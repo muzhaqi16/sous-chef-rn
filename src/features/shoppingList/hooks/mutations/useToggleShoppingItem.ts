@@ -28,6 +28,7 @@ import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -48,7 +49,11 @@ export function useToggleShoppingItem({
     context: { localFirst: true },
   });
 
-  const toggleItem = async (itemId: string) => {
+  /**
+   * `bought` names the product a tick bought when the line names a concept
+   * above it (a store-mode scan), so its price lands on that product.
+   */
+  const toggleItem = async (itemId: string, bought?: PurchasedItemInput) => {
     if (!listId) return false;
 
     const cacheId = client.cache.identify({
@@ -131,7 +136,10 @@ export function useToggleShoppingItem({
           id: itemId,
           version: snapshot.version,
           // The flag alone: the server refuses amounts beside an un-tick.
-          purchaseTracking: { isPurchased: newStatus },
+          purchaseTracking: {
+            isPurchased: newStatus,
+            ...(newStatus && bought && { purchasedItem: bought }),
+          },
         },
       },
       onCompleted: data => {
@@ -180,6 +188,8 @@ export function useToggleShoppingItem({
       },
     );
     if (settled.status === 'failed') return false;
+    // Queued is not a failure: the flip stands and replays.
+    if (settled.status === 'queued') return true;
 
     return appliedPayload(settled.data)?.shoppingListItem ?? false;
   };
@@ -192,6 +202,7 @@ export function useToggleShoppingItem({
   const recordPurchase = async (
     itemId: string,
     amounts: { purchasedQuantity: number; purchasedPrice: number | null },
+    bought?: PurchasedItemInput,
   ) => {
     if (!listId) return false;
 
@@ -269,6 +280,7 @@ export function useToggleShoppingItem({
             ...(amounts.purchasedPrice != null && {
               purchasedPrice: amounts.purchasedPrice,
             }),
+            ...(bought && { purchasedItem: bought }),
           },
         },
       },

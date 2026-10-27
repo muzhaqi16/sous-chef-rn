@@ -2,6 +2,7 @@
  * Local-first: the list is cached PERMANENTLY before firing under the minted
  * `input.id`; the caller's own replay answers IDEMPOTENT_REPLAY (applied), and an
  * id another account holds answers CONFLICT, which withdraws and reports it.
+ * Lines it is made with are cached with it and the first 50 ride the create.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -11,16 +12,37 @@ import {
   revertOptimisticShoppingList,
   writeLocalShoppingList,
 } from '#features/shoppingList/cache/list';
+import {
+  ADD_ITEMS_BATCH_LIMIT,
+  buildAddItemsReconcileUpdate,
+} from '#features/shoppingList/cache/items';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
-import type { CreateShoppingListInput } from '#/graphql/generated/schemaTypes';
+import type {
+  BatchAddShoppingListItemInput,
+  CreateShoppingListInput,
+} from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
 
-/** The created list — the server's when it answered, the local one when queued. */
-export type CreateShoppingListOutcome =
-  | { status: 'created'; shoppingList: { id: string; name: string } }
+/** Lines a new list is made with, each under the id minted for it. */
+export interface StartingLines<TItem extends BatchAddShoppingListItemInput> {
+  items: readonly TItem[];
+  /** Caches the lines under the new list's id, before the create fires. */
+  write: (listId: string) => void;
+}
+
+/**
+ * The created list — the server's when it answered, the local one when queued —
+ * and the starting lines past what one create carries, for batch adds to send.
+ */
+export type CreateShoppingListOutcome<TItem = never> =
+  | {
+      status: 'created';
+      shoppingList: { id: string; name: string };
+      unsent: TItem[];
+    }
   | { status: 'failed'; body: string };
 
 export function useCreateShoppingList(fallbackErrorMessage: string) {
@@ -29,16 +51,28 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
 
   const [mutate, { loading }] = useMutation(CreateShoppingListDocument, {
     context: { localFirst: true },
-    update(cache, { data }) {
-      const created = appliedPayload(data);
-      if (created) addShoppingListToQueryCache(cache, created.shoppingList);
+    update(cache, result, options) {
+      const created = appliedPayload(result.data);
+      if (!created) return;
+      addShoppingListToQueryCache(cache, created.shoppingList);
+      buildAddItemsReconcileUpdate({ listId: created.shoppingList.id })(
+        cache,
+        result,
+        options,
+      );
     },
   });
 
-  const createShoppingList = async (
+  const createShoppingList = async <
+    TItem extends BatchAddShoppingListItemInput = never,
+  >(
     input: CreateShoppingListInput,
-  ): Promise<CreateShoppingListOutcome> => {
+    lines?: StartingLines<TItem>,
+  ): Promise<CreateShoppingListOutcome<TItem>> => {
     const id = generateEntityId();
+    const items = lines?.items ?? [];
+    const sent = items.slice(0, ADD_ITEMS_BATCH_LIMIT);
+    const unsent = items.slice(ADD_ITEMS_BATCH_LIMIT);
 
     // Materializing the ownership row needs an auth identity; without one the
     // create falls back to online-only (no create surface should hit this).
@@ -50,12 +84,15 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
           operation: 'Create Shopping List (optimistic)',
         });
       }
+      lines?.write(id);
     }
 
     const settled = await settleMutation(
       () =>
         mutate({
-          variables: { input: { ...input, id } },
+          variables: {
+            input: { ...input, id, ...(sent.length > 0 && { items: sent }) },
+          },
         }),
       {
         document: CreateShoppingListDocument,
@@ -82,10 +119,14 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
     }
 
     const created = appliedPayload(settled.data)?.shoppingList;
-    if (created) return { status: 'created', shoppingList: created };
+    if (created) return { status: 'created', shoppingList: created, unsent };
     // Queued: the local list stands and the create replays under the same id.
     if (user) {
-      return { status: 'created', shoppingList: { id, name: input.name } };
+      return {
+        status: 'created',
+        shoppingList: { id, name: input.name },
+        unsent,
+      };
     }
     return { status: 'failed', body: fallbackErrorMessage };
   };

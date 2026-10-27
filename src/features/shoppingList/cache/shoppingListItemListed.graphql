@@ -13,6 +13,24 @@ fragment shoppingListItem_listed on ShoppingListItem {
     id
     symbol
   }
+  amount {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   purchaseInfo {
     isPurchased
     movedToPantryAt
@@ -26,7 +44,7 @@ fragment shoppingListItem_listed on ShoppingListItem {
       decimalPlaces
     }
   }
-  # The photo this entry shows: the household's choice, else the catalog's.
+  # The photo this entry shows: the household's choice, the catalog's, else the viewer's pending one.
   image {
     url
     source

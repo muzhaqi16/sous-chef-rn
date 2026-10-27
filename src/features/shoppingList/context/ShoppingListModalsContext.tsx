@@ -4,7 +4,7 @@ import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/gra
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
 import { AddToShoppingListSheet } from '#features/shoppingList/components/AddToShoppingListSheet/AddToShoppingListSheet';
 import { QuantityEditSheet } from '#features/shoppingList/components/QuantityEditSheet/QuantityEditSheet';
-import { PurchaseAmountSheet } from '#features/shoppingList/components/PurchaseAmountSheet/PurchaseAmountSheet';
+import { PurchaseAmountSheet } from '#features/shoppingList/ui/PurchaseAmountSheet';
 import { AislePickerSheet } from '#features/shoppingList/components/AislePickerSheet';
 import { useAddItemSheet } from '#features/shoppingList/hooks/useAddItemSheet';
 import { useQuantityEditModal } from '#features/shoppingList/hooks/useQuantityEditModal';
@@ -15,6 +15,7 @@ import {
 import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPantryModal';
 import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisleModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
 
 /**
  * The sheets open from all over the screen and are read back in one place, so
@@ -80,6 +81,7 @@ export function ShoppingListModalsProvider({
     items,
   });
 
+  const asksPrice = useListAsksPrice(currentListId);
   const purchaseAmount = usePurchaseAmountModal({
     items,
     recordPurchase,
@@ -121,6 +123,7 @@ export function ShoppingListModalsProvider({
         selectedPantryId={moveToPantry.selectedPantryId}
         onClose={moveToPantry.close}
         onConfirm={moveToPantry.confirm}
+        askPrice={asksPrice}
       />
 
       <AddToShoppingListSheet
@@ -155,6 +158,7 @@ export function ShoppingListModalsProvider({
           tutorial?.notifyLongPressPriceSeen();
         }}
         loading={purchaseAmount.isLoading}
+        askPrice={asksPrice}
       />
 
       <AislePickerSheet

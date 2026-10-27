@@ -69,15 +69,12 @@
   },
   "onboardingValidation": {
     "homeRequired": "Emri i shtëpisë është i detyrueshëm",
-    "homeMin": "Emri i shtëpisë duhet të ketë të paktën {{count}} karaktere",
-    "homeMax": "Emri i shtëpisë duhet të ketë më pak se {{count}} karaktere",
     "pantryRequired": "Emri i qilarit është i detyrueshëm",
     "pantryMin": "Emri i qilarit duhet të ketë të paktën {{count}} karaktere",
     "pantryMax": "Emri i qilarit duhet të ketë më pak se {{count}} karaktere",
     "listRequired": "Emri i listës është i detyrueshëm",
     "listMin": "Emri i listës duhet të ketë të paktën {{count}} karaktere",
-    "listMax": "Emri i listës duhet të ketë më pak se {{count}} karaktere",
-    "homeChars": "Emri i shtëpisë mund të përmbajë vetëm shkronja, numra, hapësira, viza, apostrofa dhe thonjëza"
+    "listMax": "Emri i listës duhet të ketë më pak se {{count}} karaktere"
   },
   "onboarding": {
     "progress": "Hapi {{step}} nga {{total}}"

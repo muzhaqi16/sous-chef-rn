@@ -240,7 +240,7 @@ export const RecipeIngredientEditor = forwardRef<
           />
 
           <FormInput
-            label={t('recipes.notes')}
+            label={t('labels.notes')}
             value={draft.notes}
             onChangeText={notes => update({ notes })}
             placeholder={t('labels.anyAdditionalNotes')}

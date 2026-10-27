@@ -26,6 +26,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: RootState) => unknown) =>
     selector({ selectedPantryId: 'pantry-1' } as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
+  useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
 
 const mockToastSuccess = jest.mocked(toastService.success);

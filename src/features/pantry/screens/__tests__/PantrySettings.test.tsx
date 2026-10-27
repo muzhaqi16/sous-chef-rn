@@ -20,6 +20,7 @@ import {
   type PantryFixture,
 } from '../../../../../__tests__/helpers/fixtures/pantryFixtures';
 import { alertService } from '#/services/alertService';
+import { Text as AppText } from '#components/atoms/Text';
 import { PantrySettings } from '../PantrySettings';
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -211,6 +212,31 @@ describe('PantrySettings', () => {
       cache: cacheWithPantry(defaultPantry),
     });
     expect(screen.getByText('Save')).toBeTruthy();
+  });
+
+  // The accent says there is something to save; with nothing, Save still saves.
+  it('reads Save in plain text until the name or description changes', async () => {
+    renderWithApollo(<PantrySettings route={editRoute} />, {
+      cache: cacheWithPantry(defaultPantry),
+      // The read answers as the cache holds it, so the pantry stays to compare with.
+      operationMocks: [
+        recordMock(GetPantryDocument, { data: pantryData(defaultPantry) }).mock,
+      ],
+    });
+    const saveTone = () =>
+      screen
+        .UNSAFE_getAllByType(AppText)
+        .find(node => node.props.children === 'Save')?.props.tone;
+
+    await screen.findByDisplayValue('Kitchen Pantry');
+    expect(saveTone()).toBe('primary');
+
+    fireEvent.changeText(
+      screen.getByDisplayValue('Kitchen Pantry'),
+      'Kitchen Pantry 2',
+    );
+
+    expect(saveTone()).toBe('accent');
   });
 
   it('shows Create button text when creating new pantry', () => {

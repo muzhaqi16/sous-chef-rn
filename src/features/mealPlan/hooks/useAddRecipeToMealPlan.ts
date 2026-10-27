@@ -15,7 +15,7 @@ export function useAddRecipeToMealPlan(
   const {
     state: { currentPlan, mealPlans: loadedPlans, hasMore, loadingMore },
     actions: { loadMore },
-  } = useMealPlans();
+  } = useMealPlans({ fetchPolicy: 'cache-first' });
 
   // A picked plan is read by id, so one from a later page resolves too.
   const pickedPlan = useMealPlanDisplay(options?.planId ?? null);

@@ -17,9 +17,6 @@ import { Text } from '#components/atoms/Text';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useListSettings } from '#features/shoppingList/hooks/useListSettings';
 import { listSettingsStyles as styles } from '#features/shoppingList/components/listSettings/styles';
-import { BudgetSection } from '#features/shoppingList/components/listSettings/BudgetSection';
-import { StoreSection } from '#features/shoppingList/components/listSettings/StoreSection';
-import { StoreComparisonSection } from '#features/shoppingList/components/listSettings/StoreComparisonSection';
 import { ListStatusSection } from '#features/shoppingList/components/listSettings/ListStatusSection';
 import { RecurringSection } from '#features/shoppingList/components/listSettings/RecurringSection';
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
@@ -39,13 +36,10 @@ export const ListSettings: React.FC<
   const { toShareList, toHomeDetail } = useAppNavigation();
   const {
     basedOnTemplate,
-    budgetInput,
     collaborators,
     completedShopDate,
     completing,
     creating,
-    currency,
-    estimatedTotal,
     formatDate,
     generating,
     handleArchiveToggle,
@@ -61,9 +55,8 @@ export const ListSettings: React.FC<
     handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
-    handleStoreSelected,
     handleToggleComplete,
-    handleTogglePriceTracking,
+    hasChanges,
     homes,
     isArchived,
     isCompleted,
@@ -82,7 +75,6 @@ export const ListSettings: React.FC<
     ownerInfo,
     ownership,
     patternLabel,
-    priceTracking,
     reactivating,
     recurringPattern,
     reminderDate,
@@ -93,24 +85,19 @@ export const ListSettings: React.FC<
     selectedHomeId,
     selectedTemplate,
     selectedTemplateId,
-    setBudgetInput,
     setIsDefault,
     setName,
     setSelectedHomeId,
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,
-    setStoreInput,
     shoppingList,
     showHomePicker,
     showPatternPicker,
     showTemplatePicker,
     statusDisplay,
-    storeInput,
     templateName,
     templates,
-    totalCost,
-    unpricedItems,
   } = useListSettings(route.params?.listId);
 
   // Ownership decides the whole screen — its title, its Save action and six
@@ -147,6 +134,7 @@ export const ListSettings: React.FC<
                   : t('labels.save'),
                 onPress: handleSave,
                 variant: 'primary',
+                hasChanges,
                 disabled: saving,
               },
             ]
@@ -179,7 +167,7 @@ export const ListSettings: React.FC<
             {!!isShared && (
               <InfoRow
                 label={t('shoppingListScreens.sharedWith')}
-                value={t('shoppingListScreens.membersCount', {
+                value={t('labels.memberCount', {
                   count: collaborators.length,
                 })}
               />
@@ -391,29 +379,6 @@ export const ListSettings: React.FC<
         marking={marking}
         name={name}
         templateName={templateName}
-      />
-
-      <StoreSection
-        isOwner={isOwner}
-        listId={listId}
-        storeInput={storeInput}
-        setStoreInput={setStoreInput}
-        handleStoreSelected={handleStoreSelected}
-      />
-
-      <StoreComparisonSection listId={listId} />
-
-      <BudgetSection
-        budgetInput={budgetInput}
-        currency={currency}
-        estimatedTotal={estimatedTotal}
-        handleTogglePriceTracking={handleTogglePriceTracking}
-        isOwner={isOwner}
-        listId={listId}
-        priceTracking={priceTracking}
-        setBudgetInput={setBudgetInput}
-        totalCost={totalCost}
-        unpricedItems={unpricedItems}
       />
 
       <ReminderSection

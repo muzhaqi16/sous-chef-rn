@@ -14,3 +14,21 @@ query GetMealPlan(
     ...useDuplicateMealPlan_mealPlan
   }
 }
+
+# The plan covering today with what the plan screens read, in one request, so
+# a screen showing it waits for no second round trip after the list (API-18).
+query CurrentMealPlan(
+  $today: LocalDate!
+  $mealsFirst: Int!
+  $mealsAfter: String
+  $ingredientsFirst: Int!
+) {
+  currentMealPlan(today: $today) {
+    id
+    ...MealPlanDisplay
+    ...MealPlanMain_mealPlan
+    ...MealPlanSettingsSheet_mealPlan
+    ...useGenerateShoppingList_mealPlan
+    ...useDuplicateMealPlan_mealPlan
+  }
+}

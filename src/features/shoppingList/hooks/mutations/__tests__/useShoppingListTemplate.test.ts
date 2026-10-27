@@ -215,15 +215,14 @@ describe('useShoppingListTemplate', () => {
         },
       });
 
-      // Both purchase states are copied, and the fresh rows carry the ids the
-      // device minted — that is what makes the replay converge.
-      const fired = add.fired[0] as {
+      // Both purchase states are copied, in the create, and the fresh rows
+      // carry the ids the device minted — that is what makes the replay converge.
+      expect(add.fired).toHaveLength(0);
+      const fired = create.fired[0] as {
         input?: {
-          shoppingListId?: string;
           items?: Array<{ id?: string; item: { itemId?: string } }>;
         };
       };
-      expect(fired.input?.shoppingListId).toBe(newId);
       expect(fired.input?.items?.map(i => i.item.itemId)).toEqual([
         'item-1',
         'item-2',

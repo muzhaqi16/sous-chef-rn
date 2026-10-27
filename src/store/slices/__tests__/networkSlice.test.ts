@@ -131,6 +131,9 @@ describe('networkSlice', () => {
   });
 
   describe('offlineBannerCause (debounced presentation state)', () => {
+    // How long a network cause must hold before the icon shows.
+    const DWELL_MS = 30_000;
+
     beforeEach(() => jest.useFakeTimers());
     afterEach(() => jest.useRealTimers());
 
@@ -155,23 +158,23 @@ describe('networkSlice', () => {
     it('shows nothing while the API failure is still within the dwell window', () => {
       const store = createTestStore();
       store.getState().setApiReachable(false);
-      jest.advanceTimersByTime(4_000);
+      jest.advanceTimersByTime(DWELL_MS - 1);
       expect(store.getState().offlineBannerCause).toBeNull();
     });
 
     it('shows api-unreachable once the failure has held for the full dwell', () => {
       const store = createTestStore();
       store.getState().setApiReachable(false);
-      jest.advanceTimersByTime(5_000);
+      jest.advanceTimersByTime(DWELL_MS);
       expect(store.getState().offlineBannerCause).toBe('api-unreachable');
     });
 
     it('never shows when the API recovers inside the dwell window', () => {
       const store = createTestStore();
       store.getState().setApiReachable(false);
-      jest.advanceTimersByTime(2_000);
+      jest.advanceTimersByTime(20_000);
       store.getState().setApiReachable(true);
-      jest.advanceTimersByTime(10_000);
+      jest.advanceTimersByTime(2 * DWELL_MS);
       expect(store.getState().offlineBannerCause).toBeNull();
     });
 
@@ -179,17 +182,19 @@ describe('networkSlice', () => {
       const store = createTestStore();
       for (let i = 0; i < 5; i += 1) {
         store.getState().setApiReachable(false);
-        jest.advanceTimersByTime(3_000);
+        jest.advanceTimersByTime(20_000);
         store.getState().setApiReachable(true);
         jest.advanceTimersByTime(1_000);
       }
       expect(store.getState().offlineBannerCause).toBeNull();
     });
 
-    it('uses the shorter dwell for a device-level disconnect', () => {
+    it('waits out a short device-level disconnect too', () => {
       const store = createTestStore();
       goOffline(store);
-      jest.advanceTimersByTime(2_000);
+      jest.advanceTimersByTime(DWELL_MS - 1);
+      expect(store.getState().offlineBannerCause).toBeNull();
+      jest.advanceTimersByTime(1);
       expect(store.getState().offlineBannerCause).toBe('device-offline');
     });
 
@@ -202,7 +207,7 @@ describe('networkSlice', () => {
     it('stays visible for the minimum duration after recovery', () => {
       const store = createTestStore();
       goOffline(store);
-      jest.advanceTimersByTime(2_000);
+      jest.advanceTimersByTime(DWELL_MS);
       goOnline(store);
       jest.advanceTimersByTime(2_000);
       expect(store.getState().offlineBannerCause).toBe('device-offline');
@@ -213,7 +218,7 @@ describe('networkSlice', () => {
     it('swaps the cause without hiding while it is already visible', () => {
       const store = createTestStore();
       goOffline(store);
-      jest.advanceTimersByTime(2_000);
+      jest.advanceTimersByTime(DWELL_MS);
       expect(store.getState().offlineBannerCause).toBe('device-offline');
 
       // Device back, API still down: relabel in place, no flicker.

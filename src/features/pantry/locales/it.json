@@ -6,22 +6,17 @@
     "noExpiry": "Nessuna scadenza",
     "amount": "Quantità",
     "nutrition": "Nutrizione",
-    "recipesToTry": "Ricette da provare",
     "noShoppingListSelectedTitle": "Nessuna lista della spesa selezionata",
     "noShoppingListSelectedMessage": "Seleziona prima una lista della spesa.",
     "goToShoppingLists": "Vai alle liste della spesa",
     "noRecipeSuggestions": "Nessun suggerimento di ricetta disponibile",
-    "notes": "Note",
-    "tags": "Tag",
     "usageHistory": "Cronologia d'uso",
     "fields": {
-      "package": "Confezione",
       "shelfLife": "Conservazione",
       "acquired": "Acquisito",
       "costPerUnit": "Costo/unità",
       "minStock": "Scorta minima",
       "restockAt": "Rifornire a",
-      "purchased": "Acquistato",
       "lastPurchase": "Ultimo acquisto",
       "lastUsed": "Ultimo utilizzo",
       "added": "Aggiunto"
@@ -65,7 +60,6 @@
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",
     "title": "Impostazioni dispensa",
-    "loading": "Caricamento...",
     "loadingData": "Caricamento dati dispensa...",
     "namePlaceholder": "Inserisci il nome (es. Dispensa cucina)",
     "descriptionPlaceholder": "Inserisci una descrizione",
@@ -85,8 +79,6 @@
     "tabLedger": "Registro",
     "period": "Periodo:",
     "granularityDaily": "Giornaliero",
-    "granularityWeekly": "Settimanale",
-    "granularityMonthly": "Mensile",
     "totalUsage": "Utilizzo totale",
     "itemsUsed": "articoli usati",
     "avgPerDay": "Media giornaliera",
@@ -125,7 +117,6 @@
     "purposeAdjustment": "Aggiustamento",
     "purposeCooking": "Cucina",
     "purposeRestock": "Riassortimento",
-    "purposeTransfer": "Trasferimento",
     "purposeWaste": "Spreco",
     "sourceManual": "Manuale",
     "sourceRecipeAuto": "Ricetta (auto)",
@@ -170,6 +161,7 @@
     "newQuantity": "Nuova quantità",
     "reasonPlaceholder": "Perché stai modificando la quantità?",
     "remainingWeightPlaceholder": "Lascia vuoto per regolare automaticamente",
+    "countedAs": "Conteggio: {{amount}}",
     "systemReason": {
       "stackMerged": "Rettifica dopo l'unione di articoli",
       "stackPurged": "Rimozione amministrativa",
@@ -183,7 +175,6 @@
     "sustainability": "Sostenibilità",
     "composted": "Compostato",
     "recycledPackaging": "Riciclato (imballaggio)",
-    "notes": "Note",
     "notesPlaceholder": "Aggiungi note su questo spreco...",
     "reasonExpired": "Scaduto",
     "reasonSpoiled": "Andato a male",
@@ -193,13 +184,11 @@
   },
   "restockItem": {
     "title": "Rifornisci articolo",
-    "restock": "Rifornisci",
     "restockBy": "Rifornisci per",
     "currentLabel": "Attuale:",
     "quantityToAdd": "Quantità da aggiungere",
     "newQuantityPrefix": "Nuova quantità: ",
     "costPerUnit": "Costo per unità",
-    "notes": "Note",
     "notesPlaceholder": "Aggiungi note su questo rifornimento...",
     "expirationPlaceholder": "Imposta nuova scadenza"
   },
@@ -209,7 +198,6 @@
     "quantityToConsume": "Quantità da consumare",
     "fifoHint": "Gli articoli vengono consumati prima per data di scadenza più vicina",
     "purpose": "Scopo *",
-    "notes": "Note",
     "notesPlaceholder": "Aggiungi note su questo utilizzo...",
     "purposeCooking": "Cucina",
     "purposeTransfer": "Trasferimento"
@@ -288,9 +276,7 @@
     "addItemDetails": "Aggiungi dettagli articolo",
     "storageLocation": "Posizione di conservazione",
     "storageLocationPlaceholder": "es., Ripiano alto, Cassetto verdure",
-    "tags": "Tag",
     "tagsPlaceholder": "es., biologico, senza glutine (separati da virgola)",
-    "notes": "Note",
     "notesPlaceholder": "es., Conservare in luogo fresco e asciutto",
     "conditionGood": "Buona",
     "conditionFair": "Discreta",
@@ -301,7 +287,6 @@
     "cost": "Costo per unità",
     "costPlaceholder": "es. 4,99",
     "acquisitionMethod": "Come acquisito",
-    "methodPurchased": "Acquistato",
     "methodHomegrown": "Coltivato in casa",
     "methodGifted": "Regalato",
     "methodBarcodeScan": "Scansione codice a barre"
@@ -311,7 +296,6 @@
     "searchPlaceholder": "Cerca nella tua dispensa...",
     "sortedBy": "Ordina, ora per {{field}}",
     "tabAll": "Tutti",
-    "tabPantry": "Dispensa",
     "tabUnassigned": "Non assegnati",
     "expiringCount": "{{count}} in scadenza",
     "expiredCount": "{{count}} scaduti",
@@ -362,9 +346,7 @@
     "exceedsAvailable": "Supera la disponibilità ({{amount}} {{unit}})"
   },
   "duplicateItem": {
-    "title": "Articolo già in dispensa",
-    "body": "Questo articolo è già nella tua dispensa in questa unità. Vuoi rifornirlo?",
-    "restock": "Rifornisci"
+    "title": "Articolo già in dispensa"
   },
   "relinkItem": {
     "action": "Non è questo articolo?",
@@ -382,7 +364,6 @@
   },
   "expirationAction": {
     "cooked": "Cucinato",
-    "consumed": "Consumato",
     "shared": "Condiviso con qualcuno",
     "extended": "Scadenza prolungata",
     "wasted": "Sprecato / Buttato",
@@ -398,9 +379,6 @@
       "SHARED": "Segnato come condiviso",
       "WASTE": "Segnato come sprecato"
     }
-  },
-  "pantryTabs": {
-    "all": "Tutti"
   },
   "expiration": {
     "noExpiryDate": "Nessuna data di scadenza"

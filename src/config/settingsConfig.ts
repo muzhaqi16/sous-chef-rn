@@ -188,7 +188,12 @@ export const PROFILE_SETTINGS_CONFIG: SettingSectionConfig[] = [
     items: [
       {
         key: 'dietaryProfile',
-        labelKey: 'profile.labels.dietaryProfile',
+        labelKey: 'profile.sections.dietaryProfile',
+        type: 'navigation',
+      },
+      {
+        key: 'brandLists',
+        labelKey: 'brandLists.title',
         type: 'navigation',
       },
     ],

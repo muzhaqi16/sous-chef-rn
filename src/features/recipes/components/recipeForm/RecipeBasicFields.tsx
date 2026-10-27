@@ -35,7 +35,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
       />
 
       <FormTextArea
-        label={t('recipes.description')}
+        label={t('labels.description')}
         value={state.description}
         onChangeText={v => updateField('description', v)}
         placeholder={t('recipes.descriptionPlaceholder')}
@@ -113,7 +113,7 @@ export const RecipeBasicFields: React.FC<RecipeBasicFieldsProps> = ({
       />
 
       <FormInput
-        label={t('recipes.recipeTags')}
+        label={t('labels.tags')}
         value={state.tags}
         onChangeText={v => updateField('tags', v)}
         placeholder={t('labels.commaSeparated')}

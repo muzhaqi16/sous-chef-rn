@@ -68,7 +68,7 @@ export const RecipeCardView: React.FC<RecipeCardViewProps> = ({
             >
               {[
                 servings != null
-                  ? t('recipes.servingsCount', { count: servings })
+                  ? t('labels.servingsCount', { count: servings })
                   : null,
                 totalMinutes != null
                   ? t('labels.min', { count: totalMinutes })

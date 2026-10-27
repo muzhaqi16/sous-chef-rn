@@ -47,6 +47,9 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   displayUnitId: 'unit vocabulary is server-owned',
   netWeightUnitId: 'unit vocabulary is server-owned',
   portionUnitId: 'unit vocabulary is server-owned',
+  newQuantityUnitId: 'unit vocabulary is server-owned',
+  remainingNetWeightUnitId: 'unit vocabulary is server-owned',
+  grossWeightUnitId: 'unit vocabulary is server-owned',
   brandId: 'catalog rows are created online only',
   chainId: 'store chains are server-owned reference data',
   dietaryProfileId: 'one per user, minted by the server at sign-up',
@@ -54,6 +57,7 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   externalSourceId: 'an external catalogue id',
   spoonacularIngredientId: 'an external catalogue id',
   receiptParseId: 'a receipt parse is created online only, never queued',
+  substituteId: 'curated substitutes are admin reference data',
 };
 
 function unwrap(type: GraphQLInputType): GraphQLInputType {

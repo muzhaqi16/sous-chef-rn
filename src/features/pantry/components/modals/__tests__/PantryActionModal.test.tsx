@@ -168,6 +168,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         },
         displayUnit: null,
         netWeightUnit: null,
+        consumeUnit: null,
         packageBreakdown: null,
         quantityBreakdown: null,
         ...overrides,

@@ -1,10 +1,9 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { EntryRowRemoveButton } from '#features/catalog/ui/EntryRowRemoveButton';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { Button } from '#components/molecules/Button';
@@ -121,7 +120,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View>
       <SectionHeader style={styles.sectionTitleSpacing}>
         {t('unitEntryList.title')}
       </SectionHeader>
@@ -159,14 +158,10 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
                     }
                   />
                 </View>
-                <AppPressable
+                <EntryRowRemoveButton
                   onPress={() => handleRemoveEntry(index)}
-                  accessibilityLabel={t('labels.remove')}
                   disabled={disabled}
-                  style={styles.deleteButton}
-                >
-                  <Icon name="trash-outline" size={20} tone="error" />
-                </AppPressable>
+                />
               </View>
               {!!entry.packageSize &&
                 parseDecimalInput(entry.packageSize) > 0 && (
@@ -192,6 +187,7 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
           variant="secondary"
           onPress={handleAddEntry}
           disabled={disabled}
+          style={styles.addButton}
         >
           {t('unitEntryList.addUnit')}
         </Button>
@@ -200,8 +196,10 @@ export const UnitEntryList: React.FC<UnitEntryListProps> = ({
   );
 };
 
+// A row's fields space themselves below; the list adds space only under its
+// "Add" button.
 const styles = StyleSheet.create(theme => ({
-  container: {
+  addButton: {
     marginBottom: theme.spacing.md,
   },
   sectionTitleSpacing: {
@@ -214,7 +212,6 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
   },
   packageSizeField: {
     flex: 0.35,
@@ -222,14 +219,8 @@ const styles = StyleSheet.create(theme => ({
   unitField: {
     flex: 0.55,
   },
-  deleteButton: {
-    flex: 0.1,
-    alignItems: 'center',
-    paddingTop: theme.spacing.xl,
-  },
   contentUnitRow: {
     marginTop: -theme.spacing.sm,
-    marginBottom: theme.spacing.md,
     marginLeft: theme.spacing.sm,
     paddingLeft: theme.spacing.md,
     borderLeftWidth: theme.borderWidth.medium,

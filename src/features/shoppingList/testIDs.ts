@@ -20,6 +20,12 @@ export const shoppingListTestIDs = {
   listSettingsStore: 'list-settings-store',
   /** List settings: where the list is cheapest, and one candidate by its id. */
   storeComparison: 'list-store-comparison',
+  listBudgetScreen: 'list-budget-screen',
+  listBudgetStore: 'list-budget-store',
+  budgetInput: 'list-budget-input',
+  budgetRemaining: 'list-budget-remaining',
+  priceTrackingSwitch: 'list-budget-price-tracking',
+  budgetAndPricesButton: 'shopping-list-budget-and-prices',
   storeComparisonCandidate: (id: string) => `list-store-comparison-${id}`,
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */
@@ -30,6 +36,7 @@ export const shoppingListTestIDs = {
   storeModeButton: 'shopping-list-store-mode',
   storeModeScreen: 'store-mode-screen',
   storeModeDone: 'store-mode-done',
+  storeModeScan: 'store-mode-scan',
   storeModeChooseStore: 'store-mode-choose-store',
   storeModeStoreField: 'store-mode-store-field',
   /** One aisle's heading, by its department. */
@@ -78,6 +85,8 @@ export const shoppingListTestIDs = {
   purchaseQuantityError: 'purchase-quantity-error',
   purchasePriceInput: 'purchase-price-input',
   purchasePriceError: 'purchase-price-error',
+  /** What a typed price means, such as how it compares with the usual. */
+  purchasePriceNote: 'purchase-price-note',
 
   itemDetail: 'shopping-item-detail',
   itemDetailEditButton: 'shopping-item-edit-button',

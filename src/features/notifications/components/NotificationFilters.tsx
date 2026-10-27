@@ -21,8 +21,8 @@ type FilterTabId = NotificationCategory | typeof ALL_TAB;
 // Static category → locale key map so the label lookup can't drift from the
 // enum (a new category is a compile error until it gets a key).
 const CATEGORY_LABEL_KEYS: Record<NotificationCategory, TranslationKey> = {
-  [NotificationCategory.Home]: 'notifications.categoryHome',
-  [NotificationCategory.Pantry]: 'notifications.categoryPantry',
+  [NotificationCategory.Home]: 'labels.home',
+  [NotificationCategory.Pantry]: 'labels.pantry',
   [NotificationCategory.Recipe]: 'notifications.categoryRecipe',
   [NotificationCategory.Shopping]: 'notifications.categoryShopping',
   [NotificationCategory.System]: 'labels.system',
@@ -42,7 +42,7 @@ export const NotificationFilters: React.FC<NotificationFiltersProps> = ({
 
   // Resolve labels at render time so a language switch re-labels the tabs.
   const tabs: FilterTabConfig<FilterTabId>[] = [
-    { id: ALL_TAB, label: t('notifications.categoryAll') },
+    { id: ALL_TAB, label: t('labels.all') },
     ...NOTIFICATION_CATEGORIES.map(category => ({
       id: category,
       label: t(CATEGORY_LABEL_KEYS[category]),

@@ -15,6 +15,9 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   netWeight
   notes
   openedAt
+  packageSize {
+    ...MeasureReaders
+  }
   pantryItemId
   portionsPerTrackingUnit
   purchase {
@@ -22,6 +25,9 @@ fragment PantryItemBatchReaders on PantryItemBatch {
     purchaseDate
   }
   quantity
+  remaining {
+    ...MeasureReaders
+  }
   remainingNetWeight
   status
   store {

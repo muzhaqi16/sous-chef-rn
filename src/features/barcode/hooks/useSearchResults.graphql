@@ -4,12 +4,30 @@
 # A scan reports the scanned barcode's own pack: `netWeight`, `netWeightKind`,
 # `displayUnit` and `variationBrand` are that barcode's, never another pack's.
 # An add names `matchedVariation.id` to store exactly those facts.
-query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
+# A scan asks once: the product's origin, brand-list matches and the
+# household's dietary alerts come with it, read by their hooks' fragments.
+# Without a home there are no alerts to read; `$homeId` is then never sent on.
+query ItemByLookup(
+  $lookup: ItemLookupInput!
+  $pantry: ID
+  $homeId: ID = ""
+  $withHome: Boolean = false
+  $withPrices: Boolean = false
+) {
   items(filters: { lookup: $lookup }, first: 1) {
     edges {
       cursor
       node {
         id
+        ...useProductOrigin_item
+        ...useProductBrandListings_item
+        ...useProductDietaryAlerts_item @include(if: $withHome)
+        ...useStorePriceMemory_item @include(if: $withPrices)
+        # The concepts above the product, nearest first: store mode ticks the
+        # list line that names the product or one of them.
+        ancestors {
+          id
+        }
         # The notices the catalog data's licences ask a reader to see.
         dataAttributions {
           source
@@ -59,7 +77,83 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
           name
           symbol
         }
-        # The unit an add naming no unit counts in, for the local row.
+        # The scanned pack's PACKAGE size, read in each unit system with the
+        # label's own figure: what the card and the add's size prefill show.
+        packageSize {
+          value
+          unitId
+          metric {
+            value
+            unitId
+            symbol
+            displayAsFraction
+            type
+          }
+          imperial {
+            value
+            unitId
+            symbol
+            displayAsFraction
+            type
+          }
+        }
+        # The package as the pieces its label states ("6 x 250mL"): a
+        # multipack's add counts the pieces, each of that size, in their
+        # container. count × each is always packageSize.
+        packs {
+          count
+          each {
+            value
+            unitId
+            metric {
+              value
+              unitId
+              symbol
+              displayAsFraction
+              type
+            }
+            imperial {
+              value
+              unitId
+              symbol
+              displayAsFraction
+              type
+            }
+          }
+          container {
+            id
+            symbol
+          }
+        }
+        # The result's nutrition card and the full sheet it opens: the item's
+        # own, else its concept's, marked as typical.
+        shownNutrition {
+          facts {
+            id
+            calories
+            totalFat
+            saturatedFat
+            transFat
+            cholesterol
+            sodium
+            totalCarbs
+            dietaryFiber
+            totalSugars
+            addedSugars
+            protein
+            vitaminD
+            calcium
+            iron
+            potassium
+            servingSize
+            servingUnit
+          }
+          typicalOf {
+            id
+            name
+          }
+        }
+        # A count unit here is the add's package unit; a measure is not.
         trackingUnit(pantry: $pantry) {
           id
           name
@@ -84,6 +178,12 @@ query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
         variationBrand {
           id
           name
+          # The company the brand is part of, as the catalog names it: the
+          # card's owner line.
+          parent {
+            id
+            name
+          }
         }
         matchedVariation {
           id
@@ -115,6 +215,51 @@ fragment useSearchResults_item on Item {
     id
     name
     symbol
+  }
+  packageSize {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
+  # The item's own nutrition, else its concept's, marked as typical.
+  shownNutrition {
+    facts {
+      id
+      calories
+      totalFat
+      saturatedFat
+      transFat
+      cholesterol
+      sodium
+      totalCarbs
+      dietaryFiber
+      totalSugars
+      addedSugars
+      protein
+      vitaminD
+      calcium
+      iron
+      potassium
+      servingSize
+      servingUnit
+    }
+    typicalOf {
+      id
+      name
+    }
   }
   type
   storageState

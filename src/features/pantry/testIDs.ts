@@ -47,6 +47,7 @@ export const pantryTestIDs = {
   editItemSubmitButton: 'edit-pantry-item-submit-button',
   editItemQuantityInput: 'edit-pantry-item-quantity-input',
   editItemUnitPicker: 'edit-pantry-item-unit-picker',
+  editItemUsedInPicker: 'edit-pantry-item-used-in-picker',
 
   sortOption: (key: string) => `pantry-sort-option-${key}`,
   /** The add-details sheet's page indicator, by page index. */

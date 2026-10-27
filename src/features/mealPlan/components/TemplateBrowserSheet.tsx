@@ -38,10 +38,10 @@ const CATEGORY_KEYS: {
   labelKey: TranslationKey;
 }[] = [
   { key: undefined, labelKey: 'templateBrowser.categoryAll' },
-  { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
+  { key: TemplateCategory.Weekly, labelKey: 'labels.weekly' },
   {
     key: TemplateCategory.Monthly,
-    labelKey: 'saveAsTemplate.categoryMonthly',
+    labelKey: 'labels.monthly',
   },
   {
     key: TemplateCategory.Breakfast,

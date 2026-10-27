@@ -174,7 +174,6 @@
         "placeholder": "Enter item name"
       },
       "description": {
-        "label": "Description",
         "placeholder": "Enter item description (optional)"
       },
       "vendor": {
@@ -215,7 +214,6 @@
         "placeholder": "tsp, cup, etc."
       },
       "tags": {
-        "label": "Tags",
         "placeholder": "Comma-separated tags (e.g., organic, gluten-free)"
       },
       "foodStamp": {
@@ -243,9 +241,6 @@
   },
   "itemValidation": {
     "nameRequired": "Item name is required",
-    "nameEmpty": "Item name cannot be empty",
-    "nameMax": "Item name cannot exceed {{count}} characters",
-    "nameChars": "Item name can only contain letters, numbers, spaces, and common punctuation",
     "descriptionMax": "Description cannot exceed {{count}} characters",
     "upcDigits": "UPC must contain only numbers",
     "upcMin": "UPC must be at least {{count}} digits",
@@ -324,12 +319,10 @@
     "brandOptional": "Brand (optional)",
     "placeholderItemName": "e.g., Rice, Pasta",
     "placeholderCategory": "e.g., Grains, Dairy",
-    "tags": "Tags",
     "tagsPlaceholder": "Enter tags separated by commas",
     "location": "Location",
     "locationPlaceholder": "e.g., Top shelf, Drawer 2",
     "storageNotes": "Storage Notes",
-    "notes": "Notes",
     "addTitle": "Add Pantry Item",
     "editTitle": "Edit Pantry Item",
     "quantityUnit": "Quantity & Unit",
@@ -412,7 +405,6 @@
     "contains": "Contains"
   },
   "storageLocationCard": {
-    "default": "Default",
     "insideParent": "Inside {{parent}}",
     "capacityWithUnit": "/ {{capacity}} {{unit}}",
     "capacity_one": "/ {{count}} unit",

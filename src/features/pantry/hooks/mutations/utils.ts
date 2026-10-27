@@ -98,6 +98,12 @@ export function buildDirtyUpdateInput(
     netWeightInput.netWeightUnitId =
       firstNonBlank(data.netWeightUnitId) ?? null;
   }
+  // A value goes with the unit it was typed in: the field opens in the reading
+  // shown (3 lb), and a bare 2.5 would land in the stack's own unit (2.5 g).
+  const typedIn = firstNonBlank(data.netWeightUnitId);
+  if (dirtyFields.netWeight && typedIn) {
+    netWeightInput.netWeightUnitId = typedIn;
+  }
   // API rule on update: a value without a unit is allowed, but a unit without
   // a value is rejected. Setting a unit therefore always sends the effective
   // weight value alongside it; with no value to attach it to, the unit change
@@ -112,6 +118,11 @@ export function buildDirtyUpdateInput(
   }
   if (Object.keys(netWeightInput).length > 0) {
     input.netWeight = netWeightInput;
+  }
+
+  if (dirtyFields.consumeUnit || dirtyFields.consumeUnitId) {
+    const consumeUnitId = firstNonBlank(data.consumeUnitId);
+    input.consumeUnit = consumeUnitId ? { id: consumeUnitId } : null;
   }
 
   if (dirtyFields.brand) {

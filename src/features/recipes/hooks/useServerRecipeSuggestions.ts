@@ -45,6 +45,8 @@ export function useServerRecipeSuggestions(
       (edge): RecipeRow => ({ source: 'suggestion', edge }),
     ),
     loading: enabled && loading && !data,
+    /** Some suggestion uses what the pantry holds; else they are only ideas. */
+    fromPantry: (edges ?? []).some(edge => edge.coverage > 0),
     refreshing: enabled && refreshing,
     /** It answered with nothing, or could not answer: someone else may fill in. */
     unanswered: enabled && (edges?.length === 0 || (!!error && !edges)),

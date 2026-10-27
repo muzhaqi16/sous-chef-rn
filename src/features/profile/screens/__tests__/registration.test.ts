@@ -11,6 +11,8 @@ describe('profileScreens', () => {
     expect(Object.keys(profileScreens).sort()).toEqual([
       'AppSettings',
       'Appearance',
+      'BrandList',
+      'BrandLists',
       'ChangePassword',
       'DataSources',
       'DebugInfo',

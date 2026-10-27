@@ -65,7 +65,7 @@ const TemplateCardComponent: React.FC<TemplateCardProps> = ({
         <View style={styles.metaItem}>
           <Icon name="people-outline" size={14} tone="textTertiary" />
           <Text role="caption" tone="secondary">
-            {t('templateCard.servings', { count: template.defaultServings })}
+            {t('labels.servingsCount', { count: template.defaultServings })}
           </Text>
         </View>
         {!!template.home?.name && (

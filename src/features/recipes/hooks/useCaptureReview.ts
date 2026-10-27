@@ -1,4 +1,5 @@
 import { useTranslation } from '#/i18n';
+import { formatCountryName } from '#/utils/formatters/region';
 import { MeasurementRegionBasis } from '#/graphql/generated/schemaTypes';
 import { useHeldCaptureId } from '#features/recipes/store/recipeCaptureStore';
 import {
@@ -13,24 +14,13 @@ export interface CaptureCandidate {
   name: string;
 }
 
-/** A country code as its name in the reader's language, else the code. */
-function regionName(code: string, language: string): string {
-  try {
-    return (
-      new Intl.DisplayNames([language], { type: 'region' }).of(code) ?? code
-    );
-  } catch {
-    return code;
-  }
-}
-
 /**
  * What a captured recipe's capture can still tell about it, while held: how
  * its measures were read, what the read warned of, and the items proposed for
  * each line it did not link, found by the line as written.
  */
 export function useCaptureReview(recipeId: string | undefined) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const capture = useFinishedCapture(useHeldCaptureId(recipeId));
   if (!capture) return { review: null };
 
@@ -40,7 +30,7 @@ export function useCaptureReview(recipeId: string | undefined) {
         region:
           region.basis === MeasurementRegionBasis.Default
             ? region.region
-            : regionName(region.region, i18n.language),
+            : formatCountryName(region.region, t),
       })
     : null;
   const warnings = [

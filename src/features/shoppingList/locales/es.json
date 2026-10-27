@@ -26,13 +26,11 @@
     "defaultListDesc": "Establecer como lista de la compra predeterminada",
     "manageMembers": "Gestionar miembros",
     "sharedWithMembers": "Esta lista se comparte con {{count}} miembros",
-    "membersCount": "{{count}} miembros",
     "leaving": "Saliendo...",
     "leaveListTitle": "Abandonar lista",
     "leaveListMessage": "¿Seguro que quieres abandonar \"{{name}}\"? Perderás acceso a todos los artículos compartidos.",
     "leaveDescription": "Abandonar esta lista eliminará tu acceso a los artículos compartidos.",
     "cantLeaveHomeLinkedMessage": "Esta lista está vinculada al hogar \"{{name}}\". Para abandonarla, primero debes abandonar el hogar.",
-    "deleteListConfirmMessage": "¿Seguro que quieres eliminar esta lista? Esta acción no se puede deshacer.",
     "failedToLeave": "No se pudo abandonar la lista",
     "listStatusSection": "Estado de la lista",
     "completedOn": "Completada el",
@@ -138,7 +136,6 @@
     "itemNamePlaceholder": "p. ej., leche, pan",
     "estimatedPrice": "Precio estimado",
     "estimatedPricePlaceholder": "p. ej., 4,99",
-    "notes": "Notas",
     "notesPlaceholder": "Cualquier nota especial...",
     "pleaseEnterQuantity": "Introduce una cantidad",
     "serverNotUpdated": "Error del servidor: el artículo no se ha {{action}}. El servidor puede tener problemas. Inténtalo de nuevo.",
@@ -169,7 +166,6 @@
     "statusInvited": "Invitado",
     "statusRemoved": "Eliminado",
     "itemDetailsTitle": "Detalles del artículo",
-    "purchased": "Comprado",
     "purchasedBy": "Comprado por",
     "priority": "Prioridad",
     "additionalDetails": "Detalles adicionales",
@@ -193,7 +189,6 @@
     "brandPlaceholder": "ej., Oatly, Chobani",
     "netWeightPlaceholder": "ej., 500",
     "priorityLow": "Baja",
-    "priorityMedium": "Media",
     "priorityHigh": "Alta",
     "store": "Tienda preferida",
     "storePlaceholder": "ej., Costco",
@@ -237,6 +232,12 @@
       "allDone": "Todo está en el carrito",
       "allDoneHint": "Pulsa {{done}} cuando hayas pagado.",
       "cartEmpty": "Aún no hay nada en el carrito"
+    },
+    "budget": {
+      "left": "Quedan {{amount}}",
+      "over": "{{amount}} por encima del presupuesto",
+      "invalid": "Introduce un presupuesto, como 60, o déjalo vacío.",
+      "noStore": "Ninguna tienda elegida"
     }
   },
   "purchaseHistory": {
@@ -342,7 +343,6 @@
     }
   },
   "listTemplate": {
-    "loading": "Cargando...",
     "loadingItems": "Cargando tus artículos"
   },
   "shoppingList": {
@@ -351,7 +351,6 @@
   "shoppingListPicker": {
     "newListNamePlaceholder": "Nombre de la nueva lista",
     "createAndAddIngredients": "Crear y añadir ingredientes",
-    "defaultBadge": "Predeterminada",
     "newList": "Nueva lista",
     "noLists": "Aún no hay listas de la compra"
   }

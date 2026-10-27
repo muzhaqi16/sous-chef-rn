@@ -1,5 +1,8 @@
 import type { TypePolicies } from '@apollo/client';
-import { mergeConnectionByNodeId } from '#/apollo/cacheFieldPolicies';
+import {
+  mergeConnectionByNodeId,
+  readByIdFromCache,
+} from '#/apollo/cacheFieldPolicies';
 
 /**
  * A plan's meals, its generated lists and a template's meals are each ONE list
@@ -24,6 +27,8 @@ export const mealPlanTypePolicies: TypePolicies = {
   },
   Query: {
     fields: {
+      // `currentMealPlan` stores the plan whole, so its by-id read asks nothing.
+      mealPlan: readByIdFromCache('MealPlan'),
       mealPlans: {
         ...mergeConnectionByNodeId(),
         keyArgs: ['filters'],

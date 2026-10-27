@@ -39,31 +39,48 @@ describe('onboarding validation', () => {
       ).toBeNull();
     });
 
-    it('rejects home name under 2 chars', async () => {
+    it.each(['Shtëpia', 'Casa de José', '家', 'Home #2'])(
+      'accepts the home name %p',
+      async homeName => {
+        const schema = getCreateHomeSchema(true);
+        expect(
+          await validate(schema, { homeName, pantryName: 'Kitchen' }),
+        ).toBeNull();
+      },
+    );
+
+    it('cleans a home name instead of refusing it', () => {
       const schema = getCreateHomeSchema(true);
-      const msg = await validate(schema, {
-        homeName: 'A',
-        pantryName: 'Kitchen',
-      });
-      expect(msg).toContain('2');
+      expect(
+        schema.cast({ homeName: '  Shtëpia \t e  Re\n', pantryName: 'Kitchen' })
+          .homeName,
+      ).toBe('Shtëpia e Re');
     });
 
-    it('rejects home name over 50 chars', async () => {
+    it('requires a home name that is blank once cleaned', async () => {
       const schema = getCreateHomeSchema(true);
       const msg = await validate(schema, {
-        homeName: 'a'.repeat(51),
+        homeName: ' \t ',
         pantryName: 'Kitchen',
       });
-      expect(msg).toContain('50');
+      expect(msg).toContain('Home name');
     });
 
-    it('rejects home name with special chars', async () => {
+    // The API's cap on a home name (CreateHomeInput).
+    it('takes a home name up to 100 characters', async () => {
       const schema = getCreateHomeSchema(true);
-      const msg = await validate(schema, {
-        homeName: 'Home@#',
-        pantryName: 'Kitchen',
-      });
-      expect(msg).toBeTruthy();
+      expect(
+        await validate(schema, {
+          homeName: 'a'.repeat(100),
+          pantryName: 'Kitchen',
+        }),
+      ).toBeNull();
+      expect(
+        await validate(schema, {
+          homeName: 'a'.repeat(101),
+          pantryName: 'Kitchen',
+        }),
+      ).toBe('Keep the name to 100 characters');
     });
 
     it('allows hyphens and apostrophes in home name', async () => {

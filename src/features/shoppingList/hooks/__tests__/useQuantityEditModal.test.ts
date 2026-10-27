@@ -14,8 +14,10 @@ import {
   DisplayFormat,
   EntryImageSource,
   ErrorCode,
+  UnitSystem,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { useQuantityEditModal } from '../useQuantityEditModal';
 import { resolveImageUrl } from '#utils/imageUtils';
 
@@ -188,6 +190,7 @@ describe('useQuantityEditModal', () => {
             name: 'gallon',
             symbol: 'gal',
           },
+          amount: null,
           image: {
             __typename: 'EntryImage',
             url: 'https://cdn.example.com/household/milk.jpg',
@@ -678,5 +681,108 @@ describe('useQuantityEditModal', () => {
     });
 
     expect(result.current.selectedItem!.unitName).toBe('kilogram');
+  });
+});
+
+// The sheet opens on what the row shows, and saves what is typed in that unit.
+describe('useQuantityEditModal — the amount as the row reads it', () => {
+  const reading = (value: number, unitId: string, symbol: string) => ({
+    __typename: 'MeasureReading',
+    value,
+    unitId,
+    symbol,
+    displayAsFraction: false,
+    type: UnitType.Weight,
+  });
+
+  // A 2 lb line, which a metric reader sees as 0.91 kg.
+  const twoPounds = (system: UnitSystem) => {
+    const cache = seedCache([
+      {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        itemName: 'Beef',
+        quantity: 2,
+        quantityInput: '2',
+        category: 'Meat',
+        unitName: 'lb',
+        version: 3,
+        unit: {
+          __typename: 'Unit',
+          id: 'unit-lb',
+          name: 'pound',
+          symbol: 'lb',
+        },
+        amount: {
+          __typename: 'Measure',
+          value: 2,
+          unitId: 'unit-lb',
+          metric: reading(0.91, 'unit-kg', 'kg'),
+          imperial: reading(2, 'unit-lb', 'lb'),
+        },
+        image: null,
+        item: null,
+      },
+    ]);
+    writeUnitSystemSettings(cache, system, system);
+    const m = updateMock();
+    const { result } = renderHookWithApollo(
+      () =>
+        useQuantityEditModal({
+          items: [createItem({ itemName: 'Beef', unitName: 'lb' })],
+        }),
+      { cache, operationMocks: [m.mock] },
+    );
+    act(() => {
+      result.current.openForItem('item-1');
+    });
+    const readQuantity = () =>
+      cache.readFragment<{ quantity: number }>({
+        id: 'ShoppingListItem:item-1',
+        fragment: QUANTITY,
+      })?.quantity;
+    return { result, m, readQuantity };
+  };
+
+  it('opens a metric reader on 0.91 kg', () => {
+    const { result } = twoPounds(UnitSystem.Metric);
+    expect(result.current.selectedItem).toMatchObject({
+      quantity: 0.91,
+      unitName: 'kg',
+      unitId: 'unit-kg',
+      itemUnits: [expect.objectContaining({ id: 'unit-kg', symbol: 'kg' })],
+    });
+  });
+
+  // Written here, 1 would read "1 lb" until the server answers with the line.
+  it('saves 1 kg as typed and writes nothing ahead of the server', async () => {
+    const { result, m, readQuantity } = twoPounds(UnitSystem.Metric);
+    let ahead: number | undefined;
+    await act(async () => {
+      const pending = result.current.save('1', 'kg', 'unit-kg');
+      ahead = readQuantity();
+      await pending;
+    });
+    expect(ahead).toBe(2);
+    expect(m.fired[0]).toEqual({
+      input: {
+        id: 'item-1',
+        quantity: '1',
+        unit: { id: 'unit-kg' },
+        version: 3,
+      },
+    });
+  });
+
+  it('writes a figure in the line’s own unit at once', async () => {
+    const { result, readQuantity } = twoPounds(UnitSystem.Imperial);
+    expect(result.current.selectedItem?.unitId).toBe('unit-lb');
+    let ahead: number | undefined;
+    await act(async () => {
+      const pending = result.current.save('3', 'lb', 'unit-lb');
+      ahead = readQuantity();
+      await pending;
+    });
+    expect(ahead).toBe(3);
   });
 });

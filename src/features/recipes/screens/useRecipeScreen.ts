@@ -60,7 +60,9 @@ export function useRecipeScreen() {
   const apiUnavailable = useAppStore(isApiUnavailable);
 
   // ── Dietary profile (for filter defaults + discovery tags) ──
-  const { profile: dietaryProfile } = useDietaryProfile();
+  const { profile: dietaryProfile } = useDietaryProfile({
+    fetchPolicy: 'cache-first',
+  });
 
   // The profile's diets: at most one lifestyle diet (the first) plus every
   // constraint diet. Discovery and the search filters' seed share them, so the

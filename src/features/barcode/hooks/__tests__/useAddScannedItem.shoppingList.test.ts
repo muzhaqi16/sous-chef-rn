@@ -32,6 +32,7 @@ const STATED = {
 
 const SCANNED: ScannedItem = {
   id: 'item-oats',
+  conceptIds: [],
   name: 'Oats',
   upc: '0001',
   canEdit: false,
@@ -103,12 +104,12 @@ describe('adding a scanned item to a shopping list', () => {
       },
     );
 
-    let outcome: string | undefined;
+    let added: { outcome: string; rowId: string | null } | undefined;
     await act(async () => {
-      outcome = await result.current.addToShoppingList(SCANNED);
+      added = await result.current.addToShoppingList(SCANNED);
     });
 
-    expect(outcome).toBe('reverted');
+    expect(added).toEqual({ outcome: 'reverted', rowId: null });
     expect(readCounts(cache)).toMatchObject(STATED);
     expect(rowKeys(cache)).toEqual([]);
   });

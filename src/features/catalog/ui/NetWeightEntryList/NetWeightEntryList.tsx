@@ -1,10 +1,9 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { EntryRowRemoveButton } from '#features/catalog/ui/EntryRowRemoveButton';
 import { DropdownStack } from '#components/atoms/DropdownStack';
 import { StyleSheet } from 'react-native-unistyles';
-import { Icon } from '#components/atoms/Icon';
 import { FormInput } from '#components/atoms/FormInput';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { Button } from '#components/molecules/Button';
@@ -88,7 +87,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   };
 
   return (
-    <View style={styles.container}>
+    <View>
       <SectionHeader style={styles.sectionTitleSpacing}>
         {t('netWeightEntry.sectionTitle')}
       </SectionHeader>
@@ -120,14 +119,10 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
                 }
               />
             </View>
-            <AppPressable
+            <EntryRowRemoveButton
               onPress={() => handleRemoveEntry(index)}
-              accessibilityLabel={t('labels.remove')}
               disabled={disabled}
-              style={styles.deleteButton}
-            >
-              <Icon name="trash-outline" size={20} tone="error" />
-            </AppPressable>
+            />
           </View>
         ))}
         {!!canAddEntry && (
@@ -135,6 +130,7 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
             variant="secondary"
             onPress={handleAddEntry}
             disabled={disabled}
+            style={styles.addButton}
           >
             {t('netWeightEntry.addButton')}
           </Button>
@@ -144,8 +140,10 @@ export const NetWeightEntryList: React.FC<NetWeightEntryListProps> = ({
   );
 };
 
+// A row's fields space themselves below; the list adds space only under its
+// "Add" button, which edit modes hide.
 const styles = StyleSheet.create(theme => ({
-  container: {
+  addButton: {
     marginBottom: theme.spacing.md,
   },
   sectionTitleSpacing: {
@@ -158,17 +156,11 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: theme.spacing.sm,
-    marginBottom: theme.spacing.md,
   },
   valueField: {
     flex: 0.35,
   },
   unitField: {
     flex: 0.55,
-  },
-  deleteButton: {
-    flex: 0.1,
-    alignItems: 'center',
-    paddingTop: theme.spacing.xl,
   },
 }));

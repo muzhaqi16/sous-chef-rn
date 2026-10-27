@@ -55,6 +55,7 @@ jest.mock('#hooks/data/useImageUpload', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  useStore.setState({ selectedHomeId: null });
 });
 
 /**
@@ -250,7 +251,47 @@ describe('useSearchResults', () => {
           netWeightKind: 'SERVING',
           brandId: 'brand-pack',
           brandName: 'Pack Brand',
-          trackingUnit: { id: 'unit-can', name: 'can', symbol: 'can' },
+          trackingUnit: {
+            id: 'unit-can',
+            name: 'can',
+            symbol: 'can',
+            type: UnitType.Count,
+          },
+        },
+      ],
+      [
+        "reports the scanned pack's size as read in each unit system",
+        {
+          netWeight: 1360.78,
+          netWeightKind: NetWeightKind.Package,
+          packageSize: {
+            __typename: 'Measure',
+            value: 1360.78,
+            unitId: 'unit-g',
+            metric: {
+              __typename: 'MeasureReading',
+              value: 1.36,
+              unitId: 'unit-kg',
+              symbol: 'kg',
+              displayAsFraction: false,
+              type: UnitType.Weight,
+            },
+            imperial: {
+              __typename: 'MeasureReading',
+              value: 3,
+              unitId: 'unit-lb',
+              symbol: 'lb',
+              displayAsFraction: false,
+              type: UnitType.Weight,
+            },
+          },
+        },
+        {
+          netWeight: 1360.78,
+          packageSize: expect.objectContaining({
+            imperial: expect.objectContaining({ value: 3 }),
+            metric: expect.objectContaining({ value: 1.36 }),
+          }),
         },
       ],
     ])('%s', async (_name, node, expected) => {
@@ -297,10 +338,49 @@ describe('useSearchResults', () => {
       );
 
       await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
-          pantry: 'pantry-7',
-        }),
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({
+            lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
+            pantry: 'pantry-7',
+          }),
+        ),
+      );
+    });
+
+    // The household's alerts ride the lookup, so the scan asks once.
+    it('asks for the household the alerts are read for', async () => {
+      useStore.setState({ selectedHomeId: 'home-1' });
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [upc.mock],
+      });
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({
+            homeId: 'home-1',
+            withHome: true,
+            withPrices: false,
+          }),
+        ),
+      );
+    });
+
+    // Store mode's price lines ride it too, and nowhere else are they read.
+    it('asks for what the household paid in store mode', async () => {
+      useStore.setState({ selectedHomeId: 'home-1' });
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        { operationMocks: [upc.mock] },
+      );
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({ homeId: 'home-1', withPrices: true }),
+        ),
       );
     });
 

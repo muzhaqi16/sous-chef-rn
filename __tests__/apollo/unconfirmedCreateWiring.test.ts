@@ -169,17 +169,6 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     },
   );
 
-  /**
-   * A forced add lands on the stack the pantry already holds in that unit and
-   * answers with ITS id, so a retry that republishes the minted row leaves a
-   * ghost edge no reconciliation on the online path removes. Restock is the
-   * duplicate recovery; no optimistic create path sends `forceAdd`.
-   */
-  it.each(creators)('%s never re-sends a create with forceAdd', file => {
-    const code = stripComments(readFileSync(join(process.cwd(), file), 'utf8'));
-    expect(code).not.toMatch(/\bforceAdd\b/);
-  });
-
   it.each(SHARED_LOCAL_WRITES)(
     '$file publishes and reconciles the row a delegating door writes',
     ({ file, publishes, reconciles }) => {

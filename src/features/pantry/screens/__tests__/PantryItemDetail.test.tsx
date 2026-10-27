@@ -1,11 +1,16 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
-import type { MockDataFor } from '#/test-utils/apolloMockProvider';
+import type {
+  MockDataFor,
+  QueryDataFor,
+} from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
@@ -14,7 +19,11 @@ import {
   EntryImageSource,
   ExternalSource,
   ItemImageStatus,
+  UnitSystem,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
 import {
   pantryItemData,
@@ -24,6 +33,11 @@ import {
 type ItemPhotoFixture = NonNullable<PantryItemFixture['photos']>[number];
 import { PantryItemDetail } from '../PantryItemDetail';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
+
+// The cost rows' own on/off cases live in PantryDetailInfo's suite.
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 // Recipe-suggestions hook is its own concern (covered by
 // useRecipeSuggestionsForItem.test). Mock it so this integration test
@@ -61,12 +75,14 @@ jest.mock('#features/pantry/hooks/usePantryItemDetailActions', () => ({
 }));
 
 const mockToRecipeDetail = jest.fn();
+const mockReplaceWithPantryItemDetail = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({
     goBack: jest.fn(),
     navigateTo: { pantryItem: jest.fn(), nutritionScreen: jest.fn() },
     navigate: jest.fn(),
     toRecipeDetail: mockToRecipeDetail,
+    replaceWithPantryItemDetail: mockReplaceWithPantryItemDetail,
   }),
 }));
 
@@ -672,6 +688,71 @@ describe('PantryItemDetail (integration)', () => {
     expect(screen.getByText('Per 100 ml')).toBeTruthy();
   });
 
+  // USM-3: a stack merged into another answers as the survivor, which takes
+  // this screen's place.
+  it('shows the survivor in place of a stack merged into it', async () => {
+    renderWithApollo(
+      <PantryItemDetail route={{ params: { itemId: 'pi-merged' } }} />,
+      { operationMocks: [itemMock(fullItem)] },
+    );
+
+    await waitFor(() =>
+      expect(mockReplaceWithPantryItemDetail).toHaveBeenCalledWith({
+        itemId: 'pi1',
+      }),
+    );
+  });
+
+  it('stays put when the answer is the stack it asked for', async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+
+    await screen.findAllByText('Milk');
+    expect(mockReplaceWithPantryItemDetail).not.toHaveBeenCalled();
+  });
+
+  // A product whose record states none reads its concept's values: titled as
+  // typical, and making no health claim for the product.
+  it("titles a concept's values as typical, with no highlights", async () => {
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [
+        itemMock({
+          ...fullItem,
+          nutritionFacts: {
+            __typename: 'NutritionFacts',
+            id: 'nf-concept',
+            calories: 334,
+            totalFat: 1.1,
+            saturatedFat: null,
+            transFat: null,
+            cholesterol: null,
+            sodium: null,
+            totalCarbs: 70,
+            dietaryFiber: null,
+            totalSugars: null,
+            addedSugars: null,
+            protein: 10.3,
+            vitaminD: null,
+            calcium: null,
+            iron: null,
+            potassium: null,
+            servingSize: 100,
+            servingUnit: 'g',
+          },
+          typicalOf: 'flour',
+        }),
+      ],
+    });
+    expect(
+      await screen.findByText(t('labels.typicalFor', { concept: 'flour' })),
+    ).toBeTruthy();
+    expect(screen.getByText('334')).toBeTruthy();
+    expect(screen.queryByText('Nutrition')).toBeNull();
+    expect(screen.queryByText(t('recipes.healthGoal.HIGH_PROTEIN'))).toBeNull();
+    expect(screen.queryByText(t('nutritionHighlights.lowFat'))).toBeNull();
+  });
+
   it('hides nutrition section when item has no nutrition data', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
@@ -690,5 +771,188 @@ describe('PantryItemDetail (integration)', () => {
       ],
     });
     await screen.findAllByText('Milk');
+  });
+
+  // The weights read in the user's unit system by the API's own readings,
+  // whatever unit the stack stores them in.
+  describe('weights in the user\u2019s unit system', () => {
+    type PackageSizeData = NonNullable<
+      NonNullable<
+        QueryDataFor<typeof GetPantryItemDocument>['pantryItem']
+      >['packageSize']
+    >;
+    interface ReadingUnit {
+      id: string;
+      symbol: string;
+      type: UnitType;
+    }
+
+    const unit = (
+      id: string,
+      symbol: string,
+      type = UnitType.Weight,
+    ): ReadingUnit => ({ id, symbol, type });
+    const read = ([value, { id, symbol, type }]: [
+      number,
+      ReadingUnit,
+    ]): PackageSizeData['metric'] => ({
+      __typename: 'MeasureReading',
+      value,
+      unitId: id,
+      symbol,
+      displayAsFraction: false,
+      type,
+    });
+    const g = unit('unit-g', 'g');
+    const oz = unit('unit-oz', 'oz');
+    const kg = unit('unit-kg', 'kg');
+    const lb = unit('unit-lb', 'lb');
+
+    const measure = (
+      value: number,
+      stored: ReadingUnit,
+      metric: [number, ReadingUnit],
+      imperial: [number, ReadingUnit],
+    ): PackageSizeData => ({
+      __typename: 'Measure',
+      value,
+      unitId: stored.id,
+      metric: read(metric),
+      imperial: read(imperial),
+    });
+
+    /** A stack whose package size is stored as `value` `stored`. */
+    const weighed = (
+      value: number,
+      stored: ReadingUnit,
+      remaining?: number,
+    ) => {
+      const data = pantryItemData(fullItem);
+      const item = data.pantryItem;
+      if (!item) throw new Error('fixture has no item');
+      item.netWeight = value;
+      item.netWeightUnit = {
+        __typename: 'Unit',
+        id: stored.id,
+        name: stored.symbol,
+        symbol: stored.symbol,
+      };
+      item.packageSize = measure(value, stored, [1.36, kg], [3, lb]);
+      if (remaining !== undefined) {
+        item.remainingNetWeight = remaining;
+        item.remaining = measure(remaining, stored, [940, g], [2.07, lb]);
+      }
+      return recordMock(GetPantryItemDocument, { data }).mock;
+    };
+
+    const settings = (preferredUnitSystem: UnitSystem) =>
+      recordMock(GetUserSettingsDocument, {
+        data: {
+          me: {
+            __typename: 'User',
+            id: 'user-1',
+            settings: {
+              __typename: 'UserSettings',
+              id: 'settings-1',
+              preferredUnitSystem,
+              deviceUnitSystem: UnitSystem.Imperial,
+            },
+          },
+        },
+      }).mock;
+
+    it.each([
+      ['grams', 1360.78, g],
+      ['ounces', 48, oz],
+    ])(
+      'reads a package size stored in %s as pounds on an imperial device',
+      async (_label, value, stored) => {
+        renderWithApollo(<PantryItemDetail route={route} />, {
+          operationMocks: [weighed(value, stored), settings(UnitSystem.System)],
+        });
+        expect(await screen.findByText('3 lb')).toBeTruthy();
+      },
+    );
+
+    it('reads it in kilograms for a metric user', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [weighed(1360.78, g), settings(UnitSystem.Metric)],
+      });
+      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+    });
+
+    it('follows a change of setting at once, with no request for it', async () => {
+      const cache = makeCache();
+      writeUnitSystemSettings(cache, UnitSystem.Imperial, UnitSystem.Imperial);
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        cache,
+        operationMocks: [weighed(1360.78, g)],
+      });
+      expect(await screen.findByText('3 lb')).toBeTruthy();
+
+      act(() => {
+        cache.modify({
+          id: 'UserSettings:settings-1',
+          fields: { preferredUnitSystem: () => UnitSystem.Metric },
+        });
+      });
+
+      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+    });
+
+    it('reads what remains in the same system', async () => {
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [weighed(1360.78, g, 940), settings(UnitSystem.System)],
+      });
+      expect(await screen.findByText('2.07 lb')).toBeTruthy();
+    });
+
+    it('reads what it holds as the row does, not in stored grams', async () => {
+      const data = pantryItemData({
+        ...fullItem,
+        quantity: 907.18,
+        heldQuantity: 907.18,
+        unitSymbol: 'g',
+        unitName: 'gram',
+      });
+      const item = data.pantryItem;
+      if (!item) throw new Error('fixture has no item');
+      item.held = measure(907.18, g, [907.18, g], [2, lb]);
+      item.held.unitId = item.unit.id;
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          recordMock(GetPantryItemDocument, { data }).mock,
+          settings(UnitSystem.Imperial),
+        ],
+      });
+      expect((await screen.findAllByText('2 lb')).length).toBeGreaterThan(0);
+      expect(screen.queryByText('907.18 g')).toBeNull();
+    });
+
+    // A "6.35 oz (180 g)" can: the API reads each system in the label's own
+    // figure, and the screen shows it as read, never a rounded 6.3 oz.
+    it.each([
+      [UnitSystem.Imperial, '6.35 oz'],
+      [UnitSystem.Metric, '180 g'],
+    ])('reads a declared can in %s as its label does', async (system, text) => {
+      const data = pantryItemData(fullItem);
+      const item = data.pantryItem;
+      if (!item) throw new Error('fixture has no item');
+      item.netWeight = 180;
+      item.netWeightUnit = {
+        __typename: 'Unit',
+        id: g.id,
+        name: g.symbol,
+        symbol: g.symbol,
+      };
+      item.packageSize = measure(180, g, [180, g], [6.35, oz]);
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        operationMocks: [
+          recordMock(GetPantryItemDocument, { data }).mock,
+          settings(system),
+        ],
+      });
+      expect(await screen.findByText(text)).toBeTruthy();
+    });
   });
 });

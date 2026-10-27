@@ -58,16 +58,17 @@ const getLatestPanGesture = () => {
 // Helper component that triggers a toast once on mount
 const ToastTrigger: React.FC<{
   message: string;
+  detail?: string;
   type?: ToastType;
   action?: { label: string; onPress: () => void };
-}> = ({ message, type, action }) => {
+}> = ({ message, detail, type, action }) => {
   const triggered = useRef(false);
   useEffect(() => {
     if (!triggered.current) {
       triggered.current = true;
-      dispatchToast({ message, type, action });
+      dispatchToast({ message, detail, type, action });
     }
-  }, [message, type, action]);
+  }, [message, detail, type, action]);
   return <Text>Trigger</Text>;
 };
 
@@ -182,6 +183,64 @@ describe('ToastProvider', () => {
       </ToastProvider>,
     );
     expect(screen.getByText('Retry')).toBeTruthy();
+  });
+
+  describe('detail', () => {
+    it('renders the detail under the message, in the smaller role', () => {
+      render(
+        <ToastProvider>
+          <ToastTrigger
+            message="Can't reach the server"
+            detail="Changes will sync when it's back"
+            type="warning"
+          />
+        </ToastProvider>,
+      );
+
+      const message = screen.getByTestId('toast-message');
+      const detail = screen.getByTestId('toast-detail');
+      expect(message).toHaveTextContent("Can't reach the server");
+      expect(detail).toHaveTextContent("Changes will sync when it's back");
+      const texts = screen.UNSAFE_getAllByType(Text);
+      const [title, body] = ['toast-message', 'toast-detail'].map(id =>
+        texts.find(text => text.props.testID === id),
+      );
+      expect(title?.props.role).toBe('bodyStrong');
+      expect(body?.props.role).toBe('caption');
+      // One column, message first: the detail sits under it, left-aligned.
+      expect(body?.parent).toBe(title?.parent);
+      expect(texts.indexOf(title!)).toBeLessThan(texts.indexOf(body!));
+    });
+
+    it('labels the card with the message and the detail', () => {
+      render(
+        <ToastProvider>
+          <ToastTrigger
+            message="You're offline"
+            detail="2 changes will sync when you're back online"
+            type="warning"
+          />
+        </ToastProvider>,
+      );
+
+      expect(screen.getByTestId('toast-warning').props.accessibilityLabel).toBe(
+        "You're offline, 2 changes will sync when you're back online",
+      );
+    });
+
+    it('leaves a toast without one as it was', () => {
+      render(
+        <ToastProvider>
+          <ToastTrigger message="Saved" type="success" />
+        </ToastProvider>,
+      );
+
+      expect(screen.queryByTestId('toast-detail')).toBeNull();
+      expect(screen.getByTestId('toast-message')).toHaveTextContent('Saved');
+      expect(screen.getByTestId('toast-success').props.accessibilityLabel).toBe(
+        'Saved',
+      );
+    });
   });
 
   describe('swipe-to-dismiss gesture', () => {
@@ -590,6 +649,39 @@ describe('ToastProvider', () => {
           </ToastProvider>,
         );
         expect(announce).toHaveBeenCalledWith('Back online');
+      } finally {
+        Object.defineProperty(Platform, 'OS', {
+          value: platform,
+          configurable: true,
+        });
+        announce.mockRestore();
+      }
+    });
+
+    it('announces the detail with the message on iOS', () => {
+      const announce = jest
+        .spyOn(AccessibilityInfo, 'announceForAccessibility')
+        .mockImplementation(() => {});
+      const platform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', {
+        value: 'ios',
+        configurable: true,
+      });
+
+      try {
+        render(
+          <ToastProvider>
+            <ToastTrigger
+              message="You're offline"
+              detail="Changes will sync when you're back online"
+              type="warning"
+            />
+          </ToastProvider>,
+        );
+        expect(announce).toHaveBeenCalledWith(
+          "You're offline, Changes will sync when you're back online",
+        );
+        expect(announce).not.toHaveBeenCalledWith("You're offline");
       } finally {
         Object.defineProperty(Platform, 'OS', {
           value: platform,

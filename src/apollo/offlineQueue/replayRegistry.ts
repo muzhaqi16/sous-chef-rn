@@ -6,16 +6,22 @@
 import { byOperation } from '#/apollo/utils/documentOperation';
 import { reconcileCreateHomeReplay } from '#features/home/offline/replayReconcilers';
 import {
+  reconcileConvertExpiredReplay,
   reconcileCreatePantryItemReplay,
   reconcileMoveToPantryReplay,
+  reconcilePantryUsageReplay,
+  reconcileRestockReplay,
   settlePantryDelete,
   settlePantryItemDelete,
 } from '#features/pantry/offline/replayReconcilers';
 import {
   AdjustPantryItemQuantityDocument,
+  ConvertExpiredToWasteDocument,
   CreatePantryItemDocument,
+  CreatePantryItemUsageDocument,
   DeletePantryDocument,
   DeletePantryItemDocument,
+  RestockPantryItemDocument,
   UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
@@ -25,10 +31,12 @@ import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { reconcileSettingsReplay } from '#/apollo/utils/unitSystemAnswers';
 import {
   reconcileShoppingAddReplay,
+  reconcileShoppingCreateReplay,
   settleShoppingItemDelete,
 } from '#features/shoppingList/offline/replayReconcilers';
 import {
   AddItemToShoppingListDocument,
+  CreateShoppingListDocument,
   MoveShoppingItemToPantryDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -83,10 +91,15 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [DeleteMealTemplateDocument, settleMealTemplateDelete],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
+  // A delta against a stack merged since lands on the survivor (USM-3).
+  [CreatePantryItemUsageDocument, reconcilePantryUsageReplay],
+  [RestockPantryItemDocument, reconcileRestockReplay],
+  [ConvertExpiredToWasteDocument, reconcileConvertExpiredReplay],
   [CreateReceiptCheckInDocument, reconcileReceiptCheckInReplay],
   [DeletePantryItemDocument, settlePantryItemDelete],
   [DeletePantryDocument, settlePantryDelete],
   ...forEachBatchAdd(reconcileShoppingAddReplay),
+  [CreateShoppingListDocument, reconcileShoppingCreateReplay],
   [RemoveItemFromShoppingListDocument, settleShoppingItemDelete],
   [UpdateUserPreferencesDocument, reconcileSettingsReplay],
 ]);

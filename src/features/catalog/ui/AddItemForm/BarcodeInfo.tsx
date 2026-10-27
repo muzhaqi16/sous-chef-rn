@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { detectScanType } from './fields';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 interface BarcodeInfoProps {
   scannedValue?: string;
@@ -13,8 +14,8 @@ interface BarcodeInfoProps {
 }
 
 /**
- * Read-only banner showing the scanned UPC/SKU (and optional format) that
- * seeded {@link AddItemForm}. Renders nothing when neither value is present.
+ * Read-only line showing the scanned UPC/SKU that seeded {@link AddItemForm},
+ * its format trailing quietly. Renders nothing when neither value is present.
  */
 export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
   scannedValue,
@@ -36,14 +37,14 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
         {shownValue}
       </Text>
       {!!format && (
-        <>
-          <Text role="label" tone="secondary" style={styles.formatLabel}>
-            {t('barcodeInfo.format')}
-          </Text>
-          <Text role="label" tone="onSurfaceVariant">
-            {format.toUpperCase()}
-          </Text>
-        </>
+        <Text
+          role="caption"
+          tone="secondary"
+          style={styles.format}
+          testID={catalogTestIDs.barcodeInfoFormat}
+        >
+          {format.toUpperCase()}
+        </Text>
       )}
     </View>
   );
@@ -51,22 +52,25 @@ export const BarcodeInfo: React.FC<BarcodeInfoProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   barcodeInfo: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    columnGap: theme.spacing.sm,
     backgroundColor: theme.colors.background,
-    padding: theme.spacing.md,
+    paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.smPlus,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
   },
   barcodeLabel: {
     textTransform: 'uppercase',
-    marginBottom: theme.spacing.xs,
   },
   barcodeValue: {
     fontFamily: 'monospace',
-    marginBottom: theme.spacing.sm,
   },
-  formatLabel: {
-    textTransform: 'uppercase',
-    marginBottom: theme.spacing.xs,
+  // Right-aligned on the line; it wraps under the value only when space runs out.
+  format: {
+    marginLeft: 'auto',
   },
 }));

@@ -1,5 +1,9 @@
 import { useRef } from 'react';
 import { useUser } from '#store/useAppStore';
+import {
+  heldFetchPolicy,
+  type StandDownOptions,
+} from '#/hooks/apollo/standDownOptions';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   skipToken,
@@ -37,9 +41,10 @@ export interface DietaryRestriction {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   healthGoal?: HealthGoal | null;
+  /** The avoided catalog item, as the root the server stored. */
+  item?: { id: string; name: string } | null;
   severity: RestrictionSeverity;
   notes?: string | null;
-  appliesToHomeId?: string | null;
 }
 
 export interface DietaryProfileData {
@@ -82,15 +87,19 @@ const DIETARY_PROFILE_DEFAULTS: DietaryProfileValues = {
  * Every write resolves to `true` once it landed or is queued and `false` when
  * it failed. A failure is alerted here, except a removal: its screen names it.
  */
-export const useDietaryProfile = () => {
+export const useDietaryProfile = ({
+  fetchPolicy,
+}: Pick<StandDownOptions, 'fetchPolicy'> = {}) => {
   const { t } = useTranslation();
   const user = useUser();
 
-  // The cache-and-network → cache-first pair
-  // means first mount fires once, subsequent mounts read cache only.
+  // Each mount of the default asks the network once; a screen that only reads
+  // the profile passes `cache-first`, which the profile's writes keep current.
   const { data, loading } = useQuery(
     GetDietaryProfileDocument,
-    user?.id ? { errorPolicy: 'ignore' } : skipToken,
+    user?.id
+      ? { errorPolicy: 'ignore', ...heldFetchPolicy(fetchPolicy) }
+      : skipToken,
   );
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
@@ -177,9 +186,9 @@ export const useDietaryProfile = () => {
         diet: r.diet,
         intolerance: r.intolerance,
         healthGoal: r.healthGoal,
+        item: r.item,
         severity: r.severity,
         notes: r.notes,
-        appliesToHomeId: r.appliesToHomeId,
       })),
       preferredCuisines: profile.preferredCuisines,
       dislikedIngredients: profile.dislikedIngredients,
@@ -255,14 +264,13 @@ export const useDietaryProfile = () => {
     restriction: RestrictionKindInput,
     severity: RestrictionSeverity,
     notes?: string,
-    appliesToHomeId?: string,
   ) => {
     if (!(await ensureProfileExists())) return false;
     const settled = await settleMutation(
       () =>
         addRestriction({
           variables: {
-            input: { kind: restriction, severity, notes, appliesToHomeId },
+            input: { kind: restriction, severity, notes },
           },
         }),
       {

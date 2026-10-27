@@ -4,6 +4,7 @@
  * without them. A whole feature is switched by `appConfig.features` instead.
  */
 export type FeatureFlag =
+  | 'budgetAndPrices'
   | 'deviceReceiptModel'
   | 'deviceReceiptReading'
   | 'ingredientPaste'
@@ -20,6 +21,9 @@ export type FeatureFlag =
  * flag the server owns is on only where the server also says so for the user.
  */
 const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
+  // A list's budget, estimates and prices, which a user turns on in Settings;
+  // off, the shopping list is a plain list with no money on it.
+  budgetAndPrices: true,
   // The phone's own model reads a receipt beside the rules; off, rules alone.
   deviceReceiptModel: false,
   // A receipt read on the phone by `@muzhaqi16/receipt-rules` first, kept when it

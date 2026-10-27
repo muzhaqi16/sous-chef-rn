@@ -108,7 +108,7 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     ],
   },
   [CollaboratorRole.Owner]: {
-    labelKey: 'collaboratorRoles.owner',
+    labelKey: 'labels.owner',
     descriptionKey: 'collaboratorRoles.descriptions.owner',
     icon: 'star',
     permissions: [

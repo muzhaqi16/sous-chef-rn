@@ -9,6 +9,26 @@ fragment SortableItem_item on ShoppingListItem {
     id
     symbol
   }
+  # quantity read in each unit system: the row shows a weight or volume in the
+  # user's while it is still the figure quantity holds.
+  amount {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   purchaseInfo {
     isPurchased
     # Set once this line's purchase reached the pantry. Read to render a
@@ -28,7 +48,7 @@ fragment SortableItem_item on ShoppingListItem {
       decimalPlaces
     }
   }
-  # The photo this entry shows: the household's choice, else the catalog's.
+  # The photo this entry shows: the household's choice, the catalog's, else the viewer's pending one.
   image {
     url
     source

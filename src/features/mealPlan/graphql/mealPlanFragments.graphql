@@ -1,6 +1,6 @@
 # Canonical shape for a MealPlan list-card.
 # Spread by: mealPlan.graphql (GetMealPlans, MealPlanForEvent, CreateMealPlan,
-#   UpdateMealPlan — 4 operations)
+#   UpdateMealPlan) and useMealPlan.graphql (CurrentMealPlan) — 5 operations
 # Read via useFragment by: useMealPlans.ts
 # Kept shared — all 5 consumers need the identical list-card shape.
 fragment MealPlanDisplay on MealPlan {

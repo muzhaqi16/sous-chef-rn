@@ -113,7 +113,7 @@ export const StorageLocationCard: React.FC<StorageLocationCardProps> = ({
                   <View style={styles.badges}>
                     {!!isDefault && (
                       <Badge variant="primary">
-                        {t('storageLocationCard.default')}
+                        {t('labels.defaultBadge')}
                       </Badge>
                     )}
                     {!!temperatureLabelKey && (

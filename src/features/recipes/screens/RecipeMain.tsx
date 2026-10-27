@@ -23,7 +23,7 @@ import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle'
 import { useCommitTracking } from '#hooks/performance/useCommitTracking';
 import { DeferredScreen } from '#components/performance/DeferredScreen';
 import { RecipeSkeleton } from '#features/recipes/components/skeletons/RecipeSkeleton';
-import { RecipeItemSkeleton } from '#features/recipes/components/skeletons/RecipeItemSkeleton';
+import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
@@ -412,7 +412,7 @@ const RecipeMainInner: React.FC = () => {
                 screen.searchLoadingMore || screen.pantryLoadingMore
               }
               itemCount={screen.items.length}
-              SkeletonComponent={RecipeItemSkeleton}
+              SkeletonComponent={ItemCardSkeleton}
               skeletonCount={2}
             />
           }

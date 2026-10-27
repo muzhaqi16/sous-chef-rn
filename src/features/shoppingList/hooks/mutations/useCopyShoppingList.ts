@@ -1,7 +1,8 @@
 /**
- * Applies what a copy derive produced: one local-first create, then batch
- * adds carrying a client-minted id per line. Both are queued, so a copy made
- * offline shows immediately and replays parent-before-children.
+ * Applies what a copy derive produced: one local-first create carrying the
+ * first 50 lines, then batch adds for the rest, each line under a client-minted
+ * id. All are queued, so a copy made offline shows immediately and replays
+ * parent-before-children.
  */
 
 import type { ApolloCache } from '@apollo/client';
@@ -46,26 +47,29 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       }),
     };
 
-    const created = await createShoppingList(input);
+    // One batch: watchers re-read once for the whole copy, not once per line.
+    const write = (listId: string) =>
+      client.cache.batch({
+        update: cache => {
+          for (const line of derived.items) {
+            writeLineToCache(cache, listId, line.id, derived);
+          }
+        },
+      });
+    const created = await createShoppingList(input, {
+      items: derived.items,
+      write,
+    });
     if (created.status === 'failed') {
       toastService.error(created.body);
       return null;
     }
     const listId = created.shoppingList.id;
 
-    // One batch: watchers re-read once for the whole copy, not once per line.
-    client.cache.batch({
-      update: cache => {
-        for (const line of derived.items) {
-          writeLineToCache(cache, listId, line.id, derived);
-        }
-      },
-    });
-
     const failure = await addItemsInSlices(
       client.cache,
       listId,
-      derived.items,
+      created.unsent,
       slice =>
         addItems({
           variables: { input: { shoppingListId: listId, items: slice } },

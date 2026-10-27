@@ -128,6 +128,8 @@ export function useAppNavigation() {
       navigation.navigate('HomeManagement', params ?? {}),
     toHomeDetail: (params: RootStackParamList['HomeDetail']) =>
       navigation.navigate('HomeDetail', params),
+    toHomeDietaryNeeds: (params: RootStackParamList['HomeDietaryNeeds']) =>
+      navigation.navigate('HomeDietaryNeeds', params),
     toStorageLocations: (params: RootStackParamList['StorageLocations']) =>
       navigation.navigate('StorageLocations', params),
     toImageCrop: (params: RootStackParamList['ImageCrop']) =>
@@ -140,6 +142,9 @@ export function useAppNavigation() {
     toAppSettings: () => navigation.navigate('AppSettings'),
     toDataSources: () => navigation.navigate('DataSources'),
     toMyReports: () => navigation.navigate('MyReports'),
+    toBrandLists: () => navigation.navigate('BrandLists'),
+    toBrandList: (params: RootStackParamList['BrandList']) =>
+      navigation.navigate('BrandList', params),
     toPerformanceDashboard: () => navigation.navigate('PerformanceDashboard'),
     toDebugInfo: () => navigation.navigate('DebugInfo'),
     toReceiptScan: () =>
@@ -155,6 +160,10 @@ export function useAppNavigation() {
       navigation.navigate('PantryItem', params),
     toPantryItemDetail: (params: RootStackParamList['PantryItemDetail']) =>
       navigation.navigate('PantryItemDetail', params),
+    /** A detail whose stack was merged away shows the survivor in its place. */
+    replaceWithPantryItemDetail: (
+      params: RootStackParamList['PantryItemDetail'],
+    ) => navigation.dispatch(replaceAction('PantryItemDetail', params)),
     toNutritionScreen: (params: RootStackParamList['NutritionScreen']) =>
       navigation.navigate('NutritionScreen', params),
     toPantryAnalytics: (params: RootStackParamList['PantryAnalytics']) =>
@@ -176,6 +185,8 @@ export function useAppNavigation() {
       navigation.navigate('ItemDetail', params),
     toListSettings: (params?: RootStackParamList['ListSettings']) =>
       navigation.navigate('ListSettings', params),
+    toListBudget: (params: RootStackParamList['ListBudget']) =>
+      navigation.navigate('ListBudget', params),
     toShareList: (params: RootStackParamList['ShareList']) =>
       navigation.navigate('ShareList', params),
     toPurchaseHistory: (params: RootStackParamList['PurchaseHistory']) =>

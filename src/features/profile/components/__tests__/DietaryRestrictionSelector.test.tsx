@@ -1,10 +1,30 @@
 'use no memo';
 import React from 'react';
+import { t } from '#/i18n';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { Diet, Intolerance, HealthGoal } from '#/graphql/generated/schemaTypes';
+import {
+  Diet,
+  Intolerance,
+  HealthGoal,
+  RestrictionSeverity,
+} from '#/graphql/generated/schemaTypes';
 import type { RestrictionSectionProps } from '#features/profile/components/RestrictionSection/RestrictionSection';
 import type { MultiSelectChipSheetProps } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
+
+const mockAvoidPick: {
+  pick?: (itemId: string, severity: string) => Promise<boolean>;
+} = {};
+jest.mock('#features/profile/components/AvoidFoodSheet', () => ({
+  AvoidFoodSheet: ({
+    onPick,
+  }: {
+    onPick: (itemId: string, severity: string) => Promise<boolean>;
+  }) => {
+    mockAvoidPick.pick = onPick;
+    return null;
+  },
+}));
 
 jest.mock(
   '#features/profile/components/RestrictionSection/RestrictionSection',
@@ -101,12 +121,14 @@ describe('DietaryRestrictionSelector', () => {
         diet: Diet.Vegan,
         intolerance: null,
         healthGoal: null,
+        severity: RestrictionSeverity.Preference,
       },
       {
         id: 'r2',
         diet: Diet.GlutenFree,
         intolerance: null,
         healthGoal: null,
+        severity: RestrictionSeverity.Preference,
       },
     ];
     render(
@@ -127,6 +149,7 @@ describe('DietaryRestrictionSelector', () => {
         diet: null,
         intolerance: Intolerance.Dairy,
         healthGoal: null,
+        severity: RestrictionSeverity.Preference,
       },
     ];
     render(
@@ -145,6 +168,7 @@ describe('DietaryRestrictionSelector', () => {
         diet: null,
         intolerance: null,
         healthGoal: HealthGoal.LowCarb,
+        severity: RestrictionSeverity.Preference,
       },
     ];
     render(
@@ -171,6 +195,7 @@ describe('DietaryRestrictionSelector', () => {
         diet: Diet.Vegetarian,
         intolerance: null,
         healthGoal: null,
+        severity: RestrictionSeverity.Preference,
       },
     ];
     render(
@@ -190,6 +215,7 @@ describe('DietaryRestrictionSelector', () => {
         diet: Diet.Vegetarian,
         intolerance: null,
         healthGoal: null,
+        severity: RestrictionSeverity.Preference,
       },
     ];
     render(
@@ -200,5 +226,43 @@ describe('DietaryRestrictionSelector', () => {
     );
     await user.press(screen.getByTestId('remove-r1'));
     expect(defaultProps.onRemove).toHaveBeenCalledWith('r1');
+  });
+
+  it('lists avoided foods by name, saying how strict a stricter one is', () => {
+    render(
+      <DietaryRestrictionSelector
+        {...defaultProps}
+        existingRestrictions={[
+          {
+            id: 'r-bacon',
+            item: { id: 'bacon', name: 'Bacon' },
+            severity: RestrictionSeverity.Preference,
+          },
+          {
+            id: 'r-shrimp',
+            item: { id: 'shrimp', name: 'Shrimp' },
+            severity: RestrictionSeverity.Allergy,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByText('Bacon')).toBeTruthy();
+    expect(
+      screen.getByText(t('dietaryProfile.avoidAllergy', { name: 'Shrimp' })),
+    ).toBeTruthy();
+  });
+
+  it('adds a picked food as an avoided item at the chosen severity', async () => {
+    const onAdd = jest.fn().mockResolvedValue(true);
+    render(<DietaryRestrictionSelector {...defaultProps} onAdd={onAdd} />);
+
+    await expect(
+      mockAvoidPick.pick?.('bacon', RestrictionSeverity.Allergy),
+    ).resolves.toBe(true);
+    expect(onAdd).toHaveBeenCalledWith(
+      [{ item: 'bacon' }],
+      RestrictionSeverity.Allergy,
+    );
   });
 });

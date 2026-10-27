@@ -249,7 +249,7 @@ const ROLE_LABEL: Record<CollaboratorRole, TranslationKey> = {
   [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
   [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
   [CollaboratorRole.Admin]: 'labels.admin',
-  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
+  [CollaboratorRole.Owner]: 'labels.owner',
 };
 
 /**

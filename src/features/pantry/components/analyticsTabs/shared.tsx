@@ -51,7 +51,7 @@ const PURPOSE_LABEL_KEYS: Record<UsagePurpose, TranslationKey> = {
   [UsagePurpose.MealPrep]: 'labels.mealPrep',
   [UsagePurpose.Restock]: 'pantryAnalytics.purposeRestock',
   [UsagePurpose.Snack]: 'usagePurpose.SNACK',
-  [UsagePurpose.Transfer]: 'pantryAnalytics.purposeTransfer',
+  [UsagePurpose.Transfer]: 'usagePurpose.TRANSFER',
   [UsagePurpose.Waste]: 'pantryAnalytics.purposeWaste',
 };
 
@@ -59,7 +59,7 @@ const SOURCE_LABEL_KEYS: Record<UsageSource, TranslationKey> = {
   [UsageSource.Manual]: 'pantryAnalytics.sourceManual',
   [UsageSource.RecipeAuto]: 'pantryAnalytics.sourceRecipeAuto',
   [UsageSource.RecipeManual]: 'pantryAnalytics.sourceRecipeManual',
-  [UsageSource.Transfer]: 'pantryAnalytics.purposeTransfer',
+  [UsageSource.Transfer]: 'usagePurpose.TRANSFER',
   [UsageSource.Waste]: 'pantryAnalytics.purposeWaste',
 };
 

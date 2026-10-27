@@ -77,6 +77,7 @@ export const AppSettingsScreen: React.FC = () => {
     resetPreferences: resetUserPreferences,
   } = useUserPreferences();
   const storeModeOffered = useFeatureFlag('storeMode');
+  const budgetAndPricesOffered = useFeatureFlag('budgetAndPrices');
 
   const { consent: receiptPhotoConsent, setConsent: setReceiptPhotoConsent } =
     useReceiptPhotoConsent();
@@ -298,6 +299,17 @@ export const AppSettingsScreen: React.FC = () => {
             description={t('settings.storeModeDesc')}
             value={userPrefs.storeMode ?? false}
             onValueChange={value => updatePreference({ storeMode: value })}
+          />
+        ) : null}
+        {budgetAndPricesOffered ? (
+          <SettingSwitch
+            testID={profileTestIDs.settingsBudgetAndPricesSwitch}
+            title={t('labels.budgetAndPrices')}
+            description={t('settings.budgetAndPricesDesc')}
+            value={userPrefs.budgetAndPrices ?? false}
+            onValueChange={value =>
+              updatePreference({ budgetAndPrices: value })
+            }
           />
         ) : null}
         <SettingSwitch

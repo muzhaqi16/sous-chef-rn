@@ -12,7 +12,6 @@ import { useSetDefaultShoppingList } from '#features/shoppingList/hooks/mutation
 import { useRecurringShoppingList } from '#features/shoppingList/hooks/mutations/useRecurringShoppingList';
 import { useShoppingListTemplate } from '#features/shoppingList/hooks/mutations/useShoppingListTemplate';
 import { useShoppingListReminder } from '#features/shoppingList/hooks/mutations/useShoppingListReminder';
-import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
 import { ListStatus, RecurringPattern } from '#/graphql/generated/schemaTypes';
@@ -23,55 +22,34 @@ import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import {
-  isShoppingListOwner,
+  listOwnershipOf,
   getShoppingListRole,
   formatRoleDisplay,
   getShoppingListOwnerInfo,
 } from '#features/shoppingList/utils/ownershipHelpers';
 
-import { formatNumberForInput } from '#/utils/formatters/number';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { dayAsInstant } from '#/utils/dateUtils';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
-
-/** Whose list this is, with "not yet known" kept distinct from "not yours". */
-export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
-
-interface StoreChoice {
-  id: string;
-  name: string;
-}
 
 function syncListFormState(
   shoppingList:
     | {
         name: string;
         isDefault: boolean;
-        budgetAmount?: number | null;
-        targetStore: StoreChoice | null;
       }
     | null
     | undefined,
   listId: string | undefined,
   setName: (v: string) => void,
   setIsDefault: (v: boolean) => void,
-  setBudgetInput: (v: string) => void,
-  setStoreInput: (v: string) => void,
-  setPickedStore: (store: StoreChoice | null) => void,
 ) {
   if (shoppingList && listId) {
     setName(shoppingList.name);
     setIsDefault(shoppingList.isDefault);
-    setBudgetInput(formatNumberForInput(shoppingList.budgetAmount));
-    setStoreInput(shoppingList.targetStore?.name ?? '');
-    setPickedStore(shoppingList.targetStore);
   } else if (listId) {
     setName('');
     setIsDefault(false);
-    setBudgetInput('');
-    setStoreInput('');
-    setPickedStore(null);
   }
 }
 
@@ -88,11 +66,6 @@ export const useListSettings = (listId: string | undefined) => {
   );
   const [name, setName] = useState('');
   const [isDefault, setIsDefault] = useState(false);
-  const [budgetInput, setBudgetInput] = useState('');
-  // What the store field shows, and the store picked from its suggestions: a
-  // typed name that is not picked names no store.
-  const [storeInput, setStoreInput] = useState('');
-  const [pickedStore, setPickedStore] = useState<StoreChoice | null>(null);
   const [saving, setSaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
@@ -131,16 +104,7 @@ export const useListSettings = (listId: string | undefined) => {
       }
     : null;
 
-  // A new list is the author's. For an existing one `unknown` is neither: owner
-  // would offer the owner-only controls to a non-owner, and `other` would hide
-  // them from the owner with no way to tell why.
-  const ownership: OwnershipAnswer = !listId
-    ? 'owner'
-    : !ownershipSnapshot
-    ? 'unknown'
-    : isShoppingListOwner(ownershipSnapshot, user?.id)
-    ? 'owner'
-    : 'other';
+  const ownership = listOwnershipOf(listId, ownershipSnapshot, user?.id);
   const isOwner = ownership === 'owner';
   const role = ownershipSnapshot
     ? getShoppingListRole(
@@ -179,7 +143,6 @@ export const useListSettings = (listId: string | undefined) => {
   const { markAsTemplate, createFromTemplate, marking, creating } =
     useShoppingListTemplate();
   const { setReminder, clearReminder } = useShoppingListReminder();
-  const { setPriceTracking } = useShoppingListBudget();
   const { deleteShoppingList } = useDeleteShoppingList();
   const { createShoppingList } = useCreateShoppingList(
     t('errors.createListFailed'),
@@ -210,13 +173,6 @@ export const useListSettings = (listId: string | undefined) => {
     return formatMonthDayYear(new Date(dateString));
   };
 
-  const currency = shoppingList?.currency ?? null;
-  // Null is an amount nobody recorded, which is not an amount of zero.
-  const totalCost = shoppingList?.totalCost ?? null;
-  const estimatedTotal = shoppingList?.estimatedTotal ?? null;
-  const unpricedItems = shoppingList?.unpricedItems ?? 0;
-  const priceTracking = shoppingList?.priceTracking ?? false;
-
   const reminderEnabled = shoppingList?.reminderEnabled ?? false;
   const reminderDate = shoppingList?.reminderDate ?? null;
 
@@ -246,15 +202,7 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   useEffect(() => {
-    syncListFormState(
-      shoppingList,
-      listId,
-      setName,
-      setIsDefault,
-      setBudgetInput,
-      setStoreInput,
-      setPickedStore,
-    );
+    syncListFormState(shoppingList, listId, setName, setIsDefault);
   }, [shoppingList, listId]);
 
   // Leaving a home evicts only the Home, not a home-linked ShoppingList a
@@ -274,29 +222,16 @@ export const useListSettings = (listId: string | undefined) => {
     }
   });
 
-  const handleStoreSelected = (id: string | null, storeName: string | null) =>
-    setPickedStore(id && storeName ? { id, name: storeName } : null);
+  // What Save would write differs from the list; a new list has nothing to compare.
+  const hasChanges = listId
+    ? name.trim() !== shoppingList?.name || isDefault !== shoppingList.isDefault
+    : undefined;
 
   const handleSave = () => {
     if (!name.trim()) {
       toastService.error(t('errors.listNameEmpty'));
       return;
     }
-
-    // A changed budget limit (empty clears it); a non-numeric entry is left out
-    // rather than sent as NaN. `Number` would read a comma-decimal keypad's
-    // entry as NaN, so it is parsed with `parseDecimalInput`.
-    const savedBudget =
-      shoppingList?.budgetAmount != null
-        ? String(shoppingList.budgetAmount)
-        : '';
-    const typedBudget =
-      budgetInput.trim() === '' ? null : parseDecimalInput(budgetInput);
-    const changedBudget =
-      budgetInput.trim() !== savedBudget && !Number.isNaN(typedBudget)
-        ? typedBudget
-        : undefined;
-    const storeChanged = pickedStore?.id !== shoppingList?.targetStore?.id;
 
     void executeWithLoadingState(
       async () => {
@@ -341,13 +276,6 @@ export const useListSettings = (listId: string | undefined) => {
           await updateShoppingList(listId, {
             name: name.trim(),
             ...(defaultTurnedOff && { isDefault: false }),
-            ...(storeChanged && { targetStore: pickedStore }),
-            ...(changedBudget !== undefined && {
-              planning: {
-                budgetAmount: changedBudget,
-                ...(currency !== null && { currency }),
-              },
-            }),
           });
         }
       },
@@ -385,7 +313,7 @@ export const useListSettings = (listId: string | undefined) => {
     if (!listId) return; // Should never happen as delete button is hidden
     alertService.alert(
       t('labels.deleteList'),
-      t('shoppingListScreens.deleteListConfirmMessage'),
+      t('shoppingListSelector.deleteAlertMessage', { count: 1 }),
       destructiveConfirm(t('labels.delete'), () => {
         void deleteList(listId);
       }),
@@ -440,11 +368,6 @@ export const useListSettings = (listId: string | undefined) => {
   };
 
   // Price tracking toggles immediately (like a real setting), not on Save.
-  const handleTogglePriceTracking = (value: boolean) => {
-    if (listId) {
-      void setPriceTracking(listId, value);
-    }
-  };
 
   // Reminder — a picked date sets/updates it; the clear action removes it.
   // The API reads the reminder's day in the owner's recorded time zone.
@@ -565,13 +488,10 @@ export const useListSettings = (listId: string | undefined) => {
 
   return {
     basedOnTemplate,
-    budgetInput,
     collaborators,
     completedShopDate,
     completing,
     creating,
-    currency,
-    estimatedTotal,
     formatDate,
     generating,
     handleArchiveToggle,
@@ -587,9 +507,8 @@ export const useListSettings = (listId: string | undefined) => {
     handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
-    handleStoreSelected,
     handleToggleComplete,
-    handleTogglePriceTracking,
+    hasChanges,
     homes,
     isArchived,
     isCompleted,
@@ -611,7 +530,6 @@ export const useListSettings = (listId: string | undefined) => {
     nextRecurringDate,
     ownerInfo,
     patternLabel,
-    priceTracking,
     reactivating,
     recurringPattern,
     reminderDate,
@@ -621,23 +539,18 @@ export const useListSettings = (listId: string | undefined) => {
     selectedHomeId,
     selectedTemplate,
     selectedTemplateId,
-    setBudgetInput,
     setIsDefault,
     setName,
     setSelectedHomeId,
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,
-    setStoreInput,
     shoppingList,
     showHomePicker,
     showPatternPicker,
     showTemplatePicker,
     statusDisplay,
-    storeInput,
     templateName,
     templates,
-    totalCost,
-    unpricedItems,
   };
 };

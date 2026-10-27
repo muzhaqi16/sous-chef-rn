@@ -41,6 +41,15 @@ describe('toastService', () => {
     });
   });
 
+  it('forwards a detail', () => {
+    toastService.warning('Offline', { detail: 'Changes will sync' });
+    expect(dispatch).toHaveBeenCalledWith({
+      message: 'Offline',
+      detail: 'Changes will sync',
+      type: 'warning',
+    });
+  });
+
   it('warns instead of crashing when no provider is mounted', () => {
     _setToastDispatch(opts => {
       console.warn('[toast] called before provider mounted:', opts.message);

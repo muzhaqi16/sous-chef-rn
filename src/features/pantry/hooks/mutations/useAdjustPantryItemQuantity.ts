@@ -19,6 +19,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 import { todayKey } from '#/utils/dateUtils';
+import type { RecountUnits } from '#features/pantry/types';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -40,6 +41,7 @@ export function useAdjustPantryItemQuantity({
     reason: string,
     version: number,
     remainingNetWeight?: number,
+    units: RecountUnits = {},
   ): Promise<boolean> => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
@@ -64,12 +66,17 @@ export function useAdjustPantryItemQuantity({
 
     // Permanent optimistic write before firing — newQuantity is absolute (a
     // physical recount), so set it directly. Persist it too so the exact value
-    // survives an app-kill before the queue replays.
-    if (currentItem) {
+    // survives an app-kill before the queue replays. A figure stated in another
+    // unit is not written ahead: only the server converts it.
+    const statedInOwnUnit = !units.newQuantityUnitId;
+    const weightInOwnUnit = !units.remainingNetWeightUnitId;
+    if (currentItem && statedInOwnUnit) {
       const optimistic = enhanceWithVersion(currentItem, {
         quantity: newQuantity,
         heldQuantity: newQuantity,
-        ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
+        ...(remainingNetWeight != null && weightInOwnUnit
+          ? { remainingNetWeight }
+          : {}),
       });
       try {
         writeItem(optimistic);
@@ -129,6 +136,7 @@ export function useAdjustPantryItemQuantity({
               idempotencyKey: generateEntityId(),
               version,
               ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
+              ...units,
             },
           },
         }),

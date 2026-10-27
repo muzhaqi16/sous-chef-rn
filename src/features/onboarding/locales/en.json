@@ -69,15 +69,12 @@
   },
   "onboardingValidation": {
     "homeRequired": "Home name is required",
-    "homeMin": "Home name must be at least {{count}} characters",
-    "homeMax": "Home name must be less than {{count}} characters",
     "pantryRequired": "Pantry name is required",
     "pantryMin": "Pantry name must be at least {{count}} characters",
     "pantryMax": "Pantry name must be less than {{count}} characters",
     "listRequired": "Shopping list name is required",
     "listMin": "Shopping list name must be at least {{count}} characters",
-    "listMax": "Shopping list name must be less than {{count}} characters",
-    "homeChars": "Home name can only contain letters, numbers, spaces, hyphens, apostrophes, and quotes"
+    "listMax": "Shopping list name must be less than {{count}} characters"
   },
   "onboarding": {
     "progress": "Step {{step}} of {{total}}"

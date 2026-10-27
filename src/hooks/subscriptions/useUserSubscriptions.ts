@@ -16,6 +16,7 @@ import {
 } from '#operations/home/home.generated';
 import { extractNodes } from '#/utils/connectionUtils';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { announceWorkSettled } from '#/services/subscriptions/settledWork';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -131,7 +132,7 @@ function handleBannedOrSuspended(payload: UserEventPayload) {
 
 /**
  * Multi-device profile/settings sync and lifecycle events (membership changes,
- * moderation actions).
+ * moderation actions, background work settling).
  */
 export function useUserSubscriptions(userId?: string) {
   const client = useApolloClient();
@@ -180,6 +181,25 @@ export function useUserSubscriptions(userId?: string) {
 
         case UserSubtype.Unbanned:
         case UserSubtype.Unsuspended:
+          break;
+
+        // The screen waiting on it asks once, instead of polling until it sees.
+        case UserSubtype.ReceiptParseSettled:
+          if (payload.parents?.receiptParseId) {
+            announceWorkSettled({
+              kind: 'receiptParse',
+              id: payload.parents.receiptParseId,
+            });
+          }
+          break;
+
+        case UserSubtype.RecipeCaptureSettled:
+          if (payload.parents?.recipeCaptureId) {
+            announceWorkSettled({
+              kind: 'recipeCapture',
+              id: payload.parents.recipeCaptureId,
+            });
+          }
           break;
       }
     },

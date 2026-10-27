@@ -25,6 +25,11 @@ import { ShoppingListItemForEditDocument } from '#features/shoppingList/hooks/us
 import type { AddedShoppingListItemFieldsFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { t } from '#/i18n';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 jest.mock('#/utils/deviceLocale', () => ({
   ...jest.requireActual('#/utils/deviceLocale'),
@@ -517,6 +522,7 @@ describe('AddEditItem', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
   });
 
   // `clearAllMocks` resets call records but NOT a spy's implementation, so a
@@ -578,6 +584,41 @@ describe('AddEditItem', () => {
   it('shows estimated price field', () => {
     renderWithApollo(<AddEditItem route={addRoute} />);
     expect(screen.getByText('Estimated Price')).toBeTruthy();
+  });
+
+  it('asks for no price, and sends none, with prices turned off', async () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    const user = userEvent.setup();
+    const added = recordMock(AddItemToShoppingListDocument, {
+      data: { addItemsToShoppingList: null },
+    });
+    jest
+      .spyOn(
+        require('#features/shoppingList/hooks/useShoppingListItemForm'),
+        'useShoppingListItemForm',
+      )
+      .mockImplementation(
+        mockUseShoppingListItemForm({
+          values: {
+            itemName: 'Steak',
+            quantityInput: '1',
+            estimatedPrice: '12.99',
+          },
+        }),
+      );
+
+    renderWithApollo(<AddEditItem route={addRoute} />, {
+      operationMocks: [added.mock],
+    });
+    expect(screen.queryByText('Estimated Price')).toBeNull();
+    await user.press(screen.getByTestId('add-item-submit-button'));
+
+    await waitFor(() => expect(added.fired).toHaveLength(1));
+    expect(added.fired[0]).toEqual({
+      input: expect.objectContaining({
+        items: [expect.not.objectContaining({ pricing: expect.anything() })],
+      }),
+    });
   });
 
   it('shows category field', () => {

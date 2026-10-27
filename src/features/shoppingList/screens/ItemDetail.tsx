@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from './useShoppingListItemDetail';
@@ -16,7 +17,7 @@ import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoV
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { entryGallery } from '#features/catalog/ui/entryGallery';
-import { hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -94,6 +95,8 @@ export const ShoppingListItemDetail: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const money = useMoney();
+  // Off, the line reads with no estimate or amount paid.
+  const showPrices = useBudgetAndPricesEnabled();
   useScreenTransition('ShoppingListItemDetail');
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
@@ -139,7 +142,10 @@ export const ShoppingListItemDetail: React.FC<
 
   const gallery = entryGallery(detail?.image, detail?.item?.photos);
   const itemPhotos = gallery.photos;
-  const nutritionFacts = detail?.item?.nutritionFacts ?? null;
+  const nutrition = toShownNutrition(detail?.item?.shownNutrition);
+  const nutritionFacts = nutrition?.facts ?? null;
+  // A concept's typical values, titled as such and making no health claim.
+  const typicalOf = nutrition?.typicalOf ?? null;
   const showImages = itemPhotos.length > 0 || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
 
@@ -218,7 +224,7 @@ export const ShoppingListItemDetail: React.FC<
     ? t(priorityLabelKey(priorityOption))
     : null;
 
-  const estimatedPrice = item.priceEstimate?.estimated;
+  const estimatedPrice = showPrices ? item.priceEstimate?.estimated : null;
   const preferredStoreName = item.storeInfo?.preferredStore?.name;
 
   // The API stores the price PER UNIT; the shopper entered the total. Show the
@@ -229,7 +235,7 @@ export const ShoppingListItemDetail: React.FC<
     ? purchaseInfo.purchasedPrice ?? null
     : null;
   const purchasedTotal =
-    purchasedQuantity != null
+    showPrices && purchasedQuantity != null
       ? totalFromUnitPrice(perUnitPaid, purchasedQuantity)
       : null;
   // At quantity 1 the per-unit price IS the total; repeating it reads as noise.
@@ -289,7 +295,7 @@ export const ShoppingListItemDetail: React.FC<
           <View style={styles.statusBadge}>
             <Icon name="checkmark-circle" size={18} tone="success" />
             <Text role="label" tone="success" style={styles.statusBadgeText}>
-              {t('shoppingListScreens.purchased')}
+              {t('labels.purchased')}
             </Text>
           </View>
         )}
@@ -324,7 +330,7 @@ export const ShoppingListItemDetail: React.FC<
             </DetailRow>
           )}
           {!!purchaseInfo?.isPurchased && purchasedQuantity != null && (
-            <DetailRow label={t('shoppingListScreens.purchased')}>
+            <DetailRow label={t('labels.purchased')}>
               <FormattedItemSubtitle
                 quantity={purchasedQuantity}
                 unitSymbol={unitSymbol}
@@ -364,7 +370,7 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.notes && (
             <View style={styles.notesRow}>
               <Text role="caption" tone="secondary">
-                {t('shoppingListScreens.notes')}
+                {t('labels.notes')}
               </Text>
               <Text role="label">{item.notes}</Text>
             </View>
@@ -372,10 +378,16 @@ export const ShoppingListItemDetail: React.FC<
         </DetailSection>
 
         {!!showNutrition && (
-          <DetailSection title={t('dietary.nutritionGoals')}>
+          <DetailSection
+            title={
+              typicalOf
+                ? t('labels.typicalFor', { concept: typicalOf })
+                : t('dietary.nutritionGoals')
+            }
+          >
             <NutritionSummary
               nutritionFacts={nutritionFacts}
-              showHighlights
+              showHighlights={!typicalOf}
               compact
             />
           </DetailSection>

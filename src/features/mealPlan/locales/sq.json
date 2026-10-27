@@ -2,7 +2,6 @@
   "mealPlan": {
     "name": "Emri",
     "namePlaceholder": "p.sh. Plani i javës 8",
-    "description": "Përshkrim",
     "descriptionPlaceholder": "Përshkrim opsional...",
     "planType": "Lloji i planit",
     "weekly": "Javor",
@@ -21,19 +20,16 @@
     "addNeedsPlan": "Krijo fillimisht një plan vaktesh, pastaj shto vaktet.",
     "noAddPermission": "Mund ta shohësh këtë plan, por jo t'i shtosh vakte.",
     "needsTheTemplate": "Hap fillimisht modelin, që vaktet e tij të jenë të disponueshme.",
-    "daily": "Ditor",
-    "custom": "I personalizuar"
+    "daily": "Ditor"
   },
   "addMealSheet": {
     "searchPlaceholder": "Kërko receta ose shto një vakt të personalizuar...",
     "addCustom": "Shto «{{query}}» si vakt të personalizuar",
+    "searchAllRecipes": "Kërko «{{query}}» në të gjitha recetat",
     "yourRecipes": "Recetat e tua",
-    "servings": "{{count}} racione",
     "noSavedRecipes": "Asnjë recetë e ruajtur",
     "noResults": "Asnjë recetë nuk përputhet me kërkimin tënd",
     "addRecipeFailed": "Shtimi i recetës dështoi. Provo sërish.",
-    "dietVegan": "Vegan",
-    "dietVegetarian": "Vegjetarian",
     "dietGlutenFree": "PG",
     "dietDairyFree": "PB"
   },
@@ -54,7 +50,6 @@
   "mealPlanItem": {
     "unnamedMeal": "Vakt pa emër",
     "pantryUpdated": "Qilari u përditësua",
-    "servings": "{{count}} racione",
     "calories": "{{count}} kal"
   },
   "mealPlanSettings": {
@@ -126,12 +121,9 @@
     "sharedWithHome": "Ky model do të ndahet me {{name}}",
     "templateNamePlaceholder": "p.sh., Plani im javor i darkave",
     "templateNameSuffix": "Modeli {{name}}",
-    "descriptionLabel": "Përshkrimi",
     "descriptionPlaceholder": "Çfarë e bën të veçantë këtë model?",
     "tagsLabel": "Etiketat (të ndara me presje)",
     "tagsPlaceholder": "p.sh., e shëndetshme, e shpejtë, ekonomike",
-    "categoryWeekly": "Javore",
-    "categoryMonthly": "Mujore",
     "categoryHoliday": "Festë",
     "categorySpecialDiet": "Dietë speciale",
     "categoryCustom": "E personalizuar"
@@ -144,8 +136,7 @@
     "offline": "Modelet nuk janë të disponueshme jashtë linje. Rilidhu për t'i shfletuar."
   },
   "templateCard": {
-    "usedTimes": "Përdorur {{count}} herë",
-    "servings": "{{count}} racione"
+    "usedTimes": "Përdorur {{count}} herë"
   },
   "templatePreview": {
     "configuration": "Konfigurimi",
@@ -169,9 +160,7 @@
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "p.sh. Darka të javës",
-    "description": "Përshkrimi",
     "descriptionPlaceholder": "Shënime opsionale",
-    "tags": "Etiketa",
     "mealsSection": "Vaktet",
     "noMeals": "Ende pa vakte",
     "mealName": "Vakt",

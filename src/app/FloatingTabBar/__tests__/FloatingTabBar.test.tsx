@@ -157,7 +157,7 @@ const TAB_APPEARANCE: TabAppearance = {
   Pantry: {
     icon: { active: 'home', inactive: 'home-outline' },
     mainScreen: 'PantryMain',
-    titleKey: 'navigation.tabs.pantry',
+    titleKey: 'labels.pantry',
   },
   ShoppingList: {
     icon: { active: 'list', inactive: 'list-outline' },

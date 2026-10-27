@@ -13,7 +13,12 @@ import {
 } from '#operations/image/imageUpload.generated';
 import { alertService } from '#/services/alertService';
 import { Telemetry } from '#/services/telemetry';
-import { ErrorCode, ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
+import {
+  EntryImageSource,
+  ErrorCode,
+  ImageUploadPurpose,
+} from '#/graphql/generated/schemaTypes';
+import { makeCache } from '#/apollo/cache';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { useImageUpload } from '../useImageUpload';
 
@@ -353,6 +358,52 @@ describe('useImageUpload', () => {
         expect.anything(),
         expect.stringContaining('30'),
       );
+    });
+
+    // A pending photo shows only on the uploader's rows, and no event reaches
+    // them, so the confirm's answer is what puts it there.
+    it("puts the photo on the viewer's pantry and list rows", async () => {
+      const pending = {
+        url: 'https://cdn.test/a.jpg',
+        source: EntryImageSource.Pending,
+      };
+      const cache = makeCache();
+      const { result } = renderHookWithApollo(() => useImageUpload(), {
+        cache,
+        operationMocks: [
+          recordPresign().mock,
+          recordMock(ConfirmItemImageUploadDocument, {
+            data: {
+              confirmItemImageUpload: {
+                __typename: 'ConfirmItemImageUploadPayload',
+                url: 'https://cdn.test/a.jpg',
+                pantryItems: [
+                  {
+                    __typename: 'PantryItem',
+                    id: 'p1',
+                    image: { __typename: 'EntryImage', ...pending },
+                  },
+                ],
+                shoppingListItems: [
+                  {
+                    __typename: 'ShoppingListItem',
+                    id: 's1',
+                    image: { __typename: 'EntryImage', ...pending },
+                  },
+                ],
+              },
+            },
+          }).mock,
+        ],
+      });
+
+      await act(async () => {
+        await result.current.uploadItemImages([file], 'item-1');
+      });
+
+      const rows = cache.extract();
+      expect(rows['PantryItem:p1']?.image).toMatchObject(pending);
+      expect(rows['ShoppingListItem:s1']?.image).toMatchObject(pending);
     });
 
     it("normalizes a picker-reported 'image/jpg' to 'image/jpeg' in the presign mime", async () => {

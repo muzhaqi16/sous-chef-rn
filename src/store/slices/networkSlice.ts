@@ -15,20 +15,19 @@ export type OfflineBannerCause =
   | 'offline-mode';
 
 /**
- * How long each cause must hold before the user sees anything. Only the
- * ANNOUNCEMENT waits — the offline policy (`isApiUnavailable`) is instant.
- * Dwell is per-cause by trustworthiness; `api-unreachable` is inferred from
- * failed requests, so it needs the most corroboration.
+ * How long each cause must hold before the user sees anything, so a passing
+ * hiccup never shows the icon. Only the PRESENTATION waits: the offline policy
+ * (`isApiUnavailable`) is instant. Offline mode is the user's own switch.
  */
 const SHOW_DWELL_MS: Record<OfflineBannerCause, number> = {
   'offline-mode': 0,
-  'device-offline': 2_000,
-  'api-unreachable': 5_000,
+  'device-offline': 30_000,
+  'api-unreachable': 30_000,
 };
 
 /**
  * Minimum time on screen; without it an outage resolving just after the dwell
- * flashes the banner and the "back online" toast back to back.
+ * flashes the icon in and out.
  */
 const MIN_VISIBLE_MS = 3_000;
 

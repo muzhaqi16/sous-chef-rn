@@ -51,7 +51,7 @@ export const SavedRecipeRow: React.FC<SavedRecipeRowProps> = ({
         {!!(recipe.servings || recipe.totalTimeMinutes) && (
           <Text role="caption" tone="secondary" style={styles.recipeMeta}>
             {recipe.servings
-              ? t('addMealSheet.servings', { count: recipe.servings })
+              ? t('labels.servingsCount', { count: recipe.servings })
               : ''}
             {recipe.totalTimeMinutes
               ? `${recipe.servings ? ' · ' : ''}${t('labels.min', {

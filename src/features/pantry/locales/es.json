@@ -6,22 +6,17 @@
     "noExpiry": "Sin caducidad",
     "amount": "Cantidad",
     "nutrition": "Nutrición",
-    "recipesToTry": "Recetas para probar",
     "noShoppingListSelectedTitle": "Ninguna lista de compras seleccionada",
     "noShoppingListSelectedMessage": "Por favor, selecciona primero una lista de compras.",
     "goToShoppingLists": "Ir a las listas de compras",
     "noRecipeSuggestions": "No hay sugerencias de recetas disponibles",
-    "notes": "Notas",
-    "tags": "Etiquetas",
     "usageHistory": "Historial de uso",
     "fields": {
-      "package": "Paquete",
       "shelfLife": "Vida útil",
       "acquired": "Adquirido",
       "costPerUnit": "Coste/unidad",
       "minStock": "Stock mínimo",
       "restockAt": "Reponer en",
-      "purchased": "Comprado",
       "lastPurchase": "Última compra",
       "lastUsed": "Último uso",
       "added": "Añadido"
@@ -65,7 +60,6 @@
   "pantrySettings": {
     "createTitle": "Crear nueva despensa",
     "title": "Ajustes de la despensa",
-    "loading": "Cargando...",
     "loadingData": "Cargando datos de la despensa...",
     "namePlaceholder": "Introduce el nombre (p. ej., Despensa de cocina)",
     "descriptionPlaceholder": "Introduce una descripción",
@@ -85,8 +79,6 @@
     "tabLedger": "Registro",
     "period": "Período:",
     "granularityDaily": "Diario",
-    "granularityWeekly": "Semanal",
-    "granularityMonthly": "Mensual",
     "totalUsage": "Uso total",
     "itemsUsed": "artículos usados",
     "avgPerDay": "Prom. por día",
@@ -125,7 +117,6 @@
     "purposeAdjustment": "Ajuste",
     "purposeCooking": "Cocina",
     "purposeRestock": "Reabastecimiento",
-    "purposeTransfer": "Transferencia",
     "purposeWaste": "Desperdicio",
     "sourceManual": "Manual",
     "sourceRecipeAuto": "Receta (auto)",
@@ -170,6 +161,7 @@
     "newQuantity": "Nueva cantidad",
     "reasonPlaceholder": "¿Por qué se ajusta la cantidad?",
     "remainingWeightPlaceholder": "Déjalo en blanco para ajustar automáticamente",
+    "countedAs": "Recuento: {{amount}}",
     "systemReason": {
       "stackMerged": "Ajuste tras combinar artículos",
       "stackPurged": "Retirada administrativa",
@@ -183,7 +175,6 @@
     "sustainability": "Sostenibilidad",
     "composted": "Compostado",
     "recycledPackaging": "Reciclado (envase)",
-    "notes": "Notas",
     "notesPlaceholder": "Añade notas sobre este desperdicio...",
     "reasonExpired": "Caducado",
     "reasonSpoiled": "Estropeado",
@@ -193,13 +184,11 @@
   },
   "restockItem": {
     "title": "Reponer artículo",
-    "restock": "Reponer",
     "restockBy": "Reponer por",
     "currentLabel": "Actual:",
     "quantityToAdd": "Cantidad a añadir",
     "newQuantityPrefix": "Nueva cantidad: ",
     "costPerUnit": "Coste por unidad",
-    "notes": "Notas",
     "notesPlaceholder": "Añade notas sobre esta reposición...",
     "expirationPlaceholder": "Establecer nueva caducidad"
   },
@@ -209,7 +198,6 @@
     "quantityToConsume": "Cantidad a consumir",
     "fifoHint": "Los artículos se consumen primero los más antiguos por fecha de caducidad",
     "purpose": "Propósito *",
-    "notes": "Notas",
     "notesPlaceholder": "Añade notas sobre este uso...",
     "purposeCooking": "Cocinar",
     "purposeTransfer": "Traslado"
@@ -288,9 +276,7 @@
     "addItemDetails": "Añadir detalles del artículo",
     "storageLocation": "Ubicación de almacenamiento",
     "storageLocationPlaceholder": "p. ej., Estante superior, Cajón verdulero",
-    "tags": "Etiquetas",
     "tagsPlaceholder": "p. ej., orgánico, sin gluten (separadas por comas)",
-    "notes": "Notas",
     "notesPlaceholder": "p. ej., Conservar en lugar fresco y seco",
     "conditionGood": "Buena",
     "conditionFair": "Regular",
@@ -301,7 +287,6 @@
     "cost": "Costo por unidad",
     "costPlaceholder": "ej., 4,99",
     "acquisitionMethod": "Cómo se adquirió",
-    "methodPurchased": "Comprado",
     "methodHomegrown": "De cosecha propia",
     "methodGifted": "Regalado",
     "methodBarcodeScan": "Escaneo de código de barras"
@@ -311,7 +296,6 @@
     "searchPlaceholder": "Busca en tu despensa...",
     "sortedBy": "Ordenar, ahora por {{field}}",
     "tabAll": "Todos",
-    "tabPantry": "Despensa",
     "tabUnassigned": "Sin asignar",
     "expiringCount": "{{count}} por vencer",
     "expiredCount": "{{count}} caducados",
@@ -362,9 +346,7 @@
     "exceedsAvailable": "Supera lo disponible ({{amount}} {{unit}})"
   },
   "duplicateItem": {
-    "title": "El artículo ya está en la despensa",
-    "body": "Este artículo ya está en tu despensa en esta unidad. ¿Quieres reponerlo?",
-    "restock": "Reponer"
+    "title": "El artículo ya está en la despensa"
   },
   "relinkItem": {
     "action": "¿No es este artículo?",
@@ -382,7 +364,6 @@
   },
   "expirationAction": {
     "cooked": "Cocinado",
-    "consumed": "Consumido",
     "shared": "Compartido con alguien",
     "extended": "Vida útil ampliada",
     "wasted": "Desperdiciado / Descartado",
@@ -398,9 +379,6 @@
       "SHARED": "Marcado como compartido",
       "WASTE": "Marcado como desperdiciado"
     }
-  },
-  "pantryTabs": {
-    "all": "Todos"
   },
   "expiration": {
     "noExpiryDate": "Sin fecha de caducidad"

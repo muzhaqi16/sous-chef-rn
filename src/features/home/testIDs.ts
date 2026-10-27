@@ -8,4 +8,10 @@ export const homeTestIDs = {
   createHomeNameInput: 'create-home-name-input',
   createHomeCancelButton: 'create-home-cancel-button',
   createHomeSubmitButton: 'create-home-submit-button',
+  /** The home details entry that opens the household's dietary needs. */
+  dietaryNeedsRow: 'home-dietary-needs-row',
+  dietaryNeedsScreen: 'home-dietary-needs-screen',
+  /** One sharing member's card on the dietary needs screen. */
+  dietaryNeedsMember: (membershipId: string) =>
+    `home-dietary-needs-member-${membershipId}`,
 };

@@ -21,7 +21,9 @@ import {
 type UnmaskedGetPantryItemQuery = Unmasked<GetPantryItemQuery>;
 type PantryItemNode = NonNullable<UnmaskedGetPantryItemQuery['pantryItem']>;
 type UnitData = PantryItemNode['unit'];
-type NutritionFactsData = PantryItemNode['item']['nutritionFacts'];
+type NutritionFactsData = NonNullable<
+  PantryItemNode['item']['shownNutrition']
+>['facts'];
 
 export interface PantryItemFixture {
   id?: string;
@@ -48,6 +50,8 @@ export interface PantryItemFixture {
   costPerUnit?: number | null;
   totalCost?: number | null;
   nutritionFacts?: NutritionFactsData;
+  /** The concept the facts are typical of; absent, they are the item's own. */
+  typicalOf?: string;
   /** A public catalog item (`canSuggest`), which can be reported. */
   canSuggest?: boolean;
   /** The catalog item's approved main photo. */
@@ -70,6 +74,24 @@ function unit(
     symbol,
     type: UnitType.Volume,
     displayAsFraction,
+  };
+}
+
+type HeldReading = NonNullable<
+  UnmaskedGetPantryItemQuery['pantryItem']
+>['held']['metric'];
+
+function heldReading(
+  value: number,
+  { id, symbol, displayAsFraction }: UnitData,
+): HeldReading {
+  return {
+    __typename: 'MeasureReading',
+    value,
+    unitId: id,
+    symbol,
+    displayAsFraction,
+    type: UnitType.Volume,
   };
 }
 
@@ -106,6 +128,14 @@ export function pantryItemData(
           symbol: trackingUnit.symbol,
         },
       },
+      // The same figure in both systems: what the screen showed before readings.
+      held: {
+        __typename: 'Measure',
+        value: held,
+        unitId: trackingUnit.id,
+        metric: heldReading(held, trackingUnit),
+        imperial: heldReading(held, trackingUnit),
+      },
       costCurrency: null,
       version: 1,
       updatedAt: '2026-01-01',
@@ -119,6 +149,8 @@ export function pantryItemData(
       lastUsedAt: null,
       netWeight: null,
       remainingNetWeight: null,
+      packageSize: null,
+      remaining: null,
       portionUnitId: null,
       portionUnit: null,
       remainingPortions: null,
@@ -139,7 +171,19 @@ export function pantryItemData(
         photos: fixture.photos ?? [],
         shelfLifeDays: null,
         shelfLifeOpenedDays: null,
-        nutritionFacts: fixture.nutritionFacts ?? null,
+        shownNutrition: fixture.nutritionFacts
+          ? {
+              __typename: 'ShownNutrition',
+              facts: fixture.nutritionFacts,
+              typicalOf: fixture.typicalOf
+                ? {
+                    __typename: 'Item',
+                    id: 'concept-1',
+                    name: fixture.typicalOf,
+                  }
+                : null,
+            }
+          : null,
         categories: fixture.categoryName
           ? [
               {
@@ -158,6 +202,7 @@ export function pantryItemData(
       unit: trackingUnit,
       displayUnit: null,
       netWeightUnit: null,
+      consumeUnit: null,
       storageLocation: fixture.storageLocationName
         ? {
             __typename: 'StorageLocation',

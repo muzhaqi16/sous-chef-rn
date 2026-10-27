@@ -23,13 +23,19 @@ export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({
   centered = false,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({ centered });
   if (attributions.length === 0) return null;
 
+  // One paragraph per notice: the licence runs on after it, so a long notice
+  // wraps as text instead of pushing the licence onto a line of its own.
   return (
     <View style={styles.list}>
       {attributions.map(({ source, notice, licenseUrl, sourceUrl }) => (
-        <View key={source} style={styles.row}>
+        <Text
+          key={source}
+          role="caption"
+          tone="secondary"
+          align={centered ? 'center' : undefined}
+        >
           {sourceUrl ? (
             <Link
               variant="caption"
@@ -39,20 +45,21 @@ export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({
               {notice}
             </Link>
           ) : (
-            <Text role="caption" tone="secondary">
-              {notice}
-            </Text>
+            notice
           )}
-          {!!licenseUrl && (
-            <Link
-              variant="caption"
-              href={licenseUrl}
-              testID={kitTestIDs.dataAttributionLicense(source)}
-            >
-              {t('labels.license')}
-            </Link>
-          )}
-        </View>
+          {licenseUrl ? (
+            <>
+              {' · '}
+              <Link
+                variant="caption"
+                href={licenseUrl}
+                testID={kitTestIDs.dataAttributionLicense(source)}
+              >
+                {t('labels.license')}
+              </Link>
+            </>
+          ) : null}
+        </Text>
       ))}
     </View>
   );
@@ -61,19 +68,5 @@ export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({
 const styles = StyleSheet.create(theme => ({
   list: {
     gap: theme.spacing.xs,
-  },
-  row: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    alignItems: 'center',
-    columnGap: theme.spacing.sm,
-    rowGap: theme.spacing['2xs'],
-    variants: {
-      centered: {
-        true: {
-          justifyContent: 'center',
-        },
-      },
-    },
   },
 }));

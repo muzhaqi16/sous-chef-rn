@@ -1,6 +1,7 @@
 import type { ApolloCache } from '@apollo/client';
 import type { Query } from '#/graphql/generated/schemaTypes';
 import type { ReplayReconciler } from '#/apollo/offlineQueue/types';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { isRecord } from '#/utils/isRecord';
 
 /**
@@ -23,6 +24,17 @@ export function dropUnitSystemAnswers(cache: ApolloCache): void {
     cache.evict({ id: 'ROOT_QUERY', fieldName });
   }
   cache.gc();
+}
+
+/**
+ * Drops what SYSTEM meant on this device once its locale changes, so the
+ * settings read asks again and amounts follow the new locale.
+ */
+export function dropDeviceUnitSystem(cache: ApolloCache): void {
+  const settings = cache.readQuery({ query: GetUserSettingsDocument })?.me
+    ?.settings;
+  if (!settings) return;
+  cache.evict({ id: cache.identify(settings), fieldName: 'deviceUnitSystem' });
 }
 
 /** A settings write replayed from the queue that set the unit system. */

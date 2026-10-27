@@ -12,6 +12,25 @@ fragment useQuantityEditModal_item on ShoppingListItem {
     name
     symbol
   }
+  # The amount as the row reads it, which the sheet opens on.
+  amount {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   image {
     url
     source

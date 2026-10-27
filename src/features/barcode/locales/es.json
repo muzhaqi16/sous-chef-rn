@@ -4,9 +4,6 @@
     "flashOn": "Activar flash",
     "flashOff": "Desactivar flash"
   },
-  "barcodeInfo": {
-    "format": "Formato"
-  },
   "scanner": {
     "noHomeTitle": "Ningún hogar seleccionado",
     "noHomeBody": "Debes ser miembro de un hogar para escanear artículos.",
@@ -18,15 +15,72 @@
     "addItemHint": "Puedes añadir este artículo a la base de datos tocando el botón de abajo.",
     "newVersion": "Nueva versión",
     "barcodeValue": "Código de barras: {{barcode}}",
-    "formatValue": "Formato: {{format}}",
     "upc": "UPC/Código de barras",
     "servingAmount": "Una porción: {{amount}}",
     "referenceAmount": "Información nutricional por {{amount}}",
-    "packSize": {
-      "body": "Open Food Facts no indica el tamaño de este producto. Introdúcelo una vez para añadirlo a tu despensa.",
-      "label": "Tamaño de un paquete",
-      "invalid": "Introduce un tamaño mayor que 0.",
-      "unitRequired": "Elige una unidad de la lista."
+    "amount": {
+      "title": "Se añade a tu despensa",
+      "eachPackage": "{{amount}} · {{size}} por envase",
+      "joinsHeld": "Añade {{amount}} a lo que ya tienes ({{held}})",
+      "packaged": "Por envase",
+      "packagedHint": "Se cuenta por envase. Desactívalo para añadir una cantidad, como 500 g.",
+      "sizeLabel": "Tamaño de un paquete",
+      "quantityInvalid": "Introduce una cantidad mayor que 0.",
+      "wholePackages": "Los envases se cuentan enteros: 1, 2, 3…",
+      "countUnit": "Cuenta los envases en una unidad de recuento, como pc.",
+      "unitRequired": "Elige una unidad de la lista.",
+      "sizeInvalid": "Introduce un tamaño mayor que 0.",
+      "sizeUnitRequired": "Elige de la lista la unidad del tamaño.",
+      "usedInSummary": "Se usa en {{unit}}"
+    },
+    "nutrition": {
+      "title": "Información nutricional",
+      "calories": "{{calories}} kcal",
+      "caloriesPer": "{{calories}} kcal por {{serving}}",
+      "protein": "{{value}} g de proteína",
+      "carbs": "{{value}} g de carbohidratos",
+      "fat": "{{value}} g de grasa"
+    },
+    "addToCart": "Añadir al carrito",
+    "addToCartWithPrice": "Añadir con precio",
+    "alreadyInCart": "Ya está en el carrito",
+    "household": {
+      "alternatives": "Otros parecidos sin avisos",
+      "openAlternative": "Abrir {{name}}"
+    },
+    "price": {
+      "title": "Precios",
+      "lastPaid": "Último precio pagado",
+      "paidAt": "En {{store}}, {{date}}",
+      "onSale": "En oferta",
+      "usual": "Tu precio habitual",
+      "typicalHere": "Precio típico aquí",
+      "typicalAtChain": "Precio típico en {{chain}}",
+      "perKg": "{{price}}/kg",
+      "perL": "{{price}}/L",
+      "each": "{{price}} c/u",
+      "perUnit": "{{price}}/{{unit}}",
+      "aboveUsual": "{{difference}} más que tu precio habitual de {{usual}}",
+      "belowUsual": "{{difference}} menos que tu precio habitual de {{usual}}",
+      "sameAsUsual": "Igual que tu precio habitual de {{usual}}"
+    },
+    "origin": {
+      "title": "De dónde viene",
+      "madeIn": "Hecho en {{countries}}",
+      "ingredientsFrom": "Ingredientes de {{countries}}",
+      "countryOfOrigin": "País de origen: {{countries}}",
+      "ownedBy": "Propiedad de {{owner}}",
+      "ownedByPartOf": "Propiedad de {{owner}}, parte de {{parent}}",
+      "partOf": "Parte de {{parent}}",
+      "sourceLabel": "Fuente: {{source}}",
+      "source": {
+        "kroger": "Kroger"
+      }
+    },
+    "brandLists": {
+      "onList": "En tu lista «{{list}}»",
+      "viaParent": "Listada como {{parent}}, su empresa matriz",
+      "addToList": "Añadir {{brand}} a una lista"
     }
   }
 }

@@ -116,7 +116,7 @@ export const buildTabFieldGroups = (
   };
   const descriptionField: FieldDef<CreateItemFormData> = {
     name: 'description',
-    label: t('addItemForm.fields.description.label'),
+    label: t('labels.description'),
     placeholder: t('addItemForm.fields.description.placeholder'),
     component: FormTextArea,
     props: { numberOfLines: 3 },
@@ -234,7 +234,7 @@ export const buildTabFieldGroups = (
   };
   const tagsField: FieldDef<CreateItemFormData> = {
     name: 'tags',
-    label: t('addItemForm.fields.tags.label'),
+    label: t('labels.tags'),
     placeholder: t('addItemForm.fields.tags.placeholder'),
     component: FormTextArea,
     props: { numberOfLines: 2 },

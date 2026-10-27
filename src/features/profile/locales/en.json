@@ -90,7 +90,11 @@
     "fat": "Fat",
     "loadingProfile": "Loading dietary profile...",
     "loadFailedTitle": "Couldn't load your dietary profile",
-    "loadFailedSubtitle": "Check your connection and try again."
+    "loadFailedSubtitle": "Check your connection and try again.",
+    "sharedWith": "Shared with",
+    "sharedWithShown": "Members of these homes see your restrictions by name when they scan or cook. Your notes stay private.",
+    "sharedWithNone": "Turn on a home to let its members see what you can't eat when they scan or cook.",
+    "sharingFailed": "Couldn't change who sees your restrictions. Try again."
   },
   "biometricSetup": {
     "authRequiredTitle": "Authentication Required",
@@ -118,7 +122,6 @@
     "fontScale": "Font Scale",
     "highContrast": "High Contrast",
     "highContrastDesc": "Increases text and border contrast for accessibility",
-    "colorDefault": "Default",
     "densityCompact": "Compact",
     "densityComfortable": "Comfortable",
     "densitySpacious": "Spacious",
@@ -143,17 +146,29 @@
     "goalsSheetTitle": "Select Health Goals",
     "addGoalsFailed": "Failed to add health goals",
     "diets": {
-      "vegetarian": "Vegetarian",
-      "vegan": "Vegan",
       "pescetarian": "Pescetarian",
       "lactoVegetarian": "Lacto Vegetarian",
       "ovoVegetarian": "Ovo Vegetarian",
       "primal": "Primal"
     },
     "intolerances": {
-      "egg": "Egg",
-      "sulfite": "Sulfite"
-    }
+      "egg": "Egg"
+    },
+    "avoidTitle": "Foods I avoid",
+    "avoidEmpty": "Pick foods from the catalog, such as bacon or mushrooms.",
+    "avoidSheetTitle": "Avoid a food",
+    "avoidHint": "Every kind of it is flagged, for you and the homes you share with.",
+    "avoidSearchPlaceholder": "Search foods",
+    "avoidSearchNeedsConnection": "Searching foods needs a connection. Try again when you're back online.",
+    "avoidNamed": "Avoid {{name}}",
+    "avoidSeverity": {
+      "preference": "Avoid",
+      "intolerance": "Intolerance",
+      "allergy": "Allergy"
+    },
+    "avoidAllergy": "{{name}} (allergy)",
+    "avoidIntolerance": "{{name}} (intolerance)",
+    "addAvoidFailed": "Couldn't add that food. Try again."
   },
   "cookingPreferences": {
     "prepTimeRange": "Prep time must be between {{min}} and {{max}} minutes",
@@ -182,7 +197,6 @@
       "developer": "Developer"
     },
     "labels": {
-      "dietaryProfile": "Dietary Profile",
       "biometricAuthentication": "Biometric Authentication",
       "logout": "Log Out"
     },
@@ -206,12 +220,10 @@
       "visit": "Open website",
       "publicDomain": "Public domain (a U.S. government work).",
       "openFoodFacts": {
-        "name": "Open Food Facts",
         "provides": "Product names, brands, package sizes and photos for scanned barcodes.",
         "licence": "Database: Open Database License (ODbL). Photos: Creative Commons Attribution-ShareAlike (CC BY-SA)."
       },
       "usdaFoodDataCentral": {
-        "name": "USDA FoodData Central",
         "provides": "Nutrition facts and product records."
       },
       "usdaFoodKeeper": {
@@ -333,16 +345,59 @@
       "recipe": "Recipe report",
       "recipeReview": "Review report",
       "profile": "Profile report",
-      "user": "User report"
+      "user": "User report",
+      "item": "Item report",
+      "photo": "Photo report",
+      "suggestion": "Suggested edit",
+      "photoUpload": "Photo for review"
     },
-    "reportedOn": "Reported {{date}}",
     "status": {
       "pending": "Waiting for review",
-      "investigating": "Under review",
-      "resolved": "Upheld",
-      "dismissed": "Closed"
+      "inReview": "Under review",
+      "upheld": "Upheld",
+      "closed": "Closed",
+      "accepted": "Accepted",
+      "declined": "Declined",
+      "approved": "Approved",
+      "notApproved": "Not approved"
     },
-    "emptyTitle": "No reports yet",
-    "emptyDescription": "Reports you send to the moderators appear here, with where each one stands."
+    "emptyTitle": "Nothing sent for review yet",
+    "emptyDescription": "Reports, suggested edits and photos you send for review appear here, with where each one stands.",
+    "sentOn": "Sent {{date}}",
+    "reviewNote": "Reviewer's note: {{note}}"
+  },
+  "brandLists": {
+    "title": "Brand lists",
+    "intro": "Keep your own lists of brands, such as ones you boycott or avoid. A scan tells you when a product's brand is on a list you have on.",
+    "emptyTitle": "No brand lists yet",
+    "emptyBody": "Make a list, then add brands here or straight from a scan.",
+    "newList": "New brand list",
+    "nameLabel": "List name",
+    "namePlaceholder": "e.g. Boycott",
+    "rename": "Rename list",
+    "deleteList": "Delete list",
+    "deleteTitle": "Delete {{name}}?",
+    "deleteBody": "Its brands are removed with it.",
+    "brandCount_one": "{{count}} brand",
+    "brandCount_other": "{{count}} brands",
+    "applies": "Use this list on scans",
+    "useNamed": "Use {{name}} on scans",
+    "addBrand": "Add a brand",
+    "addBrandTitle": "Add a brand to {{name}}",
+    "searchBrands": "Search brands",
+    "noteLabel": "Why (optional)",
+    "notePlaceholder": "e.g. parent company",
+    "noBrands": "No brands on this list yet.",
+    "errors": {
+      "createFailed": "Couldn't create the list.",
+      "updateFailed": "Couldn't update the list.",
+      "deleteFailed": "Couldn't delete the list.",
+      "addFailed": "Couldn't add the brand.",
+      "removeFailed": "Couldn't remove the brand."
+    },
+    "nameRequired": "Give the list a name.",
+    "nameTooLong": "Keep the name to 100 characters.",
+    "pickList": "Choose a list",
+    "alreadyOn": "Already on it"
   }
 }

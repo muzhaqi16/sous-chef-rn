@@ -18,6 +18,7 @@ export const kitTestIDs = {
   tabBarAddButton: 'tab-bar-add-button',
   tabBarAddMenuScrim: 'tab-bar-add-menu-scrim',
   toastMessage: 'toast-message',
+  toastDetail: 'toast-detail',
   filterTabsPrefix: 'filter-tab',
   alertModal: 'alert-modal',
   alertModalBehind: 'alert-modal-behind',

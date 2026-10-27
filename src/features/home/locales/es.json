@@ -27,11 +27,9 @@
     "inviteHomeMessage": "¡{{name}} te ha invitado a unirte a su hogar para gestionar la despensa y las listas juntos!"
   },
   "inviteUser": {
-    "roleMemberLabel": "Miembro",
     "roleMemberDescription": "Puede añadir y editar artículos de la despensa",
     "roleAdminDescription": "Puede gestionar miembros y ajustes",
     "roleGuestDescription": "Acceso solo de lectura al hogar",
-    "roleOwnerLabel": "Propietario",
     "roleOwnerDescription": "Control total del hogar y de todos los miembros",
     "ownerWarning": "⚠️ Los propietarios tienen control total",
     "submit": "Enviar invitación",
@@ -51,7 +49,6 @@
     "invitedHeading": "¡Has recibido una invitación!",
     "homeInviteText": "{{inviter}} te ha invitado a unirte",
     "listInviteText": "{{inviter}} te ha invitado a colaborar en",
-    "resourceHome": "Hogar",
     "roleLabel": "Rol: {{role}}",
     "descriptionLabel": "Descripción:",
     "acceptFailed": "No se pudo aceptar la invitación. Inténtalo de nuevo.",
@@ -71,8 +68,6 @@
     "accessibilityDefaultSuffix": ", hogar predeterminado",
     "statsHome_one": "Hogar",
     "statsHome_other": "Hogares",
-    "statsMember_one": "Miembro",
-    "statsMember_other": "Miembros",
     "statsPantry_one": "Despensa",
     "statsPantry_other": "Despensas",
     "cardDefault": "Predeterminado",
@@ -104,10 +99,11 @@
     "youLabel": "Tú",
     "storageLocationsSubtitle": "Gestiona dónde se guardan los artículos",
     "leaveHomeDescription": "Salir de este hogar eliminará tu acceso a todas las despensas, listas de compras, planes de comida y plantillas compartidas.",
-    "ownerCannotLeaveMessage": "Los propietarios no pueden salir del hogar. Transfiere la propiedad a otro miembro o elimina el hogar."
+    "ownerCannotLeaveMessage": "Los propietarios no pueden salir del hogar. Transfiere la propiedad a otro miembro o elimina el hogar.",
+    "dietaryNeedsRowTitle": "Lo que los miembros no pueden comer",
+    "dietaryNeedsRowSubtitle": "Alergias y restricciones que los miembros comparten con este hogar"
   },
   "joinHome": {
-    "homeFallback": "Hogar",
     "enterCodeTitle": "Introduce el Código",
     "enterCodeDescription": "Introduce el código de acceso que recibiste para unirte a un hogar.",
     "findHome": "Buscar Hogar",
@@ -116,8 +112,6 @@
     "invitedToJoin": "Te han invitado a unirte a",
     "enterDifferentCode": "Introducir otro código",
     "joinFailed": "No se pudo unir al hogar. El código puede no ser válido o haber caducado.",
-    "memberCount_one": "{{count}} miembro",
-    "memberCount_other": "{{count}} miembros",
     "pantryCount_one": "{{count}} despensa",
     "pantryCount_other": "{{count}} despensas"
   },
@@ -130,16 +124,11 @@
     "staleHome": "Este enlace de invitación al hogar ha caducado. Pide un nuevo enlace para unirte.",
     "staleList": "Este enlace de invitación a la lista ha caducado. Pide un nuevo enlace para unirte."
   },
-  "roles": {
-    "owner": "Propietario",
-    "member": "Miembro"
-  },
   "collaboratorRoles": {
     "viewer": "Visor",
     "shopper": "Comprador",
     "contributor": "Colaborador",
     "editor": "Editor",
-    "owner": "Propietario",
     "permissions": {
       "viewItems": "Ver artículos",
       "addItems": "Añadir artículos",
@@ -174,10 +163,6 @@
     "invalidHomeId": "ID de hogar no válido",
     "leaveBody": "¿Seguro que quieres abandonar \"{{name}}\"? Perderás acceso a este hogar y a sus despensas y listas de compras."
   },
-  "homeRoles": {
-    "owner": "Propietario",
-    "member": "Miembro"
-  },
   "inviteStatus": {
     "PENDING": "Pendiente",
     "ACCEPTED": "Aceptada",
@@ -185,5 +170,17 @@
     "EXPIRED": "Caducada",
     "REVOKED": "Revocada",
     "USED": "Usada"
+  },
+  "homeDietaryNeeds": {
+    "title": "Necesidades alimentarias",
+    "emptyTitle": "Nadie comparte aún sus necesidades alimentarias",
+    "emptyBody": "Cada miembro decide compartirlas en su Perfil alimentario.",
+    "group": {
+      "allergicTo": "Alergia a",
+      "intolerantTo": "Intolerancia a",
+      "avoids": "Evita",
+      "follows": "Sigue",
+      "goals": "Objetivos"
+    }
   }
 }

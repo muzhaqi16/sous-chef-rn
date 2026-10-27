@@ -31,7 +31,7 @@ export const profileTypePolicies: TypePolicies = {
   },
   Query: {
     fields: {
-      myUserReports: mergeConnectionByNodeId([]),
+      myReviewSubmissions: mergeConnectionByNodeId([]),
     },
   },
 };

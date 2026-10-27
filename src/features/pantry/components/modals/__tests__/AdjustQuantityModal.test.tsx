@@ -4,6 +4,8 @@ import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQu
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { t } from '#/i18n';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/AdjustQuantityModal.generated';
+import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -145,6 +147,35 @@ jest.mock('#/utils/fractionUtils', () => ({
 
 const PANTRY_ITEM_ID = 'pantry-1';
 
+const reading = (
+  value: number,
+  unitId: string,
+  symbol: string,
+  type = UnitType.Weight,
+) => ({
+  __typename: 'MeasureReading',
+  value,
+  unitId,
+  symbol,
+  displayAsFraction: false,
+  type,
+});
+
+const measure = (
+  value: number,
+  unitId: string,
+  metric: ReturnType<typeof reading>,
+  imperial: ReturnType<typeof reading>,
+) => ({ __typename: 'Measure', value, unitId, metric, imperial });
+
+// A reading of nothing the stack stores: the sheet reads the stored figure.
+const NO_READING = measure(
+  0,
+  'unit-none',
+  reading(0, 'unit-none', ''),
+  reading(0, 'unit-none', ''),
+);
+
 function makeCache(overrides: Record<string, unknown> = {}) {
   return seedCache([
     {
@@ -165,10 +196,44 @@ function makeCache(overrides: Record<string, unknown> = {}) {
           displayAsFraction: false,
         },
         netWeightUnit: null,
+        displayAmount: {
+          __typename: 'DisplayAmount',
+          quantity: 3,
+          unit: { __typename: 'Unit', id: 'u1', symbol: 'cups' },
+        },
+        held: NO_READING,
+        remaining: null,
         ...overrides,
       },
     },
   ]);
+}
+
+// 1360.78 g of honey, which the row reads as "3 lb" for an imperial user.
+function honeyCache() {
+  const cache = makeCache({
+    itemName: 'Honey',
+    quantity: 1360.78,
+    unit: {
+      __typename: 'Unit',
+      id: 'u-g',
+      symbol: 'g',
+      displayAsFraction: false,
+    },
+    displayAmount: {
+      __typename: 'DisplayAmount',
+      quantity: 1360.78,
+      unit: { __typename: 'Unit', id: 'u-g', symbol: 'g' },
+    },
+    held: measure(
+      1360.78,
+      'u-g',
+      reading(1.36, 'u-kg', 'kg'),
+      reading(3, 'u-lb', 'lb'),
+    ),
+  });
+  writeUnitSystemSettings(cache, UnitSystem.Imperial, UnitSystem.Imperial);
+  return cache;
 }
 
 describe('AdjustQuantityModal', () => {
@@ -298,6 +363,66 @@ describe('AdjustQuantityModal', () => {
 
     await waitFor(() => expect(onConfirm).toHaveBeenCalled());
     expect(onConfirm.mock.calls[0]?.[0]).toBe(5);
+  });
+
+  describe('in the user’s unit system', () => {
+    it('opens on the count as the row reads it', () => {
+      renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
+        cache: honeyCache(),
+      });
+      expect(screen.getByText('3 lb')).toBeTruthy();
+      expect(screen.getByDisplayValue('3')).toBeTruthy();
+    });
+
+    // USM-8: the server converts 2.5 lb onto the gram stack exactly.
+    it('sends a recount of 2.5 lb with the pound', async () => {
+      const onConfirm = jest.fn();
+      renderWithApollo(
+        <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
+        { cache: honeyCache() },
+      );
+
+      const user = userEvent.setup();
+      const quantity = screen.getByDisplayValue('3');
+      await user.clear(quantity);
+      await user.type(quantity, '2.5');
+      await user.type(
+        screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
+        'Recount',
+      );
+      await user.press(screen.getByTestId('confirm-btn'));
+
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      expect(onConfirm.mock.calls[0]).toEqual([
+        2.5,
+        'Recount',
+        undefined,
+        { newQuantityUnitId: 'u-lb' },
+      ]);
+    });
+
+    it('sends the stored grams, and no unit, when the count is unchanged', async () => {
+      const onConfirm = jest.fn();
+      renderWithApollo(
+        <AdjustQuantityModal {...defaultProps} onConfirm={onConfirm} />,
+        { cache: honeyCache() },
+      );
+
+      const user = userEvent.setup();
+      await user.type(
+        screen.getByPlaceholderText(t('adjustQuantity.reasonPlaceholder')),
+        'Recount',
+      );
+      await user.press(screen.getByTestId('confirm-btn'));
+
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      expect(onConfirm.mock.calls[0]).toEqual([
+        1360.78,
+        'Recount',
+        undefined,
+        {},
+      ]);
+    });
   });
 
   it('shows current quantity info', () => {

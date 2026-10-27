@@ -10,12 +10,14 @@ import { FieldRow } from '#components/atoms/FieldRow';
 import type { PantryItemFormData } from './PantryItemForm';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 
 interface NetWeightSectionProps {
   control: Control<PantryItemFormData>;
   /** Re-runs the all-or-nothing rule, which reports on the unit field. */
   onNetWeightChanged: () => void;
   onNetWeightUnitSelected: (unitId: string | null) => void;
+  onConsumeUnitSelected: (unitId: string | null) => void;
 }
 
 /**
@@ -26,6 +28,7 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
   control,
   onNetWeightChanged,
   onNetWeightUnitSelected,
+  onConsumeUnitSelected,
 }) => {
   const { t } = useTranslation();
   return (
@@ -76,6 +79,27 @@ export const NetWeightSection: React.FC<NetWeightSectionProps> = ({
           />
         </FieldRow>
       </View>
+      <View style={styles.usedIn}>
+        <Controller
+          control={control}
+          name="consumeUnit"
+          render={({ field: { onChange, value }, fieldState }) => (
+            <UnitAutocompleteField
+              variant="modal"
+              label={t('labels.usedIn')}
+              value={value ?? ''}
+              onChangeText={onChange}
+              onUnitSelected={onConsumeUnitSelected}
+              placeholder={t('labels.tbspCup')}
+              error={fieldState.error?.message}
+              testID={pantryTestIDs.editItemUsedInPicker}
+            />
+          )}
+        />
+        <Text role="caption" tone="secondary">
+          {t('labels.usedInHint')}
+        </Text>
+      </View>
     </View>
   );
 };
@@ -88,6 +112,10 @@ const styles = StyleSheet.create(theme => ({
     fontStyle: 'italic',
     color: theme.colors.textTertiary,
     marginBottom: theme.spacing.sm,
+  },
+  usedIn: {
+    marginTop: theme.spacing.md,
+    gap: theme.spacing.xs,
   },
   sectionTitleSpacing: {
     marginBottom: theme.spacing.md,

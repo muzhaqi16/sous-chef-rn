@@ -1,0 +1,41 @@
+# What a scanned product means for the household: an alert per member
+# restriction it meets, strongest first, and products of the same kind that
+# meet none. Its own query, keyed by the item, so a product checked before still
+# shows its alerts offline; the barcode lookup reads the fragment too, so a
+# scan asks once.
+query ProductDietaryAlerts($itemId: ID!, $homeId: ID!) {
+  item(id: $itemId) {
+    id
+    ...useProductDietaryAlerts_item
+  }
+}
+
+fragment useProductDietaryAlerts_item on Item {
+  id
+  dietaryAlerts(homeId: $homeId) {
+    state
+    membership {
+      id
+      userId
+      role
+      displayName
+    }
+    restriction {
+      id
+      diet
+      intolerance
+      healthGoal
+      item {
+        id
+        name
+      }
+      severity
+    }
+  }
+  dietaryAlternatives(homeId: $homeId, first: 5) {
+    id
+    name
+    imageUrl
+    primaryUpc
+  }
+}

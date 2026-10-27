@@ -221,6 +221,31 @@ enum AcquisitionMethod {
   SHOPPING_LIST
 }
 
+input AddBrandToListInput {
+  """A catalog brand, such as a scanned product's Item.variationBrand"""
+  brandId: ID!
+  brandListId: ID!
+  """
+  Optional client-minted CUID2: a replay converges on that entry; an id naming another entry is a ConflictError
+  """
+  id: ID
+  """The owner's own note, at most 500 characters"""
+  reason: String
+}
+
+type AddBrandToListPayload {
+  brandList: BrandList!
+  """The entry: the one already there when the brand was listed before"""
+  brandListEntry: BrandListEntry!
+}
+
+"""
+Result of AddBrandToList. Select on AddBrandToListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union AddBrandToListResult = AddBrandToListPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
 input AddItemsToShoppingListInput {
   items: [BatchAddShoppingListItemInput!]!
   shoppingListId: ID!
@@ -279,10 +304,6 @@ union AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError |
 
 """A dietary restriction to add to the caller's profile."""
 input AddRestrictionInput {
-  """
-  Makes it a household restriction for this home; the caller must be an active member of it. Omit for a personal restriction
-  """
-  appliesToHomeId: ID
   """What the restriction restricts"""
   kind: RestrictionKindInput!
   """Free text, at most 1000 characters after trimming"""
@@ -416,10 +437,18 @@ input AdjustPantryItemQuantityInput {
   than the tare, or together with remainingNetWeight.
   """
   grossWeight: Float
+  """The unit grossWeight is stated in, as remainingNetWeightUnitId."""
+  grossWeightUnitId: ID
   id: ID!
   idempotencyKey: ID
   """The actual quantity from physical count"""
   newQuantity: Float!
+  """
+  The unit newQuantity is stated in, when not the stack's: converted exactly
+  within one kind (2.5 lb onto a gram stack; dozens onto pieces). Another kind
+  is refused on this field. The recount's ledger row keeps it as stated.
+  """
+  newQuantityUnitId: ID
   """Why the adjustment was made (required for audit trail)"""
   reason: String!
   """
@@ -430,6 +459,11 @@ input AdjustPantryItemQuantityInput {
   field when no held batch records a weight.
   """
   remainingNetWeight: Float
+  """
+  The unit remainingNetWeight is stated in, when not the stack's net-weight
+  unit: one of the same kind, never the tracking unit; refused on this field otherwise.
+  """
+  remainingNetWeightUnitId: ID
   """
   Optimistic concurrency control. REQUIRED: the caller is updating a row it
   already holds, so it has the version — and an update that silently skipped
@@ -793,6 +827,45 @@ input BrandFilters {
   search: String
 }
 
+"""
+Brands a user wants to be told about on a product. Private to its owner; at most 20 per user.
+"""
+type BrandList {
+  createdAt: DateTime!
+  """
+  The owner's switch: only an enabled list is matched by Item.listMatches.
+  """
+  enabled: Boolean!
+  """Its brands, oldest first; at most 100."""
+  entries: [BrandListEntry!]!
+  id: ID!
+  name: String!
+  updatedAt: DateTime!
+  version: Int!
+}
+
+type BrandListEntry {
+  brand: Brand!
+  createdAt: DateTime!
+  id: ID!
+  reason: String
+  version: Int!
+}
+
+"""
+One of the caller's enabled lists naming a product's brand, or a brand above it through Brand.parent.
+"""
+type BrandListMatch {
+  """
+  The product's brand the entry reached: the scanned barcode's, or one of the product's own
+  """
+  brand: Brand!
+  brandList: BrandList!
+  entry: BrandListEntry!
+  """True when the entry names a brand above this one, through Brand.parent"""
+  viaParent: Boolean!
+}
+
 input BrandOpsInput {
   addBrandIds: [ID!]
   removeBrandIds: [ID!]
@@ -802,6 +875,12 @@ input BrandOpsInput {
 input BrandOrderBy {
   createdAt: SortOrder
   name: SortOrder
+}
+
+"""The owner a source record names for a product's brand."""
+type BrandOwnerFact {
+  name: String!
+  source: ExternalSource!
 }
 
 """
@@ -1446,6 +1525,26 @@ input ChangePantryItemUnitInput {
 }
 
 type ChangePantryItemUnitPayload {
+  """
+  The stack's batches after this write, read as pantryItemBatchesConnection
+  reads them, so a client updates its batch list without a second request.
+  """
+  batchesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; newest first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PantryItemBatchOrderBy
+    """Only batches in this status"""
+    status: BatchStatus
+  ): PantryItemBatchConnection!
   """True when the route was exact"""
   exact: Boolean!
   method: PantryUnitChangeMethod!
@@ -1718,6 +1817,16 @@ type ConfirmItemImageUploadPayload {
   took the primary slot shows here without a refetch.
   """
   item: Item!
+  """
+  The caller's live pantry stacks for the item, in every pantry it may view.
+  Each shows the photo where it now applies (EntryImage gives the order), so
+  a client updates its rows without a refetch.
+  """
+  pantryItems: [PantryItem!]!
+  """
+  The caller's live shopping-list lines for the item, on every list it can read; as pantryItems.
+  """
+  shoppingListItems: [ShoppingListItem!]!
   """The confirmed photo's public URL."""
   url: URL
 }
@@ -1843,6 +1952,26 @@ input ConvertExpiredToWasteInput {
 }
 
 type ConvertExpiredToWastePayload {
+  """
+  The stack's batches after this write, read as pantryItemBatchesConnection
+  reads them, so a client updates its batch list without a second request.
+  """
+  batchesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; newest first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PantryItemBatchOrderBy
+    """Only batches in this status"""
+    status: BatchStatus
+  ): PantryItemBatchConnection!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -2027,6 +2156,28 @@ input CreateBrandInput {
   parentId: ID
 }
 
+input CreateBrandListInput {
+  """Whether the list is matched from the start; true when omitted"""
+  enabled: Boolean
+  """
+  Optional client-minted CUID2: a replayed create answers IDEMPOTENT_REPLAY instead of duplicating
+  """
+  id: ID
+  """1 to 100 characters"""
+  name: String!
+}
+
+type CreateBrandListPayload {
+  brandList: BrandList!
+}
+
+"""
+Result of CreateBrandList. Select on CreateBrandListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union CreateBrandListResult = ConflictError | CreateBrandListPayload | ForbiddenError | NotFoundError | ValidationError
+
 type CreateBrandPayload {
   brand: Brand!
 }
@@ -2095,6 +2246,11 @@ input CreateHomeInput {
   isPublic: Boolean
   """At most this many active members, 1 to 50. Null is 50."""
   maxMembers: Int
+  """
+  Stored cleaned: control characters removed, trimmed, and each run of
+  whitespace one space. Refused (VALIDATION_FAILED on name) when that is
+  empty or over 100 characters; any other text is accepted.
+  """
   name: String!
   tags: [String!]
   timezone: TimeZone
@@ -2158,6 +2314,11 @@ input CreateItemInput {
   forge any of them.
   """
   metadata: ItemMetadataInput
+  """
+  The item's name. Stored cleaned: control characters removed, trimmed, and
+  each run of whitespace one space. Refused (VALIDATION_FAILED on name) when
+  that is empty or over 128 characters; any other text is accepted.
+  """
   name: String!
   netWeights: [ItemNetWeightInput!]
   nutritionFacts: [NutritionFactInput!]
@@ -2405,16 +2566,25 @@ input CreatePantryItemInput {
   amount: StockAmountInput
   brand: BrandRefInput
   """
+  The unit this household uses the stack in (a jar of honey, by the
+  tablespoon); the consume picker leads with it. Refused on consumeUnit when
+  the stack cannot be consumed in it. Omitted, the stack has none. Not applied
+  to a held stack a forced add joins.
+  """
+  consumeUnit: UnitRefInput
+  """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
   where the field may be cleared.
   """
   expiresOn: LocalDate
   """
-  When the pantry already holds this item in the resolved unit, add the quantity to that
-  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
-  active stack per item per unit. The added stock is measured by this input's own net weight
-  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
-  the item name) are not applied to the held stack.
+  When the pantry already holds this item, in any unit, add the stock anyway instead of
+  refusing with DuplicatePantryItemError. It joins the held stack in the resolved unit, else
+  the oldest, where the amount converts into that stack on recorded facts, and that stack is
+  returned; otherwise it opens a stack of its own in the resolved unit. Joined stock is
+  measured by this input's own net weight and records its linked purchase. Stack-level fields
+  (brand, storage, tags, thresholds, consumeUnit and the item name) are neither applied to
+  nor checked against a stack it joins.
   """
   forceAdd: Boolean
   """
@@ -2864,11 +3034,28 @@ input CreateShoppingListInput {
   """
   id: ID
   isDefault: Boolean
+  """
+  Lines for the new list, added in the same request as addItemsToShoppingList
+  adds them: at most 50, each on its own, each reporting its own result on
+  CreateShoppingListPayload.itemResults. A replayed create adds none.
+  """
+  items: [BatchAddShoppingListItemInput!]
+  """
+  The meal plan the list is derived from, recorded as linkShoppingListToMealPlan
+  records it: the caller must be able to view the plan, and the list is
+  generatedFromMealPlan.
+  """
+  mealPlanId: ID
   name: String!
   tags: [String!]
 }
 
 type CreateShoppingListPayload {
+  """
+  One result per CreateShoppingListInput.items entry, in input order, as
+  addItemsToShoppingList reports them; empty when none were sent.
+  """
+  itemResults: [BatchAddShoppingListItemResult!]!
   shoppingList: ShoppingList!
 }
 
@@ -3158,6 +3345,25 @@ A date-time string at UTC, such as 2007-12-03T10:15:30Z, compliant with the `dat
 """
 scalar DateTime @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#section-5.6")
 
+"""A package figure as the product's label prints it."""
+type DeclaredQuantity {
+  """
+  The first figure the label prints in imperial units for this same
+  quantity, by the same rule as metric; null when it prints none.
+  """
+  imperial: MeasureReading
+  """
+  The first figure the label prints in metric units for this same quantity;
+  null when it prints none. A multipack's piece and its total are different
+  quantities: 6 x 8.4 fl oz (1.49 L) prints no metric figure for one piece.
+  """
+  metric: MeasureReading
+  """
+  The label's own text, as the barcode record keeps it (6.35 oz (180 g)).
+  """
+  text: String!
+}
+
 """
 An invite to decline, by exactly one of its emailed token or its id. By id,
 the caller must be its addressee with a verified email, as on acceptance.
@@ -3221,6 +3427,31 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union DeleteAccountResult = ConflictError | DeleteAccountPayload | ForbiddenError | NotFoundError | ValidationError
+
+input DeleteBrandListInput {
+  id: ID!
+}
+
+type DeleteBrandListPayload {
+  """
+  The removed brand list, or null when it was already gone: a replay that
+  converged as success. See converged.
+  """
+  brandList: BrandList
+  """
+  True when this call CONVERGED on a brand list that was already gone: a
+  no-op success that changed nothing and published nothing. The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
+}
+
+"""
+Result of DeleteBrandList. Select on DeleteBrandListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union DeleteBrandListResult = ConflictError | DeleteBrandListPayload | ForbiddenError | NotFoundError | ValidationError
 
 input DeleteCookingLogInput {
   id: ID!
@@ -4370,6 +4601,53 @@ enum Diet {
 }
 
 """
+A member restriction a subject may break, with the strongest evidence. No alert means only no evidence, never safe.
+"""
+type DietaryAlert {
+  """
+  The evidence's own name: an allergen, an item, an analysis tag or a department
+  """
+  matched: String!
+  """
+  The member's membership of the home; its displayName is the name to show
+  """
+  membership: Membership!
+  restriction: SharedDietaryRestriction!
+  source: DietaryAlertSource!
+  state: DietaryAlertState!
+}
+
+"""
+What kind of evidence raised a dietary alert; the client writes the copy per kind.
+"""
+enum DietaryAlertSource {
+  """
+  An allergen the product declares, or one found in an ingredient's name; matched is its name
+  """
+  ALLERGEN
+  """
+  The subject is at or below an avoided catalog item; matched is that item's name
+  """
+  AVOIDED_ITEM
+  """
+  The store department the subject sits in, such as MEAT_SEAFOOD; only ever MAY_CONTAIN
+  """
+  DEPARTMENT
+  """
+  An Open Food Facts ingredients analysis, such as non-vegan; matched is the tag without its language prefix
+  """
+  INGREDIENTS_ANALYSIS
+}
+
+"""
+How strongly the evidence says a subject holds what a restriction avoids.
+"""
+enum DietaryAlertState {
+  CONTAINS
+  MAY_CONTAIN
+}
+
+"""
 What a user eats and plans for: restrictions, tastes, daily nutrition goals
 and cooking limits. One per account. A meal plan linked to it measures its
 nutrition against these goals.
@@ -4389,7 +4667,9 @@ type DietaryProfile {
   cookingSkillLevel: CookingSkillLevel
   """When the profile was created"""
   createdAt: DateTime!
-  """Ingredients the user dislikes, as free text; empty when none"""
+  """
+  Ingredients the user dislikes, as free text; empty when none. Nothing screens against it: avoided items are restrictions
+  """
   dislikedIngredients: [String!]!
   """
   Daily fat goal in grams, measured as calorieTarget is; null or 0 when no goal is set
@@ -4416,6 +4696,10 @@ type DietaryProfile {
   """
   proteinTarget: Int
   """
+  The religious diet the user follows; null when none is set. Private to the user, never shared with a home
+  """
+  religiousDiet: ReligiousDiet
+  """
   The diets, intolerances and health goals the user follows, at most 100; empty when none
   """
   restrictions: [DietaryRestriction!]!
@@ -4429,7 +4713,8 @@ type DietaryProfile {
 }
 
 type DietaryRestriction {
-  appliesToHomeId: ID
+  """The home named when the restriction was added; decides nothing"""
+  appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
   createdAt: DateTime!
   diet: Diet
   dietaryProfile: DietaryProfile!
@@ -4437,6 +4722,10 @@ type DietaryRestriction {
   healthGoal: HealthGoal
   id: ID!
   intolerance: Intolerance
+  """
+  The catalog item avoided, stored as the root of the item picked; null for the other kinds
+  """
+  item: Item
   notes: String
   severity: RestrictionSeverity!
   updatedAt: DateTime!
@@ -4504,10 +4793,11 @@ interface DomainEvent {
 }
 
 """
-The pantry already holds an active stack of this catalog item in this unit, and
-a pantry holds one. Returned by `createPantryItem` without `forceAdd`, and by
-`updatePantryItem` and `restorePantryItem` when the write would open a second,
-so the client can route the user to restock the existing stack. The `code` is
+The pantry already holds this catalog item. `createPantryItem` without
+`forceAdd` returns it when an active stack holds the item in any unit, naming
+each one. `updatePantryItem` and `restorePantryItem` return it when the write
+would open a second stack of the item in one unit. The client can route the
+user to restock the existing stack, or resend with `forceAdd`. The `code` is
 `PANTRY_ITEM_ALREADY_EXISTS`.
 """
 type DuplicatePantryItemError implements Error {
@@ -4559,7 +4849,8 @@ enum EntitlementSource {
 The photo a household's entry shows. In order: the household's own photo for
 the entry's catalog item, when it chose one and the viewer is the household's
 member; else the catalog photo the item shows everyone (Item.imageUrl); else
-none. A household upload's url is a signed link that expires: read it from the
+the viewer's own photo of the item awaiting review, newest first; else none.
+A household upload's url is a signed link that expires: read it from the
 entry each time, never store it.
 """
 type EntryImage {
@@ -4567,13 +4858,15 @@ type EntryImage {
   The ItemPhoto shown when it is one of the item's photos; null for a household upload.
   """
   catalogImageId: ID
-  """The credit a catalog photo needs; null for a household upload."""
+  """
+  The credit a catalog photo needs; null for a household upload or a pending photo.
+  """
   credit: ImageCredit
   source: EntryImageSource!
   """
-  The image sized for a row. A catalog photo, or one the household picked, is
-  that photo's thumbnail rendition (the photo itself when it has none); its
-  original is in Item.photos under catalogImageId. A household upload is
+  The image sized for a row. A catalog photo, one the household picked, or the
+  viewer's pending photo is that photo's thumbnail rendition (the photo itself
+  until it has one); its original is in Item.photos under catalogImageId. A household upload is
   served as stored, at most 1600 px on its long side: it has no rendition and
   is not among Item.photos.
   """
@@ -4588,6 +4881,10 @@ enum EntryImageSource {
   The household chose it: its own upload, or one of the item's photos it picked.
   """
   HOUSEHOLD
+  """
+  The viewer's own photo of the item, awaiting review; shown to no one else.
+  """
+  PENDING
 }
 
 """
@@ -5179,6 +5476,11 @@ type Home {
   createdAt: DateTime!
   currency: CurrencyCode
   description: String
+  """
+  One entry per ACTIVE member sharing with this home (Membership.sharesDietaryNeeds) who has a restriction,
+  in membersConnection order. Read live; readable by any member who can view the home, guests included.
+  """
+  dietaryNeeds: [MemberDietaryNeeds!]!
   id: ID!
   inviteLogsConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -5665,6 +5967,35 @@ type HouseholdMoneyReport {
   wasteValue: [CurrencyAmount!]
 }
 
+type HouseholdPaidPrice {
+  basis: PriceBasis
+  """The price per kg, L or each, when the pack's facts allowed it"""
+  normalizedPrice: Float
+  onSale: Boolean!
+  paidAt: DateTime!
+  """How many units were bought; null when not known"""
+  quantity: Float
+  """The regular price per unit, when the source recorded one beside a sale"""
+  regularPrice: Float
+  """Where it was bought; null when no store was recorded"""
+  store: Store
+  unit: Unit!
+  unitPrice: Float!
+}
+
+"""
+What a household itself paid: its own purchases and receipts only; other households', catalog and manual prices never count. A member's purchase recorded with no home counts only in that member's own summary of their only home.
+"""
+type HouseholdPriceSummary {
+  currency: Currency!
+  """The household's newest paid price, however old; null when it has none"""
+  lastPaid: HouseholdPaidPrice
+  """The fewest days usual rests on"""
+  minimumObservations: Int!
+  """Null below minimumObservations days; a sale price never counts"""
+  usual: HouseholdUsualPrice
+}
+
 """A household's spend on one top-level category."""
 type HouseholdSpendCategory {
   """
@@ -5689,6 +6020,27 @@ type HouseholdSpendStore {
   spend: [CurrencyAmount!]!
   """The store; null for purchases that name none"""
   store: Store
+}
+
+"""
+A household's usual price: the median of its regular paid prices at one basis.
+"""
+type HouseholdUsualPrice {
+  """The basis the household bought by on the most days"""
+  basis: PriceBasis!
+  """The median price per basis; each day counts once, as that day's median"""
+  medianPrice: Float!
+  observations: Int!
+  """
+  The usual price per one of a unit; null when the unit normalizes to another basis, or only by an assumed density or package size
+  """
+  unitPrice(
+    """
+    The unit the price is per; omitted, the unit Item.trackingUnit answers for this barcode with no pantry, the unit a scan's add counts in
+    """
+    unitId: ID
+  ): Float
+  windowDays: Int!
 }
 
 type IPStat {
@@ -5801,6 +6153,47 @@ enum IngredientMatchConfidence {
   UNSURE
 }
 
+"""A curated swap for a concept in a recipe, managed by admins."""
+type IngredientSubstitute {
+  """The concept it stands in for"""
+  concept: Item!
+  createdAt: DateTime!
+  """How much of the original the parts replace, in forUnit"""
+  forQuantity: Float!
+  forUnit: Unit!
+  id: ID!
+  note: String
+  parts: [IngredientSubstitutePart!]!
+  """Curated order among one concept's substitutes, lowest first"""
+  position: Int!
+  role: SubstituteRole
+  updatedAt: DateTime!
+  version: Int!
+}
+
+"""A substitute as one recipe ingredient is offered it."""
+type IngredientSubstituteOption {
+  """
+  The home's PREFERENCE and GOAL alerts the parts raise; an allergy or intolerance drops the option
+  """
+  alerts: [DietaryAlert!]!
+  parts: [SubstitutePartAmount!]!
+  """
+  False when the amount converts only by an assumption, or the recipe states none: the parts are then as curated
+  """
+  scaled: Boolean!
+  substitute: IngredientSubstitute!
+}
+
+"""One part of a substitute, for its forQuantity of the original."""
+type IngredientSubstitutePart {
+  concept: Item!
+  id: ID!
+  position: Int!
+  quantity: Float!
+  unit: Unit!
+}
+
 """Input for ingredient usage when marking recipe as cooked"""
 input IngredientUsageInput {
   actualQuantity: Float!
@@ -5816,6 +6209,11 @@ input IngredientUsageInput {
   """
   pantryItemId: ID
   recipeIngredientId: ID!
+  """
+  A substitute RecipeIngredient.substitutes offered; the entry draws one part from pantryItemId, required.
+  The ingredient may have one entry per part, all naming it; its own stacks are then not drawn.
+  """
+  substituteId: ID
 }
 
 """
@@ -5840,6 +6238,10 @@ input InlineItemInput {
   an item the caller cannot see holds is refused with a ConflictError.
   """
   id: ID
+  """
+  The name an item created inline takes, cleaned as createItem's and at most
+  128 characters. Blank or absent, the server names the item.
+  """
   name: String
   netWeight: Float
   netWeights: [ItemNetWeightInput!]
@@ -6072,6 +6474,10 @@ type Item {
   solids measured by weight, COUNT for discrete items. Null when not declared.
   """
   baseDimension: BaseDimension
+  """
+  Who owns the product's brand, per USDA else Open Food Facts; null when none is named or it is the brand itself
+  """
+  brandOwner: BrandOwnerFact
   """Brands linked to this item, at most 100; empty when none."""
   brands: [ItemBrand!]!
   """
@@ -6131,7 +6537,7 @@ type Item {
   so two callers reading the same item can get different answers. Null for a
   serving or reference figure.
   """
-  convertedNetWeight: ConvertedValue
+  convertedNetWeight: ConvertedValue @deprecated(reason: "Use packageSize, which reads in both unit systems.")
   """When the item was created."""
   createdAt: DateTime!
   """
@@ -6161,6 +6567,26 @@ type Item {
   """Free-text description of the item, or null when none is recorded."""
   description: String
   """
+  One alert per restriction it may break, among ACTIVE members sharing with the home and the
+  caller's own: by severity, then CONTAINS first, then member order. Unknown evidence raises
+  nothing and a health goal never alerts. The caller must be an ACTIVE member of the home.
+  """
+  dietaryAlerts(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [DietaryAlert!]!
+  """
+  Other live products under this item's concept raising no alert and holding allergen or ingredient
+  data, most popular first; empty for an unplaced product. The 300 most popular products are
+  judged, so one ranked below them is not offered. Not a claim of safety.
+  """
+  dietaryAlternatives(
+    """At most this many: default 5, at most 20"""
+    first: Int = 5
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [Item!]!
+  """
   Unit that netWeight is stated in, for example oz. On an item returned by a
   barcode lookup, the unit of that barcode's figure when it has one.
   """
@@ -6188,6 +6614,18 @@ type Item {
   recorded.
   """
   healthBenefits: [HealthBenefit!]!
+  """
+  What the household paid for this item. The caller must be an ACTIVE member of the home.
+  """
+  householdPriceSummary(
+    """The currency read; the caller's own when omitted"""
+    currency: CurrencyCode
+    """One barcode of the item; all of them when omitted"""
+    gtin: String
+    homeId: ID!
+    """How far back usual counts: default 180 days, at most 365"""
+    windowDays: Int
+  ): HouseholdPriceSummary!
   """Unique identifier of the catalog item."""
   id: ID!
   """
@@ -6230,6 +6668,11 @@ type Item {
   """
   level: ItemLevel!
   """
+  The caller's enabled lists naming this product's brand or one above it, one match per list, the
+  nearest. A scan is checked by its barcode's brand, a concept by none; empty when anonymous.
+  """
+  listMatches: [BrandListMatch!]!
+  """
   The product record (package size, brand, images) of the barcode a lookup
   returned this item for, whether that barcode is the item's primary, an
   alternate, or known only through the record. An add names it as
@@ -6271,7 +6714,8 @@ type Item {
   mcg for vitamin D).
   
   Null for an item that has never been aggregated; a few items still carry
-  `nutritions` without it.
+  `nutritions` without it. Always the item's own: see shownNutrition for
+  a concept's typical values.
   """
   nutritionFacts: NutritionFacts
   """
@@ -6282,6 +6726,22 @@ type Item {
   has no field for.
   """
   nutritions: JSON
+  """Where the product comes from; null when no record states a country"""
+  origin: ProductOrigin
+  """
+  One package's size, read in both unit systems: the PACKAGE netWeight in
+  displayUnit, scoped to the scanned pack on a barcode lookup. Its declared
+  figure is the record's label where it states this size. Null for a
+  serving or reference figure.
+  """
+  packageSize: Measure
+  """
+  The package packageSize reports, as the pieces its label states: "6 x
+  250mL" is 6 of 250 mL. count × each is always packageSize, so a record
+  whose pieces do not add up reads as 1 of packageSize. Null where
+  packageSize is null.
+  """
+  packs: PackStatement
   """
   A concept's parent concept, used for matching only. Null for a product or a top-level concept.
   """
@@ -6369,6 +6829,12 @@ type Item {
   """
   showInOnboarding: Boolean!
   """
+  The nutrition to show: the item's own facts, else, for a product with none,
+  its concept's, marked by typicalOf as typical of that concept. Only the
+  product's own concept is read. Null when neither has facts.
+  """
+  shownNutrition: ShownNutrition
+  """
   Lifecycle state of the catalog entry. Barcode lookups and curated lists return
   only ACTIVE items; a deleted or rejected item is ARCHIVED.
   """
@@ -6396,13 +6862,30 @@ type Item {
     """Sort order; oldest first when omitted"""
     orderBy: ItemStoreSkuOrderBy
   ): ItemStoreSkuConnection!
+  """
+  The unit households use this product in (a stack's consume unit, or a use
+  stated in another unit than its stack's), by the same rule as
+  suggestedPackageUnit; null where nothing qualifies.
+  """
+  suggestedConsumeUnit: Unit
+  """
+  The container households count this product in, where at least three
+  independent households agree and the leader has twice the runner-up's
+  support, over the last year. A product short of that takes its concept's.
+  The same for every viewer; null where nothing qualifies.
+  """
+  suggestedPackageUnit: Unit
   """Free-form labels attached to the item; empty when none."""
   tags: [String!]!
   """
   The unit an add of this item naming no unit is counted in: the unit the
   given pantry holds it in, or last held it in, else the item's preferred
-  tracking unit, retail unit, default unit or declared count unit, else piece.
-  Without a pantry, from the item alone. Requires view access to the pantry.
+  tracking unit, retail unit, default unit or declared count unit, else
+  suggestedPackageUnit, else piece. When the package size this item reports (netWeight with netWeightKind
+  PACKAGE; on a barcode lookup, the scanned one's) is known, a count stack the
+  pantry holds comes first, and past the pantry's stacks only count units
+  qualify, so one of it is one package, never one ounce. Without a pantry,
+  from the item alone. Requires view access to the pantry.
   """
   trackingUnit(pantry: ID): Unit!
   """The item's general kind, such as FOOD, DRINK or HOUSEHOLD."""
@@ -6745,10 +7228,30 @@ type ItemPhoto {
 }
 
 """
+A photo the caller uploaded for a catalog item, which a reviewer approves or rejects.
+"""
+type ItemPhotoSubmission implements ReviewSubmission {
+  id: ID!
+  item: Item!
+  """
+  The photo, with its sizes; null once it is rejected, since a rejected photo is shown to no one.
+  """
+  photo: ItemPhoto
+  """
+  Always null: a reviewer's note on a photo is not shown to the uploader.
+  """
+  reviewNote: String
+  """Always null: a photo is sent without words."""
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+}
+
+"""
 Where an item is cheaper. Catalog prices and the viewer's own household's paid
 prices count; other households' paid prices count, anonymously, only once at
 least two households and two people supplied them. Estimates do not. Rows are
-cheapest first within each basis.
+cheapest first within each basis. Sale and regular prices both count.
 """
 type ItemPriceComparison {
   currency: Currency!
@@ -6878,6 +7381,23 @@ input ItemRefInput @oneOf {
   variation: ID
 }
 
+"""A report that a catalog item, or one of its photos, is wrong."""
+type ItemReportSubmission implements ReviewSubmission {
+  id: ID!
+  item: Item!
+  """
+  The photo reported; null for a report on the whole item, and once the photo is no longer shown.
+  """
+  photo: ItemPhoto
+  """
+  Always null: a reviewer's note on a report is not shown to the reporter.
+  """
+  reviewNote: String
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+}
+
 enum ItemStatus {
   ACTIVE
   ARCHIVED
@@ -6955,6 +7475,18 @@ enum ItemSuggestionStatus {
   APPROVED
   PENDING
   REJECTED
+}
+
+"""A suggested edit to a catalog item."""
+type ItemSuggestionSubmission implements ReviewSubmission {
+  id: ID!
+  item: Item!
+  reviewNote: String
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+  """The suggestion itself, with the changes it proposed."""
+  suggestion: ItemEditSuggestion!
 }
 
 """Categorizes the general type of an item in the pantry or shopping list"""
@@ -7963,7 +8495,7 @@ type MealPlan {
   """Free text about the plan; null when none was given"""
   description: String
   """
-  The dietary profile nutritionGoalProgress measures the plan against; null when none is linked
+  The dietary profile nutritionGoalProgress measures the plan against; null when none is linked, or for any caller but its owner or an admin
   """
   dietaryProfile: DietaryProfile
   """
@@ -8003,8 +8535,8 @@ type MealPlan {
   """The plan's name; never blank"""
   name: String!
   """
-  Progress toward nutrition goals from linked dietary profile.
-  Returns null if no dietary profile is linked.
+  Progress toward the linked dietary profile's nutrition goals. Null when no
+  profile is linked, or for any caller but its owner or an admin.
   """
   nutritionGoalProgress: NutritionGoalProgress
   """
@@ -8499,10 +9031,61 @@ type MealTypeNutrition {
   totalProtein: Float!
 }
 
+"""
+An amount as stored, and as it reads in each unit system. The readings are
+the same for every viewer: a client shows metric or imperial by its own
+setting, so a change of setting needs no new request.
+"""
+type Measure {
+  """
+  What the product's label prints for this figure. Null unless a barcode
+  record's label states exactly this amount.
+  """
+  declared: DeclaredQuantity
+  """
+  The amount in imperial (US customary) units, by the same rule as metric.
+  """
+  imperial: MeasureReading!
+  """
+  The amount in metric units: the label's own metric figure where declared
+  states one, else climbed from its base to the largest unit that keeps it
+  readable, rounded at that unit's display step. A count, or a unit both
+  systems use (tbsp), reads as stored.
+  """
+  metric: MeasureReading!
+  """The unit value is stored in."""
+  unit: Unit!
+  """The id of unit, so a Measure needs no unit selection."""
+  unitId: ID!
+  """The figure exactly as stored, in unit; never rounded here."""
+  value: Float!
+}
+
+"""One unit system's reading of an amount."""
+type MeasureReading {
+  """Whether unit shows its amounts as fractions (cups do)."""
+  displayAsFraction: Boolean!
+  """The symbol of unit (lb, g, can), so a reading needs no unit selection."""
+  symbol: String!
+  """The dimension of unit: weight, volume or count."""
+  type: UnitType!
+  unit: Unit!
+  """The id of unit, so a reading needs no unit selection."""
+  unitId: ID!
+  value: Float!
+}
+
 """An amount in a unit."""
 input MeasuredAmountInput {
   """Greater than zero."""
   quantity: Float!
+  """
+  The unit by id, symbol or name, instead of unitId: a typed unit such as
+  "lbs" or "fl oz", resolved as the vocabulary resolves it, and never made. One
+  no unit answers is VALIDATION_FAILED on amount.measured.unit, as is sending
+  both unit and unitId.
+  """
+  unit: UnitRefInput
   """
   Omitted, the unit the door defaults to: the list line's, or the stack's.
   """
@@ -8563,6 +9146,18 @@ input MediaAssetsInput {
   images: [ImageInput!]
 }
 
+"""One sharing member of a home and the restrictions the home sees"""
+type MemberDietaryNeeds {
+  """
+  The member's membership of the home; its displayName is the name to show
+  """
+  membership: Membership!
+  """
+  The member's restrictions, strictest first (ALLERGY to GOAL), then newest; never empty
+  """
+  restrictions: [SharedDietaryRestriction!]!
+}
+
 """A user's membership of a home: their role and permissions in it"""
 type Membership {
   """Grants adding items to the home's pantries"""
@@ -8608,6 +9203,10 @@ type Membership {
   except canViewPantry.
   """
   role: MembershipRole!
+  """
+  Whether the member's restrictions appear in this home's dietaryNeeds; set only by the member. A new membership starts shared
+  """
+  sharesDietaryNeeds: Boolean!
   """
   Whether the membership is in force. Only an ACTIVE membership grants access
   to the home; LEFT, REMOVED and SUSPENDED memberships grant nothing.
@@ -9122,6 +9721,10 @@ type Mutation {
   """
   acceptShoppingListInvite(input: AcceptShoppingListInviteInput!): AcceptShoppingListInviteResult!
   """
+  Put a catalog brand on one of the caller's lists. A brand already there converges, its reason unchanged.
+  """
+  addBrandToList(input: AddBrandToListInput!): AddBrandToListResult!
+  """
   Batch add multiple items to a shopping list; a single add is a batch of
   one. Max 50 items per batch.
   
@@ -9244,6 +9847,8 @@ type Mutation {
   correctPantryItemPackageSize(input: CorrectPantryItemPackageSizeInput!): CorrectPantryItemPackageSizeResult!
   """Create a new brand."""
   createBrand(input: CreateBrandInput!): CreateBrandResult!
+  """Create a brand list of the caller's own."""
+  createBrandList(input: CreateBrandListInput!): CreateBrandListResult!
   """Create a new category."""
   createCategory(input: CreateCategoryInput!): CreateCategoryResult!
   """Create a new home."""
@@ -9365,6 +9970,8 @@ type Mutation {
   declineShoppingListInvite(input: DeclineShoppingListInviteInput!): DeclineShoppingListInviteResult!
   """Delete the current user's account."""
   deleteAccount: DeleteAccountResult!
+  """Delete a list and its entries. Converges on a list already gone."""
+  deleteBrandList(input: DeleteBrandListInput!): DeleteBrandListResult!
   """
   Delete one of the caller's cooking logs; Recipe.totalCookingLogs drops by
   one. Stock the cook deducted from the pantry stays deducted: deleting the
@@ -9512,10 +10119,10 @@ type Mutation {
   """
   linkItemToExternalSource(input: LinkItemToExternalSourceInput!): LinkItemToExternalSourceResult!
   """
-  Record the meal plan a shopping list was derived from. A client builds the
-  list from the plan it holds (createShoppingList, then
-  addItemsToShoppingList), then links it here. Both ends are checked: edit
-  access to the list, view access to the plan.
+  Record the meal plan a shopping list was derived from. A list made from a
+  plan names it at createShoppingList (mealPlanId, with its items) instead;
+  this links one that already exists. Both ends are checked: edit access to
+  the list, view access to the plan.
   """
   linkShoppingListToMealPlan(input: LinkShoppingListToMealPlanInput!): LinkShoppingListToMealPlanResult!
   """Authenticate a user with credentials and return tokens."""
@@ -9670,6 +10277,8 @@ type Mutation {
   This is the primary way to add a device from mobile apps.
   """
   registerDevice(input: RegisterDeviceInput!): RegisterDeviceResult!
+  """Take a brand off a list. Converges on a brand no longer listed."""
+  removeBrandFromList(input: RemoveBrandFromListInput!): RemoveBrandFromListResult!
   """
   Remove an item from a shopping list. Removing a line that is already removed
   converges: success with shoppingListItem null and converged true.
@@ -9749,6 +10358,12 @@ type Mutation {
   toggleReviewHelpful(input: ToggleReviewHelpfulInput!): ToggleReviewHelpfulResult!
   """Transfer ownership of a home to another member."""
   transferHomeOwnership(input: TransferHomeOwnershipInput!): TransferHomeOwnershipResult!
+  """
+  Rename a list or switch it on or off. Another user's list is a NotFoundError.
+  """
+  updateBrandList(input: UpdateBrandListInput!): UpdateBrandListResult!
+  """Change an entry's reason."""
+  updateBrandListEntry(input: UpdateBrandListEntryInput!): UpdateBrandListEntryResult!
   """Update a collaborator's granular permissions on a shopping list."""
   updateCollaboratorPermissions(input: UpdateCollaboratorPermissionsInput!): UpdateCollaboratorPermissionsResult!
   """Update a collaborator's role on a shopping list."""
@@ -9763,6 +10378,12 @@ type Mutation {
   updateDevice(input: UpdateDeviceInput!): UpdateDeviceResult!
   """Update the current user's dietary profile."""
   updateDietaryProfile(input: UpdateDietaryProfileInput!): UpdateDietaryProfileResult!
+  """
+  Turn the caller's own dietary sharing with a home on or off; any member, guests included. No ACTIVE
+  membership is a ForbiddenError. An unchanged value or a spent idempotencyKey writes nothing and answers
+  the membership as it stands; a change is announced on homeEvents as MEMBERSHIP_UPDATED.
+  """
+  updateDietarySharing(input: UpdateDietarySharingInput!): UpdateDietarySharingResult!
   """Update an external source mapping."""
   updateExternalSource(input: UpdateExternalSourceInput!): UpdateExternalSourceResult!
   """Update details of a favorited recipe (notes, folder, rating)."""
@@ -9931,6 +10552,8 @@ enum MutationType {
   ITEM_UNCOMPLETED
   """An existing item within a list was modified"""
   ITEM_UPDATED
+  """Resources were folded into one: the event's node is the survivor"""
+  MERGED
   """The status of a resource changed"""
   STATUS_CHANGED
   """An existing resource was modified"""
@@ -10766,11 +11389,38 @@ type OperatingSystemStat {
   osName: String!
 }
 
+"""One place a source stated that names a country."""
+type OriginFact {
+  countryCode: CountryCode!
+  source: ExternalSource!
+  """The place as the source stated it"""
+  value: String!
+}
+
+"""A package as the pieces it holds."""
+type PackStatement {
+  """
+  The COUNT unit one piece comes in (can, bottle, jar, bag, box, carton,
+  tub, tube), from the record's packaging list. Null where it names none.
+  """
+  container: Unit
+  """How many pieces the package holds; 1 for a single package."""
+  count: Int!
+  """One piece, as the label prints it."""
+  each: Measure!
+}
+
 type PackageBreakdown {
   contentUnit: Unit!
   count: Float!
+  """perUnitNetWeight in its unit, read in both unit systems; null with it."""
+  perUnit: Measure
   perUnitNetWeight: Float
   perUnitNetWeightUnit: Unit
+  """
+  totalNetWeight in perUnitNetWeightUnit, read in both unit systems; null with it.
+  """
+  total: Measure
   totalNetWeight: Float
 }
 
@@ -10991,6 +11641,11 @@ type PantryEvent implements DomainEvent {
   originatorClientId: this field cannot tell your two devices apart.
   """
   actorUserId: ID
+  """
+  Set when mutation is MERGED: the stacks folded into node. Each id now reads
+  as node through pantryItem(id:), and a use or restock naming one lands on it.
+  """
+  mergedIds: [ID!]
   mutation: MutationType!
   node: PantryEventNode!
   """
@@ -11068,6 +11723,13 @@ type PantryItem {
   """
   condition: ItemCondition!
   """
+  The unit this household uses the stack in (a jar of honey, by the
+  tablespoon), as a member set it. consumptionUnitsForPantryItem leads with it
+  while the stack can be consumed in it. A consumption naming no unit still
+  uses the tracking unit. Null until set.
+  """
+  consumeUnit: Unit
+  """
   The currency totalCost and costPerUnit are denominated in. Null when they
   are, and null with them when the costed batches disagree about currency —
   a sum across currencies is not a value, so none is reported.
@@ -11109,6 +11771,8 @@ type PantryItem {
   The expiry date, with no time and no timezone. An item is not expired on this date: it expires today. It is expired from the next day on, judged on the viewer's calendar.
   """
   expiresOn: LocalDate
+  """displayAmount's quantity in its unit, read in both unit systems."""
+  held: Measure!
   """
   The exact amount held in the tracking unit: each batch by its own package size, a
   partly used package as its fraction (1.25 jars). quantity counts a partly used
@@ -11193,6 +11857,12 @@ type PantryItem {
   one. Null when the tracking unit is not such a package.
   """
   packageBreakdown: PackageBreakdown
+  """
+  netWeight in netWeightUnit, read in both unit systems. Its declared figure
+  is the stack's barcode record's label where it states this size. Null with
+  netWeight.
+  """
+  packageSize: Measure
   """The pantry holding this stack"""
   pantry: Pantry!
   """The id of the pantry holding this stack"""
@@ -11238,6 +11908,10 @@ type PantryItem {
   tracking unit is a package the catalog defines for the item.
   """
   quantityBreakdown: QuantityBreakdown
+  """
+  remainingNetWeight in netWeightUnit, read in both unit systems; null with it.
+  """
+  remaining: Measure
   """
   The net weight left across the stack's batches, in netWeightUnit (2 jars of
   12.5 oz = 25 oz). Null when the stack tracks no net weight.
@@ -11286,6 +11960,8 @@ type PantryItem {
   storeId: ID
   """Free-form labels on this stack; empty when none"""
   tags: [String!]!
+  """tareWeight in netWeightUnit, read in both unit systems; null with it."""
+  tare: Measure
   """
   The empty container's weight, in netWeightUnit: a recount by grossWeight records gross − tare. Null when none is recorded.
   """
@@ -11373,6 +12049,12 @@ type PantryItemBatch {
   netWeight: Float
   notes: String
   openedAt: DateTime
+  """
+  netWeight in the stack's net-weight unit, read in both unit systems. Its
+  declared figure is the stack's barcode record's label where it states this
+  size. Null with netWeight.
+  """
+  packageSize: Measure
   pantryItemId: ID!
   """This batch's own portions per tracking unit (an 18-egg pack is 18)."""
   portionsPerTrackingUnit: Float
@@ -11389,6 +12071,10 @@ type PantryItemBatch {
   """
   purchaseId: ID
   quantity: Float!
+  """
+  remainingNetWeight in the stack's net-weight unit, read in both unit systems; null with it.
+  """
+  remaining: Measure
   remainingNetWeight: Float
   """The RESTOCK ledger entry this batch was created alongside."""
   sourceUsageId: ID
@@ -11747,6 +12433,11 @@ type PantryItemUsage {
   recipe: Recipe
   """The id of the recipe this use cooked; null when none"""
   recipeId: ID
+  """
+  A recount's count as the person stated it, in their unit (2.5 lb on a gram
+  stack). Null for every other row, and for a recount that named no unit.
+  """
+  statedAmount: Measure
   """
   On a purchase, the store it was bought at; null when none was given and on every other row
   """
@@ -12299,6 +12990,10 @@ type PriceComparisonRow {
   latestPrice: Float!
   """The median price per basis over the window"""
   medianPrice: Float!
+  """
+  Whether the row has the minimum observations a household's usual price needs, to show as a range
+  """
+  meetsMinimumSample: Boolean!
   observations: Int!
   scope: PriceComparisonScope!
   """Set when scope is STORE"""
@@ -12418,6 +13113,18 @@ input ProductDetailsInput {
   primaryUpc: String
   shelfLifeDays: Int
   shelfLifeOpenedDays: Int
+}
+
+"""
+Where a product comes from, as its records state it: only a place naming a country counts; nothing is inferred.
+"""
+type ProductOrigin {
+  """Its country of origin as the retailer states it: Kroger"""
+  countryOfOrigin: [OriginFact!]!
+  """Where its ingredients come from: Open Food Facts origins"""
+  ingredientsFrom: [OriginFact!]!
+  """Where it was made: Open Food Facts manufacturing places"""
+  madeIn: [OriginFact!]!
 }
 
 """
@@ -12707,10 +13414,29 @@ type PurchaseStats {
 input PurchaseTrackingInput {
   """Whether the line is purchased; null is refused"""
   isPurchased: Boolean
+  """
+  The product bought when not the line's own item, such as a store-mode scan: the purchase is recorded
+  on it while the line keeps its item. The line's item or one under it; refused beside isPurchased false.
+  Read only when the line becomes purchased: on a line already purchased, as a replayed tick, it is
+  not applied, and the purchase keeps the product it was recorded on.
+  """
+  purchasedItem: PurchasedItemInput
   """The price paid per unit bought. Refused beside isPurchased false."""
   purchasedPrice: Float
   """How much was bought. Refused beside isPurchased false."""
   purchasedQuantity: Float
+}
+
+"""
+The product a purchase was of: exactly one of a catalog item or a scanned product record.
+"""
+input PurchasedItemInput @oneOf {
+  """A catalog item: recorded with its primary barcode and its own pack"""
+  itemId: ID
+  """
+  A barcode's product record, as Item.matchedVariation returned it: recorded with that barcode and its pack
+  """
+  variation: ID
 }
 
 type QuantityBreakdown {
@@ -12720,6 +13446,8 @@ type QuantityBreakdown {
   fullPackages: Int!
   """Loose content units from opened packages (e.g., 9 cans)"""
   looseContentUnits: Float!
+  """remainingWeight in its unit, read in both unit systems; null with it."""
+  remaining: Measure
   """Total remaining weight/volume"""
   remainingWeight: Float
   """Unit of the remaining weight"""
@@ -12803,6 +13531,8 @@ type Query {
     """The id of the Brand to read"""
     id: ID!
   ): Brand
+  """The caller's own brand lists, oldest first."""
+  brandLists: [BrandList!]!
   """
   Get brands with filtering and cursor-based pagination. The root brands are
   `filters: { isRoot: true }`.
@@ -12971,6 +13701,18 @@ type Query {
     """Only active (true) or inactive (false) currencies; all when omitted"""
     isActive: Boolean
   ): [Currency!]!
+  """
+  The meal plan whose days include today, in one read: the plan the Today
+  screen shows. Scoped as mealPlans is (that one home's with homeId, else the
+  caller's own plans and those of every home they belong to); the plan
+  starting latest when several cover the day; null when none does.
+  """
+  currentMealPlan(
+    """Only this home's plans; every one the caller may read when omitted"""
+    homeId: ID
+    """The caller's own calendar date, as YYYY-MM-DD"""
+    today: LocalDate!
+  ): MealPlan
   """
   The caller's live device with the identifier the app generated for it;
   null when there is none. An administrator's lookup is not limited to their
@@ -13254,6 +13996,22 @@ type Query {
   """
   myModeration: MyModerationStatus
   """
+  Everything the caller sent for review, newest first, as one timeline: their
+  reports on people, recipes and reviews, their reports on items and photos,
+  their suggested edits, and the photos they uploaded for moderation. A photo
+  approved on arrival was never sent for review and is not listed.
+  """
+  myReviewSubmissions(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): ReviewSubmissionConnection!
+  """
   The devices this account is currently signed in from, newest first. One
   entry per device, not per token. A session with no device header appears as
   an unknown device. At most 50.
@@ -13317,6 +14075,16 @@ type Query {
     """Only batches in this status"""
     status: BatchStatus
   ): PantryItemBatchConnection!
+  """
+  pantryItem(id:) for many ids in one read: the stacks the caller may view,
+  in the order asked, each once. An id a merge absorbed reads as its
+  survivor; one naming no stack, or a stack the caller cannot view, is left
+  out. At most 100 ids; more is VALIDATION_FAILED on ids.
+  """
+  pantryItemsByIds(
+    """The ids of the PantryItems to read"""
+    ids: [ID!]!
+  ): [PantryItem!]!
   """
   Ingredient lines a user pastes, read as a capture reads them: amount, unit,
   name, handling and catalog candidates. Writes nothing.
@@ -13639,6 +14407,16 @@ type Query {
     """The id of the ShoppingListItem to read"""
     id: ID!
   ): ShoppingListItem
+  """
+  shoppingListItem(id:) for many ids in one read: the items the caller may
+  view, in the order asked, each once. One missing, removed, or on a list the
+  caller cannot view is left out. At most 100 ids; more is VALIDATION_FAILED
+  on ids.
+  """
+  shoppingListItemsByIds(
+    """The ids of the ShoppingListItems to read"""
+    ids: [ID!]!
+  ): [ShoppingListItem!]!
   """
   Where a shopping list is cheapest, by branch or by chain. Refused as a read
   of the list is to a caller who cannot read it.
@@ -14720,6 +15498,13 @@ type RecipeIngredient {
   unit, or when no seeded unit of the system shares its dimension.
   """
   convertedQuantity: ConvertedValue
+  """
+  As on Item.dietaryAlerts, judged by the ingredient's name and its linked item; an unlinked one by its name alone
+  """
+  dietaryAlerts(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+  ): [DietaryAlert!]!
   estimatedPrice: Float
   externalSources: [RecipeIngredientSourceMapping!]!
   id: ID!
@@ -14745,6 +15530,18 @@ type RecipeIngredient {
   recipe: Recipe!
   section: String
   sortOrder: Int!
+  """
+  Curated substitutes for this ingredient's concept and those above it, all parts held first. An
+  option a member is allergic or intolerant to is not offered. The caller must be an ACTIVE member.
+  """
+  substitutes(
+    """The home whose members' restrictions count"""
+    homeId: ID!
+    """At most this many: default 10, at most 20"""
+    limit: Int = 10
+    """The pantry checked for parts; the home's default pantry when omitted"""
+    pantryId: ID
+  ): [IngredientSubstituteOption!]!
   unit: Unit
 }
 
@@ -14859,6 +15656,9 @@ type RecipeIngredientMatch {
   without is matched only by NAME.
   """
   matchKind: RecipeIngredientMatchKind!
+  """
+  The first stack in draw order whose stock the unit can express without an assumption, else the first with availableQuantity null
+  """
   matchedPantryItem: PantryItem
   """
   How much more the ingredient needs, in its unit. Null when it is available,
@@ -15377,6 +16177,11 @@ union RegisterDeviceResult = ConflictError | ForbiddenError | NotFoundError | Re
 
 input RegisterInput {
   email: EmailAddress!
+  """
+  The registrant's name: its first word becomes the first name, the rest the
+  last name. Cleaned as UpdateProfileInput.firstName; refused (VALIDATION_FAILED
+  on name) when that is empty or over 255 characters.
+  """
   name: String
   password: String!
 }
@@ -15413,6 +16218,34 @@ enum ReligiousDiet {
   HALAL
   KOSHER
 }
+
+"""Names the entry by id, or by brandListId and brandId."""
+input RemoveBrandFromListInput {
+  brandId: ID
+  brandListId: ID
+  id: ID
+}
+
+type RemoveBrandFromListPayload {
+  """
+  The removed brand list entry, or null when it was already gone: a replay that
+  converged as success. See converged.
+  """
+  brandListEntry: BrandListEntry
+  """
+  True when this call CONVERGED on a brand list entry that was already gone: a
+  no-op success that changed nothing and published nothing. The canonical,
+  API-wide replay flag.
+  """
+  converged: Boolean!
+}
+
+"""
+Result of RemoveBrandFromList. Select on RemoveBrandFromListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RemoveBrandFromListResult = ConflictError | ForbiddenError | NotFoundError | RemoveBrandFromListPayload | ValidationError
 
 input RemoveItemFromShoppingListInput {
   id: ID!
@@ -15878,7 +16711,7 @@ Always include a __typename so the variant can be discriminated.
 union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
 """
-What one restriction restricts: exactly one of a diet, an intolerance or a health goal.
+What one restriction restricts: exactly one of a diet, an intolerance, a health goal or a catalog item.
 """
 input RestrictionKindInput @oneOf {
   """A diet the user follows, such as VEGAN"""
@@ -15887,6 +16720,11 @@ input RestrictionKindInput @oneOf {
   healthGoal: HealthGoal
   """A food the user cannot tolerate, such as GLUTEN"""
   intolerance: Intolerance
+  """
+  A catalog item avoided: active and visible, else NotFoundError. Stored as its root, which must be PUBLIC
+  (ValidationError on kind.item); covers everything at or below that root and its same-name twins.
+  """
+  item: ID
 }
 
 enum RestrictionSeverity {
@@ -15904,6 +16742,63 @@ type ReviewHelpful {
   Null when the voter's account was permanently deleted. The vote still counts toward the review's helpful total.
   """
   user: User
+}
+
+"""
+Something the caller sent for review: a report, a suggested edit, or a photo
+awaiting moderation. It carries no reviewer and no action taken beyond its
+status.
+"""
+interface ReviewSubmission {
+  """The report's, suggestion's or photo's own id."""
+  id: ID!
+  """The reviewer's note to the caller; null when none is shown to them."""
+  reviewNote: String
+  """The caller's own words, as sent; null when none were given."""
+  senderNote: String
+  """When the caller sent it."""
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+}
+
+"""
+A page of ReviewSubmission results. Read "edges" for the rows and "pageInfo" to decide
+whether to request another page.
+"""
+type ReviewSubmissionConnection implements Connection {
+  """The rows in this page, in the connection's sort order."""
+  edges: [ReviewSubmissionEdge!]!
+  """Cursors and flags describing where this page sits in the full result."""
+  pageInfo: PageInfo!
+  """
+  Total rows matching the query across all pages. Computed only when selected; null when not available.
+  """
+  totalCount: Int
+}
+
+"""
+One ReviewSubmission in a paginated result, paired with the cursor that identifies its
+position. Pass the cursor as "after" to resume from just past this edge.
+"""
+type ReviewSubmissionEdge implements Edge {
+  """Opaque position marker for this edge. Do not parse or construct it."""
+  cursor: String!
+  """The ReviewSubmission this edge wraps."""
+  node: ReviewSubmission!
+}
+
+"""
+Where something the caller sent for review stands, as its sender sees it.
+"""
+enum ReviewSubmissionStatus {
+  """Accepted, or acted on."""
+  ACCEPTED
+  """Closed with no change."""
+  DECLINED
+  """A reviewer has taken it up."""
+  IN_REVIEW
+  """Waiting for a reviewer."""
+  PENDING
 }
 
 input RevokeDeviceCredentialInput {
@@ -16055,6 +16950,27 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union ShareShoppingListResult = ConflictError | ForbiddenError | NotFoundError | ShareShoppingListPayload | ValidationError
+
+"""
+A member's restriction as a home they share with sees it: no notes, and no path to the rest of their profile.
+"""
+type SharedDietaryRestriction {
+  diet: Diet
+  healthGoal: HealthGoal
+  """
+  The restriction's identifier, the same as on its owner's DietaryRestriction
+  """
+  id: ID!
+  intolerance: Intolerance
+  """
+  The catalog item avoided, when the restriction avoids one: the root of the item picked
+  """
+  item: Item
+  """
+  How strictly it holds, from ALLERGY (must avoid) to GOAL (trying to follow)
+  """
+  severity: RestrictionSeverity!
+}
 
 """
 Other participants changed a shared list's items in one 15-minute window (SHARED_LIST_CHANGED).
@@ -16565,6 +17481,8 @@ type ShoppingListItem {
   addedBy: User
   """The id of the member who added the line; null when none is recorded"""
   addedById: ID
+  """quantity in unit, read in both unit systems; null when either is."""
+  amount: Measure
   """
   The brand chosen for this line, independent of the catalog item's brands: the one an add or update named, else a scanned product's; null when none
   """
@@ -16615,6 +17533,10 @@ type ShoppingListItem {
   Free-text notes, at most 500 characters from a client; null when none. Adding a recipe can write the ingredient's note, or append an amount it could not add into the line's unit
   """
   notes: String
+  """
+  netWeight in netWeightUnit, read in both unit systems; null with netWeight.
+  """
+  packageSize: Measure
   """
   The line's estimated price per one of its unit, in the list's currency, and its budget
   """
@@ -17024,6 +17946,16 @@ type ShoppingListUsageStats {
   itemCount: Int!
   """Last activity timestamp"""
   lastActivityAt: DateTime
+}
+
+"""Nutrition to show for an item, and whose it is."""
+type ShownNutrition {
+  facts: NutritionFacts!
+  """
+  The concept these values are typical of, when the item states none of its
+  own (Typical for chipotle peppers in adobo sauce). Null for the item's own.
+  """
+  typicalOf: Item
 }
 
 """
@@ -17915,14 +18847,51 @@ type Subscription {
     storeId: ID!
   ): StoreEvent!
   """
-  Per-user event stream (account update, profile change, and
-  home/shopping-list membership + moderation lifecycle transitions).
-  Subscribe once and branch on subtype.
+  Per-user event stream (account update, profile change,
+  home/shopping-list membership and moderation lifecycle transitions, and a
+  receipt parse or recipe capture settling). Subscribe once and branch on
+  subtype.
   """
   userEvents(
     """The user to watch: yourself, or anyone for an admin or moderator"""
     userId: ID!
   ): UserEvent!
+}
+
+"""
+One part of an offered substitute, in the amount this ingredient needs.
+"""
+type SubstitutePartAmount {
+  """
+  The part's other stacks in draw order, at most 3: a cook may name one instead.
+  """
+  alternativeStacks: [PantryItem!]!
+  """Whether the pantry holds a stack of it, or of an item under it"""
+  inPantry: Boolean!
+  item: Item!
+  """
+  The first stack in draw order whose stock converts to the part's unit without an assumption, else the first; null when inPantry is false
+  """
+  pantryItem: PantryItem
+  """
+  Scaled to the ingredient's amount when the option is scaled; else as curated
+  """
+  quantity: Float!
+  unit: Unit!
+}
+
+"""
+The job an ingredient does in a dish, which its substitute must also do.
+"""
+enum SubstituteRole {
+  ACID
+  BINDER
+  FAT
+  FLAVOR
+  LEAVENING
+  LIQUID
+  SWEETENER
+  THICKENER
 }
 
 """
@@ -17940,6 +18909,7 @@ input SuggestibleItemChangesInput {
   description: String
   healthInfo: HealthInfoInput
   media: MediaAssetsInput
+  """The proposed name, cleaned and bounded as createItem's"""
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
@@ -18437,7 +19407,7 @@ enum UnitSource {
   """Converts into the stack, with no curation for this operation"""
   AUTO
   """
-  Curated for this operation: an ItemUnit usage context or retail flag, Item.defaultConsumeUnit, or the stack's own portion unit
+  Curated for this operation: an ItemUnit usage context or retail flag, Item.defaultConsumeUnit, the stack's own portion or consume unit, or Item.suggestedConsumeUnit
   """
   CURATED
   """The stack's tracking unit"""
@@ -18503,6 +19473,46 @@ input UpcLookupInput {
   """Format hint for validation and normalisation; AUTO when omitted"""
   format: UpcFormat
 }
+
+input UpdateBrandListEntryInput {
+  id: ID!
+  """The owner's own note, at most 500 characters; null clears it"""
+  reason: String
+  """As on UpdateBrandListInput.version"""
+  version: Int
+}
+
+type UpdateBrandListEntryPayload {
+  brandListEntry: BrandListEntry!
+}
+
+"""
+Result of UpdateBrandListEntry. Select on UpdateBrandListEntryPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateBrandListEntryResult = ConflictError | ForbiddenError | NotFoundError | UpdateBrandListEntryPayload | ValidationError
+
+input UpdateBrandListInput {
+  enabled: Boolean
+  id: ID!
+  name: String
+  """
+  The write applies only at this version, else VERSION_CONFLICT; omitted, the last write wins
+  """
+  version: Int
+}
+
+type UpdateBrandListPayload {
+  brandList: BrandList!
+}
+
+"""
+Result of UpdateBrandList. Select on UpdateBrandListPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateBrandListResult = ConflictError | ForbiddenError | NotFoundError | UpdateBrandListPayload | ValidationError
 
 input UpdateCollaboratorPermissionsFieldsInput {
   canAddItems: Boolean
@@ -18629,7 +19639,7 @@ input UpdateDietaryProfileInput {
   """How much cooking experience the user claims; null clears it"""
   cookingSkillLevel: CookingSkillLevel
   """
-  Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused
+  Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused. Nothing screens against it: an avoided item (RestrictionKindInput.item) is what alerts read
   """
   dislikedIngredients: [String!]
   """
@@ -18678,6 +19688,29 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateDietaryProfileResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietaryProfilePayload | ValidationError
+
+input UpdateDietarySharingInput {
+  """A home the caller is an ACTIVE member of"""
+  homeId: ID!
+  """
+  A CUID2 minted per toggle for an offline queue: a resend under a spent key writes nothing, so it never undoes a later toggle
+  """
+  idempotencyKey: ID
+  """Whether the caller's dietary restrictions are shown to this home"""
+  shared: Boolean!
+}
+
+type UpdateDietarySharingPayload {
+  home: Home
+  membership: Membership!
+}
+
+"""
+Result of UpdateDietarySharing. Select on UpdateDietarySharingPayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateDietarySharingResult = ConflictError | ForbiddenError | NotFoundError | UpdateDietarySharingPayload | ValidationError
 
 input UpdateExternalSourceInput {
   externalName: String
@@ -18738,6 +19771,9 @@ input UpdateHomeInput {
   seats no one more until it is under the cap.
   """
   maxMembers: Int
+  """
+  The home's new name, cleaned and bounded as createHome's; omit it to keep the name.
+  """
   name: String
   tags: [String!]
   timezone: TimeZone
@@ -18819,6 +19855,10 @@ input UpdateItemInput {
   forge any of them.
   """
   metadata: ItemMetadataInput
+  """
+  The item's new name, cleaned and bounded as createItem's; omit it to keep
+  the name.
+  """
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
@@ -19054,6 +20094,11 @@ input UpdatePantryInput {
 
 input UpdatePantryItemInput {
   brand: BrandRefInput
+  """
+  The unit this household uses the stack in; null clears it. Refused on
+  consumeUnit when the stack, as this update leaves it, cannot be consumed in it.
+  """
+  consumeUnit: UnitRefInput
   expirationAlert: Boolean
   """
   The expiry date as YYYY-MM-DD, with no time and no timezone. Null clears it
@@ -19144,7 +20189,7 @@ Result of UpdatePantryItem. Select on UpdatePantryItemPayload for the
 success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
-union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UpdatePantryItemPayload | ValidationError
+union UpdatePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | UnitEligibilityError | UpdatePantryItemPayload | ValidationError
 
 type UpdatePantryPayload {
   home: Home
@@ -19165,8 +20210,14 @@ input UpdateProfileInput {
   """The date of birth, as a calendar date"""
   dateOfBirth: LocalDate
   displayName: String
+  """
+  Stored cleaned: control characters removed, trimmed, and each run of
+  whitespace one space. Refused (VALIDATION_FAILED on firstName) when that is
+  over 255 characters; any other text is accepted. Null clears it.
+  """
   firstName: String
   gender: String
+  """Cleaned and bounded as firstName, refused on lastName."""
   lastName: String
   phone: String
   profileVisibility: ProfileVisibility
@@ -19467,6 +20518,19 @@ union UpdateShoppingListItemResult = ConflictError | ForbiddenError | NotFoundEr
 
 type UpdateShoppingListPayload {
   shoppingList: ShoppingList!
+  """
+  The list's store comparison after this write, as shoppingListStoreComparison
+  reads it: a change of store changes it, and each line's suggestedPrice, which
+  shoppingList.itemsConnection reads. Computed only when selected.
+  """
+  storeComparison(
+    """Compare store branches (the default) or whole chains"""
+    scope: PriceComparisonScope
+    """Up to five stores to compare instead of the household's own"""
+    storeIds: [ID!]
+    """How far back observations count: default 90 days, at most 365"""
+    windowDays: Int
+  ): ShoppingListStoreComparison!
 }
 
 input UpdateShoppingListReminderInput {
@@ -20253,9 +21317,10 @@ type UserEvent implements DomainEvent {
   """
   failedLoginCount: Int
   """
-  Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED
-  and the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
-  WARNED); CREATED for ADDED_TO_*; DELETED for REMOVED_FROM_*.
+  Mutation kind for this event. UPDATED for ACCOUNT_UPDATED / PROFILE_CHANGED,
+  the moderation subtypes (BANNED / UNBANNED / SUSPENDED / UNSUSPENDED /
+  WARNED) and the *_SETTLED subtypes; CREATED for ADDED_TO_*; DELETED for
+  REMOVED_FROM_*.
   """
   mutation: MutationType!
   node: UserEventNode
@@ -20297,6 +21362,10 @@ PROFILE_CHANGED.
 """
 type UserEventParents {
   homeId: ID
+  """The receipt parse that settled, on RECEIPT_PARSE_SETTLED."""
+  receiptParseId: ID
+  """The recipe capture that settled, on RECIPE_CAPTURE_SETTLED."""
+  recipeCaptureId: ID
   shoppingListId: ID
 }
 
@@ -20352,6 +21421,24 @@ type UserProfile {
   website: URL
 }
 
+"""A report on a person, or on their recipe or recipe review."""
+type UserReportSubmission implements ReviewSubmission {
+  id: ID!
+  """
+  The recipe reported, or the recipe a reported review is on. Null for a
+  report on a person, and once the caller can no longer see the recipe.
+  """
+  recipe: Recipe
+  report: MyUserReport!
+  """The person reported, or whose recipe or review was reported."""
+  reportedUser: User!
+  """Always null: a moderator's note is never shown to the reporter."""
+  reviewNote: String
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+}
+
 enum UserRole {
   ADMIN
   MODERATOR
@@ -20373,6 +21460,13 @@ type UserSettings {
   compactMode: Boolean!
   """When the settings row was created"""
   createdAt: DateTime!
+  """
+  What SYSTEM means for the requesting device, whatever preferredUnitSystem is
+  now: its registered locale's system, else the language's, else METRIC; never
+  SYSTEM. A client caches it to read SYSTEM, and a Measure's matching reading,
+  offline.
+  """
+  deviceUnitSystem: UnitSystem!
   """
   Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
   """
@@ -20438,6 +21532,14 @@ enum UserSubtype {
   ADDED_TO_SHOPPING_LIST
   BANNED
   PROFILE_CHANGED
+  """
+  A receipt parse of yours finished, in whatever status: read it once (parents.receiptParseId).
+  """
+  RECEIPT_PARSE_SETTLED
+  """
+  A recipe capture of yours finished, in whatever status: read it once (parents.recipeCaptureId).
+  """
+  RECIPE_CAPTURE_SETTLED
   REMOVED_FROM_HOME
   REMOVED_FROM_SHOPPING_LIST
   SUSPENDED

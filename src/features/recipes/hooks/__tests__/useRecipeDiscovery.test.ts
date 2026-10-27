@@ -64,6 +64,7 @@ const server = (
 ): ReturnType<typeof useServerRecipeSuggestions> => ({
   rows: [],
   loading: false,
+  fromPantry: false,
   refreshing: false,
   unanswered: false,
   refresh: jest.fn(),
@@ -90,7 +91,10 @@ describe('useRecipeDiscovery', () => {
   });
 
   it("shows the server's ranking, one page, and keeps the catalog idle", () => {
-    const ranked = server({ rows: [randomRow('1', 'Curry')] });
+    const ranked = server({
+      rows: [randomRow('1', 'Curry')],
+      fromPantry: true,
+    });
     jest.mocked(useServerRecipeSuggestions).mockReturnValue(ranked);
 
     const { result } = renderHook(() => useRecipeDiscovery(DIET));
@@ -104,6 +108,18 @@ describe('useRecipeDiscovery', () => {
       discoveryHasMore: false,
       refresh: ranked.refresh,
     });
+  });
+
+  // An empty pantry is ranked too, with nothing of it held: ideas, not "based on your pantry".
+  it('calls a ranking that uses nothing the pantry holds ideas to try', () => {
+    jest
+      .mocked(useServerRecipeSuggestions)
+      .mockReturnValue(server({ rows: [randomRow('1', 'Curry')] }));
+
+    const { result } = renderHook(() => useRecipeDiscovery(DIET));
+
+    expect(result.current.mode).toBe('random');
+    expect(result.current.rows).toHaveLength(1);
   });
 
   it('lets the catalog fill in when the server has nothing to suggest', () => {

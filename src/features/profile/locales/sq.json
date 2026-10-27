@@ -90,7 +90,11 @@
     "fat": "Yndyrë",
     "loadingProfile": "Po ngarkohet profili dietik...",
     "loadFailedTitle": "Profili dietik nuk u ngarkua",
-    "loadFailedSubtitle": "Kontrollo lidhjen dhe provo sërish."
+    "loadFailedSubtitle": "Kontrollo lidhjen dhe provo sërish.",
+    "sharedWith": "E ndarë me",
+    "sharedWithShown": "Anëtarët e këtyre shtëpive shohin kufizimet e tua me emrin tënd kur skanojnë ose gatuajnë. Shënimet e tua mbeten private.",
+    "sharedWithNone": "Aktivizo një shtëpi që anëtarët e saj të shohin çfarë nuk mund të hash kur skanojnë ose gatuajnë.",
+    "sharingFailed": "Nuk u ndryshua dot kush i sheh kufizimet e tua. Provo përsëri."
   },
   "biometricSetup": {
     "authRequiredTitle": "Kërkohet autentifikimi",
@@ -118,7 +122,6 @@
     "fontScale": "Madhësia e shkronjave",
     "highContrast": "Kontrast i lartë",
     "highContrastDesc": "Rrit kontrastin e tekstit dhe të kornizave për aksesueshmëri",
-    "colorDefault": "I parazgjedhur",
     "densityCompact": "Kompakte",
     "densityComfortable": "Komode",
     "densitySpacious": "E gjerë",
@@ -143,17 +146,29 @@
     "goalsSheetTitle": "Zgjidh synimet shëndetësore",
     "addGoalsFailed": "S'u shtuan dot synimet shëndetësore",
     "diets": {
-      "vegetarian": "Vegjetariane",
-      "vegan": "Vegane",
       "pescetarian": "Peshkatariane",
       "lactoVegetarian": "Lakto-vegjetariane",
       "ovoVegetarian": "Ovo-vegjetariane",
       "primal": "Primale"
     },
     "intolerances": {
-      "egg": "Vezë",
-      "sulfite": "Sulfite"
-    }
+      "egg": "Vezë"
+    },
+    "avoidTitle": "Ushqimet që shmang",
+    "avoidEmpty": "Zgjidh ushqime nga katalogu, si proshutë ose kërpudha.",
+    "avoidSheetTitle": "Shmang një ushqim",
+    "avoidHint": "Çdo lloj i tij shënohet, për ty dhe për shtëpitë me të cilat ndan.",
+    "avoidSearchPlaceholder": "Kërko ushqime",
+    "avoidSearchNeedsConnection": "Për të kërkuar ushqime duhet lidhje me internetin. Provo sërish kur të kesh lidhje.",
+    "avoidNamed": "Shmang {{name}}",
+    "avoidSeverity": {
+      "preference": "Shmang",
+      "intolerance": "Intolerancë",
+      "allergy": "Alergji"
+    },
+    "avoidAllergy": "{{name}} (alergji)",
+    "avoidIntolerance": "{{name}} (intolerancë)",
+    "addAvoidFailed": "Ushqimi nuk u shtua dot. Provo përsëri."
   },
   "cookingPreferences": {
     "prepTimeRange": "Koha e përgatitjes duhet të jetë midis {{min}} dhe {{max}} minutash",
@@ -182,7 +197,6 @@
       "developer": "Zhvilluesi"
     },
     "labels": {
-      "dietaryProfile": "Profili dietik",
       "biometricAuthentication": "Autentifikimi biometrik",
       "logout": "Dilni"
     },
@@ -206,12 +220,10 @@
       "visit": "Hap faqen e internetit",
       "publicDomain": "Domen publik (vepër e qeverisë së SHBA-së).",
       "openFoodFacts": {
-        "name": "Open Food Facts",
         "provides": "Emrat, markat, madhësitë e paketimit dhe fotot e produkteve të skanuara.",
         "licence": "Baza e të dhënave: Open Database License (ODbL). Fotot: Creative Commons Atribuim-Shpërndaj njësoj (CC BY-SA)."
       },
       "usdaFoodDataCentral": {
-        "name": "USDA FoodData Central",
         "provides": "Vlerat ushqyese dhe të dhënat e produkteve."
       },
       "usdaFoodKeeper": {
@@ -333,16 +345,59 @@
       "recipe": "Raportim për një recetë",
       "recipeReview": "Raportim për një vlerësim",
       "profile": "Raportim për një profil",
-      "user": "Raportim për një përdorues"
+      "user": "Raportim për një përdorues",
+      "item": "Raportim për një artikull",
+      "photo": "Raportim për një foto",
+      "suggestion": "Ndryshim i sugjeruar",
+      "photoUpload": "Foto për shqyrtim"
     },
-    "reportedOn": "Dërguar më {{date}}",
     "status": {
       "pending": "Në pritje të shqyrtimit",
-      "investigating": "Në shqyrtim",
-      "resolved": "I pranuar",
-      "dismissed": "I mbyllur"
+      "inReview": "Në shqyrtim",
+      "upheld": "I pranuar",
+      "closed": "I mbyllur",
+      "accepted": "I pranuar",
+      "declined": "I refuzuar",
+      "approved": "E miratuar",
+      "notApproved": "E pamiratuar"
     },
-    "emptyTitle": "Ende asnjë raportim",
-    "emptyDescription": "Raportimet që u dërgon moderatorëve shfaqen këtu, me gjendjen e secilit."
+    "emptyTitle": "Ende nuk ke dërguar asgjë për shqyrtim",
+    "emptyDescription": "Raportimet, ndryshimet e sugjeruara dhe fotot që dërgon për shqyrtim shfaqen këtu, me gjendjen e secilit.",
+    "sentOn": "Dërguar më {{date}}",
+    "reviewNote": "Shënim i shqyrtimit: {{note}}"
+  },
+  "brandLists": {
+    "title": "Listat e markave",
+    "intro": "Mbaj listat e tua të markave, si ato që bojkoton ose shmang. Skanimi të tregon kur marka e një produkti është në një listë aktive.",
+    "emptyTitle": "Ende nuk ka lista markash",
+    "emptyBody": "Krijo një listë, pastaj shto marka këtu ose drejt nga një skanim.",
+    "newList": "Listë e re markash",
+    "nameLabel": "Emri i listës",
+    "namePlaceholder": "p.sh. Bojkot",
+    "rename": "Riemërto listën",
+    "deleteList": "Fshi listën",
+    "deleteTitle": "Të fshihet {{name}}?",
+    "deleteBody": "Markat e saj hiqen bashkë me të.",
+    "brandCount_one": "{{count}} markë",
+    "brandCount_other": "{{count}} marka",
+    "applies": "Përdore këtë listë në skanime",
+    "useNamed": "Përdor {{name}} në skanime",
+    "addBrand": "Shto një markë",
+    "addBrandTitle": "Shto një markë te {{name}}",
+    "searchBrands": "Kërko marka",
+    "noteLabel": "Arsyeja (opsionale)",
+    "notePlaceholder": "p.sh. kompania mëmë",
+    "noBrands": "Kjo listë nuk ka ende marka.",
+    "errors": {
+      "createFailed": "Lista nuk u krijua dot.",
+      "updateFailed": "Lista nuk u përditësua dot.",
+      "deleteFailed": "Lista nuk u fshi dot.",
+      "addFailed": "Marka nuk u shtua dot.",
+      "removeFailed": "Marka nuk u hoq dot."
+    },
+    "nameRequired": "Jepi listës një emër.",
+    "nameTooLong": "Emri nuk mund të kalojë 100 karaktere.",
+    "pickList": "Zgjidh një listë",
+    "alreadyOn": "Është tashmë në të"
   }
 }

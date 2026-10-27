@@ -23,6 +23,8 @@ interface SharedProps<TItem> {
   showAddNew?: boolean;
   addNewLabel?: string;
   onAddNew?: () => void;
+  /** The field itself was finished: blurred or submitted. */
+  onEndEditing?: () => void;
 }
 
 interface InlineVariantProps<TItem> extends SharedProps<TItem> {
@@ -113,6 +115,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
         autoCapitalize={props.autoCapitalize}
         footer={addNew}
         reserveDropdownSpace={props.reserveDropdownSpace}
+        onEndEditing={props.onEndEditing}
       />
     );
   }
@@ -144,6 +147,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
       onSearchChange={props.onSearchChange}
       onModalOpen={props.onModalOpen}
       onModalClose={props.onModalClose}
+      onEndEditing={props.onEndEditing}
       autoCapitalize={props.autoCapitalize}
       footer={addNew}
     />

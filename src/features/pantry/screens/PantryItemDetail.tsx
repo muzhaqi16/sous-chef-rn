@@ -1,8 +1,9 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
-import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
+import { HorizontalRail } from '#components/molecules/HorizontalRail';
 import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { CachedImage } from '#components/atoms/CachedImage';
@@ -25,6 +26,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl } from '#utils/imageUtils';
 import {
+  formatHeldAmount,
   formatPackageBreakdownFull,
   formatQuantityBreakdown,
   formatStorageState,
@@ -32,11 +34,9 @@ import {
   getDaysInPantry,
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
-import {
-  formatNetWeightDisplay,
-  formatQuantityForDisplay,
-  resolveQuantityNotation,
-} from '#utils/formatQuantity';
+import { formatNetWeightDisplay } from '#utils/formatQuantity';
+import { currentReading, formatReading } from '#domain/measure';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import {
   BatchStatus,
   EntryImageSource,
@@ -44,7 +44,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { PantryDetailInfo } from '#features/pantry/components/PantryDetailInfo';
 import { PantryUsageHistory } from '#features/pantry/components/PantryUsageHistory';
-import { hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { GalleryHero } from '#features/catalog/ui/GalleryHero';
 import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoViewer';
@@ -106,11 +106,13 @@ export const PantryItemDetail: React.FC<
     toNutritionScreen,
     toPantryBatchHistory,
     toPantryUsageHistory,
+    replaceWithPantryItemDetail,
   } = useAppNavigation();
   const selectedShoppingListId = useSelectedShoppingListId();
   const selectedPantryId = useSelectedPantryId();
   const selectedHomeId = useSelectedHomeId();
   const today = useToday();
+  const readingSystem = useReadingSystem();
   const [refreshing, setRefreshing] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [photoSheetVisible, setPhotoSheetVisible] = useState(false);
@@ -122,11 +124,18 @@ export const PantryItemDetail: React.FC<
     batchPricing,
     batchTotalCount,
     deletedOnServer,
+    mergedIntoId,
     itemLoading,
     itemError,
     isUnconfirmed,
     refreshAll,
   } = usePantryItemDetailData(itemId);
+
+  // Merged away: the survivor takes this screen's place, so Back still leads
+  // where it did.
+  useEffect(() => {
+    if (mergedIntoId) replaceWithPantryItemDetail({ itemId: mergedIntoId });
+  }, [mergedIntoId, replaceWithPantryItemDetail]);
 
   const handleRefresh = () => {
     void executeRefreshWithFinally(refreshAll, setRefreshing);
@@ -185,22 +194,38 @@ export const PantryItemDetail: React.FC<
   const pickableIndex = itemPhotos.findIndex(
     photo => photo.id !== item?.image?.catalogImageId,
   );
-  const nutritionFacts = item?.item.nutritionFacts ?? null;
+  const nutrition = toShownNutrition(item?.item.shownNutrition);
+  const nutritionFacts = nutrition?.facts ?? null;
+  // A concept's typical values, titled as such and making no health claim.
+  const typicalOf = nutrition?.typicalOf ?? null;
   const showImages =
     itemPhotos.length > 0 || !!imageUrl || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
+  // Each weight reads in the user's unit system while its Measure still
+  // describes the stored figure; after a local edit, as stored until the
+  // server answers with new readings.
   const packageBreakdownText = formatPackageBreakdownFull(
     item?.packageBreakdown,
     t,
+    readingSystem,
   );
-  const netWeightText = formatNetWeightDisplay(
-    item?.netWeight,
-    item?.netWeightUnit,
+  const netWeightUnitId = item?.netWeightUnit?.id;
+  const packageSizeReading = currentReading(
+    item?.packageSize,
+    { value: item?.netWeight, unitId: netWeightUnitId },
+    readingSystem,
   );
-  const remainingNetWeightText = formatNetWeightDisplay(
-    item?.remainingNetWeight,
-    item?.netWeightUnit,
+  const netWeightText = packageSizeReading
+    ? formatReading(packageSizeReading)
+    : formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
+  const remainingReading = currentReading(
+    item?.remaining,
+    { value: item?.remainingNetWeight, unitId: netWeightUnitId },
+    readingSystem,
   );
+  const remainingNetWeightText = remainingReading
+    ? formatReading(remainingReading)
+    : formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
   const quantityBreakdownText = formatQuantityBreakdown(
     item?.quantityBreakdown,
     t,
@@ -253,15 +278,7 @@ export const PantryItemDetail: React.FC<
     );
   }
 
-  // What is left, as the stack is shown: "1 doz" for 12 pc.
-  const shown = item.displayAmount;
-  const shownInOwnUnit = shown.unit.id === item.unit.id;
-  const quantityText = `${formatQuantityForDisplay(shown.quantity, {
-    notation: resolveQuantityNotation(
-      null,
-      shownInOwnUnit ? item.unit.displayAsFraction : null,
-    ),
-  })} ${shown.unit.symbol}`;
+  const quantityText = formatHeldAmount(item, readingSystem);
 
   // The EXPIRED flag can land a day late east of UTC, so the date decides too.
   // The batches' date, not the item's: an edit moves only the item's, and the
@@ -441,15 +458,22 @@ export const PantryItemDetail: React.FC<
         </DetailSection>
 
         {!!showNutrition && (
-          <DetailSection title={t('pantryItemDetail.nutrition')}>
+          <DetailSection
+            title={
+              typicalOf
+                ? t('labels.typicalFor', { concept: typicalOf })
+                : t('pantryItemDetail.nutrition')
+            }
+          >
             <NutritionSummary
               nutritionFacts={nutritionFacts}
-              showHighlights
+              showHighlights={!typicalOf}
               onPress={() =>
                 toNutritionScreen({
                   itemId: item.id,
                   itemName: item.itemName,
                   nutritionFacts,
+                  typicalOf,
                   dataAttributions: item.item.dataAttributions,
                 })
               }
@@ -461,6 +485,7 @@ export const PantryItemDetail: React.FC<
           <PantryDetailInfo
             itemRef={item}
             brandName={brandName}
+            quantityText={quantityText}
             netWeightText={netWeightText}
             remainingNetWeightText={remainingNetWeightText}
             quantityBreakdownText={quantityBreakdownText}
@@ -483,6 +508,7 @@ export const PantryItemDetail: React.FC<
               batches={batches}
               unitSymbol={item.unit.symbol}
               netWeightUnitSymbol={item.netWeightUnit?.symbol}
+              netWeightUnitId={item.netWeightUnit?.id}
               totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({
@@ -515,18 +541,14 @@ export const PantryItemDetail: React.FC<
           </DetailSection>
         )}
 
-        <DetailSection title={t('pantryItemDetail.recipesToTry')}>
+        <DetailSection title={t('labels.recipesToTry')}>
           {loadingRecipes ? (
             <ThemedActivityIndicator
               size="small"
               style={styles.recipesLoading}
             />
           ) : suggestedRecipes.length > 0 ? (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.recipesList}
-            >
+            <HorizontalRail surface="surface">
               {suggestedRecipes.map(recipe => (
                 <AppPressable
                   key={catalogKey(recipe)}
@@ -547,7 +569,7 @@ export const PantryItemDetail: React.FC<
                   </Text>
                 </AppPressable>
               ))}
-            </ScrollView>
+            </HorizontalRail>
           ) : (
             <Text role="caption" style={styles.noRecipes}>
               {t('pantryItemDetail.noRecipeSuggestions')}
@@ -667,12 +689,8 @@ const styles = StyleSheet.create(theme => ({
   recipesLoading: {
     marginTop: theme.spacing.sm,
   },
-  recipesList: {
-    paddingTop: theme.spacing.xs,
-  },
   recipeCard: {
     width: 140,
-    marginRight: theme.spacing.md,
   },
   recipeImage: {
     width: 140,

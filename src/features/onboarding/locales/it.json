@@ -69,15 +69,12 @@
   },
   "onboardingValidation": {
     "homeRequired": "Il nome della casa è obbligatorio",
-    "homeMin": "Il nome della casa deve contenere almeno {{count}} caratteri",
-    "homeMax": "Il nome della casa deve contenere meno di {{count}} caratteri",
     "pantryRequired": "Il nome della dispensa è obbligatorio",
     "pantryMin": "Il nome della dispensa deve contenere almeno {{count}} caratteri",
     "pantryMax": "Il nome della dispensa deve contenere meno di {{count}} caratteri",
     "listRequired": "Il nome della lista è obbligatorio",
     "listMin": "Il nome della lista deve contenere almeno {{count}} caratteri",
-    "listMax": "Il nome della lista deve contenere meno di {{count}} caratteri",
-    "homeChars": "Il nome della casa può contenere solo lettere, numeri, spazi, trattini, apostrofi e virgolette"
+    "listMax": "Il nome della lista deve contenere meno di {{count}} caratteri"
   },
   "onboarding": {
     "progress": "Passaggio {{step}} di {{total}}"

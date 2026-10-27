@@ -27,10 +27,10 @@ export const IMAGE_PRELOAD_COUNT = 24;
 export const getDefaultPantryTabs = (
   translate: Translate,
 ): FilterTabConfig<LocationFilter>[] => [
-  { id: 'all', label: translate('pantryTabs.all') },
+  { id: 'all', label: translate('pantryScreen.tabAll') },
   {
     id: 'fridge',
-    label: translate('labels.storageRefrigerated'),
+    label: translate('storageState.REFRIGERATED'),
     icon: 'thermometer-outline',
   },
   {

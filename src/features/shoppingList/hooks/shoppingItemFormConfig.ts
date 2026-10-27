@@ -1,5 +1,5 @@
 import { object, string, number } from 'yup';
-import { lazyMessage } from '#/utils/validation/common';
+import { itemNameText, lazyMessage } from '#/utils/validation/common';
 
 /**
  * Shape, defaults and validation for the shopping-list item form. Shared by the
@@ -61,7 +61,7 @@ export const DIRTY_TRACKED_FIELDS: readonly string[] = Object.keys(
 ).filter(field => field !== 'storeName');
 
 export const shoppingItemSchema = object({
-  itemName: string().trim().required(lazyMessage('errors.itemNameRequired')),
+  itemName: itemNameText(lazyMessage('errors.itemNameRequired')),
   quantityInput: string()
     .trim()
     .required(lazyMessage('shoppingListScreens.pleaseEnterQuantity')),

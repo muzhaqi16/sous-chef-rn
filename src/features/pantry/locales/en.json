@@ -6,22 +6,17 @@
     "noExpiry": "No expiry",
     "amount": "Amount",
     "nutrition": "Nutrition",
-    "recipesToTry": "Recipes to try",
     "noShoppingListSelectedTitle": "No Shopping List Selected",
     "noShoppingListSelectedMessage": "Please select a shopping list first.",
     "goToShoppingLists": "Go to Shopping Lists",
     "noRecipeSuggestions": "No recipe suggestions available",
-    "notes": "Notes",
-    "tags": "Tags",
     "usageHistory": "Usage History",
     "fields": {
-      "package": "Package",
       "shelfLife": "Shelf Life",
       "acquired": "Acquired",
       "costPerUnit": "Cost/Unit",
       "minStock": "Min Stock",
       "restockAt": "Restock At",
-      "purchased": "Purchased",
       "lastPurchase": "Last purchase",
       "lastUsed": "Last Used",
       "added": "Added"
@@ -65,7 +60,6 @@
   "pantrySettings": {
     "createTitle": "Create New Pantry",
     "title": "Pantry Settings",
-    "loading": "Loading...",
     "loadingData": "Loading pantry data...",
     "namePlaceholder": "Enter pantry name (e.g., Kitchen Pantry)",
     "descriptionPlaceholder": "Enter description",
@@ -85,8 +79,6 @@
     "tabLedger": "Ledger",
     "period": "Period:",
     "granularityDaily": "Daily",
-    "granularityWeekly": "Weekly",
-    "granularityMonthly": "Monthly",
     "totalUsage": "Total Usage",
     "itemsUsed": "items used",
     "avgPerDay": "Avg Per Day",
@@ -125,7 +117,6 @@
     "purposeAdjustment": "Adjustment",
     "purposeCooking": "Cooking",
     "purposeRestock": "Restock",
-    "purposeTransfer": "Transfer",
     "purposeWaste": "Waste",
     "sourceManual": "Manual",
     "sourceRecipeAuto": "Recipe (Auto)",
@@ -170,6 +161,7 @@
     "newQuantity": "New Quantity",
     "reasonPlaceholder": "Why is the quantity being adjusted?",
     "remainingWeightPlaceholder": "Leave blank to auto-adjust",
+    "countedAs": "Counted as {{amount}}",
     "systemReason": {
       "stackMerged": "Adjustment after merging items",
       "stackPurged": "Administrative removal",
@@ -183,7 +175,6 @@
     "sustainability": "Sustainability",
     "composted": "Composted",
     "recycledPackaging": "Recycled (packaging)",
-    "notes": "Notes",
     "notesPlaceholder": "Add any notes about this waste...",
     "reasonExpired": "Expired",
     "reasonSpoiled": "Spoiled",
@@ -193,13 +184,11 @@
   },
   "restockItem": {
     "title": "Restock Item",
-    "restock": "Restock",
     "restockBy": "Restock by",
     "currentLabel": "Current:",
     "quantityToAdd": "Quantity to Add",
     "newQuantityPrefix": "New quantity: ",
     "costPerUnit": "Cost per Unit",
-    "notes": "Notes",
     "notesPlaceholder": "Add any notes about this restock...",
     "expirationPlaceholder": "Set new expiration"
   },
@@ -209,7 +198,6 @@
     "quantityToConsume": "Quantity to Consume",
     "fifoHint": "Items are consumed oldest-first by expiration date",
     "purpose": "Purpose *",
-    "notes": "Notes",
     "notesPlaceholder": "Add any notes about this usage...",
     "purposeCooking": "Cooking",
     "purposeTransfer": "Transfer"
@@ -288,9 +276,7 @@
     "addItemDetails": "Add Item Details",
     "storageLocation": "Storage Location",
     "storageLocationPlaceholder": "e.g., Top shelf, Crisper drawer",
-    "tags": "Tags",
     "tagsPlaceholder": "e.g., organic, gluten-free (comma separated)",
-    "notes": "Notes",
     "notesPlaceholder": "e.g., Store in cool, dry place",
     "conditionGood": "Good",
     "conditionFair": "Fair",
@@ -301,7 +287,6 @@
     "cost": "Cost per unit",
     "costPlaceholder": "e.g., 4.99",
     "acquisitionMethod": "How acquired",
-    "methodPurchased": "Purchased",
     "methodHomegrown": "Homegrown",
     "methodGifted": "Gifted",
     "methodBarcodeScan": "Barcode scan"
@@ -311,7 +296,6 @@
     "searchPlaceholder": "Search your pantry...",
     "sortedBy": "Sort, now by {{field}}",
     "tabAll": "All",
-    "tabPantry": "Pantry",
     "tabUnassigned": "Unassigned",
     "expiringCount": "{{count}} expiring",
     "expiredCount": "{{count}} expired",
@@ -362,9 +346,7 @@
     "exceedsAvailable": "Exceeds available ({{amount}} {{unit}})"
   },
   "duplicateItem": {
-    "title": "Item Already in Pantry",
-    "body": "This item is already in your pantry in this unit. Would you like to restock it?",
-    "restock": "Restock"
+    "title": "Item Already in Pantry"
   },
   "relinkItem": {
     "action": "Not this item?",
@@ -382,7 +364,6 @@
   },
   "expirationAction": {
     "cooked": "Cooked",
-    "consumed": "Consumed",
     "shared": "Shared with someone",
     "extended": "Extended shelf life",
     "wasted": "Wasted / Discarded",
@@ -398,9 +379,6 @@
       "SHARED": "Marked as shared",
       "WASTE": "Marked as wasted"
     }
-  },
-  "pantryTabs": {
-    "all": "All"
   },
   "expiration": {
     "noExpiryDate": "No expiry date"

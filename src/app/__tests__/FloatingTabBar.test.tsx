@@ -83,7 +83,7 @@ describe('TabItem', () => {
     route: { key: 'pantry-key', name: 'Pantry' },
     isFocused: false,
     options: { tabBarAccessibilityLabel: 'Pantry tab' },
-    titleKey: 'navigation.tabs.pantry',
+    titleKey: 'labels.pantry',
     onPress: jest.fn(),
     showLabel: true,
     activeTabIndex: mockSharedValue,

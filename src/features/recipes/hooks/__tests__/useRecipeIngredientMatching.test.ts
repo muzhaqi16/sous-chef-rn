@@ -22,6 +22,7 @@ import {
   getAvailabilityStatus,
 } from '../useRecipeIngredientMatching';
 import { RecipeIngredientFragmentDoc } from '#features/recipes/graphql/recipeFragments.generated';
+import { RecipeSubstitutesDocument } from '../useRecipeSubstitutes.generated';
 
 type IngredientMatch = Parameters<typeof getAvailabilityStatus>[0];
 
@@ -62,6 +63,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: RootState) => unknown) =>
     selector({ selectedPantryId: 'pantry-1' } as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
+  useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
 
 const mockToastSuccess = jest.mocked(toastService.success);
@@ -730,6 +732,156 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
   });
 
+  /** Buttermilk is out; milk and lemon juice stand in, both held. */
+  const buttermilkMissing: Match = {
+    ingredient: {
+      id: 'ing-2',
+      isOptional: false,
+      unit: { id: 'u-ing-2' },
+    },
+    isAvailable: false,
+    matchKind: RecipeIngredientMatchKind.None,
+    matchedPantryItem: null,
+    alternativeMatches: [],
+    availableQuantity: null,
+    // Converted to the pantry's unit, so it says nothing of the servings.
+    suggestedQuantity: 473,
+    suggestedUnit: { id: 'u-ml' },
+  };
+
+  const swapPart = (
+    id: string,
+    name: string,
+    quantity: number,
+    unitId: string,
+  ) => ({
+    quantity,
+    unit: { id: unitId, symbol: unitId },
+    inPantry: true,
+    item: { id, name },
+    pantryItem: { id: `stack-${id}`, itemName: name },
+  });
+
+  const milkAndLemonMock = () =>
+    recordMock(RecipeSubstitutesDocument, {
+      data: {
+        recipe: {
+          id: 'recipe-1',
+          // Four servings of a two-serving recipe: a double batch.
+          servings: 2,
+          ingredientsConnection: {
+            edges: [
+              {
+                node: {
+                  id: 'ing-2',
+                  substitutes: [
+                    {
+                      substitute: { id: 's-milk-lemon' },
+                      scaled: true,
+                      parts: [
+                        swapPart('milk', 'Whole Milk', 1, 'u-cup'),
+                        swapPart('lemon', 'Lemon Juice', 1, 'u-tbsp'),
+                      ],
+                      alerts: [],
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+  /** A cook of four servings missing buttermilk, its swap offered. */
+  async function loadSwapCook(cook: ReturnType<typeof cookMock>) {
+    const substitutes = milkAndLemonMock();
+    const { result } = renderHookWithApollo(
+      () => useRecipeIngredientMatching('recipe-1'),
+      {
+        operationMocks: [
+          matchesMock([includedMatch, buttermilkMissing]).mock,
+          substitutes.mock,
+          cook.mock,
+        ],
+        cache: seedIngredientCache(['ing-1', 'ing-2']),
+      },
+    );
+    await act(async () => {
+      await result.current.loadMatches(4);
+    });
+    // Asked fresh for the review's own pantry, once the sheet is open.
+    await waitFor(() =>
+      expect(result.current.editableMatches[1]?.substitutes).toHaveLength(1),
+    );
+    return { result, substitutes };
+  }
+
+  async function cookWithSwap({
+    result,
+  }: Awaited<ReturnType<typeof loadSwapCook>>) {
+    const swap = result.current.editableMatches[1]?.substitutes[0];
+    act(() => {
+      result.current.updateMatch(1, {
+        selectedSubstitute: swap,
+        isIncluded: true,
+      });
+    });
+    await act(async () => {
+      await result.current.confirmConsumption();
+    });
+  }
+
+  it('cooks with a swap: draws its parts at the amount cooked, never the ingredient', async () => {
+    const cook = cookMock({ kind: 'success' });
+    const loaded = await loadSwapCook(cook);
+    expect(loaded.substitutes.fired[0]).toMatchObject({
+      homeId: 'home-1',
+      pantryId: 'pantry-1',
+    });
+    expect(loaded.result.current.editableMatches[0]?.substitutes).toEqual([]);
+
+    await cookWithSwap(loaded);
+
+    expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
+      {
+        recipeIngredientId: 'ing-1',
+        pantryItemId: 'pi-1',
+        actualQuantity: 2,
+        actualUnitId: 'su-1',
+      },
+      {
+        recipeIngredientId: 'ing-2',
+        pantryItemId: 'stack-milk',
+        actualQuantity: 2,
+        actualUnitId: 'u-cup',
+        substituteId: 's-milk-lemon',
+      },
+      {
+        recipeIngredientId: 'ing-2',
+        pantryItemId: 'stack-lemon',
+        actualQuantity: 2,
+        actualUnitId: 'u-tbsp',
+        substituteId: 's-milk-lemon',
+      },
+    ]);
+  });
+
+  // A skip names the part's stack; the toast counts the ingredient it stands in for.
+  it.each([
+    [[], 'Deducted 2 ingredients from pantry'],
+    [['Lemon Juice'], 'Deducted 1 ingredient from pantry (1 not deducted)'],
+  ])(
+    'counts a swap as one ingredient when the server skips %j',
+    async (skipped, toast) => {
+      const cook = cookMock({ kind: 'success', skipped });
+
+      await cookWithSwap(await loadSwapCook(cook));
+
+      expect(mockToastSuccess).toHaveBeenCalledWith(toast);
+    },
+  );
+
   // "Olive oil" is served by the plain bottle and by the extra virgin stack
   // under its concept; the one the user picks is the one deducted.
   it('deducts from the stack the user picked instead of the server pick', async () => {
@@ -765,21 +917,41 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
   });
 
   // The cook commits whole; what it reports apart are the entries no
-  // conversion could take to their stack's unit.
-  it('counts the entries the server skipped apart from the ones it deducted', async () => {
-    const cook = cookMock({ kind: 'success', skipped: ['Ingredient ing-2'] });
-    const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
+  // conversion could take to their stack's unit, each by its stack's name.
+  it.each([
+    ['its stack', 'Flour'],
+    // Renamed since the review read it: still counted, never hidden.
+    ['no stack sent', 'Rye flour'],
+  ])(
+    'counts a skipped entry naming %s apart from the ones deducted',
+    async (_label, skippedName) => {
+      const cook = cookMock({ kind: 'success', skipped: [skippedName] });
+      const { result } = await loadMatchesFor(
+        [
+          includedMatch,
+          {
+            ...secondMatch,
+            matchedPantryItem: {
+              id: 'pi-2',
+              itemName: 'Flour',
+              unit: { id: 'u-ing-2' },
+            },
+          },
+        ],
+        cook,
+      );
 
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+      await act(async () => {
+        await result.current.confirmConsumption();
+      });
 
-    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
-    expect(mockToastSuccess).toHaveBeenCalledWith(
-      'Deducted 1 ingredient from pantry (1 not deducted)',
-    );
-    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
-  });
+      expect(mockToastSuccess).toHaveBeenCalledTimes(1);
+      expect(mockToastSuccess).toHaveBeenCalledWith(
+        'Deducted 1 ingredient from pantry (1 not deducted)',
+      );
+      await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+    },
+  );
 
   it('counts every entry sent when the cook is queued offline', async () => {
     const cook = cookMock({ kind: 'queued' });

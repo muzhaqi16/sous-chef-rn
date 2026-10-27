@@ -1,11 +1,21 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { makeCache } from '#/apollo/cache';
-import { BatchStatus, UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  BatchStatus,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 const batch = (quantity: number): PantryItemBatchFragment => ({
   __typename: 'PantryItemBatch',
@@ -23,6 +33,8 @@ const batch = (quantity: number): PantryItemBatchFragment => ({
   depletedAt: null,
   netWeight: null,
   remainingNetWeight: null,
+  packageSize: null,
+  remaining: null,
   portionsPerTrackingUnit: null,
   createdAt: '2026-08-01',
   updatedAt: '2026-08-01',
@@ -37,6 +49,27 @@ describe('BatchListItem', () => {
   it('renders a fractional batch quantity as a cooking fraction', () => {
     renderWithApollo(<BatchListItem batch={batch(1.25)} unitSymbol="cup" />);
     expect(screen.getByText('1 1/4 cup')).toBeTruthy();
+  });
+
+  describe('what a batch cost', () => {
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+    });
+
+    const priced = { ...batch(2), costPerUnit: 1.25, totalCost: 2.5 };
+
+    it('shows the cost per unit with budget & prices on', () => {
+      renderWithApollo(<BatchListItem batch={priced} unitSymbol="pc" />);
+      expect(screen.getByText('$1.25/unit')).toBeTruthy();
+    });
+
+    it('shows no cost with budget & prices off, and still the batch', () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+      renderWithApollo(<BatchListItem batch={priced} unitSymbol="pc" />);
+
+      expect(screen.queryByText(/1\.25/)).toBeNull();
+      expect(screen.getByText('2 pc')).toBeTruthy();
+    });
   });
 
   it("shows the batch's own package size", () => {
@@ -109,5 +142,41 @@ describe('BatchListItem', () => {
       });
       expect(screen.getByText('11 pc')).toBeTruthy();
     });
+  });
+
+  // A can of Unmeat tuna: 180 g as stored; the API reads its label's "6.35 oz".
+  it('shows the package size in the user\u2019s unit system', () => {
+    type BatchSize = NonNullable<PantryItemBatchFragment['packageSize']>;
+    const reading = (
+      value: number,
+      id: string,
+      symbol: string,
+    ): BatchSize['metric'] => ({
+      __typename: 'MeasureReading',
+      value,
+      unitId: id,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
+    });
+    const packageSize: BatchSize = {
+      __typename: 'Measure',
+      value: 180,
+      unitId: 'unit-g',
+      metric: reading(180, 'unit-g', 'g'),
+      imperial: reading(6.35, 'unit-oz', 'oz'),
+    };
+    const cache = makeCache();
+    writeUnitSystemSettings(cache, UnitSystem.System, UnitSystem.Imperial);
+
+    renderWithApollo(
+      <BatchListItem
+        batch={{ ...batch(1), netWeight: 180, packageSize }}
+        netWeightUnitSymbol="g"
+        netWeightUnitId="unit-g"
+      />,
+      { cache },
+    );
+    expect(screen.getByText('Package: 6.35 oz')).toBeTruthy();
   });
 });

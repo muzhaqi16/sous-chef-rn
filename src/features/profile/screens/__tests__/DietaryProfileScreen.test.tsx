@@ -168,9 +168,36 @@ jest.mock(
   }),
 );
 
+const mockSetShared = jest.fn().mockResolvedValue(undefined);
+const mockSharingHomes: { id: string; name: string; shared: boolean }[] = [];
+jest.mock('#features/profile/hooks/useDietarySharing', () => ({
+  useDietarySharing: () => ({
+    homes: mockSharingHomes,
+    setShared: mockSetShared,
+  }),
+}));
+
 describe('DietaryProfileScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockSharingHomes.length = 0;
+  });
+
+  it('offers no sharing section to a user with no home', () => {
+    render(<DietaryProfileScreen />);
+    expect(screen.queryByText('Shared with')).toBeNull();
+  });
+
+  it('lists a switch for each of the user’s homes', () => {
+    mockSharingHomes.push(
+      { id: 'home-1', name: 'Test Home', shared: true },
+      { id: 'home-2', name: 'Beach House', shared: false },
+    );
+    render(<DietaryProfileScreen />);
+
+    expect(screen.getByText('Shared with')).toBeTruthy();
+    expect(screen.getByTestId('dietary-sharing-switch-home-1')).toBeTruthy();
+    expect(screen.getByTestId('dietary-sharing-switch-home-2')).toBeTruthy();
   });
 
   it('renders the screen with title', () => {

@@ -201,9 +201,6 @@
         "andMore_other": "{{names}} y {{count}} más"
       }
     },
-    "categoryAll": "Todas",
-    "categoryHome": "Hogar",
-    "categoryPantry": "Despensa",
     "categoryRecipe": "Recetas",
     "categoryShopping": "Compras",
     "markAllRead": "Marcar leídas",

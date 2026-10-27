@@ -66,6 +66,9 @@ const ENUM_DEFAULTS = {
   // so this value is not observed in practice. COUNT is the resting kind — a
   // bare "each" — and is the safest thing to be wrong with if it ever is.
   'Unit.type': 'COUNT',
+  // A local row's readings are stand-ins `currentReading` never shows: their
+  // empty `unitId` matches no stored unit.
+  'MeasureReading.type': 'COUNT',
   // A local membership is only ever the creator's own, of the home it made.
   'Membership.role': 'OWNER',
   'Membership.status': 'ACTIVE',
@@ -375,6 +378,30 @@ const TARGETS = [
     unmasked: true,
     fragments: {
       favorites_row: ['NEUTRAL_LOCAL_SAVED_RECIPE', 'Favorites_RowFragment'],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'profile',
+      'hooks',
+      'useBrandLists.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'profile',
+      'hooks',
+      'useBrandListsNeutral.generated.ts',
+    ),
+    typesFrom: './useBrandLists.generated',
+    unmasked: true,
+    fragments: {
+      useBrandLists_row: [
+        'NEUTRAL_LOCAL_BRAND_LIST',
+        'UseBrandLists_RowFragment',
+      ],
     },
   },
 ];

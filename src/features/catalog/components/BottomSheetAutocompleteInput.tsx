@@ -62,6 +62,8 @@ interface BottomSheetAutocompleteInputProps<T> {
   onSearchChange?: (searchTerm: string) => void;
   onModalOpen?: () => void;
   onModalClose?: () => void;
+  /** The field itself was finished: blurred or submitted. */
+  onEndEditing?: () => void;
 }
 
 export function BottomSheetAutocompleteInput<T>({
@@ -103,6 +105,7 @@ export function BottomSheetAutocompleteInput<T>({
   onSearchChange,
   onModalOpen,
   onModalClose,
+  onEndEditing,
 }: BottomSheetAutocompleteInputProps<T>) {
   const { t } = useTranslation();
   // Only `BottomSheetTextInput` sets `animatedKeyboardState.target`; without it
@@ -274,6 +277,7 @@ export function BottomSheetAutocompleteInput<T>({
         style={[styles.fieldInput, error && styles.fieldInputError]}
         value={value}
         onChangeText={handleTextChange}
+        onEndEditing={onEndEditing}
         placeholder={placeholder}
         testID={testID}
         autoCapitalize={autoCapitalize}

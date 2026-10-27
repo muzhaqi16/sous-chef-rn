@@ -1,5 +1,10 @@
 import { object, string } from 'yup';
-import { normalizeSmartPunctuation } from '#utils/validation/common';
+import {
+  cleanName,
+  lazyMessage,
+  MAX_HOME_NAME_LENGTH,
+  normalizeSmartPunctuation,
+} from '#utils/validation/common';
 import { t, type KeyUnder } from '#/i18n';
 
 /**
@@ -13,14 +18,14 @@ const msg =
   (): string =>
     t(`onboardingValidation.${key}`, options);
 
-// home name rule
+// A home name in any script ("Shtëpia"), cleaned rather than refused.
 const homeNameRule = string()
+  .transform(cleanName)
   .required(msg('homeRequired'))
-  .transform(normalizeSmartPunctuation)
-  .min(2, msg('homeMin', { count: 2 }))
-  .max(50, msg('homeMax', { count: 50 }))
-  .matches(/^[a-zA-Z0-9\s'"-]+$/, msg('homeChars'))
-  .trim();
+  .max(
+    MAX_HOME_NAME_LENGTH,
+    lazyMessage('errors.nameTooLong', { max: MAX_HOME_NAME_LENGTH }),
+  );
 
 // pantry name rule
 const pantryNameRule = string()

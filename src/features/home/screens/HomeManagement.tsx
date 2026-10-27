@@ -35,6 +35,7 @@ import { SubScreen } from '#components/templates/SubScreen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { homeTestIDs } from '#features/home/testIDs';
+import { cleanName } from '#/utils/validation/common';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
@@ -136,9 +137,10 @@ export const HomeManagement: React.FC = () => {
   };
 
   const handleCreateHome = async () => {
-    if (!homeName.trim()) return;
+    const name = cleanName(homeName);
+    if (!name) return;
 
-    const result = await createHome({ name: homeName, allowJoinCode });
+    const result = await createHome({ name, allowJoinCode });
     if (result) {
       setHomeName('');
       setAllowJoinCode(true);
@@ -328,7 +330,7 @@ export const HomeManagement: React.FC = () => {
                       {previewHome.name}
                     </Text>
                     <Text role="caption" style={styles.previewSubtitle}>
-                      {t('joinHome.memberCount', {
+                      {t('labels.memberCount', {
                         count: previewHome.membersConnection.totalCount,
                       })}
                     </Text>

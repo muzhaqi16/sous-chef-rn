@@ -18,7 +18,7 @@ export function useShoppingListsLite({
   skip = false,
   fetchPolicy,
 }: StandDownOptions = {}) {
-  const { data, loading } = useQuery(
+  const { data, loading, refetch } = useQuery(
     GetShoppingListsLiteDocument,
     skip
       ? skipToken
@@ -31,5 +31,13 @@ export function useShoppingListsLite({
   // A failed read answers `undefined`, not "no lists": keep the last answer.
   const lists = usePreservedNodes(data?.shoppingLists, 'GetShoppingListsLite');
 
-  return { lists, loading };
+  return {
+    lists,
+    loading,
+    // A query skipped from mount has no variables, so a refetch would send none.
+    refetch: async () => {
+      if (skip) return;
+      await refetch();
+    },
+  };
 }

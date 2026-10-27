@@ -27,11 +27,9 @@
     "inviteHomeMessage": "{{name}} të ka ftuar t'i bashkohesh shtëpisë së tij/saj për të menaxhuar qilarin dhe listat së bashku!"
   },
   "inviteUser": {
-    "roleMemberLabel": "Anëtar",
     "roleMemberDescription": "Mund të shtojë dhe modifikojë artikuj në qilar",
     "roleAdminDescription": "Mund të menaxhojë anëtarët dhe cilësimet",
     "roleGuestDescription": "Vetëm akses shikimi te shtëpia",
-    "roleOwnerLabel": "Pronar",
     "roleOwnerDescription": "Kontroll i plotë mbi shtëpinë dhe të gjithë anëtarët",
     "ownerWarning": "⚠️ Pronarët kanë kontroll të plotë",
     "submit": "Dërgo ftesën",
@@ -51,7 +49,6 @@
     "invitedHeading": "Ke marrë një ftesë!",
     "homeInviteText": "{{inviter}} të ka ftuar të bashkohesh",
     "listInviteText": "{{inviter}} të ka ftuar të bashkëpunosh në",
-    "resourceHome": "Shtëpia",
     "roleLabel": "Roli: {{role}}",
     "descriptionLabel": "Përshkrim:",
     "acceptFailed": "Pranimi i ftesës dështoi. Provo sërish.",
@@ -71,8 +68,6 @@
     "accessibilityDefaultSuffix": ", shtëpi parazgjedhur",
     "statsHome_one": "Shtëpi",
     "statsHome_other": "Shtëpi",
-    "statsMember_one": "Anëtar",
-    "statsMember_other": "Anëtarë",
     "statsPantry_one": "Qilar",
     "statsPantry_other": "Qilarë",
     "cardDefault": "Parazgjedhur",
@@ -104,10 +99,11 @@
     "youLabel": "Ti",
     "storageLocationsSubtitle": "Menaxho ku ruhen artikujt",
     "leaveHomeDescription": "Largimi nga kjo shtëpi do të heqë aksesin tënd në të gjitha qilarët, listat e blerjeve, planet e ushqimit dhe modelet e ndara.",
-    "ownerCannotLeaveMessage": "Pronarët nuk mund të largohen nga shtëpia. Transfero pronësinë tek një anëtar tjetër ose fshi shtëpinë."
+    "ownerCannotLeaveMessage": "Pronarët nuk mund të largohen nga shtëpia. Transfero pronësinë tek një anëtar tjetër ose fshi shtëpinë.",
+    "dietaryNeedsRowTitle": "Çfarë nuk mund të hanë anëtarët",
+    "dietaryNeedsRowSubtitle": "Alergjitë dhe kufizimet që anëtarët ndajnë me këtë shtëpi"
   },
   "joinHome": {
-    "homeFallback": "Shtëpia",
     "enterCodeTitle": "Fut Kodin e Bashkimit",
     "enterCodeDescription": "Fut kodin e bashkimit që more për t'u bashkuar me një shtëpi.",
     "findHome": "Gjej Shtëpinë",
@@ -116,8 +112,6 @@
     "invitedToJoin": "Ke marrë një ftesë për t’u bashkuar me",
     "enterDifferentCode": "Fut një kod tjetër",
     "joinFailed": "Bashkimi me shtëpinë dështoi. Kodi mund të jetë i pavlefshëm ose i skaduar.",
-    "memberCount_one": "{{count}} anëtar",
-    "memberCount_other": "{{count}} anëtarë",
     "pantryCount_one": "{{count}} qilar",
     "pantryCount_other": "{{count}} qilarë"
   },
@@ -130,16 +124,11 @@
     "staleHome": "Ky link ftese për shtëpinë ka skaduar. Kërko një link të ri për t'u bashkuar.",
     "staleList": "Ky link ftese për listën ka skaduar. Kërko një link të ri për t'u bashkuar."
   },
-  "roles": {
-    "owner": "Pronar",
-    "member": "Anëtar"
-  },
   "collaboratorRoles": {
     "viewer": "Shikues",
     "shopper": "Blerës",
     "contributor": "Kontribues",
     "editor": "Redaktor",
-    "owner": "Pronar",
     "permissions": {
       "viewItems": "Shiko artikujt",
       "addItems": "Shto artikuj",
@@ -174,10 +163,6 @@
     "invalidHomeId": "ID e pavlefshme e shtëpisë",
     "leaveBody": "Vërtet dëshiron të largohesh nga \"{{name}}\"? Do të humbasësh aksesin te kjo shtëpi dhe te qilarët e listat e blerjeve të saj."
   },
-  "homeRoles": {
-    "owner": "Pronar",
-    "member": "Anëtar"
-  },
   "inviteStatus": {
     "PENDING": "Në pritje",
     "ACCEPTED": "Pranuar",
@@ -185,5 +170,17 @@
     "EXPIRED": "Skaduar",
     "REVOKED": "Revokuar",
     "USED": "Përdorur"
+  },
+  "homeDietaryNeeds": {
+    "title": "Nevojat dietike",
+    "emptyTitle": "Askush nuk ka ndarë ende nevoja dietike",
+    "emptyBody": "Çdo anëtar zgjedh t’i ndajë në Profilin dietik.",
+    "group": {
+      "allergicTo": "Alergji ndaj",
+      "intolerantTo": "Intolerancë ndaj",
+      "avoids": "Shmang",
+      "follows": "Ndjek",
+      "goals": "Qëllimet"
+    }
   }
 }

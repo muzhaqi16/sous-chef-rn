@@ -3,6 +3,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { useKeepAwake } from '@sayem314/react-native-keep-awake';
 import { useTranslation } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
+import type { BarAction } from '#components/molecules/BarActions';
 import { Loading } from '#components/molecules/Loading';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -127,11 +128,22 @@ const StoreModeBody: React.FC<{
 export const StoreMode: React.FC<StoreModeProps> = ({ route }) => {
   const { listId } = route.params;
   const { t } = useTranslation();
-  const { goBack, toListSettings } = useAppNavigation();
+  const { goBack, toListSettings, toBarcode } = useAppNavigation();
   useKeepAwake();
 
   const storeMode = useStoreMode(listId);
   const { state, actions } = storeMode;
+  const scanAction: BarAction[] = state.permissions.canMarkPurchased
+    ? [
+        {
+          icon: 'barcode-outline',
+          accessibilityLabel: t('labels.scanBarcode'),
+          onPress: () =>
+            toBarcode({ source: 'storeMode', shoppingListId: listId }),
+          testID: shoppingListTestIDs.storeModeScan,
+        },
+      ]
+    : [];
 
   useScreenTelemetry(
     'StoreMode',
@@ -149,6 +161,7 @@ export const StoreMode: React.FC<StoreModeProps> = ({ route }) => {
       testID={shoppingListTestIDs.storeModeScreen}
       title={state.listName ?? t('labels.shoppingList')}
       actions={[
+        ...scanAction,
         {
           label: t('labels.done'),
           variant: 'primary',

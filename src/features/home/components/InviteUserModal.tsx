@@ -41,7 +41,7 @@ function buildRoleOptions(t: Translate) {
   return [
     {
       value: MembershipRole.Member,
-      label: t('inviteUser.roleMemberLabel'),
+      label: t('labels.member'),
       description: t('inviteUser.roleMemberDescription'),
       icon: 'person',
     },
@@ -59,7 +59,7 @@ function buildRoleOptions(t: Translate) {
     },
     {
       value: MembershipRole.Owner,
-      label: t('inviteUser.roleOwnerLabel'),
+      label: t('labels.owner'),
       description: t('inviteUser.roleOwnerDescription'),
       icon: 'key',
       warning: true,

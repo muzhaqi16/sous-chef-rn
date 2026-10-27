@@ -23,7 +23,7 @@ export const StorageStateControl: React.FC<StorageStateControlProps> = ({
 
   const storageStateLabel: Record<StorageState, string> = {
     [StorageState.Ambient]: t('labels.storageAmbient'),
-    [StorageState.Refrigerated]: t('labels.storageRefrigerated'),
+    [StorageState.Refrigerated]: t('storageState.REFRIGERATED'),
     [StorageState.Frozen]: t('labels.storageFrozen'),
     [StorageState.None]: '',
   };

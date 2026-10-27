@@ -67,9 +67,17 @@ export const pantryTypePolicies: TypePolicies = {
       usageRecordsConnection: mergeConnectionByNodeId(['orderBy']),
     },
   },
+  // Only the detail reads `perUnit` and `total`: merged, a list's narrower
+  // write keeps them. A reading left stale shows nothing (`currentReading`).
+  PackageBreakdown: {
+    merge: true,
+  },
   Query: {
     fields: {
       pantry: readByIdFromCache('Pantry'),
+      // An event read-back's (`PantryItemsForEvents`): each batch names other
+      // ids, so one slot, or the persisted cache keeps every batch's list.
+      pantryItemsByIds: { keyArgs: false },
       // `canRead` checks only that the entity exists: a `PantryItem` short one
       // `PantryItemDetail_pantryItem` field still goes to the network, so this
       // needs a detail-complete optimistic write.

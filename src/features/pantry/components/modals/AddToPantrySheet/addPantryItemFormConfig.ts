@@ -1,5 +1,9 @@
 import { object, string, boolean, date, mixed, type ObjectSchema } from 'yup';
-import { lazyMessage, quantityRule } from '#/utils/validation/common';
+import {
+  itemNameText,
+  lazyMessage,
+  quantityRule,
+} from '#/utils/validation/common';
 import {
   StorageState,
   ItemCondition,
@@ -73,7 +77,7 @@ export const addPantryItemDefaults = (
 });
 
 export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
-  itemName: string().trim().required(lazyMessage('errors.itemNameRequired')),
+  itemName: itemNameText(lazyMessage('errors.itemNameRequired')),
   quantityInput: quantityRule('errors.invalidQuantity').trim(),
   // ALL-OR-NOTHING in BOTH directions: the create contract rejects a unit id
   // with no weight, and the submit path drops a weight with no resolved unit

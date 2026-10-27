@@ -1,8 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { HomeDetailScreen } from '../HomeDetailScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -279,6 +280,38 @@ describe('HomeDetailScreen', () => {
   it('shows members section', () => {
     const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
     expect(getByText('Members Section')).toBeTruthy();
+  });
+
+  describe('dietary needs', () => {
+    const withMembers = (totalCount: number) => {
+      const {
+        useHomeDetailManagement,
+      } = require('#features/home/screens/useHomeDetailManagement');
+      // The default return beforeEach set, read without calling a hook.
+      const base = useHomeDetailManagement.getMockImplementation()();
+      useHomeDetailManagement.mockReturnValue({
+        ...base,
+        home: { ...base.home, membersConnection: { edges: [], totalCount } },
+      });
+    };
+
+    it('opens the household’s dietary needs once the home has another member', () => {
+      withMembers(2);
+      const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
+
+      fireEvent.press(getByText("What members can't eat"));
+
+      expect(useAppNavigation().toHomeDietaryNeeds).toHaveBeenCalledWith({
+        homeId: 'home-1',
+      });
+    });
+
+    it('offers no dietary needs to a home of one', () => {
+      withMembers(1);
+      const { queryByText } = render(<HomeDetailScreen {...defaultProps} />);
+
+      expect(queryByText("What members can't eat")).toBeNull();
+    });
   });
 
   it('shows storage locations navigation', () => {

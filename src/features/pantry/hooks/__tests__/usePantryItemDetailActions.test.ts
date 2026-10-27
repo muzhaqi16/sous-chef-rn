@@ -816,6 +816,26 @@ describe('usePantryItemDetailActions', () => {
         'used some',
         1,
         250,
+        undefined,
+      );
+    });
+
+    it('passes on the units a recount was typed in', () => {
+      const { result } = setup();
+
+      act(() =>
+        result.current.handleConfirmAdjust(2.5, 'recount', undefined, {
+          newQuantityUnitId: 'unit-lb',
+        }),
+      );
+
+      expect(mockAdjustQuantity).toHaveBeenCalledWith(
+        'item-1',
+        2.5,
+        'recount',
+        1,
+        undefined,
+        { newQuantityUnitId: 'unit-lb' },
       );
     });
 

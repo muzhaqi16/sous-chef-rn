@@ -73,18 +73,25 @@ describe('nameRule', () => {
     await expect(nameRule.validate("O'Brien-Smith")).resolves.toBeTruthy();
   });
 
-  it('rejects < 2 chars', async () => {
-    await expect(nameRule.validate('J')).rejects.toThrow('2 characters');
+  it.each(['José', 'Çelik', 'Zoë', '李', 'Ngũgĩ', 'Mary Ann'])(
+    'accepts %p, a name in its own script',
+    async name => {
+      await expect(nameRule.validate(name)).resolves.toBe(name);
+    },
+  );
+
+  it('cleans a name instead of refusing it', () => {
+    expect(nameRule.cast('  José \t María\n')).toBe('José María');
+    expect(nameRule.cast('O’Brien')).toBe("O'Brien");
+    expect(nameRule.cast('Ana\u0000')).toBe('Ana');
   });
 
-  it('rejects > 50 chars', async () => {
-    await expect(nameRule.validate('A'.repeat(51))).rejects.toThrow(
-      '50 characters',
+  // The API's cap on a first or last name (UpdateProfileInput).
+  it('takes up to 255 characters', async () => {
+    await expect(nameRule.validate('A'.repeat(255))).resolves.toBeTruthy();
+    await expect(nameRule.validate('A'.repeat(256))).rejects.toThrow(
+      'Keep the name to 255 characters',
     );
-  });
-
-  it('rejects numbers in name', async () => {
-    await expect(nameRule.validate('John123')).rejects.toThrow();
   });
 });
 

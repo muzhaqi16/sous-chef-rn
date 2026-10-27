@@ -182,6 +182,25 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     symbol
     type
   }
+  # The row reads it in the user's unit system; null on a local line.
+  amount {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   sortOrder
   # The row reads it; a write that leaves it out blanks the row.
   suggestedPrice {

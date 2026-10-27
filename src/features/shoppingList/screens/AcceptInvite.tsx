@@ -183,14 +183,13 @@ export const AcceptInvite: React.FC = () => {
         <View style={styles.inviteDetails}>
           <Text role="heading">
             {invitationType === 'home'
-              ? homeInviteDisplay?.home.name ??
-                t('invitationAcceptance.resourceHome')
+              ? homeInviteDisplay?.home.name ?? t('labels.home')
               : shoppingListInviteDisplay?.shoppingList.name ??
                 t('labels.shoppingList')}
           </Text>
           <Text role="caption" tone="secondary" style={styles.inviteType}>
             {invitationType === 'home'
-              ? t('invitationAcceptance.resourceHome')
+              ? t('labels.home')
               : t('labels.shoppingList')}
           </Text>
           <Text role="label" tone="secondary" style={styles.inviteRole}>

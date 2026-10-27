@@ -174,7 +174,6 @@
         "placeholder": "Inserisci il nome dell'articolo"
       },
       "description": {
-        "label": "Descrizione",
         "placeholder": "Inserisci la descrizione dell'articolo (facoltativo)"
       },
       "vendor": {
@@ -215,7 +214,6 @@
         "placeholder": "cucchiaino, tazza, ecc."
       },
       "tags": {
-        "label": "Tag",
         "placeholder": "Tag separati da virgole (es. biologico, senza glutine)"
       },
       "foodStamp": {
@@ -243,9 +241,6 @@
   },
   "itemValidation": {
     "nameRequired": "Il nome dell'articolo è obbligatorio",
-    "nameEmpty": "Il nome dell'articolo non può essere vuoto",
-    "nameMax": "Il nome dell'articolo non può superare {{count}} caratteri",
-    "nameChars": "Il nome dell'articolo può contenere solo lettere, numeri, spazi e punteggiatura comune",
     "descriptionMax": "La descrizione non può superare {{count}} caratteri",
     "upcDigits": "L'UPC può contenere solo numeri",
     "upcMin": "L'UPC deve avere almeno {{count}} cifre",
@@ -324,12 +319,10 @@
     "brandOptional": "Marca (opzionale)",
     "placeholderItemName": "es. riso, pasta",
     "placeholderCategory": "es. cereali, latticini",
-    "tags": "Tag",
     "tagsPlaceholder": "Inserisci i tag separati da virgola",
     "location": "Posizione",
     "locationPlaceholder": "es. ripiano alto, cassetto 2",
     "storageNotes": "Note di conservazione",
-    "notes": "Note",
     "addTitle": "Aggiungi articolo alla dispensa",
     "editTitle": "Modifica articolo della dispensa",
     "quantityUnit": "Quantità e unità",
@@ -412,7 +405,6 @@
     "contains": "Contiene"
   },
   "storageLocationCard": {
-    "default": "Predefinita",
     "insideParent": "Dentro {{parent}}",
     "capacityWithUnit": "/ {{capacity}} {{unit}}",
     "capacity_one": "/ {{count}} unità",

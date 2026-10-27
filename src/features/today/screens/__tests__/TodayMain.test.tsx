@@ -33,7 +33,12 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
 jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
   useTabBarAddMenu: jest.fn(),
 }));
-jest.mock('../useTodayOverview', () => ({ useTodayOverview: jest.fn() }));
+jest.mock('../useTodayOverview', () => ({
+  ...jest.requireActual<typeof import('../useTodayOverview')>(
+    '../useTodayOverview',
+  ),
+  useTodayOverview: jest.fn(),
+}));
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarState: () => ({ isOverlayOpen: false }),
 }));
@@ -74,6 +79,19 @@ jest.mock('#features/mealPlan/ui/MealPlanItemCard', () => {
   };
 });
 
+jest.mock('#components/molecules/ItemCardSkeleton', () => {
+  const { View: MockView } =
+    jest.requireActual<typeof import('react-native')>('react-native');
+  return { ItemCardSkeleton: () => <MockView testID="suggestion-skeleton" /> };
+});
+jest.mock('#features/mealPlan/ui/MealPlanItemCardSkeleton', () => {
+  const { View: MockView } =
+    jest.requireActual<typeof import('react-native')>('react-native');
+  return {
+    MealPlanItemCardSkeleton: () => <MockView testID="meal-skeleton" />,
+  };
+});
+
 type Overview = ReturnType<typeof useTodayOverview>;
 
 const overviewOf = (overrides: Partial<Overview> = {}): Overview => ({
@@ -85,7 +103,10 @@ const overviewOf = (overrides: Partial<Overview> = {}): Overview => ({
   retry: jest.fn(),
   counts: { expired: 6, expiring: 3, lowStock: 0 },
   meals: [],
-  suggestions: [],
+  mealsLoading: false,
+  suggestions: { items: [], loading: false, fromPantry: true },
+  refreshing: false,
+  refresh: jest.fn(),
   shopping: null,
   ...overrides,
 });
@@ -228,6 +249,13 @@ describe("today's meals", () => {
     });
   });
 
+  it('holds a meal row’s place until the plans answer, never "nothing planned"', () => {
+    renderToday({ meals: [], mealsLoading: true });
+
+    expect(screen.getByTestId('meal-skeleton')).toBeTruthy();
+    expect(screen.queryByText('Nothing planned for today')).toBeNull();
+  });
+
   it('says nothing is planned, and opens Meal Plan from there', () => {
     renderToday({ meals: [] });
 
@@ -246,8 +274,19 @@ describe('based on your pantry', () => {
     target: { recipeId: id },
   });
 
+  const suggestions = (
+    over: Partial<Overview['suggestions']> = {},
+  ): Overview['suggestions'] => ({
+    items: [],
+    loading: false,
+    fromPantry: true,
+    ...over,
+  });
+
   it('opens a suggestion, and Recipes from "See all"', () => {
-    renderToday({ suggestions: [suggestion('s1'), suggestion('s2')] });
+    renderToday({
+      suggestions: suggestions({ items: [suggestion('s1'), suggestion('s2')] }),
+    });
 
     fireEvent.press(screen.getByText('Recipe s1'));
     fireEvent.press(screen.getByTestId(todayTestIDs.suggestionsSeeAll));
@@ -260,9 +299,44 @@ describe('based on your pantry', () => {
   });
 
   it('is not shown with nothing to suggest', () => {
-    renderToday({ suggestions: [] });
+    renderToday({ suggestions: suggestions() });
 
     expect(screen.queryByText('Based on your pantry')).toBeNull();
+  });
+
+  it('holds the rows’ place while the suggestions load', () => {
+    renderToday({ suggestions: suggestions({ loading: true }) });
+
+    expect(screen.getByText('Based on your pantry')).toBeTruthy();
+    expect(screen.getAllByTestId('suggestion-skeleton')).toHaveLength(3);
+  });
+
+  // An empty pantry is ranked too, using none of it.
+  it('calls them recipes to try when they use nothing the pantry holds', () => {
+    renderToday({
+      suggestions: suggestions({
+        items: [suggestion('s1')],
+        fromPantry: false,
+      }),
+    });
+
+    expect(screen.getByText('Recipes to try')).toBeTruthy();
+    expect(screen.queryByText('Based on your pantry')).toBeNull();
+  });
+});
+
+describe('pull to refresh', () => {
+  it('refreshes the overview from the scroll host', () => {
+    const refresh = jest.fn();
+    renderToday({ refresh });
+
+    act(() => {
+      screen
+        .getByTestId(todayTestIDs.scroll)
+        .props.refreshControl.props.onRefresh();
+    });
+
+    expect(refresh).toHaveBeenCalledTimes(1);
   });
 });
 

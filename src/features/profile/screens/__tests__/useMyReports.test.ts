@@ -4,17 +4,17 @@ import {
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { MyUserReportsDocument } from '../useMyReports.generated';
+import { MyReviewSubmissionsDocument } from '../useMyReports.generated';
 import { useMyReports } from '../useMyReports';
 
-type Page = MockDataFor<typeof MyUserReportsDocument>;
+type Page = MockDataFor<typeof MyReviewSubmissionsDocument>;
 
 const page = (ids: string[], endCursor: string | null): Page => ({
-  myUserReports: {
-    __typename: 'MyUserReportConnection',
+  myReviewSubmissions: {
+    __typename: 'ReviewSubmissionConnection',
     edges: ids.map(id => ({
-      __typename: 'MyUserReportEdge',
-      node: { __typename: 'MyUserReport', id },
+      __typename: 'ReviewSubmissionEdge',
+      node: { __typename: 'ItemSuggestionSubmission', id },
     })),
     pageInfo: {
       __typename: 'PageInfo',
@@ -26,7 +26,7 @@ const page = (ids: string[], endCursor: string | null): Page => ({
 
 // Page one ends at `cursor-1`; asking past it returns the older report.
 const pagedMock = () =>
-  recordMock(MyUserReportsDocument, {
+  recordMock(MyReviewSubmissionsDocument, {
     dataFor: vars =>
       vars.after === 'cursor-1'
         ? page(['report-1'], null)
@@ -72,7 +72,7 @@ describe('useMyReports', () => {
   it('reports an answered, empty list as empty rather than as a failure', async () => {
     const { result } = renderHookWithApollo(() => useMyReports(), {
       operationMocks: [
-        recordMock(MyUserReportsDocument, { data: page([], null) }).mock,
+        recordMock(MyReviewSubmissionsDocument, { data: page([], null) }).mock,
       ],
     });
 
@@ -82,7 +82,7 @@ describe('useMyReports', () => {
   });
 
   it('reports a read that never got an answer as an error to retry', async () => {
-    const mock = recordMock(MyUserReportsDocument, {
+    const mock = recordMock(MyReviewSubmissionsDocument, {
       error: new Error('boom'),
     });
     const { result } = renderHookWithApollo(() => useMyReports(), {

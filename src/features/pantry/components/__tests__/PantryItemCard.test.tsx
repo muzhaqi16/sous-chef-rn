@@ -3,6 +3,7 @@ import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { act, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { PantryItemCard } from '../PantryItemCard';
 import { StatusLine } from '#components/atoms/StatusLine';
 import {
@@ -13,6 +14,8 @@ import { PantryActionsProvider } from '../PantryActionsContext';
 import {
   EntryImageSource,
   StorageState,
+  UnitSystem,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
 import { changeLanguage } from '#/i18n';
@@ -161,7 +164,25 @@ interface BuildItemOverrides {
   activeBatchCount?: number;
   remainingPortions?: number | null;
   portionUnit?: { id: string; name: string; symbol: string } | null;
+  /** The server's readings of the shown amount; none unless a test states them. */
+  held?: PantryItemCard_PantryItemFragment['held'];
 }
+
+const unitRead = (id: string, symbol: string) => ({
+  unitId: id,
+  symbol,
+  displayAsFraction: false,
+  type: UnitType.Weight,
+});
+
+/** What a local row holds before the server reads it: no reading of its amount. */
+const NO_READING: PantryItemCard_PantryItemFragment['held'] = {
+  __typename: 'Measure',
+  value: 0,
+  unitId: '',
+  metric: { __typename: 'MeasureReading', value: 0, ...unitRead('', '') },
+  imperial: { __typename: 'MeasureReading', value: 0, ...unitRead('', '') },
+};
 
 function buildItem(
   overrides: BuildItemOverrides = {},
@@ -187,6 +208,7 @@ function buildItem(
         symbol: overrides.shown?.symbol ?? overrides.unitSymbol ?? 'gal',
       },
     },
+    held: overrides.held ?? NO_READING,
     portionUnitId: overrides.portionUnit?.id ?? null,
     portionUnit: overrides.portionUnit
       ? { __typename: 'Unit', ...overrides.portionUnit }
@@ -274,16 +296,21 @@ function buildCache(item: PantryItemCard_PantryItemFragment) {
   return cache;
 }
 
+/** Caches the user's settings, as a signed-in session holds them. */
 function renderCard(
   overrides: BuildItemOverrides = {},
   actions = defaultActions,
+  settings?: { preferred: UnitSystem; device: UnitSystem },
 ) {
   const item = buildItem(overrides);
+  const cache = buildCache(item);
+  if (settings)
+    writeUnitSystemSettings(cache, settings.preferred, settings.device);
   return renderWithApollo(
     <PantryActionsProvider actions={actions}>
       <PantryItemCard pantryItemId={item.id} />
     </PantryActionsProvider>,
-    { cache: buildCache(item) },
+    { cache },
   );
 }
 
@@ -494,6 +521,80 @@ describe('PantryItemCard', () => {
       renderCard({ quantity: 0, isLowStock: true, expiresOn: inDays(-3) });
       expect(statusTone()).toBe('info');
       expect(screen.getByText('Out of stock')).toBeTruthy();
+    });
+  });
+
+  // The server reads what is held in each unit system; the row shows the
+  // user's while that reading still describes the stack.
+  describe('the held amount in the user\u2019s unit system', () => {
+    const honey = {
+      shown: { quantity: 1360.78, symbol: 'g' },
+      held: {
+        __typename: 'Measure',
+        value: 1360.78,
+        unitId: 'unit-shown',
+        metric: {
+          __typename: 'MeasureReading',
+          value: 1.36,
+          ...unitRead('unit-kg', 'kg'),
+        },
+        imperial: {
+          __typename: 'MeasureReading',
+          value: 3,
+          ...unitRead('unit-lb', 'lb'),
+        },
+      },
+    } satisfies BuildItemOverrides;
+
+    it('reads it in pounds on an imperial device', () => {
+      renderCard(honey, defaultActions, {
+        preferred: UnitSystem.System,
+        device: UnitSystem.Imperial,
+      });
+      expect(screen.getByText('3 lb')).toBeTruthy();
+    });
+
+    it('reads it in kilograms for a metric user', () => {
+      renderCard(honey, defaultActions, {
+        preferred: UnitSystem.Metric,
+        device: UnitSystem.Imperial,
+      });
+      expect(screen.getByText('1.36 kg')).toBeTruthy();
+    });
+
+    // A local use moved the stack to 1000 g: only the server can say what that
+    // reads in pounds, so the row shows it as stored until it answers.
+    // The settings screen writes the change to the cache at once, offline
+    // too; the row follows it with nothing fetched.
+    it('follows a change of setting at once, with no request', async () => {
+      const item = buildItem(honey);
+      const cache = buildCache(item);
+      writeUnitSystemSettings(cache, UnitSystem.Imperial, UnitSystem.Imperial);
+      renderWithApollo(
+        <PantryActionsProvider actions={defaultActions}>
+          <PantryItemCard pantryItemId={item.id} />
+        </PantryActionsProvider>,
+        { cache, operationMocks: [] },
+      );
+      expect(screen.getByText('3 lb')).toBeTruthy();
+
+      act(() => {
+        cache.modify({
+          id: 'UserSettings:settings-1',
+          fields: { preferredUnitSystem: () => UnitSystem.Metric },
+        });
+      });
+
+      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+    });
+
+    it('shows it as stored once a local use has moved it', () => {
+      renderCard(
+        { ...honey, shown: { quantity: 1000, symbol: 'g' } },
+        defaultActions,
+        { preferred: UnitSystem.Imperial, device: UnitSystem.Imperial },
+      );
+      expect(screen.getByText('1 kg')).toBeTruthy();
     });
   });
 });

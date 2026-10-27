@@ -1,6 +1,9 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
-import { GetMealPlanDocument } from './useMealPlan.generated';
+import {
+  CurrentMealPlanDocument,
+  GetMealPlanDocument,
+} from './useMealPlan.generated';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   heldFetchPolicy,
@@ -11,6 +14,8 @@ import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useLoadRemainingPages } from '#hooks/utils/useLoadRemainingPages';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { useToday } from '#hooks/app/useToday';
+import type { CurrentPlanAnswer } from '#features/mealPlan/types';
 import {
   MealPlanMain_ItemFragmentDoc,
   MealPlanMain_MealPlanFragmentDoc,
@@ -88,5 +93,35 @@ export function useMealPlan(
     loading,
     error,
     refetch,
+  };
+}
+
+/**
+ * The plan covering today, with what the plan screens read, in one request.
+ * A failed read is not waiting: the caller falls back to finding it itself.
+ */
+export function useCurrentMealPlan({
+  skip = false,
+  fetchPolicy,
+}: StandDownOptions = {}): CurrentPlanAnswer {
+  const today = useToday();
+  const result = useQuery(
+    CurrentMealPlanDocument,
+    skip
+      ? skipToken
+      : {
+          variables: {
+            today,
+            mealsFirst: MEALS_PAGE_SIZE,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+          ...heldFetchPolicy(fetchPolicy),
+        },
+  );
+  // `skipToken` keeps the last run's answer, which may be another day's.
+  const forToday = result.variables.today === today;
+  return {
+    waiting: !skip && result.loading && !result.data,
+    planId: forToday ? result.data?.currentMealPlan?.id ?? null : null,
   };
 }

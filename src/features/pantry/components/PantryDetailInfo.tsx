@@ -25,12 +25,15 @@ import { Text } from '#components/atoms/Text';
 import type { BatchPricingSummary } from '#features/pantry/utils/summarizeBatchPricing';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PantryDetailInfoProps {
   itemRef:
     | FragmentType<typeof PantryDetailInfo_PantryItemFragmentDoc>
     | PantryDetailInfo_PantryItemFragment;
   brandName: string | null;
+  /** What is left, as the header shows it: the user's unit system where read. */
+  quantityText: string;
   netWeightText: string | null;
   remainingNetWeightText: string | null;
   quantityBreakdownText: string | null;
@@ -50,6 +53,7 @@ interface PantryDetailInfoProps {
 export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   itemRef,
   brandName,
+  quantityText,
   netWeightText,
   remainingNetWeightText,
   quantityBreakdownText,
@@ -62,6 +66,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
 }) => {
   const { t } = useTranslation();
   const preferredCurrency = usePreferredCurrency();
+  const showsCost = useBudgetAndPricesEnabled();
   // Per-entity cache subscription: re-renders only when this PantryItem's
   // fields change. Falls back to the source prop on cache miss so the
   // component renders correctly under test fixtures + tolerates stale state.
@@ -107,15 +112,26 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   // An amount whose denomination cannot be established is withheld rather than
   // shown under an assumed one.
   const purchaseTotalIsDenominated = !fromBatch || !!batchCurrency;
+  const costPerUnitText = showsCost
+    ? formatCostOrNull(costPerUnit, itemCurrency)
+    : null;
+  const stockValueText = showsCost
+    ? formatCostOrNull(item.totalCost, itemCurrency)
+    : null;
+  const purchaseTotalText =
+    showsCost &&
+    purchaseTotal != null &&
+    purchaseTotal > 0 &&
+    purchaseTotalIsDenominated
+      ? formatCostOrNull(purchaseTotal, purchaseCurrency)
+      : null;
 
   return (
     <>
       {/* Quantity Row: what is left, as the stack is shown */}
       <InfoRow
         label={t('labels.quantity')}
-        value={`${formatQuantityForDisplay(item.displayAmount.quantity)} ${
-          item.displayAmount.unit.symbol
-        }`}
+        value={quantityText}
         icon="apps-outline"
         showColon={false}
         labelTone="secondary"
@@ -195,7 +211,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {/* Package Details Row */}
       {!!packageBreakdownText && (
         <InfoRow
-          label={t('pantryItemDetail.fields.package')}
+          label={t('labels.package')}
           value={packageBreakdownText}
           icon="layers-outline"
           showColon={false}
@@ -289,14 +305,14 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Cost Per Unit Row */}
-      {!!formatCostOrNull(costPerUnit, itemCurrency) && (
+      {!!costPerUnitText && (
         <InfoRow
           label={t(
             isAveraged
               ? 'labels.avgCostPerUnit'
               : 'pantryItemDetail.fields.costPerUnit',
           )}
-          value={formatCostOrNull(costPerUnit, itemCurrency)}
+          value={costPerUnitText}
           icon="cash-outline"
           showColon={false}
           labelTone="secondary"
@@ -305,10 +321,10 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
         />
       )}
       {/* Total Cost Row */}
-      {!!formatCostOrNull(item.totalCost, itemCurrency) && (
+      {!!stockValueText && (
         <InfoRow
           label={t('labels.stockValue')}
-          value={formatCostOrNull(item.totalCost, itemCurrency)}
+          value={stockValueText}
           icon="wallet-outline"
           showColon={false}
           labelTone="secondary"
@@ -350,15 +366,11 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           label={t(
             fromBatch
               ? 'pantryItemDetail.fields.lastPurchase'
-              : 'pantryItemDetail.fields.purchased',
+              : 'labels.purchased',
           )}
           // The TOTAL, not the unit price the Cost/Unit row above already shows.
           value={`${formatMonthDayYear(purchaseDay(purchaseDate))}${
-            purchaseTotal != null &&
-            purchaseTotal > 0 &&
-            purchaseTotalIsDenominated
-              ? ` · ${formatCostOrNull(purchaseTotal, purchaseCurrency)}`
-              : ''
+            purchaseTotalText ? ` · ${purchaseTotalText}` : ''
           }`}
           icon="receipt-outline"
           showColon={false}
@@ -385,7 +397,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           <View style={styles.notesHeader}>
             <Icon name="document-text-outline" size={16} tone="textSecondary" />
             <Text role="label" tone="secondary" style={styles.notesLabel}>
-              {t('pantryItemDetail.notes')}
+              {t('labels.notes')}
             </Text>
           </View>
           <Text role="body" style={styles.notesText}>
@@ -397,7 +409,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.tags.length > 0 && (
         <View style={styles.tagsSection}>
           <Text role="caption" tone="secondary" style={styles.tagsLabel}>
-            {t('pantryItemDetail.tags')}
+            {t('labels.tags')}
           </Text>
           <View style={styles.tagsContainer}>
             {item.tags.map(tag => (

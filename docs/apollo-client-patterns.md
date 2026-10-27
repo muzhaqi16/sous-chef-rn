@@ -529,19 +529,27 @@ live-event channel only delivers what happens after it connects. So the client
 re-requests its active queries whenever the device may have missed changes,
 through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
-| Event             | Fires when                                                        |
-| ----------------- | ----------------------------------------------------------------- |
-| `appForeground`   | The `appLifecycle` port goes from background/inactive to `active` |
-| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)      |
-| `wsReconnected`   | `onWebSocketReconnected`                                          |
-| `languageChanged` | The resolved language really changes; after one, each navigation  |
+| Event             | Fires when                                                                                                       |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `appForeground`   | The app returns to `active` while the live channel is closed, or after 15 minutes away                           |
+| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)                                                     |
+| `wsReconnected`   | `onWebSocketReconnected`                                                                                         |
+| `languageChanged` | The resolved language really changes                                                                             |
+| `screenShown`     | Each navigation after a switch or a resync, for what it left unasked                                             |
+
+**A return to the app over an open channel asks nothing.** Every change
+reached the cache while away, and a drop ends in a reconnect that resyncs on
+its own (`isLiveChannelOpen`, `wsLink.ts`). Only answers that move with the
+clock and carry no event (expiry counts, the day's plan) need the 15-minute
+rule. Measured: a short app switch went from 18 requests to none.
 
 The events are declared (`void` payloads) in
 `src/types/apollo-default-options.d.ts`. `createRefetchEventManager()` is
 passed to the `ApolloClient` constructor with one coalescing default handler;
-`connectResyncSources(client, { onNavigation })` attaches the sources at app
-start in `App.tsx`, because a source subscribes as it is set and importing the client
-must not subscribe to the store, the app lifecycle and the socket.
+`connectResyncSources(client, { onNavigation, scopeOnScreen })` attaches the
+sources at app start in `App.tsx`, because a source subscribes as it is set and
+importing the client must not subscribe to the store, the app lifecycle and the
+socket.
 
 The handler:
 
@@ -552,25 +560,32 @@ The handler:
 4. skips when there is no session or one is ending
    (`LogoutCleanup.isInLogoutProcess()`);
 5. runs `client.refetchQueries({ include: 'active' })`, refetching a query when
-   any coalesced event's `matchesRefetchOn` accepts it, and counts it in
-   `resync_queries_total{source}` (`source` is the event names joined by `+`).
+   any coalesced event's `matchesRefetchOn` accepts it and it is on screen, and
+   counts it in `resync_queries_total{source}` (`source` is the event names
+   joined by `+`).
 
 `include: 'active'` already leaves out standby watchers (`skipToken` or
-`skip: !isFocused`) and `cache-only` reads.
+`skip: !isFocused`) and `cache-only` reads. **A hidden home tab is left for
+when it shows.** `HomeTabs` keeps its tabs mounted (`inactiveBehavior: 'none'`),
+so their queries stay active; each tab hands its subtree `scopedClient(client,
+tab)`, which names the tab in every watched query's context, and
+`homeTabOnScreen` tells the resync which tab shows. A reconnect on the List tab
+went from 18 requests to 10; each tab then asked only its own on first show.
 
-**A language switch catches up on navigation.** Catalog names come in the
-request's language, but a screen paused at the switch has no active query for
-the refetch to reach, and resumes on `cache-first`
-([probe](verified-library-behaviour.md#apollo-tears-down-a-paused-screens-query-resubscribing-reads-the-current-fetch-policy)).
-So after a real switch `languageChanged` also fires on every navigation
-(`onNavigation`, wired in `App.tsx`; payload `switched: false`), and a batch of
-only that event refetches just the active queries not answered since the
-switch. The set is per switch, not per language: names live on shared entities,
-so a screen paused through `en` → `es` → `en` reads what the `es` screens wrote.
-A query joins it only once its refetch answers, and a catch-up waits while the
-API is unavailable. A switch before any query exists (rehydration applying the
-saved language) is not one. No screen carries code for it, and none is
-remounted.
+**What a switch or a resync leaves is caught up on navigation.** Catalog
+names come in the request's language, and a resync stands for changes missed;
+but a screen paused at the time has no active query for the refetch to reach,
+and resumes on `cache-first`
+([probe](verified-library-behaviour.md#apollo-tears-down-a-paused-screens-query-resubscribing-reads-the-current-fetch-policy)),
+and a hidden home tab was left out on purpose. So after either, `screenShown`
+fires on every navigation (`onNavigation`, wired in `App.tsx`), and a batch of
+only it (or of `languageChanged`) refetches just the active, shown queries not
+answered since. The set is per switch, not per language: names live on shared
+entities, so a screen paused through `en` → `es` → `en` reads what the `es`
+screens wrote. A query joins it only once its refetch answers, and a catch-up
+waits while the API is unavailable. A switch before any query exists
+(rehydration applying the saved language) is not one. No screen carries code
+for it, and none is remounted.
 
 Evicting the names instead would blank every screen offline, and
 `include: 'all'` does not reach a paused screen's torn-down query.

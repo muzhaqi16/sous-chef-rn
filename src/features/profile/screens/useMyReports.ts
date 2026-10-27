@@ -2,27 +2,30 @@ import { useQuery } from '@apollo/client/react';
 import { useConnectionData } from '#hooks/utils/useConnectionData';
 import { useDataState } from '#hooks/data/useDataState';
 import {
-  MyUserReportsDocument,
-  type MyUserReportsQuery,
+  MyReviewSubmissionsDocument,
+  type MyReviewSubmissionsQuery,
 } from './useMyReports.generated';
 
 const PAGE_SIZE = 20;
 
-/** A report as the list holds it: the row reads its own fragment off this ref. */
+/** A submission as the list holds it: the row reads its own fragment off this ref. */
 export type MyReportNode =
-  MyUserReportsQuery['myUserReports']['edges'][number]['node'];
+  MyReviewSubmissionsQuery['myReviewSubmissions']['edges'][number]['node'];
 
-/** The reports the signed-in person has made, newest first, a page at a time. */
+/**
+ * Everything the signed-in person sent for review, newest first, a page at a
+ * time: their reports, suggested edits and photos awaiting moderation.
+ */
 export function useMyReports() {
   const { data, loading, error, refetch, fetchMore } = useQuery(
-    MyUserReportsDocument,
+    MyReviewSubmissionsDocument,
     { variables: { first: PAGE_SIZE } },
   );
 
   const connection = useConnectionData({
     data,
-    selector: result => result.myUserReports,
-    key: 'MyUserReports',
+    selector: result => result.myReviewSubmissions,
+    key: 'MyReviewSubmissions',
     loading,
     fetchMore,
     refetch,

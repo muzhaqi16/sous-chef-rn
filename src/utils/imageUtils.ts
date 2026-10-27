@@ -47,9 +47,10 @@ export function pickImageUrl(
 /**
  * The LIST/CARD path: an entry's household photo first (`image`, the
  * household's choice), else `Item.images`, which returns at most one row (the
- * primary photo's best asset), from any of the common source shapes. A gallery
- * screen reads `Item.photos` via `photoDisplayUrl` instead. `preferredSize`
- * defaults to 'small'; pass 'large' for a detail screen.
+ * primary photo's best asset), from any of the common source shapes, else
+ * whatever `image` holds (the viewer's own pending photo). A gallery screen
+ * reads `Item.photos` via `photoDisplayUrl` instead. `preferredSize` defaults
+ * to 'small'; pass 'large' for a detail screen.
  */
 export function resolveImageUrl(
   source:
@@ -100,7 +101,8 @@ export function resolveImageUrl(
     if (fromItem) return fromItem;
   }
 
-  return null;
+  // 5. A PENDING photo is in none of the item's fields above.
+  return source.image?.url ?? null;
 }
 
 export const getItemImageUrl = (

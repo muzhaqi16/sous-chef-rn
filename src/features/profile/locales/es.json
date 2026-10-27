@@ -90,7 +90,11 @@
     "fat": "Grasa",
     "loadingProfile": "Cargando perfil alimentario...",
     "loadFailedTitle": "No se pudo cargar tu perfil alimentario",
-    "loadFailedSubtitle": "Comprueba tu conexión e inténtalo de nuevo."
+    "loadFailedSubtitle": "Comprueba tu conexión e inténtalo de nuevo.",
+    "sharedWith": "Compartido con",
+    "sharedWithShown": "Los miembros de estos hogares ven tus restricciones con tu nombre al escanear o cocinar. Tus notas siguen siendo privadas.",
+    "sharedWithNone": "Activa un hogar para que sus miembros vean lo que no puedes comer al escanear o cocinar.",
+    "sharingFailed": "No se pudo cambiar quién ve tus restricciones. Inténtalo de nuevo."
   },
   "biometricSetup": {
     "authRequiredTitle": "Autenticación requerida",
@@ -118,7 +122,6 @@
     "fontScale": "Escala de fuente",
     "highContrast": "Alto contraste",
     "highContrastDesc": "Aumenta el contraste de texto y bordes para mejor accesibilidad",
-    "colorDefault": "Predeterminado",
     "densityCompact": "Compacta",
     "densityComfortable": "Cómoda",
     "densitySpacious": "Espaciosa",
@@ -143,17 +146,29 @@
     "goalsSheetTitle": "Selecciona objetivos de salud",
     "addGoalsFailed": "No se pudieron añadir los objetivos de salud",
     "diets": {
-      "vegetarian": "Vegetariana",
-      "vegan": "Vegana",
       "pescetarian": "Pescetariana",
       "lactoVegetarian": "Lacto-vegetariana",
       "ovoVegetarian": "Ovo-vegetariana",
       "primal": "Primal"
     },
     "intolerances": {
-      "egg": "Huevo",
-      "sulfite": "Sulfitos"
-    }
+      "egg": "Huevo"
+    },
+    "avoidTitle": "Alimentos que evito",
+    "avoidEmpty": "Elige alimentos del catálogo, como beicon o setas.",
+    "avoidSheetTitle": "Evitar un alimento",
+    "avoidHint": "Se marca cualquier variedad, para ti y para los hogares con los que compartes.",
+    "avoidSearchPlaceholder": "Buscar alimentos",
+    "avoidSearchNeedsConnection": "Para buscar alimentos hace falta conexión. Inténtalo de nuevo cuando vuelvas a tenerla.",
+    "avoidNamed": "Evitar {{name}}",
+    "avoidSeverity": {
+      "preference": "Evitar",
+      "intolerance": "Intolerancia",
+      "allergy": "Alergia"
+    },
+    "avoidAllergy": "{{name}} (alergia)",
+    "avoidIntolerance": "{{name}} (intolerancia)",
+    "addAvoidFailed": "No se pudo añadir ese alimento. Inténtalo de nuevo."
   },
   "cookingPreferences": {
     "prepTimeRange": "El tiempo de preparación debe estar entre {{min}} y {{max}} minutos",
@@ -182,7 +197,6 @@
       "developer": "Desarrollador"
     },
     "labels": {
-      "dietaryProfile": "Perfil alimenticio",
       "biometricAuthentication": "Autenticación biométrica",
       "logout": "Cerrar sesión"
     },
@@ -206,12 +220,10 @@
       "visit": "Abrir sitio web",
       "publicDomain": "Dominio público (obra del Gobierno de EE. UU.).",
       "openFoodFacts": {
-        "name": "Open Food Facts",
         "provides": "Nombres, marcas, tamaños de paquete y fotos de los productos escaneados.",
         "licence": "Base de datos: Open Database License (ODbL). Fotos: Creative Commons Reconocimiento-CompartirIgual (CC BY-SA)."
       },
       "usdaFoodDataCentral": {
-        "name": "USDA FoodData Central",
         "provides": "Información nutricional y fichas de producto."
       },
       "usdaFoodKeeper": {
@@ -333,16 +345,59 @@
       "recipe": "Denuncia de una receta",
       "recipeReview": "Denuncia de una reseña",
       "profile": "Denuncia de un perfil",
-      "user": "Denuncia de un usuario"
+      "user": "Denuncia de un usuario",
+      "item": "Denuncia de un artículo",
+      "photo": "Denuncia de una foto",
+      "suggestion": "Cambio sugerido",
+      "photoUpload": "Foto para revisar"
     },
-    "reportedOn": "Enviada el {{date}}",
     "status": {
       "pending": "Pendiente de revisión",
-      "investigating": "En revisión",
-      "resolved": "Aceptada",
-      "dismissed": "Cerrada"
+      "inReview": "En revisión",
+      "upheld": "Aceptada",
+      "closed": "Cerrada",
+      "accepted": "Aceptado",
+      "declined": "Rechazado",
+      "approved": "Aprobada",
+      "notApproved": "No aprobada"
     },
-    "emptyTitle": "Aún no hay denuncias",
-    "emptyDescription": "Las denuncias que envíes a los moderadores aparecen aquí, con el estado de cada una."
+    "emptyTitle": "Aún no has enviado nada para revisar",
+    "emptyDescription": "Las denuncias, los cambios sugeridos y las fotos que envíes para revisar aparecen aquí, con el estado de cada uno.",
+    "sentOn": "Fecha de envío: {{date}}",
+    "reviewNote": "Nota de revisión: {{note}}"
+  },
+  "brandLists": {
+    "title": "Listas de marcas",
+    "intro": "Guarda tus propias listas de marcas, como las que boicoteas o evitas. Al escanear, te avisa si la marca de un producto está en una lista activa.",
+    "emptyTitle": "Aún no hay listas de marcas",
+    "emptyBody": "Crea una lista y añade marcas aquí o directamente desde un escaneo.",
+    "newList": "Nueva lista de marcas",
+    "nameLabel": "Nombre de la lista",
+    "namePlaceholder": "p. ej. Boicot",
+    "rename": "Cambiar nombre",
+    "deleteList": "Eliminar lista",
+    "deleteTitle": "¿Eliminar {{name}}?",
+    "deleteBody": "Sus marcas se eliminan con ella.",
+    "brandCount_one": "{{count}} marca",
+    "brandCount_other": "{{count}} marcas",
+    "applies": "Usar esta lista al escanear",
+    "useNamed": "Usar {{name}} al escanear",
+    "addBrand": "Añadir una marca",
+    "addBrandTitle": "Añadir una marca a {{name}}",
+    "searchBrands": "Buscar marcas",
+    "noteLabel": "Motivo (opcional)",
+    "notePlaceholder": "p. ej. empresa matriz",
+    "noBrands": "Esta lista aún no tiene marcas.",
+    "errors": {
+      "createFailed": "No se pudo crear la lista.",
+      "updateFailed": "No se pudo actualizar la lista.",
+      "deleteFailed": "No se pudo eliminar la lista.",
+      "addFailed": "No se pudo añadir la marca.",
+      "removeFailed": "No se pudo quitar la marca."
+    },
+    "nameRequired": "Ponle un nombre a la lista.",
+    "nameTooLong": "El nombre no puede pasar de 100 caracteres.",
+    "pickList": "Elige una lista",
+    "alreadyOn": "Ya está en ella"
   }
 }

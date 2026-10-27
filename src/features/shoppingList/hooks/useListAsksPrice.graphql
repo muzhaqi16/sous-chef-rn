@@ -1,0 +1,5 @@
+# What decides whether recording a line of the list asks what it cost.
+fragment useListAsksPrice_list on ShoppingList {
+  id
+  priceTracking
+}

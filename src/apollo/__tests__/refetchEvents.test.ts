@@ -19,14 +19,17 @@ import {
   connectResyncSources,
   createRefetchEventManager,
 } from '../refetchEvents';
+import { RESYNC_SCOPE } from '../scopedClient';
 
 const mockReconnectListeners = new Set<() => void>();
+let mockChannelOpen = false;
 
 jest.mock('#/apollo/links/wsLink', () => ({
   onWebSocketReconnected: (listener: () => void) => {
     mockReconnectListeners.add(listener);
     return () => mockReconnectListeners.delete(listener);
   },
+  isLiveChannelOpen: () => mockChannelOpen,
 }));
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { whenIdle: jest.fn(async () => {}) },
@@ -147,6 +150,7 @@ beforeEach(async () => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   mockReconnectListeners.clear();
+  mockChannelOpen = false;
   navigationListeners.clear();
   resetSessionEndingGate();
   useStore.setState({
@@ -238,6 +242,47 @@ describe('resync', () => {
     );
   });
 
+  // Over an open channel every change reached the cache while away, and a
+  // drop would have ended in a reconnect that resyncs on its own.
+  describe('a return to the app over an open live channel', () => {
+    beforeEach(() => {
+      mockChannelOpen = true;
+    });
+
+    it('asks nothing', async () => {
+      triggers.appForeground();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+    });
+
+    it('asks nothing for a glance at the notification shade', async () => {
+      memoryLifecycle().moveTo('inactive');
+      memoryLifecycle().moveTo('active');
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+    });
+
+    it('re-asks after 15 minutes away, for answers that move with the clock', async () => {
+      memoryLifecycle().moveTo('background');
+      await elapse(15 * 60_000);
+      memoryLifecycle().moveTo('active');
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    it('asks nothing after a shorter absence', async () => {
+      memoryLifecycle().moveTo('background');
+      await elapse(14 * 60_000);
+      memoryLifecycle().moveTo('active');
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+    });
+  });
+
   it('waits for queued writes to replay before refetching', async () => {
     const idle = deferred();
     jest.mocked(queueManager.whenIdle).mockReturnValueOnce(idle.promise);
@@ -256,6 +301,102 @@ describe('resync', () => {
     await pastTheWindow();
 
     expect(requests).toEqual([]);
+  });
+
+  // A home tab stays mounted while hidden, so its queries stay active: only
+  // its scope keeps a resync from re-asking what nobody is looking at.
+  describe('a home tab out of sight', () => {
+    let shown: string | null | undefined;
+
+    beforeEach(async () => {
+      shown = 'ShoppingList';
+      connectResyncSources(client, {
+        onNavigation,
+        scopeOnScreen: () => shown,
+      });
+      watchers.push(
+        client
+          .watchQuery({
+            query: DetailQuery,
+            context: { [RESYNC_SCOPE]: 'Pantry' },
+          })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+      requests = [];
+    });
+
+    it('is left out of a resync', async () => {
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    it('is re-asked once, when it is shown', async () => {
+      triggers.wsReconnected();
+      await pastTheWindow();
+      requests = [];
+
+      shown = 'Pantry';
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    it('is re-asked with the resync while it is the tab on screen', async () => {
+      shown = 'Pantry';
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect([...requests].sort()).toEqual([
+        'DetailForResync',
+        'ListForResync',
+      ]);
+    });
+
+    it('stays unasked under a screen pushed over the tabs', async () => {
+      shown = null;
+      triggers.wsReconnected();
+      await pastTheWindow();
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    it('is re-asked while the host cannot tell what is shown', async () => {
+      shown = undefined;
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect([...requests].sort()).toEqual([
+        'DetailForResync',
+        'ListForResync',
+      ]);
+    });
+  });
+
+  // Before, only a language switch caught a paused screen up.
+  it('catches up a screen paused through a resync once it resumes', async () => {
+    connectResyncSources(client, { onNavigation });
+    const paused = client.watchQuery({ query: DetailQuery });
+    const first = paused.subscribe(() => {});
+    await elapse(0);
+    first.unsubscribe();
+    triggers.wsReconnected();
+    await pastTheWindow();
+    requests = [];
+
+    watchers.push(paused.subscribe(() => {}));
+    navigate();
+    await pastTheWindow();
+
+    expect(requests).toEqual(['DetailForResync']);
   });
 
   describe('the language catch-up', () => {

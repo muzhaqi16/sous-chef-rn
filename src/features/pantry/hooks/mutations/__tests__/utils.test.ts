@@ -171,9 +171,23 @@ describe('pantry mutations utils', () => {
       expect(result).toEqual({ thresholds: { restockQuantity: null } });
     });
 
-    it('includes netWeight as float when dirty', () => {
+    // The field opens in the reading shown; a bare value would land in the
+    // stack's own unit.
+    it('sends a typed size with the unit it was typed in', () => {
       const result = buildDirtyUpdateInput(
         baseFormData,
+        { netWeight: true },
+        null,
+        null,
+      );
+      expect(result).toEqual({
+        netWeight: { netWeight: 1.5, netWeightUnitId: 'nw-unit-1' },
+      });
+    });
+
+    it('sends a size with no unit given as the value alone', () => {
+      const result = buildDirtyUpdateInput(
+        { ...baseFormData, netWeightUnitId: '' },
         { netWeight: true },
         null,
         null,
@@ -239,6 +253,25 @@ describe('pantry mutations utils', () => {
         null,
       );
       expect(result).toEqual({ netWeight: { netWeightUnitId: null } });
+    });
+
+    it('sets the unit it is used in, and clears it once emptied', () => {
+      expect(
+        buildDirtyUpdateInput(
+          { ...baseFormData, consumeUnit: 'tbsp', consumeUnitId: 'unit-tbsp' },
+          { consumeUnit: true },
+          null,
+          null,
+        ),
+      ).toEqual({ consumeUnit: { id: 'unit-tbsp' } });
+      expect(
+        buildDirtyUpdateInput(
+          { ...baseFormData, consumeUnit: '', consumeUnitId: '' },
+          { consumeUnit: true },
+          null,
+          null,
+        ),
+      ).toEqual({ consumeUnit: null });
     });
 
     // `unit` only relabels the unit in use; the unit changes through

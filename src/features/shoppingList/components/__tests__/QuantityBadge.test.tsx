@@ -31,6 +31,19 @@ describe('QuantityBadge', () => {
     expect(screen.getByText('1/4')).toBeTruthy();
   });
 
+  // A reading in kilograms is written as the unit is: 0.5, never "1/2".
+  it('writes the quantity in the notation it is given', () => {
+    render(
+      <QuantityBadge
+        quantity={0.5}
+        unit="kg"
+        notation="decimal"
+        onPress={mockOnPress}
+      />,
+    );
+    expect(screen.getByText('0.5')).toBeTruthy();
+  });
+
   it('calls onPress when pressed', async () => {
     const user = userEvent.setup();
     render(<QuantityBadge quantity={1} onPress={mockOnPress} />);

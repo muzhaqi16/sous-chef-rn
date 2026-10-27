@@ -1,5 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { RowThemeColors } from '#components/atoms/rowTheme';
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import type { ReadingSystem } from '#domain/measure';
 
 /**
  * Theme colors needed for shopping list items, extracted once at list level and
@@ -27,11 +29,17 @@ export const useSortableListTheme = (): SortableListThemeColors | null => {
 export interface ShoppingListRowOptions {
   /** Whether to show product images in row cells */
   showImages: boolean;
+  /** The unit system a line's weight or volume reads in. */
+  readingSystem: ReadingSystem;
+  /** Whether a line shows what it would cost; off, the list is a plain list. */
+  showPrices: boolean;
 }
 
 export const ShoppingListRowOptionsContext =
   createContext<ShoppingListRowOptions>({
     showImages: true,
+    readingSystem: UnitSystem.Metric,
+    showPrices: false,
   });
 
 export const useShoppingListRowOptions = (): ShoppingListRowOptions =>
