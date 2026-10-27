@@ -10067,10 +10067,10 @@ type Mutation {
   """
   linkItemToExternalSource(input: LinkItemToExternalSourceInput!): LinkItemToExternalSourceResult!
   """
-  Record the meal plan a shopping list was derived from. A client builds the
-  list from the plan it holds (createShoppingList, then
-  addItemsToShoppingList), then links it here. Both ends are checked: edit
-  access to the list, view access to the plan.
+  Record the meal plan a shopping list was derived from. A list made from a
+  plan names it at createShoppingList (mealPlanId, with its items) instead;
+  this links one that already exists. Both ends are checked: edit access to
+  the list, view access to the plan.
   """
   linkShoppingListToMealPlan(input: LinkShoppingListToMealPlanInput!): LinkShoppingListToMealPlanResult!
   """Authenticate a user with credentials and return tokens."""
