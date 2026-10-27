@@ -59,6 +59,7 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
     isIncluded,
     substitutes,
     selectedSubstitute,
+    includedBeforeSubstitute,
   } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
@@ -114,11 +115,12 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
               }))}
               selected={selectedSubstitute?.id ?? null}
               onSelect={id => {
-                // A second press on the picked swap goes back to the ingredient.
+                // A second press on the picked swap puts the line back as it
+                // was before any swap.
                 if (id === selectedSubstitute?.id) {
                   onUpdate(index, {
                     selectedSubstitute: null,
-                    isIncluded: !!selectedStack,
+                    isIncluded: includedBeforeSubstitute,
                   });
                   return;
                 }
@@ -127,6 +129,9 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
                   onUpdate(index, {
                     selectedSubstitute: picked,
                     isIncluded: true,
+                    includedBeforeSubstitute: selectedSubstitute
+                      ? includedBeforeSubstitute
+                      : isIncluded,
                   });
                 }
               }}

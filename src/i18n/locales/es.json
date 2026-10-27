@@ -799,7 +799,8 @@
     "andMore": "{{label}} +{{count}}",
     "checkLabel": "Revisa siempre la etiqueta: los datos del producto pueden estar incompletos.",
     "stale": "Comprobado antes; puede no estar al día.",
-    "needsConnection": "Conéctate a internet para comprobarlo para tu hogar."
+    "needsConnection": "Conéctate a internet para comprobarlo para tu hogar.",
+    "checkFailed": "No se pudo comprobar para tu hogar en este momento. Inténtalo más tarde."
   },
   "countries": {
     "AD": "Andorra",

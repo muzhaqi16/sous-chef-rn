@@ -4,6 +4,7 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
 import { SubScreen } from '#components/templates/SubScreen';
 import { RowCard } from '#components/atoms/RowCard';
 import { IconButton } from '#components/atoms/IconButton';
@@ -35,17 +36,10 @@ export const BrandListScreen: React.FC<BrandListScreenProps> = ({ route }) => {
     alertService.alert(
       t('brandLists.deleteTitle', { name: list.name }),
       t('brandLists.deleteBody'),
-      [
-        { text: t('labels.cancel'), style: 'cancel' },
-        {
-          text: t('brandLists.deleteList'),
-          style: 'destructive',
-          onPress: () => {
-            goBack();
-            void deleteList(list.id);
-          },
-        },
-      ],
+      destructiveConfirm(t('brandLists.deleteList'), () => {
+        goBack();
+        void deleteList(list.id);
+      }),
     );
   };
 

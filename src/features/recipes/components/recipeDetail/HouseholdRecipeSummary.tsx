@@ -26,11 +26,15 @@ export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  if (check === 'unchecked') {
+  if (check === 'unchecked' || check === 'failed') {
     return (
       <Card style={styles.card} testID={recipesTestIDs.householdUnchecked}>
         <Text role="caption" tone="secondary">
-          {t('dietaryAlerts.needsConnection')}
+          {t(
+            check === 'failed'
+              ? 'dietaryAlerts.checkFailed'
+              : 'dietaryAlerts.needsConnection',
+          )}
         </Text>
       </Card>
     );

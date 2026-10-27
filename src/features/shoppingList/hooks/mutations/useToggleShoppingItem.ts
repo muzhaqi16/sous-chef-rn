@@ -188,6 +188,8 @@ export function useToggleShoppingItem({
       },
     );
     if (settled.status === 'failed') return false;
+    // Queued is not a failure: the flip stands and replays.
+    if (settled.status === 'queued') return true;
 
     return appliedPayload(settled.data)?.shoppingListItem ?? false;
   };

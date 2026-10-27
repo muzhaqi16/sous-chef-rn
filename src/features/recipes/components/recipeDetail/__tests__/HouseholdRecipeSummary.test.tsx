@@ -60,6 +60,14 @@ describe('HouseholdRecipeSummary', () => {
     expect(screen.getByText(t('dietaryAlerts.needsConnection'))).toBeTruthy();
   });
 
+  it('says the check failed, not that it needs a connection, when online', () => {
+    render(<HouseholdRecipeSummary check="failed" alerts={[]} />);
+
+    expect(screen.getByTestId(recipesTestIDs.householdUnchecked)).toBeTruthy();
+    expect(screen.getByText(t('dietaryAlerts.checkFailed'))).toBeTruthy();
+    expect(screen.queryByText(t('dietaryAlerts.needsConnection'))).toBeNull();
+  });
+
   it('shows nothing when nothing was found, never calling the recipe safe', () => {
     render(<HouseholdRecipeSummary check="checked" alerts={[]} />);
 

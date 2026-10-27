@@ -81,12 +81,8 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () =>
 jest.mock('#features/barcode/hooks/useProductOrigin', () => ({
   useProductOrigin: () => ({ lines: [] }),
 }));
-const mockRefreshListings = jest.fn();
 jest.mock('#features/barcode/hooks/useProductBrandListings', () => ({
-  useProductBrandListings: () => ({
-    listings: [],
-    refresh: mockRefreshListings,
-  }),
+  useProductBrandListings: () => ({ listings: [] }),
 }));
 const mockAddBrand = jest.fn();
 jest.mock('#features/profile/hooks/useBrandLists', () => ({
@@ -634,7 +630,7 @@ describe('SearchResults', () => {
     expect(line?.unit).toBeUndefined();
   });
 
-  it("puts the scanned brand on one of the user's lists, then re-reads its listings", async () => {
+  it("puts the scanned brand on one of the user's lists", async () => {
     mockAddBrand.mockResolvedValue(true);
     renderWithApollo(
       <SearchResults
@@ -646,11 +642,12 @@ describe('SearchResults', () => {
     fireEvent.press(screen.getByTestId(barcodeTestIDs.addBrandToList));
     fireEvent.press(screen.getByText('Avoid'));
 
-    await waitFor(() => expect(mockRefreshListings).toHaveBeenCalled());
-    expect(mockAddBrand).toHaveBeenCalledWith(
-      'list-avoid',
-      { id: 'brand-pack', name: 'Pack Brand' },
-      null,
+    await waitFor(() =>
+      expect(mockAddBrand).toHaveBeenCalledWith(
+        'list-avoid',
+        { id: 'brand-pack', name: 'Pack Brand' },
+        null,
+      ),
     );
   });
 

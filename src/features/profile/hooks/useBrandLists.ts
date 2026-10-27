@@ -76,6 +76,19 @@ function writeRow(cache: ApolloCache, row: ListRow): void {
   });
 }
 
+/**
+ * Rewrites a list as the cache holds it now, so undoing one write keeps any
+ * other made since; nothing when the list is gone.
+ */
+function updateRow(
+  cache: ApolloCache,
+  id: string,
+  change: (row: ListRow) => ListRow,
+): void {
+  const row = readRow(cache, id);
+  if (row) writeRow(cache, change(row));
+}
+
 /** Puts a list in the user's lists, at `index` or last; a held one stays put. */
 function insertList(cache: ApolloCache, row: ListRow, index?: number): void {
   cache.updateQuery({ query: BrandListsDocument }, data => {
@@ -163,12 +176,17 @@ export function useBrandLists() {
     const before = readRow(client.cache, id);
     if (!before) return false;
     writeRow(client.cache, { ...before, ...fields });
+    // Only the fields this write changed go back on a refusal.
+    const restored: Partial<ListRow> = {};
+    if (fields.name !== undefined) restored.name = before.name;
+    if (fields.enabled !== undefined) restored.enabled = before.enabled;
     const settled = await settleMutation(
       () => updateMutation({ variables: { input: { id, ...fields } } }),
       {
         document: UpdateBrandListDocument,
         fallback: t('brandLists.errors.updateFailed'),
-        onFailed: () => writeRow(client.cache, before),
+        onFailed: () =>
+          updateRow(client.cache, id, row => ({ ...row, ...restored })),
       },
     );
     return settled.status !== 'failed';
@@ -228,7 +246,11 @@ export function useBrandLists() {
       {
         document: AddBrandToListDocument,
         fallback: t('brandLists.errors.addFailed'),
-        onFailed: () => writeRow(client.cache, before),
+        onFailed: () =>
+          updateRow(client.cache, listId, row => ({
+            ...row,
+            entries: row.entries.filter(entry => entry.id !== id),
+          })),
       },
     );
     return settled.status !== 'failed';
@@ -240,6 +262,8 @@ export function useBrandLists() {
   ): Promise<boolean> => {
     const before = readRow(client.cache, listId);
     if (!before) return false;
+    const index = before.entries.findIndex(entry => entry.id === entryId);
+    const removed = before.entries[index];
     writeRow(client.cache, {
       ...before,
       entries: before.entries.filter(entry => entry.id !== entryId),
@@ -249,7 +273,15 @@ export function useBrandLists() {
       {
         document: RemoveBrandFromListDocument,
         fallback: t('brandLists.errors.removeFailed'),
-        onFailed: () => writeRow(client.cache, before),
+        onFailed: () => {
+          if (!removed) return;
+          updateRow(client.cache, listId, row => {
+            if (row.entries.some(entry => entry.id === entryId)) return row;
+            const entries = [...row.entries];
+            entries.splice(Math.min(index, entries.length), 0, removed);
+            return { ...row, entries };
+          });
+        },
       },
     );
     return settled.status !== 'failed';

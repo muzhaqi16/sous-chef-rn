@@ -81,6 +81,15 @@ describe('HouseholdAlertsSection', () => {
     expect(screen.getByText(t('dietaryAlerts.needsConnection'))).toBeTruthy();
   });
 
+  it('says the check failed, not that it needs a connection, when online', () => {
+    render(
+      <HouseholdAlertsSection check="failed" alerts={[]} alternatives={[]} />,
+    );
+
+    expect(screen.getByText(t('dietaryAlerts.checkFailed'))).toBeTruthy();
+    expect(screen.queryByText(t('dietaryAlerts.needsConnection'))).toBeNull();
+  });
+
   it('opens an alternative that has a barcode', () => {
     const onOpen = jest.fn();
     render(

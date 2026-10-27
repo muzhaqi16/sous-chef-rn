@@ -109,6 +109,7 @@ describe('IngredientMatchingSheet', () => {
     isIncluded: true,
     substitutes: [],
     selectedSubstitute: null,
+    includedBeforeSubstitute: true,
   });
 
   const matchSummary: MatchSummary = {

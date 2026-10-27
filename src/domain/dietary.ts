@@ -267,6 +267,7 @@ export const strictestFirst = (
  * - `checked`: the server answered just now.
  * - `stale`: offline, showing the answer received earlier.
  * - `unchecked`: offline with no earlier answer; never shown as "nothing found".
+ * - `failed`: online, but the server gave no answer; never "nothing found".
  * - `loading`: the first answer is on its way.
  * - `none`: no home to check against.
  */
@@ -274,6 +275,7 @@ export type HouseholdCheck =
   | 'checked'
   | 'stale'
   | 'unchecked'
+  | 'failed'
   | 'loading'
   | 'none';
 
@@ -292,6 +294,7 @@ export function householdCheckOf({
 }): HouseholdCheck {
   if (!hasHome) return 'none';
   if (answered) return offline ? 'stale' : 'checked';
-  if (loading && !offline && !failed) return 'loading';
-  return 'unchecked';
+  if (offline) return 'unchecked';
+  if (loading && !failed) return 'loading';
+  return 'failed';
 }

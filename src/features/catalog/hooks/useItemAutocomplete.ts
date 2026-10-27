@@ -107,9 +107,14 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     return () => clearTimeout(timer);
   }, [semanticPending, activeTerm, fetchSemantic]);
 
-  const semanticSuggestions = (
-    semanticData?.searchItemsSemantic.edges ?? []
-  ).map(edge => semanticItemToSuggestion(edge.node));
+  // Until the quiet window ends, the semantic answer in hand is an earlier
+  // term's: it stands for this term only once asked with it.
+  const semanticSuggestions =
+    semanticVariables.prompt === activeTerm
+      ? (semanticData?.searchItemsSemantic.edges ?? []).map(edge =>
+          semanticItemToSuggestion(edge.node),
+        )
+      : [];
 
   const items: ItemSuggestion[] = hasAutocompleteResults
     ? autocompleteSuggestions

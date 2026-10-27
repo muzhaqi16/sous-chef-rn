@@ -799,7 +799,8 @@
     "andMore": "{{label}} +{{count}}",
     "checkLabel": "Kontrollo gjithmonë etiketën: të dhënat e produktit mund të jenë të paplota.",
     "stale": "U kontrollua më parë; mund të mos jetë i përditësuar.",
-    "needsConnection": "Lidhu me internetin për ta kontrolluar për shtëpinë tënde."
+    "needsConnection": "Lidhu me internetin për ta kontrolluar për shtëpinë tënde.",
+    "checkFailed": "Nuk u kontrollua dot për shtëpinë tënde tani. Provo sërish më vonë."
   },
   "countries": {
     "AD": "Andorrë",

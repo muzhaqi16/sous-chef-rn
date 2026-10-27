@@ -85,6 +85,7 @@ describe('IngredientMatchRow', () => {
       isIncluded: true,
       substitutes: [],
       selectedSubstitute: null,
+      includedBeforeSubstitute: true,
     };
   };
 
@@ -233,6 +234,7 @@ describe('IngredientMatchRow', () => {
       expect(onUpdate).toHaveBeenCalledWith(0, {
         selectedSubstitute: swap,
         isIncluded: true,
+        includedBeforeSubstitute: false,
       });
     });
 
@@ -246,6 +248,7 @@ describe('IngredientMatchRow', () => {
             ...makeMatch('Buttermilk'),
             substitutes: [swap],
             selectedSubstitute: swap,
+            includedBeforeSubstitute: false,
           }}
           onUpdate={onUpdate}
         />,
@@ -267,6 +270,64 @@ describe('IngredientMatchRow', () => {
       expect(onUpdate).toHaveBeenCalledWith(0, {
         selectedSubstitute: null,
         isIncluded: false,
+      });
+    });
+
+    it('puts an excluded line with a stack back excluded once its swap is unpicked', () => {
+      const onUpdate = jest.fn();
+      const swap = milkLemon();
+      const withStack = makeMatch('Buttermilk', {
+        matchedPantryItem: stack('p-buttermilk', 'Buttermilk', 100),
+      });
+      render(
+        <IngredientMatchRow
+          {...defaultProps}
+          editableMatch={{
+            ...withStack,
+            ingredient: { ...withStack.ingredient, isOptional: true },
+            isIncluded: true,
+            substitutes: [swap],
+            selectedSubstitute: swap,
+            includedBeforeSubstitute: false,
+          }}
+          onUpdate={onUpdate}
+        />,
+      );
+
+      fireEvent.press(screen.getByText('1 cup milk, 1 tbsp lemon juice'));
+      expect(onUpdate).toHaveBeenCalledWith(0, {
+        selectedSubstitute: null,
+        isIncluded: false,
+      });
+    });
+
+    it('keeps the state from before the first swap when switching swaps', () => {
+      const onUpdate = jest.fn();
+      const swap = milkLemon();
+      const other = {
+        ...milkLemon(),
+        id: 'swap-yogurt',
+        label: '1 cup yogurt',
+      };
+      render(
+        <IngredientMatchRow
+          {...defaultProps}
+          editableMatch={{
+            ...makeMatch('Buttermilk'),
+            isIncluded: true,
+            substitutes: [swap, other],
+            selectedSubstitute: swap,
+            includedBeforeSubstitute: false,
+          }}
+          onUpdate={onUpdate}
+        />,
+      );
+
+      fireEvent.press(screen.getByText('1 cup yogurt'));
+      expect(onUpdate).toHaveBeenCalledWith(0, {
+        selectedSubstitute: other,
+        isIncluded: true,
+        includedBeforeSubstitute: false,
       });
     });
   });

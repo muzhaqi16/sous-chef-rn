@@ -88,7 +88,7 @@ jest.mock('#features/barcode/hooks/useProductOrigin', () => ({
   useProductOrigin: () => ({ lines: [] }),
 }));
 jest.mock('#features/barcode/hooks/useProductBrandListings', () => ({
-  useProductBrandListings: () => ({ listings: [], refresh: jest.fn() }),
+  useProductBrandListings: () => ({ listings: [] }),
 }));
 jest.mock('#features/profile/hooks/useBrandLists', () => ({
   useBrandLists: () => ({ lists: [], addBrand: jest.fn() }),

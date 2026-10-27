@@ -150,6 +150,22 @@ describe('useProductDietaryAlerts', () => {
     expect(result.current.alerts).toEqual([]);
   });
 
+  it('says the check failed, not that it needs a connection, online', async () => {
+    const { result } = renderHookWithApollo(
+      () => useProductDietaryAlerts('granola'),
+      {
+        operationMocks: [
+          recordMock(ProductDietaryAlertsDocument, {
+            error: new Error('boom'),
+          }).mock,
+        ],
+      },
+    );
+
+    await waitFor(() => expect(result.current.check).toBe('failed'));
+    expect(result.current.alerts).toEqual([]);
+  });
+
   it('checks nothing without a home', () => {
     mockHomeId = null;
     const { result } = renderHookWithApollo(

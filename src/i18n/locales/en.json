@@ -799,7 +799,8 @@
     "andMore": "{{label}} +{{count}}",
     "checkLabel": "Always check the label: product data can be incomplete.",
     "stale": "Checked earlier; this may be out of date.",
-    "needsConnection": "Connect to the internet to check this for your household."
+    "needsConnection": "Connect to the internet to check this for your household.",
+    "checkFailed": "Couldn't check this for your household right now. Try again later."
   },
   "countries": {
     "AD": "Andorra",

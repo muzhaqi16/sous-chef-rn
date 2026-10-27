@@ -10,6 +10,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { useStoreModeCart } from '../useStoreModeCart';
+import { UseStoreModeCart_ListFragmentDoc } from '../useStoreModeCart.generated';
 
 const mockToggleItem = jest.fn();
 const mockRecordPurchase = jest.fn();
@@ -29,6 +30,7 @@ interface LineSeed {
   itemName: string;
   estimated?: number | null;
   suggested?: number | null;
+  suggestedIn?: string;
   unitId?: string;
 }
 
@@ -38,6 +40,7 @@ const node = ({
   itemName,
   estimated = null,
   suggested = null,
+  suggestedIn = 'USD',
   unitId,
 }: LineSeed) => ({
   __typename: 'ShoppingListItem',
@@ -52,7 +55,11 @@ const node = ({
   suggestedPrice:
     suggested === null
       ? null
-      : { __typename: 'PriceSuggestion', amount: suggested },
+      : {
+          __typename: 'PriceSuggestion',
+          amount: suggested,
+          currency: { __typename: 'Currency', code: suggestedIn },
+        },
   item: { __typename: 'Item', id: itemId },
 });
 
@@ -99,10 +106,15 @@ function renderCart(
   toBuy: LineSeed[],
   inCart: LineSeed[] = [],
   scanned: Parameters<typeof useStoreModeCart>[1] = JIF,
+  listCurrency = 'USD',
 ) {
   const cache = seedCache([]);
   seedTab(cache, false, toBuy);
   seedTab(cache, true, inCart);
+  cache.writeFragment({
+    fragment: UseStoreModeCart_ListFragmentDoc,
+    data: { __typename: 'ShoppingList', id: LIST, currency: listCurrency },
+  });
   // No operation mocks: the hook must answer from the cache alone.
   return renderHookWithApollo(() => useStoreModeCart(LIST, scanned), {
     cache,
@@ -150,6 +162,21 @@ describe('useStoreModeCart', () => {
     ]);
 
     expect(result.current.line?.estimatedPrice).toBe(4);
+  });
+
+  it("hints no suggestion priced in another currency than the list's", () => {
+    const line = {
+      id: 'pb',
+      itemId: 'jif-creamy',
+      itemName: 'Jif',
+      suggested: 3.49,
+      suggestedIn: 'EUR',
+    };
+
+    expect(renderCart([line]).result.current.line?.estimatedPrice).toBeNull();
+    expect(
+      renderCart([line], [], JIF, 'EUR').result.current.line?.estimatedPrice,
+    ).toBe(3.49);
   });
 
   it('reports a product already in the cart, with no line to tick', () => {

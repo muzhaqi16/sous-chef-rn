@@ -1,5 +1,5 @@
 import { useQuery } from '@apollo/client/react';
-import { errorService } from '#/services/errorService';
+import type { BrandListView } from '#features/profile/hooks/useBrandLists';
 import { ProductBrandListingsDocument } from './useProductBrandListings.generated';
 
 /** One of the user's lists a scanned product's brand is on. */
@@ -14,31 +14,40 @@ export interface BrandListing {
 
 /**
  * The user's own lists the scanned product's brand is on: lists switched on
- * only, read from each list so a switch flipped offline holds at once.
+ * only, read from each list so a switch flipped offline holds at once. A list
+ * holding the scanned brand itself is that list's nearest match, so an add
+ * shows from the list before the matches are read again, offline included.
  */
-export function useProductBrandListings(itemId: string) {
-  const { data, refetch } = useQuery(ProductBrandListingsDocument, {
+export function useProductBrandListings(
+  itemId: string,
+  scannedBrandId: string | null,
+  lists: readonly BrandListView[],
+) {
+  const { data } = useQuery(ProductBrandListingsDocument, {
     variables: { itemId },
   });
 
-  const listings: BrandListing[] = (data?.item?.listMatches ?? [])
-    .filter(match => match.brandList.enabled)
-    .map(match => ({
+  const byList = new Map<string, BrandListing>();
+  for (const match of data?.item?.listMatches ?? []) {
+    if (!match.brandList.enabled) continue;
+    byList.set(match.brandList.id, {
       key: `${match.brandList.id}:${match.entry.id}`,
       listName: match.brandList.name,
       viaParent: match.viaParent ? match.entry.brand.name : null,
       reason: match.entry.reason,
-    }));
+    });
+  }
+  for (const list of lists) {
+    if (!list.enabled) continue;
+    const entry = list.brands.find(brand => brand.brandId === scannedBrandId);
+    if (!entry) continue;
+    byList.set(list.id, {
+      key: `${list.id}:${entry.entryId}`,
+      listName: list.name,
+      viaParent: null,
+      reason: entry.reason,
+    });
+  }
 
-  return {
-    listings,
-    /** Re-reads the matches after the user adds this brand to a list. */
-    refresh: () => {
-      refetch().catch(error =>
-        errorService.reportError(error, {
-          operation: 'ProductBrandListings.refetch',
-        }),
-      );
-    },
-  };
+  return { listings: [...byList.values()] };
 }

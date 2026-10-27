@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import {
   useApolloClient,
@@ -83,12 +83,18 @@ export interface EditableMatch {
   substitutes: CookSubstitute[];
   /** The swap the cook picked; its parts are drawn and the ingredient is not. */
   selectedSubstitute: CookSubstitute | null;
+  /** `isIncluded` before a swap was picked, restored when it is unpicked. */
+  includedBeforeSubstitute: boolean;
 }
 
 export type MatchUpdate = Partial<
   Pick<
     EditableMatch,
-    'adjustedQuantity' | 'isIncluded' | 'selectedStack' | 'selectedSubstitute'
+    | 'adjustedQuantity'
+    | 'isIncluded'
+    | 'selectedStack'
+    | 'selectedSubstitute'
+    | 'includedBeforeSubstitute'
   >
 >;
 
@@ -143,6 +149,9 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     fetchPolicy: 'network-only',
     nextFetchPolicy: 'network-only',
   });
+  // The newest review's read: a slower one from an earlier open, scaled to
+  // its servings, never lands on a later review.
+  const substitutesRead = useRef(0);
 
   /** A swap at the amount cooked: scaled parts are for the recipe as written. */
   const toCookSubstitute = (
@@ -187,6 +196,8 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
    * open: a failed read leaves the rows as they are.
    */
   const loadSubstitutes = async (uncovered: Set<string>, servings: number) => {
+    substitutesRead.current += 1;
+    const read = substitutesRead.current;
     if (!recipeId || !homeId || !pantryId || uncovered.size === 0) return;
     let result;
     try {
@@ -204,7 +215,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       });
     }
     const recipe = result?.data?.recipe;
-    if (!recipe) return;
+    if (!recipe || read !== substitutesRead.current) return;
     // As the cook scales every amount: servings / Recipe.servings.
     const ratio = recipe.servings > 0 ? servings / recipe.servings : 1;
     const swaps = new Map<string, CookSubstitute[]>();
@@ -276,6 +287,13 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           return null;
         }
         const status = getAvailabilityStatus(match);
+        // An empty stack would only fail the deduction; picking another
+        // stack includes the line. One stating no amount has nothing to
+        // deduct until the cook states it.
+        const isIncluded =
+          match.suggestedQuantity !== null &&
+          !ingredient.isOptional &&
+          (status === 'available' || status === 'partial');
         return {
           match,
           ingredient,
@@ -286,15 +304,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           adjustedQuantity: match.suggestedQuantity,
           adjustedUnitId:
             match.suggestedUnit?.id ?? ingredient.unit?.id ?? null,
-          // An empty stack would only fail the deduction; picking another
-          // stack includes the line. One stating no amount has nothing to
-          // deduct until the cook states it.
-          isIncluded:
-            match.suggestedQuantity !== null &&
-            !ingredient.isOptional &&
-            (status === 'available' || status === 'partial'),
+          isIncluded,
           substitutes: [],
           selectedSubstitute: null,
+          includedBeforeSubstitute: isIncluded,
         };
       })
       .filter((m): m is EditableMatch => m !== null);

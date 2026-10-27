@@ -36,11 +36,15 @@ export const HouseholdAlertsSection: React.FC<HouseholdAlertsSectionProps> = ({
 }) => {
   const { t } = useTranslation();
 
-  if (check === 'unchecked') {
+  if (check === 'unchecked' || check === 'failed') {
     return (
       <Card style={styles.card} testID={barcodeTestIDs.householdUnchecked}>
         <Text role="caption" tone="secondary">
-          {t('dietaryAlerts.needsConnection')}
+          {t(
+            check === 'failed'
+              ? 'dietaryAlerts.checkFailed'
+              : 'dietaryAlerts.needsConnection',
+          )}
         </Text>
       </Card>
     );

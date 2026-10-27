@@ -132,13 +132,17 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   );
   const household = useProductDietaryAlerts(item.id);
   const origin = useProductOrigin(item.id, item.brandParentName);
-  const brandListings = useProductBrandListings(item.id);
   const brandLists = useBrandLists();
   // The scanned barcode's own brand: the one a list matches on a scan.
   const scannedBrand =
     item.brandId && item.brandName
       ? { id: item.brandId, name: item.brandName }
       : null;
+  const brandListings = useProductBrandListings(
+    item.id,
+    scannedBrand?.id ?? null,
+    brandLists.lists,
+  );
   // The unit the price sheet counts in: the matched line's, else the
   // product's own. A line with no unit of its own gets no comparison.
   const sheetUnit = cart.line ? cart.unit : item.trackingUnit;
@@ -380,15 +384,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           brand={scannedBrand}
           lists={brandLists.lists}
           onDismiss={() => setIsAddingToList(false)}
-          onPick={async (listId, reason) => {
-            const added = await brandLists.addBrand(
-              listId,
-              scannedBrand,
-              reason,
-            );
-            if (added) brandListings.refresh();
-            return added;
-          }}
+          onPick={(listId, reason) =>
+            brandLists.addBrand(listId, scannedBrand, reason)
+          }
           onMakeList={() => {
             setIsAddingToList(false);
             onOpenBrandLists?.();

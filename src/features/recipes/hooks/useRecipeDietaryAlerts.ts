@@ -1,11 +1,9 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import {
-  DietaryAlertState,
-  RestrictionSeverity,
-} from '#/graphql/generated/schemaTypes';
+import { DietaryAlertState } from '#/graphql/generated/schemaTypes';
 import {
   householdCheckOf,
+  strictestFirst,
   toHouseholdAlert,
   type HouseholdAlert,
 } from '#domain/dietary';
@@ -13,13 +11,6 @@ import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useSelectedHomeId, useUser } from '#store/useAppStore';
 import { RecipeDietaryAlertsDocument } from './useRecipeDietaryAlerts.generated';
-
-const SEVERITY_RANK: Record<RestrictionSeverity, number> = {
-  [RestrictionSeverity.Allergy]: 0,
-  [RestrictionSeverity.Intolerance]: 1,
-  [RestrictionSeverity.Preference]: 2,
-  [RestrictionSeverity.Goal]: 3,
-};
 
 const NO_ALERTS: HouseholdAlert[] = [];
 
@@ -35,12 +26,7 @@ function summarize(rows: HouseholdAlert[][]): HouseholdAlert[] {
       strongest.set(alert.id, alert);
     }
   }
-  return [...strongest.values()].sort(
-    (a, b) =>
-      SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity] ||
-      Number(b.state === DietaryAlertState.Contains) -
-        Number(a.state === DietaryAlertState.Contains),
-  );
+  return strictestFirst([...strongest.values()]);
 }
 
 /**

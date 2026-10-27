@@ -1,5 +1,6 @@
-import { skipToken, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
+import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
@@ -11,6 +12,7 @@ import { useToggleShoppingItem } from './mutations/useToggleShoppingItem';
 import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
 import type { PurchaseAmountItem } from './usePurchaseAmountModal';
 import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
+import { UseStoreModeCart_ListFragmentDoc } from './useStoreModeCart.generated';
 
 /**
  * Store mode's cart for a scanned product: the list line it fulfils and how to
@@ -50,6 +52,15 @@ export function useStoreModeCart(
         }
       : skipToken,
   );
+  const list = useFragment({
+    fragment: UseStoreModeCart_ListFragmentDoc,
+    fragmentName: 'useStoreModeCart_list',
+    from: listId ? { __typename: 'ShoppingList', id: listId } : null,
+  });
+  const recordsIn = resolveCurrency(
+    list.complete && list.data.currency ? { code: list.data.currency } : null,
+    usePreferredCurrency(),
+  );
   // A refused tick re-reads both tabs from the server, as store mode's does.
   const { toggleItem, recordPurchase } = useToggleShoppingItem({
     listId,
@@ -67,6 +78,12 @@ export function useStoreModeCart(
     ? { variation: scanned.variationId }
     : { itemId: scanned.id };
 
+  // The hint is a bare number, so a suggestion in another currency would read
+  // as one in the list's.
+  const suggested =
+    open?.suggestedPrice?.currency.code === recordsIn
+      ? open.suggestedPrice.amount
+      : null;
   const line: PurchaseAmountItem | null = open
     ? {
         id: open.id,
@@ -74,8 +91,7 @@ export function useStoreModeCart(
         requestedQuantity: open.quantity ?? 1,
         unitName: firstNonBlank(open.unit?.symbol, open.unitName) ?? null,
         // The price sheet's hint only: a typed estimate, else the suggestion.
-        estimatedPrice:
-          open.priceEstimate.estimated ?? open.suggestedPrice?.amount ?? null,
+        estimatedPrice: open.priceEstimate.estimated ?? suggested,
       }
     : null;
 

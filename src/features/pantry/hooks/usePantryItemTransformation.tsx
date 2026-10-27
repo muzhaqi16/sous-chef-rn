@@ -19,6 +19,7 @@ import { formatMonthDayYear } from '#/utils/formatters/date';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   formatQuantityForDisplay,
+  formatQuantityWithUnit,
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import {
@@ -140,13 +141,12 @@ export function formatHeldAmount(
   );
   if (reading) return formatReading(reading);
   const inOwnUnit = shown.unit.id === item.unit.id;
-  const quantity = formatQuantityForDisplay(shown.quantity, {
+  return formatQuantityWithUnit(shown.quantity, shown.unit.symbol, {
     notation: resolveQuantityNotation(
       null,
       inOwnUnit ? item.unit.displayAsFraction : null,
     ),
   });
-  return `${quantity} ${shown.unit.symbol}`;
 }
 
 // Unit labels are server data with no plural form, so they pass through as-is.
