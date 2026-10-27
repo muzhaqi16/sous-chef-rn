@@ -79,14 +79,11 @@ export function usePantryUnitChange() {
       },
     );
     if (settled.status !== 'failed') {
-      // Every batch is restated in the new unit; the response carries none.
-      // The stack's own screens are named: their queries belong to their UI.
+      // Every batch is restated in the new unit, and the payload carries no
+      // batches (asked as API-17), nor the detail's usage history, a
+      // connection. The stack itself comes back with its readers.
       void client.refetchQueries({
-        include: [
-          'GetPantryItem',
-          'PantryItemForEdit',
-          GetPantryItemBatchesDocument,
-        ],
+        include: ['GetPantryItem', GetPantryItemBatchesDocument],
       });
       return { status: 'changed' };
     }
