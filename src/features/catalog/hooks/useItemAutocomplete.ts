@@ -153,6 +153,9 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     debounceMs: options?.debounceMs ?? 250,
     requiresNetwork: true,
     fallbackItems: cachedItemSuggestions,
+    // The LRU holds whatever any earlier search returned, so an empty field
+    // listing it shows another search's results.
+    fallbackBeforeSearch: false,
     filterFallback: filterByName,
     // Only serve from the seen-items cache when offline — online keeps hitting
     // the full-catalog API so search isn't limited to the cached subset.

@@ -92,6 +92,36 @@ describe('useAutocompleteSearch', () => {
     ]);
   });
 
+  it('keeps a search-only fallback out of the list below minChars, and still searches it', () => {
+    const fallback: TestItem[] = [
+      { id: '1', name: 'Apple' },
+      { id: '2', name: 'Banana' },
+    ];
+    const filterFallback = (term: string, items: TestItem[]) =>
+      items.filter(i => i.name.toLowerCase().includes(term.toLowerCase()));
+
+    const { result } = renderHook(() =>
+      useAutocompleteSearch(
+        makeConfig({
+          fallbackItems: fallback,
+          filterFallback,
+          fallbackBeforeSearch: false,
+          localFirst: true,
+        }),
+      ),
+    );
+
+    expect(result.current.displayItems).toEqual([]);
+    act(() => {
+      result.current.handleSearchTermChange('a');
+    });
+    expect(result.current.displayItems).toEqual([]);
+    act(() => {
+      result.current.handleSearchTermChange('app');
+    });
+    expect(result.current.displayItems).toEqual([{ id: '1', name: 'Apple' }]);
+  });
+
   it('sets shouldSearch to true when searchTerm meets minChars and device is online', () => {
     const { result } = renderHook(() => useAutocompleteSearch(makeConfig()));
 

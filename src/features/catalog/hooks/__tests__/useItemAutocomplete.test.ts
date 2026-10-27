@@ -110,6 +110,21 @@ describe('useItemAutocomplete', () => {
     expect(result.current.displayItems).toEqual([]);
   });
 
+  it('lists none of the seen items while the term is under two characters', () => {
+    mockCachedItemSuggestions = [
+      makeSuggestion('i1', 'Lemon Juice'),
+      makeSuggestion('i2', 'Lemonade Lemon Juice'),
+    ];
+
+    const { result } = renderHookWithApollo(() => useItemAutocomplete());
+
+    expect(result.current.displayItems).toEqual([]);
+    act(() => {
+      result.current.handleSearchTermChange('l');
+    });
+    expect(result.current.displayItems).toEqual([]);
+  });
+
   it('returns empty searchTerm initially', () => {
     const { result } = renderHookWithApollo(() => useItemAutocomplete());
 

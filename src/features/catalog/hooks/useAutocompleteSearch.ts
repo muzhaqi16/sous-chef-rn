@@ -18,6 +18,11 @@ export interface AutocompleteSearchConfig<TItem> {
   requiresNetwork?: boolean;
   /** Items to show before any search (cached units, suggested brands) */
   fallbackItems?: TItem[];
+  /**
+   * Whether fallbackItems list below minChars. Default: true; false for a set
+   * that is only searched, never offered unasked (the seen-items LRU)
+   */
+  fallbackBeforeSearch?: boolean;
   /** Client-side filter for fallback items */
   filterFallback?: (term: string, items: TItem[]) => TItem[];
   /** Maximum results to display. Default: 10 */
@@ -56,6 +61,7 @@ export function useAutocompleteSearch<TItem>(
     debounceMs = 300,
     requiresNetwork = true,
     fallbackItems = [],
+    fallbackBeforeSearch = true,
     filterFallback,
     maxResults = 10,
     localFirst = false,
@@ -157,6 +163,7 @@ export function useAutocompleteSearch<TItem>(
   const displayItems = (() => {
     // If below min chars or no search term, use fallback
     if (searchTerm.length < minChars) {
+      if (!fallbackBeforeSearch) return [];
       if (filterFallback && searchTerm.length > 0) {
         return filterFallback(searchTerm, fallbackItems).slice(0, maxResults);
       }
