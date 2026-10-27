@@ -69,7 +69,6 @@
   },
   "onboardingValidation": {
     "homeRequired": "Emri i shtëpisë është i detyrueshëm",
-    "homeMax": "Emri i shtëpisë duhet të ketë më pak se {{count}} karaktere",
     "pantryRequired": "Emri i qilarit është i detyrueshëm",
     "pantryMin": "Emri i qilarit duhet të ketë të paktën {{count}} karaktere",
     "pantryMax": "Emri i qilarit duhet të ketë më pak se {{count}} karaktere",

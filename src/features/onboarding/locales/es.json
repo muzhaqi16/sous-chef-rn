@@ -69,7 +69,6 @@
   },
   "onboardingValidation": {
     "homeRequired": "El nombre del hogar es obligatorio",
-    "homeMax": "El nombre del hogar debe tener menos de {{count}} caracteres",
     "pantryRequired": "El nombre de la despensa es obligatorio",
     "pantryMin": "El nombre de la despensa debe tener al menos {{count}} caracteres",
     "pantryMax": "El nombre de la despensa debe tener menos de {{count}} caracteres",

@@ -136,7 +136,7 @@
     "queuedRemovalKeptResource": "Tu eliminación en {{resource}} no se aplicó: se había combinado con una entrada que ya existía.",
     "queuedRemovalKept": "Una eliminación no se aplicó: se había combinado con una entrada que ya existía.",
     "itemNameRequired": "Introduce el nombre del artículo",
-    "itemNameTooLong": "El nombre no puede superar los {{max}} caracteres",
+    "nameTooLong": "El nombre no puede superar los {{max}} caracteres",
     "invalidQuantity": "Introduce una cantidad válida",
     "invalidAmountPaid": "Introduce el importe pagado, como 3,49, o déjalo vacío.",
     "itemNotFound": "Artículo no encontrado",
@@ -688,8 +688,7 @@
     "passwordLowercase": "Se requiere al menos una letra minúscula",
     "passwordUppercase": "Se requiere al menos una letra mayúscula",
     "passwordNumber": "Se requiere al menos un número",
-    "nameMin": "El nombre debe tener al menos 2 caracteres",
-    "nameMax": "El nombre debe tener menos de 50 caracteres"
+    "nameMin": "El nombre debe tener al menos 2 caracteres"
   },
   "quantityBadge": {
     "a11yLabel": "Cantidad: {{quantity}}. Toca para editar",

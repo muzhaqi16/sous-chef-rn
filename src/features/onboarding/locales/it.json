@@ -69,7 +69,6 @@
   },
   "onboardingValidation": {
     "homeRequired": "Il nome della casa è obbligatorio",
-    "homeMax": "Il nome della casa deve contenere meno di {{count}} caratteri",
     "pantryRequired": "Il nome della dispensa è obbligatorio",
     "pantryMin": "Il nome della dispensa deve contenere almeno {{count}} caratteri",
     "pantryMax": "Il nome della dispensa deve contenere meno di {{count}} caratteri",

@@ -1,5 +1,10 @@
 import { object, string } from 'yup';
-import { cleanName, normalizeSmartPunctuation } from '#utils/validation/common';
+import {
+  cleanName,
+  lazyMessage,
+  MAX_HOME_NAME_LENGTH,
+  normalizeSmartPunctuation,
+} from '#utils/validation/common';
 import { t, type KeyUnder } from '#/i18n';
 
 /**
@@ -17,7 +22,10 @@ const msg =
 const homeNameRule = string()
   .transform(cleanName)
   .required(msg('homeRequired'))
-  .max(50, msg('homeMax', { count: 50 }));
+  .max(
+    MAX_HOME_NAME_LENGTH,
+    lazyMessage('errors.nameTooLong', { max: MAX_HOME_NAME_LENGTH }),
+  );
 
 // pantry name rule
 const pantryNameRule = string()

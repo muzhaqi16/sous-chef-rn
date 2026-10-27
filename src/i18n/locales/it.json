@@ -136,7 +136,7 @@
     "queuedRemovalKeptResource": "{{resource}}: la rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
     "queuedRemovalKept": "Una rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
     "itemNameRequired": "Inserisci il nome dell'articolo",
-    "itemNameTooLong": "Il nome non può superare i {{max}} caratteri",
+    "nameTooLong": "Il nome non può superare i {{max}} caratteri",
     "invalidQuantity": "Inserisci una quantità valida",
     "invalidAmountPaid": "Inserisci l'importo pagato, ad esempio 3,49, oppure lascia vuoto.",
     "itemNotFound": "Articolo non trovato",
@@ -688,8 +688,7 @@
     "passwordLowercase": "È richiesta almeno una lettera minuscola",
     "passwordUppercase": "È richiesta almeno una lettera maiuscola",
     "passwordNumber": "È richiesto almeno un numero",
-    "nameMin": "Il nome deve avere almeno 2 caratteri",
-    "nameMax": "Il nome deve contenere meno di 50 caratteri"
+    "nameMin": "Il nome deve avere almeno 2 caratteri"
   },
   "quantityBadge": {
     "a11yLabel": "Quantità: {{quantity}}. Tocca per modificare",

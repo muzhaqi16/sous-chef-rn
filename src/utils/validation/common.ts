@@ -41,8 +41,10 @@ export function cleanName(value: string | undefined): string | undefined {
     .replace(/\s+/g, ' ');
 }
 
-/** The API's cap on an item's name once cleaned (`CreateItemInput.name`). */
+/** The API's caps on a name once cleaned, as each input's description states. */
 export const MAX_ITEM_NAME_LENGTH = 128;
+export const MAX_PERSON_NAME_LENGTH = 255;
+export const MAX_HOME_NAME_LENGTH = 100;
 
 /**
  * An item name as the API takes it: any text, cleaned, then required and at
@@ -54,7 +56,7 @@ export const itemNameText = (required: () => string) =>
     .required(required)
     .max(
       MAX_ITEM_NAME_LENGTH,
-      lazyMessage('errors.itemNameTooLong', { max: MAX_ITEM_NAME_LENGTH }),
+      lazyMessage('errors.nameTooLong', { max: MAX_ITEM_NAME_LENGTH }),
     );
 
 export function logValidationErrors(errors: FieldErrors<FieldValues>) {
@@ -102,7 +104,10 @@ export const newPasswordRule = string()
 // A first or last name in any script ("José", "李"), cleaned rather than refused.
 export const nameRule = string()
   .transform(cleanName)
-  .max(50, lazyMessage('commonValidation.nameMax'));
+  .max(
+    MAX_PERSON_NAME_LENGTH,
+    lazyMessage('errors.nameTooLong', { max: MAX_PERSON_NAME_LENGTH }),
+  );
 
 // A quantity takes a fraction ("1 1/4") as readily as a decimal, so the rule
 // runs on what `parseFractionalInput` reads — a regex restating its grammar

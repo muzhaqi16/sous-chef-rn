@@ -66,13 +66,21 @@ describe('onboarding validation', () => {
       expect(msg).toContain('Home name');
     });
 
-    it('rejects home name over 50 chars', async () => {
+    // The API's cap on a home name (CreateHomeInput).
+    it('takes a home name up to 100 characters', async () => {
       const schema = getCreateHomeSchema(true);
-      const msg = await validate(schema, {
-        homeName: 'a'.repeat(51),
-        pantryName: 'Kitchen',
-      });
-      expect(msg).toContain('50');
+      expect(
+        await validate(schema, {
+          homeName: 'a'.repeat(100),
+          pantryName: 'Kitchen',
+        }),
+      ).toBeNull();
+      expect(
+        await validate(schema, {
+          homeName: 'a'.repeat(101),
+          pantryName: 'Kitchen',
+        }),
+      ).toBe('Keep the name to 100 characters');
     });
 
     it('allows hyphens and apostrophes in home name', async () => {

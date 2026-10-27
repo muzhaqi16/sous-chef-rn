@@ -86,9 +86,11 @@ describe('nameRule', () => {
     expect(nameRule.cast('Ana\u0000')).toBe('Ana');
   });
 
-  it('rejects > 50 chars', async () => {
-    await expect(nameRule.validate('A'.repeat(51))).rejects.toThrow(
-      '50 characters',
+  // The API's cap on a first or last name (UpdateProfileInput).
+  it('takes up to 255 characters', async () => {
+    await expect(nameRule.validate('A'.repeat(255))).resolves.toBeTruthy();
+    await expect(nameRule.validate('A'.repeat(256))).rejects.toThrow(
+      'Keep the name to 255 characters',
     );
   });
 });

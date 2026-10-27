@@ -136,7 +136,7 @@
     "queuedRemovalKeptResource": "The {{resource}} you removed had been combined with one already there, so it stays.",
     "queuedRemovalKept": "Something you removed had been combined with an entry already there, so it stays.",
     "itemNameRequired": "Please enter an item name",
-    "itemNameTooLong": "Keep the name to {{max}} characters",
+    "nameTooLong": "Keep the name to {{max}} characters",
     "invalidQuantity": "Please enter a valid quantity",
     "invalidAmountPaid": "Enter the amount paid, like 3.49, or leave it empty.",
     "itemNotFound": "Item not found",
@@ -688,8 +688,7 @@
     "passwordLowercase": "At least one lowercase letter required",
     "passwordUppercase": "At least one uppercase letter required",
     "passwordNumber": "At least one number required",
-    "nameMin": "Name must be at least 2 characters",
-    "nameMax": "Name must be less than 50 characters"
+    "nameMin": "Name must be at least 2 characters"
   },
   "quantityBadge": {
     "a11yLabel": "Quantity: {{quantity}}. Tap to edit",
