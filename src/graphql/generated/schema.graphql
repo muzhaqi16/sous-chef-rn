@@ -2206,6 +2206,11 @@ input CreateHomeInput {
   isPublic: Boolean
   """At most this many active members, 1 to 50. Null is 50."""
   maxMembers: Int
+  """
+  Stored cleaned: control characters removed, trimmed, and each run of
+  whitespace one space. Refused (VALIDATION_FAILED on name) when that is
+  empty or over 100 characters; any other text is accepted.
+  """
   name: String!
   tags: [String!]
   timezone: TimeZone
@@ -7161,6 +7166,26 @@ type ItemPhoto {
 }
 
 """
+A photo the caller uploaded for a catalog item, which a reviewer approves or rejects.
+"""
+type ItemPhotoSubmission implements ReviewSubmission {
+  id: ID!
+  item: Item!
+  """
+  The photo, with its sizes; null once it is rejected, since a rejected photo is shown to no one.
+  """
+  photo: ItemPhoto
+  """
+  Always null: a reviewer's note on a photo is not shown to the uploader.
+  """
+  reviewNote: String
+  """Always null: a photo is sent without words."""
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+}
+
+"""
 Where an item is cheaper. Catalog prices and the viewer's own household's paid
 prices count; other households' paid prices count, anonymously, only once at
 least two households and two people supplied them. Estimates do not. Rows are
@@ -7294,6 +7319,23 @@ input ItemRefInput @oneOf {
   variation: ID
 }
 
+"""A report that a catalog item, or one of its photos, is wrong."""
+type ItemReportSubmission implements ReviewSubmission {
+  id: ID!
+  item: Item!
+  """
+  The photo reported; null for a report on the whole item, and once the photo is no longer shown.
+  """
+  photo: ItemPhoto
+  """
+  Always null: a reviewer's note on a report is not shown to the reporter.
+  """
+  reviewNote: String
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+}
+
 enum ItemStatus {
   ACTIVE
   ARCHIVED
@@ -7371,6 +7413,18 @@ enum ItemSuggestionStatus {
   APPROVED
   PENDING
   REJECTED
+}
+
+"""A suggested edit to a catalog item."""
+type ItemSuggestionSubmission implements ReviewSubmission {
+  id: ID!
+  item: Item!
+  reviewNote: String
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+  """The suggestion itself, with the changes it proposed."""
+  suggestion: ItemEditSuggestion!
 }
 
 """Categorizes the general type of an item in the pantry or shopping list"""
@@ -13861,6 +13915,22 @@ type Query {
   """
   myModeration: MyModerationStatus
   """
+  Everything the caller sent for review, newest first, as one timeline: their
+  reports on people, recipes and reviews, their reports on items and photos,
+  their suggested edits, and the photos they uploaded for moderation. A photo
+  approved on arrival was never sent for review and is not listed.
+  """
+  myReviewSubmissions(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): ReviewSubmissionConnection!
+  """
   The devices this account is currently signed in from, newest first. One
   entry per device, not per token. A session with no device header appears as
   an unknown device. At most 50.
@@ -16006,6 +16076,11 @@ union RegisterDeviceResult = ConflictError | ForbiddenError | NotFoundError | Re
 
 input RegisterInput {
   email: EmailAddress!
+  """
+  The registrant's name: its first word becomes the first name, the rest the
+  last name. Cleaned as UpdateProfileInput.firstName; refused (VALIDATION_FAILED
+  on name) when that is empty or over 255 characters.
+  """
   name: String
   password: String!
 }
@@ -16566,6 +16641,63 @@ type ReviewHelpful {
   Null when the voter's account was permanently deleted. The vote still counts toward the review's helpful total.
   """
   user: User
+}
+
+"""
+Something the caller sent for review: a report, a suggested edit, or a photo
+awaiting moderation. It carries no reviewer and no action taken beyond its
+status.
+"""
+interface ReviewSubmission {
+  """The report's, suggestion's or photo's own id."""
+  id: ID!
+  """The reviewer's note to the caller; null when none is shown to them."""
+  reviewNote: String
+  """The caller's own words, as sent; null when none were given."""
+  senderNote: String
+  """When the caller sent it."""
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
+}
+
+"""
+A page of ReviewSubmission results. Read "edges" for the rows and "pageInfo" to decide
+whether to request another page.
+"""
+type ReviewSubmissionConnection implements Connection {
+  """The rows in this page, in the connection's sort order."""
+  edges: [ReviewSubmissionEdge!]!
+  """Cursors and flags describing where this page sits in the full result."""
+  pageInfo: PageInfo!
+  """
+  Total rows matching the query across all pages. Computed only when selected; null when not available.
+  """
+  totalCount: Int
+}
+
+"""
+One ReviewSubmission in a paginated result, paired with the cursor that identifies its
+position. Pass the cursor as "after" to resume from just past this edge.
+"""
+type ReviewSubmissionEdge implements Edge {
+  """Opaque position marker for this edge. Do not parse or construct it."""
+  cursor: String!
+  """The ReviewSubmission this edge wraps."""
+  node: ReviewSubmission!
+}
+
+"""
+Where something the caller sent for review stands, as its sender sees it.
+"""
+enum ReviewSubmissionStatus {
+  """Accepted, or acted on."""
+  ACCEPTED
+  """Closed with no change."""
+  DECLINED
+  """A reviewer has taken it up."""
+  IN_REVIEW
+  """Waiting for a reviewer."""
+  PENDING
 }
 
 input RevokeDeviceCredentialInput {
@@ -19537,6 +19669,9 @@ input UpdateHomeInput {
   seats no one more until it is under the cap.
   """
   maxMembers: Int
+  """
+  The home's new name, cleaned and bounded as createHome's; omit it to keep the name.
+  """
   name: String
   tags: [String!]
   timezone: TimeZone
@@ -19973,8 +20108,14 @@ input UpdateProfileInput {
   """The date of birth, as a calendar date"""
   dateOfBirth: LocalDate
   displayName: String
+  """
+  Stored cleaned: control characters removed, trimmed, and each run of
+  whitespace one space. Refused (VALIDATION_FAILED on firstName) when that is
+  over 255 characters; any other text is accepted. Null clears it.
+  """
   firstName: String
   gender: String
+  """Cleaned and bounded as firstName, refused on lastName."""
   lastName: String
   phone: String
   profileVisibility: ProfileVisibility
@@ -21158,6 +21299,24 @@ type UserProfile {
   updatedAt: DateTime!
   userId: ID!
   website: URL
+}
+
+"""A report on a person, or on their recipe or recipe review."""
+type UserReportSubmission implements ReviewSubmission {
+  id: ID!
+  """
+  The recipe reported, or the recipe a reported review is on. Null for a
+  report on a person, and once the caller can no longer see the recipe.
+  """
+  recipe: Recipe
+  report: MyUserReport!
+  """The person reported, or whose recipe or review was reported."""
+  reportedUser: User!
+  """Always null: a moderator's note is never shown to the reporter."""
+  reviewNote: String
+  senderNote: String
+  sentAt: DateTime!
+  status: ReviewSubmissionStatus!
 }
 
 enum UserRole {
