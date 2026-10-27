@@ -87,6 +87,10 @@ fragment ItemReaders on Item {
   }
   storageState
   storeDepartment
+  suggestedPackageUnit {
+    id
+    symbol
+  }
   tags
   type
   units {
