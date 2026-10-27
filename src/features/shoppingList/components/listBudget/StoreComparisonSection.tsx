@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Loading } from '#components/molecules/Loading';
-import { SegmentedControl } from '#components/molecules/SegmentedControl';
+import { ModeTabs } from '#components/molecules/ModeTabs';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { useIsOnline } from '#store/useAppStore';
@@ -20,7 +20,7 @@ import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 const SCOPES = [PriceComparisonScope.Store, PriceComparisonScope.Chain];
 
 interface StoreComparisonSectionProps {
-  listId: string | undefined;
+  listId: string;
   scope: PriceComparisonScope;
   onScopeChange: (scope: PriceComparisonScope) => void;
 }
@@ -34,7 +34,6 @@ export const StoreComparisonSection: React.FC<StoreComparisonSectionProps> = ({
   const { t } = useTranslation();
   const isOnline = useIsOnline();
   const { comparison, loading, failed } = useListStoreComparison(listId, scope);
-  if (!listId) return null;
 
   const body = () => {
     if (loading) return <Loading size="small" />;
@@ -58,7 +57,7 @@ export const StoreComparisonSection: React.FC<StoreComparisonSectionProps> = ({
       <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
         {t('shoppingListScreens.storeComparison.title')}
       </Text>
-      <SegmentedControl
+      <ModeTabs
         options={SCOPES}
         value={scope}
         onChange={onScopeChange}
@@ -67,7 +66,6 @@ export const StoreComparisonSection: React.FC<StoreComparisonSectionProps> = ({
             ? t('shoppingListScreens.storeComparison.scopeStores')
             : t('shoppingListScreens.storeComparison.scopeChains')
         }
-        size="compact"
       />
       <View style={styles.body}>{body()}</View>
     </View>

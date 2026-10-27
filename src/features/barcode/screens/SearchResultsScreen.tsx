@@ -22,6 +22,7 @@ import type { BarcodeSource, ScannedItem } from '#features/barcode/types';
 import type { ScannedPack } from '#utils/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
+import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
 function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
@@ -85,8 +86,15 @@ export const SearchResultsScreen: React.FC<
     snapPoints: ['50%', '65%', '85%'],
   });
 
+  const showPrices = useBudgetAndPricesEnabled();
   const { item, loading, error, addingItem, handleAddItem, handleRetry } =
-    useSearchResults(barcode, format, pantryId, source === 'storeMode');
+    useSearchResults(
+      barcode,
+      format,
+      pantryId,
+      // What the household paid rides the lookup only where it shows.
+      source === 'storeMode' && showPrices,
+    );
 
   // Pop SearchResults and return to the scanner beneath it.
   const handleScanAnother = () => goBack();

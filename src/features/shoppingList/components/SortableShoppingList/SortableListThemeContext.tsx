@@ -31,12 +31,15 @@ export interface ShoppingListRowOptions {
   showImages: boolean;
   /** The unit system a line's weight or volume reads in. */
   readingSystem: ReadingSystem;
+  /** Whether a line shows what it would cost; off, the list is a plain list. */
+  showPrices: boolean;
 }
 
 export const ShoppingListRowOptionsContext =
   createContext<ShoppingListRowOptions>({
     showImages: true,
     readingSystem: UnitSystem.Metric,
+    showPrices: false,
   });
 
 export const useShoppingListRowOptions = (): ShoppingListRowOptions =>

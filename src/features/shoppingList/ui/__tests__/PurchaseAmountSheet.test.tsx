@@ -205,6 +205,17 @@ describe('PurchaseAmountSheet', () => {
     expect(onConfirm).toHaveBeenCalledWith(3, 7.5);
   });
 
+  // Budget & prices off: the amount bought, and nothing about money.
+  it('asks for the amount alone when it may not ask for a price', () => {
+    const onConfirm = jest.fn();
+    renderWithInit(buildProps({ onConfirm, askPrice: false }));
+    expect(screen.queryByTestId('purchase-price-input')).toBeNull();
+    expect(screen.queryByText('Total paid')).toBeNull();
+    fireEvent.changeText(screen.getByTestId('purchase-quantity-input'), '3');
+    fireEvent.press(screen.getByTestId('header-action-0'));
+    expect(onConfirm).toHaveBeenCalledWith(3, null);
+  });
+
   it('passes null price to onConfirm when the price input is cleared', () => {
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm }));

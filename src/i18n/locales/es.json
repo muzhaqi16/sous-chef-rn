@@ -563,7 +563,8 @@
     "all": "Todas",
     "purchased": "Comprado",
     "vegan": "Vegana",
-    "sulfite": "Sulfitos"
+    "sulfite": "Sulfitos",
+    "budgetAndPrices": "Presupuesto y precios"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -629,6 +630,7 @@
     "shoppingListImagesDesc": "Mostrar imágenes de productos en las listas",
     "storeMode": "Modo tienda",
     "storeModeDesc": "Recorre una lista pasillo a pasillo desde el icono de tienda de la lista de la compra",
+    "budgetAndPricesDesc": "Fija el presupuesto de una lista y consulta su estimación y dónde sale más barata, desde el icono de la cartera en la lista de la compra",
     "shareUsageData": "Compartir datos de uso",
     "shareUsageDataDesc": "Ayuda a mejorar {{appName}} compartiendo estadísticas anónimas",
     "resetSection": "Restablecer",

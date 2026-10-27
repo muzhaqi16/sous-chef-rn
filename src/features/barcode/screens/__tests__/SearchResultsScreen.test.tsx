@@ -43,6 +43,10 @@ const searchResult = (
   ...overrides,
 });
 
+const mockShowPrices = jest.fn(() => false);
+jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: () => mockShowPrices(),
+}));
 jest.mock('../../hooks/useSearchResults', () => ({
   useSearchResults: jest.fn(),
 }));
@@ -179,5 +183,39 @@ describe('SearchResultsScreen', () => {
 
     const { getByText } = render(<SearchResultsScreen {...propsWithSource} />);
     expect(getByText('Found: Test')).toBeTruthy();
+  });
+
+  // What the household paid rides the lookup only where it is shown.
+  it('asks the lookup for prices in store mode only with budget and prices on', () => {
+    const { useSearchResults } = require('../../hooks/useSearchResults');
+    useSearchResults.mockReturnValue(searchResult());
+    const storeMode: ScreenProps = {
+      route: {
+        params: {
+          barcode: '123',
+          format: 'ean-13',
+          source: 'storeMode',
+          shoppingListId: 'list-1',
+        },
+      },
+    };
+
+    mockShowPrices.mockReturnValue(true);
+    render(<SearchResultsScreen {...storeMode} />);
+    expect(useSearchResults).toHaveBeenLastCalledWith(
+      '123',
+      'ean-13',
+      undefined,
+      true,
+    );
+
+    mockShowPrices.mockReturnValue(false);
+    render(<SearchResultsScreen {...storeMode} />);
+    expect(useSearchResults).toHaveBeenLastCalledWith(
+      '123',
+      'ean-13',
+      undefined,
+      false,
+    );
   });
 });

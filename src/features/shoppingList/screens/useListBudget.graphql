@@ -1,0 +1,30 @@
+# What Budget & prices reads on a list: its totals, budget, store and tracking,
+# and who owns it, which decides whether the screen offers its controls.
+fragment useListBudget_list on ShoppingList {
+  id
+  currency
+  budgetAmount
+  totalCost
+  estimatedTotal
+  unpricedItems
+  priceTracking
+  targetStore {
+    id
+    name
+  }
+  ownerships {
+    id
+    userId
+  }
+}
+
+# The screen's read, with what its writes snapshot before they send, so a save
+# never finds the list short of a field it restores on refusal.
+query ListBudget($id: ID!) {
+  shoppingList(id: $id) {
+    id
+    ...useListBudget_list
+    ...useUpdateShoppingList_list
+    ...useShoppingListBudget_list
+  }
+}

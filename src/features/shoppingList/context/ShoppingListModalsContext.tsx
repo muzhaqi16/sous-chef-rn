@@ -15,6 +15,7 @@ import {
 import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPantryModal';
 import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisleModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
 
 /**
  * The sheets open from all over the screen and are read back in one place, so
@@ -80,6 +81,7 @@ export function ShoppingListModalsProvider({
     items,
   });
 
+  const budgetAndPrices = useBudgetAndPricesEnabled();
   const purchaseAmount = usePurchaseAmountModal({
     items,
     recordPurchase,
@@ -155,6 +157,7 @@ export function ShoppingListModalsProvider({
           tutorial?.notifyLongPressPriceSeen();
         }}
         loading={purchaseAmount.isLoading}
+        askPrice={budgetAndPrices}
       />
 
       <AislePickerSheet

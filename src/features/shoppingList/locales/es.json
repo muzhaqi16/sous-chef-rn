@@ -232,6 +232,12 @@
       "allDone": "Todo está en el carrito",
       "allDoneHint": "Pulsa {{done}} cuando hayas pagado.",
       "cartEmpty": "Aún no hay nada en el carrito"
+    },
+    "budget": {
+      "left": "Quedan {{amount}}",
+      "over": "{{amount}} por encima del presupuesto",
+      "invalid": "Introduce un presupuesto, como 60, o déjalo vacío.",
+      "noStore": "Ninguna tienda elegida"
     }
   },
   "purchaseHistory": {

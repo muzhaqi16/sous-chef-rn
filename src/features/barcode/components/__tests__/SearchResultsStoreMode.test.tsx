@@ -101,6 +101,11 @@ jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
   }),
 }));
 
+const mockShowPrices = jest.fn(() => true);
+jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: () => mockShowPrices(),
+}));
+
 // The price lines have their own tests; here, which list they are read for.
 const mockPriceListIds: (string | undefined)[] = [];
 const mockPriceUnits: ({ id: string } | undefined)[] = [];
@@ -178,6 +183,32 @@ describe('SearchResults from store mode', () => {
 
     expect(mockPriceListIds.at(-1)).toBeUndefined();
     expect(screen.queryByText(t('barcode.price.usual'))).toBeNull();
+  });
+
+  // Budget & prices off: the product and the add, nothing about money.
+  describe('with budget and prices off', () => {
+    beforeEach(() => mockShowPrices.mockReturnValue(false));
+    afterEach(() => mockShowPrices.mockReturnValue(true));
+
+    it('reads no price lines and offers no add with price', () => {
+      renderWithApollo(<SearchResults {...props} />);
+
+      expect(mockPriceListIds.at(-1)).toBeUndefined();
+      expect(screen.queryByText(t('barcode.price.usual'))).toBeNull();
+      expect(screen.queryByTestId('alternate-btn')).toBeNull();
+      expect(screen.getByText(t('barcode.addToCart'))).toBeTruthy();
+    });
+
+    it('still ticks the matched line, with no price', async () => {
+      mockCart.line = LINE;
+      renderWithApollo(<SearchResults {...props} />);
+
+      await userEvent.setup().press(screen.getByTestId('primary-btn'));
+
+      await waitFor(() =>
+        expect(mockTick).toHaveBeenCalledWith('line-pb', null),
+      );
+    });
   });
 
   it('ticks the matched line with no price', async () => {

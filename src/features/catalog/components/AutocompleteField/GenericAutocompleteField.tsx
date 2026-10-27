@@ -35,6 +35,8 @@ export interface GenericAutocompleteFieldProps<T> {
   modalEmptySubtext?: string;
   modalMinSearchLength?: number;
   onSearchChange?: (text: string) => void;
+  /** The field itself was finished: blurred or submitted. */
+  onEndEditing?: () => void;
 }
 
 /**
@@ -69,6 +71,7 @@ export function GenericAutocompleteField<T>({
   modalEmptySubtext,
   modalMinSearchLength,
   onSearchChange,
+  onEndEditing,
 }: GenericAutocompleteFieldProps<T>) {
   if (variant === 'inline') {
     return (
@@ -117,6 +120,7 @@ export function GenericAutocompleteField<T>({
       emptyText={modalEmptyText}
       emptySubtext={modalEmptySubtext}
       onSearchChange={onSearchChange}
+      onEndEditing={onEndEditing}
       minSearchLength={modalMinSearchLength}
       autoCapitalize={autoCapitalize}
       showAddNew={showAddNew}

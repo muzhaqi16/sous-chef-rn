@@ -2,6 +2,7 @@ import {
   getShoppingListOwnerInfo,
   getShoppingListDisplayAvatarInfo,
   isShoppingListOwner,
+  listOwnershipOf,
   getShoppingListRole,
   getHomeOwnerInfo,
   getInitials,
@@ -122,6 +123,24 @@ describe('ownershipHelpers', () => {
     it('returns null when no owner info available', () => {
       const list = { ownerships: [], home: null };
       expect(getShoppingListDisplayAvatarInfo(list)).toBeNull();
+    });
+  });
+
+  // Settings and Budget & prices both read it, so neither can disagree.
+  describe('listOwnershipOf', () => {
+    const list = { ownerships: [{ userId: 'u1' }] };
+
+    it('is the author for a list not yet made', () => {
+      expect(listOwnershipOf(undefined, null, 'u2')).toBe('owner');
+    });
+
+    it('is unknown until the list has loaded', () => {
+      expect(listOwnershipOf('l1', null, 'u1')).toBe('unknown');
+    });
+
+    it('is the owner or someone else once it has', () => {
+      expect(listOwnershipOf('l1', list, 'u1')).toBe('owner');
+      expect(listOwnershipOf('l1', list, 'u2')).toBe('other');
     });
   });
 

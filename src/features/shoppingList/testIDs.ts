@@ -20,6 +20,12 @@ export const shoppingListTestIDs = {
   listSettingsStore: 'list-settings-store',
   /** List settings: where the list is cheapest, and one candidate by its id. */
   storeComparison: 'list-store-comparison',
+  listBudgetScreen: 'list-budget-screen',
+  listBudgetStore: 'list-budget-store',
+  budgetInput: 'list-budget-input',
+  budgetRemaining: 'list-budget-remaining',
+  priceTrackingSwitch: 'list-budget-price-tracking',
+  budgetAndPricesButton: 'shopping-list-budget-and-prices',
   storeComparisonCandidate: (id: string) => `list-store-comparison-${id}`,
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */

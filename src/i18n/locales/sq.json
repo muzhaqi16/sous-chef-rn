@@ -563,7 +563,8 @@
     "all": "Të gjitha",
     "purchased": "Blerë",
     "vegan": "Vegane",
-    "sulfite": "Sulfite"
+    "sulfite": "Sulfite",
+    "budgetAndPrices": "Buxheti dhe çmimet"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -629,6 +630,7 @@
     "shoppingListImagesDesc": "Shfaq imazhet e produkteve në lista",
     "storeMode": "Mënyra e dyqanit",
     "storeModeDesc": "Bëni pazarin e një liste korridor pas korridori nga ikona e dyqanit te lista e blerjeve",
+    "budgetAndPricesDesc": "Vendosni buxhetin e një liste dhe shihni vlerësimin dhe ku kushton më pak, nga ikona e portofolit te lista e blerjeve",
     "shareUsageData": "Ndaj të dhënat e përdorimit",
     "shareUsageDataDesc": "Ndihmo të përmirësojmë {{appName}} duke ndarë statistika anonime",
     "resetSection": "Rivendos",

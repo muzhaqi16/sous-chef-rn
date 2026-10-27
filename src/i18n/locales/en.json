@@ -563,7 +563,8 @@
     "all": "All",
     "purchased": "Purchased",
     "vegan": "Vegan",
-    "sulfite": "Sulfite"
+    "sulfite": "Sulfite",
+    "budgetAndPrices": "Budget & prices"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -629,6 +630,7 @@
     "shoppingListImagesDesc": "Show product images in shopping lists",
     "storeMode": "Store mode",
     "storeModeDesc": "Shop a list aisle by aisle from the store icon on the shopping list",
+    "budgetAndPricesDesc": "Set a list's budget and see its estimate and where it costs least, from the wallet icon on the shopping list",
     "shareUsageData": "Share Usage Data",
     "shareUsageDataDesc": "Help improve {{appName}} by sharing anonymous usage statistics",
     "resetSection": "Reset",

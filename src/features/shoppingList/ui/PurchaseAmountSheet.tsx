@@ -48,6 +48,8 @@ interface PurchaseAmountSheetProps {
   loading?: boolean;
   /** A line under the price on what a typed price per unit means, if any. */
   describePrice?: (unitPrice: number) => string | null;
+  /** False with budget and prices off: the sheet asks for the amount alone. */
+  askPrice?: boolean;
 }
 
 /** null for empty, invalid or negative input. */
@@ -77,6 +79,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   onConfirm,
   loading = false,
   describePrice,
+  askPrice = true,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
@@ -196,60 +199,62 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
             ) : null}
           </View>
 
-          <View style={styles.section}>
-            <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('labels.totalPaid')}
-            </SectionHeader>
-            <View style={styles.inputRow}>
-              <Text role="body" tone="secondary" style={styles.prefix}>
-                {t('purchaseAmountSheet.currencySymbol')}
-              </Text>
-              <ThemedBottomSheetTextInput
-                style={styles.input}
-                value={priceInput}
-                onChangeText={setPriceInput}
-                keyboardType="decimal-pad"
-                selectTextOnFocus
-                maxLength={10}
-                placeholder={
-                  estimatedTotal == null
-                    ? localizeNumericHint(
-                        t('purchaseAmountSheet.pricePlaceholder'),
-                      )
-                    : formatPrice(estimatedTotal)
-                }
-                accessibilityLabel={t('labels.totalPaid')}
-                testID={shoppingListTestIDs.purchasePriceInput}
-              />
+          {askPrice ? (
+            <View style={styles.section}>
+              <SectionHeader variant="overline" style={styles.sectionLabel}>
+                {t('labels.totalPaid')}
+              </SectionHeader>
+              <View style={styles.inputRow}>
+                <Text role="body" tone="secondary" style={styles.prefix}>
+                  {t('purchaseAmountSheet.currencySymbol')}
+                </Text>
+                <ThemedBottomSheetTextInput
+                  style={styles.input}
+                  value={priceInput}
+                  onChangeText={setPriceInput}
+                  keyboardType="decimal-pad"
+                  selectTextOnFocus
+                  maxLength={10}
+                  placeholder={
+                    estimatedTotal == null
+                      ? localizeNumericHint(
+                          t('purchaseAmountSheet.pricePlaceholder'),
+                        )
+                      : formatPrice(estimatedTotal)
+                  }
+                  accessibilityLabel={t('labels.totalPaid')}
+                  testID={shoppingListTestIDs.purchasePriceInput}
+                />
+              </View>
+              {priceError ? (
+                <Text
+                  role="error"
+                  tone="error"
+                  style={styles.fieldError}
+                  testID={shoppingListTestIDs.purchasePriceError}
+                >
+                  {priceError}
+                </Text>
+              ) : null}
+              {perUnitPrice != null ? (
+                <PerUnitHint
+                  price={money(perUnitPrice)}
+                  unit={item?.unitName}
+                  style={styles.perUnitHint}
+                />
+              ) : null}
+              {priceNote ? (
+                <Text
+                  role="caption"
+                  tone="secondary"
+                  style={styles.perUnitHint}
+                  testID={shoppingListTestIDs.purchasePriceNote}
+                >
+                  {priceNote}
+                </Text>
+              ) : null}
             </View>
-            {priceError ? (
-              <Text
-                role="error"
-                tone="error"
-                style={styles.fieldError}
-                testID={shoppingListTestIDs.purchasePriceError}
-              >
-                {priceError}
-              </Text>
-            ) : null}
-            {perUnitPrice != null ? (
-              <PerUnitHint
-                price={money(perUnitPrice)}
-                unit={item?.unitName}
-                style={styles.perUnitHint}
-              />
-            ) : null}
-            {priceNote ? (
-              <Text
-                role="caption"
-                tone="secondary"
-                style={styles.perUnitHint}
-                testID={shoppingListTestIDs.purchasePriceNote}
-              >
-                {priceNote}
-              </Text>
-            ) : null}
-          </View>
+          ) : null}
         </View>
       </BottomSheetView>
     </BottomSheetModal>

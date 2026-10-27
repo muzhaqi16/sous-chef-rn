@@ -6,6 +6,7 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
+import { useStore } from '#store';
 import { formatCurrency } from '#/utils/formatters/number';
 import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
 import { StoreComparisonSection } from '../StoreComparisonSection';
@@ -120,5 +121,17 @@ describe('StoreComparisonSection', () => {
     expect(query.fired).toContainEqual({
       input: { listId: 'list-1', scope: PriceComparisonScope.Chain },
     });
+  });
+
+  // The rest of Budget & prices reads from the device; this needs the server.
+  it('says it needs a connection when it cannot be read offline', async () => {
+    useStore.setState({ isOnline: false });
+    const query = recordMock(ListStoreComparisonDocument, {
+      error: new Error('Network request failed'),
+    });
+    renderWithApollo(<Section />, { operationMocks: [query.mock] });
+
+    expect(await screen.findByText('Not available offline')).toBeTruthy();
+    useStore.setState({ isOnline: true });
   });
 });

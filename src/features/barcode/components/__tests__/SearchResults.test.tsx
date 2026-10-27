@@ -98,6 +98,9 @@ jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
     alternatives: [],
   }),
 }));
+jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: () => false,
+}));
 jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
   useStorePriceMemory: () => ({ lastPaid: null, usual: null, typical: null }),
 }));

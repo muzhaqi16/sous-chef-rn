@@ -563,7 +563,8 @@
     "all": "Tutte",
     "purchased": "Acquistato",
     "vegan": "Vegana",
-    "sulfite": "Solfiti"
+    "sulfite": "Solfiti",
+    "budgetAndPrices": "Budget e prezzi"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -629,6 +630,7 @@
     "shoppingListImagesDesc": "Mostra le immagini dei prodotti nelle liste",
     "storeMode": "Modalità negozio",
     "storeModeDesc": "Fai la spesa corsia per corsia dall'icona del negozio nella lista della spesa",
+    "budgetAndPricesDesc": "Imposta il budget di una lista e vedi la stima e dove costa meno, dall'icona del portafoglio nella lista della spesa",
     "shareUsageData": "Condividi dati di utilizzo",
     "shareUsageDataDesc": "Aiuta a migliorare {{appName}} condividendo statistiche anonime",
     "resetSection": "Ripristina",

@@ -39,11 +39,12 @@ import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
   TUTORIAL_STEP_CONFIG,
-  TUTORIAL_TOTAL_STEPS,
+  tutorialStepPosition,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
 
 // Utils
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
+import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
 import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
 import { discardOptimisticShoppingItems } from '#features/shoppingList/utils/optimisticItemCache';
 import { Telemetry } from '#/services/telemetry';
@@ -127,8 +128,10 @@ export const ShoppingListMainContent: React.FC<
     toShoppingListItemDetail,
     toEditItem,
     toStoreMode,
+    toListBudget,
   } = useAppNavigation();
   const storeModeEnabled = useStoreModeEnabled();
+  const budgetAndPricesEnabled = useBudgetAndPricesEnabled();
   const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
   const { addButtonRect, isOverlayOpen } = useTabBarState();
 
@@ -297,6 +300,20 @@ export const ShoppingListMainContent: React.FC<
           accessibilityLabel: t('shoppingListScreens.storeMode.open'),
         }
       : null;
+  // Opt-in from Settings: the list's money on a screen of its own.
+  const budgetAction: BarAction | null =
+    budgetAndPricesEnabled && currentListId
+      ? {
+          icon: 'wallet-outline',
+          tone: 'textSecondary',
+          onPress: () => toListBudget({ listId: currentListId }),
+          testID: shoppingListTestIDs.budgetAndPricesButton,
+          accessibilityLabel: t('labels.budgetAndPrices'),
+        }
+      : null;
+  const headerActions: BarAction[] = [budgetAction, storeModeAction].flatMap(
+    action => (action ? [action] : []),
+  );
   const selectedListHeader: ScreenHeaderConfig = {
     ...tabHeader,
     title: currentList?.name ?? tabHeader.title,
@@ -305,7 +322,7 @@ export const ShoppingListMainContent: React.FC<
       accessibilityHint: t('shoppingListScreen.switchListAccessibility'),
       testID: shoppingListTestIDs.listSelectorButton,
     },
-    actions: storeModeAction ? [storeModeAction] : undefined,
+    actions: headerActions.length > 0 ? headerActions : undefined,
   };
 
   // SearchBar rendered above tab pills (positioned above TabView in ShoppingListTabs)
@@ -683,8 +700,7 @@ export const ShoppingListMainContent: React.FC<
             targetRect={targetRect}
             title={t(stepConfig.titleKey)}
             subtitle={t(stepConfig.subtitleKey)}
-            stepIndex={stepConfig.stepIndex}
-            totalSteps={TUTORIAL_TOTAL_STEPS}
+            {...tutorialStepPosition(stepConfig.stepIndex, tutorial.priceStep)}
             onDismiss={tutorial.skipAll}
             onNext={handleNext}
             onTargetPress={handleTargetPress}

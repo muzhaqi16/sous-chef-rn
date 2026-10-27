@@ -232,6 +232,12 @@
       "allDone": "Everything's in the cart",
       "allDoneHint": "Tap {{done}} once you have checked out.",
       "cartEmpty": "Nothing in the cart yet"
+    },
+    "budget": {
+      "left": "{{amount}} left",
+      "over": "{{amount}} over budget",
+      "invalid": "Enter a budget, like 60, or leave it empty.",
+      "noStore": "No store chosen"
     }
   },
   "purchaseHistory": {

@@ -185,6 +185,8 @@ export function useAppNavigation() {
       navigation.navigate('ItemDetail', params),
     toListSettings: (params?: RootStackParamList['ListSettings']) =>
       navigation.navigate('ListSettings', params),
+    toListBudget: (params: RootStackParamList['ListBudget']) =>
+      navigation.navigate('ListBudget', params),
     toShareList: (params: RootStackParamList['ShareList']) =>
       navigation.navigate('ShareList', params),
     toPurchaseHistory: (params: RootStackParamList['PurchaseHistory']) =>

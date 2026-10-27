@@ -6,6 +6,7 @@ describe('resolveFeatureFlags', () => {
   // The server decides per user; the build only allows.
   it('allows every capability but the phone model by default', () => {
     expect(resolveFeatureFlags({}, undefined)).toEqual({
+      budgetAndPrices: true,
       deviceReceiptModel: false,
       deviceReceiptReading: true,
       ingredientPaste: true,
@@ -50,6 +51,7 @@ describe('resolveFeatureFlags', () => {
     expect(
       resolveFeatureFlags({}, 'retiredFlag=off,ingredientPaste=maybe,,='),
     ).toEqual({
+      budgetAndPrices: true,
       deviceReceiptModel: false,
       deviceReceiptReading: true,
       ingredientPaste: true,

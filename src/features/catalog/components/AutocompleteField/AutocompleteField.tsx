@@ -45,6 +45,7 @@ interface ModalVariantProps<TItem> extends SharedProps<TItem> {
   onSearchChange?: (text: string) => void;
   onModalOpen?: () => void;
   onModalClose?: () => void;
+  onEndEditing?: () => void;
 }
 
 export type AutocompleteFieldProps<TItem> =
@@ -144,6 +145,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
       onSearchChange={props.onSearchChange}
       onModalOpen={props.onModalOpen}
       onModalClose={props.onModalClose}
+      onEndEditing={props.onEndEditing}
       autoCapitalize={props.autoCapitalize}
       footer={addNew}
     />

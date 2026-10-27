@@ -16,11 +16,14 @@ export interface UserPreferences {
   showShoppingListImages: boolean;
   /** Store mode offered on the shopping list; absent on preferences saved before it. */
   storeMode?: boolean;
+  /** A list's budget and prices shown; absent on preferences saved before it. */
+  budgetAndPrices?: boolean;
 }
 
 export const defaultUserPreferences: Required<UserPreferences> = {
   showShoppingListImages: true,
   storeMode: false,
+  budgetAndPrices: false,
 };
 
 export interface PreferencesState {

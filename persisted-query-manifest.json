@@ -855,6 +855,12 @@
       "body": "mutation LeaveHome($input: LeaveHomeInput!) {\n  leaveHome(input: $input) {\n    __typename\n    ... on LeaveHomePayload {\n      converged\n      membership {\n        id\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
+      "id": "7ceacf285d737c4e32d66db3e582892330cd20ffce7d7c55dd6ac8749ef015b6",
+      "name": "ListBudget",
+      "type": "query",
+      "body": "query ListBudget($id: ID!) {\n  shoppingList(id: $id) {\n    id\n    ...useListBudget_list\n    ...useUpdateShoppingList_list\n    ...useShoppingListBudget_list\n    __typename\n  }\n}\n\nfragment useListBudget_list on ShoppingList {\n  id\n  currency\n  budgetAmount\n  totalCost\n  estimatedTotal\n  unpricedItems\n  priceTracking\n  targetStore {\n    id\n    name\n    __typename\n  }\n  ownerships {\n    id\n    userId\n    __typename\n  }\n  __typename\n}\n\nfragment useShoppingListBudget_list on ShoppingList {\n  id\n  budgetAmount\n  currency\n  priceTracking\n  version\n  updatedAt\n  __typename\n}\n\nfragment useUpdateShoppingList_list on ShoppingList {\n  id\n  name\n  isDefault\n  status\n  isCompleted\n  completedShopDate\n  budgetAmount\n  currency\n  targetStore {\n    id\n    name\n    __typename\n  }\n  version\n  updatedAt\n  __typename\n}"
+    },
+    {
       "id": "4f03f684c789b5710dbf89ff28635a3ec7a7e6ec5b94dd4c887211bf7535ec16",
       "name": "ListStoreComparison",
       "type": "query",

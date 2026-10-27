@@ -3,6 +3,7 @@ import { renderHook, act } from '@testing-library/react-native';
 import {
   ShoppingListTutorialProvider,
   ShoppingListTutorialStep,
+  tutorialStepPosition,
   useShoppingListTutorialActions,
   useShoppingListTutorialState,
 } from '../ShoppingListTutorialContext';
@@ -19,6 +20,11 @@ jest.mock('#store/useAppStore', () => ({
 
 jest.mock('#hooks/ui/useTutorialResetSignal', () => ({
   useTutorialResetSignal: () => false,
+}));
+
+const mockPriceStep = jest.fn(() => true);
+jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: () => mockPriceStep(),
 }));
 
 beforeEach(() => {
@@ -103,6 +109,66 @@ describe('ShoppingListTutorialProvider — step sequence', () => {
     );
 
     jest.useRealTimers();
+  });
+
+  // Budget & prices off: nothing in the tour is about entering a price.
+  it('goes from the checkbox straight to the purchased tab with prices off', () => {
+    mockPriceStep.mockReturnValue(false);
+    jest.useFakeTimers();
+
+    const { result } = renderHook(
+      () => ({
+        state: useShoppingListTutorialState(),
+        actions: useShoppingListTutorialActions(),
+      }),
+      {
+        wrapper: ({ children }: { children: React.ReactNode }) => (
+          <ShoppingListTutorialProvider canStart>
+            {children}
+          </ShoppingListTutorialProvider>
+        ),
+      },
+    );
+    act(() => {
+      jest.advanceTimersByTime(2000);
+    });
+    act(() => {
+      result.current.actions?.skipCurrentStep(); // add button -> swipe actions
+    });
+    act(() => {
+      result.current.actions?.skipCurrentStep(); // swipe actions -> checkbox
+    });
+    act(() => {
+      result.current.actions?.notifyCheckboxTapped();
+    });
+
+    expect(result.current.state?.currentStep).toBe(
+      ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB,
+    );
+    expect(result.current.state?.priceStep).toBe(false);
+
+    jest.useRealTimers();
+    mockPriceStep.mockReturnValue(true);
+  });
+});
+
+describe('tutorialStepPosition', () => {
+  it('counts the price step with prices on', () => {
+    expect(tutorialStepPosition(6, true)).toEqual({
+      stepIndex: 6,
+      totalSteps: 8,
+    });
+  });
+
+  it('closes the gap the price step leaves with prices off', () => {
+    expect(tutorialStepPosition(4, false)).toEqual({
+      stepIndex: 4,
+      totalSteps: 7,
+    });
+    expect(tutorialStepPosition(6, false)).toEqual({
+      stepIndex: 5,
+      totalSteps: 7,
+    });
   });
 });
 

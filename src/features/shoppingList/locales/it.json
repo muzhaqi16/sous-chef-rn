@@ -232,6 +232,12 @@
       "allDone": "È tutto nel carrello",
       "allDoneHint": "Tocca {{done}} quando hai pagato.",
       "cartEmpty": "Ancora niente nel carrello"
+    },
+    "budget": {
+      "left": "Restano {{amount}}",
+      "over": "{{amount}} oltre il budget",
+      "invalid": "Inserisci un budget, ad esempio 60, o lascialo vuoto.",
+      "noStore": "Nessun negozio scelto"
     }
   },
   "purchaseHistory": {

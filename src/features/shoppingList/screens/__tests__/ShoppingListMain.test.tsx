@@ -5,6 +5,9 @@ import { render, screen } from '@testing-library/react-native';
 import { ShoppingListMain } from '../ShoppingListMain';
 
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: () => false,
+}));
 
 jest.mock('#features/shoppingList/screens/useShoppingListScreen', () => ({
   useShoppingListScreen: () => ({

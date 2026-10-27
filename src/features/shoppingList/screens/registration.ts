@@ -2,6 +2,7 @@ import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { noInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 import { detailScreenOptions } from '#navigation/detailScreenOptions';
 import { ListSettings } from './ListSettings';
+import { ListBudget } from './ListBudget';
 import { ShareList } from './ShareList';
 import { AddEditItem } from './AddEditItem';
 import { ShoppingListItemDetail } from './ItemDetail';
@@ -15,6 +16,11 @@ import { StoreMode } from './StoreMode';
 export const shoppingListDetailScreens = {
   ListSettings: createNativeStackScreen({
     screen: ListSettings,
+    options: detailScreenOptions,
+    linking: null,
+  }),
+  ListBudget: createNativeStackScreen({
+    screen: ListBudget,
     options: detailScreenOptions,
     linking: null,
   }),

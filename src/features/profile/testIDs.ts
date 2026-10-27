@@ -23,6 +23,7 @@ export const profileTestIDs = {
   settingsShowShoppingListImagesSwitch:
     'settings-show-shopping-list-images-switch',
   settingsStoreModeSwitch: 'settings-store-mode-switch',
+  settingsBudgetAndPricesSwitch: 'settings-budget-and-prices-switch',
   /** One home's switch in the dietary profile's "Shared with" section. */
   dietarySharingSwitch: (homeId: string) => `dietary-sharing-switch-${homeId}`,
   avoidSheet: 'dietary-avoid-sheet',

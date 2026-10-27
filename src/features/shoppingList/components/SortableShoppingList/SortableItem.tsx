@@ -121,8 +121,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   const categoryLabel = firstNonBlank(category?.split(',')[0])?.trim();
   const quantity = data.quantity ?? 0;
   const quantityInput = data.quantityInput ?? null;
+  const { showImages, readingSystem, showPrices } = useShoppingListRowOptions();
   // A substitute is similar products' price, never shown as the product's own.
-  const suggested = isPurchased ? null : data.suggestedPrice;
+  const suggested = isPurchased || !showPrices ? null : data.suggestedPrice;
   const suggestedCost = suggestedLineCost(suggested, quantity);
   const estimate = suggestedCost
     ? t(
@@ -147,7 +148,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   ) : (
     detailText
   );
-  const { showImages, readingSystem } = useShoppingListRowOptions();
   const shownReading = complete ? shownLineReading(data, readingSystem) : null;
   const unitDisplay = shownReading
     ? shownReading.symbol

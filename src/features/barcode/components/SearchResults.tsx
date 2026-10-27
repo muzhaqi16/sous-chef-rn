@@ -38,6 +38,7 @@ import { useProductDietaryAlerts } from '#features/barcode/hooks/useProductDieta
 import { HouseholdAlertsSection } from './HouseholdAlertsSection';
 import { useStorePriceMemory } from '#features/barcode/hooks/useStorePriceMemory';
 import { StorePriceSection } from './StorePriceSection';
+import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
 import { useProductOrigin } from '#features/barcode/hooks/useProductOrigin';
 import { ProductOriginSection } from './ProductOriginSection';
 import { useProductBrandListings } from '#features/barcode/hooks/useProductBrandListings';
@@ -145,9 +146,11 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   // The unit the price sheet counts in: the matched line's, else the
   // product's own. A line with no unit of its own gets no comparison.
   const sheetUnit = cart.line ? cart.unit : item.trackingUnit;
+  // Off, store mode shows no money: the price lines read nothing.
+  const showPrices = useBudgetAndPricesEnabled();
   const prices = useStorePriceMemory(
     item.id,
-    source === 'storeMode' ? shoppingListId : undefined,
+    source === 'storeMode' && showPrices ? shoppingListId : undefined,
     sheetUnit ?? item.trackingUnit,
   );
 
@@ -274,7 +277,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   };
 
   // Only a product not yet in the cart can be added with what it cost.
-  const canAddWithPrice = source === 'storeMode' && !cart.inCart && !isAdded;
+  const canAddWithPrice =
+    source === 'storeMode' && showPrices && !cart.inCart && !isAdded;
 
   // No source means no destination: only a deep link (`scan/result`) lands here
   // without one, and a button that silently no-ops is worse than none. The

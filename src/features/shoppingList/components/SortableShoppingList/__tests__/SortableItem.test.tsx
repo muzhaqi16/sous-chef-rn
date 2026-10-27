@@ -205,6 +205,7 @@ jest.mock('../SortableListThemeContext', () => ({
   useShoppingListRowOptions: jest.fn(() => ({
     showImages: true,
     readingSystem: 'METRIC',
+    showPrices: true,
   })),
 }));
 
@@ -285,10 +286,12 @@ const renderRow = (
   entry: ReturnType<typeof seedItem>,
   isPurchased = false,
   readingSystem: UnitSystem.Metric | UnitSystem.Imperial = UnitSystem.Metric,
+  showPrices = true,
 ) => {
   (useShoppingListRowOptions as jest.Mock).mockReturnValue({
     showImages: true,
     readingSystem,
+    showPrices,
   });
   return renderWithApollo(
     <SwipeableListItem
@@ -393,6 +396,14 @@ describe('SwipeableListItem (SortableItem)', () => {
       expect(
         screen.getByText(/^2 liters · ≈ .*1\.25, similar products$/),
       ).toBeTruthy();
+    });
+
+    // Budget & prices off: a plain list, the line's name, amount and category.
+    it('shows none with budget and prices turned off', () => {
+      const entry = seedItem({ quantity: 2, suggestedPrice });
+      renderRow(entry, false, UnitSystem.Metric, false);
+      expect(screen.getByText('2 liters')).toBeTruthy();
+      expect(screen.queryByText(/≈/)).toBeNull();
     });
 
     it('shows none on a bought line', () => {

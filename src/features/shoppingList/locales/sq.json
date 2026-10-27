@@ -232,6 +232,12 @@
       "allDone": "Gjithçka është në shportë",
       "allDoneHint": "Prekni {{done}} pasi të keni paguar.",
       "cartEmpty": "Ende asgjë në shportë"
+    },
+    "budget": {
+      "left": "Mbeten {{amount}}",
+      "over": "{{amount}} mbi buxhet",
+      "invalid": "Vendosni një buxhet, si 60, ose lëreni bosh.",
+      "noStore": "Asnjë dyqan i zgjedhur"
     }
   },
   "purchaseHistory": {
