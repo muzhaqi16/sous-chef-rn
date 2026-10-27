@@ -2994,11 +2994,28 @@ input CreateShoppingListInput {
   """
   id: ID
   isDefault: Boolean
+  """
+  Lines for the new list, added in the same request as addItemsToShoppingList
+  adds them: at most 50, each on its own, each reporting its own result on
+  CreateShoppingListPayload.itemResults. A replayed create adds none.
+  """
+  items: [BatchAddShoppingListItemInput!]
+  """
+  The meal plan the list is derived from, recorded as linkShoppingListToMealPlan
+  records it: the caller must be able to view the plan, and the list is
+  generatedFromMealPlan.
+  """
+  mealPlanId: ID
   name: String!
   tags: [String!]
 }
 
 type CreateShoppingListPayload {
+  """
+  One result per CreateShoppingListInput.items entry, in input order, as
+  addItemsToShoppingList reports them; empty when none were sent.
+  """
+  itemResults: [BatchAddShoppingListItemResult!]!
   shoppingList: ShoppingList!
 }
 
@@ -13632,6 +13649,18 @@ type Query {
     """Only active (true) or inactive (false) currencies; all when omitted"""
     isActive: Boolean
   ): [Currency!]!
+  """
+  The meal plan whose days include today, in one read: the plan the Today
+  screen shows. Scoped as mealPlans is (that one home's with homeId, else the
+  caller's own plans and those of every home they belong to); the plan
+  starting latest when several cover the day; null when none does.
+  """
+  currentMealPlan(
+    """Only this home's plans; every one the caller may read when omitted"""
+    homeId: ID
+    """The caller's own calendar date, as YYYY-MM-DD"""
+    today: LocalDate!
+  ): MealPlan
   """
   The caller's live device with the identifier the app generated for it;
   null when there is none. An administrator's lookup is not limited to their
