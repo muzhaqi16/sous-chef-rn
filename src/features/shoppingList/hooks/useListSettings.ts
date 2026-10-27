@@ -285,26 +285,31 @@ export const useListSettings = (listId: string | undefined) => {
   const handleStoreSelected = (id: string | null, storeName: string | null) =>
     setPickedStore(id && storeName ? { id, name: storeName } : null);
 
+  // A changed budget limit (empty clears it); a non-numeric entry is left out
+  // rather than sent as NaN. `Number` would read a comma-decimal keypad's
+  // entry as NaN, so it is parsed with `parseDecimalInput`.
+  const savedBudget =
+    shoppingList?.budgetAmount != null ? String(shoppingList.budgetAmount) : '';
+  const typedBudget =
+    budgetInput.trim() === '' ? null : parseDecimalInput(budgetInput);
+  const changedBudget =
+    budgetInput.trim() !== savedBudget && !Number.isNaN(typedBudget)
+      ? typedBudget
+      : undefined;
+  const storeChanged = pickedStore?.id !== shoppingList?.targetStore?.id;
+  // What Save would write differs from the list; a new list has nothing to compare.
+  const hasChanges = listId
+    ? name.trim() !== shoppingList?.name ||
+      isDefault !== shoppingList.isDefault ||
+      changedBudget !== undefined ||
+      storeChanged
+    : undefined;
+
   const handleSave = () => {
     if (!name.trim()) {
       toastService.error(t('errors.listNameEmpty'));
       return;
     }
-
-    // A changed budget limit (empty clears it); a non-numeric entry is left out
-    // rather than sent as NaN. `Number` would read a comma-decimal keypad's
-    // entry as NaN, so it is parsed with `parseDecimalInput`.
-    const savedBudget =
-      shoppingList?.budgetAmount != null
-        ? String(shoppingList.budgetAmount)
-        : '';
-    const typedBudget =
-      budgetInput.trim() === '' ? null : parseDecimalInput(budgetInput);
-    const changedBudget =
-      budgetInput.trim() !== savedBudget && !Number.isNaN(typedBudget)
-        ? typedBudget
-        : undefined;
-    const storeChanged = pickedStore?.id !== shoppingList?.targetStore?.id;
 
     void executeWithLoadingState(
       async () => {
@@ -603,6 +608,7 @@ export const useListSettings = (listId: string | undefined) => {
     handleStoreSelected,
     handleToggleComplete,
     handleTogglePriceTracking,
+    hasChanges,
     homes,
     isArchived,
     isCompleted,

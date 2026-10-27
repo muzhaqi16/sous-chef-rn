@@ -113,6 +113,12 @@ export const PantrySettings: React.FC<
     if (!(await setDefault(pantryId))) setIsDefault(!newValue);
   };
 
+  // Save writes the name and description; the default flag saves on its own.
+  const hasChanges = pantryId
+    ? name.trim() !== pantry?.name ||
+      description.trim() !== (pantry.description ?? '')
+    : undefined;
+
   const handleSave = () => {
     if (!name.trim()) {
       alertService.alert(t('labels.error'), t('pantrySettings.nameEmptyError'));
@@ -209,6 +215,7 @@ export const PantrySettings: React.FC<
                   : t('labels.save'),
                 onPress: handleSave,
                 variant: 'primary',
+                hasChanges,
                 disabled: saving,
               },
             ]

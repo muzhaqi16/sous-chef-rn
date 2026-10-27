@@ -9,6 +9,7 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { InfoRowProps } from '#components/atoms/InfoRow';
 import { ListSettings } from '../ListSettings';
 import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
+import { Text as AppText } from '#components/atoms/Text';
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
@@ -302,6 +303,21 @@ describe('ListSettings', () => {
       expect.not.objectContaining({ targetStore: expect.anything() }),
       PriceComparisonScope.Store,
     );
+  });
+
+  // The accent says there is something to save; with nothing, Save still saves.
+  it('reads Save in plain text until something changes', () => {
+    render(<ListSettings route={editRoute} />);
+    const saveTone = () =>
+      screen
+        .UNSAFE_getAllByType(AppText)
+        .find(node => node.props.children === 'Save')?.props.tone;
+
+    expect(saveTone()).toBe('primary');
+
+    fireEvent.press(screen.getByText('pick-store'));
+
+    expect(saveTone()).toBe('accent');
   });
 
   it('shows Save button for editing', () => {

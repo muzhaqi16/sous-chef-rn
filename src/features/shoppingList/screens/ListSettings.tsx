@@ -65,6 +65,7 @@ export const ListSettings: React.FC<
     handleStoreSelected,
     handleToggleComplete,
     handleTogglePriceTracking,
+    hasChanges,
     homes,
     isArchived,
     isCompleted,
@@ -149,6 +150,7 @@ export const ListSettings: React.FC<
                   : t('labels.save'),
                 onPress: handleSave,
                 variant: 'primary',
+                hasChanges,
                 disabled: saving,
               },
             ]
