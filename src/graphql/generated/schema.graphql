@@ -3348,11 +3348,14 @@ scalar DateTime @specifiedBy(url: "https://www.rfc-editor.org/rfc/rfc3339#sectio
 """A package figure as the product's label prints it."""
 type DeclaredQuantity {
   """
-  The first figure the label prints in imperial units; null when it prints none.
+  The first figure the label prints in imperial units for this same
+  quantity, by the same rule as metric; null when it prints none.
   """
   imperial: MeasureReading
   """
-  The first figure the label prints in metric units; null when it prints none.
+  The first figure the label prints in metric units for this same quantity;
+  null when it prints none. A multipack's piece and its total are different
+  quantities: 6 x 8.4 fl oz (1.49 L) prints no metric figure for one piece.
   """
   metric: MeasureReading
   """
