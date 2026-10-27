@@ -20,6 +20,8 @@ export interface GenericAutocompleteFieldProps<T> {
   keyExtractor: (item: T) => string;
   onSelect: (item: T) => void;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  /** The field itself was finished: blurred or submitted. */
+  onEndEditing?: () => void;
   showAddNew?: boolean;
   addNewLabel?: string;
   onAddNew?: () => void;
@@ -35,8 +37,6 @@ export interface GenericAutocompleteFieldProps<T> {
   modalEmptySubtext?: string;
   modalMinSearchLength?: number;
   onSearchChange?: (text: string) => void;
-  /** The field itself was finished: blurred or submitted. */
-  onEndEditing?: () => void;
 }
 
 /**
@@ -96,6 +96,7 @@ export function GenericAutocompleteField<T>({
         addNewLabel={addNewLabel}
         onAddNew={onAddNew}
         reserveDropdownSpace={reserveDropdownSpace}
+        onEndEditing={onEndEditing}
       />
     );
   }

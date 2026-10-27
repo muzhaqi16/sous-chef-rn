@@ -452,6 +452,7 @@ describe('MoveToPantryModal', () => {
       onClose?: jest.Mock;
       /** What the seeded sheet's header reads; awaited before returning. */
       header?: string;
+      askPrice?: boolean;
     }
 
     // Mounted closed, then opened: the seed runs on the closed -> open
@@ -462,6 +463,7 @@ describe('MoveToPantryModal', () => {
       onConfirm = jest.fn().mockResolvedValue(true),
       onClose = jest.fn(),
       header = 'Purchased: 5 gal',
+      askPrice,
       ...purchase
     }: OpenWithPurchase = {}) {
       const cache = makeCache(line);
@@ -477,7 +479,7 @@ describe('MoveToPantryModal', () => {
         request: { query: MoveToPantryPurchaseInfoDocument, variables },
         result: { data: purchaseData(purchase) },
       };
-      const props = { ...defaultProps, onConfirm, onClose };
+      const props = { ...defaultProps, onConfirm, onClose, askPrice };
       const { rerender } = renderWithApollo(
         <MoveToPantryModal {...props} visible={false} />,
         { cache, operationMocks: [mock] },
@@ -530,6 +532,19 @@ describe('MoveToPantryModal', () => {
       // The total as shown; the server derives the unit price, never the client.
       expect(sent.totalCost).toBeCloseTo(2.95, 10);
       expect(sent).not.toHaveProperty('actualPrice');
+    });
+
+    // Prices off, or a list that doesn't track them: nothing asks or sends one.
+    it('asks for no amount paid, and sends none, when the list asks no price', async () => {
+      const { onConfirm } = await openWithPurchase({ askPrice: false });
+
+      expect(
+        screen.queryByTestId('move-to-pantry-field-Total paid'),
+      ).toBeNull();
+      confirm();
+
+      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      expect(onConfirm.mock.calls[0][0].totalCost).toBeUndefined();
     });
 
     describe('a total paid that is no amount', () => {

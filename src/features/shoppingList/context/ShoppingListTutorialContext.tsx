@@ -13,7 +13,7 @@ import type { TargetRect } from '#components/organisms/SpotlightCoachMark/Spotli
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import { storeApi } from '#store';
 import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
-import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
+import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
 
 // Key shape shared with useFeatureHint / resetAllFeatureHints.
 const HINT_PREFIX = 'feature_hint_shown_';
@@ -193,15 +193,18 @@ interface ShoppingListTutorialProviderProps {
   children: ReactNode;
   /** Whether preconditions are met (e.g. lists.length > 0) */
   canStart: boolean;
+  /** The list on screen, whose price tracking decides the price step. */
+  listId?: string;
 }
 
 export function ShoppingListTutorialProvider({
   children,
   canStart,
+  listId,
 }: ShoppingListTutorialProviderProps) {
   const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
-  const priceStep = useBudgetAndPricesEnabled();
+  const priceStep = useListAsksPrice(listId);
 
   const [isCompleted, setIsCompleted] = useState(() =>
     readCompletedFromStorage(userId),

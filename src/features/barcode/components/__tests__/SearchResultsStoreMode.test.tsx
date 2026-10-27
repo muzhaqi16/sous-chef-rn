@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -102,7 +102,7 @@ jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
 }));
 
 const mockShowPrices = jest.fn(() => true);
-jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: () => mockShowPrices(),
 }));
 
@@ -183,6 +183,19 @@ describe('SearchResults from store mode', () => {
 
     expect(mockPriceListIds.at(-1)).toBeUndefined();
     expect(screen.queryByText(t('barcode.price.usual'))).toBeNull();
+  });
+
+  // The list's own setting: its prices still show, but nobody is asked for one.
+  it('offers no add with price for a list that does not track prices', () => {
+    renderWithApollo(<SearchResults {...props} />, {
+      cache: seedCache([
+        { __typename: 'ShoppingList', id: 'list-1', priceTracking: false },
+      ]),
+    });
+
+    expect(mockPriceListIds.at(-1)).toBe('list-1');
+    expect(screen.queryByTestId('alternate-btn')).toBeNull();
+    expect(screen.getByText(t('barcode.addToCart'))).toBeTruthy();
   });
 
   // Budget & prices off: the product and the add, nothing about money.

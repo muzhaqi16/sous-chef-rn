@@ -286,6 +286,14 @@ describe('ListSettings', () => {
     );
 
     expect(saveTone()).toBe('accent');
+
+    // Edited back to what it was, there is nothing to save again.
+    fireEvent.changeText(
+      screen.getByDisplayValue('Weekly Shop'),
+      'Weekly Groceries',
+    );
+
+    expect(saveTone()).toBe('primary');
   });
 
   it('shows Save button for editing', () => {

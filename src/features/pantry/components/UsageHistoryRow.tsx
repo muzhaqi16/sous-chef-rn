@@ -9,6 +9,7 @@ import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { useMoney } from '#domain/money';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import type { UsageRecord } from '#features/pantry/types';
 import { formatReading, readingOf, type ReadingSystem } from '#domain/measure';
 
@@ -45,11 +46,14 @@ export const UsageHistoryRow: React.FC<{
 }> = ({ usage, readingSystem }) => {
   const { t } = useTranslation();
   const money = useMoney();
+  const showsCost = useBudgetAndPricesEnabled();
 
   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
   // Only a purchase carries one; 0 is a price, null is unknown.
   const pricePaid =
-    usage.totalCost == null ? null : money(usage.totalCost, usage.currency);
+    !showsCost || usage.totalCost == null
+      ? null
+      : money(usage.totalCost, usage.currency);
   // Gated on the KIND, not the purpose: a correction that finds stock is
   // recorded as a RESTOCK row and still carries one.
   const correction = correctionText(usage, t);

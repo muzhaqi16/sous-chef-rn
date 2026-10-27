@@ -34,6 +34,11 @@ type ItemPhotoFixture = NonNullable<PantryItemFixture['photos']>[number];
 import { PantryItemDetail } from '../PantryItemDetail';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 
+// The cost rows' own on/off cases live in PantryDetailInfo's suite.
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
+
 // Recipe-suggestions hook is its own concern (covered by
 // useRecipeSuggestionsForItem.test). Mock it so this integration test
 // doesn't need its query's mocks too.

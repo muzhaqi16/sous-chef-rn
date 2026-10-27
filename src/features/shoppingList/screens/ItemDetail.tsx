@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from './useShoppingListItemDetail';
@@ -94,6 +95,8 @@ export const ShoppingListItemDetail: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const money = useMoney();
+  // Off, the line reads with no estimate or amount paid.
+  const showPrices = useBudgetAndPricesEnabled();
   useScreenTransition('ShoppingListItemDetail');
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
@@ -221,7 +224,7 @@ export const ShoppingListItemDetail: React.FC<
     ? t(priorityLabelKey(priorityOption))
     : null;
 
-  const estimatedPrice = item.priceEstimate?.estimated;
+  const estimatedPrice = showPrices ? item.priceEstimate?.estimated : null;
   const preferredStoreName = item.storeInfo?.preferredStore?.name;
 
   // The API stores the price PER UNIT; the shopper entered the total. Show the
@@ -232,7 +235,7 @@ export const ShoppingListItemDetail: React.FC<
     ? purchaseInfo.purchasedPrice ?? null
     : null;
   const purchasedTotal =
-    purchasedQuantity != null
+    showPrices && purchasedQuantity != null
       ? totalFromUnitPrice(perUnitPaid, purchasedQuantity)
       : null;
   // At quantity 1 the per-unit price IS the total; repeating it reads as noise.

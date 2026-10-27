@@ -8,8 +8,12 @@ import type { usePantryAnalytics } from '#features/pantry/hooks/usePantryAnalyti
 import { DateRange, PeriodGranularity } from '#/graphql/generated/schemaTypes';
 import type { MockPart } from '#/test-utils/apolloMockProvider';
 import { PantryAnalytics } from '../PantryAnalytics';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 jest.mock('#hooks/navigation/useAppNavigation');
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 type AnalyticsReturn = MockPart<ReturnType<typeof usePantryAnalytics>>;
 type Ledger = NonNullable<AnalyticsReturn['ledgerData']>;
@@ -152,8 +156,26 @@ jest.mock('#features/pantry/components/charts/TrendLineChart', () => ({
 jest.mock('#features/pantry/components/charts/BreakdownPieChart', () => ({
   BreakdownPieChart: () => null,
 }));
+// Each bar as its label, with the figure beside it when the tab gives one.
 jest.mock('#features/pantry/components/charts/TopItemsBarChart', () => ({
-  TopItemsBarChart: () => null,
+  TopItemsBarChart: ({
+    data,
+  }: React.ComponentProps<
+    typeof import('#features/pantry/components/charts/TopItemsBarChart').TopItemsBarChart
+  >) => {
+    const { View, Text } = require('react-native');
+    return (
+      <View>
+        {data.map(bar => (
+          <Text key={bar.label}>
+            {bar.secondaryLabel === undefined
+              ? bar.label
+              : `${bar.label} (${bar.secondaryLabel})`}
+          </Text>
+        ))}
+      </View>
+    );
+  },
 }));
 jest.mock('#features/pantry/components/TabView/TabView', () => ({
   TabView: ({
@@ -396,6 +418,81 @@ describe('PantryAnalytics', () => {
 
       expect(screen.queryByText(totalSpent)).toBeNull();
       expect(screen.queryByText(avgCostPerUnit)).toBeNull();
+    });
+  });
+
+  describe('with budget & prices off', () => {
+    beforeEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    });
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+    });
+
+    const wasted = (itemName: string) => ({
+      itemId: itemName,
+      itemName,
+      count: 2,
+      valueByCurrency: [{ currencyCode: 'USD', amount: 4 }],
+    });
+
+    it('shows no spend or cost in the ledger, and still its movements', () => {
+      mockAnalytics = analyticsReturn({
+        summary: { totalAdded: 100, additionCount: 50 },
+        ledger: {
+          costAnalytics: {
+            costByStore: [],
+            totalSpent: [
+              {
+                __typename: 'CurrencyAmount',
+                amount: 45.99,
+                currencyCode: 'USD',
+              },
+            ],
+            averageCostPerUnit: [
+              {
+                __typename: 'UnitCostAverage',
+                amount: 4.6,
+                currencyCode: 'USD',
+                unitSymbol: 'kg',
+              },
+            ],
+          },
+        },
+      });
+      render(<PantryAnalytics route={route} />);
+
+      expect(screen.queryByText(t('labels.totalSpent'))).toBeNull();
+      expect(screen.queryByText(t('labels.avgCostPerUnit'))).toBeNull();
+      expect(screen.queryByText(/45\.99|4\.60/)).toBeNull();
+      expect(screen.getByText('Additions')).toBeTruthy();
+      expect(screen.getByText('50')).toBeTruthy();
+    });
+
+    it('shows no value lost in the waste tab, and still what was wasted', () => {
+      mockAnalytics = analyticsReturn({
+        waste: {
+          totalWasteCount: 5,
+          valueByCurrency: [{ currencyCode: 'USD', amount: 12.5 }],
+          topWastedItems: [wasted('Milk')],
+        },
+      });
+      render(<PantryAnalytics route={route} />);
+
+      expect(screen.queryByText(t('pantryAnalytics.estValueLost'))).toBeNull();
+      expect(screen.queryByText(/\$/)).toBeNull();
+      expect(screen.getByText('Total Waste')).toBeTruthy();
+      expect(screen.getByText('Milk')).toBeTruthy();
+    });
+
+    it('names what each top wasted item cost once the switch is on', () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+      mockAnalytics = analyticsReturn({
+        waste: { topWastedItems: [wasted('Milk')] },
+      });
+      render(<PantryAnalytics route={route} />);
+
+      expect(screen.getByText('Milk ($4.00)')).toBeTruthy();
     });
   });
 

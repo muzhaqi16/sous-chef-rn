@@ -38,7 +38,8 @@ import { useProductDietaryAlerts } from '#features/barcode/hooks/useProductDieta
 import { HouseholdAlertsSection } from './HouseholdAlertsSection';
 import { useStorePriceMemory } from '#features/barcode/hooks/useStorePriceMemory';
 import { StorePriceSection } from './StorePriceSection';
-import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
 import { useProductOrigin } from '#features/barcode/hooks/useProductOrigin';
 import { ProductOriginSection } from './ProductOriginSection';
 import { useProductBrandListings } from '#features/barcode/hooks/useProductBrandListings';
@@ -148,6 +149,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const sheetUnit = cart.line ? cart.unit : item.trackingUnit;
   // Off, store mode shows no money: the price lines read nothing.
   const showPrices = useBudgetAndPricesEnabled();
+  const asksPrice = useListAsksPrice(
+    source === 'storeMode' ? shoppingListId : null,
+  );
   const prices = useStorePriceMemory(
     item.id,
     source === 'storeMode' && showPrices ? shoppingListId : undefined,
@@ -276,9 +280,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       : t('labels.addToShoppingList');
   };
 
-  // Only a product not yet in the cart can be added with what it cost.
+  // Only a product not yet in the cart can be added with what it cost, and
+  // only to a list that asks for prices.
   const canAddWithPrice =
-    source === 'storeMode' && showPrices && !cart.inCart && !isAdded;
+    source === 'storeMode' && asksPrice && !cart.inCart && !isAdded;
 
   // No source means no destination: only a deep link (`scan/result`) lands here
   // without one, and a button that silently no-ops is worse than none. The

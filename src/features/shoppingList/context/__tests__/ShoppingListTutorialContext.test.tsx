@@ -23,8 +23,9 @@ jest.mock('#hooks/ui/useTutorialResetSignal', () => ({
 }));
 
 const mockPriceStep = jest.fn(() => true);
-jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
-  useBudgetAndPricesEnabled: () => mockPriceStep(),
+// The price step follows whether the list on screen asks for prices.
+jest.mock('#features/shoppingList/hooks/useListAsksPrice', () => ({
+  useListAsksPrice: () => mockPriceStep(),
 }));
 
 beforeEach(() => {

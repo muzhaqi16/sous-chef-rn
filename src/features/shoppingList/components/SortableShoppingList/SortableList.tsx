@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { View, Dimensions, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';

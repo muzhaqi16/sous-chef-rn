@@ -44,7 +44,7 @@ import {
 
 // Utils
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
-import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
 import { discardOptimisticShoppingItems } from '#features/shoppingList/utils/optimisticItemCache';
 import { Telemetry } from '#/services/telemetry';

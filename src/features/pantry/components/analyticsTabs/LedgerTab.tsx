@@ -3,6 +3,7 @@ import { View, ScrollView } from 'react-native';
 import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import { moneyByCurrency } from '#/domain/money';
 import { useTranslation } from '#/i18n';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { PlainScrollRefreshControl } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
 import { ChartSection } from '#features/pantry/components/analytics/ChartSection';
@@ -59,8 +60,10 @@ export const LedgerTab: React.FC<
   onRefresh,
 }) => {
   const { t } = useTranslation();
+  const showsCost = useBudgetAndPricesEnabled();
+  const costAnalytics = showsCost ? ledgerData?.costAnalytics : null;
   // One average per currency AND unit: a kilogram and a piece do not average.
-  const unitCosts = ledgerData?.costAnalytics?.averageCostPerUnit ?? [];
+  const unitCosts = costAnalytics?.averageCostPerUnit ?? [];
   const [onlyUnitCost] = unitCosts.length === 1 ? unitCosts : [];
 
   const ledgerPeriodData =
@@ -183,15 +186,12 @@ export const LedgerTab: React.FC<
       </View>
 
       {/* Cost Analytics */}
-      {!!ledgerData?.costAnalytics && (
+      {!!costAnalytics && (
         <View style={styles.summaryRow}>
           <AnalyticsSummaryCard
             title={t('labels.totalSpent')}
             // No costed restock in the period is an unknown spend, never zero.
-            value={
-              moneyByCurrency(ledgerData.costAnalytics.totalSpent) ??
-              UNKNOWN_AMOUNT
-            }
+            value={moneyByCurrency(costAnalytics.totalSpent) ?? UNKNOWN_AMOUNT}
             icon="cash-outline"
             uniProps={theme => ({ color: theme.colors.warning })}
           />

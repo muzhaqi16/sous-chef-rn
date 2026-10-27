@@ -49,6 +49,8 @@ export interface InlineAutocompleteProps<T> {
 
   // Input
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  /** The field itself was finished: blurred or submitted. */
+  onEndEditing?: () => void;
 
   // Renders a spacer of the open list's height: the list is absolute, so an
   // `enableDynamicSizing` sheet doesn't measure it and it opens past the sheet's
@@ -78,6 +80,7 @@ export function InlineAutocomplete<T>({
   footer,
   autoCapitalize = 'none',
   reserveDropdownSpace = false,
+  onEndEditing,
 }: InlineAutocompleteProps<T>) {
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -208,6 +211,7 @@ export function InlineAutocomplete<T>({
             onChangeText={handleTextChange}
             placeholder={placeholder}
             onBlur={handleBlur}
+            onEndEditing={onEndEditing}
             onFocus={handleFocus}
             autoCapitalize={autoCapitalize}
             testID={testID}

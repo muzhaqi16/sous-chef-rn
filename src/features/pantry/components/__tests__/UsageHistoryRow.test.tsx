@@ -10,6 +10,11 @@ import {
 import { t } from '#/i18n';
 import { UsageHistoryRow } from '#features/pantry/components/UsageHistoryRow';
 import type { UsageRecord } from '#features/pantry/types';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   formatDate: jest.fn((d: string) => `formatted:${d}`),
@@ -27,6 +32,10 @@ const makeRecord = (overrides: Partial<UsageRecord> = {}): UsageRecord => ({
 });
 
 describe('UsageHistoryRow', () => {
+  afterEach(() => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+  });
+
   it('shows the date and the quantity with its unit symbol', () => {
     render(
       <UsageHistoryRow
@@ -113,6 +122,23 @@ describe('UsageHistoryRow', () => {
       />,
     );
     expect(screen.queryByText(/\$/)).toBeNull();
+  });
+
+  it('shows no price with budget & prices off, and still the restock', () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    render(
+      <UsageHistoryRow
+        readingSystem={UnitSystem.Imperial}
+        usage={makeRecord({
+          purpose: UsagePurpose.Restock,
+          totalCost: 1.49,
+          currency: { code: 'USD' },
+        })}
+      />,
+    );
+    expect(screen.queryByText(/1\.49/)).toBeNull();
+    expect(screen.getByText('formatted:2024-01-01')).toBeTruthy();
+    expect(screen.getByText('+1 L')).toBeTruthy();
   });
 
   it("shows a person's correction reason when their kind says it is theirs", () => {

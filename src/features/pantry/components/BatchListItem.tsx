@@ -17,6 +17,7 @@ import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { shownStock } from '#domain/stockDisplay';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { BatchListItem_PantryItemFragmentDoc } from './BatchListItem.generated';
 import { Text } from '#components/atoms/Text';
 import { Badge } from '#components/atoms/Badge';
@@ -75,6 +76,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   const today = useToday();
   const money = useMoney();
   const readingSystem = useReadingSystem();
+  const showsCost = useBudgetAndPricesEnabled();
   // Per-entity cache subscription: re-renders only when this batch's
   // PantryItemBatchFragment fields change (e.g., status, isOpened, quantity
   // updated by openBatch / wasteBatch mutations). Falls back to the source
@@ -163,7 +165,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
           </Text>
         ) : null}
 
-        {batch.costPerUnit != null ? (
+        {showsCost && batch.costPerUnit != null ? (
           <Text role="caption" tone="tertiary" style={styles.metaText}>
             {t('pantryItemDetail.batch.costPerUnit', {
               cost: money(batch.costPerUnit, batch.currency),

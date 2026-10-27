@@ -633,7 +633,7 @@
     "shoppingListImagesDesc": "Mostra le immagini dei prodotti nelle liste",
     "storeMode": "Modalità negozio",
     "storeModeDesc": "Fai la spesa corsia per corsia dall'icona del negozio nella lista della spesa",
-    "budgetAndPricesDesc": "Imposta il budget di una lista e vedi la stima e dove costa meno, dall'icona del portafoglio nella lista della spesa",
+    "budgetAndPricesDesc": "Prezzi, stime e budget nelle tue liste e nella dispensa, con il budget di ogni lista dietro l'icona del portafoglio. Disattivato, nulla ti chiede quanto hai pagato.",
     "shareUsageData": "Condividi dati di utilizzo",
     "shareUsageDataDesc": "Aiuta a migliorare {{appName}} condividendo statistiche anonime",
     "resetSection": "Ripristina",

@@ -8,6 +8,11 @@ import {
   AcquisitionMethod,
   ItemCondition,
 } from '#/graphql/generated/schemaTypes';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   ...jest.requireActual('#features/pantry/hooks/usePantryItemTransformation'),
@@ -110,6 +115,65 @@ describe('PantryDetailInfo', () => {
     expect(screen.getByText('Aug 30, 2026 · $2.95')).toBeTruthy();
     expect(screen.getByText('$0.59')).toBeTruthy();
     expect(screen.getByText('$2.95')).toBeTruthy();
+  });
+
+  describe('with budget & prices off', () => {
+    beforeEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    });
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+    });
+
+    it('shows no cost rows, and the purchase day with no total', () => {
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={{ ...baseItem, costPerUnit: 0.74, totalCost: 5.95 }}
+          pricing={{
+            isAveraged: true,
+            isRateDiluted: false,
+            lastPurchase: {
+              date: '2026-08-31T00:00:00Z',
+              totalCost: 3,
+              currency: { __typename: 'Currency', id: 'usd', code: 'USD' },
+            },
+          }}
+        />,
+      );
+
+      expect(screen.queryByText('Avg Cost/Unit')).toBeNull();
+      expect(screen.queryByText('Cost/Unit')).toBeNull();
+      expect(screen.queryByText('Stock value')).toBeNull();
+      expect(screen.queryByText(/\$/)).toBeNull();
+      expect(screen.getByText('Last purchase')).toBeTruthy();
+      expect(screen.getByText('Aug 31, 2026')).toBeTruthy();
+      expect(screen.getByText('Quantity')).toBeTruthy();
+    });
+
+    it('shows the first purchase day with no total', () => {
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={{
+            ...baseItem,
+            costPerUnit: 0.59,
+            totalCost: 2.95,
+            purchase: {
+              __typename: 'Purchase',
+              id: 'pu1',
+              purchaseDate: '2026-08-30T00:00:00Z',
+              unitPrice: 0.59,
+              totalPrice: 2.95,
+              currency: { __typename: 'Currency', id: 'cur-usd', code: 'USD' },
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getByText('Aug 30, 2026')).toBeTruthy();
+      expect(screen.queryByText(/\$/)).toBeNull();
+    });
   });
 
   it('always renders Added row', () => {

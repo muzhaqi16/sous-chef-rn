@@ -115,6 +115,24 @@ describe('useListBudget', () => {
     expect(result.current.list?.budgetAmount).toBeNull();
   });
 
+  it('turns price tracking off at once, offline', async () => {
+    const update = recordMock(UpdateShoppingListDocument, {
+      data: { updateShoppingList: null },
+    });
+    const { result } = render({ operationMocks: [update.mock] });
+
+    act(() => {
+      result.current.setPriceTracking(false);
+    });
+
+    await waitFor(() =>
+      expect(update.fired[0]).toMatchObject({
+        input: { id: 'list-1', settings: { priceTracking: false } },
+      }),
+    );
+    expect(result.current.list?.priceTracking).toBe(false);
+  });
+
   it('sends a picked store with the comparison on screen', async () => {
     const update = recordMock(UpdateShoppingListDocument, {
       data: { updateShoppingList: null },

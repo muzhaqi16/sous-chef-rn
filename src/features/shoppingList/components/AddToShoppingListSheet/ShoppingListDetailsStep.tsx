@@ -29,6 +29,7 @@ import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { logValidationErrors } from '#/utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -56,6 +57,8 @@ export const ShoppingListDetailsStep: React.FC<
   onSuccess,
 }) => {
   const { t } = useTranslation();
+  // Off, the line is added with no price.
+  const showPrices = useBudgetAndPricesEnabled();
   const insets = useSafeAreaInsets();
 
   // Mounted fresh each time the user enters the details step, so the form
@@ -120,7 +123,7 @@ export const ShoppingListDetailsStep: React.FC<
           unitId: unitData.unit?.id ?? undefined,
           notes: notes || undefined,
           category: category || undefined,
-          estimatedPrice: estimatedPrice || undefined,
+          estimatedPrice: (showPrices && estimatedPrice) || undefined,
           brandName: brand.trim() || undefined,
           brandId: brandId ?? undefined,
           // Both or neither: the schema refuses a weight without a resolved
@@ -264,16 +267,18 @@ export const ShoppingListDetailsStep: React.FC<
           />
         </FieldRow>
 
-        <FormInput
-          label={t('shoppingListScreens.estimatedPrice')}
-          value={estimatedPrice}
-          onChangeText={text => setFieldValue('estimatedPrice', text)}
-          placeholder={localizeNumericHint(
-            t('shoppingListScreens.estimatedPricePlaceholder'),
-          )}
-          keyboardType="numeric"
-          useBottomSheetInput
-        />
+        {showPrices ? (
+          <FormInput
+            label={t('shoppingListScreens.estimatedPrice')}
+            value={estimatedPrice}
+            onChangeText={text => setFieldValue('estimatedPrice', text)}
+            placeholder={localizeNumericHint(
+              t('shoppingListScreens.estimatedPricePlaceholder'),
+            )}
+            keyboardType="numeric"
+            useBottomSheetInput
+          />
+        ) : null}
 
         <SegmentedControl
           label={t('shoppingListScreens.priority')}

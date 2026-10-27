@@ -1,6 +1,7 @@
 import { useTranslation } from '#/i18n';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { refByIdOrName } from '#/utils/refInput';
@@ -16,6 +17,7 @@ export function usePantryItemSubmission({
 }) {
   const { t } = useTranslation();
   const { addItem, adding } = usePantryIntake(pantryId);
+  const asksCost = useBudgetAndPricesEnabled();
 
   const handleConfirm = async ({
     itemName,
@@ -98,10 +100,12 @@ export function usePantryItemSubmission({
 
     // Sent only when the user gave some: `storeId` comes from a picked store
     // (no free-text store name), and `acquisitionMethod` rides along with any
-    // purchase field or a non-default method.
-    const parsedCost = costPerUnit.trim()
-      ? parseDecimalInput(costPerUnit)
-      : undefined;
+    // purchase field or a non-default method. With prices off, no cost is sent,
+    // whatever the hidden field holds.
+    const parsedCost =
+      asksCost && costPerUnit.trim()
+        ? parseDecimalInput(costPerUnit)
+        : undefined;
     const costValue =
       parsedCost !== undefined && !isNaN(parsedCost) && parsedCost > 0
         ? parsedCost

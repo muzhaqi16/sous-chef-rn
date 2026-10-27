@@ -11,6 +11,11 @@ import {
 import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFragments.generated';
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 const batch = (quantity: number): PantryItemBatchFragment => ({
   __typename: 'PantryItemBatch',
@@ -44,6 +49,27 @@ describe('BatchListItem', () => {
   it('renders a fractional batch quantity as a cooking fraction', () => {
     renderWithApollo(<BatchListItem batch={batch(1.25)} unitSymbol="cup" />);
     expect(screen.getByText('1 1/4 cup')).toBeTruthy();
+  });
+
+  describe('what a batch cost', () => {
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+    });
+
+    const priced = { ...batch(2), costPerUnit: 1.25, totalCost: 2.5 };
+
+    it('shows the cost per unit with budget & prices on', () => {
+      renderWithApollo(<BatchListItem batch={priced} unitSymbol="pc" />);
+      expect(screen.getByText('$1.25/unit')).toBeTruthy();
+    });
+
+    it('shows no cost with budget & prices off, and still the batch', () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+      renderWithApollo(<BatchListItem batch={priced} unitSymbol="pc" />);
+
+      expect(screen.queryByText(/1\.25/)).toBeNull();
+      expect(screen.getByText('2 pc')).toBeTruthy();
+    });
   });
 
   it("shows the batch's own package size", () => {

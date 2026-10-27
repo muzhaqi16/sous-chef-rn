@@ -21,6 +21,7 @@ import { PantryActionModal } from '#features/pantry/components/modals/PantryActi
 import { Text } from '#components/atoms/Text';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { parseMoneyInput } from '#/utils/validation/common';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import type {
   PantryActionSharedState,
   ShownQuantity,
@@ -48,6 +49,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   onConfirm,
 }) => {
   const { t } = useTranslation();
+  const asksCost = useBudgetAndPricesEnabled();
   const [quantityInput, setQuantityInput] = useState('1');
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
@@ -65,8 +67,9 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const quantityValue = parseFractionalInput(quantityInput);
   const quantityIsUsable =
     quantityValue !== null && !isNaN(quantityValue) && quantityValue > 0;
-  const costPerUnit = parseMoneyInput(costPerUnitInput);
-  const totalCost = parseMoneyInput(totalCostInput);
+  // Off, the cost fields are hidden: they neither block a restock nor send one.
+  const costPerUnit = asksCost ? parseMoneyInput(costPerUnitInput) : null;
+  const totalCost = asksCost ? parseMoneyInput(totalCostInput) : null;
   // On the fields once a confirm is refused, then live; until then the
   // quantity field's own format hint speaks.
   const errorOn = (refused: boolean, key: TranslationKey) =>
@@ -122,6 +125,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
           setCostPerUnitInput={setCostPerUnitInput}
           totalCostInput={totalCostInput}
           setTotalCostInput={setTotalCostInput}
+          asksCost={asksCost}
           expiresAt={expiresAt}
           setExpiresAt={setExpiresAt}
           errors={errors}
@@ -139,6 +143,7 @@ const RestockActionFields: React.FC<{
   setCostPerUnitInput: (v: string) => void;
   totalCostInput: string;
   setTotalCostInput: (v: string) => void;
+  asksCost: boolean;
   expiresAt: Date | null;
   setExpiresAt: (v: Date | null) => void;
   errors: Record<'quantity' | 'costPerUnit' | 'totalCost', string | undefined>;
@@ -150,6 +155,7 @@ const RestockActionFields: React.FC<{
   setCostPerUnitInput,
   totalCostInput,
   setTotalCostInput,
+  asksCost,
   expiresAt,
   setExpiresAt,
   errors,
@@ -244,32 +250,34 @@ const RestockActionFields: React.FC<{
       </View>
 
       {/* Cost Tracking */}
-      <View style={commonStyles.bottomSheetSection}>
-        <View style={styles.costRow}>
-          <View style={styles.costField}>
-            <FormInput
-              label={t('restockItem.costPerUnit')}
-              value={costPerUnitInput}
-              onChangeText={setCostPerUnitInput}
-              placeholder={localizeNumericHint('0.00')}
-              keyboardType="decimal-pad"
-              useBottomSheetInput
-              error={errors.costPerUnit}
-            />
-          </View>
-          <View style={styles.costField}>
-            <FormInput
-              label={t('labels.totalPaid')}
-              value={totalCostInput}
-              onChangeText={setTotalCostInput}
-              placeholder={localizeNumericHint('0.00')}
-              keyboardType="decimal-pad"
-              useBottomSheetInput
-              error={errors.totalCost}
-            />
+      {asksCost ? (
+        <View style={commonStyles.bottomSheetSection}>
+          <View style={styles.costRow}>
+            <View style={styles.costField}>
+              <FormInput
+                label={t('restockItem.costPerUnit')}
+                value={costPerUnitInput}
+                onChangeText={setCostPerUnitInput}
+                placeholder={localizeNumericHint('0.00')}
+                keyboardType="decimal-pad"
+                useBottomSheetInput
+                error={errors.costPerUnit}
+              />
+            </View>
+            <View style={styles.costField}>
+              <FormInput
+                label={t('labels.totalPaid')}
+                value={totalCostInput}
+                onChangeText={setTotalCostInput}
+                placeholder={localizeNumericHint('0.00')}
+                keyboardType="decimal-pad"
+                useBottomSheetInput
+                error={errors.totalCost}
+              />
+            </View>
           </View>
         </View>
-      </View>
+      ) : null}
 
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>

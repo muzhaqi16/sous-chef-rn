@@ -58,7 +58,10 @@ const ShoppingListMainInner: React.FC = () => {
   });
 
   return (
-    <ShoppingListTutorialProvider canStart={screenData.state.lists.length > 0}>
+    <ShoppingListTutorialProvider
+      canStart={screenData.state.lists.length > 0}
+      listId={screenData.state.currentListId}
+    >
       <ShoppingListModalsProvider
         currentListId={screenData.state.currentListId}
         items={[

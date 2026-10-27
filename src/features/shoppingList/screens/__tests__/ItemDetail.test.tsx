@@ -29,6 +29,11 @@ import { EntryImageSource } from '#/graphql/generated/schemaTypes';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 const mockUseShowShoppingListImages =
   useShowShoppingListImages as jest.MockedFunction<
@@ -173,6 +178,7 @@ describe('ShoppingListItemDetail', () => {
   beforeEach(() => {
     mockUseShowShoppingListImages.mockReturnValue(true);
     mockResolveImageUrl.mockReturnValue(null);
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
   });
 
   it('renders the item name', async () => {
@@ -231,6 +237,33 @@ describe('ShoppingListItemDetail', () => {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
     await waitFor(() => expect(screen.getByText('$4.59')).toBeTruthy());
+  });
+
+  it('shows no estimate or amount paid with prices turned off', async () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              movedToPantryAt: null,
+              purchasedQuantity: 2,
+              purchasedPrice: 3.5,
+              purchaseDate: '2026-08-19T00:00:00Z',
+              purchasedBy: null,
+            },
+          }),
+        ),
+      ],
+    });
+
+    await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+    expect(screen.queryByText('$4.59')).toBeNull();
+    expect(screen.queryByText('Total paid')).toBeNull();
+    expect(screen.queryByText('$7.00')).toBeNull();
   });
 
   it('shows the preferred store', async () => {

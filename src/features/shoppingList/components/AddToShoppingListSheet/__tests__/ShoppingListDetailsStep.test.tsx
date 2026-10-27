@@ -7,6 +7,11 @@ import {
   waitFor,
 } from '@testing-library/react-native';
 import { ShoppingListDetailsStep } from '../ShoppingListDetailsStep';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 const mockAddItem = jest.fn();
 jest.mock('#features/shoppingList/hooks/mutations/useAddShoppingItem', () => ({
@@ -57,6 +62,30 @@ describe('ShoppingListDetailsStep', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockAddItem.mockResolvedValue(true);
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+  });
+
+  it('asks for an estimated price only with prices turned on', () => {
+    renderStep();
+    expect(screen.getByText('Estimated Price')).toBeTruthy();
+  });
+
+  it('adds the line with no price, and asks for none, with prices turned off', async () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    const onSuccess = jest.fn();
+    renderStep({ onSuccess });
+
+    expect(screen.queryByText('Estimated Price')).toBeNull();
+    fireEvent.changeText(
+      screen.getByTestId('add-shopping-item-name-input'),
+      'Bananas',
+    );
+    fireEvent.press(screen.getByTestId('add-shopping-item-submit-button'));
+
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    expect(mockAddItem).toHaveBeenCalledWith(
+      expect.objectContaining({ estimatedPrice: undefined }),
+    );
   });
 
   it('pre-fills the item name from the search term', () => {

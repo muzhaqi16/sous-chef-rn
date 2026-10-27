@@ -22,7 +22,7 @@ import { useStore } from '#store';
 import { fireEvent, userEvent } from '@testing-library/react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
-import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
 
@@ -33,7 +33,7 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#features/shoppingList/hooks/useStoreModeEnabled', () => ({
   useStoreModeEnabled: jest.fn(() => false),
 }));
-jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => false),
 }));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({

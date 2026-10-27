@@ -4,15 +4,25 @@ import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { ErrorCode, StorageState } from '#/graphql/generated/schemaTypes';
+import {
+  AcquisitionMethod,
+  ErrorCode,
+  StorageState,
+} from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { addPantryItemDefaults } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 import type { AddPantryItemFormData } from '#features/pantry/types';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -452,6 +462,53 @@ describe('usePantryItemSubmission', () => {
       input: expect.objectContaining({
         unit: undefined,
       }),
+    });
+  });
+
+  describe('the cost per unit', () => {
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+    });
+
+    const submit = async (overrides: Partial<AddPantryItemFormData>) => {
+      const m = createMock();
+      const { result } = renderHookWithApollo(() => useSubmission(overrides), {
+        operationMocks: [m.mock],
+      });
+      await act(async () => {
+        await result.current.handleConfirm();
+      });
+      const [fired] = m.fired;
+      return inputOf(fired!);
+    };
+
+    it('sends the cost typed with budget & prices on', async () => {
+      const input = await submit({ costPerUnit: '4.99' });
+
+      expect(input.purchase).toEqual(
+        expect.objectContaining({ costPerUnit: 4.99 }),
+      );
+    });
+
+    it('sends no cost with budget & prices off, whatever the form holds', async () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+
+      const input = await submit({ costPerUnit: '4.99' });
+
+      expect(input.purchase).toBeUndefined();
+      expect(mockOnSuccess).toHaveBeenCalled();
+    });
+
+    it('still sends the store picked with budget & prices off', async () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+
+      const input = await submit({ costPerUnit: '4.99', storeId: 'store-1' });
+
+      // `toEqual` passes only while `costPerUnit` is absent or undefined.
+      expect(input.purchase).toEqual({
+        storeId: 'store-1',
+        acquisitionMethod: AcquisitionMethod.Purchased,
+      });
     });
   });
 

@@ -17,6 +17,7 @@ import type {
   StoreModeTab,
 } from '#features/shoppingList/screens/useStoreMode';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface StoreModeHeaderProps {
   cartCount: number;
@@ -74,7 +75,10 @@ export const StoreModeHeader: React.FC<StoreModeHeaderProps> = ({
   };
   for (const aisle of aisles) counts[aisle.department] = aisle.count;
 
+  // Off, the trip reads as what is left to buy, with no cost.
+  const showPrices = useBudgetAndPricesEnabled();
   const estimateText =
+    showPrices &&
     estimate &&
     (estimate.priced === estimate.lines
       ? t('shoppingListScreens.storeMode.estimate', { price: estimate.price })

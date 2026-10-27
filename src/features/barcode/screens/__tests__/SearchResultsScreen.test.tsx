@@ -44,7 +44,7 @@ const searchResult = (
 });
 
 const mockShowPrices = jest.fn(() => false);
-jest.mock('#features/shoppingList/hooks/useBudgetAndPricesEnabled', () => ({
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: () => mockShowPrices(),
 }));
 jest.mock('../../hooks/useSearchResults', () => ({

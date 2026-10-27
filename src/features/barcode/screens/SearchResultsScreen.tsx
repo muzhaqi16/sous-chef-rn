@@ -22,7 +22,7 @@ import type { BarcodeSource, ScannedItem } from '#features/barcode/types';
 import type { ScannedPack } from '#utils/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
-import { useBudgetAndPricesEnabled } from '#features/shoppingList/hooks/useBudgetAndPricesEnabled';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
 function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
