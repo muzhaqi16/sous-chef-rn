@@ -5155,9 +5155,11 @@ type ExpiryReminderNotificationData {
 union ExternalRecipeDetails = SpoonacularRecipeDetails
 
 enum ExternalSource {
+  ALDI
   ALLRECIPES
   BARCODE_LOOKUP
   EDAMAM
+  GIANT_EAGLE
   KROGER
   OPENFOODFACTS
   SPOONACULAR
@@ -6849,6 +6851,16 @@ type Item {
   OTHER. A client places a line it creates offline by it.
   """
   storeDepartment: StoreDepartment!
+  """
+  The item's shelf price at each store that collected one in the 90 days
+  before today: current prices first, cheapest first, compared per kilogram,
+  litre or piece when every one states it. Forward only, via first: the
+  ranking has no cursor.
+  """
+  storePricesConnection(
+    """How many stores: 20 when omitted, at most 100"""
+    first: Int
+  ): ItemStorePriceConnection!
   """This item's SKUs at individual stores, oldest first by default."""
   storeSkusConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -7403,6 +7415,62 @@ enum ItemStatus {
   ARCHIVED
   DEPRECATED
   PENDING
+}
+
+"""
+A product's shelf price at one store, from the prices collected there and
+never a household's own. The typical and lowest prices are over the 90 days
+before today.
+"""
+type ItemStorePrice {
+  """Where the store shelves it, as the store states it"""
+  aisle: String
+  """When the store last listed it"""
+  confirmedAt: DateTime!
+  """
+  How many of those days had a price in force: the typical price's sample
+  """
+  coveredDays: Int!
+  currency: Currency!
+  """
+  Listed within the last 8 days; a price that is not current is never the cheapest
+  """
+  isCurrent: Boolean!
+  """The lowest price in force on any of those days"""
+  lowestPrice: Float!
+  normalizedBasis: PriceBasis
+  """The price per kilogram, litre or piece, when the package is known"""
+  normalizedPrice: Float
+  onPromotion: Boolean!
+  """The net quantity one unit holds, in packageNetWeightUnit"""
+  packageNetWeight: Float
+  packageNetWeightUnit: Unit
+  """What a shopper pays now: the promotion when one applies"""
+  price: Float!
+  """The shelf price before any promotion"""
+  regularPrice: Float!
+  store: Store!
+  """
+  The median of the price in force on each day the 90 days before today cover
+  """
+  typicalPrice: Float!
+  """What the price buys: one of this unit"""
+  unit: Unit!
+}
+
+"""One page of an item's store prices, cheapest current price first."""
+type ItemStorePriceConnection {
+  edges: [ItemStorePriceEdge!]!
+  pageInfo: PageInfo!
+  """
+  The number of store prices on this page; a ranked list has no later page to count
+  """
+  totalCount: Int!
+}
+
+type ItemStorePriceEdge {
+  cursor: String!
+  node: ItemStorePrice!
 }
 
 """Store SKU mapping for items"""
