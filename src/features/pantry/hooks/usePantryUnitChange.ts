@@ -11,7 +11,8 @@ import { isVersionConflictCode } from '#/utils/errors/versionConflict';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
-import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { writeRestatedBatches } from '#features/pantry/cache/restatedStack';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   ChangePantryItemUnitDocument,
   PreviewPantryItemUnitChangeDocument,
@@ -46,7 +47,17 @@ export function usePantryUnitChange() {
   const { t } = useTranslation();
   const client = useApolloClient();
   const isApiUnavailable = useIsApiUnavailable();
-  const [changeMutation] = useMutation(ChangePantryItemUnitDocument);
+  const [changeMutation] = useMutation(ChangePantryItemUnitDocument, {
+    update(cache, { data }, { variables }) {
+      const changed = appliedPayload(data);
+      if (!changed || !variables) return;
+      writeRestatedBatches(
+        cache,
+        variables.input.pantryItemId,
+        changed.batchesConnection,
+      );
+    },
+  });
 
   const preview = async (
     request: UnitChangeRequest,
@@ -78,15 +89,7 @@ export function usePantryUnitChange() {
         present: 'none',
       },
     );
-    if (settled.status !== 'failed') {
-      // Every batch is restated in the new unit, and the payload carries no
-      // batches (asked as API-17), nor the detail's usage history, a
-      // connection. The stack itself comes back with its readers.
-      void client.refetchQueries({
-        include: ['GetPantryItem', GetPantryItemBatchesDocument],
-      });
-      return { status: 'changed' };
-    }
+    if (settled.status !== 'failed') return { status: 'changed' };
     const failure = settled.failure;
     if (isVersionConflictCode(failure?.code)) {
       return { status: 'conflict' };

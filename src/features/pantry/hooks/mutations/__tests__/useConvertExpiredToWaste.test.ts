@@ -133,6 +133,7 @@ function expectConvertSent(fired: CapturedOperation[]) {
   expect(sent?.context.operationId).toBeUndefined();
   expect(sent?.variables).toEqual({
     today: todayKey(),
+    batchesFirst: 100,
     input: {
       pantryItemId: 'item-1',
       idempotencyKey: expect.any(String),
@@ -254,6 +255,13 @@ describe('useConvertExpiredToWaste — a stack held in batches', () => {
             condition: ItemCondition.Good,
             activeBatchCount: 1,
           },
+          batchesConnection: {
+            totalCount: 1,
+            pageInfo: { hasNextPage: false, endCursor: null },
+            edges: [
+              { node: { __typename: 'PantryItemBatch', id: 'batch-kept' } },
+            ],
+          },
         },
       }),
     ]);
@@ -274,12 +282,14 @@ describe('useConvertExpiredToWaste — a stack held in batches', () => {
     });
     expect(persistedState()).toEqual({});
     expect(onSuccess).toHaveBeenCalledWith({ hasBatches: true });
-    // The answer restates the stack, not its batches: they are read again, or
-    // the wasted batch would stay listed with its discard still on offer.
-    expect(refetchQueries).toHaveBeenCalledTimes(1);
-    expect(refetchQueries).toHaveBeenCalledWith({
-      include: [GetPantryItemBatchesDocument],
-    });
+    // The answer restates the batches too: the wasted one leaves the detail's
+    // list with its discard, and nothing is read again.
+    const batches = cache.readQuery({
+      query: GetPantryItemBatchesDocument,
+      variables: { pantryItemId: 'item-1' },
+    })?.pantryItemBatchesConnection;
+    expect(batches?.edges.map(edge => edge.node.id)).toEqual(['batch-kept']);
+    expect(refetchQueries).not.toHaveBeenCalled();
     refetchQueries.mockRestore();
   });
 

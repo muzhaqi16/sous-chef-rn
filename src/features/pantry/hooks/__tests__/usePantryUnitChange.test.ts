@@ -1,8 +1,11 @@
 import { act } from '@testing-library/react-native';
+import { ApolloClient } from '@apollo/client';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
 import {
@@ -88,6 +91,48 @@ describe('change', () => {
     await expect(
       changeWith({ __typename: 'ChangePantryItemUnitPayload' }),
     ).resolves.toEqual({ status: 'changed' });
+  });
+
+  // Each batch is restated in the new unit; the answer carries them.
+  it('writes the restated batches over the detail, reading nothing again', async () => {
+    const refetchQueries = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+    const cache = seedCache([]);
+    const m = recordMock(ChangePantryItemUnitDocument, {
+      data: {
+        changePantryItemUnit: {
+          __typename: 'ChangePantryItemUnitPayload',
+          batchesConnection: {
+            totalCount: 1,
+            pageInfo: { hasNextPage: false, endCursor: null },
+            edges: [
+              {
+                node: {
+                  __typename: 'PantryItemBatch',
+                  id: 'batch-1',
+                  quantity: 0.5,
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => usePantryUnitChange(), {
+      operationMocks: [m.mock],
+      cache,
+    });
+
+    await act(async () => {
+      await result.current.change({ ...request, version: 3 });
+    });
+
+    const batches = cache.readQuery({
+      query: GetPantryItemBatchesDocument,
+      variables: { pantryItemId: 'pi-1' },
+    })?.pantryItemBatchesConnection;
+    expect(batches?.edges.map(edge => edge.node.id)).toEqual(['batch-1']);
+    expect(refetchQueries).not.toHaveBeenCalled();
+    refetchQueries.mockRestore();
   });
 
   it('reports a stack that moved on since the preview, to preview again', async () => {

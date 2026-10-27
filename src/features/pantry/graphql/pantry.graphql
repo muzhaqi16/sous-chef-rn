@@ -864,6 +864,7 @@ mutation CorrectPantryItemPackageSize(
 mutation ConvertExpiredToWaste(
   $input: ConvertExpiredToWasteInput!
   $today: LocalDate!
+  $batchesFirst: Int = 100
 ) {
   convertExpiredToWaste(input: $input) {
     __typename
@@ -876,10 +877,15 @@ mutation ConvertExpiredToWaste(
         id
         ...PantryItemReaders
         ...useConvertExpiredToWaste_pantryItem
+        ...restatedStack_usage
       }
       pantry {
         id
         ...PantryReaders
+      }
+      # GetPantryItemBatches' page, at its size.
+      batchesConnection(first: $batchesFirst) {
+        ...writeRestatedBatches_page
       }
     }
     ... on Error {

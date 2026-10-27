@@ -1,0 +1,49 @@
+# What a write that restates a stack's batches returns for its detail screen:
+# the batch page `writeRestatedBatches` writes over GetPantryItemBatches, and
+# the usage summary's first page, which normalizes onto the stack.
+fragment writeRestatedBatches_page on PantryItemBatchConnection {
+  totalCount
+  pageInfo {
+    hasNextPage
+    endCursor
+  }
+  edges {
+    node {
+      id
+      ...PantryItemBatchFragment
+    }
+  }
+}
+
+# The detail's selection of the field (`PantryItemDetail.graphql`): a node
+# short a field it reads leaves the detail's read incomplete.
+fragment restatedStack_usage on PantryItem {
+  id
+  usageRecordsConnection(first: 5, orderBy: { usedAt: DESC }) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      node {
+        id
+        quantityUsed
+        usageUnit {
+          id
+          name
+          symbol
+        }
+        usedAt
+        purpose
+        adjustmentReason
+        adjustmentKind
+        totalCost
+        currency {
+          id
+          code
+        }
+      }
+    }
+  }
+}
