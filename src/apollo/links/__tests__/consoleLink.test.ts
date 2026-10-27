@@ -188,14 +188,21 @@ describe('createConsoleLink', () => {
               call =>
                 typeof call[0] === 'string' && call[0].includes('Variables'),
             );
-          // As text: a log file records an object argument as `Object`.
-          expect(varLog).toEqual(['   📤 Variables: {"id":"123"}']);
+          // Indented JSON text: a log file records an object argument as `Object`.
+          expect(varLog).toEqual([
+            [
+              '   📤 Variables:',
+              '      {',
+              '        "id": "123"',
+              '      }',
+            ].join('\n'),
+          ]);
           done();
         },
       });
     });
 
-    it('caps a long batch so it stays one readable line', done => {
+    it('caps a long batch so it cannot flood the console', done => {
       const link = createConsoleLink({
         enabled: true,
         logVariables: true,
@@ -222,8 +229,14 @@ describe('createConsoleLink', () => {
                     typeof call[0] === 'string' &&
                     call[0].includes('Variables'),
                 ) ?? [];
-            expect(line).toMatch(/^ {3}📤 Variables: \{"input".*…$/);
-            expect(String(line).length).toBeLessThan(2100);
+            const shown = String(line).split('\n');
+            expect(shown.slice(0, 3)).toEqual([
+              '   📤 Variables:',
+              '      {',
+              '        "input": {',
+            ]);
+            expect(shown.at(-1)).toBe('      …');
+            expect(shown.length).toBeLessThanOrEqual(42);
             done();
           },
         });

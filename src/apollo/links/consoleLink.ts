@@ -31,14 +31,18 @@ function maskValue(value: unknown, depth: number): unknown {
 }
 
 // A terminal or log file records an object argument as `Object`, so values go
-// out as text, masked, and capped so a 50-line batch stays one readable line.
-const MAX_LOGGED_LENGTH = 2000;
+// out as indented JSON text under their label, masked, and capped by lines so a
+// large batch can't flood the console.
+const MAX_LOGGED_LINES = 40;
+const JSON_INDENT = '      ';
 
-function asText(value: unknown): string {
-  const text = JSON.stringify(maskValue(value, 0));
-  return text.length > MAX_LOGGED_LENGTH
-    ? `${text.slice(0, MAX_LOGGED_LENGTH)}…`
-    : text;
+function asJson(value: unknown): string {
+  const lines = JSON.stringify(maskValue(value, 0), null, 2).split('\n');
+  const shown =
+    lines.length > MAX_LOGGED_LINES
+      ? [...lines.slice(0, MAX_LOGGED_LINES), '…']
+      : lines;
+  return shown.map(line => `${JSON_INDENT}${line}`).join('\n');
 }
 
 // Cold-start detection: first N operations have inflated timing due to JS thread contention
@@ -118,7 +122,7 @@ export const createConsoleLink = (
           }
 
           if (logVariables && Object.keys(operation.variables).length > 0) {
-            console.log(`   📤 Variables: ${asText(operation.variables)}`);
+            console.log(`   📤 Variables:\n${asJson(operation.variables)}`);
           }
 
           // Log errors as JSON strings to prevent React Native console serialization issues
@@ -140,7 +144,7 @@ export const createConsoleLink = (
           }
 
           if (logResponse && result.data) {
-            console.log(`   📥 Data: ${asText(result.data)}`);
+            console.log(`   📥 Data:\n${asJson(result.data)}`);
           }
 
           // Log query if requested
@@ -150,7 +154,7 @@ export const createConsoleLink = (
 
           // Log extensions if present
           if (result.extensions) {
-            console.log(`   🔧 Extensions: ${asText(result.extensions)}`);
+            console.log(`   🔧 Extensions:\n${asJson(result.extensions)}`);
           }
 
           observer.next(result);
