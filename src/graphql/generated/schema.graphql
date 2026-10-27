@@ -1525,6 +1525,26 @@ input ChangePantryItemUnitInput {
 }
 
 type ChangePantryItemUnitPayload {
+  """
+  The stack's batches after this write, read as pantryItemBatchesConnection
+  reads them, so a client updates its batch list without a second request.
+  """
+  batchesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; newest first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PantryItemBatchOrderBy
+    """Only batches in this status"""
+    status: BatchStatus
+  ): PantryItemBatchConnection!
   """True when the route was exact"""
   exact: Boolean!
   method: PantryUnitChangeMethod!
@@ -1932,6 +1952,26 @@ input ConvertExpiredToWasteInput {
 }
 
 type ConvertExpiredToWastePayload {
+  """
+  The stack's batches after this write, read as pantryItemBatchesConnection
+  reads them, so a client updates its batch list without a second request.
+  """
+  batchesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; newest first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PantryItemBatchOrderBy
+    """Only batches in this status"""
+    status: BatchStatus
+  ): PantryItemBatchConnection!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -9034,6 +9074,13 @@ type MeasureReading {
 input MeasuredAmountInput {
   """Greater than zero."""
   quantity: Float!
+  """
+  The unit by id, symbol or name, instead of unitId: a typed unit such as
+  "lbs" or "fl oz", resolved as the vocabulary resolves it, and never made. One
+  no unit answers is VALIDATION_FAILED on amount.measured.unit, as is sending
+  both unit and unitId.
+  """
+  unit: UnitRefInput
   """
   Omitted, the unit the door defaults to: the list line's, or the stack's.
   """
@@ -20466,6 +20513,19 @@ union UpdateShoppingListItemResult = ConflictError | ForbiddenError | NotFoundEr
 
 type UpdateShoppingListPayload {
   shoppingList: ShoppingList!
+  """
+  The list's store comparison after this write, as shoppingListStoreComparison
+  reads it: a change of store changes it, and each line's suggestedPrice, which
+  shoppingList.itemsConnection reads. Computed only when selected.
+  """
+  storeComparison(
+    """Compare store branches (the default) or whole chains"""
+    scope: PriceComparisonScope
+    """Up to five stores to compare instead of the household's own"""
+    storeIds: [ID!]
+    """How far back observations count: default 90 days, at most 365"""
+    windowDays: Int
+  ): ShoppingListStoreComparison!
 }
 
 input UpdateShoppingListReminderInput {
