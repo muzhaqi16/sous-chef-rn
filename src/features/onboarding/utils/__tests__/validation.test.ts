@@ -39,13 +39,31 @@ describe('onboarding validation', () => {
       ).toBeNull();
     });
 
-    it('rejects home name under 2 chars', async () => {
+    it.each(['Shtëpia', 'Casa de José', '家', 'Home #2'])(
+      'accepts the home name %p',
+      async homeName => {
+        const schema = getCreateHomeSchema(true);
+        expect(
+          await validate(schema, { homeName, pantryName: 'Kitchen' }),
+        ).toBeNull();
+      },
+    );
+
+    it('cleans a home name instead of refusing it', () => {
+      const schema = getCreateHomeSchema(true);
+      expect(
+        schema.cast({ homeName: '  Shtëpia \t e  Re\n', pantryName: 'Kitchen' })
+          .homeName,
+      ).toBe('Shtëpia e Re');
+    });
+
+    it('requires a home name that is blank once cleaned', async () => {
       const schema = getCreateHomeSchema(true);
       const msg = await validate(schema, {
-        homeName: 'A',
+        homeName: ' \t ',
         pantryName: 'Kitchen',
       });
-      expect(msg).toContain('2');
+      expect(msg).toContain('Home name');
     });
 
     it('rejects home name over 50 chars', async () => {
@@ -55,15 +73,6 @@ describe('onboarding validation', () => {
         pantryName: 'Kitchen',
       });
       expect(msg).toContain('50');
-    });
-
-    it('rejects home name with special chars', async () => {
-      const schema = getCreateHomeSchema(true);
-      const msg = await validate(schema, {
-        homeName: 'Home@#',
-        pantryName: 'Kitchen',
-      });
-      expect(msg).toBeTruthy();
     });
 
     it('allows hyphens and apostrophes in home name', async () => {

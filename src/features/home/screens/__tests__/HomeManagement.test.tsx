@@ -86,8 +86,15 @@ jest.mock('#features/home/components/HomeStats', () => ({
   HomeStats: () => null,
 }));
 
+// Captures the form's props so a test can type a name and submit it.
+interface CreateFormProps {
+  onHomeNameChange: (name: string) => void;
+  onSubmit: () => void;
+}
+const mockCreateFormProps: CreateFormProps[] = [];
 jest.mock('#features/home/components/CreateHomeForm', () => ({
-  CreateHomeForm: () => {
+  CreateHomeForm: (props: CreateFormProps) => {
+    mockCreateFormProps.push(props);
     const { View } = require('react-native');
     return <View testID="create-home-form" />;
   },
@@ -157,6 +164,7 @@ describe('HomeManagement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHomeCardProps.length = 0;
+    mockCreateFormProps.length = 0;
   });
 
   it('renders the home management screen', () => {
@@ -209,6 +217,24 @@ describe('HomeManagement', () => {
     fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
 
     expect(getByTestId('create-home-form')).toBeTruthy();
+  });
+
+  it('creates a home under its cleaned name, whatever its script', async () => {
+    const createHome = jest.fn().mockResolvedValue(null);
+    mockHook({ loading: false, hasResult: true, createHome });
+
+    const { getByTestId } = render(<HomeManagement />);
+    fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
+    act(() =>
+      mockCreateFormProps.at(-1)?.onHomeNameChange('  Shtëpia \t e  Re '),
+    );
+    await act(async () => {
+      mockCreateFormProps.at(-1)?.onSubmit();
+    });
+
+    expect(createHome).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'Shtëpia e Re' }),
+    );
   });
 
   it('keeps preserved homes on screen when a refetch fails', () => {

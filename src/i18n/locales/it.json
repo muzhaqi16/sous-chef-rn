@@ -689,8 +689,7 @@
     "passwordUppercase": "È richiesta almeno una lettera maiuscola",
     "passwordNumber": "È richiesto almeno un numero",
     "nameMin": "Il nome deve avere almeno 2 caratteri",
-    "nameMax": "Il nome deve contenere meno di 50 caratteri",
-    "nameChars": "Il nome può contenere solo lettere, spazi, trattini e apostrofi"
+    "nameMax": "Il nome deve contenere meno di 50 caratteri"
   },
   "quantityBadge": {
     "a11yLabel": "Quantità: {{quantity}}. Tocca per modificare",

@@ -9,6 +9,7 @@ import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t, type TranslationKey } from '#/i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
+import { cleanName } from '#/utils/validation/common';
 
 export interface RolePickerState {
   visible: boolean;
@@ -87,8 +88,9 @@ export function useHomeDetailManagement(homeId: string) {
    * cache before firing and idempotent on a queued replay. The server requires
    * the version for its optimistic-concurrency check.
    */
-  const saveName = async (name: string) => {
-    if (!home) return;
+  const saveName = async (typed: string) => {
+    const name = cleanName(typed);
+    if (!home || !name) return;
     await updateHomeFields({ name }, home, t('errors.updateHomeNameFailed'));
   };
 

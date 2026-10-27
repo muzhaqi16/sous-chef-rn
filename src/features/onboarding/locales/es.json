@@ -69,15 +69,13 @@
   },
   "onboardingValidation": {
     "homeRequired": "El nombre del hogar es obligatorio",
-    "homeMin": "El nombre del hogar debe tener al menos {{count}} caracteres",
     "homeMax": "El nombre del hogar debe tener menos de {{count}} caracteres",
     "pantryRequired": "El nombre de la despensa es obligatorio",
     "pantryMin": "El nombre de la despensa debe tener al menos {{count}} caracteres",
     "pantryMax": "El nombre de la despensa debe tener menos de {{count}} caracteres",
     "listRequired": "El nombre de la lista es obligatorio",
     "listMin": "El nombre de la lista debe tener al menos {{count}} caracteres",
-    "listMax": "El nombre de la lista debe tener menos de {{count}} caracteres",
-    "homeChars": "El nombre del hogar solo puede contener letras, números, espacios, guiones, apóstrofos y comillas"
+    "listMax": "El nombre de la lista debe tener menos de {{count}} caracteres"
   },
   "onboarding": {
     "progress": "Paso {{step}} de {{total}}"

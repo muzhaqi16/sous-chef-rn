@@ -99,12 +99,10 @@ export const newPasswordRule = string()
   .matches(/[A-Z]/, lazyMessage('commonValidation.passwordUppercase'))
   .matches(/[0-9]/, lazyMessage('commonValidation.passwordNumber'));
 
-// name rules (for firstName, lastName)
+// A first or last name in any script ("José", "李"), cleaned rather than refused.
 export const nameRule = string()
-  .transform(normalizeSmartPunctuation)
-  .min(2, lazyMessage('commonValidation.nameMin'))
-  .max(50, lazyMessage('commonValidation.nameMax'))
-  .matches(/^[a-zA-Z\s'-]+$/, lazyMessage('commonValidation.nameChars'));
+  .transform(cleanName)
+  .max(50, lazyMessage('commonValidation.nameMax'));
 
 // A quantity takes a fraction ("1 1/4") as readily as a decimal, so the rule
 // runs on what `parseFractionalInput` reads — a regex restating its grammar

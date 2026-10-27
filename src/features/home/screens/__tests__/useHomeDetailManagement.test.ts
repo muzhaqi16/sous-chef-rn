@@ -172,6 +172,19 @@ describe('useHomeDetailManagement', () => {
       });
     });
 
+    it('saves the name cleaned, whatever its script', async () => {
+      const update = updateHomeMock();
+      const { result } = await renderLoaded([update.mock]);
+
+      await act(async () => {
+        await result.current.saveName('  Shtëpia \t e  Re ');
+      });
+
+      expect(update.fired).toContainEqual({
+        input: { id: 'home-1', name: 'Shtëpia e Re', version: 1 },
+      });
+    });
+
     // A refusal resolves as a union member, so nothing threw and nothing
     // alerted: the name snapped back with no word said.
     it('says so once, in the app’s own words, when the server refuses', async () => {
