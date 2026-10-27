@@ -15,7 +15,7 @@ describe('onboarding validation', () => {
     it('requires homeName when needsHome is true', async () => {
       const schema = getCreateHomeSchema(true);
       const msg = await validate(schema, { pantryName: 'Kitchen' });
-      expect(msg).toContain('Home name');
+      expect(msg).toBe('Please enter a home name');
     });
 
     it('does not require homeName when needsHome is false', async () => {
@@ -63,7 +63,7 @@ describe('onboarding validation', () => {
         homeName: ' \t ',
         pantryName: 'Kitchen',
       });
-      expect(msg).toContain('Home name');
+      expect(msg).toBe('Please enter a home name');
     });
 
     // The API's cap on a home name (CreateHomeInput).
@@ -102,7 +102,7 @@ describe('onboarding validation', () => {
     it('defaults needsHome to true', async () => {
       const schema = getCreateHomeSchema();
       const msg = await validate(schema, { pantryName: 'Kitchen' });
-      expect(msg).toContain('Home name');
+      expect(msg).toBe('Please enter a home name');
     });
   });
 

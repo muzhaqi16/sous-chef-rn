@@ -103,8 +103,17 @@ jest.mock('#components/templates/DetailTemplate', () => ({
   },
 }));
 
+// Captures each field's props so a test can run the screen's own check.
+interface EditableFieldProps {
+  label: string;
+  value: string;
+  validation?: (value: string) => string | null;
+}
+const mockEditableFieldProps: EditableFieldProps[] = [];
 jest.mock('#features/home/components/EditableField', () => ({
-  EditableField: ({ label, value }: { label: string; value: string }) => {
+  EditableField: (props: EditableFieldProps) => {
+    mockEditableFieldProps.push(props);
+    const { label, value } = props;
     const { View, Text } = require('react-native');
     return (
       <View testID="editable-field">
@@ -270,6 +279,19 @@ describe('HomeDetailScreen', () => {
   it('shows home name in editable field', () => {
     const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
     expect(getByText('Home Name: My Home')).toBeTruthy();
+  });
+
+  // The API's rule (UpdateHomeInput.name), so a refused name is never sent.
+  it('checks a new home name as the API does before saving it', () => {
+    render(<HomeDetailScreen {...defaultProps} />);
+    const validate = mockEditableFieldProps
+      .filter(props => props.label === 'Home Name')
+      .at(-1)?.validation;
+
+    expect(validate?.(' \t ')).toBe('Please enter a home name');
+    expect(validate?.('a'.repeat(101))).toBe('Keep the name to 100 characters');
+    expect(validate?.('a'.repeat(100))).toBeNull();
+    expect(validate?.('Shtëpia')).toBeNull();
   });
 
   it('shows join code when enabled', () => {

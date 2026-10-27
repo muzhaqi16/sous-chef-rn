@@ -136,6 +136,7 @@
     "queuedRemovalKeptResource": "Tu eliminación en {{resource}} no se aplicó: se había combinado con una entrada que ya existía.",
     "queuedRemovalKept": "Una eliminación no se aplicó: se había combinado con una entrada que ya existía.",
     "itemNameRequired": "Introduce el nombre del artículo",
+    "homeNameRequired": "Introduce el nombre del hogar",
     "nameTooLong": "El nombre no puede superar los {{max}} caracteres",
     "invalidQuantity": "Introduce una cantidad válida",
     "invalidAmountPaid": "Introduce el importe pagado, como 3,49, o déjalo vacío.",

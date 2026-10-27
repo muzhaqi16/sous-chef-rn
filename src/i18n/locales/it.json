@@ -136,6 +136,7 @@
     "queuedRemovalKeptResource": "{{resource}}: la rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
     "queuedRemovalKept": "Una rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
     "itemNameRequired": "Inserisci il nome dell'articolo",
+    "homeNameRequired": "Inserisci il nome della casa",
     "nameTooLong": "Il nome non può superare i {{max}} caratteri",
     "invalidQuantity": "Inserisci una quantità valida",
     "invalidAmountPaid": "Inserisci l'importo pagato, ad esempio 3,49, oppure lascia vuoto.",

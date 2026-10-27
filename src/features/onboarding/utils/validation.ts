@@ -1,8 +1,6 @@
 import { object, string } from 'yup';
 import {
-  cleanName,
-  lazyMessage,
-  MAX_HOME_NAME_LENGTH,
+  homeNameRule,
   normalizeSmartPunctuation,
 } from '#utils/validation/common';
 import { t, type KeyUnder } from '#/i18n';
@@ -17,15 +15,6 @@ const msg =
   (key: KeyUnder<'onboardingValidation'>, options?: Record<string, unknown>) =>
   (): string =>
     t(`onboardingValidation.${key}`, options);
-
-// A home name in any script ("Shtëpia"), cleaned rather than refused.
-const homeNameRule = string()
-  .transform(cleanName)
-  .required(msg('homeRequired'))
-  .max(
-    MAX_HOME_NAME_LENGTH,
-    lazyMessage('errors.nameTooLong', { max: MAX_HOME_NAME_LENGTH }),
-  );
 
 // pantry name rule
 const pantryNameRule = string()

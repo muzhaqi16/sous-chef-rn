@@ -35,7 +35,7 @@ import { SubScreen } from '#components/templates/SubScreen';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { homeTestIDs } from '#features/home/testIDs';
-import { cleanName } from '#/utils/validation/common';
+import type { CreateHomeFormValues } from '#features/home/components/createHomeFormConfig';
 
 export const HomeManagement: React.FC = () => {
   useScreenTransition('HomeManagement');
@@ -44,8 +44,6 @@ export const HomeManagement: React.FC = () => {
 
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [mode, setMode] = useState<'create' | 'join'>('create');
-  const [homeName, setHomeName] = useState('');
-  const [allowJoinCode, setAllowJoinCode] = useState(true);
   const [joinCode, setJoinCode] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [highlightedHomeId, setHighlightedHomeId] = useState<string | null>(
@@ -128,30 +126,13 @@ export const HomeManagement: React.FC = () => {
     });
   };
 
-  // Requesting a join code makes the server refuse `createHome` outright while
-  // the address is unverified, so surface the gate on the checkbox rather than
-  // letting the whole creation fail on submit.
-  const handleAllowJoinCodeChange = (value: boolean) => {
-    if (value && !requireVerifiedEmail()) return;
-    setAllowJoinCode(value);
-  };
-
-  const handleCreateHome = async () => {
-    const name = cleanName(homeName);
-    if (!name) return;
-
-    const result = await createHome({ name, allowJoinCode });
-    if (result) {
-      setHomeName('');
-      setAllowJoinCode(true);
-      setShowCreateForm(false);
-    }
+  const handleCreateHome = async (values: CreateHomeFormValues) => {
+    const result = await createHome(values);
+    if (result) setShowCreateForm(false);
   };
 
   const handleCancelCreate = () => {
     setShowCreateForm(false);
-    setHomeName('');
-    setAllowJoinCode(true);
     setJoinCode('');
     setMode('create');
   };
@@ -298,11 +279,10 @@ export const HomeManagement: React.FC = () => {
 
             {mode === 'create' ? (
               <CreateHomeForm
-                isVisible={true}
-                homeName={homeName}
-                onHomeNameChange={setHomeName}
-                allowJoinCode={!!allowJoinCode && !hasUnverifiedEmail}
-                onAllowJoinCodeChange={handleAllowJoinCodeChange}
+                // Requesting a join code makes the server refuse `createHome`
+                // while the address is unverified, so the gate sits on the box.
+                joinCodeAvailable={!hasUnverifiedEmail}
+                requireVerifiedEmail={requireVerifiedEmail}
                 onSubmit={handleCreateHome}
                 onCancel={handleCancelCreate}
                 isCreating={creating}

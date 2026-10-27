@@ -68,7 +68,6 @@
     "defaultPantryDescription": "Default pantry"
   },
   "onboardingValidation": {
-    "homeRequired": "Home name is required",
     "pantryRequired": "Pantry name is required",
     "pantryMin": "Pantry name must be at least {{count}} characters",
     "pantryMax": "Pantry name must be less than {{count}} characters",

@@ -86,10 +86,9 @@ jest.mock('#features/home/components/HomeStats', () => ({
   HomeStats: () => null,
 }));
 
-// Captures the form's props so a test can type a name and submit it.
+// Captures the form's props so a test can submit what the form validated.
 interface CreateFormProps {
-  onHomeNameChange: (name: string) => void;
-  onSubmit: () => void;
+  onSubmit: (values: { name: string; allowJoinCode: boolean }) => Promise<void>;
 }
 const mockCreateFormProps: CreateFormProps[] = [];
 jest.mock('#features/home/components/CreateHomeForm', () => ({
@@ -219,22 +218,23 @@ describe('HomeManagement', () => {
     expect(getByTestId('create-home-form')).toBeTruthy();
   });
 
-  it('creates a home under its cleaned name, whatever its script', async () => {
-    const createHome = jest.fn().mockResolvedValue(null);
+  it('creates the home the form submits and closes the form', async () => {
+    const createHome = jest.fn().mockResolvedValue({ id: 'home-new' });
     mockHook({ loading: false, hasResult: true, createHome });
 
-    const { getByTestId } = render(<HomeManagement />);
+    const { getByTestId, queryByTestId } = render(<HomeManagement />);
     fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
-    act(() =>
-      mockCreateFormProps.at(-1)?.onHomeNameChange('  Shtëpia \t e  Re '),
-    );
     await act(async () => {
-      mockCreateFormProps.at(-1)?.onSubmit();
+      await mockCreateFormProps
+        .at(-1)
+        ?.onSubmit({ name: 'Shtëpia e Re', allowJoinCode: true });
     });
 
-    expect(createHome).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'Shtëpia e Re' }),
-    );
+    expect(createHome).toHaveBeenCalledWith({
+      name: 'Shtëpia e Re',
+      allowJoinCode: true,
+    });
+    expect(queryByTestId('create-home-form')).toBeNull();
   });
 
   it('keeps preserved homes on screen when a refetch fails', () => {

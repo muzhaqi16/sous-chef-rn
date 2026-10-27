@@ -78,7 +78,6 @@
     "title": "Detalles del Hogar",
     "errorFailedToLoad": "No se pudieron cargar los detalles del hogar",
     "sectionHomeInformation": "Información del Hogar",
-    "homeNameEmptyError": "El nombre del hogar no puede estar vacío",
     "labelAllowJoinCode": "Permitir Código de Acceso",
     "descriptionAllowJoinCode": "Permite a otros unirse a este hogar con un código",
     "labelJoinCode": "Código de Acceso",

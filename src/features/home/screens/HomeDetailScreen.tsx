@@ -39,6 +39,7 @@ import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { homeTestIDs } from '#features/home/testIDs';
+import { fieldError, homeNameRule } from '#/utils/validation/common';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type RouteParams = {
@@ -231,12 +232,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             onSave={saveName}
             placeholder={t('labels.enterHomeName')}
             readOnly={!canManage}
-            validation={value => {
-              if (!value.trim()) {
-                return t('homeDetail.homeNameEmptyError');
-              }
-              return null;
-            }}
+            validation={value => fieldError(homeNameRule, value)}
           />
           {canManage ? (
             <SettingSwitch

@@ -78,7 +78,6 @@
     "title": "Dettagli Casa",
     "errorFailedToLoad": "Caricamento dei dettagli della casa non riuscito",
     "sectionHomeInformation": "Informazioni Casa",
-    "homeNameEmptyError": "Il nome della casa non può essere vuoto",
     "labelAllowJoinCode": "Consenti Codice di Accesso",
     "descriptionAllowJoinCode": "Permetti ad altri di unirsi a questa casa con un codice",
     "labelJoinCode": "Codice di Accesso",

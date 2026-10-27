@@ -78,7 +78,6 @@
     "title": "Home Details",
     "errorFailedToLoad": "Failed to load home details",
     "sectionHomeInformation": "Home Information",
-    "homeNameEmptyError": "Home name cannot be empty",
     "labelAllowJoinCode": "Allow Join Code",
     "descriptionAllowJoinCode": "Let others join this home using a code",
     "labelJoinCode": "Join Code",

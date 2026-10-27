@@ -1,4 +1,4 @@
-import { string } from 'yup';
+import { string, ValidationError, type Schema } from 'yup';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
 import { logger } from '#/utils/environment';
 import { t, type TranslationKey } from '#/i18n';
@@ -44,7 +44,7 @@ export function cleanName(value: string | undefined): string | undefined {
 /** The API's caps on a name once cleaned, as each input's description states. */
 export const MAX_ITEM_NAME_LENGTH = 128;
 export const MAX_PERSON_NAME_LENGTH = 255;
-export const MAX_HOME_NAME_LENGTH = 100;
+const MAX_HOME_NAME_LENGTH = 100;
 
 /**
  * An item name as the API takes it: any text, cleaned, then required and at
@@ -58,6 +58,29 @@ export const itemNameText = (required: () => string) =>
       MAX_ITEM_NAME_LENGTH,
       lazyMessage('errors.nameTooLong', { max: MAX_ITEM_NAME_LENGTH }),
     );
+
+/**
+ * A home name as the API takes it (CreateHomeInput, UpdateHomeInput): any
+ * text, cleaned, then required and at most `MAX_HOME_NAME_LENGTH`.
+ */
+export const homeNameRule = string()
+  .transform(cleanName)
+  .required(lazyMessage('errors.homeNameRequired'))
+  .max(
+    MAX_HOME_NAME_LENGTH,
+    lazyMessage('errors.nameTooLong', { max: MAX_HOME_NAME_LENGTH }),
+  );
+
+/** The message `rule` gives `value`, or null when it passes: a field checked on its own. */
+export function fieldError(rule: Schema, value: unknown): string | null {
+  try {
+    rule.validateSync(value);
+    return null;
+  } catch (error) {
+    if (error instanceof ValidationError) return error.message;
+    throw error;
+  }
+}
 
 export function logValidationErrors(errors: FieldErrors<FieldValues>) {
   const fields = Object.entries(errors)

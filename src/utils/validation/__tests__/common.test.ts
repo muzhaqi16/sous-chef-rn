@@ -1,5 +1,7 @@
 import {
   emailRule,
+  fieldError,
+  homeNameRule,
   lazyMessage,
   nameRule,
   optionalMoneyRule,
@@ -92,6 +94,33 @@ describe('nameRule', () => {
     await expect(nameRule.validate('A'.repeat(256))).rejects.toThrow(
       'Keep the name to 255 characters',
     );
+  });
+});
+
+// The API's rule for CreateHomeInput.name and UpdateHomeInput.name.
+describe('homeNameRule', () => {
+  it('cleans a name in any script', () => {
+    expect(homeNameRule.cast('  Shtëpia \t e  Re\n')).toBe('Shtëpia e Re');
+  });
+
+  it('requires a name that is blank once cleaned', async () => {
+    await expect(homeNameRule.validate(' \t ')).rejects.toThrow(
+      'Please enter a home name',
+    );
+  });
+
+  it('takes up to 100 characters', async () => {
+    await expect(homeNameRule.validate('a'.repeat(100))).resolves.toBeTruthy();
+    await expect(homeNameRule.validate('a'.repeat(101))).rejects.toThrow(
+      'Keep the name to 100 characters',
+    );
+  });
+});
+
+describe('fieldError', () => {
+  it('gives the message a rule reports, and null when it passes', () => {
+    expect(fieldError(homeNameRule, '')).toBe('Please enter a home name');
+    expect(fieldError(homeNameRule, 'Our Flat')).toBeNull();
   });
 });
 

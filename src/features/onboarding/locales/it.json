@@ -68,7 +68,6 @@
     "defaultPantryDescription": "Dispensa predefinita"
   },
   "onboardingValidation": {
-    "homeRequired": "Il nome della casa è obbligatorio",
     "pantryRequired": "Il nome della dispensa è obbligatorio",
     "pantryMin": "Il nome della dispensa deve contenere almeno {{count}} caratteri",
     "pantryMax": "Il nome della dispensa deve contenere meno di {{count}} caratteri",

@@ -136,6 +136,7 @@
     "queuedRemovalKeptResource": "The {{resource}} you removed had been combined with one already there, so it stays.",
     "queuedRemovalKept": "Something you removed had been combined with an entry already there, so it stays.",
     "itemNameRequired": "Please enter an item name",
+    "homeNameRequired": "Please enter a home name",
     "nameTooLong": "Keep the name to {{max}} characters",
     "invalidQuantity": "Please enter a valid quantity",
     "invalidAmountPaid": "Enter the amount paid, like 3.49, or leave it empty.",

@@ -78,7 +78,6 @@
     "title": "Detajet e Shtëpisë",
     "errorFailedToLoad": "Ngarkimi i detajeve të shtëpisë dështoi",
     "sectionHomeInformation": "Informacioni i Shtëpisë",
-    "homeNameEmptyError": "Emri i shtëpisë nuk mund të jetë bosh",
     "labelAllowJoinCode": "Lejo Kodin e Bashkimit",
     "descriptionAllowJoinCode": "Lejo të tjerët të bashkohen në këtë shtëpi me një kod",
     "labelJoinCode": "Kodi i Bashkimit",
