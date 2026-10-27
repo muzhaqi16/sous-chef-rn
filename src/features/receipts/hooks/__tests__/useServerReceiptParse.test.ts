@@ -27,6 +27,13 @@ import {
   type ReceiptDraft,
 } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
+import { announceWorkSettled } from '#/services/subscriptions/settledWork';
+import { useIsLiveChannelOpen } from '#hooks/subscriptions/useIsLiveChannelOpen';
+
+// Closed unless a case opens it: then the poll is the 2.5 s one.
+jest.mock('#hooks/subscriptions/useIsLiveChannelOpen', () => ({
+  useIsLiveChannelOpen: jest.fn(() => false),
+}));
 import {
   CreateReceiptParseDocument,
   ReceiptParseDocument,
@@ -120,6 +127,7 @@ function render(
 
 beforeEach(() => {
   jest.useFakeTimers();
+  jest.mocked(useIsLiveChannelOpen).mockReturnValue(false);
   useStore.setState({ isOnline: true });
   useReceiptDraftStore.setState({ draft: null });
 });
@@ -181,6 +189,39 @@ describe('useServerReceiptParse', () => {
       expect.any(Number),
       { via: 'text', outcome: 'parsed' },
     );
+  });
+
+  // The parse's own event answers while the live channel is open (API-15), so
+  // a 30-second parse costs one read after it, not twelve polls.
+  it('waits for the parse to say it settled while the live channel is open', async () => {
+    jest.mocked(useIsLiveChannelOpen).mockReturnValue(true);
+    seedMilkDraft();
+    const create = created(ReceiptParseStatus.Pending);
+    const poll = polledTo({
+      status: ReceiptParseStatus.Parsed,
+      warnings: [],
+      receipt: MILK_RECEIPT,
+    });
+    render([create.mock, ...poll.mocks]);
+    await waitFor(() => expect(create.fired).toHaveLength(1));
+
+    await pollOnce();
+    await pollOnce();
+    expect(poll.fired()).toHaveLength(1);
+    expect(useReceiptDraftStore.getState().draft?.parsedBy).not.toBe('server');
+
+    const [ask] = create.fired;
+    if (!ask) throw new Error('the parse was never asked for');
+    act(() => {
+      announceWorkSettled({
+        kind: 'receiptParse',
+        id: String(inputOf(ask).id),
+      });
+    });
+    await pollOnce();
+
+    expect(poll.fired()).toHaveLength(2);
+    expect(useReceiptDraftStore.getState().draft?.parsedBy).toBe('server');
   });
 
   it("takes the server's day when the phone read none", async () => {

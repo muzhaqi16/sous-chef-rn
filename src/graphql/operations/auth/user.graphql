@@ -214,6 +214,8 @@ subscription UserEvents($userId: ID!) {
     parents {
       homeId
       shoppingListId
+      receiptParseId
+      recipeCaptureId
     }
     node {
       ... on User {

@@ -11,16 +11,22 @@ import {
 } from '#features/recipes/utils/recipeCaptureOutcome';
 import { RecipeCaptureDocument } from './useRecipeCapture.generated';
 import { useCaptureOutcomeReporter } from './useCaptureOutcomeReporter';
+import { useIsLiveChannelOpen } from '#hooks/subscriptions/useIsLiveChannelOpen';
+import { onWorkSettled } from '#/services/subscriptions/settledWork';
 
 /** A structured page answers in seconds; a model read takes longer. */
 const FAST_POLL_MS = 2000;
 const SLOW_POLL_MS = 5000;
 const FAST_FOR_MS = 30_000;
+// With the live channel open the capture's own event answers
+// (`onWorkSettled`); this only covers an event the stream lost.
+const SAFETY_POLL_MS = 15_000;
 
 /**
- * Polls one capture while it reads and reports how it ended. Paused while the
- * API is unreachable, resumed when it is back; past the server's deadline it
- * is reported unanswered.
+ * Watches one capture while it reads and reports how it ended: asked once when
+ * its event says it settled, polled slowly as a fallback (quickly while the
+ * live channel is closed). Paused while the API is unreachable, resumed when it
+ * is back; past the server's deadline it is reported unanswered.
  */
 export function useRecipeCapturePoll(entry: CaptureEntry): void {
   const unavailable = useIsApiUnavailable();
@@ -55,12 +61,14 @@ export function useRecipeCapturePoll(entry: CaptureEntry): void {
   // Asked for only once its create is answered: a poll sent beside the create
   // can reach the server first and be told no such capture exists.
   const polled = reading && entry.answered && !unavailable;
-  const { data } = useQuery(
+  const channelOpen = useIsLiveChannelOpen();
+  const fallbackPollMs = slow ? SLOW_POLL_MS : FAST_POLL_MS;
+  const { data, refetch } = useQuery(
     RecipeCaptureDocument,
     polled
       ? {
           variables: { id: entry.id },
-          pollInterval: slow ? SLOW_POLL_MS : FAST_POLL_MS,
+          pollInterval: channelOpen ? SAFETY_POLL_MS : fallbackPollMs,
           fetchPolicy: 'network-only',
           // A poll re-renders only on data.
           notifyOnNetworkStatusChange: false,
@@ -69,6 +77,16 @@ export function useRecipeCapturePoll(entry: CaptureEntry): void {
         }
       : skipToken,
   );
+
+  useEffect(() => {
+    if (!polled) return;
+    return onWorkSettled(work => {
+      if (work.kind !== 'recipeCapture' || work.id !== entry.id) return;
+      refetch().catch(() => {
+        // The next poll asks again.
+      });
+    });
+  }, [polled, entry.id, refetch]);
 
   useEffect(() => {
     if (!polled || !data) return;
