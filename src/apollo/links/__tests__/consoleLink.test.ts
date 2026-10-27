@@ -188,10 +188,45 @@ describe('createConsoleLink', () => {
               call =>
                 typeof call[0] === 'string' && call[0].includes('Variables'),
             );
-          expect(varLog).toBeDefined();
+          // As text: a log file records an object argument as `Object`.
+          expect(varLog).toEqual(['   📤 Variables: {"id":"123"}']);
           done();
         },
       });
+    });
+
+    it('caps a long batch so it stays one readable line', done => {
+      const link = createConsoleLink({
+        enabled: true,
+        logVariables: true,
+        logTiming: false,
+      });
+      const items = Array.from({ length: 200 }, (_, i) => ({
+        id: `line-${i}`,
+      }));
+      link
+        .request(
+          createMockOperation('AddItems', OperationTypeNode.MUTATION, {
+            input: { items },
+          }),
+          createMockForward(),
+        )
+        .subscribe({
+          next: () => {},
+          complete: () => {
+            const [line] =
+              jest
+                .mocked(console.log)
+                .mock.calls.find(
+                  call =>
+                    typeof call[0] === 'string' &&
+                    call[0].includes('Variables'),
+                ) ?? [];
+            expect(line).toMatch(/^ {3}📤 Variables: \{"input".*…$/);
+            expect(String(line).length).toBeLessThan(2100);
+            done();
+          },
+        });
     });
 
     it('does not log variables when empty', done => {
