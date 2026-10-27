@@ -986,7 +986,7 @@ mutation JoinShoppingListByShareCode(
 #
 # `updatedFields` drives the skip (an event that changed nothing on screen costs
 # nothing) and `clearedItemIds` still carries a batch clear on its own. When the
-# handler does need values it reads them back through `ShoppingListItemForEvent`
+# handler does need values it reads them back through `ShoppingListItemsForEvents`
 # / `ShoppingListSummaryForEvent`, which get the generous HTTP limits.
 # See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription MyShoppingListsEvents {

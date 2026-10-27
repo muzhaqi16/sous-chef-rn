@@ -1,7 +1,7 @@
 /**
  * The event carries the envelope plus the changed entity's id only —
  * subscriptions are validated against depth 5, which no fragment spread fits
- * under. Handlers read values back via `PantryItemForEvent` and friends, and
+ * under. Handlers read values back via `PantryItemsForEvents` and friends, and
  * only where needed: never for a self-echo, a delete, or an unheld row.
  */
 
@@ -15,7 +15,7 @@ import {
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import {
   ExpirationNotificationForEventDocument,
-  PantryItemForEventDocument,
+  PantryItemsForEventsDocument,
   PantrySummaryForEventDocument,
   UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
   type UsePantrySubscriptions_ExpirationNotificationFragment,
@@ -24,6 +24,7 @@ import {
 } from './usePantrySubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { batchedEventRead } from '#/services/subscriptions/batchedEventRead';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import {
   CacheStrategy,
@@ -116,6 +117,16 @@ function refreshPantrySummary(
   }, SUMMARY_REFRESH_DELAY_MS);
 }
 
+const readPantryItems = batchedEventRead(async (client, ids) => {
+  const data = await fetchEventEntity(
+    client,
+    PantryItemsForEventsDocument,
+    { ids },
+    'PantryItem',
+  );
+  return data ? data.pantryItemsByIds.map(item => item.id) : null;
+});
+
 async function handleItemChanged(
   payload: PantryEventsPayload,
   client: SubscriptionApolloClient,
@@ -160,14 +171,8 @@ async function handleItemChanged(
   const add = isAdd(mutation);
   if (!add && !isItemListed(client, itemId)) return;
 
-  const data = await fetchEventEntity(
-    client,
-    PantryItemForEventDocument,
-    { id: itemId },
-    'PantryItem',
-  );
   // Offline, or deleted between the event and this read.
-  if (!data?.pantryItem) return;
+  if (!(await readPantryItems(client, itemId))) return;
 
   // Re-checked after the await: a local delete can start mid-read, and
   // re-adding the row the user just removed is worse than a missed update.
@@ -298,12 +303,7 @@ export function usePantrySubscriptions(userId?: string) {
             payload.node.__typename === 'PantryItem' &&
             isItemListed(client, payload.node.id)
           ) {
-            void fetchEventEntity(
-              client,
-              PantryItemForEventDocument,
-              { id: payload.node.id },
-              'PantryItem',
-            );
+            void readPantryItems(client, payload.node.id);
           }
           break;
 

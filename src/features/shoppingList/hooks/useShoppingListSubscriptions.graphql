@@ -96,8 +96,9 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
 # spread fits under. These queries are how the handler gets the values, over
 # HTTP where the budget is generous, and only for events that need them.
 
-query ShoppingListItemForEvent($id: ID!) {
-  shoppingListItem(id: $id) {
+# Every line a burst of events names, in one read (`batchedEventRead`).
+query ShoppingListItemsForEvents($ids: [ID!]!) {
+  shoppingListItemsByIds(ids: $ids) {
     id
     ...useShoppingListSubscriptions_item
   }

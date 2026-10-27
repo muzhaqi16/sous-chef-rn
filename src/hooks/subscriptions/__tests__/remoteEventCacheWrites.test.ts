@@ -29,7 +29,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
-import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import { PantryItemsForEventsDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
 import { MealPlanForEventDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
@@ -40,7 +40,7 @@ import { MealPlanMain_MealPlanFragmentDoc } from '#features/mealPlan/screens/Mea
 import { GetMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useMealPlanSubscriptions.generated';
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
-import { ShoppingListItemForEventDocument } from '#features/shoppingList/hooks/useShoppingListSubscriptions.generated';
+import { ShoppingListItemsForEventsDocument } from '#features/shoppingList/hooks/useShoppingListSubscriptions.generated';
 import { captureOnData } from '#/test-utils/subscriptionCapture';
 import { typedConnectionOf } from '#/test-utils/fixtures/connectionOf';
 
@@ -167,14 +167,16 @@ describe('a pantry item created elsewhere', () => {
         },
       });
     }
-    const readBack = recordMock(PantryItemForEventDocument, {
+    const readBack = recordMock(PantryItemsForEventsDocument, {
       data: {
-        pantryItem: {
-          id: 'item-new',
-          pantryId: 'pantry-1',
-          storageState: StorageState.Refrigerated,
-          storageLocation: { id: 'loc-1' },
-        },
+        pantryItemsByIds: [
+          {
+            id: 'item-new',
+            pantryId: 'pantry-1',
+            storageState: StorageState.Refrigerated,
+            storageLocation: { id: 'loc-1' },
+          },
+        ],
       },
     });
     const { result } = renderHookWithApollo(
@@ -541,13 +543,15 @@ const counters = (cache: InMemoryCache) => {
 
 /** The row as the server holds it after the transition, for the read-back. */
 const rowReadBack = (isPurchased: boolean) =>
-  recordMock(ShoppingListItemForEventDocument, {
+  recordMock(ShoppingListItemsForEventsDocument, {
     data: {
-      shoppingListItem: {
-        id: 'item-1',
-        shoppingList: { id: 'list-1' },
-        purchaseInfo: { isPurchased },
-      },
+      shoppingListItemsByIds: [
+        {
+          id: 'item-1',
+          shoppingList: { id: 'list-1' },
+          purchaseInfo: { isPurchased },
+        },
+      ],
     },
     maxUsageCount: 1,
   });
@@ -590,7 +594,7 @@ describe('a row ticked off, then back on, by another member', () => {
     };
 
     await announce(MutationType.ItemCompleted);
-    await waitFor(() => expect(bought.fired).toEqual([{ id: 'item-1' }]));
+    await waitFor(() => expect(bought.fired).toEqual([{ ids: ['item-1'] }]));
     await settle();
 
     expect(read(cache, false)).toEqual({ ids: ['item-2'], totalCount: 1 });
@@ -603,7 +607,7 @@ describe('a row ticked off, then back on, by another member', () => {
     });
 
     await announce(MutationType.ItemUncompleted);
-    await waitFor(() => expect(unbought.fired).toEqual([{ id: 'item-1' }]));
+    await waitFor(() => expect(unbought.fired).toEqual([{ ids: ['item-1'] }]));
     await settle();
 
     expect(read(cache, false)).toEqual({

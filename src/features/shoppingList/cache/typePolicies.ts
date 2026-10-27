@@ -83,6 +83,9 @@ export const shoppingListTypePolicies: TypePolicies = {
     fields: {
       shoppingList: readByIdFromCache('ShoppingList'),
       shoppingListItem: readByIdFromCache('ShoppingListItem'),
+      // An event read-back's (`ShoppingListItemsForEvents`): each batch names
+      // other ids, so one slot, or the persisted cache keeps every batch's list.
+      shoppingListItemsByIds: { keyArgs: false },
       // Not keyed on page size: a picker asking for fewer lists reads the
       // collection the overview holds, offline included. `cache.modify` by
       // field name still reaches every stored variant.

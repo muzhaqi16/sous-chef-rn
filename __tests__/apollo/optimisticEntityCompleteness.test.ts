@@ -94,7 +94,7 @@ import {
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
-import { PantryItemForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import { PantryItemsForEventsDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { NotificationForEventDocument } from '#features/notifications/hooks/useNotifications.generated';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import {
@@ -111,7 +111,7 @@ import {
   GetStorageLocationsDocument,
 } from '#features/catalog/graphql/storageLocation.generated';
 import {
-  ShoppingListItemForEventDocument,
+  ShoppingListItemsForEventsDocument,
   UseShoppingListSubscriptions_ItemFragmentDoc,
 } from '#features/shoppingList/hooks/useShoppingListSubscriptions.generated';
 import {
@@ -626,14 +626,15 @@ describe('optimistic entity completeness', () => {
 
     it('keeps GetPantry complete after a pantry event read-back lands', async () => {
       // A housemate's add arrives as an envelope plus an id; the handler reads
-      // the values back with PantryItemForEvent and links the row. A cache
+      // the values back with PantryItemsForEvents and links the row. A cache
       // write triggers no fetch on a mounted watcher, so a field this misses
       // blanks the viewer's list until the screen is remounted.
       const cache = await seedPantryCache();
       const event = await runAgainstSchema<{
-        pantryItem: PantryItemRef & { pantryId: string };
-      }>(PantryItemForEventDocument, { id: 'server-item-from-event' });
-      const item = event.pantryItem;
+        pantryItemsByIds: Array<PantryItemRef & { pantryId: string }>;
+      }>(PantryItemsForEventsDocument, { ids: ['server-item-from-event'] });
+      const [item] = event.pantryItemsByIds;
+      if (!item) throw new Error('the schema answered no row');
       item.id = 'server-item-from-event';
       item.pantryId = 'pantry-1';
 
@@ -1005,9 +1006,10 @@ describe('optimistic entity completeness', () => {
       // fragment that omits the parent back-reference blanks the list.
       const cache = await seedListCache();
       const event = await runAgainstSchema<{
-        shoppingListItem: { id: string };
-      }>(ShoppingListItemForEventDocument, { id: 'item-from-event' });
-      const item = event.shoppingListItem;
+        shoppingListItemsByIds: Array<{ id: string }>;
+      }>(ShoppingListItemsForEventsDocument, { ids: ['item-from-event'] });
+      const [item] = event.shoppingListItemsByIds;
+      if (!item) throw new Error('the schema answered no row');
       item.id = 'item-from-event';
 
       cache.writeFragment({
@@ -1609,7 +1611,7 @@ describe('optimistic entity completeness', () => {
   describe('every connection-linking writer is accounted for', () => {
     const LINKING_MODULES: Record<string, string> = {
       'src/features/pantry/cache/items.ts':
-        'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, CreateReceiptCheckIn, PantryItemForEvent)',
+        'covered: the GetPantry cases above (optimistic, CreatePantryItem, MoveShoppingItemToPantry, CreateReceiptCheckIn, PantryItemsForEvents)',
       'src/features/pantry/hooks/usePantrySubscriptions.ts':
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
@@ -1716,14 +1718,14 @@ describe('optimistic entity completeness', () => {
         'PantryItem',
       );
       expectWriterCoversReader(
-        PantryItemForEventDocument,
-        'pantryItem',
+        PantryItemsForEventsDocument,
+        'pantryItemsByIds',
         GetPantryDocument,
         'PantryItem',
       );
       expectWriterCoversReader(
-        ShoppingListItemForEventDocument,
-        'shoppingListItem',
+        ShoppingListItemsForEventsDocument,
+        'shoppingListItemsByIds',
         GetShoppingListItemsFilteredDocument,
         'ShoppingListItem',
       );

@@ -24,7 +24,7 @@ import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  PantryItemForEventDocument,
+  PantryItemsForEventsDocument,
   PantrySummaryForEventDocument,
 } from '#features/pantry/hooks/usePantrySubscriptions.generated';
 import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
@@ -77,7 +77,10 @@ const summaryReads = (query: jest.Mock) =>
       (options as { query: unknown }).query === PantrySummaryForEventDocument,
   );
 
-/** The read-back is a promise, so the handler finishes a microtask later. */
+/**
+ * Read-backs gather for 150 ms (`batchedEventRead`), and each is a promise, so
+ * the handler finishes past the window and a microtask later.
+ */
 const deliver = async (
   onData: CapturedOnData,
   payload: unknown,
@@ -85,6 +88,9 @@ const deliver = async (
 ) => {
   await act(async () => {
     onData(payload, client);
+  });
+  await act(async () => {
+    jest.advanceTimersByTime(150);
   });
 };
 
@@ -162,14 +168,16 @@ describe('usePantrySubscriptions', () => {
         storageLocation: null,
       }),
       jest.fn().mockResolvedValue({
-        data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+        data: {
+          pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+        },
       }),
     );
 
     await deliver(getOnData(), itemEvent(MutationType.ItemAdded), client);
 
     expect(client.query).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { id: 'item-1' } }),
+      expect.objectContaining({ variables: { ids: ['item-1'] } }),
     );
     // The ref, not the read-back object: the updater merges what it is handed
     // over the stored record, so a denormalized read would inline entity refs.
@@ -214,7 +222,7 @@ describe('usePantrySubscriptions', () => {
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient(
       jest.fn(),
-      jest.fn().mockResolvedValue({ data: { pantryItem: null } }),
+      jest.fn().mockResolvedValue({ data: { pantryItemsByIds: [] } }),
     );
 
     await deliver(getOnData(), itemEvent(MutationType.ItemAdded), client);
@@ -244,14 +252,16 @@ describe('usePantrySubscriptions', () => {
     const client = makeClient(
       jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
       jest.fn().mockResolvedValue({
-        data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+        data: {
+          pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+        },
       }),
     );
 
     await deliver(getOnData(), itemEvent(MutationType.ItemUpdated), client);
 
     expect(client.query).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { id: 'item-1' } }),
+      expect.objectContaining({ variables: { ids: ['item-1'] } }),
     );
     // An update moves no connection membership — normalization did the work.
     expect(mockAddToConnection).not.toHaveBeenCalled();
@@ -265,7 +275,9 @@ describe('usePantrySubscriptions', () => {
     const client = makeClient(
       jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
       jest.fn().mockResolvedValue({
-        data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+        data: {
+          pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+        },
       }),
     );
 
@@ -283,7 +295,7 @@ describe('usePantrySubscriptions', () => {
       [client.cache, 'pantry-1', 'item-3', { evictItem: true }],
     ]);
     expect(client.query).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { id: 'item-1' } }),
+      expect.objectContaining({ variables: { ids: ['item-1'] } }),
     );
     expect(mockAddToConnection).not.toHaveBeenCalled();
     // The counts move with the rows; the server's summary states them.
@@ -389,7 +401,9 @@ describe('usePantrySubscriptions', () => {
       const client = makeClient(
         jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
         jest.fn().mockResolvedValue({
-          data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+          data: {
+            pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+          },
         }),
       );
 
@@ -403,7 +417,7 @@ describe('usePantrySubscriptions', () => {
       );
 
       expect(client.query).toHaveBeenCalledWith(
-        expect.objectContaining({ variables: { id: 'item-1' } }),
+        expect.objectContaining({ variables: { ids: ['item-1'] } }),
       );
     });
 
@@ -415,7 +429,9 @@ describe('usePantrySubscriptions', () => {
       const client = makeClient(
         jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
         jest.fn().mockResolvedValue({
-          data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+          data: {
+            pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+          },
         }),
       );
 
@@ -448,7 +464,7 @@ describe('usePantrySubscriptions: a row only the list has fetched', () => {
   const readBacks = (query: jest.Mock) =>
     query.mock.calls.filter(
       ([options]) =>
-        (options as { query: unknown }).query === PantryItemForEventDocument,
+        (options as { query: unknown }).query === PantryItemsForEventsDocument,
     );
 
   it.each([
@@ -457,7 +473,9 @@ describe('usePantrySubscriptions: a row only the list has fetched', () => {
   ])('reads it back after %s', async (_label, mutation) => {
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
-    const query = jest.fn().mockResolvedValue({ data: { pantryItem: null } });
+    const query = jest
+      .fn()
+      .mockResolvedValue({ data: { pantryItemsByIds: [] } });
 
     await deliver(
       getOnData(),
@@ -470,14 +488,16 @@ describe('usePantrySubscriptions: a row only the list has fetched', () => {
     );
 
     expect(readBacks(query)).toEqual([
-      [expect.objectContaining({ variables: { id: 'pi1' } })],
+      [expect.objectContaining({ variables: { ids: ['pi1'] } })],
     ]);
   });
 
   it('reads it back after a low-stock alert', async () => {
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
-    const query = jest.fn().mockResolvedValue({ data: { pantryItem: null } });
+    const query = jest
+      .fn()
+      .mockResolvedValue({ data: { pantryItemsByIds: [] } });
 
     await deliver(
       getOnData(),

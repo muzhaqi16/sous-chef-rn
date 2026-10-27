@@ -20,12 +20,13 @@ import {
   ShoppingListSubtype,
 } from '#/graphql/generated/schemaTypes';
 import {
-  ShoppingListItemForEventDocument,
+  ShoppingListItemsForEventsDocument,
   ShoppingListSummaryForEventDocument,
   UseShoppingListSubscriptions_ListRefFragmentDoc,
 } from './useShoppingListSubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { batchedEventRead } from '#/services/subscriptions/batchedEventRead';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import { useSubscriptionRejected } from '#/services/subscriptions/rejectedSubscriptions';
 import {
@@ -153,6 +154,16 @@ const removeCollaborator = createRemoveFromParentConnectionUpdater(
  * Mounted once at app level, by `CoreSubscriptionProvider`. Another device's change
  * is written as it arrives; this device's own writes are skipped as echoes.
  */
+const readListItems = batchedEventRead(async (client, ids) => {
+  const data = await fetchEventEntity(
+    client,
+    ShoppingListItemsForEventsDocument,
+    { ids },
+    'ShoppingListItem',
+  );
+  return data ? data.shoppingListItemsByIds.map(item => item.id) : null;
+});
+
 export function useShoppingListSubscriptions(userId?: string) {
   const selectedShoppingListId = useSelectedShoppingListId() ?? undefined;
   const rejected = useSubscriptionRejected(MyShoppingListsEventsDocument);
@@ -207,14 +218,8 @@ export function useShoppingListSubscriptions(userId?: string) {
       return;
     }
 
-    const data = await fetchEventEntity(
-      client,
-      ShoppingListItemForEventDocument,
-      { id: itemId },
-      'ShoppingListItem',
-    );
     // Offline, or deleted between the event and this read.
-    if (!data?.shoppingListItem) return;
+    if (!(await readListItems(client, itemId))) return;
 
     if (isCreate) {
       // One notification for the internal modify plus any follow-up writes.

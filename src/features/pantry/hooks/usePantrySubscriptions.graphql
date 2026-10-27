@@ -13,7 +13,7 @@ fragment usePantrySubscriptions_expirationNotification on ExpirationNotification
   }
 }
 
-# What an item event reads back (`PantryItemForEvent`): the event carries only
+# What an item event reads back (`PantryItemsForEvents`): the event carries only
 # the id, so this selection is what refreshes a changed row in the cache.
 fragment usePantrySubscriptions_pantryItem on PantryItem {
   id
@@ -153,8 +153,9 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
 # queries, with the ordinary HTTP budget, fired only for the events that need
 # one (never for a self-echo, never for a delete).
 
-query PantryItemForEvent($id: ID!) {
-  pantryItem(id: $id) {
+# Every row a burst of events names, in one read (`batchedEventRead`).
+query PantryItemsForEvents($ids: [ID!]!) {
+  pantryItemsByIds(ids: $ids) {
     id
     ...usePantrySubscriptions_pantryItem
   }

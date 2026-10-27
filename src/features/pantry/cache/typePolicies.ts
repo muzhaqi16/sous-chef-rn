@@ -75,6 +75,9 @@ export const pantryTypePolicies: TypePolicies = {
   Query: {
     fields: {
       pantry: readByIdFromCache('Pantry'),
+      // An event read-back's (`PantryItemsForEvents`): each batch names other
+      // ids, so one slot, or the persisted cache keeps every batch's list.
+      pantryItemsByIds: { keyArgs: false },
       // `canRead` checks only that the entity exists: a `PantryItem` short one
       // `PantryItemDetail_pantryItem` field still goes to the network, so this
       // needs a detail-complete optimistic write.
