@@ -12,7 +12,10 @@ import { useStore } from '#store';
 import { getI18n } from '#/i18n/config';
 import { Telemetry } from '#/services/telemetry';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import {
+  GetUserSettingsDocument,
+  type GetUserSettingsQuery,
+} from '#operations/auth/user.generated';
 
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
@@ -196,14 +199,41 @@ describe('createOfflineModeLink', () => {
     expect(value?.data).toEqual(cachedData);
   });
 
-  it('lets allow-listed queries through even when offline', () => {
+  it('lets allow-listed queries through offline mode while the server is reachable', () => {
     mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
-      isOnline: false,
+      offlineModeEnabled: true,
+      isOnline: true,
+      apiReachable: true,
     });
     const forward = makeForward();
     link.request(makeOperation(GetUserSettingsDocument), forward);
     expect(forward).toHaveBeenCalled();
+  });
+
+  // Forwarded with the device offline, the settings read failed and its error
+  // result replaced the cached settings: the screen said "not available offline".
+  it('serves an allow-listed query from the cache while the device is offline', () => {
+    mockedGetState.mockReturnValue({
+      offlineModeEnabled: false,
+      isOnline: false,
+      apiReachable: null,
+    });
+    const cache = new InMemoryCache();
+    const cachedData: GetUserSettingsQuery = {
+      __typename: 'Query',
+      me: { __typename: 'User', id: 'u1', settings: null },
+    };
+    cache.writeQuery({
+      query: GetUserSettingsDocument,
+      data: cachedData,
+    });
+
+    const forward = makeForward();
+    const { value } = observe(
+      link.request(makeOperation(GetUserSettingsDocument, cache), forward),
+    );
+    expect(forward).not.toHaveBeenCalled();
+    expect(value?.data).toEqual({ me: cachedData.me });
   });
 
   // Each branch of this link is a distinct answer to "did offline work?", and

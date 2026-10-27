@@ -3,6 +3,7 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, OperationTypeNode } from 'graphql';
 import { useStore } from '#store';
 import {
+  isApiUnavailable,
   isNetworkWithheld,
   blocksCacheMissQueries,
 } from '#store/slices/networkSlice';
@@ -14,8 +15,10 @@ import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { operationNameOf } from '../utils/documentOperation';
 
 /**
- * Must always reach the network, even in offline mode: RefreshToken for token
- * rotation, GetUserSettings so offline mode itself can be toggled off.
+ * Reach the network through the user's offline mode: RefreshToken for token
+ * rotation, GetUserSettings so offline mode itself can be toggled off. With the
+ * server unavailable they take the cache like any read: the request is doomed,
+ * and its failure would replace the cached answer.
  */
 const ALWAYS_ALLOW = [RefreshTokenDocument, GetUserSettingsDocument].map(
   document => operationNameOf(document),
@@ -34,9 +37,8 @@ export const createOfflineModeLink = () => {
       return forward(operation);
     }
 
-    // Allow-listed operations always pass through
     const operationName = operation.operationName ?? '';
-    if (ALWAYS_ALLOW.includes(operationName)) {
+    if (ALWAYS_ALLOW.includes(operationName) && !isApiUnavailable(state)) {
       return forward(operation);
     }
 
