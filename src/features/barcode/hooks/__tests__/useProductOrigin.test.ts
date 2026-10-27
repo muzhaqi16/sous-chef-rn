@@ -6,7 +6,11 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { formatCountryName } from '#/utils/formatters/region';
-import { ProductOriginDocument } from '../useProductOrigin.generated';
+import { makeCache } from '#/apollo/cache';
+import {
+  ProductOriginDocument,
+  UseProductOrigin_ItemFragmentDoc,
+} from '../useProductOrigin.generated';
 import { useProductOrigin } from '../useProductOrigin';
 
 const fact = (countryCode: string, source: ExternalSource) => ({
@@ -36,6 +40,38 @@ const render = (
   });
 
 describe('useProductOrigin', () => {
+  // What a scan's barcode lookup leaves in the cache: the item with its origin.
+  it('reads what the lookup stored without asking again', async () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: cache.identify({ __typename: 'Item', id: 'item-1' }),
+      fragment: UseProductOrigin_ItemFragmentDoc,
+      fragmentName: 'useProductOrigin_item',
+      data: {
+        __typename: 'Item',
+        id: 'item-1',
+        origin: {
+          __typename: 'ProductOrigin',
+          madeIn: [
+            { __typename: 'OriginFact', ...fact('CA', ExternalSource.Usda) },
+          ],
+          ingredientsFrom: [],
+          countryOfOrigin: [],
+        },
+        brandOwner: null,
+      },
+    });
+    const mock = originMock({ origin: null, brandOwner: null });
+
+    const { result } = renderHookWithApollo(
+      () => useProductOrigin('item-1', undefined),
+      { cache, operationMocks: [mock.mock] },
+    );
+
+    await waitFor(() => expect(result.current.lines).toHaveLength(1));
+    expect(mock.fired).toEqual([]);
+  });
+
   it('states each fact the records give, with the source that states it', async () => {
     const { result } = render(
       originMock({

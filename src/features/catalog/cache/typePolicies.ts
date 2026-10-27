@@ -1,5 +1,6 @@
 import type { TypePolicies } from '@apollo/client';
 import type { StoreValue } from '@apollo/client/utilities';
+import { readByIdFromCache } from '#/apollo/cacheFieldPolicies';
 
 /**
  * A catalog item's media and nutrition survive a response that OMITS them, while an explicit null still clears — that is how an image is removed.
@@ -37,6 +38,8 @@ export const catalogTypePolicies: TypePolicies = {
       items: {
         keyArgs: ['filters'],
       },
+      // A scan's lookup stores the item whole, so a by-id read off it asks nothing.
+      item: readByIdFromCache('Item'),
     },
   },
 };

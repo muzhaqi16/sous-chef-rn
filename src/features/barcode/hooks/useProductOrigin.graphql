@@ -1,26 +1,32 @@
 # Where a scanned product comes from and who owns its brand, as its source
 # records state them; nothing is read from the barcode. Its own query, keyed by
-# the item, so a product read before still shows them offline.
+# the item, so a product read before still shows them offline; the barcode
+# lookup reads the fragment too, so a scan asks once.
 query ProductOrigin($itemId: ID!) {
   item(id: $itemId) {
     id
-    origin {
-      madeIn {
-        countryCode
-        source
-      }
-      ingredientsFrom {
-        countryCode
-        source
-      }
-      countryOfOrigin {
-        countryCode
-        source
-      }
-    }
-    brandOwner {
-      name
+    ...useProductOrigin_item
+  }
+}
+
+fragment useProductOrigin_item on Item {
+  id
+  origin {
+    madeIn {
+      countryCode
       source
     }
+    ingredientsFrom {
+      countryCode
+      source
+    }
+    countryOfOrigin {
+      countryCode
+      source
+    }
+  }
+  brandOwner {
+    name
+    source
   }
 }

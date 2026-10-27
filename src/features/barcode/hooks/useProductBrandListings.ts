@@ -1,6 +1,9 @@
-import { useQuery } from '@apollo/client/react';
+import { useFragment, useQuery } from '@apollo/client/react';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
-import { ProductBrandListingsDocument } from './useProductBrandListings.generated';
+import {
+  ProductBrandListingsDocument,
+  UseProductBrandListings_ItemFragmentDoc,
+} from './useProductBrandListings.generated';
 
 /** One of the user's lists a scanned product's brand is on. */
 export interface BrandListing {
@@ -23,12 +26,20 @@ export function useProductBrandListings(
   scannedBrandId: string | null,
   lists: readonly BrandListView[],
 ) {
-  const { data } = useQuery(ProductBrandListingsDocument, {
+  // The scan's lookup stores these with the item, so this asks only for an
+  // item that came another way.
+  useQuery(ProductBrandListingsDocument, {
     variables: { itemId },
+    fetchPolicy: 'cache-first',
+  });
+  const { data, complete } = useFragment({
+    fragment: UseProductBrandListings_ItemFragmentDoc,
+    fragmentName: 'useProductBrandListings_item',
+    from: { __typename: 'Item', id: itemId },
   });
 
   const byList = new Map<string, BrandListing>();
-  for (const match of data?.item?.listMatches ?? []) {
+  for (const match of complete ? data.listMatches : []) {
     if (!match.brandList.enabled) continue;
     byList.set(match.brandList.id, {
       key: `${match.brandList.id}:${match.entry.id}`,

@@ -55,6 +55,7 @@ jest.mock('#hooks/data/useImageUpload', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  useStore.setState({ selectedHomeId: null });
 });
 
 /**
@@ -337,10 +338,28 @@ describe('useSearchResults', () => {
       );
 
       await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
-          pantry: 'pantry-7',
-        }),
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({
+            lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
+            pantry: 'pantry-7',
+          }),
+        ),
+      );
+    });
+
+    // The household's alerts ride the lookup, so the scan asks once.
+    it('asks for the household the alerts are read for', async () => {
+      useStore.setState({ selectedHomeId: 'home-1' });
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [upc.mock],
+      });
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({ homeId: 'home-1', withHome: true }),
+        ),
       );
     });
 

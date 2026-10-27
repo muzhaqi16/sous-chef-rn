@@ -4,12 +4,23 @@
 # A scan reports the scanned barcode's own pack: `netWeight`, `netWeightKind`,
 # `displayUnit` and `variationBrand` are that barcode's, never another pack's.
 # An add names `matchedVariation.id` to store exactly those facts.
-query ItemByLookup($lookup: ItemLookupInput!, $pantry: ID) {
+# A scan asks once: the product's origin, brand-list matches and the
+# household's dietary alerts come with it, read by their hooks' fragments.
+# Without a home there are no alerts to read; `$homeId` is then never sent on.
+query ItemByLookup(
+  $lookup: ItemLookupInput!
+  $pantry: ID
+  $homeId: ID = ""
+  $withHome: Boolean = false
+) {
   items(filters: { lookup: $lookup }, first: 1) {
     edges {
       cursor
       node {
         id
+        ...useProductOrigin_item
+        ...useProductBrandListings_item
+        ...useProductDietaryAlerts_item @include(if: $withHome)
         # The concepts above the product, nearest first: store mode ticks the
         # list line that names the product or one of them.
         ancestors {

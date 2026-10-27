@@ -34,6 +34,7 @@ import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { toShownNutrition } from '#domain/nutrition';
 import { storeApi } from '#store';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { blocksCacheMissQueries } from '#store/slices/networkSlice';
 
 // `format` is react-native-vision-camera-barcode-scanner's BarcodeFormat, with
@@ -174,6 +175,9 @@ export const useSearchResults = (
   const createdId = created?.barcode === barcode ? created.id : null;
 
   const [addNewItem, { loading: addingItem }] = useMutation(CreateItemDocument);
+  // The household's dietary alerts ride the lookup when there is a household.
+  const homeId = useSelectedHomeId();
+  const homeVariables = homeId ? { homeId, withHome: true } : {};
 
   const {
     data: upcData,
@@ -184,6 +188,7 @@ export const useSearchResults = (
     variables: {
       lookup: { upc: { code: barcode, format: upcFormat } },
       pantry: pantryId,
+      ...homeVariables,
     },
     // `items` is keyed by `filters`, so another code's result never serves this
     // one; network-only is for a code the catalog has gained or changed since.
@@ -202,7 +207,11 @@ export const useSearchResults = (
     error: skuError,
     refetch: refetchSku,
   } = useQuery(ItemByLookupDocument, {
-    variables: { lookup: { sku: { sku: barcode } }, pantry: pantryId },
+    variables: {
+      lookup: { sku: { sku: barcode } },
+      pantry: pantryId,
+      ...homeVariables,
+    },
     skip: skuSkipped,
     fetchPolicy: 'network-only', // As the UPC lookup above.
     refetchOn: false,

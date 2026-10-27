@@ -1,9 +1,12 @@
-import { useQuery } from '@apollo/client/react';
+import { useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { formatCountryName } from '#/utils/formatters/region';
-import { ProductOriginDocument } from './useProductOrigin.generated';
+import {
+  ProductOriginDocument,
+  UseProductOrigin_ItemFragmentDoc,
+} from './useProductOrigin.generated';
 
 /** One fact about where a product comes from, and the source that states it. */
 export interface OriginLine {
@@ -46,10 +49,18 @@ export function useProductOrigin(
   brandParentName: string | undefined,
 ) {
   const { t } = useTranslation();
-  const { data } = useQuery(ProductOriginDocument, {
+  // The scan's lookup stores these with the item, so this asks only for an
+  // item that came another way.
+  useQuery(ProductOriginDocument, {
     variables: { itemId },
+    fetchPolicy: 'cache-first',
   });
-  const item = data?.item;
+  const { data, complete } = useFragment({
+    fragment: UseProductOrigin_ItemFragmentDoc,
+    fragmentName: 'useProductOrigin_item',
+    from: { __typename: 'Item', id: itemId },
+  });
+  const item = complete ? data : undefined;
 
   const sources = (facts: OriginFact[]) => {
     const names = facts.flatMap(fact => sourceName(fact.source, t) ?? []);
