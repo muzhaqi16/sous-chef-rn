@@ -6032,8 +6032,10 @@ type HouseholdUsualPrice {
   The usual price per one of a unit; null when the unit normalizes to another basis, or only by an assumed density or package size
   """
   unitPrice(
-    """The unit the price is per"""
-    unitId: ID!
+    """
+    The unit the price is per; omitted, the unit Item.trackingUnit answers for this barcode with no pantry, the unit a scan's add counts in
+    """
+    unitId: ID
   ): Float
   windowDays: Int!
 }
