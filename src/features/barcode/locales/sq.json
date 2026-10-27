@@ -4,9 +4,6 @@
     "flashOn": "Ndiz blicin",
     "flashOff": "Fik blicin"
   },
-  "barcodeInfo": {
-    "format": "Formati"
-  },
   "scanner": {
     "noHomeTitle": "Nuk është zgjedhur shtëpi",
     "noHomeBody": "Duhet të jesh anëtar i një shtëpie për të skanuar artikuj.",
@@ -18,7 +15,6 @@
     "addItemHint": "Mund ta shtosh këtë artikull në bazën e të dhënave duke trokitur butonin më poshtë.",
     "newVersion": "Version i ri",
     "barcodeValue": "Barkodi: {{barcode}}",
-    "formatValue": "Formati: {{format}}",
     "upc": "UPC/Barkod",
     "servingAmount": "Një racion: {{amount}}",
     "referenceAmount": "Vlerat ushqyese për {{amount}}",
@@ -38,7 +34,12 @@
       "usedInSummary": "Përdoret në {{unit}}"
     },
     "nutrition": {
-      "title": "Vlerat ushqyese"
+      "title": "Vlerat ushqyese",
+      "calories": "{{calories}} kcal",
+      "caloriesPer": "{{calories}} kcal për {{serving}}",
+      "protein": "{{value}} g proteina",
+      "carbs": "{{value}} g karbohidrate",
+      "fat": "{{value}} g yndyrë"
     },
     "addToCart": "Shto në shportë",
     "addToCartWithPrice": "Shto me çmim",

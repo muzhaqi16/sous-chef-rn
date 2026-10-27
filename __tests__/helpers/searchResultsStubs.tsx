@@ -9,43 +9,44 @@ interface Action {
   disabled?: boolean;
 }
 
-/** The card as its item's name. */
-export const ProductResultCard = ({ item }: { item: { name: string } }) => (
-  <Text>{item.name}</Text>
+/** The card as its item's name, and the brand's list action when it has one. */
+export const ProductResultCard = ({
+  item,
+  brandLists,
+}: {
+  item: { name: string };
+  brandLists?: { onAddToList: () => void };
+}) => (
+  <View>
+    <Text>{item.name}</Text>
+    {brandLists ? (
+      <Pressable testID="add-brand-to-list" onPress={brandLists.onAddToList} />
+    ) : null}
+  </View>
 );
 
 /**
  * Each action as a button: `primary-btn` (its `disabled` as accessibility
- * state only, so a press still reaches the screen), `alternate-btn` and
- * `secondary-btn`.
+ * state only, so a press still reaches the screen) and `alternate-btn`.
  */
 export const ActionButtons = ({
   primaryAction,
   alternateAction,
-  secondaryAction,
 }: {
-  primaryAction?: Action;
+  primaryAction: Action;
   alternateAction?: Action;
-  secondaryAction?: Action;
 }) => (
   <View>
-    {primaryAction ? (
-      <Pressable
-        testID="primary-btn"
-        accessibilityState={{ disabled: !!primaryAction.disabled }}
-        onPress={primaryAction.onPress}
-      >
-        <Text>{primaryAction.label}</Text>
-      </Pressable>
-    ) : null}
+    <Pressable
+      testID="primary-btn"
+      accessibilityState={{ disabled: !!primaryAction.disabled }}
+      onPress={primaryAction.onPress}
+    >
+      <Text>{primaryAction.label}</Text>
+    </Pressable>
     {alternateAction ? (
       <Pressable testID="alternate-btn" onPress={alternateAction.onPress}>
         <Text>{alternateAction.label}</Text>
-      </Pressable>
-    ) : null}
-    {secondaryAction ? (
-      <Pressable testID="secondary-btn" onPress={secondaryAction.onPress}>
-        <Text>{secondaryAction.label}</Text>
       </Pressable>
     ) : null}
   </View>

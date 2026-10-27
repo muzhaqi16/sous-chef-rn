@@ -149,9 +149,11 @@ describe('SearchResults', () => {
     expect(screen.getByText('Add to shopping list')).toBeTruthy();
   });
 
-  it('renders Scan Another button', () => {
+  // The header's scan button is the way to the next scan; the body offers only
+  // the add, beside what it adds.
+  it('offers no second scan button in the body', () => {
     renderWithApollo(<SearchResults {...defaultProps} />);
-    expect(screen.getByText('Scan Another')).toBeTruthy();
+    expect(screen.queryByText('Scan Another')).toBeNull();
   });
 
   // The screen is only reached from a pantry or shopping list, both of which
@@ -161,8 +163,8 @@ describe('SearchResults', () => {
   it('offers no add action when there is no source to add to', () => {
     renderWithApollo(<SearchResults {...defaultProps} source={undefined} />);
     expect(screen.queryByTestId('primary-btn')).toBeNull();
-    // The card and the escape hatch still render.
-    expect(screen.getByText('Scan Another')).toBeTruthy();
+    // The card still renders.
+    expect(screen.getByText('Organic Milk')).toBeTruthy();
   });
 
   // A 1.89 L carton is ONE container, counted as one: left to the API, a count

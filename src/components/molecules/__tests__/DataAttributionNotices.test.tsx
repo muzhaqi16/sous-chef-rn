@@ -46,6 +46,14 @@ describe('DataAttributionNotices', () => {
     expect(openURL.mock.calls).toEqual([[OFF.sourceUrl], [OFF.licenseUrl]]);
   });
 
+  // One paragraph, so a long notice wraps as text and the licence follows it
+  // instead of taking a line of its own.
+  it('runs the licence on after its notice', () => {
+    render(<DataAttributionNotices attributions={[OFF]} />);
+
+    expect(screen.getByText(`${OFF.notice} · License`)).toBeTruthy();
+  });
+
   it('offers no link a notice does not name', () => {
     render(<DataAttributionNotices attributions={[USDA]} />);
 

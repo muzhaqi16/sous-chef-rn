@@ -6,6 +6,7 @@ import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { Icon } from '#components/atoms/Icon';
+import { IconButton } from '#components/atoms/IconButton';
 import { Text } from '#components/atoms/Text';
 import {
   formatQuantityWithUnit,
@@ -23,6 +24,7 @@ import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { NetWeightKind } from '#/graphql/generated/schemaTypes';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 import type { PhotoCreditValue } from '#/types/attribution';
+import type { BrandListing } from '#features/barcode/hooks/useProductBrandListings';
 
 interface Item {
   id: string;
@@ -58,6 +60,14 @@ interface ItemCardProps {
   /** "Suggest Edit" for a public catalog item, "Edit" when this user can write
    *  through. Falls back to the suggestion wording — the safe assumption. */
   editActionLabel?: string;
+  /**
+   * The user's lists the brand is on, and the way to put it on one, drawn at
+   * the brand. Absent when the scan names no brand of its own.
+   */
+  brandLists?: {
+    listings: readonly BrandListing[];
+    onAddToList: () => void;
+  };
 }
 
 export const ProductResultCard: React.FC<ItemCardProps> = ({
@@ -67,6 +77,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
   onEditItem,
   onCreateVariant,
   editActionLabel,
+  brandLists,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
@@ -104,10 +115,57 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
         <View style={styles.headerText}>
           <Text role="title">{item.name}</Text>
           {!!item.brandName && (
-            <Text role="body" tone="secondary">
-              {item.brandName}
-            </Text>
+            <View style={styles.brandRow}>
+              <Text role="body" tone="secondary" style={styles.brandName}>
+                {item.brandName}
+              </Text>
+              {brandLists ? (
+                <IconButton
+                  name={
+                    brandLists.listings.length > 0
+                      ? 'bookmark'
+                      : 'bookmark-outline'
+                  }
+                  size="sm"
+                  tone="primary"
+                  onPress={brandLists.onAddToList}
+                  accessibilityLabel={t('barcode.brandLists.addToList', {
+                    brand: item.brandName,
+                  })}
+                  style={styles.brandBookmark}
+                  testID={barcodeTestIDs.addBrandToList}
+                />
+              ) : null}
+            </View>
           )}
+          {/* A list is the user's record, never a fact about the product: an
+              unlisted brand shows no "not listed" line. */}
+          {brandLists && brandLists.listings.length > 0 ? (
+            <View
+              style={styles.brandListings}
+              testID={barcodeTestIDs.brandListings}
+            >
+              {brandLists.listings.map(listing => (
+                <View key={listing.key}>
+                  <Text role="caption" tone="accent">
+                    {t('barcode.brandLists.onList', { list: listing.listName })}
+                  </Text>
+                  {!!listing.viaParent && (
+                    <Text role="caption" tone="secondary">
+                      {t('barcode.brandLists.viaParent', {
+                        parent: listing.viaParent,
+                      })}
+                    </Text>
+                  )}
+                  {!!listing.reason && (
+                    <Text role="caption" tone="secondary">
+                      {listing.reason}
+                    </Text>
+                  )}
+                </View>
+              ))}
+            </View>
+          ) : null}
           {netWeightLine !== null && (
             <Text role="body" tone="secondary">
               {netWeightLine}
@@ -128,7 +186,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
         </Text>
         {format ? (
           <Text role="caption" tone="tertiary" style={styles.itemFormat}>
-            {t('barcode.formatValue', { format })}
+            {format}
           </Text>
         ) : null}
       </View>
@@ -189,14 +247,35 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
     gap: theme.spacing.xs,
   },
-  itemDetails: {
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: theme.spacing.xs,
+  },
+  brandName: {
+    flexShrink: 1,
+  },
+  // The full touch target, without growing the brand's line past its text.
+  brandBookmark: {
+    marginVertical:
+      -(theme.sizes.touchTarget.min - theme.type.body.lineHeight) / 2,
+  },
+  brandListings: {
+    gap: theme.spacing.xs,
+  },
+  // One line: the barcode, its format trailing quietly at the far end.
+  itemDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'baseline',
+    columnGap: theme.spacing.sm,
   },
   itemBarcode: {
     fontFamily: 'monospace',
   },
   itemFormat: {
     textTransform: 'uppercase',
+    marginLeft: 'auto',
   },
   actionsRow: {
     flexDirection: 'row',

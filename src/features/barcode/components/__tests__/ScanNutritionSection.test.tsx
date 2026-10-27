@@ -36,13 +36,37 @@ const TUNA: NutritionFactsValues = {
 };
 
 describe('ScanNutritionSection', () => {
-  it('shows the calories and macros a source states', () => {
+  it('reads the calories and macros a source states as text', () => {
     render(
       <ScanNutritionSection nutrition={{ facts: TUNA, typicalOf: null }} />,
     );
     expect(screen.getByText(t('barcode.nutrition.title'))).toBeTruthy();
-    expect(screen.getByText('71')).toBeTruthy();
-    expect(screen.getByText('10.6')).toBeTruthy();
+    expect(screen.getByText('71 kcal')).toBeTruthy();
+    expect(
+      screen.getByText('10.6 g protein · 5.9 g carbs · 0 g fat'),
+    ).toBeTruthy();
+  });
+
+  it('names the serving the figures are for', () => {
+    render(
+      <ScanNutritionSection
+        nutrition={{
+          facts: { ...TUNA, servingSize: 100, servingUnit: 'g' },
+          typicalOf: null,
+        }}
+      />,
+    );
+    expect(screen.getByText('71 kcal per 100 g')).toBeTruthy();
+  });
+
+  it('leads with the macros when no calories are stated', () => {
+    render(
+      <ScanNutritionSection
+        nutrition={{ facts: { ...NONE, protein: 3 }, typicalOf: null }}
+      />,
+    );
+    expect(screen.getByText('3 g protein')).toBeTruthy();
+    expect(screen.queryByText(/kcal/)).toBeNull();
   });
 
   it.each([
@@ -65,8 +89,15 @@ describe('ScanNutritionSection', () => {
         onOpenDetails={onOpenDetails}
       />,
     );
-    fireEvent.press(screen.getByText(t('labels.viewDetails')));
+    fireEvent.press(screen.getByText(t('labels.details')));
     expect(onOpenDetails).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no details without a way to open them', () => {
+    render(
+      <ScanNutritionSection nutrition={{ facts: TUNA, typicalOf: null }} />,
+    );
+    expect(screen.queryByText(t('labels.details'))).toBeNull();
   });
 
   // A product whose record states none reads its concept's values, titled as
@@ -86,6 +117,6 @@ describe('ScanNutritionSection', () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByText(t('barcode.nutrition.title'))).toBeNull();
-    expect(screen.getByText('71')).toBeTruthy();
+    expect(screen.getByText('71 kcal')).toBeTruthy();
   });
 });

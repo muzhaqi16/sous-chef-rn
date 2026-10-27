@@ -39,6 +39,8 @@ interface ScanAmountSectionProps {
    * row reads it. In another unit the server may open a stack of its own.
    */
   joins?: { amount: string; unitId: string } | null;
+  /** The add, at the card's foot: it adds what the card says, fields open or not. */
+  action?: React.ReactNode;
 }
 
 const AS_DECIMAL: QuantityDisplayOptions = { notation: 'decimal' };
@@ -50,6 +52,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
   onEdit,
   createsStack,
   joins,
+  action,
 }) => {
   const { t } = useTranslation();
   const { control, setValue, trigger } = form;
@@ -110,7 +113,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
 
   if (!editing) {
     return (
-      <Card>
+      <Card style={styles.summaryCard}>
         <AppPressable
           onPress={onEdit}
           accessibilityRole="button"
@@ -133,6 +136,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
           </Text>
           <Icon name="chevron-forward" size={16} tone="primary" />
         </AppPressable>
+        {action}
       </Card>
     );
   }
@@ -291,11 +295,15 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
           </Text>
         </View>
       ) : null}
+      {action}
     </Card>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  summaryCard: {
+    gap: theme.spacing.md,
+  },
   summary: {
     flexDirection: 'row',
     alignItems: 'center',

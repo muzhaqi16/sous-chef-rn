@@ -41,7 +41,6 @@ import { StorePriceSection } from './StorePriceSection';
 import { useProductOrigin } from '#features/barcode/hooks/useProductOrigin';
 import { ProductOriginSection } from './ProductOriginSection';
 import { useProductBrandListings } from '#features/barcode/hooks/useProductBrandListings';
-import { BrandListingsSection } from './BrandListingsSection';
 import { useBrandLists } from '#features/profile/hooks/useBrandLists';
 import { AddToBrandListSheet } from '#features/profile/ui/AddToBrandListSheet';
 
@@ -277,12 +276,36 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   // Only a product not yet in the cart can be added with what it cost.
   const canAddWithPrice = source === 'storeMode' && !cart.inCart && !isAdded;
 
+  // No source means no destination: only a deep link (`scan/result`) lands here
+  // without one, and a button that silently no-ops is worse than none. The
+  // header's scan button is the way on either way.
+  const addActions = source ? (
+    <ActionButtons
+      primaryAction={{
+        label: getButtonLabel(),
+        onPress: handleAddItem,
+        disabled: isAdded || cart.inCart,
+        loading: isLoading,
+      }}
+      alternateAction={
+        canAddWithPrice
+          ? {
+              label: t('barcode.addToCartWithPrice'),
+              onPress: () => setIsAskingPrice(true),
+            }
+          : undefined
+      }
+    />
+  ) : null;
+  const addsToPantry = source === 'pantry' && !!pantryId;
+
   return (
     <View style={styles.container}>
       <ScrollView
         style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
       >
         <ProductResultCard
           item={item}
@@ -291,9 +314,19 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           onEditItem={onEditItem}
           onCreateVariant={onCreateVariant}
           editActionLabel={editActionLabel}
+          brandLists={
+            scannedBrand
+              ? {
+                  listings: brandListings.listings,
+                  onAddToList: () => setIsAddingToList(true),
+                }
+              : undefined
+          }
         />
 
-        {source === 'pantry' && !!pantryId && (
+        {/* The add sits with what it adds: in the pantry's amount card, else
+            right under the product. */}
+        {addsToPantry ? (
           <ScanAmountSection
             form={amountForm}
             editing={isEditingAmount}
@@ -307,7 +340,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                   }
                 : null
             }
+            action={addActions}
           />
+        ) : (
+          addActions
         )}
 
         <ScanNutritionSection
@@ -316,12 +352,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         />
 
         <ProductOriginSection {...origin} />
-
-        <BrandListingsSection
-          listings={brandListings.listings}
-          brandName={scannedBrand?.name ?? null}
-          onAddToList={() => setIsAddingToList(true)}
-        />
 
         <HouseholdAlertsSection
           {...household}
@@ -343,40 +373,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           centered
         />
       </ScrollView>
-
-      {/* Pinned below the scroll, so the add stays in view however long the
-          result runs. */}
-      <View style={styles.footer}>
-        <ActionButtons
-          /*
-           * No source means no destination for the item. Only a deep link
-           * (`scan/result`) can land here without one, and a button that
-           * silently no-ops is worse than none.
-           */
-          primaryAction={
-            source
-              ? {
-                  label: getButtonLabel(),
-                  onPress: handleAddItem,
-                  disabled: isAdded || cart.inCart,
-                  loading: isLoading,
-                }
-              : undefined
-          }
-          alternateAction={
-            canAddWithPrice
-              ? {
-                  label: t('barcode.addToCartWithPrice'),
-                  onPress: () => setIsAskingPrice(true),
-                }
-              : undefined
-          }
-          secondaryAction={{
-            label: t('labels.scanAnother'),
-            onPress: onScanAnother,
-          }}
-        />
-      </View>
 
       {!!scannedBrand && (
         <AddToBrandListSheet
@@ -426,8 +422,5 @@ const styles = StyleSheet.create(theme => ({
   scrollContent: {
     paddingVertical: theme.spacing.lg,
     gap: theme.spacing.lg,
-  },
-  footer: {
-    paddingTop: theme.spacing.md,
   },
 }));

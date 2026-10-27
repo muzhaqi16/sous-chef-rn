@@ -4,9 +4,6 @@
     "flashOn": "Activar flash",
     "flashOff": "Desactivar flash"
   },
-  "barcodeInfo": {
-    "format": "Formato"
-  },
   "scanner": {
     "noHomeTitle": "Ningún hogar seleccionado",
     "noHomeBody": "Debes ser miembro de un hogar para escanear artículos.",
@@ -18,7 +15,6 @@
     "addItemHint": "Puedes añadir este artículo a la base de datos tocando el botón de abajo.",
     "newVersion": "Nueva versión",
     "barcodeValue": "Código de barras: {{barcode}}",
-    "formatValue": "Formato: {{format}}",
     "upc": "UPC/Código de barras",
     "servingAmount": "Una porción: {{amount}}",
     "referenceAmount": "Información nutricional por {{amount}}",
@@ -38,7 +34,12 @@
       "usedInSummary": "Se usa en {{unit}}"
     },
     "nutrition": {
-      "title": "Información nutricional"
+      "title": "Información nutricional",
+      "calories": "{{calories}} kcal",
+      "caloriesPer": "{{calories}} kcal por {{serving}}",
+      "protein": "{{value}} g de proteína",
+      "carbs": "{{value}} g de carbohidratos",
+      "fat": "{{value}} g de grasa"
     },
     "addToCart": "Añadir al carrito",
     "addToCartWithPrice": "Añadir con precio",

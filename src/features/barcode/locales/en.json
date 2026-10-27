@@ -4,9 +4,6 @@
     "flashOn": "Turn flash on",
     "flashOff": "Turn flash off"
   },
-  "barcodeInfo": {
-    "format": "Format"
-  },
   "scanner": {
     "noHomeTitle": "No Home Selected",
     "noHomeBody": "You need to be a member of a home to scan items.",
@@ -18,7 +15,6 @@
     "addItemHint": "You can add this item to the database by tapping the button below.",
     "newVersion": "New Version",
     "barcodeValue": "Barcode: {{barcode}}",
-    "formatValue": "Format: {{format}}",
     "upc": "UPC/Barcode",
     "servingAmount": "One serving: {{amount}}",
     "referenceAmount": "Nutrition per {{amount}}",
@@ -38,7 +34,12 @@
       "usedInSummary": "Used in {{unit}}"
     },
     "nutrition": {
-      "title": "Nutrition facts"
+      "title": "Nutrition facts",
+      "calories": "{{calories}} kcal",
+      "caloriesPer": "{{calories}} kcal per {{serving}}",
+      "protein": "{{value}} g protein",
+      "carbs": "{{value}} g carbs",
+      "fat": "{{value}} g fat"
     },
     "addToCart": "Add to cart",
     "addToCartWithPrice": "Add with price",

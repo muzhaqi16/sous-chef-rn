@@ -4,12 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
 
 interface ActionButtonsProps {
-  /**
-   * Omit when there is no action to offer — the secondary action then stands
-   * alone. Rendering a primary button that cannot do anything is worse than
-   * rendering none.
-   */
-  primaryAction?: {
+  primaryAction: {
     label: string;
     onPress: () => void;
     disabled?: boolean;
@@ -20,31 +15,25 @@ interface ActionButtonsProps {
     label: string;
     onPress: () => void;
   };
-  secondaryAction: {
-    label: string;
-    onPress: () => void;
-  };
 }
 
+/** The scan's add, drawn where its destination is described. */
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   primaryAction,
   alternateAction,
-  secondaryAction,
 }) => {
   return (
     <View style={styles.actionButtons}>
-      {!!primaryAction && (
-        <Button
-          onPress={primaryAction.onPress}
-          variant="primary"
-          size="large"
-          fullWidth
-          disabled={primaryAction.disabled}
-          loading={primaryAction.loading}
-        >
-          {primaryAction.label}
-        </Button>
-      )}
+      <Button
+        onPress={primaryAction.onPress}
+        variant="primary"
+        size="large"
+        fullWidth
+        disabled={primaryAction.disabled}
+        loading={primaryAction.loading}
+      >
+        {primaryAction.label}
+      </Button>
 
       {!!alternateAction && (
         <Button
@@ -56,21 +45,12 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           {alternateAction.label}
         </Button>
       )}
-
-      <Button
-        onPress={secondaryAction.onPress}
-        variant="secondary"
-        size="large"
-        fullWidth
-      >
-        {secondaryAction.label}
-      </Button>
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   actionButtons: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
 }));
