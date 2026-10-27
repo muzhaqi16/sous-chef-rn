@@ -107,7 +107,8 @@ export const isMultipack = (item: ScannedItem): boolean =>
 /**
  * The COUNT unit a scan is counted in: the pantry's counted stack of the item,
  * so a repeat scan joins it, else the container its label names (can, jar),
- * else a counted tracking unit, else a piece.
+ * else a counted tracking unit (the API's, which ends in the container
+ * households count it in), else a piece.
  */
 export function packageUnitOf(
   item: ScannedItem,

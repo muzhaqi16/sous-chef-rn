@@ -479,6 +479,75 @@ describe('useOperationUnits', () => {
       });
     });
 
+    // Peanut butter held in jars of grams, which households use by the
+    // tablespoon: the server ranks that unit first, as curated.
+    describe('a unit households use the product in', () => {
+      const tbsp = (source: UnitSource) =>
+        makeRankedUnit({
+          rank: 1,
+          source,
+          unit: {
+            __typename: 'Unit',
+            id: 'u-tbsp',
+            name: 'tablespoon',
+            symbol: 'tbsp',
+            type: UnitType.Volume,
+            unitRole: UnitRole.Measurement,
+            commonFractions: null,
+            displayAsFraction: true,
+          },
+        });
+      const grams = makeRankedUnit({ rank: 2 });
+
+      const defaultFor = async (
+        operation: PantryOperation,
+        units: MockPart<RankedUnit>[],
+      ) => {
+        const { result } = renderHook(
+          () =>
+            useOperationUnits({
+              ...defaultOptions,
+              netWeightUnitId: 'unit-1',
+              operation,
+            }),
+          {
+            wrapper: createApolloTestWrapper({
+              operationMocks: [consumptionMock(units)],
+            }),
+          },
+        );
+        await waitFor(() => expect(result.current.loading).toBe(false));
+        return result.current.defaultUnit?.unitId;
+      };
+
+      it('opens a use on it, ahead of the net weight unit', async () => {
+        expect(
+          await defaultFor(PantryOperation.Consume, [
+            grams,
+            tbsp(UnitSource.Curated),
+          ]),
+        ).toBe('u-tbsp');
+      });
+
+      it('leaves waste on the net weight unit', async () => {
+        expect(
+          await defaultFor(PantryOperation.Waste, [
+            grams,
+            tbsp(UnitSource.Curated),
+          ]),
+        ).toBe('unit-1');
+      });
+
+      it('keeps the net weight unit ahead of a unit merely convertible', async () => {
+        expect(
+          await defaultFor(PantryOperation.Consume, [
+            grams,
+            tbsp(UnitSource.Auto),
+          ]),
+        ).toBe('unit-1');
+      });
+    });
+
     it('exposes defaultIncrement and commonFractions from default unit', async () => {
       const { result } = renderHook(
         () =>
