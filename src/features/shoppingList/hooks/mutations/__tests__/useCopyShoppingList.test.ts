@@ -3,7 +3,6 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
-  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import {
   AddItemToShoppingListDocument,
@@ -61,25 +60,59 @@ describe('useCopyShoppingList', () => {
     jest.clearAllMocks();
   });
 
-  it('sends the lines in batches the API accepts', async () => {
+  // One create carries the list and its first 50 lines.
+  it('sends the first 50 lines with the create and the rest in batches', async () => {
+    const create = queuedCreate();
     const add = recordMock(AddItemToShoppingListDocument, {
       data: { addItemsToShoppingList: null },
     });
     const { result } = renderHookWithApollo(
       () => useCopyShoppingList('copy failed'),
-      { cache: seedCache([]), operationMocks: [queuedCreate().mock, add.mock] },
+      { cache: seedCache([]), operationMocks: [create.mock, add.mock] },
     );
 
     let copied: Awaited<ReturnType<typeof result.current.copyList>> = null;
     await act(async () => {
-      copied = await result.current.copyList(derivedList(51));
+      copied = await result.current.copyList(derivedList(101));
     });
 
+    const [sent] = create.fired as Array<{ input: { items: unknown[] } }>;
+    expect(sent?.input.items).toHaveLength(50);
     const sizes = (add.fired as Array<{ input: { items: unknown[] } }>).map(
       fired => fired.input.items.length,
     );
     expect(sizes).toEqual([50, 1]);
     expect(copied).toEqual(expect.any(String));
+  });
+
+  it('withdraws the list and its lines when the create is refused', async () => {
+    const refused = recordMock(CreateShoppingListDocument, {
+      data: {
+        createShoppingList: {
+          __typename: 'ForbiddenError',
+          code: ErrorCode.Forbidden,
+          message: 'guest',
+        },
+      },
+    });
+    const cache = seedCache([]);
+    const { result } = renderHookWithApollo(
+      () => useCopyShoppingList('copy failed'),
+      { cache, operationMocks: [refused.mock] },
+    );
+
+    let copied: Awaited<ReturnType<typeof result.current.copyList>> = null;
+    await act(async () => {
+      copied = await result.current.copyList(derivedList(3));
+    });
+
+    expect(copied).toBeNull();
+    expect(
+      Object.keys(cache.extract()).filter(key =>
+        key.startsWith('ShoppingList:'),
+      ),
+    ).toEqual([]);
+    expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 
   it('takes back the rows of a refused batch and reports it', async () => {
@@ -100,43 +133,34 @@ describe('useCopyShoppingList', () => {
 
     let copied: Awaited<ReturnType<typeof result.current.copyList>> = null;
     await act(async () => {
-      copied = await result.current.copyList(derivedList(3));
+      copied = await result.current.copyList(derivedList(53));
     });
 
-    expect(cachedRows(cache)).toEqual([]);
-    // The list stands; only its refused lines are taken back.
+    // The create's 50 stand; only the refused batch's 3 are taken back.
+    expect(cachedRows(cache)).toHaveLength(50);
+    expect(cachedRows(cache)).not.toContain('ShoppingListItem:line-50');
     expect(copied).toEqual(expect.any(String));
     expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 
-  it('takes back the one line the service refused and keeps the rest', async () => {
-    const data: MockDataFor<typeof AddItemToShoppingListDocument> = {
-      addItemsToShoppingList: {
-        __typename: 'AddItemsToShoppingListPayload',
-        results: [
-          {
-            index: 0,
-            success: true,
-            item: { id: 'line-0' },
-          },
-          {
-            index: 1,
-            success: false,
-            item: null,
-          },
-          {
-            index: 2,
-            success: true,
-            item: { id: 'line-2' },
-          },
-        ],
+  it('takes back the one line the create refused and keeps the rest', async () => {
+    const created = recordMock(CreateShoppingListDocument, {
+      data: {
+        createShoppingList: {
+          __typename: 'CreateShoppingListPayload',
+          shoppingList: { id: 'list-copy', name: 'Copy' },
+          itemResults: [
+            { index: 0, success: true, item: { id: 'line-0' } },
+            { index: 1, success: false, item: null },
+            { index: 2, success: true, item: { id: 'line-2' } },
+          ],
+        },
       },
-    };
-    const partlyRefused = recordMock(AddItemToShoppingListDocument, { data });
+    });
     const cache = seedCache([]);
     const { result } = renderHookWithApollo(
       () => useCopyShoppingList('copy failed'),
-      { cache, operationMocks: [queuedCreate().mock, partlyRefused.mock] },
+      { cache, operationMocks: [created.mock] },
     );
 
     await act(async () => {

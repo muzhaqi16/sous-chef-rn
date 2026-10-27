@@ -215,6 +215,21 @@ describe('useRecurringShoppingList', () => {
       recordMock(AddItemToShoppingListDocument, {
         data: { addItemsToShoppingList: null },
       });
+    // The create applies and refuses both lines it carries.
+    const createRefusingLines = () =>
+      recordMock(CreateShoppingListDocument, {
+        data: {
+          createShoppingList: {
+            __typename: 'CreateShoppingListPayload',
+            shoppingList: { id: 'list-copy', name: 'Weekly' },
+            itemResults: [0, 1].map(index => ({
+              index,
+              success: false,
+              item: null,
+            })),
+          },
+        },
+      });
     const queuedSchedule = () =>
       recordMock(CreateRecurringShoppingListDocument, {
         data: { createRecurringShoppingList: null },
@@ -250,7 +265,9 @@ describe('useRecurringShoppingList', () => {
         input: { id: newId, homeId: 'home-1' },
       });
 
-      const added = add.fired[0] as {
+      // The lines ride the create.
+      expect(add.fired).toHaveLength(0);
+      const added = create.fired[0] as {
         input?: { items?: Array<{ item: { itemId?: string } }> };
       };
       expect(added.input?.items?.map(i => i.item.itemId)).toEqual([
@@ -359,21 +376,14 @@ describe('useRecurringShoppingList', () => {
     });
 
     it('advances the pointer when some copied lines are refused', async () => {
-      const refusedAdd = recordMock(AddItemToShoppingListDocument, {
-        data: {
-          addItemsToShoppingList: {
-            __typename: 'ForbiddenError',
-            code: ErrorCode.Forbidden,
-          },
-        },
-      });
+      const create = createRefusingLines();
       const schedule = queuedSchedule();
       const cache = seedRecurring();
       const { result } = renderHookWithApollo(
         () => useRecurringShoppingList(),
         {
           cache,
-          operationMocks: [queuedCreate().mock, refusedAdd.mock, schedule.mock],
+          operationMocks: [create.mock, schedule.mock],
         },
       );
 
@@ -384,7 +394,7 @@ describe('useRecurringShoppingList', () => {
 
       // The list for this occurrence exists; only its lines were refused.
       expect(newId).not.toBeNull();
-      expect(refusedAdd.fired).toHaveLength(1);
+      expect(create.fired).toHaveLength(1);
       expect(schedule.fired).toHaveLength(1);
       const pointer = cache.readFragment<{ nextRecurringDate: string | null }>({
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
@@ -395,20 +405,12 @@ describe('useRecurringShoppingList', () => {
     });
 
     it('rolls the following occurrence on a second generate after a partly refused roll', async () => {
-      const refusedAdd = recordMock(AddItemToShoppingListDocument, {
-        data: {
-          addItemsToShoppingList: {
-            __typename: 'ForbiddenError',
-            code: ErrorCode.Forbidden,
-          },
-        },
-      });
       const schedule = queuedSchedule();
       const { result } = renderHookWithApollo(
         () => useRecurringShoppingList(),
         {
           cache: seedRecurring(),
-          operationMocks: [queuedCreate().mock, refusedAdd.mock, schedule.mock],
+          operationMocks: [createRefusingLines().mock, schedule.mock],
         },
       );
 

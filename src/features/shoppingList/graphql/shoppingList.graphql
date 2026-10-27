@@ -342,6 +342,8 @@ query GetShoppingListSuggestions($id: ID!, $limit: Int = 20) {
 # MUTATIONS
 # ============================================
 
+# A list made with lines carries up to 50 of them; each result pairs back to the
+# id minted for it by `index`, as the batch add's do.
 mutation CreateShoppingList($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
     __typename
@@ -350,6 +352,15 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
         id
         ...ShoppingListReaders
         name
+      }
+      itemResults {
+        index
+        success
+        item {
+          id
+          ...ShoppingListItemReaders
+          ...AddedShoppingListItemFields
+        }
       }
     }
     ... on Error {

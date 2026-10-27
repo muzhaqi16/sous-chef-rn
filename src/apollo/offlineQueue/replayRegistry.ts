@@ -31,10 +31,12 @@ import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { reconcileSettingsReplay } from '#/apollo/utils/unitSystemAnswers';
 import {
   reconcileShoppingAddReplay,
+  reconcileShoppingCreateReplay,
   settleShoppingItemDelete,
 } from '#features/shoppingList/offline/replayReconcilers';
 import {
   AddItemToShoppingListDocument,
+  CreateShoppingListDocument,
   MoveShoppingItemToPantryDocument,
   RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -97,6 +99,7 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [DeletePantryItemDocument, settlePantryItemDelete],
   [DeletePantryDocument, settlePantryDelete],
   ...forEachBatchAdd(reconcileShoppingAddReplay),
+  [CreateShoppingListDocument, reconcileShoppingCreateReplay],
   [RemoveItemFromShoppingListDocument, settleShoppingItemDelete],
   [UpdateUserPreferencesDocument, reconcileSettingsReplay],
 ]);

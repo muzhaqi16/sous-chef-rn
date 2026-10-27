@@ -42,14 +42,54 @@ export const reconcileShoppingAddReplay: Reconciler = (
 
   const payload: unknown = extractMutationPayload(data);
   if (!isRecord(payload) || !Array.isArray(payload.results)) return;
+  settleReplayedLines(cache, adopt, {
+    listId: shoppingListId,
+    items,
+    results: payload.results,
+    list: payload.shoppingList,
+  });
+};
+
+/** A list created with lines settles them as a batch add settles its own. */
+export const reconcileShoppingCreateReplay: Reconciler = (
+  cache,
+  variables,
+  data,
+  adopt,
+) => {
+  const input: unknown = variables.input;
+  if (!isRecord(input)) return;
+  const { id, items } = input;
+  if (typeof id !== 'string' || !Array.isArray(items)) return;
+
+  const payload: unknown = extractMutationPayload(data);
+  if (!isRecord(payload) || !Array.isArray(payload.itemResults)) return;
+  settleReplayedLines(cache, adopt, {
+    listId: id,
+    items,
+    results: payload.itemResults,
+    list: payload.shoppingList,
+  });
+};
+
+function settleReplayedLines(
+  cache: Parameters<Reconciler>[0],
+  adopt: Parameters<Reconciler>[3],
+  {
+    listId,
+    items,
+    results,
+    list,
+  }: { listId: string; items: unknown[]; results: unknown[]; list: unknown },
+): void {
   // The list is resolved after the whole batch, so the refused and merged rows
   // are already out of its count.
-  const countsSettled = carriesListTotals(payload.shoppingList, shoppingListId);
+  const countsSettled = carriesListTotals(list, listId);
 
   const withdrawn: string[] = [];
   const merged: { mintedId: string; item: { id: string; version?: number } }[] =
     [];
-  payload.results.forEach((result: unknown, position) => {
+  results.forEach((result: unknown, position) => {
     if (!isRecord(result)) return;
     const index = typeof result.index === 'number' ? result.index : position;
     const row: unknown = items[index];
@@ -68,15 +108,13 @@ export const reconcileShoppingAddReplay: Reconciler = (
       adoptServerEntityId(cache, 'Item', idOf(result.item.item), sent);
     }
   });
-  withdrawShoppingListItems(cache, shoppingListId, withdrawn, {
-    countsSettled,
-  });
+  withdrawShoppingListItems(cache, listId, withdrawn, { countsSettled });
   // A merged line's minted row was counted already, so the kept one is not.
   for (const { mintedId, item } of merged) {
-    addNewItemToShoppingListCache(cache, shoppingListId, item, false);
+    addNewItemToShoppingListCache(cache, listId, item, false);
     adopt?.({ mintedId, survivingId: item.id, version: item.version });
   }
-};
+}
 
 /**
  * An applied delete answers with its row's `{ id }`, which re-creates the entity
