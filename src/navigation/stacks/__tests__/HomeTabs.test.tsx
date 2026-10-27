@@ -10,6 +10,7 @@ import {
 import { ApolloProvider, useApolloClient } from '@apollo/client/react';
 import { render } from '@testing-library/react-native';
 import { RESYNC_SCOPE } from '#/apollo/scopedClient';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 
 // Capture the config `HomeTabs` hands to react-navigation. Without this the
 // navigator factory swallows it, and the screen options below — the reason
@@ -98,6 +99,7 @@ describe('HomeTabs', () => {
   it('scopes every query a tab watches to that tab', () => {
     const client = new ApolloClient({
       cache: new InMemoryCache(),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
       link: ApolloLink.empty(),
     });
     let watched: ObservableQuery | undefined;
