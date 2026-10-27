@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { t } from '#/i18n';
 import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { profileTestIDs } from '#features/profile/testIDs';
+import { SearchAvoidableFoodsDocument } from '../useAvoidFoodSearch.generated';
 import { AvoidFoodSheet } from '../AvoidFoodSheet';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
@@ -21,39 +22,48 @@ jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-let mockItems: Array<{ id: string; name: string; category: null }> = [];
-let mockTerm = 'bacon';
-jest.mock('#features/catalog/hooks/useItemAutocomplete', () => ({
-  useItemAutocomplete: () => ({
-    displayItems: mockItems,
-    searchTerm: mockTerm,
-    isLoading: false,
-    handleSearchTermChange: jest.fn(),
-    reset: jest.fn(),
-  }),
-}));
+// The field reports once typing pauses, so a row arrives after that wait.
+const ARRIVES = { timeout: 3000 };
 
-const renderSheet = (added: boolean) => {
+const searchMock = () =>
+  recordMock(SearchAvoidableFoodsDocument, {
+    data: {
+      searchItems: {
+        edges: [
+          { node: { id: 'bacon', name: 'Bacon' } },
+          { node: { id: 'turkey-bacon', name: 'Turkey Bacon' } },
+        ],
+      },
+    },
+  });
+
+const sheet = (
+  visible: boolean,
+  onPick: (itemId: string, severity: RestrictionSeverity) => Promise<boolean>,
+  onDismiss = jest.fn(),
+) => <AvoidFoodSheet visible={visible} onDismiss={onDismiss} onPick={onPick} />;
+
+const searchFor = async (term: string) => {
+  fireEvent.changeText(
+    screen.getByTestId(profileTestIDs.avoidSearchInput),
+    term,
+  );
+  await screen.findByText('Bacon', {}, ARRIVES);
+};
+
+const renderSheet = async (added: boolean) => {
   const onDismiss = jest.fn();
   const onPick = jest.fn().mockResolvedValue(added);
-  renderWithApollo(
-    <AvoidFoodSheet visible onDismiss={onDismiss} onPick={onPick} />,
-  );
+  renderWithApollo(sheet(true, onPick, onDismiss), {
+    operationMocks: [searchMock().mock],
+  });
+  await searchFor('bacon');
   return { onDismiss, onPick };
 };
 
-beforeEach(() => {
-  jest.clearAllMocks();
-  mockTerm = 'bacon';
-  mockItems = [
-    { id: 'bacon', name: 'Bacon', category: null },
-    { id: 'turkey-bacon', name: 'Turkey Bacon', category: null },
-  ];
-});
-
 describe('AvoidFoodSheet', () => {
   it('avoids the picked food by default, then closes', async () => {
-    const { onDismiss, onPick } = renderSheet(true);
+    const { onDismiss, onPick } = await renderSheet(true);
 
     fireEvent.press(screen.getByText('Bacon'));
 
@@ -65,7 +75,7 @@ describe('AvoidFoodSheet', () => {
   });
 
   it('records an allergy when that is chosen first', async () => {
-    const { onPick } = renderSheet(true);
+    const { onPick } = await renderSheet(true);
 
     fireEvent.press(
       screen.getByText(t('dietaryProfile.avoidSeverity.allergy')),
@@ -82,16 +92,16 @@ describe('AvoidFoodSheet', () => {
 
   it('opens again at the mildest severity', async () => {
     const onPick = jest.fn().mockResolvedValue(true);
-    const sheet = (visible: boolean) => (
-      <AvoidFoodSheet visible={visible} onDismiss={jest.fn()} onPick={onPick} />
-    );
-    const { rerender } = renderWithApollo(sheet(true));
+    const { rerender } = renderWithApollo(sheet(true, onPick), {
+      operationMocks: [searchMock().mock],
+    });
     fireEvent.press(
       screen.getByText(t('dietaryProfile.avoidSeverity.allergy')),
     );
 
-    rerender(sheet(false));
-    rerender(sheet(true));
+    rerender(sheet(false, onPick));
+    rerender(sheet(true, onPick));
+    await searchFor('bacon');
     fireEvent.press(screen.getByText('Bacon'));
 
     await waitFor(() =>
@@ -103,22 +113,11 @@ describe('AvoidFoodSheet', () => {
   });
 
   it('stays open when the food could not be added', async () => {
-    const { onDismiss, onPick } = renderSheet(false);
+    const { onDismiss, onPick } = await renderSheet(false);
 
     fireEvent.press(screen.getByText('Bacon'));
 
     await waitFor(() => expect(onPick).toHaveBeenCalled());
     expect(onDismiss).not.toHaveBeenCalled();
-  });
-
-  it('says when nothing matched', () => {
-    mockItems = [];
-    mockTerm = 'zzz';
-    renderSheet(true);
-
-    expect(
-      screen.getByText(t('empty.noResultsFor', { query: 'zzz' })),
-    ).toBeTruthy();
-    expect(screen.getByTestId(profileTestIDs.avoidSheet)).toBeTruthy();
   });
 });

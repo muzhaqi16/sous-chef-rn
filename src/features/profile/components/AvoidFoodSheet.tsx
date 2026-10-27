@@ -3,21 +3,15 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { SEVERITY_LABEL_KEYS } from '#domain/dietary';
-import {
-  RestrictionSeverity,
-  type ItemSuggestion,
-} from '#/graphql/generated/schemaTypes';
+import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
-import { RowCard } from '#components/atoms/RowCard';
-import { RowThumbnail } from '#components/atoms/RowThumbnail';
-import { ListItem } from '#components/molecules/ListItem';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { Sheet } from '#components/templates/Sheet';
-import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import { profileTestIDs } from '#features/profile/testIDs';
-import { resolveImageUrl } from '#utils/imageUtils';
 import { commonStyles } from '#/styles/commonStyles';
+import { AvoidFoodRow } from './AvoidFoodRow';
+import { useAvoidFoodSearch } from './useAvoidFoodSearch';
 
 /** Mildest first: avoiding a food is the common case, so it leads. */
 const SEVERITIES: RestrictionSeverity[] = [
@@ -25,6 +19,9 @@ const SEVERITIES: RestrictionSeverity[] = [
   RestrictionSeverity.Intolerance,
   RestrictionSeverity.Allergy,
 ];
+
+/** The API allows 30 food searches a minute, so the field waits for typing to pause. */
+const SEARCH_QUIET_MS = 500;
 
 interface AvoidFoodSheetProps {
   visible: boolean;
@@ -35,7 +32,7 @@ interface AvoidFoodSheetProps {
 
 /**
  * Picks a catalog food to avoid. The server stores the pick as its root, so
- * one brand's bacon avoids every bacon.
+ * avoiding bacon avoids every kind of bacon.
  */
 export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
   visible,
@@ -43,8 +40,8 @@ export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
   onPick,
 }) => {
   const { t } = useTranslation();
-  const autocomplete = useItemAutocomplete({ debounceMs: 0 });
-  const { reset } = autocomplete;
+  const search = useAvoidFoodSearch();
+  const { reset } = search;
   const [severity, setSeverity] = useState(RestrictionSeverity.Preference);
   const [saving, setSaving] = useState(false);
 
@@ -59,16 +56,20 @@ export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
     if (!visible) reset();
   }, [visible, reset]);
 
-  const searched =
-    autocomplete.searchTerm.length >= 2 && !autocomplete.isLoading;
-
-  const handlePick = async (picked: ItemSuggestion) => {
+  const handlePick = async (itemId: string) => {
     if (saving) return;
     setSaving(true);
-    const added = await onPick(picked.id, severity);
+    const added = await onPick(itemId, severity);
     setSaving(false);
     if (added) onDismiss();
   };
+
+  const notice = search.offline
+    ? t('dietaryProfile.avoidSearchNeedsConnection')
+    : search.failure ??
+      (search.noMatches
+        ? t('empty.noResultsFor', { query: search.searchTerm })
+        : null);
 
   return (
     <Sheet
@@ -98,35 +99,26 @@ export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
         <SearchBar
           testID={profileTestIDs.avoidSearchInput}
           placeholder={t('dietaryProfile.avoidSearchPlaceholder')}
-          onChangeText={autocomplete.handleSearchTermChange}
-          debounceMs={250}
+          onChangeText={search.onSearchTermChange}
+          debounceMs={SEARCH_QUIET_MS}
           autoCapitalize="words"
           autoCorrect={false}
           returnKeyType="search"
-          isLoading={!!autocomplete.isLoading}
+          isLoading={search.searching}
           containerStyle={styles.spaced}
         />
-        {autocomplete.displayItems.map(item => (
-          <RowCard
-            key={item.id}
-            testID={profileTestIDs.avoidCandidate(item.id)}
-          >
-            <ListItem
-              title={item.name}
-              subtitle={item.category?.name ?? undefined}
-              leftElement={<RowThumbnail uri={resolveImageUrl(item)} />}
-              onPress={() => {
-                void handlePick(item);
-              }}
-              accessibilityLabel={t('dietaryProfile.avoidNamed', {
-                name: item.name,
-              })}
-            />
-          </RowCard>
+        {search.foods.map(food => (
+          <AvoidFoodRow
+            key={food.id}
+            food={food}
+            onPress={() => {
+              void handlePick(food.id);
+            }}
+          />
         ))}
-        {!!searched && autocomplete.displayItems.length === 0 && (
+        {notice !== null && (
           <Text role="body" tone="secondary" align="center">
-            {t('empty.noResultsFor', { query: autocomplete.searchTerm })}
+            {notice}
           </Text>
         )}
       </View>

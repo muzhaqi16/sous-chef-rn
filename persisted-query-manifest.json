@@ -1293,6 +1293,12 @@
       "body": "query SavedRecipeFolders {\n  savedRecipeFolders\n}"
     },
     {
+      "id": "7444b2bffee36865a790fcd9d85fbce9329f213a73b1af90a0ec60bb255fa86a",
+      "name": "SearchAvoidableFoods",
+      "type": "query",
+      "body": "query SearchAvoidableFoods($query: String!, $first: Int!) {\n  searchItems(\n    query: $query\n    first: $first\n    filters: {level: CONCEPT, visibility: PUBLIC}\n  ) {\n    edges {\n      node {\n        id\n        ...AvoidFoodRow_item\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment AvoidFoodRow_item on Item {\n  id\n  name\n  imageUrl\n  categories {\n    id\n    isPrimary\n    category {\n      id\n      name\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "a1fa9dce14d9e2cfd48f373b6a2fd08a31c937c2f6fa8df2f4bd669dc75aa929",
       "name": "SearchBrands",
       "type": "query",
