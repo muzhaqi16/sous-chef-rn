@@ -17,6 +17,7 @@ import {
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
 import { toImagePerspective } from '#utils/imageUtils';
+import { todayKey } from '#/utils/dateUtils';
 import {
   MAX_IMAGE_SIZE,
   MAX_PROFILE_SIZE,
@@ -417,6 +418,7 @@ export const useImageUpload = () => {
           const { data } = await confirmItemUpload({
             variables: {
               input: { itemId, key, perspective, makePrimary },
+              today: todayKey(),
             },
           });
           const payload = appliedPayload(data);

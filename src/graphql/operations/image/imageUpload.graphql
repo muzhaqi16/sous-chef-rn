@@ -46,7 +46,10 @@ mutation ConfirmProfileImageUpload($input: ConfirmProfileImageUploadInput!) {
   }
 }
 
-mutation ConfirmItemImageUpload($input: ConfirmItemImageUploadInput!) {
+mutation ConfirmItemImageUpload(
+  $input: ConfirmItemImageUploadInput!
+  $today: LocalDate!
+) {
   confirmItemImageUpload(input: $input) {
     __typename
     ... on ConfirmItemImageUploadPayload {
@@ -56,6 +59,28 @@ mutation ConfirmItemImageUpload($input: ConfirmItemImageUploadInput!) {
       item {
         id
         ...ItemReaders
+      }
+      # The viewer's own rows for the item, so a pending photo shows on them
+      # without a pull to refresh.
+      pantryItems {
+        id
+        ...PantryItemReaders
+        pantry {
+          id
+          ...PantryReaders
+        }
+        storageLocation {
+          id
+          ...StorageLocationReaders
+        }
+      }
+      shoppingListItems {
+        id
+        ...ShoppingListItemReaders
+        shoppingList {
+          id
+          ...ShoppingListReaders
+        }
       }
     }
     ... on Error {
