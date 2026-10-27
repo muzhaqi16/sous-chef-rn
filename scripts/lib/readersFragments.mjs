@@ -23,9 +23,11 @@ import { isEntity, isOwnedElsewhere } from './graphqlDocuments.mjs';
 export const readersDirOf = root => join(root, 'graphql', 'readers');
 export const READERS_DIR = readersDirOf(fromRoot('src'));
 const SUFFIX = 'Readers';
-// Value types a mutation returns in many places. The server's parser counts
-// every inline copy against its token cap, so each is selected by one fragment.
-const SHARED = new Set(['Measure']);
+// Types a mutation returns in many places. The server's parser counts every
+// inline copy against its token cap, so each is selected by one fragment. That
+// fragment is the union of every place's selection, so a type joins only while
+// its places select the same fields, or every place fetches the extra ones.
+const SHARED = new Set(['ItemPhoto', 'Measure', 'ShownNutrition']);
 
 const readersFile = (type, dir) =>
   join(dir, `${type[0].toLowerCase()}${type.slice(1)}${SUFFIX}.graphql`);
@@ -324,6 +326,9 @@ const sharedSpread = type =>
     ? {
         kind: Kind.SELECTION_SET,
         selections: [
+          ...(isEntity(type)
+            ? [{ kind: Kind.FIELD, name: { kind: Kind.NAME, value: 'id' } }]
+            : []),
           {
             kind: Kind.FRAGMENT_SPREAD,
             name: { kind: Kind.NAME, value: `${type.name}${SUFFIX}` },

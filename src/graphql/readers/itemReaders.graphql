@@ -77,50 +77,13 @@ fragment ItemReaders on Item {
   }
   photos {
     id
-    credit {
-      license
-      licenseUrl
-      sourceUrl
-      text
-    }
-    isPrimary
-    perspective
-    status
-    url
-    variants {
-      id
-      kind
-      url
-    }
+    ...ItemPhotoReaders
   }
   primaryUpc
   shelfLifeDays
   shelfLifeOpenedDays
   shownNutrition {
-    facts {
-      id
-      addedSugars
-      calcium
-      calories
-      cholesterol
-      dietaryFiber
-      iron
-      potassium
-      protein
-      saturatedFat
-      servingSize
-      servingUnit
-      sodium
-      totalCarbs
-      totalFat
-      totalSugars
-      transFat
-      vitaminD
-    }
-    typicalOf {
-      id
-      name
-    }
+    ...ShownNutritionReaders
   }
   storageState
   storeDepartment
