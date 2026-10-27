@@ -51,6 +51,12 @@ mutation ConfirmItemImageUpload($input: ConfirmItemImageUploadInput!) {
     __typename
     ... on ConfirmItemImageUploadPayload {
       url
+      # The item's photos as the confirm left them: the gallery and the scan
+      # card show the new photo, pending ones included, without a refetch.
+      item {
+        id
+        ...ItemReaders
+      }
     }
     ... on Error {
       code
