@@ -9,6 +9,7 @@ export const barcodeTestIDs = {
   /** What a pantry add records: its summary, which opens the fields below. */
   scanAmountSummary: 'scan-amount-summary',
   scanAmountQuantity: 'scan-amount-quantity',
+  scanAmountUnit: 'scan-amount-unit',
   scanAmountPackaged: 'scan-amount-packaged',
   scanAmountSize: 'scan-amount-size',
   scanAmountUsedIn: 'scan-amount-used-in',

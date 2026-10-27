@@ -177,6 +177,7 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
               }}
               error={unitState.error?.message}
               placeholder={t('labels.pcsDozen')}
+              testID={barcodeTestIDs.scanAmountUnit}
             />
           )}
         />
