@@ -2523,7 +2523,8 @@ input CreatePantryItemInput {
   """
   The unit this household uses the stack in (a jar of honey, by the
   tablespoon); the consume picker leads with it. Refused on consumeUnit when
-  the stack cannot be consumed in it. Omitted, the stack has none.
+  the stack cannot be consumed in it. Omitted, the stack has none. Not applied
+  to a held stack a forced add joins.
   """
   consumeUnit: UnitRefInput
   """
@@ -2532,11 +2533,13 @@ input CreatePantryItemInput {
   """
   expiresOn: LocalDate
   """
-  When the pantry already holds this item in the resolved unit, add the quantity to that
-  stack and return it instead of refusing with DuplicatePantryItemError. A pantry holds one
-  active stack per item per unit. The added stock is measured by this input's own net weight
-  and records its linked purchase. Stack-level fields (brand, storage, tags, thresholds and
-  the item name) are not applied to the held stack.
+  When the pantry already holds this item, in any unit, add the stock anyway instead of
+  refusing with DuplicatePantryItemError. It joins the held stack in the resolved unit, else
+  the oldest, where the amount converts into that stack on recorded facts, and that stack is
+  returned; otherwise it opens a stack of its own in the resolved unit. Joined stock is
+  measured by this input's own net weight and records its linked purchase. Stack-level fields
+  (brand, storage, tags, thresholds, consumeUnit and the item name) are neither applied to
+  nor checked against a stack it joins.
   """
   forceAdd: Boolean
   """
@@ -4725,10 +4728,11 @@ interface DomainEvent {
 }
 
 """
-The pantry already holds an active stack of this catalog item in this unit, and
-a pantry holds one. Returned by `createPantryItem` without `forceAdd`, and by
-`updatePantryItem` and `restorePantryItem` when the write would open a second,
-so the client can route the user to restock the existing stack. The `code` is
+The pantry already holds this catalog item. `createPantryItem` without
+`forceAdd` returns it when an active stack holds the item in any unit, naming
+each one. `updatePantryItem` and `restorePantryItem` return it when the write
+would open a second stack of the item in one unit. The client can route the
+user to restock the existing stack, or resend with `forceAdd`. The `code` is
 `PANTRY_ITEM_ALREADY_EXISTS`.
 """
 type DuplicatePantryItemError implements Error {
