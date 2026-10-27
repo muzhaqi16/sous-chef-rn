@@ -2259,6 +2259,11 @@ input CreateItemInput {
   forge any of them.
   """
   metadata: ItemMetadataInput
+  """
+  The item's name. Stored cleaned: control characters removed, trimmed, and
+  each run of whitespace one space. Refused (VALIDATION_FAILED on name) when
+  that is empty or over 128 characters; any other text is accepted.
+  """
   name: String!
   netWeights: [ItemNetWeightInput!]
   nutritionFacts: [NutritionFactInput!]
@@ -5900,7 +5905,7 @@ type HouseholdPaidPrice {
 }
 
 """
-What a household itself paid: its own purchases and receipts only; other households', catalog and manual prices never count.
+What a household itself paid: its own purchases and receipts only; other households', catalog and manual prices never count. A member's purchase recorded with no home counts only in that member's own summary of their only home.
 """
 type HouseholdPriceSummary {
   currency: Currency!
@@ -6152,6 +6157,10 @@ input InlineItemInput {
   an item the caller cannot see holds is refused with a ConflictError.
   """
   id: ID
+  """
+  The name an item created inline takes, cleaned as createItem's and at most
+  128 characters. Blank or absent, the server names the item.
+  """
   name: String
   netWeight: Float
   netWeights: [ItemNetWeightInput!]
@@ -6487,7 +6496,8 @@ type Item {
   ): [DietaryAlert!]!
   """
   Other live products under this item's concept raising no alert and holding allergen or ingredient
-  data, most popular first; empty for an unplaced product. Not a claim of safety.
+  data, most popular first; empty for an unplaced product. The 300 most popular products are
+  judged, so one ranked below them is not offered. Not a claim of safety.
   """
   dietaryAlternatives(
     """At most this many: default 5, at most 20"""
@@ -13270,6 +13280,8 @@ input PurchaseTrackingInput {
   """
   The product bought when not the line's own item, such as a store-mode scan: the purchase is recorded
   on it while the line keeps its item. The line's item or one under it; refused beside isPurchased false.
+  Read only when the line becomes purchased: on a line already purchased, as a replayed tick, it is
+  not applied, and the purchase keeps the product it was recorded on.
   """
   purchasedItem: PurchasedItemInput
   """The price paid per unit bought. Refused beside isPurchased false."""
@@ -18649,6 +18661,7 @@ input SuggestibleItemChangesInput {
   description: String
   healthInfo: HealthInfoInput
   media: MediaAssetsInput
+  """The proposed name, cleaned and bounded as createItem's"""
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
@@ -19591,6 +19604,10 @@ input UpdateItemInput {
   forge any of them.
   """
   metadata: ItemMetadataInput
+  """
+  The item's new name, cleaned and bounded as createItem's; omit it to keep
+  the name.
+  """
   name: String
   nutritionFacts: [NutritionFactInput!]
   packageInfo: PackageInfoInput
