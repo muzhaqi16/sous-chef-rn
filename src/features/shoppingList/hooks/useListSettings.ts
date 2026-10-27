@@ -15,7 +15,11 @@ import { useShoppingListReminder } from '#features/shoppingList/hooks/mutations/
 import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { useDeleteShoppingList } from '#features/shoppingList/hooks/mutations/useDeleteShoppingList';
-import { ListStatus, RecurringPattern } from '#/graphql/generated/schemaTypes';
+import {
+  ListStatus,
+  PriceComparisonScope,
+  RecurringPattern,
+} from '#/graphql/generated/schemaTypes';
 import { useAppStore } from '#store/useAppStore';
 
 import { useUser } from '#store/useAppStore';
@@ -93,6 +97,10 @@ export const useListSettings = (listId: string | undefined) => {
   // typed name that is not picked names no store.
   const [storeInput, setStoreInput] = useState('');
   const [pickedStore, setPickedStore] = useState<StoreChoice | null>(null);
+  // The comparison on screen, which a change of store restates in its answer.
+  const [comparisonScope, setComparisonScope] = useState(
+    PriceComparisonScope.Store,
+  );
   const [saving, setSaving] = useState(false);
   const [selectedHomeId, setSelectedHomeId] = useState<string | null>(null);
   const [showHomePicker, setShowHomePicker] = useState(false);
@@ -338,17 +346,21 @@ export const useListSettings = (listId: string | undefined) => {
           if (defaultTurnedOn) {
             await setAsDefault(listId);
           }
-          await updateShoppingList(listId, {
-            name: name.trim(),
-            ...(defaultTurnedOff && { isDefault: false }),
-            ...(storeChanged && { targetStore: pickedStore }),
-            ...(changedBudget !== undefined && {
-              planning: {
-                budgetAmount: changedBudget,
-                ...(currency !== null && { currency }),
-              },
-            }),
-          });
+          await updateShoppingList(
+            listId,
+            {
+              name: name.trim(),
+              ...(defaultTurnedOff && { isDefault: false }),
+              ...(storeChanged && { targetStore: pickedStore }),
+              ...(changedBudget !== undefined && {
+                planning: {
+                  budgetAmount: changedBudget,
+                  ...(currency !== null && { currency }),
+                },
+              }),
+            },
+            comparisonScope,
+          );
         }
       },
       setSaving,
@@ -567,6 +579,7 @@ export const useListSettings = (listId: string | undefined) => {
     basedOnTemplate,
     budgetInput,
     collaborators,
+    comparisonScope,
     completedShopDate,
     completing,
     creating,
@@ -625,6 +638,7 @@ export const useListSettings = (listId: string | undefined) => {
     setIsDefault,
     setName,
     setSelectedHomeId,
+    setComparisonScope,
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,

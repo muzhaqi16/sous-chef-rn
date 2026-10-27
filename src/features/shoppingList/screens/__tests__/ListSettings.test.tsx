@@ -8,6 +8,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { InfoRowProps } from '#components/atoms/InfoRow';
 import { ListSettings } from '../ListSettings';
+import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
@@ -284,6 +285,8 @@ describe('ListSettings', () => {
         expect.objectContaining({
           targetStore: { id: 'store-1', name: 'Costco' },
         }),
+        // The comparison on screen, which the answer restates.
+        PriceComparisonScope.Store,
       ),
     );
   });
@@ -297,6 +300,7 @@ describe('ListSettings', () => {
     expect(mockUpdateShoppingList).toHaveBeenCalledWith(
       'sl1',
       expect.not.objectContaining({ targetStore: expect.anything() }),
+      PriceComparisonScope.Store,
     );
   });
 

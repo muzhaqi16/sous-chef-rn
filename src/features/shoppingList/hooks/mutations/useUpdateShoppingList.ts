@@ -19,6 +19,7 @@ import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import type {
   ListStatus,
+  PriceComparisonScope,
   ShoppingListPlanningInput,
 } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
@@ -40,11 +41,30 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
   const [mutate] = useMutation(UpdateShoppingListDocument, {
     context: { localFirst: true },
+    update(cache, { data }, { variables }) {
+      const comparison = appliedPayload(data)?.storeComparison;
+      if (!comparison || !variables?.comparisonScope) return;
+      cache.writeQuery({
+        query: ListStoreComparisonDocument,
+        variables: {
+          input: {
+            listId: variables.input.id,
+            scope: variables.comparisonScope,
+          },
+        },
+        data: { __typename: 'Query', shoppingListStoreComparison: comparison },
+      });
+    },
   });
 
+  /**
+   * `comparisonShown` is the comparison on screen, which a change of store
+   * restates in the same answer.
+   */
   const updateShoppingList = async (
     id: string,
     updates: ShoppingListSettingsUpdate,
+    comparisonShown?: PriceComparisonScope,
   ) => {
     const { targetStore, ...fields } = updates;
     const planning =
@@ -120,6 +140,8 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
 
+    const withComparison =
+      targetStore !== undefined && comparisonShown !== undefined;
     const settled = await settleMutation(
       () =>
         mutate({
@@ -130,6 +152,10 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
               ...(planning !== undefined && { planning }),
               version: snapshot.version,
             },
+            ...(withComparison && {
+              withComparison,
+              comparisonScope: comparisonShown,
+            }),
           },
         }),
       {
@@ -144,14 +170,11 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     // Queued (offline / API down): the permanent write stands and the update
     // replays keyed by the list id; there is no server entity to return.
     const updated = appliedPayload(settled.data)?.shoppingList ?? null;
-    // The list's store prices every line's suggestion and marks the comparison's
-    // target; neither is part of the list the response carries.
+    // The list's store prices every line's suggestion, which the list the
+    // response carries does not restate.
     if (updated && targetStore !== undefined) {
       void client.refetchQueries({
-        include: [
-          GetShoppingListItemsFilteredDocument,
-          ListStoreComparisonDocument,
-        ],
+        include: [GetShoppingListItemsFilteredDocument],
       });
     }
     return updated;

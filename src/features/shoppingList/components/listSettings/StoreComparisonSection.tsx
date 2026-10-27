@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
@@ -21,15 +21,18 @@ const SCOPES = [PriceComparisonScope.Store, PriceComparisonScope.Chain];
 
 interface StoreComparisonSectionProps {
   listId: string | undefined;
+  scope: PriceComparisonScope;
+  onScopeChange: (scope: PriceComparisonScope) => void;
 }
 
 /** Where the list's unbought items cost least, from recorded prices. */
 export const StoreComparisonSection: React.FC<StoreComparisonSectionProps> = ({
   listId,
+  scope,
+  onScopeChange,
 }) => {
   const { t } = useTranslation();
   const isOnline = useIsOnline();
-  const [scope, setScope] = useState(PriceComparisonScope.Store);
   const { comparison, loading, failed } = useListStoreComparison(listId, scope);
   if (!listId) return null;
 
@@ -58,7 +61,7 @@ export const StoreComparisonSection: React.FC<StoreComparisonSectionProps> = ({
       <SegmentedControl
         options={SCOPES}
         value={scope}
-        onChange={setScope}
+        onChange={onScopeChange}
         formatLabel={value =>
           value === PriceComparisonScope.Store
             ? t('shoppingListScreens.storeComparison.scopeStores')

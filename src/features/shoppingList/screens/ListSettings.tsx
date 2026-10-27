@@ -41,6 +41,7 @@ export const ListSettings: React.FC<
     basedOnTemplate,
     budgetInput,
     collaborators,
+    comparisonScope,
     completedShopDate,
     completing,
     creating,
@@ -94,6 +95,7 @@ export const ListSettings: React.FC<
     selectedTemplate,
     selectedTemplateId,
     setBudgetInput,
+    setComparisonScope,
     setIsDefault,
     setName,
     setSelectedHomeId,
@@ -401,7 +403,11 @@ export const ListSettings: React.FC<
         handleStoreSelected={handleStoreSelected}
       />
 
-      <StoreComparisonSection listId={listId} />
+      <StoreComparisonSection
+        listId={listId}
+        scope={comparisonScope}
+        onScopeChange={setComparisonScope}
+      />
 
       <BudgetSection
         budgetInput={budgetInput}

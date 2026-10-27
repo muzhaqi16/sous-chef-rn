@@ -1,4 +1,5 @@
-# Where the list is cheapest, from recorded prices (30 calls a minute).
+# Where the list is cheapest, from recorded prices (30 calls a minute). A
+# change of store restates it in UpdateShoppingList, in this selection.
 query ListStoreComparison($input: ShoppingListStoreComparisonInput!) {
   shoppingListStoreComparison(input: $input) {
     scope

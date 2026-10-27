@@ -373,13 +373,58 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
   }
 }
 
-mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
+# A change of store restates the comparison the settings screen shows, in
+# ListStoreComparison's selection, which `useUpdateShoppingList` writes over it.
+mutation UpdateShoppingList(
+  $input: UpdateShoppingListInput!
+  $withComparison: Boolean = false
+  $comparisonScope: PriceComparisonScope
+) {
   updateShoppingList(input: $input) {
     __typename
     ... on UpdateShoppingListPayload {
       shoppingList {
         id
         ...ShoppingListReaders
+      }
+      # Its stores, currency and unpriced lines are entities: each with the
+      # fields the queries read on it, as every write returning one carries.
+      storeComparison(scope: $comparisonScope) @include(if: $withComparison) {
+        scope
+        currency {
+          id
+          code
+          decimalPlaces
+          name
+          symbol
+        }
+        comparableLines
+        leftOutLines
+        truncated
+        unpricedLines {
+          id
+          ...ShoppingListItemReaders
+        }
+        candidates {
+          scope
+          store {
+            id
+            ...StoreReaders
+            name
+            address
+          }
+          chain {
+            id
+            name
+          }
+          estimatedTotal
+          pricedLines
+          chainFilledLines
+          anyStoreFilledLines
+          ranked
+          isTarget
+          newestObservedAt
+        }
       }
     }
     ... on Error {

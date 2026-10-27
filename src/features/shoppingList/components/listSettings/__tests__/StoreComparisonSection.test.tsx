@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import {
   recordMock,
@@ -14,6 +14,18 @@ type Comparison = MockDataFor<
   typeof ListStoreComparisonDocument
 >['shoppingListStoreComparison'];
 type Candidate = NonNullable<NonNullable<Comparison>['candidates']>[number];
+
+// The settings screen holds the scope, so a change of store restates it.
+function Section() {
+  const [scope, setScope] = useState(PriceComparisonScope.Store);
+  return (
+    <StoreComparisonSection
+      listId="list-1"
+      scope={scope}
+      onScopeChange={setScope}
+    />
+  );
+}
 
 // The rest is completed from the SDL.
 const renderWith = (
@@ -33,7 +45,7 @@ const renderWith = (
       },
     },
   });
-  renderWithApollo(<StoreComparisonSection listId="list-1" />, {
+  renderWithApollo(<Section />, {
     operationMocks: [query.mock],
   });
   return query;
