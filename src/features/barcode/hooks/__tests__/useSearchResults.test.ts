@@ -358,7 +358,28 @@ describe('useSearchResults', () => {
 
       await waitFor(() =>
         expect(upc.fired).toContainEqual(
-          expect.objectContaining({ homeId: 'home-1', withHome: true }),
+          expect.objectContaining({
+            homeId: 'home-1',
+            withHome: true,
+            withPrices: false,
+          }),
+        ),
+      );
+    });
+
+    // Store mode's price lines ride it too, and nowhere else are they read.
+    it('asks for what the household paid in store mode', async () => {
+      useStore.setState({ selectedHomeId: 'home-1' });
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        { operationMocks: [upc.mock] },
+      );
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({ homeId: 'home-1', withPrices: true }),
         ),
       );
     });

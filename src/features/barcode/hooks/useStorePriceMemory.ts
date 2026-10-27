@@ -1,4 +1,4 @@
-import { skipToken, useQuery } from '@apollo/client/react';
+import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import {
@@ -10,7 +10,9 @@ import { formatMonthDay } from '#/utils/formatters/date';
 import { useSelectedHomeId } from '#store/useAppStore';
 import {
   HouseholdPricePaidDocument,
+  HouseholdUsualUnitPriceDocument,
   StorePriceComparisonDocument,
+  UseStorePriceMemory_ItemFragmentDoc,
 } from './useStorePriceMemory.generated';
 
 /** The newest price the household paid, worded for the card. */
@@ -52,22 +54,40 @@ export function useStorePriceMemory(
 ) {
   const { t } = useTranslation();
   const homeId = useSelectedHomeId();
-  const paid = useQuery(
+  const shown = listId && homeId ? homeId : null;
+  // The scan's lookup stores these with the item in store mode, so this asks
+  // only for an item that came another way.
+  useQuery(
     HouseholdPricePaidDocument,
-    listId && homeId && unit
-      ? { variables: { itemId, homeId, unitId: unit.id } }
+    shown
+      ? { variables: { itemId, homeId: shown }, fetchPolicy: 'cache-first' }
+      : skipToken,
+  );
+  const paid = useFragment({
+    fragment: UseStorePriceMemory_ItemFragmentDoc,
+    fragmentName: 'useStorePriceMemory_item',
+    from: shown ? { __typename: 'Item', id: itemId } : null,
+    variables: { homeId: shown ?? '' },
+  });
+  const summary = paid.complete ? paid.data.householdPriceSummary : undefined;
+  // A list line counting in a unit of its own: the usual per one of that.
+  const ownUnit =
+    paid.complete && unit && unit.id !== paid.data.usualUnit.id
+      ? unit
+      : undefined;
+  const ownUnitPrice = useQuery(
+    HouseholdUsualUnitPriceDocument,
+    shown && ownUnit
+      ? {
+          variables: { itemId, homeId: shown, unitId: ownUnit.id },
+          fetchPolicy: 'cache-first',
+        }
       : skipToken,
   );
   const here = useQuery(
     StorePriceComparisonDocument,
     listId ? { variables: { itemId, listId } } : skipToken,
   );
-
-  // `skipToken` keeps the last run's answer, which may be another home's.
-  const summary =
-    paid.variables.homeId === homeId
-      ? paid.data?.item?.householdPriceSummary
-      : undefined;
   const money = (
     amount: number,
     currency: { code: string; decimalPlaces: number },
@@ -114,7 +134,13 @@ export function useStorePriceMemory(
     );
   const typicalRow = atStore ?? atChain;
 
-  const usualPerUnit = usual?.unitPrice ?? null;
+  // `skipToken` keeps the last run's answer, which may be another unit's.
+  const asked = ownUnitPrice.variables;
+  const ownUsual =
+    ownUnit && asked.unitId === ownUnit.id && asked.homeId === shown
+      ? ownUnitPrice.data?.item?.householdPriceSummary.usual?.unitPrice
+      : undefined;
+  const usualPerUnit = (ownUnit ? ownUsual : usual?.unitPrice) ?? null;
   /**
    * How a price per one of `unit` compares with the usual, to the currency's
    * smallest coin; null where the server could not put the usual on that unit.

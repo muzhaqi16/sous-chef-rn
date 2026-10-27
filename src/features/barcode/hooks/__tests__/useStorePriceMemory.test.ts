@@ -12,6 +12,7 @@ import { formatCurrency } from '#/utils/formatters/number';
 import { formatMonthDay } from '#/utils/formatters/date';
 import {
   HouseholdPricePaidDocument,
+  HouseholdUsualUnitPriceDocument,
   StorePriceComparisonDocument,
 } from '../useStorePriceMemory.generated';
 import { useStorePriceMemory } from '../useStorePriceMemory';
@@ -43,6 +44,8 @@ const paidMock = (summary: {
     data: {
       item: {
         id: 'pb',
+        // The unit the usual is priced in when asked for none: the jar.
+        usualUnit: { id: 'u-jar' },
         householdPriceSummary: {
           currency: USD,
           lastPaid: summary.lastPaid
@@ -208,7 +211,8 @@ describe('useStorePriceMemory', () => {
     });
     const { result } = render([paid, comparisonMock([])]);
     await waitFor(() => expect(result.current.usual).not.toBeNull());
-    expect(paid.fired[0]).toMatchObject({ unitId: 'u-jar' });
+    // The jar is the unit the usual comes in: nothing more is asked.
+    expect(paid.fired).toEqual([{ itemId: 'pb', homeId: 'home-1' }]);
 
     const usual = t('barcode.price.perUnit', { price: usd(3.49), unit: 'jar' });
     expect(result.current.compareToUsual(4.29)).toBe(
@@ -219,6 +223,49 @@ describe('useStorePriceMemory', () => {
     );
     expect(result.current.compareToUsual(2.99)).toBe(
       t('barcode.price.belowUsual', { difference: usd(0.5), usual }),
+    );
+  });
+
+  // A list line counting in pounds: the usual per pound is asked on its own.
+  it("asks the usual per one of a list line's own unit", async () => {
+    const perLb = recordMock(HouseholdUsualUnitPriceDocument, {
+      data: {
+        item: {
+          id: 'pb',
+          householdPriceSummary: { usual: { unitPrice: 5.99 } },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useStorePriceMemory('pb', 'list-1', { id: 'u-lb', symbol: 'lb' }),
+      {
+        operationMocks: [
+          paidMock({
+            usual: {
+              basis: PriceBasis.PerKg,
+              medianPrice: 13.2,
+              unitPrice: 3.49,
+            },
+          }).mock,
+          perLb.mock,
+          comparisonMock([]).mock,
+        ],
+      },
+    );
+
+    await waitFor(() =>
+      expect(result.current.compareToUsual(5.99)).toBe(
+        t('barcode.price.sameAsUsual', {
+          usual: t('barcode.price.perUnit', { price: usd(5.99), unit: 'lb' }),
+        }),
+      ),
+    );
+    expect(perLb.fired).toEqual([
+      { itemId: 'pb', homeId: 'home-1', unitId: 'u-lb' },
+    ]);
+    // The pound's price joins the summary the first answer stored.
+    expect(result.current.usual).toBe(
+      t('barcode.price.perKg', { price: usd(13.2) }),
     );
   });
 

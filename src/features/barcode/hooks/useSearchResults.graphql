@@ -12,6 +12,7 @@ query ItemByLookup(
   $pantry: ID
   $homeId: ID = ""
   $withHome: Boolean = false
+  $withPrices: Boolean = false
 ) {
   items(filters: { lookup: $lookup }, first: 1) {
     edges {
@@ -21,6 +22,7 @@ query ItemByLookup(
         ...useProductOrigin_item
         ...useProductBrandListings_item
         ...useProductDietaryAlerts_item @include(if: $withHome)
+        ...useStorePriceMemory_item @include(if: $withPrices)
         # The concepts above the product, nearest first: store mode ticks the
         # list line that names the product or one of them.
         ancestors {

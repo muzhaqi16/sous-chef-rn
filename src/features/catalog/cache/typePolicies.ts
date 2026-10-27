@@ -32,6 +32,10 @@ export const catalogTypePolicies: TypePolicies = {
       },
     },
   },
+  // No id: a query asking for the usual in a second unit joins the summary
+  // the scan's lookup stored instead of replacing it.
+  HouseholdPriceSummary: { merge: true },
+  HouseholdUsualPrice: { merge: true },
   Query: {
     fields: {
       // Item lookups by filters (barcode/UPC, etc.) - cache separately per filter

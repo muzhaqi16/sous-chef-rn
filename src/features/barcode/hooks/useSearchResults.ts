@@ -164,6 +164,7 @@ export const useSearchResults = (
   barcode: string,
   format?: string,
   pantryId?: string,
+  inStoreMode = false,
 ) => {
   const { t } = useTranslation();
   const client = useApolloClient();
@@ -175,9 +176,12 @@ export const useSearchResults = (
   const createdId = created?.barcode === barcode ? created.id : null;
 
   const [addNewItem, { loading: addingItem }] = useMutation(CreateItemDocument);
-  // The household's dietary alerts ride the lookup when there is a household.
+  // The household's dietary alerts ride the lookup when there is a household,
+  // and in store mode what it paid.
   const homeId = useSelectedHomeId();
-  const homeVariables = homeId ? { homeId, withHome: true } : {};
+  const homeVariables = homeId
+    ? { homeId, withHome: true, withPrices: inStoreMode }
+    : {};
 
   const {
     data: upcData,

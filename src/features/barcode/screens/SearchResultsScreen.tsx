@@ -86,7 +86,7 @@ export const SearchResultsScreen: React.FC<
   });
 
   const { item, loading, error, addingItem, handleAddItem, handleRetry } =
-    useSearchResults(barcode, format, pantryId);
+    useSearchResults(barcode, format, pantryId, source === 'storeMode');
 
   // Pop SearchResults and return to the scanner beneath it.
   const handleScanAnother = () => goBack();
