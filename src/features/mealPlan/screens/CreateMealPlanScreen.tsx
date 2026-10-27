@@ -71,7 +71,9 @@ export const CreateMealPlanScreen: React.FC = () => {
   const { createPlanFromTemplate, creatingFromTemplate } =
     useMealTemplateActions();
   const { homes } = useHomeQuery();
-  const { profile: dietaryProfile } = useDietaryProfile();
+  const { profile: dietaryProfile } = useDietaryProfile({
+    fetchPolicy: 'cache-first',
+  });
   const selectedHomeId = useSelectedHomeId();
 
   const { control, handleSubmit, setError } = useForm<CreateMealPlanFormValues>(

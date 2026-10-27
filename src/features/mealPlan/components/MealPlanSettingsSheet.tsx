@@ -115,7 +115,9 @@ export const MealPlanSettingsSheet: React.FC<MealPlanSettingsSheetProps> = ({
   // Nutrition-goal tracking = linking the user's (single) dietary profile to the
   // plan. Linking populates nutritionGoalProgress server-side; the toggle only
   // shows when the user actually has a profile to link.
-  const { profile: dietaryProfile } = useDietaryProfile();
+  const { profile: dietaryProfile } = useDietaryProfile({
+    fetchPolicy: 'cache-first',
+  });
   const { updateMealPlan } = useMealPlanActions();
   const isDietaryLinked = !!mealPlan?.dietaryProfile?.id;
 

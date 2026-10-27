@@ -1,5 +1,9 @@
 import { useRef } from 'react';
 import { useUser } from '#store/useAppStore';
+import {
+  heldFetchPolicy,
+  type StandDownOptions,
+} from '#/hooks/apollo/standDownOptions';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import {
   skipToken,
@@ -83,15 +87,19 @@ const DIETARY_PROFILE_DEFAULTS: DietaryProfileValues = {
  * Every write resolves to `true` once it landed or is queued and `false` when
  * it failed. A failure is alerted here, except a removal: its screen names it.
  */
-export const useDietaryProfile = () => {
+export const useDietaryProfile = ({
+  fetchPolicy,
+}: Pick<StandDownOptions, 'fetchPolicy'> = {}) => {
   const { t } = useTranslation();
   const user = useUser();
 
-  // The cache-and-network → cache-first pair
-  // means first mount fires once, subsequent mounts read cache only.
+  // Each mount of the default asks the network once; a screen that only reads
+  // the profile passes `cache-first`, which the profile's writes keep current.
   const { data, loading } = useQuery(
     GetDietaryProfileDocument,
-    user?.id ? { errorPolicy: 'ignore' } : skipToken,
+    user?.id
+      ? { errorPolicy: 'ignore', ...heldFetchPolicy(fetchPolicy) }
+      : skipToken,
   );
 
   // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error

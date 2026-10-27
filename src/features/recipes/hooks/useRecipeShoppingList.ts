@@ -143,8 +143,9 @@ export function useRecipeShoppingList({
   backendRecipe,
 }: UseRecipeShoppingListOptions) {
   const { t } = useTranslation();
+  // A picker for the List tab's lists: the cache it keeps current answers.
   const { lists: shoppingLists, loading: shoppingListsLoading } =
-    useShoppingListsLite();
+    useShoppingListsLite({ fetchPolicy: 'cache-first' });
 
   const targetListId = useActiveShoppingListId(shoppingLists);
   const setSelectedShoppingListId = useAppStore(
