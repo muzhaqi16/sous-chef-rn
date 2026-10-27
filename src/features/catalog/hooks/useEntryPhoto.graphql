@@ -2,7 +2,10 @@
 # with every live entry of the household for the item, so the rows and the
 # detail settle from the response with no refetch.
 
-mutation UpdateHomeItemPhoto($input: UpdateHomeItemPhotoInput!) {
+mutation UpdateHomeItemPhoto(
+  $input: UpdateHomeItemPhotoInput!
+  $today: LocalDate!
+) {
   updateHomeItemPhoto(input: $input) {
     __typename
     ... on HomeItemPhotoPayload {
@@ -14,10 +17,22 @@ mutation UpdateHomeItemPhoto($input: UpdateHomeItemPhotoInput!) {
       pantryItems {
         id
         ...PantryItemReaders
+        pantry {
+          id
+          ...PantryReaders
+        }
+        storageLocation {
+          id
+          ...StorageLocationReaders
+        }
       }
       shoppingListItems {
         id
         ...ShoppingListItemReaders
+        shoppingList {
+          id
+          ...ShoppingListReaders
+        }
       }
     }
     ... on Error {
@@ -30,7 +45,10 @@ mutation UpdateHomeItemPhoto($input: UpdateHomeItemPhotoInput!) {
   }
 }
 
-mutation DeleteHomeItemPhoto($input: DeleteHomeItemPhotoInput!) {
+mutation DeleteHomeItemPhoto(
+  $input: DeleteHomeItemPhotoInput!
+  $today: LocalDate!
+) {
   deleteHomeItemPhoto(input: $input) {
     __typename
     ... on HomeItemPhotoPayload {
@@ -42,10 +60,22 @@ mutation DeleteHomeItemPhoto($input: DeleteHomeItemPhotoInput!) {
       pantryItems {
         id
         ...PantryItemReaders
+        pantry {
+          id
+          ...PantryReaders
+        }
+        storageLocation {
+          id
+          ...StorageLocationReaders
+        }
       }
       shoppingListItems {
         id
         ...ShoppingListItemReaders
+        shoppingList {
+          id
+          ...ShoppingListReaders
+        }
       }
     }
     ... on Error {

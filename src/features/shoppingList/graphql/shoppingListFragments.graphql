@@ -222,6 +222,7 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
   image {
     url
     source
+    catalogImageId
   }
   item {
     id

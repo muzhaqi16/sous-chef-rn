@@ -142,8 +142,7 @@
     "wrongPhotoAction": "Report wrong photo",
     "wrongPhotoConfirmTitle": "Report this photo?",
     "wrongPhotoConfirmBody": "An admin will check whether it shows this item.",
-    "wrongPhotoConfirm": "Report",
-    "wrongPhotoReason": "The photo shows a different product."
+    "wrongPhotoConfirm": "Report"
   },
   "addItemForm": {
     "modes": {

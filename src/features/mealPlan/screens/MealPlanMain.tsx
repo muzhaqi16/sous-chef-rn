@@ -242,22 +242,33 @@ const MealPlanMainInner: React.FC = () => {
     }
   };
 
-  // A viewer who cannot edit gets no add action.
-  useTabBarAddMenu(
-    permissions.canEdit
-      ? [
-          {
-            key: 'meal',
-            label: t('mealTemplateBuilder.addMeal'),
-            icon: 'add',
-            onPress: () => {
-              setAddMealType(undefined);
-              setAddMealVisible(true);
-            },
-          },
-        ]
-      : [],
-  );
+  // Always registered, so the `+` says why it cannot add rather than doing
+  // nothing. Until the plan is known the add waits, as one Today handed over does.
+  const mealAdd = (() => {
+    if (permissions.canEdit) return { pending: false };
+    if (plansState === 'empty') {
+      return { disabledReason: t('mealPlan.addNeedsPlan'), pending: false };
+    }
+    if (activeMealPlan) {
+      return { disabledReason: t('mealPlan.noAddPermission'), pending: false };
+    }
+    if (plansState === 'error' || plansState === 'offline') {
+      return { disabledReason: t('mealPlan.needsThePlan'), pending: false };
+    }
+    return { disabledReason: t('labels.loading'), pending: true };
+  })();
+  useTabBarAddMenu([
+    {
+      key: 'meal',
+      label: t('mealTemplateBuilder.addMeal'),
+      icon: 'add',
+      onPress: () => {
+        setAddMealType(undefined);
+        setAddMealVisible(true);
+      },
+      ...mealAdd,
+    },
+  ]);
 
   const handleToggleCompleted = (
     id: string,

@@ -6,6 +6,7 @@ fragment PantryContent_pantryItem on PantryItem {
   image {
     url
     source
+    catalogImageId
   }
   item {
     id

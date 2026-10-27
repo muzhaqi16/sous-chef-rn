@@ -48,6 +48,7 @@ fragment shoppingListItem_listed on ShoppingListItem {
   image {
     url
     source
+    catalogImageId
   }
   item {
     id

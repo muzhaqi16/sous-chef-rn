@@ -18,6 +18,8 @@
     "startDateRequiredMessage": "Selecciona una fecha de inicio.",
     "failedToCreate": "No se pudo crear el plan de comidas.",
     "needsThePlan": "Abre primero el plan para tener sus comidas.",
+    "addNeedsPlan": "Crea primero un plan de comidas y luego añade comidas.",
+    "noAddPermission": "Puedes ver este plan, pero no añadirle comidas.",
     "needsTheTemplate": "Abre primero la plantilla para tener sus comidas.",
     "daily": "Diario",
     "custom": "Personalizado"

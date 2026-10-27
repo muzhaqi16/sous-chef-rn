@@ -28,6 +28,7 @@ const selectSelectedShoppingListId = (state: RootState) =>
 const selectSetSelectedPantryId = (state: RootState) =>
   state.setSelectedPantryId;
 const selectSetPendingTabAdd = (state: RootState) => state.setPendingTabAdd;
+const selectPendingTabAdd = (state: RootState) => state.pendingTabAdd;
 
 const selectIsHomeSelectionReady = (state: RootState) =>
   state.isHomeSelectionReady;
@@ -132,6 +133,8 @@ export const useSetSelectedPantryId = () =>
   useAppStore(selectSetSelectedPantryId);
 /** Leaves an add for another tab to start once it has focus. */
 export const useSetPendingTabAdd = () => useAppStore(selectSetPendingTabAdd);
+/** The add another tab left for its tab to start. */
+export const usePendingTabAdd = () => useAppStore(selectPendingTabAdd);
 export const useSelectedShoppingListId = () =>
   useAppStore(selectSelectedShoppingListId);
 export const useIsHydrated = () => useAppStore(selectHydrated);

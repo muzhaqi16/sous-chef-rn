@@ -43,6 +43,7 @@ describe('usePantryImagePreload', () => {
         __typename: 'EntryImage',
         url: HOUSEHOLD,
         source: EntryImageSource.Household,
+        catalogImageId: null,
       }),
     ]);
 

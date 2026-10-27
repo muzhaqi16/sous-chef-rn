@@ -133,6 +133,9 @@ const makeMealPlan = (
   nutritionSummary: {
     __typename: 'MealPlanNutritionSummary',
     totalCalories: 0,
+    totalProtein: 0,
+    totalCarbs: 0,
+    totalFat: 0,
     avgDailyCalories: 0,
     avgDailyProtein: 0,
     avgDailyCarbs: 0,
@@ -140,6 +143,7 @@ const makeMealPlan = (
     totalMeals: 0,
     mealsWithNutrition: 0,
     coveragePercentage: 0,
+    mealTypeBreakdown: [],
   },
   nutritionGoalProgress: null,
   generatedShoppingListsConnection: generatedLists([]),

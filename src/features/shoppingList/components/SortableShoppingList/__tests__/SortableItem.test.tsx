@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import { StyleSheet } from 'react-native-unistyles';
+import { fireEvent, screen, within } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 
 /**
@@ -134,6 +135,20 @@ jest.mock('#/styles/commonStyles', () => ({
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
+}));
+
+jest.mock('#components/atoms/RowCard', () => ({
+  RowCard: ({ children }: { children?: React.ReactNode }) => {
+    const { View } = require('react-native');
+    return <View testID="row-card">{children}</View>;
+  },
+}));
+
+jest.mock('#components/atoms/ThemeEpochSentinel', () => ({
+  ThemeEpochSentinel: () => {
+    const { View } = require('react-native');
+    return <View testID="theme-epoch-sentinel" />;
+  },
 }));
 
 jest.mock('#hooks/animations/useSlideAnimation', () => ({
@@ -329,6 +344,7 @@ describe('SwipeableListItem (SortableItem)', () => {
           __typename: 'EntryImage',
           url: 'https://cdn.example.com/our-milk.jpg',
           source: EntryImageSource.Household,
+          catalogImageId: null,
         },
         item: {
           __typename: 'Item',
@@ -398,6 +414,29 @@ describe('SwipeableListItem (SortableItem)', () => {
     const entry = seedItem();
     renderRow(entry);
     expect(screen.getByTestId('swipeable-item')).toBeTruthy();
+  });
+
+  // A card left outside the slide stays on screen, empty, as its row leaves.
+  it('slides the whole card, its theme kept by a sentinel', () => {
+    const slide = { transform: [{ translateX: 7 }] };
+    const { useSlideAnimation } = jest.requireMock(
+      '#hooks/animations/useSlideAnimation',
+    );
+    useSlideAnimation.mockReturnValueOnce({
+      animatedSlideStyle: slide,
+      triggerSlide: jest.fn(),
+    });
+    renderRow(seedItem());
+
+    let node = screen.getByTestId('row-card').parent;
+    while (
+      node &&
+      StyleSheet.flatten(node.props.style)?.transform !== slide.transform
+    ) {
+      node = node.parent;
+    }
+    expect(node).not.toBeNull();
+    expect(within(node!).getByTestId('theme-epoch-sentinel')).toBeTruthy();
   });
 
   it('renders a list item', () => {

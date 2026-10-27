@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   useFocusEffect,
+  useIsFocused,
   type NavigationProp,
   type ParamListBase,
 } from '@react-navigation/native';
@@ -9,7 +10,9 @@ import {
   type TabBarAddAction,
 } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
+import { usePendingTabAdd } from '#store/useAppStore';
 import type { PendingTabAdd } from '#store/slices/uiSlice';
 
 interface Navigable {
@@ -37,91 +40,74 @@ function focusedTab(navigation: Navigable): string | null {
 }
 
 /**
- * Runs an add another tab asked for: the named action, else the only one, else
- * the menu. A disabled action opens the menu too, so its reason shows.
+ * Runs an add another tab asked for: the named action, else the only one. One
+ * still loading waits for the actions to change. One that cannot run says why:
+ * in the menu when there are several, alone when there is one, since the bar
+ * draws no menu for a single action.
  */
 function startPendingAdd(
   pending: PendingTabAdd,
   actions: readonly TabBarAddAction[],
   openMenu: () => void,
-) {
+): 'done' | 'waiting' {
   const action = pending.actionKey
     ? actions.find(candidate => candidate.key === pending.actionKey)
     : actions.length === 1
     ? actions[0]
     : undefined;
-  if (action && !action.disabledReason) action.onPress();
-  else openMenu();
+  if (action && !action.disabledReason) {
+    action.onPress();
+    return 'done';
+  }
+  if (action?.pending) return 'waiting';
+  if (actions.length > 1) openMenu();
+  else if (action?.disabledReason) toastService.info(action.disabledReason);
+  return 'done';
 }
-
-/** What the menu shows; handlers are left out, since a press reads the latest. */
-const shownAs = (action: TabBarAddAction) =>
-  [action.key, action.label, action.icon, action.disabledReason ?? ''].join(
-    '\u0000',
-  );
 
 /**
  * Gives the focused tab's `+` a menu of add actions. Registered per tab and
- * removed on unmount, so it survives the tab's blur; blur only closes it. A
- * changed handler re-registers nothing; a changed label or reason does.
+ * removed on unmount, so it survives the tab's blur; blur only closes it.
  */
 export const useTabBarAddMenu = (actions: readonly TabBarAddAction[]) => {
-  const setters = useTabBarSetters();
+  const { setAddMenu, setAddMenuOpen } = useTabBarSetters();
   const { navigation } = useAppNavigation();
-  const actionsRef = useRef(actions);
-  const settersRef = useRef(setters);
-  const tabRef = useRef<string | null>(null);
+  const isFocused = useIsFocused();
+  const handedOver = usePendingTabAdd();
+  const [tab, setTab] = useState<string | null>(null);
 
-  useEffect(() => {
-    actionsRef.current = actions;
-    settersRef.current = setters;
-  });
-
-  const [register] = useState(() => () => {
-    const tab = tabRef.current;
-    if (!tab) return;
-    settersRef.current.setAddMenu(
-      tab,
-      actionsRef.current.map(action => ({
-        ...action,
-        onPress: () =>
-          actionsRef.current
-            .find(latest => latest.key === action.key)
-            ?.onPress(),
-      })),
-    );
-  });
-
-  const [onFocusEffect] = useState(() => () => {
-    const tab = focusedTab(navigation);
-    tabRef.current = tab;
-    register();
-    const pending = tab ? useStore.getState().takePendingTabAdd(tab) : null;
-    // A frame later, so a tab mounting on this focus has its sheets mounted.
-    const frame = pending
-      ? requestAnimationFrame(() =>
-          startPendingAdd(pending, actionsRef.current, () =>
-            settersRef.current.setAddMenuOpen(true),
-          ),
-        )
-      : null;
+  useFocusEffect(() => {
+    const focused = focusedTab(navigation);
+    setTab(focused);
+    // An add asked of another tab was for a tab the user did not reach.
+    const { pendingTabAdd, clearPendingTabAdd } = useStore.getState();
+    if (pendingTabAdd && pendingTabAdd.tab !== focused) clearPendingTabAdd();
     return () => {
-      if (frame !== null) cancelAnimationFrame(frame);
-      settersRef.current.setAddMenuOpen(false);
+      // Leaving the tab drops its own add, still waiting or not.
+      const left = useStore.getState();
+      if (left.pendingTabAdd?.tab === focused) left.clearPendingTabAdd();
+      setAddMenuOpen(false);
     };
   });
-  useFocusEffect(onFocusEffect);
 
-  const signature = actions.map(shownAs).join('\u0001');
   useEffect(() => {
-    register();
-  }, [signature, register]);
+    if (tab) setAddMenu(tab, actions);
+  }, [tab, actions, setAddMenu]);
 
-  useEffect(
-    () => () => {
-      const tab = tabRef.current;
-      if (tab) settersRef.current.setAddMenu(tab, undefined);
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!tab) return;
+    return () => setAddMenu(tab, undefined);
+  }, [tab, setAddMenu]);
+
+  // After the commit that mounted the screen, so its sheets can open, and again
+  // whenever the actions change, so one that was loading runs once it can. The
+  // store is read here, not `handedOver`: a re-run must not start it twice.
+  useEffect(() => {
+    const pending = useStore.getState().pendingTabAdd;
+    if (!isFocused || !tab || pending?.tab !== tab) return;
+    const outcome = startPendingAdd(pending, actions, () =>
+      setAddMenuOpen(true),
+    );
+    if (outcome === 'done') useStore.getState().clearPendingTabAdd();
+  }, [isFocused, tab, handedOver, actions, setAddMenuOpen]);
 };

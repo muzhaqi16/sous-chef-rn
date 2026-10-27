@@ -142,8 +142,7 @@
     "wrongPhotoAction": "Raporto foto të gabuar",
     "wrongPhotoConfirmTitle": "Të raportohet kjo foto?",
     "wrongPhotoConfirmBody": "Një administrator do të kontrollojë nëse tregon këtë artikull.",
-    "wrongPhotoConfirm": "Raporto",
-    "wrongPhotoReason": "Fotoja tregon një produkt tjetër."
+    "wrongPhotoConfirm": "Raporto"
   },
   "addItemForm": {
     "modes": {

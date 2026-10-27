@@ -33,6 +33,15 @@ jest.mock('#/constants/animations', () => ({
   },
 }));
 
+jest.mock('#components/atoms/ThemeEpochSentinel', () => {
+  const RN = require('react-native');
+  const R = require('react');
+  return {
+    ThemeEpochSentinel: () =>
+      R.createElement(RN.View, { testID: 'theme-epoch-sentinel' }),
+  };
+});
+
 jest.mock('#features/pantry/components/BaseItemCard/BaseItemCard', () => {
   const RN = require('react-native');
   const R = require('react');
@@ -443,6 +452,7 @@ describe('PantryItemCard', () => {
         __typename: 'EntryImage',
         url: 'https://example.com/our-milk.jpg',
         source: EntryImageSource.Household,
+        catalogImageId: null,
       },
     });
     expect(screen.getByTestId('card-left-image').props.accessibilityLabel).toBe(
@@ -464,6 +474,8 @@ describe('PantryItemCard', () => {
     };
     renderCard({}, actionsWithDelete);
     expect(screen.getByText('Milk')).toBeTruthy();
+    // The themed card sits under the animated slide.
+    expect(screen.getByTestId('theme-epoch-sentinel')).toBeTruthy();
   });
 
   describe('row status', () => {

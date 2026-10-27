@@ -21,6 +21,7 @@ import {
   visitWithTypeInfo,
   isObjectType,
   isInterfaceType,
+  isUnionType,
 } from 'graphql';
 import {
   KEY_FIELDS,
@@ -57,6 +58,16 @@ const PARENT_FIELDS = {
  * parent type is owed unless it is the type the noun names (`deleteShoppingList`).
  */
 const REMOVAL = /^(?:delete|remove|purge|decline|revoke|leave)([A-Z]\w*)$/;
+
+/** The payload types a mutation answers with on success. */
+function successPayloads(field) {
+  const type = getNamedType(field.type);
+  const members = isUnionType(type) ? type.getTypes() : [type];
+  return members
+    .map(member => member.name)
+    .filter(name => name.endsWith('Payload'));
+}
+
 const roots = documentRoots();
 const [coreRoot] = roots;
 const schema = loadSchema('find-stale-cache-fields');
@@ -206,6 +217,17 @@ const parentTypes = new Set([
   ...PAYLOAD_PARENTS,
 ]);
 
+/**
+ * Payloads a write that is not a removal answers with. A removal-named mutation
+ * answering with one states what it changed, as that write does: clearing a
+ * value (`deleteHomeItemPhoto`) leaves its entities in place.
+ */
+const writePayloads = new Set(
+  Object.entries(schema.getMutationType().getFields())
+    .filter(([name]) => !REMOVAL.test(name))
+    .flatMap(([, field]) => successPayloads(field)),
+);
+
 const findings = [];
 for (const op of operations) {
   if (op.kind !== 'mutation') continue;
@@ -218,9 +240,13 @@ for (const op of operations) {
     op.file,
   );
 
-  const noun = REMOVAL.exec(op.ast.selectionSet.selections[0].name.value)?.[1];
+  const rootField = op.ast.selectionSet.selections[0].name.value;
+  const noun = REMOVAL.exec(rootField)?.[1];
+  const writes = successPayloads(
+    schema.getMutationType().getFields()[rootField],
+  ).some(payload => writePayloads.has(payload));
   const removed = new Set(
-    noun
+    noun && !writes
       ? [...returned].filter(type => type === noun || !parentTypes.has(type))
       : [],
   );

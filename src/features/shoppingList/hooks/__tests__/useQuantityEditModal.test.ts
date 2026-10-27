@@ -195,6 +195,7 @@ describe('useQuantityEditModal', () => {
             __typename: 'EntryImage',
             url: 'https://cdn.example.com/household/milk.jpg',
             source: EntryImageSource.Household,
+            catalogImageId: null,
           },
           item: {
             __typename: 'Item',

@@ -15,7 +15,7 @@ import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
-import { useActiveMealPlan } from '#features/mealPlan/screens/useActiveMealPlan';
+import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
 import { useServerRecipeSuggestions } from '#features/recipes/hooks/useServerRecipeSuggestions';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
@@ -39,21 +39,54 @@ export function useTodayOverview() {
   };
   const today = useToday();
 
-  const { pantry, currentHome, selectedHomeId, isReady } = useCurrentPantry();
+  const { pantry, pantries, currentHome, selectedHomeId, isReady } =
+    useCurrentPantry();
   const unreadCount = useUnreadNotificationCount();
+  // Only once the home itself has loaded: before that, no pantries means
+  // nothing has arrived, not that there are none.
+  const noPantry =
+    !pantry &&
+    isReady &&
+    !!selectedHomeId &&
+    !!currentHome &&
+    pantries.length === 0;
 
+  // `stats` is cached without `today`, so a cache-first read on a new day
+  // answers with yesterday's counts. The network confirms each pantry's day
+  // once; held at `cache-first` after that, a refocus costs nothing.
+  const countsKey = pantry ? `${pantry.id}:${today}` : null;
+  const [confirmedKey, setConfirmedKey] = useState<string | null>(null);
+  const isConfirmed = countsKey !== null && confirmedKey === countsKey;
   const countsResult = useQuery(
     TodayCountsDocument,
     pantry && isFocused
       ? {
           variables: { id: pantry.id, today },
-          ...heldFetchPolicy(standDown.fetchPolicy),
+          ...(isConfirmed
+            ? heldFetchPolicy(standDown.fetchPolicy)
+            : {
+                fetchPolicy: 'cache-and-network',
+                nextFetchPolicy: standDown.fetchPolicy,
+              }),
         }
       : skipToken,
   );
+  // `skipToken` keeps the last run's data: a pantry since switched or deleted
+  // has no counts to show here.
+  const countsData =
+    pantry && countsResult.variables.id === pantry.id
+      ? countsResult.data
+      : undefined;
+  const answeredKey =
+    countsData && !countsResult.loading && !countsResult.error
+      ? `${countsResult.variables.id}:${countsResult.variables.today}`
+      : null;
+  if (countsKey && !isConfirmed && answeredKey === countsKey) {
+    setConfirmedKey(countsKey);
+  }
   // A failed read answers `undefined`; the pantry's last counts for the day stand.
   const stats = usePreservedQueryData(
-    countsResult.data ? countsResult.data.pantry?.stats ?? null : undefined,
+    countsData ? countsData.pantry?.stats ?? null : undefined,
     null,
     `${pantry?.id ?? ''}:${today}`,
   );
@@ -67,17 +100,14 @@ export function useTodayOverview() {
     },
     actions: { refetch: refetchPlans },
   } = useMealPlans(standDown);
+  // The plan covering today, not the one last opened on the Meal Plan tab.
   const {
     items,
     itemDetails,
     mealPlan: activePlan,
     loading: activePlanLoading,
     refetch: refetchPlan,
-  } = useActiveMealPlan({
-    currentPlanId: currentPlan?.id ?? null,
-    planIds: mealPlans.map(plan => plan.id),
-    ...standDown,
-  });
+  } = useMealPlan(currentPlan?.id ?? null, standDown);
   const { dailyMeals } = useDailyMeals(items, fromDateKey(today));
   const meals = dailyMeals.flatMap(group =>
     group.items.map(item => ({
@@ -106,7 +136,7 @@ export function useTodayOverview() {
 
   const hasNoHousehold = isReady && !selectedHomeId;
   const householdIsEmpty =
-    stats?.totalItems === 0 &&
+    (noPantry || stats?.totalItems === 0) &&
     plansHaveResult &&
     mealPlans.length === 0 &&
     !listsLoading &&
@@ -114,11 +144,12 @@ export function useTodayOverview() {
   const isFirstRun = hasNoHousehold || householdIsEmpty;
 
   // Only the counts gate the screen: each other section shows when it arrives.
-  // Until the pantry resolves there is nothing to ask, which is not an answer.
+  // Until the pantry resolves there is nothing to ask, which is not an answer;
+  // a home with no pantry has no counts to wait for.
   const countsState = useDataState({
-    loading: countsResult.loading || !pantry,
+    loading: countsResult.loading || (!pantry && !noPantry),
     error: countsResult.error,
-    hasResult: stats !== null || countsResult.data !== undefined,
+    hasResult: noPantry || stats !== null || countsData !== undefined,
     isEmpty: false,
   });
   const state: DataState = isFirstRun ? 'empty' : countsState;
