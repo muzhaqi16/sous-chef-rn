@@ -12,14 +12,33 @@ import { TodayStack } from '#navigation/stacks/TodayStack';
 import { ShoppingListStack } from '#navigation/stacks/ShoppingListStack';
 import { RecipeStack } from '#navigation/stacks/RecipeStack';
 import { MealPlanStack } from '#navigation/stacks/MealPlanStack';
+import { ApolloProvider, useApolloClient } from '@apollo/client/react';
 import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
 import { FloatingTabBar } from '#app/FloatingTabBar/FloatingTabBar';
+import { scopedClient } from '#/apollo/scopedClient';
 
 function HomeTabsLayout({ children }: { children: React.ReactNode }) {
   return (
     <TabBarActionsProvider>
       <View style={styles.layout}>{children}</View>
     </TabBarActionsProvider>
+  );
+}
+
+// A hidden tab stays mounted, so its queries stay active. Scoped to the tab, a
+// resync leaves them until the tab is shown again (`homeTabOnScreen`).
+function TabQueryScope({
+  tab,
+  children,
+}: {
+  tab: string;
+  children: React.ReactNode;
+}) {
+  const client = useApolloClient();
+  return (
+    <ApolloProvider client={scopedClient(client, tab)}>
+      {children}
+    </ApolloProvider>
   );
 }
 
@@ -39,6 +58,9 @@ const styles = StyleSheet.create(theme => ({
 export const HomeTabs = createBottomTabNavigator({
   tabBar: props => <FloatingTabBar {...props} tabs={TAB_APPEARANCE} />,
   layout: HomeTabsLayout,
+  screenLayout: ({ children, route }) => (
+    <TabQueryScope tab={route.name}>{children}</TabQueryScope>
+  ),
   screenOptions: {
     headerShown: false,
     tabBarHideOnKeyboard: true,

@@ -13,6 +13,7 @@ import { startCore } from '#bootstrap/startCore';
 import { useCoreReady } from '#bootstrap/useCoreReady';
 import { Navigation } from '#navigation/RootNavigator';
 import { navigationRef } from '#services/NavigationService';
+import { homeTabOnScreen } from '#navigation/homeTabOnScreen';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/molecules/Toast';
 import { OfflineTransitionAnnouncer } from '#components/atoms/OfflineTransitionAnnouncer';
@@ -51,10 +52,12 @@ setPushTokenProvider(
 registerMobileSessionHost();
 
 // The core's start: its persisted stores and the client's resync triggers
-// (`src/apollo/refetchEvents.ts`); navigation paces the language catch-up.
+// (`src/apollo/refetchEvents.ts`); navigation paces the catch-ups, and a resync
+// re-asks only the home tab on screen.
 startCore({
   client,
   onNavigation: listener => navigationRef.addListener('state', listener),
+  scopeOnScreen: homeTabOnScreen,
 });
 
 const App = () => {

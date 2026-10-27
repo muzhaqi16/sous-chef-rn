@@ -1,8 +1,8 @@
 import { canonicalStringify } from '@apollo/client/utilities';
 
 /**
- * Answers since the last language switch, by name and variables, counting the
- * erred ones in a row. Per switch, not per language: names are shared entities,
+ * Answers since the last language switch or resync, by name and variables,
+ * counting the erred ones in a row. Per switch, not per language: names are shared entities,
  * so a screen paused through `en` → `es` → `en` holds what `es` screens wrote.
  */
 let answered: Map<string, number> | null = null;

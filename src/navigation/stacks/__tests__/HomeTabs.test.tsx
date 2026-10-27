@@ -1,5 +1,15 @@
 'use no memo';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
+import {
+  ApolloClient,
+  ApolloLink,
+  InMemoryCache,
+  gql,
+  type ObservableQuery,
+} from '@apollo/client';
+import { ApolloProvider, useApolloClient } from '@apollo/client/react';
+import { render } from '@testing-library/react-native';
+import { RESYNC_SCOPE } from '#/apollo/scopedClient';
 
 // Capture the config `HomeTabs` hands to react-navigation. Without this the
 // navigator factory swallows it, and the screen options below — the reason
@@ -11,6 +21,10 @@ interface TabScreenConfig {
 interface NavigatorConfig {
   screenOptions?: Record<string, unknown>;
   screens?: Record<string, TabScreenConfig>;
+  screenLayout?: (props: {
+    route: { name: string };
+    children: ReactNode;
+  }) => ReactElement;
 }
 let mockNavigatorConfig: NavigatorConfig | undefined;
 
@@ -79,6 +93,36 @@ describe('HomeTabs', () => {
   // four FlashLists plus every mounted cell's own animation/gesture effects
   // that freezes the JS thread for seconds on a tab switch, so this navigator
   // deliberately opts out. See CLAUDE.md's `inactiveBehavior` section.
+  // Mounted while hidden, a tab's queries stay active: its scope is what lets
+  // a resync leave them until it is shown.
+  it('scopes every query a tab watches to that tab', () => {
+    const client = new ApolloClient({
+      cache: new InMemoryCache(),
+      link: ApolloLink.empty(),
+    });
+    let watched: ObservableQuery | undefined;
+    const Probe = () => {
+      watched = useApolloClient().watchQuery({
+        query: gql`
+          query TabProbe {
+            probe
+          }
+        `,
+      });
+      return null;
+    };
+    const layout = mockNavigatorConfig?.screenLayout;
+    expect(layout).toBeDefined();
+
+    render(
+      <ApolloProvider client={client}>
+        {layout?.({ route: { name: 'Pantry' }, children: <Probe /> })}
+      </ApolloProvider>,
+    );
+
+    expect(watched?.options.context).toEqual({ [RESYNC_SCOPE]: 'Pantry' });
+  });
+
   it('keeps blurred tabs mounted rather than pausing them', () => {
     expect(screenOptions().inactiveBehavior).toBe('none');
   });
