@@ -84,11 +84,11 @@ export const LedgerTab: React.FC<
     },
     {
       value: PeriodGranularity.Weekly,
-      label: t('pantryAnalytics.granularityWeekly'),
+      label: t('labels.weekly'),
     },
     {
       value: PeriodGranularity.Monthly,
-      label: t('pantryAnalytics.granularityMonthly'),
+      label: t('labels.monthly'),
     },
   ];
 

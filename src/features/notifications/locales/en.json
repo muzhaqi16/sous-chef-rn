@@ -201,9 +201,6 @@
         "andMore_other": "{{names}} and {{count}} others"
       }
     },
-    "categoryAll": "All",
-    "categoryHome": "Home",
-    "categoryPantry": "Pantry",
     "categoryRecipe": "Recipe",
     "categoryShopping": "Shopping",
     "markAllRead": "Mark all read",

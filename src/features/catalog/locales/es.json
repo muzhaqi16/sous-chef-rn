@@ -174,7 +174,6 @@
         "placeholder": "Introduce el nombre del artículo"
       },
       "description": {
-        "label": "Descripción",
         "placeholder": "Introduce la descripción del artículo (opcional)"
       },
       "vendor": {
@@ -215,7 +214,6 @@
         "placeholder": "cdta., taza, etc."
       },
       "tags": {
-        "label": "Etiquetas",
         "placeholder": "Etiquetas separadas por comas (p. ej., orgánico, sin gluten)"
       },
       "foodStamp": {
@@ -321,12 +319,10 @@
     "brandOptional": "Marca (opcional)",
     "placeholderItemName": "p. ej., arroz, pasta",
     "placeholderCategory": "p. ej., cereales, lácteos",
-    "tags": "Etiquetas",
     "tagsPlaceholder": "Introduce etiquetas separadas por comas",
     "location": "Ubicación",
     "locationPlaceholder": "p. ej., estante superior, cajón 2",
     "storageNotes": "Notas de almacenamiento",
-    "notes": "Notas",
     "addTitle": "Añadir artículo a la despensa",
     "editTitle": "Editar artículo de la despensa",
     "quantityUnit": "Cantidad y unidad",
@@ -409,7 +405,6 @@
     "contains": "Contiene"
   },
   "storageLocationCard": {
-    "default": "Predeterminada",
     "insideParent": "Dentro de {{parent}}",
     "capacityWithUnit": "/ {{capacity}} {{unit}}",
     "capacity_one": "/ {{count}} unidad",

@@ -61,8 +61,8 @@ export interface DietaryOption<T extends string> {
 // Lifestyle dietary choices. Labels are i18n keys resolved via `t()` at render —
 // the enum value stays the stable identity used for selection and persistence.
 export const DIET_OPTIONS: readonly DietaryOption<Diet>[] = [
-  { labelKey: 'dietaryProfile.diets.vegetarian', value: Diet.Vegetarian },
-  { labelKey: 'dietaryProfile.diets.vegan', value: Diet.Vegan },
+  { labelKey: 'labels.vegetarian', value: Diet.Vegetarian },
+  { labelKey: 'labels.vegan', value: Diet.Vegan },
   { labelKey: 'recipes.diet.GLUTEN_FREE', value: Diet.GlutenFree },
   { labelKey: 'recipes.diet.KETO', value: Diet.Keto },
   { labelKey: 'recipes.diet.PALEO', value: Diet.Paleo },
@@ -95,7 +95,7 @@ export const INTOLERANCE_OPTIONS: readonly DietaryOption<Intolerance>[] = [
   },
   { labelKey: 'recipes.intolerance.SOY', value: Intolerance.Soy },
   {
-    labelKey: 'dietaryProfile.intolerances.sulfite',
+    labelKey: 'labels.sulfite',
     value: Intolerance.Sulfite,
   },
   {

@@ -104,7 +104,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           ]}
           onPress={() => onPress?.(home.id)}
           accessibilityRole="button"
-          accessibilityLabel={`${home.name}, ${t('joinHome.memberCount', {
+          accessibilityLabel={`${home.name}, ${t('labels.memberCount', {
             count: memberCount,
           })}, ${t('joinHome.pantryCount', {
             count: pantryCount,
@@ -118,7 +118,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
             <Text role="heading">{home.name}</Text>
 
             <Text role="caption" tone="secondary" style={styles.homeDetails}>
-              {t('joinHome.memberCount', { count: memberCount })} •{' '}
+              {t('labels.memberCount', { count: memberCount })} •{' '}
               {t('joinHome.pantryCount', { count: pantryCount })}
             </Text>
           </View>

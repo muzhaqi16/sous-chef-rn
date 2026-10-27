@@ -174,7 +174,6 @@
         "placeholder": "Shkruaj emrin e artikullit"
       },
       "description": {
-        "label": "Përshkrimi",
         "placeholder": "Shkruaj përshkrimin e artikullit (opsional)"
       },
       "vendor": {
@@ -215,7 +214,6 @@
         "placeholder": "lugë çaji, filxhan, etj."
       },
       "tags": {
-        "label": "Etiketa",
         "placeholder": "Etiketa të ndara me presje (p.sh. organike, pa gluten)"
       },
       "foodStamp": {
@@ -321,12 +319,10 @@
     "brandOptional": "Marka (opsionale)",
     "placeholderItemName": "p.sh., Oriz, Makarona",
     "placeholderCategory": "p.sh., Drithëra, Bulmet",
-    "tags": "Etiketat",
     "tagsPlaceholder": "Shkruaj etiketat të ndara me presje",
     "location": "Vendndodhja",
     "locationPlaceholder": "p.sh., Rafti i sipërm, Sirtari 2",
     "storageNotes": "Shënime ruajtjeje",
-    "notes": "Shënime",
     "addTitle": "Shto artikull në qilar",
     "editTitle": "Ndrysho artikullin e qilarit",
     "quantityUnit": "Sasia dhe njësia",
@@ -409,7 +405,6 @@
     "contains": "Përmban"
   },
   "storageLocationCard": {
-    "default": "Parazgjedhur",
     "insideParent": "Ndodhet te {{parent}}",
     "capacityWithUnit": "/ {{capacity}} {{unit}}",
     "capacity_one": "/ {{count}} njësi",

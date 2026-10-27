@@ -288,7 +288,7 @@ interface NutrientSpec {
 /** In display order within each category. */
 const NUTRIENTS: Record<NutrientField, NutrientSpec> = {
   calories: { labelKey: 'labels.calories', unit: 'kcal', category: 'macro' },
-  protein: { labelKey: 'recipes.macroProtein', unit: 'g', category: 'macro' },
+  protein: { labelKey: 'labels.protein', unit: 'g', category: 'macro' },
   totalFat: {
     labelKey: 'nutrition.nutrient.totalFat',
     unit: 'g',

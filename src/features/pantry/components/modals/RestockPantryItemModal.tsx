@@ -107,7 +107,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       pantryItemId={pantryItemId}
       onClose={onClose}
       title={t('restockItem.title')}
-      confirmLabel={t('restockItem.restock')}
+      confirmLabel={t('labels.restock')}
       snapPoints={['80%', '95%']}
       unitToggleLabel={t('restockItem.restockBy')}
       currentQuantityLabel={t('restockItem.currentLabel')}
@@ -274,7 +274,7 @@ const RestockActionFields: React.FC<{
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
         <FormInput
-          label={t('restockItem.notes')}
+          label={t('labels.notes')}
           value={shared.notes}
           onChangeText={shared.setNotes}
           placeholder={t('restockItem.notesPlaceholder')}

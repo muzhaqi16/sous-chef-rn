@@ -406,7 +406,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const tagsFields: FieldDef<PantryItemFormData>[] = [
     {
       name: 'tags',
-      label: t('itemForm.tags'),
+      label: t('labels.tags'),
       placeholder: t('itemForm.tagsPlaceholder'),
       component: FormInput,
       renderValue: (value: unknown) =>

@@ -358,7 +358,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           // The checkbox is labelled with the name too: derived, it is read twice.
           accessibilityLabel={accessibilityLabelOf(
             itemName,
-            isPurchased && t('shoppingListScreens.purchased'),
+            isPurchased && t('labels.purchased'),
             isPendingSync ? t('status.syncing') : detailText,
             formatQuantityWithUnit(shownQuantity, unitDisplay, {
               quantityInput: shownQuantityInput,

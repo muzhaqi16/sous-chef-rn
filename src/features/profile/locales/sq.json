@@ -122,7 +122,6 @@
     "fontScale": "Madhësia e shkronjave",
     "highContrast": "Kontrast i lartë",
     "highContrastDesc": "Rrit kontrastin e tekstit dhe të kornizave për aksesueshmëri",
-    "colorDefault": "I parazgjedhur",
     "densityCompact": "Kompakte",
     "densityComfortable": "Komode",
     "densitySpacious": "E gjerë",
@@ -147,16 +146,13 @@
     "goalsSheetTitle": "Zgjidh synimet shëndetësore",
     "addGoalsFailed": "S'u shtuan dot synimet shëndetësore",
     "diets": {
-      "vegetarian": "Vegjetariane",
-      "vegan": "Vegane",
       "pescetarian": "Peshkatariane",
       "lactoVegetarian": "Lakto-vegjetariane",
       "ovoVegetarian": "Ovo-vegjetariane",
       "primal": "Primale"
     },
     "intolerances": {
-      "egg": "Vezë",
-      "sulfite": "Sulfite"
+      "egg": "Vezë"
     },
     "avoidTitle": "Ushqimet që shmang",
     "avoidEmpty": "Zgjidh ushqime nga katalogu, si proshutë ose kërpudha.",
@@ -200,7 +196,6 @@
       "developer": "Zhvilluesi"
     },
     "labels": {
-      "dietaryProfile": "Profili dietik",
       "biometricAuthentication": "Autentifikimi biometrik",
       "logout": "Dilni"
     },

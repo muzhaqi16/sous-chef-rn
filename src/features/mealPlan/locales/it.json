@@ -2,7 +2,6 @@
   "mealPlan": {
     "name": "Nome",
     "namePlaceholder": "es. Piano settimana 8",
-    "description": "Descrizione",
     "descriptionPlaceholder": "Descrizione opzionale...",
     "planType": "Tipo di piano",
     "weekly": "Settimanale",
@@ -21,20 +20,16 @@
     "addNeedsPlan": "Crea prima un piano pasti, poi aggiungi i pasti.",
     "noAddPermission": "Puoi vedere questo piano, ma non aggiungervi pasti.",
     "needsTheTemplate": "Apri prima il modello, così i suoi pasti sono disponibili.",
-    "daily": "Giornaliero",
-    "custom": "Personalizzato"
+    "daily": "Giornaliero"
   },
   "addMealSheet": {
     "searchPlaceholder": "Cerca ricette o aggiungi un pasto personalizzato...",
     "addCustom": "Aggiungi «{{query}}» come pasto personalizzato",
     "searchAllRecipes": "Cerca «{{query}}» in tutte le ricette",
     "yourRecipes": "Le tue ricette",
-    "servings": "{{count}} porzioni",
     "noSavedRecipes": "Nessuna ricetta salvata",
     "noResults": "Nessuna ricetta corrisponde alla tua ricerca",
     "addRecipeFailed": "Impossibile aggiungere la ricetta. Riprova.",
-    "dietVegan": "Vegano",
-    "dietVegetarian": "Vegetariano",
     "dietGlutenFree": "SG",
     "dietDairyFree": "SL"
   },
@@ -55,7 +50,6 @@
   "mealPlanItem": {
     "unnamedMeal": "Pasto senza nome",
     "pantryUpdated": "Dispensa aggiornata",
-    "servings": "{{count}} porzioni",
     "calories": "{{count}} cal"
   },
   "mealPlanSettings": {
@@ -127,12 +121,9 @@
     "sharedWithHome": "Questo modello sarà condiviso con {{name}}",
     "templateNamePlaceholder": "es. Il mio piano cene settimanale",
     "templateNameSuffix": "Modello {{name}}",
-    "descriptionLabel": "Descrizione",
     "descriptionPlaceholder": "Cosa rende speciale questo modello?",
     "tagsLabel": "Tag (separati da virgola)",
     "tagsPlaceholder": "es. sano, veloce, economico",
-    "categoryWeekly": "Settimanale",
-    "categoryMonthly": "Mensile",
     "categoryHoliday": "Festività",
     "categorySpecialDiet": "Dieta speciale",
     "categoryCustom": "Personalizzata"
@@ -145,8 +136,7 @@
     "offline": "I modelli non sono disponibili offline. Riconnettiti per sfogliarli."
   },
   "templateCard": {
-    "usedTimes": "Usato {{count}} volte",
-    "servings": "{{count}} porzioni"
+    "usedTimes": "Usato {{count}} volte"
   },
   "templatePreview": {
     "configuration": "Configurazione",
@@ -170,9 +160,7 @@
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "es. Cene infrasettimanali",
-    "description": "Descrizione",
     "descriptionPlaceholder": "Note facoltative",
-    "tags": "Tag",
     "mealsSection": "Pasti",
     "noMeals": "Nessun pasto aggiunto",
     "mealName": "Pasto",

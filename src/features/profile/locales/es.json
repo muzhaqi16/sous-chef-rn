@@ -122,7 +122,6 @@
     "fontScale": "Escala de fuente",
     "highContrast": "Alto contraste",
     "highContrastDesc": "Aumenta el contraste de texto y bordes para mejor accesibilidad",
-    "colorDefault": "Predeterminado",
     "densityCompact": "Compacta",
     "densityComfortable": "Cómoda",
     "densitySpacious": "Espaciosa",
@@ -147,16 +146,13 @@
     "goalsSheetTitle": "Selecciona objetivos de salud",
     "addGoalsFailed": "No se pudieron añadir los objetivos de salud",
     "diets": {
-      "vegetarian": "Vegetariana",
-      "vegan": "Vegana",
       "pescetarian": "Pescetariana",
       "lactoVegetarian": "Lacto-vegetariana",
       "ovoVegetarian": "Ovo-vegetariana",
       "primal": "Primal"
     },
     "intolerances": {
-      "egg": "Huevo",
-      "sulfite": "Sulfitos"
+      "egg": "Huevo"
     },
     "avoidTitle": "Alimentos que evito",
     "avoidEmpty": "Elige alimentos del catálogo, como beicon o setas.",
@@ -200,7 +196,6 @@
       "developer": "Desarrollador"
     },
     "labels": {
-      "dietaryProfile": "Perfil alimenticio",
       "biometricAuthentication": "Autenticación biométrica",
       "logout": "Cerrar sesión"
     },

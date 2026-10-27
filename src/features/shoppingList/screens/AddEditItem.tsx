@@ -401,7 +401,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
       {/* Notes Field */}
       <FormInput
-        label={t('shoppingListScreens.notes')}
+        label={t('labels.notes')}
         value={notes}
         onChangeText={text => setFieldValue('notes', text)}
         placeholder={t('shoppingListScreens.notesPlaceholder')}

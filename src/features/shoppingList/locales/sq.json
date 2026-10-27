@@ -26,13 +26,11 @@
     "defaultListDesc": "Vendos si listën e blerjeve të parazgjedhur",
     "manageMembers": "Menaxho anëtarët",
     "sharedWithMembers": "Kjo listë është e ndarë me {{count}} anëtarë",
-    "membersCount": "{{count}} anëtarë",
     "leaving": "Po largohesh...",
     "leaveListTitle": "Largohu nga lista",
     "leaveListMessage": "Vërtet dëshiron të largohesh nga \"{{name}}\"? Do humbasësh aksesin te të gjithë artikujt e ndarë.",
     "leaveDescription": "Duke u larguar nga kjo listë, do humbasësh aksesin te artikujt e ndarë.",
     "cantLeaveHomeLinkedMessage": "Kjo listë është e lidhur me shtëpinë \"{{name}}\". Për t'u larguar, duhet të largohesh më parë nga shtëpia.",
-    "deleteListConfirmMessage": "Vërtet dëshiron ta fshish këtë listë? Ky veprim nuk mund të zhbëhet.",
     "failedToLeave": "Nuk u largove dot nga lista",
     "listStatusSection": "Statusi i listës",
     "completedOn": "Përfunduar më",
@@ -138,7 +136,6 @@
     "itemNamePlaceholder": "p.sh. qumësht, bukë",
     "estimatedPrice": "Çmimi i parashikuar",
     "estimatedPricePlaceholder": "p.sh. 4,99",
-    "notes": "Shënime",
     "notesPlaceholder": "Çdo shënim i veçantë...",
     "pleaseEnterQuantity": "Shkruaj një sasi",
     "serverNotUpdated": "Gabim serveri: artikulli nuk u {{action}}. Serveri mund të ketë probleme. Provoje sërish.",
@@ -169,7 +166,6 @@
     "statusInvited": "I ftuar",
     "statusRemoved": "I hequr",
     "itemDetailsTitle": "Detajet e artikullit",
-    "purchased": "Blerë",
     "purchasedBy": "Blerë nga",
     "priority": "Prioriteti",
     "additionalDetails": "Detaje shtesë",
@@ -193,7 +189,6 @@
     "brandPlaceholder": "p.sh., Oatly, Chobani",
     "netWeightPlaceholder": "p.sh., 500",
     "priorityLow": "E ulët",
-    "priorityMedium": "Mesatare",
     "priorityHigh": "E lartë",
     "store": "Dyqani i preferuar",
     "storePlaceholder": "p.sh., Costco",
@@ -342,7 +337,6 @@
     }
   },
   "listTemplate": {
-    "loading": "Po ngarkohet...",
     "loadingItems": "Po ngarkohen artikujt e tu"
   },
   "shoppingList": {
@@ -351,7 +345,6 @@
   "shoppingListPicker": {
     "newListNamePlaceholder": "Emri i listës së re",
     "createAndAddIngredients": "Krijo dhe shto përbërësit",
-    "defaultBadge": "Parazgjedhur",
     "newList": "Listë e re",
     "noLists": "Ende nuk ka lista blerjesh"
   }

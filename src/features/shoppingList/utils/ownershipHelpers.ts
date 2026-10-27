@@ -217,13 +217,13 @@ const ROLE_LABEL_KEYS: Record<
   CollaboratorRole | MembershipRole,
   TranslationKey
 > = {
-  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
+  [CollaboratorRole.Owner]: 'labels.owner',
   [CollaboratorRole.Admin]: 'labels.admin',
   [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
   [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
   [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
   [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
-  [MembershipRole.Member]: 'roles.member',
+  [MembershipRole.Member]: 'labels.member',
   [MembershipRole.Guest]: 'labels.guest',
 };
 

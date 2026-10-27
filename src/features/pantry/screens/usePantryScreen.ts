@@ -135,7 +135,7 @@ export function usePantryScreen() {
     { id: 'all', label: t('pantryScreen.tabAll') },
     {
       id: 'fridge',
-      label: t('labels.storageRefrigerated'),
+      label: t('storageState.REFRIGERATED'),
       icon: 'thermometer-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: StorageType.Refrigerator,

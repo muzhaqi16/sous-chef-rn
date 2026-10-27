@@ -122,7 +122,6 @@
     "fontScale": "Font Scale",
     "highContrast": "High Contrast",
     "highContrastDesc": "Increases text and border contrast for accessibility",
-    "colorDefault": "Default",
     "densityCompact": "Compact",
     "densityComfortable": "Comfortable",
     "densitySpacious": "Spacious",
@@ -147,16 +146,13 @@
     "goalsSheetTitle": "Select Health Goals",
     "addGoalsFailed": "Failed to add health goals",
     "diets": {
-      "vegetarian": "Vegetarian",
-      "vegan": "Vegan",
       "pescetarian": "Pescetarian",
       "lactoVegetarian": "Lacto Vegetarian",
       "ovoVegetarian": "Ovo Vegetarian",
       "primal": "Primal"
     },
     "intolerances": {
-      "egg": "Egg",
-      "sulfite": "Sulfite"
+      "egg": "Egg"
     },
     "avoidTitle": "Foods I avoid",
     "avoidEmpty": "Pick foods from the catalog, such as bacon or mushrooms.",
@@ -200,7 +196,6 @@
       "developer": "Developer"
     },
     "labels": {
-      "dietaryProfile": "Dietary Profile",
       "biometricAuthentication": "Biometric Authentication",
       "logout": "Log Out"
     },

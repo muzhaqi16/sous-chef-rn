@@ -402,7 +402,7 @@ export const useListSettings = (listId: string | undefined) => {
     if (!listId) return; // Should never happen as delete button is hidden
     alertService.alert(
       t('labels.deleteList'),
-      t('shoppingListScreens.deleteListConfirmMessage'),
+      t('shoppingListSelector.deleteAlertMessage', { count: 1 }),
       destructiveConfirm(t('labels.delete'), () => {
         void deleteList(listId);
       }),

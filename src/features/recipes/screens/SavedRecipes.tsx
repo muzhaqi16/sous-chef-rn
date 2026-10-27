@@ -198,7 +198,7 @@ export const SavedRecipes: React.FC = () => {
     const tabs: FilterTabConfig<string>[] = [
       {
         id: 'all',
-        label: t('recipes.filterAll'),
+        label: t('labels.all'),
       },
     ];
 
@@ -218,7 +218,7 @@ export const SavedRecipes: React.FC = () => {
         label:
           selectedTags.length > 0
             ? t('recipes.tagCount', { count: selectedTags.length })
-            : t('recipes.tags'),
+            : t('labels.tags'),
         icon: 'pricetag-outline',
         onPress: () => setShowTagPicker(true),
         showDropdownIndicator: true,

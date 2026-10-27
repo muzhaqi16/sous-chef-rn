@@ -156,9 +156,6 @@
     "updateShoppingItemFailed": "Impossibile aggiornare l'articolo.",
     "changedElsewhereTitle": "Modificato altrove",
     "changedElsewhereLatestShown": "È stato modificato altrove dopo che l'hai aperto, quindi la tua modifica non è stata salvata. Ora viene mostrata la versione più recente.",
-    "entityHome": "Casa",
-    "entityMember": "Membro",
-    "entityInvite": "Invito",
     "notFoundTitle": "Non trovato",
     "addLowStockFailed": "Impossibile aggiungere gli articoli con poche scorte",
     "saveLoginFailed": "Impossibile salvare le informazioni di accesso",
@@ -489,7 +486,6 @@
     "status": "Stato",
     "storage": "Conservazione",
     "storageAmbient": "Ambiente",
-    "storageRefrigerated": "Refrigerato",
     "storageFrozen": "Congelato",
     "storageLocations": "Posizioni di archiviazione",
     "storageState": "Stato di conservazione",
@@ -546,7 +542,28 @@
     },
     "usedIn": "Si usa in",
     "tbspCup": "tbsp, tazza",
-    "usedInHint": "Con cosa lo misuri quando lo usi, come tbsp per il miele."
+    "usedInHint": "Con cosa lo misuri quando lo usi, come tbsp per il miele.",
+    "member": "Membro",
+    "member_one": "Membro",
+    "member_other": "Membri",
+    "memberCount_one": "{{count}} membro",
+    "memberCount_other": "{{count}} membri",
+    "description": "Descrizione",
+    "tags": "Tag",
+    "vegetarian": "Vegetariana",
+    "protein": "Proteine",
+    "restock": "Rifornisci",
+    "notes": "Note",
+    "defaultBadge": "Predefinita",
+    "owner": "Proprietario",
+    "servingsCount_one": "{{count}} porzione",
+    "servingsCount_other": "{{count}} porzioni",
+    "weekly": "Settimanale",
+    "monthly": "Mensile",
+    "all": "Tutte",
+    "purchased": "Acquistato",
+    "vegan": "Vegana",
+    "sulfite": "Solfiti"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -646,7 +663,6 @@
   },
   "navigation": {
     "tabs": {
-      "pantry": "Dispensa",
       "shoppingList": "Lista",
       "mealPlan": "Piano pasti"
     }
@@ -718,8 +734,7 @@
   "swipeActions": {
     "markUnpurchased": "Segna come non acquistato",
     "consume": "Consuma",
-    "recordWaste": "Registra spreco",
-    "restock": "Rifornisci"
+    "recordWaste": "Registra spreco"
   },
   "dateRange": {
     "week": "Settimana",

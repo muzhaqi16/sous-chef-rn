@@ -38,7 +38,7 @@ export const HomeStats: React.FC<HomeStatsProps> = ({
         key: 'members',
         icon: 'people-outline',
         value: totalMembers,
-        label: t('homeManagement.statsMember', { count: totalMembers }),
+        label: t('labels.member', { count: totalMembers }),
       },
       {
         key: 'pantries',

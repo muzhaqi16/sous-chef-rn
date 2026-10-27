@@ -345,7 +345,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="description"
         render={({ field }) => (
           <FormTextArea
-            label={t('mealTemplateBuilder.description')}
+            label={t('labels.description')}
             value={field.value}
             onChangeText={field.onChange}
             placeholder={t('mealTemplateBuilder.descriptionPlaceholder')}
@@ -358,7 +358,7 @@ export const MealTemplateBuilderScreen: React.FC<
         name="tags"
         render={({ field }) => (
           <FormInput
-            label={t('mealTemplateBuilder.tags')}
+            label={t('labels.tags')}
             value={field.value}
             onChangeText={field.onChange}
             placeholder={t('labels.commaSeparated')}

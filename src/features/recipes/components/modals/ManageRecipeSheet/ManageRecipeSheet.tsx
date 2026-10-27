@@ -230,7 +230,7 @@ export const ManageRecipeSheet: React.FC<ManageRecipeSheetProps> = ({
 
       {/* Tags */}
       <SectionHeader variant="overline" style={styles.sectionLabel}>
-        {t('manageRecipe.tags')}
+        {t('labels.tags')}
       </SectionHeader>
       <TagInput
         tags={tags}

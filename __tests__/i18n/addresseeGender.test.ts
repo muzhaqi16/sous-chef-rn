@@ -33,7 +33,7 @@ import path from 'path';
  * NOTE: this is about the ADDRESSEE only. An adjective agreeing with a *noun*
  * is different and correct — `Default` is `Predeterminado` for a masculine noun
  * and `Predeterminada` for a feminine one. Those live in per-context keys
- * (`recipes.defaultBadge` vs `storageLocationCard.default`), where the key names
+ * (`recipes.defaultBadge` vs `labels.defaultBadge`), where the key names
  * the context and the translator picks the form. See
  * `docs/i18n-translator-review.md`.
  */

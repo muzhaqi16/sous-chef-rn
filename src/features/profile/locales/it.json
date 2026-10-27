@@ -122,7 +122,6 @@
     "fontScale": "Scala dei caratteri",
     "highContrast": "Contrasto elevato",
     "highContrastDesc": "Aumenta il contrasto di testo e bordi per l'accessibilità",
-    "colorDefault": "Predefinito",
     "densityCompact": "Compatta",
     "densityComfortable": "Comoda",
     "densitySpacious": "Spaziosa",
@@ -147,16 +146,13 @@
     "goalsSheetTitle": "Seleziona obiettivi di salute",
     "addGoalsFailed": "Impossibile aggiungere gli obiettivi di salute",
     "diets": {
-      "vegetarian": "Vegetariana",
-      "vegan": "Vegana",
       "pescetarian": "Pescetariana",
       "lactoVegetarian": "Latto-vegetariana",
       "ovoVegetarian": "Ovo-vegetariana",
       "primal": "Primal"
     },
     "intolerances": {
-      "egg": "Uova",
-      "sulfite": "Solfiti"
+      "egg": "Uova"
     },
     "avoidTitle": "Alimenti che evito",
     "avoidEmpty": "Scegli alimenti dal catalogo, come pancetta o funghi.",
@@ -200,7 +196,6 @@
       "developer": "Sviluppatore"
     },
     "labels": {
-      "dietaryProfile": "Profilo alimentare",
       "biometricAuthentication": "Autenticazione biometrica",
       "logout": "Esci"
     },

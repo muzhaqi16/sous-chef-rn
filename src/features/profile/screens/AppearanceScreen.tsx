@@ -24,7 +24,7 @@ const APP_COLORS: {
   labelKey: TranslationKey;
   value: string | null;
 }[] = [
-  { labelKey: 'appearance.colorDefault', value: null },
+  { labelKey: 'labels.default', value: null },
   {
     labelKey: 'storageLocationForm.colorBlue',
     value: colors.accentSwatches.blue,

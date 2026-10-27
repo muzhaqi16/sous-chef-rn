@@ -109,7 +109,7 @@ describe('useProductDietaryAlerts', () => {
       {
         id: 'r-vegan',
         memberName: t('homeDetail.youLabel'),
-        what: t('dietaryProfile.diets.vegan'),
+        what: t('labels.vegan'),
         state: DietaryAlertState.MayContain,
         severity: RestrictionSeverity.Preference,
         isDiet: true,

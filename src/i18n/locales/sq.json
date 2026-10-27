@@ -156,9 +156,6 @@
     "updateShoppingItemFailed": "Artikulli nuk mund të përditësohej.",
     "changedElsewhereTitle": "U ndryshua diku tjetër",
     "changedElsewhereLatestShown": "Kjo u ndryshua diku tjetër pasi e hapët, prandaj ndryshimi juaj nuk u ruajt. Tani shfaqet versioni më i fundit.",
-    "entityHome": "Shtëpia",
-    "entityMember": "Anëtar",
-    "entityInvite": "Ftesë",
     "notFoundTitle": "Nuk u gjet",
     "addLowStockFailed": "Nuk u shtuan dot artikujt me stok të ulët",
     "saveLoginFailed": "Nuk u ruajtën dot të dhënat e hyrjes",
@@ -489,7 +486,6 @@
     "status": "Statusi",
     "storage": "Ruajtja",
     "storageAmbient": "Ambient",
-    "storageRefrigerated": "Në frigorifer",
     "storageFrozen": "I ngrirë",
     "storageLocations": "Vendet e ruajtjes",
     "storageState": "Gjendja e ruajtjes",
@@ -546,7 +542,28 @@
     },
     "usedIn": "Përdoret në",
     "tbspCup": "tbsp, filxhan",
-    "usedInHint": "Me çfarë e mat kur e përdor, si tbsp për mjaltin."
+    "usedInHint": "Me çfarë e mat kur e përdor, si tbsp për mjaltin.",
+    "member": "Anëtar",
+    "member_one": "Anëtar",
+    "member_other": "Anëtarë",
+    "memberCount_one": "{{count}} anëtar",
+    "memberCount_other": "{{count}} anëtarë",
+    "description": "Përshkrim",
+    "tags": "Etiketat",
+    "vegetarian": "Vegjetariane",
+    "protein": "Proteina",
+    "restock": "Riplotëso",
+    "notes": "Shënime",
+    "defaultBadge": "Parazgjedhur",
+    "owner": "Pronar",
+    "servingsCount_one": "{{count}} pjesë",
+    "servingsCount_other": "{{count}} pjesë",
+    "weekly": "Javore",
+    "monthly": "Mujore",
+    "all": "Të gjitha",
+    "purchased": "Blerë",
+    "vegan": "Vegane",
+    "sulfite": "Sulfite"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -646,7 +663,6 @@
   },
   "navigation": {
     "tabs": {
-      "pantry": "Qilari",
       "shoppingList": "Lista",
       "mealPlan": "Vaktet"
     }
@@ -718,8 +734,7 @@
   "swipeActions": {
     "markUnpurchased": "Shëno si të pablerë",
     "consume": "Konsumo",
-    "recordWaste": "Regjistro mbeturinat",
-    "restock": "Riplotëso"
+    "recordWaste": "Regjistro mbeturinat"
   },
   "dateRange": {
     "week": "Javë",

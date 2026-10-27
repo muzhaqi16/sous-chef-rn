@@ -38,7 +38,7 @@ export interface RecipeFilterOption<V extends string> {
 }
 
 export const DIET_OPTIONS: RecipeFilterOption<Diet>[] = [
-  { labelKey: 'recipeFilters.diets.vegetarian', value: Diet.Vegetarian },
+  { labelKey: 'labels.vegetarian', value: Diet.Vegetarian },
   { labelKey: 'recipeFilters.diets.vegan', value: Diet.Vegan },
   { labelKey: 'recipes.diet.GLUTEN_FREE', value: Diet.GlutenFree },
   { labelKey: 'recipeFilters.diets.ketogenic', value: Diet.Keto },
@@ -49,14 +49,14 @@ export const DIET_OPTIONS: RecipeFilterOption<Diet>[] = [
     value: Diet.LactoVegetarian,
   },
   { labelKey: 'recipeFilters.diets.ovoVegetarian', value: Diet.OvoVegetarian },
-  { labelKey: 'recipeFilters.diets.primal', value: Diet.Primal },
+  { labelKey: 'recipes.diet.PRIMAL', value: Diet.Primal },
   { labelKey: 'labels.lowFodmap', value: Diet.LowFodmap },
   { labelKey: 'recipes.diet.WHOLE30', value: Diet.Whole30 },
 ];
 
 export const INTOLERANCE_OPTIONS: RecipeFilterOption<Intolerance>[] = [
   { labelKey: 'recipes.intolerance.DAIRY', value: Intolerance.Dairy },
-  { labelKey: 'recipeFilters.intolerances.egg', value: Intolerance.Egg },
+  { labelKey: 'recipes.intolerance.EGG', value: Intolerance.Egg },
   { labelKey: 'recipes.intolerance.GLUTEN', value: Intolerance.Gluten },
   { labelKey: 'recipes.intolerance.GRAIN', value: Intolerance.Grain },
   { labelKey: 'recipes.intolerance.PEANUT', value: Intolerance.Peanut },
@@ -65,7 +65,7 @@ export const INTOLERANCE_OPTIONS: RecipeFilterOption<Intolerance>[] = [
   { labelKey: 'recipes.intolerance.SHELLFISH', value: Intolerance.Shellfish },
   { labelKey: 'recipes.intolerance.SOY', value: Intolerance.Soy },
   {
-    labelKey: 'recipeFilters.intolerances.sulfite',
+    labelKey: 'labels.sulfite',
     value: Intolerance.Sulfite,
   },
   { labelKey: 'recipes.intolerance.TREE_NUT', value: Intolerance.TreeNut },

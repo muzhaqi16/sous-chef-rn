@@ -296,7 +296,7 @@ export const ShoppingListDetailsStep: React.FC<
         />
 
         <FormInput
-          label={t('shoppingListScreens.notes')}
+          label={t('labels.notes')}
           value={notes}
           onChangeText={text => setFieldValue('notes', text)}
           placeholder={t('shoppingListScreens.notesPlaceholder')}

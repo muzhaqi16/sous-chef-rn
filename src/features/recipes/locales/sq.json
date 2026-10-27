@@ -2,7 +2,6 @@
   "recipes": {
     "name": "Emri i recetës",
     "namePlaceholder": "p.sh. pulë Tikka Masala",
-    "description": "Përshkrim",
     "descriptionPlaceholder": "Një përshkrim i shkurtër i recetës...",
     "imageUrl": "URL e imazhit",
     "imageUrlPlaceholder": "https://...",
@@ -35,11 +34,9 @@
     "quantityNoAmountPlaceholder": "Pa sasi",
     "section": "Seksioni",
     "sectionPlaceholder": "p.sh. Për salcën...",
-    "notes": "Shënime",
     "optional": "Opsionale",
     "rating": "Vlerësimi",
     "none": "Asnjë",
-    "tags": "Etiketa",
     "searchPlaceholder": "Kërko receta...",
     "basedOnPantry": "Sipas qilarit tënd",
     "captureReviewTitle": "Recetë e importuar",
@@ -160,7 +157,6 @@
     "nutritionTitle": "Ushqyerja",
     "caloriesPerServingLabel": "Kal / racion",
     "tipsPlaceholder": "Këshilla të kuzhinierit (opsionale)",
-    "recipeTags": "Etiketa",
     "originalAuthor": "Autori origjinal",
     "originalAuthorPlaceholder": "Atribuim (opsional)",
     "forkedFrom": "Degëzuar nga {{name}}",
@@ -178,8 +174,6 @@
     "publishA11y": "Dërgo recetën për shqyrtim",
     "unpublishA11y": "Hiq publikimin e recetës",
     "withdrawA11y": "Tërhiq recetën nga shqyrtimi",
-    "vegetarian": "Vegjetariane",
-    "vegan": "Vegane",
     "dairyFree": "Pa bulmet",
     "about": "Rreth",
     "addAll": "Shto të gjitha",
@@ -198,7 +192,6 @@
     "searchIncompleteTitle": "Nuk u ngarkuan dot të gjitha recetat e tua",
     "searchIncompleteDescription": "Mund të mungojnë disa rezultate.",
     "removeRecipeFailed": "Heqja e recetës dështoi. Provo përsëri.",
-    "filterAll": "Të gjitha",
     "folders": "Dosjet",
     "tagCount_one": "{{count}} Etiketë",
     "tagCount_other": "{{count}} Etiketa",
@@ -359,7 +352,6 @@
       "TREE_NUT": "Arra",
       "WHEAT": "Grurë"
     },
-    "macroProtein": "Proteina",
     "macroCarbohydrates": "Karbohidrate",
     "macroFat": "Yndyra",
     "macroFiber": "Fibra",
@@ -369,8 +361,6 @@
     "helpfulWithCount": "I dobishëm ({{count}})",
     "reviewCount_one": "{{count}} recension",
     "reviewCount_other": "{{count}} recensione",
-    "servingsCount_one": "{{count}} pjesë",
-    "servingsCount_other": "{{count}} pjesë",
     "pantryMatchLabel_one": "{{used}} nga {{count}} përbërës në qilarin tënd, {{missing}} për t'u blerë",
     "pantryMatchLabel_other": "{{used}} nga {{count}} përbërës në qilarin tënd, {{missing}} për t'u blerë",
     "createdFromRecipe": "Krijuar nga një recetë",
@@ -407,17 +397,11 @@
     "selectOne": "Zgjidh një",
     "cookTimeOption": "{{minutes}} min",
     "diets": {
-      "vegetarian": "Vegjetariane",
       "vegan": "Vegan",
       "ketogenic": "Ketogjenike",
       "pescetarian": "Pescetariane",
       "lactoVegetarian": "Lakto-vegjetariane",
-      "ovoVegetarian": "Ovo-vegjetariane",
-      "primal": "Primal"
-    },
-    "intolerances": {
-      "egg": "Vezë",
-      "sulfite": "Sulfite"
+      "ovoVegetarian": "Ovo-vegjetariane"
     }
   },
   "nutritionSummary": {
@@ -429,7 +413,6 @@
     "mealsWithNutritionData": "Vakte me të dhëna ushqyese",
     "totalCalories": "Kalori gjithsej",
     "goalProgress": "Përparimi i objektivit",
-    "macroProtein": "Proteina",
     "macroFat": "Yndyrë",
     "unitKcal": "kcal",
     "unitGrams": "g",
@@ -450,7 +433,6 @@
     "updating": "Po përditësohet...",
     "yourRating": "Vlerësimi yt",
     "ratingFormat": "{{rating}}/5",
-    "tags": "Etiketat",
     "tagsPlaceholder": "Shto etiketa...",
     "notes": "Shënimet"
   },

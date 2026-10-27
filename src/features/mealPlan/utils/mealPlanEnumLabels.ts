@@ -37,8 +37,8 @@ export const TEMPLATE_CATEGORY_LABEL_KEYS: Record<
   TemplateCategory,
   TranslationKey
 > = {
-  [TemplateCategory.Weekly]: 'saveAsTemplate.categoryWeekly',
-  [TemplateCategory.Monthly]: 'saveAsTemplate.categoryMonthly',
+  [TemplateCategory.Weekly]: 'labels.weekly',
+  [TemplateCategory.Monthly]: 'labels.monthly',
   [TemplateCategory.Breakfast]: 'labels.breakfast',
   [TemplateCategory.Lunch]: 'labels.lunch',
   [TemplateCategory.Dinner]: 'labels.dinner',
@@ -51,5 +51,5 @@ export const MEAL_PLAN_TYPE_LABEL_KEYS: Record<MealPlanType, TranslationKey> = {
   [MealPlanType.Daily]: 'mealPlan.daily',
   [MealPlanType.Weekly]: 'mealPlan.weekly',
   [MealPlanType.Monthly]: 'mealPlan.monthly',
-  [MealPlanType.Custom]: 'mealPlan.custom',
+  [MealPlanType.Custom]: 'storageLocationForm.typeCustom',
 };

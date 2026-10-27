@@ -193,7 +193,7 @@ export const PantrySettings: React.FC<
   // `loading && !pantry` — a cached copy renders instead of blanking the screen.
   if (pantryId && loadingPantry && !pantry) {
     return (
-      <SubScreen title={t('pantrySettings.loading')} scroll="none">
+      <SubScreen title={t('loading.loading')} scroll="none">
         <Loading message={t('pantrySettings.loadingData')} />
       </SubScreen>
     );

@@ -85,7 +85,7 @@ export const JoinHomeByCodeScreen: React.FC<
         toPantryMain();
         toastService.success(
           t('labels.joined', {
-            name: firstNonBlank(home?.name) ?? t('joinHome.homeFallback'),
+            name: firstNonBlank(home?.name) ?? t('labels.home'),
           }),
         );
       },
@@ -179,7 +179,7 @@ export const JoinHomeByCodeScreen: React.FC<
             align="center"
             style={styles.meta}
           >
-            {t('joinHome.memberCount', { count: memberCount })} ·{' '}
+            {t('labels.memberCount', { count: memberCount })} ·{' '}
             {t('joinHome.pantryCount', { count: pantryCount })}
           </Text>
         </View>

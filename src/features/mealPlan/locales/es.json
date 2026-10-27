@@ -2,7 +2,6 @@
   "mealPlan": {
     "name": "Nombre",
     "namePlaceholder": "p. ej., Plan semana 8",
-    "description": "Descripción",
     "descriptionPlaceholder": "Descripción opcional...",
     "planType": "Tipo de plan",
     "weekly": "Semanal",
@@ -21,20 +20,16 @@
     "addNeedsPlan": "Crea primero un plan de comidas y luego añade comidas.",
     "noAddPermission": "Puedes ver este plan, pero no añadirle comidas.",
     "needsTheTemplate": "Abre primero la plantilla para tener sus comidas.",
-    "daily": "Diario",
-    "custom": "Personalizado"
+    "daily": "Diario"
   },
   "addMealSheet": {
     "searchPlaceholder": "Busca recetas o añade una comida personalizada...",
     "addCustom": "Añadir «{{query}}» como comida personalizada",
     "searchAllRecipes": "Buscar «{{query}}» en todas las recetas",
     "yourRecipes": "Tus recetas",
-    "servings": "{{count}} raciones",
     "noSavedRecipes": "Aún no hay recetas guardadas",
     "noResults": "No hay recetas que coincidan con tu búsqueda",
     "addRecipeFailed": "No se pudo añadir la receta. Inténtalo de nuevo.",
-    "dietVegan": "Vegano",
-    "dietVegetarian": "Vegetariano",
     "dietGlutenFree": "SG",
     "dietDairyFree": "SL"
   },
@@ -55,7 +50,6 @@
   "mealPlanItem": {
     "unnamedMeal": "Comida sin nombre",
     "pantryUpdated": "Despensa actualizada",
-    "servings": "{{count}} raciones",
     "calories": "{{count}} cal"
   },
   "mealPlanSettings": {
@@ -127,12 +121,9 @@
     "sharedWithHome": "Esta plantilla se compartirá con {{name}}",
     "templateNamePlaceholder": "p. ej., Mi plan de cenas semanal",
     "templateNameSuffix": "Plantilla {{name}}",
-    "descriptionLabel": "Descripción",
     "descriptionPlaceholder": "¿Qué tiene de especial esta plantilla?",
     "tagsLabel": "Etiquetas (separadas por comas)",
     "tagsPlaceholder": "p. ej., saludable, rápido, económico",
-    "categoryWeekly": "Semanal",
-    "categoryMonthly": "Mensual",
     "categoryHoliday": "Festividad",
     "categorySpecialDiet": "Dieta especial",
     "categoryCustom": "Personalizada"
@@ -145,8 +136,7 @@
     "offline": "Las plantillas no están disponibles sin conexión. Vuelve a conectarte para verlas."
   },
   "templateCard": {
-    "usedTimes": "Usada {{count}}x",
-    "servings": "{{count}} raciones"
+    "usedTimes": "Usada {{count}}x"
   },
   "templatePreview": {
     "configuration": "Configuración",
@@ -170,9 +160,7 @@
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "p. ej. Cenas entre semana",
-    "description": "Descripción",
     "descriptionPlaceholder": "Notas opcionales",
-    "tags": "Etiquetas",
     "mealsSection": "Comidas",
     "noMeals": "Aún no hay comidas",
     "mealName": "Comida",

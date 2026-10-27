@@ -26,13 +26,11 @@
     "defaultListDesc": "Imposta come lista della spesa predefinita",
     "manageMembers": "Gestisci membri",
     "sharedWithMembers": "Lista condivisa con {{count}} membri",
-    "membersCount": "{{count}} membri",
     "leaving": "Uscita in corso...",
     "leaveListTitle": "Abbandona lista",
     "leaveListMessage": "Vuoi davvero abbandonare \"{{name}}\"? Perderai accesso a tutti gli articoli condivisi.",
     "leaveDescription": "Abbandonando questa lista perderai accesso agli articoli condivisi.",
     "cantLeaveHomeLinkedMessage": "Questa lista è collegata alla casa \"{{name}}\". Per abbandonarla, devi prima abbandonare la casa.",
-    "deleteListConfirmMessage": "Vuoi davvero eliminare questa lista? Questa azione non può essere annullata.",
     "failedToLeave": "Impossibile abbandonare la lista",
     "listStatusSection": "Stato della lista",
     "completedOn": "Completata il",
@@ -138,7 +136,6 @@
     "itemNamePlaceholder": "es. latte, pane",
     "estimatedPrice": "Prezzo stimato",
     "estimatedPricePlaceholder": "es. 4,99",
-    "notes": "Note",
     "notesPlaceholder": "Eventuali note speciali...",
     "pleaseEnterQuantity": "Inserisci una quantità",
     "serverNotUpdated": "Errore server: l'articolo non è stato {{action}}. Il server potrebbe avere problemi. Riprova.",
@@ -169,7 +166,6 @@
     "statusInvited": "Invitato",
     "statusRemoved": "Rimosso",
     "itemDetailsTitle": "Dettagli articolo",
-    "purchased": "Acquistato",
     "purchasedBy": "Acquistato da",
     "priority": "Priorità",
     "additionalDetails": "Dettagli aggiuntivi",
@@ -193,7 +189,6 @@
     "brandPlaceholder": "es., Oatly, Chobani",
     "netWeightPlaceholder": "es., 500",
     "priorityLow": "Bassa",
-    "priorityMedium": "Media",
     "priorityHigh": "Alta",
     "store": "Negozio preferito",
     "storePlaceholder": "es., Costco",
@@ -342,7 +337,6 @@
     }
   },
   "listTemplate": {
-    "loading": "Caricamento...",
     "loadingItems": "Caricamento dei tuoi articoli"
   },
   "shoppingList": {
@@ -351,7 +345,6 @@
   "shoppingListPicker": {
     "newListNamePlaceholder": "Nome nuova lista",
     "createAndAddIngredients": "Crea e aggiungi ingredienti",
-    "defaultBadge": "Predefinita",
     "newList": "Nuova lista",
     "noLists": "Nessuna lista della spesa"
   }

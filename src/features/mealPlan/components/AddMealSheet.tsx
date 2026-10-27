@@ -51,8 +51,8 @@ interface AddMealSheetProps {
 }
 
 const DIET_TAG_LABEL_KEYS: Record<PickerDietTag, TranslationKey> = {
-  vegan: 'addMealSheet.dietVegan',
-  vegetarian: 'addMealSheet.dietVegetarian',
+  vegan: 'recipes.diet.VEGAN',
+  vegetarian: 'recipes.diet.VEGETARIAN',
   glutenFree: 'addMealSheet.dietGlutenFree',
   dairyFree: 'addMealSheet.dietDairyFree',
 };

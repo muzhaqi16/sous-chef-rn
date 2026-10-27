@@ -90,7 +90,7 @@ export const StorageLocationAutocompleteField: React.FC<
             })
           : undefined
       }
-      badge={item.isDefault ? t('labels.default') : undefined}
+      badge={item.isDefault ? t('labels.defaultBadge') : undefined}
     />
   );
 

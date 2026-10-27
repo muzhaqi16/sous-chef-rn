@@ -183,7 +183,7 @@ export const ListSettings: React.FC<
             {!!isShared && (
               <InfoRow
                 label={t('shoppingListScreens.sharedWith')}
-                value={t('shoppingListScreens.membersCount', {
+                value={t('labels.memberCount', {
                   count: collaborators.length,
                 })}
               />

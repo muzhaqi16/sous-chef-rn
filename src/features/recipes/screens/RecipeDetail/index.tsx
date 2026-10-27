@@ -494,7 +494,7 @@ const RecipeDetailScreen: React.FC = () => {
         <View style={styles.metadata}>
           {displayData.servings != null && (
             <Text role="caption" tone="secondary">
-              🍽️ {t('recipes.servingsCount', { count: displayData.servings })}
+              🍽️ {t('labels.servingsCount', { count: displayData.servings })}
             </Text>
           )}
           {!!displayData.readyInMinutes && (
@@ -587,14 +587,14 @@ const RecipeDetailScreen: React.FC = () => {
             {!!displayData.vegetarian && (
               <View style={styles.tag}>
                 <Text role="label" tone="accent">
-                  {t('recipes.vegetarian')}
+                  {t('labels.vegetarian')}
                 </Text>
               </View>
             )}
             {!!displayData.vegan && (
               <View style={styles.tag}>
                 <Text role="label" tone="accent">
-                  {t('recipes.vegan')}
+                  {t('labels.vegan')}
                 </Text>
               </View>
             )}

@@ -46,7 +46,7 @@ const EXPIRATION_ACTIONS: {
   },
   {
     action: ExpirationAction.Consumed,
-    labelKey: 'expirationAction.consumed',
+    labelKey: 'usagePurpose.GENERAL',
     icon: 'checkmark-circle',
   },
   {

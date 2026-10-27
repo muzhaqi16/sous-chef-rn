@@ -3,9 +3,7 @@ import { restrictionLabelKey } from '../dietary';
 
 describe('restrictionLabelKey', () => {
   it('names a diet, an intolerance and a health goal', () => {
-    expect(restrictionLabelKey({ diet: Diet.Vegan })).toBe(
-      'dietaryProfile.diets.vegan',
-    );
+    expect(restrictionLabelKey({ diet: Diet.Vegan })).toBe('labels.vegan');
     expect(restrictionLabelKey({ intolerance: Intolerance.Peanut })).toBe(
       'recipes.intolerance.PEANUT',
     );

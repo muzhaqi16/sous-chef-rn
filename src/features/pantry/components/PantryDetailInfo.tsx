@@ -351,7 +351,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           label={t(
             fromBatch
               ? 'pantryItemDetail.fields.lastPurchase'
-              : 'pantryItemDetail.fields.purchased',
+              : 'labels.purchased',
           )}
           // The TOTAL, not the unit price the Cost/Unit row above already shows.
           value={`${formatMonthDayYear(purchaseDay(purchaseDate))}${
@@ -386,7 +386,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
           <View style={styles.notesHeader}>
             <Icon name="document-text-outline" size={16} tone="textSecondary" />
             <Text role="label" tone="secondary" style={styles.notesLabel}>
-              {t('pantryItemDetail.notes')}
+              {t('labels.notes')}
             </Text>
           </View>
           <Text role="body" style={styles.notesText}>
@@ -398,7 +398,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.tags.length > 0 && (
         <View style={styles.tagsSection}>
           <Text role="caption" tone="secondary" style={styles.tagsLabel}>
-            {t('pantryItemDetail.tags')}
+            {t('labels.tags')}
           </Text>
           <View style={styles.tagsContainer}>
             {item.tags.map(tag => (

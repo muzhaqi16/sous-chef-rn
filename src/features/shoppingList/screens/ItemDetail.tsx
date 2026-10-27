@@ -292,7 +292,7 @@ export const ShoppingListItemDetail: React.FC<
           <View style={styles.statusBadge}>
             <Icon name="checkmark-circle" size={18} tone="success" />
             <Text role="label" tone="success" style={styles.statusBadgeText}>
-              {t('shoppingListScreens.purchased')}
+              {t('labels.purchased')}
             </Text>
           </View>
         )}
@@ -327,7 +327,7 @@ export const ShoppingListItemDetail: React.FC<
             </DetailRow>
           )}
           {!!purchaseInfo?.isPurchased && purchasedQuantity != null && (
-            <DetailRow label={t('shoppingListScreens.purchased')}>
+            <DetailRow label={t('labels.purchased')}>
               <FormattedItemSubtitle
                 quantity={purchasedQuantity}
                 unitSymbol={unitSymbol}
@@ -367,7 +367,7 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.notes && (
             <View style={styles.notesRow}>
               <Text role="caption" tone="secondary">
-                {t('shoppingListScreens.notes')}
+                {t('labels.notes')}
               </Text>
               <Text role="label">{item.notes}</Text>
             </View>

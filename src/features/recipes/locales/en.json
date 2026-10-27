@@ -2,7 +2,6 @@
   "recipes": {
     "name": "Recipe Name",
     "namePlaceholder": "e.g., Chicken Tikka Masala",
-    "description": "Description",
     "descriptionPlaceholder": "A brief description of the recipe...",
     "imageUrl": "Image URL",
     "imageUrlPlaceholder": "https://...",
@@ -35,11 +34,9 @@
     "quantityNoAmountPlaceholder": "No amount",
     "section": "Section",
     "sectionPlaceholder": "e.g., For the sauce...",
-    "notes": "Notes",
     "optional": "Optional",
     "rating": "Rating",
     "none": "None",
-    "tags": "Tags",
     "searchPlaceholder": "Search recipes...",
     "basedOnPantry": "Based on your pantry",
     "captureReviewTitle": "Imported recipe",
@@ -160,7 +157,6 @@
     "nutritionTitle": "Nutrition",
     "caloriesPerServingLabel": "Cal / serving",
     "tipsPlaceholder": "Chef's tips (optional)",
-    "recipeTags": "Tags",
     "originalAuthor": "Original Author",
     "originalAuthorPlaceholder": "Attribution (optional)",
     "forkedFrom": "Forked from {{name}}",
@@ -178,8 +174,6 @@
     "publishA11y": "Submit recipe for review",
     "unpublishA11y": "Unpublish recipe",
     "withdrawA11y": "Withdraw recipe from review",
-    "vegetarian": "Vegetarian",
-    "vegan": "Vegan",
     "dairyFree": "Dairy Free",
     "about": "About",
     "addAll": "Add All",
@@ -198,7 +192,6 @@
     "searchIncompleteTitle": "Couldn't load all your recipes",
     "searchIncompleteDescription": "Some matches may be missing.",
     "removeRecipeFailed": "Failed to remove recipe. Please try again.",
-    "filterAll": "All",
     "folders": "Folders",
     "tagCount_one": "{{count}} Tag",
     "tagCount_other": "{{count}} Tags",
@@ -359,7 +352,6 @@
       "TREE_NUT": "Tree Nut",
       "WHEAT": "Wheat"
     },
-    "macroProtein": "Protein",
     "macroCarbohydrates": "Carbohydrates",
     "macroFat": "Fat",
     "macroFiber": "Fiber",
@@ -369,8 +361,6 @@
     "helpfulWithCount": "Helpful ({{count}})",
     "reviewCount_one": "{{count}} review",
     "reviewCount_other": "{{count}} reviews",
-    "servingsCount_one": "{{count}} serving",
-    "servingsCount_other": "{{count}} servings",
     "pantryMatchLabel_one": "{{used}} of {{count}} ingredient in your pantry, {{missing}} to buy",
     "pantryMatchLabel_other": "{{used}} of {{count}} ingredients in your pantry, {{missing}} to buy",
     "createdFromRecipe": "Created from recipe",
@@ -407,17 +397,11 @@
     "selectOne": "Select one",
     "cookTimeOption": "{{minutes}} min",
     "diets": {
-      "vegetarian": "Vegetarian",
       "vegan": "Vegan",
       "ketogenic": "Ketogenic",
       "pescetarian": "Pescetarian",
       "lactoVegetarian": "Lacto-Vegetarian",
-      "ovoVegetarian": "Ovo-Vegetarian",
-      "primal": "Primal"
-    },
-    "intolerances": {
-      "egg": "Egg",
-      "sulfite": "Sulfite"
+      "ovoVegetarian": "Ovo-Vegetarian"
     }
   },
   "nutritionSummary": {
@@ -429,7 +413,6 @@
     "mealsWithNutritionData": "Meals with Nutrition Data",
     "totalCalories": "Total Calories",
     "goalProgress": "Goal Progress",
-    "macroProtein": "Protein",
     "macroFat": "Fat",
     "unitKcal": "kcal",
     "unitGrams": "g",
@@ -450,7 +433,6 @@
     "updating": "Updating...",
     "yourRating": "Your Rating",
     "ratingFormat": "{{rating}}/5",
-    "tags": "Tags",
     "tagsPlaceholder": "Add tags...",
     "notes": "Notes"
   },

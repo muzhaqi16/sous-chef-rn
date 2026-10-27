@@ -46,7 +46,7 @@ export const ACQUISITION_METHOD_OPTIONS: OfferedAcquisitionMethod[] = [
 
 const ACQUISITION_METHOD_LABEL_KEYS: Record<AcquisitionMethod, TranslationKey> =
   {
-    [AcquisitionMethod.Purchased]: 'addToPantry.methodPurchased',
+    [AcquisitionMethod.Purchased]: 'labels.purchased',
     [AcquisitionMethod.BarcodeScan]: 'addToPantry.methodBarcodeScan',
     [AcquisitionMethod.ShoppingList]: 'shoppingListScreen.label',
     [AcquisitionMethod.Homegrown]: 'addToPantry.methodHomegrown',

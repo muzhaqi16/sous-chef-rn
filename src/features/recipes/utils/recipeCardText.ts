@@ -10,7 +10,7 @@ export function timeAndServings(
   if (totalTimeMinutes) {
     parts.push(`⏱ ${translate('labels.min', { count: totalTimeMinutes })}`);
   }
-  parts.push(translate('recipes.servingsCount', { count: servings }));
+  parts.push(translate('labels.servingsCount', { count: servings }));
   return parts;
 }
 

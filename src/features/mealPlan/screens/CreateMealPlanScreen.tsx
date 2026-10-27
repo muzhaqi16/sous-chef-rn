@@ -211,7 +211,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         name="description"
         render={({ field }) => (
           <FormTextArea
-            label={t('mealPlan.description')}
+            label={t('labels.description')}
             value={field.value}
             onChangeText={field.onChange}
             placeholder={t('mealPlan.descriptionPlaceholder')}

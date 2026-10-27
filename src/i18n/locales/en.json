@@ -156,9 +156,6 @@
     "updateShoppingItemFailed": "Could not update the item.",
     "changedElsewhereTitle": "Changed Elsewhere",
     "changedElsewhereLatestShown": "This changed somewhere else after you opened it, so your change wasn't saved. The latest version is shown now.",
-    "entityHome": "Home",
-    "entityMember": "Member",
-    "entityInvite": "Invite",
     "notFoundTitle": "Not Found",
     "addLowStockFailed": "Failed to add low stock items",
     "saveLoginFailed": "Failed to save login information",
@@ -489,7 +486,6 @@
     "status": "Status",
     "storage": "Storage",
     "storageAmbient": "Ambient",
-    "storageRefrigerated": "Refrigerated",
     "storageFrozen": "Frozen",
     "storageLocations": "Storage Locations",
     "storageState": "Storage State",
@@ -546,7 +542,28 @@
     },
     "usedIn": "Used in",
     "tbspCup": "tbsp, cup",
-    "usedInHint": "What you measure it out in, like tbsp for honey."
+    "usedInHint": "What you measure it out in, like tbsp for honey.",
+    "member": "Member",
+    "member_one": "Member",
+    "member_other": "Members",
+    "memberCount_one": "{{count}} member",
+    "memberCount_other": "{{count}} members",
+    "description": "Description",
+    "tags": "Tags",
+    "vegetarian": "Vegetarian",
+    "protein": "Protein",
+    "restock": "Restock",
+    "notes": "Notes",
+    "defaultBadge": "Default",
+    "owner": "Owner",
+    "servingsCount_one": "{{count}} serving",
+    "servingsCount_other": "{{count}} servings",
+    "weekly": "Weekly",
+    "monthly": "Monthly",
+    "all": "All",
+    "purchased": "Purchased",
+    "vegan": "Vegan",
+    "sulfite": "Sulfite"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -646,7 +663,6 @@
   },
   "navigation": {
     "tabs": {
-      "pantry": "Pantry",
       "shoppingList": "List",
       "mealPlan": "Meal Plan"
     }
@@ -718,8 +734,7 @@
   "swipeActions": {
     "markUnpurchased": "Mark as unpurchased",
     "consume": "Consume",
-    "recordWaste": "Record waste",
-    "restock": "Restock"
+    "recordWaste": "Record waste"
   },
   "dateRange": {
     "week": "Week",

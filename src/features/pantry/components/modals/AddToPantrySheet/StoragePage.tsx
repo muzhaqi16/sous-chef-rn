@@ -87,7 +87,7 @@ export const StoragePage: React.FC<StoragePageProps> = ({
 
         {/* Tags */}
         <FormInput
-          label={t('addToPantry.tags')}
+          label={t('labels.tags')}
           value={tags}
           onChangeText={setTags}
           placeholder={t('addToPantry.tagsPlaceholder')}
@@ -96,7 +96,7 @@ export const StoragePage: React.FC<StoragePageProps> = ({
 
         {/* Notes */}
         <FormInput
-          label={t('addToPantry.notes')}
+          label={t('labels.notes')}
           value={storageNotes}
           onChangeText={setStorageNotes}
           placeholder={t('addToPantry.notesPlaceholder')}

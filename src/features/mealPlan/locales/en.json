@@ -2,7 +2,6 @@
   "mealPlan": {
     "name": "Name",
     "namePlaceholder": "e.g., Week 8 Plan",
-    "description": "Description",
     "descriptionPlaceholder": "Optional description...",
     "planType": "Plan Type",
     "weekly": "Weekly",
@@ -21,20 +20,16 @@
     "addNeedsPlan": "Create a meal plan first, then add meals to it.",
     "noAddPermission": "You can view this plan but not add meals to it.",
     "needsTheTemplate": "Open the template first so its meals are available.",
-    "daily": "Daily",
-    "custom": "Custom"
+    "daily": "Daily"
   },
   "addMealSheet": {
     "searchPlaceholder": "Search recipes or add a custom meal...",
     "addCustom": "Add \"{{query}}\" as custom meal",
     "searchAllRecipes": "Search all recipes for \"{{query}}\"",
     "yourRecipes": "Your Recipes",
-    "servings": "{{count}} servings",
     "noSavedRecipes": "No saved recipes yet",
     "noResults": "No recipes match your search",
     "addRecipeFailed": "Failed to add recipe. Please try again.",
-    "dietVegan": "Vegan",
-    "dietVegetarian": "Vegetarian",
     "dietGlutenFree": "GF",
     "dietDairyFree": "DF"
   },
@@ -55,7 +50,6 @@
   "mealPlanItem": {
     "unnamedMeal": "Unnamed meal",
     "pantryUpdated": "Pantry updated",
-    "servings": "{{count}} servings",
     "calories": "{{count}} cal"
   },
   "mealPlanSettings": {
@@ -127,12 +121,9 @@
     "sharedWithHome": "This template will be shared with {{name}}",
     "templateNamePlaceholder": "e.g., My Weekly Dinner Plan",
     "templateNameSuffix": "{{name}} Template",
-    "descriptionLabel": "Description",
     "descriptionPlaceholder": "What's special about this template?",
     "tagsLabel": "Tags (comma-separated)",
     "tagsPlaceholder": "e.g., healthy, quick, budget",
-    "categoryWeekly": "Weekly",
-    "categoryMonthly": "Monthly",
     "categoryHoliday": "Holiday",
     "categorySpecialDiet": "Special Diet",
     "categoryCustom": "Custom"
@@ -145,8 +136,7 @@
     "offline": "Templates aren't available offline. Reconnect to browse them."
   },
   "templateCard": {
-    "usedTimes": "Used {{count}}x",
-    "servings": "{{count}} servings"
+    "usedTimes": "Used {{count}}x"
   },
   "templatePreview": {
     "configuration": "Configuration",
@@ -170,9 +160,7 @@
   },
   "mealTemplateBuilder": {
     "namePlaceholder": "e.g. Weeknight Dinners",
-    "description": "Description",
     "descriptionPlaceholder": "Optional notes",
-    "tags": "Tags",
     "mealsSection": "Meals",
     "noMeals": "No meals added yet",
     "mealName": "Meal",

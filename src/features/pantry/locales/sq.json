@@ -10,8 +10,6 @@
     "noShoppingListSelectedMessage": "Ju lutemi zgjidhni fillimisht një listë blerjesh.",
     "goToShoppingLists": "Shko te listat e blerjeve",
     "noRecipeSuggestions": "Nuk ka sugjerime recetash në dispozicion",
-    "notes": "Shënime",
-    "tags": "Etiketa",
     "usageHistory": "Historiku i përdorimit",
     "fields": {
       "shelfLife": "Afati i ruajtjes",
@@ -19,7 +17,6 @@
       "costPerUnit": "Kosto/njësi",
       "minStock": "Stoku minimal",
       "restockAt": "Rimbush në",
-      "purchased": "Blerë",
       "lastPurchase": "Blerja e fundit",
       "lastUsed": "Përdorur së fundi",
       "added": "Shtuar"
@@ -63,7 +60,6 @@
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",
     "title": "Cilësimet e qilarit",
-    "loading": "Po ngarkohet...",
     "loadingData": "Po ngarkohen të dhënat e qilarit...",
     "namePlaceholder": "Shkruaj emrin (p.sh. Qilari i kuzhinës)",
     "descriptionPlaceholder": "Shkruaj një përshkrim",
@@ -83,8 +79,6 @@
     "tabLedger": "Regjistri",
     "period": "Periudha:",
     "granularityDaily": "Ditore",
-    "granularityWeekly": "Javore",
-    "granularityMonthly": "Mujore",
     "totalUsage": "Përdorimi total",
     "itemsUsed": "artikuj të përdorur",
     "avgPerDay": "Mes. në ditë",
@@ -123,7 +117,6 @@
     "purposeAdjustment": "Rregullim",
     "purposeCooking": "Gatim",
     "purposeRestock": "Riblerje",
-    "purposeTransfer": "Transferim",
     "purposeWaste": "Mbeturinë",
     "sourceManual": "Manual",
     "sourceRecipeAuto": "Recetë (auto)",
@@ -182,7 +175,6 @@
     "sustainability": "Qëndrueshmëria",
     "composted": "Të kompostuara",
     "recycledPackaging": "Të ricikluara (ambalazhi)",
-    "notes": "Shënime",
     "notesPlaceholder": "Shto shënime për këto mbeturina...",
     "reasonExpired": "Skaduar",
     "reasonSpoiled": "Prishur",
@@ -192,13 +184,11 @@
   },
   "restockItem": {
     "title": "Riplotëso artikullin",
-    "restock": "Riplotëso",
     "restockBy": "Riplotësuar nga",
     "currentLabel": "Aktualisht:",
     "quantityToAdd": "Sasia për t'u shtuar",
     "newQuantityPrefix": "Sasia e re: ",
     "costPerUnit": "Kostoja për njësi",
-    "notes": "Shënime",
     "notesPlaceholder": "Shto shënime për këtë riplotësim...",
     "expirationPlaceholder": "Cakto skadim të ri"
   },
@@ -208,7 +198,6 @@
     "quantityToConsume": "Sasia për t'u konsumuar",
     "fifoHint": "Artikujt konsumohen më të vjetrit-së pari sipas datës së skadimit",
     "purpose": "Qëllimi *",
-    "notes": "Shënime",
     "notesPlaceholder": "Shto shënime për këtë përdorim...",
     "purposeCooking": "Gatim",
     "purposeTransfer": "Transferim"
@@ -287,9 +276,7 @@
     "addItemDetails": "Shto detajet e artikullit",
     "storageLocation": "Vendndodhja e ruajtjes",
     "storageLocationPlaceholder": "p.sh. Rafti i sipërm, Sirtari i perimeve",
-    "tags": "Etiketat",
     "tagsPlaceholder": "p.sh. organike, pa gluten (të ndara me presje)",
-    "notes": "Shënime",
     "notesPlaceholder": "p.sh. Ruaje në vend të freskët dhe të thatë",
     "conditionGood": "Mirë",
     "conditionFair": "Mesatare",
@@ -300,7 +287,6 @@
     "cost": "Kostoja për njësi",
     "costPlaceholder": "p.sh. 4,99",
     "acquisitionMethod": "Si u sigurua",
-    "methodPurchased": "Blerë",
     "methodHomegrown": "Rritur në shtëpi",
     "methodGifted": "Dhuratë",
     "methodBarcodeScan": "Skanim i barkodit"
@@ -310,7 +296,6 @@
     "searchPlaceholder": "Kërko në qilarin tënd...",
     "sortedBy": "Rendit, tani sipas {{field}}",
     "tabAll": "Të gjitha",
-    "tabPantry": "Qilar",
     "tabUnassigned": "Pa caktuar",
     "expiringCount": "{{count}} po skadojnë",
     "expiredCount": "{{count}} të skaduar",
@@ -379,7 +364,6 @@
   },
   "expirationAction": {
     "cooked": "Gatuar",
-    "consumed": "Konsumuar",
     "shared": "Ndarë me dikë",
     "extended": "Afat ruajtjeje i zgjatur",
     "wasted": "Hedhur / Shpërdoruar",
@@ -395,9 +379,6 @@
       "SHARED": "Shënuar si i ndarë",
       "WASTE": "Shënuar si i hedhur"
     }
-  },
-  "pantryTabs": {
-    "all": "Të gjitha"
   },
   "expiration": {
     "noExpiryDate": "Pa datë skadimi"

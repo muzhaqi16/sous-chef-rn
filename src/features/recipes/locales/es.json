@@ -2,7 +2,6 @@
   "recipes": {
     "name": "Nombre de la receta",
     "namePlaceholder": "p. ej., Pollo Tikka Masala",
-    "description": "Descripción",
     "descriptionPlaceholder": "Una breve descripción de la receta...",
     "imageUrl": "URL de imagen",
     "imageUrlPlaceholder": "https://...",
@@ -35,11 +34,9 @@
     "quantityNoAmountPlaceholder": "Sin cantidad",
     "section": "Sección",
     "sectionPlaceholder": "p. ej., Para la salsa...",
-    "notes": "Notas",
     "optional": "Opcional",
     "rating": "Valoración",
     "none": "Ninguna",
-    "tags": "Etiquetas",
     "searchPlaceholder": "Buscar recetas...",
     "basedOnPantry": "Basado en tu despensa",
     "captureReviewTitle": "Receta importada",
@@ -160,7 +157,6 @@
     "nutritionTitle": "Nutrición",
     "caloriesPerServingLabel": "Cal / ración",
     "tipsPlaceholder": "Consejos del chef (opcional)",
-    "recipeTags": "Etiquetas",
     "originalAuthor": "Autor original",
     "originalAuthorPlaceholder": "Atribución (opcional)",
     "forkedFrom": "Bifurcado de {{name}}",
@@ -178,8 +174,6 @@
     "publishA11y": "Enviar receta a revisión",
     "unpublishA11y": "Despublicar receta",
     "withdrawA11y": "Retirar receta de la revisión",
-    "vegetarian": "Vegetariana",
-    "vegan": "Vegana",
     "dairyFree": "Sin lácteos",
     "about": "Acerca de",
     "addAll": "Añadir todo",
@@ -198,7 +192,6 @@
     "searchIncompleteTitle": "No se pudieron cargar todas tus recetas",
     "searchIncompleteDescription": "Puede que falten algunas coincidencias.",
     "removeRecipeFailed": "No se pudo quitar la receta. Inténtalo de nuevo.",
-    "filterAll": "Todas",
     "folders": "Carpetas",
     "tagCount_one": "{{count}} Etiqueta",
     "tagCount_other": "{{count}} Etiquetas",
@@ -359,7 +352,6 @@
       "TREE_NUT": "Frutos secos",
       "WHEAT": "Trigo"
     },
-    "macroProtein": "Proteínas",
     "macroCarbohydrates": "Carbohidratos",
     "macroFat": "Grasas",
     "macroFiber": "Fibra",
@@ -369,8 +361,6 @@
     "helpfulWithCount": "Útil ({{count}})",
     "reviewCount_one": "{{count}} reseña",
     "reviewCount_other": "{{count}} reseñas",
-    "servingsCount_one": "{{count}} ración",
-    "servingsCount_other": "{{count}} raciones",
     "pantryMatchLabel_one": "{{used}} de {{count}} ingrediente en tu despensa, {{missing}} por comprar",
     "pantryMatchLabel_other": "{{used}} de {{count}} ingredientes en tu despensa, {{missing}} por comprar",
     "createdFromRecipe": "Creada a partir de una receta",
@@ -407,17 +397,11 @@
     "selectOne": "Selecciona uno",
     "cookTimeOption": "{{minutes}} min",
     "diets": {
-      "vegetarian": "Vegetariana",
       "vegan": "Vegana",
       "ketogenic": "Cetogénica",
       "pescetarian": "Pescetariana",
       "lactoVegetarian": "Lacto-vegetariana",
-      "ovoVegetarian": "Ovo-vegetariana",
-      "primal": "Primal"
-    },
-    "intolerances": {
-      "egg": "Huevo",
-      "sulfite": "Sulfitos"
+      "ovoVegetarian": "Ovo-vegetariana"
     }
   },
   "nutritionSummary": {
@@ -429,7 +413,6 @@
     "mealsWithNutritionData": "Comidas con datos nutricionales",
     "totalCalories": "Calorías totales",
     "goalProgress": "Progreso del objetivo",
-    "macroProtein": "Proteínas",
     "macroFat": "Grasas",
     "unitKcal": "kcal",
     "unitGrams": "g",
@@ -450,7 +433,6 @@
     "updating": "Actualizando...",
     "yourRating": "Tu valoración",
     "ratingFormat": "{{rating}}/5",
-    "tags": "Etiquetas",
     "tagsPlaceholder": "Añadir etiquetas...",
     "notes": "Notas"
   },
