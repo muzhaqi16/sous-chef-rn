@@ -28,10 +28,12 @@ function sourceName(source: ExternalSource, t: Translate): string | null {
       return t('labels.sources.usdaFoodDataCentral');
     case ExternalSource.Kroger:
       return t('barcode.origin.source.kroger');
-    // Recipe and lookup sources state no origin or owner.
+    // Recipe, lookup and collected-price sources state no origin or owner.
+    case ExternalSource.Aldi:
     case ExternalSource.Allrecipes:
     case ExternalSource.BarcodeLookup:
     case ExternalSource.Edamam:
+    case ExternalSource.GiantEagle:
     case ExternalSource.Spoonacular:
     case ExternalSource.Tasty:
     case ExternalSource.UserCreated:
