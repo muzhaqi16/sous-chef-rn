@@ -13,7 +13,7 @@ import type {
   ScanAmount,
   ScannedItem,
 } from '#features/barcode/types';
-import { ScrollView, View } from 'react-native';
+import { View } from 'react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
@@ -300,13 +300,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const addsToPantry = source === 'pantry' && !!pantryId;
 
   return (
-    <View style={styles.container}>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
+    <>
+      <View style={styles.content}>
         <ProductResultCard
           item={item}
           readingSystem={readingSystem}
@@ -372,7 +367,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           attributions={item.dataAttributions ?? []}
           centered
         />
-      </ScrollView>
+      </View>
 
       {!!scannedBrand && (
         <AddToBrandListSheet
@@ -408,19 +403,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           describePrice={sheetUnit ? prices.compareToUsual : undefined}
         />
       )}
-    </View>
+    </>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  container: {
-    flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingVertical: theme.spacing.lg,
+  // The screen scrolls it and pads its end past the home indicator.
+  content: {
+    paddingTop: theme.spacing.lg,
     gap: theme.spacing.lg,
   },
 }));

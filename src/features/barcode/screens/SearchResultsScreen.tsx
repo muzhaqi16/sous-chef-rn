@@ -202,7 +202,6 @@ export const SearchResultsScreen: React.FC<
           },
         ],
       }}
-      scroll="none"
     >
       {renderContent()}
 
