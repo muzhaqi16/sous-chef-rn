@@ -264,8 +264,8 @@ export const strictestFirst = (
 ): HouseholdAlert[] => [...alerts].sort((a, b) => rankOf(a) - rankOf(b));
 
 /**
- * - `checked`: the server answered just now.
- * - `stale`: offline, showing the answer received earlier.
+ * - `checked`: showing the server's answer, its refresh not failed.
+ * - `stale`: showing an earlier answer, offline or after a failed refresh.
  * - `unchecked`: offline with no earlier answer; never shown as "nothing found".
  * - `failed`: online, but the server gave no answer; never "nothing found".
  * - `loading`: the first answer is on its way.
@@ -293,7 +293,7 @@ export function householdCheckOf({
   loading: boolean;
 }): HouseholdCheck {
   if (!hasHome) return 'none';
-  if (answered) return offline ? 'stale' : 'checked';
+  if (answered) return offline || failed ? 'stale' : 'checked';
   if (offline) return 'unchecked';
   if (loading && !failed) return 'loading';
   return 'failed';

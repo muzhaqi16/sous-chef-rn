@@ -131,6 +131,26 @@ describe('useRecipeDietaryAlerts', () => {
     expect(result.current.alertsFor('rice-row')).toEqual([]);
   });
 
+  // Under `errorPolicy: 'all'` an answer that comes with errors keeps its data
+  // (a network failure drops it): never shown as a clean check.
+  it('shows an answer that came with errors as possibly out of date', async () => {
+    const answered = alertsMock().mock;
+    const withErrors: typeof answered = {
+      ...answered,
+      result: {
+        ...(answered.result as { data: Record<string, unknown> }),
+        errors: [{ message: 'restrictions unavailable' }],
+      },
+    };
+    const { result } = renderHookWithApollo(
+      () => useRecipeDietaryAlerts('recipe-1'),
+      { operationMocks: [withErrors] },
+    );
+
+    await waitFor(() => expect(result.current.check).toBe('stale'));
+    expect(result.current.summary).toHaveLength(2);
+  });
+
   it('checks nothing without a home', () => {
     mockHomeId = null;
     const { result } = renderHookWithApollo(
