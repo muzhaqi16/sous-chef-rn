@@ -104,6 +104,11 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
         home {
           id
           name
+          # The selector's delete mode: a home's OWNER and ADMINs delete its lists.
+          myMembership {
+            id
+            role
+          }
         }
         ownerships {
           id

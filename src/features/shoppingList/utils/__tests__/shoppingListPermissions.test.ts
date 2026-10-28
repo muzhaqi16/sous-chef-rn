@@ -4,6 +4,7 @@ import {
   CollaboratorStatus,
 } from '#/graphql/generated/schemaTypes';
 import {
+  canDeleteShoppingList,
   getInvitableCollaboratorRoles,
   getShoppingListPermissions,
   getShoppingListPermissionsWithOwner,
@@ -337,5 +338,21 @@ describe('getInvitableCollaboratorRoles', () => {
     expect(
       getInvitableCollaboratorRoles(inviter(CollaboratorRole.Viewer), ROLES),
     ).toEqual([CollaboratorRole.Viewer, CollaboratorRole.Shopper]);
+  });
+});
+
+describe('canDeleteShoppingList', () => {
+  it('lets the list’s owner delete it', () => {
+    expect(canDeleteShoppingList(true, null)).toBe(true);
+  });
+
+  // The API's DELETE on a home's list floors at ADMIN.
+  it.each([
+    [MembershipRole.Owner, true],
+    [MembershipRole.Admin, true],
+    [MembershipRole.Member, false],
+    [MembershipRole.Guest, false],
+  ])('lets a home %s who does not own it delete it: %s', (role, allowed) => {
+    expect(canDeleteShoppingList(false, role)).toBe(allowed);
   });
 });

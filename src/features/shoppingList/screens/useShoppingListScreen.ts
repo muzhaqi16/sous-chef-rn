@@ -4,6 +4,7 @@ import { useApolloClient } from '@apollo/client/react';
 import { useUser } from '#store/useAppStore';
 import { requirePlatform } from '#platform/install';
 import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
+import { canDeleteShoppingList } from '#features/shoppingList/utils/shoppingListPermissions';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -120,10 +121,14 @@ export function useShoppingListScreen() {
     rawPurchasedItems: filteredPurchasedItems,
   });
 
-  const listDataWithOwnership = lists.map(list => ({
-    ...list,
-    _isOwner: isShoppingListOwner(list, user?.id),
-  }));
+  const listDataWithOwnership = lists.map(list => {
+    const isOwner = isShoppingListOwner(list, user?.id);
+    return {
+      ...list,
+      _isOwner: isOwner,
+      _canDelete: canDeleteShoppingList(isOwner, list.home?.myMembership?.role),
+    };
+  });
 
   // Warm the disk cache, deferred to idle so it does not compete with in-flight
   // queries during the critical load.

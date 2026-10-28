@@ -28,6 +28,8 @@ import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 export type ShoppingListSelectorItem = ShoppingListFromQuery & {
   _isOwner: boolean;
+  /** The API lets the viewer delete it: its owner, or the home's OWNER/ADMIN. */
+  _canDelete: boolean;
 };
 
 interface UseShoppingListSelectorOptions {
@@ -86,14 +88,14 @@ export function useShoppingListSelectorModal({
   };
 
   const handleLongPress = (item: ShoppingListSelectorItem) => {
-    if (!item._isOwner) return;
+    if (!item._canDelete) return;
     longPressItemRef.current = item.id;
     setIsDeleteMode(true);
     setSelectedForDeletion(new Set([item.id]));
   };
 
   const toggleDeleteSelection = (item: ShoppingListSelectorItem) => {
-    if (!item._isOwner) return;
+    if (!item._canDelete) return;
     if (longPressItemRef.current === item.id) {
       longPressItemRef.current = null;
       return;
@@ -249,7 +251,7 @@ export function useShoppingListSelectorModal({
 
     if (isDeleteMode) {
       const isSelectedForDelete = selectedForDeletion.has(list.id);
-      const canDelete = !!list._isOwner;
+      const canDelete = list._canDelete;
 
       return (
         <SelectorItemContainer
