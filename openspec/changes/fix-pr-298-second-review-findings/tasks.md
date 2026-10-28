@@ -32,8 +32,8 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 
 ## 5. Skipped queries serve nothing (findings 6, 11; D7)
 
-- [ ] 5.1 In `src/features/recipes/hooks/useRecipeSubstitutes.ts`, read `recipeId && homeId && wanted ? data?.recipe : undefined`. Add `useRecipeSubstitutes.test.ts` cases: after an answer, `homeId` going null and `wanted` going false each leave `substitutesFor` empty. Verify both fail on `dev` and pass after.
-- [ ] 5.2 In `src/features/barcode/hooks/useStorePriceMemory.ts`, read `comparison` and `store` from `here` only while `listId` is set. Add a `useStorePriceMemory.test.ts` case: answered for a list, then rerendered with `listId` undefined, `typical` is null. Verify it fails on `dev` and passes after.
+- [x] 5.1 In `src/features/recipes/hooks/useRecipeSubstitutes.ts`, read `recipeId && homeId && wanted ? data?.recipe : undefined`. Add `useRecipeSubstitutes.test.ts` cases: after an answer, `homeId` going null and `wanted` going false each leave `substitutesFor` empty. Verify both fail on `dev` and pass after.
+- [x] 5.2 In `src/features/barcode/hooks/useStorePriceMemory.ts`, read `comparison` and `store` from `here` only while `listId` is set. Add a `useStorePriceMemory.test.ts` case: answered for a list, then rerendered with `listId` undefined, `typical` is null. Verify it fails on `dev` and passes after.
 
 ## 6. A locale change refreshes in place (finding 7, D8)
 

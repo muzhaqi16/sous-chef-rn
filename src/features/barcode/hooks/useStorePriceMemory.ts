@@ -113,8 +113,10 @@ export function useStorePriceMemory(
     };
   }
 
-  const comparison = here.data?.itemPriceComparison;
-  const store = here.data?.shoppingList?.targetStore;
+  // `skipToken` keeps the last answer, so prices switched off would show it.
+  const answered = listId ? here.data : undefined;
+  const comparison = answered?.itemPriceComparison;
+  const store = answered?.shoppingList?.targetStore;
   const rows = (comparison?.rows ?? []).filter(
     row => row.meetsMinimumSample && (basis === null || row.basis === basis),
   );

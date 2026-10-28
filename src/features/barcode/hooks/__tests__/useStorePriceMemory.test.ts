@@ -265,6 +265,29 @@ describe('useStorePriceMemory', () => {
     );
   });
 
+  // The card stays open while Budget & prices is switched off: store mode
+  // then shows no money, though the skipped query keeps its last answer.
+  it('drops the typical price once prices are switched off', async () => {
+    const shopping: { listId: string | undefined } = { listId: 'list-1' };
+    const { result, rerender } = renderHookWithApollo(
+      ({ listId }: { listId: string | undefined }) =>
+        useStorePriceMemory('pb', listId, JAR_UNIT, 'USD'),
+      {
+        operationMocks: [
+          paidMock({}).mock,
+          comparisonMock([row(PriceComparisonScope.Store, 'store-1', 9.5)])
+            .mock,
+        ],
+        initialProps: shopping,
+      },
+    );
+    await waitFor(() => expect(result.current.typical).not.toBeNull());
+
+    rerender({ listId: undefined });
+
+    expect(result.current.typical).toBeNull();
+  });
+
   it('reads nothing outside store mode', () => {
     const paid = paidMock({});
     const here = comparisonMock([]);

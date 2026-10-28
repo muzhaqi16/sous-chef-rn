@@ -53,8 +53,10 @@ export function useRecipeSubstitutes(
       : skipToken,
   );
 
+  // `skipToken` keeps the last answer: the home just left, or rows unflagged.
+  const recipe = recipeId && homeId && wanted ? data?.recipe : undefined;
   const byIngredient = new Map<string, SubstituteOption[]>();
-  for (const { node } of data?.recipe?.ingredientsConnection.edges ?? []) {
+  for (const { node } of recipe?.ingredientsConnection.edges ?? []) {
     if (node.substitutes.length === 0) continue;
     byIngredient.set(
       node.id,

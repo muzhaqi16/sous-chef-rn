@@ -20,8 +20,9 @@ import {
 import { RecipeSubstitutesDocument } from '../useRecipeSubstitutes.generated';
 import { useRecipeSubstitutes } from '../useRecipeSubstitutes';
 
+let mockHomeId: string | null = 'home-1';
 jest.mock('#store/useAppStore', () => ({
-  useSelectedHomeId: () => 'home-1',
+  useSelectedHomeId: () => mockHomeId,
   useSelectedPantryId: () => 'pantry-1',
   useUser: () => ({ id: 'u-me' }),
 }));
@@ -114,6 +115,10 @@ const substitutesMock = () =>
   });
 
 describe('useRecipeSubstitutes', () => {
+  beforeEach(() => {
+    mockHomeId = 'home-1';
+  });
+
   it('words each swap: parts in the recipe amount, what the pantry holds, note and notes', async () => {
     const mock = substitutesMock();
     const { result } = renderHookWithApollo(
@@ -171,6 +176,40 @@ describe('useRecipeSubstitutes', () => {
     );
 
     expect(mock.fired).toHaveLength(0);
+    expect(result.current.substitutesFor('buttermilk')).toEqual([]);
+  });
+
+  // A skipped query keeps its last answer, which is another household's.
+  it('offers no swaps once the home is left', async () => {
+    const { result, rerender } = renderHookWithApollo(
+      () => useRecipeSubstitutes('recipe-1', true),
+      { operationMocks: [substitutesMock().mock] },
+    );
+    await waitFor(() =>
+      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
+    );
+
+    mockHomeId = null;
+    rerender({});
+
+    expect(result.current.substitutesFor('buttermilk')).toEqual([]);
+  });
+
+  it('offers no swaps once no row is flagged', async () => {
+    const { result, rerender } = renderHookWithApollo(
+      ({ wanted }: { wanted: boolean }) =>
+        useRecipeSubstitutes('recipe-1', wanted),
+      {
+        operationMocks: [substitutesMock().mock],
+        initialProps: { wanted: true },
+      },
+    );
+    await waitFor(() =>
+      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
+    );
+
+    rerender({ wanted: false });
+
     expect(result.current.substitutesFor('buttermilk')).toEqual([]);
   });
 
