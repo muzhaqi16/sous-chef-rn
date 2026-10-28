@@ -9174,6 +9174,12 @@ type Measure {
 type MeasureReading {
   """Whether unit shows its amounts as fractions (cups do)."""
   displayAsFraction: Boolean!
+  """
+  The unit's short form in the request's language (unit.localizedSymbol:
+  g and lb as they are, a can as lata in Spanish), so a reading needs no
+  unit selection.
+  """
+  localizedSymbol: String!
   """The symbol of unit (lb, g, can), so a reading needs no unit selection."""
   symbol: String!
   """The dimension of unit: weight, volume or count."""
@@ -13029,6 +13035,12 @@ type ParsedReceiptLine {
   """The printed article or barcode number"""
   code: String
   kind: ReceiptLineKind!
+  """
+  The vocabulary unit the printed unit names (pc is piece, lb is pound), to
+  show in the request's language through its localizedSymbol or
+  localizedName; null when it names none. unit stays as printed.
+  """
+  measureUnit: Unit
   """The product name as printed, on an ITEM"""
   product: String
   """
