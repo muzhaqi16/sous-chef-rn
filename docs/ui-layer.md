@@ -282,6 +282,11 @@ they read it.
   variant-resolved style is cached on the wrong dependencies and freezes at its
   first-render value — memoized, zero bailouts, and silently wrong.
   `scripts/check-unistyles-variant-staleness.mjs` is the cover.
+- **A style returns object literals**, directly or through a ternary, `&&` or
+  `||`. The plugin attaches a style's dependencies only there; a style returned
+  from a `switch`, loop or `try`, or as a call result, gets none and keeps the
+  theme it first rendered with. `__tests__/ui/stylesCarryTheirDependencies.test.ts`
+  compiles every stylesheet with the plugin's `debug` warnings and fails on one.
 - **A host that mounts its children later than they were created wraps them in
   `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
   an element against its other dependencies, so a parent that outlives a theme
