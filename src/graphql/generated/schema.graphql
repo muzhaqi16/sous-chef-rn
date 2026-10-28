@@ -8536,6 +8536,10 @@ union MarkStorageLocationAsDefaultResult = ConflictError | ForbiddenError | Mark
 Input to restore a previously-dismissed item so it can be suggested again.
 """
 input MarkSuggestionActiveInput {
+  """
+  A CUID2 minted per restore for an offline queue: a resend under a spent key writes nothing, so it never undoes a later markSuggestionDismissed
+  """
+  idempotencyKey: ID
   """Catalog item to start suggesting again."""
   itemId: ID!
   """Which surface to restore it on (pantry vs shopping)."""
@@ -8562,6 +8566,10 @@ union MarkSuggestionActiveResult = ConflictError | ForbiddenError | MarkSuggesti
 Input to hide a catalog item from a user's suggestions on a given surface.
 """
 input MarkSuggestionDismissedInput {
+  """
+  A CUID2 minted per dismissal for an offline queue: a resend under a spent key writes nothing, so it never undoes a later markSuggestionActive
+  """
+  idempotencyKey: ID
   """Catalog item to stop suggesting."""
   itemId: ID!
   """Which surface to hide it from (pantry vs shopping)."""
@@ -10330,7 +10338,9 @@ type Mutation {
   markStorageLocationAsDefault(input: MarkStorageLocationAsDefaultInput!): MarkStorageLocationAsDefaultResult!
   """
   Mark a previously-dismissed item active again so it can appear in your
-  suggestions on the given surface.
+  suggestions on the given surface. Restoring an item not dismissed, or a
+  resend under a spent idempotencyKey, writes nothing and answers as the first
+  send did.
   """
   markSuggestionActive(input: MarkSuggestionActiveInput!): MarkSuggestionActiveResult!
   """
@@ -10340,7 +10350,8 @@ type Mutation {
   Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
   chosen surface; low-stock and expiring-soon alerts are never suppressed.
   Dismissals are per-user, so on shared lists/homes only your own
-  suggestions are affected.
+  suggestions are affected. Dismissing an item already dismissed, or a resend
+  under a spent idempotencyKey, writes nothing and answers as the first send did.
   """
   markSuggestionDismissed(input: MarkSuggestionDismissedInput!): MarkSuggestionDismissedResult!
   """
@@ -12803,7 +12814,13 @@ sections (recentlyDeleted, frequentlyAdded, popular) omit items the pantry
 holds and items the viewer dismissed.
 """
 type PantrySuggestions {
-  """Stacks expiring within expirationDays, soonest first"""
+  """
+  Stacks expiring within expirationDays, soonest first, that a restock has not
+  answered: a stack leaves once its stock lasting past the window (batches
+  expiring later, or never) is above zero and above its low-stock minimum when
+  lowStockAlert is set. The pantry's expiringSoon filter, its stats and expiry
+  notifications still count the expiring stock until it is used or removed.
+  """
   expiringSoon: [PantryItemSuggestion!]!
   """
   Items this pantry's home adds to its pantries most often, whoever added them
