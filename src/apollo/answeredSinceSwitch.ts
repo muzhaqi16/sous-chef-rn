@@ -60,3 +60,9 @@ export const wasAnsweredSinceSwitch = (
     (erredInARow === 0 || erredInARow >= MAX_ERRED_ANSWERS)
   );
 };
+
+/** Its last answer since the switch had data and no errors. */
+export const wasAnsweredWholeSinceSwitch = (
+  operationName: string,
+  variables: unknown,
+): boolean => answered?.get(keyOf(operationName, variables)) === 0;

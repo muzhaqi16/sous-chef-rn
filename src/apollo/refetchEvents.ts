@@ -16,7 +16,9 @@ import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
 import {
   startAnswersForSwitch,
   wasAnsweredSinceSwitch,
+  wasAnsweredWholeSinceSwitch,
 } from './answeredSinceSwitch';
+import { fragmentsCarried, fragmentsNeeded } from './fragmentsOnEntities';
 import { logger } from '#/utils/environment';
 import { RESYNC_SCOPE } from './scopedClient';
 
@@ -148,17 +150,56 @@ const isCatchUp = (batch: PendingResync): boolean =>
     name => name === 'languageChanged' || name === 'screenShown',
   );
 
+const answeredSinceSwitch = (query: ObservableQuery): boolean =>
+  !!query.queryName && wasAnsweredSinceSwitch(query.queryName, query.variables);
+
+const answeredWholeSinceSwitch = (query: ObservableQuery): boolean =>
+  !!query.queryName &&
+  wasAnsweredWholeSinceSwitch(query.queryName, query.variables);
+
+/**
+ * A query made only of fragments that a query answered whole since the switch
+ * holds on the same entities was answered with it: a scan card's hooks read
+ * what the barcode lookup brought.
+ */
+function answeredWithAnother(
+  client: ApolloClient,
+): (query: ObservableQuery) => boolean {
+  let carried: Set<string> | undefined;
+  return query => {
+    const needed = fragmentsNeeded(
+      query.query,
+      query.variables,
+      query.getCurrentResult().data,
+    );
+    if (!needed) return false;
+    const held = (carried ??= new Set(
+      [...client.getObservableQueries('active')].flatMap(carrier =>
+        answeredWholeSinceSwitch(carrier)
+          ? [
+              ...fragmentsCarried(
+                carrier.query,
+                carrier.variables,
+                carrier.getCurrentResult().data,
+              ),
+            ]
+          : [],
+      ),
+    ));
+    return [...needed].every(key => held.has(key));
+  };
+}
+
 // What is on screen and not answered since the last switch or resync, whoever
 // asked. A resync starts afresh, so it re-asks all that is shown.
-const reasks =
-  (batch: PendingResync) =>
-  (query: ObservableQuery): boolean =>
+const reasks = (client: ApolloClient, batch: PendingResync) => {
+  const answeredWith = answeredWithAnother(client);
+  return (query: ObservableQuery): boolean =>
     batch.matchers.some(matcher => matcher(query)) &&
     isOnScreen(query) &&
-    !(
-      !!query.queryName &&
-      wasAnsweredSinceSwitch(query.queryName, query.variables)
-    );
+    !answeredSinceSwitch(query) &&
+    !answeredWith(query);
+};
 
 async function refetchActive(
   client: ApolloClient,
@@ -171,7 +212,7 @@ async function refetchActive(
     startAnswersForSwitch();
     catchUpOnNavigation();
   }
-  const wanted = reasks(batch);
+  const wanted = reasks(client, batch);
   let refetched = 0;
   try {
     await client.refetchQueries({
@@ -225,7 +266,7 @@ export const createRefetchEventManager = (): RefetchEventManager => {
     if (
       pending &&
       isCatchUp(pending) &&
-      ![...client.getObservableQueries('active')].some(reasks(pending))
+      ![...client.getObservableQueries('active')].some(reasks(client, pending))
     ) {
       takePending();
       running = false;

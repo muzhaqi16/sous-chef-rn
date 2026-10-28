@@ -80,6 +80,55 @@ const DetailQuery = gql`
   }
 `;
 
+// A scan's lookup carries its card's fragment, as `ItemByLookup` does, and its
+// price card's on request; each card also asks for its product by id.
+const CardFragments = `
+  fragment CardForResync_product on Product {
+    id
+    origin
+  }
+  fragment PriceForResync_product on Product {
+    id
+    price
+  }
+`;
+const LookupQuery = gql`
+  query LookupForResync($withPrice: Boolean = false) {
+    lookup {
+      id
+      name
+      ...CardForResync_product
+      ...PriceForResync_product @include(if: $withPrice)
+    }
+  }
+  ${CardFragments}
+`;
+const CardQuery = gql`
+  query CardForResync($id: ID!) {
+    product(id: $id) {
+      id
+      ...CardForResync_product
+    }
+  }
+  ${CardFragments}
+`;
+const PriceQuery = gql`
+  query PriceForResync($id: ID!) {
+    product(id: $id) {
+      id
+      ...PriceForResync_product
+    }
+  }
+  ${CardFragments}
+`;
+const pasta = {
+  __typename: 'Product',
+  id: 'p1',
+  name: 'Pasta',
+  origin: 'IT',
+  price: 3,
+};
+
 const navigationListeners = new Set<() => void>();
 const navigate = () => navigationListeners.forEach(listener => listener());
 const onNavigation = (listener: () => void) => {
@@ -161,7 +210,22 @@ beforeEach(async () => {
   failing = new Set();
   heldResponses = null;
   client = new ApolloClient({
-    cache: new InMemoryCache(),
+    cache: new InMemoryCache({
+      typePolicies: {
+        Query: {
+          fields: {
+            // As `readByIdFromCache`: a card reads the product the lookup stored.
+            product: {
+              read: (_, { args, toReference }) =>
+                typeof args?.id === 'string'
+                  ? toReference({ __typename: 'Product', id: args.id })
+                  : undefined,
+            },
+          },
+        },
+      },
+    }),
+    dataMasking: true,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
     // The production language link in front: it records what was answered
     // in the language a catch-up asks for.
@@ -177,7 +241,13 @@ beforeEach(async () => {
             }
             const respond = () => {
               observer.next({
-                data: { list: 'value', search: 'value', detail: 'value' },
+                data: {
+                  list: 'value',
+                  search: 'value',
+                  detail: 'value',
+                  lookup: pasta,
+                  product: pasta,
+                },
               });
               observer.complete();
             };
@@ -605,6 +675,87 @@ describe('resync', () => {
       await pastTheWindow();
 
       expect(requests).not.toContain('SearchForResync');
+    });
+  });
+
+  describe('a card the lookup answered with', () => {
+    beforeEach(async () => {
+      connectResyncSources(client, { onNavigation });
+      // Before the resync, so the cache holds what may have missed a change.
+      await client.query({ query: CardQuery, variables: { id: 'p1' } });
+      await client.query({ query: PriceQuery, variables: { id: 'p1' } });
+      triggers.wsReconnected();
+      await pastTheWindow();
+    });
+
+    const scan = async (variables: { withPrice?: boolean } = {}) => {
+      watchers.push(
+        client
+          .watchQuery({ query: LookupQuery, variables, refetchOn: false })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+    };
+    const showCard = async (query: typeof CardQuery, id = 'p1') => {
+      watchers.push(
+        client
+          .watchQuery({ query, variables: { id }, fetchPolicy: 'cache-first' })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+    };
+
+    it('is not re-asked: the lookup brought what it reads', async () => {
+      requests = [];
+      await scan();
+      await showCard(CardQuery);
+      expect(requests).toEqual(['LookupForResync']);
+
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['LookupForResync']);
+    });
+
+    it('is re-asked when the lookup left its fragment out', async () => {
+      requests = [];
+      await scan({ withPrice: false });
+      await showCard(PriceQuery);
+
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['LookupForResync', 'PriceForResync']);
+    });
+
+    it('is re-asked for a product the lookup did not bring', async () => {
+      client.writeQuery({
+        query: CardQuery,
+        variables: { id: 'p2' },
+        data: {
+          product: { __typename: 'Product', id: 'p2', origin: 'FR' },
+        },
+      });
+      requests = [];
+      await scan();
+      await showCard(CardQuery, 'p2');
+
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['LookupForResync', 'CardForResync']);
+    });
+
+    // The lookup declines resync, so its cards are the ones a resync refreshes.
+    it('is re-asked by a resync that the lookup declines', async () => {
+      await scan();
+      await showCard(CardQuery);
+      requests = [];
+
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect([...requests].sort()).toEqual(['CardForResync', 'ListForResync']);
     });
   });
 

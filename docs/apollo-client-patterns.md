@@ -529,13 +529,13 @@ live-event channel only delivers what happens after it connects. So the client
 re-requests its active queries whenever the device may have missed changes,
 through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
-| Event             | Fires when                                                                                                       |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `appForeground`   | The app returns to `active` while the live channel is closed, or after 60 s away                                 |
-| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)                                                     |
-| `wsReconnected`   | `onWebSocketReconnected`                                                                                         |
-| `languageChanged` | The resolved language really changes                                                                             |
-| `screenShown`     | Each navigation after a switch or a resync, for what it left unasked                                             |
+| Event             | Fires when                                                                       |
+| ----------------- | -------------------------------------------------------------------------------- |
+| `appForeground`   | The app returns to `active` while the live channel is closed, or after 60 s away |
+| `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)                     |
+| `wsReconnected`   | `onWebSocketReconnected`                                                         |
+| `languageChanged` | The resolved language really changes                                             |
+| `screenShown`     | Each navigation after a switch or a resync, for what it left unasked             |
 
 **A return within 60 s over an open channel asks nothing.** The API ends a
 socket that leaves one of its pings unanswered at the next
@@ -587,7 +587,11 @@ only it (or of `languageChanged`) refetches just the active, shown queries not
 answered since. The set is per switch, not per language: names live on shared
 entities, so a screen paused through `en` → `es` → `en` reads what the `es`
 screens wrote. A query joins it only once its refetch answers, and a catch-up
-waits while the API is unavailable. A switch before any query exists
+waits while the API is unavailable. A query made only of fragments on entities
+it looks up by id counts as answered when an active query answered whole since
+holds those fragments on those entities (`fragmentsOnEntities.ts`): a scan
+card's hooks read what the barcode lookup brought, so a scan after a resync
+asks once. A switch before any query exists
 (rehydration applying the saved language) is not one. No screen carries code
 for it, and none is remounted.
 

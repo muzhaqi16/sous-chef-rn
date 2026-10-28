@@ -3,6 +3,7 @@ import {
   noteAnsweredInLanguage,
   startAnswersForSwitch,
   wasAnsweredSinceSwitch,
+  wasAnsweredWholeSinceSwitch,
 } from '../answeredSinceSwitch';
 
 /**
@@ -37,6 +38,19 @@ describe('answeredSinceSwitch', () => {
     noteAnsweredInLanguage('Pantry', { id: 'p1' });
 
     expect(wasAnsweredSinceSwitch('Pantry', { id: 'p1' })).toBe(true);
+  });
+
+  // A query that keeps erring stops being re-asked, but what it holds is not
+  // the server's answer.
+  it('counts no answer with errors as whole, however many', () => {
+    for (let attempt = 0; attempt < 3; attempt++) {
+      noteAnsweredInLanguage('Pantry', { id: 'p1' }, { erred: true });
+    }
+
+    expect(wasAnsweredSinceSwitch('Pantry', { id: 'p1' })).toBe(true);
+    expect(wasAnsweredWholeSinceSwitch('Pantry', { id: 'p1' })).toBe(false);
+    noteAnsweredInLanguage('Pantry', { id: 'p1' });
+    expect(wasAnsweredWholeSinceSwitch('Pantry', { id: 'p1' })).toBe(true);
   });
 
   // The keys carry search terms and ids; the catch-up a switch started goes on.
