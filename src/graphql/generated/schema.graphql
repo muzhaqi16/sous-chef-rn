@@ -7712,6 +7712,8 @@ type ItemUnitSuggestion {
     """How many it follows: picks singular or plural; omitted, the singular"""
     quantity: Float
   ): String!
+  """Both forms of localizedSymbol, as Unit.localizedSymbolForms"""
+  localizedSymbolForms: PluralForms!
   name: String!
   symbol: String!
   type: UnitType!
@@ -13141,6 +13143,20 @@ enum Plan {
 type PlatformStat {
   count: Int!
   platform: MobilePlatform!
+}
+
+"""
+A text's two forms by plural category. Pick one per number with the
+language's plural rules (Intl.PluralRules): one where they read the number
+as one, and for any part of one (½ cup); other for every other number, zero
+included. A language whose rules have further categories (few, many) takes
+other for them, as every shipped language does.
+"""
+type PluralForms {
+  """The form for one, and for any part of one: 1 can, ½ cup"""
+  one: String!
+  """The form for every other number: 0 cans, 2 cans"""
+  other: String!
 }
 
 """Sub-input for power/battery status"""
@@ -19198,6 +19214,8 @@ type SuggestionUnit {
     """How many it follows: picks singular or plural; omitted, the singular"""
     quantity: Float
   ): String!
+  """Both forms of localizedSymbol, as Unit.localizedSymbolForms"""
+  localizedSymbolForms: PluralForms!
   name: String!
   symbol: String!
 }
@@ -19539,9 +19557,9 @@ type Unit {
   isMetric: Boolean!
   """
   The unit's name in the request's language (Accept-Language), singular or
-  plural as that language's plural rules read quantity: singular without one.
-  English when the language has no name for the unit; a household's own unit
-  keeps its name.
+  plural as that language's plural rules read quantity, and singular for any
+  part of one (½ cup) or without one. English when the language has no name
+  for the unit; a household's own unit keeps its name.
   """
   localizedName(
     """How many: picks singular or plural; omitted, the singular"""
@@ -19559,6 +19577,12 @@ type Unit {
     """How many it follows: picks singular or plural; omitted, the singular"""
     quantity: Float
   ): String!
+  """
+  Both forms of localizedSymbol, for a client that picks one per number it
+  shows (a list's rows, an amount being edited) as PluralForms says; one
+  field, so no alias per form.
+  """
+  localizedSymbolForms: PluralForms!
   minPrecision: Float!
   """
   The canonical English name, in every language; localizedName is the one to show
