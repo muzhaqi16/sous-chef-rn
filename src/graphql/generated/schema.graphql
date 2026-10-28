@@ -14357,7 +14357,8 @@ type Query {
     recipeId: ID!
   ): CookingLogConnection!
   """
-  Recipes the caller could cook from what their pantries hold. Published
+  Recipes the caller could cook from what the pantries in scope hold: that
+  home's with homeId, else every pantry the caller may view. Published
   recipes anyone can discover, and the caller's own and saved ones, come
   first when at least half their non-optional ingredients are held: best
   covered first, with stock about to expire lifting the recipes that use it.
@@ -14377,6 +14378,10 @@ type Query {
   recipeSuggestions(
     """How many suggestions: 20 when omitted, at most 100"""
     first: Int
+    """
+    Only this home's pantries, those the caller may view; refused unless the caller is an active member. Every pantry the caller may view when omitted
+    """
+    homeId: ID
     """
     The caller's own calendar date, as YYYY-MM-DD. With it, stock expiring within 3 days lifts the recipes that use it
     """
@@ -15167,10 +15172,16 @@ type Recipe {
   """
   latestRevision: RecipeRevision
   """
-  How much of this recipe you can already make from your pantry, 0-100.
-  Null when unauthenticated.
+  How much of this recipe you can already make from the pantries in scope,
+  0-100: that home's with homeId, else every pantry you may view. Null when
+  unauthenticated.
   """
-  matchPercentage: Float
+  matchPercentage(
+    """
+    Only this home's pantries, those you may view; refused unless you are an active member. Every pantry you may view when omitted
+    """
+    homeId: ID
+  ): Float
   """
   The viewer's meal-plan items that use this recipe: from plans they own or
   share through an active home membership, soonest first. Empty for an
@@ -16136,14 +16147,15 @@ type RecipeSuggestionConnection {
 """A suggested recipe, and why it was suggested."""
 type RecipeSuggestionEdge {
   """
-  The share of the recipe's non-optional ingredients the caller's pantries
-  hold, from 0 to 100: the figure Recipe.matchPercentage reports.
+  The share of the recipe's non-optional ingredients the pantries in scope
+  hold, from 0 to 100: the figure Recipe.matchPercentage reports for the same
+  homeId.
   """
   coverage: Int!
   cursor: String!
   """
-  The caller's stacks expiring within 3 days of today that the recipe would
-  use; empty when today was not sent.
+  The stacks in the pantries in scope expiring within 3 days of today that
+  the recipe would use; empty when today was not sent.
   """
   expiringStacks: [PantryItem!]!
   node: Recipe!
