@@ -23,10 +23,16 @@ describe('getMealTemplatePermissions', () => {
     ).toEqual({ canEdit: true, canDelete: true, canDuplicate: true });
   });
 
-  // The API gates template delete on EDIT, not on the plan's ADMIN floor.
-  it('lets a home MEMBER edit and delete', () => {
+  // Delete floors at ADMIN, as for a meal plan: EDIT is not enough.
+  it('lets a home MEMBER edit but not delete', () => {
     expect(
       getMealTemplatePermissions(homeTemplate(MembershipRole.Member), 'u1'),
+    ).toEqual({ canEdit: true, canDelete: false, canDuplicate: true });
+  });
+
+  it('lets a home ADMIN delete', () => {
+    expect(
+      getMealTemplatePermissions(homeTemplate(MembershipRole.Admin), 'u1'),
     ).toEqual({ canEdit: true, canDelete: true, canDuplicate: true });
   });
 
