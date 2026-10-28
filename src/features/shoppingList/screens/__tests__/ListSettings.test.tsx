@@ -409,6 +409,43 @@ describe('ListSettings', () => {
     expect(screen.getByText(/This list is linked to the home/)).toBeTruthy();
   });
 
+  // The API's EDIT reaches a home MEMBER: the settings are theirs to change,
+  // but the default is the owner's mark and sharing the owner's roster.
+  it("lets a home MEMBER who doesn't own the list edit it, not its default", () => {
+    const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
+    ownerHelpers.isShoppingListOwner.mockReturnValue(false);
+
+    const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+    useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+      shoppingList: {
+        id: 'sl1',
+        name: 'Weekly Groceries',
+        isDefault: false,
+        homeId: 'h1',
+        home: {
+          name: 'Family Home',
+          myMembership: { id: 'm1', role: 'MEMBER' },
+        },
+        collaboratorsConnection: { edges: [], totalCount: 0 },
+      },
+      isShared: true,
+      collaborators: [],
+    }));
+
+    render(<ListSettings route={editRoute} />);
+    expect(
+      screen.getByText(t('shoppingListScreens.listSettings')),
+    ).toBeTruthy();
+    expect(screen.getByText(t('shoppingListScreens.listName'))).toBeTruthy();
+    expect(screen.queryByText(t('shoppingListScreens.defaultList'))).toBeNull();
+    expect(
+      screen.queryByText(t('shoppingListScreens.manageMembers')),
+    ).toBeNull();
+    expect(screen.getAllByText(t('labels.leaveList')).length).toBeGreaterThan(
+      0,
+    );
+  });
+
   // The API lets a home's OWNER and ADMINs delete its lists; a MEMBER edits.
   it.each([
     ['ADMIN', true],

@@ -13,7 +13,8 @@ interface TemplateSectionProps {
   creating: boolean;
   handleCreateFromTemplate: () => void;
   handleSaveAsTemplate: () => void;
-  isOwner: boolean;
+  /** The API lets the viewer edit the list. */
+  canEdit: boolean;
   isTemplate: boolean;
   listId: string | undefined;
   marking: boolean;
@@ -27,7 +28,7 @@ export const TemplateSection: React.FC<TemplateSectionProps> = ({
   creating,
   handleCreateFromTemplate,
   handleSaveAsTemplate,
-  isOwner,
+  canEdit,
   isTemplate,
   listId,
   marking,
@@ -35,7 +36,7 @@ export const TemplateSection: React.FC<TemplateSectionProps> = ({
   templateName,
 }) => {
   const { t } = useTranslation();
-  if (!listId || !isOwner) return null;
+  if (!listId || !canEdit) return null;
 
   return (
     <View style={commonStyles.settingsSection}>

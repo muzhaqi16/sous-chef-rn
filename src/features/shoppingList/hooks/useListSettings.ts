@@ -28,6 +28,7 @@ import {
   getShoppingListOwnerInfo,
 } from '#features/shoppingList/utils/ownershipHelpers';
 import { canDeleteShoppingList } from '#features/shoppingList/utils/shoppingListPermissions';
+import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
 
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { dayAsInstant } from '#/utils/dateUtils';
@@ -107,6 +108,10 @@ export const useListSettings = (listId: string | undefined) => {
 
   const ownership = listOwnershipOf(listId, ownershipSnapshot, user?.id);
   const isOwner = ownership === 'owner';
+  // The API's EDIT, which every section but the default and sharing takes:
+  // the owner, a home's MEMBER and above, a collaborator holding canEdit.
+  const permissions = useShoppingListPermissions(shoppingList, user?.id);
+  const canEdit = isOwner || permissions.canEditList;
   const canDelete = canDeleteShoppingList(
     isOwner,
     shoppingList?.home?.myMembership?.role,
@@ -501,6 +506,7 @@ export const useListSettings = (listId: string | undefined) => {
     handleClearReminder,
     handleCreateFromTemplate,
     canDelete,
+    canEdit,
     handleDelete,
     handleGenerateNext,
     handleLeaveList,

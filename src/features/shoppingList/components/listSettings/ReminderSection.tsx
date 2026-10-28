@@ -11,7 +11,8 @@ import { listSettingsStyles as styles } from './styles';
 interface ReminderSectionProps {
   handleClearReminder: () => void;
   handleSetReminderDate: (date: Date | null) => void;
-  isOwner: boolean;
+  /** The API lets the viewer edit the list. */
+  canEdit: boolean;
   listId: string | undefined;
   reminderDate: string | null;
   reminderEnabled: boolean;
@@ -21,13 +22,13 @@ interface ReminderSectionProps {
 export const ReminderSection: React.FC<ReminderSectionProps> = ({
   handleClearReminder,
   handleSetReminderDate,
-  isOwner,
+  canEdit,
   listId,
   reminderDate,
   reminderEnabled,
 }) => {
   const { t } = useTranslation();
-  if (!listId || !isOwner) return null;
+  if (!listId || !canEdit) return null;
 
   return (
     <View style={commonStyles.settingsSection}>
