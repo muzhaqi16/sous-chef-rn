@@ -42,6 +42,8 @@ const selectIsPantryQueryComplete = (state: RootState) =>
 const selectSetHomeAndPantry = (state: RootState) => state.setHomeAndPantry;
 
 const selectIsOnline = (state: RootState) => state.isOnline;
+const selectClientUpgradeRequired = (state: RootState) =>
+  state.clientUpgradeRequired;
 const selectCachedUnits = (state: RootState) => state.cachedUnits;
 
 // No user means the auth navigator in the SAME render: the stored value only
@@ -139,6 +141,9 @@ export const useSelectedShoppingListId = () =>
   useAppStore(selectSelectedShoppingListId);
 export const useIsHydrated = () => useAppStore(selectHydrated);
 export const useIsOnline = () => useAppStore(selectIsOnline);
+/** The server refuses this build: nothing works until the user updates. */
+export const useIsClientUpgradeRequired = () =>
+  useAppStore(selectClientUpgradeRequired);
 /** The units held on the device for offline autocomplete and lookups. */
 export const useCachedUnits = () => useAppStore(selectCachedUnits);
 export const useCanAccessDevTools = () => useAppStore(selectCanAccessDevTools);

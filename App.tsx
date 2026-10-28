@@ -20,6 +20,7 @@ import { OfflineTransitionAnnouncer } from '#components/atoms/OfflineTransitionA
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useAppLifecycle } from '#/app/useAppLifecycle';
+import { UpdateRequiredDialog } from '#/app/UpdateRequiredDialog';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
 import { CoreDataProvider } from '#bootstrap/CoreDataProvider';
@@ -94,6 +95,8 @@ const App = () => {
                            top inset.
                         2. OfflineTransitionAnnouncer - renders null; reads the
                            offline/online transition to a screen reader once.
+                        2b. UpdateRequiredDialog - a native Modal, so it sits
+                            above everything once the server refuses this build.
                         3. GlobalBackdrop - covers everything including status bar
                         3b. ToastProvider - a LEAF, mounted last so the toast is
                             last in the native order; it exposes no context, so
@@ -107,6 +110,7 @@ const App = () => {
                             </NotificationProvider>
                           </AlertProvider>
                           <OfflineTransitionAnnouncer />
+                          <UpdateRequiredDialog />
                         </View>
                         <GlobalBackdrop />
                         {/* Last, so the card composites above every screen's

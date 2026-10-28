@@ -71,6 +71,31 @@ describe('networkSlice', () => {
     });
   });
 
+  // Every request and socket reconnect of a refused build marks it, and the
+  // update dialog reads it: one change, then silence.
+  describe('markClientUpgradeRequired', () => {
+    it('starts clear and latches on the first refusal', () => {
+      const store = createTestStore();
+      expect(store.getState().clientUpgradeRequired).toBe(false);
+
+      store.getState().markClientUpgradeRequired();
+
+      expect(store.getState().clientUpgradeRequired).toBe(true);
+    });
+
+    it('notifies subscribers once, however many refusals arrive', () => {
+      const store = createTestStore();
+      const listener = jest.fn();
+      store.subscribe(listener);
+
+      store.getState().markClientUpgradeRequired();
+      store.getState().markClientUpgradeRequired();
+      store.getState().markClientUpgradeRequired();
+
+      expect(listener).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('setOnline', () => {
     it('transitions from offline to online', () => {
       const store = createTestStore({ isOnline: false });

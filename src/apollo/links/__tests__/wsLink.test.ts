@@ -3,6 +3,7 @@
 // Mock store before importing wsLink
 const mockSetTokens = jest.fn();
 const mockEndSession = jest.fn();
+const mockMarkClientUpgradeRequired = jest.fn();
 jest.mock('#store', () => ({
   useStore: {
     getState: jest.fn(() => ({
@@ -11,6 +12,7 @@ jest.mock('#store', () => ({
       apiReachable: true,
       setTokens: mockSetTokens,
       endSession: mockEndSession,
+      markClientUpgradeRequired: mockMarkClientUpgradeRequired,
     })),
   },
 }));
@@ -720,6 +722,12 @@ describe('wsLink', () => {
       jest.useFakeTimers();
       disableAutoReconnect();
       enableAutoReconnect();
+      const { useStore } = require('#store');
+      useStore.getState.mockReturnValue({
+        accessToken: 'mock-token',
+        isOnline: true,
+        markClientUpgradeRequired: mockMarkClientUpgradeRequired,
+      });
     });
 
     afterEach(() => {
@@ -740,6 +748,16 @@ describe('wsLink', () => {
       jest.advanceTimersByTime(31000);
 
       expect(getWebSocketState().reconnectAttempts).toBe(0);
+    });
+
+    it('raises the update dialog', () => {
+      onHandlers.closed({
+        code: 4411,
+        reason: 'Client upgrade required: 5.0.0',
+        wasClean: true,
+      });
+
+      expect(mockMarkClientUpgradeRequired).toHaveBeenCalled();
     });
 
     it('stops reconnecting on subsequent closes for the rest of the session', () => {

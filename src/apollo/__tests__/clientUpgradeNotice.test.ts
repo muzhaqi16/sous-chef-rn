@@ -3,11 +3,13 @@ import { storage } from '#/store/deviceStorage';
 // The mocks are referenced through `mock*` bindings declared here rather than
 // through the imported module objects, so they survive the `jest.resetModules()`
 // that `freshLaunch()` uses — a re-registered factory closes over the same spies.
-const mockAlert = jest.fn();
+const mockMarkUpgradeRequired = jest.fn();
 const mockToast = jest.fn();
 
-jest.mock('#/services/alertService', () => ({
-  alertService: { alert: mockAlert },
+jest.mock('#store', () => ({
+  useStore: {
+    getState: () => ({ markClientUpgradeRequired: mockMarkUpgradeRequired }),
+  },
 }));
 jest.mock('#/services/toastService', () => ({
   toastService: { info: mockToast },
@@ -24,17 +26,16 @@ jest.mock('../clientIdentity', () => ({
 // the way a device's storage outlives a relaunch.
 const storageReady = jest.spyOn(storage, 'isReady');
 
-const STORAGE_KEY = 'clientUpgradeNotice.announcedForVersion';
 const RECOMMENDED_KEY = 'clientUpgradeNotice.announcedRecommended';
 
 /**
  * A fresh copy of the module, standing in for an app relaunch.
  *
- * Both notices guard against repeats with module-level state that deliberately
- * outlives every call within a launch, so exercising the across-launch behaviour
- * means discarding the module rather than resetting it. Device storage survives
- * it — which is the whole distinction under test: the in-memory guard is gone,
- * the persisted one is not.
+ * The soft notice guards against repeats with module-level state that
+ * deliberately outlives every call within a launch, so exercising the
+ * across-launch behaviour means discarding the module rather than resetting it.
+ * Device storage survives it — which is the whole distinction under test: the
+ * in-memory guard is gone, the persisted one is not.
  */
 const freshLaunch = (): typeof import('../clientUpgradeNotice') => {
   jest.resetModules();
@@ -47,76 +48,15 @@ beforeEach(() => {
   storage.clearAll();
 });
 
+// The dialog is the host's (`UpdateRequiredDialog`), which reads this latch;
+// the latch's idempotence is the slice's (networkSlice.test.ts). It is never
+// persisted (persistOptions.test.ts), so a still-refused build asks again on
+// every launch.
 describe('announceClientUpgradeRequired', () => {
-  it('shows a localized alert', () => {
+  it('raises the update dialog through the store latch', () => {
     freshLaunch().announceClientUpgradeRequired();
 
-    expect(mockAlert).toHaveBeenCalledWith(
-      'appUpdate.title',
-      'appUpdate.message',
-    );
-  });
-
-  // The server refuses in didResolveOperation, so every in-flight query and
-  // every socket reconnect produces the signal.
-  it('announces only once within a launch, however many refusals arrive', () => {
-    const notice = freshLaunch();
-    notice.announceClientUpgradeRequired();
-    notice.announceClientUpgradeRequired();
-    notice.announceClientUpgradeRequired();
-
-    expect(mockAlert).toHaveBeenCalledTimes(1);
-  });
-
-  // No button is supplied, so alertService supplies its own single dismiss
-  // button — nothing here may pin the alert open, since only a store update
-  // clears the refusal.
-  it('passes no buttons, leaving the default dismissable OK', () => {
-    freshLaunch().announceClientUpgradeRequired();
-
-    expect(mockAlert.mock.calls[0]).toHaveLength(2);
-  });
-
-  describe('across launches', () => {
-    it('stays quiet on relaunch for a build already announced', () => {
-      freshLaunch().announceClientUpgradeRequired();
-      expect(mockAlert).toHaveBeenCalledTimes(1);
-
-      freshLaunch().announceClientUpgradeRequired();
-
-      expect(mockAlert).toHaveBeenCalledTimes(1);
-    });
-
-    it('announces again after the user updates to a build still below the floor', () => {
-      storage.set(STORAGE_KEY, '4.1.0');
-
-      freshLaunch().announceClientUpgradeRequired();
-
-      expect(mockAlert).toHaveBeenCalledTimes(1);
-      expect(storage.getString(STORAGE_KEY)).toBe('4.2.1');
-    });
-  });
-
-  // Announcing twice beats throwing inside the link chain.
-  it('still announces when storage is not initialized yet', () => {
-    storageReady.mockReturnValue(false);
-
-    freshLaunch().announceClientUpgradeRequired();
-
-    expect(mockAlert).toHaveBeenCalledTimes(1);
-  });
-
-  // The persisted guard is what silences future launches, so it must not be
-  // spent on a notice the user never saw.
-  it('records the announced build only after the alert is raised', () => {
-    mockAlert.mockImplementationOnce(() => {
-      expect(storage.getString(STORAGE_KEY)).toBeUndefined();
-    });
-
-    freshLaunch().announceClientUpgradeRequired();
-
-    expect(mockAlert).toHaveBeenCalledTimes(1);
-    expect(storage.getString(STORAGE_KEY)).toBe('4.2.1');
+    expect(mockMarkUpgradeRequired).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -124,11 +64,11 @@ describe('announceClientUpgradeRequired', () => {
 // notice: the number that moves here is the server's, so each new release
 // nudges once and an ignored one stays quiet until the next.
 describe('announceClientReleaseAvailable', () => {
-  it('shows a toast, not the blocking alert', () => {
+  it('shows a toast, not the blocking dialog', () => {
     freshLaunch().announceClientReleaseAvailable('4.3.0');
 
     expect(mockToast).toHaveBeenCalledWith('appUpdate.available');
-    expect(mockAlert).not.toHaveBeenCalled();
+    expect(mockMarkUpgradeRequired).not.toHaveBeenCalled();
   });
 
   it('nudges once within a launch, however many responses carry it', () => {
@@ -167,11 +107,11 @@ describe('announceClientReleaseAvailable', () => {
     expect(mockToast).not.toHaveBeenCalled();
   });
 
-  it('does not disturb the blocking notice guard', () => {
+  it('does not stand in for the blocking notice', () => {
     const notice = freshLaunch();
     notice.announceClientReleaseAvailable('4.3.0');
     notice.announceClientUpgradeRequired();
 
-    expect(mockAlert).toHaveBeenCalledTimes(1);
+    expect(mockMarkUpgradeRequired).toHaveBeenCalledTimes(1);
   });
 });

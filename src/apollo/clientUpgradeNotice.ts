@@ -1,40 +1,18 @@
-import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
+import { useStore } from '#store';
 import { storage } from '#/store/deviceStorage';
 import { logger } from '#/utils/environment';
 import { clientVersion } from './clientIdentity';
 
 /**
- * Tells the user their build is below the server's minimum. The refusal lands
- * on every request and every socket reconnect, so `announcedThisLaunch` plus
- * the persisted key collapse it into one alert. Keyed on the INSTALLED version,
- * so someone who updates and is still below the floor IS told again.
+ * Tells the user their build is below the server's minimum: the host's update
+ * dialog reads the latch, which blocks the app and returns on every launch
+ * while refused. Every request and socket reconnect carries the refusal; only
+ * the first one changes anything.
  */
-const ANNOUNCED_VERSION_KEY = 'clientUpgradeNotice.announcedForVersion';
-
-let announcedThisLaunch = false;
-
 export function announceClientUpgradeRequired(): void {
-  if (announcedThisLaunch) return;
-  announcedThisLaunch = true;
-
-  // Defensive only — index.js initializes storage before any React code. Fails
-  // toward announcing: a duplicate alert beats a link-layer throw.
-  const storageReady = storage.isReady();
-  if (storageReady) {
-    if (storage.getString(ANNOUNCED_VERSION_KEY) === clientVersion()) return;
-  } else {
-    logger.warn(
-      'Client-upgrade notice fired before storage init; announcing without the per-version guard',
-    );
-  }
-
-  alertService.alert(t('appUpdate.title'), t('appUpdate.message'));
-
-  // Recorded only after the alert is raised: burning the key first would
-  // silence this build permanently if the notice never reached the user.
-  if (storageReady) storage.set(ANNOUNCED_VERSION_KEY, clientVersion());
+  useStore.getState().markClientUpgradeRequired();
 }
 
 /**

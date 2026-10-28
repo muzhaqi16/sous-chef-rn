@@ -51,6 +51,12 @@ export interface NetworkState {
    * dwell timer. Never read it for behaviour — use `isApiUnavailable`.
    */
   offlineBannerCause: OfflineBannerCause | null;
+  /**
+   * The server refused this build as below its minimum version. A latch for
+   * the process, never persisted: only an update clears the refusal, and the
+   * updated build starts clear.
+   */
+  clientUpgradeRequired: boolean;
 
   setNetworkStatus: (status: {
     isOnline: boolean;
@@ -66,6 +72,7 @@ export interface NetworkState {
    */
   setOfflineModeEnabled: (enabled: boolean, immediate?: boolean) => void;
   setApiReachable: (reachable: boolean | null) => void;
+  markClientUpgradeRequired: () => void;
 }
 
 /**
@@ -129,6 +136,7 @@ const initialNetworkState = {
   // reported itself online until the breaker had failed three requests.
   apiReachable: null,
   offlineBannerCause: null,
+  clientUpgradeRequired: false,
 };
 
 export const createNetworkSlice: StateCreator<
@@ -255,6 +263,13 @@ export const createNetworkSlice: StateCreator<
         draft.apiReachable = reachable;
       });
       syncOfflineBanner();
+    },
+
+    markClientUpgradeRequired: () => {
+      if (get().clientUpgradeRequired) return;
+      set(draft => {
+        draft.clientUpgradeRequired = true;
+      });
     },
   };
 };
