@@ -6,7 +6,8 @@
 import { useTranslation as useI18nextTranslation } from 'react-i18next';
 import type { UseTranslationOptions } from 'react-i18next';
 import type { ParseKeys, TOptions } from 'i18next';
-import { getI18n } from './config';
+import { deviceLanguage } from '#/utils/deviceLocale';
+import { getI18n, SUPPORTED_LANGUAGES, type SupportedLanguage } from './config';
 
 // ---------------------------------------------------------------------------
 // Translating
@@ -75,6 +76,14 @@ export function getResolvedLanguage(): string {
   // `init` runs synchronously with inline resources, so `language` is set by
   // the time `getI18n()` is reachable.
   return (i18n.resolvedLanguage ?? i18n.language).split('-')[0] ?? 'en';
+}
+
+/** The language of a user who never picked one: the device's, else English. */
+export function deviceAppLanguage(): SupportedLanguage {
+  return deviceLanguage(
+    SUPPORTED_LANGUAGES.map(option => option.value),
+    'en',
+  );
 }
 
 /**
