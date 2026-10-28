@@ -2,11 +2,7 @@ import React, { useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
-import { BottomSheetView } from '@gorhom/bottom-sheet';
-import {
-  BottomSheetModal,
-  useStandardBottomSheet,
-} from '#hooks/ui/useStandardBottomSheet';
+import { Sheet } from '#components/templates/Sheet';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
@@ -86,15 +82,6 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   askPrice = true,
 }) => {
   const { t } = useTranslation();
-  // No snap points: the sheet measures its own content, so the keyboard lift
-  // seats it on the keyboard instead of stretching a fixed height up the
-  // screen and pushing the price field off the bottom edge.
-  const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
-    visible: visible && !!item,
-    onDismiss: onClose,
-    snapPoints: [],
-    enableDynamicSizing: true,
-  });
 
   const [quantityInput, setQuantityInput] = useState('');
   const [priceInput, setPriceInput] = useState('');
@@ -147,120 +134,125 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
     onConfirm(parsedQty, parsedTotal);
   };
 
+  const open = visible && !!item;
+  // No snap points: sized to its content, gorhom's lift seats it on the
+  // keyboard. `view`, never the keyboard-aware `form`: that pads by the
+  // keyboard's height, which a content-sized sheet grows by, scrolling the
+  // header off the top.
   return (
-    <BottomSheetModal ref={ref} {...modalProps}>
-      {/* NOT a keyboard-aware scrollable: it pads its content by the keyboard's
-          height, and under `enableDynamicSizing` the sheet is sized to that
-          content — so focusing the price field grew the sheet by a keyboard and
-          scrolled the header off the top. Gorhom's own `interactive` lift seats
-          this content-sized sheet on the keyboard already. */}
-      <BottomSheetView style={[styles.content, contentContainerStyle]}>
-        <SheetHeader
-          title={t('purchaseAmountSheet.title')}
-          onClose={onClose}
-          confirm={{
-            onPress: handleConfirm,
-            disabled: !quantityIsUsable || parsedTotal === undefined,
-            loading,
-          }}
-        />
-        <View style={styles.sections}>
-          <Text role="heading" style={styles.itemName}>
-            {item?.itemName ?? ''}
-          </Text>
+    <Sheet
+      visible={open}
+      onDismiss={onClose}
+      snapPoints={[]}
+      enableDynamicSizing
+      mode="view"
+      contentContainerStyle={styles.content}
+    >
+      <SheetHeader
+        title={t('purchaseAmountSheet.title')}
+        onClose={onClose}
+        confirm={{
+          onPress: handleConfirm,
+          disabled: !quantityIsUsable || parsedTotal === undefined,
+          loading,
+        }}
+      />
+      <View style={styles.sections}>
+        <Text role="heading" style={styles.itemName}>
+          {item?.itemName ?? ''}
+        </Text>
 
+        <View style={styles.section}>
+          <SectionHeader variant="overline" style={styles.sectionLabel}>
+            {t('labels.quantity')}
+          </SectionHeader>
+          <View style={styles.inputRow}>
+            <ThemedBottomSheetTextInput
+              style={styles.input}
+              value={quantityInput}
+              onChangeText={setQuantityInput}
+              keyboardType="decimal-pad"
+              selectTextOnFocus
+              maxLength={10}
+              accessibilityLabel={t('labels.quantity')}
+              testID={shoppingListTestIDs.purchaseQuantityInput}
+            />
+            {item?.unitName ? (
+              <Text role="body" tone="secondary" style={styles.affix}>
+                {item.unitName}
+              </Text>
+            ) : null}
+          </View>
+          {quantityError ? (
+            <Text
+              role="error"
+              tone="error"
+              style={styles.fieldError}
+              testID={shoppingListTestIDs.purchaseQuantityError}
+            >
+              {quantityError}
+            </Text>
+          ) : null}
+        </View>
+
+        {askPrice ? (
           <View style={styles.section}>
             <SectionHeader variant="overline" style={styles.sectionLabel}>
-              {t('labels.quantity')}
+              {t('labels.totalPaid')}
             </SectionHeader>
             <View style={styles.inputRow}>
+              <Text role="body" tone="secondary" style={styles.prefix}>
+                {currencySymbol(currency)}
+              </Text>
               <ThemedBottomSheetTextInput
                 style={styles.input}
-                value={quantityInput}
-                onChangeText={setQuantityInput}
+                value={priceInput}
+                onChangeText={setPriceInput}
                 keyboardType="decimal-pad"
                 selectTextOnFocus
                 maxLength={10}
-                accessibilityLabel={t('labels.quantity')}
-                testID={shoppingListTestIDs.purchaseQuantityInput}
+                placeholder={
+                  estimatedTotal == null
+                    ? localizeNumericHint(
+                        t('purchaseAmountSheet.pricePlaceholder'),
+                      )
+                    : formatPrice(estimatedTotal)
+                }
+                accessibilityLabel={t('labels.totalPaid')}
+                testID={shoppingListTestIDs.purchasePriceInput}
               />
-              {item?.unitName ? (
-                <Text role="body" tone="secondary" style={styles.affix}>
-                  {item.unitName}
-                </Text>
-              ) : null}
             </View>
-            {quantityError ? (
+            {priceError ? (
               <Text
                 role="error"
                 tone="error"
                 style={styles.fieldError}
-                testID={shoppingListTestIDs.purchaseQuantityError}
+                testID={shoppingListTestIDs.purchasePriceError}
               >
-                {quantityError}
+                {priceError}
+              </Text>
+            ) : null}
+            {perUnitPrice != null ? (
+              <PerUnitHint
+                price={formatCurrency(perUnitPrice, currency)}
+                unit={item?.unitName}
+                style={styles.perUnitHint}
+              />
+            ) : null}
+            {priceNote ? (
+              <Text
+                role="caption"
+                tone="secondary"
+                style={styles.perUnitHint}
+                testID={shoppingListTestIDs.purchasePriceNote}
+              >
+                {priceNote}
               </Text>
             ) : null}
           </View>
-
-          {askPrice ? (
-            <View style={styles.section}>
-              <SectionHeader variant="overline" style={styles.sectionLabel}>
-                {t('labels.totalPaid')}
-              </SectionHeader>
-              <View style={styles.inputRow}>
-                <Text role="body" tone="secondary" style={styles.prefix}>
-                  {currencySymbol(currency)}
-                </Text>
-                <ThemedBottomSheetTextInput
-                  style={styles.input}
-                  value={priceInput}
-                  onChangeText={setPriceInput}
-                  keyboardType="decimal-pad"
-                  selectTextOnFocus
-                  maxLength={10}
-                  placeholder={
-                    estimatedTotal == null
-                      ? localizeNumericHint(
-                          t('purchaseAmountSheet.pricePlaceholder'),
-                        )
-                      : formatPrice(estimatedTotal)
-                  }
-                  accessibilityLabel={t('labels.totalPaid')}
-                  testID={shoppingListTestIDs.purchasePriceInput}
-                />
-              </View>
-              {priceError ? (
-                <Text
-                  role="error"
-                  tone="error"
-                  style={styles.fieldError}
-                  testID={shoppingListTestIDs.purchasePriceError}
-                >
-                  {priceError}
-                </Text>
-              ) : null}
-              {perUnitPrice != null ? (
-                <PerUnitHint
-                  price={formatCurrency(perUnitPrice, currency)}
-                  unit={item?.unitName}
-                  style={styles.perUnitHint}
-                />
-              ) : null}
-              {priceNote ? (
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  style={styles.perUnitHint}
-                  testID={shoppingListTestIDs.purchasePriceNote}
-                >
-                  {priceNote}
-                </Text>
-              ) : null}
-            </View>
-          ) : null}
-        </View>
-      </BottomSheetView>
-    </BottomSheetModal>
+        ) : null}
+      </View>
+    </Sheet>
   );
 };
 

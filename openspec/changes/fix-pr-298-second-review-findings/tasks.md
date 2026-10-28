@@ -57,7 +57,7 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 ## 10. `PurchaseAmountSheet` on `Sheet`, and the last comment (findings 13, 14; D12, D13)
 
 - [ ] 10.1 Rebuild `src/features/shoppingList/ui/PurchaseAmountSheet.tsx` on `<Sheet mode="view" snapPoints={[]} enableDynamicSizing>`, with `SheetHeader` as its first child, keeping `ThemedBottomSheetTextInput`. Drop the direct `useStandardBottomSheet` and `BottomSheetView` imports. Verify `PurchaseAmountSheet.test.tsx` passes, and on an Android emulator that focusing the price field seats the sheet on the keyboard with its header visible (screenshot before and after).
-- [ ] 10.2 Cut the `forgetHome` docblock (`src/domain/forgetHome.ts`) to six lines or fewer, keeping what the code cannot say. Verify `npx eslint src/domain/forgetHome.ts` is clean.
+- [x] 10.2 Cut the `forgetHome` docblock (`src/domain/forgetHome.ts`) to six lines or fewer, keeping what the code cannot say. Verify `npx eslint src/domain/forgetHome.ts` is clean.
 
 ## 11. Integration
 

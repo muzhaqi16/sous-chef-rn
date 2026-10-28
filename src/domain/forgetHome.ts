@@ -6,13 +6,10 @@ import { extractNodes } from '#/utils/connectionUtils';
 import { useStore } from '#store/index';
 
 /**
- * Forget a home the caller left or was removed from: its cache entry, and
- * every pick that may name what it holds. Its lists, plans and templates stay
- * with the household, their creator's included, so the app resyncs what it
- * shows.
- *
- * Returns the home now selected in its place, or null when the selection did
- * not move to another one.
+ * Forgets a home the caller left or was removed from: its cache entry and every
+ * pick that may name what it holds. Its lists, plans and templates stay with
+ * the household, the caller's own included, so the app resyncs what it shows.
+ * Returns the home selected in its place, or null when the selection stayed.
  */
 export function forgetHome(cache: ApolloCache, homeId: string): string | null {
   safeEvict(cache, 'Home', homeId);
