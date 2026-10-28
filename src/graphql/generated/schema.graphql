@@ -19487,10 +19487,33 @@ type Unit {
   id: ID!
   isCommon: Boolean!
   isMetric: Boolean!
+  """
+  The unit's name in the request's language (Accept-Language), singular or
+  plural as that language's plural rules read quantity: singular without one.
+  English when the language has no name for the unit; a household's own unit
+  keeps its name.
+  """
+  localizedName(
+    """How many: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
+  """
+  The unit's short form in the request's language. A standard symbol (g, kg,
+  mL, L, oz, lb, fl oz…) is the same in every language; another unit takes
+  the language's abbreviation (pz), else its name there (bolsa), else symbol.
+  English keeps symbol.
+  """
+  localizedSymbol: String!
   minPrecision: Float!
+  """
+  The canonical English name, in every language; localizedName is the one to show
+  """
   name: String!
   notes: String
   sortOrder: Int!
+  """
+  The canonical symbol, in every language; localizedSymbol is the one to show
+  """
   symbol: String!
   type: UnitType!
   unitRole: UnitRole!
