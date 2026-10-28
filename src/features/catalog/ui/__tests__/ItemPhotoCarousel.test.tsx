@@ -7,6 +7,11 @@ import { ItemPhotoCarousel } from '#features/catalog/ui/ItemPhotoCarousel';
 import { CachedImage } from '#components/atoms/CachedImage';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import { ImageKind, ItemImageStatus } from '#/graphql/generated/schemaTypes';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GalleryHero } from '#features/catalog/ui/GalleryHero';
+import { catalogTestIDs } from '#features/catalog/testIDs';
+import { HEADER_BAND_HEIGHT } from '#components/templates/CollapsingHeroDetail';
+import { lightTheme } from '#/theme/themes';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
@@ -123,6 +128,28 @@ describe('ItemPhotoCarousel', () => {
     );
 
     expect(screen.getByText('Pending review')).toBeTruthy();
+  });
+
+  // The hero runs under the status bar and its floating buttons.
+  describe('filling a hero', () => {
+    const noInsets = { top: 0, bottom: 0, left: 0, right: 0 };
+    afterEach(() => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue(noInsets);
+    });
+
+    it('badges a pending photo below the status bar and the buttons', () => {
+      jest.mocked(useSafeAreaInsets).mockReturnValue({ ...noInsets, top: 40 });
+      renderWithApollo(
+        <GalleryHero
+          photos={[photo({ status: ItemImageStatus.Pending })]}
+          height={320}
+        />,
+      );
+
+      expect(screen.getByTestId(catalogTestIDs.photoPendingBadge)).toHaveStyle({
+        top: 40 + HEADER_BAND_HEIGHT + lightTheme.spacing.sm,
+      });
+    });
   });
 
   it('credits a licensed photo on its page', () => {

@@ -27,6 +27,7 @@ import {
   type ItemPhotoCarousel_ItemPhotoFragment,
 } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 
 // The current page's dot; the credit clears the pill it sets the height of.
 const ACTIVE_DOT_SIZE = 10;
@@ -78,6 +79,11 @@ interface ItemPhotoCarouselProps {
   overlayDots?: boolean;
   /** Bottom offset of the floated dots (overlayDots only, default 8). */
   dotsBottomOffset?: number;
+  /**
+   * How far a host's chrome reaches down over the photo (a hero's status bar
+   * and buttons); the pending badge sits below it. Default 0.
+   */
+  topClearance?: number;
   /** Opens the fullscreen viewer at the tapped page. */
   onPhotoPress?: (index: number) => void;
   /**
@@ -102,6 +108,7 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   resizeMode = 'contain',
   overlayDots = false,
   dotsBottomOffset = 8,
+  topClearance = 0,
   onPhotoPress,
   onUnrenderable,
 }) => {
@@ -195,6 +202,7 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
               resizeMode={resizeMode}
               creditDotsOffset={creditDotsOffset}
               showDots={showDots}
+              topClearance={topClearance}
               onPress={
                 onPhotoPress ? () => onPhotoPress(page.photoIndex) : undefined
               }
@@ -244,6 +252,7 @@ const PhotoPage: React.FC<{
   resizeMode: 'cover' | 'contain';
   creditDotsOffset: number | null;
   showDots: boolean;
+  topClearance: number;
   onPress?: () => void;
   onFailed?: () => void;
 }> = ({
@@ -253,6 +262,7 @@ const PhotoPage: React.FC<{
   resizeMode,
   creditDotsOffset,
   showDots,
+  topClearance,
   onPress,
   onFailed,
 }) => {
@@ -299,7 +309,11 @@ const PhotoPage: React.FC<{
       {/* A photo on a catalog item the user cannot edit lands PENDING: the API
           returns it to its submitter alone, so it must not read as live. */}
       {photo.status === ItemImageStatus.Pending && (
-        <View style={styles.pendingBadge} pointerEvents="none">
+        <View
+          style={styles.pendingBadge(topClearance)}
+          pointerEvents="none"
+          testID={catalogTestIDs.photoPendingBadge}
+        >
           <Icon name="time-outline" size={12} tone="onScrim" />
           <Text role="label" style={styles.pendingText}>
             {t('itemPhotos.pendingReview')}
@@ -386,9 +400,9 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
   },
-  pendingBadge: {
+  pendingBadge: (topClearance: number) => ({
     position: 'absolute',
-    top: theme.spacing.sm,
+    top: topClearance + theme.spacing.sm,
     left: theme.spacing.sm,
     flexDirection: 'row',
     alignItems: 'center',
@@ -398,7 +412,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     borderCurve: 'continuous',
     backgroundColor: theme.colors.overlays.dark,
-  },
+  }),
   pendingText: {
     color: theme.colors.onScrim,
   },
