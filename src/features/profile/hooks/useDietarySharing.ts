@@ -2,6 +2,7 @@ import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { errorService } from '#/services/errorService';
 import {
   DietarySharingHomesDocument,
   UpdateDietarySharingDocument,
@@ -18,13 +19,13 @@ export interface DietarySharingHome {
 /**
  * The caller's homes with their own dietary sharing switch in each, and the
  * write that flips one. The switch flips in the cache before the write is
- * sent, so it holds offline and the write queues; a refusal flips it back and
- * says why.
+ * sent, so it holds offline and the write queues; a refusal says why and shows
+ * the server's state.
  */
 export function useDietarySharing() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { data } = useQuery(DietarySharingHomesDocument);
+  const { data, refetch } = useQuery(DietarySharingHomesDocument);
   const [mutate] = useMutation(UpdateDietarySharingDocument, {
     context: { localFirst: true },
   });
@@ -60,7 +61,14 @@ export function useDietarySharing() {
         document: UpdateDietarySharingDocument,
         fallback: t('dietary.sharingFailed'),
         present: 'toast',
-        onFailed: () => writeShared(membershipId, !shared),
+        // Flipping back could undo a later toggle the server took.
+        onFailed: () => {
+          void refetch().catch(error =>
+            errorService.reportError(error, {
+              operation: 'DietarySharing.refetch',
+            }),
+          );
+        },
       },
     );
   };
