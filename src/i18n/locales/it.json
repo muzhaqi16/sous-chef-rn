@@ -537,6 +537,12 @@
     "package": "Confezione",
     "packageSize": "Dimensione della confezione",
     "unit": "Unità",
+    "pricePer": {
+      "kg": "{{price}}/kg",
+      "l": "{{price}}/L",
+      "each": "{{price}} cad.",
+      "unit": "{{price}}/{{unit}}"
+    },
     "sources": {
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"

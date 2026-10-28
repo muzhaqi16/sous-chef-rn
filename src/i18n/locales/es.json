@@ -537,6 +537,12 @@
     "package": "Paquete",
     "packageSize": "Tamaño del paquete",
     "unit": "Unidad",
+    "pricePer": {
+      "kg": "{{price}}/kg",
+      "l": "{{price}}/L",
+      "each": "{{price}} c/u",
+      "unit": "{{price}}/{{unit}}"
+    },
     "sources": {
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"

@@ -56,10 +56,6 @@
       "usual": "Tu precio habitual",
       "typicalHere": "Precio típico aquí",
       "typicalAtChain": "Precio típico en {{chain}}",
-      "perKg": "{{price}}/kg",
-      "perL": "{{price}}/L",
-      "each": "{{price}} c/u",
-      "perUnit": "{{price}}/{{unit}}",
       "aboveUsual": "{{difference}} más que tu precio habitual de {{usual}}",
       "belowUsual": "{{difference}} menos que tu precio habitual de {{usual}}",
       "sameAsUsual": "Igual que tu precio habitual de {{usual}}"

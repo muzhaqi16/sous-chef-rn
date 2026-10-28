@@ -158,7 +158,7 @@ describe('useStorePriceMemory', () => {
 
     await waitFor(() => expect(result.current.lastPaid).not.toBeNull());
     expect(result.current.lastPaid).toEqual({
-      price: t('barcode.price.perKg', { price: usd(14.3) }),
+      price: t('labels.pricePer.kg', { price: usd(14.3) }),
       storeName: 'Giant Eagle',
       paidOn: formatMonthDay(new Date(PAID_AT)),
       onSale: true,
@@ -223,10 +223,10 @@ describe('useStorePriceMemory', () => {
 
     await waitFor(() => expect(result.current.usual).not.toBeNull());
     expect(result.current.usual).toBe(
-      t('barcode.price.perKg', { price: usd(7.69) }),
+      t('labels.pricePer.kg', { price: usd(7.69) }),
     );
     expect(result.current.lastPaid?.price).toBe(
-      t('barcode.price.perUnit', { price: usd(3.49), unit: 'jar' }),
+      t('labels.pricePer.unit', { price: usd(3.49), unit: 'jar' }),
     );
     expect(result.current.lastPaid?.storeName).toBeNull();
   });
@@ -242,7 +242,7 @@ describe('useStorePriceMemory', () => {
     ]);
     await waitFor(() =>
       expect(chainOnly.result.current.typical).toEqual({
-        price: t('barcode.price.perKg', { price: usd(8.1) }),
+        price: t('labels.pricePer.kg', { price: usd(8.1) }),
         chainName: 'Giant Eagle',
       }),
     );
@@ -256,7 +256,7 @@ describe('useStorePriceMemory', () => {
     ]);
     await waitFor(() =>
       expect(atStore.result.current.typical).toEqual({
-        price: t('barcode.price.perKg', { price: usd(9.5) }),
+        price: t('labels.pricePer.kg', { price: usd(9.5) }),
         chainName: null,
       }),
     );
@@ -284,7 +284,7 @@ describe('useStorePriceMemory', () => {
     // The jar is the unit the usual comes in: nothing more is asked.
     expect(paid.fired).toEqual([{ itemId: 'pb', homeId: 'home-1' }]);
 
-    const usual = t('barcode.price.perUnit', { price: usd(3.49), unit: 'jar' });
+    const usual = t('labels.pricePer.unit', { price: usd(3.49), unit: 'jar' });
     expect(result.current.compareToUsual(4.29)).toBe(
       t('barcode.price.aboveUsual', { difference: usd(0.8), usual }),
     );
@@ -326,7 +326,7 @@ describe('useStorePriceMemory', () => {
     await waitFor(() =>
       expect(result.current.compareToUsual(5.99)).toBe(
         t('barcode.price.sameAsUsual', {
-          usual: t('barcode.price.perUnit', { price: usd(5.99), unit: 'lb' }),
+          usual: t('labels.pricePer.unit', { price: usd(5.99), unit: 'lb' }),
         }),
       ),
     );
@@ -335,7 +335,7 @@ describe('useStorePriceMemory', () => {
     ]);
     // The pound's price joins the summary the first answer stored.
     expect(result.current.usual).toBe(
-      t('barcode.price.perKg', { price: usd(13.2) }),
+      t('labels.pricePer.kg', { price: usd(13.2) }),
     );
   });
 

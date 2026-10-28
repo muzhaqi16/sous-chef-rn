@@ -1,9 +1,12 @@
 import { renderHook } from '@testing-library/react-native';
 import {
+  pricePerBasis,
   resolveCurrency,
   useMoney,
   usePreferredCurrency,
 } from '#/domain/money';
+import { PriceBasis } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 import { useStore } from '#store';
 import { DEFAULT_CURRENCY, UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 
@@ -59,5 +62,20 @@ describe('the account currency', () => {
     const { result } = renderHook(() => useMoney());
     expect(result.current(null, EUR)).toBe(UNKNOWN_AMOUNT);
     expect(result.current(undefined, null)).toBe(UNKNOWN_AMOUNT);
+  });
+});
+
+describe('pricePerBasis', () => {
+  it('words a price per kilogram, litre and piece', () => {
+    expect(pricePerBasis(t, PriceBasis.PerKg, '$2.84')).toBe('$2.84/kg');
+    expect(pricePerBasis(t, PriceBasis.PerL, '$1.10')).toBe('$1.10/L');
+    expect(pricePerBasis(t, PriceBasis.Each, '$0.89')).toBe('$0.89 each');
+  });
+
+  // The wire can carry a basis this build's enum lacks.
+  it('names no basis this build predates', () => {
+    expect(
+      pricePerBasis(t, 'PER_LB' as unknown as PriceBasis, '$1.29'),
+    ).toBeNull();
   });
 });

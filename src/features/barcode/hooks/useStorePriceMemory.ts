@@ -2,9 +2,10 @@ import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import {
-  PriceBasis,
+  type PriceBasis,
   PriceComparisonScope,
 } from '#/graphql/generated/schemaTypes';
+import { pricePerBasis } from '#/domain/money';
 import { formatCurrency } from '#/utils/formatters/number';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { useSelectedHomeId } from '#store/useAppStore';
@@ -29,18 +30,9 @@ export interface TypicalLine {
   chainName: string | null;
 }
 
+// A basis this build predates: the price alone, never a blank label.
 function perBasis(t: Translate, basis: PriceBasis, price: string): string {
-  switch (basis) {
-    case PriceBasis.PerKg:
-      return t('barcode.price.perKg', { price });
-    case PriceBasis.PerL:
-      return t('barcode.price.perL', { price });
-    case PriceBasis.Each:
-      return t('barcode.price.each', { price });
-    // A basis this build predates: the price alone, never a blank label.
-    default:
-      return price;
-  }
+  return pricePerBasis(t, basis, price) ?? price;
 }
 
 /**
@@ -109,7 +101,7 @@ export function useStorePriceMemory(
       price:
         normalized != null && last.basis && last.basis === basis
           ? perBasis(t, last.basis, money(normalized, summary.currency))
-          : t('barcode.price.perUnit', {
+          : t('labels.pricePer.unit', {
               price: money(last.unitPrice, summary.currency),
               unit: last.unit.symbol,
             }),
@@ -155,7 +147,7 @@ export function useStorePriceMemory(
     const scale = 10 ** summary.currency.decimalPlaces;
     const difference =
       Math.round(paidPerUnit * scale) - Math.round(usualPerUnit * scale);
-    const usualText = t('barcode.price.perUnit', {
+    const usualText = t('labels.pricePer.unit', {
       price: money(usualPerUnit, summary.currency),
       unit: unit.symbol,
     });

@@ -537,6 +537,12 @@
     "package": "Paketimi",
     "packageSize": "Madhësia e paketimit",
     "unit": "Njësia",
+    "pricePer": {
+      "kg": "{{price}}/kg",
+      "l": "{{price}}/L",
+      "each": "{{price}} për copë",
+      "unit": "{{price}}/{{unit}}"
+    },
     "sources": {
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
