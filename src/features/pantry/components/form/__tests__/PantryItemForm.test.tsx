@@ -14,7 +14,13 @@ import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
 import { PantryItemForm } from '../PantryItemForm';
 import { PantryItemForm_PantryItemFragmentDoc } from '../PantryItemForm.generated';
-import type { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  UnitSystem,
+  UnitType,
+  type StorageState,
+} from '#/graphql/generated/schemaTypes';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
+import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
 
 jest.mock('#store/useAppStore', () => ({
@@ -93,11 +99,15 @@ jest.mock('#components/atoms/FormInput', () => ({
 jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
   UnitAutocompleteField: ({
     label,
+    value,
     onChangeText,
     onUnitSelected,
     error,
+    testID,
   }: {
     label?: string;
+    value?: string;
+    testID?: string;
     onChangeText?: (text: string) => void;
     onUnitSelected?: (
       unitId: string | null,
@@ -112,8 +122,9 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
     return (
       <View testID="unit-autocomplete">
         {label ? <Text>{label}</Text> : null}
+        <Text>{`unit:${value ?? ''}`}</Text>
         <Pressable
-          testID="pick-unit"
+          testID={testID ? `${testID}-pick` : 'pick-unit'}
           onPress={() => {
             // The real field's onSelect order: the symbol first, then the id.
             onChangeText?.('lb');
@@ -526,5 +537,105 @@ describe('PantryItemForm — net weight', () => {
     expect(
       screen.queryByText('Please select a unit for the net weight.'),
     ).toBeNull();
+  });
+});
+
+// The size opens as the detail reads it, so what is saved is what was typed.
+describe('PantryItemForm — package size in the user’s units', () => {
+  type Stack = NonNullable<
+    QueryDataFor<typeof PantryItemForEditDocument>['pantryItem']
+  >;
+  type Reading = NonNullable<Stack['packageSize']>['metric'];
+
+  const reading = (value: number, id: string, symbol: string): Reading => ({
+    __typename: 'MeasureReading',
+    value,
+    unitId: id,
+    symbol,
+    displayAsFraction: false,
+    type: UnitType.Weight,
+  });
+
+  // A 3 LB honey whose size the stack stores as 1360.78 g.
+  const renderHoney = (system: UnitSystem, trackingUnitId?: string) => {
+    const cache = buildCache({});
+    const data = pantryItemData({ id: 'item-1' });
+    const stack = data.pantryItem;
+    if (!stack) throw new Error('fixture has no item');
+    stack.netWeight = 1360.78;
+    stack.netWeightUnit = {
+      __typename: 'Unit',
+      id: 'unit-g',
+      name: 'gram',
+      symbol: 'g',
+    };
+    stack.packageSize = {
+      __typename: 'Measure',
+      value: 1360.78,
+      unitId: 'unit-g',
+      metric: reading(1.36, 'unit-kg', 'kg'),
+      imperial: reading(3, 'unit-lb', 'lb'),
+    };
+    if (trackingUnitId) stack.unit = { ...stack.unit, id: trackingUnitId };
+    cache.writeQuery({
+      query: PantryItemForEditDocument,
+      variables: { id: 'item-1' },
+      data,
+    });
+    writeUnitSystemSettings(cache, system, system);
+    renderWithApollo(<PantryItemForm itemId="item-1" />, { cache });
+  };
+
+  const openProduct = async () => {
+    const user = userEvent.setup();
+    await screen.findByText('Edit Pantry Item');
+    await user.press(screen.getByText('Product'));
+  };
+
+  it.each([
+    [UnitSystem.Imperial, '3', 'lb'],
+    [UnitSystem.Metric, '1.36', 'kg'],
+  ])('opens a %s user on %s %s', async (system, value, unit) => {
+    renderHoney(system);
+    await openProduct();
+    expect(screen.getByPlaceholderText('e.g., 14.5').props.value).toBe(value);
+    expect(screen.getByText(`unit:${unit}`)).toBeTruthy();
+  });
+
+  it('opens on the stored figure where the reading is the tracking unit', async () => {
+    renderHoney(UnitSystem.Imperial, 'unit-lb');
+    await openProduct();
+    expect(screen.getByPlaceholderText('e.g., 14.5').props.value).toBe(
+      '1360.78',
+    );
+    expect(screen.getByText('unit:g')).toBeTruthy();
+  });
+});
+
+describe('PantryItemForm — the unit it is used in', () => {
+  it('opens on the stack’s, so it can be changed or cleared', async () => {
+    const cache = buildCache({});
+    const data = pantryItemData({ id: 'item-1' });
+    const stack = data.pantryItem;
+    if (!stack) throw new Error('fixture has no item');
+    stack.consumeUnit = {
+      __typename: 'Unit',
+      id: 'unit-tbsp',
+      name: 'tablespoon',
+      symbol: 'tbsp',
+    };
+    cache.writeQuery({
+      query: PantryItemForEditDocument,
+      variables: { id: 'item-1' },
+      data,
+    });
+    renderWithApollo(<PantryItemForm itemId="item-1" />, { cache });
+
+    const user = userEvent.setup();
+    await screen.findByText('Edit Pantry Item');
+    await user.press(screen.getByText('Product'));
+
+    expect(screen.getByText('Used in')).toBeTruthy();
+    expect(screen.getByText('unit:tbsp')).toBeTruthy();
   });
 });

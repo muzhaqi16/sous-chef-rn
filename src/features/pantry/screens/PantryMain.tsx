@@ -372,6 +372,7 @@ function PantryMainContent({
         noHomeSelected={screen.noHomeSelected}
         noHomes={screen.noHomes}
         noPantries={screen.noPantries}
+        pantriesHidden={screen.pantriesHidden}
         onSelectHome={onSelectHome}
         onCreatePantry={onCreatePantry}
         onAddItem={handleAddItem}
@@ -431,7 +432,7 @@ const PantryMainFallback: React.FC = () => {
     { id: 'all', label: t('pantryScreen.tabAll') },
     {
       id: 'fridge',
-      label: t('labels.storageRefrigerated'),
+      label: t('storageState.REFRIGERATED'),
       icon: 'thermometer-outline',
     },
     {

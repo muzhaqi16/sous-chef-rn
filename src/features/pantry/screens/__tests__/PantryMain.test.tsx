@@ -74,6 +74,7 @@ const defaultPantryScreen = {
   noHomeSelected: false,
   noHomes: false,
   noPantries: false,
+  pantriesHidden: false,
 
   // Store state
   unreadCount: 0,
@@ -465,6 +466,19 @@ describe('PantryMain', () => {
       expect(capturedPantryContentProps.noPantries).toBe(true);
       expect(typeof capturedPantryContentProps.onCreatePantry).toBe('function');
       // Add CTA must NOT appear when there's nowhere to add to
+      expect(capturedPantryContentProps.onAddItem).toBeUndefined();
+    });
+
+    it('passes pantriesHidden when the member may not view the pantries', () => {
+      mockPantryScreen({
+        pantry: null,
+        pantries: [],
+        selectedHomeId: 'h1',
+        noPantries: true,
+        pantriesHidden: true,
+      });
+      renderWithApollo(<PantryMain />);
+      expect(capturedPantryContentProps.pantriesHidden).toBe(true);
       expect(capturedPantryContentProps.onAddItem).toBeUndefined();
     });
   });

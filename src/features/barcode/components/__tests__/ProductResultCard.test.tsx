@@ -1,8 +1,15 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import { barcodeTestIDs } from '#features/barcode/testIDs';
 import { ProductResultCard } from '../ProductResultCard';
-import { NetWeightKind } from '#/graphql/generated/schemaTypes';
+import type { ReadingSystem } from '#domain/measure';
+import {
+  NetWeightKind,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: ({ uri }: { uri: string }) => {
@@ -19,18 +26,30 @@ describe('ProductResultCard', () => {
   };
 
   it('renders item name and barcode', () => {
-    render(<ProductResultCard item={baseItem} />);
+    render(
+      <ProductResultCard readingSystem={UnitSystem.Metric} item={baseItem} />,
+    );
     expect(screen.getByText('Organic Milk')).toBeTruthy();
     expect(screen.getByText('Barcode: 123456789')).toBeTruthy();
   });
 
   it('renders brand name when provided', () => {
-    render(<ProductResultCard item={{ ...baseItem, brandName: 'Horizon' }} />);
+    render(
+      <ProductResultCard
+        readingSystem={UnitSystem.Metric}
+        item={{ ...baseItem, brandName: 'Horizon' }}
+      />,
+    );
     expect(screen.getByText('Horizon')).toBeTruthy();
   });
 
   it('renders price when provided', () => {
-    render(<ProductResultCard item={{ ...baseItem, price: 4.99 }} />);
+    render(
+      <ProductResultCard
+        readingSystem={UnitSystem.Metric}
+        item={{ ...baseItem, price: 4.99 }}
+      />,
+    );
     expect(screen.getByText('$4.99')).toBeTruthy();
   });
 
@@ -39,6 +58,7 @@ describe('ProductResultCard', () => {
   it('shows a package figure as the size', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{
           ...baseItem,
           netWeight: 500,
@@ -50,9 +70,41 @@ describe('ProductResultCard', () => {
     expect(screen.getByText('500 g')).toBeTruthy();
   });
 
+  // A 3 LB (1.36 kg) honey reads as its label does in each unit system, never
+  // as the grams the catalog stores.
+  it.each<[ReadingSystem, string]>([
+    [UnitSystem.Imperial, '3 lb'],
+    [UnitSystem.Metric, '1.36 kg'],
+  ])('shows the pack size in the user’s unit system (%s)', (system, text) => {
+    const reading = (value: number, symbol: string) => ({
+      value,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
+    });
+    render(
+      <ProductResultCard
+        readingSystem={system}
+        item={{
+          ...baseItem,
+          netWeight: 1360.78,
+          netWeightKind: NetWeightKind.Package,
+          displayUnit: { name: 'gram', symbol: 'g' },
+          packageSize: {
+            metric: reading(1.36, 'kg'),
+            imperial: reading(3, 'lb'),
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText(text)).toBeTruthy();
+    expect(screen.queryByText(/gram/)).toBeNull();
+  });
+
   it('labels a serving figure as a serving', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{
           ...baseItem,
           netWeight: 30,
@@ -65,13 +117,20 @@ describe('ProductResultCard', () => {
   });
 
   it('renders format when provided', () => {
-    render(<ProductResultCard item={baseItem} format="UPC-A" />);
-    expect(screen.getByText('Format: UPC-A')).toBeTruthy();
+    render(
+      <ProductResultCard
+        readingSystem={UnitSystem.Metric}
+        item={baseItem}
+        format="UPC-A"
+      />,
+    );
+    expect(screen.getByText('UPC-A')).toBeTruthy();
   });
 
   it('shows its image, credited under it', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{
           ...baseItem,
           image: {
@@ -95,9 +154,70 @@ describe('ProductResultCard', () => {
   it('shows no credit for an image that needs none', () => {
     render(
       <ProductResultCard
+        readingSystem={UnitSystem.Metric}
         item={{ ...baseItem, image: { url: 'https://cdn.test/front.jpg' } }}
       />,
     );
     expect(screen.queryByText(/^Photo:/)).toBeNull();
+  });
+  describe("the user's brand lists, at the brand", () => {
+    const jif = { ...baseItem, brandName: 'Jif' };
+
+    it('names each list the brand is on, the parent it went through and the note', () => {
+      render(
+        <ProductResultCard
+          readingSystem={UnitSystem.Metric}
+          item={jif}
+          brandLists={{
+            listings: [
+              {
+                key: 'a',
+                listName: 'Boycott',
+                viaParent: 'Smucker',
+                reason: 'parent company',
+              },
+            ],
+            onAddToList: jest.fn(),
+          }}
+        />,
+      );
+
+      expect(
+        screen.getByText(t('barcode.brandLists.onList', { list: 'Boycott' })),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(
+          t('barcode.brandLists.viaParent', { parent: 'Smucker' }),
+        ),
+      ).toBeTruthy();
+      expect(screen.getByText('parent company')).toBeTruthy();
+    });
+
+    it('says nothing about an unlisted brand, and offers to add it', () => {
+      const onAddToList = jest.fn();
+      render(
+        <ProductResultCard
+          readingSystem={UnitSystem.Metric}
+          item={jif}
+          brandLists={{ listings: [], onAddToList }}
+        />,
+      );
+
+      expect(screen.queryByTestId(barcodeTestIDs.brandListings)).toBeNull();
+      fireEvent.press(
+        screen.getByLabelText(
+          t('barcode.brandLists.addToList', { brand: 'Jif' }),
+        ),
+      );
+      expect(onAddToList).toHaveBeenCalled();
+    });
+
+    it('offers no add for a product with no brand of its own', () => {
+      render(
+        <ProductResultCard readingSystem={UnitSystem.Metric} item={jif} />,
+      );
+
+      expect(screen.queryByTestId(barcodeTestIDs.addBrandToList)).toBeNull();
+    });
   });
 });

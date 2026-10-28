@@ -134,7 +134,7 @@ function suggestionDisplayItem(
     );
   }
   subtitleParts.push(
-    translate('recipes.servingsCount', { count: node.servings }),
+    translate('labels.servingsCount', { count: node.servings }),
   );
   if (node.totalTimeMinutes) {
     subtitleParts.push(

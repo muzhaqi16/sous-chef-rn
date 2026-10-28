@@ -100,6 +100,28 @@ describe('InlineAutocomplete', () => {
   // to the list ACTUALLY rendering, not to the broader "should the dropdown
   // show" flag — that stays true for a settled search that matched nothing, and
   // reserving then leaves a band of blank sheet under the field.
+  // A host that saves on finishing the field (a store cleared once emptied)
+  // hears it from either variant.
+  it('says when the field is finished', () => {
+    const onEndEditing = jest.fn();
+    render(
+      <InlineAutocomplete<string>
+        value=""
+        onChangeText={() => {}}
+        items={[]}
+        renderItem={item => <Text>{item}</Text>}
+        keyExtractor={item => item}
+        onSelect={() => {}}
+        onEndEditing={onEndEditing}
+        testID="unit-input"
+      />,
+    );
+
+    fireEvent(screen.getByTestId('unit-input'), 'endEditing');
+
+    expect(onEndEditing).toHaveBeenCalledTimes(1);
+  });
+
   describe('reserveDropdownSpace', () => {
     const Field: React.FC<{ items: string[]; loading?: boolean }> = ({
       items,

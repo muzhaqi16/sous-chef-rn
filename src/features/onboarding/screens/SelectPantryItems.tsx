@@ -18,7 +18,6 @@ import { Button } from '#components/molecules/Button';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
-import { logger } from '#/utils/environment';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
@@ -121,8 +120,8 @@ export const SelectPantryItems = () => {
       void executeWithLoadingState(
         async () => {
           await Promise.all([
-            ...itemsToAdd.map(async item => {
-              const outcome = await addItem(item.name, {
+            ...itemsToAdd.map(item =>
+              addItem(item.name, {
                 item: { id: item.id },
                 ...(item.displayUnit?.id && {
                   unit: { id: item.displayUnit.id },
@@ -135,17 +134,8 @@ export const SelectPantryItems = () => {
                 purchase: {
                   acquisitionMethod: AcquisitionMethod.Purchased,
                 },
-              });
-              // A race with another device can still find the item stocked. It
-              // is already in the pantry, the onboarding goal, so it is a skip.
-              if (outcome.status === 'duplicate') {
-                logger.info(
-                  'SelectPantryItems: item already in pantry — skipped',
-                  { itemId: item.id },
-                );
-              }
-              return outcome;
-            }),
+              }),
+            ),
             // `itemsToRemove` is drawn from the same index as the map.
             ...itemsToRemove.flatMap(catalogId => {
               const pantryItemId = existingItemMap.get(catalogId);

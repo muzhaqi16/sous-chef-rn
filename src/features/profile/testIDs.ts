@@ -23,6 +23,14 @@ export const profileTestIDs = {
   settingsShowShoppingListImagesSwitch:
     'settings-show-shopping-list-images-switch',
   settingsStoreModeSwitch: 'settings-store-mode-switch',
+  settingsBudgetAndPricesSwitch: 'settings-budget-and-prices-switch',
+  /** One home's switch in the dietary profile's "Shared with" section. */
+  dietarySharingSwitch: (homeId: string) => `dietary-sharing-switch-${homeId}`,
+  avoidSheet: 'dietary-avoid-sheet',
+  avoidSeverity: 'dietary-avoid-severity',
+  avoidSearchInput: 'dietary-avoid-search-input',
+  /** One food the avoid sheet's search found. */
+  avoidCandidate: (itemId: string) => `dietary-avoid-candidate-${itemId}`,
   settingsShareUsageDataSwitch: 'settings-share-usage-data-switch',
 
   cookingPreferencesSkillLevelPicker: 'cooking-preferences-skill-level-picker',
@@ -37,4 +45,23 @@ export const profileTestIDs = {
 
   /** A navigation row on the profile menu, by its settings-config key. */
   menuItem: (key: string) => `profile-menu-${key}`,
+
+  /** The user's own brand lists, and one list's screen. */
+  brandListsScreen: 'brand-lists-screen',
+  brandListsNew: 'brand-lists-new',
+  brandListRow: (listId: string) => `brand-list-row-${listId}`,
+  brandListSwitch: (listId: string) => `brand-list-switch-${listId}`,
+  brandListScreen: 'brand-list-screen',
+  brandListAddBrand: 'brand-list-add-brand',
+  brandListRename: 'brand-list-rename',
+  brandListDelete: 'brand-list-delete',
+  brandEntryRow: (entryId: string) => `brand-entry-row-${entryId}`,
+  /** The sheet that adds a catalog brand to a list. */
+  addBrandSheet: 'add-brand-sheet',
+  addBrandSearchInput: 'add-brand-search-input',
+  addBrandNoteInput: 'add-brand-note-input',
+  addBrandCandidate: (brandId: string) => `add-brand-candidate-${brandId}`,
+  /** The sheet that puts a scanned brand on one of the user's lists. */
+  addToBrandListSheet: 'add-to-brand-list-sheet',
+  brandListChoice: (listId: string) => `brand-list-choice-${listId}`,
 };

@@ -151,9 +151,9 @@ describe('offline transition (real store + real breaker)', () => {
   it('surfaces the offline indicator to the user', () => {
     goOffline();
 
-    // The banner resolves its cause through the same selector; the device-level
-    // dwell is the shorter one.
-    jest.advanceTimersByTime(2_000);
+    // The indicator resolves its cause through the same selector, once the
+    // outage has outlasted the dwell that keeps a hiccup off the screen.
+    jest.advanceTimersByTime(30_000);
     expect(mockStore.getState().offlineBannerCause).toBe('device-offline');
   });
 

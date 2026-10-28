@@ -53,27 +53,20 @@ query GetHomes($first: Int, $after: String) {
   }
 }
 
-query GetHomeByJoinCode($joinCode: String!) {
-  homeByJoinCode(joinCode: $joinCode) {
-    id
+# Resolve an anyone-with-link code (home join code OR list share code) without
+# knowing its type: the pre-join preview, served logged out too (`@optionalAuth`).
+query ResolveShareLink($code: String!) {
+  resolveShareLink(code: $code) {
+    targetType
+    homeId
+    listId
     name
-    isDefault
-    membersConnection(first: 10) {
-      totalCount
-    }
-    pantriesConnection(first: 20) {
-      edges {
-        node {
-          id
-          name
-          isDefault
-        }
-      }
-      totalCount
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
+    alreadyMember
+    memberCount
+    itemCount
+    link {
+      universal
+      scheme
     }
   }
 }

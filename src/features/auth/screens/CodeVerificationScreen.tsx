@@ -22,7 +22,6 @@ import { logger } from '#/utils/environment';
 import { logValidationErrors } from '#/utils/validation/common';
 import { emailVerificationSchema } from '#/utils/validation/auth';
 import { toastService } from '#services/toastService';
-import { TOAST } from '#/constants/animations';
 import { authTestIDs } from '#features/auth/testIDs';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
@@ -145,7 +144,6 @@ export function CodeVerificationScreen({
       // `verifyEmail` issues no tokens, and a deleted account comes back under
       // its ORIGINAL password, not the one typed at re-registration.
       toastService.success(t('auth.emailVerifiedToastSignIn'), {
-        duration: TOAST.AUTO_DISMISS_LONG,
         action: {
           label: t('auth.forgotPassword'),
           onPress: navigateToForgotPassword,

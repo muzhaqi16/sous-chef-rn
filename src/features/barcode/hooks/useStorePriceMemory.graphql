@@ -1,0 +1,96 @@
+# What the household itself paid for a scanned product: store mode's "Last
+# paid" and "Your usual", and the usual per one of the unit `trackingUnit`
+# names, with no pantry: the one the server prices it in when asked for none.
+# The scan's lookup carries it in store mode. Keyed by the item and the home,
+# so a product read before still shows it offline at the shelf.
+fragment useStorePriceMemory_item on Item {
+  id
+  # Aliased: the lookup asks for the pantry's.
+  usualUnit: trackingUnit {
+    id
+  }
+  householdPriceSummary(homeId: $homeId) {
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+    lastPaid {
+      unitPrice
+      unit {
+        id
+        name
+        symbol
+      }
+      normalizedPrice
+      basis
+      store {
+        id
+        name
+      }
+      paidAt
+      onSale
+    }
+    usual {
+      basis
+      medianPrice
+      unitPrice
+    }
+  }
+}
+
+# The same for an item that came another way than the scan's lookup.
+query HouseholdPricePaid($itemId: ID!, $homeId: ID!) {
+  item(id: $itemId) {
+    id
+    ...useStorePriceMemory_item
+  }
+}
+
+# The usual per one of a list line's own unit, when the price sheet counts in
+# it. The summary's objects merge (`catalogTypePolicies`), so this joins what
+# the lookup stored rather than replacing it.
+query HouseholdUsualUnitPrice($itemId: ID!, $homeId: ID!, $unitId: ID!) {
+  item(id: $itemId) {
+    id
+    householdPriceSummary(homeId: $homeId) {
+      usual {
+        unitPrice(unitId: $unitId)
+      }
+    }
+  }
+}
+
+# What the product typically costs where the list is being shopped: the list's
+# store and its chain, beside the item's comparison rows.
+query StorePriceComparison($itemId: ID!, $listId: ID!) {
+  shoppingList(id: $listId) {
+    id
+    targetStore {
+      id
+      chain {
+        id
+        name
+      }
+    }
+  }
+  itemPriceComparison(input: { itemId: $itemId }) {
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+    rows {
+      basis
+      scope
+      medianPrice
+      meetsMinimumSample
+      store {
+        id
+      }
+      chain {
+        id
+      }
+    }
+  }
+}

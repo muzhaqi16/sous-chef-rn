@@ -15,6 +15,24 @@ fragment pantryItem_listed on PantryItem {
       symbol
     }
   }
+  held {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   expiresOn
   storageState
   lastUsedAt
@@ -29,7 +47,7 @@ fragment pantryItem_listed on PantryItem {
   remainingPortions
   activeBatchCount
   updatedAt
-  # The photo this entry shows: the household's choice, else the catalog's.
+  # The photo this entry shows: the household's choice, the catalog's, else the viewer's pending one.
   image {
     url
     source
@@ -55,6 +73,9 @@ fragment pantryItem_listed on PantryItem {
     id
     name
     symbol
+  }
+  consumeUnit {
+    id
   }
   storageLocation {
     id

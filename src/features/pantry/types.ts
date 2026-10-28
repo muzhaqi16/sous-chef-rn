@@ -6,6 +6,7 @@ import type {
   UsagePurpose,
 } from '#/graphql/generated/schemaTypes';
 import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
+import type { MeasureShape } from '#domain/measure';
 
 /** A unit as `UnitPicker` renders it; the hooks that rank units produce this shape. */
 export interface PickableUnit {
@@ -75,6 +76,14 @@ export interface UsageRecord {
   usageUnit?: { symbol?: string | null } | null;
   totalCost?: number | null;
   currency?: { code: string } | null;
+  /** A recount stated in a unit, read in both systems; null on every other row. */
+  statedAmount?: MeasureShape | null;
+}
+
+/** The units a recount was typed in, where not the stack's own. */
+export interface RecountUnits {
+  newQuantityUnitId?: string;
+  remainingNetWeightUnitId?: string;
 }
 
 export interface PackageSizeCorrectionInput {

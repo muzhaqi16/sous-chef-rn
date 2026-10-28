@@ -16,13 +16,12 @@ import {
   CreateOutcome,
   ErrorCode,
   ModerationContentType,
-  ReportStatus,
   ReportType,
 } from '#/graphql/generated/schemaTypes';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { useStore } from '#store';
 import { t } from '#/i18n';
-import { MyReportRow_ReportFragmentDoc } from '#features/profile/components/MyReportRow.generated';
+import { MyUserReportReadersFragmentDoc } from '#/graphql/readers/myUserReportReaders.generated';
 import { CreateUserReportDocument } from '../useReportContent.generated';
 import { useReportContent, type ReportOutcome } from '../useReportContent';
 
@@ -49,9 +48,7 @@ const payload = (outcome: CreateOutcome): Member => ({
     __typename: 'MyUserReport',
     id: 'report-1',
     type: ReportType.Spam,
-    status: ReportStatus.Pending,
     contentType: ModerationContentType.RecipeReview,
-    createdAt: '2026-10-01T09:00:00.000Z',
   },
 });
 
@@ -88,11 +85,11 @@ describe('useReportContent', () => {
 
     expect(outcome).toEqual({ status: 'sent' });
     expect(fired).toEqual([{ input: INPUT }]);
-    // The row's own fragment reads complete off the mutation's response.
+    // What My reports reads on the report is complete off the response.
     expect(
       client.cache.readFragment({
-        fragment: MyReportRow_ReportFragmentDoc,
-        fragmentName: 'MyReportRow_report',
+        fragment: MyUserReportReadersFragmentDoc,
+        fragmentName: 'MyUserReportReaders',
         id: client.cache.identify({
           __typename: 'MyUserReport',
           id: 'report-1',
@@ -101,7 +98,6 @@ describe('useReportContent', () => {
     ).toEqual(
       expect.objectContaining({
         id: 'report-1',
-        status: ReportStatus.Pending,
         type: ReportType.Spam,
       }),
     );

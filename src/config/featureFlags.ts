@@ -4,6 +4,7 @@
  * without them. A whole feature is switched by `appConfig.features` instead.
  */
 export type FeatureFlag =
+  | 'budgetAndPrices'
   | 'deviceReceiptModel'
   | 'deviceReceiptReading'
   | 'ingredientPaste'
@@ -13,13 +14,17 @@ export type FeatureFlag =
   | 'recipeCaptureText'
   | 'recipeCaptureUrl'
   | 'storeMode'
-  | 'storeRoutes';
+  | 'storeRoutes'
+  | 'storeShelfPrices';
 
 /**
  * What a build allows when neither the fork nor the build says otherwise. A
  * flag the server owns is on only where the server also says so for the user.
  */
 const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
+  // A list's budget, estimates and prices, which a user turns on in Settings;
+  // off, the shopping list is a plain list with no money on it.
+  budgetAndPrices: true,
   // The phone's own model reads a receipt beside the rules; off, rules alone.
   deviceReceiptModel: false,
   // A receipt read on the phone by `@muzhaqi16/receipt-rules` first, kept when it
@@ -40,6 +45,9 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   storeMode: true,
   // A list's walking order learned from trips (`ShoppingList.storeRoute`).
   storeRoutes: true,
+  // An item's shelf price at each store (`Item.storePricesConnection`); off,
+  // a list line's detail and store mode's scan card show no shelf prices.
+  storeShelfPrices: true,
 };
 
 const isFeatureFlag = (name: string): name is FeatureFlag =>

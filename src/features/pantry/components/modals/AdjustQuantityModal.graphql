@@ -14,4 +14,48 @@ fragment AdjustQuantityModal_pantryItem on PantryItem {
     name
     symbol
   }
+  # The count and the weight left as the row reads them, in the user's system.
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
+  held {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
+  remaining {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
 }

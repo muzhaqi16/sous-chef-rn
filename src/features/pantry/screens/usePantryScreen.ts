@@ -135,7 +135,7 @@ export function usePantryScreen() {
     { id: 'all', label: t('pantryScreen.tabAll') },
     {
       id: 'fridge',
-      label: t('labels.storageRefrigerated'),
+      label: t('storageState.REFRIGERATED'),
       icon: 'thermometer-outline',
       iconElement: React.createElement(StorageLocationIcon, {
         type: StorageType.Refrigerator,
@@ -219,6 +219,10 @@ export function usePantryScreen() {
   // mid-load — "unknown" is not "none".
   const noPantries =
     isReady && !!selectedHomeId && !!currentHome && pantries.length === 0;
+  // The API leaves out every pantry for a member whose pantry view is off, so
+  // none then means hidden, not none to create.
+  const pantriesHidden =
+    noPantries && currentHome.myMembership?.canViewPantry === false;
 
   // Classified on the FETCHED set: a failed read must not reach the
   // "add your first item" empty state, which invites duplicates.
@@ -293,6 +297,7 @@ export function usePantryScreen() {
     noHomeSelected,
     noHomes,
     noPantries,
+    pantriesHidden,
 
     // Store state
     pantrySortOption,

@@ -11,6 +11,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import {
   AddItemToShoppingListDocument,
+  CreateShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
@@ -261,6 +262,41 @@ describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
       'list-1',
       expect.objectContaining({ id: 'existing-row' }),
       false,
+    );
+  });
+});
+
+// A list created with lines settles them as the batch add does, under the
+// list id the create minted.
+describe('reconcileReplaySuccess — CreateShoppingList with lines', () => {
+  const createOperation = operationNameOf(CreateShoppingListDocument);
+  const variables = {
+    input: {
+      id: 'list-new',
+      name: 'Groceries',
+      items: [{ id: 'row-a' }, { id: 'row-b' }],
+    },
+  };
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it('withdraws the lines the server refused, the list settling its count', () => {
+    reconcileReplaySuccess(createOperation, variables, {
+      createShoppingList: {
+        __typename: 'CreateShoppingListPayload',
+        shoppingList: { id: 'list-new', totalItems: 1 },
+        itemResults: [
+          { index: 0, success: true, item: { id: 'row-a' } },
+          { index: 1, success: false, item: null },
+        ],
+      },
+    });
+
+    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
+      {},
+      'list-new',
+      ['row-b'],
+      { countsSettled: true },
     );
   });
 });

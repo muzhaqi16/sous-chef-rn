@@ -2,49 +2,77 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
+import { Controller, useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { homeTestIDs } from '#features/home/testIDs';
+import { logValidationErrors } from '#/utils/validation/common';
+import {
+  CREATE_HOME_DEFAULTS,
+  createHomeSchema,
+  type CreateHomeFormValues,
+} from './createHomeFormConfig';
 
 interface CreateHomeFormProps {
-  isVisible: boolean;
-  homeName: string;
-  onHomeNameChange: (name: string) => void;
-  allowJoinCode: boolean;
-  onAllowJoinCodeChange: (value: boolean) => void;
-  onSubmit: () => void;
+  /** False while the address is unverified: the server refuses a join code then. */
+  joinCodeAvailable: boolean;
+  /** Asks for a verified address before a join code is turned on; false without one. */
+  requireVerifiedEmail: () => boolean;
+  /** Receives the name cleaned; a name the API would refuse never reaches it. */
+  onSubmit: (values: CreateHomeFormValues) => Promise<void>;
   onCancel: () => void;
   isCreating: boolean;
 }
 
 export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
-  isVisible,
-  homeName,
-  onHomeNameChange,
-  allowJoinCode,
-  onAllowJoinCodeChange,
+  joinCodeAvailable,
+  requireVerifiedEmail,
   onSubmit,
   onCancel,
   isCreating,
 }) => {
   const { t } = useTranslation();
-  if (!isVisible) return null;
+  const { control, handleSubmit } = useForm<CreateHomeFormValues>({
+    resolver: yupResolver(createHomeSchema),
+    defaultValues: CREATE_HOME_DEFAULTS,
+  });
 
   return (
     <View style={styles.createForm}>
-      <BaseInput
-        testID={homeTestIDs.createHomeNameInput}
-        value={homeName}
-        onChangeText={onHomeNameChange}
-        placeholder={t('labels.enterHomeName')}
-        autoFocus
-        autoCapitalize="words"
+      <Controller
+        control={control}
+        name="name"
+        render={({ field, fieldState }) => (
+          <BaseInput
+            testID={homeTestIDs.createHomeNameInput}
+            value={field.value}
+            onChangeText={field.onChange}
+            onBlur={field.onBlur}
+            placeholder={t('labels.enterHomeName')}
+            errorMessage={fieldState.error?.message}
+            autoFocus
+            autoCapitalize="words"
+          />
+        )}
       />
-      <FormCheckbox
-        label={t('createHome.allowJoinCode')}
-        checked={allowJoinCode}
-        onPress={() => onAllowJoinCodeChange(!allowJoinCode)}
+      <Controller
+        control={control}
+        name="allowJoinCode"
+        render={({ field }) => {
+          const checked = field.value && joinCodeAvailable;
+          return (
+            <FormCheckbox
+              label={t('createHome.allowJoinCode')}
+              checked={checked}
+              onPress={() => {
+                if (!checked && !requireVerifiedEmail()) return;
+                field.onChange(!checked);
+              }}
+            />
+          );
+        }}
       />
       <View style={styles.formActions}>
         <Button
@@ -58,8 +86,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
         <Button
           testID={homeTestIDs.createHomeSubmitButton}
           loading={isCreating}
-          disabled={!homeName.trim()}
-          onPress={onSubmit}
+          onPress={handleSubmit(onSubmit, logValidationErrors)}
           variant="primary"
           style={styles.button}
         >

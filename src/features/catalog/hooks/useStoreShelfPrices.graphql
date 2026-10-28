@@ -1,0 +1,54 @@
+# An item's shelf price at each store that collected one, cheapest current
+# first: a list line's detail reads it here, and store mode's scan lookup
+# (`ItemByLookup`) carries it so a scan asks once. `first` is a literal so both
+# read one cache entry.
+fragment useStoreShelfPrices_item on Item {
+  id
+  storePricesConnection(first: 10) {
+    edges {
+      node {
+        store {
+          id
+          name
+        }
+        price
+        regularPrice
+        onPromotion
+        typicalPrice
+        lowestPrice
+        coveredDays
+        normalizedPrice
+        normalizedBasis
+        isCurrent
+        confirmedAt
+        aisle
+        unit {
+          id
+          symbol
+        }
+        currency {
+          id
+          code
+          decimalPlaces
+        }
+      }
+    }
+  }
+}
+
+# The store the list is shopped at, read from what the list screen stored:
+# asking for it could cost a scan a request of its own.
+fragment useStoreShelfPrices_list on ShoppingList {
+  id
+  targetStore {
+    id
+  }
+}
+
+# The same for an item no scan lookup brought.
+query StoreShelfPrices($itemId: ID!) {
+  item(id: $itemId) {
+    id
+    ...useStoreShelfPrices_item
+  }
+}

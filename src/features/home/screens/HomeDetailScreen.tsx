@@ -31,13 +31,19 @@ import {
   executeWriteWithFinally,
 } from '#/utils/finallyHelpers';
 import { logger } from '#/utils/environment';
-import { SousChefLoader } from '#components/atoms/SousChefLoader';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { Text } from '#components/atoms/Text';
 import { getInviteDisplayName } from '#features/home/utils/inviteFormatters';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  canManageHome,
+  getAssignableRoles,
+} from '#features/home/utils/homePermissions';
+import { homeTestIDs } from '#features/home/testIDs';
+import { fieldError, homeNameRule } from '#/utils/validation/common';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 type RouteParams = {
@@ -49,7 +55,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 }) => {
   useScreenTransition('HomeDetailScreen');
   const { t } = useTranslation();
-  const { goBack, toStorageLocations } = useAppNavigation();
+  const { goBack, toStorageLocations, toHomeDietaryNeeds } = useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
   const currentUser = useUser();
@@ -61,8 +67,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   const {
     home,
-    loading,
-    error,
+    homeState,
     leaving,
     refetch,
     rolePickerState,
@@ -153,7 +158,10 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   const currentUserMembership = home?.myMembership;
   const isOwner = currentUserMembership?.role === MembershipRole.Owner;
-  const canManage = currentUserMembership?.canManageHome ?? false;
+  const canManage = canManageHome(currentUserMembership);
+  const assignableRoles = currentUserMembership
+    ? getAssignableRoles(currentUserMembership.role)
+    : [];
 
   const handleLeaveHome = async () => {
     if (!home) return;
@@ -178,12 +186,6 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   // true` on EVERY mount (useQuery builds a new ObservableQuery each time), so
   // gating on it shows a spinner over the cached home.
   if (!home) {
-    const getMessage = () => {
-      if (loading) return t('labels.loading');
-      if (error) return t('homeDetail.errorFailedToLoad');
-      return t('errors.codes.homeNotFound');
-    };
-
     return (
       <DetailTemplate
         title={t('homeDetail.title')}
@@ -192,21 +194,16 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         sections={[
           {
             content: (
-              <View style={styles.centeredSpinner}>
-                <SousChefLoader
-                  size="small"
-                  showBrand={false}
-                  message={getMessage()}
-                />
-                {!loading && !!error && (
-                  <Button
-                    title={t('labels.retry')}
-                    onPress={() => refetch()}
-                    variant="secondary"
-                    style={styles.retryButton}
-                  />
-                )}
-              </View>
+              <DataStateView
+                state={homeState}
+                onRetry={() => {
+                  void refetch();
+                }}
+                empty={{
+                  icon: 'home-outline',
+                  title: t('errors.codes.homeNotFound'),
+                }}
+              />
             ),
           },
         ]}
@@ -230,12 +227,7 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
             onSave={saveName}
             placeholder={t('labels.enterHomeName')}
             readOnly={!canManage}
-            validation={value => {
-              if (!value.trim()) {
-                return t('homeDetail.homeNameEmptyError');
-              }
-              return null;
-            }}
+            validation={value => fieldError(homeNameRule, value)}
           />
           {canManage ? (
             <SettingSwitch
@@ -299,8 +291,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         <HomeMembersSection
           members={memberNodes}
           invites={inviteNodes}
-          canManageHome={canManage}
-          isOwner={isOwner}
+          viewer={currentUserMembership ?? null}
+          viewerUserId={currentUser?.id}
           resolveMemberLabel={member => {
             const isCurrentUser =
               !!currentUser?.id && member.userId === currentUser.id;
@@ -329,6 +321,23 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       ),
     },
+    // Only a home with someone besides the user has dietary needs to share.
+    ...((home.membersConnection.totalCount ?? memberNodes.length) > 1
+      ? [
+          {
+            title: t('homeDietaryNeeds.title'),
+            content: (
+              <ThemedNavigationRow
+                icon="nutrition-outline"
+                title={t('homeDetail.dietaryNeedsRowTitle')}
+                subtitle={t('homeDetail.dietaryNeedsRowSubtitle')}
+                onPress={() => toHomeDietaryNeeds({ homeId })}
+                testID={homeTestIDs.dietaryNeedsRow}
+              />
+            ),
+          },
+        ]
+      : []),
     {
       title: t('labels.storage'),
       content: (
@@ -381,7 +390,9 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       <ModalPicker
         visible={rolePickerState.visible}
         label={t('labels.selectRole')}
-        options={ROLE_OPTIONS.map(role => ({
+        options={ROLE_OPTIONS.filter(role =>
+          assignableRoles.includes(role.value),
+        ).map(role => ({
           label: t(role.labelKey),
           value: role.value,
         }))}
@@ -395,9 +406,6 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  retryButton: {
-    marginTop: theme.spacing.md,
-  },
   joinCodeRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -424,9 +432,4 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
   },
   leaveHomeDescription: {},
-  centeredSpinner: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing['3xl'],
-  },
 }));

@@ -278,6 +278,47 @@ describe('usePantryIntake', () => {
     );
   });
 
+  // USM-2: every add is forced. A held product joins its stack (the answer
+  // names it, covered above) or opens its own under the minted id.
+  it('forces every add, so a held product is never refused', async () => {
+    const create = createAnswering();
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      operationMocks: [create.mock],
+    });
+
+    await act(async () => {
+      await result.current.addItem('Milk', {
+        item: { id: 'cat-milk' },
+        quantity: 1,
+      });
+    });
+
+    expect(create.fired[0]).toMatchObject({ input: { forceAdd: true } });
+  });
+
+  it('keeps the row of an add the server stood apart, under its minted id', async () => {
+    const cache = cacheHolding('pi-held');
+    const create = createAnswering();
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      cache,
+      operationMocks: [create.mock],
+    });
+
+    let outcome: unknown;
+    await act(async () => {
+      outcome = await result.current.addItem('Milk', {
+        item: { id: 'cat-milk' },
+        quantity: 1,
+      });
+    });
+
+    const minted = (create.fired[0]?.input as { id: string }).id;
+    expect(outcome).toEqual({ status: 'added' });
+    expect(JSON.stringify(cache.extract()[`Pantry:${PANTRY_ID}`])).toContain(
+      minted,
+    );
+  });
+
   it('tells the user about a refusal only when asked to', async () => {
     const refusal = () =>
       recordMock(CreatePantryItemDocument, {

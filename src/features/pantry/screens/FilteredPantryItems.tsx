@@ -344,7 +344,9 @@ export const FilteredPantryItems: React.FC<
     }
     return filtered;
   })();
-  const { lists: pickerLists } = useShoppingListsLite();
+  const { lists: pickerLists } = useShoppingListsLite({
+    fetchPolicy: 'cache-first',
+  });
   const picker = useLowStockListPicker({
     addToList,
     // The rows on screen: the button adds what the person is looking at, not a

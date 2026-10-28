@@ -4,6 +4,11 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { RestockPantryItemModal } from '#features/pantry/components/modals/RestockPantryItemModal';
 import { eggsShared } from '#/test-utils/pantryActionShared';
 import type { PantryActionSharedState } from '#features/pantry/types';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 // Minimal stand-ins for the props the mocked PantryActionModal feeds back to
 // `renderActionFields`; matches exactly what this stub constructs.
@@ -243,6 +248,40 @@ describe('RestockPantryItemModal', () => {
         'unit-1',
         undefined,
         3.49,
+        null,
+      );
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe('with budget & prices off', () => {
+    beforeEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    });
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+    });
+
+    it('asks for no cost, and still for the quantity and expiry', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+
+      expect(screen.queryByText('Cost per Unit')).toBeNull();
+      expect(screen.queryByText('Total paid')).toBeNull();
+      expect(screen.getByText('Quantity to Add')).toBeTruthy();
+      expect(screen.getByText('Expiration Date')).toBeTruthy();
+    });
+
+    it('restocks with no cost', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+      fireEvent.press(screen.getByTestId('restock-confirm'));
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith(
+        1,
+        '1',
+        '',
+        'unit-1',
+        undefined,
+        undefined,
         null,
       );
       expect(defaultProps.onClose).toHaveBeenCalled();

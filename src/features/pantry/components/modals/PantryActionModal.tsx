@@ -109,6 +109,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     trackingUnitId,
     trackingUnitType: pantryItem?.unit.type,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
+    consumeUnitId: pantryItem?.consumeUnit?.id,
     operation,
   });
 

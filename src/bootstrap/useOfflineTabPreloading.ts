@@ -86,20 +86,26 @@ const WARM_TARGETS: Array<{
   },
 ];
 
-async function warmTabQueries(client: ApolloClient): Promise<void> {
-  for (const target of WARM_TARGETS) {
-    // Plain statements only inside the try: a value block (`?.`, `??`, ternary)
-    // there bails the whole function out of the React Compiler.
-    try {
-      await target.warm(client);
-    } catch (error) {
-      // Best effort: a failed warm must never surface to the user or block
-      // anything. The next cold start retries.
-      errorService.reportError(error, {
-        operation: `Offline tab warm: ${target.name}`,
-      });
-    }
+async function warmOne(
+  client: ApolloClient,
+  target: (typeof WARM_TARGETS)[number],
+): Promise<void> {
+  // Plain statements only inside the try: a value block (`?.`, `??`, ternary)
+  // there bails the whole function out of the React Compiler.
+  try {
+    await target.warm(client);
+  } catch (error) {
+    // Best effort: a failed warm must never surface to the user or block
+    // anything. The next cold start retries.
+    errorService.reportError(error, {
+      operation: `Offline tab warm: ${target.name}`,
+    });
   }
+}
+
+// Together, so a cold cache costs one round trip rather than three.
+async function warmTabQueries(client: ApolloClient): Promise<void> {
+  await Promise.all(WARM_TARGETS.map(target => warmOne(client, target)));
 }
 
 export function useOfflineTabPreloading(): void {

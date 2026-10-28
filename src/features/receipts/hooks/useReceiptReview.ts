@@ -97,7 +97,9 @@ export function useReceiptReview() {
   // The product being picked in a line's sheet, asked about before it is saved.
   const [pickingItemId, setPickingItemId] = useState<string | null>(null);
   // The list the user works in, checked against the lists they still have.
-  const { lists, loading: listsLoading } = useShoppingListsLite();
+  const { lists, loading: listsLoading } = useShoppingListsLite({
+    fetchPolicy: 'cache-first',
+  });
   const listId = useActiveShoppingListId(lists);
   const { pantry } = useCurrentPantry();
   const pantryId = pantry?.id;

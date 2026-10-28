@@ -87,7 +87,7 @@ envelope**:
 
 **Fix:** `fetchPolicy: 'no-cache'` on both `useSubscription` calls
 (`usePantrySubscriptions.ts`, `useShoppingListSubscriptions.ts`). Every handler
-already reads entities back with a query (`PantryItemForEvent`, the shopping-list
+already reads entities back with a query (`PantryItemsForEvents`, the shopping-list
 read-backs), so nothing needed the envelope in the cache.
 `__tests__/apollo/subscriptionEnvelopeWrite.test.ts` performs the write against the
 real cache and asserts the incompleteness; the hook suites assert the envelope no

@@ -10,28 +10,18 @@ import {
   RemoveMemberDocument,
   DeleteHomeInviteDocument,
   LeaveHomeDocument,
-  GetHomesDocument,
 } from '#operations/home/home.generated';
 import type { UpdateMembershipInput } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
-import {
-  createRemoveFromParentConnectionUpdater,
-  safeEvict,
-} from '#/apollo/utils/cacheUpdaters';
+import { createRemoveFromParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
 import {
   settleMutation,
   type SettleStatus,
 } from '#/apollo/utils/settleMutation';
 import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
 import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
-import { extractNodes } from '#/utils/connectionUtils';
 import { useCrudOperations } from '#/hooks/utils/useCrudOperations';
-import {
-  useAppStore,
-  useHomeState,
-  useSelectedHomeId,
-  useSetSelectedPantryId,
-} from '#store/useAppStore';
+import { forgetHome } from '#/domain/forgetHome';
 import { useMarkHomeAsDefault } from './useMarkHomeAsDefault';
 
 const removeFromMembers = createRemoveFromParentConnectionUpdater(
@@ -60,12 +50,6 @@ export function useHomeMembership(
   { onConflictRefresh }: { onConflictRefresh?: () => void } = {},
 ) {
   const client = useApolloClient();
-  const selectedHomeId = useSelectedHomeId();
-  const { setSelectedHomeId } = useHomeState();
-  const setSelectedPantryId = useSetSelectedPantryId();
-  const setSelectedShoppingListId = useAppStore(
-    state => state.setSelectedShoppingListId,
-  );
   const { markAsDefault } = useMarkHomeAsDefault();
   const { createRemoveOperation } = useCrudOperations();
 
@@ -138,22 +122,9 @@ export function useHomeMembership(
    * as not found included, which carries no membership for an `update` to read.
    */
   const removeLeftHome = () => {
-    safeEvict(client.cache, 'Home', homeId);
-    if (homeId !== selectedHomeId) return;
-
-    const cachedData = client.cache.readQuery({ query: GetHomesDocument });
-    const [newDefaultHome] = extractNodes(cachedData?.homes);
-    if (newDefaultHome) {
-      setSelectedHomeId(newDefaultHome.id);
-      setSelectedPantryId(null);
-      // Background sync: a refusal is reported where it is written.
-      void markAsDefault(newDefaultHome.id);
-    } else {
-      setSelectedHomeId(null);
-      setSelectedPantryId(null);
-    }
-    // Clear shopping list selection (may have belonged to left home)
-    setSelectedShoppingListId(null);
+    const nextHomeId = forgetHome(client.cache, homeId);
+    // Background sync: a refusal is reported where it is written.
+    if (nextHomeId) void markAsDefault(nextHomeId);
   };
 
   /** Asks first; resolves whether the removal landed or queued, false on Cancel. */

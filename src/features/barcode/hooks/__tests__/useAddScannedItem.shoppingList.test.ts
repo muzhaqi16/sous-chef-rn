@@ -10,6 +10,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import type { ScannedItem } from '#features/barcode/types';
 import { useAddScannedItem } from '../useAddScannedItem';
+import { UseToggleShoppingItem_ItemFragmentDoc } from '#features/shoppingList/hooks/mutations/useToggleShoppingItem.generated';
 
 const LIST_ID = 'list-1';
 
@@ -32,6 +33,7 @@ const STATED = {
 
 const SCANNED: ScannedItem = {
   id: 'item-oats',
+  conceptIds: [],
   name: 'Oats',
   upc: '0001',
   canEdit: false,
@@ -103,13 +105,56 @@ describe('adding a scanned item to a shopping list', () => {
       },
     );
 
-    let outcome: string | undefined;
+    let added: { outcome: string; rowId: string | null } | undefined;
     await act(async () => {
-      outcome = await result.current.addToShoppingList(SCANNED);
+      added = await result.current.addToShoppingList(SCANNED);
     });
 
-    expect(outcome).toBe('reverted');
+    expect(added).toEqual({ outcome: 'reverted', rowId: null });
     expect(readCounts(cache)).toMatchObject(STATED);
     expect(rowKeys(cache)).toEqual([]);
+  });
+
+  // The API lands an add for an item the list holds on that line, and the
+  // reconcile takes the minted row out: a tick has only the held line to find.
+  it('names the line the server folded the scan into', async () => {
+    const cache = cacheWithList();
+    const { result } = renderHookWithApollo(
+      () => useAddScannedItem({ pantryId: undefined, shoppingListId: LIST_ID }),
+      {
+        cache,
+        operationMocks: [
+          addAnswer({
+            addItemsToShoppingList: {
+              __typename: 'AddItemsToShoppingListPayload',
+              results: [
+                {
+                  __typename: 'BatchAddShoppingListItemResult',
+                  index: 0,
+                  success: true,
+                  item: { __typename: 'ShoppingListItem', id: 'line-held' },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+    );
+
+    let added: { outcome: string; rowId: string | null } | undefined;
+    await act(async () => {
+      added = await result.current.addToShoppingList(SCANNED);
+    });
+
+    expect(added).toEqual({ outcome: 'kept', rowId: 'line-held' });
+    expect(rowKeys(cache)).toEqual(['ShoppingListItem:line-held']);
+    // Store mode ticks it next; the tick reads this snapshot or sends nothing.
+    expect(
+      cache.readFragment({
+        id: 'ShoppingListItem:line-held',
+        fragment: UseToggleShoppingItem_ItemFragmentDoc,
+        fragmentName: 'useToggleShoppingItem_item',
+      }),
+    ).not.toBeNull();
   });
 });

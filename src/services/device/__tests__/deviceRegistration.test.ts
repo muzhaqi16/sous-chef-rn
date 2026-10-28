@@ -82,6 +82,7 @@ import {
   recordRegisteredLocale,
 } from '#/services/auth/deviceId';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 
 // A sign-out revokes and drops the slot through the step the app registers.
 registerMobileSessionHost();
@@ -244,12 +245,28 @@ describe('registerDeviceInBackground — the unit pickers', () => {
     ]);
   });
 
+  // Over the cached settings, never by evicting a field of them: a settings
+  // read left incomplete falls back to metric until the answer lands.
+  it("re-reads what the new locale means for the device's unit system", async () => {
+    (recordRegisteredLocale as jest.Mock).mockReturnValueOnce(true);
+
+    registerDeviceInBackground();
+    await flush();
+
+    expect(mockQuery).toHaveBeenCalledWith({
+      query: GetUserSettingsDocument,
+      fetchPolicy: 'network-only',
+    });
+    expect(droppedPickers()).not.toContain('deviceUnitSystem');
+  });
+
   it('keeps them when the locale is the one already registered', async () => {
     registerDeviceInBackground();
     await flush();
 
     expect(recordRegisteredLocale).toHaveBeenCalled();
     expect(mockCache.evict).not.toHaveBeenCalled();
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 
   it('records nothing when the registration did not land', async () => {

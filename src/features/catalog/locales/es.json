@@ -174,7 +174,6 @@
         "placeholder": "Introduce el nombre del artículo"
       },
       "description": {
-        "label": "Descripción",
         "placeholder": "Introduce la descripción del artículo (opcional)"
       },
       "vendor": {
@@ -215,7 +214,6 @@
         "placeholder": "cdta., taza, etc."
       },
       "tags": {
-        "label": "Etiquetas",
         "placeholder": "Etiquetas separadas por comas (p. ej., orgánico, sin gluten)"
       },
       "foodStamp": {
@@ -243,9 +241,6 @@
   },
   "itemValidation": {
     "nameRequired": "El nombre del artículo es obligatorio",
-    "nameEmpty": "El nombre del artículo no puede estar vacío",
-    "nameMax": "El nombre del artículo no puede superar los {{count}} caracteres",
-    "nameChars": "El nombre del artículo solo puede contener letras, números, espacios y signos de puntuación comunes",
     "descriptionMax": "La descripción no puede superar los {{count}} caracteres",
     "upcDigits": "El UPC solo puede contener números",
     "upcMin": "El UPC debe tener al menos {{count}} dígitos",
@@ -282,6 +277,8 @@
   },
   "itemPhotos": {
     "pendingReview": "Pendiente de revisión",
+    "pendingReviewAction": "Foto pendiente de revisión",
+    "pendingReviewBody": "Un administrador revisa esta foto antes de que todos la vean. Hasta entonces solo la ves tú.",
     "viewPhoto": "Ver foto",
     "viewPhotoLabeled": "Ver foto: {{perspective}}",
     "counter": "{{current}} de {{total}}",
@@ -324,12 +321,10 @@
     "brandOptional": "Marca (opcional)",
     "placeholderItemName": "p. ej., arroz, pasta",
     "placeholderCategory": "p. ej., cereales, lácteos",
-    "tags": "Etiquetas",
     "tagsPlaceholder": "Introduce etiquetas separadas por comas",
     "location": "Ubicación",
     "locationPlaceholder": "p. ej., estante superior, cajón 2",
     "storageNotes": "Notas de almacenamiento",
-    "notes": "Notas",
     "addTitle": "Añadir artículo a la despensa",
     "editTitle": "Editar artículo de la despensa",
     "quantityUnit": "Cantidad y unidad",
@@ -412,7 +407,6 @@
     "contains": "Contiene"
   },
   "storageLocationCard": {
-    "default": "Predeterminada",
     "insideParent": "Dentro de {{parent}}",
     "capacityWithUnit": "/ {{capacity}} {{unit}}",
     "capacity_one": "/ {{count}} unidad",
@@ -459,5 +453,20 @@
   },
   "storeBranch": {
     "number": "Tienda n.º {{number}}"
+  },
+  "storeShelfPrices": {
+    "title": "Precios en tiendas",
+    "cheapest": "Más barato",
+    "sale": "Oferta",
+    "listStore": "Tienda de esta lista",
+    "was": "antes {{price}}",
+    "usually": "Normalmente {{price}}",
+    "usuallyOver_one": "Normalmente {{price}} en {{count}} día",
+    "usuallyOver_other": "Normalmente {{price}} en {{count}} días",
+    "lowestIn_one": "Precio más bajo en {{count}} día",
+    "lowestIn_other": "Precio más bajo en {{count}} días",
+    "lastSeen": "Visto por última vez el {{date}}",
+    "showMore_one": "Mostrar {{count}} más",
+    "showMore_other": "Mostrar {{count}} más"
   }
 }

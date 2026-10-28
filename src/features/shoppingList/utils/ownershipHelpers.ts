@@ -155,6 +155,24 @@ export function isShoppingListOwner(
   return list.ownerships?.some(o => o.userId === currentUserId) ?? false;
 }
 
+/** Whether the viewer may change a list's settings; `unknown` until it loads. */
+export type OwnershipAnswer = 'owner' | 'other' | 'unknown';
+
+/**
+ * A new list is the author's. For an existing one `unknown` is neither: owner
+ * would offer the owner-only controls to a non-owner, and `other` would hide
+ * them from the owner with no way to tell why.
+ */
+export function listOwnershipOf(
+  listId: string | undefined,
+  list: ShoppingListWithOwnership | null,
+  currentUserId?: string,
+): OwnershipAnswer {
+  if (!listId) return 'owner';
+  if (!list) return 'unknown';
+  return isShoppingListOwner(list, currentUserId) ? 'owner' : 'other';
+}
+
 /**
  * Get current user's role in a shopping list (as a collaborator)
  */
@@ -217,13 +235,13 @@ const ROLE_LABEL_KEYS: Record<
   CollaboratorRole | MembershipRole,
   TranslationKey
 > = {
-  [CollaboratorRole.Owner]: 'collaboratorRoles.owner',
+  [CollaboratorRole.Owner]: 'labels.owner',
   [CollaboratorRole.Admin]: 'labels.admin',
   [CollaboratorRole.Editor]: 'collaboratorRoles.editor',
   [CollaboratorRole.Viewer]: 'collaboratorRoles.viewer',
   [CollaboratorRole.Shopper]: 'collaboratorRoles.shopper',
   [CollaboratorRole.Contributor]: 'collaboratorRoles.contributor',
-  [MembershipRole.Member]: 'roles.member',
+  [MembershipRole.Member]: 'labels.member',
   [MembershipRole.Guest]: 'labels.guest',
 };
 

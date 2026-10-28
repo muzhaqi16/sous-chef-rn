@@ -164,11 +164,12 @@ export const colors = {
       text: '#EA580C',
       iconBg: '#FEF3C7',
     },
+    // The secondary ramp: the brand orange would read as `warning`.
     info: {
-      bg: '#EFF6FF',
-      border: '#BFDBFE',
-      text: '#2563EB',
-      iconBg: '#DBEAFE',
+      bg: charade['50'],
+      border: charade['200'],
+      text: charade['800'],
+      iconBg: charade['100'],
     },
     success: {
       bg: '#F0FDF4',

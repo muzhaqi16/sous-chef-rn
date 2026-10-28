@@ -13,6 +13,7 @@ import type { TargetRect } from '#components/organisms/SpotlightCoachMark/Spotli
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import { storeApi } from '#store';
 import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
+import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
 
 // Key shape shared with useFeatureHint / resetAllFeatureHints.
 const HINT_PREFIX = 'feature_hint_shown_';
@@ -61,6 +62,23 @@ export type TutorialRectKey =
 
 export const TUTORIAL_TOTAL_STEPS = 8;
 
+const PRICE_STEP_INDEX = 5;
+
+/**
+ * A step's place in the count the coach mark shows. With budget and prices
+ * off the price step is left out, so the steps after it move up one.
+ */
+export const tutorialStepPosition = (
+  stepIndex: number,
+  priceStep: boolean,
+): { stepIndex: number; totalSteps: number } =>
+  priceStep
+    ? { stepIndex, totalSteps: TUTORIAL_TOTAL_STEPS }
+    : {
+        stepIndex: stepIndex > PRICE_STEP_INDEX ? stepIndex - 1 : stepIndex,
+        totalSteps: TUTORIAL_TOTAL_STEPS - 1,
+      };
+
 // Partial: the guided and idle steps spotlight nothing.
 export const TUTORIAL_STEP_CONFIG: Partial<
   Record<
@@ -96,7 +114,7 @@ export const TUTORIAL_STEP_CONFIG: Partial<
     titleKey: 'shoppingListTutorial.longPress.title',
     subtitleKey: 'shoppingListTutorial.longPress.subtitle',
     rectKey: 'itemCard',
-    stepIndex: 5,
+    stepIndex: PRICE_STEP_INDEX,
   },
   [ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB]: {
     titleKey: 'shoppingListTutorial.purchasedTab.title',
@@ -117,6 +135,8 @@ export const TUTORIAL_STEP_CONFIG: Partial<
 interface ShoppingListTutorialStateContextValue {
   currentStep: ShoppingListTutorialStep;
   isActive: boolean;
+  /** Whether the price step is in the sequence: budget and prices are on. */
+  priceStep: boolean;
   rects: Partial<Record<TutorialRectKey, TargetRect | null>>;
 }
 
@@ -173,14 +193,18 @@ interface ShoppingListTutorialProviderProps {
   children: ReactNode;
   /** Whether preconditions are met (e.g. lists.length > 0) */
   canStart: boolean;
+  /** The list on screen, whose price tracking decides the price step. */
+  listId?: string;
 }
 
 export function ShoppingListTutorialProvider({
   children,
   canStart,
+  listId,
 }: ShoppingListTutorialProviderProps) {
   const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
+  const priceStep = useListAsksPrice(listId);
 
   const [isCompleted, setIsCompleted] = useState(() =>
     readCompletedFromStorage(userId),
@@ -294,9 +318,13 @@ export function ShoppingListTutorialProvider({
     advanceTo(ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX);
   };
 
+  const afterCheckbox = priceStep
+    ? ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE
+    : ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB;
+
   const notifyCheckboxTapped = () => {
     if (currentStep !== ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX) return;
-    advanceTo(ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE);
+    advanceTo(afterCheckbox);
   };
 
   const notifyLongPressPriceSeen = () => {
@@ -342,8 +370,7 @@ export function ShoppingListTutorialProvider({
         ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS,
       [ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS]:
         ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
-      [ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX]:
-        ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE,
+      [ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX]: afterCheckbox,
       [ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE]:
         ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB,
       [ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB]:
@@ -376,6 +403,7 @@ export function ShoppingListTutorialProvider({
   const stateValue: ShoppingListTutorialStateContextValue = {
     currentStep,
     isActive,
+    priceStep,
     rects,
   };
 

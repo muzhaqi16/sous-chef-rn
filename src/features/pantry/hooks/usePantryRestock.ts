@@ -43,9 +43,11 @@ type RestockDetails = Pick<
   'costPerUnit' | 'totalCost' | 'storeId' | 'expiresOn' | 'notes'
 >;
 
-/** A count of the product bought with no unit; the stack's own unit decides it. */
+/** A count of the product bought, in the buyer's unit or else the stack's own. */
 interface Bought {
   count: number;
+  /** The COUNT unit the buyer counted in, when they named one. */
+  unitId?: string;
   packageSize?: PackageSizeInput | null;
   /**
    * The product, for an add when nothing sizes the packages. `itemId` is the
@@ -69,7 +71,8 @@ type PantryRestockOptions = Stated & {
 /**
  * The one restock of a held stack: an amount countable in its own unit moves
  * the row at once, offline too; packages wait for the server to size them. A
- * count nothing sizes goes as a `forceAdd` add, counted into a counted stack.
+ * count nothing sizes, or one in a unit the stack is not counted in, goes as a
+ * `forceAdd` add.
  */
 export function usePantryRestock(pantryId: string | undefined) {
   const { t } = useTranslation();
@@ -115,17 +118,23 @@ export function usePantryRestock(pantryId: string | undefined) {
       ...details
     }: PantryRestockOptions,
   ): Promise<PantryRestockOutcome> => {
+    const heldUnit = readStackUnit(client.cache, pantryItemId);
     const amount =
       stated ??
       boughtAmountOf(bought.count, {
-        heldUnit: readStackUnit(client.cache, pantryItemId),
+        heldUnit,
         packageSize: bought.packageSize,
+        unitId: bought.unitId,
       });
     const refusal = fallback ?? t('errors.restockFailedRetry');
-    // A restock names one stack and refuses packages nothing sizes; an add
-    // with `forceAdd` counts them as the API counts any add: in a counted stack
-    // of the item, joined if one is held.
-    if (bought && amount.packages && !amount.packages.size) {
+    // A restock names one stack: it refuses packages nothing sizes, and a count
+    // in a unit the stack is not counted in. An add with `forceAdd` takes both
+    // as the API counts any add: joined to a held stack its unit restates
+    // into, else a stack of its own.
+    const { packages } = amount;
+    const inOtherUnit =
+      packages?.unitId != null && packages.unitId !== heldUnit?.id;
+    if (bought && packages && (!packages.size || inOtherUnit)) {
       const { itemId } = bought.item;
       const outcome = await intake.addItem(
         bought.item.name,
@@ -133,7 +142,7 @@ export function usePantryRestock(pantryId: string | undefined) {
         {
           present,
           fallback: refusal,
-          ...(itemId ? { local: { itemId } } : {}),
+          ...(itemId ? { local: { itemId, unitId: bought.unitId } } : {}),
         },
       );
       return outcome.status === 'added'

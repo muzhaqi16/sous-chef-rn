@@ -241,6 +241,50 @@ describe('useMealPlans', () => {
     );
   });
 
+  // `currentMealPlan` (API-18) names the plan covering today in the same round
+  // trip as the list; the plans from today are asked only for an upcoming one.
+  describe('with what currentMealPlan said', () => {
+    const isCurrentVariant = (variables: unknown) =>
+      (variables as { filters?: { startDate?: string } }).filters?.startDate !==
+      undefined;
+
+    it.each([
+      ['while it is still being asked', { waiting: true, planId: null }],
+      ['once it names a plan', { waiting: false, planId: 'today' }],
+    ])('leaves the plans from today unasked %s', async (_label, current) => {
+      const cache = seedPlanCache([
+        { id: 'today', startDate: YESTERDAY, endDate: TOMORROW },
+      ]);
+      const recorded = recordMock(GetMealPlansDocument, {
+        data: planConnection([]),
+      });
+      const { result } = renderHookWithApollo(() => useMealPlans({ current }), {
+        cache,
+        operationMocks: [recorded.mock, recorded.mock],
+      });
+
+      await waitFor(() => expect(recorded.fired).toHaveLength(1));
+      expect(recorded.fired.some(isCurrentVariant)).toBe(false);
+      if (current.planId) {
+        expect(result.current.state.currentPlan?.id).toBe('today');
+      }
+    });
+
+    it('asks for the plans from today when it names none, for the upcoming', async () => {
+      const recorded = recordMock(GetMealPlansDocument, {
+        data: planConnection([]),
+      });
+      renderHookWithApollo(
+        () => useMealPlans({ current: { waiting: false, planId: null } }),
+        { operationMocks: [recorded.mock, recorded.mock] },
+      );
+
+      await waitFor(() =>
+        expect(recorded.fired.some(isCurrentVariant)).toBe(true),
+      );
+    });
+  });
+
   describe('beyond the first page', () => {
     type Plan = { id: string; startDate: string; endDate: string };
     /** A week-long plan starting `startOffsetDays` from the pinned today. */

@@ -56,6 +56,25 @@ const RECONNECT_DEBOUNCE_MS = 2000; // 2 seconds debounce for reconnections
 // First connect does NOT fire (it's not a reconnect).
 let hasConnectedBefore = false;
 const reconnectListeners = new Set<() => void>();
+// From an ack to the next close, every server change reaches the cache as it
+// happens; a drop ends in a reconnect, which resyncs what it missed.
+let channelOpen = false;
+const channelListeners = new Set<() => void>();
+
+const setChannelOpen = (open: boolean) => {
+  if (open === channelOpen) return;
+  channelOpen = open;
+  channelListeners.forEach(listener => listener());
+};
+
+/** Whether the live-event channel is acked and open right now. */
+export const isLiveChannelOpen = (): boolean => channelOpen;
+
+/** Calls `listener` whenever the channel opens or closes; returns the unsubscribe. */
+export function onLiveChannelChange(listener: () => void): () => void {
+  channelListeners.add(listener);
+  return () => channelListeners.delete(listener);
+}
 
 /** Subscribe to WebSocket reconnects. Returns an unsubscribe fn. */
 export function onWebSocketReconnected(listener: () => void): () => void {
@@ -382,6 +401,7 @@ const createWsClient = () => {
     on: {
       connected: (_socket: unknown, payload: unknown) => {
         dialStage = 'acked';
+        setChannelOpen(true);
         persistRotatedTokensFromAck(payload);
 
         // A connect that follows a previous connection is a reconnect — the
@@ -415,6 +435,7 @@ const createWsClient = () => {
         }
       },
       closed: (event: unknown) => {
+        setChannelOpen(false);
         // A close before the stability window must NOT reset the backoff
         // counter — clear the pending reset so rapid connect→close cycles
         // (e.g. subscription-cap rejections) escalate the backoff.
@@ -717,6 +738,7 @@ export const disposeWebSocket = () => {
   // listeners and triggering a spurious resync.
   lastReconnectTime = 0;
   hasConnectedBefore = false;
+  setChannelOpen(false);
 
   if (!client) return;
 

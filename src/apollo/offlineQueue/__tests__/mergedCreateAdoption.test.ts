@@ -659,3 +659,148 @@ describe("a merged create's queued writes", () => {
     expect(queueStore.getMutation('remove')?.status).toBe(QueueStatus.SUCCESS);
   });
 });
+
+// USM-3: a stack merged into another between enqueue and replay. A delta
+// naming it lands on the survivor, which the answer names; the rest of the
+// queue follows the user's rule: deltas move, sets do not. (A removal queued
+// after a use collapses into the removal before any replay.)
+describe('a delta queued against a stack merged since', () => {
+  const useOnMerged = {
+    data: {
+      createPantryItemUsage: {
+        __typename: 'CreatePantryItemUsagePayload',
+        pantry: { __typename: 'Pantry', id: 'pantry-1' },
+        pantryItemUsage: {
+          __typename: 'PantryItemUsage',
+          id: 'usage-1',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: 'survivor-1',
+            version: 9,
+          },
+        },
+      },
+    },
+  };
+  const queue = (
+    id: string,
+    document: Parameters<typeof queuedMutationFor>[0],
+    input: Record<string, unknown>,
+    offset: number,
+  ) =>
+    queueStore.addMutation(
+      makeQueuedMutation({
+        id,
+        ...queuedMutationFor(document),
+        variables: { input },
+        createdAt: NOW + offset,
+      }),
+    );
+  const queueUse = () =>
+    queue(
+      'use',
+      CreatePantryItemUsageDocument,
+      {
+        pantryItemId: 'merged-1',
+        amount: { quantity: 1 },
+        purpose: 'CONSUMED',
+      },
+      0,
+    );
+  const managerWithHandlers = () => {
+    const manager = new QueueManager();
+    const failed = jest.fn();
+    const kept = jest.fn();
+    manager.setFailureHandler(failed);
+    manager.setRemovalKeptHandler(kept);
+    return { manager, failed, kept };
+  };
+
+  it('lands on the survivor, with no withdrawal, and later deltas follow', async () => {
+    queueUse();
+    queue(
+      'restock',
+      RestockPantryItemDocument,
+      { id: 'merged-1', quantity: 2, idempotencyKey: 'restock-1' },
+      1,
+    );
+    mockClient.mutate.mockResolvedValueOnce(useOnMerged).mockResolvedValueOnce({
+      data: {
+        restockPantryItem: {
+          __typename: 'RestockPantryItemPayload',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: 'survivor-1',
+            version: 10,
+          },
+        },
+      },
+    });
+    const { manager, failed } = managerWithHandlers();
+
+    await manager.processQueue();
+
+    expect(failed).not.toHaveBeenCalled();
+    expect(queueStore.getMutation('use')?.status).toBe(QueueStatus.SUCCESS);
+    expect(sentInputs()[1]).toMatchObject({ id: 'survivor-1' });
+  });
+
+  it('withdraws a recount of the merged stack as a conflict', async () => {
+    queueUse();
+    queue(
+      'recount',
+      UpdatePantryItemQuantityDocument,
+      { pantryItemId: 'merged-1', quantity: '4', version: 3 },
+      1,
+    );
+    mockClient.mutate.mockResolvedValueOnce(useOnMerged);
+    const { manager, failed } = managerWithHandlers();
+
+    await manager.processQueue();
+
+    expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+    expect(failed).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutationId: 'recount',
+        error: expect.objectContaining({ type: 'conflict' }),
+      }),
+    );
+  });
+
+  it('takes the merged row off the pantry and links the survivor', async () => {
+    mockClient.cache.restore({
+      ROOT_QUERY: {
+        __typename: 'Query',
+        'pantry:{"id":"pantry-1"}': { __ref: 'Pantry:pantry-1' },
+      },
+      'Pantry:pantry-1': {
+        __typename: 'Pantry',
+        id: 'pantry-1',
+        'itemsConnection:{"filters":{},"orderBy":{}}': {
+          __typename: 'PantryItemConnection',
+          totalCount: 2,
+          edges: [
+            {
+              __typename: 'PantryItemEdge',
+              node: { __ref: 'PantryItem:merged-1' },
+            },
+            {
+              __typename: 'PantryItemEdge',
+              node: { __ref: 'PantryItem:survivor-1' },
+            },
+          ],
+        },
+      },
+      'PantryItem:merged-1': { __typename: 'PantryItem', id: 'merged-1' },
+      'PantryItem:survivor-1': { __typename: 'PantryItem', id: 'survivor-1' },
+    });
+    queueUse();
+    mockClient.mutate.mockResolvedValueOnce(useOnMerged);
+
+    await new QueueManager().processQueue();
+
+    const held = mockClient.cache.extract();
+    expect(held['PantryItem:merged-1']).toBeUndefined();
+    expect(held['PantryItem:survivor-1']).toBeDefined();
+  });
+});

@@ -8,6 +8,11 @@ import {
   AcquisitionMethod,
   ItemCondition,
 } from '#/graphql/generated/schemaTypes';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   ...jest.requireActual('#features/pantry/hooks/usePantryItemTransformation'),
@@ -68,6 +73,7 @@ describe('PantryDetailInfo', () => {
   const defaultProps = {
     itemRef: baseItem,
     brandName: null as string | null,
+    quantityText: '2 L',
     netWeightText: null as string | null,
     remainingNetWeightText: null as string | null,
     quantityBreakdownText: null as string | null,
@@ -111,6 +117,65 @@ describe('PantryDetailInfo', () => {
     expect(screen.getByText('$2.95')).toBeTruthy();
   });
 
+  describe('with budget & prices off', () => {
+    beforeEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    });
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+    });
+
+    it('shows no cost rows, and the purchase day with no total', () => {
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={{ ...baseItem, costPerUnit: 0.74, totalCost: 5.95 }}
+          pricing={{
+            isAveraged: true,
+            isRateDiluted: false,
+            lastPurchase: {
+              date: '2026-08-31T00:00:00Z',
+              totalCost: 3,
+              currency: { __typename: 'Currency', id: 'usd', code: 'USD' },
+            },
+          }}
+        />,
+      );
+
+      expect(screen.queryByText('Avg Cost/Unit')).toBeNull();
+      expect(screen.queryByText('Cost/Unit')).toBeNull();
+      expect(screen.queryByText('Stock value')).toBeNull();
+      expect(screen.queryByText(/\$/)).toBeNull();
+      expect(screen.getByText('Last purchase')).toBeTruthy();
+      expect(screen.getByText('Aug 31, 2026')).toBeTruthy();
+      expect(screen.getByText('Quantity')).toBeTruthy();
+    });
+
+    it('shows the first purchase day with no total', () => {
+      render(
+        <PantryDetailInfo
+          {...defaultProps}
+          itemRef={{
+            ...baseItem,
+            costPerUnit: 0.59,
+            totalCost: 2.95,
+            purchase: {
+              __typename: 'Purchase',
+              id: 'pu1',
+              purchaseDate: '2026-08-30T00:00:00Z',
+              unitPrice: 0.59,
+              totalPrice: 2.95,
+              currency: { __typename: 'Currency', id: 'cur-usd', code: 'USD' },
+            },
+          }}
+        />,
+      );
+
+      expect(screen.getByText('Aug 30, 2026')).toBeTruthy();
+      expect(screen.queryByText(/\$/)).toBeNull();
+    });
+  });
+
   it('always renders Added row', () => {
     render(<PantryDetailInfo {...defaultProps} />);
     expect(screen.getByText('Added')).toBeTruthy();
@@ -141,23 +206,7 @@ describe('PantryDetailInfo', () => {
         itemRef={{ ...baseItem, quantity: 2, ...holding(1.25) }}
       />,
     );
-    expect(screen.getByText('1 1/4 L')).toBeTruthy();
     expect(screen.getByText('Packages')).toBeTruthy();
-  });
-
-  it('shows a stack as the server shows it: 12 pc as 1 doz', () => {
-    const item: PantryDetailInfo_PantryItemFragment = {
-      ...baseItem,
-      quantity: 12,
-      heldQuantity: 12,
-      displayAmount: {
-        __typename: 'DisplayAmount',
-        quantity: 1,
-        unit: { __typename: 'Unit', id: 'u-doz', symbol: 'doz' },
-      },
-    };
-    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('1 doz')).toBeTruthy();
   });
 
   it('shows no packages row when every package is whole', () => {
@@ -408,18 +457,6 @@ describe('PantryDetailInfo', () => {
       expect(screen.queryByText('Stock value')).toBeNull();
       expect(screen.queryByText('$0.00')).toBeNull();
     });
-  });
-
-  it('renders a fractional quantity as a cooking fraction', () => {
-    const item = { ...baseItem, quantity: 2, ...holding(1.25) };
-    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('1 1/4 L')).toBeTruthy();
-  });
-
-  it('rounds a quantity no cooking fraction fits to three decimals', () => {
-    const item = { ...baseItem, quantity: 178, ...holding(177.4412) };
-    render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('177.441 L')).toBeTruthy();
   });
 
   it('formats the Min Stock and Restock At quantities', () => {

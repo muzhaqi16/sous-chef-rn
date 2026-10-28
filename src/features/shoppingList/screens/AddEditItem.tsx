@@ -32,6 +32,7 @@ import {
 } from '#/utils/parseDecimalInput';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { refByIdOrName, typedItemRef } from '#/utils/refInput';
 
 type RouteParams = {
@@ -44,6 +45,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   route,
 }) => {
   const { t } = useTranslation();
+  // Off, the line is added and edited with no price.
+  const showPrices = useBudgetAndPricesEnabled();
   const navigation = useAppNavigation();
   const { listId, itemId } = route.params;
   // Extract initialItemName (only present when navigating from AddItem route)
@@ -198,9 +201,10 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
             ...unitData,
             notes,
             category,
-            ...(estimatedPrice && {
-              pricing: { estimatedPrice: parseDecimalInput(estimatedPrice) },
-            }),
+            ...(showPrices &&
+              estimatedPrice && {
+                pricing: { estimatedPrice: parseDecimalInput(estimatedPrice) },
+              }),
             // Always sent (0/1/2) so "low" persists, and so an edit can lower
             // priority back to it.
             priority,
@@ -364,17 +368,18 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       </FieldRow>
 
-      {/* Estimated Price Field */}
-      <FormInput
-        testID={formTestIDs.priceInput}
-        label={t('shoppingListScreens.estimatedPrice')}
-        value={estimatedPrice}
-        onChangeText={text => setFieldValue('estimatedPrice', text)}
-        placeholder={localizeNumericHint(
-          t('shoppingListScreens.estimatedPricePlaceholder'),
-        )}
-        keyboardType="numeric"
-      />
+      {showPrices ? (
+        <FormInput
+          testID={formTestIDs.priceInput}
+          label={t('shoppingListScreens.estimatedPrice')}
+          value={estimatedPrice}
+          onChangeText={text => setFieldValue('estimatedPrice', text)}
+          placeholder={localizeNumericHint(
+            t('shoppingListScreens.estimatedPricePlaceholder'),
+          )}
+          keyboardType="numeric"
+        />
+      ) : null}
 
       {/* Priority */}
       <SegmentedControl
@@ -401,7 +406,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
       {/* Notes Field */}
       <FormInput
-        label={t('shoppingListScreens.notes')}
+        label={t('labels.notes')}
         value={notes}
         onChangeText={text => setFieldValue('notes', text)}
         placeholder={t('shoppingListScreens.notesPlaceholder')}

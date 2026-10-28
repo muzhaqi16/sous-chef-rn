@@ -27,16 +27,16 @@
     "inviteHomeMessage": "{{name}} ti ha invitato a unirti alla sua casa per gestire la dispensa e le liste insieme!"
   },
   "inviteUser": {
-    "roleMemberLabel": "Membro",
     "roleMemberDescription": "Può aggiungere e modificare elementi nella dispensa",
     "roleAdminDescription": "Può gestire membri e impostazioni",
     "roleGuestDescription": "Accesso in sola lettura alla casa",
-    "roleOwnerLabel": "Proprietario",
     "roleOwnerDescription": "Controllo totale della casa e di tutti i membri",
     "ownerWarning": "⚠️ I proprietari hanno il controllo totale",
     "submit": "Invia invito",
     "offlineError": "Impossibile inviare l'invito offline",
     "sendFailed": "Impossibile inviare l'invito. Riprova.",
+    "inviteeRemoved": "Questa persona è stata rimossa dalla casa. Solo il proprietario o un amministratore può invitarla di nuovo.",
+    "inviteeSuspended": "L'iscrizione di questa persona a questa casa è sospesa.",
     "emailLabel": "Indirizzo email",
     "emailPlaceholder": "Inserisci indirizzo email"
   },
@@ -47,13 +47,9 @@
     "unknownType": "Tipo di invito sconosciuto",
     "declineConfirm": "Vuoi davvero rifiutare questo invito?",
     "notFound": "Invito non trovato o scaduto",
-    "loadingDetails": "Caricamento dettagli dell'invito...",
     "invitedHeading": "Hai ricevuto un invito!",
     "homeInviteText": "{{inviter}} ti ha invitato a unirti",
     "listInviteText": "{{inviter}} ti ha invitato a collaborare a",
-    "resourceHome": "Casa",
-    "roleLabel": "Ruolo: {{role}}",
-    "descriptionLabel": "Descrizione:",
     "acceptFailed": "Impossibile accettare l'invito. Riprova.",
     "declineFailed": "Impossibile rifiutare l'invito. Riprova.",
     "unavailableHere": "Apri questo invito dalla sua notifica, o dall'email che ti abbiamo inviato, per accettarlo.",
@@ -71,8 +67,6 @@
     "accessibilityDefaultSuffix": ", casa predefinita",
     "statsHome_one": "Casa",
     "statsHome_other": "Case",
-    "statsMember_one": "Membro",
-    "statsMember_other": "Membri",
     "statsPantry_one": "Dispensa",
     "statsPantry_other": "Dispense",
     "cardDefault": "Predefinita",
@@ -81,9 +75,7 @@
   "homeDetail": {
     "shareLinkMessage": "Unisciti alla mia casa",
     "title": "Dettagli Casa",
-    "errorFailedToLoad": "Caricamento dei dettagli della casa non riuscito",
     "sectionHomeInformation": "Informazioni Casa",
-    "homeNameEmptyError": "Il nome della casa non può essere vuoto",
     "labelAllowJoinCode": "Consenti Codice di Accesso",
     "descriptionAllowJoinCode": "Permetti ad altri di unirsi a questa casa con un codice",
     "labelJoinCode": "Codice di Accesso",
@@ -104,10 +96,11 @@
     "youLabel": "Tu",
     "storageLocationsSubtitle": "Gestisci dove vengono conservati gli articoli",
     "leaveHomeDescription": "Lasciare questa casa rimuoverà il tuo accesso a tutte le dispense, liste della spesa, piani pasti e modelli condivisi.",
-    "ownerCannotLeaveMessage": "I proprietari non possono lasciare la casa. Trasferisci la proprietà a un altro membro o elimina la casa."
+    "ownerCannotLeaveMessage": "I proprietari non possono lasciare la casa. Trasferisci la proprietà a un altro membro o elimina la casa.",
+    "dietaryNeedsRowTitle": "Cosa non possono mangiare i membri",
+    "dietaryNeedsRowSubtitle": "Allergie e restrizioni che i membri condividono con questa casa"
   },
   "joinHome": {
-    "homeFallback": "Casa",
     "enterCodeTitle": "Inserisci il Codice",
     "enterCodeDescription": "Inserisci il codice di accesso che hai ricevuto per unirti a una casa.",
     "findHome": "Trova Casa",
@@ -116,8 +109,6 @@
     "invitedToJoin": "Hai ricevuto un invito a unirti a",
     "enterDifferentCode": "Inserisci un altro codice",
     "joinFailed": "Impossibile unirsi alla casa. Il codice potrebbe non essere valido o scaduto.",
-    "memberCount_one": "{{count}} membro",
-    "memberCount_other": "{{count}} membri",
     "pantryCount_one": "{{count}} dispensa",
     "pantryCount_other": "{{count}} dispense"
   },
@@ -130,16 +121,11 @@
     "staleHome": "Questo link di invito alla casa è scaduto. Richiedi un nuovo link per unirti.",
     "staleList": "Questo link di invito alla lista è scaduto. Richiedi un nuovo link per unirti."
   },
-  "roles": {
-    "owner": "Proprietario",
-    "member": "Membro"
-  },
   "collaboratorRoles": {
     "viewer": "Visualizzatore",
     "shopper": "Acquirente",
     "contributor": "Collaboratore",
     "editor": "Editore",
-    "owner": "Proprietario",
     "permissions": {
       "viewItems": "Vedere gli articoli",
       "addItems": "Aggiungere articoli",
@@ -151,7 +137,7 @@
     "descriptions": {
       "viewer": "Può vedere la lista della spesa",
       "shopper": "Può segnare gli articoli come acquistati",
-      "contributor": "Può aggiungere articoli e segnarli come acquistati",
+      "contributor": "Può aggiungere e modificare articoli e segnarli come acquistati",
       "editor": "Può aggiungere, modificare e rimuovere articoli",
       "admin": "Controllo totale, inclusa la possibilità di invitare altri",
       "owner": "Controllo totale sulla lista della spesa"
@@ -174,10 +160,6 @@
     "invalidHomeId": "ID casa non valido",
     "leaveBody": "Vuoi davvero lasciare \"{{name}}\"? Perderai l'accesso a questa casa e alle sue dispense e liste della spesa."
   },
-  "homeRoles": {
-    "owner": "Proprietario",
-    "member": "Membro"
-  },
   "inviteStatus": {
     "PENDING": "In attesa",
     "ACCEPTED": "Accettato",
@@ -185,5 +167,17 @@
     "EXPIRED": "Scaduto",
     "REVOKED": "Revocato",
     "USED": "Usato"
+  },
+  "homeDietaryNeeds": {
+    "title": "Esigenze alimentari",
+    "emptyTitle": "Nessuno condivide ancora le proprie esigenze alimentari",
+    "emptyBody": "Ogni membro sceglie di condividerle nel proprio Profilo alimentare.",
+    "group": {
+      "allergicTo": "Allergia a",
+      "intolerantTo": "Intolleranza a",
+      "avoids": "Evita",
+      "follows": "Segue",
+      "goals": "Obiettivi"
+    }
   }
 }

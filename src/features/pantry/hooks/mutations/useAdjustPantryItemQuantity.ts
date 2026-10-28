@@ -19,6 +19,7 @@ import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 import { todayKey } from '#/utils/dateUtils';
+import type { RecountUnits } from '#features/pantry/types';
 
 interface UseAdjustPantryItemQuantityOptions {
   onSuccess?: () => void;
@@ -40,12 +41,13 @@ export function useAdjustPantryItemQuantity({
     reason: string,
     version: number,
     remainingNetWeight?: number,
+    units: RecountUnits = {},
   ): Promise<boolean> => {
     const cacheId = client.cache.identify({
       __typename: 'PantryItem',
       id: pantryItemId,
     });
-    const currentItem =
+    const readItem = () =>
       client.cache.readFragment<UseAdjustPantryItemQuantity_PantryItemFragment>(
         {
           id: cacheId,
@@ -53,6 +55,7 @@ export function useAdjustPantryItemQuantity({
           fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
         },
       );
+    const currentItem = readItem();
 
     const writeItem = (data: UseAdjustPantryItemQuantity_PantryItemFragment) =>
       client.cache.writeFragment({
@@ -64,15 +67,27 @@ export function useAdjustPantryItemQuantity({
 
     // Permanent optimistic write before firing — newQuantity is absolute (a
     // physical recount), so set it directly. Persist it too so the exact value
-    // survives an app-kill before the queue replays.
-    if (currentItem) {
-      const optimistic = enhanceWithVersion(currentItem, {
-        quantity: newQuantity,
-        heldQuantity: newQuantity,
-        ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
-      });
+    // survives an app-kill before the queue replays. A figure stated in another
+    // unit is not written ahead: only the server converts it.
+    const statedInOwnUnit = !units.newQuantityUnitId;
+    const weightInOwnUnit = !units.remainingNetWeightUnitId;
+    // What the recount writes over the stack, and the stack as it was.
+    const ahead =
+      currentItem && statedInOwnUnit
+        ? {
+            before: currentItem,
+            written: enhanceWithVersion(currentItem, {
+              quantity: newQuantity,
+              heldQuantity: newQuantity,
+              ...(remainingNetWeight != null && weightInOwnUnit
+                ? { remainingNetWeight }
+                : {}),
+            }),
+          }
+        : null;
+    if (ahead) {
       try {
-        writeItem(optimistic);
+        writeItem(ahead.written);
         writeHeldStock(client.cache, pantryItemId, newQuantity);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
@@ -102,10 +117,23 @@ export function useAdjustPantryItemQuantity({
       );
     };
 
+    // A newer answer for the stack since (another member's use) replaced what
+    // this recount wrote, and stays.
+    const stillHolds = (
+      written: UseAdjustPantryItemQuantity_PantryItemFragment,
+    ) => {
+      const now = readItem();
+      return (
+        !!now &&
+        now.version === written.version &&
+        now.updatedAt === written.updatedAt &&
+        now.quantity === written.quantity
+      );
+    };
     const revert = () => {
-      if (currentItem) {
+      if (ahead && stillHolds(ahead.written)) {
         try {
-          writeItem(currentItem);
+          writeItem(ahead.before);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Revert rejected pantry quantity adjust',
@@ -129,6 +157,7 @@ export function useAdjustPantryItemQuantity({
               idempotencyKey: generateEntityId(),
               version,
               ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
+              ...units,
             },
           },
         }),

@@ -25,7 +25,6 @@ import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { alertService } from '#/services/alertService';
 import {
   ErrorCode,
-  ExternalSource,
   NetWeightKind,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
@@ -53,8 +52,24 @@ jest.mock('#hooks/data/useImageUpload', () => ({
   })),
 }));
 
+// Only the shelf-price flag is switched here; every other flag reads as built.
+const mockShelfPricesOffered = jest.fn(() => true);
+jest.mock('#hooks/settings/useFeatureFlag', () => {
+  const actual = jest.requireActual<
+    typeof import('#hooks/settings/useFeatureFlag')
+  >('#hooks/settings/useFeatureFlag');
+  return {
+    useFeatureFlag: (flag: Parameters<typeof actual.useFeatureFlag>[0]) =>
+      flag === 'storeShelfPrices'
+        ? mockShelfPricesOffered()
+        : actual.useFeatureFlag(flag),
+  };
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
+  mockShelfPricesOffered.mockReturnValue(true);
+  useStore.setState({ selectedHomeId: null });
 });
 
 /**
@@ -174,13 +189,6 @@ describe('useSearchResults', () => {
       licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
       sourceUrl: 'https://world.openfoodfacts.org/product/0001112223334',
     } satisfies LookupNode['imageCredit'];
-    const notice = {
-      __typename: 'DataAttribution',
-      source: ExternalSource.Openfoodfacts,
-      notice: 'Product data from Open Food Facts, available under the ODbL.',
-      licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
-      sourceUrl: 'https://world.openfoodfacts.org/product/0001112223334',
-    } satisfies NonNullable<LookupNode['dataAttributions']>[number];
 
     it.each<[string, LookupNode, Record<string, unknown>]>([
       [
@@ -212,11 +220,6 @@ describe('useSearchResults', () => {
         'shows an item with no photos by its only image and credit',
         { photos: [], imageCredit: credit },
         { image: { url: SAMPLE_UPC_ITEM.imageUrl, credit } },
-      ],
-      [
-        'carries the notices the item data asks for',
-        { dataAttributions: [notice] },
-        { dataAttributions: [notice] },
       ],
       // Both flags carry through to the card, which hides its edit action when
       // both are false — a scan can surface an item the user may not touch.
@@ -250,7 +253,47 @@ describe('useSearchResults', () => {
           netWeightKind: 'SERVING',
           brandId: 'brand-pack',
           brandName: 'Pack Brand',
-          trackingUnit: { id: 'unit-can', name: 'can', symbol: 'can' },
+          trackingUnit: {
+            id: 'unit-can',
+            name: 'can',
+            symbol: 'can',
+            type: UnitType.Count,
+          },
+        },
+      ],
+      [
+        "reports the scanned pack's size as read in each unit system",
+        {
+          netWeight: 1360.78,
+          netWeightKind: NetWeightKind.Package,
+          packageSize: {
+            __typename: 'Measure',
+            value: 1360.78,
+            unitId: 'unit-g',
+            metric: {
+              __typename: 'MeasureReading',
+              value: 1.36,
+              unitId: 'unit-kg',
+              symbol: 'kg',
+              displayAsFraction: false,
+              type: UnitType.Weight,
+            },
+            imperial: {
+              __typename: 'MeasureReading',
+              value: 3,
+              unitId: 'unit-lb',
+              symbol: 'lb',
+              displayAsFraction: false,
+              type: UnitType.Weight,
+            },
+          },
+        },
+        {
+          netWeight: 1360.78,
+          packageSize: expect.objectContaining({
+            imperial: expect.objectContaining({ value: 3 }),
+            metric: expect.objectContaining({ value: 1.36 }),
+          }),
         },
       ],
     ])('%s', async (_name, node, expected) => {
@@ -297,10 +340,91 @@ describe('useSearchResults', () => {
       );
 
       await waitFor(() =>
-        expect(upc.fired).toContainEqual({
-          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
-          pantry: 'pantry-7',
-        }),
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({
+            lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
+            pantry: 'pantry-7',
+          }),
+        ),
+      );
+    });
+
+    // The household's alerts ride the lookup, so the scan asks once.
+    it('asks for the household the alerts are read for', async () => {
+      useStore.setState({ selectedHomeId: 'home-1' });
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [upc.mock],
+      });
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({
+            homeId: 'home-1',
+            withHome: true,
+            withPrices: false,
+          }),
+        ),
+      );
+    });
+
+    // A store's shelf price is no household's: it rides store mode's lookup
+    // with or without one, and no other.
+    it('asks for the shelf price at each store in store mode only', async () => {
+      const inStore = lookupMock('upc', []);
+      const { unmount } = renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        { operationMocks: [inStore.mock] },
+      );
+      await waitFor(() =>
+        expect(inStore.fired).toContainEqual(
+          expect.objectContaining({ withHome: false, withShelfPrices: true }),
+        ),
+      );
+      unmount();
+
+      const fromPantry = lookupMock('upc', []);
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [fromPantry.mock],
+      });
+      await waitFor(() =>
+        expect(fromPantry.fired).toContainEqual(
+          expect.objectContaining({ withShelfPrices: false }),
+        ),
+      );
+    });
+
+    it("asks for no shelf prices with the build's flag off", async () => {
+      mockShelfPricesOffered.mockReturnValue(false);
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        { operationMocks: [upc.mock] },
+      );
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({ withShelfPrices: false }),
+        ),
+      );
+    });
+
+    // Store mode's price lines ride it too, and nowhere else are they read.
+    it('asks for what the household paid in store mode', async () => {
+      useStore.setState({ selectedHomeId: 'home-1' });
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        { operationMocks: [upc.mock] },
+      );
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({ homeId: 'home-1', withPrices: true }),
+        ),
       );
     });
 

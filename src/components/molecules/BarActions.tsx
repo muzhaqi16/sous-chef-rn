@@ -1,5 +1,6 @@
 import React from 'react';
 import { CountBadge } from '#components/atoms/CountBadge';
+import { StatusMark } from '#components/atoms/StatusMark';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -20,6 +21,11 @@ export interface HeaderTextAction {
   onPress: () => void;
   /** `primary` is the bar's confirm: bold, in the accent. */
   variant?: ActionVariant;
+  /**
+   * False: nothing new to confirm, so it reads in plain text and keeps its tap;
+   * the accent then says there is something to save. Unset keeps the variant's.
+   */
+  hasChanges?: boolean;
   disabled?: boolean;
   /** Only when the label alone under-describes the action. */
   accessibilityLabel?: string;
@@ -77,7 +83,11 @@ const BarActionButton: React.FC<{
     <Text
       role={action.variant === 'primary' ? 'bodyStrong' : 'body'}
       tone={
-        action.disabled ? 'tertiary' : TEXT_TONE[action.variant ?? 'default']
+        action.disabled
+          ? 'tertiary'
+          : action.hasChanges === false
+          ? 'primary'
+          : TEXT_TONE[action.variant ?? 'default']
       }
       numberOfLines={1}
     >
@@ -87,6 +97,7 @@ const BarActionButton: React.FC<{
     <View>
       <HeaderActionIcon action={action} />
       <CountBadge count={action.badge} />
+      <StatusMark icon={action.mark} />
     </View>
   );
 

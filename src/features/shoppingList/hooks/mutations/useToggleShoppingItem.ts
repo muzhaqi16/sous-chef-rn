@@ -13,6 +13,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
@@ -28,6 +29,7 @@ import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
+import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
 
 interface UseToggleShoppingItemOptions {
   listId: string | null | undefined;
@@ -48,14 +50,32 @@ export function useToggleShoppingItem({
     context: { localFirst: true },
   });
 
-  const toggleItem = async (itemId: string) => {
-    if (!listId) return false;
+  // A tick that cannot be sent says so as a refused one does, so a false
+  // answer has always told the user.
+  const unsent = (): false => {
+    alertService.alert(t('labels.error'), t('errors.updateItemFailed'));
+    return false;
+  };
+
+  /**
+   * Sets a line's purchase state to `wanted`, or flips it when null. A line
+   * already in that state is written nothing ahead, and the server answers a
+   * bare claim of the state it holds with no write. `bought` names the product
+   * a tick bought when the line names a concept above it (a store-mode scan),
+   * so its price lands on that product.
+   */
+  const setPurchased = async (
+    itemId: string,
+    wanted: boolean | null,
+    bought?: PurchasedItemInput,
+  ) => {
+    if (!listId) return unsent();
 
     const cacheId = client.cache.identify({
       __typename: 'ShoppingListItem',
       id: itemId,
     });
-    if (!cacheId) return false;
+    if (!cacheId) return unsent();
 
     const snapshot =
       client.cache.readFragment<UseToggleShoppingItem_ItemFragment>({
@@ -63,56 +83,28 @@ export function useToggleShoppingItem({
         fragment: UseToggleShoppingItem_ItemFragmentDoc,
         fragmentName: 'useToggleShoppingItem_item',
       });
-    if (!snapshot) return false;
+    if (!snapshot) return unsent();
 
     const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
-    const newStatus = !previousIsPurchased;
+    const newStatus = wanted ?? !previousIsPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
     // The flip clears this, so the snapshot is its only record — a refusal that
     // cannot put it back offers move-to-pantry for an already-stocked line.
     const previousMovedToPantryAt =
       snapshot.purchaseInfo.movedToPantryAt ?? null;
 
-    writePurchaseInfo(
-      client.cache,
-      itemId,
-      { isPurchased: newStatus },
-      { updatedAt: new Date().toISOString() },
-    );
-
-    const counterChange = recordListCounters(client.cache, listId, () => {
-      if (newStatus) {
-        moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
-      } else {
-        moveShoppingListItemToUnpurchased(client.cache, listId, { id: itemId });
-      }
-    });
-
-    // Tracks `purchaseInfo`, not `isPurchased` inside it: restoration's
-    // `cache.modify` ignores a modifier for a missing field, and shallow-merges
-    // object values, so a partial `purchaseInfo` is enough.
-    const clearPersistence = optimisticDataPersistence.track(
-      'ShoppingListItem',
-      itemId,
-      'purchaseInfo',
-      { isPurchased: newStatus },
-    );
-
-    const revert = () => {
+    const writeAhead = () => {
       writePurchaseInfo(
         client.cache,
         itemId,
-        {
-          isPurchased: previousIsPurchased,
-          movedToPantryAt: previousMovedToPantryAt,
-        },
-        // Restoring, not flipping: the server never saw the change and still holds
-        // the stamp, which a flip would clear again over the snapshot's value.
-        { updatedAt: previousUpdatedAt, restoring: true },
+        { isPurchased: newStatus },
+        { updatedAt: new Date().toISOString() },
       );
-      // Every failure refetches, which also settles counters that cannot be exact.
-      undoListCounters(client.cache, counterChange, () => {
-        if (previousIsPurchased) {
+
+      // The move counts the line in or out whether or not it was listed, so it
+      // runs only for a real change of state.
+      const counterChange = recordListCounters(client.cache, listId, () => {
+        if (newStatus) {
           moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
         } else {
           moveShoppingListItemToUnpurchased(client.cache, listId, {
@@ -120,8 +112,46 @@ export function useToggleShoppingItem({
           });
         }
       });
-      clearPersistence();
+
+      // Tracks `purchaseInfo`, not `isPurchased` inside it: restoration's
+      // `cache.modify` ignores a modifier for a missing field, and shallow-merges
+      // object values, so a partial `purchaseInfo` is enough.
+      const clearPersistence = optimisticDataPersistence.track(
+        'ShoppingListItem',
+        itemId,
+        'purchaseInfo',
+        { isPurchased: newStatus },
+      );
+
+      const revert = () => {
+        writePurchaseInfo(
+          client.cache,
+          itemId,
+          {
+            isPurchased: previousIsPurchased,
+            movedToPantryAt: previousMovedToPantryAt,
+          },
+          // Restoring, not flipping: the server never saw the change and still holds
+          // the stamp, which a flip would clear again over the snapshot's value.
+          { updatedAt: previousUpdatedAt, restoring: true },
+        );
+        // Every failure refetches, which also settles counters that cannot be exact.
+        undoListCounters(client.cache, counterChange, () => {
+          if (previousIsPurchased) {
+            moveShoppingListItemToPurchased(client.cache, listId, {
+              id: itemId,
+            });
+          } else {
+            moveShoppingListItemToUnpurchased(client.cache, listId, {
+              id: itemId,
+            });
+          }
+        });
+        clearPersistence();
+      };
+      return { revert, clearPersistence };
     };
+    const ahead = newStatus === previousIsPurchased ? null : writeAhead();
 
     const togglePurchasedMutationOptions: Parameters<
       typeof updatePurchaseMutation
@@ -131,13 +161,16 @@ export function useToggleShoppingItem({
           id: itemId,
           version: snapshot.version,
           // The flag alone: the server refuses amounts beside an un-tick.
-          purchaseTracking: { isPurchased: newStatus },
+          purchaseTracking: {
+            isPurchased: newStatus,
+            ...(newStatus && bought && { purchasedItem: bought }),
+          },
         },
       },
       onCompleted: data => {
         // Drop the offline marker only once the server confirms — a queued
         // completion resolves with a null payload and must keep it.
-        if (appliedPayload(data)) clearPersistence();
+        if (appliedPayload(data)) ahead?.clearPersistence();
 
         // Depletion recovery: an empty source connection with totalCount > 0 means
         // the server holds unfetched items for the tab we toggled FROM.
@@ -170,7 +203,7 @@ export function useToggleShoppingItem({
         document: UpdateShoppingListItemDocument,
         fallback: t('errors.updateItemFailed'),
         onFailed: () => {
-          revert();
+          ahead?.revert();
           void refetch().catch(error =>
             errorService.reportError(error, {
               operation: 'ToggleShoppingItem.refetch',
@@ -180,9 +213,18 @@ export function useToggleShoppingItem({
       },
     );
     if (settled.status === 'failed') return false;
+    // Queued is not a failure: the flip stands and replays.
+    if (settled.status === 'queued') return true;
 
     return appliedPayload(settled.data)?.shoppingListItem ?? false;
   };
+
+  const toggleItem = (itemId: string, bought?: PurchasedItemInput) =>
+    setPurchased(itemId, null, bought);
+
+  /** Puts a line in the cart and never takes it out, however often it is sent. */
+  const claimPurchased = (itemId: string, bought?: PurchasedItemInput) =>
+    setPurchased(itemId, true, bought);
 
   /**
    * `purchasedPrice` is PER UNIT: the server records it times the quantity as
@@ -192,14 +234,15 @@ export function useToggleShoppingItem({
   const recordPurchase = async (
     itemId: string,
     amounts: { purchasedQuantity: number; purchasedPrice: number | null },
+    bought?: PurchasedItemInput,
   ) => {
-    if (!listId) return false;
+    if (!listId) return unsent();
 
     const cacheId = client.cache.identify({
       __typename: 'ShoppingListItem',
       id: itemId,
     });
-    if (!cacheId) return false;
+    if (!cacheId) return unsent();
 
     const snapshot =
       client.cache.readFragment<UseToggleShoppingItem_ItemFragment>({
@@ -207,7 +250,7 @@ export function useToggleShoppingItem({
         fragment: UseToggleShoppingItem_ItemFragmentDoc,
         fragmentName: 'useToggleShoppingItem_item',
       });
-    if (!snapshot) return false;
+    if (!snapshot) return unsent();
 
     const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
@@ -269,6 +312,7 @@ export function useToggleShoppingItem({
             ...(amounts.purchasedPrice != null && {
               purchasedPrice: amounts.purchasedPrice,
             }),
+            ...(bought && { purchasedItem: bought }),
           },
         },
       },
@@ -294,5 +338,5 @@ export function useToggleShoppingItem({
     return settled.status !== 'failed';
   };
 
-  return { toggleItem, recordPurchase };
+  return { toggleItem, claimPurchased, recordPurchase };
 }

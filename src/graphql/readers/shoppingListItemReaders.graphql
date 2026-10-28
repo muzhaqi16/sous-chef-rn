@@ -11,6 +11,9 @@ fragment ShoppingListItemReaders on ShoppingListItem {
       displayName
     }
   }
+  amount {
+    ...MeasureReaders
+  }
   brand {
     id
     name
@@ -27,12 +30,6 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     id
     canEdit
     canSuggest
-    dataAttributions {
-      licenseUrl
-      notice
-      source
-      sourceUrl
-    }
     displayUnit {
       id
       name
@@ -44,43 +41,12 @@ fragment ShoppingListItemReaders on ShoppingListItem {
       url
     }
     imageUrl
-    nutritionFacts {
-      id
-      addedSugars
-      calcium
-      calories
-      cholesterol
-      dietaryFiber
-      iron
-      potassium
-      protein
-      saturatedFat
-      servingSize
-      servingUnit
-      sodium
-      totalCarbs
-      totalFat
-      totalSugars
-      transFat
-      vitaminD
-    }
     photos {
       id
-      credit {
-        license
-        licenseUrl
-        sourceUrl
-        text
-      }
-      isPrimary
-      perspective
-      status
-      url
-      variants {
-        id
-        kind
-        url
-      }
+      ...ItemPhotoReaders
+    }
+    shownNutrition {
+      ...ShownNutritionReaders
     }
     storeDepartment
   }

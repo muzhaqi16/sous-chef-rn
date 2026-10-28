@@ -44,8 +44,8 @@ query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {
   }
 }
 
-# Every stack field the change re-denominates. The batches are re-read: each
-# one is restated in the new unit, which the response does not carry.
+# Every stack field the change re-denominates. The batches and the usage
+# summary, each restated in the new unit, come with it.
 fragment usePantryUnitChange_pantryItem on PantryItem {
   id
   version
@@ -91,6 +91,7 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
 mutation ChangePantryItemUnit(
   $input: ChangePantryItemUnitInput!
   $today: LocalDate!
+  $batchesFirst: Int = 100
 ) {
   changePantryItemUnit(input: $input) {
     __typename
@@ -103,10 +104,15 @@ mutation ChangePantryItemUnit(
         id
         ...PantryItemReaders
         ...usePantryUnitChange_pantryItem
+        ...restatedStack_usage
       }
       pantry {
         id
         ...PantryReaders
+      }
+      # GetPantryItemBatches' page, at its size.
+      batchesConnection(first: $batchesFirst) {
+        ...writeRestatedBatches_page
       }
     }
     ... on Error {

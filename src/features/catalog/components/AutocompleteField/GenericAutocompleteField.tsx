@@ -20,6 +20,8 @@ export interface GenericAutocompleteFieldProps<T> {
   keyExtractor: (item: T) => string;
   onSelect: (item: T) => void;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  /** The field itself was finished: blurred or submitted. */
+  onEndEditing?: () => void;
   showAddNew?: boolean;
   addNewLabel?: string;
   onAddNew?: () => void;
@@ -69,6 +71,7 @@ export function GenericAutocompleteField<T>({
   modalEmptySubtext,
   modalMinSearchLength,
   onSearchChange,
+  onEndEditing,
 }: GenericAutocompleteFieldProps<T>) {
   if (variant === 'inline') {
     return (
@@ -93,6 +96,7 @@ export function GenericAutocompleteField<T>({
         addNewLabel={addNewLabel}
         onAddNew={onAddNew}
         reserveDropdownSpace={reserveDropdownSpace}
+        onEndEditing={onEndEditing}
       />
     );
   }
@@ -117,6 +121,7 @@ export function GenericAutocompleteField<T>({
       emptyText={modalEmptyText}
       emptySubtext={modalEmptySubtext}
       onSearchChange={onSearchChange}
+      onEndEditing={onEndEditing}
       minSearchLength={modalMinSearchLength}
       autoCapitalize={autoCapitalize}
       showAddNew={showAddNew}

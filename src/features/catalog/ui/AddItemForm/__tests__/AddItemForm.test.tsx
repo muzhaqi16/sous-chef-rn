@@ -304,13 +304,13 @@ describe('AddItemForm', () => {
         format="ean13"
       />,
     );
-    expect(screen.getByText('Format')).toBeTruthy();
+    expect(screen.getByTestId('barcode-info-format')).toBeTruthy();
     expect(screen.getByText('EAN13')).toBeTruthy();
   });
 
   it('does not show format section when format is not provided', () => {
     render(<AddItemForm {...defaultProps} scannedValue="123456789012" />);
-    expect(screen.queryByText('Format')).toBeNull();
+    expect(screen.queryByTestId('barcode-info-format')).toBeNull();
   });
 
   it('does not show barcode info value when no scannedValue and no barcode', () => {
@@ -418,7 +418,7 @@ describe('AddItemForm', () => {
       render(<AddItemForm {...defaultProps} />);
       // No barcode info value should be rendered (though UPC/Barcode label exists as a form field)
       // The barcode info section (with barcodeValue) is not rendered
-      expect(screen.queryByText('Format')).toBeNull();
+      expect(screen.queryByTestId('barcode-info-format')).toBeNull();
     });
   });
 
@@ -427,7 +427,7 @@ describe('AddItemForm', () => {
       render(
         <AddItemForm {...defaultProps} scannedValue="123456789012" format="" />,
       );
-      expect(screen.queryByText('Format')).toBeNull();
+      expect(screen.queryByTestId('barcode-info-format')).toBeNull();
     });
 
     it('renders format in uppercase', () => {
@@ -524,7 +524,7 @@ describe('AddItemForm', () => {
   describe('barcode info section visibility', () => {
     it('does not show barcode info when scannedValue and barcode are both absent', () => {
       render(<AddItemForm {...defaultProps} />);
-      expect(screen.queryByText('Format')).toBeNull();
+      expect(screen.queryByTestId('barcode-info-format')).toBeNull();
     });
 
     it('shows barcode info section when only scannedValue is provided', () => {

@@ -4,6 +4,11 @@ import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import { kitTestIDs } from '#components/testIDs';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { StoreModeHeader } from '../StoreModeHeader';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 // The picker's modal stands in as one button that picks a store.
 jest.mock('#features/catalog/ui/autocomplete/StoreAutocompleteField', () => {
@@ -99,6 +104,16 @@ describe('StoreModeHeader', () => {
       />,
     );
     expect(screen.getByText('≈ $8.00 for 2 of the 3 items to go')).toBeTruthy();
+  });
+
+  it('reads no cost with prices turned off', () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValueOnce(false);
+    render(
+      <StoreModeHeader
+        {...props({ estimate: { price: '$12.00', priced: 3, lines: 3 } })}
+      />,
+    );
+    expect(screen.queryByText('≈ $12.00 to go')).toBeNull();
   });
 
   it('offers every aisle on the list, then the cart', () => {

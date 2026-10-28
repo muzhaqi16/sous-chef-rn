@@ -34,7 +34,7 @@ import { photoDisplayUrl, getPerspectiveLabel } from '#utils/imageUtils';
 import {
   useItemPhoto,
   type ItemPhotoRef,
-} from '#features/catalog/ui/ItemPhotoCarousel';
+} from '#features/catalog/ui/useItemPhoto';
 import { useMarkPrimaryItemImage } from '#features/catalog/hooks/useMarkPrimaryItemImage';
 import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
 import { writesItemDirectly } from '#domain/itemWriteAccess';

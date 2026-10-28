@@ -1,7 +1,8 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { OfflineStatusPill } from '../OfflineStatusPill';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
+import { toastService } from '#/services/toastService';
 
 jest.mock('#hooks/ui/useOfflineStatus');
 
@@ -14,7 +15,9 @@ const status = (
 ): ReturnType<typeof useOfflineStatus> => ({
   offline: true,
   iconName: 'cloud-offline-outline',
-  message: 'You are offline',
+  title: 'You are offline',
+  detail: 'Changes will sync',
+  message: 'You are offline, Changes will sync',
   pendingCount: 0,
   ...over,
 });
@@ -28,29 +31,48 @@ describe('OfflineStatusPill', () => {
     expect(screen.queryByTestId('offline-banner')).toBeNull();
   });
 
-  it('is a polite live region carrying the status as its label', () => {
+  it('is a button carrying the status as its label', () => {
     offlineStatus.mockReturnValue(status());
 
     render(<OfflineStatusPill />);
 
     const pill = screen.getByTestId('offline-banner');
-    // Android reads the region on appearance. iOS is covered by the toast the
-    // app root fires on the transition, not by a second announcement here —
-    // two would read the same sentence twice.
-    expect(pill.props.accessibilityLiveRegion).toBe('polite');
-    expect(pill.props.accessibilityLabel).toBe('You are offline');
+    // Not a live region: every mounted header has a pill, so each would read
+    // the same sentence. The app root's announcer reads the transition once.
+    expect(pill.props.accessibilityLiveRegion).toBeUndefined();
+    expect(pill.props.accessibilityLabel).toBe(
+      'You are offline, Changes will sync',
+    );
     expect(pill.props.accessibilityRole).toBe('button');
   });
 
   it('keeps the label in step with the pending count', () => {
     offlineStatus.mockReturnValue(
-      status({ message: 'You are offline · 3 waiting', pendingCount: 3 }),
+      status({
+        detail: '3 changes will sync',
+        message: 'You are offline, 3 changes will sync',
+        pendingCount: 3,
+      }),
     );
 
     render(<OfflineStatusPill />);
 
     expect(screen.getByTestId('offline-banner').props.accessibilityLabel).toBe(
-      'You are offline · 3 waiting',
+      'You are offline, 3 changes will sync',
+    );
+  });
+
+  it('shows the title with the detail under it when tapped', () => {
+    offlineStatus.mockReturnValue(
+      status({ detail: '3 changes will sync', pendingCount: 3 }),
+    );
+
+    render(<OfflineStatusPill />);
+    fireEvent.press(screen.getByTestId('offline-banner'));
+
+    expect(jest.mocked(toastService.warning)).toHaveBeenCalledWith(
+      'You are offline',
+      { detail: '3 changes will sync' },
     );
   });
 });

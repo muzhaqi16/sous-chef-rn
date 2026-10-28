@@ -6,6 +6,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { announceWorkSettled } from '#/services/subscriptions/settledWork';
 import { RecipeCaptureDocument } from '../useRecipeCapture.generated';
 import { useRecipeCapturePoll } from '../useRecipeCapturePoll';
 import {
@@ -71,6 +72,38 @@ describe('useRecipeCapturePoll', () => {
     });
   });
 
+  // Joined, the refetch would get the poll's answer, read before the capture
+  // settled, and wait for the next poll.
+  it('asks again when the capture settles while a poll is in flight', async () => {
+    const inFlight = recordMock(RecipeCaptureDocument, {
+      held: true,
+      maxUsageCount: 1,
+      data: {
+        recipeCapture: {
+          id: 'capture-1',
+          alreadySaved: false,
+          status: RecipeCaptureStatus.Pending,
+        },
+      },
+    });
+    const settled = answering({
+      status: RecipeCaptureStatus.Saved,
+      recipe: { id: 'recipe-1', name: 'Miso salmon' },
+    });
+    renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
+      operationMocks: [inFlight.mock, settled.mock],
+    });
+    await waitFor(() => expect(inFlight.fired).toHaveLength(1));
+
+    act(() => {
+      announceWorkSettled({ kind: 'recipeCapture', id: 'capture-1' });
+    });
+
+    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    expect(settled.fired).toHaveLength(1);
+    inFlight.release();
+  });
+
   it('keeps a partial read as a row to finish', async () => {
     renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
       operationMocks: [
@@ -105,7 +138,6 @@ describe('useRecipeCapturePoll', () => {
     await waitFor(() =>
       expect(mockToastError).toHaveBeenCalledWith(
         "Recipe import isn't available right now. Try again later.",
-        expect.objectContaining({ duration: expect.any(Number) }),
       ),
     );
     expect(useRecipeCaptureStore.getState().entries).toEqual([]);

@@ -1,7 +1,7 @@
 import React from 'react';
 import { ScrollView } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { RecipeItemSkeleton } from './RecipeItemSkeleton';
+import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 
 const ITEM_COUNT = 10;
 
@@ -17,7 +17,7 @@ export const RecipeSkeleton: React.FC = () => (
     showsVerticalScrollIndicator={false}
   >
     {Array.from({ length: ITEM_COUNT }, (_, index) => (
-      <RecipeItemSkeleton key={index} />
+      <ItemCardSkeleton key={index} />
     ))}
   </ScrollView>
 );

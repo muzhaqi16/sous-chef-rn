@@ -1,5 +1,6 @@
 'use no memo';
 import React from 'react';
+import { t } from '#/i18n';
 import { RecipeIngredientMatchKind } from '#/graphql/generated/schemaTypes';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import {
@@ -82,6 +83,9 @@ describe('IngredientMatchRow', () => {
       adjustedQuantity: 2,
       adjustedUnitId: null,
       isIncluded: true,
+      substitutes: [],
+      selectedSubstitute: null,
+      includedBeforeSubstitute: true,
     };
   };
 
@@ -183,6 +187,148 @@ describe('IngredientMatchRow', () => {
     expect(onUpdate).toHaveBeenCalledWith(0, {
       selectedStack: evoo,
       isIncluded: true,
+    });
+  });
+
+  describe('swaps for an ingredient the pantry does not cover', () => {
+    const milkLemon = () => ({
+      id: 's-milk-lemon',
+      label: '1 cup milk, 1 tbsp lemon juice',
+      parts: [
+        {
+          key: 'milk',
+          text: '1 cup milk',
+          stack: stack('p-milk', 'Whole Milk', 1000),
+          quantity: 1,
+          unitId: 'u-cup',
+        },
+        {
+          key: 'lemon',
+          text: '1 tbsp lemon juice',
+          stack: stack('p-lemon', 'Lemon Juice', 250),
+          quantity: 1,
+          unitId: 'u-tbsp',
+        },
+      ],
+      scaled: true,
+    });
+
+    it('offers each swap, and takes the one picked', () => {
+      const onUpdate = jest.fn();
+      const swap = milkLemon();
+      render(
+        <IngredientMatchRow
+          {...defaultProps}
+          editableMatch={{
+            ...makeMatch('Buttermilk'),
+            isIncluded: false,
+            substitutes: [swap],
+          }}
+          onUpdate={onUpdate}
+        />,
+      );
+
+      expect(screen.getByText(t('ingredientMatch.useInstead'))).toBeTruthy();
+      fireEvent.press(screen.getByText('1 cup milk, 1 tbsp lemon juice'));
+
+      expect(onUpdate).toHaveBeenCalledWith(0, {
+        selectedSubstitute: swap,
+        isIncluded: true,
+        includedBeforeSubstitute: false,
+      });
+    });
+
+    it("names each part's stack once picked, and a second press goes back", () => {
+      const onUpdate = jest.fn();
+      const swap = milkLemon();
+      render(
+        <IngredientMatchRow
+          {...defaultProps}
+          editableMatch={{
+            ...makeMatch('Buttermilk'),
+            substitutes: [swap],
+            selectedSubstitute: swap,
+            includedBeforeSubstitute: false,
+          }}
+          onUpdate={onUpdate}
+        />,
+      );
+
+      expect(
+        screen.getByText(
+          t('ingredientMatch.substitutePart', {
+            part: '1 tbsp lemon juice',
+            name: 'Lemon Juice',
+            amount: '250 mL',
+          }),
+        ),
+      ).toBeTruthy();
+      // The ingredient's own amount is not drawn, so it is not asked.
+      expect(screen.queryByText(t('ingredientMatch.qtyLabel'))).toBeNull();
+
+      fireEvent.press(screen.getByText('1 cup milk, 1 tbsp lemon juice'));
+      expect(onUpdate).toHaveBeenCalledWith(0, {
+        selectedSubstitute: null,
+        isIncluded: false,
+      });
+    });
+
+    it('puts an excluded line with a stack back excluded once its swap is unpicked', () => {
+      const onUpdate = jest.fn();
+      const swap = milkLemon();
+      const withStack = makeMatch('Buttermilk', {
+        matchedPantryItem: stack('p-buttermilk', 'Buttermilk', 100),
+      });
+      render(
+        <IngredientMatchRow
+          {...defaultProps}
+          editableMatch={{
+            ...withStack,
+            ingredient: { ...withStack.ingredient, isOptional: true },
+            isIncluded: true,
+            substitutes: [swap],
+            selectedSubstitute: swap,
+            includedBeforeSubstitute: false,
+          }}
+          onUpdate={onUpdate}
+        />,
+      );
+
+      fireEvent.press(screen.getByText('1 cup milk, 1 tbsp lemon juice'));
+      expect(onUpdate).toHaveBeenCalledWith(0, {
+        selectedSubstitute: null,
+        isIncluded: false,
+      });
+    });
+
+    it('keeps the state from before the first swap when switching swaps', () => {
+      const onUpdate = jest.fn();
+      const swap = milkLemon();
+      const other = {
+        ...milkLemon(),
+        id: 'swap-yogurt',
+        label: '1 cup yogurt',
+      };
+      render(
+        <IngredientMatchRow
+          {...defaultProps}
+          editableMatch={{
+            ...makeMatch('Buttermilk'),
+            isIncluded: true,
+            substitutes: [swap, other],
+            selectedSubstitute: swap,
+            includedBeforeSubstitute: false,
+          }}
+          onUpdate={onUpdate}
+        />,
+      );
+
+      fireEvent.press(screen.getByText('1 cup yogurt'));
+      expect(onUpdate).toHaveBeenCalledWith(0, {
+        selectedSubstitute: other,
+        isIncluded: true,
+        includedBeforeSubstitute: false,
+      });
     });
   });
 

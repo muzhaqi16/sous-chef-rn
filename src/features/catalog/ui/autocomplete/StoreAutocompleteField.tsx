@@ -27,6 +27,8 @@ interface StoreAutocompleteFieldProps {
    * to tell the user to choose from the list.
    */
   helperText?: string;
+  /** The field itself was finished: blurred or submitted. */
+  onEndEditing?: () => void;
 }
 
 export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
@@ -40,6 +42,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
   testID,
   onStoreSelected,
   helperText,
+  onEndEditing,
 }) => {
   const { t } = useTranslation();
   const store = useStoreAutocomplete();
@@ -109,6 +112,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         }
         modalMinSearchLength={2}
         onSearchChange={store.handleSearchTermChange}
+        onEndEditing={onEndEditing}
       />
       {helperText ? (
         <Text role="caption" tone="tertiary" style={styles.helper}>

@@ -18,6 +18,7 @@ describe('shoppingListDetailScreens', () => {
     expect(Object.keys(shoppingListDetailScreens).sort()).toEqual([
       'EditItem',
       'ItemDetail',
+      'ListBudget',
       'ListSettings',
       'PurchaseHistory',
       'ShareList',

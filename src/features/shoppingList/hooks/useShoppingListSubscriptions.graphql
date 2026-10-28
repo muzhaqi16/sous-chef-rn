@@ -4,6 +4,24 @@
 # and writes back via cache.writeFragment to trigger a single notification.
 # Both fragments must mirror exactly what the subscription server pushes.
 fragment useShoppingListSubscriptions_item on ShoppingListItem {
+  amount {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   id
   # The parent back-reference the list query selects on every node. Without it
   # the written row reads incomplete and the whole list blanks, which no
@@ -78,8 +96,9 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
 # spread fits under. These queries are how the handler gets the values, over
 # HTTP where the budget is generous, and only for events that need them.
 
-query ShoppingListItemForEvent($id: ID!) {
-  shoppingListItem(id: $id) {
+# Every line a burst of events names, in one read (`batchedEventRead`).
+query ShoppingListItemsForEvents($ids: [ID!]!) {
+  shoppingListItemsByIds(ids: $ids) {
     id
     ...useShoppingListSubscriptions_item
   }

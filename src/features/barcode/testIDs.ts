@@ -6,7 +6,26 @@ export const barcodeTestIDs = {
   /** `ProductResultCard`'s edit action: the press target, and its label. */
   productEditAction: 'product-result-edit-action',
   productEditActionLabel: 'product-result-edit-action-label',
-  /** The pack-size prompt a product without a package size asks before adding. */
-  packSizeInput: 'pack-size-input',
-  packSizeConfirm: 'pack-size-confirm',
+  /** What a pantry add records: its summary, which opens the fields below. */
+  scanAmountSummary: 'scan-amount-summary',
+  scanAmountQuantity: 'scan-amount-quantity',
+  scanAmountUnit: 'scan-amount-unit',
+  scanAmountPackaged: 'scan-amount-packaged',
+  scanAmountSize: 'scan-amount-size',
+  scanAmountUsedIn: 'scan-amount-used-in',
+  /** The scanned product's nutrition card. */
+  productNutrition: 'product-nutrition',
+  /** The household's dietary alerts on a scan, and its offline note. */
+  householdAlerts: 'household-alerts',
+  householdUnchecked: 'household-unchecked',
+  /** A product of the same kind that raises no alert. */
+  householdAlternative: (itemId: string) => `household-alternative-${itemId}`,
+  /** Store mode's price lines on a scan, and its shelf price at each store. */
+  storePrices: 'store-prices',
+  storeShelfPrices: 'store-shelf-prices',
+  /** Where a scanned product comes from and who owns its brand. */
+  productOrigin: 'product-origin',
+  /** The user's own lists a scanned brand is on, and the add action. */
+  brandListings: 'brand-listings',
+  addBrandToList: 'add-brand-to-list',
 };

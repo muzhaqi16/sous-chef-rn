@@ -126,6 +126,7 @@ describe('preferencesSlice', () => {
       expect(store.getState().getUserPreferences('user-1')).toEqual({
         showShoppingListImages: false,
         storeMode: false,
+        budgetAndPrices: false,
       });
     });
 

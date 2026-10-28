@@ -1,5 +1,6 @@
 import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
@@ -83,7 +84,8 @@ describe('useToggleShoppingItem', () => {
     expect(typeof result.current.toggleItem).toBe('function');
   });
 
-  it('returns false when listId is null', async () => {
+  // A false answer has always told the user, whether refused or never sent.
+  it('returns false when listId is null, and says so', async () => {
     const recorded: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
       () =>
@@ -108,9 +110,13 @@ describe('useToggleShoppingItem', () => {
 
     expect(toggleResult).toBe(false);
     expect(recorded).toEqual([]);
+    expect(mockAlert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.updateItemFailed'),
+    );
   });
 
-  it('returns false when item is not found in cache', async () => {
+  it('returns false when item is not found in cache, and says so', async () => {
     // No cache seeding — readFragment will return null, hook bails out.
     const recorded: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
@@ -136,6 +142,34 @@ describe('useToggleShoppingItem', () => {
 
     expect(toggleResult).toBe(false);
     expect(recorded).toEqual([]);
+    expect(mockAlert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.updateItemFailed'),
+    );
+  });
+
+  // A store-mode add with a price ticks through this setter.
+  it('says so when a purchase cannot be recorded for a line not in the cache', async () => {
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [] },
+    );
+
+    let recordResult!: Awaited<
+      ReturnType<typeof result.current.recordPurchase>
+    >;
+    await act(async () => {
+      recordResult = await result.current.recordPurchase('non-existent', {
+        purchasedQuantity: 1,
+        purchasedPrice: 3,
+      });
+    });
+
+    expect(recordResult).toBe(false);
+    expect(mockAlert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.updateItemFailed'),
+    );
   });
 });
 
@@ -350,6 +384,141 @@ describe('useToggleShoppingItem — toggleItem', () => {
     );
     expect(moveShoppingListItemToPurchased).not.toHaveBeenCalled();
   });
+
+  it('names the product a tick bought, and never on an un-tick', async () => {
+    const ticked: Array<Record<string, unknown>> = [];
+    const tick = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      {
+        cache: seedShoppingItem(),
+        operationMocks: [createToggleMock(ticked, responseRow(true))],
+      },
+    );
+    await act(async () => {
+      await tick.result.current.toggleItem('item-1', { variation: 'var-1' });
+    });
+    expect(ticked).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: {
+            isPurchased: true,
+            purchasedItem: { variation: 'var-1' },
+          },
+        },
+      },
+    ]);
+
+    // The server refuses it beside an un-tick.
+    const unticked: Array<Record<string, unknown>> = [];
+    const untick = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      {
+        cache: seedShoppingItem({ isPurchased: true }),
+        operationMocks: [createToggleMock(unticked, responseRow(false))],
+      },
+    );
+    await act(async () => {
+      await untick.result.current.toggleItem('item-1', { variation: 'var-1' });
+    });
+    expect(unticked).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: { isPurchased: false },
+        },
+      },
+    ]);
+  });
+});
+
+// Store mode's tick: it only ever puts a line in the cart. The server answers
+// a bare claim of the state a line already holds with no write.
+describe('useToggleShoppingItem — claimPurchased', () => {
+  const mockRefetch = jest.fn().mockResolvedValue(undefined);
+  const purchasedRow = {
+    __typename: 'ShoppingListItem',
+    id: 'item-1',
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: true,
+    },
+  };
+
+  const renderClaim = (cache: ReturnType<typeof seedCache>) => {
+    const recorded: Array<Record<string, unknown>> = [];
+    const hook = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { cache, operationMocks: [createToggleMock(recorded, purchasedRow)] },
+    );
+    return { ...hook, recorded };
+  };
+
+  it('puts an open line in the cart', async () => {
+    const cache = seedShoppingItem();
+    const { result, recorded } = renderClaim(cache);
+
+    await act(async () => {
+      await result.current.claimPurchased('item-1', { variation: 'var-1' });
+    });
+
+    expect(recorded).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: {
+            isPurchased: true,
+            purchasedItem: { variation: 'var-1' },
+          },
+        },
+      },
+    ]);
+    expect(readPurchased(cache)).toBe(true);
+    expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a line another member already ticked in the cart', async () => {
+    const cache = seedShoppingItem({ isPurchased: true });
+    const { result, recorded } = renderClaim(cache);
+
+    await act(async () => {
+      await result.current.claimPurchased('item-1');
+    });
+
+    expect(recorded).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: { isPurchased: true },
+        },
+      },
+    ]);
+    expect(readPurchased(cache)).toBe(true);
+    expect(moveShoppingListItemToPurchased).not.toHaveBeenCalled();
+    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
+  });
+
+  it('leaves the line purchased when the same tick is sent again', async () => {
+    const cache = seedShoppingItem();
+    const { result, recorded } = renderClaim(cache);
+
+    await act(async () => {
+      await result.current.claimPurchased('item-1');
+    });
+    await act(async () => {
+      await result.current.claimPurchased('item-1');
+    });
+
+    expect(recorded).toHaveLength(2);
+    expect(readPurchased(cache)).toBe(true);
+    // Counted into the cart once: a second move would count it twice.
+    expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
+    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
+  });
 });
 
 describe('useToggleShoppingItem — recordPurchase', () => {
@@ -392,6 +561,38 @@ describe('useToggleShoppingItem — recordPurchase', () => {
       },
     });
     expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
+  });
+
+  it('records the purchase on the product bought, when the tick names one', async () => {
+    const recorded: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      {
+        cache: seedShoppingItem(),
+        operationMocks: [updatePurchaseMock(recorded, 'success')],
+      },
+    );
+
+    await act(async () => {
+      await result.current.recordPurchase(
+        'item-1',
+        { purchasedQuantity: 1, purchasedPrice: 6.49 },
+        { variation: 'var-1' },
+      );
+    });
+
+    expect(recorded).toContainEqual({
+      input: {
+        id: 'item-1',
+        version: 3,
+        purchaseTracking: {
+          isPurchased: true,
+          purchasedQuantity: 1,
+          purchasedPrice: 6.49,
+          purchasedItem: { variation: 'var-1' },
+        },
+      },
+    });
   });
 
   it("writes the server's purchase summary and amounts into the cache", async () => {

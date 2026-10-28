@@ -86,8 +86,14 @@ jest.mock('#features/home/components/HomeStats', () => ({
   HomeStats: () => null,
 }));
 
+// Captures the form's props so a test can submit what the form validated.
+interface CreateFormProps {
+  onSubmit: (values: { name: string; allowJoinCode: boolean }) => Promise<void>;
+}
+const mockCreateFormProps: CreateFormProps[] = [];
 jest.mock('#features/home/components/CreateHomeForm', () => ({
-  CreateHomeForm: () => {
+  CreateHomeForm: (props: CreateFormProps) => {
+    mockCreateFormProps.push(props);
     const { View } = require('react-native');
     return <View testID="create-home-form" />;
   },
@@ -157,6 +163,7 @@ describe('HomeManagement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHomeCardProps.length = 0;
+    mockCreateFormProps.length = 0;
   });
 
   it('renders the home management screen', () => {
@@ -209,6 +216,25 @@ describe('HomeManagement', () => {
     fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
 
     expect(getByTestId('create-home-form')).toBeTruthy();
+  });
+
+  it('creates the home the form submits and closes the form', async () => {
+    const createHome = jest.fn().mockResolvedValue({ id: 'home-new' });
+    mockHook({ loading: false, hasResult: true, createHome });
+
+    const { getByTestId, queryByTestId } = render(<HomeManagement />);
+    fireEvent.press(getByTestId(homeTestIDs.managementAddButton));
+    await act(async () => {
+      await mockCreateFormProps
+        .at(-1)
+        ?.onSubmit({ name: 'Shtëpia e Re', allowJoinCode: true });
+    });
+
+    expect(createHome).toHaveBeenCalledWith({
+      name: 'Shtëpia e Re',
+      allowJoinCode: true,
+    });
+    expect(queryByTestId('create-home-form')).toBeNull();
   });
 
   it('keeps preserved homes on screen when a refetch fails', () => {

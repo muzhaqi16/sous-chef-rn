@@ -4,7 +4,6 @@
  * answer at all, and its refusal carries no usable ids on the replay path.
  */
 import type { ApolloCache } from '@apollo/client';
-import type { PantryItemDuplicateInfo } from '#domain/pantryItemDuplicate';
 import { logger } from '#/utils/environment';
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
@@ -13,7 +12,9 @@ import {
 } from './pantryCacheReaders.generated';
 
 /** The matched row, plus what an optimistic restock needs to bump it locally. */
-export interface CachedPantryItemDuplicate extends PantryItemDuplicateInfo {
+export interface CachedPantryItemDuplicate {
+  existingPantryItemId: string;
+  existingPantryItemIds: string[];
   quantity: number | null;
 }
 

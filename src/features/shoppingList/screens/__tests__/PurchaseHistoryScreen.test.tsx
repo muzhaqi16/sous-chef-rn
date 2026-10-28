@@ -10,6 +10,11 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { PurchaseHistoryScreen } from '../PurchaseHistoryScreen';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
@@ -116,7 +121,10 @@ const failingMock: MockFor<typeof GetItemPurchaseHistoryDocument> = {
 const route = { params: { itemId: '1', itemName: 'Milk' } };
 
 describe('PurchaseHistoryScreen', () => {
-  beforeEach(() => jest.mocked(useIsApiUnavailable).mockReturnValue(false));
+  beforeEach(() => {
+    jest.mocked(useIsApiUnavailable).mockReturnValue(false);
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+  });
 
   it('says why the list stops when another page exists but the network is withheld', async () => {
     jest.mocked(useIsApiUnavailable).mockReturnValue(true);
@@ -163,6 +171,18 @@ describe('PurchaseHistoryScreen', () => {
     await waitFor(() =>
       expect(screen.getAllByText('$5.00').length).toBeGreaterThan(0),
     );
+  });
+
+  it('lists when and how much, with no price or spend, with prices turned off', async () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
+      operationMocks: [historyMock([purchase])],
+    });
+
+    expect(await screen.findByText('2 kg')).toBeTruthy();
+    expect(screen.queryByText('$5.00')).toBeNull();
+    expect(screen.queryByText('$2.50 per kg')).toBeNull();
+    expect(screen.queryByText('Total Spent:', { exact: false })).toBeNull();
   });
 
   it('splits the total into a per-unit line', async () => {

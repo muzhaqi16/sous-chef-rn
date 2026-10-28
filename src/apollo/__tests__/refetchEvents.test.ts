@@ -15,18 +15,23 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { languageLink } from '../links/languageLink';
+import { createOfflineModeLink } from '../links/offlineModeLink';
 import {
+  announceHouseholdLeft,
   connectResyncSources,
   createRefetchEventManager,
 } from '../refetchEvents';
+import { RESYNC_SCOPE } from '../scopedClient';
 
 const mockReconnectListeners = new Set<() => void>();
+let mockChannelOpen = false;
 
 jest.mock('#/apollo/links/wsLink', () => ({
   onWebSocketReconnected: (listener: () => void) => {
     mockReconnectListeners.add(listener);
     return () => mockReconnectListeners.delete(listener);
   },
+  isLiveChannelOpen: () => mockChannelOpen,
 }));
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { whenIdle: jest.fn(async () => {}) },
@@ -35,6 +40,7 @@ interface MockSessionState {
   user: { id: string } | null;
   isOnline: boolean;
   apiReachable: boolean | null;
+  offlineModeEnabled: boolean;
 }
 
 jest.mock('#store', () => {
@@ -44,6 +50,7 @@ jest.mock('#store', () => {
       user: { id: 'user-1' },
       isOnline: true,
       apiReachable: true,
+      offlineModeEnabled: false,
     })),
   };
 });
@@ -76,6 +83,55 @@ const DetailQuery = gql`
     detail
   }
 `;
+
+// A scan's lookup carries its card's fragment, as `ItemByLookup` does, and its
+// price card's on request; each card also asks for its product by id.
+const CardFragments = `
+  fragment CardForResync_product on Product {
+    id
+    origin
+  }
+  fragment PriceForResync_product on Product {
+    id
+    price
+  }
+`;
+const LookupQuery = gql`
+  query LookupForResync($withPrice: Boolean = false) {
+    lookup {
+      id
+      name
+      ...CardForResync_product
+      ...PriceForResync_product @include(if: $withPrice)
+    }
+  }
+  ${CardFragments}
+`;
+const CardQuery = gql`
+  query CardForResync($id: ID!) {
+    product(id: $id) {
+      id
+      ...CardForResync_product
+    }
+  }
+  ${CardFragments}
+`;
+const PriceQuery = gql`
+  query PriceForResync($id: ID!) {
+    product(id: $id) {
+      id
+      ...PriceForResync_product
+    }
+  }
+  ${CardFragments}
+`;
+const pasta = {
+  __typename: 'Product',
+  id: 'p1',
+  name: 'Pasta',
+  origin: 'IT',
+  price: 3,
+};
 
 const navigationListeners = new Set<() => void>();
 const navigate = () => navigationListeners.forEach(listener => listener());
@@ -114,6 +170,7 @@ const triggers = {
   languageChanged: () => {
     void changeLanguage(getResolvedLanguage() === 'es' ? 'en' : 'es');
   },
+  householdLeft: announceHouseholdLeft,
 };
 
 let requests: string[];
@@ -147,21 +204,40 @@ beforeEach(async () => {
   jest.useFakeTimers();
   jest.clearAllMocks();
   mockReconnectListeners.clear();
+  mockChannelOpen = false;
   navigationListeners.clear();
   resetSessionEndingGate();
   useStore.setState({
     user: { id: 'user-1' },
     apiReachable: true,
+    offlineModeEnabled: false,
   });
   requests = [];
   failing = new Set();
   heldResponses = null;
   client = new ApolloClient({
-    cache: new InMemoryCache(),
+    cache: new InMemoryCache({
+      typePolicies: {
+        Query: {
+          fields: {
+            // As `readByIdFromCache`: a card reads the product the lookup stored.
+            product: {
+              read: (_, { args, toReference }) =>
+                typeof args?.id === 'string'
+                  ? toReference({ __typename: 'Product', id: args.id })
+                  : undefined,
+            },
+          },
+        },
+      },
+    }),
+    dataMasking: true,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    // The production language link in front: it records what was answered
-    // in the language a catch-up asks for.
+    // The production offline-mode and language links in front, in their
+    // order: the language link records what was answered in the language a
+    // catch-up asks for, and what offline mode answers never reaches it.
     link: ApolloLink.from([
+      createOfflineModeLink(),
       languageLink,
       new ApolloLink(
         operation =>
@@ -173,7 +249,13 @@ beforeEach(async () => {
             }
             const respond = () => {
               observer.next({
-                data: { list: 'value', search: 'value', detail: 'value' },
+                data: {
+                  list: 'value',
+                  search: 'value',
+                  detail: 'value',
+                  lookup: pasta,
+                  product: pasta,
+                },
               });
               observer.complete();
             };
@@ -238,6 +320,73 @@ describe('resync', () => {
     );
   });
 
+  // Inside the API's liveness window (two 30 s pings) the server still holds
+  // the subscriptions; past it the socket may be dead with no close delivered.
+  describe('a return to the app over an open live channel', () => {
+    beforeEach(() => {
+      mockChannelOpen = true;
+    });
+
+    const returnAfter = async (ms: number) => {
+      memoryLifecycle().moveTo('background');
+      await elapse(ms);
+      memoryLifecycle().moveTo('active');
+      await pastTheWindow();
+    };
+
+    it('asks nothing', async () => {
+      triggers.appForeground();
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+    });
+
+    it('asks nothing for a glance at the notification shade', async () => {
+      memoryLifecycle().moveTo('inactive');
+      memoryLifecycle().moveTo('active');
+      await pastTheWindow();
+
+      expect(requests).toEqual([]);
+    });
+
+    it('asks nothing after a brief trip to another app', async () => {
+      await returnAfter(10_000);
+
+      expect(requests).toEqual([]);
+    });
+
+    it('re-asks once the server may have dropped the socket unseen', async () => {
+      await returnAfter(90_000);
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    // The server reaps at the tick after the unanswered ping, which can come
+    // just over one interval after the app left.
+    it('re-asks between one and two ping intervals away', async () => {
+      await returnAfter(40_000);
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    it('still resyncs when the socket reconnects after a brief return', async () => {
+      await returnAfter(10_000);
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+  });
+
+  it('re-asks after a brief absence with the channel closed', async () => {
+    memoryLifecycle().moveTo('background');
+    await elapse(10_000);
+    memoryLifecycle().moveTo('active');
+    await pastTheWindow();
+
+    expect(requests).toEqual(['ListForResync']);
+  });
+
   it('waits for queued writes to replay before refetching', async () => {
     const idle = deferred();
     jest.mocked(queueManager.whenIdle).mockReturnValueOnce(idle.promise);
@@ -256,6 +405,102 @@ describe('resync', () => {
     await pastTheWindow();
 
     expect(requests).toEqual([]);
+  });
+
+  // A home tab stays mounted while hidden, so its queries stay active: only
+  // its scope keeps a resync from re-asking what nobody is looking at.
+  describe('a home tab out of sight', () => {
+    let shown: string | null | undefined;
+
+    beforeEach(async () => {
+      shown = 'ShoppingList';
+      connectResyncSources(client, {
+        onNavigation,
+        scopeOnScreen: () => shown,
+      });
+      watchers.push(
+        client
+          .watchQuery({
+            query: DetailQuery,
+            context: { [RESYNC_SCOPE]: 'Pantry' },
+          })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+      requests = [];
+    });
+
+    it('is left out of a resync', async () => {
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    it('is re-asked once, when it is shown', async () => {
+      triggers.wsReconnected();
+      await pastTheWindow();
+      requests = [];
+
+      shown = 'Pantry';
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['DetailForResync']);
+    });
+
+    it('is re-asked with the resync while it is the tab on screen', async () => {
+      shown = 'Pantry';
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect([...requests].sort()).toEqual([
+        'DetailForResync',
+        'ListForResync',
+      ]);
+    });
+
+    it('stays unasked under a screen pushed over the tabs', async () => {
+      shown = null;
+      triggers.wsReconnected();
+      await pastTheWindow();
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
+    it('is re-asked while the host cannot tell what is shown', async () => {
+      shown = undefined;
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect([...requests].sort()).toEqual([
+        'DetailForResync',
+        'ListForResync',
+      ]);
+    });
+  });
+
+  // Before, only a language switch caught a paused screen up.
+  it('catches up a screen paused through a resync once it resumes', async () => {
+    connectResyncSources(client, { onNavigation });
+    const paused = client.watchQuery({ query: DetailQuery });
+    const first = paused.subscribe(() => {});
+    await elapse(0);
+    first.unsubscribe();
+    triggers.wsReconnected();
+    await pastTheWindow();
+    requests = [];
+
+    watchers.push(paused.subscribe(() => {}));
+    navigate();
+    await pastTheWindow();
+
+    expect(requests).toEqual(['DetailForResync']);
   });
 
   describe('the language catch-up', () => {
@@ -392,6 +637,31 @@ describe('resync', () => {
       expect(requests).toEqual([]);
     });
 
+    // A held read is never sent, so it is never answered: counting it would
+    // make every navigation drain the queue and walk every query for nothing.
+    it('touches neither the queue nor the network for a read held to the cache', async () => {
+      await client.query({ query: DetailQuery });
+      watchers.push(
+        client
+          .watchQuery({
+            query: DetailQuery,
+            fetchPolicy: 'cache-only',
+            nextFetchPolicy: 'cache-only',
+          })
+          .subscribe(() => {}),
+      );
+      triggers.languageChanged();
+      await pastTheWindow();
+      jest.mocked(queueManager.whenIdle).mockClear();
+      requests = [];
+
+      navigate();
+      await pastTheWindow();
+
+      expect(queueManager.whenIdle).not.toHaveBeenCalled();
+      expect(requests).toEqual([]);
+    });
+
     it('waits for the API to catch up', async () => {
       useStore.setState({ apiReachable: false });
       triggers.languageChanged();
@@ -423,6 +693,34 @@ describe('resync', () => {
       },
     );
 
+    // Offline mode answers each query before the language link records it,
+    // so nothing is ever answered and every navigation would drain the queue.
+    it('drains nothing on a navigation in offline mode', async () => {
+      useStore.setState({ offlineModeEnabled: true });
+      triggers.languageChanged();
+      await pastTheWindow();
+      jest.mocked(queueManager.whenIdle).mockClear();
+
+      navigate();
+      await pastTheWindow();
+
+      expect(queueManager.whenIdle).not.toHaveBeenCalled();
+      expect(requests).toEqual([]);
+    });
+
+    it('re-asks once offline mode is off what it left unasked', async () => {
+      useStore.setState({ offlineModeEnabled: true });
+      triggers.languageChanged();
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual([]);
+
+      useStore.setState({ offlineModeEnabled: false });
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+    });
+
     // Rehydration applies the saved language after the sources subscribe.
     it('ignores a switch made before any query exists', async () => {
       watchers.splice(0).forEach(watcher => watcher.unsubscribe());
@@ -446,6 +744,87 @@ describe('resync', () => {
       await pastTheWindow();
 
       expect(requests).not.toContain('SearchForResync');
+    });
+  });
+
+  describe('a card the lookup answered with', () => {
+    beforeEach(async () => {
+      connectResyncSources(client, { onNavigation });
+      // Before the resync, so the cache holds what may have missed a change.
+      await client.query({ query: CardQuery, variables: { id: 'p1' } });
+      await client.query({ query: PriceQuery, variables: { id: 'p1' } });
+      triggers.wsReconnected();
+      await pastTheWindow();
+    });
+
+    const scan = async (variables: { withPrice?: boolean } = {}) => {
+      watchers.push(
+        client
+          .watchQuery({ query: LookupQuery, variables, refetchOn: false })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+    };
+    const showCard = async (query: typeof CardQuery, id = 'p1') => {
+      watchers.push(
+        client
+          .watchQuery({ query, variables: { id }, fetchPolicy: 'cache-first' })
+          .subscribe(() => {}),
+      );
+      await elapse(0);
+    };
+
+    it('is not re-asked: the lookup brought what it reads', async () => {
+      requests = [];
+      await scan();
+      await showCard(CardQuery);
+      expect(requests).toEqual(['LookupForResync']);
+
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['LookupForResync']);
+    });
+
+    it('is re-asked when the lookup left its fragment out', async () => {
+      requests = [];
+      await scan({ withPrice: false });
+      await showCard(PriceQuery);
+
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['LookupForResync', 'PriceForResync']);
+    });
+
+    it('is re-asked for a product the lookup did not bring', async () => {
+      client.writeQuery({
+        query: CardQuery,
+        variables: { id: 'p2' },
+        data: {
+          product: { __typename: 'Product', id: 'p2', origin: 'FR' },
+        },
+      });
+      requests = [];
+      await scan();
+      await showCard(CardQuery, 'p2');
+
+      navigate();
+      await pastTheWindow();
+
+      expect(requests).toEqual(['LookupForResync', 'CardForResync']);
+    });
+
+    // The lookup declines resync, so its cards are the ones a resync refreshes.
+    it('is re-asked by a resync that the lookup declines', async () => {
+      await scan();
+      await showCard(CardQuery);
+      requests = [];
+
+      triggers.wsReconnected();
+      await pastTheWindow();
+
+      expect([...requests].sort()).toEqual(['CardForResync', 'ListForResync']);
     });
   });
 

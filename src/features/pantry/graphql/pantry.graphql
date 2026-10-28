@@ -591,6 +591,9 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
     ... on ValidationError {
       field
     }
+    ... on UnitEligibilityError {
+      field
+    }
   }
 }
 
@@ -861,6 +864,7 @@ mutation CorrectPantryItemPackageSize(
 mutation ConvertExpiredToWaste(
   $input: ConvertExpiredToWasteInput!
   $today: LocalDate!
+  $batchesFirst: Int = 100
 ) {
   convertExpiredToWaste(input: $input) {
     __typename
@@ -873,10 +877,15 @@ mutation ConvertExpiredToWaste(
         id
         ...PantryItemReaders
         ...useConvertExpiredToWaste_pantryItem
+        ...restatedStack_usage
       }
       pantry {
         id
         ...PantryReaders
+      }
+      # GetPantryItemBatches' page, at its size.
+      batchesConnection(first: $batchesFirst) {
+        ...writeRestatedBatches_page
       }
     }
     ... on Error {
@@ -901,11 +910,15 @@ mutation ConvertExpiredToWaste(
 # active set (cost dilution, expired batches) while showing only the first few.
 # `totalCount` is what its "view all" affordance counts, so a stack past this
 # page still names its real size instead of silently reading 100.
-query GetPantryItemBatches($pantryItemId: ID!, $status: BatchStatus) {
+query GetPantryItemBatches(
+  $pantryItemId: ID!
+  $status: BatchStatus
+  $batchesFirst: Int = 100
+) {
   pantryItemBatchesConnection(
     pantryItemId: $pantryItemId
     status: $status
-    first: 100
+    first: $batchesFirst
   ) {
     totalCount
     # Shares a cache field with GetPantryItemBatchHistory (keyArgs is
@@ -1047,7 +1060,7 @@ mutation WastePantryItemBatch(
 # depth 4 and one nested object inside a branch is the whole budget.
 #
 # The handler reads the entity back through a normal query
-# (`PantryItemForEvent` and friends), which gets the generous HTTP limits.
+# (`PantryItemsForEvents` and friends), which gets the generous HTTP limits.
 # See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription PantryEvents($pantryId: ID!) {
   pantryEvents(pantryId: $pantryId) {
@@ -1060,6 +1073,9 @@ subscription PantryEvents($pantryId: ID!) {
     subtype
     pantryId
     timestamp
+    # On a MERGED event, the stacks folded into `node`: gone as rows, their
+    # ids now read as the survivor.
+    mergedIds
     node {
       __typename
       ... on PantryItem {
@@ -1118,6 +1134,25 @@ query GetPantryItemUsageHistory(
           currency {
             id
             code
+          }
+          # A recount stated in a unit, as stated ("2.5 lb" on a gram stack).
+          statedAmount {
+            value
+            unitId
+            metric {
+              value
+              unitId
+              symbol
+              displayAsFraction
+              type
+            }
+            imperial {
+              value
+              unitId
+              symbol
+              displayAsFraction
+              type
+            }
           }
         }
       }

@@ -14,6 +14,7 @@ import {
 import { Text } from '#components/atoms/Text';
 import { Badge, type BadgeVariant } from '#components/atoms/Badge';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatQuantityDisplay,
@@ -56,6 +57,9 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
     selectedStack,
     adjustedQuantity,
     isIncluded,
+    substitutes,
+    selectedSubstitute,
+    includedBeforeSubstitute,
   } = editableMatch;
   const status = getAvailabilityStatus(match);
   const badge = BADGE_CONFIG[status];
@@ -98,7 +102,60 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
           )}
         </View>
 
-        {stackOptions.length > 1 && selectedStack ? (
+        {substitutes.length > 0 && (
+          <View style={styles.substitutes}>
+            <Text role="caption" tone="secondary">
+              {t('ingredientMatch.useInstead')}
+            </Text>
+            <ChipScrollRow
+              options={substitutes.map(swap => ({
+                key: swap.id,
+                label: swap.label,
+                testID: recipesTestIDs.cookSubstitute(swap.id),
+              }))}
+              selected={selectedSubstitute?.id ?? null}
+              onSelect={id => {
+                // A second press on the picked swap puts the line back as it
+                // was before any swap.
+                if (id === selectedSubstitute?.id) {
+                  onUpdate(index, {
+                    selectedSubstitute: null,
+                    isIncluded: includedBeforeSubstitute,
+                  });
+                  return;
+                }
+                const picked = substitutes.find(swap => swap.id === id);
+                if (picked) {
+                  onUpdate(index, {
+                    selectedSubstitute: picked,
+                    isIncluded: true,
+                    includedBeforeSubstitute: selectedSubstitute
+                      ? includedBeforeSubstitute
+                      : isIncluded,
+                  });
+                }
+              }}
+              edgeFadeColor="surface"
+            />
+          </View>
+        )}
+
+        {selectedSubstitute ? (
+          selectedSubstitute.parts.map(part => (
+            <Text
+              key={part.key}
+              role="caption"
+              tone="secondary"
+              numberOfLines={1}
+            >
+              {t('ingredientMatch.substitutePart', {
+                part: part.text,
+                name: part.stack.itemName,
+                amount: stackAmount(part.stack),
+              })}
+            </Text>
+          ))
+        ) : stackOptions.length > 1 && selectedStack ? (
           <ChipScrollRow
             options={stackOptions.map(stack => ({
               key: stack.id,
@@ -135,31 +192,36 @@ const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
         )}
 
         <View style={styles.bottomRow}>
-          <View style={styles.quantityRow}>
-            <Text role="caption" tone="secondary">
-              {t('ingredientMatch.qtyLabel')}
-            </Text>
-            <ThemedTextInput
-              style={styles.quantityInput}
-              value={quantityText}
-              placeholder={t('recipes.quantityNoAmountPlaceholder')}
-              onChangeText={text => {
-                setQuantityText(text);
-                const parsed = parseDecimalInput(text);
-                // A field holding no amount deducts nothing, never the last one.
-                const num = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
-                setSyncedQuantity(num);
-                onUpdate(index, { adjustedQuantity: num });
-              }}
-              keyboardType="decimal-pad"
-              editable={isIncluded}
-            />
-            {!!match.suggestedUnit?.symbol && (
+          {/* A swap's parts state their own amounts; the ingredient's is not drawn. */}
+          {selectedSubstitute ? (
+            <View />
+          ) : (
+            <View style={styles.quantityRow}>
               <Text role="caption" tone="secondary">
-                {match.suggestedUnit.symbol}
+                {t('ingredientMatch.qtyLabel')}
               </Text>
-            )}
-          </View>
+              <ThemedTextInput
+                style={styles.quantityInput}
+                value={quantityText}
+                placeholder={t('recipes.quantityNoAmountPlaceholder')}
+                onChangeText={text => {
+                  setQuantityText(text);
+                  const parsed = parseDecimalInput(text);
+                  // A field holding no amount deducts nothing, never the last one.
+                  const num = !isNaN(parsed) && parsed >= 0 ? parsed : 0;
+                  setSyncedQuantity(num);
+                  onUpdate(index, { adjustedQuantity: num });
+                }}
+                keyboardType="decimal-pad"
+                editable={isIncluded}
+              />
+              {!!match.suggestedUnit?.symbol && (
+                <Text role="caption" tone="secondary">
+                  {match.suggestedUnit.symbol}
+                </Text>
+              )}
+            </View>
+          )}
           <BaseSwitch
             accessibilityLabel={ingredient.name}
             value={isIncluded}
@@ -206,6 +268,9 @@ const styles = StyleSheet.create(theme => ({
   quantityRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: theme.spacing.xs,
+  },
+  substitutes: {
     gap: theme.spacing.xs,
   },
   quantityInput: {

@@ -46,7 +46,7 @@ export const pantrySwipeActions = ({
     left.push({
       key: 'restock',
       icon: 'add-circle-outline',
-      labelKey: 'swipeActions.restock',
+      labelKey: 'labels.restock',
       onPress: onRestock,
       haptic: false,
     });

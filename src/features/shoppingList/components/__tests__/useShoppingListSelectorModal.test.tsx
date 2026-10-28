@@ -36,6 +36,7 @@ const makeList = (
   home: null,
   ownerships: [],
   _isOwner: true,
+  _canDelete: true,
   ...overrides,
 });
 
@@ -43,6 +44,7 @@ const makeHome = (name: string): ShoppingListSelectorItem['home'] => ({
   __typename: 'Home',
   id: 'home-1',
   name,
+  myMembership: null,
 });
 
 const makeOwnership = (
@@ -173,6 +175,7 @@ const makeLists = (): ShoppingListSelectorItem[] => [
     totalItems: 3,
     completedItems: 0,
     _isOwner: false,
+    _canDelete: false,
     ownerships: [makeOwnership('other@test.com', 'Other')],
   }),
 ];

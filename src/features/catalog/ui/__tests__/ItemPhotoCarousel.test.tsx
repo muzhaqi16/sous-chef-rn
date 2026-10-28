@@ -111,20 +111,6 @@ describe('ItemPhotoCarousel', () => {
     expect(heroUris()).toContain('https://cdn.example.com/legacy.jpg');
   });
 
-  // A PENDING photo is returned only to its submitter; presenting it without a
-  // badge would read as though it were already live on a shared catalog item.
-  it('badges a pending photo', () => {
-    renderWithApollo(
-      <ItemPhotoCarousel
-        photos={[photo({ status: ItemImageStatus.Pending })]}
-        imageHeight={280}
-        resizeMode="cover"
-      />,
-    );
-
-    expect(screen.getByText('Pending review')).toBeTruthy();
-  });
-
   it('credits a licensed photo on its page', () => {
     renderWithApollo(
       <ItemPhotoCarousel
@@ -160,16 +146,45 @@ describe('ItemPhotoCarousel', () => {
     expect(screen.queryByText(/^Photo:/)).toBeNull();
   });
 
-  it('does not badge an approved photo', () => {
+  // The header's flag carries a pending photo's state, not the photo.
+  it('puts no label on a photo awaiting review', () => {
     renderWithApollo(
       <ItemPhotoCarousel
-        photos={[photo()]}
+        photos={[photo({ status: ItemImageStatus.Pending })]}
         imageHeight={280}
         resizeMode="cover"
       />,
     );
 
     expect(screen.queryByText('Pending review')).toBeNull();
+  });
+
+  // The header's photo action follows the photo on screen.
+  it('reports the page a swipe settles on, once', () => {
+    const onPageChange = jest.fn();
+    renderWithApollo(
+      <ItemPhotoCarousel
+        photos={[
+          photo(),
+          photo({ id: 'photo-2', url: 'https://cdn.example.com/side.jpg' }),
+        ]}
+        imageHeight={280}
+        resizeMode="cover"
+        onPageChange={onPageChange}
+      />,
+    );
+    const list = screen.UNSAFE_getByProps({ pagingEnabled: true });
+    const settle = (x: number) =>
+      act(() => {
+        list.props.onMomentumScrollEnd({
+          nativeEvent: { contentOffset: { x } },
+        });
+      });
+
+    settle(750);
+    settle(750);
+
+    expect(onPageChange.mock.calls).toEqual([[1]]);
   });
 
   it('renders the capped set for an item with many photos', () => {

@@ -8,9 +8,12 @@ describe('Badge', () => {
     expect(screen.getByText('New')).toBeTruthy();
   });
 
-  it('has accessibility role "text"', () => {
+  // One element: VoiceOver otherwise reads the label, then the text again.
+  it('is one accessible text element', () => {
     render(<Badge>Status</Badge>);
-    expect(screen.getByRole('text')).toBeTruthy();
+    const badge = screen.getByLabelText('Status');
+    expect(badge.props.accessible).toBe(true);
+    expect(badge.props.accessibilityRole).toBe('text');
   });
 
   it('sets accessibilityLabel for string children', () => {

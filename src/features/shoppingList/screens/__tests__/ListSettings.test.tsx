@@ -8,6 +8,8 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { InfoRowProps } from '#components/atoms/InfoRow';
 import { ListSettings } from '../ListSettings';
+import { t } from '#/i18n';
+import { Text as AppText } from '#components/atoms/Text';
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
 
@@ -95,30 +97,6 @@ jest.mock(
   }),
 );
 
-// Picking from the real field's modal is the field's own test; here a press
-// picks a store as the field reports it.
-jest.mock('#features/catalog/ui/autocomplete/StoreAutocompleteField', () => ({
-  StoreAutocompleteField: ({
-    onChangeText,
-    onStoreSelected,
-  }: {
-    onChangeText: (text: string) => void;
-    onStoreSelected: (id: string | null, name: string | null) => void;
-  }) => {
-    const { Text } = require('react-native');
-    return (
-      <Text
-        onPress={() => {
-          onChangeText('Costco');
-          onStoreSelected('store-1', 'Costco');
-        }}
-      >
-        pick-store
-      </Text>
-    );
-  },
-}));
-
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
@@ -133,12 +111,24 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
     unregisterParentDeletion: jest.fn(),
   },
 }));
-jest.mock('#features/shoppingList/utils/ownershipHelpers', () => ({
-  isShoppingListOwner: jest.fn(() => true),
-  getShoppingListRole: jest.fn(() => 'OWNER'),
-  formatRoleDisplay: jest.fn(() => 'Owner'),
-  getShoppingListOwnerInfo: jest.fn(() => null),
-}));
+jest.mock('#features/shoppingList/utils/ownershipHelpers', () => {
+  const isShoppingListOwner = jest.fn(() => true);
+  return {
+    isShoppingListOwner,
+    // The real answer over the mocked owner check, which the tests switch.
+    listOwnershipOf: (listId: string | undefined, list: unknown) =>
+      !listId
+        ? 'owner'
+        : !list
+        ? 'unknown'
+        : isShoppingListOwner()
+        ? 'owner'
+        : 'other',
+    getShoppingListRole: jest.fn(() => 'OWNER'),
+    formatRoleDisplay: jest.fn(() => 'Owner'),
+    getShoppingListOwnerInfo: jest.fn(() => null),
+  };
+});
 
 jest.mock('#components/templates/Screen', () => ({
   Screen: ({
@@ -271,33 +261,40 @@ describe('ListSettings', () => {
     expect(screen.queryByText('Danger Zone')).toBeNull();
   });
 
-  // The list's store is where a ticked line's price is recorded.
-  it('saves the store picked for the list', async () => {
+  // Its money has a screen of its own, reached from the list's header.
+  it('holds no store, comparison or budget settings', () => {
     render(<ListSettings route={editRoute} />);
 
-    fireEvent.press(screen.getByText('pick-store'));
-    fireEvent.press(screen.getByText('Save'));
-
-    await waitFor(() =>
-      expect(mockUpdateShoppingList).toHaveBeenCalledWith(
-        'sl1',
-        expect.objectContaining({
-          targetStore: { id: 'store-1', name: 'Costco' },
-        }),
-      ),
-    );
+    expect(screen.queryByText('Shopping at')).toBeNull();
+    expect(screen.queryByText("Where it's cheapest")).toBeNull();
+    expect(screen.queryByText('Budget Limit')).toBeNull();
+    expect(screen.queryByText('Price Tracking')).toBeNull();
   });
 
-  it('sends no store when it did not change', async () => {
+  // The accent says there is something to save; with nothing, Save still saves.
+  it('reads Save in plain text until something changes', () => {
     render(<ListSettings route={editRoute} />);
+    const saveTone = () =>
+      screen
+        .UNSAFE_getAllByType(AppText)
+        .find(node => node.props.children === 'Save')?.props.tone;
 
-    fireEvent.press(screen.getByText('Save'));
+    expect(saveTone()).toBe('primary');
 
-    await waitFor(() => expect(mockUpdateShoppingList).toHaveBeenCalled());
-    expect(mockUpdateShoppingList).toHaveBeenCalledWith(
-      'sl1',
-      expect.not.objectContaining({ targetStore: expect.anything() }),
+    fireEvent.changeText(
+      screen.getByDisplayValue('Weekly Groceries'),
+      'Weekly Shop',
     );
+
+    expect(saveTone()).toBe('accent');
+
+    // Edited back to what it was, there is nothing to save again.
+    fireEvent.changeText(
+      screen.getByDisplayValue('Weekly Shop'),
+      'Weekly Groceries',
+    );
+
+    expect(saveTone()).toBe('primary');
   });
 
   it('shows Save button for editing', () => {
@@ -411,6 +408,76 @@ describe('ListSettings', () => {
     render(<ListSettings route={editRoute} />);
     expect(screen.getByText(/This list is linked to the home/)).toBeTruthy();
   });
+
+  // The API's EDIT reaches a home MEMBER: the settings are theirs to change,
+  // but the default is the owner's mark and sharing the owner's roster.
+  it("lets a home MEMBER who doesn't own the list edit it, not its default", () => {
+    const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
+    ownerHelpers.isShoppingListOwner.mockReturnValue(false);
+
+    const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+    useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+      shoppingList: {
+        id: 'sl1',
+        name: 'Weekly Groceries',
+        isDefault: false,
+        homeId: 'h1',
+        home: {
+          name: 'Family Home',
+          myMembership: { id: 'm1', role: 'MEMBER' },
+        },
+        collaboratorsConnection: { edges: [], totalCount: 0 },
+      },
+      isShared: true,
+      collaborators: [],
+    }));
+
+    render(<ListSettings route={editRoute} />);
+    expect(
+      screen.getByText(t('shoppingListScreens.listSettings')),
+    ).toBeTruthy();
+    expect(screen.getByText(t('shoppingListScreens.listName'))).toBeTruthy();
+    expect(screen.queryByText(t('shoppingListScreens.defaultList'))).toBeNull();
+    expect(
+      screen.queryByText(t('shoppingListScreens.manageMembers')),
+    ).toBeNull();
+    expect(screen.getAllByText(t('labels.leaveList')).length).toBeGreaterThan(
+      0,
+    );
+  });
+
+  // The API lets a home's OWNER and ADMINs delete its lists; a MEMBER edits.
+  it.each([
+    ['ADMIN', true],
+    ['MEMBER', false],
+  ])(
+    'offers Delete List to a home %s who does not own the list: %s',
+    (role, offered) => {
+      const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
+      ownerHelpers.isShoppingListOwner.mockReturnValue(false);
+
+      const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+      useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+        shoppingList: {
+          id: 'sl1',
+          name: 'Weekly Groceries',
+          isDefault: true,
+          homeId: 'h1',
+          home: {
+            name: 'Family Home',
+            myMembership: { id: 'm1', role },
+          },
+          createdBy: { id: 'u2' },
+          collaboratorsConnection: { edges: [], totalCount: 0 },
+        },
+        isShared: true,
+        collaborators: [],
+      }));
+
+      render(<ListSettings route={editRoute} />);
+      expect(!!screen.queryByText(t('labels.deleteList'))).toBe(offered);
+    },
+  );
 
   it('navigates to the linked home when a non-owner taps Manage Home', () => {
     const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
@@ -597,8 +664,8 @@ describe('ListSettings', () => {
   describe('while ownership has not resolved', () => {
     // The detail query is `errorPolicy: 'ignore'`, so a failure and a cache
     // that never held the list both arrive as no list at all. Reading that as
-    // "not the owner" shows the owner the viewer's screen, with budget,
-    // reminder, recurring, template, archive and delete simply absent.
+    // "not the owner" shows the owner the viewer's screen, with reminder,
+    // recurring, template, archive and delete simply absent.
     const withoutDetails = () => {
       const detailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
       detailsModule.useShoppingListDetails = jest.fn(() => ({

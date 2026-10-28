@@ -156,6 +156,7 @@ describe('event envelope written to the cache after a local delete', () => {
           subtype: PantrySubtype.ItemChanged,
           pantryId: 'pantry-1',
           timestamp: '2026-01-01T00:00:00.000Z',
+          mergedIds: null,
           node: { __typename: 'PantryItem', id: itemId },
         },
       },

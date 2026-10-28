@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import {
   useApolloClient,
@@ -18,7 +18,13 @@ import {
   RecipeIngredientMatchKind,
   type IngredientUsageInput,
 } from '#/graphql/generated/schemaTypes';
-import { useSelectedPantryId } from '#store/useAppStore';
+import { useSelectedHomeId, useSelectedPantryId } from '#store/useAppStore';
+import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import {
+  RecipeSubstitutesDocument,
+  type RecipeSubstitutesQuery,
+} from './useRecipeSubstitutes.generated';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -40,6 +46,25 @@ export type PantryStackOption = NonNullable<
   IngredientMatch['matchedPantryItem']
 >;
 
+type SubstituteOptionData = NonNullable<
+  RecipeSubstitutesQuery['recipe']
+>['ingredientsConnection']['edges'][number]['node']['substitutes'][number];
+
+/** A swap the cook can use instead of a missing ingredient. */
+export interface CookSubstitute {
+  id: string;
+  /** Its parts, worded for the chip. */
+  label: string;
+  /** The parts the pantry holds, each drawn from the stack named. */
+  parts: {
+    key: string;
+    text: string;
+    stack: PantryStackOption;
+    quantity: number;
+    unitId: string;
+  }[];
+}
+
 export interface EditableMatch {
   match: IngredientMatch;
   /** Materialized RecipeIngredient fragment (id, isOptional, unit, …). The
@@ -54,10 +79,23 @@ export interface EditableMatch {
   adjustedQuantity: number | null;
   adjustedUnitId: string | null;
   isIncluded: boolean;
+  /** Swaps for an ingredient the pantry does not cover, parts held first. */
+  substitutes: CookSubstitute[];
+  /** The swap the cook picked; its parts are drawn and the ingredient is not. */
+  selectedSubstitute: CookSubstitute | null;
+  /** `isIncluded` before a swap was picked, restored when it is unpicked. */
+  includedBeforeSubstitute: boolean;
 }
 
 export type MatchUpdate = Partial<
-  Pick<EditableMatch, 'adjustedQuantity' | 'isIncluded' | 'selectedStack'>
+  Pick<
+    EditableMatch,
+    | 'adjustedQuantity'
+    | 'isIncluded'
+    | 'selectedStack'
+    | 'selectedSubstitute'
+    | 'includedBeforeSubstitute'
+  >
 >;
 
 export interface MatchSummary {
@@ -88,9 +126,54 @@ export function getAvailabilityStatus(
   return 'missing';
 }
 
+/** One entry a reviewed cook sends, under the stack it draws on. */
+interface CookDraw {
+  stackName: string;
+  stackUnitId: string;
+  usage: IngredientUsageInput;
+}
+
+/**
+ * The ingredients a cook left undeducted. The API names a skip only by its
+ * stack's name and units, so each skip claims an entry of its own: two entries
+ * drawn from stacks of one name are two skips. A skip no entry claims counts
+ * on its own, so none is hidden.
+ */
+function undeductedIngredients(
+  draws: readonly CookDraw[],
+  skips: readonly {
+    itemName: string;
+    fromUnitId?: string | null;
+    toUnitId: string;
+  }[],
+): Set<string> {
+  const claimed = new Set<number>();
+  const claim = (fits: (draw: CookDraw) => boolean) => {
+    const index = draws.findIndex(
+      (draw, position) => !claimed.has(position) && fits(draw),
+    );
+    if (index === -1) return null;
+    claimed.add(index);
+    return draws[index] ?? null;
+  };
+  const undeducted = new Set<string>();
+  skips.forEach((skip, position) => {
+    const draw =
+      claim(
+        candidate =>
+          candidate.stackName === skip.itemName &&
+          candidate.usage.actualUnitId === skip.fromUnitId &&
+          candidate.stackUnitId === skip.toUnitId,
+      ) ?? claim(candidate => candidate.stackName === skip.itemName);
+    undeducted.add(draw?.usage.recipeIngredientId ?? `skip:${position}`);
+  });
+  return undeducted;
+}
+
 export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const { t } = useTranslation();
   const pantryId = useSelectedPantryId();
+  const homeId = useSelectedHomeId();
   const client = useApolloClient();
   const [editableMatches, setEditableMatches] = useState<EditableMatch[]>([]);
   const [isSheetVisible, setIsSheetVisible] = useState(false);
@@ -104,6 +187,97 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
       nextFetchPolicy: 'network-only',
     },
   );
+
+  // Substitutes read the same pantry stock, so a reopened review asks again.
+  const [loadSubstitutesQuery] = useLazyQuery(RecipeSubstitutesDocument, {
+    fetchPolicy: 'network-only',
+    nextFetchPolicy: 'network-only',
+  });
+  // The newest review's read: a slower one from an earlier open, scaled to
+  // its servings, never lands on a later review.
+  const substitutesRead = useRef(0);
+
+  /** A swap at the amount cooked: scaled parts are for the recipe as written. */
+  const toCookSubstitute = (
+    option: SubstituteOptionData,
+    servingsRatio: number,
+  ): CookSubstitute | null => {
+    const ratio = option.scaled ? servingsRatio : 1;
+    const parts = option.parts.map(part => ({
+      ...part,
+      quantity: part.quantity * ratio,
+    }));
+    const texts = parts.map(part =>
+      t('recipes.substitutes.part', {
+        amount: formatQuantityWithUnit(part.quantity, part.unit.symbol),
+        name: part.item.name,
+      }),
+    );
+    const held = parts.flatMap((part, index) =>
+      part.pantryItem
+        ? [
+            {
+              key: part.item.id,
+              text: texts[index] ?? part.item.name,
+              stack: part.pantryItem,
+              quantity: part.quantity,
+              unitId: part.unit.id,
+            },
+          ]
+        : [],
+    );
+    // A swap the pantry holds none of has nothing to draw.
+    if (held.length === 0) return null;
+    return {
+      id: option.substitute.id,
+      label: texts.join(', '),
+      parts: held,
+    };
+  };
+
+  /**
+   * Offers swaps on the rows the pantry does not cover, once the review is
+   * open: a failed read leaves the rows as they are.
+   */
+  const loadSubstitutes = async (uncovered: Set<string>, servings: number) => {
+    substitutesRead.current += 1;
+    const read = substitutesRead.current;
+    if (!recipeId || !homeId || !pantryId || uncovered.size === 0) return;
+    let result;
+    try {
+      result = await loadSubstitutesQuery({
+        variables: {
+          recipeId,
+          homeId,
+          pantryId,
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
+      });
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: 'Load recipe substitutes error:',
+      });
+    }
+    const recipe = result?.data?.recipe;
+    if (!recipe || read !== substitutesRead.current) return;
+    // As the cook scales every amount: servings / Recipe.servings.
+    const ratio = recipe.servings > 0 ? servings / recipe.servings : 1;
+    const swaps = new Map<string, CookSubstitute[]>();
+    for (const { node } of recipe.ingredientsConnection.edges) {
+      if (!uncovered.has(node.id)) continue;
+      const options = node.substitutes.flatMap(
+        option => toCookSubstitute(option, ratio) ?? [],
+      );
+      if (options.length > 0) swaps.set(node.id, options);
+    }
+    if (swaps.size === 0) return;
+    setEditableMatches(prev =>
+      prev.map(em => {
+        const options = swaps.get(em.ingredient.id);
+        return options ? { ...em, substitutes: options } : em;
+      }),
+    );
+  };
 
   // The reviewed cook is the quick cook's own write with `exactStacks`: one
   // transaction, so it deducts every stack stated or none.
@@ -157,6 +331,13 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           return null;
         }
         const status = getAvailabilityStatus(match);
+        // An empty stack would only fail the deduction; picking another
+        // stack includes the line. One stating no amount has nothing to
+        // deduct until the cook states it.
+        const isIncluded =
+          match.suggestedQuantity !== null &&
+          !ingredient.isOptional &&
+          (status === 'available' || status === 'partial');
         return {
           match,
           ingredient,
@@ -167,19 +348,27 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           adjustedQuantity: match.suggestedQuantity,
           adjustedUnitId:
             match.suggestedUnit?.id ?? ingredient.unit?.id ?? null,
-          // An empty stack would only fail the deduction; picking another
-          // stack includes the line. One stating no amount has nothing to
-          // deduct until the cook states it.
-          isIncluded:
-            match.suggestedQuantity !== null &&
-            !ingredient.isOptional &&
-            (status === 'available' || status === 'partial'),
+          isIncluded,
+          substitutes: [],
+          selectedSubstitute: null,
+          includedBeforeSubstitute: isIncluded,
         };
       })
       .filter((m): m is EditableMatch => m !== null);
 
     setEditableMatches(editable);
     setIsSheetVisible(true);
+    void loadSubstitutes(
+      new Set(
+        editable
+          .filter(em => {
+            const status = getAvailabilityStatus(em.match);
+            return status === 'missing' || status === 'partial';
+          })
+          .map(em => em.ingredient.id),
+      ),
+      servings,
+    );
     return true;
   };
 
@@ -220,20 +409,34 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const confirmConsumption = async (cook?: CookEntry) => {
     if (!recipeId || !pantryId) return;
 
-    const ingredientsUsed: IngredientUsageInput[] = editableMatches.flatMap(
-      em => {
-        const pantryItem = em.selectedStack;
-        const quantity = em.adjustedQuantity;
-        if (
-          !em.isIncluded ||
-          !pantryItem ||
-          quantity === null ||
-          quantity <= 0
-        ) {
-          return [];
-        }
-        return [
-          {
+    // Each entry keeps its stack's name and unit: a skip reports it by them.
+    const entries: CookDraw[] = editableMatches.flatMap(em => {
+      const swap = em.selectedSubstitute;
+      if (swap) {
+        if (!em.isIncluded) return [];
+        // Its parts are drawn instead; the ingredient's own stacks are not.
+        return swap.parts.map(part => ({
+          stackName: part.stack.itemName,
+          stackUnitId: part.stack.unit.id,
+          usage: {
+            recipeIngredientId: em.ingredient.id,
+            pantryItemId: part.stack.id,
+            actualQuantity: part.quantity,
+            actualUnitId: part.unitId,
+            substituteId: swap.id,
+          },
+        }));
+      }
+      const pantryItem = em.selectedStack;
+      const quantity = em.adjustedQuantity;
+      if (!em.isIncluded || !pantryItem || quantity === null || quantity <= 0) {
+        return [];
+      }
+      return [
+        {
+          stackName: pantryItem.itemName,
+          stackUnitId: pantryItem.unit.id,
+          usage: {
             recipeIngredientId: em.ingredient.id,
             pantryItemId: pantryItem.id,
             actualQuantity: quantity,
@@ -242,9 +445,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
               em.match.suggestedUnit?.id ??
               pantryItem.unit.id,
           },
-        ];
-      },
-    );
+        },
+      ];
+    });
+    const ingredientsUsed = entries.map(entry => entry.usage);
 
     if (ingredientsUsed.length === 0) {
       toastService.info(t('recipes.noIngredientsForDeduction'));
@@ -292,8 +496,17 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     }
     // The cook commits whole. What it reports apart are the entries no
     // conversion could take to their stack's unit; queued, every entry replays.
-    const skippedCount = data?.skippedIngredients.length ?? 0;
-    const deductedCount = ingredientsUsed.length - skippedCount;
+    // The toast counts ingredients, and a swap's parts are entries of one.
+    const notDeducted = undeductedIngredients(
+      entries,
+      data?.skippedIngredients ?? [],
+    );
+    const skippedCount = notDeducted.size;
+    const deductedCount = Math.max(
+      0,
+      new Set(ingredientsUsed.map(usage => usage.recipeIngredientId)).size -
+        skippedCount,
+    );
     toastService.success(
       skippedCount > 0
         ? t('recipes.deductedFromPantryFailed', {

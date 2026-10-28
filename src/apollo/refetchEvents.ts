@@ -7,33 +7,70 @@ import {
 } from '@apollo/client';
 import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
-import { isApiUnavailable } from '#store/slices/networkSlice';
+import {
+  isApiUnavailable,
+  isNetworkWithheld,
+} from '#store/slices/networkSlice';
 import { queueManager } from './offlineQueue/queueManager';
 import { LogoutCleanup } from './logoutCleanup';
-import { onWebSocketReconnected } from './links/wsLink';
+import { isLiveChannelOpen, onWebSocketReconnected } from './links/wsLink';
 import { Telemetry } from '#services/telemetry';
 import { getResolvedLanguage, onLanguageChanged } from '#/i18n';
 import {
   startAnswersForSwitch,
   wasAnsweredSinceSwitch,
+  wasAnsweredWholeSinceSwitch,
 } from './answeredSinceSwitch';
+import { fragmentsCarried, fragmentsNeeded } from './fragmentsOnEntities';
 import { logger } from '#/utils/environment';
+import { RESYNC_SCOPE } from './scopedClient';
 
 type RefetchSource = keyof RefetchEvents;
 
+/** The scope on screen: its name, null for none, undefined while unknown. */
+export type ScopeOnScreen = () => string | null | undefined;
+
+// The host's, from `connectResyncSources`; without one every query is shown.
+let scopeOnScreen: ScopeOnScreen = () => undefined;
+// Starts the navigation catch-ups, once something is left to catch up.
+let catchUpOnNavigation = (): void => {};
+
+// A screen kept mounted while hidden (a home tab) keeps its queries active, so
+// only its scope tells a resync to leave them for when it is shown.
+const isOnScreen = (query: ObservableQuery): boolean => {
+  const scope: unknown = query.options.context?.[RESYNC_SCOPE];
+  if (typeof scope !== 'string') return true;
+  const shown = scopeOnScreen();
+  return shown === undefined || shown === scope;
+};
+
+// The API ends a socket at the tick after the ping it left unanswered
+// (WS_PING_INTERVAL_MS, 30 s: sous-chef-api packages/core/src/context/ws.ts),
+// so it can go just over one interval after the app stops, the close unseen.
+const SERVER_LIVENESS_WINDOW_MS = 30_000;
+
 /**
- * Three moments the device may have missed changes: the live-event channel
- * only delivers what happens after it connects. Each wraps a signal the app
- * already has; none adds a probe.
+ * Inside the liveness window over an open channel the server still holds the
+ * subscriptions, and a drop reconnects and resyncs on its own. Past it they may
+ * be gone, and answers that move with the clock (expiry counts, the day's plan)
+ * carry no event.
  */
 const appForeground = () =>
   new Observable<void>(observer => {
     const lifecycle = requirePlatform('appLifecycle');
     let lastState = lifecycle.current();
+    let leftAt = Date.now();
     return lifecycle.subscribe(nextState => {
       const wasAway = lastState === 'inactive' || lastState === 'background';
+      if (lastState === 'active' && nextState !== 'active') leftAt = Date.now();
       lastState = nextState;
-      if (nextState === 'active' && wasAway) observer.next();
+      if (nextState !== 'active' || !wasAway) return;
+      if (
+        !isLiveChannelOpen() ||
+        Date.now() - leftAt >= SERVER_LIVENESS_WINDOW_MS
+      ) {
+        observer.next();
+      }
     });
   });
 
@@ -59,34 +96,59 @@ const hasLiveSession = (): boolean =>
   !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
 
 // Offline a catch-up would only fail: `apiReachable` re-asks what is active.
+// In offline mode the link answers every query before it is recorded, so each
+// navigation would drain the queue to refetch the cache.
 const canCatchUp = (): boolean =>
-  hasLiveSession() && !isApiUnavailable(useStore.getState());
+  hasLiveSession() && !isNetworkWithheld(useStore.getState());
 
 // Catalog names come in the request's language, so a switch re-reads the
-// screen and each later navigation catches up a paused one. Only a real
-// change counts: i18next repeats the language, and rehydration precedes queries.
-const languageChanged =
-  (client: ApolloClient, onNavigation?: NavigationSubscribe) => () =>
-    new Observable<RefetchEvents['languageChanged']>(observer => {
-      let current = getResolvedLanguage();
-      let stopNavigation: (() => void) | undefined;
-      const stopLanguage = onLanguageChanged(() => {
-        const next = getResolvedLanguage();
-        if (next === current) return;
-        current = next;
-        if (client.getObservableQueries('all').size === 0) return;
-        stopNavigation ??= onNavigation?.(() => {
-          if (canCatchUp()) observer.next();
-        });
-        // What was answered before the switch is in the old language.
-        startAnswersForSwitch();
-        observer.next();
-      });
-      return () => {
-        stopLanguage();
-        stopNavigation?.();
-      };
+// screen and each later navigation catches up the rest. Only a real change
+// counts: i18next repeats the language, and rehydration precedes queries.
+const languageChanged = (client: ApolloClient) => () =>
+  new Observable<RefetchEvents['languageChanged']>(observer => {
+    let current = getResolvedLanguage();
+    return onLanguageChanged(() => {
+      const next = getResolvedLanguage();
+      if (next === current) return;
+      current = next;
+      if (client.getObservableQueries('all').size === 0) return;
+      // What was answered before the switch is in the old language.
+      startAnswersForSwitch();
+      catchUpOnNavigation();
+      observer.next();
     });
+  });
+
+// Whatever the household holds the caller reached as a member, so leaving
+// changes what every screen of it shows, as a resync does.
+let householdLeft = (): void => {};
+
+/** The caller left a home or was removed from one: resync what the app shows. */
+export const announceHouseholdLeft = (): void => householdLeft();
+
+const householdLeftSource = () =>
+  new Observable<RefetchEvents['householdLeft']>(observer => {
+    householdLeft = () => observer.next();
+    return () => {
+      householdLeft = () => {};
+    };
+  });
+
+// After a switch or a resync, each navigation re-asks what it shows that was
+// left unasked: a paused screen resuming, or a home tab hidden at the time.
+const screenShown = (onNavigation?: NavigationSubscribe) => () =>
+  new Observable<RefetchEvents['screenShown']>(observer => {
+    let stopNavigation: (() => void) | undefined;
+    catchUpOnNavigation = () => {
+      stopNavigation ??= onNavigation?.(() => {
+        if (canCatchUp()) observer.next();
+      });
+    };
+    return () => {
+      stopNavigation?.();
+      catchUpOnNavigation = () => {};
+    };
+  });
 
 // The socket re-acks a second or two after the app returns to the foreground.
 const SETTLE_MS = 1_500;
@@ -100,19 +162,62 @@ interface PendingResync {
 }
 
 const isCatchUp = (batch: PendingResync): boolean =>
-  [...batch.sources].every(name => name === 'languageChanged');
+  [...batch.sources].every(
+    name => name === 'languageChanged' || name === 'screenShown',
+  );
 
-// A language catch-up re-asks only what has not been answered since the
-// switch, whoever asked; any other trigger re-asks everything.
-const reasks =
-  (batch: PendingResync) =>
-  (query: ObservableQuery): boolean =>
-    batch.matchers.some(matcher => matcher(query)) &&
-    !(
-      isCatchUp(batch) &&
-      !!query.queryName &&
-      wasAnsweredSinceSwitch(query.queryName, query.variables)
+const answeredSinceSwitch = (query: ObservableQuery): boolean =>
+  !!query.queryName && wasAnsweredSinceSwitch(query.queryName, query.variables);
+
+const answeredWholeSinceSwitch = (query: ObservableQuery): boolean =>
+  !!query.queryName &&
+  wasAnsweredWholeSinceSwitch(query.queryName, query.variables);
+
+/**
+ * A query made only of fragments that a query answered whole since the switch
+ * holds on the same entities was answered with it: a scan card's hooks read
+ * what the barcode lookup brought.
+ */
+function answeredWithAnother(
+  client: ApolloClient,
+): (query: ObservableQuery) => boolean {
+  let carried: Set<string> | undefined;
+  return query => {
+    const needed = fragmentsNeeded(
+      query.query,
+      query.variables,
+      query.getCurrentResult().data,
     );
+    if (!needed) return false;
+    const held = (carried ??= new Set(
+      [...client.getObservableQueries('active')].flatMap(carrier =>
+        answeredWholeSinceSwitch(carrier)
+          ? [
+              ...fragmentsCarried(
+                carrier.query,
+                carrier.variables,
+                carrier.getCurrentResult().data,
+              ),
+            ]
+          : [],
+      ),
+    ));
+    return [...needed].every(key => held.has(key));
+  };
+}
+
+// What is on screen and not answered since the last switch or resync, whoever
+// asked. A resync starts afresh, so it re-asks all that is shown. A query held
+// to the cache is never sent by `refetchQueries`, so it is never answered.
+const reasks = (client: ApolloClient, batch: PendingResync) => {
+  const answeredWith = answeredWithAnother(client);
+  return (query: ObservableQuery): boolean =>
+    query.options.fetchPolicy !== 'cache-only' &&
+    batch.matchers.some(matcher => matcher(query)) &&
+    isOnScreen(query) &&
+    !answeredSinceSwitch(query) &&
+    !answeredWith(query);
+};
 
 async function refetchActive(
   client: ApolloClient,
@@ -120,7 +225,12 @@ async function refetchActive(
 ): Promise<void> {
   const source = [...batch.sources].sort().join('+');
   if (!(isCatchUp(batch) ? canCatchUp() : hasLiveSession())) return;
-  const wanted = reasks(batch);
+  if (!isCatchUp(batch)) {
+    // Anything answered before now may have missed a change.
+    startAnswersForSwitch();
+    catchUpOnNavigation();
+  }
+  const wanted = reasks(client, batch);
   let refetched = 0;
   try {
     await client.refetchQueries({
@@ -174,7 +284,7 @@ export const createRefetchEventManager = (): RefetchEventManager => {
     if (
       pending &&
       isCatchUp(pending) &&
-      ![...client.getObservableQueries('active')].some(reasks(pending))
+      ![...client.getObservableQueries('active')].some(reasks(client, pending))
     ) {
       takePending();
       running = false;
@@ -213,15 +323,18 @@ export const createRefetchEventManager = (): RefetchEventManager => {
  */
 export const connectResyncSources = (
   client: ApolloClient,
-  { onNavigation }: { onNavigation?: NavigationSubscribe } = {},
+  {
+    onNavigation,
+    scopeOnScreen: shown,
+  }: { onNavigation?: NavigationSubscribe; scopeOnScreen?: ScopeOnScreen } = {},
 ): void => {
   const manager = client.refetchEventManager;
   if (!manager) return;
+  scopeOnScreen = shown ?? (() => undefined);
   manager.setEventSource('appForeground', appForeground);
   manager.setEventSource('apiReachable', apiReachable);
   manager.setEventSource('wsReconnected', wsReconnected);
-  manager.setEventSource(
-    'languageChanged',
-    languageChanged(client, onNavigation),
-  );
+  manager.setEventSource('languageChanged', languageChanged(client));
+  manager.setEventSource('householdLeft', householdLeftSource);
+  manager.setEventSource('screenShown', screenShown(onNavigation));
 };

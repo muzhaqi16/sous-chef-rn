@@ -20,6 +20,25 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       symbol
     }
   }
+  # displayAmount read in each unit system, as the row reads it.
+  held {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   version
   updatedAt
   storageState
@@ -30,6 +49,43 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   lastUsedAt
   netWeight
   remainingNetWeight
+  # Both read in each unit system; the label's own figure where it states it.
+  packageSize {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
+  remaining {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   portionUnitId
   portionUnit {
     id
@@ -39,7 +95,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   remainingPortions
   activeBatchCount
   earliestBatchExpiresOn
-  # The photo this entry shows: the household's choice, else the catalog's.
+  # The photo this entry shows: the household's choice, the catalog's, else the viewer's pending one.
   # `catalogImageId` names the item photo it is, so the hero can lead with it.
   image {
     url
@@ -55,13 +111,6 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     # PRIVATE/no-store for its membership data.
     canEdit
     canSuggest
-    # The notices the catalog data's licences ask a reader to see.
-    dataAttributions {
-      source
-      notice
-      licenseUrl
-      sourceUrl
-    }
     imageUrl
     images {
       id
@@ -75,25 +124,32 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     name
     shelfLifeDays
     shelfLifeOpenedDays
-    nutritionFacts {
-      id
-      calories
-      totalFat
-      saturatedFat
-      transFat
-      cholesterol
-      sodium
-      totalCarbs
-      dietaryFiber
-      totalSugars
-      addedSugars
-      protein
-      vitaminD
-      calcium
-      iron
-      potassium
-      servingSize
-      servingUnit
+    # The item's own nutrition, else its concept's, marked as typical.
+    shownNutrition {
+      facts {
+        id
+        calories
+        totalFat
+        saturatedFat
+        transFat
+        cholesterol
+        sodium
+        totalCarbs
+        dietaryFiber
+        totalSugars
+        addedSugars
+        protein
+        vitaminD
+        calcium
+        iron
+        potassium
+        servingSize
+        servingUnit
+      }
+      typicalOf {
+        id
+        name
+      }
     }
     categories {
       id
@@ -135,6 +191,43 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       symbol
     }
     totalNetWeight
+    # Both weights read in the user's unit system.
+    perUnit {
+      value
+      unitId
+      metric {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+      imperial {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+    }
+    total {
+      value
+      unitId
+      metric {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+      imperial {
+        value
+        unitId
+        symbol
+        displayAsFraction
+        type
+      }
+    }
   }
   quantityBreakdown {
     fullPackages

@@ -220,9 +220,10 @@ it("previews the first three of Recipes' pantry suggestions, in order", async ()
   const { result } = renderOverview();
 
   await waitFor(() =>
-    expect(result.current.overview.suggestions).toHaveLength(3),
+    expect(result.current.overview.suggestions.items).toHaveLength(3),
   );
-  expect(result.current.overview.suggestions.map(s => s.title)).toEqual([
+  expect(result.current.overview.suggestions.fromPantry).toBe(true);
+  expect(result.current.overview.suggestions.items.map(s => s.title)).toEqual([
     'Recipe 1',
     'Recipe 2',
     'Recipe 3',
@@ -242,7 +243,36 @@ it('previews no suggestions with pantry suggestions switched off', async () => {
 
   await waitFor(() => expect(result.current.overview.counts).not.toBeNull());
   expect(suggestions.fired).toHaveLength(0);
-  expect(result.current.overview.suggestions).toEqual([]);
+  expect(result.current.overview.suggestions).toEqual({
+    items: [],
+    loading: false,
+    fromPantry: false,
+  });
+});
+
+it('asks every section again on a pull to refresh, and spins until all answer', async () => {
+  const counts = countsMock();
+  const plans = plansMock();
+  const plan = planMock();
+  const suggestions = suggestionsMock();
+  const lists = listsMock();
+  const { result } = renderOverview([counts, plans, plan, suggestions, lists]);
+  await waitFor(() => expect(result.current.overview.meals).toHaveLength(1));
+  await waitFor(() =>
+    expect(result.current.overview.suggestions.items).toHaveLength(3),
+  );
+  const before = [counts, plans, plan, suggestions, lists].map(
+    mock => mock.fired.length,
+  );
+
+  act(() => result.current.overview.refresh());
+
+  expect(result.current.overview.refreshing).toBe(true);
+  await waitFor(() => expect(result.current.overview.refreshing).toBe(false));
+  // At least once more each: a plans answer can re-run the plan's read too.
+  [counts, plans, plan, suggestions, lists].forEach((mock, index) => {
+    expect(mock.fired.length).toBeGreaterThan(before[index] ?? 0);
+  });
 });
 
 it('summarizes the active list as the items left to buy', async () => {

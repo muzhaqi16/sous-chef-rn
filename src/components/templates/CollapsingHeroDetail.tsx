@@ -26,6 +26,7 @@ import {
   HeaderActionIcon,
   type HeaderAction,
 } from '#components/molecules/HeaderActionIcon';
+import { StatusMark } from '#components/atoms/StatusMark';
 import {
   HeaderActionMenu,
   useHeaderOverflow,
@@ -77,6 +78,7 @@ const HeroChip: React.FC<{ action: HeaderAction }> = ({ action }) => (
     accessibilityLabel={action.accessibilityLabel}
   >
     <HeaderActionIcon action={action} defaultSize={sizes.icon.md} />
+    <StatusMark icon={action.mark} />
   </AppPressable>
 );
 

@@ -5,10 +5,11 @@ import {
   useQuery,
 } from '@apollo/client/react';
 import {
-  GetHomeByJoinCodeDocument,
   GetHomesDocument,
   JoinHomeByCodeDocument,
+  ResolveShareLinkDocument,
 } from '#operations/home/home.generated';
+import { homeLink } from '#features/home/utils/shareLink';
 import { errorService } from '#/services/errorService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -33,11 +34,11 @@ export type JoinHomeOutcome =
 export function useJoinHomeByCode({ code, skip }: UseJoinHomeByCodeArgs) {
   const { t } = useTranslation();
   const client = useApolloClient();
+  // The pre-join preview: `homeByJoinCode` serves a whole Home whose
+  // connections a non-member may not read, so its answer nulls for them.
   const { data, loading } = useQuery(
-    GetHomeByJoinCodeDocument,
-    code && !skip
-      ? { variables: { joinCode: code }, refetchOn: false }
-      : skipToken,
+    ResolveShareLinkDocument,
+    code && !skip ? { variables: { code }, refetchOn: false } : skipToken,
   );
 
   const [joinMutation] = useMutation(JoinHomeByCodeDocument, {
@@ -91,7 +92,7 @@ export function useJoinHomeByCode({ code, skip }: UseJoinHomeByCodeArgs) {
   }
 
   return {
-    home: data?.homeByJoinCode ?? null,
+    home: homeLink(data?.resolveShareLink),
     previewLoading: loading,
     joinHome,
   };

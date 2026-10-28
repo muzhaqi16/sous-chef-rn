@@ -61,6 +61,8 @@ interface MoveToPantryModalProps {
   onConfirm: (input: MoveToPantryInput) => Promise<boolean>;
   /** Server unreachable (offline / API down) — disables the confirm action. */
   confirmDisabled?: boolean;
+  /** False leaves out the amount paid, and the move records no price. */
+  askPrice?: boolean;
 }
 
 export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
@@ -71,6 +73,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   onClose,
   onConfirm,
   confirmDisabled = false,
+  askPrice = true,
 }) => {
   const { t } = useTranslation();
   const money = useMoney();
@@ -378,7 +381,9 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
     // The field asks for the TOTAL paid, as Mark Purchased does; the server
     // records it exactly and derives the unit price.
-    const totalPaid = parseMoneyInput(confirmedPrice) ?? undefined;
+    const totalPaid = askPrice
+      ? parseMoneyInput(confirmedPrice) ?? undefined
+      : undefined;
 
     setIsMoving(true);
     const moved = await onConfirm({
@@ -580,23 +585,25 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
             />
 
             {/* Total paid (Optional) */}
-            <View style={styles.section}>
-              <FormInput
-                label={t('labels.totalPaid')}
-                value={actualPriceInput}
-                onChangeText={handlePriceChange}
-                placeholder={localizeNumericHint('0.00')}
-                keyboardType="decimal-pad"
-                error={errors.actualPriceInput?.message}
-              />
-              {perUnitPrice != null ? (
-                <PerUnitHint
-                  price={money(perUnitPrice)}
-                  unit={lineUnitLabel}
-                  style={styles.perUnitHint}
+            {askPrice ? (
+              <View style={styles.section}>
+                <FormInput
+                  label={t('labels.totalPaid')}
+                  value={actualPriceInput}
+                  onChangeText={handlePriceChange}
+                  placeholder={localizeNumericHint('0.00')}
+                  keyboardType="decimal-pad"
+                  error={errors.actualPriceInput?.message}
                 />
-              ) : null}
-            </View>
+                {perUnitPrice != null ? (
+                  <PerUnitHint
+                    price={money(perUnitPrice)}
+                    unit={lineUnitLabel}
+                    style={styles.perUnitHint}
+                  />
+                ) : null}
+              </View>
+            ) : null}
 
             {/* Notes (Optional) */}
             <View style={styles.section}>

@@ -235,6 +235,30 @@ describe('AppSettingsScreen', () => {
     jest.mocked(useFeatureFlag).mockReturnValue(true);
   });
 
+  // A plain list by default; a person who budgets turns the money on.
+  it('turns budget and prices on for this user', () => {
+    render(<AppSettingsScreen />);
+
+    expect(
+      screen.getByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
+    ).toBeTruthy();
+    fireEvent.press(screen.getByTestId('toggle-Budget & prices'));
+
+    expect(mockUpdatePreference).toHaveBeenCalledWith({
+      budgetAndPrices: true,
+    });
+  });
+
+  it('offers no budget and prices switch where the build leaves it out', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(false);
+    render(<AppSettingsScreen />);
+
+    expect(
+      screen.queryByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
+    ).toBeNull();
+    jest.mocked(useFeatureFlag).mockReturnValue(true);
+  });
+
   it('renders the screen title', () => {
     render(<AppSettingsScreen />);
     expect(screen.getByText('App Settings')).toBeTruthy();

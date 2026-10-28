@@ -52,6 +52,10 @@ fragment HomeDetailScreen_home on Home {
         status
         email
         recipientName
+        # Whoever sent an invite may withdraw it without managing the home.
+        inviter {
+          id
+        }
         ...HomeInviteCard_invite
       }
     }

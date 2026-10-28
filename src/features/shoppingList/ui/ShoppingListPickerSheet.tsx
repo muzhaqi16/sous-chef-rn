@@ -72,7 +72,7 @@ export const ShoppingListPickerSheet: React.FC<
       {!!item.isDefault && (
         <View style={styles.defaultBadge}>
           <Text role="label" style={styles.defaultBadgeText}>
-            {t('shoppingListPicker.defaultBadge')}
+            {t('labels.defaultBadge')}
           </Text>
         </View>
       )}

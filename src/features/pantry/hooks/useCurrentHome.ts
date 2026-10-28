@@ -2,6 +2,7 @@ import { useQuery } from '@apollo/client/react';
 import { useSelectedHomeId, useIsHomeSelectionReady } from '#store/useAppStore';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
 
 /**
  * Separate from `useCurrentPantry` so a home-only consumer does not also run its
@@ -13,7 +14,7 @@ export function useCurrentHome() {
   const isHomeSelectionReady = useIsHomeSelectionReady();
 
   const { data: homesData } = useQuery(GetHomesDocument, {
-    fetchPolicy: 'cache-only',
+    ...heldFetchPolicy('cache-only'),
     errorPolicy: 'ignore',
   });
 

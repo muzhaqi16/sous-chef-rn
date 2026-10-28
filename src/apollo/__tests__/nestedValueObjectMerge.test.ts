@@ -318,6 +318,7 @@ describe('the entry photo on ShoppingListItem', () => {
         unitName: 'lemon',
         version: 3,
         unit: null,
+        amount: null,
         image,
         item: null,
       },

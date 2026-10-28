@@ -20,9 +20,11 @@
  * multiplies its whole subtree's cost by the page size; a VARIABLE does not,
  * which is why a page read states its size as one.
  *
- * Two caps bound the document itself: the parser refuses one over 1000 tokens
- * (400), and the request guard one over 20 000 characters. Both are measured on
- * the operation together with every fragment sent with it.
+ * Two caps bound the document itself: the parser refuses one over 2000 tokens
+ * (400), over HTTP and on the WebSocket subscribe alike, and the request guard
+ * one over 20 000 characters. Both are measured on the operation together with
+ * every fragment sent with it, after the `__typename` Apollo adds to every
+ * selection: the source text undercounts.
  *
  * One cap reads the REQUEST, not the document: the page sizes along one nested
  * path, variables resolved, multiply to at most 100 000
@@ -31,10 +33,11 @@
  *
  * ---
  * The rules and their defaults are the API's:
- * `packages/core/src/config/armorConfig.ts` (the rules, `MAX_DOCUMENT_TOKENS`),
+ * `packages/core/src/config/armorConfig.ts` (the rules, `maxDocumentTokens()`),
  * `config/sections/http.ts` and `config/sections/publicApi.ts` (the defaults):
  *
  *     MAX_QUERY_DEPTH=10         MAX_QUERY_COST=3500     MAX_QUERY_LENGTH=20000
+ *     MAX_QUERY_TOKENS=2000
  *     MAX_SUBSCRIPTION_DEPTH=4   MAX_SUBSCRIPTION_COMPLEXITY=500
  *     OBJECT_COST=1  SCALAR_COST=0  DEPTH_COST_FACTOR=1.5
  *     MAX_NESTED_PAGINATION_PRODUCT=100000
@@ -63,6 +66,7 @@ import {
   type FragmentDefinitionNode,
   type OperationDefinitionNode,
 } from 'graphql';
+import { addTypenameToDocument } from '@apollo/client/utilities';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { OPERATION_ROOT_DIRS } from '#/test-utils/sourceRoots';
@@ -77,7 +81,7 @@ const MAX_SUBSCRIPTION_DEPTH = 4;
 const MAX_SUBSCRIPTION_COST = 500;
 const MAX_QUERY_DEPTH = 10;
 const MAX_QUERY_COST = 3500;
-const MAX_DOCUMENT_TOKENS = 1000;
+const MAX_DOCUMENT_TOKENS = 2000;
 const MAX_DOCUMENT_LENGTH = 20000;
 const OBJECT_COST = 1;
 const SCALAR_COST = 0;
@@ -294,7 +298,7 @@ function sentDocument(def: OperationDefinitionNode): string {
     kind: Kind.DOCUMENT,
     definitions: [def, ...reached.values()],
   };
-  return print(document);
+  return print(addTypenameToDocument(document));
 }
 
 /** Tokens as the server's parser counts them (`parseOptions.maxTokens`). */

@@ -1,18 +1,25 @@
 'use no memo';
 import React from 'react';
+import type { ScannedItem } from '#features/barcode/types';
 import {
   ErrorCode,
-  ExternalSource,
   NetWeightKind,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  UseHeldStacks_PantryFragmentDoc,
+  UseHeldStacks_PantryItemFragmentDoc,
+} from '#features/pantry/hooks/useHeldStacks.generated';
+import type { HeldStack } from '#features/pantry/hooks/useHeldStacks';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { t } from '#/i18n';
-import type { PackSizeOutcome } from '../PackSizeSheet';
+import { barcodeTestIDs } from '#features/barcode/testIDs';
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
@@ -50,29 +57,13 @@ jest.mock('#features/shoppingList/cache/items', () => {
   };
 });
 
-jest.mock('#domain/pantryItemDuplicate', () => {
-  const isDup = jest.fn().mockReturnValue(false);
-  const getInfo = jest.fn().mockReturnValue(null);
-  const getInfoFromPayload = jest.fn().mockReturnValue(null);
-  return {
-    isPantryItemDuplicateError: isDup,
-    getPantryItemDuplicateInfo: getInfo,
-    getPantryItemDuplicateInfoFromPayload: getInfoFromPayload,
-    promptPantryDuplicate: jest.fn(),
-    getPantryItemDuplicateFromResult: jest.fn(
-      (payload: { __typename?: string } | null | undefined, error: unknown) => {
-        if (payload?.__typename === 'DuplicatePantryItemError') {
-          const info = getInfoFromPayload(payload);
-          if (info) return info;
-        }
-        if (error != null && isDup(error)) return getInfo(error);
-        return null;
-      },
-    ),
-  };
-});
-
+// The counting units the device holds: a scan is counted in a piece.
+const mockCachedUnits = [
+  { id: 'unit-pc', name: 'piece', symbol: 'pc', type: 'COUNT' },
+];
+let mockUnitsNow: typeof mockCachedUnits = mockCachedUnits;
 jest.mock('#store/useAppStore', () => ({
+  useCachedUnits: () => mockUnitsNow,
   useAppStore: jest.fn(
     (
       selector: (state: { setPendingPantryScrollToTop: () => void }) => unknown,
@@ -87,20 +78,54 @@ jest.mock('../ProductResultCard', () =>
   require('#/test-utils/searchResultsStubs'),
 );
 jest.mock('../ActionButtons', () => require('#/test-utils/searchResultsStubs'));
+jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () =>
+  require('#/test-utils/searchResultsStubs'),
+);
 
-// The sheet's own form is pinned in `PackSizeSheet.test.tsx`.
-const mockPackSizeOutcomes: PackSizeOutcome[] = [];
-jest.mock('../PackSizeSheet', () => ({
-  PackSizeSheet:
-    require('#/test-utils/searchResultsStubs').packSizeSheetConfirming(
-      { netWeight: 32, netWeightUnitId: 'unit-oz' },
-      (outcome: PackSizeOutcome) => mockPackSizeOutcomes.push(outcome),
-    ),
+// Alerts have their own tests; here the household has nothing to check.
+jest.mock('#features/barcode/hooks/useProductOrigin', () => ({
+  useProductOrigin: () => ({ lines: [] }),
 }));
+jest.mock('#features/barcode/hooks/useProductBrandListings', () => ({
+  useProductBrandListings: () => ({ listings: [] }),
+}));
+const mockAddBrand = jest.fn();
+jest.mock('#features/profile/hooks/useBrandLists', () => ({
+  useBrandLists: () => ({
+    lists: [{ id: 'list-avoid', name: 'Avoid', enabled: true, brands: [] }],
+    addBrand: mockAddBrand,
+  }),
+}));
+jest.mock('#features/barcode/hooks/useProductDietaryAlerts', () => ({
+  useProductDietaryAlerts: () => ({
+    check: 'none',
+    alerts: [],
+    alternatives: [],
+  }),
+}));
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: () => false,
+}));
+jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
+  useStorePriceMemory: () => ({ lastPaid: null, usual: null, typical: null }),
+}));
+
+// Store mode's shelf prices have their own tests; here, which list they are read for.
+const mockShelfListIds: (string | null | undefined)[] = [];
+jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
+  useStoreShelfPrices: (_itemId: string, listId: string | null | undefined) => {
+    mockShelfListIds.push(listId);
+    return { rows: [] };
+  },
+}));
+
+/** One package counted in a piece, sized by the record: what a scan adds. */
+const ONE_PACKAGE = { packages: { count: 1, unitId: 'unit-pc' } };
 
 describe('SearchResults', () => {
   const mockItem = {
     id: 'item-1',
+    conceptIds: [],
     name: 'Organic Milk',
     upc: '123456',
     netWeight: 1,
@@ -117,7 +142,7 @@ describe('SearchResults', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockPackSizeOutcomes.length = 0;
+    mockUnitsNow = mockCachedUnits;
   });
 
   it('renders item name', () => {
@@ -128,6 +153,22 @@ describe('SearchResults', () => {
   it('renders Add to Pantry button for pantry source', () => {
     renderWithApollo(<SearchResults {...defaultProps} />);
     expect(screen.getByText('Add to Pantry')).toBeTruthy();
+  });
+
+  it('reads no shelf prices for a scan from the pantry or a list', () => {
+    const { unmount } = renderWithApollo(<SearchResults {...defaultProps} />);
+    expect(mockShelfListIds.at(-1)).toBeNull();
+    unmount();
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        source="shoppingList"
+        shoppingListId="list-1"
+      />,
+    );
+    expect(mockShelfListIds.at(-1)).toBeNull();
+    expect(screen.queryByTestId(barcodeTestIDs.storeShelfPrices)).toBeNull();
   });
 
   it('renders Add to shopping list button for shopping list source', () => {
@@ -141,9 +182,11 @@ describe('SearchResults', () => {
     expect(screen.getByText('Add to shopping list')).toBeTruthy();
   });
 
-  it('renders Scan Another button', () => {
+  // The header's scan button is the way to the next scan; the body offers only
+  // the add, beside what it adds.
+  it('offers no second scan button in the body', () => {
     renderWithApollo(<SearchResults {...defaultProps} />);
-    expect(screen.getByText('Scan Another')).toBeTruthy();
+    expect(screen.queryByText('Scan Another')).toBeNull();
   });
 
   // The screen is only reached from a pantry or shopping list, both of which
@@ -153,14 +196,15 @@ describe('SearchResults', () => {
   it('offers no add action when there is no source to add to', () => {
     renderWithApollo(<SearchResults {...defaultProps} source={undefined} />);
     expect(screen.queryByTestId('primary-btn')).toBeNull();
-    // The card and the escape hatch still render.
-    expect(screen.getByText('Scan Another')).toBeTruthy();
+    // The card still renders.
+    expect(screen.getByText('Organic Milk')).toBeTruthy();
   });
 
-  // A 1.89 L carton is ONE container. Its size belongs to the barcode's record,
-  // which the add names: a netWeight sent beside it would be stored as the
-  // user's own edit.
-  it('adds one container naming the scanned record, and no size of its own', async () => {
+  // A 1.89 L carton is ONE container, counted as one: left to the API, a count
+  // lands in the item's tracking unit, which can be a measure (1 oz, 1 cup).
+  // Its size belongs to the barcode's record, which the add names: a size sent
+  // beside it would be stored as the user's own edit.
+  it('adds one counted package naming the scanned record, and no size of its own', async () => {
     const rec = recordMock(CreatePantryItemDocument, {
       data: {
         createPantryItem: {
@@ -188,10 +232,196 @@ describe('SearchResults', () => {
     await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
-    expect(firedInput.quantity).toBe(1);
+    expect(firedInput.amount).toEqual(ONE_PACKAGE);
     expect(firedInput.item).toEqual({ variation: 'esm-1' });
+    expect(firedInput).not.toHaveProperty('quantity');
     expect(firedInput).not.toHaveProperty('netWeight');
     expect(firedInput).not.toHaveProperty('unit');
+    expect(firedInput).not.toHaveProperty('consumeUnit');
+  });
+
+  // The device's units are a persisted store, which hydrates after mount.
+  it('adds in one tap when the units load after the screen opened', async () => {
+    mockUnitsNow = [];
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+    const { rerender } = renderWithApollo(<SearchResults {...defaultProps} />, {
+      operationMocks: [rec.mock],
+    });
+
+    mockUnitsNow = mockCachedUnits;
+    rerender(<SearchResults {...defaultProps} />);
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+      .input;
+    expect(firedInput.amount).toEqual(ONE_PACKAGE);
+  });
+
+  it('sends a package size the user changed', async () => {
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{
+          ...mockItem,
+          variationId: 'esm-1',
+          netWeightKind: NetWeightKind.Package,
+          packageSize: {
+            __typename: 'Measure',
+            value: 1360.78,
+            unitId: 'unit-g',
+            metric: {
+              __typename: 'MeasureReading',
+              value: 1.36,
+              unitId: 'unit-kg',
+              symbol: 'kg',
+              displayAsFraction: false,
+              type: UnitType.Weight,
+            },
+            imperial: {
+              __typename: 'MeasureReading',
+              value: 3,
+              unitId: 'unit-lb',
+              symbol: 'lb',
+              displayAsFraction: false,
+              type: UnitType.Weight,
+            },
+          },
+        }}
+      />,
+      { operationMocks: [rec.mock] },
+    );
+
+    // No settings cached: the API's own fallback, metric.
+    expect(screen.getByText('1 pc · 1.36 kg each')).toBeTruthy();
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
+    fireEvent.changeText(
+      screen.getByTestId(barcodeTestIDs.scanAmountSize),
+      '2',
+    );
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+      .input;
+    expect(firedInput.amount).toEqual({
+      packages: {
+        count: 1,
+        unitId: 'unit-pc',
+        size: { netWeight: 2, netWeightUnitId: 'unit-kg' },
+      },
+    });
+  });
+
+  // USM-4: a "6 x 250mL" six-pack adds as 6 cans of 250 ml, never as one
+  // package of the record's 1500 mL.
+  it('adds a six-pack as its six cans, each one can’s size', async () => {
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+    const volume = (
+      value: number,
+      unitId: string,
+      symbol: string,
+    ): NonNullable<ScannedItem['packageSize']>['metric'] => ({
+      __typename: 'MeasureReading',
+      value,
+      unitId,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Volume,
+    });
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{
+          ...mockItem,
+          variationId: 'esm-six',
+          packageSize: {
+            __typename: 'Measure',
+            value: 1500,
+            unitId: 'unit-ml',
+            metric: volume(1.5, 'unit-l', 'L'),
+            imperial: volume(50.72, 'unit-floz', 'fl oz'),
+          },
+          packs: {
+            __typename: 'PackStatement',
+            count: 6,
+            each: {
+              __typename: 'Measure',
+              value: 250,
+              unitId: 'unit-ml',
+              metric: volume(250, 'unit-ml', 'ml'),
+              imperial: volume(8.45, 'unit-floz', 'fl oz'),
+            },
+            container: { __typename: 'Unit', id: 'unit-can', symbol: 'can' },
+          },
+        }}
+      />,
+      { operationMocks: [rec.mock] },
+    );
+
+    expect(screen.getByText('6 can · 250 ml each')).toBeTruthy();
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
+      .input;
+    expect(firedInput.amount).toEqual({
+      packages: {
+        count: 6,
+        unitId: 'unit-can',
+        size: { netWeight: 250, netWeightUnitId: 'unit-ml' },
+      },
+    });
+  });
+
+  it('adds nothing while the amount is invalid, and opens it to show why', async () => {
+    const rec = recordMock(CreatePantryItemDocument, {
+      data: {
+        createPantryItem: {
+          __typename: 'CreatePantryItemPayload',
+          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+        },
+      },
+    });
+    renderWithApollo(<SearchResults {...defaultProps} />, {
+      operationMocks: [rec.mock],
+    });
+
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
+    fireEvent.changeText(
+      screen.getByTestId(barcodeTestIDs.scanAmountQuantity),
+      '1 1/2',
+    );
+    fireEvent.press(screen.getByTestId('primary-btn'));
+
+    expect(
+      await screen.findByText(t('barcode.amount.wholePackages')),
+    ).toBeTruthy();
+    expect(rec.fired).toHaveLength(0);
   });
 
   it('sends the day of the add on the input, for its default expiry', async () => {
@@ -231,33 +461,9 @@ describe('SearchResults', () => {
         },
       });
 
-    const notice = {
-      source: ExternalSource.Openfoodfacts,
-      notice: 'Product data from Open Food Facts, available under the ODbL.',
-      licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
-      sourceUrl: 'https://world.openfoodfacts.org/product/123456',
-    };
-
-    it('shows the notice its data asks for', () => {
-      renderWithApollo(
-        <SearchResults
-          {...defaultProps}
-          item={{
-            ...mockItem,
-            source: 'OPENFOODFACTS',
-            dataAttributions: [notice],
-          }}
-        />,
-      );
-      expect(screen.getByText(notice.notice)).toBeTruthy();
-    });
-
-    it('credits nobody for an item whose data asks for no notice', () => {
-      renderWithApollo(<SearchResults {...defaultProps} />);
-      expect(screen.queryByText(/Open Food Facts/)).toBeNull();
-    });
-
-    it('asks for the pack size it lacks, then stores the one entered', async () => {
+    // The size is the user's to add if they know it; unasked, the API counts
+    // an unsized package in a counted stack.
+    it('adds one counted package without asking for the size it lacks', async () => {
       const rec = created();
       const onScanAnother = jest.fn();
       renderWithApollo(
@@ -274,26 +480,15 @@ describe('SearchResults', () => {
         { operationMocks: [rec.mock] },
       );
 
+      expect(screen.getByText('1 pc')).toBeTruthy();
       fireEvent.press(screen.getByTestId('primary-btn'));
-      // Nothing is added until the size is given.
-      expect(rec.fired).toHaveLength(0);
-
-      fireEvent.press(screen.getByTestId('pack-size-stub'));
 
       await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
-      expect(firedInput.netWeight).toEqual({
-        netWeight: 32,
-        netWeightUnitId: 'unit-oz',
-      });
+      expect(firedInput.amount).toEqual(ONE_PACKAGE);
       expect(firedInput.item).toEqual({ variation: 'off-1' });
-      // The prompt closes only once the add has landed.
-      await waitFor(() =>
-        expect(mockPackSizeOutcomes).toEqual([{ status: 'done' }]),
-      );
-      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
-      expect(onScanAnother).toHaveBeenCalledTimes(1);
+      await waitFor(() => expect(onScanAnother).toHaveBeenCalledTimes(1));
     });
 
     describe('a refused add', () => {
@@ -315,7 +510,7 @@ describe('SearchResults', () => {
           },
         });
 
-      it('keeps the prompt open with the reason on the size, and no alert', async () => {
+      it('shows a refused size on the size field, opened, and no alert', async () => {
         const rec = refusedOn('netWeight');
         const onScanAnother = jest.fn();
         renderWithApollo(
@@ -328,33 +523,26 @@ describe('SearchResults', () => {
         );
 
         fireEvent.press(screen.getByTestId('primary-btn'));
-        fireEvent.press(screen.getByTestId('pack-size-stub'));
 
-        await waitFor(() =>
-          expect(mockPackSizeOutcomes).toEqual([
-            { status: 'refused', sizeError: t('errors.field.netWeight') },
-          ]),
-        );
-        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
+        expect(
+          await screen.findByText(t('errors.field.netWeight')),
+        ).toBeTruthy();
+        expect(screen.getByTestId(barcodeTestIDs.scanAmountSize)).toBeTruthy();
         const { alertService } = jest.requireMock('#/services/alertService');
         expect(alertService.alert).not.toHaveBeenCalled();
         expect(onScanAnother).not.toHaveBeenCalled();
       });
 
-      it('alerts any other refusal, with the prompt still open', async () => {
+      it('alerts a refusal no amount field can show', async () => {
         const rec = refusedOn('quantity');
         renderWithApollo(<SearchResults {...defaultProps} item={offItem} />, {
           operationMocks: [rec.mock],
         });
 
         fireEvent.press(screen.getByTestId('primary-btn'));
-        fireEvent.press(screen.getByTestId('pack-size-stub'));
 
-        await waitFor(() =>
-          expect(mockPackSizeOutcomes).toEqual([{ status: 'refused' }]),
-        );
-        expect(screen.getByTestId('pack-size-stub')).toBeTruthy();
         const { alertService } = jest.requireMock('#/services/alertService');
+        await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
         expect(alertService.alert).toHaveBeenCalledTimes(1);
         expect(alertService.alert).toHaveBeenCalledWith(
           t('labels.error'),
@@ -382,10 +570,9 @@ describe('SearchResults', () => {
       fireEvent.press(screen.getByTestId('primary-btn'));
 
       await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
-      expect(screen.queryByTestId('pack-size-stub')).toBeNull();
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
-      expect(firedInput).not.toHaveProperty('netWeight');
+      expect(firedInput.amount).toEqual(ONE_PACKAGE);
     });
   });
 
@@ -450,6 +637,122 @@ describe('SearchResults', () => {
     expect(line?.brand).toBeUndefined();
     expect(line?.netWeight).toBeUndefined();
     expect(line?.unit).toBeUndefined();
+  });
+
+  it("puts the scanned brand on one of the user's lists", async () => {
+    mockAddBrand.mockResolvedValue(true);
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        item={{ ...mockItem, brandId: 'brand-pack', brandName: 'Pack Brand' }}
+      />,
+    );
+
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.addBrandToList));
+    fireEvent.press(screen.getByText('Avoid'));
+
+    await waitFor(() =>
+      expect(mockAddBrand).toHaveBeenCalledWith(
+        'list-avoid',
+        { id: 'brand-pack', name: 'Pack Brand' },
+        null,
+      ),
+    );
+  });
+
+  // Opened from a cold scanner, the pantry's rows land after the card: what an
+  // add opens or joins follows them, and an amount typed meanwhile stays.
+  it('follows the pantry rows that land after it opened, keeping the typed amount', async () => {
+    const cache = makeCache();
+    renderWithApollo(<SearchResults {...defaultProps} />, {
+      cache,
+      operationMocks: [],
+    });
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
+    fireEvent.changeText(
+      screen.getByTestId(barcodeTestIDs.scanAmountQuantity),
+      '3',
+    );
+    // No stack known: the add opens one, which alone takes a consume unit.
+    expect(screen.getByText(t('labels.usedIn'))).toBeTruthy();
+
+    const reading: HeldStack['held']['metric'] = {
+      __typename: 'MeasureReading',
+      value: 2,
+      unitId: 'unit-pc',
+      symbol: 'pc',
+      displayAsFraction: false,
+      type: UnitType.Count,
+    };
+    act(() => {
+      cache.writeFragment({
+        fragment: UseHeldStacks_PantryItemFragmentDoc,
+        fragmentName: 'useHeldStacks_pantryItem',
+        data: {
+          __typename: 'PantryItem',
+          id: 'stack-milk',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          item: { __typename: 'Item', id: mockItem.id },
+          unit: {
+            __typename: 'Unit',
+            id: 'unit-pc',
+            type: UnitType.Count,
+            displayAsFraction: false,
+          },
+          displayAmount: {
+            __typename: 'DisplayAmount',
+            quantity: 2,
+            unit: { __typename: 'Unit', id: 'unit-pc', symbol: 'pc' },
+          },
+          held: {
+            __typename: 'Measure',
+            value: 2,
+            unitId: 'unit-pc',
+            metric: reading,
+            imperial: reading,
+          },
+        },
+      });
+      cache.writeFragment({
+        fragment: UseHeldStacks_PantryFragmentDoc,
+        fragmentName: 'useHeldStacks_pantry',
+        variables: {
+          itemsFirst: undefined,
+          itemsCursor: undefined,
+          itemsFilter: undefined,
+          itemsOrderBy: undefined,
+        },
+        data: {
+          __typename: 'Pantry',
+          id: 'pantry-1',
+          itemsConnection: {
+            __typename: 'PantryItemConnection',
+            edges: [
+              {
+                __typename: 'PantryItemEdge',
+                node: {
+                  __typename: 'PantryItem',
+                  id: 'stack-milk',
+                  item: { __typename: 'Item', id: mockItem.id },
+                },
+              },
+            ],
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText(t('labels.usedIn'))).toBeNull(),
+    );
+    expect(
+      screen.getByTestId(barcodeTestIDs.scanAmountQuantity).props.value,
+    ).toBe('3');
   });
 
   describe('the pantry item count', () => {

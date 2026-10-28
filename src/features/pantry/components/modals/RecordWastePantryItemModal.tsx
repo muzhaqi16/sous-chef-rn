@@ -226,7 +226,7 @@ const WasteActionFields: React.FC<{
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
         <FormInput
-          label={t('recordWaste.notes')}
+          label={t('labels.notes')}
           value={shared.notes}
           onChangeText={shared.setNotes}
           placeholder={t('recordWaste.notesPlaceholder')}

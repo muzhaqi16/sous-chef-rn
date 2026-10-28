@@ -141,6 +141,15 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
     await waitFor(() => expect(result.current.deletedOnServer).toBe(true));
   });
 
+  // A pantry the caller may not view refuses its stacks: the item is there,
+  // just not theirs to see, so it is neither removed nor worth retrying.
+  it('reads a FORBIDDEN refusal as hidden, not removed', async () => {
+    const { result } = renderDetail(refusedWith(ErrorCode.Forbidden));
+
+    await waitFor(() => expect(result.current.hiddenFromViewer).toBe(true));
+    expect(result.current.deletedOnServer).toBe(false);
+  });
+
   it('waits for the read to settle before calling the item removed', async () => {
     const item = noSuchItem(true);
     const { result } = renderDetail(item.mock);

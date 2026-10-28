@@ -1,9 +1,7 @@
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  ItemPhotoCarousel,
-  type ItemPhotoRef,
-} from '#features/catalog/ui/ItemPhotoCarousel';
+import { ItemPhotoCarousel } from '#features/catalog/ui/ItemPhotoCarousel';
+import type { ItemPhotoRef } from '#features/catalog/ui/useItemPhoto';
 import { CONTENT_OVERLAP } from '#components/templates/CollapsingHeroDetail';
 
 interface GalleryHeroProps {
@@ -19,6 +17,8 @@ interface GalleryHeroProps {
   onPhotoPress?: (index: number) => void;
   /** Fired when the gallery has no renderable image — lets the host collapse. */
   onUnrenderable?: () => void;
+  /** The page now on screen, lead page included. */
+  onPageChange?: (page: number) => void;
 }
 
 /**
@@ -34,6 +34,7 @@ export const GalleryHero: React.FC<GalleryHeroProps> = ({
   height,
   onPhotoPress,
   onUnrenderable,
+  onPageChange,
 }) => (
   <ItemPhotoCarousel
     photos={photos}
@@ -46,6 +47,7 @@ export const GalleryHero: React.FC<GalleryHeroProps> = ({
     dotsBottomOffset={CONTENT_OVERLAP + 8}
     onPhotoPress={onPhotoPress}
     onUnrenderable={onUnrenderable}
+    onPageChange={onPageChange}
   />
 );
 

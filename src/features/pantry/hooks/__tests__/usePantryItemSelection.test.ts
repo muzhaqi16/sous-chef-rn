@@ -156,33 +156,27 @@ describe('usePantryItemSelection.addItem', () => {
     expect(readPantry(cache).totalItems).toBe(1);
   });
 
-  it('withdraws the row and reports a duplicate as a skip, not a failure', async () => {
+  // USM-2: picking a product the pantry already holds joins its stack. The
+  // minted row goes, and the stack it joined is the one the pantry shows.
+  it('joins a product the pantry already holds, with no alert', async () => {
     const cache = makeCache();
     const data: MockDataFor<typeof CreatePantryItemDocument> = {
       createPantryItem: {
-        __typename: 'DuplicatePantryItemError',
-        code: ErrorCode.PantryItemAlreadyExists,
-        existingPantryItemIds: ['pi-1'],
+        __typename: 'CreatePantryItemPayload',
+        // Another id than the minted one: the stack it joined.
+        pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
       },
     };
-    const duplicate = recordMock(CreatePantryItemDocument, {
-      data,
-    });
-    const { result } = await setup(cache, duplicate);
+    const joined = recordMock(CreatePantryItemDocument, { data });
+    const { result } = await setup(cache, joined);
 
     let outcome: unknown;
     await act(async () => {
-      const pending = result.current.addItem('Milk', ONBOARDING_INPUT);
-      expect(catalogIds(cache)).toContain('cat-milk');
-      outcome = await pending;
+      outcome = await result.current.addItem('Milk', ONBOARDING_INPUT);
     });
 
-    expect(outcome).toEqual({
-      status: 'duplicate',
-      existingPantryItemId: 'pi-1',
-    });
-    expect(catalogIds(cache)).not.toContain('cat-milk');
-    expect(readPantry(cache).totalItems).toBe(1);
+    expect(outcome).toEqual({ status: 'added' });
+    expect(joined.fired[0]).toMatchObject({ input: { forceAdd: true } });
     const { alertService } = jest.requireMock('#/services/alertService');
     expect(alertService.alert).not.toHaveBeenCalled();
   });

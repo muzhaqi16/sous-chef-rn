@@ -7,12 +7,10 @@ import { PaginatedHistoryScreen } from '#components/templates/PaginatedHistorySc
 import { Text } from '#components/atoms/Text';
 import { UsageHistoryRow } from '#features/pantry/components/UsageHistoryRow';
 import type { UsageRecord } from '#features/pantry/types';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 
 const keyExtractor = (item: UsageRecord) => item.id;
 const getItemType = () => 'usage';
-const renderItem = ({ item }: ListRenderItemInfo<UsageRecord>) => (
-  <UsageHistoryRow usage={item} />
-);
 
 type RouteParams = {
   pantryItemId: string;
@@ -33,6 +31,10 @@ export const PantryUsageHistoryScreen: React.FC<
     isFetchingMore,
     retry,
   } = usePantryUsageHistory(pantryItemId);
+  const readingSystem = useReadingSystem();
+  const renderItem = ({ item }: ListRenderItemInfo<UsageRecord>) => (
+    <UsageHistoryRow usage={item} readingSystem={readingSystem} />
+  );
 
   return (
     <PaginatedHistoryScreen

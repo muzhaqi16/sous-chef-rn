@@ -1,4 +1,4 @@
-import { string } from 'yup';
+import { string, ValidationError, type Schema } from 'yup';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
 import { logger } from '#/utils/environment';
 import { t, type TranslationKey } from '#/i18n';
@@ -24,6 +24,62 @@ export function normalizeSmartPunctuation(
     .replace(/[‘’‚‛]/g, "'")
     .replace(/[“”„‟]/g, '"')
     .replace(/[–—]/g, '-');
+}
+
+/**
+ * A typed name, cleaned rather than refused, as the API stores an item's: a
+ * control character dropped (a space if it was whitespace), ends trimmed, each
+ * run of whitespace one space. Smart punctuation is mapped too, since the API's
+ * matching tells ’ from '.
+ */
+export function cleanName(value: string | undefined): string | undefined {
+  const mapped = normalizeSmartPunctuation(value);
+  if (!mapped) return mapped;
+  return mapped
+    .replace(/\p{Cc}/gu, char => (/\s/u.test(char) ? ' ' : ''))
+    .trim()
+    .replace(/\s+/g, ' ');
+}
+
+/** The API's caps on a name once cleaned, as each input's description states. */
+export const MAX_ITEM_NAME_LENGTH = 128;
+export const MAX_PERSON_NAME_LENGTH = 255;
+const MAX_HOME_NAME_LENGTH = 100;
+
+/**
+ * An item name as the API takes it: any text, cleaned, then required and at
+ * most `MAX_ITEM_NAME_LENGTH`. `required` is the caller's own message.
+ */
+export const itemNameText = (required: () => string) =>
+  string()
+    .transform(cleanName)
+    .required(required)
+    .max(
+      MAX_ITEM_NAME_LENGTH,
+      lazyMessage('errors.nameTooLong', { max: MAX_ITEM_NAME_LENGTH }),
+    );
+
+/**
+ * A home name as the API takes it (CreateHomeInput, UpdateHomeInput): any
+ * text, cleaned, then required and at most `MAX_HOME_NAME_LENGTH`.
+ */
+export const homeNameRule = string()
+  .transform(cleanName)
+  .required(lazyMessage('errors.homeNameRequired'))
+  .max(
+    MAX_HOME_NAME_LENGTH,
+    lazyMessage('errors.nameTooLong', { max: MAX_HOME_NAME_LENGTH }),
+  );
+
+/** The message `rule` gives `value`, or null when it passes: a field checked on its own. */
+export function fieldError(rule: Schema, value: unknown): string | null {
+  try {
+    rule.validateSync(value);
+    return null;
+  } catch (error) {
+    if (error instanceof ValidationError) return error.message;
+    throw error;
+  }
 }
 
 export function logValidationErrors(errors: FieldErrors<FieldValues>) {
@@ -68,12 +124,13 @@ export const newPasswordRule = string()
   .matches(/[A-Z]/, lazyMessage('commonValidation.passwordUppercase'))
   .matches(/[0-9]/, lazyMessage('commonValidation.passwordNumber'));
 
-// name rules (for firstName, lastName)
+// A first or last name in any script ("José", "李"), cleaned rather than refused.
 export const nameRule = string()
-  .transform(normalizeSmartPunctuation)
-  .min(2, lazyMessage('commonValidation.nameMin'))
-  .max(50, lazyMessage('commonValidation.nameMax'))
-  .matches(/^[a-zA-Z\s'-]+$/, lazyMessage('commonValidation.nameChars'));
+  .transform(cleanName)
+  .max(
+    MAX_PERSON_NAME_LENGTH,
+    lazyMessage('errors.nameTooLong', { max: MAX_PERSON_NAME_LENGTH }),
+  );
 
 // A quantity takes a fraction ("1 1/4") as readily as a decimal, so the rule
 // runs on what `parseFractionalInput` reads — a regex restating its grammar

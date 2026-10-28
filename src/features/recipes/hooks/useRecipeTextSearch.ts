@@ -11,7 +11,7 @@ import { fetchTextPage } from './useRecipeSearch';
 import { UseRecipeTextSearch_PickedRecipeFragmentDoc } from './useRecipeTextSearch.generated';
 import { catalogHintOf, type RecipeTarget } from './useOpenCatalogRecipe';
 
-const MIN_QUERY_LENGTH = 3;
+export const MIN_QUERY_LENGTH = 3;
 
 export type PickerDietTag = 'vegan' | 'vegetarian' | 'glutenFree' | 'dairyFree';
 

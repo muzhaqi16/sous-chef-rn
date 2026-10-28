@@ -1,7 +1,7 @@
 /**
  * The event carries the envelope plus the changed entity's id only —
  * subscriptions are validated against depth 5, which no fragment spread fits
- * under. Handlers read values back via `PantryItemForEvent` and friends, and
+ * under. Handlers read values back via `PantryItemsForEvents` and friends, and
  * only where needed: never for a self-echo, a delete, or an unheld row.
  */
 
@@ -12,9 +12,10 @@ import {
   PantryEventsDocument,
   type PantryEventsSubscription,
 } from '#features/pantry/graphql/pantry.generated';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import {
   ExpirationNotificationForEventDocument,
-  PantryItemForEventDocument,
+  PantryItemsForEventsDocument,
   PantrySummaryForEventDocument,
   UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
   type UsePantrySubscriptions_ExpirationNotificationFragment,
@@ -23,6 +24,7 @@ import {
 } from './usePantrySubscriptions.generated';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
+import { batchedEventRead } from '#/services/subscriptions/batchedEventRead';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
 import {
   CacheStrategy,
@@ -73,13 +75,22 @@ function readCachedItem(
   });
 }
 
-/** A complete read means some mounted list holds this row, so an update to it
- *  is worth a round trip. */
-function isItemCached(
+/**
+ * A list holds this row, so an update to it is worth a round trip. Read through
+ * the list's own fragment: the read-back's wider one is complete only once a
+ * read-back or the detail has run, so a listed row would never refresh.
+ */
+function isItemListed(
   client: SubscriptionApolloClient,
   itemId: string,
 ): boolean {
-  return readCachedItem(client, itemId) !== null;
+  return (
+    client.cache.readFragment({
+      fragment: PantryItem_ListedFragmentDoc,
+      fragmentName: 'pantryItem_listed',
+      from: { __typename: 'PantryItem', id: itemId },
+    }) !== null
+  );
 }
 
 /**
@@ -105,6 +116,16 @@ function refreshPantrySummary(
     );
   }, SUMMARY_REFRESH_DELAY_MS);
 }
+
+const readPantryItems = batchedEventRead(async (client, ids) => {
+  const data = await fetchEventEntity(
+    client,
+    PantryItemsForEventsDocument,
+    { ids },
+    'PantryItem',
+  );
+  return data ? data.pantryItemsByIds.map(item => item.id) : null;
+});
 
 async function handleItemChanged(
   payload: PantryEventsPayload,
@@ -137,17 +158,21 @@ async function handleItemChanged(
     return;
   }
 
-  const add = isAdd(mutation);
-  if (!add && !isItemCached(client, itemId)) return;
+  // A merge folded `mergedIds` into the node: those rows are gone, and the
+  // survivor, which took their stock, reads back below as an update.
+  if (mutation === MutationType.Merged) {
+    for (const mergedId of payload.mergedIds ?? []) {
+      removeFromPantryItemsConnection(client.cache, pantryId, mergedId, {
+        evictItem: true,
+      });
+    }
+  }
 
-  const data = await fetchEventEntity(
-    client,
-    PantryItemForEventDocument,
-    { id: itemId },
-    'PantryItem',
-  );
+  const add = isAdd(mutation);
+  if (!add && !isItemListed(client, itemId)) return;
+
   // Offline, or deleted between the event and this read.
-  if (!data?.pantryItem) return;
+  if (!(await readPantryItems(client, itemId))) return;
 
   // Re-checked after the await: a local delete can start mid-read, and
   // re-adding the row the user just removed is worse than a missed update.
@@ -276,14 +301,9 @@ export function usePantrySubscriptions(userId?: string) {
         case PantrySubtype.WasteAlert:
           if (
             payload.node.__typename === 'PantryItem' &&
-            isItemCached(client, payload.node.id)
+            isItemListed(client, payload.node.id)
           ) {
-            void fetchEventEntity(
-              client,
-              PantryItemForEventDocument,
-              { id: payload.node.id },
-              'PantryItem',
-            );
+            void readPantryItems(client, payload.node.id);
           }
           break;
 

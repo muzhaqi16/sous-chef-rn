@@ -5,25 +5,10 @@
 
 export type ToastType = 'default' | 'success' | 'error' | 'warning' | 'info';
 
-/**
- * How long a toast holds, in ms. Armed on the tick its enter animation starts,
- * so it spans the fade-in; add `motion.timing.STANDARD` for time on screen.
- */
-export const TOAST_HOLD_MS = {
-  /** The default: a confirmation. */
-  SHORT: 1400,
-  /** A full sentence rather than a confirmation: reading time. */
-  LONG: 2600,
-};
-
 export interface ToastOptions {
   message: string;
-  /**
-   * Hold in ms, default `TOAST_HOLD_MS.SHORT`; prefer a `TOAST_HOLD_MS` preset.
-   * The hold spans the fade-in and excludes the fade-out, so time on screen is
-   * about `duration + motion.timing.STANDARD`.
-   */
-  duration?: number;
+  /** A smaller second line under `message`, which then reads as a short title. */
+  detail?: string;
   type?: ToastType;
   action?: { label: string; onPress: () => void };
   /**
@@ -35,6 +20,27 @@ export interface ToastOptions {
 }
 
 export type ToastPresenter = (options: ToastOptions) => void;
+
+const NOTICE_MS = 1000;
+// About 240 words a minute.
+const MS_PER_WORD = 250;
+const ACTION_REACH_MS = 1500;
+const MIN_HOLD_MS = 1400;
+const MAX_HOLD_MS = 8000;
+
+/**
+ * How long a toast holds, in ms: a beat to notice it, then time to read every
+ * word it shows, and to reach its action. Armed on the tick its enter
+ * animation starts, so it spans the fade-in.
+ */
+export function toastHoldMs({ message, detail, action }: ToastOptions): number {
+  const words = [message, detail, action?.label]
+    .join(' ')
+    .split(/\s+/)
+    .filter(Boolean).length;
+  const hold = NOTICE_MS + words * MS_PER_WORD + (action ? ACTION_REACH_MS : 0);
+  return Math.min(Math.max(hold, MIN_HOLD_MS), MAX_HOLD_MS);
+}
 
 export type AlertButtonStyle = 'default' | 'cancel' | 'destructive';
 

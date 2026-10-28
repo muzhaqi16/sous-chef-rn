@@ -12,7 +12,7 @@ import AddItemForm from '../AddItemForm';
  * `createItemSchema` runs for real here — the sibling suite mocks it away. The
  * net-weight rows are a form FIELD, not component state: held in state and
  * merged only at submit, their rules could never fire and a half-filled row was
- * dropped with nothing reported, while Save stayed gated on `isValid`.
+ * dropped with nothing reported.
  */
 
 jest.mock('#components/atoms/Icon', () => ({
@@ -186,15 +186,58 @@ describe('AddItemForm — an edit that leaves the net weight alone', () => {
       />,
     );
 
-    // Save is gated on whole-schema `isValid`, which settles a tick after mount.
-    const save = screen.getByText('Save Changes');
-    await waitFor(() => expect(save).not.toBeDisabled());
-    await user.press(save);
+    await user.press(screen.getByText('Save Changes'));
 
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     expect(onSubmit.mock.calls[0]?.[0]?.netWeights).toEqual([
       { value: 500, unitName: 'g', unitId: 'unit-g' },
     ]);
+  });
+});
+
+describe('AddItemForm — a prefilled field the rules refuse', () => {
+  it('reports it on its page instead of disabling Save', async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn();
+    render(
+      <AddItemForm
+        {...defaultProps}
+        onSubmit={onSubmit}
+        mode="directEdit"
+        initialData={{
+          name: 'Rice',
+          netWeights: [{ value: 500, unitName: '' }],
+        }}
+      />,
+    );
+    // The unitless weight is on Inventory; the form opens on Basics.
+    expect(screen.queryByTestId('net-weight-entry-list')).toBeNull();
+
+    const save = screen.getByText('Save Changes');
+    expect(save).not.toBeDisabled();
+    await user.press(save);
+
+    expect(await screen.findByText('Unit is required')).toBeTruthy();
+    expect(screen.getByTestId('net-weight-entry-list')).toBeTruthy();
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it('submits a catalog name the old character rule refused', async () => {
+    const user = userEvent.setup();
+    const onSubmit = jest.fn();
+    render(
+      <AddItemForm
+        {...defaultProps}
+        onSubmit={onSubmit}
+        mode="directEdit"
+        initialData={{ name: 'Cashew Splits R/s' }}
+      />,
+    );
+
+    await user.press(screen.getByText('Save Changes'));
+
+    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    expect(onSubmit.mock.calls[0]?.[0]?.name).toBe('Cashew Splits R/s');
   });
 });
 

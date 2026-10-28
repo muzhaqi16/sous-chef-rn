@@ -1,5 +1,8 @@
 import { object, string } from 'yup';
-import { normalizeSmartPunctuation } from '#utils/validation/common';
+import {
+  homeNameRule,
+  normalizeSmartPunctuation,
+} from '#utils/validation/common';
 import { t, type KeyUnder } from '#/i18n';
 
 /**
@@ -12,15 +15,6 @@ const msg =
   (key: KeyUnder<'onboardingValidation'>, options?: Record<string, unknown>) =>
   (): string =>
     t(`onboardingValidation.${key}`, options);
-
-// home name rule
-const homeNameRule = string()
-  .required(msg('homeRequired'))
-  .transform(normalizeSmartPunctuation)
-  .min(2, msg('homeMin', { count: 2 }))
-  .max(50, msg('homeMax', { count: 50 }))
-  .matches(/^[a-zA-Z0-9\s'"-]+$/, msg('homeChars'))
-  .trim();
 
 // pantry name rule
 const pantryNameRule = string()

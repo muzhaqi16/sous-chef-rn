@@ -17,6 +17,7 @@ import {
 } from '#features/pantry/utils/itemEnumLabels';
 import { localizeNumericHint } from '#/utils/formatters/number';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 export interface StockSettingsPageProps {
   minQuantity: string;
@@ -51,6 +52,7 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
+  const asksCost = useBudgetAndPricesEnabled();
   const formatMethodLabel = (value: OfferedAcquisitionMethod) =>
     t(acquisitionMethodLabelKey(value));
   return (
@@ -111,14 +113,16 @@ export const StockSettingsPage: React.FC<StockSettingsPageProps> = ({
           />
         </View>
 
-        <FormInput
-          label={t('addToPantry.cost')}
-          value={costPerUnit}
-          onChangeText={setCostPerUnit}
-          placeholder={localizeNumericHint(t('addToPantry.costPlaceholder'))}
-          keyboardType="decimal-pad"
-          useBottomSheetInput
-        />
+        {asksCost ? (
+          <FormInput
+            label={t('addToPantry.cost')}
+            value={costPerUnit}
+            onChangeText={setCostPerUnit}
+            placeholder={localizeNumericHint(t('addToPantry.costPlaceholder'))}
+            keyboardType="decimal-pad"
+            useBottomSheetInput
+          />
+        ) : null}
 
         <SegmentedControl
           label={t('addToPantry.acquisitionMethod')}

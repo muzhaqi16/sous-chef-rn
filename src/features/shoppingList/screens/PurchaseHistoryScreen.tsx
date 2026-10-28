@@ -25,6 +25,7 @@ import { isCalendarDayInstant, purchaseDay } from '#/utils/dateUtils';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { personName } from '#/utils/formatters/memberFormatters';
 import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 const keyExtractor = (item: { id: string }) => item.id;
 
@@ -97,11 +98,11 @@ const PurchaseHistoryItemComponent: React.FC<PurchaseHistoryItemProps> = ({
 }) => {
   const { t } = useTranslation();
   const preferredCurrency = usePreferredCurrency();
-  const priceText = formatPrice(
-    purchase.totalPrice,
-    purchase.currency,
-    preferredCurrency,
-  );
+  // Off, a purchase reads as when and how much, with no price.
+  const showPrices = useBudgetAndPricesEnabled();
+  const priceText = showPrices
+    ? formatPrice(purchase.totalPrice, purchase.currency, preferredCurrency)
+    : null;
   // At quantity 1 the per-unit price IS the total. Every other quantity gets
   // the rate — a fractional one most of all.
   const perUnitText =
@@ -193,6 +194,7 @@ const PurchaseHistoryHeader: React.FC<{
   averageSpent: string;
 }> = ({ totalCount, totalSpent, averageSpent }) => {
   const { t } = useTranslation();
+  const showPrices = useBudgetAndPricesEnabled();
   return (
     <View style={styles.statsContainer}>
       <Text role="body">
@@ -201,18 +203,22 @@ const PurchaseHistoryHeader: React.FC<{
           {totalCount}
         </Text>
       </Text>
-      <Text role="body" style={styles.statsRow}>
-        {t('purchaseHistory.totalSpent')}{' '}
-        <Text role="bodyStrong" style={styles.statsValue}>
-          {totalSpent}
-        </Text>
-      </Text>
-      <Text role="body" style={styles.statsRow}>
-        {t('purchaseHistory.averagePrice')}{' '}
-        <Text role="bodyStrong" style={styles.statsValue}>
-          {averageSpent}
-        </Text>
-      </Text>
+      {showPrices ? (
+        <>
+          <Text role="body" style={styles.statsRow}>
+            {t('purchaseHistory.totalSpent')}{' '}
+            <Text role="bodyStrong" style={styles.statsValue}>
+              {totalSpent}
+            </Text>
+          </Text>
+          <Text role="body" style={styles.statsRow}>
+            {t('purchaseHistory.averagePrice')}{' '}
+            <Text role="bodyStrong" style={styles.statsValue}>
+              {averageSpent}
+            </Text>
+          </Text>
+        </>
+      ) : null}
     </View>
   );
 };

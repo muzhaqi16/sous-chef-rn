@@ -16,7 +16,8 @@ interface ListStatusSectionProps {
   handleToggleComplete: () => void;
   isArchived: boolean;
   isCompleted: boolean;
-  isOwner: boolean;
+  /** The API lets the viewer edit the list. */
+  canEdit: boolean;
   listId: string | undefined;
   reactivating: boolean;
   statusDisplay: string;
@@ -31,13 +32,13 @@ export const ListStatusSection: React.FC<ListStatusSectionProps> = ({
   handleToggleComplete,
   isArchived,
   isCompleted,
-  isOwner,
+  canEdit,
   listId,
   reactivating,
   statusDisplay,
 }) => {
   const { t } = useTranslation();
-  if (!listId || !isOwner) return null;
+  if (!listId || !canEdit) return null;
 
   return (
     <View style={commonStyles.settingsSection}>

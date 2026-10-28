@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
 import { useHomeMembership } from '#features/home/hooks/useHomeMembership';
@@ -9,6 +10,7 @@ import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { t, type TranslationKey } from '#/i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
+import { cleanName } from '#/utils/validation/common';
 
 export interface RolePickerState {
   visible: boolean;
@@ -25,9 +27,8 @@ export const ROLE_OPTIONS: {
   labelKey: TranslationKey;
   value: MembershipRole;
 }[] = [
-  { labelKey: 'homeRoles.owner', value: MembershipRole.Owner },
   { labelKey: 'labels.admin', value: MembershipRole.Admin },
-  { labelKey: 'homeRoles.member', value: MembershipRole.Member },
+  { labelKey: 'labels.member', value: MembershipRole.Member },
   { labelKey: 'labels.guest', value: MembershipRole.Guest },
 ];
 
@@ -81,14 +82,22 @@ export function useHomeDetailManagement(homeId: string) {
     from: homeRef ? { __typename: 'Home', id: homeId } : null,
   });
   const home = homeRef && unmaskedComplete ? unmaskedData : null;
+  // An answer naming no home is not found, never a failed load.
+  const homeState = useDataState({
+    loading,
+    error,
+    hasResult: data !== undefined,
+    isEmpty: !home,
+  });
 
   /**
    * Local-first: an absolute field set keyed by the home id, written to the
    * cache before firing and idempotent on a queued replay. The server requires
    * the version for its optimistic-concurrency check.
    */
-  const saveName = async (name: string) => {
-    if (!home) return;
+  const saveName = async (typed: string) => {
+    const name = cleanName(typed);
+    if (!home || !name) return;
     await updateHomeFields({ name }, home, t('errors.updateHomeNameFailed'));
   };
 
@@ -151,8 +160,7 @@ export function useHomeDetailManagement(homeId: string) {
   return {
     // Data
     home,
-    loading,
-    error,
+    homeState,
     leaving,
     refetch,
 

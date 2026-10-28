@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { fromDateKey } from '#/utils/dateUtils';
+import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useToday } from '#hooks/app/useToday';
 import {
   heldFetchPolicy,
@@ -14,7 +15,10 @@ import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { useMealPlans } from '#features/mealPlan/hooks/useMealPlans';
 import { useDailyMeals } from '#features/mealPlan/hooks/useDailyMeals';
-import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
+import {
+  useCurrentMealPlan,
+  useMealPlan,
+} from '#features/mealPlan/screens/useMealPlan';
 import { useServerRecipeSuggestions } from '#features/recipes/hooks/useServerRecipeSuggestions';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
@@ -23,7 +27,7 @@ import { useUnreadNotificationCount } from '#features/notifications/hooks/useUnr
 import { TodayCountsDocument } from './useTodayOverview.generated';
 
 /** How many of Recipes' pantry suggestions Today previews. */
-const SUGGESTION_PREVIEW = 3;
+export const SUGGESTION_PREVIEW = 3;
 
 /**
  * Today's overview of the household. Every read is another tab's, so each one
@@ -90,14 +94,25 @@ export function useTodayOverview() {
     `${pantry?.id ?? ''}:${today}`,
   );
 
+  // The plan covering today and its meals come with the list, not after it.
+  const current = useCurrentMealPlan(standDown);
   const {
-    state: { currentPlan, mealPlans, hasResult: plansHaveResult },
-  } = useMealPlans(standDown);
+    state: {
+      currentPlan,
+      mealPlans,
+      hasResult: plansHaveResult,
+      initialLoading: plansLoading,
+    },
+    actions: { refetch: refetchPlans },
+  } = useMealPlans({ ...standDown, current });
   // The plan covering today, not the one last opened on the Meal Plan tab.
-  const { items, itemDetails } = useMealPlan(
-    currentPlan?.id ?? null,
-    standDown,
-  );
+  const {
+    items,
+    itemDetails,
+    mealPlan: activePlan,
+    loading: activePlanLoading,
+    refetch: refetchPlan,
+  } = useMealPlan(currentPlan?.id ?? null, standDown);
   const { dailyMeals } = useDailyMeals(items, fromDateKey(today));
   const meals = dailyMeals.flatMap(group =>
     group.items.map(item => ({
@@ -115,7 +130,12 @@ export function useTodayOverview() {
     { fetchPolicy: standDown.fetchPolicy },
   );
 
-  const { lists, loading: listsLoading } = useShoppingListsLite(standDown);
+  const {
+    lists,
+    loading: listsLoading,
+    refetch: refetchLists,
+  } = useShoppingListsLite(standDown);
+  const [refreshing, setRefreshing] = useState(false);
   const activeListId = useActiveShoppingListId(lists);
   const activeList = lists.find(list => list.id === activeListId);
 
@@ -157,10 +177,35 @@ export function useTodayOverview() {
     retry: () => {
       if (pantry) void countsResult.refetch();
     },
+    refreshing,
+    /** Pull to refresh: every section asks again, and the spinner waits for all. */
+    refresh: () => {
+      void executeRefreshWithFinally(
+        () =>
+          Promise.allSettled([
+            pantry ? countsResult.refetch() : null,
+            refetchPlans(),
+            activePlan ? refetchPlan() : null,
+            refetchLists(),
+            suggestions.refresh(),
+          ]),
+        setRefreshing,
+      );
+    },
     meals,
-    suggestions: suggestionsEnabled
-      ? toDisplayItems(suggestions.rows.slice(0, SUGGESTION_PREVIEW), t)
-      : [],
+    /** Before the first answer only: a refetch keeps the meals it shows. */
+    mealsLoading: plansLoading || (activePlanLoading && !activePlan),
+    suggestions: {
+      items: suggestionsEnabled
+        ? toDisplayItems(suggestions.rows.slice(0, SUGGESTION_PREVIEW), t)
+        : [],
+      /** Asked and not yet answered: the section holds its rows' place. */
+      loading: suggestions.loading,
+      /** Until they answer, whether the pantry holds anything decides. */
+      fromPantry: suggestions.loading
+        ? (stats?.totalItems ?? 0) > 0
+        : suggestions.fromPantry,
+    },
     shopping: activeList
       ? {
           id: activeList.id,

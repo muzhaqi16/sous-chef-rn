@@ -30,8 +30,19 @@ function maskValue(value: unknown, depth: number): unknown {
   return out;
 }
 
-function maskVariables(variables: Record<string, unknown>) {
-  return maskValue(variables, 0);
+// A terminal or log file records an object argument as `Object`, so values go
+// out as indented JSON text under their label, masked, and capped by lines so a
+// large batch can't flood the console.
+const MAX_LOGGED_LINES = 40;
+const JSON_INDENT = '      ';
+
+function asJson(value: unknown): string {
+  const lines = JSON.stringify(maskValue(value, 0), null, 2).split('\n');
+  const shown =
+    lines.length > MAX_LOGGED_LINES
+      ? [...lines.slice(0, MAX_LOGGED_LINES), '…']
+      : lines;
+  return shown.map(line => `${JSON_INDENT}${line}`).join('\n');
 }
 
 // Cold-start detection: first N operations have inflated timing due to JS thread contention
@@ -110,9 +121,8 @@ export const createConsoleLink = (
             }
           }
 
-          // Log variables as expandable object
           if (logVariables && Object.keys(operation.variables).length > 0) {
-            console.log('   📤 Variables:', maskVariables(operation.variables));
+            console.log(`   📤 Variables:\n${asJson(operation.variables)}`);
           }
 
           // Log errors as JSON strings to prevent React Native console serialization issues
@@ -133,9 +143,8 @@ export const createConsoleLink = (
             }
           }
 
-          // Log response data as expandable object
           if (logResponse && result.data) {
-            console.log('   📥 Data:', result.data);
+            console.log(`   📥 Data:\n${asJson(result.data)}`);
           }
 
           // Log query if requested
@@ -145,7 +154,7 @@ export const createConsoleLink = (
 
           // Log extensions if present
           if (result.extensions) {
-            console.log('   🔧 Extensions:', result.extensions);
+            console.log(`   🔧 Extensions:\n${asJson(result.extensions)}`);
           }
 
           observer.next(result);

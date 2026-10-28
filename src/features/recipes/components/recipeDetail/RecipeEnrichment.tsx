@@ -13,7 +13,7 @@ type MacroField = Exclude<keyof RecipeNutritionFacts, 'calories'>;
 // The macros under the calories, in order, with the unit each is stated in.
 const MACROS: { field: MacroField; labelKey: TranslationKey; unit: string }[] =
   [
-    { field: 'protein', labelKey: 'recipes.macroProtein', unit: 'g' },
+    { field: 'protein', labelKey: 'labels.protein', unit: 'g' },
     { field: 'totalCarbs', labelKey: 'recipes.macroCarbohydrates', unit: 'g' },
     { field: 'totalFat', labelKey: 'recipes.macroFat', unit: 'g' },
     { field: 'dietaryFiber', labelKey: 'recipes.macroFiber', unit: 'g' },

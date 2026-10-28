@@ -46,4 +46,21 @@ export const recipesTestIDs = {
   heartButton: 'recipe-heart-button',
   reportButton: 'recipe-report-button',
   reviewReportButton: (reviewId: string) => `review-report-${reviewId}`,
+  /** The recipe page's household dietary summary, and its offline note. */
+  householdSummary: 'recipe-household-summary',
+  householdUnchecked: 'recipe-household-unchecked',
+  /** An ingredient's tile on the recipe page, keyed by its place in the list. */
+  ingredientTile: (index: number) => `recipe-ingredient-${index}`,
+  /** A flagged ingredient's sheet: who it affects, what can stand in, add. */
+  ingredientSheet: 'recipe-ingredient-sheet',
+  ingredientSheetAdd: 'recipe-ingredient-sheet-add',
+  substituteOption: (substituteId: string) =>
+    `recipe-substitute-${substituteId}`,
+  /** A swap offered for a missing ingredient in the cook review. */
+  cookSubstitute: (substituteId: string) => `cook-substitute-${substituteId}`,
+  /** `DataAttributionNotices`: a notice's link and its licence link, by source. */
+  dataAttributionSource: (source: string) =>
+    `data-attribution-${source.toLowerCase()}`,
+  dataAttributionLicense: (source: string) =>
+    `data-attribution-${source.toLowerCase()}-license`,
 };

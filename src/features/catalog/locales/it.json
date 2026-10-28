@@ -174,7 +174,6 @@
         "placeholder": "Inserisci il nome dell'articolo"
       },
       "description": {
-        "label": "Descrizione",
         "placeholder": "Inserisci la descrizione dell'articolo (facoltativo)"
       },
       "vendor": {
@@ -215,7 +214,6 @@
         "placeholder": "cucchiaino, tazza, ecc."
       },
       "tags": {
-        "label": "Tag",
         "placeholder": "Tag separati da virgole (es. biologico, senza glutine)"
       },
       "foodStamp": {
@@ -243,9 +241,6 @@
   },
   "itemValidation": {
     "nameRequired": "Il nome dell'articolo è obbligatorio",
-    "nameEmpty": "Il nome dell'articolo non può essere vuoto",
-    "nameMax": "Il nome dell'articolo non può superare {{count}} caratteri",
-    "nameChars": "Il nome dell'articolo può contenere solo lettere, numeri, spazi e punteggiatura comune",
     "descriptionMax": "La descrizione non può superare {{count}} caratteri",
     "upcDigits": "L'UPC può contenere solo numeri",
     "upcMin": "L'UPC deve avere almeno {{count}} cifre",
@@ -282,6 +277,8 @@
   },
   "itemPhotos": {
     "pendingReview": "In attesa di revisione",
+    "pendingReviewAction": "Foto in attesa di revisione",
+    "pendingReviewBody": "Un amministratore controlla questa foto prima che tutti la vedano. Fino ad allora la vedi solo tu.",
     "viewPhoto": "Vedi foto",
     "viewPhotoLabeled": "Vedi foto: {{perspective}}",
     "counter": "{{current}} di {{total}}",
@@ -324,12 +321,10 @@
     "brandOptional": "Marca (opzionale)",
     "placeholderItemName": "es. riso, pasta",
     "placeholderCategory": "es. cereali, latticini",
-    "tags": "Tag",
     "tagsPlaceholder": "Inserisci i tag separati da virgola",
     "location": "Posizione",
     "locationPlaceholder": "es. ripiano alto, cassetto 2",
     "storageNotes": "Note di conservazione",
-    "notes": "Note",
     "addTitle": "Aggiungi articolo alla dispensa",
     "editTitle": "Modifica articolo della dispensa",
     "quantityUnit": "Quantità e unità",
@@ -412,7 +407,6 @@
     "contains": "Contiene"
   },
   "storageLocationCard": {
-    "default": "Predefinita",
     "insideParent": "Dentro {{parent}}",
     "capacityWithUnit": "/ {{capacity}} {{unit}}",
     "capacity_one": "/ {{count}} unità",
@@ -459,5 +453,20 @@
   },
   "storeBranch": {
     "number": "Punto vendita n. {{number}}"
+  },
+  "storeShelfPrices": {
+    "title": "Prezzi nei negozi",
+    "cheapest": "Il più economico",
+    "sale": "In offerta",
+    "listStore": "Negozio di questa lista",
+    "was": "prima {{price}}",
+    "usually": "Di solito {{price}}",
+    "usuallyOver_one": "Di solito {{price}} in {{count}} giorno",
+    "usuallyOver_other": "Di solito {{price}} in {{count}} giorni",
+    "lowestIn_one": "Prezzo più basso in {{count}} giorno",
+    "lowestIn_other": "Prezzo più basso in {{count}} giorni",
+    "lastSeen": "Visto l’ultima volta il {{date}}",
+    "showMore_one": "Mostra {{count}} altro",
+    "showMore_other": "Mostra altri {{count}}"
   }
 }

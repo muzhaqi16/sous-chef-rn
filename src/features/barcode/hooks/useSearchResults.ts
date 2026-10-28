@@ -20,6 +20,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { useImageUpload } from '#hooks/data/useImageUpload';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import {
   mapFormToCreateItemInput,
   stashPendingFormImages,
@@ -32,7 +33,9 @@ import { alertService } from '#/services/alertService';
 import type { AddItemFieldRefusal } from '#features/catalog/types';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { toShownNutrition } from '#domain/nutrition';
 import { storeApi } from '#store';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { blocksCacheMissQueries } from '#store/slices/networkSlice';
 
 // `format` is react-native-vision-camera-barcode-scanner's BarcodeFormat, with
@@ -90,11 +93,12 @@ const convertToScannedItem = (
   brandNameOverride?: string,
 ): ScannedItem => ({
   id: item.id,
+  conceptIds: item.ancestors?.map(concept => concept.id) ?? [],
   name: item.name,
   description: firstNonBlank(item.description),
   imageUrl: firstNonBlank(item.imageUrl),
   image: cardImageOf(item),
-  dataAttributions: item.dataAttributions,
+  nutrition: toShownNutrition(item.shownNutrition) ?? undefined,
   canEdit: item.canEdit,
   canSuggest: item.canSuggest,
   upc: scannedCode,
@@ -110,17 +114,24 @@ const convertToScannedItem = (
         symbol: item.displayUnit.symbol,
       }
     : undefined,
+  packageSize: item.packageSize ?? undefined,
+  packs: item.packs ?? undefined,
   trackingUnit: item.trackingUnit
     ? {
         id: item.trackingUnit.id,
         name: item.trackingUnit.name,
         symbol: item.trackingUnit.symbol,
+        type: item.trackingUnit.type,
       }
     : undefined,
+  suggestedPackageUnit: item.suggestedPackageUnit ?? undefined,
   // The brand typed into the create form is the item's; a scan's is the
   // barcode's own.
   brandName: brandNameOverride ?? item.variationBrand?.name,
   brandId: brandNameOverride ? undefined : item.variationBrand?.id,
+  brandParentName: brandNameOverride
+    ? undefined
+    : item.variationBrand?.parent?.name,
   type: item.type,
   storageState: item.storageState,
   shelfLifeDays: item.shelfLifeDays ?? undefined,
@@ -154,6 +165,7 @@ export const useSearchResults = (
   barcode: string,
   format?: string,
   pantryId?: string,
+  inStoreMode = false,
 ) => {
   const { t } = useTranslation();
   const client = useApolloClient();
@@ -165,6 +177,15 @@ export const useSearchResults = (
   const createdId = created?.barcode === barcode ? created.id : null;
 
   const [addNewItem, { loading: addingItem }] = useMutation(CreateItemDocument);
+  // The household's dietary alerts ride the lookup when there is a household,
+  // and in store mode what it paid.
+  const homeId = useSelectedHomeId();
+  const homeVariables = homeId
+    ? { homeId, withHome: true, withPrices: inStoreMode }
+    : {};
+  // A store's shelf price is no household's, so it rides with or without one.
+  const shelfPricesOffered = useFeatureFlag('storeShelfPrices');
+  const withShelfPrices = inStoreMode && shelfPricesOffered;
 
   const {
     data: upcData,
@@ -175,6 +196,8 @@ export const useSearchResults = (
     variables: {
       lookup: { upc: { code: barcode, format: upcFormat } },
       pantry: pantryId,
+      ...homeVariables,
+      withShelfPrices,
     },
     // `items` is keyed by `filters`, so another code's result never serves this
     // one; network-only is for a code the catalog has gained or changed since.
@@ -193,7 +216,12 @@ export const useSearchResults = (
     error: skuError,
     refetch: refetchSku,
   } = useQuery(ItemByLookupDocument, {
-    variables: { lookup: { sku: { sku: barcode } }, pantry: pantryId },
+    variables: {
+      lookup: { sku: { sku: barcode } },
+      pantry: pantryId,
+      ...homeVariables,
+      withShelfPrices,
+    },
     skip: skuSkipped,
     fetchPolicy: 'network-only', // As the UPC lookup above.
     refetchOn: false,

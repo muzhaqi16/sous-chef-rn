@@ -14,7 +14,8 @@ interface RecurringSectionProps {
   generating: boolean;
   handleGenerateNext: () => void;
   handleStopRecurring: () => void;
-  isOwner: boolean;
+  /** The API lets the viewer edit the list. */
+  canEdit: boolean;
   isRecurring: boolean;
   listId: string | undefined;
   nextRecurringDate: string | null;
@@ -29,7 +30,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
   generating,
   handleGenerateNext,
   handleStopRecurring,
-  isOwner,
+  canEdit,
   isRecurring,
   listId,
   nextRecurringDate,
@@ -38,7 +39,7 @@ export const RecurringSection: React.FC<RecurringSectionProps> = ({
   setShowPatternPicker,
 }) => {
   const { t } = useTranslation();
-  if (!listId || !isOwner) return null;
+  if (!listId || !canEdit) return null;
 
   return (
     <View style={commonStyles.settingsSection}>

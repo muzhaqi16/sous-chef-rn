@@ -54,6 +54,10 @@ fragment PantryActionModal_pantryItem on PantryItem {
     name
     symbol
   }
+  # The unit the household uses the stack in: a use opens on it.
+  consumeUnit {
+    id
+  }
   packageBreakdown {
     count
     contentUnit {

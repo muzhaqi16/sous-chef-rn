@@ -42,6 +42,8 @@ query GetShoppingListDetails($id: ID!) {
     unpricedItems
     currency
     priceTracking
+    ...useListAsksPrice_list
+    ...useListCurrency_list
     # The store this trip is shopped at: a ticked line's price is recorded there.
     targetStore {
       id
@@ -103,6 +105,11 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
         home {
           id
           name
+          # The selector's delete mode: a home's OWNER and ADMINs delete its lists.
+          myMembership {
+            id
+            role
+          }
         }
         ownerships {
           id
@@ -342,6 +349,8 @@ query GetShoppingListSuggestions($id: ID!, $limit: Int = 20) {
 # MUTATIONS
 # ============================================
 
+# A list made with lines carries up to 50 of them; each result pairs back to the
+# id minted for it by `index`, as the batch add's do.
 mutation CreateShoppingList($input: CreateShoppingListInput!) {
   createShoppingList(input: $input) {
     __typename
@@ -350,6 +359,15 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
         id
         ...ShoppingListReaders
         name
+      }
+      itemResults {
+        index
+        success
+        item {
+          id
+          ...ShoppingListItemReaders
+          ...AddedShoppingListItemFields
+        }
       }
     }
     ... on Error {
@@ -362,13 +380,58 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
   }
 }
 
-mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
+# A change of store restates the comparison the settings screen shows, in
+# ListStoreComparison's selection, which `useUpdateShoppingList` writes over it.
+mutation UpdateShoppingList(
+  $input: UpdateShoppingListInput!
+  $withComparison: Boolean = false
+  $comparisonScope: PriceComparisonScope
+) {
   updateShoppingList(input: $input) {
     __typename
     ... on UpdateShoppingListPayload {
       shoppingList {
         id
         ...ShoppingListReaders
+      }
+      # Its stores, currency and unpriced lines are entities: each with the
+      # fields the queries read on it, as every write returning one carries.
+      storeComparison(scope: $comparisonScope) @include(if: $withComparison) {
+        scope
+        currency {
+          id
+          code
+          decimalPlaces
+          name
+          symbol
+        }
+        comparableLines
+        leftOutLines
+        truncated
+        unpricedLines {
+          id
+          ...ShoppingListItemReaders
+        }
+        candidates {
+          scope
+          store {
+            id
+            ...StoreReaders
+            name
+            address
+          }
+          chain {
+            id
+            name
+          }
+          estimatedTotal
+          pricedLines
+          chainFilledLines
+          anyStoreFilledLines
+          ranked
+          isTarget
+          newestObservedAt
+        }
       }
     }
     ... on Error {
@@ -986,7 +1049,7 @@ mutation JoinShoppingListByShareCode(
 #
 # `updatedFields` drives the skip (an event that changed nothing on screen costs
 # nothing) and `clearedItemIds` still carries a batch clear on its own. When the
-# handler does need values it reads them back through `ShoppingListItemForEvent`
+# handler does need values it reads them back through `ShoppingListItemsForEvents`
 # / `ShoppingListSummaryForEvent`, which get the generous HTTP limits.
 # See `__tests__/graphql/documentLimits.test.ts` for the enforced bound.
 subscription MyShoppingListsEvents {

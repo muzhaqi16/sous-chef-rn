@@ -1,14 +1,15 @@
 import React from 'react';
 import { View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
 import { toastService } from '#/services/toastService';
-import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { kitTestIDs } from '#components/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { motion } from '#/theme/motion';
 
 interface OfflineStatusPillProps {
   size?: number;
@@ -17,40 +18,45 @@ interface OfflineStatusPillProps {
 
 /**
  * Inline offline indicator for a header's action row; renders nothing online.
- * Purely visual so it can be mounted in every header — the on/off announcement
- * toast fires once at the app root in `OfflineTransitionToaster`, not here.
+ * Purely visual so it can be mounted in every header: a screen reader hears
+ * the transition once, from `OfflineTransitionAnnouncer` at the app root.
  */
 export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
   size = 22,
   style,
 }) => {
-  const { offline, iconName, message, pendingCount } = useOfflineStatus();
+  const { offline, iconName, title, detail, message, pendingCount } =
+    useOfflineStatus();
 
   if (!offline) return null;
 
   const handlePress = () => {
-    toastService.warning(message, { duration: TOAST.AUTO_DISMISS_LONG });
+    toastService.warning(title, { detail });
   };
 
   return (
-    <Pressable
-      testID={kitTestIDs.offlineBanner}
-      onPress={handlePress}
-      style={[styles.pressable, style]}
-      hitSlop={hitSlop.md}
-      accessibilityRole="button"
-      accessibilityLabel={message}
-      accessibilityLiveRegion="polite"
+    <Animated.View
+      entering={FadeIn.duration(motion.timing.STANDARD)}
+      exiting={FadeOut.duration(motion.timing.STANDARD)}
     >
-      <Icon name={iconName} size={size} tone="alertBannerWarning" />
-      {pendingCount > 0 && (
-        <View style={styles.badge}>
-          <Text role="footnoteStrong" style={styles.badgeText}>
-            {pendingCount > 9 ? '9+' : pendingCount}
-          </Text>
-        </View>
-      )}
-    </Pressable>
+      <Pressable
+        testID={kitTestIDs.offlineBanner}
+        onPress={handlePress}
+        style={[styles.pressable, style]}
+        hitSlop={hitSlop.md}
+        accessibilityRole="button"
+        accessibilityLabel={message}
+      >
+        <Icon name={iconName} size={size} tone="alertBannerWarning" />
+        {pendingCount > 0 && (
+          <View style={styles.badge}>
+            <Text role="footnoteStrong" style={styles.badgeText}>
+              {pendingCount > 9 ? '9+' : pendingCount}
+            </Text>
+          </View>
+        )}
+      </Pressable>
+    </Animated.View>
   );
 };
 

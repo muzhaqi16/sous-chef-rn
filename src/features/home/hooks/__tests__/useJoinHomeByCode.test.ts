@@ -11,6 +11,8 @@ import {
   JoinHomeByCodeDocument,
 } from '#operations/home/home.generated';
 import { useJoinHomeByCode } from '../useJoinHomeByCode';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 
 type HomesData = MockDataFor<typeof GetHomesDocument>;
 type HomeEdgeData = NonNullable<
@@ -184,5 +186,33 @@ describe('useJoinHomeByCode', () => {
     });
 
     expect(cachedHomeIds(cache)).toEqual(['home-1', 'home-2']);
+  });
+});
+
+// A code never undoes a removal: the person is told why, in the app's words,
+// and where to turn.
+it('tells a removed member to ask for an invite back', async () => {
+  const refused = recordMock(JoinHomeByCodeDocument, {
+    data: {
+      joinHomeByCode: {
+        __typename: 'ForbiddenError',
+        code: ErrorCode.HomeMembershipRemoved,
+        message: 'You cannot rejoin this home',
+      },
+    },
+  });
+  const { result } = renderHookWithApollo(
+    () => useJoinHomeByCode({ code: '', skip: true }),
+    { operationMocks: [refused.mock] },
+  );
+
+  let outcome: Awaited<ReturnType<typeof result.current.joinHome>> | undefined;
+  await act(async () => {
+    outcome = await result.current.joinHome('ABC123');
+  });
+
+  expect(outcome).toEqual({
+    joined: false,
+    body: t('errors.codes.homeMembershipRemoved'),
   });
 });

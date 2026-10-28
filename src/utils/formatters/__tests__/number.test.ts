@@ -1,4 +1,5 @@
 import {
+  currencySymbol,
   formatCurrency,
   UNKNOWN_AMOUNT,
   formatDecimal,
@@ -177,5 +178,29 @@ describe('formatCurrency', () => {
     // No currency: nothing tells the formatter how many places to use.
     expect(formatCurrency(1234, null, 0)).toBe('1,234');
     expect(formatCurrency(4.5, 'NOTACURRENCY', 3)).toBe('NOTACURRENCY 4.500');
+  });
+});
+
+describe('currencySymbol', () => {
+  it("reads the currency's own symbol, never a dollar sign", () => {
+    onLocale('en-US');
+    expect(currencySymbol('USD')).toBe('$');
+    expect(currencySymbol('EUR')).toBe('€');
+    expect(currencySymbol('JPY')).toBe('¥');
+  });
+
+  it('reads the symbol where the locale writes it after the amount', () => {
+    onLocale('es-ES');
+    expect(currencySymbol('EUR')).toBe('€');
+  });
+
+  it('falls back to the code for a currency Intl rejects', () => {
+    onLocale('en-US');
+    expect(currencySymbol('NOTACURRENCY')).toBe('NOTACURRENCY');
+  });
+
+  it('falls back to the code without Intl', () => {
+    withoutIntl();
+    expect(currencySymbol('EUR')).toBe('EUR');
   });
 });

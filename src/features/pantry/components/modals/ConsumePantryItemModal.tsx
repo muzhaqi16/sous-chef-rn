@@ -186,7 +186,7 @@ const ConsumeActionFields: React.FC<{
       {/* Notes */}
       <View style={commonStyles.bottomSheetSection}>
         <FormInput
-          label={t('consumeItem.notes')}
+          label={t('labels.notes')}
           value={shared.notes}
           onChangeText={shared.setNotes}
           placeholder={t('consumeItem.notesPlaceholder')}

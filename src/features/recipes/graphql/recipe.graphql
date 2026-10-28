@@ -360,6 +360,8 @@ mutation MarkRecipeAsCooked(
       # so the toast can name the cause rather than only the count.
       skippedIngredients {
         itemName
+        fromUnitId
+        toUnitId
         code
       }
       cookingLog {

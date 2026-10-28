@@ -9,53 +9,23 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { useFragment } from '@apollo/client/react';
-import type { FragmentType } from '@apollo/client/masking';
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
-import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import {
   galleryPhotos,
   photoDisplayUrl,
   getPerspectiveLabel,
 } from '#utils/imageUtils';
 import {
-  ItemPhotoCarousel_ItemPhotoFragmentDoc,
-  type ItemPhotoCarousel_ItemPhotoFragment,
-} from '#features/catalog/ui/ItemPhotoCarousel.generated';
+  useItemPhoto,
+  type ItemPhotoRef,
+} from '#features/catalog/ui/useItemPhoto';
 import { PhotoCredit } from '#features/catalog/ui/PhotoCredit';
 
 // The current page's dot; the credit clears the pill it sets the height of.
 const ACTIVE_DOT_SIZE = 10;
-
-/**
- * A photo as a caller can hold it: the masked ref Apollo hands back at runtime,
- * or the materialized object — codegen inlines fragment spreads into the
- * screen-level types, so screens are typed as holding the latter.
- */
-export type ItemPhotoRef =
-  | FragmentType<typeof ItemPhotoCarousel_ItemPhotoFragmentDoc>
-  | ItemPhotoCarousel_ItemPhotoFragment;
-
-/**
- * A photo ref read through its fragment. An incomplete read falls back to the
- * ref's materialized form, or null for a bare masked ref: it carries no `url`,
- * so rendering it would put `undefined` into an <Image>.
- */
-export const useItemPhoto = (
-  ref: ItemPhotoRef,
-): ItemPhotoCarousel_ItemPhotoFragment | null => {
-  const result = useFragment({
-    fragment: ItemPhotoCarousel_ItemPhotoFragmentDoc,
-    fragmentName: 'ItemPhotoCarousel_itemPhoto',
-    from: ref,
-  });
-  if (result.complete) return result.data;
-  return 'url' in ref && typeof ref.url === 'string' ? ref : null;
-};
 
 interface ItemPhotoCarouselProps {
   /** `Item.photos`, in the server's gallery order. Capped at 6 for display. */
@@ -78,6 +48,8 @@ interface ItemPhotoCarouselProps {
   overlayDots?: boolean;
   /** Bottom offset of the floated dots (overlayDots only, default 8). */
   dotsBottomOffset?: number;
+  /** The page now on screen, as a swipe settles on it (lead page included). */
+  onPageChange?: (page: number) => void;
   /** Opens the fullscreen viewer at the tapped page. */
   onPhotoPress?: (index: number) => void;
   /**
@@ -102,6 +74,7 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   resizeMode = 'contain',
   overlayDots = false,
   dotsBottomOffset = 8,
+  onPageChange,
   onPhotoPress,
   onUnrenderable,
 }) => {
@@ -129,7 +102,9 @@ export const ItemPhotoCarousel: React.FC<ItemPhotoCarouselProps> = ({
   ) => {
     if (pageWidth <= 0) return;
     const next = Math.round(event.nativeEvent.contentOffset.x / pageWidth);
-    if (next !== index) setIndex(next);
+    if (next === index) return;
+    setIndex(next);
+    onPageChange?.(next);
   };
 
   // No gallery yet: render the item's single resolved asset, so an item whose
@@ -296,17 +271,6 @@ const PhotoPage: React.FC<{
         frame
       )}
 
-      {/* A photo on a catalog item the user cannot edit lands PENDING: the API
-          returns it to its submitter alone, so it must not read as live. */}
-      {photo.status === ItemImageStatus.Pending && (
-        <View style={styles.pendingBadge} pointerEvents="none">
-          <Icon name="time-outline" size={12} tone="onScrim" />
-          <Text role="label" style={styles.pendingText}>
-            {t('itemPhotos.pendingReview')}
-          </Text>
-        </View>
-      )}
-
       {/* box-none: a tap beside the credit still opens the viewer. */}
       {photo.credit ? (
         <View
@@ -385,22 +349,6 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: theme.colors.background,
-  },
-  pendingBadge: {
-    position: 'absolute',
-    top: theme.spacing.sm,
-    left: theme.spacing.sm,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
-    paddingVertical: theme.spacing['2xs'],
-    borderRadius: theme.radii.full,
-    borderCurve: 'continuous',
-    backgroundColor: theme.colors.overlays.dark,
-  },
-  pendingText: {
-    color: theme.colors.onScrim,
   },
   // On the photo's bottom edge, or above the floated dot pill: its active dot
   // and its padding above and below.

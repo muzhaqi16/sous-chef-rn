@@ -1,4 +1,7 @@
 import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
+import { makeCache } from '#/apollo/cache';
+import { errorService } from '#/services/errorService';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
@@ -190,6 +193,115 @@ describe('useCreateShoppingList', () => {
     expect(outcome).toMatchObject({
       status: 'created',
       shoppingList: { id: 'srv-1' },
+    });
+  });
+
+  // A copy or a generated list: its lines are cached before the create fires.
+  describe('made with starting lines', () => {
+    const LINE = gql`
+      fragment _StartingLineProbe on ShoppingListItem {
+        id
+        itemName
+      }
+    `;
+    const lines = (count: number) =>
+      Array.from({ length: count }, (_, index) => ({
+        id: `line-${index}`,
+        item: { inline: { name: `Item ${index}` } },
+      }));
+    const lineKeys = (cache: ReturnType<typeof makeCache>) =>
+      Object.keys(cache.extract()).filter(key =>
+        key.startsWith('ShoppingListItem:'),
+      );
+
+    const createWithLines = async (
+      operationMocks: MockedResponse[],
+      count: number,
+      write?: (cache: ReturnType<typeof makeCache>) => () => void,
+    ) => {
+      const cache = makeCache();
+      const items = lines(count);
+      const writeLines = (listId: string) => {
+        for (const line of items) {
+          cache.writeFragment({
+            fragment: LINE,
+            data: {
+              __typename: 'ShoppingListItem',
+              id: line.id,
+              itemName: `${listId} ${line.id}`,
+            },
+          });
+        }
+      };
+      const { result } = renderHookWithApollo(
+        () => useCreateShoppingList(FALLBACK),
+        { cache, operationMocks },
+      );
+      let outcome:
+        | CreateShoppingListOutcome<(typeof items)[number]>
+        | undefined;
+      await act(async () => {
+        outcome = await result.current.createShoppingList(
+          { name: 'Copy' },
+          { items, write: write ? write(cache) : writeLines },
+        );
+      });
+      return { cache, outcome };
+    };
+
+    it('still sends the create when its lines cannot be cached', async () => {
+      const report = jest.spyOn(errorService, 'reportError');
+      const fired: unknown[] = [];
+      const { outcome } = await createWithLines(
+        [
+          {
+            request: {
+              query: CreateShoppingListDocument,
+              variables: vars => {
+                fired.push(vars);
+                return true;
+              },
+            },
+            result: successResult('list-1', 'Copy'),
+          },
+        ],
+        2,
+        () => () => {
+          throw new Error('cache write failed');
+        },
+      );
+
+      expect(fired).toHaveLength(1);
+      expect(outcome).toMatchObject({ status: 'created' });
+      expect(report).toHaveBeenCalledWith(
+        expect.any(Error),
+        expect.objectContaining({
+          operation: 'Create Shopping List lines (optimistic)',
+        }),
+      );
+    });
+
+    it('takes every starting line back with a refused create, the unsent too', async () => {
+      const { cache, outcome } = await createWithLines(
+        [
+          createMock({
+            result: {
+              data: {
+                createShoppingList: {
+                  __typename: 'ConflictError',
+                  code: 'CONFLICT',
+                  message: 'taken',
+                },
+              },
+            },
+          }),
+        ],
+        60,
+      );
+
+      expect(outcome).toMatchObject({ status: 'failed' });
+      expect(revertOptimisticShoppingList).toHaveBeenCalledTimes(1);
+      expect(lineKeys(cache)).toEqual([]);
     });
   });
 });

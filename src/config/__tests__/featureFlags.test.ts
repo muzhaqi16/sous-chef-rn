@@ -6,6 +6,7 @@ describe('resolveFeatureFlags', () => {
   // The server decides per user; the build only allows.
   it('allows every capability but the phone model by default', () => {
     expect(resolveFeatureFlags({}, undefined)).toEqual({
+      budgetAndPrices: true,
       deviceReceiptModel: false,
       deviceReceiptReading: true,
       ingredientPaste: true,
@@ -16,6 +17,7 @@ describe('resolveFeatureFlags', () => {
       recipeCaptureUrl: true,
       storeMode: true,
       storeRoutes: true,
+      storeShelfPrices: true,
     });
   });
 
@@ -39,6 +41,13 @@ describe('resolveFeatureFlags', () => {
     });
   });
 
+  it('lets a build turn store shelf prices off', () => {
+    expect(resolveFeatureFlags({}, 'storeShelfPrices=off')).toMatchObject({
+      storeShelfPrices: false,
+      budgetAndPrices: true,
+    });
+  });
+
   it('lets a build turn reading receipts on the phone off', () => {
     expect(resolveFeatureFlags({}, 'deviceReceiptReading=off')).toMatchObject({
       deviceReceiptReading: false,
@@ -50,6 +59,7 @@ describe('resolveFeatureFlags', () => {
     expect(
       resolveFeatureFlags({}, 'retiredFlag=off,ingredientPaste=maybe,,='),
     ).toEqual({
+      budgetAndPrices: true,
       deviceReceiptModel: false,
       deviceReceiptReading: true,
       ingredientPaste: true,
@@ -60,6 +70,7 @@ describe('resolveFeatureFlags', () => {
       recipeCaptureUrl: true,
       storeMode: true,
       storeRoutes: true,
+      storeShelfPrices: true,
     });
   });
 });

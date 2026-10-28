@@ -101,6 +101,64 @@ export const reconcileCreatePantryItemReplay: ReplayReconcilerTable[string] = (
   adoptServerEntityId(cache, 'Item', servedItemId, sent);
 };
 
+/** The stack a delta landed on: the payload's own, else its ledger row's. */
+const stackOf = (payload: Record<string, unknown>): unknown => {
+  if (isRecord(payload.pantryItem)) return payload.pantryItem;
+  return isRecord(payload.pantryItemUsage)
+    ? payload.pantryItemUsage.pantryItem
+    : undefined;
+};
+
+/**
+ * A delta queued against a stack the server has since merged into another
+ * (USM-3) lands on the survivor, which the answer names. The merged row goes,
+ * the survivor is linked, and later writes follow it through `adopt`: deltas
+ * move, while a set or a removal is withdrawn, as for a merged create.
+ */
+const adoptSurvivorOfDelta =
+  (subjectKey: 'id' | 'pantryItemId'): ReplayReconcilerTable[string] =>
+  (cache, variables, data, adopt) => {
+    const input: unknown = variables.input;
+    const payload: unknown = extractMutationPayload(data);
+    if (!isRecord(input) || !isRecord(payload)) return;
+    const queuedId = input[subjectKey];
+    const row = stackOf(payload);
+    const servedId = idOf(row);
+    if (typeof queuedId !== 'string' || !servedId || servedId === queuedId) {
+      return;
+    }
+
+    const pantryId = idOf(payload.pantry);
+    if (pantryId) {
+      const countsSettled = carriesPantryCount(payload.pantry, pantryId);
+      removePantryItemLocally(cache, pantryId, queuedId, {
+        countsSettled,
+        evictItem: true,
+      });
+      addPantryItemLocally(
+        cache,
+        pantryId,
+        { __typename: 'PantryItem', id: servedId },
+        { countsSettled },
+      );
+    } else {
+      safeEvict(cache, 'PantryItem', queuedId);
+    }
+    adopt?.({
+      mintedId: queuedId,
+      survivingId: servedId,
+      version:
+        isRecord(row) && typeof row.version === 'number'
+          ? row.version
+          : undefined,
+    });
+  };
+
+export const reconcilePantryUsageReplay = adoptSurvivorOfDelta('pantryItemId');
+export const reconcileRestockReplay = adoptSurvivorOfDelta('id');
+export const reconcileConvertExpiredReplay =
+  adoptSurvivorOfDelta('pantryItemId');
+
 /**
  * An applied delete answers with its row's `{ id }`, which re-creates the entity
  * the local removal evicted; it goes again. A converged replay answers `null`.

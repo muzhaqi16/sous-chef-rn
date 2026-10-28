@@ -18,11 +18,14 @@ fragment UserReaders on User {
     proteinTarget
     restrictions {
       id
-      appliesToHomeId
       createdAt
       diet
       healthGoal
       intolerance
+      item {
+        id
+        name
+      }
       notes
       severity
     }
@@ -74,6 +77,7 @@ fragment UserReaders on User {
     autoSync
     compactMode
     createdAt
+    deviceUnitSystem
     language
     offlineMode
     personalizedAds

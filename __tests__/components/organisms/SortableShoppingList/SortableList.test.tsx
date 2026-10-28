@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { Text } from '#components/atoms/Text';
 import { SortableShoppingList } from '../../../../src/features/shoppingList/components/SortableShoppingList/SortableList';
 import { ShoppingListPermissionsProvider } from '#features/shoppingList/context/ShoppingListPermissionsContext';
@@ -55,14 +55,14 @@ describe('SortableShoppingList', () => {
   );
 
   it('renders without crashing with empty items', () => {
-    const { toJSON } = render(
+    const { toJSON } = renderWithApollo(
       withPermissions(<SortableShoppingList {...defaultProps} />),
     );
     expect(toJSON()).toBeTruthy();
   });
 
   it('renders ListFooterComponent when items are empty', () => {
-    const { getByText } = render(
+    const { getByText } = renderWithApollo(
       withPermissions(
         <SortableShoppingList
           {...defaultProps}
@@ -75,7 +75,7 @@ describe('SortableShoppingList', () => {
 
   it('renders list when items are provided', () => {
     const items = [shoppingListRowItem('1')];
-    const { toJSON } = render(
+    const { toJSON } = renderWithApollo(
       withPermissions(<SortableShoppingList {...defaultProps} items={items} />),
     );
     expect(toJSON()).toBeTruthy();

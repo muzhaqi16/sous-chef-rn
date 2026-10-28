@@ -23,7 +23,7 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 /**
  * Join a home via share link or a typed code. Mirrors
  * {@link JoinByShareCodeScreen} but adds a preview-then-confirm step, so the
- * user sees the home name and counts before committing.
+ * user sees the home name and member count before committing.
  */
 export const JoinHomeByCodeScreen: React.FC<
   StaticScreenProps<{ joinCode?: string } | undefined>
@@ -41,6 +41,15 @@ export const JoinHomeByCodeScreen: React.FC<
   const [code, setCode] = useState(initialCode);
   const [inputValue, setInputValue] = useState(initialCode);
   const [joining, setJoining] = useState(false);
+
+  // A second link opened while this screen shows arrives as new params on the
+  // same screen: the preview follows the link, not the first code.
+  const [linkedCode, setLinkedCode] = useState(initialCode);
+  if (initialCode !== linkedCode) {
+    setLinkedCode(initialCode);
+    setCode(initialCode);
+    setInputValue(initialCode);
+  }
 
   const { home, previewLoading, joinHome } = useJoinHomeByCode({
     code,
@@ -85,7 +94,7 @@ export const JoinHomeByCodeScreen: React.FC<
         toPantryMain();
         toastService.success(
           t('labels.joined', {
-            name: firstNonBlank(home?.name) ?? t('joinHome.homeFallback'),
+            name: firstNonBlank(home?.name) ?? t('labels.home'),
           }),
         );
       },
@@ -159,8 +168,7 @@ export const JoinHomeByCodeScreen: React.FC<
     }
 
     // Preview-then-confirm (home is non-null here).
-    const memberCount = home.membersConnection.totalCount ?? 0;
-    const pantryCount = home.pantriesConnection.totalCount ?? 0;
+    const memberCount = home.memberCount ?? 0;
     return (
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -179,8 +187,7 @@ export const JoinHomeByCodeScreen: React.FC<
             align="center"
             style={styles.meta}
           >
-            {t('joinHome.memberCount', { count: memberCount })} ·{' '}
-            {t('joinHome.pantryCount', { count: pantryCount })}
+            {t('labels.memberCount', { count: memberCount })}
           </Text>
         </View>
         <Button

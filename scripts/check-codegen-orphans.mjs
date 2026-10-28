@@ -114,6 +114,14 @@ const SKIP_FILES = new Set([
   ),
   // Same generator, derived from `home.graphql`.
   fromRoot('src', 'features', 'home', 'cache', 'homeRowNeutral.generated.ts'),
+  // Same generator, derived from `useBrandLists.graphql`.
+  fromRoot(
+    'src',
+    'features',
+    'profile',
+    'hooks',
+    'useBrandListsNeutral.generated.ts',
+  ),
 ]);
 
 const fix = process.argv.includes('--fix');

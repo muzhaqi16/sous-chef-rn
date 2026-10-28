@@ -10,12 +10,10 @@ import {
   UserEventsDocument,
   type UserEventsSubscription,
 } from '#operations/auth/user.generated';
-import {
-  GetHomesDocument,
-  type GetHomesQuery,
-} from '#operations/home/home.generated';
-import { extractNodes } from '#/utils/connectionUtils';
+import { GetHomesDocument } from '#operations/home/home.generated';
+import { forgetHome } from '#/domain/forgetHome';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
+import { announceWorkSettled } from '#/services/subscriptions/settledWork';
 import {
   CacheStrategy,
   type SubscriptionApolloClient,
@@ -24,7 +22,6 @@ import {
   ModerationReasonCode,
   UserSubtype,
 } from '#/graphql/generated/schemaTypes';
-import { useSelectedHomeId } from '#store/useAppStore';
 import { useStore } from '#store/index';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { t } from '#/i18n';
@@ -41,34 +38,11 @@ const removedThemselves = (payload: UserEventPayload) =>
 function handleRemovedFromHome(
   payload: UserEventPayload,
   client: SubscriptionApolloClient,
-  selectedHomeId: string | null,
 ) {
   const homeId = payload.parents?.homeId;
   if (!homeId) return;
 
-  safeEvict(client.cache, 'Home', homeId);
-
-  if (homeId === selectedHomeId) {
-    // `homes` is a HomeConnection (edges/pageInfo), not a flat array — read it
-    // typed and unwrap via extractNodes. Exclude the home we were just removed
-    // from in case the eviction hasn't propagated to the connection yet.
-    const cachedData = client.cache.readQuery<GetHomesQuery>({
-      query: GetHomesDocument,
-    });
-    const remaining = extractNodes(cachedData?.homes).filter(
-      home => home.id !== homeId,
-    );
-
-    const store = useStore.getState();
-    const [firstRemaining] = remaining;
-    store.setSelectedHomeId(firstRemaining?.id ?? null);
-    store.setSelectedPantryId(null);
-    store.setSelectedShoppingListId(null);
-    // The meal plan pick is persisted like the other two. Left set, it keeps
-    // naming a plan in the home we just lost, and every detail read for it
-    // comes back FORBIDDEN.
-    store.setSelectedMealPlanId(null);
-  }
+  forgetHome(client.cache, homeId);
 
   if (!removedThemselves(payload)) {
     toastService.error(t('accountEvents.removedFromHome'));
@@ -131,11 +105,10 @@ function handleBannedOrSuspended(payload: UserEventPayload) {
 
 /**
  * Multi-device profile/settings sync and lifecycle events (membership changes,
- * moderation actions).
+ * moderation actions, background work settling).
  */
 export function useUserSubscriptions(userId?: string) {
   const client = useApolloClient();
-  const selectedHomeId = useSelectedHomeId() ?? null;
 
   const userEventHandlers = subscriptionService.register<UserEventPayload>({
     document: UserEventsDocument,
@@ -154,7 +127,7 @@ export function useUserSubscriptions(userId?: string) {
           break;
 
         case UserSubtype.RemovedFromHome:
-          handleRemovedFromHome(payload, client, selectedHomeId);
+          handleRemovedFromHome(payload, client);
           break;
 
         case UserSubtype.AddedToHome:
@@ -180,6 +153,25 @@ export function useUserSubscriptions(userId?: string) {
 
         case UserSubtype.Unbanned:
         case UserSubtype.Unsuspended:
+          break;
+
+        // The screen waiting on it asks once, instead of polling until it sees.
+        case UserSubtype.ReceiptParseSettled:
+          if (payload.parents?.receiptParseId) {
+            announceWorkSettled({
+              kind: 'receiptParse',
+              id: payload.parents.receiptParseId,
+            });
+          }
+          break;
+
+        case UserSubtype.RecipeCaptureSettled:
+          if (payload.parents?.recipeCaptureId) {
+            announceWorkSettled({
+              kind: 'recipeCapture',
+              id: payload.parents.recipeCaptureId,
+            });
+          }
           break;
       }
     },

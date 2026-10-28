@@ -130,7 +130,9 @@ describe('useShoppingListSubscriptions', () => {
       cache: mockCache,
       query: jest.fn().mockResolvedValue({
         data: {
-          shoppingListItem: { __typename: 'ShoppingListItem', id: 'i1' },
+          shoppingListItemsByIds: [
+            { __typename: 'ShoppingListItem', id: 'i1' },
+          ],
         },
       }),
     };
@@ -149,10 +151,13 @@ describe('useShoppingListSubscriptions', () => {
       );
     });
 
-    expect(mockClient.query).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { id: 'i1' } }),
+    // Read-backs gather for 150 ms before one by-ids read.
+    await waitFor(() =>
+      expect(addNewItemToShoppingListCache).toHaveBeenCalled(),
     );
-    expect(addNewItemToShoppingListCache).toHaveBeenCalled();
+    expect(mockClient.query).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { ids: ['i1'] } }),
+    );
   });
 
   it('skips self-echo for MyShoppingListsEvents item changes', () => {
@@ -354,7 +359,7 @@ describe('useShoppingListSubscriptions: another device toggles a row twice', () 
     const fetchModule = require('#/services/subscriptions/fetchEventEntity');
     const fetchSpy = jest
       .spyOn(fetchModule, 'fetchEventEntity')
-      .mockResolvedValue({ shoppingListItem: { id: 'i1' } });
+      .mockResolvedValue({ shoppingListItemsByIds: [{ id: 'i1' }] });
 
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'));

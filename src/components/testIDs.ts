@@ -18,6 +18,7 @@ export const kitTestIDs = {
   tabBarAddButton: 'tab-bar-add-button',
   tabBarAddMenuScrim: 'tab-bar-add-menu-scrim',
   toastMessage: 'toast-message',
+  toastDetail: 'toast-detail',
   filterTabsPrefix: 'filter-tab',
   alertModal: 'alert-modal',
   alertModalBehind: 'alert-modal-behind',
@@ -50,9 +51,4 @@ export const kitTestIDs = {
   /** `BiometricSetupView`'s two buttons, under the caller's id. */
   biometricEnable: (prefix: string) => `${prefix}-enable`,
   biometricSkip: (prefix: string) => `${prefix}-skip`,
-  /** `DataAttributionNotices`: a notice's link and its licence link, by source. */
-  dataAttributionSource: (source: string) =>
-    `data-attribution-${source.toLowerCase()}`,
-  dataAttributionLicense: (source: string) =>
-    `data-attribution-${source.toLowerCase()}-license`,
 };

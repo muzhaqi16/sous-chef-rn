@@ -76,20 +76,23 @@ export function reconcileShoppingItemCreateUpdate(
 
 // Structural slices the builder below reads, kept loose so every
 // add-to-shopping-list mutation document satisfies the shape.
+type AddItemsReconcileResultsLike = readonly ({
+  index?: number | null;
+  success?: boolean | null;
+  item?: { id: string; item?: { id: string } | null } | null;
+} | null)[];
+
 interface AddItemsReconcilePayloadLike {
   __typename?: string;
   shoppingList?: unknown;
-  results?:
-    | readonly ({
-        index?: number | null;
-        success?: boolean | null;
-        item?: { id: string; item?: { id: string } | null } | null;
-      } | null)[]
-    | null;
+  results?: AddItemsReconcileResultsLike | null;
+  /** A create's: the lines it was made with. */
+  itemResults?: AddItemsReconcileResultsLike | null;
 }
 
 interface AddItemsReconcileDataLike {
   addItemsToShoppingList?: AddItemsReconcilePayloadLike | null;
+  createShoppingList?: AddItemsReconcilePayloadLike | null;
 }
 
 interface AddItemsReconcileVariablesLike {
@@ -132,9 +135,10 @@ interface BuildAddItemsReconcileUpdateOptions {
 }
 
 /**
- * The mutation `update` shared by every add-to-shopping-list entry point: EVERY
- * result is reconciled, each paired back to the id its caller minted by `index`.
- * List id from `listId`, else `variables.input.shoppingListId`.
+ * The mutation `update` shared by every add-to-shopping-list entry point, and
+ * by a create made with lines: EVERY result is reconciled, each paired back to
+ * the id its caller minted by `index`. List id from `listId`, else
+ * `variables.input.shoppingListId`.
  */
 export function buildAddItemsReconcileUpdate({
   listId,
@@ -149,7 +153,7 @@ export function buildAddItemsReconcileUpdate({
     const payload = appliedPayload(data);
     const targetListId = listId ?? variables?.input.shoppingListId;
     if (!payload || !targetListId || !variables) return;
-    const results = payload.results;
+    const results = payload.results ?? payload.itemResults;
     if (!results?.length) return;
     const run = () => {
       // The payload's list is resolved after the whole batch, so the refused
@@ -324,8 +328,8 @@ export function carriesListTotals(list: unknown, listId: string): boolean {
   );
 }
 
-/** The API refuses a batch add of more lines than this. */
-const ADD_ITEMS_BATCH_LIMIT = 50;
+/** The API refuses a batch add, or a create's lines, past this many. */
+export const ADD_ITEMS_BATCH_LIMIT = 50;
 
 /**
  * Sends optimistic lines as batch adds the API accepts, each slice settled on

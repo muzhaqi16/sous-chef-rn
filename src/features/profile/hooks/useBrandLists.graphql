@@ -1,0 +1,123 @@
+# The caller's own brand lists, oldest first, each with its brands: the Settings
+# screens and the scan card's "add to a list". Private to their owner.
+query BrandLists {
+  brandLists {
+    id
+    name
+    enabled
+    version
+    entries {
+      id
+      reason
+      version
+      brand {
+        id
+        name
+      }
+    }
+  }
+}
+
+# A list a local-first create writes: everything a query reads on one.
+fragment useBrandLists_row on BrandList {
+  id
+  ...BrandListReaders
+}
+
+mutation CreateBrandList($input: CreateBrandListInput!) {
+  createBrandList(input: $input) {
+    __typename
+    ... on CreateBrandListPayload {
+      brandList {
+        id
+        ...BrandListReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation UpdateBrandList($input: UpdateBrandListInput!) {
+  updateBrandList(input: $input) {
+    __typename
+    ... on UpdateBrandListPayload {
+      brandList {
+        id
+        ...BrandListReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation DeleteBrandList($input: DeleteBrandListInput!) {
+  deleteBrandList(input: $input) {
+    __typename
+    ... on DeleteBrandListPayload {
+      brandList {
+        id
+      }
+      converged
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation AddBrandToList($input: AddBrandToListInput!) {
+  addBrandToList(input: $input) {
+    __typename
+    ... on AddBrandToListPayload {
+      brandListEntry {
+        id
+      }
+      brandList {
+        id
+        ...BrandListReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation RemoveBrandFromList($input: RemoveBrandFromListInput!) {
+  removeBrandFromList(input: $input) {
+    __typename
+    ... on RemoveBrandFromListPayload {
+      brandListEntry {
+        id
+      }
+      converged
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

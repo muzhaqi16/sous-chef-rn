@@ -5,7 +5,7 @@ import { waitFor } from '@testing-library/react-native';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
-import { ResolveShareLinkDocument } from '../JoinByLinkScreen.generated';
+import { ResolveShareLinkDocument } from '#operations/home/home.generated';
 import { JoinByLinkScreen } from '../JoinByLinkScreen';
 
 const mockDispatch = jest.fn();

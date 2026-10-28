@@ -24,10 +24,7 @@ import {
   type GetMealPlanQuery,
 } from '#features/mealPlan/screens/useMealPlan.generated';
 import type { Unmasked } from '@apollo/client/masking';
-import {
-  AddDerivedItemsToShoppingListDocument,
-  LinkDerivedListToMealPlanDocument,
-} from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListPlanDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { toastService } from '#/services/toastService';
@@ -165,18 +162,6 @@ function addMock() {
   });
 }
 
-function linkMock() {
-  return recordMock(LinkDerivedListToMealPlanDocument, {
-    data: {
-      linkShoppingListToMealPlan: {
-        __typename: 'LinkShoppingListToMealPlanPayload',
-        shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
-      },
-    },
-    partial: true,
-  });
-}
-
 describe('generating a shopping list from a cached meal plan', () => {
   afterEach(() => {
     useStore.setState({ apiReachable: true, isOnline: true });
@@ -249,11 +234,10 @@ describe('generating a shopping list from a cached meal plan', () => {
   it('refuses a plan whose later pages of meals are unread, without firing anything', async () => {
     const create = createMock();
     const add = addMock();
-    const link = linkMock();
     const { result } = renderHookWithApollo(
       () => useGenerateShoppingList(PLAN_ID),
       {
-        operationMocks: [create.mock, add.mock, link.mock],
+        operationMocks: [create.mock, add.mock],
         cache: seedPlan(planOf(twoMeals, true)),
       },
     );
@@ -265,7 +249,6 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(response).toBeNull();
     expect(create.fired).toHaveLength(0);
     expect(add.fired).toHaveLength(0);
-    expect(link.fired).toHaveLength(0);
     expect(toastService.error).toHaveBeenCalledTimes(1);
     expect(toastService.error).toHaveBeenCalledWith(
       t('generateShoppingList.planNotLoaded'),
@@ -278,11 +261,10 @@ describe('generating a shopping list from a cached meal plan', () => {
   it('refuses a plan with a recipe over the ingredient limit, without firing anything', async () => {
     const create = createMock();
     const add = addMock();
-    const link = linkMock();
     const { result } = renderHookWithApollo(
       () => useGenerateShoppingList(PLAN_ID),
       {
-        operationMocks: [create.mock, add.mock, link.mock],
+        operationMocks: [create.mock, add.mock],
         cache: seedPlan(
           planOf([
             recipeMeal(
@@ -305,7 +287,6 @@ describe('generating a shopping list from a cached meal plan', () => {
     expect(response).toBeNull();
     expect(create.fired).toHaveLength(0);
     expect(add.fired).toHaveLength(0);
-    expect(link.fired).toHaveLength(0);
     expect(toastService.error).toHaveBeenCalledTimes(1);
     // Names the recipe and the limit: no refresh brings the rest in.
     expect(toastService.error).toHaveBeenCalledWith(
@@ -318,12 +299,11 @@ describe('generating a shopping list from a cached meal plan', () => {
     useStore.setState({ apiReachable: false });
     const create = createMock();
     const add = addMock();
-    const link = linkMock();
     const cache = seedPlan(planOf(twoMeals));
 
     const { result } = renderHookWithApollo(
       () => useGenerateShoppingList(PLAN_ID),
-      { operationMocks: [create.mock, add.mock, link.mock], cache },
+      { operationMocks: [create.mock, add.mock], cache },
     );
 
     const response = await result.current.generateShoppingList({
@@ -331,12 +311,14 @@ describe('generating a shopping list from a cached meal plan', () => {
     });
 
     expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 2 });
+    // One write: the create carries the lines and names the plan.
     expect(create.fired).toHaveLength(1);
-    expect(add.fired).toHaveLength(1);
+    expect(add.fired).toHaveLength(0);
+    expect(create.fired[0]).toMatchObject({ input: { mealPlanId: PLAN_ID } });
 
     // Two ingredients at double servings; the meal with no cached recipe
     // contributes nothing and does not stop the rest.
-    const fired = add.fired[0] as {
+    const fired = create.fired[0] as {
       input?: {
         items?: Array<{
           quantity: number;
@@ -364,13 +346,6 @@ describe('generating a shopping list from a cached meal plan', () => {
         recipeIngredientId: 'ri-2',
       },
     ]);
-
-    // The list records the plan it came from, which the fan-out did inside its
-    // own transaction and a client-assembled list has to say separately.
-    expect(link.fired).toHaveLength(1);
-    expect(link.fired[0]).toMatchObject({
-      input: { id: 'list-1', mealPlanId: PLAN_ID },
-    });
   });
 
   describe('an ingredient the server has not linked yet', () => {
@@ -475,12 +450,7 @@ describe('generating a shopping list from a cached meal plan', () => {
       const { result } = renderHookWithApollo(
         () => useGenerateShoppingList(PLAN_ID),
         {
-          operationMocks: [
-            refetch.mock,
-            createMock().mock,
-            add.mock,
-            linkMock().mock,
-          ],
+          operationMocks: [refetch.mock, createMock().mock, add.mock],
           cache: seedUnlinked(),
         },
       );
@@ -539,7 +509,6 @@ describe('generating a shopping list from a cached meal plan', () => {
             planMock({ extraMeals: [addedElsewhere] }).mock,
             createMock().mock,
             addMock().mock,
-            linkMock().mock,
           ],
           cache,
         },
@@ -569,7 +538,6 @@ describe('generating a shopping list from a cached meal plan', () => {
             planMock({ overLimit: true }).mock,
             create.mock,
             add.mock,
-            linkMock().mock,
           ],
           cache: seedUnlinked(),
         },
@@ -597,12 +565,7 @@ describe('generating a shopping list from a cached meal plan', () => {
       const { result } = renderHookWithApollo(
         () => useGenerateShoppingList(PLAN_ID),
         {
-          operationMocks: [
-            refetch.mock,
-            createMock().mock,
-            addMock().mock,
-            linkMock().mock,
-          ],
+          operationMocks: [refetch.mock, createMock().mock, addMock().mock],
           cache: seedUnlinked(),
         },
       );
@@ -633,14 +596,15 @@ describe('generating a shopping list from a cached meal plan', () => {
         key.startsWith('ShoppingListItem:'),
       );
 
-    it('sends 63 lines as batches the API accepts and reports all of them', async () => {
+    it('sends 50 of 63 lines with the create, the rest as a batch, and reports all of them', async () => {
       useStore.setState({ apiReachable: false });
+      const create = createMock();
       const add = addMock();
 
       const { result } = renderHookWithApollo(
         () => useGenerateShoppingList(PLAN_ID),
         {
-          operationMocks: [createMock().mock, add.mock, linkMock().mock],
+          operationMocks: [create.mock, add.mock],
           cache: seedBig(63),
         },
       );
@@ -649,8 +613,8 @@ describe('generating a shopping list from a cached meal plan', () => {
         checkPantry: false,
       });
 
-      const sizes = (add.fired as Array<{ input: { items: unknown[] } }>).map(
-        fired => fired.input.items.length,
+      const sizes = [...create.fired, ...add.fired].map(
+        fired => (fired as { input: { items: unknown[] } }).input.items.length,
       );
       expect(sizes).toEqual([50, 13]);
       expect(response).toEqual({ shoppingListId: 'list-1', lineCount: 63 });
@@ -680,7 +644,7 @@ describe('generating a shopping list from a cached meal plan', () => {
       const { result } = renderHookWithApollo(
         () => useGenerateShoppingList(PLAN_ID),
         {
-          operationMocks: [createMock().mock, refused.mock, linkMock().mock],
+          operationMocks: [createMock().mock, refused.mock],
           cache,
         },
       );

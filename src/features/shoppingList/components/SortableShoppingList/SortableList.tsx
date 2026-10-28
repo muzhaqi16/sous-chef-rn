@@ -1,6 +1,8 @@
 import React, { useRef } from 'react';
 import { View, Dimensions, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { useSwipeableCoordinator } from '#hooks/ui/useSwipeableCoordinator';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import {
@@ -164,7 +166,13 @@ const SortableShoppingListComponent: React.FC<SortableShoppingListProps> = ({
     flexGrow: 1,
   };
 
-  const rowOptions: ShoppingListRowOptions = { showImages };
+  const readingSystem = useReadingSystem();
+  const showPrices = useBudgetAndPricesEnabled();
+  const rowOptions: ShoppingListRowOptions = {
+    showImages,
+    readingSystem,
+    showPrices,
+  };
 
   return (
     <SortableListThemeContext.Provider value={themeColors}>

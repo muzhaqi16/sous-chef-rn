@@ -1,0 +1,53 @@
+# The caller's homes and their own dietary sharing switch in each: the dietary
+# profile's "Shared with" section.
+#
+# It shares the cached `homes` connection with GetHomes, which a first page
+# replaces: the edge's `cursor` and the connection's `pageInfo` and `totalCount`
+# are selected as GetHomes selects them, or this read leaves every home
+# reader's list incomplete.
+query DietarySharingHomes {
+  homes(first: 50) {
+    edges {
+      cursor
+      node {
+        id
+        name
+        myMembership {
+          id
+          sharesDietaryNeeds
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
+  }
+}
+
+# The switch the hook flips in the cache before the write is sent.
+fragment useDietarySharing_membership on Membership {
+  id
+  sharesDietaryNeeds
+}
+
+mutation UpdateDietarySharing($input: UpdateDietarySharingInput!) {
+  updateDietarySharing(input: $input) {
+    __typename
+    ... on UpdateDietarySharingPayload {
+      membership {
+        id
+        ...MembershipReaders
+        ...useDietarySharing_membership
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

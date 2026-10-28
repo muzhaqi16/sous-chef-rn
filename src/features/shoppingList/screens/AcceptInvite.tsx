@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import {
-  Pressable,
-  OnPrimaryActivityIndicator,
-} from '#components/atoms/themedComponents';
 import { alertService } from '#/services/alertService';
-import { Icon } from '#components/atoms/Icon';
+import { toastService } from '#/services/toastService';
+import { Badge } from '#components/atoms/Badge';
+import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
+import { Divider } from '#components/atoms/Divider';
+import { InfoRow } from '#components/atoms/InfoRow';
+import { DetailSection } from '#components/molecules/DetailSection';
+import { Button } from '#components/molecules/Button';
+import { formatRoleDisplay } from '#features/shoppingList/utils/ownershipHelpers';
 import { useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useInviteByToken } from '#features/shoppingList/screens/useInviteByToken';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import { commonStyles } from '#/styles/commonStyles';
 import { Screen } from '#components/templates/Screen';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { personName } from '#/utils/formatters/memberFormatters';
@@ -35,11 +36,11 @@ export const AcceptInvite: React.FC = () => {
   // InvitationAcceptanceModal's.
   const {
     invitationType,
-    hasInvite,
+    inviteState,
+    retry,
     inviteRole,
     shoppingListInviteDisplay,
     homeInviteDisplay,
-    loading,
     accept,
     decline,
   } = useInviteByToken(token);
@@ -62,13 +63,13 @@ export const AcceptInvite: React.FC = () => {
 
     void executeWithLoadingState(async () => {
       if (!(await accept(inviteToken))) return;
-      alertService.alert(
-        t('labels.success'),
+      // Leaves at once: an answered invite reads as unavailable from its token.
+      toastService.success(
         invitationType === 'home'
           ? t('invitationAcceptance.homeAccepted')
           : t('invitationAcceptance.shoppingListAccepted'),
-        [{ text: t('labels.ok'), onPress: () => goBack() }],
       );
+      goBack();
     }, setProcessing);
   };
 
@@ -94,84 +95,68 @@ export const AcceptInvite: React.FC = () => {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={commonStyles.loadingContainer}>
-        <SousChefLoader
-          size="small"
-          showBrand={false}
-          message={t('labels.loading')}
-        />
-      </View>
-    );
-  }
-
-  if (!hasInvite) {
-    return (
-      <View style={commonStyles.loadingContainer}>
-        <Text
-          role="error"
-          align="center"
-          tone="error"
-          style={styles.inviteText}
-        >
-          {invitationType === 'unknown'
-            ? t('invitationAcceptance.notFound')
-            : t('invitationAcceptance.loadingDetails')}
-        </Text>
-        <Pressable
-          style={({ pressed }) => [
-            styles.declineButton,
-            pressed && { opacity: 0.7 },
-          ]}
-          onPress={() => goBack()}
-        >
-          <Text role="bodyStrong" style={styles.declineButtonText}>
-            {t('labels.goBack')}
-          </Text>
-        </Pressable>
-      </View>
-    );
-  }
-
-  const invite =
-    invitationType === 'home'
-      ? {
-          inviterName: homeInviteDisplay?.inviterName,
-          inviter: homeInviteDisplay?.inviter,
-        }
-      : {
-          inviterName: shoppingListInviteDisplay?.inviterName,
-          inviter: shoppingListInviteDisplay?.invitedBy,
-        };
+  const isHome = invitationType === 'home';
+  const invite = isHome
+    ? {
+        inviterName: homeInviteDisplay?.inviterName,
+        inviter: homeInviteDisplay?.inviter,
+      }
+    : {
+        inviterName: shoppingListInviteDisplay?.inviterName,
+        inviter: shoppingListInviteDisplay?.invitedBy,
+      };
   // An invite names its inviter itself: the invitee shares nothing with them
   // yet, so `User.displayName` gives only a name the inviter chose.
   const inviterName =
     firstNonBlank(invite.inviterName, personName(invite.inviter)) ??
     t('labels.someone');
 
+  const entityName = isHome
+    ? homeInviteDisplay?.home.name ?? t('labels.home')
+    : shoppingListInviteDisplay?.shoppingList.name ?? t('labels.shoppingList');
+  const description = isHome
+    ? null
+    : shoppingListInviteDisplay?.shoppingList.description;
+
   return (
-    <Screen header={{ close: () => goBack() }} scroll="none">
-      <View style={styles.content}>
-        <View style={styles.iconContainer}>
-          <Icon
-            name={invitationType === 'home' ? 'home' : 'shopping-cart'}
-            size={64}
-            tone="primary"
-          />
-        </View>
-
-        <Text role="heading" align="center" style={styles.title}>
-          {t('invitationAcceptance.invitedHeading')}
-        </Text>
-
-        <Text
-          role="body"
-          tone="secondary"
-          align="center"
-          style={styles.inviteText}
-        >
-          {invitationType === 'home'
+    <Screen
+      header={{ close: () => goBack() }}
+      state={{
+        value: inviteState,
+        onRetry: retry,
+        empty: {
+          icon: 'mail-outline',
+          title: t('invitationAcceptance.notFound'),
+          description: t('errors.invitationUnavailable'),
+          action: { label: t('labels.goBack'), onPress: () => goBack() },
+        },
+      }}
+      footer={
+        inviteState === 'ready' ? (
+          <View style={styles.actions}>
+            <Button
+              variant="outline"
+              onPress={handleDecline}
+              disabled={processing}
+              style={styles.action}
+            >
+              {t('labels.decline')}
+            </Button>
+            <Button
+              onPress={handleAccept}
+              loading={processing}
+              style={styles.action}
+            >
+              {t('labels.accept')}
+            </Button>
+          </View>
+        ) : undefined
+      }
+    >
+      <View style={styles.intro}>
+        <Text role="heading">{t('invitationAcceptance.invitedHeading')}</Text>
+        <Text role="body" tone="secondary">
+          {isHome
             ? t('invitationAcceptance.homeInviteText', {
                 inviter: inviterName,
               })
@@ -179,73 +164,32 @@ export const AcceptInvite: React.FC = () => {
                 inviter: inviterName,
               })}
         </Text>
-
-        <View style={styles.inviteDetails}>
-          <Text role="heading">
-            {invitationType === 'home'
-              ? homeInviteDisplay?.home.name ??
-                t('invitationAcceptance.resourceHome')
-              : shoppingListInviteDisplay?.shoppingList.name ??
-                t('labels.shoppingList')}
-          </Text>
-          <Text role="caption" tone="secondary" style={styles.inviteType}>
-            {invitationType === 'home'
-              ? t('invitationAcceptance.resourceHome')
-              : t('labels.shoppingList')}
-          </Text>
-          <Text role="label" tone="secondary" style={styles.inviteRole}>
-            {t('invitationAcceptance.roleLabel', {
-              role: inviteRole,
-            })}
-          </Text>
-        </View>
-
-        {!!(
-          invitationType === 'shopping_list' &&
-          shoppingListInviteDisplay?.shoppingList.description
-        ) && (
-          <View style={styles.messageContainer}>
-            <Text role="label" tone="secondary" style={styles.messageLabel}>
-              {t('invitationAcceptance.descriptionLabel')}
-            </Text>
-            <Text role="body">
-              {shoppingListInviteDisplay.shoppingList.description}
-            </Text>
-          </View>
-        )}
-
-        <View style={styles.actions}>
-          <Pressable
-            style={({ pressed }) => [
-              styles.declineButton,
-              pressed && { opacity: 0.7 },
-            ]}
-            onPress={handleDecline}
-            disabled={processing}
-          >
-            <Text role="bodyStrong" style={styles.declineButtonText}>
-              {t('labels.decline')}
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.acceptButton,
-              pressed && { opacity: 0.7 },
-            ]}
-            onPress={handleAccept}
-            disabled={processing}
-          >
-            {processing ? (
-              <OnPrimaryActivityIndicator size="small" />
-            ) : (
-              <Text role="bodyStrong" style={styles.acceptButtonText}>
-                {t('labels.accept')}
-              </Text>
-            )}
-          </Pressable>
-        </View>
       </View>
+
+      <DetailSection>
+        <DetailTitleRow
+          title={entityName}
+          flush
+          trailing={
+            <Badge variant="primary" icon={isHome ? 'home' : 'cart'}>
+              {isHome ? t('labels.home') : t('labels.shoppingList')}
+            </Badge>
+          }
+        />
+        <Divider style={styles.divider} />
+        <InfoRow
+          label={t('labels.role')}
+          value={formatRoleDisplay(inviteRole, t)}
+          showColon={false}
+          showBorder={false}
+        />
+      </DetailSection>
+
+      {!!description && (
+        <DetailSection title={t('labels.description')}>
+          <Text role="body">{description}</Text>
+        </DetailSection>
+      )}
     </Screen>
   );
 };
@@ -253,73 +197,20 @@ export const AcceptInvite: React.FC = () => {
 export default AcceptInvite;
 
 const styles = StyleSheet.create(theme => ({
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: theme.spacing.xl,
+  intro: {
+    gap: theme.spacing.xs,
+    paddingTop: theme.spacing.lg,
+    paddingBottom: theme.spacing.lg,
   },
-  title: {
-    flex: 1,
-  },
-  iconContainer: {
-    marginBottom: theme.spacing.xl,
-  },
-  inviteText: {
+  divider: {
     marginTop: theme.spacing.md,
-  },
-  inviteDetails: {
-    marginTop: theme.spacing.xl,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-  },
-  inviteType: {
-    marginTop: theme.spacing.xs,
-  },
-  inviteRole: {
-    marginTop: theme.spacing['2xs'],
-  },
-  messageContainer: {
-    marginTop: theme.spacing.xl,
-    padding: theme.spacing.md,
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    width: '100%',
-  },
-  messageLabel: {
-    marginBottom: theme.spacing.sm,
+    marginBottom: theme.spacing.xs,
   },
   actions: {
     flexDirection: 'row',
-    marginTop: theme.spacing.xl,
-    gap: theme.spacing.base,
+    gap: theme.spacing.md,
   },
-  declineButton: {
+  action: {
     flex: 1,
-    paddingVertical: theme.spacing.smPlus,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surface,
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-  },
-  declineButtonText: {
-    color: theme.colors.textPrimary,
-  },
-  acceptButton: {
-    flex: 1,
-    paddingVertical: theme.spacing.smPlus,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    alignItems: 'center',
-    backgroundColor: theme.colors.primary,
-  },
-  acceptButtonText: {
-    color: theme.colors.onPrimary,
   },
 }));

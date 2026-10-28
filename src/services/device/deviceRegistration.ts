@@ -24,7 +24,10 @@ import {
   ensureDeviceId,
   recordRegisteredLocale,
 } from '#/services/auth/deviceId';
-import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
+import {
+  dropUnitSystemAnswers,
+  refreshDeviceUnitSystem,
+} from '#/apollo/utils/unitSystemAnswers';
 import { useStore } from '#store';
 import { holdsSessionTokens } from '#store/slices/authSlice';
 import { backoffDelay, sleep } from '#/utils/backoff';
@@ -292,7 +295,9 @@ async function registerDeviceOnce(): Promise<RegistrationOutcome> {
     // Until a session's first registration lands, or after the device's locale
     // changes, the pickers answered a "Device default" user in the wrong system.
     if (recordRegisteredLocale(deviceInfo.language)) {
-      dropUnitSystemAnswers(requireApolloClient().cache);
+      const client = requireApolloClient();
+      dropUnitSystemAnswers(client.cache);
+      void refreshDeviceUnitSystem(client);
     }
     return 'ok';
   } catch (error) {

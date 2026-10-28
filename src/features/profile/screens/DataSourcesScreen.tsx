@@ -20,14 +20,14 @@ interface DataSource {
 const SOURCES: readonly DataSource[] = [
   {
     id: 'openFoodFacts',
-    nameKey: 'profile.dataSources.openFoodFacts.name',
+    nameKey: 'labels.sources.openFoodFacts',
     providesKey: 'profile.dataSources.openFoodFacts.provides',
     licenceKey: 'profile.dataSources.openFoodFacts.licence',
     url: 'https://world.openfoodfacts.org',
   },
   {
     id: 'usdaFoodDataCentral',
-    nameKey: 'profile.dataSources.usdaFoodDataCentral.name',
+    nameKey: 'labels.sources.usdaFoodDataCentral',
     providesKey: 'profile.dataSources.usdaFoodDataCentral.provides',
     licenceKey: 'profile.dataSources.publicDomain',
     url: 'https://fdc.nal.usda.gov',

@@ -11,6 +11,11 @@ import { formatRole } from '#/utils/formatters/roleFormatters';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
 import type { MembershipPermissionKey } from '#features/home/types';
+import {
+  canGrantFlag,
+  canManageMember,
+  type HomeViewer,
+} from '#features/home/utils/homePermissions';
 import { HomeMemberCard_MemberFragmentDoc } from './HomeMemberCard.generated';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
@@ -30,10 +35,8 @@ interface HomeMemberCardProps {
   memberRef: FragmentType<typeof HomeMemberCard_MemberFragmentDoc>;
   displayName: string;
   isCurrentUser: boolean;
-  /** Current user's own membership — drives whether action buttons render. */
-  canManageHome?: boolean;
-  /** Current user is the home OWNER — gates the transfer-ownership action. */
-  isOwner?: boolean;
+  /** The current user's own membership: decides which actions render. */
+  viewer: HomeViewer | null;
   onChangeRole: () => void;
   onRemove: () => void;
   onTransferOwnership?: () => void;
@@ -52,8 +55,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
   memberRef,
   displayName,
   isCurrentUser,
-  canManageHome,
-  isOwner,
+  viewer,
   onChangeRole,
   onRemove,
   onTransferOwnership,
@@ -70,9 +72,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
 
   if (!complete) return null;
 
-  // An owner can be neither removed nor demoted.
-  const canManageMember =
-    canManageHome && !isCurrentUser && member.role !== MembershipRole.Owner;
+  const canManage = canManageMember(viewer, member.role, isCurrentUser);
   return (
     <View style={[commonStyles.card, commonStyles.shadow, styles.memberCard]}>
       <View style={styles.memberInfo}>
@@ -92,7 +92,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
           </Text>
         )}
       </View>
-      {!!canManageMember && (
+      {!!canManage && (
         <View style={styles.memberActions}>
           <AppPressable style={styles.actionButton} onPress={onChangeRole}>
             <Icon name="swap-horizontal" size={18} />
@@ -104,7 +104,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
               {t('homeDetail.changeRole')}
             </Text>
           </AppPressable>
-          {!!isOwner && !!onTransferOwnership && (
+          {viewer?.role === MembershipRole.Owner && !!onTransferOwnership && (
             <AppPressable
               style={[
                 styles.actionButton,
@@ -148,7 +148,7 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
       )}
 
       {/* Per-permission overrides (managed members only). */}
-      {!!canManageMember && !!onUpdatePermission && !!showPermissions && (
+      {!!viewer && !!canManage && !!onUpdatePermission && !!showPermissions && (
         <View style={styles.permissionList}>
           {PERMISSION_ROWS.map(({ key, labelKey }) => (
             <View key={key} style={styles.permissionRow}>
@@ -157,7 +157,9 @@ export const HomeMemberCard: React.FC<HomeMemberCardProps> = ({
               </Text>
               <BaseSwitch
                 accessibilityLabel={t(labelKey)}
-                value={!!member[key]}
+                value={member[key]}
+                // Switching off is always allowed; on takes holding the flag.
+                disabled={!member[key] && !canGrantFlag(viewer, key)}
                 onValueChange={value => onUpdatePermission(key, value)}
               />
             </View>

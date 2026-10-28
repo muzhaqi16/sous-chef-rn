@@ -2,6 +2,9 @@
 import React from 'react';
 import { userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
+import { makeCache } from '#/apollo/cache';
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import type { ReceiptReviewRow } from '../../hooks/useReceiptReview';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
@@ -112,6 +115,28 @@ describe('ReceiptReviewScreen rows', () => {
     expect(
       screen.getByText(/PAPER TOWELS · 1 · not for the pantry/),
     ).toBeTruthy();
+  });
+
+  // A receipt is a document: what it printed stays printed, whatever unit
+  // system the reader keeps (unified-stock-model, quantity-display).
+  it('keeps a weighed line as printed for a metric user', () => {
+    const cache = makeCache();
+    writeUnitSystemSettings(cache, UnitSystem.Metric, UnitSystem.Imperial);
+    mockRows = [
+      row({
+        printed: 'BANANAS',
+        price: 0.88,
+        choice: lineChoice({
+          itemName: 'Bananas',
+          price: 0.88,
+          quantity: 1.52,
+          unitText: 'lb',
+        }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />, { cache });
+
+    expect(screen.getByText(/BANANAS · 1\.52 lb/)).toBeTruthy();
   });
 });
 

@@ -4,8 +4,11 @@ import {
   CollaboratorStatus,
 } from '#/graphql/generated/schemaTypes';
 import {
+  canDeleteShoppingList,
+  getInvitableCollaboratorRoles,
   getShoppingListPermissions,
   getShoppingListPermissionsWithOwner,
+  type CollaboratorInviter,
 } from '../shoppingListPermissions';
 
 const FULL = {
@@ -134,40 +137,38 @@ describe('shoppingListPermissions', () => {
       expect(perms.canMarkPurchased).toBe(true);
     });
 
-    it.each([
-      CollaboratorRole.Owner,
-      CollaboratorRole.Admin,
-      CollaboratorRole.Editor,
-      CollaboratorRole.Contributor,
-    ])('lets a %s edit the list whatever canEdit says', role => {
+    it('lets an OWNER collaborator edit the list whatever canEdit says', () => {
       const list = {
         homeId: null,
         collaboratorsConnection: makeCollaborator('u1', {
-          role,
+          role: CollaboratorRole.Owner,
           canEdit: false,
         }),
       };
       expect(getShoppingListPermissions(list, 'u1').canEditList).toBe(true);
     });
 
-    it.each([CollaboratorRole.Shopper, CollaboratorRole.Viewer])(
-      'lets a %s edit the list only through canEdit',
-      role => {
-        const permissionsWith = (canEdit: boolean) =>
-          getShoppingListPermissions(
-            {
-              homeId: null,
-              collaboratorsConnection: makeCollaborator('u1', {
-                role,
-                canEdit,
-              }),
-            },
-            'u1',
-          );
-        expect(permissionsWith(true).canEditList).toBe(true);
-        expect(permissionsWith(false).canEditList).toBe(false);
-      },
-    );
+    it.each([
+      CollaboratorRole.Admin,
+      CollaboratorRole.Editor,
+      CollaboratorRole.Contributor,
+      CollaboratorRole.Shopper,
+      CollaboratorRole.Viewer,
+    ])('lets a %s edit the list only through canEdit', role => {
+      const permissionsWith = (canEdit: boolean) =>
+        getShoppingListPermissions(
+          {
+            homeId: null,
+            collaboratorsConnection: makeCollaborator('u1', {
+              role,
+              canEdit,
+            }),
+          },
+          'u1',
+        );
+      expect(permissionsWith(true).canEditList).toBe(true);
+      expect(permissionsWith(false).canEditList).toBe(false);
+    });
 
     it('does not let item edits stand for list edits', () => {
       const list = {
@@ -273,5 +274,85 @@ describe('shoppingListPermissions', () => {
       const list = { homeId: null, ownership: null };
       expect(getShoppingListPermissionsWithOwner(list, 'u1')).toEqual(NONE);
     });
+  });
+});
+
+describe('getInvitableCollaboratorRoles', () => {
+  const ROLES = [
+    CollaboratorRole.Viewer,
+    CollaboratorRole.Shopper,
+    CollaboratorRole.Contributor,
+    CollaboratorRole.Editor,
+    CollaboratorRole.Admin,
+  ];
+  const inviter = (
+    role: CollaboratorRole,
+    flags: Partial<CollaboratorInviter> = {},
+  ): CollaboratorInviter => ({
+    role,
+    canEdit: true,
+    canAddItems: true,
+    canRemoveItems: true,
+    canEditItems: true,
+    canMarkPurchased: true,
+    canInviteOthers: true,
+    ...flags,
+  });
+
+  it('offers nothing without canInviteOthers', () => {
+    expect(
+      getInvitableCollaboratorRoles(
+        inviter(CollaboratorRole.Admin, { canInviteOthers: false }),
+        ROLES,
+      ),
+    ).toEqual([]);
+  });
+
+  it('offers at most the inviter’s own role', () => {
+    expect(
+      getInvitableCollaboratorRoles(inviter(CollaboratorRole.Editor), ROLES),
+    ).toEqual([
+      CollaboratorRole.Viewer,
+      CollaboratorRole.Shopper,
+      CollaboratorRole.Contributor,
+      CollaboratorRole.Editor,
+    ]);
+  });
+
+  // An invite of a role carries that role's flags, each of which the inviter
+  // must hold.
+  it('leaves out a role carrying a flag the inviter lacks', () => {
+    expect(
+      getInvitableCollaboratorRoles(
+        inviter(CollaboratorRole.Admin, { canRemoveItems: false }),
+        ROLES,
+      ),
+    ).toEqual([
+      CollaboratorRole.Viewer,
+      CollaboratorRole.Shopper,
+      CollaboratorRole.Contributor,
+    ]);
+  });
+
+  it('ranks SHOPPER with VIEWER', () => {
+    expect(
+      getInvitableCollaboratorRoles(inviter(CollaboratorRole.Viewer), ROLES),
+    ).toEqual([CollaboratorRole.Viewer, CollaboratorRole.Shopper]);
+  });
+});
+
+describe('canDeleteShoppingList', () => {
+  it('lets the list’s owner delete it', () => {
+    expect(canDeleteShoppingList(true, null)).toBe(true);
+  });
+
+  // The API's DELETE on a home's list floors at ADMIN.
+  it.each([
+    [MembershipRole.Owner, true],
+    [MembershipRole.Admin, true],
+    [MembershipRole.Member, false],
+    [MembershipRole.Guest, false],
+  ])('lets a home %s who does not own it delete it: %s', (role, allowed) => {
+    expect(canDeleteShoppingList(false, role)).toBe(allowed);
   });
 });

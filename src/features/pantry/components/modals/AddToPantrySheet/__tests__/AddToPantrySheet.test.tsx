@@ -32,28 +32,6 @@ jest.mock('#/utils/connectionUtils', () => ({
   extractNodes: jest.fn(() => []),
 }));
 
-jest.mock('#domain/pantryItemDuplicate', () => {
-  const isDup = jest.fn().mockReturnValue(false);
-  const getInfo = jest.fn().mockReturnValue(null);
-  const getInfoFromPayload = jest.fn().mockReturnValue(null);
-  return {
-    isPantryItemDuplicateError: isDup,
-    getPantryItemDuplicateInfo: getInfo,
-    getPantryItemDuplicateInfoFromPayload: getInfoFromPayload,
-    promptPantryDuplicate: jest.fn(),
-    getPantryItemDuplicateFromResult: jest.fn(
-      (payload: { __typename?: string } | null | undefined, error: unknown) => {
-        if (payload?.__typename === 'DuplicatePantryItemError') {
-          const info = getInfoFromPayload(payload);
-          if (info) return info;
-        }
-        if (error != null && isDup(error)) return getInfo(error);
-        return null;
-      },
-    ),
-  };
-});
-
 /**
  * The quick-add handlers are props on `AddItemSheet`, which is mocked away —
  * so the mock parks them here for a test to call. Without this the handlers
@@ -231,14 +209,13 @@ describe('AddToPantrySheet', () => {
   });
 
   /**
-   * The server REFUSES a duplicate add — it never merges — so quick-add withdraws
-   * the row it published and restocks the existing one instead. Withdrawing the
-   * row is not enough: the optimistic add also moved `Pantry.stats.totalItems`,
-   * which the header and the "All" tab badge both read, and which does not
-   * self-heal the way a dangling connection edge does. Evicting the entity alone
-   * leaves the count one too high per refused add until a pull-to-refresh.
+   * USM-2: an add of a held product is forced, so the server joins it to the
+   * stack it holds and answers with that stack's id. The optimistic add moved
+   * `Pantry.stats.totalItems` and the connection's `totalCount`, which the
+   * header and the "All" tab badge read; the join must leave both where they
+   * started, or the count is one too high per joined add.
    */
-  describe('a duplicate refusal leaves the header count where it started', () => {
+  describe('a joined add leaves the header count where it started', () => {
     const SEED_PANTRY = gql`
       query SeedPantry($id: ID!) {
         pantry(id: $id) {
@@ -304,7 +281,7 @@ describe('AddToPantrySheet', () => {
       };
     };
 
-    const duplicate: MockFor<typeof CreatePantryItemDocument> = {
+    const joined: MockFor<typeof CreatePantryItemDocument> = {
       request: {
         query: CreatePantryItemDocument,
         variables: () => true,
@@ -312,48 +289,24 @@ describe('AddToPantrySheet', () => {
       result: {
         data: {
           createPantryItem: {
-            __typename: 'DuplicatePantryItemError',
-            code: ErrorCode.Conflict,
-            existingPantryItemIds: ['pi-1'],
-          },
-        },
-      },
-    };
-
-    const restocked: MockFor<typeof RestockPantryItemDocument> = {
-      request: {
-        query: RestockPantryItemDocument,
-        variables: () => true,
-      },
-      result: {
-        data: {
-          restockPantryItem: {
-            __typename: 'RestockPantryItemPayload',
-            pantryItemUsage: {
-              __typename: 'PantryItemUsage',
-              id: 'usage-1',
-              pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+            __typename: 'CreatePantryItemPayload',
+            // The held stack's id, not the minted one: the add joined it.
+            pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+            pantry: {
+              __typename: 'Pantry',
+              id: 'pantry-1',
+              stats: { __typename: 'PantryStats', totalItems: 70 },
             },
           },
         },
       },
     };
 
-    beforeEach(() => {
-      const { getPantryItemDuplicateInfoFromPayload } = jest.requireMock(
-        '#domain/pantryItemDuplicate',
-      );
-      getPantryItemDuplicateInfoFromPayload.mockReturnValue({
-        existingPantryItemId: 'pi-1',
-        existingPantryItemIds: ['pi-1'],
-      });
-    });
-
     it('reverses both counters the optimistic add moved', async () => {
       const cache = seedCache();
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
         cache,
-        operationMocks: [duplicate, restocked],
+        operationMocks: [joined],
       });
 
       const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
@@ -361,27 +314,11 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd({ id: 'item-1', name: 'Milk' });
 
-      // The optimistic write lands synchronously, before the refusal arrives.
+      // The optimistic write lands synchronously, before the answer arrives.
       expect(readTotals(cache)).toEqual({ totalItems: 71, totalCount: 71 });
 
       await waitFor(() =>
         expect(readTotals(cache)).toEqual({ totalItems: 70, totalCount: 70 }),
-      );
-    });
-
-    it('corrects the eager "added" toast to say it restocked instead', async () => {
-      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
-        cache: seedCache(),
-        operationMocks: [duplicate, restocked],
-      });
-
-      const quickAdd = sheetProps.current.onQuickAddSearchSuggestion as (
-        item: unknown,
-      ) => void;
-      quickAdd({ id: 'item-1', name: 'Milk' });
-
-      await waitFor(() =>
-        expect(toastService.success).toHaveBeenCalledWith('Restocked Milk'),
       );
     });
   });

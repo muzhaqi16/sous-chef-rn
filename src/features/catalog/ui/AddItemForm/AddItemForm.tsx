@@ -5,7 +5,7 @@ import { errorService } from '#/services/errorService';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
-import { useForm, type Resolver } from 'react-hook-form';
+import { useForm, type FieldErrors, type Resolver } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import type { CreateItemFormData } from '#features/catalog/utils/itemValidation';
 import {
@@ -271,7 +271,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
     handleSubmit,
     setValue,
     setError,
-    formState: { errors, isValid },
+    formState: { errors },
   } = useForm<CreateItemFormData>({
     // Only the review path mandates a note — see `requiresEditNote`.
     resolver: yupResolver(
@@ -289,7 +289,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
   // The editor rows are the form's `netWeights` / `units` fields. Written on
   // every change rather than at submit: a field the resolver cannot see makes
-  // its rules unreachable, and Save is gated on whole-schema `isValid`.
+  // its rules unreachable.
   const handleNetWeightEntriesChanged = (entries: NetWeightEntry[]) => {
     setNetWeightEntries(entries);
     setValue('netWeights', toNetWeightInputs(entries), {
@@ -373,12 +373,25 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
     const refusal = await onSubmit(processedData);
     if (!refusal) return;
-    setCurrentPage(
-      PAGES.findIndex(page =>
-        fieldsOn(page).some(f => f.name === refusal.field),
-      ),
-    );
+    openPageOf(refusal.field);
     setError(refusal.field, { type: 'server', message: refusal.message });
+  };
+
+  // The entry lists are form fields drawn outside TAB_FIELDS, on Inventory.
+  const openPageOf = (field: string) => {
+    const page =
+      field === 'netWeights' || field === 'units'
+        ? PAGES.indexOf('Inventory')
+        : PAGES.findIndex(name => fieldsOn(name).some(f => f.name === field));
+    if (page >= 0) setCurrentPage(page);
+  };
+
+  // Save is never disabled: a failing field, even one prefilled and never
+  // touched, shows its message, and the form opens the first one's page.
+  const handleInvalid = (formErrors: FieldErrors<CreateItemFormData>) => {
+    logValidationErrors(formErrors);
+    const [firstField] = Object.keys(formErrors);
+    if (firstField !== undefined) openPageOf(firstField);
   };
 
   const activePage = PAGES[currentPage] ?? PAGES[0];
@@ -463,7 +476,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
 
         {activePage === 'Inventory' && (
           <DropdownStack>
-            <View style={styles.section}>
+            <View>
               <NetWeightEntryList
                 entries={netWeightEntries}
                 onEntriesChanged={handleNetWeightEntriesChanged}
@@ -480,7 +493,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
                 into UnitEntry rows, so an empty list would read as "remove every
                 unit" rather than "left untouched". */}
             {!editing && (
-              <View style={styles.section}>
+              <View style={styles.followingSection}>
                 <UnitEntryList
                   entries={unitEntries}
                   onEntriesChanged={handleUnitEntriesChanged}
@@ -518,8 +531,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
           variant="primary"
           fullWidth
           loading={loading}
-          disabled={!isValid}
-          onPress={handleSubmit(handleFormSubmit, logValidationErrors)}
+          onPress={handleSubmit(handleFormSubmit, handleInvalid)}
         >
           {t(modeConfig.buttonLabel)}
         </Button>
@@ -550,6 +562,10 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     marginBottom: theme.spacing.xl,
+  },
+  // Space between sections, never after the last: "More options" follows it.
+  followingSection: {
+    marginTop: theme.spacing.xl,
   },
   notice: {
     marginTop: theme.spacing.sm,

@@ -22,6 +22,7 @@ import { useStore } from '#store';
 import { fireEvent, userEvent } from '@testing-library/react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 type ScreenData = ShoppingListMainContentProps['screenData'];
 
@@ -31,6 +32,9 @@ jest.mock('#hooks/navigation/useAppNavigation');
 
 jest.mock('#features/shoppingList/hooks/useStoreModeEnabled', () => ({
   useStoreModeEnabled: jest.fn(() => false),
+}));
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => false),
 }));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
@@ -390,6 +394,41 @@ describe('ShoppingListMainContent', () => {
         listId: screenData.state.currentListId,
       });
       jest.mocked(useStoreModeEnabled).mockReturnValue(false);
+    });
+  });
+
+  // A basic list unless the person turns the extras on.
+  describe('budget and prices', () => {
+    afterEach(() => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+      jest.mocked(useStoreModeEnabled).mockReturnValue(false);
+    });
+
+    it('offers no way in, and no header action at all, with both extras off', () => {
+      const { queryByTestId } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
+      );
+
+      expect(
+        queryByTestId(shoppingListTestIDs.budgetAndPricesButton),
+      ).toBeNull();
+      expect(queryByTestId(shoppingListTestIDs.storeModeButton)).toBeNull();
+    });
+
+    it('opens Budget & prices for the list on screen, beside store mode', () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+      jest.mocked(useStoreModeEnabled).mockReturnValue(true);
+      const screenData = makeScreenData();
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={screenData} />,
+      );
+
+      expect(getByTestId(shoppingListTestIDs.storeModeButton)).toBeTruthy();
+      fireEvent.press(getByTestId(shoppingListTestIDs.budgetAndPricesButton));
+
+      expect(jest.mocked(useAppNavigation)().toListBudget).toHaveBeenCalledWith(
+        { listId: screenData.state.currentListId },
+      );
     });
   });
 

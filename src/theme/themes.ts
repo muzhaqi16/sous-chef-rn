@@ -344,10 +344,10 @@ export const darkTheme = {
         iconBg: '#4A3D2A',
       },
       info: {
-        bg: '#2A303D',
-        border: '#3A4A5C',
-        text: '#90CAF9',
-        iconBg: '#303D4A',
+        bg: colors.charade[950],
+        border: colors.charade[900],
+        text: colors.charade[300],
+        iconBg: colors.charade[900],
       },
       success: {
         bg: '#2A3D2A',

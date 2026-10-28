@@ -71,7 +71,9 @@ export const CreateMealPlanScreen: React.FC = () => {
   const { createPlanFromTemplate, creatingFromTemplate } =
     useMealTemplateActions();
   const { homes } = useHomeQuery();
-  const { profile: dietaryProfile } = useDietaryProfile();
+  const { profile: dietaryProfile } = useDietaryProfile({
+    fetchPolicy: 'cache-first',
+  });
   const selectedHomeId = useSelectedHomeId();
 
   const { control, handleSubmit, setError } = useForm<CreateMealPlanFormValues>(
@@ -209,7 +211,7 @@ export const CreateMealPlanScreen: React.FC = () => {
         name="description"
         render={({ field }) => (
           <FormTextArea
-            label={t('mealPlan.description')}
+            label={t('labels.description')}
             value={field.value}
             onChangeText={field.onChange}
             placeholder={t('mealPlan.descriptionPlaceholder')}

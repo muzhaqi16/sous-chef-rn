@@ -2,6 +2,7 @@ import { createNativeStackScreen } from '@react-navigation/native-stack';
 import { cardScreenOptions } from '#navigation/detailScreenOptions';
 import { HomeManagement } from './HomeManagement';
 import { HomeDetailScreen } from './HomeDetailScreen';
+import { HomeDietaryNeedsScreen } from './HomeDietaryNeedsScreen';
 
 /**
  * Registered as siblings of the `Home` tab navigator, so one root-level entry
@@ -16,6 +17,11 @@ export const homeManagementScreens = {
   }),
   HomeDetail: createNativeStackScreen({
     screen: HomeDetailScreen,
+    options: cardScreenOptions,
+    linking: null,
+  }),
+  HomeDietaryNeeds: createNativeStackScreen({
+    screen: HomeDietaryNeedsScreen,
     options: cardScreenOptions,
     linking: null,
   }),

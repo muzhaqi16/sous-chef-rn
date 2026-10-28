@@ -106,7 +106,7 @@ export const ListTemplate = <TItem extends { id: string } = { id: string }>({
   const effectiveEmptyState = isLoading
     ? {
         icon: emptyState?.icon ?? 'ellipsis-horizontal',
-        title: t('listTemplate.loading'),
+        title: t('loading.loading'),
         description:
           emptyState?.loadingDescription ?? t('listTemplate.loadingItems'),
       }

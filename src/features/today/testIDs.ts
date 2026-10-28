@@ -4,6 +4,7 @@
  */
 export const todayTestIDs = {
   screen: 'today-screen',
+  scroll: 'today-scroll',
   householdTitle: 'today-household-title',
   notificationsButton: 'today-notifications-button',
   statCard: (status: 'expired' | 'expiring' | 'lowStock') =>

@@ -4,6 +4,7 @@ fragment UserSettingsReaders on UserSettings {
   autoSync
   compactMode
   createdAt
+  deviceUnitSystem
   language
   offlineMode
   personalizedAds

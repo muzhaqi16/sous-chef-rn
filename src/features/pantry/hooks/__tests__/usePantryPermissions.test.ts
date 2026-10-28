@@ -102,13 +102,26 @@ describe('usePantryPermissions', () => {
       expect(result.current.canRemoveItems).toBe(true);
     });
 
-    it('lets a member with canManageHome delete a pantry', () => {
-      withHome({
-        id: 'h1',
-        myMembership: { role: MembershipRole.Member, canManageHome: true },
-      });
+    // Deleting a pantry is the home owner's alone: no role below it and no
+    // flag lets anyone else.
+    it.each([
+      { role: MembershipRole.Admin },
+      { role: MembershipRole.Member, canManageHome: true },
+    ])('does not let a $role delete a pantry', myMembership => {
+      withHome({ id: 'h1', myMembership });
       const { result } = renderHook(() => usePantryPermissions());
-      expect(result.current.canDeletePantry).toBe(true);
+      expect(result.current.canDeletePantry).toBe(false);
+    });
+
+    it('still gives an admin every other pantry permission', () => {
+      withHome({ id: 'h1', myMembership: { role: MembershipRole.Admin } });
+      const { result } = renderHook(() => usePantryPermissions());
+      expect(result.current).toMatchObject({
+        canAddItems: true,
+        canEditItems: true,
+        canRemoveItems: true,
+        canCreatePantry: true,
+      });
     });
 
     it('denies create to a member explicitly denied pantry edit', () => {

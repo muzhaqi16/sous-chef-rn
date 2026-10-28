@@ -17,7 +17,10 @@ import {
   resolveQuantityNotation,
 } from '#/utils/formatQuantity';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
-import type { PackageSizeCorrectionInput } from '#features/pantry/types';
+import type {
+  PackageSizeCorrectionInput,
+  RecountUnits,
+} from '#features/pantry/types';
 
 type PantryItemForActions =
   | {
@@ -70,6 +73,7 @@ export interface UsePantryItemDetailActionsResult {
     newQuantity: number,
     reason: string,
     remainingNetWeight?: number,
+    units?: RecountUnits,
   ) => void;
   handleCorrectPackageSize: (
     input: PackageSizeCorrectionInput,
@@ -252,6 +256,7 @@ export function usePantryItemDetailActions({
     newQuantity: number,
     reason: string,
     remainingNetWeight?: number,
+    units?: RecountUnits,
   ) => {
     if (!item) return;
     void adjustQuantity(
@@ -260,6 +265,7 @@ export function usePantryItemDetailActions({
       reason,
       item.version,
       remainingNetWeight,
+      units,
     );
   };
 

@@ -17,9 +17,6 @@ import { Text } from '#components/atoms/Text';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useListSettings } from '#features/shoppingList/hooks/useListSettings';
 import { listSettingsStyles as styles } from '#features/shoppingList/components/listSettings/styles';
-import { BudgetSection } from '#features/shoppingList/components/listSettings/BudgetSection';
-import { StoreSection } from '#features/shoppingList/components/listSettings/StoreSection';
-import { StoreComparisonSection } from '#features/shoppingList/components/listSettings/StoreComparisonSection';
 import { ListStatusSection } from '#features/shoppingList/components/listSettings/ListStatusSection';
 import { RecurringSection } from '#features/shoppingList/components/listSettings/RecurringSection';
 import { ReminderSection } from '#features/shoppingList/components/listSettings/ReminderSection';
@@ -39,13 +36,11 @@ export const ListSettings: React.FC<
   const { toShareList, toHomeDetail } = useAppNavigation();
   const {
     basedOnTemplate,
-    budgetInput,
+    canDelete,
     collaborators,
     completedShopDate,
     completing,
     creating,
-    currency,
-    estimatedTotal,
     formatDate,
     generating,
     handleArchiveToggle,
@@ -61,14 +56,14 @@ export const ListSettings: React.FC<
     handleSelectTemplate,
     handleSetReminderDate,
     handleStopRecurring,
-    handleStoreSelected,
     handleToggleComplete,
-    handleTogglePriceTracking,
+    hasChanges,
     homes,
     isArchived,
     isCompleted,
     isDefault,
     isHomeMember,
+    canEdit,
     isOwner,
     isRecurring,
     isShared,
@@ -82,7 +77,6 @@ export const ListSettings: React.FC<
     ownerInfo,
     ownership,
     patternLabel,
-    priceTracking,
     reactivating,
     recurringPattern,
     reminderDate,
@@ -93,29 +87,24 @@ export const ListSettings: React.FC<
     selectedHomeId,
     selectedTemplate,
     selectedTemplateId,
-    setBudgetInput,
     setIsDefault,
     setName,
     setSelectedHomeId,
     setShowHomePicker,
     setShowPatternPicker,
     setShowTemplatePicker,
-    setStoreInput,
     shoppingList,
     showHomePicker,
     showPatternPicker,
     showTemplatePicker,
     statusDisplay,
-    storeInput,
     templateName,
     templates,
-    totalCost,
-    unpricedItems,
   } = useListSettings(route.params?.listId);
 
   // Ownership decides the whole screen — its title, its Save action and six
   // sections — so an unresolved answer waits rather than rendering the viewer's
-  // read-only version at the list's owner.
+  // read-only version at someone who may edit.
   if (listId && ownership === 'unknown') {
     return (
       <SubScreen
@@ -132,12 +121,12 @@ export const ListSettings: React.FC<
       title={
         !listId
           ? t('shoppingListScreens.createNewList')
-          : isOwner
+          : canEdit
           ? t('shoppingListScreens.listSettings')
           : t('shoppingListScreens.listInfo')
       }
       actions={
-        isOwner
+        canEdit
           ? [
               {
                 label: saving
@@ -147,6 +136,7 @@ export const ListSettings: React.FC<
                   : t('labels.save'),
                 onPress: handleSave,
                 variant: 'primary',
+                hasChanges,
                 disabled: saving,
               },
             ]
@@ -154,7 +144,7 @@ export const ListSettings: React.FC<
       }
       scroll="form"
     >
-      {!isOwner && listId ? (
+      {!canEdit && listId ? (
         <>
           {/* Read-only view for collaborators */}
           <View style={commonStyles.settingsSection}>
@@ -179,93 +169,15 @@ export const ListSettings: React.FC<
             {!!isShared && (
               <InfoRow
                 label={t('shoppingListScreens.sharedWith')}
-                value={t('shoppingListScreens.membersCount', {
+                value={t('labels.memberCount', {
                   count: collaborators.length,
                 })}
               />
             )}
           </View>
-
-          <View style={commonStyles.settingsSection}>
-            <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
-              {t('labels.leaveList')}
-            </Text>
-
-            {isHomeMember ? (
-              <>
-                <View style={styles.disabledLeaveButton}>
-                  <Icon name="log-out-outline" size={20} tone="textSecondary" />
-                  <Text
-                    role="bodyStrong"
-                    tone="secondary"
-                    style={styles.disabledButtonText}
-                  >
-                    {t('labels.leaveList')}
-                  </Text>
-                </View>
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  style={styles.leaveDescription}
-                >
-                  {t('shoppingListScreens.cantLeaveHomeLinkedMessage', {
-                    name: shoppingList?.home?.name ?? '',
-                  })}
-                </Text>
-                {!!linkedHomeId && (
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.actionRow,
-                      pressed && styles.pressed,
-                    ]}
-                    onPress={() => toHomeDetail({ homeId: linkedHomeId })}
-                  >
-                    <Icon name="people-outline" size={20} tone="primary" />
-                    <Text role="body" tone="accent" style={styles.actionText}>
-                      {t('shoppingListScreens.manageHome')}
-                    </Text>
-                    <Icon
-                      name="chevron-forward"
-                      size={20}
-                      tone="textSecondary"
-                    />
-                  </Pressable>
-                )}
-              </>
-            ) : (
-              <>
-                <Pressable
-                  style={({ pressed }) => [
-                    styles.deleteButton,
-                    pressed && styles.pressed,
-                  ]}
-                  onPress={handleLeaveList}
-                  disabled={leaving}
-                >
-                  <Icon name="log-out-outline" size={20} tone="error" />
-                  <Text
-                    role="bodyStrong"
-                    tone="danger"
-                    style={styles.deleteButtonText}
-                  >
-                    {leaving
-                      ? t('shoppingListScreens.leaving')
-                      : t('labels.leaveList')}
-                  </Text>
-                </Pressable>
-                <Text
-                  role="caption"
-                  tone="secondary"
-                  style={styles.leaveDescription}
-                >
-                  {t('shoppingListScreens.leaveDescription')}
-                </Text>
-              </>
-            )}
-          </View>
         </>
       ) : (
-        // Editable view for owners
+        // Editable for anyone the API lets edit the list
         <View style={commonStyles.settingsSection}>
           <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
             {t('labels.general')}
@@ -301,21 +213,27 @@ export const ListSettings: React.FC<
             </View>
           )}
 
-          <View style={commonStyles.settingsRow}>
-            <View style={commonStyles.settingsRowInfo}>
-              <Text role="bodyStrong">
-                {t('shoppingListScreens.defaultList')}
-              </Text>
-              <Text role="caption" style={commonStyles.settingsRowDescription}>
-                {t('shoppingListScreens.defaultListDesc')}
-              </Text>
+          {/* A default is its owner's mark: the API refuses anyone else. */}
+          {!!isOwner && (
+            <View style={commonStyles.settingsRow}>
+              <View style={commonStyles.settingsRowInfo}>
+                <Text role="bodyStrong">
+                  {t('shoppingListScreens.defaultList')}
+                </Text>
+                <Text
+                  role="caption"
+                  style={commonStyles.settingsRowDescription}
+                >
+                  {t('shoppingListScreens.defaultListDesc')}
+                </Text>
+              </View>
+              <BaseSwitch
+                accessibilityLabel={t('shoppingListScreens.defaultList')}
+                value={isDefault}
+                onValueChange={setIsDefault}
+              />
             </View>
-            <BaseSwitch
-              accessibilityLabel={t('shoppingListScreens.defaultList')}
-              value={isDefault}
-              onValueChange={setIsDefault}
-            />
-          </View>
+          )}
         </View>
       )}
 
@@ -360,7 +278,7 @@ export const ListSettings: React.FC<
         handleToggleComplete={handleToggleComplete}
         isArchived={isArchived}
         isCompleted={isCompleted}
-        isOwner={isOwner}
+        canEdit={canEdit}
         listId={listId}
         reactivating={reactivating}
         statusDisplay={statusDisplay}
@@ -371,7 +289,7 @@ export const ListSettings: React.FC<
         generating={generating}
         handleGenerateNext={handleGenerateNext}
         handleStopRecurring={handleStopRecurring}
-        isOwner={isOwner}
+        canEdit={canEdit}
         isRecurring={isRecurring}
         listId={listId}
         nextRecurringDate={nextRecurringDate}
@@ -385,7 +303,7 @@ export const ListSettings: React.FC<
         creating={creating}
         handleCreateFromTemplate={handleCreateFromTemplate}
         handleSaveAsTemplate={handleSaveAsTemplate}
-        isOwner={isOwner}
+        canEdit={canEdit}
         isTemplate={isTemplate}
         listId={listId}
         marking={marking}
@@ -393,33 +311,10 @@ export const ListSettings: React.FC<
         templateName={templateName}
       />
 
-      <StoreSection
-        isOwner={isOwner}
-        listId={listId}
-        storeInput={storeInput}
-        setStoreInput={setStoreInput}
-        handleStoreSelected={handleStoreSelected}
-      />
-
-      <StoreComparisonSection listId={listId} />
-
-      <BudgetSection
-        budgetInput={budgetInput}
-        currency={currency}
-        estimatedTotal={estimatedTotal}
-        handleTogglePriceTracking={handleTogglePriceTracking}
-        isOwner={isOwner}
-        listId={listId}
-        priceTracking={priceTracking}
-        setBudgetInput={setBudgetInput}
-        totalCost={totalCost}
-        unpricedItems={unpricedItems}
-      />
-
       <ReminderSection
         handleClearReminder={handleClearReminder}
         handleSetReminderDate={handleSetReminderDate}
-        isOwner={isOwner}
+        canEdit={canEdit}
         listId={listId}
         reminderDate={reminderDate}
         reminderEnabled={reminderEnabled}
@@ -455,7 +350,83 @@ export const ListSettings: React.FC<
         </View>
       )}
 
-      {!!listId && !!isOwner && (
+      {!!listId && !isOwner && (
+        <View style={commonStyles.settingsSection}>
+          <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
+            {t('labels.leaveList')}
+          </Text>
+
+          {isHomeMember ? (
+            <>
+              <View style={styles.disabledLeaveButton}>
+                <Icon name="log-out-outline" size={20} tone="textSecondary" />
+                <Text
+                  role="bodyStrong"
+                  tone="secondary"
+                  style={styles.disabledButtonText}
+                >
+                  {t('labels.leaveList')}
+                </Text>
+              </View>
+              <Text
+                role="caption"
+                tone="secondary"
+                style={styles.leaveDescription}
+              >
+                {t('shoppingListScreens.cantLeaveHomeLinkedMessage', {
+                  name: shoppingList?.home?.name ?? '',
+                })}
+              </Text>
+              {!!linkedHomeId && (
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.actionRow,
+                    pressed && styles.pressed,
+                  ]}
+                  onPress={() => toHomeDetail({ homeId: linkedHomeId })}
+                >
+                  <Icon name="people-outline" size={20} tone="primary" />
+                  <Text role="body" tone="accent" style={styles.actionText}>
+                    {t('shoppingListScreens.manageHome')}
+                  </Text>
+                  <Icon name="chevron-forward" size={20} tone="textSecondary" />
+                </Pressable>
+              )}
+            </>
+          ) : (
+            <>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.deleteButton,
+                  pressed && styles.pressed,
+                ]}
+                onPress={handleLeaveList}
+                disabled={leaving}
+              >
+                <Icon name="log-out-outline" size={20} tone="error" />
+                <Text
+                  role="bodyStrong"
+                  tone="danger"
+                  style={styles.deleteButtonText}
+                >
+                  {leaving
+                    ? t('shoppingListScreens.leaving')
+                    : t('labels.leaveList')}
+                </Text>
+              </Pressable>
+              <Text
+                role="caption"
+                tone="secondary"
+                style={styles.leaveDescription}
+              >
+                {t('shoppingListScreens.leaveDescription')}
+              </Text>
+            </>
+          )}
+        </View>
+      )}
+
+      {!!listId && !!canDelete && (
         <View style={commonStyles.settingsSection}>
           <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
             {t('labels.dangerZone')}

@@ -29,6 +29,8 @@ const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
 }));
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
+import { DietarySharingSection } from '#features/profile/components/DietarySharingSection';
+import { useDietarySharing } from '#features/profile/hooks/useDietarySharing';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
 import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsSheet/MacroTargetsSheet';
 import { Text } from '#components/atoms/Text';
@@ -46,6 +48,7 @@ export const DietaryProfileScreen: React.FC = () => {
     addDietaryRestriction,
     removeDietaryRestriction,
   } = useDietaryProfile();
+  const sharing = useDietarySharing();
 
   // State for modals and editing
   const [editingMeals, setEditingMeals] = useState(false);
@@ -282,6 +285,24 @@ export const DietaryProfileScreen: React.FC = () => {
           />
         </View>
       </Animated.View>
+      {/* Shared With Section: one switch per home the user belongs to */}
+      {sharing.homes.length > 0 && (
+        <Animated.View
+          entering={FadeIn.duration(motion.timing.SLOW).delay(50)}
+          layout={LinearTransition}
+          style={styles.sectionContainer}
+        >
+          <Text role="bodyStrong" tone="secondary">
+            {t('dietary.sharedWith')}
+          </Text>
+          <View style={styles.sectionCard}>
+            <DietarySharingSection
+              homes={sharing.homes}
+              onChange={sharing.setShared}
+            />
+          </View>
+        </Animated.View>
+      )}
       {/* Food Preferences Section */}
       <Animated.View
         entering={FadeIn.duration(motion.timing.SLOW).delay(100)}

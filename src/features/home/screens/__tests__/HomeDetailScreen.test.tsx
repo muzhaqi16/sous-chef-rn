@@ -1,9 +1,11 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { HomeDetailScreen } from '../HomeDetailScreen';
+import { kitTestIDs } from '#components/testIDs';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -39,7 +41,7 @@ jest.mock('#features/home/screens/useHomeDetailManagement', () => ({
         canManageHome: true,
       },
     },
-    loading: false,
+    homeState: 'ready',
     leaving: false,
     refetch: mockRefetch,
     rolePickerState: mockRolePickerState,
@@ -102,8 +104,17 @@ jest.mock('#components/templates/DetailTemplate', () => ({
   },
 }));
 
+// Captures each field's props so a test can run the screen's own check.
+interface EditableFieldProps {
+  label: string;
+  value: string;
+  validation?: (value: string) => string | null;
+}
+const mockEditableFieldProps: EditableFieldProps[] = [];
 jest.mock('#features/home/components/EditableField', () => ({
-  EditableField: ({ label, value }: { label: string; value: string }) => {
+  EditableField: (props: EditableFieldProps) => {
+    mockEditableFieldProps.push(props);
+    const { label, value } = props;
     const { View, Text } = require('react-native');
     return (
       <View testID="editable-field">
@@ -212,7 +223,7 @@ beforeEach(() => {
         canManageHome: true,
       },
     },
-    loading: false,
+    homeState: 'ready',
     leaving: false,
     refetch: mockRefetch,
     rolePickerState: mockRolePickerState,
@@ -251,7 +262,7 @@ describe('HomeDetailScreen', () => {
     } = require('#features/home/screens/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       ...useHomeDetailManagement(),
-      loading: true,
+      homeState: 'ready',
     });
 
     const { getByText, queryByText } = render(
@@ -271,6 +282,19 @@ describe('HomeDetailScreen', () => {
     expect(getByText('Home Name: My Home')).toBeTruthy();
   });
 
+  // The API's rule (UpdateHomeInput.name), so a refused name is never sent.
+  it('checks a new home name as the API does before saving it', () => {
+    render(<HomeDetailScreen {...defaultProps} />);
+    const validate = mockEditableFieldProps
+      .filter(props => props.label === 'Home Name')
+      .at(-1)?.validation;
+
+    expect(validate?.(' \t ')).toBe('Please enter a home name');
+    expect(validate?.('a'.repeat(101))).toBe('Keep the name to 100 characters');
+    expect(validate?.('a'.repeat(100))).toBeNull();
+    expect(validate?.('Shtëpia')).toBeNull();
+  });
+
   it('shows join code when enabled', () => {
     const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
     expect(getByText('ABC123')).toBeTruthy();
@@ -279,6 +303,38 @@ describe('HomeDetailScreen', () => {
   it('shows members section', () => {
     const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
     expect(getByText('Members Section')).toBeTruthy();
+  });
+
+  describe('dietary needs', () => {
+    const withMembers = (totalCount: number) => {
+      const {
+        useHomeDetailManagement,
+      } = require('#features/home/screens/useHomeDetailManagement');
+      // The default return beforeEach set, read without calling a hook.
+      const base = useHomeDetailManagement.getMockImplementation()();
+      useHomeDetailManagement.mockReturnValue({
+        ...base,
+        home: { ...base.home, membersConnection: { edges: [], totalCount } },
+      });
+    };
+
+    it('opens the household’s dietary needs once the home has another member', () => {
+      withMembers(2);
+      const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
+
+      fireEvent.press(getByText("What members can't eat"));
+
+      expect(useAppNavigation().toHomeDietaryNeeds).toHaveBeenCalledWith({
+        homeId: 'home-1',
+      });
+    });
+
+    it('offers no dietary needs to a home of one', () => {
+      withMembers(1);
+      const { queryByText } = render(<HomeDetailScreen {...defaultProps} />);
+
+      expect(queryByText("What members can't eat")).toBeNull();
+    });
   });
 
   it('shows storage locations navigation', () => {
@@ -297,7 +353,7 @@ describe('HomeDetailScreen', () => {
     } = require('#features/home/screens/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       home: null,
-      loading: true,
+      homeState: 'loading',
       leaving: false,
       refetch: mockRefetch,
       rolePickerState: mockRolePickerState,
@@ -311,8 +367,30 @@ describe('HomeDetailScreen', () => {
       toggleJoinCode: mockToggleJoinCode,
     });
 
-    const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
+    const { getByText, getByTestId } = render(
+      <HomeDetailScreen {...defaultProps} />,
+    );
     expect(getByText('Home Details')).toBeTruthy();
+    expect(getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
+  });
+
+  // A failed read gets the app's error state and its retry, never the
+  // loading animation with an error written into its banner.
+  it('shows the error state when the home fails to load', () => {
+    const {
+      useHomeDetailManagement,
+    } = require('#features/home/screens/useHomeDetailManagement');
+    useHomeDetailManagement.mockReturnValue({
+      ...useHomeDetailManagement(),
+      home: null,
+      homeState: 'error',
+    });
+
+    const { getByTestId, queryByTestId } = render(
+      <HomeDetailScreen {...defaultProps} />,
+    );
+    expect(getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(queryByTestId(kitTestIDs.stateLoading)).toBeNull();
   });
 
   it('shows leave home button for non-owner member', () => {
@@ -334,7 +412,7 @@ describe('HomeDetailScreen', () => {
           canManageHome: false,
         },
       },
-      loading: false,
+      homeState: 'ready',
       leaving: false,
       refetch: mockRefetch,
       rolePickerState: mockRolePickerState,

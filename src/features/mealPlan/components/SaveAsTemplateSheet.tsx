@@ -17,8 +17,8 @@ const CATEGORY_OPTION_KEYS: {
   key: TemplateCategory;
   labelKey: TranslationKey;
 }[] = [
-  { key: TemplateCategory.Weekly, labelKey: 'saveAsTemplate.categoryWeekly' },
-  { key: TemplateCategory.Monthly, labelKey: 'saveAsTemplate.categoryMonthly' },
+  { key: TemplateCategory.Weekly, labelKey: 'labels.weekly' },
+  { key: TemplateCategory.Monthly, labelKey: 'labels.monthly' },
   {
     key: TemplateCategory.Breakfast,
     labelKey: 'labels.breakfast',
@@ -141,7 +141,7 @@ export const SaveAsTemplateSheet: React.FC<SaveAsTemplateSheetProps> = ({
       />
 
       <FormTextArea
-        label={t('saveAsTemplate.descriptionLabel')}
+        label={t('labels.description')}
         value={description}
         onChangeText={setDescription}
         placeholder={t('saveAsTemplate.descriptionPlaceholder')}

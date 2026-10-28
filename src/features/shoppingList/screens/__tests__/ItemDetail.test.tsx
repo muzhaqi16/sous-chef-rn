@@ -25,10 +25,22 @@ import { kitTestIDs } from '#components/testIDs';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetShoppingListItemDocument } from '../useShoppingListItemDetail.generated';
-import { EntryImageSource } from '#/graphql/generated/schemaTypes';
+import { StoreShelfPricesDocument } from '#features/catalog/hooks/useStoreShelfPrices.generated';
+import { catalogTestIDs } from '#features/catalog/testIDs';
+import { t } from '#/i18n';
+import {
+  EntryImageSource,
+  ItemImageStatus,
+} from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 const mockUseShowShoppingListImages =
   useShowShoppingListImages as jest.MockedFunction<
@@ -48,6 +60,7 @@ jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: jest.fn(() => null),
 }));
 jest.mock('#domain/nutrition', () => ({
+  ...jest.requireActual('#domain/nutrition'),
   hasNutritionData: jest.fn(() => false),
 }));
 jest.mock('#hooks/performance/useScreenTransition');
@@ -172,6 +185,7 @@ describe('ShoppingListItemDetail', () => {
   beforeEach(() => {
     mockUseShowShoppingListImages.mockReturnValue(true);
     mockResolveImageUrl.mockReturnValue(null);
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
   });
 
   it('renders the item name', async () => {
@@ -230,6 +244,114 @@ describe('ShoppingListItemDetail', () => {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
     await waitFor(() => expect(screen.getByText('$4.59')).toBeTruthy());
+  });
+
+  it('shows no estimate or amount paid with prices turned off', async () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: true,
+              movedToPantryAt: null,
+              purchasedQuantity: 2,
+              purchasedPrice: 3.5,
+              purchaseDate: '2026-08-19T00:00:00Z',
+              purchasedBy: null,
+            },
+          }),
+        ),
+      ],
+    });
+
+    await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+    expect(screen.queryByText('$4.59')).toBeNull();
+    expect(screen.queryByText('Total paid')).toBeNull();
+    expect(screen.queryByText('$7.00')).toBeNull();
+  });
+
+  describe('prices at stores', () => {
+    const lineWithItem = () =>
+      buildItemMock(
+        'si1',
+        buildShoppingListItem({ item: { __typename: 'Item', id: 'cat-1' } }),
+      );
+    const priceAt = (id: string, name: string, price: number) => ({
+      store: { id, name },
+      price,
+      regularPrice: price,
+      onPromotion: false,
+      typicalPrice: price,
+      lowestPrice: price,
+      coveredDays: 90,
+      normalizedPrice: null,
+      normalizedBasis: null,
+      isCurrent: true,
+      confirmedAt: '2026-10-26T12:00:00.000Z',
+      aisle: null,
+      unit: { id: 'u-lb', symbol: 'lb' },
+      currency: {
+        id: 'usd',
+        code: 'USD',
+        decimalPlaces: 2,
+      },
+    });
+    const shelfMock = (nodes: ReturnType<typeof priceAt>[]) =>
+      recordMock(StoreShelfPricesDocument, {
+        data: {
+          item: {
+            id: 'cat-1',
+            storePricesConnection: {
+              edges: nodes.map(node => ({ node })),
+            },
+          },
+        },
+      });
+
+    it("lists each store's shelf price under its heading", async () => {
+      const shelf = shelfMock([
+        priceAt('s-aldi', 'ALDI', 1.99),
+        priceAt('s-ge', 'Giant Eagle', 2.49),
+      ]);
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [lineWithItem(), shelf.mock],
+      });
+
+      expect(await screen.findByText(t('storeShelfPrices.title'))).toBeTruthy();
+      expect(
+        screen.getByTestId(catalogTestIDs.storeShelfPrice('s-aldi')),
+      ).toBeTruthy();
+      expect(
+        screen.getByTestId(catalogTestIDs.storeShelfPrice('s-ge')),
+      ).toBeTruthy();
+      expect(shelf.fired).toEqual([{ itemId: 'cat-1' }]);
+    });
+
+    it('shows and asks for none with prices turned off', async () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+      const shelf = shelfMock([priceAt('s-aldi', 'ALDI', 1.99)]);
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [lineWithItem(), shelf.mock],
+      });
+
+      await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+      expect(screen.queryByText(t('storeShelfPrices.title'))).toBeNull();
+      expect(shelf.fired).toEqual([]);
+    });
+
+    it('shows no section for an item no store has priced', async () => {
+      const shelf = shelfMock([]);
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [lineWithItem(), shelf.mock],
+      });
+
+      await waitFor(() => expect(shelf.fired).toHaveLength(1));
+      await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+      expect(screen.queryByText(t('storeShelfPrices.title'))).toBeNull();
+    });
   });
 
   it('shows the preferred store', async () => {
@@ -580,6 +702,45 @@ describe('ShoppingListItemDetail', () => {
     expect(
       await screen.findByTestId('shopping-item-report-photo-button'),
     ).toBeTruthy();
+  });
+
+  // The hero photo carries no label: the flag says the user's upload awaits
+  // review, and explains rather than reporting it.
+  it("marks the flag over the user's photo awaiting review", async () => {
+    mockResolveImageUrl.mockReturnValue('https://cdn.test/mine.jpg');
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            item: {
+              __typename: 'Item',
+              id: 'i1',
+              canSuggest: true,
+              imageUrl: 'https://cdn.test/bread.jpg',
+              photos: [
+                {
+                  __typename: 'ItemPhoto',
+                  id: 'mine',
+                  url: 'https://cdn.test/mine.jpg',
+                  status: ItemImageStatus.Pending,
+                },
+              ],
+            },
+          }),
+        ),
+      ],
+    });
+    const flag = await screen.findByLabelText(
+      t('itemPhotos.pendingReviewAction'),
+    );
+
+    fireEvent.press(flag);
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('itemPhotos.pendingReview'),
+      t('itemPhotos.pendingReviewBody'),
+    );
   });
 
   it('offers no photo report on a line with no catalog item', async () => {

@@ -20,7 +20,7 @@ export const priorityOptionOf = (value: number): PriorityOption | undefined =>
 
 const PRIORITY_LABEL_KEYS: Record<PriorityOption, TranslationKey> = {
   low: 'shoppingListScreens.priorityLow',
-  medium: 'shoppingListScreens.priorityMedium',
+  medium: 'recipes.difficultyLabel.MEDIUM',
   high: 'shoppingListScreens.priorityHigh',
 };
 

@@ -1,4 +1,5 @@
 import {
+  canDelete,
   canEdit,
   canView,
   getPermissionLevel,
@@ -16,8 +17,8 @@ interface MealTemplateData extends HomeLinkedResource {
 }
 
 /**
- * Mirrors the API: editing and deleting a template both require EDIT (owner,
- * or a home MEMBER and above); duplicating needs only VIEW.
+ * Mirrors the API, as for a meal plan: a home MEMBER edits, deleting takes
+ * the creator or the home's OWNER/ADMIN, and duplicating needs only VIEW.
  */
 export function getMealTemplatePermissions(
   template: MealTemplateData,
@@ -28,7 +29,7 @@ export function getMealTemplatePermissions(
 
   return {
     canEdit: canEdit(level),
-    canDelete: canEdit(level),
+    canDelete: canDelete(level),
     canDuplicate: canView(level),
   };
 }

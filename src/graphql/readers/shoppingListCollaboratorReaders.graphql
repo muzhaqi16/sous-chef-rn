@@ -4,6 +4,7 @@ fragment ShoppingListCollaboratorReaders on ShoppingListCollaborator {
   canAddItems
   canEdit
   canEditItems
+  canInviteOthers
   canMarkPurchased
   canRemoveItems
   collaborator {

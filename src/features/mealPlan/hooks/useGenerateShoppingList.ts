@@ -8,7 +8,6 @@ import {
 } from '@apollo/client/react';
 import {
   AddDerivedItemsToShoppingListDocument,
-  LinkDerivedListToMealPlanDocument,
   UseGenerateShoppingList_MealPlanFragmentDoc,
   type UseGenerateShoppingList_MealPlanFragment,
   GenerateShoppingListPlanDocument,
@@ -24,8 +23,14 @@ import {
   buildAddItemsReconcileUpdate,
   createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
+import {
+  useCreateShoppingList,
+  type StartingLines,
+} from '#features/shoppingList/hooks/useCreateShoppingList';
+import type {
+  BatchAddShoppingListItemInput,
+  CreateShoppingListInput,
+} from '#/graphql/generated/schemaTypes';
 import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
 import { useAppStore, useSelectedPantryId } from '#store/useAppStore';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -71,8 +76,8 @@ function unreadSource(
 
 /**
  * Builds the list from the cached plan instead of asking the server to fan out,
- * so it works offline: a create, a batch add, and a link back to the plan,
- * every one of them queued and keyed by a client-minted id.
+ * so it works offline: a create carrying the lines and the plan, then batch
+ * adds for any past its 50, every one queued and keyed by a client-minted id.
  */
 export function useGenerateShoppingList(mealPlanId: string | null) {
   const { t } = useTranslation();
@@ -111,9 +116,6 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     },
   );
 
-  const [linkToPlan] = useMutation(LinkDerivedListToMealPlanDocument, {
-    context: { localFirst: true },
-  });
   const apiUnavailable = useAppStore(isApiUnavailable);
 
   // An imported recipe's ingredients link to catalog items on a server job, so
@@ -221,23 +223,29 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 
     const listName =
       firstNonBlank(options.name)?.trim() ?? defaultListName(source.name);
-    const listId =
-      options.shoppingListId ?? (await createList(listName, source.homeId));
-    if (!listId) return null;
-
-    // One batch: watchers re-read once for the whole list, not once per line.
-    client.cache.batch({
-      update: cache => {
-        for (const line of inputs) {
-          writeLineToCache(cache, listId, line, displayNames);
-        }
+    const target = await targetList(
+      options.shoppingListId,
+      { name: listName, homeId: source.homeId, mealPlanId },
+      {
+        items: inputs,
+        // One batch: watchers re-read once for the whole list, not once per line.
+        write: listId =>
+          client.cache.batch({
+            update: cache => {
+              for (const line of inputs) {
+                writeLineToCache(cache, listId, line, displayNames);
+              }
+            },
+          }),
       },
-    });
+    );
+    if (!target) return null;
+    const { listId } = target;
 
     const addFailure = await addItemsInSlices(
       client.cache,
       listId,
-      inputs,
+      target.unsent,
       slice =>
         addItems({
           variables: { input: { shoppingListId: listId, items: slice } },
@@ -248,24 +256,8 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       },
     );
 
-    // Queued like the writes above: the list carries no plan of its own until
-    // this lands, so the plan's generated-lists section fills in on replay.
-    const linked = options.shoppingListId
-      ? null
-      : await settleMutation(
-          () =>
-            linkToPlan({
-              variables: { input: { id: listId, mealPlanId } },
-            }),
-          {
-            document: LinkDerivedListToMealPlanDocument,
-            fallback: t('generateShoppingList.generateFailed'),
-            present: 'none',
-          },
-        );
-    const failure = addFailure ?? linked?.failure;
-    if (failure) {
-      toastService.error(failure.body);
+    if (addFailure) {
+      toastService.error(addFailure.body);
       return null;
     }
 
@@ -286,10 +278,24 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     return { shoppingListId: listId, lineCount: inputs.length };
   };
 
-  /** The new list's id, or null once its refusal is presented. */
-  async function createList(name: string, homeId: string | null) {
-    const created = await createShoppingList({ name, homeId });
-    if (created.status === 'created') return created.shoppingList.id;
+  /**
+   * Where the lines go and which are still to send, or null once a refused
+   * create is presented. A new list is made with its lines and names its plan,
+   * so one write does what a create, an add and a link did.
+   */
+  async function targetList(
+    existingId: string | undefined,
+    create: CreateShoppingListInput,
+    lines: StartingLines<BatchAddShoppingListItemInput>,
+  ) {
+    if (existingId) {
+      lines.write(existingId);
+      return { listId: existingId, unsent: lines.items };
+    }
+    const created = await createShoppingList(create, lines);
+    if (created.status === 'created') {
+      return { listId: created.shoppingList.id, unsent: created.unsent };
+    }
     toastService.error(created.body);
     return null;
   }

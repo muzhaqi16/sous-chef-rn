@@ -22,6 +22,7 @@ fragment HomeReaders on Home {
     canViewPantry
     displayName
     role
+    sharesDietaryNeeds
     status
   }
   name

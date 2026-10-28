@@ -51,7 +51,10 @@ export const GenerateShoppingListSheet: React.FC<
     }
   }
 
-  const { lists: shoppingLists } = useShoppingListsLite({ skip: !visible });
+  const { lists: shoppingLists } = useShoppingListsLite({
+    skip: !visible,
+    fetchPolicy: 'cache-first',
+  });
 
   const handleGenerate = () => {
     onGenerate({

@@ -11,6 +11,26 @@ fragment PantryItemCard_pantryItem on PantryItem {
       symbol
     }
   }
+  # displayAmount read in each unit system: the row shows it while it is
+  # still the figure displayAmount holds.
+  held {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
   expiresOn
   storageState
   lastUsedAt
@@ -25,7 +45,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
   remainingPortions
   activeBatchCount
   updatedAt
-  # The photo this entry shows: the household's choice, else the catalog's.
+  # The photo this entry shows: the household's choice, the catalog's, else the viewer's pending one.
   image {
     url
     source

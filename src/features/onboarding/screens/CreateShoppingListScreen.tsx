@@ -189,7 +189,7 @@ export const CreateShoppingListScreen = () => {
                   tone="accent"
                   style={styles.defaultBadgeText}
                 >
-                  {t('labels.default')}
+                  {t('labels.defaultBadge')}
                 </Text>
               </View>
             )}

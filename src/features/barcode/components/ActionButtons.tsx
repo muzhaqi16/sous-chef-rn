@@ -4,56 +4,55 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Button } from '#components/molecules/Button';
 
 interface ActionButtonsProps {
-  /**
-   * Omit when there is no action to offer — the secondary action then stands
-   * alone. Rendering a primary button that cannot do anything is worse than
-   * rendering none.
-   */
-  primaryAction?: {
+  primaryAction: {
     label: string;
     onPress: () => void;
     disabled?: boolean;
     loading?: boolean;
   };
-  secondaryAction: {
+  /** Another way to do the primary action, shown under it, quieter. */
+  alternateAction?: {
     label: string;
     onPress: () => void;
+    disabled?: boolean;
   };
 }
 
+/** The scan's add, drawn where its destination is described. */
 export const ActionButtons: React.FC<ActionButtonsProps> = ({
   primaryAction,
-  secondaryAction,
+  alternateAction,
 }) => {
   return (
     <View style={styles.actionButtons}>
-      {!!primaryAction && (
-        <Button
-          onPress={primaryAction.onPress}
-          variant="primary"
-          size="large"
-          fullWidth
-          disabled={primaryAction.disabled}
-          loading={primaryAction.loading}
-        >
-          {primaryAction.label}
-        </Button>
-      )}
-
       <Button
-        onPress={secondaryAction.onPress}
-        variant="secondary"
+        onPress={primaryAction.onPress}
+        variant="primary"
         size="large"
         fullWidth
+        disabled={primaryAction.disabled}
+        loading={primaryAction.loading}
       >
-        {secondaryAction.label}
+        {primaryAction.label}
       </Button>
+
+      {!!alternateAction && (
+        <Button
+          onPress={alternateAction.onPress}
+          variant="ghost"
+          size="large"
+          fullWidth
+          disabled={alternateAction.disabled}
+        >
+          {alternateAction.label}
+        </Button>
+      )}
     </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   actionButtons: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
   },
 }));

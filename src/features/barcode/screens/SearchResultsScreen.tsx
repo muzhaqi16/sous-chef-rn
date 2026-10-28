@@ -22,6 +22,7 @@ import type { BarcodeSource, ScannedItem } from '#features/barcode/types';
 import type { ScannedPack } from '#utils/items/suggestItemChanges';
 import { Screen } from '#components/templates/Screen';
 import { writesItemDirectly } from '#domain/itemWriteAccess';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 /** Build form initialData from a ScannedItem for edit/variant modes */
 function buildInitialDataFromItem(item: ScannedItem): AddItemFormInitialData {
@@ -66,7 +67,13 @@ export const SearchResultsScreen: React.FC<
   const { barcode, format, source, pantryId, shoppingListId } = route.params;
 
   const { t } = useTranslation();
-  const { goBack, navigation } = useAppNavigation();
+  const {
+    goBack,
+    navigation,
+    toSearchResults,
+    toBrandLists,
+    toNutritionScreen,
+  } = useAppNavigation();
 
   const [sheetMode, setSheetMode] = useState<AddItemFormMode>('create');
 
@@ -79,8 +86,15 @@ export const SearchResultsScreen: React.FC<
     snapPoints: ['50%', '65%', '85%'],
   });
 
+  const showPrices = useBudgetAndPricesEnabled();
   const { item, loading, error, addingItem, handleAddItem, handleRetry } =
-    useSearchResults(barcode, format, pantryId);
+    useSearchResults(
+      barcode,
+      format,
+      pantryId,
+      // What the household paid rides the lookup only where it shows.
+      source === 'storeMode' && showPrices,
+    );
 
   // Pop SearchResults and return to the scanner beneath it.
   const handleScanAnother = () => goBack();
@@ -128,8 +142,10 @@ export const SearchResultsScreen: React.FC<
     }
 
     if (item) {
+      const { nutrition } = item;
       return (
         <SearchResults
+          key={item.id}
           item={item}
           format={format}
           onScanAnother={handleScanAnother}
@@ -139,6 +155,28 @@ export const SearchResultsScreen: React.FC<
           source={source}
           pantryId={pantryId}
           shoppingListId={shoppingListId}
+          // An empty format lets the lookup detect the barcode's kind.
+          onOpenBarcode={alternative =>
+            toSearchResults({
+              barcode: alternative,
+              format: '',
+              source,
+              pantryId,
+              shoppingListId,
+            })
+          }
+          onOpenBrandLists={toBrandLists}
+          onOpenNutrition={
+            nutrition
+              ? () =>
+                  toNutritionScreen({
+                    itemId: item.id,
+                    itemName: item.name,
+                    nutritionFacts: nutrition.facts,
+                    typicalOf: nutrition.typicalOf,
+                  })
+              : undefined
+          }
         />
       );
     }
@@ -171,7 +209,6 @@ export const SearchResultsScreen: React.FC<
           },
         ],
       }}
-      scroll="none"
     >
       {renderContent()}
 

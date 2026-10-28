@@ -9,7 +9,9 @@ import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
 import { formatQuantityForDisplay } from '#/utils/formatQuantity';
 import { useMoney } from '#domain/money';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import type { UsageRecord } from '#features/pantry/types';
+import { formatReading, readingOf, type ReadingSystem } from '#domain/measure';
 
 /** Local copy for the kinds the server writes itself. */
 const SYSTEM_REASON_KEY: Record<AdjustmentKind, TranslationKey | null> = {
@@ -36,20 +38,29 @@ const correctionText = (usage: UsageRecord, t: Translate): string | null => {
   return usage.adjustmentReason ?? null;
 };
 
-/** One ledger line, shared by the detail summary and the full-history screen. */
-export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
-  usage,
-}) => {
+/** One ledger line of the full-history screen. */
+export const UsageHistoryRow: React.FC<{
+  usage: UsageRecord;
+  /** The system a recount stated in a unit reads in. */
+  readingSystem: ReadingSystem;
+}> = ({ usage, readingSystem }) => {
   const { t } = useTranslation();
   const money = useMoney();
+  const showsCost = useBudgetAndPricesEnabled();
 
   const isAdjustment = usage.purpose === UsagePurpose.Adjustment;
   // Only a purchase carries one; 0 is a price, null is unknown.
   const pricePaid =
-    usage.totalCost == null ? null : money(usage.totalCost, usage.currency);
+    !showsCost || usage.totalCost == null
+      ? null
+      : money(usage.totalCost, usage.currency);
   // Gated on the KIND, not the purpose: a correction that finds stock is
   // recorded as a RESTOCK row and still carries one.
   const correction = correctionText(usage, t);
+  // A recount stated in a unit says what was counted ("Counted: 2.5 lb").
+  const stated = usage.statedAmount
+    ? formatReading(readingOf(usage.statedAmount, readingSystem))
+    : null;
   const isRestock = usage.purpose === UsagePurpose.Restock;
   // `string`: the wire can carry a purpose this client's enum predates;
   // `enumKeyCoverage.test.ts` guards the members it does know.
@@ -81,6 +92,11 @@ export const UsageHistoryRow: React.FC<{ usage: UsageRecord }> = ({
         {!!correction && (
           <Text role="caption" tone="tertiary" style={styles.adjustmentReason}>
             {correction}
+          </Text>
+        )}
+        {!!stated && (
+          <Text role="caption" tone="tertiary" style={styles.adjustmentReason}>
+            {t('adjustQuantity.countedAs', { amount: stated })}
           </Text>
         )}
         {pricePaid !== null && (

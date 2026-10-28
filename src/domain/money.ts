@@ -1,3 +1,5 @@
+import { PriceBasis } from '#/graphql/generated/schemaTypes';
+import type { Translate } from '#/i18n/types';
 import { useAppStore } from '#store/useAppStore';
 import { DEFAULT_CURRENCY, formatCurrency } from '#/utils/formatters/number';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -52,4 +54,25 @@ export function useMoney(): (
   const preferred = usePreferredCurrency();
   return (amount, figureCurrency) =>
     formatCurrency(amount, resolveCurrency(figureCurrency, preferred));
+}
+
+/**
+ * A formatted price per kilogram, litre or piece; null for a basis this build
+ * predates, which the caller shows without one rather than as a blank label.
+ */
+export function pricePerBasis(
+  t: Translate,
+  basis: PriceBasis,
+  price: string,
+): string | null {
+  switch (basis) {
+    case PriceBasis.PerKg:
+      return t('labels.pricePer.kg', { price });
+    case PriceBasis.PerL:
+      return t('labels.pricePer.l', { price });
+    case PriceBasis.Each:
+      return t('labels.pricePer.each', { price });
+    default:
+      return null;
+  }
 }

@@ -13,9 +13,10 @@ import { startCore } from '#bootstrap/startCore';
 import { useCoreReady } from '#bootstrap/useCoreReady';
 import { Navigation } from '#navigation/RootNavigator';
 import { navigationRef } from '#services/NavigationService';
+import { homeTabOnScreen } from '#navigation/homeTabOnScreen';
 import { SplashScreen } from '#screens/SplashScreen';
 import { ToastProvider } from '#components/molecules/Toast';
-import { OfflineTransitionToaster } from '#components/atoms/OfflineTransitionToaster';
+import { OfflineTransitionAnnouncer } from '#components/atoms/OfflineTransitionAnnouncer';
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useAppLifecycle } from '#/app/useAppLifecycle';
@@ -51,10 +52,12 @@ setPushTokenProvider(
 registerMobileSessionHost();
 
 // The core's start: its persisted stores and the client's resync triggers
-// (`src/apollo/refetchEvents.ts`); navigation paces the language catch-up.
+// (`src/apollo/refetchEvents.ts`); navigation paces the catch-ups, and a resync
+// re-asks only the home tab on screen.
 startCore({
   client,
   onNavigation: listener => navigationRef.addListener('state', listener),
+  scopeOnScreen: homeTabOnScreen,
 });
 
 const App = () => {
@@ -89,8 +92,8 @@ const App = () => {
                            indicator is `OfflineStatusPill`, rendered inline in
                            each screen's header — nothing global occupies the
                            top inset.
-                        2. OfflineTransitionToaster - renders null; fires the
-                           offline/online announcement toast once at the root.
+                        2. OfflineTransitionAnnouncer - renders null; reads the
+                           offline/online transition to a screen reader once.
                         3. GlobalBackdrop - covers everything including status bar
                         3b. ToastProvider - a LEAF, mounted last so the toast is
                             last in the native order; it exposes no context, so
@@ -103,7 +106,7 @@ const App = () => {
                               <Navigation />
                             </NotificationProvider>
                           </AlertProvider>
-                          <OfflineTransitionToaster />
+                          <OfflineTransitionAnnouncer />
                         </View>
                         <GlobalBackdrop />
                         {/* Last, so the card composites above every screen's

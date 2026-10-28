@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useTranslation } from '#/i18n';
 import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from './useShoppingListItemDetail';
@@ -16,13 +17,14 @@ import { ItemPhotoViewer } from '#features/catalog/ui/ItemPhotoViewer/ItemPhotoV
 import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { entryGallery } from '#features/catalog/ui/entryGallery';
-import { hasNutritionData } from '#domain/nutrition';
+import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { useStoreShelfPrices } from '#features/catalog/hooks/useStoreShelfPrices';
+import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
@@ -94,6 +96,8 @@ export const ShoppingListItemDetail: React.FC<
 > = ({ route }) => {
   const { t } = useTranslation();
   const money = useMoney();
+  // Off, the line reads with no estimate or amount paid.
+  const showPrices = useBudgetAndPricesEnabled();
   useScreenTransition('ShoppingListItemDetail');
   const { toEditItem, toPurchaseHistory, goBack } = useAppNavigation();
   const { listId, itemId } = route.params;
@@ -113,12 +117,7 @@ export const ShoppingListItemDetail: React.FC<
   // for `detail`.
   const { item, detail, notFound, state, retry } =
     useShoppingListItemDetail(itemId);
-
-  const reportPhotoActions = useReportPhotoHeaderAction(
-    detail?.item,
-    detail?.image,
-    shoppingListTestIDs.itemDetailReportPhotoButton,
-  );
+  const shelfPrices = useStoreShelfPrices(item?.item?.id, listId);
 
   const handleEdit = () => {
     toEditItem({ listId, itemId });
@@ -138,8 +137,17 @@ export const ShoppingListItemDetail: React.FC<
   );
 
   const gallery = entryGallery(detail?.image, detail?.item?.photos);
+  const reportPhoto = useReportPhotoHeaderAction(
+    detail?.item,
+    detail?.image,
+    gallery,
+    shoppingListTestIDs.itemDetailReportPhotoButton,
+  );
   const itemPhotos = gallery.photos;
-  const nutritionFacts = detail?.item?.nutritionFacts ?? null;
+  const nutrition = toShownNutrition(detail?.item?.shownNutrition);
+  const nutritionFacts = nutrition?.facts ?? null;
+  // A concept's typical values, titled as such and making no health claim.
+  const typicalOf = nutrition?.typicalOf ?? null;
   const showImages = itemPhotos.length > 0 || !!gallery.leadImageUrl;
   const showNutrition = hasNutritionData(nutritionFacts);
 
@@ -218,7 +226,7 @@ export const ShoppingListItemDetail: React.FC<
     ? t(priorityLabelKey(priorityOption))
     : null;
 
-  const estimatedPrice = item.priceEstimate?.estimated;
+  const estimatedPrice = showPrices ? item.priceEstimate?.estimated : null;
   const preferredStoreName = item.storeInfo?.preferredStore?.name;
 
   // The API stores the price PER UNIT; the shopper entered the total. Show the
@@ -229,7 +237,7 @@ export const ShoppingListItemDetail: React.FC<
     ? purchaseInfo.purchasedPrice ?? null
     : null;
   const purchasedTotal =
-    purchasedQuantity != null
+    showPrices && purchasedQuantity != null
       ? totalFromUnitPrice(perUnitPaid, purchasedQuantity)
       : null;
   // At quantity 1 the per-unit price IS the total; repeating it reads as noise.
@@ -250,7 +258,7 @@ export const ShoppingListItemDetail: React.FC<
             onPress: handleEdit,
             testID: shoppingListTestIDs.itemDetailEditButton,
           },
-          ...reportPhotoActions,
+          ...reportPhoto.actions,
         ]}
         renderHero={
           hasHero
@@ -262,6 +270,7 @@ export const ShoppingListItemDetail: React.FC<
                     leadImageUrl={gallery.leadImageUrl}
                     height={heroHeight}
                     onPhotoPress={setViewerIndex}
+                    onPageChange={reportPhoto.onPageChange}
                     // The collapse guard for the gallery branch: a dead CDN url
                     // collapses the hero, as on the CachedImage path below.
                     onUnrenderable={() => setFailedHeroUri(imageUrl)}
@@ -289,7 +298,7 @@ export const ShoppingListItemDetail: React.FC<
           <View style={styles.statusBadge}>
             <Icon name="checkmark-circle" size={18} tone="success" />
             <Text role="label" tone="success" style={styles.statusBadgeText}>
-              {t('shoppingListScreens.purchased')}
+              {t('labels.purchased')}
             </Text>
           </View>
         )}
@@ -324,7 +333,7 @@ export const ShoppingListItemDetail: React.FC<
             </DetailRow>
           )}
           {!!purchaseInfo?.isPurchased && purchasedQuantity != null && (
-            <DetailRow label={t('shoppingListScreens.purchased')}>
+            <DetailRow label={t('labels.purchased')}>
               <FormattedItemSubtitle
                 quantity={purchasedQuantity}
                 unitSymbol={unitSymbol}
@@ -364,18 +373,30 @@ export const ShoppingListItemDetail: React.FC<
           {!!item.notes && (
             <View style={styles.notesRow}>
               <Text role="caption" tone="secondary">
-                {t('shoppingListScreens.notes')}
+                {t('labels.notes')}
               </Text>
               <Text role="label">{item.notes}</Text>
             </View>
           )}
         </DetailSection>
 
+        {shelfPrices.rows.length > 0 && (
+          <DetailSection title={t('storeShelfPrices.title')}>
+            <StoreShelfPriceList rows={shelfPrices.rows} />
+          </DetailSection>
+        )}
+
         {!!showNutrition && (
-          <DetailSection title={t('dietary.nutritionGoals')}>
+          <DetailSection
+            title={
+              typicalOf
+                ? t('labels.typicalFor', { concept: typicalOf })
+                : t('dietary.nutritionGoals')
+            }
+          >
             <NutritionSummary
               nutritionFacts={nutritionFacts}
-              showHighlights
+              showHighlights={!typicalOf}
               compact
             />
           </DetailSection>
@@ -425,14 +446,6 @@ export const ShoppingListItemDetail: React.FC<
                 <Text role="label">{t('labels.yes')}</Text>
               </DetailRow>
             )}
-          </DetailSection>
-        )}
-
-        {!!detail?.item?.dataAttributions.length && (
-          <DetailSection transparent>
-            <DataAttributionNotices
-              attributions={detail.item.dataAttributions}
-            />
           </DetailSection>
         )}
       </CollapsingHeroDetail>

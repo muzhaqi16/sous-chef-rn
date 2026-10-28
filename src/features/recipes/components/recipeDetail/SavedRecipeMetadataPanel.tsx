@@ -81,7 +81,7 @@ export const SavedRecipeMetadataPanel: React.FC<
       {savedTags.length > 0 && (
         <View style={styles.tagsDisplayRow}>
           <Text role="caption" tone="secondary">
-            {t('recipes.tags')}
+            {t('labels.tags')}
           </Text>
           <View style={styles.tagsChipsContainer}>
             {savedTags.map((tag, index) => (
@@ -98,7 +98,7 @@ export const SavedRecipeMetadataPanel: React.FC<
       {!!savedNotes && (
         <View style={styles.notesDisplayRow}>
           <Text role="caption" tone="secondary">
-            {t('recipes.notes')}
+            {t('labels.notes')}
           </Text>
           <Text role="caption" style={styles.notesText}>
             {savedNotes}

@@ -97,7 +97,7 @@ export const NutritionSummaryCard: React.FC<NutritionSummaryCardProps> = ({
                 unit={t('nutritionSummary.unitKcal')}
               />
               <MacroStat
-                label={t('nutritionSummary.macroProtein')}
+                label={t('labels.protein')}
                 value={nutritionSummary.avgDailyProtein}
                 unit={t('nutritionSummary.unitGrams')}
               />

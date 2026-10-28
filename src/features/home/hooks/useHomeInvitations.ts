@@ -5,10 +5,11 @@ import { useLazyQuery, useMutation } from '@apollo/client/react';
 import {
   InviteToHomeDocument,
   JoinHomeByCodeDocument,
-  GetHomeByJoinCodeDocument,
+  ResolveShareLinkDocument,
   type GetHomesQuery,
 } from '#operations/home/home.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { homeLink } from '#features/home/utils/shareLink';
+import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
@@ -72,8 +73,8 @@ export function useHomeInvitations({
   );
 
   // Preview home by join code query
-  const [getHomeByJoinCode, { loading: loadingPreview, data: previewData }] =
-    useLazyQuery(GetHomeByJoinCodeDocument, {
+  const [resolveShareLink, { loading: loadingPreview, data: previewData }] =
+    useLazyQuery(ResolveShareLinkDocument, {
       // Every lookup asks the server; without `nextFetchPolicy` a repeat
       // lookup of the same code is answered from the cache.
       fetchPolicy: 'network-only',
@@ -99,6 +100,18 @@ export function useHomeInvitations({
       {
         document: InviteToHomeDocument,
         fallback: t('errors.sendInviteFailed'),
+        // The refusal is about the invitee, not the inviter the code table
+        // speaks to: only someone who manages the home brings a member back.
+        copy: {
+          [ErrorCode.HomeMembershipRemoved]: {
+            title: t('labels.error'),
+            body: t('inviteUser.inviteeRemoved'),
+          },
+          [ErrorCode.HomeMembershipSuspended]: {
+            title: t('labels.error'),
+            body: t('inviteUser.inviteeSuspended'),
+          },
+        },
         present: 'none',
       },
     );
@@ -142,8 +155,8 @@ export function useHomeInvitations({
 
     let result;
     try {
-      result = await getHomeByJoinCode({
-        variables: { joinCode: joinCode.trim() },
+      result = await resolveShareLink({
+        variables: { code: joinCode.trim() },
       });
     } catch (error) {
       errorService.reportError(error, { operation: 'Preview Home' });
@@ -154,10 +167,10 @@ export function useHomeInvitations({
     }
     if (!result) return null;
 
-    return result.data?.homeByJoinCode ?? null;
+    return homeLink(result.data?.resolveShareLink);
   };
 
-  const previewHome = previewData?.homeByJoinCode ?? null;
+  const previewHome = homeLink(previewData?.resolveShareLink);
 
   return {
     inviteUserToHome,

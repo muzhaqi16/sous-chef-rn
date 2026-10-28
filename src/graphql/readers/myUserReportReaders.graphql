@@ -2,7 +2,5 @@
 fragment MyUserReportReaders on MyUserReport {
   id
   contentType
-  createdAt
-  status
   type
 }

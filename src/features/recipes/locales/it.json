@@ -2,7 +2,6 @@
   "recipes": {
     "name": "Nome della ricetta",
     "namePlaceholder": "es. pollo Tikka Masala",
-    "description": "Descrizione",
     "descriptionPlaceholder": "Una breve descrizione della ricetta...",
     "imageUrl": "URL immagine",
     "imageUrlPlaceholder": "https://...",
@@ -35,11 +34,9 @@
     "quantityNoAmountPlaceholder": "Senza quantità",
     "section": "Sezione",
     "sectionPlaceholder": "es. Per la salsa...",
-    "notes": "Note",
     "optional": "Opzionale",
     "rating": "Valutazione",
     "none": "Nessuna",
-    "tags": "Tag",
     "searchPlaceholder": "Cerca ricette...",
     "basedOnPantry": "In base alla tua dispensa",
     "captureReviewTitle": "Ricetta importata",
@@ -160,7 +157,6 @@
     "nutritionTitle": "Valori nutrizionali",
     "caloriesPerServingLabel": "Cal / porzione",
     "tipsPlaceholder": "Consigli dello chef (opzionale)",
-    "recipeTags": "Tag",
     "originalAuthor": "Autore originale",
     "originalAuthorPlaceholder": "Attribuzione (opzionale)",
     "forkedFrom": "Derivata da {{name}}",
@@ -178,8 +174,6 @@
     "publishA11y": "Invia ricetta per la revisione",
     "unpublishA11y": "Annulla pubblicazione ricetta",
     "withdrawA11y": "Ritira la ricetta dalla revisione",
-    "vegetarian": "Vegetariana",
-    "vegan": "Vegana",
     "dairyFree": "Senza lattosio",
     "about": "Informazioni",
     "addAll": "Aggiungi tutto",
@@ -198,7 +192,6 @@
     "searchIncompleteTitle": "Impossibile caricare tutte le tue ricette",
     "searchIncompleteDescription": "Alcuni risultati potrebbero mancare.",
     "removeRecipeFailed": "Impossibile rimuovere la ricetta. Riprova.",
-    "filterAll": "Tutte",
     "folders": "Cartelle",
     "tagCount_one": "{{count}} Tag",
     "tagCount_other": "{{count}} Tag",
@@ -359,7 +352,6 @@
       "TREE_NUT": "Frutta a guscio",
       "WHEAT": "Grano"
     },
-    "macroProtein": "Proteine",
     "macroCarbohydrates": "Carboidrati",
     "macroFat": "Grassi",
     "macroFiber": "Fibre",
@@ -369,8 +361,6 @@
     "helpfulWithCount": "Utile ({{count}})",
     "reviewCount_one": "{{count}} recensione",
     "reviewCount_other": "{{count}} recensioni",
-    "servingsCount_one": "{{count}} porzione",
-    "servingsCount_other": "{{count}} porzioni",
     "pantryMatchLabel_one": "{{used}} di {{count}} ingrediente nella tua dispensa, {{missing}} da comprare",
     "pantryMatchLabel_other": "{{used}} di {{count}} ingredienti nella tua dispensa, {{missing}} da comprare",
     "createdFromRecipe": "Creata da una ricetta",
@@ -382,7 +372,19 @@
     "tagsTooMany": "Una ricetta può avere al massimo {{count}} tag",
     "tagTooLong": "Ogni tag può avere al massimo {{count}} caratteri",
     "tipsTooLong": "I consigli possono avere al massimo {{count}} caratteri",
-    "stepsTooLarge": "Questi passaggi sono troppo lunghi per essere salvati. Accorciali e riprova."
+    "stepsTooLarge": "Questi passaggi sono troppo lunghi per essere salvati. Accorciali e riprova.",
+    "ingredientAlerts": {
+      "lead": "Controlla prima di cucinare: riguarda persone della tua casa.",
+      "hint": "Mostra a chi della tua casa crea problemi"
+    },
+    "substitutes": {
+      "title": "Al posto di {{name}}",
+      "open": "Sostituti per {{name}}",
+      "part": "{{amount}} {{name}}",
+      "per": "Per {{amount}} di {{name}}",
+      "inPantry": "Nella tua dispensa",
+      "partlyInPantry": "In parte nella tua dispensa"
+    }
   },
   "recipeFilters": {
     "title": "Filtri",
@@ -395,17 +397,11 @@
     "selectOne": "Seleziona uno",
     "cookTimeOption": "{{minutes}} min",
     "diets": {
-      "vegetarian": "Vegetariana",
       "vegan": "Vegana",
       "ketogenic": "Chetogenica",
       "pescetarian": "Pescetariana",
       "lactoVegetarian": "Latto-vegetariana",
-      "ovoVegetarian": "Ovo-vegetariana",
-      "primal": "Primal"
-    },
-    "intolerances": {
-      "egg": "Uovo",
-      "sulfite": "Solfiti"
+      "ovoVegetarian": "Ovo-vegetariana"
     }
   },
   "nutritionSummary": {
@@ -417,7 +413,6 @@
     "mealsWithNutritionData": "Pasti con dati nutrizionali",
     "totalCalories": "Calorie totali",
     "goalProgress": "Progresso obiettivo",
-    "macroProtein": "Proteine",
     "macroFat": "Grassi",
     "unitKcal": "kcal",
     "unitGrams": "g",
@@ -438,7 +433,6 @@
     "updating": "Aggiornamento in corso...",
     "yourRating": "La tua valutazione",
     "ratingFormat": "{{rating}}/5",
-    "tags": "Tag",
     "tagsPlaceholder": "Aggiungi tag...",
     "notes": "Note"
   },
@@ -542,6 +536,8 @@
     "optional": "Opzionale",
     "matchedPantryItem": "Abbinato: {{name}} ({{amount}} disponibili)",
     "qtyLabel": "Q.tà:",
-    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto."
+    "unsureHint": "Corrisponde solo il nome. Attivalo se è l’articolo giusto.",
+    "useInstead": "Usa invece",
+    "substitutePart": "{{part}}: da {{name}} ({{amount}} disponibili)"
   }
 }

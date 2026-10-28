@@ -27,16 +27,16 @@
     "inviteHomeMessage": "{{name}} has invited you to join their home for managing pantry and shopping lists together!"
   },
   "inviteUser": {
-    "roleMemberLabel": "Member",
     "roleMemberDescription": "Can add and edit items in pantry",
     "roleAdminDescription": "Can manage members and settings",
     "roleGuestDescription": "View-only access to home",
-    "roleOwnerLabel": "Owner",
     "roleOwnerDescription": "Full control over home and all members",
     "ownerWarning": "⚠️ Owners have full control",
     "submit": "Send Invite",
     "offlineError": "Cannot send invite while offline",
     "sendFailed": "Failed to send invite. Please try again.",
+    "inviteeRemoved": "This person was removed from the home. Only its owner or an admin can invite them back.",
+    "inviteeSuspended": "This person's membership of this home is suspended.",
     "emailLabel": "Email Address",
     "emailPlaceholder": "Enter email address"
   },
@@ -47,13 +47,9 @@
     "unknownType": "Unknown invitation type",
     "declineConfirm": "Are you sure you want to decline this invitation?",
     "notFound": "Invitation not found or expired",
-    "loadingDetails": "Loading invitation details...",
     "invitedHeading": "You've been invited!",
     "homeInviteText": "{{inviter}} has invited you to join",
     "listInviteText": "{{inviter}} has invited you to collaborate on",
-    "resourceHome": "Home",
-    "roleLabel": "Role: {{role}}",
-    "descriptionLabel": "Description:",
     "acceptFailed": "Failed to accept invitation. Please try again.",
     "declineFailed": "Failed to decline invitation. Please try again.",
     "unavailableHere": "Open this invitation from its notification, or the email we sent you, to accept it.",
@@ -71,8 +67,6 @@
     "accessibilityDefaultSuffix": ", default home",
     "statsHome_one": "Home",
     "statsHome_other": "Homes",
-    "statsMember_one": "Member",
-    "statsMember_other": "Members",
     "statsPantry_one": "Pantry",
     "statsPantry_other": "Pantries",
     "cardDefault": "Default",
@@ -81,9 +75,7 @@
   "homeDetail": {
     "shareLinkMessage": "Join my home",
     "title": "Home Details",
-    "errorFailedToLoad": "Failed to load home details",
     "sectionHomeInformation": "Home Information",
-    "homeNameEmptyError": "Home name cannot be empty",
     "labelAllowJoinCode": "Allow Join Code",
     "descriptionAllowJoinCode": "Let others join this home using a code",
     "labelJoinCode": "Join Code",
@@ -104,10 +96,11 @@
     "youLabel": "You",
     "storageLocationsSubtitle": "Manage where items are stored",
     "leaveHomeDescription": "Leaving this home will remove your access to all shared pantries, shopping lists, meal plans, and templates.",
-    "ownerCannotLeaveMessage": "Owners cannot leave the home. Please transfer ownership to another member or delete the home."
+    "ownerCannotLeaveMessage": "Owners cannot leave the home. Please transfer ownership to another member or delete the home.",
+    "dietaryNeedsRowTitle": "What members can't eat",
+    "dietaryNeedsRowSubtitle": "Allergies and restrictions members share with this home"
   },
   "joinHome": {
-    "homeFallback": "Home",
     "enterCodeTitle": "Enter Join Code",
     "enterCodeDescription": "Enter the join code you received to join a home.",
     "findHome": "Find Home",
@@ -116,8 +109,6 @@
     "invitedToJoin": "You've been invited to join",
     "enterDifferentCode": "Enter a different code",
     "joinFailed": "Failed to join home. The code may be invalid or expired.",
-    "memberCount_one": "{{count}} member",
-    "memberCount_other": "{{count}} members",
     "pantryCount_one": "{{count}} pantry",
     "pantryCount_other": "{{count}} pantries"
   },
@@ -130,16 +121,11 @@
     "staleHome": "This home invite link expired. Ask for a new link to join.",
     "staleList": "This list invite link expired. Ask for a new link to join."
   },
-  "roles": {
-    "owner": "Owner",
-    "member": "Member"
-  },
   "collaboratorRoles": {
     "viewer": "Viewer",
     "shopper": "Shopper",
     "contributor": "Contributor",
     "editor": "Editor",
-    "owner": "Owner",
     "permissions": {
       "viewItems": "View items",
       "addItems": "Add items",
@@ -151,7 +137,7 @@
     "descriptions": {
       "viewer": "Can view the shopping list",
       "shopper": "Can mark items as purchased",
-      "contributor": "Can add items and mark as purchased",
+      "contributor": "Can add and edit items and mark them purchased",
       "editor": "Can add, edit, and remove items",
       "admin": "Full control including inviting others",
       "owner": "Full control over the shopping list"
@@ -174,10 +160,6 @@
     "invalidHomeId": "Invalid home ID",
     "leaveBody": "Are you sure you want to leave \"{{name}}\"? You will lose access to this home and its pantries and shopping lists."
   },
-  "homeRoles": {
-    "owner": "Owner",
-    "member": "Member"
-  },
   "inviteStatus": {
     "PENDING": "Invited",
     "ACCEPTED": "Accepted",
@@ -185,5 +167,17 @@
     "EXPIRED": "Expired",
     "REVOKED": "Revoked",
     "USED": "Used"
+  },
+  "homeDietaryNeeds": {
+    "title": "Dietary needs",
+    "emptyTitle": "No one shares their dietary needs yet",
+    "emptyBody": "Each member chooses to share in their Dietary Profile.",
+    "group": {
+      "allergicTo": "Allergic to",
+      "intolerantTo": "Intolerant to",
+      "avoids": "Avoids",
+      "follows": "Follows",
+      "goals": "Goals"
+    }
   }
 }

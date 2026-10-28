@@ -17,6 +17,8 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
+import { shownLineReading } from '#features/shoppingList/utils/lineReading';
 
 export interface QuantityEditItem {
   id: string;
@@ -89,28 +91,37 @@ export function useQuantityEditModal(
   const selectedItemRaw =
     selectedItemId && liveItemComplete ? liveItem : fallbackItem;
 
+  // The sheet opens on the amount as the row reads it (0.91 kg for a 2 lb line
+  // to a metric reader), and saves what is typed in that unit.
+  const readingSystem = useReadingSystem();
+  const shown =
+    selectedItemId && liveItemComplete
+      ? shownLineReading(liveItem, readingSystem)
+      : null;
+  const storedUnit = selectedItemRaw?.unit ?? null;
+  const shownUnit = shown
+    ? { id: shown.unitId, symbol: shown.symbol, name: shown.symbol }
+    : storedUnit;
+
   const selectedItem: QuantityEditItem | null = selectedItemRaw
     ? {
         id: selectedItemRaw.id,
         itemName: firstNonBlank(selectedItemRaw.itemName) ?? t('labels.item'),
-        quantity: selectedItemRaw.quantity ?? 0,
+        quantity: shown?.value ?? selectedItemRaw.quantity ?? 0,
         unitName:
-          firstNonBlank(
-            selectedItemRaw.unit?.symbol,
-            selectedItemRaw.unitName,
-          ) ?? null,
-        unitId: selectedItemRaw.unit?.id ?? null,
+          firstNonBlank(shownUnit?.symbol, selectedItemRaw.unitName) ?? null,
+        unitId: shownUnit?.id ?? null,
         category: firstNonBlank(selectedItemRaw.category) ?? null,
         imageUrl: resolveImageUrl(selectedItemRaw),
         version: selectedItemRaw.version,
         // Units are available on the Full fragment (detail view) but not the Display
-        // fragment used in list views. Provide the current unit as the only option.
-        itemUnits: selectedItemRaw.unit
+        // fragment used in list views. Provide the shown unit as the only option.
+        itemUnits: shownUnit
           ? [
               {
-                id: selectedItemRaw.unit.id,
-                symbol: selectedItemRaw.unit.symbol,
-                name: selectedItemRaw.unit.name,
+                id: shownUnit.id,
+                symbol: shownUnit.symbol,
+                name: shownUnit.name,
                 isDefault: true,
                 isPreferred: true,
               },
@@ -155,13 +166,15 @@ export function useQuantityEditModal(
     };
 
     // Local-first: the write can be queued, so the list shows the new quantity
-    // now and after a restart, not only once the replay lands.
-    const next = {
-      quantityInput,
-      ...(parsed !== null && { quantity: parsed }),
-    };
+    // now and after a restart, not only once the replay lands. A figure in
+    // another unit waits for the server's line: written here it would read in
+    // the old unit, and the cache may hold too little of the new one to show.
+    const sameUnit = unitId === null || unitId === selectedItemRaw.unit?.id;
+    const next = sameUnit
+      ? { quantityInput, ...(parsed !== null && { quantity: parsed }) }
+      : {};
     const entity = { __typename: 'ShoppingListItem', id: itemId };
-    writeEntityFields(client.cache, entity, next);
+    if (sameUnit) writeEntityFields(client.cache, entity, next);
     const clearPersisted = optimisticDataPersistence.trackFields(
       'ShoppingListItem',
       itemId,

@@ -312,6 +312,8 @@ const FORM_OWNERS: Record<string, string> = {
   changePasswordSchema: 'src/features/profile/screens/ChangePasswordScreen.tsx',
   templateItemSchema:
     'src/features/mealPlan/screens/MealTemplateBuilderScreen.tsx',
+  // Resolved by SearchResults; its fields are written and re-run here.
+  scanAmountSchema: 'src/features/barcode/components/ScanAmountSection.tsx',
 };
 
 describe('cross-field rules are re-run by their form', () => {

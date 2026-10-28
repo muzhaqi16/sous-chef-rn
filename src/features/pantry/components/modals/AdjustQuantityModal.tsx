@@ -27,6 +27,13 @@ import {
   type AdjustQuantityFormValues,
 } from './adjustQuantityFormConfig';
 import { logValidationErrors } from '#/utils/validation/common';
+import {
+  currentReading,
+  formatReading,
+  readingNotation,
+} from '#domain/measure';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
+import type { RecountUnits } from '#features/pantry/types';
 
 interface AdjustQuantityModalProps {
   visible: boolean;
@@ -36,6 +43,7 @@ interface AdjustQuantityModalProps {
     newQuantity: number,
     reason: string,
     remainingNetWeight?: number,
+    units?: RecountUnits,
   ) => void;
 }
 
@@ -52,6 +60,37 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
   });
   const pantryItem = pantryItemId && complete ? data : null;
+  const readingSystem = useReadingSystem();
+  // The count as the row reads it ("3 lb" for 1360.78 g) while `held` still
+  // describes the stack; after a local write, as stored. Only the server
+  // converts, so a figure typed in the reading's unit goes with that unit.
+  const heldReading = pantryItem
+    ? currentReading(
+        pantryItem.held,
+        {
+          value: pantryItem.displayAmount.quantity,
+          unitId: pantryItem.displayAmount.unit.id,
+        },
+        readingSystem,
+      )
+    : null;
+  // The API refuses a weight stated in the tracking unit: there it is as stored.
+  const remainingRead = pantryItem
+    ? currentReading(
+        pantryItem.remaining,
+        {
+          value: pantryItem.remainingNetWeight,
+          unitId: pantryItem.netWeightUnit?.id,
+        },
+        readingSystem,
+      )
+    : null;
+  const remainingReading =
+    remainingRead &&
+    (remainingRead.unitId !== pantryItem?.unit.id ||
+      remainingRead.unitId === pantryItem.netWeightUnit?.id)
+      ? remainingRead
+      : null;
 
   const { control, handleSubmit, reset } = useForm<AdjustQuantityFormValues>({
     resolver: yupResolver(adjustQuantitySchema),
@@ -70,12 +109,16 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     setPendingSeed(
       nextSeedKey && pantryItem
         ? {
-            quantityInput: formatQuantityForInput(pantryItem.quantity, {
-              notation: resolveQuantityNotation(
-                null,
-                pantryItem.unit.displayAsFraction,
-              ),
-            }),
+            quantityInput: heldReading
+              ? formatQuantityForInput(heldReading.value, {
+                  notation: readingNotation(heldReading),
+                })
+              : formatQuantityForInput(pantryItem.quantity, {
+                  notation: resolveQuantityNotation(
+                    null,
+                    pantryItem.unit.displayAsFraction,
+                  ),
+                }),
             reason: '',
             remainingWeightInput: '',
           }
@@ -94,12 +137,30 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
     // rewrites the stock and books an adjustment for the rounding; the exact
     // stored value moves nothing, so the server records nothing.
     const edited = parseQuantity(values);
+    const unchanged = isUnchangedQuantity(
+      edited,
+      heldReading ? heldReading.value : pantryItem.quantity,
+    );
+    const statedIn =
+      heldReading && heldReading.unitId !== pantryItem.unit.id
+        ? heldReading.unitId
+        : null;
+    const remaining = parseRemainingWeight(values);
+    const remainingIn =
+      remainingReading &&
+      remainingReading.unitId !== pantryItem.netWeightUnit?.id
+        ? remainingReading.unitId
+        : null;
     onConfirm(
-      isUnchangedQuantity(edited, pantryItem.quantity)
-        ? pantryItem.quantity
-        : edited,
+      unchanged ? pantryItem.quantity : edited,
       values.reason.trim(),
-      parseRemainingWeight(values),
+      remaining,
+      {
+        ...(!unchanged && statedIn ? { newQuantityUnitId: statedIn } : {}),
+        ...(remaining != null && remainingIn
+          ? { remainingNetWeightUnitId: remainingIn }
+          : {}),
+      },
     );
     onClose();
   }, logValidationErrors);
@@ -130,11 +191,15 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
               <Text role="body" tone="secondary">
                 {t('adjustQuantity.currentLabel')}
               </Text>
-              <FormattedItemSubtitle
-                quantity={pantryItem.quantity}
-                displayAsFraction={pantryItem.unit.displayAsFraction}
-                unitSymbol={pantryItem.unit.symbol}
-              />
+              {heldReading ? (
+                <Text role="body">{formatReading(heldReading)}</Text>
+              ) : (
+                <FormattedItemSubtitle
+                  quantity={pantryItem.quantity}
+                  displayAsFraction={pantryItem.unit.displayAsFraction}
+                  unitSymbol={pantryItem.unit.symbol}
+                />
+              )}
             </View>
           </View>
 
@@ -143,10 +208,12 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
               <View style={commonStyles.bottomSheetItemRow}>
                 <Text role="body" tone="secondary">
                   {t('labels.remaining')}
-                  {formatNetWeightDisplay(
-                    pantryItem.remainingNetWeight,
-                    pantryItem.netWeightUnit,
-                  )}
+                  {remainingReading
+                    ? formatReading(remainingReading)
+                    : formatNetWeightDisplay(
+                        pantryItem.remainingNetWeight,
+                        pantryItem.netWeightUnit,
+                      )}
                 </Text>
               </View>
             )}

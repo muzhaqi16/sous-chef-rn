@@ -1,15 +1,8 @@
-import { useApolloClient } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import { AcquisitionMethod, UnitType } from '#/graphql/generated/schemaTypes';
+import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
-import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
-import {
-  findCachedPantryItemDuplicate,
-  readStackUnit,
-} from '#features/pantry/utils/pantryCacheReaders';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { promptPantryDuplicate } from '#domain/pantryItemDuplicate';
-import { stockAmountOf } from '#domain/stockAmount';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { refByIdOrName } from '#/utils/refInput';
 import { toDateKey } from '#/utils/dateUtils';
@@ -23,10 +16,8 @@ export function usePantryItemSubmission({
   onSuccess: () => void;
 }) {
   const { t } = useTranslation();
-  const client = useApolloClient();
-
   const { addItem, adding } = usePantryIntake(pantryId);
-  const { restock } = usePantryRestock(pantryId);
+  const asksCost = useBudgetAndPricesEnabled();
 
   const handleConfirm = async ({
     itemName,
@@ -109,10 +100,12 @@ export function usePantryItemSubmission({
 
     // Sent only when the user gave some: `storeId` comes from a picked store
     // (no free-text store name), and `acquisitionMethod` rides along with any
-    // purchase field or a non-default method.
-    const parsedCost = costPerUnit.trim()
-      ? parseDecimalInput(costPerUnit)
-      : undefined;
+    // purchase field or a non-default method. With prices off, no cost is sent,
+    // whatever the hidden field holds.
+    const parsedCost =
+      asksCost && costPerUnit.trim()
+        ? parseDecimalInput(costPerUnit)
+        : undefined;
     const costValue =
       parsedCost !== undefined && !isNaN(parsedCost) && parsedCost > 0
         ? parsedCost
@@ -200,59 +193,6 @@ export function usePantryItemSubmission({
       tags: tagList ?? [],
     };
 
-    /**
-     * The shared recovery for "you already have this". Reached from the local
-     * cache check below and, when that could not see the row, from the server's
-     * refusal — so both offer the same choice.
-     */
-    const promptDuplicateRecovery = (existingPantryItemId: string) => {
-      const restockExisting = async () => {
-        // A stated size is one package's, so it goes with a whole count on a
-        // counted stack (2 jars), never with an amount; the server does the
-        // arithmetic. A stack the cache does not hold takes the plain amount.
-        const amount = stockAmountOf(quantity, {
-          asPackages:
-            statedNetWeight !== null &&
-            Number.isInteger(quantity) &&
-            readStackUnit(client.cache, existingPantryItemId)?.type ===
-              UnitType.Count,
-          packageSize: statedNetWeight,
-        });
-        const restocked = await restock(existingPantryItemId, {
-          amount,
-          // Forward the purchase details the user just entered so the
-          // restock records an ItemPriceHistory observation.
-          ...(costValue !== undefined && { costPerUnit: costValue }),
-          ...(storeId && { storeId }),
-          ...(expiresOn && { expiresOn }),
-          present: 'alert',
-        });
-        if (restocked.status === 'rejected') return;
-        onSuccess();
-      };
-      // The restock never rejects, so it needs no catch here.
-      promptPantryDuplicate({
-        onRestock: () => {
-          void restockExisting();
-        },
-      });
-    };
-
-    // The pantry answers "do I stock this?" itself, so no doomed create queues.
-    // The server refuses only the item IN THAT UNIT: name plus unit id, where a
-    // blank unit (the tracking unit) matches any; free text is the server's.
-    const cachedDuplicate =
-      unitId || !unit.trim()
-        ? findCachedPantryItemDuplicate(client.cache, pantryId, {
-            itemName: itemName.trim(),
-            unitId,
-          })
-        : null;
-    if (cachedDuplicate) {
-      promptDuplicateRecovery(cachedDuplicate.existingPantryItemId);
-      return;
-    }
-
     // A refusal naming a field (`netWeight` is reachable from this form) reads
     // as its localized `errors.field.*` copy.
     const outcome = await addItem(itemName.trim(), input, {
@@ -260,13 +200,8 @@ export function usePantryItemSubmission({
       present: 'alert',
       fallback: t('errors.addItemFailed'),
     });
-    // Backstop for what the local check could not see — a windowed list, or a
-    // collaborator's add.
-    if (outcome.status === 'duplicate') {
-      promptDuplicateRecovery(outcome.existingPantryItemId);
-      return;
-    }
-    // Applied or queued — the item stays (and replays if queued offline).
+    // Applied or queued — the item stays (and replays if queued offline). A
+    // held product joins its stack or opens its own, never refused.
     if (outcome.status === 'added') onSuccess();
   };
 

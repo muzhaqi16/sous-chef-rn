@@ -10,6 +10,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { getDeviceId } from '#/services/auth/deviceId';
+import { onWorkSettled } from '#/services/subscriptions/settledWork';
 import { useUserSubscriptions } from '../useUserSubscriptions';
 
 const mockRegister = jest.fn().mockReturnValue({});
@@ -40,6 +41,35 @@ beforeEach(() => {
 });
 
 describe('useUserSubscriptions', () => {
+  // The screen waiting on the work asks once (API-15) instead of polling.
+  it.each([
+    [
+      UserSubtype.ReceiptParseSettled,
+      { receiptParseId: 'parse-1' },
+      'receiptParse',
+      'parse-1',
+    ],
+    [
+      UserSubtype.RecipeCaptureSettled,
+      { recipeCaptureId: 'capture-1' },
+      'recipeCapture',
+      'capture-1',
+    ],
+  ] as const)(
+    'announces %s for the screen waiting on it',
+    (subtype, parents, kind, id) => {
+      const settled = jest.fn();
+      const stop = onWorkSettled(settled);
+      const getOnData = captureOnData(mockRegister);
+      renderHookWithApollo(() => useUserSubscriptions('user-1'));
+
+      getOnData()({ __typename: 'UserEvent', subtype, parents });
+
+      expect(settled).toHaveBeenCalledWith({ kind, id });
+      stop();
+    },
+  );
+
   it('clears every entity selection when removed from the selected home', () => {
     const getOnData = captureOnData(mockRegister);
     renderHookWithApollo(() => useUserSubscriptions('user-1'));

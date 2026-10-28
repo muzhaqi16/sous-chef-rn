@@ -60,6 +60,11 @@ interface ShoppingRowCreate<TData> {
 }
 
 interface ShoppingRowCreated<TData> {
+  /**
+   * The row the line landed on: the server's when it folded the add into a
+   * line it held, else the id the create minted.
+   */
+  id: string;
   /** `kept` once the row is added or its create queued. */
   outcome: 'kept' | 'reverted';
   /** Why the row was withdrawn, for the surface to present; never presented here. */
@@ -67,12 +72,24 @@ interface ShoppingRowCreated<TData> {
   data: TData | null | undefined;
 }
 
-/** The batch can apply while refusing its only line; that comes with no code worth naming. */
-function refusedLine(data: unknown): boolean {
+/** The batch's only line, as an applied response states it. */
+function answeredLine(data: unknown): Record<string, unknown> | null {
   const payload: unknown = appliedPayload(data);
   const results: unknown = isRecord(payload) ? payload.results : undefined;
   const line: unknown = Array.isArray(results) ? results[0] : undefined;
-  return isRecord(line) && (line.success === false || line.item === null);
+  return isRecord(line) ? line : null;
+}
+
+/** The batch can apply while refusing its only line; that comes with no code worth naming. */
+function refusedLine(data: unknown): boolean {
+  const line = answeredLine(data);
+  return !!line && (line.success === false || line.item === null);
+}
+
+/** The row the server put the line on, which differs from the minted id after a merge. */
+function landedRowId(data: unknown): string | null {
+  const item = answeredLine(data)?.item;
+  return isRecord(item) && typeof item.id === 'string' ? item.id : null;
 }
 
 export async function createShoppingListRow<TData>(
@@ -113,11 +130,12 @@ export async function createShoppingListRow<TData>(
     { document, fallback, present: 'none', onFailed: withdraw },
   );
   if (settled.failure) {
-    return { outcome: 'reverted', failure: settled.failure, data: null };
+    return { id, outcome: 'reverted', failure: settled.failure, data: null };
   }
   if (refusedLine(settled.data)) {
     withdraw();
     return {
+      id,
       outcome: 'reverted',
       failure: {
         code: null,
@@ -128,5 +146,10 @@ export async function createShoppingListRow<TData>(
       data: settled.data,
     };
   }
-  return { outcome: 'kept', failure: null, data: settled.data };
+  return {
+    id: landedRowId(settled.data) ?? id,
+    outcome: 'kept',
+    failure: null,
+    data: settled.data,
+  };
 }

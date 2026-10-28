@@ -78,6 +78,25 @@ function connection<TN extends string, ET extends string, T>(
   };
 }
 
+// A count reads as stored in both systems.
+function countHeld(value: number): PantryItemNode['held'] {
+  const reading: PantryItemNode['held']['metric'] = {
+    __typename: 'MeasureReading',
+    value,
+    unitId: 'unit-piece',
+    symbol: 'pc',
+    displayAsFraction: false,
+    type: UnitType.Count,
+  };
+  return {
+    __typename: 'Measure',
+    value,
+    unitId: 'unit-piece',
+    metric: reading,
+    imperial: reading,
+  };
+}
+
 /** Build a single PantryItem node matching PantryItemDisplay fragment selection. */
 function pantryItemNode(item: PantryItemFixture): PantryItemNode {
   return {
@@ -94,6 +113,8 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
       quantity: item.heldQuantity ?? item.quantity ?? 1,
       unit: { __typename: 'Unit', id: 'unit-piece', symbol: 'pc' },
     },
+    held: countHeld(item.heldQuantity ?? item.quantity ?? 1),
+    consumeUnit: null,
     createdAt: '2026-01-01',
     updatedAt: '2026-01-01',
     storageState: StorageState.Ambient,

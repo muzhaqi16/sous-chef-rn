@@ -1,6 +1,7 @@
 'use no memo';
 
 import React from 'react';
+import { t } from '#/i18n';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { ModerationContentType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
@@ -63,6 +64,56 @@ jest.mock('#features/recipes/screens/useRecipeTags', () => ({
 jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
   useRecipeReviews: () => ({ state: {}, actions: {} }),
 }));
+
+const mockHousehold: {
+  check: string;
+  summary: unknown[];
+  rows: Record<string, unknown[]>;
+} = { check: 'none', summary: [], rows: {} };
+jest.mock('#features/recipes/hooks/useRecipeDietaryAlerts', () => ({
+  useRecipeDietaryAlerts: () => ({
+    check: mockHousehold.check,
+    summary: mockHousehold.summary,
+    alertsFor: (id: string) => mockHousehold.rows[id] ?? [],
+  }),
+}));
+
+// The swaps' own wording is pinned in their hook and sheet tests; here, which
+// rows offer them.
+const mockSubstitutes: Record<string, { id: string }[]> = {};
+const mockSubstitutesWanted: boolean[] = [];
+jest.mock('#features/recipes/hooks/useRecipeSubstitutes', () => ({
+  useRecipeSubstitutes: (_recipeId: string, wanted: boolean) => {
+    mockSubstitutesWanted.push(wanted);
+    return { substitutesFor: (id: string) => mockSubstitutes[id] ?? [] };
+  },
+}));
+jest.mock(
+  '#features/recipes/components/recipeDetail/IngredientAlertsSheet',
+  () => {
+    const { Pressable, Text } = require('react-native');
+    return {
+      IngredientAlertsSheet: ({
+        visible,
+        ingredientName,
+        alerts,
+        options,
+        onAdd,
+      }: {
+        visible: boolean;
+        ingredientName: string;
+        alerts: unknown[];
+        options: unknown[];
+        onAdd: () => void;
+      }) =>
+        visible ? (
+          <Pressable accessibilityLabel="sheet add" onPress={onAdd}>
+            <Text>{`${ingredientName}: ${alerts.length} alerts, ${options.length} swaps`}</Text>
+          </Pressable>
+        ) : null,
+    };
+  },
+);
 
 jest.mock('#features/recipes/hooks/useForkRecipe', () => ({
   useForkRecipe: jest.fn(() => ({ forkRecipe: jest.fn(), forking: false })),
@@ -544,31 +595,124 @@ describe('RecipeDetail', () => {
         ...overrides,
       });
 
-    it('lists every ingredient as a row with its own add action', () => {
+    it('lays every ingredient out as a tile in one sideways row', () => {
       renderIngredients();
 
-      for (const name of NAMES) {
+      NAMES.forEach((name, index) => {
         expect(screen.getByText(name)).toBeTruthy();
-        expect(screen.getByLabelText(`Add ${name}`)).toBeTruthy();
-      }
+        expect(
+          screen.getByTestId(recipesTestIDs.ingredientTile(index)),
+        ).toBeTruthy();
+      });
     });
 
-    it('adds one ingredient from its row', () => {
+    it('adds a plain ingredient on a tap', () => {
       const handleAddSingleIngredient = jest.fn();
       renderIngredients({ handleAddSingleIngredient });
 
-      fireEvent.press(screen.getByLabelText('Add Eggs'));
+      fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(2)));
 
       expect(handleAddSingleIngredient).toHaveBeenCalledWith(
         expect.objectContaining({ id: 'i2', name: 'Eggs' }),
       );
     });
 
-    it('marks an added ingredient and stops adding it again', () => {
-      renderIngredients({ addedIngredients: new Set(['i0']) });
+    describe('for the household', () => {
+      const SHRIMP = {
+        id: 'r-shellfish',
+        memberName: 'Tani',
+        what: 'Shellfish',
+        state: 'CONTAINS',
+        severity: 'ALLERGY',
+        isDiet: false,
+      };
+      const BUTTER = {
+        id: 'r-vegan',
+        memberName: 'You',
+        what: 'Vegan',
+        state: 'CONTAINS',
+        severity: 'PREFERENCE',
+        isDiet: true,
+      };
+      afterEach(() => {
+        mockHousehold.check = 'none';
+        mockHousehold.summary = [];
+        mockHousehold.rows = {};
+        for (const id of Object.keys(mockSubstitutes)) {
+          delete mockSubstitutes[id];
+        }
+        mockSubstitutesWanted.length = 0;
+      });
 
-      expect(screen.queryByLabelText('Add Flour')).toBeNull();
-      expect(screen.getByLabelText('Added')).toBeDisabled();
+      it('opens a flagged ingredient’s sheet, with its alerts and swaps, instead of adding it', () => {
+        mockHousehold.check = 'checked';
+        mockHousehold.summary = [BUTTER];
+        mockHousehold.rows = { i4: [BUTTER] };
+        mockSubstitutes.i0 = [{ id: 's-flour' }];
+        mockSubstitutes.i4 = [{ id: 's-oil' }, { id: 's-applesauce' }];
+        const handleAddSingleIngredient = jest.fn();
+        renderIngredients({ handleAddSingleIngredient });
+
+        expect(mockSubstitutesWanted.at(-1)).toBe(true);
+        fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(4)));
+        expect(handleAddSingleIngredient).not.toHaveBeenCalled();
+        expect(screen.getByText('Butter: 1 alerts, 2 swaps')).toBeTruthy();
+
+        // Added anyway, from the sheet, once its alerts have been read.
+        fireEvent.press(screen.getByLabelText('sheet add'));
+        expect(handleAddSingleIngredient).toHaveBeenCalledWith(
+          expect.objectContaining({ id: 'i4', name: 'Butter' }),
+        );
+      });
+
+      it('asks for no swaps while nothing is flagged', () => {
+        mockSubstitutes.i0 = [{ id: 's-flour' }];
+        renderIngredients();
+
+        expect(mockSubstitutesWanted.at(-1)).toBe(false);
+      });
+
+      it('leads with who the recipe affects and badges each flagged tile', () => {
+        mockHousehold.check = 'checked';
+        mockHousehold.summary = [SHRIMP, BUTTER];
+        mockHousehold.rows = { i4: [BUTTER] };
+        renderIngredients();
+
+        expect(screen.getByTestId('recipe-household-summary')).toBeTruthy();
+        expect(screen.getByText('Tani')).toBeTruthy();
+        expect(
+          screen.getByText(
+            t('dietaryAlerts.reason.contains', { what: 'Shellfish' }),
+          ),
+        ).toBeTruthy();
+        // The summary's line and the butter tile's badge both say it.
+        expect(
+          screen.getAllByText(
+            t('dietaryAlerts.reason.notDiet', { what: 'Vegan' }),
+          ),
+        ).toHaveLength(2);
+      });
+
+      it('shows no summary when nobody is affected', () => {
+        mockHousehold.check = 'checked';
+        renderIngredients();
+
+        expect(screen.queryByTestId('recipe-household-summary')).toBeNull();
+      });
+    });
+
+    it('marks an added ingredient and stops adding it again', () => {
+      const handleAddSingleIngredient = jest.fn();
+      renderIngredients({
+        addedIngredients: new Set(['i0']),
+        handleAddSingleIngredient,
+      });
+
+      expect(
+        screen.getByTestId(recipesTestIDs.ingredientTile(0)),
+      ).toBeDisabled();
+      fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
+      expect(handleAddSingleIngredient).not.toHaveBeenCalled();
     });
   });
 

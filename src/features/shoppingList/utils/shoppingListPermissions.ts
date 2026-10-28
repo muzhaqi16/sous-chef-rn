@@ -81,15 +81,6 @@ const GUEST_PERMISSIONS: ShoppingListPermissionFlags = {
   canEditList: false,
 };
 
-// The API lets these roles edit a personal list's details whatever `canEdit`
-// says; below them the flag decides.
-const EDITS_LIST_BY_ROLE: ReadonlySet<CollaboratorRole> = new Set([
-  CollaboratorRole.Owner,
-  CollaboratorRole.Admin,
-  CollaboratorRole.Editor,
-  CollaboratorRole.Contributor,
-]);
-
 /**
  * Find the current user's collaborator from the collaborators connection
  */
@@ -141,9 +132,9 @@ function getCollaboratorPermissions(
     canRemoveItems: collaborator.canRemoveItems ?? false,
     canEditItems: collaborator.canEditItems ?? false,
     canMarkPurchased: collaborator.canMarkPurchased ?? false,
+    // Below OWNER the API reads `canEdit` at every role.
     canEditList:
-      (collaborator.role !== undefined &&
-        EDITS_LIST_BY_ROLE.has(collaborator.role)) ||
+      collaborator.role === CollaboratorRole.Owner ||
       (collaborator.canEdit ?? false),
   };
 }
@@ -205,4 +196,84 @@ export function getShoppingListPermissionsWithOwner(
   }
 
   return getShoppingListPermissions(shoppingList, userId, homeMembership);
+}
+
+type CollaboratorFlag =
+  | 'canEdit'
+  | 'canAddItems'
+  | 'canRemoveItems'
+  | 'canEditItems'
+  | 'canMarkPurchased'
+  | 'canInviteOthers';
+
+/** The inviting collaborator's own row. */
+export interface CollaboratorInviter extends Record<CollaboratorFlag, boolean> {
+  role: CollaboratorRole;
+}
+
+const EVERY_FLAG: readonly CollaboratorFlag[] = [
+  'canEdit',
+  'canAddItems',
+  'canRemoveItems',
+  'canEditItems',
+  'canMarkPurchased',
+  'canInviteOthers',
+];
+
+/** The flags the API gives an invite of each role (`getPermissionsForRole`). */
+const ROLE_FLAGS: Record<CollaboratorRole, readonly CollaboratorFlag[]> = {
+  [CollaboratorRole.Owner]: EVERY_FLAG,
+  [CollaboratorRole.Admin]: EVERY_FLAG,
+  [CollaboratorRole.Editor]: EVERY_FLAG.filter(
+    flag => flag !== 'canInviteOthers',
+  ),
+  [CollaboratorRole.Contributor]: [
+    'canAddItems',
+    'canEditItems',
+    'canMarkPurchased',
+  ],
+  [CollaboratorRole.Shopper]: ['canMarkPurchased'],
+  [CollaboratorRole.Viewer]: [],
+};
+
+// SHOPPER ranks with VIEWER: what it adds is the canMarkPurchased flag.
+const ROLE_RANK: Record<CollaboratorRole, number> = {
+  [CollaboratorRole.Viewer]: 1,
+  [CollaboratorRole.Shopper]: 1,
+  [CollaboratorRole.Contributor]: 2,
+  [CollaboratorRole.Editor]: 3,
+  [CollaboratorRole.Admin]: 4,
+  [CollaboratorRole.Owner]: 5,
+};
+
+/**
+ * The roles a collaborator may invite to a personal list, as the API decides:
+ * holding `canInviteOthers`, at most their own role, and only a role whose
+ * flags they all hold. The list's owner has no row and is unconstrained.
+ */
+export function getInvitableCollaboratorRoles(
+  inviter: CollaboratorInviter,
+  roles: readonly CollaboratorRole[],
+): CollaboratorRole[] {
+  if (!inviter.canInviteOthers) return [];
+  return roles.filter(
+    role =>
+      ROLE_RANK[role] <= ROLE_RANK[inviter.role] &&
+      ROLE_FLAGS[role].every(flag => inviter[flag]),
+  );
+}
+
+/**
+ * Deleting a list, as the API decides: its owner, and on a home's list the
+ * home's OWNER and ADMINs.
+ */
+export function canDeleteShoppingList(
+  isOwner: boolean,
+  homeRole: MembershipRole | null | undefined,
+): boolean {
+  return (
+    isOwner ||
+    homeRole === MembershipRole.Owner ||
+    homeRole === MembershipRole.Admin
+  );
 }

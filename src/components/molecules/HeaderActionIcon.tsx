@@ -41,6 +41,8 @@ export interface HeaderAction {
   photoUri?: string | null;
   /** Header bars only. */
   badge?: number;
+  /** A state glyph on the button's corner, such as a photo pending review. */
+  mark?: IconName;
   size?: number;
   library?: IconLibrary;
   testID?: string;

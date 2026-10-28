@@ -92,12 +92,15 @@ function buildPaths(cx: number, cy: number, scale: number) {
 const buildForSize = ({ canvas, scale }: (typeof SIZES)[keyof typeof SIZES]) =>
   buildPaths(canvas / 2, canvas / 2, scale);
 
-/** Pulls the banner up over the canvas so its top edge crosses the bag. */
-const bannerGeometry = ({
-  canvas,
-  scale,
-}: (typeof SIZES)[keyof typeof SIZES]) => ({
-  marginTop: 25 * scale - canvas / 2,
+/**
+ * Sits the banner `gap` below the bag, in the canvas's empty lower band: over
+ * the bag, a message long enough to wrap hides half the illustration.
+ */
+const bannerGeometry = (
+  { canvas, scale }: (typeof SIZES)[keyof typeof SIZES],
+  gap: number,
+) => ({
+  marginTop: 45 * scale - canvas / 2 + gap,
   minWidth: 110 * scale,
   minHeight: 28 * scale,
 });
@@ -331,9 +334,9 @@ const componentStyles = StyleSheet.create(theme => ({
     backgroundColor: COLORS.banner,
     variants: {
       size: {
-        small: bannerGeometry(SIZES.small),
-        medium: bannerGeometry(SIZES.medium),
-        large: bannerGeometry(SIZES.large),
+        small: bannerGeometry(SIZES.small, theme.spacing.sm),
+        medium: bannerGeometry(SIZES.medium, theme.spacing.md),
+        large: bannerGeometry(SIZES.large, theme.spacing.md),
       },
     },
   },

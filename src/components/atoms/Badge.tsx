@@ -45,6 +45,8 @@ export interface BadgeContent {
 interface BadgeProps {
   children: React.ReactNode;
   variant?: BadgeVariant;
+  /** A glyph before the text, in the badge's tone. */
+  icon?: IconName;
   size?: 'small' | 'medium';
   style?: ViewStyle;
 }
@@ -52,6 +54,7 @@ interface BadgeProps {
 export const Badge: React.FC<BadgeProps> = ({
   children,
   variant = 'default',
+  icon,
   size = 'small',
   style,
 }) => {
@@ -62,10 +65,13 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <View
+      // One element, or VoiceOver reads the label and then the text again.
+      accessible={typeof children === 'string'}
       accessibilityRole="text"
       accessibilityLabel={typeof children === 'string' ? children : undefined}
-      style={[styles.badge, style]}
+      style={[styles.badge, !!icon && styles.withIcon, style]}
     >
+      {!!icon && <Icon name={icon} size="xs" tone={BADGE_ICON_TONE[variant]} />}
       <Text role="footnoteStrong" tone={BADGE_TEXT_TONE[variant]}>
         {children}
       </Text>
@@ -120,6 +126,11 @@ const styles = StyleSheet.create(theme => ({
         },
       },
     },
+  },
+  withIcon: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
   },
   stack: {
     gap: theme.spacing['2xs'],

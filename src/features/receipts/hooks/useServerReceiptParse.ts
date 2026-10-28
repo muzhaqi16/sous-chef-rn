@@ -23,6 +23,8 @@ import {
   type ServerParseOutcome,
 } from '../store/receiptDraftStore';
 import { classifyCreateResult, outcomeOf } from '../utils/serverReceipt';
+import { useIsLiveChannelOpen } from '#hooks/subscriptions/useIsLiveChannelOpen';
+import { onWorkSettled } from '#/services/subscriptions/settledWork';
 import {
   CreateReceiptParseDocument,
   ReceiptParseDocument,
@@ -30,6 +32,9 @@ import {
 
 // The API asks for a poll every 2–3 s and allows 120 a minute.
 const POLL_MS = 2500;
+// With the live channel open the parse's own event answers (`onWorkSettled`);
+// this only covers an event the stream lost.
+const SAFETY_POLL_MS = 15_000;
 // About 2.5 times a photo parse's slowest; past it the parse is asked for
 // again on the next visit, which the API answers with the same parse.
 const POLL_LIMIT_MS = 180_000;
@@ -231,20 +236,34 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     const limit = setTimeout(() => setGaveUp(true), POLL_LIMIT_MS);
     return () => clearTimeout(limit);
   }, [polled, polling]);
-  const { data } = useQuery(
+  const channelOpen = useIsLiveChannelOpen();
+  const { data, refetch } = useQuery(
     ReceiptParseDocument,
     polled
       ? {
           variables: { id: polling },
-          pollInterval: POLL_MS,
+          pollInterval: channelOpen ? SAFETY_POLL_MS : POLL_MS,
           fetchPolicy: 'network-only',
           // The hook reads no loading state: a poll re-renders only on data.
           notifyOnNetworkStatusChange: false,
           // Polled while open; nothing for the resync to refresh.
           refetchOn: false,
+          // The settle event's refetch would join a poll in flight, whose
+          // answer was read before the parse settled.
+          context: { queryDeduplication: false },
         }
       : skipToken,
   );
+
+  useEffect(() => {
+    if (!polled) return;
+    return onWorkSettled(work => {
+      if (work.kind !== 'receiptParse' || work.id !== polling) return;
+      refetch().catch(() => {
+        // The next poll asks again.
+      });
+    });
+  }, [polled, polling, refetch]);
 
   useEffect(() => {
     if (!polled || !data) return;

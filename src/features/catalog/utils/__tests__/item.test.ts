@@ -37,19 +37,41 @@ describe('item validation', () => {
       expect(await validateRule(itemNameRule, 'Salt & Pepper')).toBeNull();
     });
 
-    it('rejects empty name', async () => {
-      const msg = await validateRule(itemNameRule, '');
-      expect(msg).toBeTruthy();
+    // Names the catalog holds, which an edit must be able to send back.
+    it('accepts any characters a real name uses', async () => {
+      expect(await validateRule(itemNameRule, 'Cashew Splits R/s')).toBeNull();
+      expect(await validateRule(itemNameRule, 'Jalapeño Peppers')).toBeNull();
+      expect(await validateRule(itemNameRule, 'Crème fraîche 30%')).toBeNull();
+      expect(await validateRule(itemNameRule, 'Djathë i bardhë')).toBeNull();
+      expect(await validateRule(itemNameRule, 'a'.repeat(128))).toBeNull();
     });
 
-    it('rejects name over 100 chars', async () => {
-      const msg = await validateRule(itemNameRule, 'a'.repeat(101));
-      expect(msg).toContain('100');
+    // The API's cap (CreateItemInput.name), counted after cleaning.
+    it('refuses a name over 128 characters once cleaned', async () => {
+      expect(await validateRule(itemNameRule, 'a'.repeat(129))).toBe(
+        'Keep the name to 128 characters',
+      );
+      expect(
+        await validateRule(itemNameRule, `  ${'a'.repeat(128)}  `),
+      ).toBeNull();
     });
 
-    it('rejects special characters', async () => {
-      const msg = await validateRule(itemNameRule, 'Item@#$');
-      expect(msg).toBeTruthy();
+    it('cleans a name instead of refusing it', async () => {
+      expect(itemNameRule.cast('  Oat \t milk\n')).toBe('Oat milk');
+      expect(itemNameRule.cast('Trader Joe’s – Salsa')).toBe(
+        "Trader Joe's - Salsa",
+      );
+      expect(itemNameRule.cast('Milk\u0000')).toBe('Milk');
+      expect(itemNameRule.cast('Oat \u0000 milk')).toBe('Oat milk');
+    });
+
+    it('rejects a name that is empty once cleaned', async () => {
+      expect(await validateRule(itemNameRule, '')).toBe(
+        'Item name is required',
+      );
+      expect(await validateRule(itemNameRule, '   ')).toBe(
+        'Item name is required',
+      );
     });
   });
 

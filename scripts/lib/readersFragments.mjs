@@ -3,7 +3,8 @@
  * mutation that changes one to spread (Relay's rule). Spreads are flattened so
  * no consumer fragment's connections come along; connections and views are
  * excluded, conflicting arguments aliased, and a variable argument renamed to
- * the argument's own name for the spreading operation to declare.
+ * the argument's own name for the spreading operation to declare. A `SHARED`
+ * value type is selected once, as the union every readers file reads on it.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,6 +23,11 @@ import { isEntity, isOwnedElsewhere } from './graphqlDocuments.mjs';
 export const readersDirOf = root => join(root, 'graphql', 'readers');
 export const READERS_DIR = readersDirOf(fromRoot('src'));
 const SUFFIX = 'Readers';
+// Types a mutation returns in many places. The server's parser counts every
+// inline copy against its token cap, so each is selected by one fragment. That
+// fragment is the union of every place's selection, so a type joins only while
+// its places select the same fields, or every place fetches the extra ones.
+const SHARED = new Set(['ItemPhoto', 'Measure', 'ShownNutrition']);
 
 const readersFile = (type, dir) =>
   join(dir, `${type[0].toLowerCase()}${type.slice(1)}${SUFFIX}.graphql`);
@@ -278,7 +284,8 @@ function toSelectionSet(schema, tree, type, variables) {
         name: { kind: Kind.NAME, value: entry.name },
         arguments: entry.args,
         selectionSet: entry.sub
-          ? toSelectionSet(
+          ? sharedSpread(getNamedType(field.type)) ??
+            toSelectionSet(
               schema,
               entry.sub,
               getNamedType(field.type),
@@ -314,6 +321,41 @@ function toSelectionSet(schema, tree, type, variables) {
   return { kind: Kind.SELECTION_SET, selections };
 }
 
+const sharedSpread = type =>
+  SHARED.has(type.name)
+    ? {
+        kind: Kind.SELECTION_SET,
+        selections: [
+          ...(isEntity(type)
+            ? [{ kind: Kind.FIELD, name: { kind: Kind.NAME, value: 'id' } }]
+            : []),
+          {
+            kind: Kind.FRAGMENT_SPREAD,
+            name: { kind: Kind.NAME, value: `${type.name}${SUFFIX}` },
+          },
+        ],
+      }
+    : null;
+
+/** Merges into `shared` what `tree` reads on each `SHARED` type, at any depth. */
+function collectShared(schema, tree, shared) {
+  for (const [condition, group] of tree) {
+    const fields = schema.getType(condition).getFields();
+    for (const entry of group.values()) {
+      if (!entry.sub) continue;
+      const named = getNamedType(fields[entry.name].type);
+      if (SHARED.has(named.name)) {
+        shared.set(
+          named.name,
+          mergeTree(shared.get(named.name) ?? newTree(), entry.sub),
+        );
+      } else {
+        collectShared(schema, entry.sub, shared);
+      }
+    }
+  }
+}
+
 function renderReaders(schema, type, tree) {
   const variables = new Map();
   const fragment = {
@@ -334,6 +376,7 @@ function renderReaders(schema, type, tree) {
 export function expectedReadersFiles(schema, documents, dir = READERS_DIR) {
   const readers = computeReaders(schema, documents);
   const files = new Map();
+  const shared = new Map();
   for (const type of [...readersDemand(schema, documents)].sort()) {
     const tree = readers.get(type);
     if (!tree) {
@@ -342,6 +385,12 @@ export function expectedReadersFiles(schema, documents, dir = READERS_DIR) {
           'nothing for a mutation to keep current',
       );
     }
+    collectShared(schema, tree, shared);
+    files.set(readersFile(type, dir), renderReaders(schema, type, tree));
+  }
+  for (const [type, tree] of [...shared].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
     files.set(readersFile(type, dir), renderReaders(schema, type, tree));
   }
   return files;

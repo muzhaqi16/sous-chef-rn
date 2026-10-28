@@ -11,6 +11,7 @@ import type {
   ToastPresenter,
   ToastType,
 } from '#platform/presenters';
+import { toastHoldMs } from '#platform/presenters';
 import { TOAST } from '#/constants/animations';
 import { HapticService } from '#services/haptic/HapticService';
 
@@ -58,16 +59,17 @@ const getLatestPanGesture = () => {
 // Helper component that triggers a toast once on mount
 const ToastTrigger: React.FC<{
   message: string;
+  detail?: string;
   type?: ToastType;
   action?: { label: string; onPress: () => void };
-}> = ({ message, type, action }) => {
+}> = ({ message, detail, type, action }) => {
   const triggered = useRef(false);
   useEffect(() => {
     if (!triggered.current) {
       triggered.current = true;
-      dispatchToast({ message, type, action });
+      dispatchToast({ message, detail, type, action });
     }
-  }, [message, type, action]);
+  }, [message, detail, type, action]);
   return <Text>Trigger</Text>;
 };
 
@@ -182,6 +184,64 @@ describe('ToastProvider', () => {
       </ToastProvider>,
     );
     expect(screen.getByText('Retry')).toBeTruthy();
+  });
+
+  describe('detail', () => {
+    it('renders the detail under the message, in the smaller role', () => {
+      render(
+        <ToastProvider>
+          <ToastTrigger
+            message="Can't reach the server"
+            detail="Changes will sync when it's back"
+            type="warning"
+          />
+        </ToastProvider>,
+      );
+
+      const message = screen.getByTestId('toast-message');
+      const detail = screen.getByTestId('toast-detail');
+      expect(message).toHaveTextContent("Can't reach the server");
+      expect(detail).toHaveTextContent("Changes will sync when it's back");
+      const texts = screen.UNSAFE_getAllByType(Text);
+      const [title, body] = ['toast-message', 'toast-detail'].map(id =>
+        texts.find(text => text.props.testID === id),
+      );
+      expect(title?.props.role).toBe('bodyStrong');
+      expect(body?.props.role).toBe('caption');
+      // One column, message first: the detail sits under it, left-aligned.
+      expect(body?.parent).toBe(title?.parent);
+      expect(texts.indexOf(title!)).toBeLessThan(texts.indexOf(body!));
+    });
+
+    it('labels the card with the message and the detail', () => {
+      render(
+        <ToastProvider>
+          <ToastTrigger
+            message="You're offline"
+            detail="2 changes will sync when you're back online"
+            type="warning"
+          />
+        </ToastProvider>,
+      );
+
+      expect(screen.getByTestId('toast-warning').props.accessibilityLabel).toBe(
+        "You're offline, 2 changes will sync when you're back online",
+      );
+    });
+
+    it('leaves a toast without one as it was', () => {
+      render(
+        <ToastProvider>
+          <ToastTrigger message="Saved" type="success" />
+        </ToastProvider>,
+      );
+
+      expect(screen.queryByTestId('toast-detail')).toBeNull();
+      expect(screen.getByTestId('toast-message')).toHaveTextContent('Saved');
+      expect(screen.getByTestId('toast-success').props.accessibilityLabel).toBe(
+        'Saved',
+      );
+    });
   });
 
   describe('swipe-to-dismiss gesture', () => {
@@ -303,11 +363,10 @@ describe('ToastProvider', () => {
       });
     };
 
-    it('holds a default toast for AUTO_DISMISS_SHORT', () => {
-      showToastNow({ message: 'Saved', type: 'success' });
-
+    /** Live just before its hold ends, gone just after. */
+    const expectHeldFor = (ms: number) => {
       act(() => {
-        jest.advanceTimersByTime(TOAST.AUTO_DISMISS_SHORT - 50);
+        jest.advanceTimersByTime(ms - 50);
       });
       expect(isLive()).toBe(true);
 
@@ -315,34 +374,46 @@ describe('ToastProvider', () => {
         jest.advanceTimersByTime(100);
       });
       expect(isLive()).toBe(false);
+    };
+
+    it('holds a toast for the time it takes to read', () => {
+      const toast: ToastOptions = { message: 'Saved', type: 'success' };
+      showToastNow(toast);
+
+      expectHeldFor(toastHoldMs(toast));
     });
 
-    it('honours an explicit duration shorter than the default', () => {
-      // An equality check against AUTO_DISMISS_LONG would make every other
-      // value — including a deliberately short one — silently hold for
-      // AUTO_DISMISS_SHORT instead.
-      const short = 500;
-      showToastNow({ message: 'Saved', type: 'success', duration: short });
+    it('holds a sentence longer than a confirmation', () => {
+      const toast: ToastOptions = {
+        message:
+          'You were removed from this home. Ask its owner or an admin to invite you back.',
+        type: 'success',
+      };
+      expect(toastHoldMs(toast)).toBeGreaterThan(
+        toastHoldMs({ message: 'Saved' }) + 3000,
+      );
+      showToastNow(toast);
 
-      act(() => {
-        jest.advanceTimersByTime(short + 50);
-      });
-      expect(isLive()).toBe(false);
+      expectHeldFor(toastHoldMs(toast));
     });
 
-    it('honours an explicit duration longer than the default', () => {
-      const long = TOAST.AUTO_DISMISS_SHORT + 1000;
-      showToastNow({ message: 'Saved', type: 'success', duration: long });
+    it('holds a toast with an action long enough to reach it', () => {
+      const toast: ToastOptions = {
+        message: 'Saved',
+        type: 'success',
+        action: { label: 'Undo', onPress: jest.fn() },
+      };
+      expect(toastHoldMs(toast)).toBeGreaterThan(
+        toastHoldMs({ message: 'Saved Undo' }),
+      );
+      showToastNow(toast);
 
-      act(() => {
-        jest.advanceTimersByTime(TOAST.AUTO_DISMISS_SHORT + 50);
-      });
-      expect(isLive()).toBe(true);
+      expectHeldFor(toastHoldMs(toast));
+    });
 
-      act(() => {
-        jest.advanceTimersByTime(1000);
-      });
-      expect(isLive()).toBe(false);
+    it('caps the hold of a long message', () => {
+      const words = toastHoldMs({ message: 'word '.repeat(60) });
+      expect(toastHoldMs({ message: 'word '.repeat(120) })).toBe(words);
     });
   });
 
@@ -393,13 +464,14 @@ describe('ToastProvider', () => {
       act(() => {
         jest.advanceTimersByTime(ms);
       });
-    const outlastHold = () => advance(TOAST.AUTO_DISMISS_SHORT + 50);
+    const undo = (onPress = jest.fn()) => ({ label: 'Undo', onPress });
+    // The longest toast these cases show.
+    const outlastHold = () =>
+      advance(toastHoldMs({ message: 'Removed A', action: undo() }) + 50);
     const outlastQueueDelay = () => advance(TOAST.QUEUE_DELAY + 50);
 
     const isLive = (type: ToastType) =>
       screen.getByTestId(`toast-${type}`).props.pointerEvents === 'auto';
-
-    const undo = (onPress = jest.fn()) => ({ label: 'Undo', onPress });
 
     it('replaces a displayed toast carrying an action with a newer one of its type', () => {
       const show = mountProvider();
@@ -590,6 +662,39 @@ describe('ToastProvider', () => {
           </ToastProvider>,
         );
         expect(announce).toHaveBeenCalledWith('Back online');
+      } finally {
+        Object.defineProperty(Platform, 'OS', {
+          value: platform,
+          configurable: true,
+        });
+        announce.mockRestore();
+      }
+    });
+
+    it('announces the detail with the message on iOS', () => {
+      const announce = jest
+        .spyOn(AccessibilityInfo, 'announceForAccessibility')
+        .mockImplementation(() => {});
+      const platform = Platform.OS;
+      Object.defineProperty(Platform, 'OS', {
+        value: 'ios',
+        configurable: true,
+      });
+
+      try {
+        render(
+          <ToastProvider>
+            <ToastTrigger
+              message="You're offline"
+              detail="Changes will sync when you're back online"
+              type="warning"
+            />
+          </ToastProvider>,
+        );
+        expect(announce).toHaveBeenCalledWith(
+          "You're offline, Changes will sync when you're back online",
+        );
+        expect(announce).not.toHaveBeenCalledWith("You're offline");
       } finally {
         Object.defineProperty(Platform, 'OS', {
           value: platform,

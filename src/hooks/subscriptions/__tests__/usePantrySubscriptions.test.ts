@@ -14,6 +14,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedCache,
   type QueryDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -22,7 +23,12 @@ import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
-import { PantrySummaryForEventDocument } from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import {
+  PantryItemsForEventsDocument,
+  PantrySummaryForEventDocument,
+} from '#features/pantry/hooks/usePantrySubscriptions.generated';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
+import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
 import { todayKey } from '#/utils/dateUtils';
 
 jest.mock('#/services/auth/deviceId', () => ({
@@ -71,7 +77,10 @@ const summaryReads = (query: jest.Mock) =>
       (options as { query: unknown }).query === PantrySummaryForEventDocument,
   );
 
-/** The read-back is a promise, so the handler finishes a microtask later. */
+/**
+ * Read-backs gather for 150 ms (`batchedEventRead`), and each is a promise, so
+ * the handler finishes past the window and a microtask later.
+ */
 const deliver = async (
   onData: CapturedOnData,
   payload: unknown,
@@ -79,6 +88,9 @@ const deliver = async (
 ) => {
   await act(async () => {
     onData(payload, client);
+  });
+  await act(async () => {
+    jest.advanceTimersByTime(150);
   });
 };
 
@@ -156,14 +168,16 @@ describe('usePantrySubscriptions', () => {
         storageLocation: null,
       }),
       jest.fn().mockResolvedValue({
-        data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+        data: {
+          pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+        },
       }),
     );
 
     await deliver(getOnData(), itemEvent(MutationType.ItemAdded), client);
 
     expect(client.query).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { id: 'item-1' } }),
+      expect.objectContaining({ variables: { ids: ['item-1'] } }),
     );
     // The ref, not the read-back object: the updater merges what it is handed
     // over the stored record, so a denormalized read would inline entity refs.
@@ -208,7 +222,7 @@ describe('usePantrySubscriptions', () => {
     renderHookWithApollo(() => usePantrySubscriptions('user-1'));
     const client = makeClient(
       jest.fn(),
-      jest.fn().mockResolvedValue({ data: { pantryItem: null } }),
+      jest.fn().mockResolvedValue({ data: { pantryItemsByIds: [] } }),
     );
 
     await deliver(getOnData(), itemEvent(MutationType.ItemAdded), client);
@@ -238,17 +252,55 @@ describe('usePantrySubscriptions', () => {
     const client = makeClient(
       jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
       jest.fn().mockResolvedValue({
-        data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+        data: {
+          pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+        },
       }),
     );
 
     await deliver(getOnData(), itemEvent(MutationType.ItemUpdated), client);
 
     expect(client.query).toHaveBeenCalledWith(
-      expect.objectContaining({ variables: { id: 'item-1' } }),
+      expect.objectContaining({ variables: { ids: ['item-1'] } }),
     );
     // An update moves no connection membership — normalization did the work.
     expect(mockAddToConnection).not.toHaveBeenCalled();
+  });
+
+  // USM-3: a merge names the survivor as the node and the folded stacks in
+  // `mergedIds`. Those rows are gone, and the survivor took their stock.
+  it('drops the merged rows and reads the survivor back', async () => {
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const client = makeClient(
+      jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
+      jest.fn().mockResolvedValue({
+        data: {
+          pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+        },
+      }),
+    );
+
+    await deliver(
+      getOnData(),
+      {
+        ...itemEvent(MutationType.Merged, undefined),
+        mergedIds: ['item-2', 'item-3'],
+      },
+      client,
+    );
+
+    expect(mockRemoveFromConnection.mock.calls).toEqual([
+      [client.cache, 'pantry-1', 'item-2', { evictItem: true }],
+      [client.cache, 'pantry-1', 'item-3', { evictItem: true }],
+    ]);
+    expect(client.query).toHaveBeenCalledWith(
+      expect.objectContaining({ variables: { ids: ['item-1'] } }),
+    );
+    expect(mockAddToConnection).not.toHaveBeenCalled();
+    // The counts move with the rows; the server's summary states them.
+    await flushSummaryRead();
+    expect(summaryReads(client.query)).toHaveLength(1);
   });
 
   it('ignores its own echo', async () => {
@@ -349,7 +401,9 @@ describe('usePantrySubscriptions', () => {
       const client = makeClient(
         jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
         jest.fn().mockResolvedValue({
-          data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+          data: {
+            pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+          },
         }),
       );
 
@@ -363,7 +417,7 @@ describe('usePantrySubscriptions', () => {
       );
 
       expect(client.query).toHaveBeenCalledWith(
-        expect.objectContaining({ variables: { id: 'item-1' } }),
+        expect.objectContaining({ variables: { ids: ['item-1'] } }),
       );
     });
 
@@ -375,7 +429,9 @@ describe('usePantrySubscriptions', () => {
       const client = makeClient(
         jest.fn().mockReturnValue({ __typename: 'PantryItem', id: 'item-1' }),
         jest.fn().mockResolvedValue({
-          data: { pantryItem: { __typename: 'PantryItem', id: 'item-1' } },
+          data: {
+            pantryItemsByIds: [{ __typename: 'PantryItem', id: 'item-1' }],
+          },
         }),
       );
 
@@ -390,6 +446,70 @@ describe('usePantrySubscriptions', () => {
 
       expect(client.query).toHaveBeenCalled();
     });
+  });
+});
+
+// The gate reads the row as the LIST holds it. The read-back's own fragment is
+// wider (`version`, `minQuantity`…), so gating on it skipped every listed row:
+// a merge's survivor and a member's edit stayed stale until the next resync.
+describe('usePantrySubscriptions: a row only the list has fetched', () => {
+  const listedCache = () =>
+    seedCache([
+      {
+        data: pantryItemData({ id: 'pi1' }).pantryItem!,
+        fragment: PantryItem_ListedFragmentDoc,
+        fragmentName: 'pantryItem_listed',
+      },
+    ]);
+  const readBacks = (query: jest.Mock) =>
+    query.mock.calls.filter(
+      ([options]) =>
+        (options as { query: unknown }).query === PantryItemsForEventsDocument,
+    );
+
+  it.each([
+    ['an update made elsewhere', MutationType.ItemUpdated],
+    ['a merge into it', MutationType.Merged],
+  ])('reads it back after %s', async (_label, mutation) => {
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const query = jest
+      .fn()
+      .mockResolvedValue({ data: { pantryItemsByIds: [] } });
+
+    await deliver(
+      getOnData(),
+      {
+        ...itemEvent(mutation),
+        node: { __typename: 'PantryItem', id: 'pi1' },
+        mergedIds: [],
+      },
+      { cache: listedCache(), query },
+    );
+
+    expect(readBacks(query)).toEqual([
+      [expect.objectContaining({ variables: { ids: ['pi1'] } })],
+    ]);
+  });
+
+  it('reads it back after a low-stock alert', async () => {
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const query = jest
+      .fn()
+      .mockResolvedValue({ data: { pantryItemsByIds: [] } });
+
+    await deliver(
+      getOnData(),
+      {
+        ...itemEvent(MutationType.ItemUpdated),
+        subtype: PantrySubtype.LowStockAlert,
+        node: { __typename: 'PantryItem', id: 'pi1' },
+      },
+      { cache: listedCache(), query },
+    );
+
+    expect(readBacks(query)).toHaveLength(1);
   });
 });
 
