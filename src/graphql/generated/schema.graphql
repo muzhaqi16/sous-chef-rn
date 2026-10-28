@@ -5574,7 +5574,10 @@ type Home {
   name: String!
   """Deep link that opens this home in the app (for existing members)."""
   navigateLink: ShareLink!
-  """The home's pantries; the default one is `filters: { isDefault: true }`"""
+  """
+  The home's pantries; the default one is `filters: { isDefault: true }`.
+  Empty for a member whose pantry view (`canViewPantry`) is off.
+  """
   pantriesConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -5595,6 +5598,32 @@ type Home {
   Deep link that opens this home's pantry in the app (for existing members).
   """
   pantryLink: ShareLink!
+  """
+  The household's purchases, every member's: each one recorded for this home
+  (Purchase.homeId), with its buyer as `user`. Readable by any member who
+  can view the home, guests included, whatever their pantry view. These are
+  the purchases `moneyReport` sums, so over the same period its totalCount
+  equals moneyReport.purchaseCount. Only a purchase's buyer may update or
+  delete it.
+  """
+  purchasesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """
+    Narrows the list: every field given must match; fromDate and toDate bound purchaseDate, both inclusive
+    """
+    filters: PurchaseFilters
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; most recent purchase first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PurchaseOrderBy
+  ): PurchaseConnection!
   shoppingListsConnection(
     """Resume after this cursor: a previous page's endCursor"""
     after: String
@@ -8279,6 +8308,9 @@ input MarkHomeAsDefaultInput {
 }
 
 type MarkHomeAsDefaultPayload {
+  """
+  The home's default pantry; null when it has none or the caller's pantry view (`canViewPantry`) is off
+  """
   defaultPantry: Pantry
   settings: UserSettings!
 }
@@ -8789,8 +8821,9 @@ type MealPlanItem {
   The pantry uses linked to this meal, oldest first: what completing it
   deducted, and any use recorded naming it (createPantryItemUsage
   mealPlanItemId). An undone use is left out, a use of a stack later merged
-  names the survivor, and one whose stack was deleted is left out. The first
-  100, in the order they were recorded; empty when there are none.
+  names the survivor, and one whose stack was deleted is left out, as is a
+  use from a pantry the caller may not view (`canViewPantry` off). The
+  first 100, in the order they were recorded; empty when there are none.
   """
   usedPantryItems: [UsedPantryItem!]!
   """
@@ -10161,7 +10194,11 @@ type Mutation {
   reference back to its origin.
   """
   forkRecipe(input: ForkRecipeInput!): ForkRecipeResult!
-  """Send an invitation for a user to join a home."""
+  """
+  Send an invitation for a user to join a home. The role it confers is at
+  most the inviter's own: only the home's owner invites an ADMIN, and OWNER
+  is never invited (a system admin is exempt). A higher role is FORBIDDEN.
+  """
   inviteToHome(input: InviteToHomeInput!): InviteToHomeResult!
   """Invite a user to collaborate on a shopping list."""
   inviteToShoppingList(input: InviteToShoppingListInput!): InviteToShoppingListResult!
@@ -10506,7 +10543,10 @@ type Mutation {
   avatar and cover image; set avatar/coverImage to null to remove them.
   """
   updateProfile(input: UpdateProfileInput!): UpdateProfileResult!
-  """Update an existing purchase record."""
+  """
+  Update one of the caller's purchases; an administrator may update any.
+  Another member's purchase, though the caller can read it, is FORBIDDEN.
+  """
   updatePurchase(input: UpdatePurchaseInput!): UpdatePurchaseResult!
   """
   Update a recipe the caller owns, its ingredient list (`ingredients`) in
@@ -11950,7 +11990,7 @@ type PantryItem {
   """
   portionsPerTrackingUnit: Float
   """
-  The purchase behind this stack's first acquisition; null when none is recorded
+  The purchase behind this stack's first acquisition; null when none is recorded or the caller may not see it
   """
   purchase: Purchase
   """
@@ -11959,6 +11999,27 @@ type PantryItem {
   as PantryItemBatch.purchaseId.
   """
   purchaseId: ID
+  """
+  The purchases behind this stack's acquisitions — its first, and each
+  restock's — that the caller may see, whoever bought them: their own, and
+  those recorded for a household they are an active member of. A stack merged
+  into this one brings its purchases. Empty for a caller who may not view the
+  stack's pantry. Only a purchase's buyer may update or delete it.
+  """
+  purchasesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; most recent purchase first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PurchaseOrderBy
+  ): PurchaseConnection!
   """
   Current amount, derived from the item's ACTIVE batches. Every path that adds
   or removes stock writes a batch and recomputes this; it is never set
@@ -13359,7 +13420,9 @@ type Purchase {
   unitSymbol: String!
   """When the purchase last changed"""
   updatedAt: DateTime!
-  """The user who recorded the purchase; resolves for a deleted account too"""
+  """
+  The user who recorded the purchase, the one member who may update or delete it; resolves for a deleted account too
+  """
   user: User!
   """The user who recorded the purchase"""
   userId: ID!
@@ -13411,12 +13474,12 @@ input PurchaseFilters {
 
 """Summary of purchase history for a shopping list item"""
 type PurchaseHistorySummary {
-  """Date of most recent purchase"""
+  """The latest purchaseDate among them; null when there are none"""
   lastPurchaseDate: DateTime
-  """Whether this item has been purchased before"""
+  """Whether purchasesConnection lists at least one purchase"""
   previouslyPurchased: Boolean!
   """
-  Times any member purchased this line; purchasesConnection lists only the caller's own.
+  How many purchases purchasesConnection lists to the caller: its totalCount. A deleted purchase is not counted
   """
   purchaseCount: Int!
 }
@@ -14107,7 +14170,11 @@ type Query {
   returns it too.
   """
   notificationSummary: NotificationSummary!
-  """Fetch a single pantry by its ID."""
+  """
+  Fetch a single pantry by its ID: null when there is none, FORBIDDEN for a
+  caller who may not view it — not a member of its home, or a member whose
+  pantry view (`canViewPantry`) is off.
+  """
   pantry(
     """The id of the Pantry to read"""
     id: ID!
@@ -14181,7 +14248,12 @@ type Query {
     """The stack and the unit it would change to"""
     input: PreviewPantryItemUnitChangeInput!
   ): PantryUnitChangePreview!
-  """Fetch a single purchase by its ID."""
+  """
+  A purchase by its ID, when the caller may see it: their own, one recorded
+  for a household they are an active member of, or one naming no household
+  that was bought from a personal list they take part in. Null when there is
+  none; FORBIDDEN when it exists and the caller may not see it.
+  """
   purchase(
     """The id of the Purchase to read"""
     id: ID!
@@ -14190,7 +14262,8 @@ type Query {
   One user's recorded purchases, newest first by default: the caller's own
   unless userId names someone else, which only an admin may do (anyone else
   is refused FORBIDDEN). shoppingListId narrows the page to purchases made
-  from one list.
+  from one list. A household's purchases, every member's, are
+  Home.purchasesConnection.
   """
   purchases(
     """Resume after this cursor: a previous page's endCursor"""
@@ -17611,14 +17684,22 @@ type ShoppingListItem {
   priceEstimate: PriceEstimate!
   """The line's priority: 0 low, 1 medium, 2 high. 0 when unset."""
   priority: Int!
-  """How often and when any member bought this line"""
+  """
+  How often and when this line was bought, over the purchases purchasesConnection lists to the caller
+  """
   purchaseHistory: PurchaseHistorySummary!
   """
   Whether, when and for how much the line was bought; reset when the line is unmarked or re-added after a purchase
   """
   purchaseInfo: ShoppingListItemPurchaseInfo!
   """
-  The caller's own purchases of this line. purchaseHistory counts every member's.
+  This line's purchases the caller may see, whoever bought them, each with its
+  buyer as `user`: their own, those recorded for a household they are an
+  active member of (Purchase.homeId), and, for one naming no household, those
+  on a personal list they take part in. A viewer who opened a public list by
+  its share code without joining sees none. purchaseHistory counts this same
+  set. Only a purchase's buyer may update or delete it, so compare
+  `user.id` with the viewer before offering either.
   """
   purchasesConnection(
     """Resume after this cursor: a previous page's endCursor"""
