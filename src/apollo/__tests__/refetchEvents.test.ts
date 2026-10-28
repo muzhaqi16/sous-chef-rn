@@ -242,12 +242,19 @@ describe('resync', () => {
     );
   });
 
-  // Over an open channel every change reached the cache while away, and a
-  // drop would have ended in a reconnect that resyncs on its own.
+  // Inside the API's liveness window (two 30 s pings) the server still holds
+  // the subscriptions; past it the socket may be dead with no close delivered.
   describe('a return to the app over an open live channel', () => {
     beforeEach(() => {
       mockChannelOpen = true;
     });
+
+    const returnAfter = async (ms: number) => {
+      memoryLifecycle().moveTo('background');
+      await elapse(ms);
+      memoryLifecycle().moveTo('active');
+      await pastTheWindow();
+    };
 
     it('asks nothing', async () => {
       triggers.appForeground();
@@ -264,23 +271,34 @@ describe('resync', () => {
       expect(requests).toEqual([]);
     });
 
-    it('re-asks after 15 minutes away, for answers that move with the clock', async () => {
-      memoryLifecycle().moveTo('background');
-      await elapse(15 * 60_000);
-      memoryLifecycle().moveTo('active');
-      await pastTheWindow();
+    it('asks nothing after a brief trip to another app', async () => {
+      await returnAfter(10_000);
+
+      expect(requests).toEqual([]);
+    });
+
+    it('re-asks once the server may have dropped the socket unseen', async () => {
+      await returnAfter(90_000);
 
       expect(requests).toEqual(['ListForResync']);
     });
 
-    it('asks nothing after a shorter absence', async () => {
-      memoryLifecycle().moveTo('background');
-      await elapse(14 * 60_000);
-      memoryLifecycle().moveTo('active');
+    it('still resyncs when the socket reconnects after a brief return', async () => {
+      await returnAfter(10_000);
+      triggers.wsReconnected();
       await pastTheWindow();
 
-      expect(requests).toEqual([]);
+      expect(requests).toEqual(['ListForResync']);
     });
+  });
+
+  it('re-asks after a brief absence with the channel closed', async () => {
+    memoryLifecycle().moveTo('background');
+    await elapse(10_000);
+    memoryLifecycle().moveTo('active');
+    await pastTheWindow();
+
+    expect(requests).toEqual(['ListForResync']);
   });
 
   it('waits for queued writes to replay before refetching', async () => {

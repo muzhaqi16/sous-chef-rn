@@ -531,17 +531,21 @@ through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
 | Event             | Fires when                                                                                                       |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `appForeground`   | The app returns to `active` while the live channel is closed, or after 15 minutes away                           |
+| `appForeground`   | The app returns to `active` while the live channel is closed, or after 60 s away                                 |
 | `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)                                                     |
 | `wsReconnected`   | `onWebSocketReconnected`                                                                                         |
 | `languageChanged` | The resolved language really changes                                                                             |
 | `screenShown`     | Each navigation after a switch or a resync, for what it left unasked                                             |
 
-**A return to the app over an open channel asks nothing.** Every change
-reached the cache while away, and a drop ends in a reconnect that resyncs on
-its own (`isLiveChannelOpen`, `wsLink.ts`). Only answers that move with the
-clock and carry no event (expiry counts, the day's plan) need the 15-minute
-rule. Measured: a short app switch went from 18 requests to none.
+**A return within 60 s over an open channel asks nothing.** The API ends a
+socket that leaves one of its pings unanswered at the next
+(`WS_PING_INTERVAL_MS`, 30 s), and the device may never see that close. Inside
+two intervals the server still holds the subscriptions, so every change
+reaches the cache on resume, and a drop ends in a reconnect that resyncs on its
+own (`isLiveChannelOpen`, `wsLink.ts`). Past the window the return resyncs
+whatever the channel reads, which also covers answers that move with the clock
+and carry no event (expiry counts, the day's plan). Measured: a short app
+switch went from 18 requests to none.
 
 The events are declared (`void` payloads) in
 `src/types/apollo-default-options.d.ts`. `createRefetchEventManager()` is

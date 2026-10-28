@@ -39,17 +39,20 @@ const isOnScreen = (query: ObservableQuery): boolean => {
   return shown === undefined || shown === scope;
 };
 
-// Answers that move with the clock (expiry counts, the day's plan) carry no
-// event, so an absence this long re-asks even over an open channel.
-const LONG_ABSENCE_MS = 15 * 60_000;
+// The API ends a socket that leaves one of its pings unanswered at the next
+// (WS_PING_INTERVAL_MS, 30 s: sous-chef-api packages/core/src/context/ws.ts),
+// and the device may never see the close.
+const SERVER_LIVENESS_WINDOW_MS = 2 * 30_000;
 
 /**
  * Three moments the device may have missed changes: the live-event channel
  * only delivers what happens after it connects. Each wraps a signal the app
  * already has; none adds a probe.
  *
- * A return to the app over a channel still open missed nothing: had it
- * dropped while away, its reconnect resyncs on its own.
+ * A return inside the liveness window over a channel still open missed
+ * nothing: the server held its subscriptions, and a drop reconnects and
+ * resyncs on its own. Past it the server may have let them go, and answers
+ * that move with the clock (expiry counts, the day's plan) carry no event.
  */
 const appForeground = () =>
   new Observable<void>(observer => {
@@ -61,7 +64,10 @@ const appForeground = () =>
       if (lastState === 'active' && nextState !== 'active') leftAt = Date.now();
       lastState = nextState;
       if (nextState !== 'active' || !wasAway) return;
-      if (!isLiveChannelOpen() || Date.now() - leftAt >= LONG_ABSENCE_MS) {
+      if (
+        !isLiveChannelOpen() ||
+        Date.now() - leftAt >= SERVER_LIVENESS_WINDOW_MS
+      ) {
         observer.next();
       }
     });
