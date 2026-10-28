@@ -7705,6 +7705,13 @@ type ItemUnitSuggestion {
   id: ID!
   isDefault: Boolean!
   isPreferred: Boolean!
+  """
+  The short form to show, in the request's language, as Unit.localizedSymbol
+  """
+  localizedSymbol(
+    """How many it follows: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
   name: String!
   symbol: String!
   type: UnitType!
@@ -8220,6 +8227,9 @@ type LowStockItem {
   pantryName: String!
   restockQuantity: Float
   unitId: ID!
+  """
+  The stack's unit label: in the request's language, agreeing with currentQuantity, while it spells the stack's unit; a label the user gave is returned as written
+  """
   unitName: String!
 }
 
@@ -9183,9 +9193,9 @@ type MeasureReading {
   """Whether unit shows its amounts as fractions (cups do)."""
   displayAsFraction: Boolean!
   """
-  The unit's short form in the request's language (unit.localizedSymbol:
-  g and lb as they are, a can as lata in Spanish), so a reading needs no
-  unit selection.
+  The unit's short form in the request's language, agreeing with value
+  (unit.localizedSymbol(quantity: value): g and lb as they are, 3 cans as
+  3 latas in Spanish), so a reading needs no unit selection.
   """
   localizedSymbol: String!
   """The symbol of unit (lb, g, can), so a reading needs no unit selection."""
@@ -11628,8 +11638,9 @@ input PackagesInput {
   item's own PACKAGE size when the item is one pack (a product holding one
   barcode), else, on a move, the list line's own amount as one package, and
   on a restock, the stack's last purchase (one more of what was last bought).
-  A size the catalog only infers is never used. With none, a create or a move
-  counts the packages in a counted stack of the item; a restock is refused.
+  One of these that cannot be expressed in the stack's unit is skipped; a size
+  the catalog only infers is never used. With none, a create or a move counts
+  the packages in a counted stack of the item; a restock is refused.
   """
   size: PackageSizeInput
   """
@@ -13472,7 +13483,9 @@ type Purchase {
   unknown rather than zero.
   """
   unitPrice: Float
-  """The unit as written when the purchase was recorded"""
+  """
+  The unit as written when the purchase was recorded. While it spells unit itself (its name or symbol, in any language) it reads in the request's language, agreeing with quantity, as unit.localizedSymbol(quantity:); a label of the client's own is returned as written
+  """
   unitSymbol: String!
   """When the purchase last changed"""
   updatedAt: DateTime!
@@ -17823,7 +17836,7 @@ type ShoppingListItem {
   """The unit quantity is counted in; null when the line has none"""
   unit: Unit
   """
-  The label shown for unit: the label the client gave, else the unit's symbol; null when the line has no unit or none was recorded
+  The label shown for unit: the label the client gave, else the unit's symbol; null when the line has no unit or none was recorded. While it spells unit itself (its name or symbol, in any language) it reads in the request's language, agreeing with quantity, as unit.localizedSymbol(quantity:); a label of the client's own is returned as written
   """
   unitName: String
   """When the line last changed"""
@@ -19178,6 +19191,13 @@ Contains only the fields needed for one-tap add UI.
 """
 type SuggestionUnit {
   id: ID!
+  """
+  The short form to show, in the request's language, as Unit.localizedSymbol
+  """
+  localizedSymbol(
+    """How many it follows: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
   name: String!
   symbol: String!
 }
@@ -19531,9 +19551,14 @@ type Unit {
   The unit's short form in the request's language. A standard symbol (g, kg,
   mL, L, oz, lb, fl oz…) is the same in every language; another unit takes
   the language's abbreviation (pz), else its name there (bolsa), else symbol.
-  English keeps symbol.
+  English keeps symbol. Where the short form is the unit's name (bolsa, can),
+  it is singular or plural as localizedName reads quantity (2 bolsas, 3 cans);
+  an abbreviation or a standard symbol never changes.
   """
-  localizedSymbol: String!
+  localizedSymbol(
+    """How many it follows: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
   minPrecision: Float!
   """
   The canonical English name, in every language; localizedName is the one to show
@@ -19558,6 +19583,10 @@ type UnitCostAverage {
   """The average, rounded to the currency's minor unit"""
   amount: Float!
   currencyCode: CurrencyCode!
+  """
+  The unit the cost is per, for its text in the request's language; null when the restocks named none
+  """
+  unit: Unit
   """
   The symbol of the unit the cost is per; null when the restocks named none
   """
@@ -21090,6 +21119,12 @@ type UsageBySource {
 type UsageByUnit {
   count: Int!
   totalQuantity: Float!
+  """
+  The unit, for its text in the request's language
+  (unit.localizedSymbol(quantity: totalQuantity)); null for records that
+  named no unit, which unitId reports as "unknown".
+  """
+  unit: Unit
   unitId: ID!
   unitName: String!
   unitSymbol: String!
