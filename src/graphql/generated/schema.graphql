@@ -11626,8 +11626,9 @@ input PackagesInput {
   """
   One package's net content. Omitted: the list line's stated size, else the
   item's own PACKAGE size when the item is one pack (a product holding one
-  barcode), else, on a move, the list line's own amount as one package. A
-  size the catalog only infers is never used. With none, a create or a move
+  barcode), else, on a move, the list line's own amount as one package, and
+  on a restock, the stack's last purchase (one more of what was last bought).
+  A size the catalog only infers is never used. With none, a create or a move
   counts the packages in a counted stack of the item; a restock is refused.
   """
   size: PackageSizeInput
