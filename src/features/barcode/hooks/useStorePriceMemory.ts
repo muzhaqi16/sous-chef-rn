@@ -47,7 +47,7 @@ export function useStorePriceMemory(
   itemId: string,
   listId: string | undefined,
   unit: { id: string; symbol: string } | undefined,
-  recordsIn: string,
+  recordsIn: string | null,
 ) {
   const { t } = useTranslation();
   const homeId = useSelectedHomeId();

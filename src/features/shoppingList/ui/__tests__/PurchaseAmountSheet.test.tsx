@@ -134,6 +134,15 @@ describe('PurchaseAmountSheet', () => {
     expect(screen.getByText(/€1\.50 per cups/)).toBeTruthy();
   });
 
+  // Before the list is read its currency is unknown; another would be wrong.
+  it('names no currency while the list has not been read', () => {
+    renderWithInit(buildProps({ currency: null }));
+    expect(screen.queryByText('$')).toBeNull();
+
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '3');
+    expect(screen.getByText(/^1\.50 per cups/)).toBeTruthy();
+  });
+
   it('pre-fills the quantity input from requestedQuantity', () => {
     renderWithInit(buildProps());
     expect(screen.getByTestId('purchase-quantity-input').props.value).toBe('2');

@@ -3,3 +3,11 @@ fragment useListCurrency_list on ShoppingList {
   id
   currency
 }
+
+# Asked only while the device lacks it: a scan opened before the list loaded.
+query ListCurrency($id: ID!) {
+  shoppingList(id: $id) {
+    id
+    ...useListCurrency_list
+  }
+}

@@ -118,6 +118,13 @@ function seedTab(
   });
 }
 
+/** The list as the device holds it once store mode has read it. */
+const seedList = (cache: ReturnType<typeof seedCache>, currency = 'USD') =>
+  cache.writeFragment({
+    fragment: UseListCurrency_ListFragmentDoc,
+    data: { __typename: 'ShoppingList', id: LIST, currency },
+  });
+
 function renderCart(
   toBuy: LineSeed[],
   inCart: LineSeed[] = [],
@@ -127,10 +134,7 @@ function renderCart(
   const cache = seedCache([]);
   seedTab(cache, false, toBuy);
   seedTab(cache, true, inCart);
-  cache.writeFragment({
-    fragment: UseListCurrency_ListFragmentDoc,
-    data: { __typename: 'ShoppingList', id: LIST, currency: listCurrency },
-  });
+  seedList(cache, listCurrency);
   // No operation mocks: the hook must answer from the cache alone.
   return renderHookWithApollo(() => useStoreModeCart(LIST, scanned), {
     cache,
@@ -250,6 +254,7 @@ describe('useStoreModeCart', () => {
       { id: 'pb', itemId: 'jif-creamy', itemName: 'Jif' },
     ]);
     seedTab(cache, true, []);
+    seedList(cache);
     const { result } = renderHookWithApollo(
       () => ({ cart: useStoreModeCart(LIST, JIF), client: useApolloClient() }),
       { cache, operationMocks: [] },
@@ -268,6 +273,7 @@ describe('useStoreModeCart', () => {
       { id: 'pb', itemId: 'jif-creamy', itemName: 'Jif' },
     ]);
     seedTab(cache, true, []);
+    seedList(cache);
     const { result } = renderHookWithApollo(() => useStoreModeCart(LIST, JIF), {
       cache,
       operationMocks: [

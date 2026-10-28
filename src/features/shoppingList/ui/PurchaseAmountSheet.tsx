@@ -36,8 +36,8 @@ interface PurchaseAmountSheetItem {
 interface PurchaseAmountSheetProps {
   visible: boolean;
   item: PurchaseAmountSheetItem | null;
-  /** The code the list records a price in (`useListCurrency`). */
-  currency: string;
+  /** The code the list records a price in (`useListCurrency`); null names none. */
+  currency: string | null;
   onClose: () => void;
   /**
    * `totalPrice` is what the shopper paid for the whole quantity — the receipt
@@ -201,9 +201,11 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               {t('labels.totalPaid')}
             </SectionHeader>
             <View style={styles.inputRow}>
-              <Text role="body" tone="secondary" style={styles.prefix}>
-                {currencySymbol(currency)}
-              </Text>
+              {currency ? (
+                <Text role="body" tone="secondary" style={styles.prefix}>
+                  {currencySymbol(currency)}
+                </Text>
+              ) : null}
               <ThemedBottomSheetTextInput
                 style={styles.input}
                 value={priceInput}
