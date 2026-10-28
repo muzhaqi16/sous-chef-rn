@@ -400,6 +400,93 @@ describe('useToggleShoppingItem — toggleItem', () => {
   });
 });
 
+// Store mode's tick: it only ever puts a line in the cart. The server answers
+// a bare claim of the state a line already holds with no write.
+describe('useToggleShoppingItem — claimPurchased', () => {
+  const mockRefetch = jest.fn().mockResolvedValue(undefined);
+  const purchasedRow = {
+    __typename: 'ShoppingListItem',
+    id: 'item-1',
+    purchaseInfo: {
+      __typename: 'ShoppingListItemPurchaseInfo',
+      isPurchased: true,
+    },
+  };
+
+  const renderClaim = (cache: ReturnType<typeof seedCache>) => {
+    const recorded: Array<Record<string, unknown>> = [];
+    const hook = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { cache, operationMocks: [createToggleMock(recorded, purchasedRow)] },
+    );
+    return { ...hook, recorded };
+  };
+
+  it('puts an open line in the cart', async () => {
+    const cache = seedShoppingItem();
+    const { result, recorded } = renderClaim(cache);
+
+    await act(async () => {
+      await result.current.claimPurchased('item-1', { variation: 'var-1' });
+    });
+
+    expect(recorded).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: {
+            isPurchased: true,
+            purchasedItem: { variation: 'var-1' },
+          },
+        },
+      },
+    ]);
+    expect(readPurchased(cache)).toBe(true);
+    expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps a line another member already ticked in the cart', async () => {
+    const cache = seedShoppingItem({ isPurchased: true });
+    const { result, recorded } = renderClaim(cache);
+
+    await act(async () => {
+      await result.current.claimPurchased('item-1');
+    });
+
+    expect(recorded).toEqual([
+      {
+        input: {
+          id: 'item-1',
+          version: 3,
+          purchaseTracking: { isPurchased: true },
+        },
+      },
+    ]);
+    expect(readPurchased(cache)).toBe(true);
+    expect(moveShoppingListItemToPurchased).not.toHaveBeenCalled();
+    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
+  });
+
+  it('leaves the line purchased when the same tick is sent again', async () => {
+    const cache = seedShoppingItem();
+    const { result, recorded } = renderClaim(cache);
+
+    await act(async () => {
+      await result.current.claimPurchased('item-1');
+    });
+    await act(async () => {
+      await result.current.claimPurchased('item-1');
+    });
+
+    expect(recorded).toHaveLength(2);
+    expect(readPurchased(cache)).toBe(true);
+    // Counted into the cart once: a second move would count it twice.
+    expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
+    expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
+  });
+});
+
 describe('useToggleShoppingItem — recordPurchase', () => {
   const mockRefetch = jest.fn().mockResolvedValue(undefined);
 

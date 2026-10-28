@@ -309,6 +309,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           ? {
               label: t('barcode.addToCartWithPrice'),
               onPress: () => setIsAskingPrice(true),
+              // A second add racing the first could leave its tick unpriced.
+              disabled: isLoading,
             }
           : undefined
       }

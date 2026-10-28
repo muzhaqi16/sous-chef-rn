@@ -62,7 +62,7 @@ export function useStoreModeCart(
     usePreferredCurrency(),
   );
   // A refused tick re-reads both tabs from the server, as store mode's does.
-  const { toggleItem, recordPurchase } = useToggleShoppingItem({
+  const { claimPurchased, recordPurchase } = useToggleShoppingItem({
     listId,
     refetch: () => Promise.all([toBuy.refetch(), cart.refetch()]),
   });
@@ -102,7 +102,10 @@ export function useStoreModeCart(
     unit: open?.unit ? { id: open.unit.id, symbol: open.unit.symbol } : null,
     /** A line for the product is already in the cart. */
     inCart: match?.inCart ?? false,
-    /** Ticks a line; with what the price sheet took, records what it cost. */
+    /**
+     * Puts a line in the cart, never out of it (another member may have
+     * ticked it already); with what the price sheet took, records what it cost.
+     */
     tick: (
       lineId: string,
       paid: { quantity: number; totalPrice: number | null } | null,
@@ -120,6 +123,6 @@ export function useStoreModeCart(
             },
             bought,
           )
-        : toggleItem(lineId, bought),
+        : claimPurchased(lineId, bought),
   };
 }

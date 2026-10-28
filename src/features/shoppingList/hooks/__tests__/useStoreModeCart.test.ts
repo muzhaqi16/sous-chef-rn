@@ -12,11 +12,11 @@ import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { useStoreModeCart } from '../useStoreModeCart';
 import { UseStoreModeCart_ListFragmentDoc } from '../useStoreModeCart.generated';
 
-const mockToggleItem = jest.fn();
+const mockClaimPurchased = jest.fn();
 const mockRecordPurchase = jest.fn();
 jest.mock('../mutations/useToggleShoppingItem', () => ({
   useToggleShoppingItem: () => ({
-    toggleItem: (...args: unknown[]) => mockToggleItem(...args),
+    claimPurchased: (...args: unknown[]) => mockClaimPurchased(...args),
     recordPurchase: (...args: unknown[]) => mockRecordPurchase(...args),
   }),
 }));
@@ -189,22 +189,27 @@ describe('useStoreModeCart', () => {
     expect(result.current.inCart).toBe(true);
   });
 
-  it('ticks with no price through the plain toggle', async () => {
-    mockToggleItem.mockResolvedValue(true);
+  // A claim, not a flip: a line another member ticked stays in the cart.
+  it('ticks with no price by claiming the line purchased', async () => {
+    mockClaimPurchased.mockResolvedValue(true);
     const { result } = renderCart([]);
 
     await expect(result.current.tick('pb', null)).resolves.toBe(true);
-    expect(mockToggleItem).toHaveBeenCalledWith('pb', { itemId: 'jif-creamy' });
+    expect(mockClaimPurchased).toHaveBeenCalledWith('pb', {
+      itemId: 'jif-creamy',
+    });
     expect(mockRecordPurchase).not.toHaveBeenCalled();
   });
 
   it("names the scanned barcode's record as what was bought, so the price lands on the product", async () => {
-    mockToggleItem.mockResolvedValue(true);
+    mockClaimPurchased.mockResolvedValue(true);
     const { result } = renderCart([], [], { ...JIF, variationId: 'var-jif' });
 
     await result.current.tick('pb', null);
 
-    expect(mockToggleItem).toHaveBeenCalledWith('pb', { variation: 'var-jif' });
+    expect(mockClaimPurchased).toHaveBeenCalledWith('pb', {
+      variation: 'var-jif',
+    });
   });
 
   it('records the total the sheet took as a price per unit', async () => {
@@ -218,6 +223,6 @@ describe('useStoreModeCart', () => {
       { purchasedQuantity: 2, purchasedPrice: 3.5 },
       { itemId: 'jif-creamy' },
     );
-    expect(mockToggleItem).not.toHaveBeenCalled();
+    expect(mockClaimPurchased).not.toHaveBeenCalled();
   });
 });

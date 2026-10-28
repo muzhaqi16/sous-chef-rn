@@ -14,6 +14,7 @@ interface ActionButtonsProps {
   alternateAction?: {
     label: string;
     onPress: () => void;
+    disabled?: boolean;
   };
 }
 
@@ -41,6 +42,7 @@ export const ActionButtons: React.FC<ActionButtonsProps> = ({
           variant="ghost"
           size="large"
           fullWidth
+          disabled={alternateAction.disabled}
         >
           {alternateAction.label}
         </Button>

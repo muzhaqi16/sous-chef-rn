@@ -5,7 +5,7 @@
 // `useStoreModeCart.test.ts`).
 
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
@@ -264,6 +264,26 @@ describe('SearchResults from store mode', () => {
     );
     expect(mockTick).not.toHaveBeenCalled();
     expect(onScanAnother).not.toHaveBeenCalled();
+  });
+
+  // Two adds racing for one line could leave the priced one unrecorded.
+  it('offers no add with price while an add is in flight', async () => {
+    let finish!: (added: { outcome: 'kept'; rowId: string }) => void;
+    mockAddToShoppingList.mockReturnValue(
+      new Promise(resolve => {
+        finish = resolve;
+      }),
+    );
+    renderWithApollo(<SearchResults {...props} />);
+    const priceAction = () =>
+      screen.getByTestId('alternate-btn').props.accessibilityState;
+    expect(priceAction()).toEqual({ disabled: false });
+
+    await userEvent.setup().press(screen.getByTestId('primary-btn'));
+
+    await waitFor(() => expect(priceAction()).toEqual({ disabled: true }));
+    await act(async () => finish({ outcome: 'kept', rowId: 'new-1' }));
+    await waitFor(() => expect(mockTick).toHaveBeenCalledWith('new-1', null));
   });
 
   it('records what the shelf price sheet took', async () => {

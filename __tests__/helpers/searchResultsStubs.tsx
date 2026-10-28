@@ -26,8 +26,8 @@ export const ProductResultCard = ({
 );
 
 /**
- * Each action as a button: `primary-btn` (its `disabled` as accessibility
- * state only, so a press still reaches the screen) and `alternate-btn`.
+ * Each action as a button, `primary-btn` and `alternate-btn`, with its
+ * `disabled` as accessibility state only, so a press still reaches the screen.
  */
 export const ActionButtons = ({
   primaryAction,
@@ -45,7 +45,11 @@ export const ActionButtons = ({
       <Text>{primaryAction.label}</Text>
     </Pressable>
     {alternateAction ? (
-      <Pressable testID="alternate-btn" onPress={alternateAction.onPress}>
+      <Pressable
+        testID="alternate-btn"
+        accessibilityState={{ disabled: !!alternateAction.disabled }}
+        onPress={alternateAction.onPress}
+      >
         <Text>{alternateAction.label}</Text>
       </Pressable>
     ) : null}
