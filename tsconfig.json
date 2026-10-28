@@ -16,6 +16,7 @@
       "#/test-utils/*": ["./__tests__/helpers/*"],
       "#/*": ["./src/*"],
       "#assets": ["./src/assets"],
+      "#assets/*": ["./src/assets/*"],
       "#bootstrap": ["./src/bootstrap"],
       "#bootstrap/*": ["./src/bootstrap/*"],
       "#components": ["./src/components"],
