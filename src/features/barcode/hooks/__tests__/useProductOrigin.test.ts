@@ -157,4 +157,41 @@ describe('useProductOrigin', () => {
       ]),
     );
   });
+
+  // The wire can carry a source this build's enum lacks, which no mock can
+  // state: the cache holds what an older build parsed. The line stands,
+  // credited to nobody.
+  it('credits nobody for a source this build predates', async () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: cache.identify({ __typename: 'Item', id: 'item-1' }),
+      fragment: UseProductOrigin_ItemFragmentDoc,
+      fragmentName: 'useProductOrigin_item',
+      data: {
+        __typename: 'Item',
+        id: 'item-1',
+        origin: null,
+        brandOwner: {
+          __typename: 'BrandOwnerFact',
+          name: 'Acme Foods',
+          source: 'GROCER_X' as unknown as ExternalSource,
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => useProductOrigin('item-1', undefined),
+      { cache, operationMocks: [] },
+    );
+
+    await waitFor(() =>
+      expect(result.current.lines).toEqual([
+        {
+          key: 'owner',
+          text: t('barcode.origin.ownedBy', { owner: 'Acme Foods' }),
+          source: null,
+        },
+      ]),
+    );
+  });
 });

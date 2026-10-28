@@ -37,6 +37,9 @@ function perBasis(t: Translate, basis: PriceBasis, price: string): string {
       return t('barcode.price.perL', { price });
     case PriceBasis.Each:
       return t('barcode.price.each', { price });
+    // A basis this build predates: the price alone, never a blank label.
+    default:
+      return price;
   }
 }
 

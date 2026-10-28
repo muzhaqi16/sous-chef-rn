@@ -15,6 +15,7 @@ import {
   HouseholdPricePaidDocument,
   HouseholdUsualUnitPriceDocument,
   StorePriceComparisonDocument,
+  UseStorePriceMemory_ItemFragmentDoc,
 } from '../useStorePriceMemory.generated';
 import { useStorePriceMemory } from '../useStorePriceMemory';
 
@@ -163,6 +164,46 @@ describe('useStorePriceMemory', () => {
       onSale: true,
     });
     expect(result.current.usual).toBeNull();
+  });
+
+  // The wire can carry a basis this build's enum lacks, which no mock can
+  // state: the cache holds what an older build parsed. The price shows alone.
+  it('shows the bare price on a basis this build predates', async () => {
+    const cache = makeCache();
+    cache.writeFragment({
+      id: cache.identify({ __typename: 'Item', id: 'pb' }),
+      fragment: UseStorePriceMemory_ItemFragmentDoc,
+      fragmentName: 'useStorePriceMemory_item',
+      variables: { homeId: 'home-1' },
+      data: {
+        __typename: 'Item',
+        id: 'pb',
+        usualUnit: { __typename: 'Unit', id: 'u-jar' },
+        householdPriceSummary: {
+          __typename: 'HouseholdPriceSummary',
+          currency: { __typename: 'Currency', ...USD },
+          lastPaid: {
+            __typename: 'HouseholdPaidPrice',
+            unitPrice: 6.49,
+            unit: { __typename: 'Unit', ...JAR },
+            normalizedPrice: 6.5,
+            basis: 'PER_LB' as unknown as PriceBasis,
+            store: null,
+            paidAt: PAID_AT,
+            onSale: false,
+          },
+          usual: null,
+        },
+      },
+    });
+
+    const { result } = renderHookWithApollo(
+      () => useStorePriceMemory('pb', 'list-1', JAR_UNIT),
+      { cache, operationMocks: [comparisonMock([]).mock] },
+    );
+
+    await waitFor(() => expect(result.current.lastPaid).not.toBeNull());
+    expect(result.current.lastPaid?.price).toBe(usd(6.5));
   });
 
   it('reads every line on the usual basis, and a last price off it per its own unit', async () => {
