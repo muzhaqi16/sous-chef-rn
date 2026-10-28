@@ -33,6 +33,7 @@ import {
   WriteHeldStock_ShownInFragmentDoc,
 } from '#features/pantry/cache/stock.generated';
 import { UsePantryItemActions_IdFragmentDoc } from '../usePantryItemActions.generated';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
@@ -61,7 +62,11 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
     // One entry per fragment the hook reads back, so the fixture is held to
     // each of the three selections rather than to its own keys.
     ids.flatMap(id => {
-      const unit = { __typename: 'Unit', id: 'unit-1', symbol: 'ea' };
+      const unit = asAbbreviation({
+        __typename: 'Unit',
+        id: 'unit-1',
+        symbol: 'ea',
+      });
       const data = {
         __typename: 'PantryItem',
         id,
@@ -85,8 +90,8 @@ const cachedItem = (cache: ReturnType<typeof seedPantryItems>, id = 'item-1') =>
     fragment: STOCK,
   });
 
-const PIECE = { __typename: 'Unit', id: 'pc', symbol: 'pc' };
-const DOZEN = {
+const PIECE = asAbbreviation({ __typename: 'Unit', id: 'pc', symbol: 'pc' });
+const DOZEN = asAbbreviation({
   __typename: 'Unit',
   id: 'doz',
   symbol: 'doz',
@@ -95,7 +100,7 @@ const DOZEN = {
   baseUnitId: 'pc',
   conversionFactor: 12,
   commonFractions: [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4],
-};
+});
 
 /** A stack of eggs counted in pieces and shown in dozens, as the server holds one. */
 const seedEggs = (held: number) => {
@@ -295,6 +300,45 @@ describe('usePantryItemActions', () => {
 
       expect(result.current.restockModal.visible).toBe(true);
       expect(result.current.restockModal.itemId).toBe('item-1');
+      expect(result.current.restockModal.reason).toBeUndefined();
+    });
+  });
+
+  describe('openRestockAsking', () => {
+    const REASON = "We don't know how much one package of this holds.";
+
+    it('opens the restock modal with the reason the amount is asked', () => {
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { cache: seedPantryItems() },
+      );
+
+      let opened;
+      act(() => {
+        opened = result.current.openRestockAsking('item-1', REASON);
+      });
+
+      expect(opened).toBe(true);
+      expect(result.current.restockModal).toMatchObject({
+        visible: true,
+        itemId: 'item-1',
+        reason: REASON,
+      });
+    });
+
+    it('says it could not for an item the cache does not hold', () => {
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { cache: seedPantryItems() },
+      );
+
+      let opened;
+      act(() => {
+        opened = result.current.openRestockAsking('item-unknown', REASON);
+      });
+
+      expect(opened).toBe(false);
+      expect(result.current.restockModal.visible).toBe(false);
     });
   });
 

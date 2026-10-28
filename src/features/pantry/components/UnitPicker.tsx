@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { unitLabel } from '#/utils/formatQuantity';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import Animated, { FadeIn, FadeOut } from 'react-native-reanimated';
@@ -51,9 +52,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
     .flatMap(g => g.units)
     .find(u => u.unitId === selectedUnitId);
 
-  const selectedLabel = selectedUnit
-    ? selectedUnit.unitSymbol || selectedUnit.unitName
-    : undefined;
+  const selectedLabel = selectedUnit ? unitLabel(selectedUnit.unit) : undefined;
 
   const isSelectedLowConfidence =
     selectedUnit?.conversionConfidence != null &&
@@ -139,8 +138,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                       onPress={() =>
                         handleSelect({
                           unitId: unit.unitId,
-                          unitSymbol: unit.unitSymbol,
-                          unitName: unit.unitName,
+                          unit: unit.unit,
                           unitType: unit.unitType,
                           isTrackingUnit: unit.isTrackingUnit,
                           conversionRatio: unit.conversionRatio,
@@ -156,7 +154,7 @@ export const UnitPicker: React.FC<UnitPickerProps> = ({
                             commonStyles.bottomSheetOptionTextSelected,
                         ]}
                       >
-                        {unit.unitSymbol || unit.unitName}
+                        {unitLabel(unit.unit)}
                         {isLowConfidence ? ' ~' : null}
                       </Text>
                       {selected ? (

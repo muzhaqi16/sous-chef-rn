@@ -16,6 +16,7 @@ import {
   recipeFormIngredient,
 } from '#/test-utils/fixtures/recipeFixtures';
 import { useRecipeForm } from '../useRecipeForm';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -479,12 +480,12 @@ describe('useRecipeForm', () => {
               id: 'ing-1',
               name: 'all-purpose flour',
               originalText: '2 ½ cups all-purpose flour, sifted',
-              unit: {
+              unit: asAbbreviation({
                 __typename: 'Unit',
                 id: 'u-cup',
                 name: 'cup',
                 symbol: 'cup',
-              },
+              }),
             }),
           ],
         }),
@@ -551,12 +552,12 @@ describe('useRecipeForm', () => {
                 name: 'Olive oil',
                 imageUrl: null,
               },
-              unit: {
+              unit: asAbbreviation({
                 __typename: 'Unit',
                 id: 'unit-tbsp',
                 name: 'tablespoon',
                 symbol: 'tbsp',
-              },
+              }),
               isOptional: false,
               notes: null,
               preparation: null,

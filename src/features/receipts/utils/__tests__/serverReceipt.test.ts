@@ -23,6 +23,7 @@ const line = (
   code: null,
   quantity: null,
   unit: null,
+  measureUnit: null,
   unitPrice: null,
   amount: null,
   appliesTo: null,
@@ -105,6 +106,37 @@ describe('fromServerReceipt', () => {
         price: 1.26,
       },
     ]);
+  });
+
+  it('carries the known unit a printed one names to the review line', () => {
+    const piece: ServerLine['measureUnit'] = {
+      __typename: 'Unit',
+      id: 'unit-pc',
+      symbol: 'pc',
+      localizedSymbol: 'pz',
+      symbolOther: 'pz',
+    };
+    const [named, unnamed] = receiptReviewLines(
+      fromServerReceipt({
+        merchant: merchant(null),
+        lines: [
+          line({
+            text: 'TOMATOES 2 PC',
+            kind: ReceiptLineKind.Item,
+            unit: 'pc',
+            measureUnit: piece,
+          }),
+          line({
+            text: 'BASIL 1 BNCH',
+            kind: ReceiptLineKind.Item,
+            unit: 'bnch',
+          }),
+        ],
+      }),
+    );
+    expect(named).toMatchObject({ unit: 'pc', measureUnit: piece });
+    expect(unnamed).toMatchObject({ unit: 'bnch' });
+    expect(unnamed).not.toHaveProperty('measureUnit');
   });
 
   it('copies the figures the server gives, and reads none from the text', () => {

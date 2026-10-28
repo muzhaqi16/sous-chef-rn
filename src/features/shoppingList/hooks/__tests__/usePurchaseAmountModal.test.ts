@@ -3,6 +3,7 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { DisplayFormat, UnitType } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { usePurchaseAmountModal } from '../usePurchaseAmountModal';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 const makeItem = (
   overrides: Partial<ShoppingListItemDisplayFragment> = {},
@@ -25,13 +26,13 @@ const makeItem = (
     movedToPantryAt: null,
     isPurchased: false,
   },
-  unit: {
+  unit: asAbbreviation({
     __typename: 'Unit',
     id: 'u1',
     name: 'Liter',
     symbol: 'L',
     type: UnitType.Volume,
-  },
+  }),
   item: null,
   ...overrides,
 });

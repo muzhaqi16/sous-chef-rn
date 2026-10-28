@@ -14,7 +14,11 @@ import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import Chip from '#features/shoppingList/components/Chip';
 import { Icon } from '#components/atoms/Icon';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
+import {
+  formatQuantityForInput,
+  unitLabel,
+  type UnitLabelSource,
+} from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { localizeNumericHint } from '#/utils/formatters/number';
@@ -23,11 +27,17 @@ import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface ItemUnit {
   id: string;
-  symbol: string;
-  name: string;
+  /** The unit as the line holds or reads it: its chip, and what the field shows. */
+  unit: UnitLabelSource;
   isDefault?: boolean;
   isPreferred?: boolean;
 }
+
+// The stored label names the unit as shown, or as the API wrote it ("Tbsps").
+const namesUnit = ({ unit }: ItemUnit, text: string): boolean =>
+  [unitLabel(unit), unit.symbol, unit.name].some(
+    label => !!label && label.toLowerCase() === text.toLowerCase(),
+  );
 
 interface QuantityEditSheetItem {
   id: string;
@@ -96,7 +106,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     item?.itemUnits?.slice().sort((a, b) => {
       if (a.isPreferred !== b.isPreferred) return a.isPreferred ? -1 : 1;
       if (a.isDefault !== b.isDefault) return a.isDefault ? -1 : 1;
-      return a.symbol.localeCompare(b.symbol);
+      return unitLabel(a.unit).localeCompare(unitLabel(b.unit));
     }) ?? [];
 
   // Seed on open / item-id change only (render-time state update); seeding on
@@ -112,13 +122,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
       // Case-insensitive match against the chips, so "Tbsps" displays as "tbsp".
       const storedUnit = item.unitName;
       if (storedUnit && item.itemUnits && item.itemUnits.length > 0) {
-        const matchingUnit = item.itemUnits.find(
-          u =>
-            u.symbol.toLowerCase() === storedUnit.toLowerCase() ||
-            u.name.toLowerCase() === storedUnit.toLowerCase(),
-        );
+        const matchingUnit = item.itemUnits.find(u => namesUnit(u, storedUnit));
         if (matchingUnit) {
-          setUnitName(matchingUnit.symbol);
+          setUnitName(unitLabel(matchingUnit.unit));
           setUnitId(matchingUnit.id);
         } else {
           setUnitName(storedUnit.toLowerCase());
@@ -161,9 +167,9 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
     stepTo(Math.max(0, stepBase - 1));
   };
 
-  const handleUnitChipPress = (unit: ItemUnit) => {
-    setUnitName(unit.symbol);
-    setUnitId(unit.id);
+  const handleUnitChipPress = (chip: ItemUnit) => {
+    setUnitName(unitLabel(chip.unit));
+    setUnitId(chip.id);
   };
 
   const handleQuantityPress = () => {
@@ -299,12 +305,12 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
             {itemUnits.length > 0 && (
               <View style={styles.chipsContainer}>
-                {itemUnits.map(unit => (
+                {itemUnits.map(chip => (
                   <Chip
-                    key={unit.id}
-                    label={unit.symbol}
-                    selected={unitName === unit.symbol}
-                    onPress={() => handleUnitChipPress(unit)}
+                    key={chip.id}
+                    label={unitLabel(chip.unit)}
+                    selected={unitName === unitLabel(chip.unit)}
+                    onPress={() => handleUnitChipPress(chip)}
                   />
                 ))}
               </View>

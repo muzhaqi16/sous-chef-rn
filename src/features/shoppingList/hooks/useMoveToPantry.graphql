@@ -19,6 +19,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   # The server's computed costs, so the moved row's detail screen has them
@@ -48,6 +50,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   remainingPortions
   activeBatchCount
@@ -65,6 +69,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     displayAsFraction
   }
@@ -72,6 +78,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   storageLocation {
     id
@@ -84,12 +92,16 @@ fragment useMoveToPantry_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalNetWeight
   }
@@ -100,6 +112,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalContentUnits
     remainingWeight
@@ -107,6 +121,8 @@ fragment useMoveToPantry_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
 }

@@ -8,6 +8,7 @@ import {
 import type { HouseholdAlert } from '#domain/dietary';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { IngredientTile } from '../IngredientTile';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#components/atoms/CachedImage', () => ({
   CachedImage: ({ uri }: { uri: string }) => {
@@ -35,7 +36,12 @@ const ingredient = (
   section: null,
   item: null,
   unit: symbol
-    ? { __typename: 'Unit', id: `unit-${symbol}`, name: symbol, symbol }
+    ? asAbbreviation({
+        __typename: 'Unit',
+        id: `unit-${symbol}`,
+        name: symbol,
+        symbol,
+      })
     : null,
   convertedQuantity: null,
   ...overrides,
@@ -89,7 +95,11 @@ describe('IngredientTile', () => {
         convertedQuantity: {
           __typename: 'ConvertedValue',
           value: 236.588,
-          unit: { __typename: 'Unit', id: 'unit-ml', symbol: 'ml' },
+          unit: asAbbreviation({
+            __typename: 'Unit',
+            id: 'unit-ml',
+            symbol: 'ml',
+          }),
         },
       }),
     );

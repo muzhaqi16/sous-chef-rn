@@ -17,6 +17,7 @@ import {
   type UseStoreShelfPrices_ItemFragment,
 } from '../useStoreShelfPrices.generated';
 import { useStoreShelfPrices } from '../useStoreShelfPrices';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(),
@@ -35,12 +36,16 @@ const USD: StorePrice['currency'] = {
   decimalPlaces: 2,
 };
 const usd = (amount: number) => formatCurrency(amount, 'USD', 2);
-const LB: StorePrice['unit'] = { __typename: 'Unit', id: 'u-lb', symbol: 'lb' };
-const PIECE: StorePrice['unit'] = {
+const LB: StorePrice['unit'] = asAbbreviation({
+  __typename: 'Unit',
+  id: 'u-lb',
+  symbol: 'lb',
+});
+const PIECE: StorePrice['unit'] = asAbbreviation({
   __typename: 'Unit',
   id: 'u-pc',
   symbol: 'pc',
-};
+});
 const SEEN = '2026-10-16T18:11:52.922Z';
 
 const store = (id: string, name: string): StorePrice['store'] => ({

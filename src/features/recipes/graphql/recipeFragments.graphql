@@ -18,6 +18,8 @@ fragment RecipeIngredientFragment on RecipeIngredient {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   image
   isOptional

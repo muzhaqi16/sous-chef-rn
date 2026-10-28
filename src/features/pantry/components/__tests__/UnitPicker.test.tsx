@@ -13,8 +13,7 @@ const groups: PickableUnitGroup[] = [
     units: [
       {
         unitId: 'g',
-        unitName: 'gram',
-        unitSymbol: 'g',
+        unit: { symbol: 'g', name: 'gram' },
         unitType: UnitType.Weight,
         isTrackingUnit: true,
         conversionRatio: 1,
@@ -22,8 +21,7 @@ const groups: PickableUnitGroup[] = [
       },
       {
         unitId: 'kg',
-        unitName: 'kilogram',
-        unitSymbol: 'kg',
+        unit: { symbol: 'kg', name: 'kilogram' },
         unitType: UnitType.Weight,
         isTrackingUnit: false,
         conversionRatio: 1000,

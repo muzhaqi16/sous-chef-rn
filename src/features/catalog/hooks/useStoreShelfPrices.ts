@@ -14,6 +14,7 @@ import {
   UseStoreShelfPrices_ListFragmentDoc,
   type UseStoreShelfPrices_ItemFragment,
 } from './useStoreShelfPrices.generated';
+import { unitLabel } from '#/utils/formatQuantity';
 
 /** One store's shelf price for an item, worded for its row. */
 export interface StoreShelfPriceRow {
@@ -81,7 +82,10 @@ function rowOf(
     storeName: node.store.name,
     price: perPiece
       ? t('labels.pricePer.each', { price: priceText })
-      : t('labels.pricePer.unit', { price: priceText, unit: node.unit.symbol }),
+      : t('labels.pricePer.unit', {
+          price: priceText,
+          unit: unitLabel(node.unit),
+        }),
     perBasis:
       node.normalizedBasis &&
       node.normalizedPrice != null &&

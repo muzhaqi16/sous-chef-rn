@@ -21,8 +21,8 @@ describe('validateDeductionQuantity', () => {
       validateDeductionQuantity(
         '1',
         shared(0.25, {
-          trackingUnitSymbol: 'kg',
-          activeUnitSymbol: 'kg',
+          trackingUnit: { symbol: 'kg' },
+          activeUnit: { symbol: 'kg' },
           displayAsFractionOf: () => false,
         }),
         'consume',

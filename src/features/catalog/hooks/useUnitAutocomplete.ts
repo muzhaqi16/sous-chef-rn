@@ -16,9 +16,24 @@ export interface UnitItem {
   id: string;
   name: string;
   symbol: string;
+  localizedSymbol?: string;
+  symbolOther?: string;
+  localizedName?: string;
+  nameOther?: string;
   type?: UnitType;
   abbreviation?: string;
 }
+
+// The app's language as well as the canonical English, so "tbsp" still finds
+// tablespoon under Italian.
+const UNIT_SEARCH_KEYS: ReadonlyArray<keyof UnitItem> = [
+  'symbol',
+  'name',
+  'localizedSymbol',
+  'symbolOther',
+  'localizedName',
+  'nameOther',
+];
 
 /** 24 hours in milliseconds — matches backend refresh cadence for common units */
 const UNITS_CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -98,7 +113,7 @@ export function useUnitAutocomplete() {
   const fallbackItems: UnitItem[] = cachedUnits;
 
   const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
-    return [...filterByTerm(items, term, ['symbol', 'name'])];
+    return [...filterByTerm(items, term, UNIT_SEARCH_KEYS)];
   };
 
   const autocomplete = useAutocompleteSearch<UnitItem>({

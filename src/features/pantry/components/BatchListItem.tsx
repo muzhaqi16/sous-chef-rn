@@ -13,7 +13,10 @@ import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  formatQuantityWithUnit,
+} from '#/utils/formatQuantity';
 import { shownStock } from '#domain/stockDisplay';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
@@ -27,11 +30,6 @@ import { useToday } from '#hooks/app/useToday';
 
 interface BatchListItemProps {
   batch: PantryItemBatchFragment;
-  unitSymbol?: string;
-  /** The unit every batch's own package size is recorded in. */
-  netWeightUnitSymbol?: string;
-  /** The stored unit `netWeight` is in, which its reading must still match. */
-  netWeightUnitId?: string;
   onOpen?: (batchId: string) => void;
   onWaste?: (batchId: string) => void;
   /** Offered on a weighed batch: its package size can be corrected. */
@@ -65,9 +63,6 @@ const formatDate = (dateString: string | null | undefined) => {
 
 const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   batch: batchSource,
-  unitSymbol,
-  netWeightUnitSymbol,
-  netWeightUnitId,
   onOpen,
   onWaste,
   onCorrectSize,
@@ -97,18 +92,19 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
   const shown = stack.complete
     ? shownStock(batch.quantity, stack.data.unit, stack.data.displayUnit)
     : null;
+  const netWeightUnit = stack.complete ? stack.data.netWeightUnit : null;
 
   // In the user's unit system while the reading still describes the stored
   // size; after a local correction, as stored until the server answers.
   const sizeReading = currentReading(
     batch.packageSize,
-    { value: batch.netWeight, unitId: netWeightUnitId },
+    { value: batch.netWeight, unitId: netWeightUnit?.id },
     readingSystem,
   );
   const sizeText = sizeReading
     ? formatReading(sizeReading)
-    : batch.netWeight != null && netWeightUnitSymbol
-    ? `${formatQuantityForDisplay(batch.netWeight)} ${netWeightUnitSymbol}`
+    : batch.netWeight != null && netWeightUnit
+    ? formatQuantityWithUnit(batch.netWeight, netWeightUnit)
     : null;
 
   const expiryInfo = getExpiryText(batch.expiresOn, today, t);
@@ -135,8 +131,9 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
         </View>
 
         <Text role="caption" style={styles.quantityText}>
-          {formatQuantityForDisplay(shown?.quantity ?? batch.quantity)}{' '}
-          {shown?.unit.symbol ?? unitSymbol ?? ''}
+          {shown
+            ? formatQuantityWithUnit(shown.quantity, shown.unit)
+            : formatQuantityForDisplay(batch.quantity)}
         </Text>
 
         {sizeText !== null && (

@@ -8,8 +8,9 @@ import {
   PantryUnitChangeResolution,
 } from '#/graphql/generated/schemaTypes';
 import {
-  formatQuantityForDisplay,
+  formatQuantityWithUnit,
   resolveQuantityNotation,
+  unitLabel,
 } from '#/utils/formatQuantity';
 import type {
   ChangeOutcome,
@@ -78,9 +79,9 @@ interface Option {
 type PreviewUnit = UnitChangePreview['toUnit'];
 
 const amountText = (quantity: number | null | undefined, unit: PreviewUnit) =>
-  `${formatQuantityForDisplay(quantity, {
+  formatQuantityWithUnit(quantity, unit, {
     notation: resolveQuantityNotation(null, unit.displayAsFraction),
-  })} ${unit.symbol}`;
+  });
 
 /** The stack as it will read: the server's text, so no dozen is worked out here. */
 const shownAfter = (preview: UnitChangePreview) =>
@@ -166,7 +167,7 @@ function choiceMessage(
 
 function refusalText(preview: UnitChangePreview): string {
   if (preview.conflictingPantryItemId) {
-    return t('unitChange.conflicting', { unit: preview.toUnit.symbol });
+    return t('unitChange.conflicting', { unit: unitLabel(preview.toUnit) });
   }
   const field = preview.refusal?.field;
   const fieldKey = `errors.field.${field ?? ''}`;
@@ -247,7 +248,7 @@ async function decide(
       return null;
     case 'packageSize': {
       const packageSizeNeeded = t('unitChange.packageSizeNeeded', {
-        unit: toUnit.symbol,
+        unit: unitLabel(toUnit),
       });
       if (!setChoice) {
         deps.reportFieldError('netWeight', packageSizeNeeded);
@@ -256,7 +257,12 @@ async function decide(
       const picked = await ask<Option | 'packageSize'>(
         withNotice(
           choiceMessage(
-            [t('unitChange.packageSizeOrSet', { unit: toUnit.symbol, amount })],
+            [
+              t('unitChange.packageSizeOrSet', {
+                unit: unitLabel(toUnit),
+                amount,
+              }),
+            ],
             null,
             setChoice.value,
             amount,
@@ -275,7 +281,10 @@ async function decide(
       if (!setChoice) {
         deps.reportFieldError(
           'quantityInput',
-          t('unitChange.noRoute', { from: fromUnit.symbol, to: toUnit.symbol }),
+          t('unitChange.noRoute', {
+            from: unitLabel(fromUnit),
+            to: unitLabel(toUnit),
+          }),
         );
         return null;
       }
@@ -296,8 +305,8 @@ async function decide(
       };
       const lead = [
         t('unitChange.estimateChoice', {
-          from: fromUnit.symbol,
-          to: toUnit.symbol,
+          from: unitLabel(fromUnit),
+          to: unitLabel(toUnit),
         }),
       ];
       if (!setChoice) {

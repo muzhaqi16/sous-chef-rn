@@ -7,6 +7,7 @@ import {
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
+import { unitLabel } from '#/utils/formatQuantity';
 
 interface UnitAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -17,6 +18,7 @@ interface UnitAutocompleteFieldProps {
   required?: boolean;
   error?: string;
   testID?: string;
+  /** The picked unit's name and short form, in the app's language. */
   onUnitSelected?: (
     unitId: string | null,
     unitName: string | null,
@@ -62,8 +64,13 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
       loading={unit.isLoading}
       renderItem={item => (
         <AutocompleteRow
-          symbolText={item.symbol}
-          title={item.name}
+          // Where the short form is the name ("cucchiaio"), it shows once.
+          symbolText={
+            unitLabel(item) === unitLabel(item, { form: 'name' })
+              ? undefined
+              : unitLabel(item)
+          }
+          title={unitLabel(item, { form: 'name' })}
           trailingText={
             item.abbreviation ? `(${item.abbreviation})` : undefined
           }
@@ -71,8 +78,13 @@ export const UnitAutocompleteField: React.FC<UnitAutocompleteFieldProps> = ({
       )}
       keyExtractor={item => item.id}
       onSelect={item => {
-        onChangeText(item.symbol);
-        onUnitSelected?.(item.id, item.name, item.type, item.symbol);
+        onChangeText(unitLabel(item));
+        onUnitSelected?.(
+          item.id,
+          unitLabel(item, { form: 'name' }),
+          item.type,
+          unitLabel(item),
+        );
         unit.setSearchTerm('');
       }}
       autoCapitalize="none"

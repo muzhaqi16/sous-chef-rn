@@ -13,6 +13,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { UseAdjustPantryItemQuantity_PantryItemFragmentDoc } from '../useAdjustPantryItemQuantity.generated';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/services/errorService');
 
@@ -285,7 +286,7 @@ describe('useAdjustPantryItemQuantity', () => {
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 1360.78,
-        unit: { __typename: 'Unit', id: 'u-g', symbol: 'g' },
+        unit: asAbbreviation({ __typename: 'Unit', id: 'u-g', symbol: 'g' }),
       },
       isLowStock: false,
       remainingNetWeight: null,

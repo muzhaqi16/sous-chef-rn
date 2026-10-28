@@ -30,11 +30,8 @@ function semanticItemToSuggestion(node: SemanticItem): ItemSuggestion {
     displayUnit: null,
     defaultUnit: node.defaultConsumeUnit
       ? {
+          ...node.defaultConsumeUnit,
           __typename: 'ItemUnitSuggestion',
-          id: node.defaultConsumeUnit.id,
-          name: node.defaultConsumeUnit.name,
-          symbol: node.defaultConsumeUnit.symbol,
-          type: node.defaultConsumeUnit.type,
           isDefault: true,
           isPreferred: false,
         }

@@ -10,6 +10,7 @@ import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatQuantityForInput,
   type QuantityDisplayOptions,
+  unitLabel,
 } from '#utils/formatQuantity';
 import type { HeldUnit } from '#domain/stockAmount';
 import type { ScanAmount, ScannedItem } from '#features/barcode/types';
@@ -162,7 +163,7 @@ export function packageUnitFields(
   packageUnit: UnitChoice | null,
 ): Pick<ScanAmountFormValues, 'unitDisplay' | 'unitId' | 'unitType'> {
   return {
-    unitDisplay: packageUnit?.symbol ?? '',
+    unitDisplay: unitLabel(packageUnit),
     unitId: packageUnit?.id ?? null,
     unitType: packageUnit ? UnitType.Count : null,
   };
@@ -185,7 +186,7 @@ export function scanAmountDefaults(
     ),
     ...packageUnitFields(packageUnit),
     sizeInput: size ? formatQuantityForInput(size.value, AS_DECIMAL) : '',
-    sizeUnitDisplay: size?.unit.symbol ?? '',
+    sizeUnitDisplay: unitLabel(size?.unit),
     sizeUnitId: size?.unit.id ?? null,
     consumeUnitDisplay: '',
     consumeUnitId: null,

@@ -72,6 +72,8 @@ query ItemByLookup(
           id
           name
           symbol
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
         }
         # The scanned pack's PACKAGE size, read in each unit system with the
         # label's own figure: what the card and the add's size prefill show.
@@ -82,6 +84,7 @@ query ItemByLookup(
             value
             unitId
             symbol
+            localizedSymbol
             displayAsFraction
             type
           }
@@ -89,6 +92,7 @@ query ItemByLookup(
             value
             unitId
             symbol
+            localizedSymbol
             displayAsFraction
             type
           }
@@ -105,6 +109,7 @@ query ItemByLookup(
               value
               unitId
               symbol
+              localizedSymbol
               displayAsFraction
               type
             }
@@ -112,6 +117,7 @@ query ItemByLookup(
               value
               unitId
               symbol
+              localizedSymbol
               displayAsFraction
               type
             }
@@ -119,6 +125,8 @@ query ItemByLookup(
           container {
             id
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
           }
         }
         # The result's nutrition card and the full sheet it opens: the item's
@@ -154,6 +162,8 @@ query ItemByLookup(
           id
           name
           symbol
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
           type
           displayAsFraction
         }
@@ -162,6 +172,8 @@ query ItemByLookup(
         suggestedPackageUnit {
           id
           symbol
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
         }
         categories {
           id
@@ -217,6 +229,8 @@ fragment useSearchResults_item on Item {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   packageSize {
     value
@@ -225,6 +239,7 @@ fragment useSearchResults_item on Item {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -232,6 +247,7 @@ fragment useSearchResults_item on Item {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

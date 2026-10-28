@@ -300,6 +300,8 @@ query MatchRecipeIngredientsToPantry(
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     matchedPantryItem {
       id
@@ -308,12 +310,16 @@ query MatchRecipeIngredientsToPantry(
         id
         name
         symbol
+        localizedSymbol
+        symbolOther: localizedSymbol(quantity: 2)
       }
       displayAmount {
         quantity
         unit {
           id
           symbol
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
         }
       }
     }
@@ -324,12 +330,16 @@ query MatchRecipeIngredientsToPantry(
         id
         name
         symbol
+        localizedSymbol
+        symbolOther: localizedSymbol(quantity: 2)
       }
       displayAmount {
         quantity
         unit {
           id
           symbol
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
         }
       }
     }

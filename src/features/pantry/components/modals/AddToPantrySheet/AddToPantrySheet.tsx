@@ -33,6 +33,11 @@ interface AddToPantrySheetProps {
   pantryId: string | undefined;
   onClose: () => void;
   onItemAdded?: () => void;
+  /**
+   * A restock the server could not size: asks for the amount elsewhere, and
+   * says whether it could.
+   */
+  onRestockNeedsAmount?: (pantryItemId: string, reason: string) => boolean;
   initialSearchQuery?: string;
 }
 
@@ -42,6 +47,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   pantryId,
   onClose,
   onItemAdded,
+  onRestockNeedsAmount,
   initialSearchQuery = '',
 }) => {
   const { t } = useTranslation();
@@ -99,21 +105,25 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
 
   /**
    * Restock the row this pantry already stocks instead of creating a second
-   * one. The toast fires ahead of the result and is corrected on refusal — a
-   * queued restock has no result to wait for.
+   * one. The toast waits for the outcome, which a queued restock reaches at
+   * once: packages the server cannot size open a form, not a success.
    */
   const runRestock = async (
     pantryItemId: string,
     item: { id: string; name: string },
     removal: ReturnType<typeof removeSuggestion>,
   ) => {
-    toastService.success(t('addToPantry.restocked', { name: item.name }));
     const outcome = await restockItem(pantryItemId, item);
     if (outcome.status === 'rejected') {
+      const { sizeRefusal } = outcome;
+      if (sizeRefusal && onRestockNeedsAmount?.(pantryItemId, sizeRefusal)) {
+        return;
+      }
       restoreSuggestion(removal);
-      toastService.error(t('addToPantry.restockFailed'));
+      toastService.error(sizeRefusal ?? t('addToPantry.restockFailed'));
       return;
     }
+    toastService.success(t('addToPantry.restocked', { name: item.name }));
     onItemAdded?.();
   };
 

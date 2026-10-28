@@ -34,6 +34,7 @@ import { localizeNumericHint } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { refByIdOrName, typedItemRef } from '#/utils/refInput';
+import { unitLabel } from '#/utils/formatQuantity';
 
 type RouteParams = {
   listId: string;
@@ -114,9 +115,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   // Handle autocomplete item selection
   const handleItemSelect = (item: ItemSuggestion) => {
     setFieldValue('itemName', item.name);
-    if (item.defaultUnit?.symbol) {
-      setFieldValue('unit', item.defaultUnit.symbol);
-    }
+    const seededUnit = unitLabel(item.defaultUnit);
+    if (seededUnit) setFieldValue('unit', seededUnit);
     if (item.defaultUnit?.id) {
       setFieldValue('selectedUnitId', item.defaultUnit.id);
     }

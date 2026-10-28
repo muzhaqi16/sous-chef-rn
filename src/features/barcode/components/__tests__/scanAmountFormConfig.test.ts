@@ -13,6 +13,10 @@ import {
   scanAmountSchema,
   type ScanAmountFormValues,
 } from '../scanAmountFormConfig';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 const piece = { id: 'unit-pc', symbol: 'pc', type: UnitType.Count };
 const jar = { id: 'unit-jar', symbol: 'jar', type: UnitType.Count };
@@ -22,14 +26,15 @@ const reading = (
   value: number,
   id: string,
   symbol: string,
-): PackageSize['metric'] => ({
-  __typename: 'MeasureReading',
-  value,
-  unitId: id,
-  symbol,
-  displayAsFraction: false,
-  type: UnitType.Weight,
-});
+): PackageSize['metric'] =>
+  readingAsAbbreviation({
+    __typename: 'MeasureReading',
+    value,
+    unitId: id,
+    symbol,
+    displayAsFraction: false,
+    type: UnitType.Weight,
+  });
 
 const honey: ScannedItem = {
   id: 'item-honey',
@@ -86,11 +91,11 @@ describe('the package a scan is counted in', () => {
   describe('where households agree on a container', () => {
     const learned = {
       ...honey,
-      suggestedPackageUnit: {
+      suggestedPackageUnit: asAbbreviation({
         __typename: 'Unit',
         id: 'unit-jar',
         symbol: 'jar',
-      },
+      }),
     } satisfies ScannedItem;
 
     // `trackingUnit` reaches the households' container only for a sized pack.
@@ -101,7 +106,7 @@ describe('the package a scan is counted in', () => {
           null,
           [piece, cup],
         ),
-      ).toEqual({ __typename: 'Unit', ...jar });
+      ).toEqual(expect.objectContaining({ __typename: 'Unit', ...jar }));
     });
 
     it('still joins a counted stack the pantry holds', () => {
@@ -297,17 +302,19 @@ describe('a multipack', () => {
         metric: volume(250, 'unit-ml', 'ml'),
         imperial: volume(8.45, 'unit-floz', 'fl oz'),
       },
-      container: { __typename: 'Unit', ...can },
+      container: asAbbreviation({ __typename: 'Unit', ...can }),
     },
   };
 
   it('is counted in the container its label names', () => {
     expect(isMultipack(sixPack)).toBe(true);
-    expect(packageUnitOf(sixPack, null, [piece])).toEqual({
-      ...can,
-      __typename: 'Unit',
-      type: UnitType.Count,
-    });
+    expect(packageUnitOf(sixPack, null, [piece])).toEqual(
+      expect.objectContaining({
+        ...can,
+        __typename: 'Unit',
+        type: UnitType.Count,
+      }),
+    );
   });
 
   it('still joins a counted stack the pantry holds', () => {
@@ -319,11 +326,11 @@ describe('a multipack', () => {
   it('takes its label’s container over the one households count it in', () => {
     const learned = {
       ...sixPack,
-      suggestedPackageUnit: {
+      suggestedPackageUnit: asAbbreviation({
         __typename: 'Unit',
         id: 'unit-jar',
         symbol: 'jar',
-      },
+      }),
     } satisfies ScannedItem;
     expect(packageUnitOf(learned, null, [piece])).toMatchObject({
       id: 'unit-can',

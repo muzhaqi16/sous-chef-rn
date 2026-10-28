@@ -22,12 +22,27 @@ const HELD = [
   { id: 'unit-cup', name: 'cup', symbol: 'cup', type: UnitType.Volume },
 ];
 
+// Held as the API names it to an Italian reader.
+const TABLESPOON_IT = {
+  id: 'unit-tbsp',
+  name: 'tablespoon',
+  symbol: 'tbsp',
+  localizedSymbol: 'cucchiaio',
+  symbolOther: 'cucchiai',
+  localizedName: 'cucchiaio',
+  nameOther: 'cucchiai',
+  type: UnitType.Volume,
+};
+
 let result: { current: ReturnType<typeof useResolveUnit> };
 let fired: RecordedMock['fired'];
 
 /** Mounts the hook over the device's state, with the API answering `answer`. */
 function mountWith(
-  state: { isOnline?: boolean; cachedUnits?: typeof HELD },
+  state: {
+    isOnline?: boolean;
+    cachedUnits?: Array<(typeof HELD)[number] | typeof TABLESPOON_IT>;
+  },
   answer: { id: string } | null = { id: 'from-api' },
 ) {
   useStore.setState({ isOnline: true, cachedUnits: [], ...state });
@@ -98,11 +113,13 @@ describe('useResolveUnit device first', () => {
       expect(await result.current.resolveUnit('cartoon')).toEqual({
         id: 'unit-carton',
         symbol: 'carton',
+        label: 'carton',
         type: UnitType.Count,
       });
       expect(await result.current.resolveUnit('pund')).toEqual({
         id: 'unit-lb',
         symbol: 'lb',
+        label: 'lb',
         type: UnitType.Weight,
       });
       expect(fired).toEqual([]);
@@ -129,5 +146,46 @@ describe('useResolveUnit device first', () => {
       expect(await result.current.resolveUnitId(null, 'tin')).toBeNull();
       expect(fired).toEqual([]);
     });
+  });
+});
+
+describe('useResolveUnit in the app language', () => {
+  beforeEach(() =>
+    mountWith({ cachedUnits: [...HELD, TABLESPOON_IT], isOnline: false }),
+  );
+
+  it.each([
+    ['its Italian name', 'cucchiaio'],
+    ['its Italian plural', 'Cucchiai'],
+    ['its canonical symbol', 'tbsp'],
+    ['its canonical name', 'tablespoon'],
+  ])('resolves a held unit offline by %s', async (_how, text) => {
+    // The canonical symbol is what a check compares; the label, what shows.
+    expect(await result.current.resolveUnit(text)).toEqual({
+      id: 'unit-tbsp',
+      symbol: 'tbsp',
+      label: 'cucchiaio',
+      type: UnitType.Volume,
+    });
+    expect(fired).toEqual([]);
+  });
+
+  it('resolves the canonical symbol when the units are named in Albanian', async () => {
+    mountWith({
+      cachedUnits: [
+        {
+          ...TABLESPOON_IT,
+          localizedSymbol: 'lugë gjelle',
+          symbolOther: 'lugë gjelle',
+          localizedName: 'lugë gjelle',
+          nameOther: 'lugë gjelle',
+        },
+      ],
+      isOnline: false,
+    });
+    expect(await result.current.resolveUnitId(null, 'tbsp')).toBe('unit-tbsp');
+    expect(await result.current.resolveUnitId(null, 'lugë gjelle')).toBe(
+      'unit-tbsp',
+    );
   });
 });

@@ -34,11 +34,7 @@ function shownAmount(
   return {
     __typename: 'DisplayAmount',
     quantity: amount.quantity,
-    unit: {
-      __typename: 'Unit',
-      id: amount.unit.id,
-      symbol: amount.unit.symbol,
-    },
+    unit: amount.unit,
   };
 }
 

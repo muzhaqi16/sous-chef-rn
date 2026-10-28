@@ -13,6 +13,8 @@ import { formatMonthDay, formatMonthYear } from '#/utils/formatters/date';
 import {
   formatQuantityDisplay,
   formatQuantityForDisplay,
+  unitLabel,
+  type UnitLabelSource,
 } from '#/utils/formatQuantity';
 import {
   AnalyticsSummaryCard,
@@ -38,6 +40,12 @@ const formatPeriod = (
     ? formatMonthYear(date)
     : formatMonthDay(date);
 };
+
+/** What a cost is per ("lata"): its unit, else the symbol it was tallied by. */
+const costUnitOf = (cost: {
+  unit: UnitLabelSource | null;
+  unitSymbol: string | null;
+}): string => unitLabel(cost.unit ?? { symbol: cost.unitSymbol });
 
 /** The pantry analytics tab for every movement, as a running log. */
 export const LedgerTab: React.FC<
@@ -202,9 +210,9 @@ export const LedgerTab: React.FC<
               icon="calculator-outline"
               uniProps={theme => ({ color: theme.colors.warning })}
               subtitle={
-                onlyUnitCost.unitSymbol
+                costUnitOf(onlyUnitCost)
                   ? t('pantryAnalytics.perUnit', {
-                      unit: onlyUnitCost.unitSymbol,
+                      unit: costUnitOf(onlyUnitCost),
                     })
                   : undefined
               }
@@ -229,9 +237,9 @@ export const LedgerTab: React.FC<
                 <Text role="bodyStrong">
                   {money(cost.amount, cost.currencyCode)}
                 </Text>
-                {!!cost.unitSymbol && (
+                {!!costUnitOf(cost) && (
                   <Text role="caption" tone="secondary">
-                    {t('pantryAnalytics.perUnit', { unit: cost.unitSymbol })}
+                    {t('pantryAnalytics.perUnit', { unit: costUnitOf(cost) })}
                   </Text>
                 )}
               </View>
@@ -320,7 +328,10 @@ export const LedgerTab: React.FC<
                 <Text role="bodyStrong">
                   {formatQuantityDisplay(
                     unit.totalQuantity,
-                    unit.unitSymbol || unit.unitName,
+                    unit.unit ?? {
+                      symbol: unit.unitSymbol,
+                      name: unit.unitName,
+                    },
                   )}
                 </Text>
                 <Text role="caption" tone="secondary">
@@ -348,7 +359,10 @@ export const LedgerTab: React.FC<
                 <Text role="bodyStrong">
                   {formatQuantityDisplay(
                     unit.totalQuantity,
-                    unit.unitSymbol || unit.unitName,
+                    unit.unit ?? {
+                      symbol: unit.unitSymbol,
+                      name: unit.unitName,
+                    },
                   )}
                 </Text>
                 <Text role="caption" tone="secondary">

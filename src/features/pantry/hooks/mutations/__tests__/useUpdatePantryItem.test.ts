@@ -8,6 +8,7 @@ import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryItem.generated';
 import type { DirtyFieldFlags, FormDataInput } from '../types';
 import { useUpdatePantryItem } from '../useUpdatePantryItem';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/services/errorService');
 
@@ -53,7 +54,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   displayAmount: {
     __typename: 'DisplayAmount',
     quantity: 5,
-    unit: { __typename: 'Unit', id: 'unit-1', symbol: 'g' },
+    unit: asAbbreviation({ __typename: 'Unit', id: 'unit-1', symbol: 'g' }),
   },
   version: 1,
   updatedAt: '2025-01-01',
@@ -72,14 +73,14 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   storageNotes: null,
   tags: [],
   item: null,
-  unit: {
+  unit: asAbbreviation({
     __typename: 'Unit',
     id: 'unit-1',
     name: 'Gram',
     symbol: 'g',
     type: UnitType.Weight,
     displayAsFraction: false,
-  },
+  }),
   netWeightUnit: null,
   storageLocation: null,
   packageBreakdown: null,
@@ -204,12 +205,12 @@ describe('useUpdatePantryItem — a package size typed in another unit', () => {
     const cache = seedCache([
       buildPantryItem({
         netWeight: 1360.78,
-        netWeightUnit: {
+        netWeightUnit: asAbbreviation({
           __typename: 'Unit',
           id: 'unit-g',
           name: 'gram',
           symbol: 'g',
-        },
+        }),
       }),
     ]);
     const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {

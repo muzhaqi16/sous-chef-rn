@@ -17,10 +17,7 @@ import {
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
-import {
-  formatNetWeightDisplay,
-  getUnitDisplayText,
-} from '#/utils/formatQuantity';
+import { formatNetWeightDisplay, unitLabel } from '#/utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
   correctWeightSchema,
@@ -99,9 +96,7 @@ export const CorrectPackageSizeModal: React.FC<
             weightInput: formatNumberForInput(
               seedReading?.value ?? batch.netWeight,
             ),
-            unitDisplay:
-              seedReading?.symbol ??
-              getUnitDisplayText(pantryItem.netWeightUnit),
+            unitDisplay: unitLabel(seedReading ?? pantryItem.netWeightUnit),
             selectedUnitId:
               seedReading?.unitId ?? pantryItem.netWeightUnit?.id ?? null,
             reason: '',

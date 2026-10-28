@@ -8,13 +8,14 @@ import type { RootState } from '#store/index';
 import type { UnitItem } from '#features/catalog/hooks/useUnitAutocomplete';
 import { useUnitAutocomplete } from '#features/catalog/hooks/useUnitAutocomplete';
 
-const mockCachedUnits: UnitItem[] = [
+const COMMON_UNITS: UnitItem[] = [
   { id: 'u1', name: 'Cup', symbol: 'cup' },
   { id: 'u2', name: 'Tablespoon', symbol: 'tbsp' },
   { id: 'u3', name: 'Teaspoon', symbol: 'tsp' },
   { id: 'u4', name: 'Ounce', symbol: 'oz' },
   { id: 'u5', name: 'Gram', symbol: 'g' },
 ];
+let mockCachedUnits = COMMON_UNITS;
 
 let mockIsOnline = true;
 const mockSetCachedUnits = jest.fn();
@@ -39,6 +40,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockCachedUnits = COMMON_UNITS;
 });
 
 afterEach(() => {
@@ -197,5 +199,35 @@ describe('useUnitAutocomplete', () => {
     );
 
     expect(result.current.isLoading).toBe(false);
+  });
+
+  it.each([
+    ['its Italian name', 'cucchiaio'],
+    ['its Italian plural', 'cucchiai'],
+    ['its canonical symbol', 'tbsp'],
+  ])('finds a unit offline by %s', (_how, term) => {
+    mockIsOnline = false;
+    mockCachedUnits = [
+      ...COMMON_UNITS.filter(unit => unit.id !== 'u2'),
+      {
+        id: 'u2',
+        name: 'Tablespoon',
+        symbol: 'tbsp',
+        localizedSymbol: 'cucchiaio',
+        symbolOther: 'cucchiai',
+        localizedName: 'cucchiaio',
+        nameOther: 'cucchiai',
+      },
+    ];
+    const { result } = renderHookWithApollo(
+      () => useUnitAutocomplete(),
+      apolloMocks,
+    );
+
+    act(() => {
+      result.current.handleSearchTermChange(term);
+    });
+
+    expect(result.current.displayItems.map(unit => unit.id)).toEqual(['u2']);
   });
 });

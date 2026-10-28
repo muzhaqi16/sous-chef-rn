@@ -22,6 +22,7 @@ import {
 } from '../useRecipeShoppingList.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: unknown) => unknown) =>
@@ -77,7 +78,12 @@ const ingredient = (
   originalText: null,
   estimatedPrice: null,
   item: null,
-  unit: { __typename: 'Unit', id: 'unit-cup', name: 'cup', symbol: 'cup' },
+  unit: asAbbreviation({
+    __typename: 'Unit',
+    id: 'unit-cup',
+    name: 'cup',
+    symbol: 'cup',
+  }),
   convertedQuantity: null,
   image: null,
   isOptional: false,

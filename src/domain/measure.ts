@@ -30,6 +30,7 @@ export function resolveReadingSystem(
 export interface MeasureReadingShape {
   value: number;
   symbol: string;
+  localizedSymbol?: string | null;
   displayAsFraction?: boolean | null;
   type?: UnitType | null;
 }
@@ -72,7 +73,7 @@ export function readingNotation(
 
 /** "3 lb", "1 1/2 cup", "1 1/2 can": a measure in its unit's own notation. */
 export function formatReading(reading: MeasureReadingShape): string {
-  return formatQuantityWithUnit(reading.value, reading.symbol, {
+  return formatQuantityWithUnit(reading.value, reading, {
     notation: readingNotation(reading),
   });
 }

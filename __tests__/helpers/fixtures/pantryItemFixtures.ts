@@ -15,6 +15,7 @@ import {
   AcquisitionMethod,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
+import { asAbbreviation, readingAsAbbreviation } from './unitLabels';
 
 // Test fixtures need the fully unmasked shape so they can specify nested
 // fragment fields directly when seeding the cache.
@@ -67,14 +68,14 @@ function unit(
   name = 'liters',
   displayAsFraction = false,
 ): UnitData {
-  return {
+  return asAbbreviation({
     __typename: 'Unit',
     id: 'u1',
     name,
     symbol,
     type: UnitType.Volume,
     displayAsFraction,
-  };
+  });
 }
 
 type HeldReading = NonNullable<
@@ -85,14 +86,14 @@ function heldReading(
   value: number,
   { id, symbol, displayAsFraction }: UnitData,
 ): HeldReading {
-  return {
+  return readingAsAbbreviation({
     __typename: 'MeasureReading',
     value,
     unitId: id,
     symbol,
     displayAsFraction,
     type: UnitType.Volume,
-  };
+  });
 }
 
 /** Build the full GetPantryItem query result. */
@@ -122,11 +123,11 @@ export function pantryItemData(
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: held,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: trackingUnit.id,
           symbol: trackingUnit.symbol,
-        },
+        }),
       },
       // The same figure in both systems: what the screen showed before readings.
       held: {

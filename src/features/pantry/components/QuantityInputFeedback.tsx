@@ -2,7 +2,11 @@ import React from 'react';
 import { View } from 'react-native';
 import { ConversionPreview } from '#features/pantry/components/ConversionPreview';
 import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  unitLabel,
+  type UnitLabelSource,
+} from '#/utils/formatQuantity';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
@@ -14,7 +18,7 @@ interface QuantityInputFeedbackProps {
   /** What is available, for the "exceeds" message */
   available: ShownQuantity | null;
   /** Unit symbol for quick-select chips (the consumption unit, e.g. "c") */
-  consumeUnitSymbol: string;
+  consumeUnit: UnitLabelSource;
   /** Whether a converted (non-tracking) unit is selected */
   isConvertedUnit: boolean;
   /** Conversion preview text (e.g. "0.25 c ≈ 0.03 bag") */
@@ -44,7 +48,7 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
   previewText,
   previewLoading,
   conversionConfidence,
-  consumeUnitSymbol,
+  consumeUnit,
   commonFractions,
   onFractionSelect,
   selectedFractionValue,
@@ -60,7 +64,7 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
           fractions={commonFractions}
           onSelect={onFractionSelect}
           selectedValue={selectedFractionValue}
-          unitSymbol={consumeUnitSymbol}
+          unit={consumeUnit}
           displayAsFraction
         />
       ) : null}
@@ -74,11 +78,15 @@ export const QuantityInputFeedback: React.FC<QuantityInputFeedbackProps> = ({
               {remaining.quantity >= 0 || available === null
                 ? t('deduction.remainingAfter', {
                     amount: formatQuantityForDisplay(remaining.quantity),
-                    unit: remaining.unitSymbol,
+                    unit: unitLabel(remaining.unit, {
+                      quantity: remaining.quantity,
+                    }),
                   })
                 : t('deduction.exceedsAvailable', {
                     amount: formatQuantityForDisplay(available.quantity),
-                    unit: available.unitSymbol,
+                    unit: unitLabel(available.unit, {
+                      quantity: available.quantity,
+                    }),
                   })}
             </Text>
           ) : null}

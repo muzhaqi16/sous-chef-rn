@@ -7,12 +7,16 @@ fragment AdjustQuantityModal_pantryItem on PantryItem {
   unit {
     id
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     displayAsFraction
   }
   netWeightUnit {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   # The count and the weight left as the row reads them, in the user's system.
   displayAmount {
@@ -20,6 +24,8 @@ fragment AdjustQuantityModal_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   held {
@@ -29,6 +35,7 @@ fragment AdjustQuantityModal_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -36,6 +43,7 @@ fragment AdjustQuantityModal_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -47,6 +55,7 @@ fragment AdjustQuantityModal_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -54,6 +63,7 @@ fragment AdjustQuantityModal_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

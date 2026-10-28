@@ -15,6 +15,7 @@ import {
   StorePriceComparisonDocument,
   UseStorePriceMemory_ItemFragmentDoc,
 } from './useStorePriceMemory.generated';
+import { unitLabel } from '#/utils/formatQuantity';
 
 /** The newest price the household paid, worded for the card. */
 export interface LastPaidLine {
@@ -105,7 +106,7 @@ export function useStorePriceMemory(
           ? perBasis(t, last.basis, money(normalized, summary.currency))
           : t('labels.pricePer.unit', {
               price: money(last.unitPrice, summary.currency),
-              unit: last.unit.symbol,
+              unit: unitLabel(last.unit),
             }),
       storeName: last.store?.name ?? null,
       paidOn: formatMonthDay(new Date(last.paidAt)),
@@ -155,7 +156,7 @@ export function useStorePriceMemory(
       Math.round(paidPerUnit * scale) - Math.round(usualPerUnit * scale);
     const usualText = t('labels.pricePer.unit', {
       price: money(usualPerUnit, summary.currency),
-      unit: unit.symbol,
+      unit: unitLabel(unit),
     });
     if (difference === 0) {
       return t('barcode.price.sameAsUsual', { usual: usualText });

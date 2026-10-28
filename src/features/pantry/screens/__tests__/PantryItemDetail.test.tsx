@@ -33,6 +33,10 @@ import {
 type ItemPhotoFixture = NonNullable<PantryItemFixture['photos']>[number];
 import { PantryItemDetail } from '../PantryItemDetail';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 // The cost rows' own on/off cases live in PantryDetailInfo's suite.
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
@@ -795,14 +799,15 @@ describe('PantryItemDetail (integration)', () => {
     const read = ([value, { id, symbol, type }]: [
       number,
       ReadingUnit,
-    ]): PackageSizeData['metric'] => ({
-      __typename: 'MeasureReading',
-      value,
-      unitId: id,
-      symbol,
-      displayAsFraction: false,
-      type,
-    });
+    ]): PackageSizeData['metric'] =>
+      readingAsAbbreviation({
+        __typename: 'MeasureReading',
+        value,
+        unitId: id,
+        symbol,
+        displayAsFraction: false,
+        type,
+      });
     const g = unit('unit-g', 'g');
     const oz = unit('unit-oz', 'oz');
     const kg = unit('unit-kg', 'kg');
@@ -831,12 +836,12 @@ describe('PantryItemDetail (integration)', () => {
       const item = data.pantryItem;
       if (!item) throw new Error('fixture has no item');
       item.netWeight = value;
-      item.netWeightUnit = {
+      item.netWeightUnit = asAbbreviation({
         __typename: 'Unit',
         id: stored.id,
         name: stored.symbol,
         symbol: stored.symbol,
-      };
+      });
       item.packageSize = measure(value, stored, [1.36, kg], [3, lb]);
       if (remaining !== undefined) {
         item.remainingNetWeight = remaining;
@@ -939,12 +944,12 @@ describe('PantryItemDetail (integration)', () => {
       const item = data.pantryItem;
       if (!item) throw new Error('fixture has no item');
       item.netWeight = 180;
-      item.netWeightUnit = {
+      item.netWeightUnit = asAbbreviation({
         __typename: 'Unit',
         id: g.id,
         name: g.symbol,
         symbol: g.symbol,
-      };
+      });
       item.packageSize = measure(180, g, [180, g], [6.35, oz]);
       renderWithApollo(<PantryItemDetail route={route} />, {
         operationMocks: [

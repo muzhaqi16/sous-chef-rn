@@ -218,6 +218,8 @@ query GetShoppingListItemsFiltered(
             id
             name
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
             # A package size goes with a counted unit (the move sheet's rule).
             type
           }

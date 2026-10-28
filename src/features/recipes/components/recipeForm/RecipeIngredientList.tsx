@@ -28,7 +28,9 @@ const rowDetail = (ingredient: IngredientFormState): string =>
   [
     ingredient.quantity === null
       ? ''
-      : formatQuantityDisplay(ingredient.quantity, ingredient.unitLabel),
+      : formatQuantityDisplay(ingredient.quantity, {
+          symbol: ingredient.unitLabel,
+        }),
     ingredient.preparation ?? '',
   ]
     .filter(part => part.trim() !== '')

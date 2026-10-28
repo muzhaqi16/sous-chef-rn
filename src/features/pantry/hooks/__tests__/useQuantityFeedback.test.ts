@@ -21,8 +21,8 @@ const feedback = (
   const { result } = renderHook(() => useQuantityFeedback(input, shared));
   const { remaining, available } = result.current;
   return {
-    remaining: remaining && `${remaining.quantity} ${remaining.unitSymbol}`,
-    available: available && `${available.quantity} ${available.unitSymbol}`,
+    remaining: remaining && `${remaining.quantity} ${remaining.unit.symbol}`,
+    available: available && `${available.quantity} ${available.unit.symbol}`,
   };
 };
 

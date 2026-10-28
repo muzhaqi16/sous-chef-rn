@@ -2,11 +2,16 @@ import { useLazyQuery } from '@apollo/client/react';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { useCachedUnits, useIsOnline } from '#store/useAppStore';
+import { unitLabel } from '#/utils/formatQuantity';
 
 interface HeldUnit {
   id: string;
   name: string;
   symbol: string;
+  localizedSymbol?: string;
+  symbolOther?: string;
+  localizedName?: string;
+  nameOther?: string;
   abbreviation?: string;
   type?: UnitType;
 }
@@ -14,15 +19,25 @@ interface HeldUnit {
 /** A unit a typed text names, as the field shows and checks it. */
 export interface ResolvedUnit {
   id: string;
+  /** Canonical, for checks; `label` is what the field shows. */
   symbol: string;
+  label: string;
   /** Null where the unit came from the API with no kind. */
   type: UnitType | null;
 }
 
+// The app's language beside the canonical labels, so a unit typed in either
+// resolves; the result still carries the canonical `symbol`.
 const labelsOf = (unit: HeldUnit) =>
-  [unit.symbol, unit.abbreviation, unit.name].flatMap(label =>
-    label ? [label.toLowerCase()] : [],
-  );
+  [
+    unit.symbol,
+    unit.abbreviation,
+    unit.name,
+    unit.localizedSymbol,
+    unit.symbolOther,
+    unit.localizedName,
+    unit.nameOther,
+  ].flatMap(label => (label ? [label.toLowerCase()] : []));
 
 // One letter added, dropped or changed.
 function withinOneEdit(a: string, b: string): boolean {
@@ -86,7 +101,12 @@ export function useResolveUnit() {
     const typed = unitText.trim();
     const held = typed ? heldUnitNamed(heldUnits, typed) : undefined;
     return held
-      ? { id: held.id, symbol: held.symbol, type: held.type ?? null }
+      ? {
+          id: held.id,
+          symbol: held.symbol,
+          label: unitLabel(held),
+          type: held.type ?? null,
+        }
       : null;
   };
 
@@ -100,7 +120,14 @@ export function useResolveUnit() {
     if (!isOnline) return null;
     const result = await unitQuery({ variables: { symbol: typed } });
     const unit = result.data?.unitBySymbol;
-    return unit ? { id: unit.id, symbol: unit.symbol, type: unit.type } : null;
+    return unit
+      ? {
+          id: unit.id,
+          symbol: unit.symbol,
+          label: unitLabel(unit),
+          type: unit.type,
+        }
+      : null;
   };
 
   const resolveUnitId = async (

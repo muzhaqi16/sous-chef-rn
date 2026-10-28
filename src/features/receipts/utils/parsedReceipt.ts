@@ -1,3 +1,5 @@
+import type { UnitLabelSource } from '#/utils/formatQuantity';
+
 /** A receipt as the review reads it, from the phone's labels or the server's parse. */
 export type ParsedLineKind =
   | 'item'
@@ -16,6 +18,8 @@ export interface ParsedReceiptLine {
   code?: string;
   quantity?: number;
   unit?: string;
+  /** The known unit the printed one names, where the API names one. */
+  measureUnit?: UnitLabelSource;
   unitPrice?: number;
   lineTotal?: number;
   /** A discount's item, or the item a weight or count line describes. */

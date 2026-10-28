@@ -244,6 +244,25 @@ describe('formatHeldAmount', () => {
     );
   });
 
+  // The short form an Italian reader sees is a name, and agrees with the count.
+  it('shows the unit in the app language, singular or plural by the amount', () => {
+    const cans = (quantity: number) => ({
+      displayAmount: {
+        quantity,
+        unit: {
+          id: 'u-can',
+          symbol: 'can',
+          localizedSymbol: 'lattina',
+          symbolOther: 'lattine',
+        },
+      },
+      unit: { id: 'u-can', displayAsFraction: false },
+      held: NO_READING,
+    });
+    expect(formatHeldAmount(cans(3), UnitSystem.Metric)).toBe('3 lattine');
+    expect(formatHeldAmount(cans(1), UnitSystem.Metric)).toBe('1 lattina');
+  });
+
   it('rounds to three decimals for a unit that does not', () => {
     expect(formatHeldAmount(liters(177.4412), UnitSystem.Metric)).toBe(
       '177.441 L',

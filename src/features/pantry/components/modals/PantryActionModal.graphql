@@ -20,6 +20,8 @@ fragment PantryActionModal_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   activeBatchCount
@@ -30,6 +32,8 @@ fragment PantryActionModal_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   remainingPortions
   lastUsedAt
@@ -37,12 +41,16 @@ fragment PantryActionModal_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     displayAsFraction
   }
   displayUnit {
     id
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     hasStandardCountFactor
     baseUnitId
@@ -53,6 +61,8 @@ fragment PantryActionModal_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   # The unit the household uses the stack in: a use opens on it.
   consumeUnit {
@@ -64,12 +74,16 @@ fragment PantryActionModal_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalNetWeight
   }
@@ -80,6 +94,8 @@ fragment PantryActionModal_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalContentUnits
     remainingWeight
@@ -87,6 +103,8 @@ fragment PantryActionModal_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
 }

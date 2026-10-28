@@ -12,6 +12,8 @@ fragment PantryDetailInfo_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   lastUsedAt
@@ -34,6 +36,8 @@ fragment PantryDetailInfo_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   storageLocation {
     id

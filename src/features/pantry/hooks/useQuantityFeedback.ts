@@ -36,13 +36,13 @@ export function actionConversionOptions(
     pantryItemId: shared.pantryItemId,
     inputQuantity,
     selectedUnitId: shared.activeUnitId,
-    selectedUnitSymbol: shared.activeUnitSymbol,
+    selectedUnit: shared.activeUnit,
     selectedDisplayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
     trackingUnitId,
-    trackingUnitSymbol:
-      toNetWeight && shared.netWeightUnitSymbol !== undefined
-        ? shared.netWeightUnitSymbol
-        : shared.trackingUnitSymbol,
+    trackingUnit:
+      toNetWeight && shared.netWeightUnit !== undefined
+        ? shared.netWeightUnit
+        : shared.trackingUnit,
     trackingDisplayAsFraction: shared.displayAsFractionOf(trackingUnitId),
     conversionRatio: shared.isDualTracked
       ? null
@@ -68,7 +68,7 @@ export function useQuantityFeedback(
   const hasInput = inputQuantity !== null && !isNaN(inputQuantity);
   const inActiveUnit = (quantity: number): ShownQuantity => ({
     quantity,
-    unitSymbol: shared.activeUnitSymbol,
+    unit: shared.activeUnit,
     displayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
   });
   let remaining: ShownQuantity | null = null;
@@ -106,14 +106,14 @@ export function useQuantityFeedback(
     shared.isDualTracked &&
     conversion.convertedValue != null &&
     shared.remainingNetWeight != null &&
-    shared.netWeightUnitSymbol !== undefined
+    shared.netWeightUnit !== undefined
   ) {
     // API converted input to net weight — subtract directly. Dual tracking
     // implies both the remaining weight and its unit are present.
-    const unitSymbol = shared.netWeightUnitSymbol;
+    const unit = shared.netWeightUnit;
     const inNetWeight = (quantity: number): ShownQuantity => ({
       quantity,
-      unitSymbol,
+      unit,
       displayAsFraction: shared.displayAsFractionOf(shared.netWeightUnitId),
     });
     available = inNetWeight(shared.remainingNetWeight);

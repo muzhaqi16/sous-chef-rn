@@ -10,6 +10,8 @@ fragment useUpdatePantryItemQuantity_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
 }

@@ -42,16 +42,20 @@ interface MockSessionState {
   isOnline: boolean;
   apiReachable: boolean | null;
   offlineModeEnabled: boolean;
+  lastUnitsFetchedAt: number | null;
+  setLastUnitsFetchedAt: (timestamp: number) => void;
 }
 
 jest.mock('#store', () => {
   const { create } = jest.requireActual<typeof import('zustand')>('zustand');
   return {
-    useStore: create<MockSessionState>()(() => ({
+    useStore: create<MockSessionState>()(set => ({
       user: { id: 'user-1' },
       isOnline: true,
       apiReachable: true,
       offlineModeEnabled: false,
+      lastUnitsFetchedAt: null,
+      setLastUnitsFetchedAt: lastUnitsFetchedAt => set({ lastUnitsFetchedAt }),
     })),
   };
 });
@@ -402,10 +406,20 @@ describe('resync', () => {
   });
 
   it('does not resync for a switch to the language already in use', async () => {
+    useStore.setState({ lastUnitsFetchedAt: 1 });
     void changeLanguage(getResolvedLanguage());
     await pastTheWindow();
 
     expect(requests).toEqual([]);
+    expect(useStore.getState().lastUnitsFetchedAt).toBe(1);
+  });
+
+  it("expires the device's common units, named in the old language, at a switch", async () => {
+    useStore.setState({ lastUnitsFetchedAt: Date.now() });
+    triggers.languageChanged();
+    await pastTheWindow();
+
+    expect(useStore.getState().lastUnitsFetchedAt).toBe(0);
   });
 
   // A home tab stays mounted while hidden, so its queries stay active: only

@@ -6,8 +6,9 @@ import {
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
-  formatQuantityForDisplay,
+  formatQuantityWithUnit,
   resolveQuantityNotation,
+  type UnitLabelSource,
 } from '#/utils/formatQuantity';
 
 export interface UseConversionPreviewOptions {
@@ -16,12 +17,12 @@ export interface UseConversionPreviewOptions {
   inputQuantity: number | null;
   /** The unit the user selected */
   selectedUnitId: string | undefined;
-  selectedUnitSymbol: string;
+  selectedUnit: UnitLabelSource;
   /** Null when the unit's notation is unknown; a fraction then wins. */
   selectedDisplayAsFraction?: boolean | null;
   /** The item's tracking unit */
   trackingUnitId: string | undefined;
-  trackingUnitSymbol: string;
+  trackingUnit: UnitLabelSource;
   trackingDisplayAsFraction?: boolean | null;
   /** Conversion ratio: selectedUnit = trackingUnit * ratio */
   conversionRatio: number | null;
@@ -47,21 +48,21 @@ const DEBOUNCE_MS = 500;
 /** One side of "1 1/4 cup ≈ 295.74 mL", in its own unit's notation. */
 const formatSide = (
   quantity: number,
-  symbol: string,
+  unit: UnitLabelSource,
   displayAsFraction: boolean | null | undefined,
 ): string =>
-  `${formatQuantityForDisplay(quantity, {
+  formatQuantityWithUnit(quantity, unit, {
     notation: resolveQuantityNotation(null, displayAsFraction),
-  })} ${symbol}`;
+  });
 
 export function useConversionPreview({
   pantryItemId,
   inputQuantity,
   selectedUnitId,
-  selectedUnitSymbol,
+  selectedUnit,
   selectedDisplayAsFraction,
   trackingUnitId,
-  trackingUnitSymbol,
+  trackingUnit,
   trackingDisplayAsFraction,
   conversionRatio,
 }: UseConversionPreviewOptions): ConversionPreviewResult {
@@ -143,11 +144,11 @@ export function useConversionPreview({
     unitPair && convertedValue != null
       ? `${formatSide(
           unitPair.quantity,
-          selectedUnitSymbol,
+          selectedUnit,
           selectedDisplayAsFraction,
         )} \u2248 ${formatSide(
           convertedValue,
-          trackingUnitSymbol,
+          trackingUnit,
           trackingDisplayAsFraction,
         )}`
       : null;

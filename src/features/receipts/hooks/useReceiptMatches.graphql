@@ -44,6 +44,8 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
           displayUnit {
             id
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
             name
           }
         }
@@ -67,6 +69,8 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
           displayUnit {
             id
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
             name
           }
         }

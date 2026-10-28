@@ -22,6 +22,10 @@ import {
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import type { StorageLocationOption } from '#features/catalog/hooks/useStorageLocationAutocomplete';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
@@ -547,14 +551,15 @@ describe('PantryItemForm — package size in the user’s units', () => {
   >;
   type Reading = NonNullable<Stack['packageSize']>['metric'];
 
-  const reading = (value: number, id: string, symbol: string): Reading => ({
-    __typename: 'MeasureReading',
-    value,
-    unitId: id,
-    symbol,
-    displayAsFraction: false,
-    type: UnitType.Weight,
-  });
+  const reading = (value: number, id: string, symbol: string): Reading =>
+    readingAsAbbreviation({
+      __typename: 'MeasureReading',
+      value,
+      unitId: id,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
+    });
 
   // A 3 LB honey whose size the stack stores as 1360.78 g.
   const renderHoney = (system: UnitSystem, trackingUnitId?: string) => {
@@ -563,12 +568,12 @@ describe('PantryItemForm — package size in the user’s units', () => {
     const stack = data.pantryItem;
     if (!stack) throw new Error('fixture has no item');
     stack.netWeight = 1360.78;
-    stack.netWeightUnit = {
+    stack.netWeightUnit = asAbbreviation({
       __typename: 'Unit',
       id: 'unit-g',
       name: 'gram',
       symbol: 'g',
-    };
+    });
     stack.packageSize = {
       __typename: 'Measure',
       value: 1360.78,
@@ -618,12 +623,12 @@ describe('PantryItemForm — the unit it is used in', () => {
     const data = pantryItemData({ id: 'item-1' });
     const stack = data.pantryItem;
     if (!stack) throw new Error('fixture has no item');
-    stack.consumeUnit = {
+    stack.consumeUnit = asAbbreviation({
       __typename: 'Unit',
       id: 'unit-tbsp',
       name: 'tablespoon',
       symbol: 'tbsp',
-    };
+    });
     cache.writeQuery({
       query: PantryItemForEditDocument,
       variables: { id: 'item-1' },

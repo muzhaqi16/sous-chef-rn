@@ -36,7 +36,8 @@ function restockVariables(
 
 export type PantryRestockOutcome =
   | { status: 'restocked' }
-  | { status: 'rejected' };
+  /** `sizeRefusal`: the copy when nothing sized the packages, for a form to ask. */
+  | { status: 'rejected'; sizeRefusal: string | null };
 
 type RestockDetails = Pick<
   RestockPantryItemInput,
@@ -70,9 +71,9 @@ type PantryRestockOptions = Stated & {
 
 /**
  * The one restock of a held stack: an amount countable in its own unit moves
- * the row at once, offline too; packages wait for the server to size them. A
- * count nothing sizes, or one in a unit the stack is not counted in, goes as a
- * `forceAdd` add.
+ * the row at once, offline too; packages wait for the server to size them, and
+ * it refuses them when nothing does. A count in a unit the stack is not counted
+ * in goes as a `forceAdd` add.
  */
 export function usePantryRestock(pantryId: string | undefined) {
   const { t } = useTranslation();
@@ -127,14 +128,13 @@ export function usePantryRestock(pantryId: string | undefined) {
         unitId: bought.unitId,
       });
     const refusal = fallback ?? t('errors.restockFailedRetry');
-    // A restock names one stack: it refuses packages nothing sizes, and a count
-    // in a unit the stack is not counted in. An add with `forceAdd` takes both
-    // as the API counts any add: joined to a held stack its unit restates
-    // into, else a stack of its own.
+    // A restock refuses a count in a unit the stack is not counted in. An add
+    // with `forceAdd` takes it, but names no stack: the server joins it to one
+    // its unit restates into, else makes a stack of its own.
     const { packages } = amount;
     const inOtherUnit =
       packages?.unitId != null && packages.unitId !== heldUnit?.id;
-    if (bought && packages && (!packages.size || inOtherUnit)) {
+    if (bought && packages && inOtherUnit) {
       const { itemId } = bought.item;
       const outcome = await intake.addItem(
         bought.item.name,
@@ -147,7 +147,7 @@ export function usePantryRestock(pantryId: string | undefined) {
       );
       return outcome.status === 'added'
         ? { status: 'restocked' }
-        : { status: 'rejected' };
+        : { status: 'rejected', sizeRefusal: null };
     }
     const added = amount.measured
       ? inTrackingUnit(
@@ -182,7 +182,14 @@ export function usePantryRestock(pantryId: string | undefined) {
         present,
       },
     );
-    if (settled.status === 'failed') return { status: 'rejected' };
+    if (settled.status === 'failed') {
+      // `amount.packages.size` is the input's one field named `size`.
+      const { failure } = settled;
+      return {
+        status: 'rejected',
+        sizeRefusal: failure?.field === 'size' ? failure.body : null,
+      };
+    }
 
     // The new batch row is the server's to build, so drop the connection and
     // let the screen refetch it — but only once the server answered. A queued

@@ -44,6 +44,7 @@ query AutocompleteItems($input: AutocompleteInput!) {
         id
         name
         symbol
+        localizedSymbol
         type
         isDefault
         isPreferred
@@ -87,6 +88,7 @@ query SearchItemsSemantic(
           id
           name
           symbol
+          localizedSymbol
           type
         }
         brands {
@@ -154,6 +156,8 @@ mutation CreateItem($input: CreateItemInput!) {
           id
           name
           symbol
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
         }
         packageSize {
           value
@@ -162,6 +166,7 @@ mutation CreateItem($input: CreateItemInput!) {
             value
             unitId
             symbol
+            localizedSymbol
             displayAsFraction
             type
           }
@@ -169,6 +174,7 @@ mutation CreateItem($input: CreateItemInput!) {
             value
             unitId
             symbol
+            localizedSymbol
             displayAsFraction
             type
           }
@@ -207,11 +213,15 @@ mutation CreateItem($input: CreateItemInput!) {
             id
             name
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
           }
           contentUnit {
             id
             name
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
           }
         }
       }

@@ -18,6 +18,10 @@ import {
   type PantryItemCard_PantryItemFragment,
 } from '../PantryItemCard.generated';
 import { toDateKey } from '#/utils/dateUtils';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 // PantryContent now reads `useApolloClient` for the image-preload effect and
 // each `PantryItemCard` cell subscribes to its own entity via `useFragment`.
@@ -43,7 +47,7 @@ function renderContent(
 // Helper that extracts items from props before delegating to renderContent so
 // the existing test bodies keep working as-is.
 function render(ui: React.ReactElement) {
-  const props = (ui as { props?: { items?: PantryItem[] } }).props;
+  const props = (ui as { props?: { items?: MockPantryItem[] } }).props;
   const items = (props?.items ?? []) as Array<
     { __typename: string; id: string } & Record<string, unknown>
   >;
@@ -54,20 +58,19 @@ type DeepPartial<T> = T extends object
   ? { [P in keyof T]?: DeepPartial<T[P]> }
   : T;
 
-const countReading = (value: number, id = 'unit-piece', symbol = 'pc') => ({
-  __typename: 'MeasureReading',
-  value,
-  unitId: id,
-  symbol,
-  displayAsFraction: false,
-  type: 'COUNT',
-});
+const countReading = (value: number, id = 'unit-piece', symbol = 'pc') =>
+  readingAsAbbreviation({
+    __typename: 'MeasureReading',
+    value,
+    unitId: id,
+    symbol,
+    displayAsFraction: false,
+    type: 'COUNT',
+  });
 
-function createMockPantryItem(
-  overrides: DeepPartial<PantryItem> = {},
-): PantryItem {
+function createMockPantryItem(overrides: DeepPartial<PantryItem> = {}) {
   const held = overrides.heldQuantity ?? overrides.quantity ?? 1;
-  return {
+  const item = {
     __typename: 'PantryItem',
     id: 'mock-id',
     image: null,
@@ -77,11 +80,11 @@ function createMockPantryItem(
     displayAmount: {
       __typename: 'DisplayAmount',
       quantity: held,
-      unit: {
+      unit: asAbbreviation({
         __typename: 'Unit',
         id: overrides.unit?.id ?? 'unit-piece',
         symbol: overrides.unit?.symbol ?? 'pc',
-      },
+      }),
     },
     // A count reads the same in both unit systems.
     held: {
@@ -123,7 +126,11 @@ function createMockPantryItem(
       packageBreakdown: null,
     },
     itemId: 'item-1',
-    unit: null,
+    unit: asAbbreviation({
+      __typename: 'Unit',
+      id: overrides.unit?.id ?? 'unit-piece',
+      symbol: overrides.unit?.symbol ?? 'pc',
+    }),
     unitId: null,
     brand: null,
     brandId: null,
@@ -182,7 +189,18 @@ function createMockPantryItem(
     ledger: { __typename: 'LedgerSummary' },
     ...overrides,
   } as PantryItem;
+  // The schema's item carries no aliases; the list's documents label its units.
+  return {
+    ...item,
+    unit: asAbbreviation(item.unit),
+    displayAmount: {
+      ...item.displayAmount,
+      unit: asAbbreviation(item.displayAmount.unit),
+    },
+  };
 }
+
+type MockPantryItem = ReturnType<typeof createMockPantryItem>;
 
 jest.mock('#hooks/performance/useDeferredRender', () => ({
   useDeferredRender: jest.fn(() => true),
@@ -363,7 +381,7 @@ jest.mock('#features/pantry/utils/pantryFilters', () => ({
 
 const defaultProps = {
   pantryName: 'My Kitchen',
-  items: [] as PantryItem[],
+  items: [] as MockPantryItem[],
   locationFilter: 'all',
   onLocationFilterChange: jest.fn(),
   // Default to an empty pantry (all counts 0). While `loading`, the skeleton
@@ -935,7 +953,7 @@ describe('PantryContent', () => {
         id: '1',
         itemName: 'Flour',
         quantity: 500,
-        unit: { __typename: 'Unit', id: 'unit-g', symbol: 'g' },
+        unit: asAbbreviation({ __typename: 'Unit', id: 'unit-g', symbol: 'g' }),
       }),
     ];
     render(<PantryContent {...defaultProps} items={items} />);

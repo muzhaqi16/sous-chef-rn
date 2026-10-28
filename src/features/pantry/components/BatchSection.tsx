@@ -22,9 +22,6 @@ interface BatchSectionProps {
    * for reactive per-row updates.
    */
   batches: ReadonlyArray<PantryItemBatchFragment>;
-  unitSymbol?: string;
-  netWeightUnitSymbol?: string;
-  netWeightUnitId?: string;
   /** Every batch, including pages this screen did not fetch. */
   totalCount?: number;
   onViewAll: () => void;
@@ -33,9 +30,6 @@ interface BatchSectionProps {
 
 export const BatchSection: React.FC<BatchSectionProps> = ({
   batches,
-  unitSymbol,
-  netWeightUnitSymbol,
-  netWeightUnitId,
   totalCount,
   onViewAll,
   onCorrectSize,
@@ -87,9 +81,6 @@ export const BatchSection: React.FC<BatchSectionProps> = ({
             <BatchListItem
               key={batch.id}
               batch={batch}
-              unitSymbol={unitSymbol}
-              netWeightUnitSymbol={netWeightUnitSymbol}
-              netWeightUnitId={netWeightUnitId}
               onOpen={permissions.canEditItems ? handleOpen : undefined}
               onWaste={permissions.canRemoveItems ? handleWaste : undefined}
               onCorrectSize={onCorrectSize}

@@ -115,6 +115,9 @@ const languageChanged = (client: ApolloClient) => () =>
       const next = getResolvedLanguage();
       if (next === current) return;
       current = next;
+      // The device's copy of the common units names them in the old language:
+      // kept for offline search, re-read on the next online warm.
+      useStore.getState().setLastUnitsFetchedAt(0);
       if (
         apolloCachePersistence.storedLanguage() === undefined &&
         client.getObservableQueries('all').size === 0

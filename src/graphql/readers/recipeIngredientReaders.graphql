@@ -4,6 +4,8 @@ fragment RecipeIngredientReaders on RecipeIngredient {
   convertedQuantity {
     unit {
       id
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
       symbol
     }
     value
@@ -25,6 +27,8 @@ fragment RecipeIngredientReaders on RecipeIngredient {
   sortOrder
   unit {
     id
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     name
     symbol
   }

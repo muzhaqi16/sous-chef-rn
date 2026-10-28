@@ -20,6 +20,8 @@ fragment UpdateShoppingListItem_item on ShoppingListItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   sortOrder
   item {

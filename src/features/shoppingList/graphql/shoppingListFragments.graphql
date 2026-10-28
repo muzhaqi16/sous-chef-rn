@@ -31,6 +31,8 @@ fragment ShoppingListItemDisplayFragment on ShoppingListItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     # A counted line takes a move's package count as its own (useMoveToPantry).
     type
   }
@@ -182,6 +184,8 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
   }
   # The row reads it in the user's unit system; null on a local line.
@@ -192,6 +196,7 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -199,6 +204,7 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

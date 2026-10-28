@@ -27,6 +27,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   held {
@@ -36,6 +38,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -43,6 +46,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -63,6 +67,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   remainingPortions
   activeBatchCount
@@ -85,12 +91,16 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     displayAsFraction
   }
   displayUnit {
     id
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     hasStandardCountFactor
     baseUnitId
@@ -101,6 +111,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   consumeUnit {
     id
@@ -116,12 +128,16 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalNetWeight
   }
@@ -132,6 +148,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalContentUnits
     remainingWeight
@@ -139,6 +157,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
 }

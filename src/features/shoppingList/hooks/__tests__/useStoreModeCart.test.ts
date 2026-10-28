@@ -13,6 +13,7 @@ import {
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { useStoreModeCart } from '../useStoreModeCart';
 import { UseListCurrency_ListFragmentDoc } from '../useListCurrency.generated';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 const mockClaimPurchased = jest.fn();
 const mockRecordPurchase = jest.fn();
@@ -56,7 +57,12 @@ const node = ({
   quantity: 2,
   unitName: 'jar',
   unit: unitId
-    ? { __typename: 'Unit', id: unitId, name: 'jar', symbol: 'jar' }
+    ? asAbbreviation({
+        __typename: 'Unit',
+        id: unitId,
+        name: 'jar',
+        symbol: 'jar',
+      })
     : null,
   priceEstimate: { __typename: 'ShoppingListItemPriceEstimate', estimated },
   suggestedPrice:
@@ -159,7 +165,9 @@ describe('useStoreModeCart', () => {
       },
     ]);
 
-    expect(result.current.unit).toEqual({ id: 'unit-jar', symbol: 'jar' });
+    expect(result.current.unit).toEqual(
+      expect.objectContaining({ id: 'unit-jar', symbol: 'jar' }),
+    );
     expect(result.current.line).toEqual({
       id: 'pb',
       itemName: 'Peanut butter',

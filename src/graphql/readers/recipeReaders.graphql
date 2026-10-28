@@ -78,6 +78,8 @@ fragment RecipeReaders on Recipe {
         sortOrder
         unit {
           id
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
           name
           symbol
         }

@@ -70,6 +70,8 @@ query GetPantry(
             unit {
               id
               symbol
+              localizedSymbol
+              symbolOther: localizedSymbol(quantity: 2)
             }
           }
           expiresOn
@@ -83,6 +85,8 @@ query GetPantry(
           unit {
             id
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
           }
           ...pantryItem_listed
         }
@@ -154,6 +158,8 @@ query GetPantryItemSuggestions(
         defaultUnit {
           id
           symbol
+          localizedSymbol
+          symbolOther: localizedSymbol(quantity: 2)
         }
       }
       expiringSoon {
@@ -307,6 +313,12 @@ query GetPantryLedgerAnalytics(
           unitId
           unitName
           unitSymbol
+          unit {
+            id
+            symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
+          }
           totalQuantity
           count
         }
@@ -314,6 +326,12 @@ query GetPantryLedgerAnalytics(
           unitId
           unitName
           unitSymbol
+          unit {
+            id
+            symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
+          }
           totalQuantity
           count
         }
@@ -342,6 +360,12 @@ query GetPantryLedgerAnalytics(
           amount
           currencyCode
           unitSymbol
+          unit {
+            id
+            symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
+          }
         }
         costByStore {
           storeId
@@ -355,6 +379,12 @@ query GetPantryLedgerAnalytics(
             amount
             currencyCode
             unitSymbol
+            unit {
+              id
+              symbol
+              localizedSymbol
+              symbolOther: localizedSymbol(quantity: 2)
+            }
           }
         }
       }
@@ -379,6 +409,8 @@ query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
       type
       unitRole
       commonFractions
@@ -401,6 +433,8 @@ query RestockUnitsForPantryItem($pantryItemId: ID!) {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
       type
       unitRole
       commonFractions
@@ -660,6 +694,8 @@ mutation CreatePantryItemUsage(
             unit {
               id
               symbol
+              localizedSymbol
+              symbolOther: localizedSymbol(quantity: 2)
             }
           }
           isLowStock
@@ -947,6 +983,34 @@ query GetPantryItemBatchHistory(
   $first: Int
   $after: String
 ) {
+  # The units its rows read off the stack (`BatchListItem_pantryItem`), in the
+  # same request; a core document spreads no component's fragment.
+  pantryItem(id: $pantryItemId) {
+    id
+    unit {
+      id
+      symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
+    }
+    displayUnit {
+      id
+      symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
+      type
+      hasStandardCountFactor
+      baseUnitId
+      conversionFactor
+      commonFractions
+    }
+    netWeightUnit {
+      id
+      symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
+    }
+  }
   pantryItemBatchesConnection(
     pantryItemId: $pantryItemId
     first: $first
@@ -1124,6 +1188,8 @@ query GetPantryItemUsageHistory(
             id
             name
             symbol
+            localizedSymbol
+            symbolOther: localizedSymbol(quantity: 2)
           }
           usedAt
           purpose
@@ -1143,6 +1209,7 @@ query GetPantryItemUsageHistory(
               value
               unitId
               symbol
+              localizedSymbol
               displayAsFraction
               type
             }
@@ -1150,6 +1217,7 @@ query GetPantryItemUsageHistory(
               value
               unitId
               symbol
+              localizedSymbol
               displayAsFraction
               type
             }

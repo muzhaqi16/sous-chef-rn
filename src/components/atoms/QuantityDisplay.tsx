@@ -5,13 +5,15 @@ import type { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
+  unitLabel,
+  type UnitLabelSource,
 } from '#/utils/formatQuantity';
 
 interface QuantityDisplayProps {
   quantity: number | null | undefined;
   quantityInput?: string | null;
   displayFormat?: DisplayFormat | null;
-  unitSymbol?: string | null;
+  unit?: UnitLabelSource | null;
   displayAsFraction?: boolean | null;
   style?: StyleProp<TextStyle>;
   showUnit?: boolean;
@@ -25,7 +27,7 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
   quantity,
   quantityInput,
   displayFormat,
-  unitSymbol,
+  unit,
   displayAsFraction,
   style,
   showUnit = true,
@@ -36,11 +38,12 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
   });
 
   if (!text) return <Text style={style}>-</Text>;
+  const label = showUnit ? unitLabel(unit, { quantity }) : '';
 
   return (
     <Text style={style}>
       {text}
-      {showUnit && unitSymbol ? ` ${unitSymbol}` : ''}
+      {label ? ` ${label}` : ''}
     </Text>
   );
 };

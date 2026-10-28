@@ -23,6 +23,7 @@ import {
 } from '../useRecipeIngredientMatching';
 import { RecipeIngredientFragmentDoc } from '#features/recipes/graphql/recipeFragments.generated';
 import { RecipeSubstitutesDocument } from '../useRecipeSubstitutes.generated';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 type IngredientMatch = Parameters<typeof getAvailabilityStatus>[0];
 
@@ -48,12 +49,12 @@ function seedIngredientCache(ids: string[]) {
         sortOrder: 0,
         section: null,
         item: null,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: `u-${id}`,
           name: 'cup',
           symbol: 'cup',
-        },
+        }),
       },
     })),
   );
@@ -306,12 +307,12 @@ describe('useRecipeIngredientMatching', () => {
               __typename: 'RecipeIngredient',
               id: 'ing-1',
               isOptional: false,
-              unit: {
+              unit: asAbbreviation({
                 __typename: 'Unit',
                 id: 'u-ing-1',
                 name: 'cup',
                 symbol: 'cup',
-              },
+              }),
             },
             isAvailable: true,
             matchKind: RecipeIngredientMatchKind.Item,

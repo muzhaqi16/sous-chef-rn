@@ -138,6 +138,38 @@ describe('ReceiptReviewScreen rows', () => {
 
     expect(screen.getByText(/BANANAS · 1\.52 lb/)).toBeTruthy();
   });
+
+  // The API names the known unit a printed one stands for; the line reads it
+  // in the app's language until the user types a unit of their own.
+  it('shows a printed unit as the unit it names, else as printed', () => {
+    const piece = { symbol: 'pc', localizedSymbol: 'pz', symbolOther: 'pz' };
+    mockRows = [
+      row({
+        printed: 'TOMATOES',
+        unit: 'pc',
+        measureUnit: piece,
+        choice: lineChoice({ quantity: 2, unitText: 'pc' }),
+      }),
+      row({
+        index: 1,
+        printed: 'BASIL',
+        unit: 'bnch',
+        choice: lineChoice({ quantity: 1, unitText: 'bnch' }),
+      }),
+      row({
+        index: 2,
+        printed: 'ONIONS',
+        unit: 'pc',
+        measureUnit: piece,
+        choice: lineChoice({ quantity: 3, unitText: 'kg' }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText(/TOMATOES · 2 pz/)).toBeTruthy();
+    expect(screen.getByText(/BASIL · 1 bnch/)).toBeTruthy();
+    expect(screen.getByText(/ONIONS · 3 kg/)).toBeTruthy();
+  });
 });
 
 describe('ReceiptReviewScreen Add', () => {

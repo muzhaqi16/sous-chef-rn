@@ -13,6 +13,8 @@ fragment pantryItem_listed on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   held {
@@ -22,6 +24,7 @@ fragment pantryItem_listed on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -29,6 +32,7 @@ fragment pantryItem_listed on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -43,6 +47,8 @@ fragment pantryItem_listed on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   remainingPortions
   activeBatchCount
@@ -65,6 +71,8 @@ fragment pantryItem_listed on PantryItem {
   unit {
     id
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     name
     type
     displayAsFraction
@@ -73,6 +81,8 @@ fragment pantryItem_listed on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   consumeUnit {
     id
@@ -87,12 +97,16 @@ fragment pantryItem_listed on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalNetWeight
   }
@@ -103,6 +117,8 @@ fragment pantryItem_listed on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
     totalContentUnits
     remainingWeight
@@ -110,12 +126,16 @@ fragment pantryItem_listed on PantryItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   itemId
   displayUnit {
     id
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     hasStandardCountFactor
     baseUnitId

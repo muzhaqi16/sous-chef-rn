@@ -198,7 +198,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   );
   const quantity = heldReading
     ? formatReading(heldReading)
-    : formatQuantityDisplay(displayAmount.quantity, displayAmount.unit.symbol);
+    : formatQuantityDisplay(displayAmount.quantity, displayAmount.unit);
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
   // Each of the row's four text slots has ONE owner, and an absent value leaves

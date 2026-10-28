@@ -2,6 +2,7 @@ import Fraction from 'fraction.js';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { getResolvedLanguage } from '#/i18n';
 
 /** Every quantity the app renders or seeds is at most this precise: 1/8 is 0.125. */
 const MAX_DECIMALS = 3;
@@ -127,13 +128,84 @@ export function formatQuantityForDisplay(
   return formatQuantityAsFraction(value, notation);
 }
 
+/**
+ * A unit as a document selects it to be shown: the singular forms plain, the
+ * plurals aliased (`symbolOther: localizedSymbol(quantity: 2)`, and `nameOther`
+ * on `localizedName`), one alias a unit under the API's alias cap. A unit known
+ * only as text is `{ symbol: text }`.
+ */
+export interface UnitLabelSource {
+  symbol?: string | null;
+  name?: string | null;
+  localizedSymbol?: string | null;
+  symbolOther?: string | null;
+  localizedName?: string | null;
+  nameOther?: string | null;
+}
+
+export interface UnitLabelOptions {
+  /** `name` shows the unit's name in place of its short form. */
+  form?: 'symbol' | 'name';
+  /** The quantity the label follows, which picks its plural. */
+  quantity?: number | null;
+}
+
+// One per language: building a PluralRules parses locale data. `null` records
+// an engine without `Intl.PluralRules`, which some Hermes builds are.
+const pluralRulesByLanguage = new Map<string, Intl.PluralRules | null>();
+
+function readsAsOne(quantity: number): boolean {
+  const language = getResolvedLanguage();
+  let rules = pluralRulesByLanguage.get(language);
+  if (rules === undefined) {
+    try {
+      rules = new Intl.PluralRules(language);
+    } catch {
+      rules = null;
+    }
+    pluralRulesByLanguage.set(language, rules);
+  }
+  return rules ? rules.select(quantity) === 'one' : quantity === 1;
+}
+
+/**
+ * How a unit reads on screen, in the app's language. A blank localized field
+ * (an optimistic unit filled with the SDL neutral) falls back to the canonical
+ * one. Display only: a comparison reads `symbol`, `name` or the id.
+ */
+export function unitLabel(
+  unit: UnitLabelSource | null | undefined,
+  { form = 'symbol', quantity }: UnitLabelOptions = {},
+): string {
+  if (!unit) return '';
+  // A part of one reads singular in every language here: "1/2 cup".
+  const partOfOne = quantity != null && quantity > 0 && quantity < 1;
+  const plural = quantity != null && !partOfOne && !readsAsOne(quantity);
+  const label =
+    form === 'name'
+      ? firstNonBlank(
+          plural ? unit.nameOther : null,
+          unit.localizedName,
+          unit.name,
+          unit.symbol,
+        )
+      : firstNonBlank(
+          plural ? unit.symbolOther : null,
+          unit.localizedSymbol,
+          unit.symbol,
+          unit.name,
+        );
+  return label ?? '';
+}
+
 /** A quantity and its unit as one phrase, as a row's quantity chip shows them: "2 pc". */
 export function formatQuantityWithUnit(
   quantity: number | null | undefined,
-  unit: string | null | undefined,
+  unit: UnitLabelSource | null | undefined,
   options: QuantityDisplayOptions = {},
 ): string {
-  return `${formatQuantityForDisplay(quantity, options)} ${unit ?? ''}`.trim();
+  const label = unitLabel(unit, { quantity });
+  return `${formatQuantityForDisplay(quantity, options)} ${label}`.trim();
 }
 
 // Two quantities equal to `MAX_DECIMALS` places are the same quantity.
@@ -173,30 +245,27 @@ export function formatQuantityForInput(
  */
 const isMillilitre = (symbol: string): boolean => symbol.toLowerCase() === 'ml';
 
-/** Primary display, with g→kg / mL→L upscaling: 1500 g → "1.5 kg". */
-export function formatQuantityDisplay(quantity: number, unit?: string): string {
-  const unitStr = unit ?? '';
-  if (quantity >= 1000 && (unitStr === 'g' || isMillilitre(unitStr))) {
-    return `${formatQuantity(quantity / 1000)} ${unitStr === 'g' ? 'kg' : 'L'}`;
+/**
+ * Primary display, with g→kg / mL→L upscaling: 1500 g → "1.5 kg". Upscales by
+ * the canonical symbol; kg and L read the same in every language.
+ */
+export function formatQuantityDisplay(
+  quantity: number,
+  unit?: UnitLabelSource | null,
+): string {
+  const symbol = unit?.symbol ?? '';
+  if (quantity >= 1000 && (symbol === 'g' || isMillilitre(symbol))) {
+    return `${formatQuantity(quantity / 1000)} ${symbol === 'g' ? 'kg' : 'L'}`;
   }
-  return `${formatQuantityForDisplay(quantity)} ${unitStr}`.trim();
+  const label = unitLabel(unit, { quantity });
+  return `${formatQuantityForDisplay(quantity)} ${label}`.trim();
 }
 
 /** A package size, as `formatQuantityDisplay` shows it; null when none is stated. */
 export function formatNetWeightDisplay(
   netWeight?: number | null,
-  netWeightUnit?: { symbol?: string | null; name?: string | null } | null,
+  netWeightUnit?: UnitLabelSource | null,
 ): string | null {
   if (!netWeight) return null;
-  return formatQuantityDisplay(
-    netWeight,
-    firstNonBlank(netWeightUnit?.symbol, netWeightUnit?.name),
-  );
-}
-
-/** Prefers the unit's symbol over its name. */
-export function getUnitDisplayText(
-  unit?: { symbol?: string; name?: string } | null,
-): string {
-  return firstNonBlank(unit?.symbol, unit?.name) ?? '';
+  return formatQuantityDisplay(netWeight, netWeightUnit);
 }

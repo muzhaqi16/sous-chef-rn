@@ -16,11 +16,12 @@ import {
 } from '#domain/expiry';
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   formatQuantityForDisplay,
   formatQuantityWithUnit,
   resolveQuantityNotation,
+  unitLabel,
+  type UnitLabelSource,
 } from '#/utils/formatQuantity';
 import {
   currentReading,
@@ -82,9 +83,9 @@ type BreakdownMeasure = MeasureShape & { value: number; unitId: string };
 
 interface PackageBreakdown {
   count: number;
-  contentUnit: { name: string; symbol?: string | null };
+  contentUnit: UnitLabelSource;
   perUnitNetWeight?: number | null;
-  perUnitNetWeightUnit?: { id?: string; symbol?: string | null } | null;
+  perUnitNetWeightUnit?: (UnitLabelSource & { id?: string }) | null;
   totalNetWeight?: number | null;
   /** `perUnitNetWeight` read in both unit systems. */
   perUnit?: BreakdownMeasure | null;
@@ -98,7 +99,7 @@ interface PackageBreakdown {
  */
 function breakdownWeight(
   stored: number,
-  unit: { id?: string; symbol?: string | null },
+  unit: UnitLabelSource & { id?: string },
   measure: BreakdownMeasure | null | undefined,
   system: ReadingSystem | undefined,
 ): { weight: string; weightUnit: string | null | undefined } {
@@ -110,16 +111,19 @@ function breakdownWeight(
         weight: formatQuantityForDisplay(reading.value, {
           notation: readingNotation(reading),
         }),
-        weightUnit: reading.symbol,
+        weightUnit: unitLabel(reading),
       }
     : {
         weight: formatQuantityForDisplay(stored, { notation: 'decimal' }),
-        weightUnit: unit.symbol,
+        weightUnit: unitLabel(unit, { quantity: stored }),
       };
 }
 
 interface HeldAmountSource {
-  displayAmount: { quantity: number; unit: { id: string; symbol: string } };
+  displayAmount: {
+    quantity: number;
+    unit: UnitLabelSource & { id: string; symbol: string };
+  };
   unit: { id: string; displayAsFraction: boolean };
   held: BreakdownMeasure;
 }
@@ -141,7 +145,7 @@ export function formatHeldAmount(
   );
   if (reading) return formatReading(reading);
   const inOwnUnit = shown.unit.id === item.unit.id;
-  return formatQuantityWithUnit(shown.quantity, shown.unit.symbol, {
+  return formatQuantityWithUnit(shown.quantity, shown.unit, {
     notation: resolveQuantityNotation(
       null,
       inOwnUnit ? item.unit.displayAsFraction : null,
@@ -149,17 +153,15 @@ export function formatHeldAmount(
   });
 }
 
-// Unit labels are server data with no plural form, so they pass through as-is.
 export const formatPackageBreakdown = (
   breakdown: PackageBreakdown | null | undefined,
   translate: Translate,
   system?: ReadingSystem,
 ): string | null => {
   if (!breakdown) return null;
-  const unit =
-    firstNonBlank(breakdown.contentUnit.symbol) ?? breakdown.contentUnit.name;
+  const unit = unitLabel(breakdown.contentUnit, { quantity: breakdown.count });
   const storedUnit = breakdown.perUnitNetWeightUnit;
-  if (breakdown.perUnitNetWeight && storedUnit?.symbol) {
+  if (breakdown.perUnitNetWeight && storedUnit && unitLabel(storedUnit)) {
     const { weight, weightUnit } = breakdownWeight(
       breakdown.perUnitNetWeight,
       storedUnit,
@@ -188,7 +190,7 @@ export const formatPackageBreakdownFull = (
   const short = formatPackageBreakdown(breakdown, translate, system);
   if (!breakdown || !short) return null;
   const storedUnit = breakdown.perUnitNetWeightUnit;
-  if (breakdown.totalNetWeight && storedUnit?.symbol) {
+  if (breakdown.totalNetWeight && storedUnit && unitLabel(storedUnit)) {
     const { weight, weightUnit } = breakdownWeight(
       breakdown.totalNetWeight,
       storedUnit,
@@ -210,10 +212,10 @@ export const formatQuantityBreakdown = (
     | {
         fullPackages: number;
         looseContentUnits: number;
-        contentUnit?: { name?: string; symbol?: string | null } | null;
+        contentUnit?: UnitLabelSource | null;
         totalContentUnits: number;
         remainingWeight?: number | null;
-        remainingWeightUnit?: { symbol?: string | null } | null;
+        remainingWeightUnit?: UnitLabelSource | null;
       }
     | null
     | undefined,
@@ -222,13 +224,8 @@ export const formatQuantityBreakdown = (
   if (!breakdown) return null;
   const total = Math.floor(breakdown.totalContentUnits);
   if (total <= 0) return null;
-  // The unit label is server data (`Unit.symbol` / `Unit.name`) with no plural
-  // form, so it passes through untouched — never append an English "s" to it.
   // The count/unit order lives in the key so a locale can change it.
-  const contentLabel = firstNonBlank(
-    breakdown.contentUnit?.symbol,
-    breakdown.contentUnit?.name,
-  );
+  const contentLabel = unitLabel(breakdown.contentUnit, { quantity: total });
   if (!contentLabel) return null;
   return translate('itemSubtitle.contentUnitCount', {
     count: total,

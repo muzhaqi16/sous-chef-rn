@@ -5,6 +5,7 @@ import {
   toPastedIngredient,
 } from '#features/recipes/utils/pastedIngredients';
 import type { ParseIngredientLinesQuery } from '#features/recipes/hooks/useIngredientPaste.generated';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 type ParsedLine =
   ParseIngredientLinesQuery['parseIngredientLines']['lines'][number];
@@ -42,12 +43,12 @@ describe('toPastedIngredient', () => {
     originalText: '2 ½ cups all-purpose flour, sifted',
     name: 'all-purpose flour',
     quantity: 2.5,
-    unit: {
+    unit: asAbbreviation({
       __typename: 'Unit',
       id: 'u-cup',
       name: 'cup',
       symbol: 'cup',
-    },
+    }),
     preparation: 'sifted',
     note: null,
     section: 'For the dough',

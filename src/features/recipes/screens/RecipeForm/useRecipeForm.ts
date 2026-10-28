@@ -27,6 +27,7 @@ import { extractNodes } from '#/utils/connectionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { unitLabel } from '#/utils/formatQuantity';
 
 let nextTempId = 1;
 function generateTempId(): string {
@@ -49,12 +50,6 @@ function stepInstruction(step: unknown): string {
     ? String(text)
     : '';
 }
-
-/** The unit as a row shows it. Module scope: an optional chain inside `??`
- * stops the compiler lowering the hook. */
-const unitLabelOf = (
-  unit: { symbol: string; name: string } | null | undefined,
-): string => firstNonBlank(unit?.symbol, unit?.name) ?? '';
 
 /** Who wrote the recipe and where a capture read it; undefined when neither is known. */
 function attributionOf(
@@ -339,7 +334,7 @@ export function useRecipeForm() {
         name: ing.name,
         quantity: ing.quantity,
         unitId: ing.unit?.id ?? null,
-        unitLabel: unitLabelOf(ing.unit),
+        unitLabel: unitLabel(ing.unit),
         // A proposed revision's lines carry no line as written.
         originalText: 'originalText' in ing ? ing.originalText : null,
         itemId: ing.item?.id ?? null,

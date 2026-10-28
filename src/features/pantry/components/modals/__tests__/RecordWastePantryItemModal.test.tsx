@@ -10,9 +10,9 @@ import type { PantryActionSharedState } from '#features/pantry/types';
 type MockSharedState = Pick<
   PantryActionSharedState,
   | 'trackingQuantity'
-  | 'trackingUnitSymbol'
+  | 'trackingUnit'
   | 'trackingUnitId'
-  | 'activeUnitSymbol'
+  | 'activeUnit'
   | 'activeUnitId'
   | 'displayAsFractionOf'
   | 'isConvertedUnit'
@@ -25,8 +25,7 @@ type MockSharedState = Pick<
 > & {
   selectedUnitInfo: {
     unitId: string;
-    unitSymbol: string;
-    unitName: string;
+    unit: { symbol: string; name?: string };
     unitType: string;
     isTrackingUnit: boolean;
     conversionConfidence: number | null;
@@ -93,22 +92,21 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
     const { View, Text } = require('react-native');
     const sharedState = {
       trackingQuantity: 10,
-      trackingUnitSymbol: 'oz',
+      trackingUnit: { symbol: 'oz' },
       trackingUnitId: 'unit-1',
-      activeUnitSymbol: 'oz',
+      activeUnit: { symbol: 'oz' },
       activeUnitId: 'unit-1',
       displayAsFractionOf: () => null,
       isConvertedUnit: false,
       exactFactor: 1,
       showStock: (held: number) => ({
         quantity: held,
-        unitSymbol: 'oz',
+        unit: { symbol: 'oz' },
         displayAsFraction: null,
       }),
       selectedUnitInfo: {
         unitId: 'unit-1',
-        unitSymbol: 'oz',
-        unitName: 'Ounces',
+        unit: { symbol: 'oz', name: 'Ounces' },
         unitType: 'WEIGHT',
         isTrackingUnit: true,
         conversionConfidence: null,

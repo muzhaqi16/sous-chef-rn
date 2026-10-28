@@ -11,6 +11,7 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -18,6 +19,7 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -50,6 +52,8 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
   }
   sortOrder

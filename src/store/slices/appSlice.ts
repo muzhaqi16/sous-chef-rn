@@ -11,6 +11,10 @@ interface Unit {
   id: string;
   name: string;
   symbol: string;
+  localizedSymbol?: string;
+  symbolOther?: string;
+  localizedName?: string;
+  nameOther?: string;
   abbreviation?: string;
   type?: UnitType;
 }

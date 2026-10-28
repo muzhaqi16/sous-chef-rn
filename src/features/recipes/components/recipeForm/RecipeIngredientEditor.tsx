@@ -22,7 +22,7 @@ import type { IngredientFormState } from '#features/recipes/types';
 import { Text } from '#components/atoms/Text';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import type { CaptureCandidate } from '#features/recipes/hooks/useCaptureReview';
-import { formatQuantityForInput } from '#/utils/formatQuantity';
+import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
 
 export interface RecipeIngredientEditorRef {
   open: (ingredient?: IngredientFormState) => void;
@@ -113,7 +113,8 @@ export const RecipeIngredientEditor = forwardRef<
 
   const handleItemSelect = ({ id, defaultUnit }: ItemSuggestion) => {
     const changes: Partial<IngredientDraft> = { itemId: id };
-    if (defaultUnit?.symbol) changes.unit = defaultUnit.symbol;
+    const seededUnit = unitLabel(defaultUnit);
+    if (seededUnit) changes.unit = seededUnit;
     if (defaultUnit?.id) changes.unitId = defaultUnit.id;
     update(changes);
   };

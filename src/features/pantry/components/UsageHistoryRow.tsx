@@ -7,7 +7,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { AdjustmentKind, UsagePurpose } from '#/graphql/generated/schemaTypes';
 import { formatDate } from '#features/pantry/hooks/usePantryItemTransformation';
 import { Text } from '#components/atoms/Text';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit } from '#/utils/formatQuantity';
 import { useMoney } from '#domain/money';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import type { UsageRecord } from '#features/pantry/types';
@@ -110,8 +110,7 @@ export const UsageHistoryRow: React.FC<{
         style={isAdjustment ? styles.adjustmentQuantity : undefined}
       >
         {quantityPrefix}
-        {formatQuantityForDisplay(usage.quantityUsed)}
-        {usage.usageUnit?.symbol ? ` ${usage.usageUnit.symbol}` : ''}
+        {formatQuantityWithUnit(usage.quantityUsed, usage.usageUnit)}
       </Text>
     </View>
   );

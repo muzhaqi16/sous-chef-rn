@@ -28,6 +28,8 @@ fragment RecipeCaptureReaders on RecipeCapture {
       section
       unit {
         id
+        localizedSymbol
+        symbolOther: localizedSymbol(quantity: 2)
         name
         symbol
       }

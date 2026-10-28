@@ -9,8 +9,8 @@ import { ConversionPreview } from '#features/pantry/components/ConversionPreview
 import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
-  formatQuantityForDisplay,
   formatQuantityForInput,
+  formatQuantityWithUnit,
 } from '#/utils/formatQuantity';
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
 import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
@@ -30,6 +30,8 @@ import type {
 interface RestockPantryItemModalProps {
   visible: boolean;
   pantryItemId: string | null;
+  /** Why the amount is asked, shown on its field until it is edited. */
+  reason?: string;
   onClose: () => void;
   onConfirm: (
     quantity: number,
@@ -45,12 +47,15 @@ interface RestockPantryItemModalProps {
 export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   visible,
   pantryItemId,
+  reason,
   onClose,
   onConfirm,
 }) => {
   const { t } = useTranslation();
   const asksCost = useBudgetAndPricesEnabled();
   const [quantityInput, setQuantityInput] = useState('1');
+  // Outside `handleReset`, which runs as the modal opens.
+  const [quantityEdited, setQuantityEdited] = useState(false);
   const [costPerUnitInput, setCostPerUnitInput] = useState('');
   const [totalCostInput, setTotalCostInput] = useState('');
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
@@ -75,7 +80,9 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const errorOn = (refused: boolean, key: TranslationKey) =>
     confirmRefused && refused ? t(key) : undefined;
   const errors = {
-    quantity: errorOn(!quantityIsUsable, 'errors.invalidQuantity'),
+    quantity:
+      errorOn(!quantityIsUsable, 'errors.invalidQuantity') ??
+      (quantityEdited ? undefined : reason),
     costPerUnit: errorOn(costPerUnit === undefined, 'errors.invalidAmountPaid'),
     totalCost: errorOn(totalCost === undefined, 'errors.invalidAmountPaid'),
   };
@@ -120,7 +127,10 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       renderActionFields={shared => (
         <RestockActionFields
           quantityInput={quantityInput}
-          setQuantityInput={setQuantityInput}
+          setQuantityInput={value => {
+            setQuantityEdited(true);
+            setQuantityInput(value);
+          }}
           costPerUnitInput={costPerUnitInput}
           setCostPerUnitInput={setCostPerUnitInput}
           totalCostInput={totalCostInput}
@@ -177,12 +187,12 @@ const RestockActionFields: React.FC<{
       ? shared.availableInSelectedUnit
       : shared.trackingQuantity;
 
-  const newQuantitySymbol =
+  const newQuantityUnit =
     shared.isDualTracked &&
     shared.isConvertedUnit &&
-    shared.netWeightUnitSymbol !== undefined
-      ? shared.netWeightUnitSymbol
-      : shared.activeUnitSymbol;
+    shared.netWeightUnit !== undefined
+      ? shared.netWeightUnit
+      : shared.activeUnit;
 
   let newQuantity: ShownQuantity | null = null;
   if (addAmount !== null && !isNaN(addAmount)) {
@@ -201,7 +211,7 @@ const RestockActionFields: React.FC<{
           (shared.isDualTracked && conversion.convertedValue != null
             ? conversion.convertedValue
             : addAmount),
-        unitSymbol: newQuantitySymbol,
+        unit: newQuantityUnit,
         displayAsFraction: null,
       };
     }
@@ -225,8 +235,7 @@ const RestockActionFields: React.FC<{
             {newQuantity !== null ? (
               <Text role="label" tone="accent" style={styles.newQuantityText}>
                 {t('restockItem.newQuantityPrefix')}
-                {formatQuantityForDisplay(newQuantity.quantity)}{' '}
-                {newQuantity.unitSymbol}
+                {formatQuantityWithUnit(newQuantity.quantity, newQuantity.unit)}
               </Text>
             ) : null}
             {shared.isConvertedUnit ? (
@@ -243,7 +252,7 @@ const RestockActionFields: React.FC<{
             fractions={shared.commonFractions}
             onSelect={value => setQuantityInput(formatQuantityForInput(value))}
             selectedValue={addAmount ?? undefined}
-            unitSymbol={shared.activeUnitSymbol}
+            unit={shared.activeUnit}
             displayAsFraction
           />
         ) : null}

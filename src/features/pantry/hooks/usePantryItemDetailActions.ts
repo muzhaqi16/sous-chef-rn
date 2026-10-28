@@ -15,6 +15,7 @@ import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePant
 import {
   formatQuantityForDisplay,
   resolveQuantityNotation,
+  unitLabel,
 } from '#/utils/formatQuantity';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 import type {
@@ -201,7 +202,7 @@ export function usePantryItemDetailActions({
         itemName,
         quantity,
         unitId: item?.unit?.id,
-        unitName: item?.unit?.name,
+        unitName: unitLabel(item?.unit, { quantity }),
       },
       line: {
         item: catalogItemId
@@ -240,7 +241,7 @@ export function usePantryItemDetailActions({
               item.unit?.displayAsFraction,
             ),
           }),
-          unit: item.unit?.name ?? '',
+          unit: unitLabel(item.unit, { quantity: item.quantity }),
         });
 
     alertService.alert(

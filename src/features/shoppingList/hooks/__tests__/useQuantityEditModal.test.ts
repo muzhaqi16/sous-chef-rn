@@ -20,6 +20,10 @@ import {
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { useQuantityEditModal } from '../useQuantityEditModal';
 import { resolveImageUrl } from '#utils/imageUtils';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 function updateMock() {
   return recordMock(UpdateShoppingListItemDocument, {
@@ -78,13 +82,13 @@ function createItem(
       movedToPantryAt: null,
       isPurchased: false,
     },
-    unit: {
+    unit: asAbbreviation({
       __typename: 'Unit',
       id: 'unit-1',
       name: 'gallon',
       symbol: 'gal',
       type: UnitType.Volume,
-    },
+    }),
     item: null,
     ...overrides,
   };
@@ -184,12 +188,12 @@ describe('useQuantityEditModal', () => {
           category: 'Dairy',
           unitName: 'gallon',
           version: 3,
-          unit: {
+          unit: asAbbreviation({
             __typename: 'Unit',
             id: 'unit-1',
             name: 'gallon',
             symbol: 'gal',
-          },
+          }),
           amount: null,
           image: {
             __typename: 'EntryImage',
@@ -235,8 +239,7 @@ describe('useQuantityEditModal', () => {
     expect(result.current.selectedItem!.itemUnits[0]).toEqual(
       expect.objectContaining({
         id: 'unit-1',
-        symbol: 'gal',
-        name: 'gallon',
+        unit: expect.objectContaining({ symbol: 'gal', name: 'gallon' }),
         isDefault: true,
         isPreferred: true,
       }),
@@ -686,14 +689,15 @@ describe('useQuantityEditModal', () => {
 
 // The sheet opens on what the row shows, and saves what is typed in that unit.
 describe('useQuantityEditModal — the amount as the row reads it', () => {
-  const reading = (value: number, unitId: string, symbol: string) => ({
-    __typename: 'MeasureReading',
-    value,
-    unitId,
-    symbol,
-    displayAsFraction: false,
-    type: UnitType.Weight,
-  });
+  const reading = (value: number, unitId: string, symbol: string) =>
+    readingAsAbbreviation({
+      __typename: 'MeasureReading',
+      value,
+      unitId,
+      symbol,
+      displayAsFraction: false,
+      type: UnitType.Weight,
+    });
 
   // A 2 lb line, which a metric reader sees as 0.91 kg.
   const twoPounds = (system: UnitSystem) => {
@@ -707,12 +711,12 @@ describe('useQuantityEditModal — the amount as the row reads it', () => {
         category: 'Meat',
         unitName: 'lb',
         version: 3,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: 'unit-lb',
           name: 'pound',
           symbol: 'lb',
-        },
+        }),
         amount: {
           __typename: 'Measure',
           value: 2,
@@ -750,7 +754,12 @@ describe('useQuantityEditModal — the amount as the row reads it', () => {
       quantity: 0.91,
       unitName: 'kg',
       unitId: 'unit-kg',
-      itemUnits: [expect.objectContaining({ id: 'unit-kg', symbol: 'kg' })],
+      itemUnits: [
+        expect.objectContaining({
+          id: 'unit-kg',
+          unit: expect.objectContaining({ symbol: 'kg' }),
+        }),
+      ],
     });
   });
 

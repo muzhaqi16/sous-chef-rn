@@ -5,6 +5,7 @@ fragment CorrectPackageSizeModal_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
   }
   # The server refuses a package size stated in the tracking unit.
   unit {
@@ -24,6 +25,7 @@ fragment CorrectPackageSizeModal_batch on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -31,6 +33,7 @@ fragment CorrectPackageSizeModal_batch on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -42,6 +45,7 @@ fragment CorrectPackageSizeModal_batch on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -49,6 +53,7 @@ fragment CorrectPackageSizeModal_batch on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

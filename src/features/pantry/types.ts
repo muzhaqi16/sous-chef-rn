@@ -7,12 +7,13 @@ import type {
 } from '#/graphql/generated/schemaTypes';
 import type { OfferedAcquisitionMethod } from '#features/pantry/utils/itemEnumLabels';
 import type { MeasureShape } from '#domain/measure';
+import type { UnitLabelSource } from '#/utils/formatQuantity';
 
 /** A unit as `UnitPicker` renders it; the hooks that rank units produce this shape. */
 export interface PickableUnit {
   unitId: string;
-  unitSymbol: string;
-  unitName: string;
+  /** The unit as the ranking returns it, to show. */
+  unit: UnitLabelSource;
   unitType: UnitType;
   isTrackingUnit: boolean;
   conversionRatio: number | null;
@@ -22,7 +23,7 @@ export interface PickableUnit {
 /** An amount and the unit it reads in: "11 pc", "2 doz". */
 export interface ShownQuantity {
   quantity: number;
-  unitSymbol: string;
+  unit: UnitLabelSource;
   /** The unit's own notation; null where a fraction wins. */
   displayAsFraction: boolean | null;
 }
@@ -34,12 +35,12 @@ export interface PantryActionSharedState {
   setNotes: (notes: string) => void;
   /** Available quantity in the tracking unit, which is always the base. */
   trackingQuantity: number;
-  trackingUnitSymbol: string;
+  trackingUnit: UnitLabelSource;
   trackingUnitId: string | undefined;
   /** A unit's own notation; null where its flag is unknown. */
   displayAsFractionOf: (unitId: string | undefined) => boolean | null;
   /** Selected unit, falling back to the tracking unit. */
-  activeUnitSymbol: string;
+  activeUnit: UnitLabelSource;
   activeUnitId: string | undefined;
   /** A non-tracking unit is selected, so quantities need conversion. */
   isConvertedUnit: boolean;
@@ -61,7 +62,7 @@ export interface PantryActionSharedState {
   availableLoading: boolean;
   /** Dual-tracked items only. */
   remainingNetWeight: number | null;
-  netWeightUnitSymbol: string | undefined;
+  netWeightUnit: UnitLabelSource | undefined;
   netWeightUnitId: string | undefined;
   isDualTracked: boolean;
 }
@@ -73,7 +74,7 @@ export interface UsageRecord {
   purpose: UsagePurpose;
   adjustmentKind?: AdjustmentKind | null;
   adjustmentReason?: string | null;
-  usageUnit?: { symbol?: string | null } | null;
+  usageUnit?: UnitLabelSource | null;
   totalCost?: number | null;
   currency?: { code: string } | null;
   /** A recount stated in a unit, read in both systems; null on every other row. */

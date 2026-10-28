@@ -33,6 +33,8 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   # Selected inline rather than spreading ShoppingListItemPurchaseInfoFragment:
   # this is the READER, and under `dataMasking` a named spread hides these
@@ -138,6 +140,8 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
       id
       name
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   purchaseHistory {

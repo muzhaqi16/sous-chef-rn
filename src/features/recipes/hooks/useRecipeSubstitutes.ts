@@ -67,7 +67,7 @@ export function useRecipeSubstitutes(
           parts: parts.map(part => ({
             key: part.item.id,
             text: t('recipes.substitutes.part', {
-              amount: formatQuantityWithUnit(part.quantity, part.unit.symbol),
+              amount: formatQuantityWithUnit(part.quantity, part.unit),
               name: part.item.name,
             }),
             inPantry: part.inPantry,
@@ -77,7 +77,7 @@ export function useRecipeSubstitutes(
             ? null
             : formatQuantityWithUnit(
                 substitute.forQuantity,
-                substitute.forUnit.symbol,
+                substitute.forUnit,
               ),
           note: substitute.note,
           alerts: alerts.map(alert =>

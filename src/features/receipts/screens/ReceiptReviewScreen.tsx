@@ -24,7 +24,11 @@ import { useMoney } from '#domain/money';
 import { useToday } from '#hooks/app/useToday';
 import { fromDateKey, toDateKey } from '#/utils/dateUtils';
 import { EARLIEST_RECEIPT_DAY } from '#features/receipts/utils/receiptDate';
-import { formatQuantityDisplay } from '#/utils/formatQuantity';
+import {
+  formatQuantityDisplay,
+  type UnitLabelSource,
+} from '#/utils/formatQuantity';
+import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import { ReceiptLineSheet } from '../components/ReceiptLineSheet';
 import {
   useReceiptReview,
@@ -34,6 +38,16 @@ import {
 import { receiptsTestIDs } from '../testIDs';
 
 type ReviewSection = 'toAdd' | 'pending' | 'toCheck' | 'notAdded' | 'added';
+
+// While the line keeps its printed unit, the known unit it names; else what
+// the user typed, as typed.
+const shownUnitOf = (
+  row: ReceiptReviewRow,
+  choice: ReceiptLineChoice,
+): UnitLabelSource =>
+  row.measureUnit && choice.unitText === (row.unit ?? '')
+    ? row.measureUnit
+    : { symbol: choice.unitText };
 
 // Lines that will be added first, then those waiting for a match, those with
 // no product to add yet, those left out, and those already in.
@@ -186,7 +200,10 @@ export const ReceiptReviewScreen: React.FC = () => {
             : 'receipts.review.chosenDetail',
           {
             printed: row.printed,
-            amount: formatQuantityDisplay(choice.quantity, choice.unitText),
+            amount: formatQuantityDisplay(
+              choice.quantity,
+              shownUnitOf(row, choice),
+            ),
           },
         );
       }

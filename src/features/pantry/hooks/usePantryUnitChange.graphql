@@ -9,11 +9,15 @@ query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {
     fromUnit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
       displayAsFraction
     }
     toUnit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
       displayAsFraction
     }
     quantityBefore
@@ -57,12 +61,16 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   unit {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     displayAsFraction
   }
@@ -72,6 +80,8 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   minQuantity
   restockQuantity

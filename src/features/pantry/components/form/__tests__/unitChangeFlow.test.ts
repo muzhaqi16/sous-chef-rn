@@ -17,6 +17,7 @@ import {
   type UnitChangeDeps,
   type UnitChangeTarget,
 } from '../unitChangeFlow';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 const mockAlert = jest.mocked(alertService.alert);
 
@@ -24,12 +25,13 @@ const unit = (
   id: string,
   symbol: string,
   displayAsFraction = true,
-): UnitChangePreview['toUnit'] => ({
-  __typename: 'Unit',
-  id,
-  symbol,
-  displayAsFraction,
-});
+): UnitChangePreview['toUnit'] =>
+  asAbbreviation({
+    __typename: 'Unit',
+    id,
+    symbol,
+    displayAsFraction,
+  });
 
 const PC = unit('u-pc', 'pc');
 const DOZ = unit('u-doz', 'doz', false);

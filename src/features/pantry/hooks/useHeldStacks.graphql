@@ -62,6 +62,8 @@ fragment useHeldStacks_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   held {
@@ -71,6 +73,7 @@ fragment useHeldStacks_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -78,6 +81,7 @@ fragment useHeldStacks_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

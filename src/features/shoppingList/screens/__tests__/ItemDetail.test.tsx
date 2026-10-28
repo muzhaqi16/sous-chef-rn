@@ -37,6 +37,7 @@ import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => true),
@@ -225,12 +226,12 @@ describe('ShoppingListItemDetail', () => {
           buildShoppingListItem({
             brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
             netWeight: 500,
-            netWeightUnit: {
+            netWeightUnit: asAbbreviation({
               __typename: 'Unit',
               id: 'unit-g',
               name: 'gram',
               symbol: 'g',
-            },
+            }),
           }),
         ),
       ],

@@ -209,7 +209,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     }));
     const texts = parts.map(part =>
       t('recipes.substitutes.part', {
-        amount: formatQuantityWithUnit(part.quantity, part.unit.symbol),
+        amount: formatQuantityWithUnit(part.quantity, part.unit),
         name: part.item.name,
       }),
     );

@@ -104,15 +104,13 @@ const mockItem = {
   itemUnits: [
     {
       id: 'unit-1',
-      symbol: 'lbs',
-      name: 'Pounds',
+      unit: { symbol: 'lbs', name: 'Pounds' },
       isDefault: true,
       isPreferred: false,
     },
     {
       id: 'unit-2',
-      symbol: 'oz',
-      name: 'Ounces',
+      unit: { symbol: 'oz', name: 'Ounces' },
       isDefault: false,
       isPreferred: false,
     },

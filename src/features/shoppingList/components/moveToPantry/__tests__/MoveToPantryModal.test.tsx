@@ -15,6 +15,7 @@ import {
 } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal.generated';
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -246,13 +247,13 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         itemName: 'Milk',
         quantity: 2,
         unitName: 'gal',
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u1',
           symbol: 'gal',
           name: 'Gallons',
           type: UnitType.Volume,
-        },
+        }),
         ...overrides,
       },
     },
@@ -433,13 +434,13 @@ describe('MoveToPantryModal', () => {
       'A package size goes with a whole number of packages in a counted unit, like 2 jars. Leave it empty for an amount like 500 g.';
     const JAR_LINE = {
       unitName: 'jar',
-      unit: {
+      unit: asAbbreviation({
         __typename: 'Unit',
         id: 'u-jar',
         symbol: 'jar',
         name: 'Jars',
         type: UnitType.Count,
-      },
+      }),
     };
     const NO_UNIT_LINE = { unit: null, unitName: null };
 

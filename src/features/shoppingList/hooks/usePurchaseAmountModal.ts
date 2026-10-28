@@ -5,6 +5,7 @@ import { UsePurchaseAmountModal_ItemFragmentDoc } from './usePurchaseAmountModal
 import { useTranslation } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
+import { unitLabel } from '#/utils/formatQuantity';
 
 export interface PurchaseAmountItem {
   id: string;
@@ -87,7 +88,7 @@ export function usePurchaseAmountModal(
         requestedQuantity: selectedItemRaw.quantity ?? 1,
         unitName:
           firstNonBlank(
-            selectedItemRaw.unit?.symbol,
+            unitLabel(selectedItemRaw.unit),
             selectedItemRaw.unitName,
           ) ?? null,
         estimatedPrice: liveEstimatedPrice,

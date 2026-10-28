@@ -14,6 +14,8 @@ fragment useAdjustPantryItemQuantity_pantryItem on PantryItem {
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
   isLowStock

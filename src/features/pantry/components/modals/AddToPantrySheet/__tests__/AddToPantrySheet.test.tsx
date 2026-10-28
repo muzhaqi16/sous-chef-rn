@@ -18,6 +18,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { AddToPantrySheet } from '../AddToPantrySheet';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -369,6 +370,8 @@ describe('AddToPantrySheet', () => {
                   __typename
                   id
                   symbol
+                  localizedSymbol
+                  symbolOther: localizedSymbol(quantity: 2)
                 }
               }
             }
@@ -418,7 +421,7 @@ describe('AddToPantrySheet', () => {
         itemName: 'Milk',
         quantity: 3,
         item: { __typename: 'Item', id: 'item-1' },
-        unit: { __typename: 'Unit', id: 'unit-l', symbol: 'L' },
+        unit: asAbbreviation({ __typename: 'Unit', id: 'unit-l', symbol: 'L' }),
       },
     };
 
@@ -525,9 +528,8 @@ describe('AddToPantrySheet', () => {
       expect(readQuantity(cache)).toBe(4);
     });
 
-    it('adds one package to a stack held by volume as the API counts an add, never 1 L', async () => {
-      // A restock refuses packages nothing sizes; a forced add counts them in
-      // a counted stack of the item.
+    it('restocks a stack held by volume by one package for the server to size, never 1 L', async () => {
+      // A forced add would name no stack, and could land on another one.
       const cache = seedStocked([stockedEdge]);
       typedUnit(cache, 'unit-l', UnitType.Volume);
       const create = recordMock(CreatePantryItemDocument, {
@@ -546,13 +548,12 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(milkInLitres);
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
-      expect(create.fired[0]?.input).toMatchObject({
-        item: { id: 'item-1' },
+      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      expect(restock.fired[0]?.input).toMatchObject({
+        id: 'pi-1',
         amount: { packages: { count: 1 } },
-        forceAdd: true,
       });
-      expect(restock.fired).toHaveLength(0);
+      expect(create.fired).toHaveLength(0);
       // The held litres never move by 1 L.
       expect(readQuantity(cache)).toBe(3);
     });
@@ -717,14 +718,79 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(suggestionRow(PantrySuggestionSource.LowStock, 'pi-held'));
 
-      // The stack is past the loaded window, so its unit is unknown: a forced
-      // add joins the item's counted stack, or counts it as the API counts an add.
-      await waitFor(() => expect(create.fired).toHaveLength(1));
-      expect(create.fired[0]).toMatchObject({
-        input: { amount: { packages: { count: 1 } }, forceAdd: true },
+      // The stack is past the loaded window, so its unit is unknown: the
+      // server sizes the package, on the stack the row names.
+      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      expect(restock.fired[0]).toMatchObject({
+        input: { id: 'pi-held', amount: { packages: { count: 1 } } },
       });
-      expect(restock.fired).toHaveLength(0);
-      expect(toastService.success).toHaveBeenCalledWith('Restocked Milk');
+      expect(create.fired).toHaveLength(0);
+      await waitFor(() =>
+        expect(toastService.success).toHaveBeenCalledWith('Restocked Milk'),
+      );
+    });
+
+    describe('a restock the server cannot size', () => {
+      const unsized = () =>
+        recordMock(RestockPantryItemDocument, {
+          data: {
+            restockPantryItem: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: 'state how much one package holds',
+              field: 'amount.packages.size',
+            },
+          },
+        });
+
+      const tapExpiring = () => {
+        const quickAdd = sheetProps.current.onQuickAddSuggestion as (
+          row: unknown,
+        ) => void;
+        quickAdd(suggestionRow(PantrySuggestionSource.ExpiringSoon, 'pi-held'));
+      };
+
+      it('asks for the amount on the restock form, with no toast', async () => {
+        const onRestockNeedsAmount = jest.fn(() => true);
+        renderWithApollo(
+          <AddToPantrySheet
+            {...defaultProps}
+            onRestockNeedsAmount={onRestockNeedsAmount}
+          />,
+          { cache: makeCache(), operationMocks: [unsized().mock] },
+        );
+
+        tapExpiring();
+
+        await waitFor(() =>
+          expect(onRestockNeedsAmount).toHaveBeenCalledWith(
+            'pi-held',
+            expect.stringContaining('how much one package'),
+          ),
+        );
+        expect(toastService.success).not.toHaveBeenCalled();
+        expect(toastService.error).not.toHaveBeenCalled();
+        expect(defaultProps.onItemAdded).not.toHaveBeenCalled();
+      });
+
+      it('says why on a toast when no form can ask', async () => {
+        renderWithApollo(
+          <AddToPantrySheet
+            {...defaultProps}
+            onRestockNeedsAmount={() => false}
+          />,
+          { cache: makeCache(), operationMocks: [unsized().mock] },
+        );
+
+        tapExpiring();
+
+        await waitFor(() =>
+          expect(toastService.error).toHaveBeenCalledWith(
+            expect.stringContaining('how much one package'),
+          ),
+        );
+        expect(toastService.success).not.toHaveBeenCalled();
+      });
     });
 
     it('adds an Add Again row, never restocking the removed stack it names', async () => {

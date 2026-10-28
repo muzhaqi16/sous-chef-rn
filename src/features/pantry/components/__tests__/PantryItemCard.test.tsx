@@ -19,6 +19,10 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
 import { changeLanguage } from '#/i18n';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('react-native-worklets', () => ({
   createWorkletRuntime: jest.fn(),
@@ -168,12 +172,13 @@ interface BuildItemOverrides {
   held?: PantryItemCard_PantryItemFragment['held'];
 }
 
-const unitRead = (id: string, symbol: string) => ({
-  unitId: id,
-  symbol,
-  displayAsFraction: false,
-  type: UnitType.Weight,
-});
+const unitRead = (id: string, symbol: string) =>
+  readingAsAbbreviation({
+    unitId: id,
+    symbol,
+    displayAsFraction: false,
+    type: UnitType.Weight,
+  });
 
 /** What a local row holds before the server reads it: no reading of its amount. */
 const NO_READING: PantryItemCard_PantryItemFragment['held'] = {
@@ -202,16 +207,16 @@ function buildItem(
         overrides.heldQuantity ??
         overrides.quantity ??
         2,
-      unit: {
+      unit: asAbbreviation({
         __typename: 'Unit',
         id: overrides.shown ? 'unit-shown' : 'unit-1',
         symbol: overrides.shown?.symbol ?? overrides.unitSymbol ?? 'gal',
-      },
+      }),
     },
     held: overrides.held ?? NO_READING,
     portionUnitId: overrides.portionUnit?.id ?? null,
     portionUnit: overrides.portionUnit
-      ? { __typename: 'Unit', ...overrides.portionUnit }
+      ? asAbbreviation({ __typename: 'Unit', ...overrides.portionUnit })
       : null,
     remainingPortions: overrides.remainingPortions ?? null,
     expiresOn: overrides.expiresOn ?? null,
@@ -227,11 +232,11 @@ function buildItem(
       imageUrl: overrides.imageUrl ?? null,
       images: [] as PantryItemCard_PantryItemFragment['item']['images'],
     },
-    unit: {
+    unit: asAbbreviation({
       __typename: 'Unit',
       id: 'unit-1',
       symbol: overrides.unitSymbol ?? 'gal',
-    },
+    }),
     netWeightUnit: null,
     storageLocation:
       overrides.storageLocationName == null
@@ -247,15 +252,15 @@ function buildItem(
           count: overrides.packageBreakdown.count,
           perUnitNetWeight: overrides.packageBreakdown.perUnitNetWeight ?? null,
           totalNetWeight: overrides.packageBreakdown.totalNetWeight ?? null,
-          contentUnit: {
+          contentUnit: asAbbreviation({
             __typename: 'Unit',
             ...overrides.packageBreakdown.contentUnit,
-          },
+          }),
           perUnitNetWeightUnit: overrides.packageBreakdown.perUnitNetWeightUnit
-            ? {
+            ? asAbbreviation({
                 __typename: 'Unit',
                 ...overrides.packageBreakdown.perUnitNetWeightUnit,
-              }
+              })
             : null,
         }
       : null,
@@ -267,16 +272,16 @@ function buildItem(
           totalContentUnits: overrides.quantityBreakdown.totalContentUnits,
           remainingWeight: overrides.quantityBreakdown.remainingWeight,
           contentUnit: overrides.quantityBreakdown.contentUnit
-            ? {
+            ? asAbbreviation({
                 __typename: 'Unit',
                 ...overrides.quantityBreakdown.contentUnit,
-              }
+              })
             : null,
           remainingWeightUnit: overrides.quantityBreakdown.remainingWeightUnit
-            ? {
+            ? asAbbreviation({
                 __typename: 'Unit',
                 ...overrides.quantityBreakdown.remainingWeightUnit,
-              }
+              })
             : null,
         }
       : null,

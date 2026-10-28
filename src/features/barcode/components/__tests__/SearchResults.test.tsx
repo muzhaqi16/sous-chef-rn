@@ -20,6 +20,10 @@ import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/us
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { t } from '#/i18n';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
@@ -286,22 +290,22 @@ describe('SearchResults', () => {
             __typename: 'Measure',
             value: 1360.78,
             unitId: 'unit-g',
-            metric: {
+            metric: readingAsAbbreviation({
               __typename: 'MeasureReading',
               value: 1.36,
               unitId: 'unit-kg',
               symbol: 'kg',
               displayAsFraction: false,
               type: UnitType.Weight,
-            },
-            imperial: {
+            }),
+            imperial: readingAsAbbreviation({
               __typename: 'MeasureReading',
               value: 3,
               unitId: 'unit-lb',
               symbol: 'lb',
               displayAsFraction: false,
               type: UnitType.Weight,
-            },
+            }),
           },
         }}
       />,
@@ -344,14 +348,15 @@ describe('SearchResults', () => {
       value: number,
       unitId: string,
       symbol: string,
-    ): NonNullable<ScannedItem['packageSize']>['metric'] => ({
-      __typename: 'MeasureReading',
-      value,
-      unitId,
-      symbol,
-      displayAsFraction: false,
-      type: UnitType.Volume,
-    });
+    ): NonNullable<ScannedItem['packageSize']>['metric'] =>
+      readingAsAbbreviation({
+        __typename: 'MeasureReading',
+        value,
+        unitId,
+        symbol,
+        displayAsFraction: false,
+        type: UnitType.Volume,
+      });
 
     renderWithApollo(
       <SearchResults
@@ -376,7 +381,11 @@ describe('SearchResults', () => {
               metric: volume(250, 'unit-ml', 'ml'),
               imperial: volume(8.45, 'unit-floz', 'fl oz'),
             },
-            container: { __typename: 'Unit', id: 'unit-can', symbol: 'can' },
+            container: asAbbreviation({
+              __typename: 'Unit',
+              id: 'unit-can',
+              symbol: 'can',
+            }),
           },
         }}
       />,
@@ -676,14 +685,14 @@ describe('SearchResults', () => {
     // No stack known: the add opens one, which alone takes a consume unit.
     expect(screen.getByText(t('labels.usedIn'))).toBeTruthy();
 
-    const reading: HeldStack['held']['metric'] = {
+    const reading: HeldStack['held']['metric'] = readingAsAbbreviation({
       __typename: 'MeasureReading',
       value: 2,
       unitId: 'unit-pc',
       symbol: 'pc',
       displayAsFraction: false,
       type: UnitType.Count,
-    };
+    });
     act(() => {
       cache.writeFragment({
         fragment: UseHeldStacks_PantryItemFragmentDoc,
@@ -702,7 +711,11 @@ describe('SearchResults', () => {
           displayAmount: {
             __typename: 'DisplayAmount',
             quantity: 2,
-            unit: { __typename: 'Unit', id: 'unit-pc', symbol: 'pc' },
+            unit: asAbbreviation({
+              __typename: 'Unit',
+              id: 'unit-pc',
+              symbol: 'pc',
+            }),
           },
           held: {
             __typename: 'Measure',

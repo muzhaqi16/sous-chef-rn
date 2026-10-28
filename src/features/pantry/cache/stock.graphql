@@ -6,12 +6,16 @@ fragment writeHeldStock_pantryItem on PantryItem {
   unit {
     id
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
   }
   displayAmount {
     quantity
     unit {
       id
       symbol
+      localizedSymbol
+      symbolOther: localizedSymbol(quantity: 2)
     }
   }
 }
@@ -23,6 +27,8 @@ fragment writeHeldStock_shownIn on PantryItem {
   displayUnit {
     id
     symbol
+    localizedSymbol
+    symbolOther: localizedSymbol(quantity: 2)
     type
     hasStandardCountFactor
     baseUnitId
