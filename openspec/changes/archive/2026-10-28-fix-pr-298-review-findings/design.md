@@ -161,19 +161,25 @@ a refused tick this way.
 New `src/features/pantry/hooks/useHeldStacks.ts` (top-level hooks are the
 pantry's public API). It returns, live:
 
-1. **Candidates.** `useFragment` reads the pantry's unfiltered `itemsConnection`
-   (client mode, args undefined, as `cachedPantryItems` reads it) and keeps the
-   nodes of `itemId`. If that read is incomplete (server mode, which
-   `usePantryScreen` enters only online, or a pantry not cached), a new query
-   `HeldStacks(pantryId, filters: { itemId })` runs `cache-first`. The API
-   supports `Pantry.itemsConnection(filters: PantryItemFilters { itemId })`.
-2. **Stacks.** `useFragmentList` over the candidate ids with
-   `readHeldStack_pantryItem`, which gains `createdAt`. Incomplete entries are
-   dropped, for both choosers.
+1. **Candidates.** `useFragment` reads the hook's own `useHeldStacks_pantry`
+   fragment over the pantry's unfiltered `itemsConnection` (client mode, all four
+   arguments undefined, the key `GetPantry` writes) and keeps the nodes of
+   `itemId`. If that read is incomplete (server mode, which `usePantryScreen`
+   enters only online, or a pantry not cached), the colocated query
+   `HeldStacks($pantryId, $itemId, $stacksFirst)` runs `cache-first` over
+   `Pantry.itemsConnection(filters: { itemId })`, with `$stacksFirst` set to 20.
+   Its answer is used only when its variables name this pantry and item, since
+   `skipToken` keeps the last run's data.
+2. **Stacks.** `useFragmentList` over the candidate ids with the hook's own
+   `useHeldStacks_pantryItem` fragment, which carries `createdAt` and the held
+   amount `formatHeldAmount` reads. Incomplete entries, and rows of another item
+   listed under the filtered connection, are dropped for both choosers.
 3. **Two choices from the same stacks.** `seedUnit` picks a counted stack
-   first, else the first (today's `readHeldStackUnit` rule). It seeds the amount
-   form. `joinedIn(unitId)` picks as the API joins a forced add: the stack in
-   `unitId`, else the oldest by `createdAt`. It feeds the joined-stack summary.
+   first, else the first (the `readHeldStackUnit` rule). It seeds the amount
+   form. `joinedIn(unitId)` picks as the API joins a forced add: the oldest
+   stack in `unitId`, else the oldest held, by `createdAt`. `SearchResults`
+   passes it the form's current unit (`useWatch` on `unitId`), so the
+   joined-stack summary follows a unit the user changes.
 4. **Unread stacks count as none.** While neither source has answered, the card
    says the add creates a stack and offers its consume unit, as it did before.
    The API ignores a consume unit on a joined stack ("not applied to a held
@@ -185,8 +191,8 @@ hook. The amount form keeps its own state, and the existing effect fills an
 empty unit field once `seedUnit` appears. A unit the user typed is never
 overwritten. `usePantryIntake` drops `heldStackOf` and `useAddScannedItem`
 drops `heldUnitOf`/`heldStackOf` (hook members must be read). `readHeldStack`
-goes if nothing else reads it. `readHeldStackUnit` stays for
-`useReceiptReview.addChosen`, a handler read.
+and its `readHeldStack_pantryItem` fragment are gone. `readHeldStackUnit` stays
+for `useReceiptReview.addChosen`, a handler read.
 
 - *Lookup carries the stacks:* every local-first pantry writer would have to
   keep that filtered connection complete. Not chosen.
