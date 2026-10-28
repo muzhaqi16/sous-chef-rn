@@ -150,7 +150,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const brandListings = useProductBrandListings(
     item.id,
     scannedBrand?.id ?? null,
-    brandLists.lists,
+    brandLists.loaded ? brandLists.lists : null,
   );
   // The unit the price sheet counts in: the matched line's, else the
   // product's own. A line with no unit of its own gets no comparison.

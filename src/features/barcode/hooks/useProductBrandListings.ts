@@ -20,11 +20,13 @@ export interface BrandListing {
  * only, read from each list so a switch flipped offline holds at once. A list
  * holding the scanned brand itself is that list's nearest match, so an add
  * shows from the list before the matches are read again, offline included.
+ * `lists` is null until the user's lists are read; until then the matches
+ * stand as the item carries them.
  */
 export function useProductBrandListings(
   itemId: string,
   scannedBrandId: string | null,
-  lists: readonly BrandListView[],
+  lists: readonly BrandListView[] | null,
 ) {
   // The scan's lookup stores these with the item, so this asks only for an
   // item that came another way.
@@ -38,9 +40,20 @@ export function useProductBrandListings(
     from: { __typename: 'Item', id: itemId },
   });
 
+  // Deleting a list or taking a brand off one leaves its match on the item, so
+  // a match counts only while the user's lists still hold its entry.
+  const stillHeld = (listId: string, entryId: string) =>
+    lists === null ||
+    lists.some(
+      list =>
+        list.id === listId &&
+        list.brands.some(brand => brand.entryId === entryId),
+    );
+
   const byList = new Map<string, BrandListing>();
   for (const match of complete ? data.listMatches : []) {
     if (!match.brandList.enabled) continue;
+    if (!stillHeld(match.brandList.id, match.entry.id)) continue;
     byList.set(match.brandList.id, {
       key: `${match.brandList.id}:${match.entry.id}`,
       listName: match.brandList.name,
@@ -48,7 +61,7 @@ export function useProductBrandListings(
       reason: match.entry.reason,
     });
   }
-  for (const list of lists) {
+  for (const list of lists ?? []) {
     if (!list.enabled) continue;
     const entry = list.brands.find(brand => brand.brandId === scannedBrandId);
     if (!entry) continue;

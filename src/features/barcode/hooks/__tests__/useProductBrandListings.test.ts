@@ -63,8 +63,9 @@ describe('useProductBrandListings', () => {
         },
       },
     });
+    // The user's lists not read yet: the matches stand as the item carries them.
     const { result } = renderHookWithApollo(
-      () => useProductBrandListings('jif-creamy', 'b-jif', []),
+      () => useProductBrandListings('jif-creamy', 'b-jif', null),
       { operationMocks: [mock.mock] },
     );
 
@@ -138,5 +139,74 @@ describe('useProductBrandListings', () => {
         reason: null,
       },
     ]);
+  });
+
+  // The user sees the match, then changes the list from the scan result.
+  describe('once the user has changed their lists', () => {
+    const avoidMatch = () =>
+      recordMock(ProductBrandListingsDocument, {
+        data: {
+          item: {
+            id: 'jif-creamy',
+            listMatches: [
+              match(
+                { id: 'l-avoid', name: 'Avoid', enabled: true },
+                { id: 'e-2', reason: null, brand: 'Jif' },
+                false,
+              ),
+            ],
+          },
+        },
+      });
+    const AVOID_HOLDING_JIF = list('l-avoid', 'Avoid', true, [
+      entry('e-2', 'b-jif', null),
+    ]);
+
+    // Scanned as a Skippy record, so only the item's match can name Avoid.
+    const renderListings = (lists: BrandListView[] | null) => {
+      const mock = avoidMatch();
+      const hook = renderHookWithApollo(
+        (props: { lists: BrandListView[] | null }) =>
+          useProductBrandListings('jif-creamy', 'b-skippy', props.lists),
+        { operationMocks: [mock.mock], initialProps: { lists } },
+      );
+      return hook;
+    };
+
+    it('drops a match on a list the user deleted', async () => {
+      const { result, rerender } = renderListings(null);
+      await waitFor(() => expect(result.current.listings).toHaveLength(1));
+
+      rerender({ lists: [] });
+
+      expect(result.current.listings).toEqual([]);
+    });
+
+    it('drops a match whose brand the user took off the list', async () => {
+      const { result, rerender } = renderListings([AVOID_HOLDING_JIF]);
+      await waitFor(() => expect(result.current.listings).toHaveLength(1));
+
+      rerender({
+        lists: [
+          list('l-avoid', 'Avoid', true, [entry('e-9', 'b-nutella', null)]),
+        ],
+      });
+
+      expect(result.current.listings).toEqual([]);
+    });
+
+    it('keeps a match the list still holds', async () => {
+      const { result } = renderListings([AVOID_HOLDING_JIF]);
+
+      await waitFor(() => expect(result.current.listings).toHaveLength(1));
+      expect(result.current.listings).toEqual([
+        {
+          key: 'l-avoid:e-2',
+          listName: 'Avoid',
+          viaParent: null,
+          reason: null,
+        },
+      ]);
+    });
   });
 });
