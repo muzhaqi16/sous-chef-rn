@@ -9270,7 +9270,7 @@ type Membership {
   """Grants inviting people to the home"""
   canInviteOthers: Boolean!
   """
-  Grants editing the home's settings, managing its members and invites, and deleting its pantries
+  Grants editing the home's settings and managing its members and invites. Deleting a pantry takes the home's owner
   """
   canManageHome: Boolean!
   """Grants removing items from the home's pantries"""
