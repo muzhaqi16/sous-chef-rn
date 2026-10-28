@@ -56,13 +56,19 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 
 ## 10. `PurchaseAmountSheet` on `Sheet`, and the last comment (findings 13, 14; D12, D13)
 
-- [ ] 10.1 Rebuild `src/features/shoppingList/ui/PurchaseAmountSheet.tsx` on `<Sheet mode="view" snapPoints={[]} enableDynamicSizing>`, with `SheetHeader` as its first child, keeping `ThemedBottomSheetTextInput`. Drop the direct `useStandardBottomSheet` and `BottomSheetView` imports. Verify `PurchaseAmountSheet.test.tsx` passes, and on an Android emulator that focusing the price field seats the sheet on the keyboard with its header visible (screenshot before and after).
+- [x] 10.1 Rebuild `src/features/shoppingList/ui/PurchaseAmountSheet.tsx` on `<Sheet mode="view" snapPoints={[]} enableDynamicSizing>`, with `SheetHeader` as its first child, keeping `ThemedBottomSheetTextInput`. Drop the direct `useStandardBottomSheet` and `BottomSheetView` imports. Verify `PurchaseAmountSheet.test.tsx` passes, and on an Android emulator that focusing the price field seats the sheet on the keyboard with its header visible (screenshot before and after).
 - [x] 10.2 Cut the `forgetHome` docblock (`src/domain/forgetHome.ts`) to six lines or fewer, keeping what the code cannot say. Verify `npx eslint src/domain/forgetHome.ts` is clean.
 
 ## 11. Integration
 
-- [ ] 11.1 Run `npm run typecheck && npm run lint && npm test` (the full suite, unfiltered), then `npm run check:compiler-bailouts && npm run check:unistyles-variants && npm run check:dead-modules && npm run check:import-cycles`. Verify all pass, or that each failure is a known flake confirmed by a rerun.
+- [x] 11.1 Run `npm run typecheck && npm run lint && npm test` (the full suite, unfiltered), then `npm run check:compiler-bailouts && npm run check:unistyles-variants && npm run check:dead-modules && npm run check:import-cycles`. Verify all pass, or that each failure is a known flake confirmed by a rerun.
 - [ ] 11.2 On a dev build on an emulator: open Budget & prices as a home MEMBER on another member's list and change the budget; scan in store mode on a EUR list and add with a price ("€" label, no USD comparison); swipe an item's hero to its second photo and confirm the report dialog. Verify each by screenshot.
+
+  Partly done on 2026-10-28 (`emulator-5554`, debug build at afe4c08f4 + Metro, account Tani):
+  - Done: as a MEMBER of "Whitney Home" on "Weekly Groceries", which another user owns, every Budget & prices control was editable. The budget changed 125 → 126, the server answered (version 27), and it was set back to 125 (version 28).
+  - Done with a different currency: the list is USD and the account prefers ALL, so the price sheet read "$" rather than "€". It read "ALL" when the scan deep link opened before the list's currency was cached.
+  - Not checked: the comparison, because the product has no household usual price to compare with.
+  - Not checked: the page swipe, because no item on the device has more than one catalog photo. The single-photo hero's flag opened "Report this photo?", which was cancelled.
 
 ## Workflow follow-up
 
