@@ -1,13 +1,24 @@
 import { act, waitFor } from '@testing-library/react-native';
+import type { Unmasked } from '@apollo/client/masking';
 import {
+  completeMockedResponse,
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
+import {
+  CollaboratorRole,
+  CollaboratorStatus,
+  MembershipRole,
+  PriceComparisonScope,
+} from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { useListBudget } from '../useListBudget';
+import {
+  ListBudgetDocument,
+  type ListBudgetQuery,
+} from '../useListBudget.generated';
 
 const OWNER = {
   id: 'user-1',
@@ -37,13 +48,58 @@ const LIST = {
   ownerships: [
     { __typename: 'ShoppingListOwnership', id: 'own-1', userId: 'user-1' },
   ],
+  homeId: null,
+  home: null,
+  collaboratorsConnection: { edges: [] },
 };
 
-const render = (operationMocks: Parameters<typeof renderHookWithApollo>[1]) =>
+type ListSeed = Partial<Omit<typeof LIST, 'home' | 'collaboratorsConnection'>> &
+  Record<string, unknown>;
+
+/** The list as the screen's read left it on the device. */
+function cacheWith(list: ListSeed = {}) {
+  const cache = seedCache([]);
+  const variables = { id: 'list-1' };
+  const completed = completeMockedResponse({
+    request: { query: ListBudgetDocument, variables },
+    result: { data: { shoppingList: { ...LIST, ...list } } },
+  }).result as (vars: typeof variables) => {
+    data: Unmasked<ListBudgetQuery>;
+  };
+  cache.writeQuery({
+    query: ListBudgetDocument,
+    variables,
+    data: completed(variables).data,
+  });
+  return cache;
+}
+
+const render = (
+  operationMocks: Parameters<typeof renderHookWithApollo>[1],
+  list?: ListSeed,
+) =>
   renderHookWithApollo(() => useListBudget('list-1'), {
-    cache: seedCache([LIST]),
+    cache: cacheWith(list),
     ...operationMocks,
   });
+
+const collaborator = (canEdit: boolean) => ({
+  collaboratorsConnection: {
+    edges: [
+      {
+        node: {
+          __typename: 'ShoppingListCollaborator',
+          id: 'collab-1',
+          collaboratorId: 'user-2',
+          collaborator: { __typename: 'User', id: 'user-2' },
+          status: CollaboratorStatus.Active,
+          role: canEdit ? CollaboratorRole.Editor : CollaboratorRole.Viewer,
+          canEdit,
+        },
+      },
+    ],
+  },
+});
 
 describe('useListBudget', () => {
   beforeEach(() => {
@@ -66,11 +122,52 @@ describe('useListBudget', () => {
     expect(result.current.state).toBe('ready');
   });
 
-  it("offers its controls to the list's owner only", () => {
+  it("offers its controls to the list's owner", () => {
     expect(render({ operationMocks: [] }).result.current.canEdit).toBe(true);
+  });
 
+  // The API gates the budget, store and tracking on EDIT, not on ownership.
+  it("offers them to a home's member on a list another member made", () => {
     useStore.setState({ user: { ...OWNER, id: 'user-2' } });
-    expect(render({ operationMocks: [] }).result.current.canEdit).toBe(false);
+    const { result } = render(
+      { operationMocks: [] },
+      {
+        homeId: 'home-1',
+        home: {
+          __typename: 'Home',
+          id: 'home-1',
+          myMembership: {
+            __typename: 'Membership',
+            id: 'm-2',
+            role: MembershipRole.Member,
+          },
+        },
+      },
+    );
+
+    expect(result.current.canEdit).toBe(true);
+  });
+
+  it('offers them to a collaborator who may edit, and not to one who may only view', () => {
+    useStore.setState({ user: { ...OWNER, id: 'user-2' } });
+
+    expect(
+      render({ operationMocks: [] }, collaborator(true)).result.current.canEdit,
+    ).toBe(true);
+    expect(
+      render({ operationMocks: [] }, collaborator(false)).result.current
+        .canEdit,
+    ).toBe(false);
+  });
+
+  it('offers nothing before the list is on the device', () => {
+    const { result } = renderHookWithApollo(() => useListBudget('list-1'), {
+      cache: seedCache([]),
+      operationMocks: [],
+    });
+
+    expect(result.current.list).toBeNull();
+    expect(result.current.canEdit).toBe(false);
   });
 
   it('reports a budget that is not a number, and sends nothing', () => {

@@ -20,8 +20,8 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 
 ## 3. Budget & prices for every editor (finding 1, D1)
 
-- [ ] 3.1 Add to `useListBudget_list` (`src/features/shoppingList/screens/useListBudget.graphql`) what `useShoppingListPermissions` reads: `homeId`, the collaborator ids with their fragment, the ownership ids with their fragment, and `home { id myMembership }`, using the same spreads as the List Settings document. Run `npm run codegen` and diff `src/graphql/generated/schema.graphql` (expect no change). Verify `npm run lint` passes for the `.graphql` files.
-- [ ] 3.2 In `useListBudget.ts`, set `canEdit` to `isOwner || permissions.canEditList`, as `useListSettings` does, and reword its doc line. Add `useListBudget.test.ts` cases: a home MEMBER on another member's list can edit; a collaborator with `canEdit` can edit; a view-only collaborator cannot; nothing is editable before the list loads. Verify the MEMBER case fails on `dev` and all pass after.
+- [x] 3.1 Add to `useListBudget_list` (`src/features/shoppingList/screens/useListBudget.graphql`) what `useShoppingListPermissions` reads: `homeId`, the collaborator ids with their fragment, the ownership ids with their fragment, and `home { id myMembership }`, using the same spreads as the List Settings document. Run `npm run codegen` and diff `src/graphql/generated/schema.graphql` (expect no change). Verify `npm run lint` passes for the `.graphql` files.
+- [x] 3.2 In `useListBudget.ts`, set `canEdit` to `isOwner || permissions.canEditList`, as `useListSettings` does, and reword its doc line. Add `useListBudget.test.ts` cases: a home MEMBER on another member's list can edit; a collaborator with `canEdit` can edit; a view-only collaborator cannot; nothing is editable before the list loads. Verify the MEMBER case fails on `dev` and all pass after.
 
 ## 4. One currency per price (findings 5, 17; D6)
 

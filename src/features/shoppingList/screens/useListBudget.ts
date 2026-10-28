@@ -8,6 +8,7 @@ import type { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { listOwnershipOf } from '#features/shoppingList/utils/ownershipHelpers';
+import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
 import {
   ListBudgetDocument,
   UseListBudget_ListFragmentDoc,
@@ -37,6 +38,13 @@ export function useListBudget(listId: string) {
     from: { __typename: 'ShoppingList', id: listId },
   });
   const list = read.complete ? read.data : null;
+  const isOwner =
+    listOwnershipOf(
+      listId,
+      list ? { ownerships: list.ownerships } : null,
+      user?.id,
+    ) === 'owner';
+  const permissions = useShoppingListPermissions(list, user?.id);
   const state = useDataState({
     loading,
     error,
@@ -78,8 +86,8 @@ export function useListBudget(listId: string) {
 
   return {
     list,
-    /** Only a list's owner changes its money; others read it. */
-    canEdit: listOwnershipOf(listId, list, user?.id) === 'owner',
+    /** The API's EDIT: the owner, a home's MEMBER and above, a collaborator holding canEdit. */
+    canEdit: isOwner || permissions.canEditList,
     state,
     retry: () => {
       void refetch();

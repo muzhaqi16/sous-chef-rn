@@ -1,10 +1,19 @@
 import React from 'react';
 import { screen } from '@testing-library/react-native';
-import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import type { Unmasked } from '@apollo/client/masking';
+import {
+  completeMockedResponse,
+  renderWithApollo,
+  seedCache,
+} from '#/test-utils/apolloMockProvider';
 import { formatCurrency } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useStore } from '#store';
 import { ListBudget } from '../ListBudget';
+import {
+  ListBudgetDocument,
+  type ListBudgetQuery,
+} from '../useListBudget.generated';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -35,11 +44,32 @@ const LIST = {
   ownerships: [
     { __typename: 'ShoppingListOwnership', id: 'own-1', userId: 'user-1' },
   ],
+  homeId: null,
+  home: null,
+  collaboratorsConnection: { edges: [] },
 };
+
+/** The list as the screen's read left it on the device. */
+function cachedList() {
+  const cache = seedCache([]);
+  const variables = { id: 'list-1' };
+  const completed = completeMockedResponse({
+    request: { query: ListBudgetDocument, variables },
+    result: { data: { shoppingList: LIST } },
+  }).result as (vars: typeof variables) => {
+    data: Unmasked<ListBudgetQuery>;
+  };
+  cache.writeQuery({
+    query: ListBudgetDocument,
+    variables,
+    data: completed(variables).data,
+  });
+  return cache;
+}
 
 const renderScreen = () =>
   renderWithApollo(<ListBudget route={{ params: { listId: 'list-1' } }} />, {
-    cache: seedCache([LIST]),
+    cache: cachedList(),
     operationMocks: [],
   });
 

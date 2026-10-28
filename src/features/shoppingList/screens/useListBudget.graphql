@@ -1,5 +1,5 @@
 # What Budget & prices reads on a list: its totals, budget, store and tracking,
-# and who owns it, which decides whether the screen offers its controls.
+# and who may edit it, which decides whether the screen offers its controls.
 fragment useListBudget_list on ShoppingList {
   id
   currency
@@ -12,9 +12,33 @@ fragment useListBudget_list on ShoppingList {
     id
     name
   }
+  homeId
+  home {
+    id
+    myMembership {
+      id
+      role
+    }
+  }
   ownerships {
     id
     userId
+    ...ShoppingListOwnershipFragment
+  }
+  # As the list detail query asks it, so both read one cached connection.
+  collaboratorsConnection(first: 20) {
+    edges {
+      cursor
+      node {
+        id
+        ...ShoppingListCollaboratorFragment
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    totalCount
   }
 }
 
