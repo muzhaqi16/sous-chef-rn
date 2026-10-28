@@ -256,7 +256,6 @@
   },
   "purchaseAmountSheet": {
     "title": "Mark Purchased",
-    "currencySymbol": "$",
     "pricePlaceholder": "0.00",
     "perUnitHint": "{{price}} per unit",
     "perUnitOfHint": "{{price}} per {{unit}}",

@@ -92,9 +92,12 @@ const JAR = { id: 'u-jar', name: 'jar', symbol: 'jar' };
 const JAR_UNIT = { id: 'u-jar', symbol: 'jar' };
 
 const render = (mocks: ReturnType<typeof recordMock>[]) =>
-  renderHookWithApollo(() => useStorePriceMemory('pb', 'list-1', JAR_UNIT), {
-    operationMocks: mocks.map(mock => mock.mock),
-  });
+  renderHookWithApollo(
+    () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'USD'),
+    {
+      operationMocks: mocks.map(mock => mock.mock),
+    },
+  );
 
 describe('useStorePriceMemory', () => {
   // Store mode mounts the card per scan: the same product scanned again reads
@@ -107,7 +110,7 @@ describe('useStorePriceMemory', () => {
     ]);
     const mount = () =>
       renderHookWithApollo(
-        () => useStorePriceMemory('pb', 'list-1', JAR_UNIT),
+        () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'USD'),
         { cache, operationMocks: [paid.mock, here.mock] },
       );
 
@@ -198,7 +201,7 @@ describe('useStorePriceMemory', () => {
     });
 
     const { result } = renderHookWithApollo(
-      () => useStorePriceMemory('pb', 'list-1', JAR_UNIT),
+      () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'USD'),
       { cache, operationMocks: [comparisonMock([]).mock] },
     );
 
@@ -266,7 +269,7 @@ describe('useStorePriceMemory', () => {
     const paid = paidMock({});
     const here = comparisonMock([]);
     const { result } = renderHookWithApollo(
-      () => useStorePriceMemory('pb', undefined, JAR_UNIT),
+      () => useStorePriceMemory('pb', undefined, JAR_UNIT, 'USD'),
       { operationMocks: [paid.mock, here.mock] },
     );
 
@@ -307,7 +310,13 @@ describe('useStorePriceMemory', () => {
       },
     });
     const { result } = renderHookWithApollo(
-      () => useStorePriceMemory('pb', 'list-1', { id: 'u-lb', symbol: 'lb' }),
+      () =>
+        useStorePriceMemory(
+          'pb',
+          'list-1',
+          { id: 'u-lb', symbol: 'lb' },
+          'USD',
+        ),
       {
         operationMocks: [
           paidMock({
@@ -337,6 +346,21 @@ describe('useStorePriceMemory', () => {
     expect(result.current.usual).toBe(
       t('labels.pricePer.kg', { price: usd(13.2) }),
     );
+  });
+
+  // The typed price is in the list's currency; the household's usual in the
+  // caller's. Compared as bare numbers they would read "€0.50 below $2.50".
+  it('compares nothing with a usual in another currency', async () => {
+    const paid = paidMock({
+      usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: 2.5 },
+    });
+    const inEuros = renderHookWithApollo(
+      () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'EUR'),
+      { operationMocks: [paid.mock, comparisonMock([]).mock] },
+    );
+    await waitFor(() => expect(inEuros.result.current.usual).not.toBeNull());
+
+    expect(inEuros.result.current.compareToUsual(2)).toBeNull();
   });
 
   it('compares nothing when the usual cannot be put on the unit, or there is none', async () => {

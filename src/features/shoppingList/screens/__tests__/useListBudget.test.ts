@@ -53,7 +53,9 @@ const LIST = {
   collaboratorsConnection: { edges: [] },
 };
 
-type ListSeed = Partial<Omit<typeof LIST, 'home' | 'collaboratorsConnection'>> &
+type ListSeed = Partial<
+  Omit<typeof LIST, 'homeId' | 'home' | 'collaboratorsConnection'>
+> &
   Record<string, unknown>;
 
 /** The list as the screen's read left it on the device. */

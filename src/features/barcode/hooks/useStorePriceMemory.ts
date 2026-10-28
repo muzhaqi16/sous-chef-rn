@@ -39,13 +39,15 @@ function perBasis(t: Translate, basis: PriceBasis, price: string): string {
  * Store mode's price lines for a scanned product: what the household last paid
  * and usually pays, and what it typically costs here. Every line reads per kg,
  * L or each on one basis; a last price the server could not put on it shows
- * per its own unit. A line the server has nothing for is null. `unit` is the
- * one the price sheet counts in, which a typed price is compared in.
+ * per its own unit. A line the server has nothing for is null. `unit` and
+ * `recordsIn` are what the price sheet counts in and the currency it records,
+ * which a typed price is compared in.
  */
 export function useStorePriceMemory(
   itemId: string,
   listId: string | undefined,
   unit: { id: string; symbol: string } | undefined,
+  recordsIn: string,
 ) {
   const { t } = useTranslation();
   const homeId = useSelectedHomeId();
@@ -144,6 +146,8 @@ export function useStorePriceMemory(
    */
   const compareToUsual = (paidPerUnit: number): string | null => {
     if (!summary || !unit || usualPerUnit === null) return null;
+    // The usual is in the caller's currency, the typed price in the list's.
+    if (summary.currency.code !== recordsIn) return null;
     const scale = 10 ** summary.currency.decimalPlaces;
     const difference =
       Math.round(paidPerUnit * scale) - Math.round(usualPerUnit * scale);

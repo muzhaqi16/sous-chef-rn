@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { BottomSheetView } from '@gorhom/bottom-sheet';
@@ -14,6 +13,8 @@ import { Text } from '#components/atoms/Text';
 import { formatQuantityForInput } from '#/utils/formatQuantity';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
+  currencySymbol,
+  formatCurrency,
   formatNumberForInput,
   localizeNumericHint,
 } from '#/utils/formatters/number';
@@ -39,6 +40,8 @@ interface PurchaseAmountSheetItem {
 interface PurchaseAmountSheetProps {
   visible: boolean;
   item: PurchaseAmountSheetItem | null;
+  /** The code the list records a price in (`useListCurrency`). */
+  currency: string;
   onClose: () => void;
   /**
    * `totalPrice` is what the shopper paid for the whole quantity — the receipt
@@ -75,6 +78,7 @@ const formatPrice = (price: number | null): string =>
 export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   visible,
   item,
+  currency,
   onClose,
   onConfirm,
   loading = false,
@@ -82,7 +86,6 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   askPrice = true,
 }) => {
   const { t } = useTranslation();
-  const money = useMoney();
   // No snap points: the sheet measures its own content, so the keyboard lift
   // seats it on the keyboard instead of stretching a fixed height up the
   // screen and pushing the price field off the bottom edge.
@@ -206,7 +209,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               </SectionHeader>
               <View style={styles.inputRow}>
                 <Text role="body" tone="secondary" style={styles.prefix}>
-                  {t('purchaseAmountSheet.currencySymbol')}
+                  {currencySymbol(currency)}
                 </Text>
                 <ThemedBottomSheetTextInput
                   style={styles.input}
@@ -238,7 +241,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
               ) : null}
               {perUnitPrice != null ? (
                 <PerUnitHint
-                  price={money(perUnitPrice)}
+                  price={formatCurrency(perUnitPrice, currency)}
                   unit={item?.unitName}
                   style={styles.perUnitHint}
                 />

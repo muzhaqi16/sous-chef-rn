@@ -256,7 +256,6 @@
   },
   "purchaseAmountSheet": {
     "title": "Shëno si të blerë",
-    "currencySymbol": "$",
     "pricePlaceholder": "0.00",
     "perUnitHint": "{{price}} për njësi",
     "perUnitOfHint": "{{price}} për {{unit}}",

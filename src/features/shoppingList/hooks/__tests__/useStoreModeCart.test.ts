@@ -12,7 +12,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import { useStoreModeCart } from '../useStoreModeCart';
-import { UseStoreModeCart_ListFragmentDoc } from '../useStoreModeCart.generated';
+import { UseListCurrency_ListFragmentDoc } from '../useListCurrency.generated';
 
 const mockClaimPurchased = jest.fn();
 const mockRecordPurchase = jest.fn();
@@ -128,7 +128,7 @@ function renderCart(
   seedTab(cache, false, toBuy);
   seedTab(cache, true, inCart);
   cache.writeFragment({
-    fragment: UseStoreModeCart_ListFragmentDoc,
+    fragment: UseListCurrency_ListFragmentDoc,
     data: { __typename: 'ShoppingList', id: LIST, currency: listCurrency },
   });
   // No operation mocks: the hook must answer from the cache alone.

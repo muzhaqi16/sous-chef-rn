@@ -16,6 +16,7 @@ import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPant
 import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisleModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
+import { useListCurrency } from '#features/shoppingList/hooks/useListCurrency';
 
 /**
  * The sheets open from all over the screen and are read back in one place, so
@@ -82,6 +83,7 @@ export function ShoppingListModalsProvider({
   });
 
   const asksPrice = useListAsksPrice(currentListId);
+  const listCurrency = useListCurrency(currentListId);
   const purchaseAmount = usePurchaseAmountModal({
     items,
     recordPurchase,
@@ -149,6 +151,7 @@ export function ShoppingListModalsProvider({
       <PurchaseAmountSheet
         visible={purchaseAmount.visible}
         item={purchaseAmount.selectedItem}
+        currency={listCurrency}
         onClose={() => {
           purchaseAmount.close();
           tutorial?.notifyLongPressPriceSeen();

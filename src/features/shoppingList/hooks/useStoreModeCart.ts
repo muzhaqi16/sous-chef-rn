@@ -1,6 +1,5 @@
-import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -13,7 +12,7 @@ import { useToggleShoppingItem } from './mutations/useToggleShoppingItem';
 import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
 import type { PurchaseAmountItem } from './usePurchaseAmountModal';
 import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
-import { UseStoreModeCart_ListFragmentDoc } from './useStoreModeCart.generated';
+import { useListCurrency } from './useListCurrency';
 
 /**
  * Store mode's cart for a scanned product: the list line it fulfils and how to
@@ -53,15 +52,7 @@ export function useStoreModeCart(
         }
       : skipToken,
   );
-  const list = useFragment({
-    fragment: UseStoreModeCart_ListFragmentDoc,
-    fragmentName: 'useStoreModeCart_list',
-    from: listId ? { __typename: 'ShoppingList', id: listId } : null,
-  });
-  const recordsIn = resolveCurrency(
-    list.complete && list.data.currency ? { code: list.data.currency } : null,
-    usePreferredCurrency(),
-  );
+  const recordsIn = useListCurrency(listId);
   // A refused tick re-reads both tabs from the server, as store mode's does.
   const { claimPurchased, recordPurchase } = useToggleShoppingItem({
     listId,

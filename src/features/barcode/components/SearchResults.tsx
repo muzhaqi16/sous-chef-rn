@@ -42,6 +42,7 @@ import { useStoreShelfPrices } from '#features/catalog/hooks/useStoreShelfPrices
 import { StoreShelfPriceSection } from './StoreShelfPriceSection';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
+import { useListCurrency } from '#features/shoppingList/hooks/useListCurrency';
 import { useProductOrigin } from '#features/barcode/hooks/useProductOrigin';
 import { ProductOriginSection } from './ProductOriginSection';
 import { useProductBrandListings } from '#features/barcode/hooks/useProductBrandListings';
@@ -159,18 +160,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const sheetUnit = cart.line ? cart.unit : item.trackingUnit;
   // Off, store mode shows no money: the price lines read nothing.
   const showPrices = useBudgetAndPricesEnabled();
-  const asksPrice = useListAsksPrice(
-    source === 'storeMode' ? shoppingListId : null,
-  );
+  const storeModeListId = source === 'storeMode' ? shoppingListId : null;
+  const asksPrice = useListAsksPrice(storeModeListId);
+  const listCurrency = useListCurrency(storeModeListId);
   const prices = useStorePriceMemory(
     item.id,
     source === 'storeMode' && showPrices ? shoppingListId : undefined,
     sheetUnit ?? item.trackingUnit,
+    listCurrency,
   );
-  const shelfPrices = useStoreShelfPrices(
-    item.id,
-    source === 'storeMode' ? shoppingListId : null,
-  );
+  const shelfPrices = useStoreShelfPrices(item.id, storeModeListId);
 
   const onPantryAdded = () => {
     setIsAdded(true);
@@ -418,6 +417,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
               estimatedPrice: null,
             }
           }
+          currency={listCurrency}
           onClose={() => setIsAskingPrice(false)}
           onConfirm={handlePrice}
           loading={isLoading}

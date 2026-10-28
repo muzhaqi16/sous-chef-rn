@@ -143,6 +143,15 @@ export function formatCurrency(
 }
 
 /**
+ * The currency's symbol as the device's locale writes it ("$", "€"), read back
+ * from `format` as the decimal separator is; the code when Intl knows none.
+ */
+export function currencySymbol(currency: string): string {
+  const zero = getCurrencyFormatter(currency)?.format(0) ?? '';
+  return zero.replace(/[\d.,'’\s]/g, '') || currency;
+}
+
+/**
  * Rewrites example numbers in a hint: `e.g., 4.99` → `e.g., 4,99`. This CANNOT
  * live in the locale files — they are keyed by interface language while the
  * separator comes from the DEVICE, so no `en.json` entry suits an English UI on

@@ -1,6 +1,0 @@
-# The currency a price recorded from the list is in: the price sheet's hint
-# takes a suggestion only in it.
-fragment useStoreModeCart_list on ShoppingList {
-  id
-  currency
-}

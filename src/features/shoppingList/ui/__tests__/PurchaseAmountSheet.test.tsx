@@ -78,6 +78,7 @@ const buildProps = (
 ): PurchaseAmountSheetProps => ({
   visible: true,
   item: makeItem(),
+  currency: 'USD',
   onClose: jest.fn(),
   onConfirm: jest.fn(),
   loading: false,
@@ -121,6 +122,16 @@ describe('PurchaseAmountSheet', () => {
     render(<PurchaseAmountSheet {...buildProps()} />);
     expect(screen.getByText('Quantity')).toBeTruthy();
     expect(screen.getByText('Total paid')).toBeTruthy();
+  });
+
+  // The price is recorded in the list's currency, whatever the locale.
+  it("labels the total paid in the list's currency", () => {
+    renderWithInit(buildProps({ currency: 'EUR' }));
+    expect(screen.getByText('€')).toBeTruthy();
+    expect(screen.queryByText('$')).toBeNull();
+
+    fireEvent.changeText(screen.getByTestId('purchase-price-input'), '3');
+    expect(screen.getByText(/€1\.50 per cups/)).toBeTruthy();
   });
 
   it('pre-fills the quantity input from requestedQuantity', () => {
