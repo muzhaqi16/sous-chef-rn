@@ -5,8 +5,6 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { NutritionSummary } from '#features/catalog/ui/NutritionSummary';
 import { NutritionDetailList } from '#features/pantry/components/NutritionDetailList';
 import { SubScreen } from '#components/templates/SubScreen';
-import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
-import type { DataAttributionValue } from '#/types/attribution';
 import type { NutritionFactsValues } from '#domain/nutrition';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
@@ -17,15 +15,13 @@ type NutritionScreenParams = {
   nutritionFacts: NutritionFactsValues;
   /** The concept these values are typical of; absent for the item's own. */
   typicalOf?: string | null;
-  dataAttributions: readonly DataAttributionValue[];
 };
 
 export const NutritionScreen: React.FC<
   StaticScreenProps<NutritionScreenParams>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { itemName, nutritionFacts, typicalOf, dataAttributions } =
-    route.params;
+  const { itemName, nutritionFacts, typicalOf } = route.params;
 
   return (
     <SubScreen title={itemName}>
@@ -48,12 +44,6 @@ export const NutritionScreen: React.FC<
         <View style={styles.section}>
           <NutritionDetailList nutritionFacts={nutritionFacts} />
         </View>
-
-        {dataAttributions.length > 0 && (
-          <View style={styles.section}>
-            <DataAttributionNotices attributions={dataAttributions} />
-          </View>
-        )}
       </View>
     </SubScreen>
   );

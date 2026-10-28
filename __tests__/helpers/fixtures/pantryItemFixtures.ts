@@ -164,7 +164,6 @@ export function pantryItemData(
         // most callers of these fixtures never reach.
         canEdit: false,
         canSuggest: fixture.canSuggest ?? false,
-        dataAttributions: [],
         name: 'Milk',
         imageUrl: fixture.imageUrl ?? null,
         images: [],

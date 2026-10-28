@@ -1,8 +1,8 @@
 import React from 'react';
 import { Linking } from 'react-native';
 import { fireEvent, render, screen } from '@testing-library/react-native';
-import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
-import { kitTestIDs } from '#components/testIDs';
+import { DataAttributionNotices } from '#features/recipes/components/DataAttributionNotices';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 
 const OFF = {
@@ -37,10 +37,10 @@ describe('DataAttributionNotices', () => {
     render(<DataAttributionNotices attributions={[OFF]} />);
 
     fireEvent.press(
-      screen.getByTestId(kitTestIDs.dataAttributionSource(OFF.source)),
+      screen.getByTestId(recipesTestIDs.dataAttributionSource(OFF.source)),
     );
     fireEvent.press(
-      screen.getByTestId(kitTestIDs.dataAttributionLicense(OFF.source)),
+      screen.getByTestId(recipesTestIDs.dataAttributionLicense(OFF.source)),
     );
 
     expect(openURL.mock.calls).toEqual([[OFF.sourceUrl], [OFF.licenseUrl]]);
@@ -58,7 +58,7 @@ describe('DataAttributionNotices', () => {
     render(<DataAttributionNotices attributions={[USDA]} />);
 
     expect(
-      screen.queryByTestId(kitTestIDs.dataAttributionSource(USDA.source)),
+      screen.queryByTestId(recipesTestIDs.dataAttributionSource(USDA.source)),
     ).toBeNull();
     expect(screen.queryByText('License')).toBeNull();
   });

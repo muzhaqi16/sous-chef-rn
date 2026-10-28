@@ -25,7 +25,6 @@ import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { alertService } from '#/services/alertService';
 import {
   ErrorCode,
-  ExternalSource,
   NetWeightKind,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
@@ -190,13 +189,6 @@ describe('useSearchResults', () => {
       licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0/',
       sourceUrl: 'https://world.openfoodfacts.org/product/0001112223334',
     } satisfies LookupNode['imageCredit'];
-    const notice = {
-      __typename: 'DataAttribution',
-      source: ExternalSource.Openfoodfacts,
-      notice: 'Product data from Open Food Facts, available under the ODbL.',
-      licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
-      sourceUrl: 'https://world.openfoodfacts.org/product/0001112223334',
-    } satisfies NonNullable<LookupNode['dataAttributions']>[number];
 
     it.each<[string, LookupNode, Record<string, unknown>]>([
       [
@@ -228,11 +220,6 @@ describe('useSearchResults', () => {
         'shows an item with no photos by its only image and credit',
         { photos: [], imageCredit: credit },
         { image: { url: SAMPLE_UPC_ITEM.imageUrl, credit } },
-      ],
-      [
-        'carries the notices the item data asks for',
-        { dataAttributions: [notice] },
-        { dataAttributions: [notice] },
       ],
       // Both flags carry through to the card, which hides its edit action when
       // both are false — a scan can surface an item the user may not touch.

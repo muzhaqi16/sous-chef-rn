@@ -98,7 +98,6 @@ const convertToScannedItem = (
   description: firstNonBlank(item.description),
   imageUrl: firstNonBlank(item.imageUrl),
   image: cardImageOf(item),
-  dataAttributions: item.dataAttributions,
   nutrition: toShownNutrition(item.shownNutrition) ?? undefined,
   canEdit: item.canEdit,
   canSuggest: item.canSuggest,

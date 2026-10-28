@@ -4,7 +4,6 @@ import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { HorizontalRail } from '#components/molecules/HorizontalRail';
-import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
@@ -476,7 +475,6 @@ export const PantryItemDetail: React.FC<
                   itemName: item.itemName,
                   nutritionFacts,
                   typicalOf,
-                  dataAttributions: item.item.dataAttributions,
                 })
               }
             />
@@ -578,12 +576,6 @@ export const PantryItemDetail: React.FC<
             </Text>
           )}
         </DetailSection>
-
-        {item.item.dataAttributions.length > 0 && (
-          <DetailSection transparent>
-            <DataAttributionNotices attributions={item.item.dataAttributions} />
-          </DetailSection>
-        )}
       </CollapsingHeroDetail>
 
       {!!actions.adjustModalVisible && (

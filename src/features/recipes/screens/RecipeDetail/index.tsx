@@ -34,7 +34,7 @@ import { useRecipeDetail } from './useRecipeDetail';
 import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';
-import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
+import { DataAttributionNotices } from '#features/recipes/components/DataAttributionNotices';
 import { RecipeDetailSkeleton } from '#features/recipes/components/skeletons/RecipeDetailSkeleton';
 import { useForkRecipe } from '#features/recipes/hooks/useForkRecipe';
 import { usePublishRecipe } from '#features/recipes/hooks/usePublishRecipe';

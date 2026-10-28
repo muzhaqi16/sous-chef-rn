@@ -174,7 +174,6 @@ export const SearchResultsScreen: React.FC<
                     itemName: item.name,
                     nutritionFacts: nutrition.facts,
                     typicalOf: nutrition.typicalOf,
-                    dataAttributions: item.dataAttributions ?? [],
                   })
               : undefined
           }

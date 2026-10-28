@@ -30,12 +30,6 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     id
     canEdit
     canSuggest
-    dataAttributions {
-      licenseUrl
-      notice
-      source
-      sourceUrl
-    }
     displayUnit {
       id
       name

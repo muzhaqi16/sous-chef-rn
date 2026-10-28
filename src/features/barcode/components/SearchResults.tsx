@@ -16,7 +16,6 @@ import type {
 import { View } from 'react-native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { useCachedUnits } from '#store/useAppStore';
 import { formatHeldAmount } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useHeldStacks } from '#features/pantry/hooks/useHeldStacks';
@@ -389,11 +388,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
         <StorePriceSection {...prices} />
         <StoreShelfPriceSection rows={shelfPrices.rows} />
-
-        <DataAttributionNotices
-          attributions={item.dataAttributions ?? []}
-          centered
-        />
       </View>
 
       {!!scannedBrand && (

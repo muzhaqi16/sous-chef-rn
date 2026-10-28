@@ -23,12 +23,6 @@ fragment ItemReaders on Item {
     }
     isPrimary
   }
-  dataAttributions {
-    licenseUrl
-    notice
-    source
-    sourceUrl
-  }
   defaultConsumeUnit {
     id
     name

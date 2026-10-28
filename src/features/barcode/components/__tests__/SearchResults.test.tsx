@@ -3,7 +3,6 @@ import React from 'react';
 import type { ScannedItem } from '#features/barcode/types';
 import {
   ErrorCode,
-  ExternalSource,
   NetWeightKind,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
@@ -461,32 +460,6 @@ describe('SearchResults', () => {
           },
         },
       });
-
-    const notice = {
-      source: ExternalSource.Openfoodfacts,
-      notice: 'Product data from Open Food Facts, available under the ODbL.',
-      licenseUrl: 'https://opendatacommons.org/licenses/odbl/1-0/',
-      sourceUrl: 'https://world.openfoodfacts.org/product/123456',
-    };
-
-    it('shows the notice its data asks for', () => {
-      renderWithApollo(
-        <SearchResults
-          {...defaultProps}
-          item={{
-            ...mockItem,
-            source: 'OPENFOODFACTS',
-            dataAttributions: [notice],
-          }}
-        />,
-      );
-      expect(screen.getByText(notice.notice)).toBeTruthy();
-    });
-
-    it('credits nobody for an item whose data asks for no notice', () => {
-      renderWithApollo(<SearchResults {...defaultProps} />);
-      expect(screen.queryByText(/Open Food Facts/)).toBeNull();
-    });
 
     // The size is the user's to add if they know it; unasked, the API counts
     // an unsized package in a counted stack.

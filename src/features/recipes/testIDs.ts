@@ -58,4 +58,9 @@ export const recipesTestIDs = {
     `recipe-substitute-${substituteId}`,
   /** A swap offered for a missing ingredient in the cook review. */
   cookSubstitute: (substituteId: string) => `cook-substitute-${substituteId}`,
+  /** `DataAttributionNotices`: a notice's link and its licence link, by source. */
+  dataAttributionSource: (source: string) =>
+    `data-attribution-${source.toLowerCase()}`,
+  dataAttributionLicense: (source: string) =>
+    `data-attribution-${source.toLowerCase()}-license`,
 };

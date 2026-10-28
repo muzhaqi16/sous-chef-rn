@@ -25,7 +25,6 @@ import { useStoreShelfPrices } from '#features/catalog/hooks/useStoreShelfPrices
 import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
-import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
@@ -447,14 +446,6 @@ export const ShoppingListItemDetail: React.FC<
                 <Text role="label">{t('labels.yes')}</Text>
               </DetailRow>
             )}
-          </DetailSection>
-        )}
-
-        {!!detail?.item?.dataAttributions.length && (
-          <DetailSection transparent>
-            <DataAttributionNotices
-              attributions={detail.item.dataAttributions}
-            />
           </DetailSection>
         )}
       </CollapsingHeroDetail>

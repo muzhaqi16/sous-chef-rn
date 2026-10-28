@@ -5,7 +5,7 @@ import { useTranslation } from '#/i18n';
 import { Link } from '#components/atoms/Link';
 import { Text } from '#components/atoms/Text';
 import type { DataAttributionValue } from '#/types/attribution';
-import { kitTestIDs } from '#components/testIDs';
+import { recipesTestIDs } from '#features/recipes/testIDs';
 
 interface DataAttributionNoticesProps {
   attributions: readonly DataAttributionValue[];
@@ -14,9 +14,9 @@ interface DataAttributionNoticesProps {
 }
 
 /**
- * The notices a licensed dataset requires wherever its data shows (ODbL, USDA,
- * a recipe provider), as the API words them: each links to its source, and to its
- * licence when it names one.
+ * The notices a recipe's provider asks a reader to see, such as Spoonacular's
+ * backlink, as the API words them: each links to its source, and to its licence
+ * when it names one.
  */
 export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({
   attributions,
@@ -40,7 +40,7 @@ export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({
             <Link
               variant="caption"
               href={sourceUrl}
-              testID={kitTestIDs.dataAttributionSource(source)}
+              testID={recipesTestIDs.dataAttributionSource(source)}
             >
               {notice}
             </Link>
@@ -53,7 +53,7 @@ export const DataAttributionNotices: React.FC<DataAttributionNoticesProps> = ({
               <Link
                 variant="caption"
                 href={licenseUrl}
-                testID={kitTestIDs.dataAttributionLicense(source)}
+                testID={recipesTestIDs.dataAttributionLicense(source)}
               >
                 {t('labels.license')}
               </Link>
