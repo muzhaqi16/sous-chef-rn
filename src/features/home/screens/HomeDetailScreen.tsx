@@ -38,6 +38,10 @@ import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import {
+  canManageHome,
+  getAssignableRoles,
+} from '#features/home/utils/homePermissions';
 import { homeTestIDs } from '#features/home/testIDs';
 import { fieldError, homeNameRule } from '#/utils/validation/common';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
@@ -155,7 +159,10 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 
   const currentUserMembership = home?.myMembership;
   const isOwner = currentUserMembership?.role === MembershipRole.Owner;
-  const canManage = currentUserMembership?.canManageHome ?? false;
+  const canManage = canManageHome(currentUserMembership);
+  const assignableRoles = currentUserMembership
+    ? getAssignableRoles(currentUserMembership.role)
+    : [];
 
   const handleLeaveHome = async () => {
     if (!home) return;
@@ -296,8 +303,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         <HomeMembersSection
           members={memberNodes}
           invites={inviteNodes}
-          canManageHome={canManage}
-          isOwner={isOwner}
+          viewer={currentUserMembership ?? null}
+          viewerUserId={currentUser?.id}
           resolveMemberLabel={member => {
             const isCurrentUser =
               !!currentUser?.id && member.userId === currentUser.id;
@@ -395,7 +402,9 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
       <ModalPicker
         visible={rolePickerState.visible}
         label={t('labels.selectRole')}
-        options={ROLE_OPTIONS.map(role => ({
+        options={ROLE_OPTIONS.filter(role =>
+          assignableRoles.includes(role.value),
+        ).map(role => ({
           label: t(role.labelKey),
           value: role.value,
         }))}

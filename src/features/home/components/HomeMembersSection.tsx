@@ -11,6 +11,10 @@ import {
   type MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import type { MembershipPermissionKey } from '#features/home/types';
+import {
+  canManageHome,
+  type HomeViewer,
+} from '#features/home/utils/homePermissions';
 import type { HomeDetailScreen_HomeFragment } from '#features/home/screens/HomeDetailScreen.generated';
 
 type MemberNode =
@@ -21,9 +25,10 @@ type InviteNode =
 interface HomeMembersSectionProps {
   members: ReadonlyArray<MemberNode>;
   invites: ReadonlyArray<InviteNode>;
-  canManageHome?: boolean;
-  /** Current user is the home OWNER — gates the transfer-ownership action. */
-  isOwner?: boolean;
+  /** The current user's own membership: decides which actions render. */
+  viewer: HomeViewer | null;
+  /** The current user's id: whoever sent an invite may withdraw it. */
+  viewerUserId: string | undefined;
   /** Resolve a member's label (display name + isCurrentUser flag). The screen
    *  owns the user-store dependency so this component stays presentational. */
   resolveMemberLabel: (member: MemberNode) => {
@@ -57,8 +62,8 @@ interface HomeMembersSectionProps {
 export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
   members,
   invites,
-  canManageHome,
-  isOwner,
+  viewer,
+  viewerUserId,
   resolveMemberLabel,
   resolveInviteLabel,
   onChangeRole,
@@ -86,8 +91,7 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
               memberRef={member}
               displayName={displayName}
               isCurrentUser={isCurrentUser}
-              canManageHome={canManageHome}
-              isOwner={isOwner}
+              viewer={viewer}
               onChangeRole={() =>
                 onChangeRole(member.id, member.role, displayName)
               }
@@ -126,7 +130,10 @@ export const HomeMembersSection: React.FC<HomeMembersSectionProps> = ({
               key={invite.id}
               inviteRef={invite}
               displayName={resolveInviteLabel(invite)}
-              canRevoke={canManageHome}
+              canRevoke={
+                canManageHome(viewer) ||
+                (!!viewerUserId && invite.inviter?.id === viewerUserId)
+              }
               onRevoke={() => onRevokeInvite(invite.id, invite.email)}
             />
           ))}

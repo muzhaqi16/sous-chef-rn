@@ -26,7 +26,6 @@ export const ROLE_OPTIONS: {
   labelKey: TranslationKey;
   value: MembershipRole;
 }[] = [
-  { labelKey: 'labels.owner', value: MembershipRole.Owner },
   { labelKey: 'labels.admin', value: MembershipRole.Admin },
   { labelKey: 'labels.member', value: MembershipRole.Member },
   { labelKey: 'labels.guest', value: MembershipRole.Guest },

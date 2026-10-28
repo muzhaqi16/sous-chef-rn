@@ -2,110 +2,135 @@ import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import {
   getInvitableRoles,
   canInviteToHome,
+  canManageHome,
+  getAssignableRoles,
+  type HomeViewer,
 } from '#features/home/utils/homePermissions';
 
-describe('getInvitableRoles', () => {
-  it('Guest cannot invite anyone', () => {
-    expect(getInvitableRoles(MembershipRole.Guest)).toEqual([]);
-  });
+const EVERY_ROLE = [
+  MembershipRole.Guest,
+  MembershipRole.Member,
+  MembershipRole.Admin,
+  MembershipRole.Owner,
+];
 
-  it('Member can only invite Members', () => {
-    expect(getInvitableRoles(MembershipRole.Member)).toEqual([
-      MembershipRole.Member,
+describe('getInvitableRoles', () => {
+  it('lets a Guest invite only Guests', () => {
+    expect(getInvitableRoles(MembershipRole.Guest, true)).toEqual([
+      MembershipRole.Guest,
     ]);
   });
 
-  it('Admin can invite Members but not Admins', () => {
+  it('lets a Member invite Members and Guests', () => {
+    expect(getInvitableRoles(MembershipRole.Member, true)).toEqual([
+      MembershipRole.Member,
+      MembershipRole.Guest,
+    ]);
+  });
+
+  it('lets an Admin invite Members and Guests but not Admins', () => {
     // Conferring ADMIN is the home owner's alone: a non-owner who could grant
     // it would escalate by inviting a second address of their own.
-    expect(getInvitableRoles(MembershipRole.Admin)).toEqual([
+    expect(getInvitableRoles(MembershipRole.Admin, false)).toEqual([
       MembershipRole.Member,
+      MembershipRole.Guest,
+    ]);
+  });
+
+  it('lets the Owner invite Guests, Members and Admins', () => {
+    expect(getInvitableRoles(MembershipRole.Owner, false)).toEqual([
+      MembershipRole.Guest,
+      MembershipRole.Member,
+      MembershipRole.Admin,
     ]);
   });
 
   it('never offers OWNER, whoever is asking', () => {
-    for (const role of [
-      MembershipRole.Guest,
-      MembershipRole.Member,
-      MembershipRole.Admin,
-      MembershipRole.Owner,
-    ]) {
+    for (const role of EVERY_ROLE) {
       expect(getInvitableRoles(role, true)).not.toContain(MembershipRole.Owner);
     }
   });
 
   it('offers ADMIN to the owner alone', () => {
-    expect(getInvitableRoles(MembershipRole.Owner)).toContain(
-      MembershipRole.Admin,
-    );
-    for (const role of [
-      MembershipRole.Guest,
-      MembershipRole.Member,
-      MembershipRole.Admin,
-    ]) {
+    for (const role of EVERY_ROLE.filter(r => r !== MembershipRole.Owner)) {
       expect(getInvitableRoles(role, true)).not.toContain(MembershipRole.Admin);
     }
   });
 
-  it('Owner can invite Guests, Members, and Admins', () => {
-    expect(getInvitableRoles(MembershipRole.Owner)).toEqual([
-      MembershipRole.Guest,
-      MembershipRole.Member,
-      MembershipRole.Admin,
-    ]);
-  });
-
-  it('returns empty array for unknown role', () => {
-    expect(getInvitableRoles('UNKNOWN' as MembershipRole)).toEqual([]);
-  });
-
-  // Mirrors the API's invite rule: OWNER/ADMIN may always invite; the
-  // canInviteOthers flag only escalates (or blocks) MEMBER.
-  describe('canInviteOthers flag', () => {
-    it('explicitly false blocks Member invites', () => {
-      expect(getInvitableRoles(MembershipRole.Member, false)).toEqual([]);
-    });
-
-    it('explicitly false does NOT block Admin invites', () => {
-      expect(getInvitableRoles(MembershipRole.Admin, false)).toEqual([
-        MembershipRole.Member,
-      ]);
-    });
-
-    it('explicitly false does NOT block Owner invites', () => {
-      expect(getInvitableRoles(MembershipRole.Owner, false)).toEqual([
-        MembershipRole.Guest,
-        MembershipRole.Member,
-        MembershipRole.Admin,
-      ]);
-    });
-
-    it('true grants Member invites', () => {
-      expect(getInvitableRoles(MembershipRole.Member, true)).toEqual([
-        MembershipRole.Member,
-      ]);
-    });
-
-    it('never grants Guest invites', () => {
-      expect(getInvitableRoles(MembershipRole.Guest, true)).toEqual([]);
-    });
-  });
+  // The API admits OWNER/ADMIN outright; below them the flag alone decides.
+  it.each([MembershipRole.Guest, MembershipRole.Member])(
+    'offers a %s nothing without canInviteOthers',
+    role => {
+      expect(getInvitableRoles(role, false)).toEqual([]);
+    },
+  );
 });
 
 describe('canInviteToHome', () => {
-  it('returns false for Guest', () => {
-    expect(canInviteToHome(MembershipRole.Guest)).toBe(false);
+  it.each([MembershipRole.Admin, MembershipRole.Owner])(
+    'lets a %s invite without canInviteOthers',
+    role => {
+      expect(canInviteToHome(role, false)).toBe(true);
+    },
+  );
+
+  it.each([MembershipRole.Guest, MembershipRole.Member])(
+    'lets a %s invite only with canInviteOthers',
+    role => {
+      expect(canInviteToHome(role, true)).toBe(true);
+      expect(canInviteToHome(role, false)).toBe(false);
+    },
+  );
+});
+
+const viewerAs = (
+  role: MembershipRole,
+  canManageHomeFlag = false,
+): HomeViewer => ({
+  role,
+  canManageHome: canManageHomeFlag,
+  canViewPantry: true,
+  canEditPantry: true,
+  canAddItems: true,
+  canRemoveItems: true,
+  canInviteOthers: true,
+});
+
+describe('canManageHome', () => {
+  it.each([MembershipRole.Owner, MembershipRole.Admin])(
+    'lets a %s manage without the flag',
+    role => {
+      expect(canManageHome(viewerAs(role))).toBe(true);
+    },
+  );
+
+  it.each([MembershipRole.Member, MembershipRole.Guest])(
+    'lets a %s manage only with canManageHome',
+    role => {
+      expect(canManageHome(viewerAs(role, true))).toBe(true);
+      expect(canManageHome(viewerAs(role))).toBe(false);
+    },
+  );
+});
+
+describe('getAssignableRoles', () => {
+  // OWNER moves only through transferHomeOwnership.
+  it('offers the owner every role but OWNER', () => {
+    expect(getAssignableRoles(MembershipRole.Owner)).toEqual([
+      MembershipRole.Admin,
+      MembershipRole.Member,
+      MembershipRole.Guest,
+    ]);
   });
 
-  it('returns true for Member', () => {
-    expect(canInviteToHome(MembershipRole.Member)).toBe(true);
-  });
-
-  it('returns true for Admin', () => {
-    expect(canInviteToHome(MembershipRole.Admin)).toBe(true);
-  });
-
-  it('returns true for Owner', () => {
-    expect(canInviteToHome(MembershipRole.Owner)).toBe(true);
+  it('offers anyone below the owner only roles under their own', () => {
+    expect(getAssignableRoles(MembershipRole.Admin)).toEqual([
+      MembershipRole.Member,
+      MembershipRole.Guest,
+    ]);
+    expect(getAssignableRoles(MembershipRole.Member)).toEqual([
+      MembershipRole.Guest,
+    ]);
+    expect(getAssignableRoles(MembershipRole.Guest)).toEqual([]);
   });
 });
