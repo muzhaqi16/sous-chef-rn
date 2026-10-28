@@ -367,8 +367,6 @@ export const useListSettings = (listId: string | undefined) => {
     );
   };
 
-  // Price tracking toggles immediately (like a real setting), not on Save.
-
   // Reminder — a picked date sets/updates it; the clear action removes it.
   // The API reads the reminder's day in the owner's recorded time zone.
   const handleSetReminderDate = (date: Date | null) => {
