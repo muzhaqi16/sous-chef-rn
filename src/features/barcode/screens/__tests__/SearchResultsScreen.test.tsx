@@ -130,10 +130,12 @@ describe('SearchResultsScreen', () => {
     const { useSearchResults } = require('../../hooks/useSearchResults');
     useSearchResults.mockReturnValue(searchResult({ loading: true }));
 
-    const { getByText } = render(<SearchResultsScreen {...defaultProps} />);
-    // The brand loader sets its banner in caps, and the barcode reads back
-    // below it so a wrong scan is visible while the search runs.
-    expect(getByText('SEARCHING FOR ITEM...')).toBeTruthy();
+    const { getByLabelText, getByText } = render(
+      <SearchResultsScreen {...defaultProps} />,
+    );
+    // The brand loader draws its banner letter by letter and reads it out as
+    // one label; the barcode reads back below it so a wrong scan is visible.
+    expect(getByLabelText('Searching for item...')).toBeTruthy();
     expect(getByText('Barcode: 1234567890')).toBeTruthy();
   });
 

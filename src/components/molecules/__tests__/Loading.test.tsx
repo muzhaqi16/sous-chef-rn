@@ -20,11 +20,11 @@ describe('Loading', () => {
 });
 
 describe('LoadingBranded', () => {
-  // The brand loader draws the message in its own banner, in caps, so the
-  // component must not also render it beneath the spinner.
+  // The brand loader draws the message in its own banner, letter by letter and
+  // read out as one label, so the component must not also render it beneath.
   it('hands the message to the brand banner and does not repeat it', () => {
     render(<LoadingBranded message="Fetching data" />);
-    expect(screen.getByText('FETCHING DATA')).toBeTruthy();
+    expect(screen.getByLabelText('Fetching data')).toBeTruthy();
     expect(screen.queryByText('Fetching data')).toBeNull();
   });
 
