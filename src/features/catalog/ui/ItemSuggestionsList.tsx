@@ -2,7 +2,7 @@ import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
@@ -26,11 +26,9 @@ interface ItemSuggestionsListProps {
   onSelectSuggestion: (item: ItemSuggestion) => void;
   /** Whether quick add is disabled (e.g., during mutation) */
   quickAddDisabled?: boolean;
-  /** Icon to show in suggestion placeholder (default: 'cube-outline') */
-  placeholderIcon?: 'cube-outline' | 'cart-outline';
   /** Whether to show brand names (default: true) */
   showBrands?: boolean;
-  /** When false, always show placeholder icon regardless of image URL */
+  /** When false, rows show no photo even when they have one */
   showImages?: boolean;
   /** Renders a "wrong details?" footer row under the results. Omit for no footer.
    *  Only shown when there are results — with none there is nothing to report. */
@@ -42,7 +40,6 @@ interface SuggestionRowProps {
   isLast: boolean;
   onSelectSuggestion: (item: ItemSuggestion) => void;
   quickAddDisabled: boolean;
-  placeholderIcon: 'cube-outline' | 'cart-outline';
   showBrands: boolean;
   showImages: boolean;
 }
@@ -52,7 +49,6 @@ const SuggestionRow = ({
   isLast,
   onSelectSuggestion,
   quickAddDisabled,
-  placeholderIcon,
   showBrands,
   showImages,
 }: SuggestionRowProps) => {
@@ -64,17 +60,7 @@ const SuggestionRow = ({
 
   return (
     <View style={styles.suggestionItem}>
-      {!!showImages && (
-        <View style={styles.imageContainer}>
-          {imageUrl ? (
-            <CachedImage uri={imageUrl} style={styles.image} displaySize={40} />
-          ) : (
-            <View style={styles.imagePlaceholder}>
-              <Icon name={placeholderIcon} size={20} tone="primary" />
-            </View>
-          )}
-        </View>
-      )}
+      {!!showImages && <RowThumbnail uri={imageUrl} />}
       <View style={styles.suggestionInfo}>
         <Text role="bodyStrong" numberOfLines={1}>
           {item.name}
@@ -165,7 +151,6 @@ export const ItemSuggestionsList = ({
   onAddManually,
   onSelectSuggestion,
   quickAddDisabled = false,
-  placeholderIcon = 'cube-outline',
   showBrands = true,
   showImages = true,
   onReportItem,
@@ -206,7 +191,6 @@ export const ItemSuggestionsList = ({
             isLast={isLast}
             onSelectSuggestion={onSelectSuggestion}
             quickAddDisabled={quickAddDisabled}
-            placeholderIcon={placeholderIcon}
             showBrands={showBrands}
             showImages={showImages}
           />
@@ -232,6 +216,9 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     padding: theme.spacing.md,
+    gap: theme.layout.rowSlotGap,
+    // A row without a photo stands as tall as one with.
+    minHeight: theme.sizes.itemCard.compact.image + theme.spacing.md * 2,
     variants: {
       withBorder: {
         true: {
@@ -241,28 +228,8 @@ const styles = StyleSheet.create(theme => ({
       },
     },
   },
-  imageContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    marginRight: theme.spacing.md,
-  },
-  image: {
-    width: 40,
-    height: 40,
-  },
-  imagePlaceholder: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.colors.surfaceVariant,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   suggestionInfo: {
     flex: 1,
-    marginRight: theme.spacing.md,
   },
   suggestionBrands: {
     marginTop: theme.spacing['2xs'],

@@ -163,7 +163,6 @@ const createConfig = (
 ): AddItemSheetConfig => ({
   titleKey: 'addItemSheet.addToPantry',
   testIDPrefix: pantrySheetConfig.testIDPrefix,
-  placeholderIcon: 'cube-outline',
   searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
   suggestionGroups: [
     {

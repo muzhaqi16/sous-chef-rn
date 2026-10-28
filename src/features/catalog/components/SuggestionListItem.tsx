@@ -9,8 +9,8 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
-import { Icon, type IconLibrary } from '#components/atoms/Icon';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { Icon } from '#components/atoms/Icon';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { SLIDE_PRESETS } from '#constants/animations';
 import { Text } from '#components/atoms/Text';
 import { catalogTestIDs } from '#features/catalog/testIDs';
@@ -20,8 +20,6 @@ export interface SuggestionListItemProps {
   imageUrl?: string | null;
   title: string;
   subtitle?: string | null;
-  placeholderIcon?: string;
-  placeholderIconLibrary?: IconLibrary;
   onPress?: () => void;
   onQuickAdd?: () => void;
   /** When provided, shows a muted ✕ control that dismisses this suggestion */
@@ -32,7 +30,7 @@ export interface SuggestionListItemProps {
   isExiting?: boolean;
   /** Called after exit animation completes */
   onExitComplete?: () => void;
-  /** When false, always show placeholder icon regardless of imageUrl */
+  /** When false, the row shows no photo even when it has one */
   showImage?: boolean;
 }
 
@@ -48,8 +46,6 @@ export const SuggestionListItem = ({
   imageUrl,
   title,
   subtitle,
-  placeholderIcon = 'cube-outline',
-  placeholderIconLibrary = 'Ionicons',
   onPress,
   onQuickAdd,
   onDismiss,
@@ -122,26 +118,7 @@ export const SuggestionListItem = ({
         disabled={!onPress && !onQuickAdd}
         testID={testID}
       >
-        {!!showImage && (
-          <View style={styles.imageContainer}>
-            {imageUrl ? (
-              <CachedImage
-                uri={imageUrl}
-                style={styles.image}
-                displaySize={40}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Icon
-                  name={placeholderIcon}
-                  size={20}
-                  tone="primary"
-                  library={placeholderIconLibrary}
-                />
-              </View>
-            )}
-          </View>
-        )}
+        {!!showImage && <RowThumbnail uri={imageUrl} />}
         <View style={styles.info}>
           <Text role="bodyStrong" numberOfLines={1}>
             {title}
@@ -206,25 +183,9 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-  },
-  imageContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    marginRight: theme.spacing.md,
-  },
-  image: {
-    width: 40,
-    height: 40,
-  },
-  imagePlaceholder: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
+    gap: theme.layout.rowSlotGap,
+    // A row without a photo stands as tall as one with.
+    minHeight: theme.sizes.itemCard.compact.height,
   },
   info: {
     flex: 1,
@@ -237,7 +198,6 @@ const styles = StyleSheet.create(theme => ({
     height: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: theme.spacing.xs,
   },
   quickAddButton: {
     width: 36,

@@ -6,7 +6,6 @@ export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionI
   {
     titleKey: 'labels.addToShoppingList',
     testIDPrefix: shoppingListTestIDs.addSheetPrefix,
-    placeholderIcon: 'cart-outline',
     searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
     suggestionGroups: [
       {

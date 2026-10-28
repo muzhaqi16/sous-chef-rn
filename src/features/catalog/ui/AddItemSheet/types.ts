@@ -46,7 +46,6 @@ export interface AddItemSheetConfig<
    */
   titleKey: TranslationKey;
   testIDPrefix: string;
-  placeholderIcon: 'cube-outline' | 'cart-outline';
   searchPlaceholderKey: TranslationKey;
   suggestionGroups: SuggestionGroupConfig<T>[];
   quickAdd: QuickAddConfig;

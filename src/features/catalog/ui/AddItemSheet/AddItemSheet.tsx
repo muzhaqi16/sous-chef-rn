@@ -186,7 +186,6 @@ export function AddItemSheet<
         imageUrl={item.imageUrl}
         title={item.name}
         subtitle={item.subtitle ?? item.category}
-        placeholderIcon={config.placeholderIcon}
         onQuickAdd={() => onQuickAddSuggestion(item)}
         onDismiss={
           dismissible && onDismissSuggestion
@@ -322,7 +321,6 @@ export function AddItemSheet<
                 onAddManually={handleAddManually}
                 onSelectSuggestion={handleSelectSearchSuggestion}
                 quickAddDisabled={isMutating}
-                placeholderIcon={config.placeholderIcon}
                 showBrands={false}
                 showImages={showImages}
                 onReportItem={() => setStep('report')}

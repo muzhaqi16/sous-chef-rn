@@ -5,7 +5,6 @@ import type { AddItemSheetConfig } from '#features/catalog/ui/AddItemSheet/types
 export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
   titleKey: 'addItemSheet.addToPantry',
   testIDPrefix: pantryTestIDs.addItemSheetPrefix,
-  placeholderIcon: 'cube-outline',
   searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
   suggestionGroups: [
     {
