@@ -1,4 +1,3 @@
-import { TOAST_HOLD_MS } from '#platform/presenters';
 import { FadeIn, FadeOut, LinearTransition } from 'react-native-reanimated';
 import type { SlideAnimationConfig } from '#hooks/animations/types';
 import { motion } from '#/theme/motion';
@@ -24,9 +23,6 @@ export const SHEET = {
 
 /** Toast animation. */
 export const TOAST = {
-  /** The holds are the core's (`TOAST_HOLD_MS`): it picks one per message. */
-  AUTO_DISMISS_SHORT: TOAST_HOLD_MS.SHORT,
-  AUTO_DISMISS_LONG: TOAST_HOLD_MS.LONG,
   SWIPE_THRESHOLD: 50,
   /** Dismissal travel from rest — clears the tallest two-line toast. */
   OFFSCREEN_Y: -150,

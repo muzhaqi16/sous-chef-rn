@@ -29,10 +29,11 @@ import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
-import type {
-  ToastOptions,
-  ToastPresenter,
-  ToastType,
+import {
+  toastHoldMs,
+  type ToastOptions,
+  type ToastPresenter,
+  type ToastType,
 } from '#platform/presenters';
 
 // Every toast of an outcome type carries its haptic, so no caller fires its
@@ -322,12 +323,6 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
     translateY.set(withSpring(0, motion.spring.TOAST_ENTER));
     translateX.set(0);
     opacity.set(withTiming(1, { duration: motion.timing.FAST }));
-    // Any positive duration is honoured, not just the TOAST presets.
-    const requested = current.duration;
-    const ms =
-      typeof requested === 'number' && requested > 0
-        ? requested
-        : TOAST.AUTO_DISMISS_SHORT;
     const id = setTimeout(
       () =>
         animateDismiss(
@@ -335,7 +330,7 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
           generation,
           setQueue,
         ),
-      ms,
+      toastHoldMs(current),
     );
     return () => clearTimeout(id);
   }, [current, generation, currentGeneration, opacity, translateX, translateY]);

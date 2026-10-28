@@ -8,7 +8,7 @@ import {
   GetHomeByJoinCodeDocument,
   type GetHomesQuery,
 } from '#operations/home/home.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { createAddToParentConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
@@ -99,6 +99,18 @@ export function useHomeInvitations({
       {
         document: InviteToHomeDocument,
         fallback: t('errors.sendInviteFailed'),
+        // The refusal is about the invitee, not the inviter the code table
+        // speaks to: only someone who manages the home brings a member back.
+        copy: {
+          [ErrorCode.HomeMembershipRemoved]: {
+            title: t('labels.error'),
+            body: t('inviteUser.inviteeRemoved'),
+          },
+          [ErrorCode.HomeMembershipSuspended]: {
+            title: t('labels.error'),
+            body: t('inviteUser.inviteeSuspended'),
+          },
+        },
         present: 'none',
       },
     );

@@ -142,7 +142,7 @@ describe('useHomeDetailManagement', () => {
     expect(result.current.home).toEqual(
       expect.objectContaining({ id: 'home-1', name: 'Test Home' }),
     );
-    expect(result.current.loading).toBe(false);
+    expect(result.current.homeState).toBe('ready');
     expect(result.current.leaving).toBe(false);
     expect(typeof result.current.saveName).toBe('function');
     expect(typeof result.current.changeRole).toBe('function');
@@ -152,13 +152,14 @@ describe('useHomeDetailManagement', () => {
     expect(typeof result.current.toggleJoinCode).toBe('function');
   });
 
-  it('returns null home when no data', async () => {
+  // An answer naming no home is "not found", never a failed load.
+  it('reads an answered null home as empty', async () => {
     const { result } = renderHookWithApollo(
       () => useHomeDetailManagement('home-1'),
       { operationMocks: [getHomeMock({ home: null })] },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await waitFor(() => expect(result.current.homeState).toBe('empty'));
     expect(result.current.home).toBeNull();
   });
 
@@ -677,13 +678,13 @@ describe('useHomeDetailManagement', () => {
   });
 
   describe('loading states', () => {
-    it('returns loading true when query is loading', () => {
+    it('reads a home still being fetched as loading', () => {
       const { result } = renderHookWithApollo(
         () => useHomeDetailManagement('home-1'),
         { operationMocks: [getHomeMock(DEFAULT_HOME_DATA, { held: true })] },
       );
 
-      expect(result.current.loading).toBe(true);
+      expect(result.current.homeState).toBe('loading');
     });
   });
 

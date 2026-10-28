@@ -5,6 +5,11 @@ import {
 } from '#features/notifications/hooks/useInvitationActions';
 import { useUserId } from '#store/useAppStore';
 import { presentFailure } from '#/utils/errors/presentFailure';
+import { useDataState } from '#hooks/data/useDataState';
+import {
+  CollaboratorStatus,
+  InviteStatus,
+} from '#/graphql/generated/schemaTypes';
 import {
   AcceptInvite_ShoppingListInviteFragmentDoc,
   AcceptInvite_HomeInviteFragmentDoc,
@@ -35,17 +40,24 @@ export function useInviteByToken(token: string | undefined) {
   // No notification behind a link: the invite is named by its token alone.
   const { acceptHome, acceptList, declineHome, declineList } =
     useInvitationActions(null, useUserId() ?? null);
-  const { data: homeInviteData, loading: homeInviteLoading } = useQuery(
+  const homeQuery = useQuery(
     GetHomeInviteByTokenDocument,
     token ? { variables: { token } } : skipToken,
   );
-  const { data: listInviteData, loading: listInviteLoading } = useQuery(
+  const listQuery = useQuery(
     GetShoppingListInviteByTokenDocument,
     token ? { variables: { token } } : skipToken,
   );
+  const homeInviteData = homeQuery.data;
+  const listInviteData = listQuery.data;
 
-  const shoppingListInvite = listInviteData?.shoppingListInviteByToken ?? null;
-  const homeInvite = homeInviteData?.homeInviteByToken ?? null;
+  // A spent token still names its invite, so only a pending one can be answered.
+  const listMatch = listInviteData?.shoppingListInviteByToken;
+  const homeMatch = homeInviteData?.homeInviteByToken;
+  const shoppingListInvite =
+    listMatch?.status === CollaboratorStatus.Pending ? listMatch : null;
+  const homeInvite =
+    homeMatch?.status === InviteStatus.Pending ? homeMatch : null;
 
   // Unmask display fields (pattern B — resilient fallback). The queries already
   // select these, so the cache has them without a spread.
@@ -93,21 +105,28 @@ export function useInviteByToken(token: string | undefined) {
   const homeInviteDisplay: AcceptInvite_HomeInviteFragment | null =
     homeInvite && homeFragment.complete ? homeFragment.data : null;
 
+  // A token names one kind of invite, so the other query answers null.
+  const inviteState = useDataState({
+    loading: homeQuery.loading || listQuery.loading,
+    error: homeQuery.error ?? listQuery.error,
+    hasResult: homeInviteData !== undefined || listInviteData !== undefined,
+    isEmpty: !shoppingListInvite && !homeInvite,
+    skipped: !token,
+  });
+
   return {
     invitationType,
-    hasInvite: !!shoppingListInvite || !!homeInvite,
+    inviteState,
+    retry: () => {
+      void homeQuery.refetch();
+      void listQuery.refetch();
+    },
     inviteRole:
       (invitationType === 'home'
         ? homeInvite?.role
-        : shoppingListInvite?.role) ?? '',
+        : shoppingListInvite?.role) ?? null,
     shoppingListInviteDisplay,
     homeInviteDisplay,
-    // Only when there is nothing to show: a warm cache renders the invite while
-    // the accompanying network leg is still open.
-    loading:
-      (homeInviteLoading || listInviteLoading) &&
-      !shoppingListInvite &&
-      !homeInvite,
     accept,
     decline,
   };

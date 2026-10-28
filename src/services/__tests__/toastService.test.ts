@@ -32,11 +32,11 @@ describe('toastService', () => {
 
   it('forwards options', () => {
     const action = { label: 'Retry', onPress: jest.fn() };
-    toastService.error('Failed', { duration: 5000, action });
+    toastService.error('Failed', { supersede: true, action });
     expect(dispatch).toHaveBeenCalledWith({
       message: 'Failed',
       type: 'error',
-      duration: 5000,
+      supersede: true,
       action,
     });
   });

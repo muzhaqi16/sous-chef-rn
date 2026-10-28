@@ -178,6 +178,9 @@ export class ErrorService {
     BAD_REQUEST: 'validationFailed',
     CLIENT_UPGRADE_REQUIRED: 'clientUpgradeRequired',
     HOME_NOT_A_MEMBER: 'homeAccessDenied',
+    // Told to the one refused at a join door; an inviter's copy is the invite's own.
+    HOME_MEMBERSHIP_REMOVED: 'homeMembershipRemoved',
+    HOME_MEMBERSHIP_SUSPENDED: 'homeMembershipSuspended',
     OPERATION_RATE_LIMITED: 'rateLimitExceeded',
     RESOURCE_VERSION_CONFLICT: 'versionConflict',
     WS_OPERATION_NOT_ALLOWED: 'operationNotAllowed',

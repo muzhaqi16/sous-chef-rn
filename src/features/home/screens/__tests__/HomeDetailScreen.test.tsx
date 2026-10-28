@@ -5,6 +5,7 @@ import { fireEvent, render } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { HomeDetailScreen } from '../HomeDetailScreen';
+import { kitTestIDs } from '#components/testIDs';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -40,7 +41,7 @@ jest.mock('#features/home/screens/useHomeDetailManagement', () => ({
         canManageHome: true,
       },
     },
-    loading: false,
+    homeState: 'ready',
     leaving: false,
     refetch: mockRefetch,
     rolePickerState: mockRolePickerState,
@@ -222,7 +223,7 @@ beforeEach(() => {
         canManageHome: true,
       },
     },
-    loading: false,
+    homeState: 'ready',
     leaving: false,
     refetch: mockRefetch,
     rolePickerState: mockRolePickerState,
@@ -261,7 +262,7 @@ describe('HomeDetailScreen', () => {
     } = require('#features/home/screens/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       ...useHomeDetailManagement(),
-      loading: true,
+      homeState: 'ready',
     });
 
     const { getByText, queryByText } = render(
@@ -352,7 +353,7 @@ describe('HomeDetailScreen', () => {
     } = require('#features/home/screens/useHomeDetailManagement');
     useHomeDetailManagement.mockReturnValue({
       home: null,
-      loading: true,
+      homeState: 'loading',
       leaving: false,
       refetch: mockRefetch,
       rolePickerState: mockRolePickerState,
@@ -366,8 +367,30 @@ describe('HomeDetailScreen', () => {
       toggleJoinCode: mockToggleJoinCode,
     });
 
-    const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
+    const { getByText, getByTestId } = render(
+      <HomeDetailScreen {...defaultProps} />,
+    );
     expect(getByText('Home Details')).toBeTruthy();
+    expect(getByTestId(kitTestIDs.stateLoading)).toBeTruthy();
+  });
+
+  // A failed read gets the app's error state and its retry, never the
+  // loading animation with an error written into its banner.
+  it('shows the error state when the home fails to load', () => {
+    const {
+      useHomeDetailManagement,
+    } = require('#features/home/screens/useHomeDetailManagement');
+    useHomeDetailManagement.mockReturnValue({
+      ...useHomeDetailManagement(),
+      home: null,
+      homeState: 'error',
+    });
+
+    const { getByTestId, queryByTestId } = render(
+      <HomeDetailScreen {...defaultProps} />,
+    );
+    expect(getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(queryByTestId(kitTestIDs.stateLoading)).toBeNull();
   });
 
   it('shows leave home button for non-owner member', () => {
@@ -389,7 +412,7 @@ describe('HomeDetailScreen', () => {
           canManageHome: false,
         },
       },
-      loading: false,
+      homeState: 'ready',
       leaving: false,
       refetch: mockRefetch,
       rolePickerState: mockRolePickerState,

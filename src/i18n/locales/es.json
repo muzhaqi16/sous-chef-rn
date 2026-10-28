@@ -19,6 +19,8 @@
       "genericLater": "Algo salió mal. Inténtalo de nuevo más tarde.",
       "genericRetry": "Algo salió mal. Inténtalo de nuevo.",
       "homeAccessDenied": "No tienes acceso a este hogar",
+      "homeMembershipRemoved": "Te quitaron de este hogar. Pide a su propietario o a un administrador que te invite de nuevo.",
+      "homeMembershipSuspended": "Tu membresía en este hogar está suspendida.",
       "homeInviteExpired": "La invitación al hogar ha caducado",
       "homeMemberLimitReached": "Este hogar ha alcanzado su límite de miembros",
       "payloadTooLarge": "Es demasiado para enviar de una vez. Prueba con un cambio más pequeño.",

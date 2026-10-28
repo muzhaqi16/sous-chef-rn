@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import { useFragment, useQuery } from '@apollo/client/react';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
 import { useHomeMembership } from '#features/home/hooks/useHomeMembership';
@@ -81,6 +82,13 @@ export function useHomeDetailManagement(homeId: string) {
     from: homeRef ? { __typename: 'Home', id: homeId } : null,
   });
   const home = homeRef && unmaskedComplete ? unmaskedData : null;
+  // An answer naming no home is not found, never a failed load.
+  const homeState = useDataState({
+    loading,
+    error,
+    hasResult: data !== undefined,
+    isEmpty: !home,
+  });
 
   /**
    * Local-first: an absolute field set keyed by the home id, written to the
@@ -152,8 +160,7 @@ export function useHomeDetailManagement(homeId: string) {
   return {
     // Data
     home,
-    loading,
-    error,
+    homeState,
     leaving,
     refetch,
 

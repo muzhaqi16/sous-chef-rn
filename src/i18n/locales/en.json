@@ -19,6 +19,8 @@
       "genericLater": "Something went wrong. Please try again later.",
       "genericRetry": "Something went wrong. Please try again.",
       "homeAccessDenied": "You don't have access to this home",
+      "homeMembershipRemoved": "You were removed from this home. Ask its owner or an admin to invite you back.",
+      "homeMembershipSuspended": "Your membership of this home is suspended.",
       "homeInviteExpired": "Home invitation has expired",
       "homeMemberLimitReached": "This home has reached its member limit",
       "payloadTooLarge": "That is too much to send at once. Try a smaller change.",

@@ -11,9 +11,12 @@ import type {
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import {
   CollaboratorRole,
+  CollaboratorStatus,
   ErrorCode,
+  InviteStatus,
   MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import { AcceptInvite } from '../AcceptInvite';
@@ -64,6 +67,7 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
 
 interface ShoppingListInviteInput {
   role?: CollaboratorRole;
+  status?: CollaboratorStatus;
   invitedByEmail?: string | null;
   invitedByDisplayName?: string | null;
   shoppingListName?: string;
@@ -80,6 +84,7 @@ function buildShoppingListInvite(
 ): MockPart<ShoppingListInvite> {
   return {
     role: input.role ?? CollaboratorRole.Editor,
+    status: input.status ?? CollaboratorStatus.Pending,
     // The invitee shares nothing with the inviter yet, so the invite itself
     // carries the name and the inviter's own reads null.
     inviterName: input.invitedByDisplayName ?? null,
@@ -100,6 +105,7 @@ function buildShoppingListInvite(
 
 interface HomeInviteInput {
   role?: MembershipRole;
+  status?: InviteStatus;
   inviterEmail?: string;
   inviterDisplayName?: string | null;
   inviterName?: string | null;
@@ -112,6 +118,7 @@ type HomeInvite = GetHomeInviteByTokenQuery['homeInviteByToken'] &
 function buildHomeInvite(input: HomeInviteInput = {}): MockPart<HomeInvite> {
   return {
     role: input.role ?? MembershipRole.Member,
+    status: input.status ?? InviteStatus.Pending,
     inviterName: input.inviterName ?? null,
     home: { name: input.homeName ?? 'Family Home' },
     inviter: {
@@ -302,7 +309,7 @@ describe('AcceptInvite', () => {
     [
       'shows role for shopping list invite',
       { list: { role: CollaboratorRole.Editor } },
-      [/EDITOR/],
+      ['Role', 'Editor'],
     ],
     [
       'shows "Shopping List" as invite type for shopping list invite',
@@ -312,7 +319,7 @@ describe('AcceptInvite', () => {
     [
       'shows description when shopping list has description',
       { list: { shoppingListDescription: 'Weekly shopping' } },
-      ['Description:', 'Weekly shopping'],
+      ['Description', 'Weekly shopping'],
     ],
     [
       'shows inviter displayName for shopping list invite when available',
@@ -327,7 +334,7 @@ describe('AcceptInvite', () => {
     [
       'shows role for home invite',
       { home: { role: MembershipRole.Admin } },
-      ["You've been invited!", /ADMIN/],
+      ["You've been invited!", 'Admin'],
     ],
     ['shows "Home" invite type label for home invite', HOME_INVITE, ['Home']],
     [
@@ -363,9 +370,42 @@ describe('AcceptInvite', () => {
     }
   });
 
+  it.each<[string, LinkedInvite]>([
+    ['an accepted home invite', { home: { status: InviteStatus.Accepted } }],
+    ['a revoked home invite', { home: { status: InviteStatus.Revoked } }],
+    [
+      'a list invite already taken up',
+      { list: { status: CollaboratorStatus.Active } },
+    ],
+  ])('offers nothing to accept on %s', async (_name, invite) => {
+    renderInvite(invite);
+
+    expect(
+      await screen.findByText(/This invitation is no longer available/),
+    ).toBeTruthy();
+    expect(screen.queryByText('Accept')).toBeNull();
+  });
+
   it('shows loading state while fetching invites', () => {
-    const tree = renderWithApollo(<AcceptInvite />, { operationMocks: [] });
-    expect(tree.toJSON()).toBeTruthy();
+    renderInvite(HOME_INVITE);
+
+    expect(screen.queryByText('Accept')).toBeNull();
+    expect(screen.queryByText(/Invitation not found/)).toBeNull();
+  });
+
+  it('offers a retry when the invite could not be read', async () => {
+    renderWithApollo(<AcceptInvite />, {
+      operationMocks: [
+        GetHomeInviteByTokenDocument,
+        GetShoppingListInviteByTokenDocument,
+      ].map(query => ({
+        request: { query, variables: { token: TOKEN } },
+        error: new Error('Server error'),
+      })),
+    });
+
+    expect(await screen.findByText('Try again')).toBeTruthy();
+    expect(screen.queryByText(/Invitation not found/)).toBeNull();
   });
 
   it.each<[string, string, LinkedInvite, string]>([
@@ -413,13 +453,10 @@ describe('AcceptInvite', () => {
 
     await user.press(await screen.findByText('Accept'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Success',
-        message,
-        expect.any(Array),
-      ),
-    );
+    await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+    expect(toastService.success).toHaveBeenCalledWith(message);
+    // The accepted invite resolves to not found; the screen has already left.
+    expect(alertService.alert).not.toHaveBeenCalled();
   });
 
   it('uses a custom token from route params', async () => {
@@ -434,10 +471,8 @@ describe('AcceptInvite', () => {
     await user.press(screen.getByText('Accept'));
 
     await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Success',
+      expect(toastService.success).toHaveBeenCalledWith(
         'Shopping list invitation accepted!',
-        expect.any(Array),
       ),
     );
   });

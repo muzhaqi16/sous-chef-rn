@@ -19,6 +19,8 @@
       "genericLater": "Diçka shkoi keq. Provoni sërish më vonë.",
       "genericRetry": "Diçka shkoi keq. Provoni sërish.",
       "homeAccessDenied": "Nuk keni akses në këtë shtëpi",
+      "homeMembershipRemoved": "Je hequr nga kjo shtëpi. Kërkoji pronarit ose një administratori të të ftojë përsëri.",
+      "homeMembershipSuspended": "Anëtarësia jote në këtë shtëpi është pezulluar.",
       "homeInviteExpired": "Ftesa për shtëpinë ka skaduar",
       "homeMemberLimitReached": "Kjo shtëpi ka arritur kufirin e anëtarëve",
       "payloadTooLarge": "Është shumë për t'u dërguar njëherësh. Provo një ndryshim më të vogël.",

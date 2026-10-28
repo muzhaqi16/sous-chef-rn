@@ -200,6 +200,26 @@ describe('JoinHomeByCodeScreen', () => {
     expect(tree.getByText(/2 members · 1 pantry/)).toBeTruthy();
   });
 
+  // A second join link opened while the screen shows lands as new params on
+  // the same screen; the preview must follow it, not the first code.
+  it('previews the home a second link names', async () => {
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
+      {
+        operationMocks: [
+          buildPreviewMock('ABC123', { name: 'Family Home' }),
+          buildPreviewMock('XYZ789', { id: 'home-2', name: 'Beach House' }),
+        ],
+      },
+    );
+    await waitFor(() => expect(tree.getByText('Family Home')).toBeTruthy());
+
+    tree.rerender(<JoinHomeByCodeScreen route={makeRoute('XYZ789')} />);
+
+    await waitFor(() => expect(tree.getByText('Beach House')).toBeTruthy());
+    expect(tree.queryByText('Family Home')).toBeNull();
+  });
+
   it('shows "Home not found" when the code resolves to null', async () => {
     const tree = renderWithApollo(
       <JoinHomeByCodeScreen route={makeRoute('BADCODE')} />,

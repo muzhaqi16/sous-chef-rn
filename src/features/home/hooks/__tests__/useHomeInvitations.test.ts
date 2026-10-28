@@ -1,4 +1,5 @@
 import { act } from '@testing-library/react-native';
+import { t, type TranslationKey } from '#/i18n';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
@@ -277,6 +278,60 @@ describe('useHomeInvitations', () => {
       expect(refusal).toBe('Failed to send invitation');
       expect(alertService.alert).not.toHaveBeenCalled();
     });
+
+    // Only someone who manages the home brings a removed member back; the
+    // inviter is told about the invitee, not that they themselves were removed.
+    const inviteeRefusals: Array<{ code: ErrorCode; copyKey: TranslationKey }> =
+      [
+        {
+          code: ErrorCode.HomeMembershipRemoved,
+          copyKey: 'inviteUser.inviteeRemoved',
+        },
+        {
+          code: ErrorCode.HomeMembershipSuspended,
+          copyKey: 'inviteUser.inviteeSuspended',
+        },
+      ];
+    it.each(inviteeRefusals)(
+      'says a $code invitee cannot be invited by this inviter',
+      async ({ code, copyKey }) => {
+        const refusedMock: MockFor<typeof InviteToHomeDocument> = {
+          request: {
+            query: InviteToHomeDocument,
+            variables: {
+              input: {
+                homeId: 'home-1',
+                email: 'gone@test.com',
+                role: MembershipRole.Member,
+              },
+            },
+          },
+          result: {
+            data: {
+              inviteToHome: {
+                __typename: 'ForbiddenError',
+                code,
+                message: 'refused',
+              },
+            },
+          },
+        };
+        const { result } = renderHookWithApollo(
+          () => useHomeInvitations(createOptions()),
+          { operationMocks: [refusedMock] },
+        );
+
+        let refusal: string | null | undefined;
+        await act(async () => {
+          refusal = await result.current.inviteUserToHome(
+            'home-1',
+            'gone@test.com',
+          );
+        });
+
+        expect(refusal).toBe(t(copyKey));
+      },
+    );
   });
 
   describe('joinHomeByCode', () => {

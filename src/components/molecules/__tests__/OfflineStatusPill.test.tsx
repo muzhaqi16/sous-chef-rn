@@ -3,7 +3,6 @@ import { fireEvent, render, screen } from '@testing-library/react-native';
 import { OfflineStatusPill } from '../OfflineStatusPill';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
 import { toastService } from '#/services/toastService';
-import { TOAST } from '#/constants/animations';
 
 jest.mock('#hooks/ui/useOfflineStatus');
 
@@ -73,7 +72,7 @@ describe('OfflineStatusPill', () => {
 
     expect(jest.mocked(toastService.warning)).toHaveBeenCalledWith(
       'You are offline',
-      { detail: '3 changes will sync', duration: TOAST.AUTO_DISMISS_LONG },
+      { detail: '3 changes will sync' },
     );
   });
 });

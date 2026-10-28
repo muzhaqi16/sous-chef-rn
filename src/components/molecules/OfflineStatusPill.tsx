@@ -5,7 +5,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from '#components/atoms/themedComponents';
 import { useOfflineStatus } from '#hooks/ui/useOfflineStatus';
 import { toastService } from '#/services/toastService';
-import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { kitTestIDs } from '#components/testIDs';
@@ -32,7 +31,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
   if (!offline) return null;
 
   const handlePress = () => {
-    toastService.warning(title, { detail, duration: TOAST.AUTO_DISMISS_LONG });
+    toastService.warning(title, { detail });
   };
 
   return (

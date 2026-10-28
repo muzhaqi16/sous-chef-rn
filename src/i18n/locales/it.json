@@ -19,6 +19,8 @@
       "genericLater": "Qualcosa è andato storto. Riprova più tardi.",
       "genericRetry": "Qualcosa è andato storto. Riprova.",
       "homeAccessDenied": "Non hai accesso a questa casa",
+      "homeMembershipRemoved": "La tua iscrizione a questa casa è stata rimossa. Chiedi al proprietario o a un amministratore di invitarti di nuovo.",
+      "homeMembershipSuspended": "La tua iscrizione a questa casa è sospesa.",
       "homeInviteExpired": "L’invito alla casa è scaduto",
       "homeMemberLimitReached": "Questa casa ha raggiunto il limite di membri",
       "payloadTooLarge": "È troppo da inviare in una volta. Prova con una modifica più piccola.",

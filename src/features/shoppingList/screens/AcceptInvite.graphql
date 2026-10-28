@@ -27,6 +27,7 @@ query GetShoppingListInviteByToken($token: String!) {
   shoppingListInviteByToken(token: $token) {
     id
     role
+    status
     ...AcceptInvite_shoppingListInvite
   }
 }
@@ -64,6 +65,7 @@ query GetHomeInviteByToken($token: String!) {
   homeInviteByToken(token: $token) {
     id
     role
+    status
     ...AcceptInvite_homeInvite
   }
 }

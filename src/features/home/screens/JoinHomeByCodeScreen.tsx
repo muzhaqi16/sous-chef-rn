@@ -42,6 +42,15 @@ export const JoinHomeByCodeScreen: React.FC<
   const [inputValue, setInputValue] = useState(initialCode);
   const [joining, setJoining] = useState(false);
 
+  // A second link opened while this screen shows arrives as new params on the
+  // same screen: the preview follows the link, not the first code.
+  const [linkedCode, setLinkedCode] = useState(initialCode);
+  if (initialCode !== linkedCode) {
+    setLinkedCode(initialCode);
+    setCode(initialCode);
+    setInputValue(initialCode);
+  }
+
   const { home, previewLoading, joinHome } = useJoinHomeByCode({
     code,
     skip: isLoggedOut,

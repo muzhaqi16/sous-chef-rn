@@ -11,6 +11,7 @@ import type {
   ToastPresenter,
   ToastType,
 } from '#platform/presenters';
+import { toastHoldMs } from '#platform/presenters';
 import { TOAST } from '#/constants/animations';
 import { HapticService } from '#services/haptic/HapticService';
 
@@ -362,11 +363,10 @@ describe('ToastProvider', () => {
       });
     };
 
-    it('holds a default toast for AUTO_DISMISS_SHORT', () => {
-      showToastNow({ message: 'Saved', type: 'success' });
-
+    /** Live just before its hold ends, gone just after. */
+    const expectHeldFor = (ms: number) => {
       act(() => {
-        jest.advanceTimersByTime(TOAST.AUTO_DISMISS_SHORT - 50);
+        jest.advanceTimersByTime(ms - 50);
       });
       expect(isLive()).toBe(true);
 
@@ -374,34 +374,46 @@ describe('ToastProvider', () => {
         jest.advanceTimersByTime(100);
       });
       expect(isLive()).toBe(false);
+    };
+
+    it('holds a toast for the time it takes to read', () => {
+      const toast: ToastOptions = { message: 'Saved', type: 'success' };
+      showToastNow(toast);
+
+      expectHeldFor(toastHoldMs(toast));
     });
 
-    it('honours an explicit duration shorter than the default', () => {
-      // An equality check against AUTO_DISMISS_LONG would make every other
-      // value — including a deliberately short one — silently hold for
-      // AUTO_DISMISS_SHORT instead.
-      const short = 500;
-      showToastNow({ message: 'Saved', type: 'success', duration: short });
+    it('holds a sentence longer than a confirmation', () => {
+      const toast: ToastOptions = {
+        message:
+          'You were removed from this home. Ask its owner or an admin to invite you back.',
+        type: 'success',
+      };
+      expect(toastHoldMs(toast)).toBeGreaterThan(
+        toastHoldMs({ message: 'Saved' }) + 3000,
+      );
+      showToastNow(toast);
 
-      act(() => {
-        jest.advanceTimersByTime(short + 50);
-      });
-      expect(isLive()).toBe(false);
+      expectHeldFor(toastHoldMs(toast));
     });
 
-    it('honours an explicit duration longer than the default', () => {
-      const long = TOAST.AUTO_DISMISS_SHORT + 1000;
-      showToastNow({ message: 'Saved', type: 'success', duration: long });
+    it('holds a toast with an action long enough to reach it', () => {
+      const toast: ToastOptions = {
+        message: 'Saved',
+        type: 'success',
+        action: { label: 'Undo', onPress: jest.fn() },
+      };
+      expect(toastHoldMs(toast)).toBeGreaterThan(
+        toastHoldMs({ message: 'Saved Undo' }),
+      );
+      showToastNow(toast);
 
-      act(() => {
-        jest.advanceTimersByTime(TOAST.AUTO_DISMISS_SHORT + 50);
-      });
-      expect(isLive()).toBe(true);
+      expectHeldFor(toastHoldMs(toast));
+    });
 
-      act(() => {
-        jest.advanceTimersByTime(1000);
-      });
-      expect(isLive()).toBe(false);
+    it('caps the hold of a long message', () => {
+      const words = toastHoldMs({ message: 'word '.repeat(60) });
+      expect(toastHoldMs({ message: 'word '.repeat(120) })).toBe(words);
     });
   });
 
@@ -452,13 +464,14 @@ describe('ToastProvider', () => {
       act(() => {
         jest.advanceTimersByTime(ms);
       });
-    const outlastHold = () => advance(TOAST.AUTO_DISMISS_SHORT + 50);
+    const undo = (onPress = jest.fn()) => ({ label: 'Undo', onPress });
+    // The longest toast these cases show.
+    const outlastHold = () =>
+      advance(toastHoldMs({ message: 'Removed A', action: undo() }) + 50);
     const outlastQueueDelay = () => advance(TOAST.QUEUE_DELAY + 50);
 
     const isLive = (type: ToastType) =>
       screen.getByTestId(`toast-${type}`).props.pointerEvents === 'auto';
-
-    const undo = (onPress = jest.fn()) => ({ label: 'Undo', onPress });
 
     it('replaces a displayed toast carrying an action with a newer one of its type', () => {
       const show = mountProvider();
