@@ -11,6 +11,9 @@ declare module '@apollo/client' {
     wsReconnected: void;
     /** At the switch itself. */
     languageChanged: void;
+    /** The caller left a home or was removed from one: its lists, plans and
+     *  templates stay with the household. */
+    householdLeft: void;
     /** On each navigation after a switch or a resync: what it left unshown. */
     screenShown: void;
   }

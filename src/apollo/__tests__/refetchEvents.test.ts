@@ -16,6 +16,7 @@ import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { languageLink } from '../links/languageLink';
 import {
+  announceHouseholdLeft,
   connectResyncSources,
   createRefetchEventManager,
 } from '../refetchEvents';
@@ -166,6 +167,7 @@ const triggers = {
   languageChanged: () => {
     void changeLanguage(getResolvedLanguage() === 'es' ? 'en' : 'es');
   },
+  householdLeft: announceHouseholdLeft,
 };
 
 let requests: string[];

@@ -118,6 +118,21 @@ const languageChanged = (client: ApolloClient) => () =>
     });
   });
 
+// Whatever the household holds the caller reached as a member, so leaving
+// changes what every screen of it shows, as a resync does.
+let householdLeft = (): void => {};
+
+/** The caller left a home or was removed from one: resync what the app shows. */
+export const announceHouseholdLeft = (): void => householdLeft();
+
+const householdLeftSource = () =>
+  new Observable<RefetchEvents['householdLeft']>(observer => {
+    householdLeft = () => observer.next();
+    return () => {
+      householdLeft = () => {};
+    };
+  });
+
 // After a switch or a resync, each navigation re-asks what it shows that was
 // left unasked: a paused screen resuming, or a home tab hidden at the time.
 const screenShown = (onNavigation?: NavigationSubscribe) => () =>
@@ -317,5 +332,6 @@ export const connectResyncSources = (
   manager.setEventSource('apiReachable', apiReachable);
   manager.setEventSource('wsReconnected', wsReconnected);
   manager.setEventSource('languageChanged', languageChanged(client));
+  manager.setEventSource('householdLeft', householdLeftSource);
   manager.setEventSource('screenShown', screenShown(onNavigation));
 };

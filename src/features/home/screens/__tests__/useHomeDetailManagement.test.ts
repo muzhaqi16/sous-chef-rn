@@ -21,7 +21,7 @@ import {
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { alertService } from '#/services/alertService';
-import type { RootState } from '#store/index';
+import { useStore, type RootState } from '#store/index';
 import { useHomeDetailManagement } from '../useHomeDetailManagement';
 
 const mockStoreState = {
@@ -61,7 +61,11 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
   ),
 }));
 
+// The store `forgetHome` moves loads the home feature's own updaters.
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual<typeof import('#/apollo/utils/cacheUpdaters')>(
+    '#/apollo/utils/cacheUpdaters',
+  ),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
 }));
@@ -572,11 +576,17 @@ describe('useHomeDetailManagement', () => {
     });
 
     describe('once confirmed', () => {
-      // The eviction runs for real, so each case reads the cache it leaves.
+      // The eviction runs for real, so each case reads the cache it leaves,
+      // and the store it moves the picks in.
       beforeEach(() => {
         const actual: typeof import('#/apollo/utils/cacheUpdaters') =
           jest.requireActual('#/apollo/utils/cacheUpdaters');
         jest.mocked(safeEvict).mockImplementation(actual.safeEvict);
+        useStore.setState({
+          selectedHomeId: 'home-1',
+          selectedShoppingListId: 'sl-1',
+          selectedMealPlanId: 'mp-1',
+        });
       });
       afterEach(() => jest.mocked(safeEvict).mockReset());
 
@@ -613,10 +623,11 @@ describe('useHomeDetailManagement', () => {
         expect(fired).toEqual([{ input: { homeId: 'home-1' } }]);
         expect(left).toBe(true);
         expect(holdsHome(cache)).toBe(false);
-        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
-        expect(mockStoreState.setSelectedShoppingListId).toHaveBeenCalledWith(
-          null,
-        );
+        expect(useStore.getState()).toMatchObject({
+          selectedHomeId: null,
+          selectedShoppingListId: null,
+          selectedMealPlanId: null,
+        });
       });
 
       // Leaving twice: the server reads the ended membership as the leave it
@@ -630,7 +641,7 @@ describe('useHomeDetailManagement', () => {
 
         expect(left).toBe(true);
         expect(holdsHome(cache)).toBe(false);
-        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
+        expect(useStore.getState().selectedHomeId).toBeNull();
         // The confirmation only.
         expect(alertService.alert).toHaveBeenCalledTimes(1);
       });
@@ -646,7 +657,7 @@ describe('useHomeDetailManagement', () => {
 
         expect(left).toBe(true);
         expect(holdsHome(cache)).toBe(false);
-        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
+        expect(useStore.getState().selectedHomeId).toBeNull();
         expect(alertService.alert).toHaveBeenCalledTimes(1);
       });
 
@@ -658,7 +669,7 @@ describe('useHomeDetailManagement', () => {
 
         expect(left).toBe(false);
         expect(holdsHome(cache)).toBe(true);
-        expect(mockStoreState.setSelectedHomeId).not.toHaveBeenCalled();
+        expect(useStore.getState().selectedHomeId).toBe('home-1');
         // The confirmation, then the refusal.
         expect(alertService.alert).toHaveBeenCalledTimes(2);
       });

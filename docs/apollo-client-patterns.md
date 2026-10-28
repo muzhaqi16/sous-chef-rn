@@ -535,7 +535,15 @@ through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 | `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)                     |
 | `wsReconnected`   | `onWebSocketReconnected`                                                         |
 | `languageChanged` | The resolved language really changes                                             |
+| `householdLeft`   | The caller leaves a home or is removed from one (`forgetHome`, `src/domain`)     |
 | `screenShown`     | Each navigation after a switch or a resync, for what it left unasked             |
+
+**Leaving a home resyncs.** A home's lists, plans and templates belong to the
+household, so a member who leaves loses even the ones they made. Evicting the
+`Home` leaves their rows in every connection that listed them, and no read goes
+incomplete over it, so `forgetHome` (both the leave and an admin's removal)
+announces `householdLeft`: the screen shown is asked again, and `screenShown`
+catches up the rest.
 
 **A return within 60 s over an open channel asks nothing.** The API ends a
 socket that leaves one of its pings unanswered at the next
