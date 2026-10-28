@@ -7,7 +7,10 @@ import {
 } from '@apollo/client';
 import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
-import { isApiUnavailable } from '#store/slices/networkSlice';
+import {
+  isApiUnavailable,
+  isNetworkWithheld,
+} from '#store/slices/networkSlice';
 import { queueManager } from './offlineQueue/queueManager';
 import { LogoutCleanup } from './logoutCleanup';
 import { isLiveChannelOpen, onWebSocketReconnected } from './links/wsLink';
@@ -97,8 +100,10 @@ const hasLiveSession = (): boolean =>
   !!useStore.getState().user?.id && !LogoutCleanup.isInLogoutProcess();
 
 // Offline a catch-up would only fail: `apiReachable` re-asks what is active.
+// In offline mode the link answers every query before it is recorded, so each
+// navigation would drain the queue to refetch the cache.
 const canCatchUp = (): boolean =>
-  hasLiveSession() && !isApiUnavailable(useStore.getState());
+  hasLiveSession() && !isNetworkWithheld(useStore.getState());
 
 // Catalog names come in the request's language, so a switch re-reads the
 // screen and each later navigation catches up the rest. Only a real change
@@ -206,10 +211,12 @@ function answeredWithAnother(
 }
 
 // What is on screen and not answered since the last switch or resync, whoever
-// asked. A resync starts afresh, so it re-asks all that is shown.
+// asked. A resync starts afresh, so it re-asks all that is shown. A query held
+// to the cache is never sent by `refetchQueries`, so it is never answered.
 const reasks = (client: ApolloClient, batch: PendingResync) => {
   const answeredWith = answeredWithAnother(client);
   return (query: ObservableQuery): boolean =>
+    query.options.fetchPolicy !== 'cache-only' &&
     batch.matchers.some(matcher => matcher(query)) &&
     isOnScreen(query) &&
     !answeredSinceSwitch(query) &&

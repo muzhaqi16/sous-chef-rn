@@ -15,6 +15,7 @@ import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { languageLink } from '../links/languageLink';
+import { createOfflineModeLink } from '../links/offlineModeLink';
 import {
   announceHouseholdLeft,
   connectResyncSources,
@@ -39,6 +40,7 @@ interface MockSessionState {
   user: { id: string } | null;
   isOnline: boolean;
   apiReachable: boolean | null;
+  offlineModeEnabled: boolean;
 }
 
 jest.mock('#store', () => {
@@ -48,6 +50,7 @@ jest.mock('#store', () => {
       user: { id: 'user-1' },
       isOnline: true,
       apiReachable: true,
+      offlineModeEnabled: false,
     })),
   };
 });
@@ -207,6 +210,7 @@ beforeEach(async () => {
   useStore.setState({
     user: { id: 'user-1' },
     apiReachable: true,
+    offlineModeEnabled: false,
   });
   requests = [];
   failing = new Set();
@@ -229,9 +233,11 @@ beforeEach(async () => {
     }),
     dataMasking: true,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    // The production language link in front: it records what was answered
-    // in the language a catch-up asks for.
+    // The production offline-mode and language links in front, in their
+    // order: the language link records what was answered in the language a
+    // catch-up asks for, and what offline mode answers never reaches it.
     link: ApolloLink.from([
+      createOfflineModeLink(),
       languageLink,
       new ApolloLink(
         operation =>
@@ -623,6 +629,31 @@ describe('resync', () => {
       expect(requests).toEqual([]);
     });
 
+    // A held read is never sent, so it is never answered: counting it would
+    // make every navigation drain the queue and walk every query for nothing.
+    it('touches neither the queue nor the network for a read held to the cache', async () => {
+      await client.query({ query: DetailQuery });
+      watchers.push(
+        client
+          .watchQuery({
+            query: DetailQuery,
+            fetchPolicy: 'cache-only',
+            nextFetchPolicy: 'cache-only',
+          })
+          .subscribe(() => {}),
+      );
+      triggers.languageChanged();
+      await pastTheWindow();
+      jest.mocked(queueManager.whenIdle).mockClear();
+      requests = [];
+
+      navigate();
+      await pastTheWindow();
+
+      expect(queueManager.whenIdle).not.toHaveBeenCalled();
+      expect(requests).toEqual([]);
+    });
+
     it('waits for the API to catch up', async () => {
       useStore.setState({ apiReachable: false });
       triggers.languageChanged();
@@ -653,6 +684,34 @@ describe('resync', () => {
         expect(requests).toEqual([]);
       },
     );
+
+    // Offline mode answers each query before the language link records it,
+    // so nothing is ever answered and every navigation would drain the queue.
+    it('drains nothing on a navigation in offline mode', async () => {
+      useStore.setState({ offlineModeEnabled: true });
+      triggers.languageChanged();
+      await pastTheWindow();
+      jest.mocked(queueManager.whenIdle).mockClear();
+
+      navigate();
+      await pastTheWindow();
+
+      expect(queueManager.whenIdle).not.toHaveBeenCalled();
+      expect(requests).toEqual([]);
+    });
+
+    it('re-asks once offline mode is off what it left unasked', async () => {
+      useStore.setState({ offlineModeEnabled: true });
+      triggers.languageChanged();
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual([]);
+
+      useStore.setState({ offlineModeEnabled: false });
+      navigate();
+      await pastTheWindow();
+      expect(requests).toEqual(['ListForResync']);
+    });
 
     // Rehydration applies the saved language after the sources subscribe.
     it('ignores a switch made before any query exists', async () => {

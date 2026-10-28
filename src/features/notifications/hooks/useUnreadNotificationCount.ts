@@ -1,7 +1,8 @@
 /**
- * The unread badge count (`Query.notificationSummary`). `cache-only` — the feed
- * queries, the server-event re-read and every notification write's payload keep
- * it current, and this renders on screens that never display the notifications.
+ * The unread badge count (`Query.notificationSummary`). Asks nothing on mount:
+ * the feed queries, the server-event re-read and every write's payload keep it
+ * current. Not held to the cache, so the default `nextFetchPolicy` lets a resync
+ * re-read it, which is how the badge recovers from an event missed while away.
  */
 import { useQuery } from '@apollo/client/react';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';

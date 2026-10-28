@@ -2,6 +2,7 @@ import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
 import { firstNonBlank } from '#/utils/firstNonBlank';
+import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import {
@@ -35,7 +36,7 @@ export function useStoreModeCart(
             first: PAGINATION.ITEMS_PAGE_SIZE,
             isPurchased: false,
           },
-          fetchPolicy: 'cache-only',
+          ...heldFetchPolicy('cache-only'),
         }
       : skipToken,
   );
@@ -48,7 +49,7 @@ export function useStoreModeCart(
             first: PAGINATION.ITEMS_PAGE_SIZE,
             isPurchased: true,
           },
-          fetchPolicy: 'cache-only',
+          ...heldFetchPolicy('cache-only'),
         }
       : skipToken,
   );

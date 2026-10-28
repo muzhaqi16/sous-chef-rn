@@ -1,4 +1,6 @@
 import type { Unmasked } from '@apollo/client/masking';
+import { useApolloClient } from '@apollo/client/react';
+import { act } from '@testing-library/react-native';
 import {
   completeMockedResponse,
   renderHookWithApollo,
@@ -14,11 +16,16 @@ import { UseStoreModeCart_ListFragmentDoc } from '../useStoreModeCart.generated'
 
 const mockClaimPurchased = jest.fn();
 const mockRecordPurchase = jest.fn();
+// What a refused tick runs to re-read the list.
+let mockRefetchOnRefusal: () => Promise<unknown> = async () => {};
 jest.mock('../mutations/useToggleShoppingItem', () => ({
-  useToggleShoppingItem: () => ({
-    claimPurchased: (...args: unknown[]) => mockClaimPurchased(...args),
-    recordPurchase: (...args: unknown[]) => mockRecordPurchase(...args),
-  }),
+  useToggleShoppingItem: (options: { refetch: () => Promise<unknown> }) => {
+    mockRefetchOnRefusal = options.refetch;
+    return {
+      claimPurchased: (...args: unknown[]) => mockClaimPurchased(...args),
+      recordPurchase: (...args: unknown[]) => mockRecordPurchase(...args),
+    };
+  },
 }));
 
 const LIST = 'list-1';
@@ -63,36 +70,45 @@ const node = ({
   item: { __typename: 'Item', id: itemId },
 });
 
+const tabVariables = (isPurchased: boolean) => ({
+  id: LIST,
+  first: PAGINATION.ITEMS_PAGE_SIZE,
+  isPurchased,
+});
+
+/** The server's answer for one tab of the list. */
+const tabResponse = (isPurchased: boolean, lines: LineSeed[]) => ({
+  request: {
+    query: GetShoppingListItemsFilteredDocument,
+    variables: tabVariables(isPurchased),
+  },
+  result: {
+    data: {
+      shoppingList: {
+        __typename: 'ShoppingList',
+        id: LIST,
+        itemsConnection: {
+          __typename: 'ShoppingListItemConnection',
+          edges: lines.map((line, index) => ({
+            __typename: 'ShoppingListItemEdge',
+            cursor: `c-${index}`,
+            node: node(line),
+          })),
+        },
+      },
+    },
+  },
+});
+
 /** Writes one tab of the list the way store mode's own read left it. */
 function seedTab(
   cache: ReturnType<typeof seedCache>,
   isPurchased: boolean,
   lines: LineSeed[],
 ) {
-  const variables = {
-    id: LIST,
-    first: PAGINATION.ITEMS_PAGE_SIZE,
-    isPurchased,
-  };
-  const completed = completeMockedResponse({
-    request: { query: GetShoppingListItemsFilteredDocument, variables },
-    result: {
-      data: {
-        shoppingList: {
-          __typename: 'ShoppingList',
-          id: LIST,
-          itemsConnection: {
-            __typename: 'ShoppingListItemConnection',
-            edges: lines.map((line, index) => ({
-              __typename: 'ShoppingListItemEdge',
-              cursor: `c-${index}`,
-              node: node(line),
-            })),
-          },
-        },
-      },
-    },
-  }).result as (vars: typeof variables) => {
+  const variables = tabVariables(isPurchased);
+  const completed = completeMockedResponse(tabResponse(isPurchased, lines))
+    .result as (vars: typeof variables) => {
     data: Unmasked<GetShoppingListItemsFilteredQuery>;
   };
   cache.writeQuery({
@@ -224,5 +240,49 @@ describe('useStoreModeCart', () => {
       { itemId: 'jif-creamy' },
     );
     expect(mockClaimPurchased).not.toHaveBeenCalled();
+  });
+
+  // Store mode loaded every line; a fetch through this read would page its
+  // lines back to the first page.
+  it('asks the network for neither tab when the app resyncs', async () => {
+    const cache = seedCache([]);
+    seedTab(cache, false, [
+      { id: 'pb', itemId: 'jif-creamy', itemName: 'Jif' },
+    ]);
+    seedTab(cache, true, []);
+    const { result } = renderHookWithApollo(
+      () => ({ cart: useStoreModeCart(LIST, JIF), client: useApolloClient() }),
+      { cache, operationMocks: [] },
+    );
+    expect(result.current.cart.line?.id).toBe('pb');
+
+    const resync = result.current.client.refetchQueries({ include: 'active' });
+    await resync;
+
+    expect(resync.queries).toHaveLength(0);
+  });
+
+  it('re-reads both tabs from the server after a refused tick', async () => {
+    const cache = seedCache([]);
+    seedTab(cache, false, [
+      { id: 'pb', itemId: 'jif-creamy', itemName: 'Jif' },
+    ]);
+    seedTab(cache, true, []);
+    const { result } = renderHookWithApollo(() => useStoreModeCart(LIST, JIF), {
+      cache,
+      operationMocks: [
+        tabResponse(false, []),
+        tabResponse(true, [
+          { id: 'pb', itemId: 'jif-creamy', itemName: 'Jif' },
+        ]),
+      ],
+    });
+    expect(result.current.inCart).toBe(false);
+
+    await act(async () => {
+      await mockRefetchOnRefusal();
+    });
+
+    expect(result.current.inCart).toBe(true);
   });
 });
