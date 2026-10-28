@@ -46,7 +46,7 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 
 ## 8. A settle event's refetch sends its own request (finding 9, D10)
 
-- [ ] 8.1 Add `context: { queryDeduplication: false }` to the polling `useQuery` options in `src/features/receipts/hooks/useServerReceiptParse.ts` and `src/features/recipes/hooks/useRecipeCapturePoll.ts`. In each test suite, add a case: a settle event that arrives while a poll is in flight sends a second request, and the hook shows the settled answer. Use a link that holds the first response. Verify each fails on `dev` and passes after.
+- [x] 8.1 Add `context: { queryDeduplication: false }` to the polling `useQuery` options in `src/features/receipts/hooks/useServerReceiptParse.ts` and `src/features/recipes/hooks/useRecipeCapturePoll.ts`. In each test suite, add a case: a settle event that arrives while a poll is in flight sends a second request, and the hook shows the settled answer. Use a link that holds the first response. Verify each fails on `dev` and passes after.
 
 ## 9. The price sheet stays open on a failed add (finding 10, D11)
 

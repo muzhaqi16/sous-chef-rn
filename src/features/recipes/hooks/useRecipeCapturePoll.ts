@@ -74,6 +74,9 @@ export function useRecipeCapturePoll(entry: CaptureEntry): void {
           notifyOnNetworkStatusChange: false,
           // Polled while it reads; nothing for the resync to refresh.
           refetchOn: false,
+          // The settle event's refetch would join a poll in flight, whose
+          // answer was read before the capture settled.
+          context: { queryDeduplication: false },
         }
       : skipToken,
   );

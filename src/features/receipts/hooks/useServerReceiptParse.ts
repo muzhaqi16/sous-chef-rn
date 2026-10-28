@@ -248,6 +248,9 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
           notifyOnNetworkStatusChange: false,
           // Polled while open; nothing for the resync to refresh.
           refetchOn: false,
+          // The settle event's refetch would join a poll in flight, whose
+          // answer was read before the parse settled.
+          context: { queryDeduplication: false },
         }
       : skipToken,
   );

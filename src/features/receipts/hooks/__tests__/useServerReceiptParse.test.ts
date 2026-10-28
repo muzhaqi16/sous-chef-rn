@@ -224,6 +224,52 @@ describe('useServerReceiptParse', () => {
     expect(useReceiptDraftStore.getState().draft?.parsedBy).toBe('server');
   });
 
+  // Joined, the refetch would get the poll's answer, read before the parse
+  // settled, and the next check would be the 15 s safety poll.
+  it('asks again when the parse settles while a poll is in flight', async () => {
+    jest.mocked(useIsLiveChannelOpen).mockReturnValue(true);
+    seedMilkDraft();
+    const create = created(ReceiptParseStatus.Pending);
+    const inFlight = recordMock(ReceiptParseDocument, {
+      held: true,
+      maxUsageCount: 1,
+      dataFor: vars => ({
+        receiptParse: {
+          id: String(vars.id),
+          status: ReceiptParseStatus.Pending,
+          warnings: [],
+          receipt: null,
+        },
+      }),
+    });
+    const settled = recordMock(ReceiptParseDocument, {
+      dataFor: vars => ({
+        receiptParse: {
+          id: String(vars.id),
+          status: ReceiptParseStatus.Parsed,
+          warnings: [],
+          receipt: MILK_RECEIPT,
+        },
+      }),
+    });
+    render([create.mock, inFlight.mock, settled.mock]);
+    await waitFor(() => expect(inFlight.fired).toHaveLength(1));
+
+    const [ask] = create.fired;
+    if (!ask) throw new Error('the parse was never asked for');
+    act(() => {
+      announceWorkSettled({
+        kind: 'receiptParse',
+        id: String(inputOf(ask).id),
+      });
+    });
+    await pollOnce();
+
+    expect(settled.fired).toHaveLength(1);
+    expect(useReceiptDraftStore.getState().draft?.parsedBy).toBe('server');
+    inFlight.release();
+  });
+
   it("takes the server's day when the phone read none", async () => {
     jest.setSystemTime(new Date(2026, 9, 1, 12));
     seedMilkDraft({ purchasedOn: undefined });
