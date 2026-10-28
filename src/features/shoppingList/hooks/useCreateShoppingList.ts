@@ -16,6 +16,7 @@ import {
   ADD_ITEMS_BATCH_LIMIT,
   buildAddItemsReconcileUpdate,
 } from '#features/shoppingList/cache/items';
+import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -73,6 +74,8 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
     const items = lines?.items ?? [];
     const sent = items.slice(0, ADD_ITEMS_BATCH_LIMIT);
     const unsent = items.slice(ADD_ITEMS_BATCH_LIMIT);
+    const lineIds = items.flatMap(line => (line.id ? [line.id] : []));
+    const writeLines = lines?.write ?? (() => {});
 
     // Materializing the ownership row needs an auth identity; without one the
     // create falls back to online-only (no create surface should hit this).
@@ -84,7 +87,14 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
           operation: 'Create Shopping List (optimistic)',
         });
       }
-      lines?.write(id);
+      // The lines still ride the create, and its answer writes the server's.
+      try {
+        writeLines(id);
+      } catch (cacheError) {
+        errorService.reportError(cacheError, {
+          operation: 'Create Shopping List lines (optimistic)',
+        });
+      }
     }
 
     const settled = await settleMutation(
@@ -100,7 +110,9 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
         present: 'none',
         onFailed: () => {
           if (!user) return;
+          // Every starting line was cached, the unsent ones included.
           try {
+            withdrawShoppingListItems(client.cache, id, lineIds);
             revertOptimisticShoppingList(client.cache, id);
           } catch (cacheError) {
             errorService.reportError(cacheError, {
