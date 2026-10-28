@@ -123,3 +123,5 @@ docs/audits/*
 # commit.
 .watchman-cookie-*
 .argent/
+# OpenSpec planning artifacts stay local to each checkout.
+openspec/
