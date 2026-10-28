@@ -51,6 +51,8 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
     'a time-to-live refresh; a cached answer must not be stamped fresh',
   'features/catalog/hooks/useUnitAutocomplete.ts':
     'a time-to-live refresh; a cached answer must not be stamped fresh',
+  'apollo/utils/unitSystemAnswers.ts':
+    'what SYSTEM means after a locale change; the cached answer is the old one',
 };
 
 describe('the one-shot query default', () => {

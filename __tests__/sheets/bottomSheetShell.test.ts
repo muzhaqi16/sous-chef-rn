@@ -53,7 +53,6 @@ const PENDING_ADOPTION = [
   'src/features/recipes/components/recipeForm/RecipeStepEditor.tsx',
   'src/features/recipes/components/recipeSearch/IngredientSelectorSheet.tsx',
   'src/features/shoppingList/components/CollaboratorPermissionsBottomSheet.tsx',
-  'src/features/shoppingList/ui/PurchaseAmountSheet.tsx',
   'src/features/shoppingList/components/QuantityEditSheet/QuantityEditSheet.tsx',
 ];
 
