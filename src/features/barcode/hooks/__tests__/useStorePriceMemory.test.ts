@@ -1,4 +1,5 @@
 import { waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import { t } from '#/i18n';
 import {
   recordMock,
@@ -95,6 +96,34 @@ const render = (mocks: ReturnType<typeof recordMock>[]) =>
   });
 
 describe('useStorePriceMemory', () => {
+  // Store mode mounts the card per scan: the same product scanned again reads
+  // the comparison it already holds.
+  it('asks once for a product scanned twice', async () => {
+    const cache = makeCache();
+    const paid = paidMock({});
+    const here = comparisonMock([
+      row(PriceComparisonScope.Store, 'store-1', 12, false),
+    ]);
+    const mount = () =>
+      renderHookWithApollo(
+        () => useStorePriceMemory('pb', 'list-1', JAR_UNIT),
+        { cache, operationMocks: [paid.mock, here.mock] },
+      );
+
+    const first = mount();
+    await waitFor(() => expect(here.fired).toHaveLength(1));
+    await waitFor(() =>
+      expect(cache.extract().ROOT_QUERY).toHaveProperty([
+        'itemPriceComparison({"input":{"itemId":"pb"}})',
+      ]),
+    );
+    first.unmount();
+    mount();
+
+    await waitFor(() => expect(paid.fired).toHaveLength(1));
+    expect(here.fired).toHaveLength(1);
+  });
+
   it('shows nothing for a product the household never bought, with thin data here', async () => {
     const paid = paidMock({});
     const here = comparisonMock([

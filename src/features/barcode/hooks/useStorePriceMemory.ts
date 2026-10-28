@@ -86,7 +86,9 @@ export function useStorePriceMemory(
   );
   const here = useQuery(
     StorePriceComparisonDocument,
-    listId ? { variables: { itemId, listId } } : skipToken,
+    listId
+      ? { variables: { itemId, listId }, fetchPolicy: 'cache-first' }
+      : skipToken,
   );
   const money = (
     amount: number,

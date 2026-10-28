@@ -1,4 +1,5 @@
 import { act, waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
@@ -256,5 +257,24 @@ describe('useBrandLists', () => {
         'list-avoid',
       ]),
     );
+  });
+
+  // The scan card mounts per scan: one read of the lists serves the next.
+  it('asks once across scans when read cache-first', async () => {
+    const cache = makeCache();
+    const lists = listsMock();
+    const mount = () =>
+      renderHookWithApollo(
+        () => useBrandLists({ fetchPolicy: 'cache-first' }),
+        { cache, operationMocks: [lists.mock] },
+      );
+
+    const first = mount();
+    await waitFor(() => expect(first.result.current.lists).toHaveLength(2));
+    first.unmount();
+    const second = mount();
+
+    expect(second.result.current.lists).toHaveLength(2);
+    expect(lists.fired).toHaveLength(1);
   });
 });

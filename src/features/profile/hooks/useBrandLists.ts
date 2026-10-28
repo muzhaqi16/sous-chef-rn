@@ -113,11 +113,18 @@ function dropList(cache: ApolloCache, id: string): void {
 /**
  * The user's own brand lists and their writes. Every write lands in the cache
  * first and queues offline, so a list can be built in a store with no signal.
+ * A reader that mounts per scan reads `cache-first`: the lists move only by
+ * this user's own writes, and a resync refreshes what is held.
  */
-export function useBrandLists() {
+export function useBrandLists({
+  fetchPolicy,
+}: { fetchPolicy?: 'cache-first' } = {}) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { data } = useQuery(BrandListsDocument);
+  const { data } = useQuery(
+    BrandListsDocument,
+    fetchPolicy ? { fetchPolicy } : {},
+  );
   const [createMutation] = useMutation(CreateBrandListDocument, {
     context: { localFirst: true },
   });

@@ -141,7 +141,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   );
   const household = useProductDietaryAlerts(item.id);
   const origin = useProductOrigin(item.id, item.brandParentName);
-  const brandLists = useBrandLists();
+  // Mounted per scan: a second read of the same lists asks nothing.
+  const brandLists = useBrandLists({ fetchPolicy: 'cache-first' });
   // The scanned barcode's own brand: the one a list matches on a scan.
   const scannedBrand =
     item.brandId && item.brandName
