@@ -7,7 +7,13 @@ import {
   NetWeightKind,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import {
+  UseHeldStacks_PantryFragmentDoc,
+  UseHeldStacks_PantryItemFragmentDoc,
+} from '#features/pantry/hooks/useHeldStacks.generated';
+import type { HeldStack } from '#features/pantry/hooks/useHeldStacks';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
@@ -654,6 +660,101 @@ describe('SearchResults', () => {
         null,
       ),
     );
+  });
+
+  // Opened from a cold scanner, the pantry's rows land after the card: what an
+  // add opens or joins follows them, and an amount typed meanwhile stays.
+  it('follows the pantry rows that land after it opened, keeping the typed amount', async () => {
+    const cache = makeCache();
+    renderWithApollo(<SearchResults {...defaultProps} />, {
+      cache,
+      operationMocks: [],
+    });
+    fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
+    fireEvent.changeText(
+      screen.getByTestId(barcodeTestIDs.scanAmountQuantity),
+      '3',
+    );
+    // No stack known: the add opens one, which alone takes a consume unit.
+    expect(screen.getByText(t('labels.usedIn'))).toBeTruthy();
+
+    const reading: HeldStack['held']['metric'] = {
+      __typename: 'MeasureReading',
+      value: 2,
+      unitId: 'unit-pc',
+      symbol: 'pc',
+      displayAsFraction: false,
+      type: UnitType.Count,
+    };
+    act(() => {
+      cache.writeFragment({
+        fragment: UseHeldStacks_PantryItemFragmentDoc,
+        fragmentName: 'useHeldStacks_pantryItem',
+        data: {
+          __typename: 'PantryItem',
+          id: 'stack-milk',
+          createdAt: '2026-01-01T00:00:00.000Z',
+          item: { __typename: 'Item', id: mockItem.id },
+          unit: {
+            __typename: 'Unit',
+            id: 'unit-pc',
+            type: UnitType.Count,
+            displayAsFraction: false,
+          },
+          displayAmount: {
+            __typename: 'DisplayAmount',
+            quantity: 2,
+            unit: { __typename: 'Unit', id: 'unit-pc', symbol: 'pc' },
+          },
+          held: {
+            __typename: 'Measure',
+            value: 2,
+            unitId: 'unit-pc',
+            metric: reading,
+            imperial: reading,
+          },
+        },
+      });
+      cache.writeFragment({
+        fragment: UseHeldStacks_PantryFragmentDoc,
+        fragmentName: 'useHeldStacks_pantry',
+        variables: {
+          itemsFirst: undefined,
+          itemsCursor: undefined,
+          itemsFilter: undefined,
+          itemsOrderBy: undefined,
+        },
+        data: {
+          __typename: 'Pantry',
+          id: 'pantry-1',
+          itemsConnection: {
+            __typename: 'PantryItemConnection',
+            edges: [
+              {
+                __typename: 'PantryItemEdge',
+                node: {
+                  __typename: 'PantryItem',
+                  id: 'stack-milk',
+                  item: { __typename: 'Item', id: mockItem.id },
+                },
+              },
+            ],
+            pageInfo: {
+              __typename: 'PageInfo',
+              hasNextPage: false,
+              endCursor: null,
+            },
+          },
+        },
+      });
+    });
+
+    await waitFor(() =>
+      expect(screen.queryByText(t('labels.usedIn'))).toBeNull(),
+    );
+    expect(
+      screen.getByTestId(barcodeTestIDs.scanAmountQuantity).props.value,
+    ).toBe('3');
   });
 
   describe('the pantry item count', () => {

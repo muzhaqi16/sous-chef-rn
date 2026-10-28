@@ -62,7 +62,7 @@ export function useAddScannedItem({
 }: UseAddScannedItemArgs) {
   const client = useApolloClient();
   const { t } = useTranslation();
-  const { addItem, heldUnitOf, heldStackOf } = usePantryIntake(pantryId);
+  const { addItem } = usePantryIntake(pantryId);
 
   const [addToShoppingListMutation] = useMutation(
     BarcodeAddItemToShoppingListDocument,
@@ -127,7 +127,5 @@ export function useAddScannedItem({
   return {
     addToPantry,
     addToShoppingList,
-    heldUnitOf,
-    heldStackOf,
   };
 }

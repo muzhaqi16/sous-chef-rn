@@ -14,11 +14,12 @@ import type {
   ScannedItem,
 } from '#features/barcode/types';
 import { View } from 'react-native';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
 import { useCachedUnits } from '#store/useAppStore';
 import { formatHeldAmount } from '#features/pantry/hooks/usePantryItemTransformation';
+import { useHeldStacks } from '#features/pantry/hooks/useHeldStacks';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { logValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
@@ -101,13 +102,14 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const setPendingPantryScrollToTop = useAppStore(
     s => s.setPendingPantryScrollToTop,
   );
-  const { addToPantry, addToShoppingList, heldUnitOf, heldStackOf } =
-    useAddScannedItem({ pantryId, shoppingListId });
+  const { addToPantry, addToShoppingList } = useAddScannedItem({
+    pantryId,
+    shoppingListId,
+  });
   const cachedUnits = useCachedUnits();
-  // Read once: the stack the pantry held as the scan opened.
-  const [heldUnit] = useState(() => heldUnitOf(item.id));
-  const [heldStack] = useState(() => heldStackOf(item.id));
-  const packageUnit = packageUnitOf(item, heldUnit, cachedUnits);
+  // Live: the pantry may finish loading, or a member add one, while open.
+  const held = useHeldStacks(pantryId, item.id);
+  const packageUnit = packageUnitOf(item, held.seedUnit, cachedUnits);
   // Read once: the form starts from it, and a send compares against it.
   const readingSystem = useReadingSystem();
   const [prefilledAmount] = useState(() =>
@@ -117,6 +119,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     resolver: yupResolver(scanAmountSchema),
     defaultValues: prefilledAmount,
   });
+  // The stack an add in the unit the form now states joins.
+  const joinedStack = held.joinedIn(
+    useWatch({ control: amountForm.control, name: 'unitId' }),
+  );
+  // Unread stacks count as none: the API ignores a consume unit on a join.
+  const createsStack = held.seedUnit === null;
   // The device's units hydrate after mount: a unit field still empty takes
   // the package unit once they do.
   useEffect(() => {
@@ -335,12 +343,12 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             form={amountForm}
             editing={isEditingAmount}
             onEdit={() => setIsEditingAmount(true)}
-            createsStack={heldUnit === null}
+            createsStack={createsStack}
             joins={
-              heldStack
+              joinedStack
                 ? {
-                    amount: formatHeldAmount(heldStack, readingSystem),
-                    unitId: heldStack.unit.id,
+                    amount: formatHeldAmount(joinedStack, readingSystem),
+                    unitId: joinedStack.unit.id,
                   }
                 : null
             }

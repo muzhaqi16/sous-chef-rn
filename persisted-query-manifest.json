@@ -789,6 +789,12 @@
       "body": "query GetUserSettings {\n  me {\n    id\n    settings {\n      id\n      theme\n      compactMode\n      showTutorials\n      autoSync\n      offlineMode\n      shareUsageData\n      shareWithPartners\n      personalizedAds\n      preferredUnitSystem\n      deviceUnitSystem\n      language\n      timezone\n      preferredCurrency\n      createdAt\n      updatedAt\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "d473e1421eae4a42db239754e02b4e143cde10e89481d9453f32436ed782d5ed",
+      "name": "HeldStacks",
+      "type": "query",
+      "body": "query HeldStacks($pantryId: ID!, $itemId: ID!, $stacksFirst: Int!) {\n  pantry(id: $pantryId) {\n    id\n    itemsConnection(filters: {itemId: $itemId}, first: $stacksFirst) {\n      edges {\n        node {\n          id\n          ...useHeldStacks_pantryItem\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment useHeldStacks_pantryItem on PantryItem {\n  id\n  createdAt\n  item {\n    id\n    __typename\n  }\n  unit {\n    id\n    type\n    displayAsFraction\n    __typename\n  }\n  displayAmount {\n    quantity\n    unit {\n      id\n      symbol\n      __typename\n    }\n    __typename\n  }\n  held {\n    value\n    unitId\n    metric {\n      value\n      unitId\n      symbol\n      displayAsFraction\n      type\n      __typename\n    }\n    imperial {\n      value\n      unitId\n      symbol\n      displayAsFraction\n      type\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "cb1dff9a1e9cb33dd3a76f64fb4b9f6de4219a74557e3d085c9fa7113c4ad350",
       "name": "HomeDietaryNeeds",
       "type": "query",

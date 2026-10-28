@@ -9,10 +9,7 @@ import {
   localIntakeRow,
   writeLocalIntake,
 } from '#features/pantry/cache/localIntake';
-import {
-  readHeldStack,
-  readHeldStackUnit,
-} from '#features/pantry/utils/pantryCacheReaders';
+import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -170,9 +167,5 @@ export function usePantryIntake(pantryId: string | undefined) {
   const heldUnitOf = (itemId: string) =>
     readHeldStackUnit(client.cache, pantryId, itemId);
 
-  /** That stack's amount, as its row shows it (`formatHeldAmount`); null if none. */
-  const heldStackOf = (itemId: string) =>
-    readHeldStack(client.cache, pantryId, itemId);
-
-  return { addItem, adding, heldUnitOf, heldStackOf };
+  return { addItem, adding, heldUnitOf };
 }

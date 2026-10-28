@@ -1,0 +1,85 @@
+# The stacks of one item, for what an add joins. In server mode the rows are
+# keyed on the live filter and sort, which no fragment can name, so the stacks
+# are asked for by item.
+query HeldStacks($pantryId: ID!, $itemId: ID!, $stacksFirst: Int!) {
+  pantry(id: $pantryId) {
+    id
+    itemsConnection(filters: { itemId: $itemId }, first: $stacksFirst) {
+      edges {
+        node {
+          id
+          ...useHeldStacks_pantryItem
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+}
+
+# Read with the arguments UNDEFINED on purpose: client mode stores every row
+# under `itemsConnection:{}`. The arguments are `GetPantry`'s, which fetches it.
+fragment useHeldStacks_pantry on Pantry {
+  id
+  itemsConnection(
+    first: $itemsFirst
+    after: $itemsCursor
+    filters: $itemsFilter
+    orderBy: $itemsOrderBy
+  ) {
+    edges {
+      node {
+        id
+        item {
+          id
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+# A held stack's amount as its row reads it (formatHeldAmount), and when it was
+# opened: an add in no held stack's unit joins the oldest.
+fragment useHeldStacks_pantryItem on PantryItem {
+  id
+  createdAt
+  item {
+    id
+  }
+  unit {
+    id
+    type
+    displayAsFraction
+  }
+  displayAmount {
+    quantity
+    unit {
+      id
+      symbol
+    }
+  }
+  held {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      displayAsFraction
+      type
+    }
+  }
+}

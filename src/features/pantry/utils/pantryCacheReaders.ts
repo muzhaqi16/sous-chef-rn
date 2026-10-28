@@ -8,9 +8,7 @@ import { logger } from '#/utils/environment';
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   FindCachedPantryItemDuplicate_PantryFragmentDoc,
-  ReadHeldStack_PantryItemFragmentDoc,
   ReadStackUnit_PantryItemFragmentDoc,
-  type ReadHeldStack_PantryItemFragment,
 } from './pantryCacheReaders.generated';
 
 /** The matched row, plus what an optimistic restock needs to bump it locally. */
@@ -191,32 +189,4 @@ export function readHeldStackUnit(
     .map(node => readStackUnit(cache, node.id))
     .filter(unit => unit !== null);
   return units.find(unit => unit.type === UnitType.Count) ?? units[0] ?? null;
-}
-
-/** A held stack's amount as its row reads it: what `formatHeldAmount` takes. */
-export type HeldStack = ReadHeldStack_PantryItemFragment;
-
-/**
- * The stack `readHeldStackUnit` names, with its amount, so an add can say what
- * it joins. Null when the cache holds no complete stack of `itemId`.
- */
-export function readHeldStack(
-  cache: ApolloCache,
-  pantryId: string | null | undefined,
-  itemId: string,
-): HeldStack | null {
-  const stacks = cachedPantryItems(cache, pantryId)
-    .filter(node => node.item?.id === itemId)
-    .map(node =>
-      cache.readFragment({
-        id: cache.identify({ __typename: 'PantryItem', id: node.id }),
-        fragment: ReadHeldStack_PantryItemFragmentDoc,
-      }),
-    )
-    .filter(stack => stack !== null);
-  return (
-    stacks.find(stack => stack.unit.type === UnitType.Count) ??
-    stacks[0] ??
-    null
-  );
 }

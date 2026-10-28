@@ -13,7 +13,6 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
-import { ReadHeldStack_PantryItemFragmentDoc } from '#features/pantry/utils/pantryCacheReaders.generated';
 import { usePantryIntake } from '../usePantryIntake';
 
 const PANTRY_ID = 'p-1';
@@ -445,47 +444,5 @@ describe('usePantryIntake', () => {
       type: UnitType.Count,
     });
     expect(result.current.heldUnitOf('cat-milk')).toBeNull();
-
-    // The same stack's amount, as its row reads it, for the add to say what it
-    // joins; none until the cache holds it complete.
-    expect(result.current.heldStackOf('cat-bananas')).toBeNull();
-    const reading = {
-      __typename: 'MeasureReading',
-      value: 4,
-      unitId: 'unit-piece',
-      symbol: 'pc',
-      displayAsFraction: false,
-      type: UnitType.Count,
-    } as const;
-    cache.writeFragment({
-      fragment: ReadHeldStack_PantryItemFragmentDoc,
-      data: {
-        __typename: 'PantryItem',
-        id: 'pi-bananas',
-        unit: {
-          __typename: 'Unit',
-          id: 'unit-piece',
-          type: UnitType.Count,
-          displayAsFraction: false,
-        },
-        displayAmount: {
-          __typename: 'DisplayAmount',
-          quantity: 4,
-          unit: { __typename: 'Unit', id: 'unit-piece', symbol: 'pc' },
-        },
-        held: {
-          __typename: 'Measure',
-          value: 4,
-          unitId: 'unit-piece',
-          metric: reading,
-          imperial: reading,
-        },
-      },
-    });
-    expect(result.current.heldStackOf('cat-bananas')).toMatchObject({
-      id: 'pi-bananas',
-      displayAmount: { quantity: 4 },
-    });
-    expect(result.current.heldStackOf('cat-milk')).toBeNull();
   });
 });
