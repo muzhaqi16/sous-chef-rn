@@ -134,40 +134,38 @@ describe('shoppingListPermissions', () => {
       expect(perms.canMarkPurchased).toBe(true);
     });
 
-    it.each([
-      CollaboratorRole.Owner,
-      CollaboratorRole.Admin,
-      CollaboratorRole.Editor,
-      CollaboratorRole.Contributor,
-    ])('lets a %s edit the list whatever canEdit says', role => {
+    it('lets an OWNER collaborator edit the list whatever canEdit says', () => {
       const list = {
         homeId: null,
         collaboratorsConnection: makeCollaborator('u1', {
-          role,
+          role: CollaboratorRole.Owner,
           canEdit: false,
         }),
       };
       expect(getShoppingListPermissions(list, 'u1').canEditList).toBe(true);
     });
 
-    it.each([CollaboratorRole.Shopper, CollaboratorRole.Viewer])(
-      'lets a %s edit the list only through canEdit',
-      role => {
-        const permissionsWith = (canEdit: boolean) =>
-          getShoppingListPermissions(
-            {
-              homeId: null,
-              collaboratorsConnection: makeCollaborator('u1', {
-                role,
-                canEdit,
-              }),
-            },
-            'u1',
-          );
-        expect(permissionsWith(true).canEditList).toBe(true);
-        expect(permissionsWith(false).canEditList).toBe(false);
-      },
-    );
+    it.each([
+      CollaboratorRole.Admin,
+      CollaboratorRole.Editor,
+      CollaboratorRole.Contributor,
+      CollaboratorRole.Shopper,
+      CollaboratorRole.Viewer,
+    ])('lets a %s edit the list only through canEdit', role => {
+      const permissionsWith = (canEdit: boolean) =>
+        getShoppingListPermissions(
+          {
+            homeId: null,
+            collaboratorsConnection: makeCollaborator('u1', {
+              role,
+              canEdit,
+            }),
+          },
+          'u1',
+        );
+      expect(permissionsWith(true).canEditList).toBe(true);
+      expect(permissionsWith(false).canEditList).toBe(false);
+    });
 
     it('does not let item edits stand for list edits', () => {
       const list = {

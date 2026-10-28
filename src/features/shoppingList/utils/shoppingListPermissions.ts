@@ -81,15 +81,6 @@ const GUEST_PERMISSIONS: ShoppingListPermissionFlags = {
   canEditList: false,
 };
 
-// The API lets these roles edit a personal list's details whatever `canEdit`
-// says; below them the flag decides.
-const EDITS_LIST_BY_ROLE: ReadonlySet<CollaboratorRole> = new Set([
-  CollaboratorRole.Owner,
-  CollaboratorRole.Admin,
-  CollaboratorRole.Editor,
-  CollaboratorRole.Contributor,
-]);
-
 /**
  * Find the current user's collaborator from the collaborators connection
  */
@@ -141,9 +132,9 @@ function getCollaboratorPermissions(
     canRemoveItems: collaborator.canRemoveItems ?? false,
     canEditItems: collaborator.canEditItems ?? false,
     canMarkPurchased: collaborator.canMarkPurchased ?? false,
+    // Below OWNER the API reads `canEdit` at every role.
     canEditList:
-      (collaborator.role !== undefined &&
-        EDITS_LIST_BY_ROLE.has(collaborator.role)) ||
+      collaborator.role === CollaboratorRole.Owner ||
       (collaborator.canEdit ?? false),
   };
 }
