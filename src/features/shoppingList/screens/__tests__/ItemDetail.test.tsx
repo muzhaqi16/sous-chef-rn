@@ -276,8 +276,7 @@ describe('ShoppingListItemDetail', () => {
         buildShoppingListItem({ item: { __typename: 'Item', id: 'cat-1' } }),
       );
     const priceAt = (id: string, name: string, price: number) => ({
-      __typename: 'ItemStorePrice',
-      store: { __typename: 'Store', id, name },
+      store: { id, name },
       price,
       regularPrice: price,
       onPromotion: false,
@@ -289,9 +288,8 @@ describe('ShoppingListItemDetail', () => {
       isCurrent: true,
       confirmedAt: '2026-10-26T12:00:00.000Z',
       aisle: null,
-      unit: { __typename: 'Unit', id: 'u-lb', symbol: 'lb' },
+      unit: { id: 'u-lb', symbol: 'lb' },
       currency: {
-        __typename: 'Currency',
         id: 'usd',
         code: 'USD',
         decimalPlaces: 2,
