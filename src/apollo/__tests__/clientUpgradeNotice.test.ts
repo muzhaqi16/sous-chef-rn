@@ -3,14 +3,8 @@ import { storage } from '#/store/deviceStorage';
 // The mocks are referenced through `mock*` bindings declared here rather than
 // through the imported module objects, so they survive the `jest.resetModules()`
 // that `freshLaunch()` uses — a re-registered factory closes over the same spies.
-const mockMarkUpgradeRequired = jest.fn();
 const mockToast = jest.fn();
 
-jest.mock('#store', () => ({
-  useStore: {
-    getState: () => ({ markClientUpgradeRequired: mockMarkUpgradeRequired }),
-  },
-}));
 jest.mock('#/services/toastService', () => ({
   toastService: { info: mockToast },
 }));
@@ -48,27 +42,14 @@ beforeEach(() => {
   storage.clearAll();
 });
 
-// The dialog is the host's (`UpdateRequiredDialog`), which reads this latch;
-// the latch's idempotence is the slice's (networkSlice.test.ts). It is never
-// persisted (persistOptions.test.ts), so a still-refused build asks again on
-// every launch.
-describe('announceClientUpgradeRequired', () => {
-  it('raises the update dialog through the store latch', () => {
-    freshLaunch().announceClientUpgradeRequired();
-
-    expect(mockMarkUpgradeRequired).toHaveBeenCalledTimes(1);
-  });
-});
-
-// The soft nudge keys on the RECOMMENDED version, the opposite of the hard
-// notice: the number that moves here is the server's, so each new release
-// nudges once and an ignored one stays quiet until the next.
+// The nudge keys on the RECOMMENDED version: the number that moves here is the
+// server's, so each new release nudges once and an ignored one stays quiet
+// until the next.
 describe('announceClientReleaseAvailable', () => {
-  it('shows a toast, not the blocking dialog', () => {
+  it('shows a toast', () => {
     freshLaunch().announceClientReleaseAvailable('4.3.0');
 
     expect(mockToast).toHaveBeenCalledWith('appUpdate.available');
-    expect(mockMarkUpgradeRequired).not.toHaveBeenCalled();
   });
 
   it('nudges once within a launch, however many responses carry it', () => {
@@ -97,21 +78,13 @@ describe('announceClientReleaseAvailable', () => {
     expect(storage.getString(RECOMMENDED_KEY)).toBe('4.4.0');
   });
 
-  // Opposite of the hard notice, deliberately: a duplicate nudge for a build
-  // that still works is pure annoyance, so this one fails toward silence.
+  // A duplicate nudge for a build that still works is pure annoyance, so this
+  // fails toward silence.
   it('stays silent when storage is not initialized yet', () => {
     storageReady.mockReturnValue(false);
 
     freshLaunch().announceClientReleaseAvailable('4.3.0');
 
     expect(mockToast).not.toHaveBeenCalled();
-  });
-
-  it('does not stand in for the blocking notice', () => {
-    const notice = freshLaunch();
-    notice.announceClientReleaseAvailable('4.3.0');
-    notice.announceClientUpgradeRequired();
-
-    expect(mockMarkUpgradeRequired).toHaveBeenCalledTimes(1);
   });
 });

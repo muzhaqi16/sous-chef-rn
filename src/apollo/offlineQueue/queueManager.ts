@@ -216,7 +216,7 @@ export class QueueManager {
       Telemetry.increment('offline_queue_drain_skipped_total', 1, {
         reason: 'already_processing',
       });
-      Telemetry.warn('Queue drain skipped: already processing');
+      Telemetry.debug('Queue drain skipped: already processing');
       return this.processingPromise ?? Promise.resolve();
     }
 

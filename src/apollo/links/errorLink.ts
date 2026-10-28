@@ -17,7 +17,6 @@ import {
   getRateLimitMessage,
 } from '#/utils/errors/rateLimit';
 import { clientVersion } from '../clientIdentity';
-import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import { LogoutCleanup } from '../logoutCleanup';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { operationNameOf } from '../utils/documentOperation';
@@ -111,16 +110,18 @@ export const errorLink = new ErrorLink(({ error, operation, forward }) => {
       // Terminal: a retry sends the same version and a refresh succeeds then
       // fails identically, so bail out before anything downstream recovers.
       if (code === CLIENT_UPGRADE_REQUIRED) {
-        logger.error(
-          `App version ${clientVersion()} is below the server minimum (${extensionText(
-            err.extensions?.minimumVersion,
-            'unknown',
-          )}); ${operation.operationName} refused until the app is updated`,
-        );
-        // Every operation is refused from here on, so the user needs to be told
-        // once rather than left watching screens fail silently. The notice
-        // de-duplicates across the flood of refusals this produces.
-        announceClientUpgradeRequired();
+        // Every operation is refused from here on: the first refusal logs, and
+        // the latch raises the host's update dialog.
+        const store = useStore.getState();
+        if (!store.clientUpgradeRequired) {
+          logger.error(
+            `App version ${clientVersion()} is below the server minimum (${extensionText(
+              err.extensions?.minimumVersion,
+              'unknown',
+            )}); ${operation.operationName} refused until the app is updated`,
+          );
+        }
+        store.markClientUpgradeRequired();
         return;
       }
 

@@ -52,9 +52,9 @@ export interface NetworkState {
    */
   offlineBannerCause: OfflineBannerCause | null;
   /**
-   * The server refused this build as below its minimum version. A latch for
-   * the process, never persisted: only an update clears the refusal, and the
-   * updated build starts clear.
+   * The server refused this build as below its minimum version. Never
+   * persisted, so an updated build starts clear; a response the server's
+   * version gate admits clears it, so a floor rolled back stops blocking.
    */
   clientUpgradeRequired: boolean;
 
@@ -73,6 +73,7 @@ export interface NetworkState {
   setOfflineModeEnabled: (enabled: boolean, immediate?: boolean) => void;
   setApiReachable: (reachable: boolean | null) => void;
   markClientUpgradeRequired: () => void;
+  clearClientUpgradeRequired: () => void;
 }
 
 /**
@@ -269,6 +270,13 @@ export const createNetworkSlice: StateCreator<
       if (get().clientUpgradeRequired) return;
       set(draft => {
         draft.clientUpgradeRequired = true;
+      });
+    },
+
+    clearClientUpgradeRequired: () => {
+      if (!get().clientUpgradeRequired) return;
+      set(draft => {
+        draft.clientUpgradeRequired = false;
       });
     },
   };

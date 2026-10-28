@@ -605,7 +605,8 @@
   "appUpdate": {
     "title": "Update Required",
     "message": "This version of {{appName}} can no longer connect to the server. Please update to the latest version to keep using the app.",
-    "available": "A new version of {{appName}} is available."
+    "available": "A new version of {{appName}} is available.",
+    "storeNotOpened": "The store didn't open. Update {{appName}} from your device's app store."
   },
   "empty": {
     "noItems": "No items yet",

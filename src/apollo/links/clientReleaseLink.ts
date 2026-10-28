@@ -1,6 +1,15 @@
 import { ApolloLink } from '@apollo/client';
 import { tap } from 'rxjs';
+import { useStore } from '#store';
 import { announceClientReleaseAvailable } from '../clientUpgradeNotice';
+
+// The version gate refuses before Apollo runs, with a 426; a 2xx passed it. A
+// result errorLink answers from the cache after a network failure carries none.
+const passedVersionGate = (response: unknown): boolean =>
+  typeof response === 'object' &&
+  response !== null &&
+  'ok' in response &&
+  response.ok === true;
 
 /**
  * The server attaches `extensions.clientRelease` only when it can show this
@@ -27,6 +36,10 @@ export const createClientReleaseLink = () =>
   new ApolloLink((operation, forward) =>
     forward(operation).pipe(
       tap(result => {
+        const response: unknown = operation.getContext().response;
+        if (passedVersionGate(response)) {
+          useStore.getState().clearClientUpgradeRequired();
+        }
         const recommended = readRecommendedVersion(result.extensions);
         if (recommended) announceClientReleaseAvailable(recommended);
       }),

@@ -38,18 +38,24 @@ const untrackedStylesIn = (file: string, source: string): string[] => {
   // The plugin compiles nothing while NODE_ENV is 'test', which Jest sets.
   const nodeEnv = process.env.NODE_ENV;
   process.env.NODE_ENV = 'development';
-  transformSync(source, {
-    filename: file,
-    cwd: REPO_ROOT,
-    root: REPO_ROOT,
-    babelrc: false,
-    configFile: false,
-    parserOpts: { plugins: ['typescript', 'jsx'] },
-    plugins: [[PLUGIN, { ...pluginOptions, debug: true }]],
-  });
-  process.env.NODE_ENV = nodeEnv;
-  warn.mockRestore();
-  log.mockRestore();
+  try {
+    transformSync(source, {
+      filename: file,
+      cwd: REPO_ROOT,
+      root: REPO_ROOT,
+      babelrc: false,
+      configFile: false,
+      // A `.ts` file reads `<T>(x: T) =>` and `<T>value` as TypeScript, not JSX.
+      parserOpts: {
+        plugins: file.endsWith('.tsx') ? ['typescript', 'jsx'] : ['typescript'],
+      },
+      plugins: [[PLUGIN, { ...pluginOptions, debug: true }]],
+    });
+  } finally {
+    process.env.NODE_ENV = nodeEnv;
+    warn.mockRestore();
+    log.mockRestore();
+  }
   return warnings;
 };
 

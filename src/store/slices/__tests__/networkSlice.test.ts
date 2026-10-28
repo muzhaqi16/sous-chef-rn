@@ -96,6 +96,29 @@ describe('networkSlice', () => {
     });
   });
 
+  // Every response the version gate admits clears it, so a floor rolled back
+  // stops blocking without a relaunch, and an admitted build changes nothing.
+  describe('clearClientUpgradeRequired', () => {
+    it('lifts the latch once the server admits this build again', () => {
+      const store = createTestStore();
+      store.getState().markClientUpgradeRequired();
+
+      store.getState().clearClientUpgradeRequired();
+
+      expect(store.getState().clientUpgradeRequired).toBe(false);
+    });
+
+    it('notifies nobody while the latch is already clear', () => {
+      const store = createTestStore();
+      const listener = jest.fn();
+      store.subscribe(listener);
+
+      store.getState().clearClientUpgradeRequired();
+
+      expect(listener).not.toHaveBeenCalled();
+    });
+  });
+
   describe('setOnline', () => {
     it('transitions from offline to online', () => {
       const store = createTestStore({ isOnline: false });

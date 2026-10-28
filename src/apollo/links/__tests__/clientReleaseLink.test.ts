@@ -1,6 +1,14 @@
 jest.mock('../../clientUpgradeNotice', () => ({
   announceClientReleaseAvailable: jest.fn(),
 }));
+const mockClearClientUpgradeRequired = jest.fn();
+jest.mock('#store', () => ({
+  useStore: {
+    getState: () => ({
+      clearClientUpgradeRequired: mockClearClientUpgradeRequired,
+    }),
+  },
+}));
 
 import { ApolloClient, ApolloLink, InMemoryCache, gql } from '@apollo/client';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
@@ -29,13 +37,17 @@ const client = new ApolloClient({
 /**
  * Drives one operation through the link with a canned downstream result and
  * returns what the subscriber saw, so the pass-through is asserted alongside
- * the side effect.
+ * the side effect. `response` lands on the context as HttpLink puts it there.
  */
-const run = (extensions?: Record<string, unknown>): Promise<unknown> =>
+const run = (
+  extensions?: Record<string, unknown>,
+  response?: Response,
+): Promise<unknown> =>
   new Promise((resolve, reject) => {
     const downstream = new ApolloLink(
-      () =>
+      operation =>
         new Observable(observer => {
+          if (response) operation.setContext({ response });
           observer.next({ data: { me: { id: '1' } }, extensions });
           observer.complete();
         }),
@@ -103,5 +115,24 @@ describe('clientReleaseLink', () => {
     await run(extensions);
 
     expect(announce).not.toHaveBeenCalled();
+  });
+
+  // The version gate refuses with a 426 before Apollo runs, so a 2xx means this
+  // build was admitted: a floor raised by mistake and rolled back stops blocking.
+  it('clears the update latch when the server admits this build', async () => {
+    await run(undefined, new Response(null, { status: 200 }));
+
+    expect(mockClearClientUpgradeRequired).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['a refusal', new Response(null, { status: 426 })],
+    ['a server failure', new Response(null, { status: 503 })],
+    // errorLink answers from the cache after a network failure: no response.
+    ['a result with no response', undefined],
+  ])('keeps the update latch on %s', async (_label, response) => {
+    await run(undefined, response);
+
+    expect(mockClearClientUpgradeRequired).not.toHaveBeenCalled();
   });
 });

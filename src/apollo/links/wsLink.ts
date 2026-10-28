@@ -11,7 +11,6 @@ import { serializeError } from '#/utils/errorSerialization';
 import { backoffDelay, sleep } from '#/utils/backoff';
 import { getDeviceId } from '#/services/auth/deviceId';
 import { CLIENT_NAME, clientVersion } from '../clientIdentity';
-import { announceClientUpgradeRequired } from '../clientUpgradeNotice';
 import {
   isProtocolErrorCloseCode,
   isRetryableWebSocketClose,
@@ -469,9 +468,8 @@ const createWsClient = () => {
           logger.error(
             `🔌 WebSocket closed: client upgrade required (app version ${clientVersion()}): ${reason}`,
           );
-          // Shared with the HTTP half so the two transports announce once
-          // between them, not once each.
-          announceClientUpgradeRequired();
+          // The HTTP half sets the same latch, so the two raise one dialog.
+          useStore.getState().markClientUpgradeRequired();
           return;
         }
 
