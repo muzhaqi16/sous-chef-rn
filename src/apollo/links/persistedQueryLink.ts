@@ -11,7 +11,8 @@ import { sha256 } from 'js-sha256';
  * Reorders top-level definitions so the text on the wire is the text that was
  * hashed — codegen emits fragments in reference order while the hash sorts
  * them, so the APQ registration retry is otherwise rejected as "provided sha
- * does not match query". Memoized on document identity to avoid re-hashing.
+ * does not match query", and the safelist refuses a graphql-ws subscribe it
+ * hashes as received. Memoized on document identity to avoid re-hashing.
  */
 const sortedDocuments = new WeakMap<DocumentNode, DocumentNode>();
 
@@ -28,7 +29,7 @@ function sortDefinitions(document: DocumentNode): DocumentNode {
   return sorted;
 }
 
-const sortDefinitionsLink = new ApolloLink((operation, forward) => {
+export const sortDefinitionsLink = new ApolloLink((operation, forward) => {
   operation.query = sortDefinitions(operation.query);
   return forward(operation);
 });
