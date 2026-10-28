@@ -4967,6 +4967,14 @@ enum ErrorCode {
   FORBIDDEN
   HOME_ACCESS_DENIED
   """
+  The caller (or, on inviteToHome, the invitee) was removed from the home, and this door cannot bring them back: a join code never does, and an invite does only when sent after the removal by someone who can manage the home. Carried by a ForbiddenError member.
+  """
+  HOME_MEMBERSHIP_REMOVED
+  """
+  The caller's (or, on inviteToHome, the invitee's) membership of the home is suspended; no join door reopens it. Carried by a ForbiddenError member.
+  """
+  HOME_MEMBERSHIP_SUSPENDED
+  """
   The home is at its member cap (`Home.maxMembers`): a join by code, an invite acceptance or a rejoin is refused until a member leaves or the cap is raised.
   """
   HOME_MEMBER_LIMIT_REACHED
@@ -9809,7 +9817,13 @@ type Mutation {
   proof of owning it. An invitation already accepted, declined or revoked
   answers ConflictError, and one that has expired a ValidationError on the
   field that named it; only an invitation that does not exist answers
-  NotFoundError.
+  NotFoundError. A member who left rejoins, and a member who was removed is
+  reinstated, with the invitation's role and that role's default
+  permissions, when it was sent (or re-sent) after the removal by someone
+  who can still manage the home when it is accepted. Otherwise a removed
+  member is refused with HOME_MEMBERSHIP_REMOVED, and a suspended one with
+  HOME_MEMBERSHIP_SUSPENDED, both on a ForbiddenError; the invitation stays
+  pending.
   """
   acceptHomeInvite(input: AcceptHomeInviteInput!): AcceptHomeInviteResult!
   """
@@ -10198,6 +10212,10 @@ type Mutation {
   Send an invitation for a user to join a home. The role it confers is at
   most the inviter's own: only the home's owner invites an ADMIN, and OWNER
   is never invited (a system admin is exempt). A higher role is FORBIDDEN.
+  Inviting someone removed from the home is how they are brought back, and
+  only someone who can manage it (owner, admin, or canManageHome) may: anyone
+  else is refused with HOME_MEMBERSHIP_REMOVED, and inviting a suspended
+  member with HOME_MEMBERSHIP_SUSPENDED, both on a ForbiddenError.
   """
   inviteToHome(input: InviteToHomeInput!): InviteToHomeResult!
   """Invite a user to collaborate on a shopping list."""
@@ -10211,7 +10229,13 @@ type Mutation {
   credential supersedes the old one, which stops working immediately.
   """
   issueDeviceCredential(input: IssueDeviceCredentialInput!): IssueDeviceCredentialResult!
-  """Join a home using its join code."""
+  """
+  Join a home using its join code. A member who left rejoins as a MEMBER. A
+  member who was removed is refused with HOME_MEMBERSHIP_REMOVED and a
+  suspended one with HOME_MEMBERSHIP_SUSPENDED, both on a ForbiddenError: a
+  code never undoes a removal, only an invitation from someone who can manage
+  the home does.
+  """
   joinHomeByCode(input: JoinHomeByCodeInput!): JoinHomeByCodeResult!
   """Join a shared shopping list using its share code."""
   joinShoppingListByShareCode(input: JoinShoppingListByShareCodeInput!): JoinShoppingListByShareCodeResult!
@@ -10408,8 +10432,10 @@ type Mutation {
   removeItemsFromShoppingList(input: RemoveItemsFromShoppingListInput!): RemoveItemsFromShoppingListResult!
   """
   Remove a member from a home (owner/admin only). A removed member cannot
-  rejoin by code or by invitation. Removing a member who already left bars
-  them the same way; removing one already removed converges, with no write.
+  rejoin by code; only an invitation sent after the removal by someone who
+  can manage the home (owner, admin, or canManageHome) brings them back.
+  Removing a member who already left bars them the same way; removing one
+  already removed converges, with no write.
   """
   removeMember(input: RemoveMemberInput!): RemoveMemberResult!
   """Remove a recipe from the user's favorites."""
@@ -19283,6 +19309,14 @@ enum TopLevelErrorCode {
   Authenticated, active, and not allowed. The ONE authorization code, whichever layer refuses: the auth directive family, a service-thrown AuthorizationError, or the ForbiddenError union member.
   """
   FORBIDDEN
+  """
+  A removed member refused by a door that cannot bring them back. The join and invite mutations report it as a ForbiddenError union member with this code.
+  """
+  HOME_MEMBERSHIP_REMOVED
+  """
+  A suspended membership refused at a join door. The join and invite mutations report it as a ForbiddenError union member with this code.
+  """
+  HOME_MEMBERSHIP_SUSPENDED
   """
   The home is at its member cap. A join, invite acceptance or rejoin reports it as a ConflictError union member with this code.
   """
