@@ -239,5 +239,8 @@
   },
   "engines": {
     "node": ">= 22.13.0"
+  },
+  "allowScripts": {
+    "detox@20.51.4": true
   }
 }
