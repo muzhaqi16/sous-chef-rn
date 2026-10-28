@@ -15,8 +15,8 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 
 ## 2. One ping interval of trust (finding 4, D5)
 
-- [ ] 2.1 Set `SERVER_LIVENESS_WINDOW_MS = 30_000` in `src/apollo/refetchEvents.ts`. Its comment states that the API reaps a socket at the tick after its first missed ping (`sous-chef-api` `packages/core/src/context/ws.ts`). Cut the `appForeground` docblock to six lines or fewer (finding 14). Add a `refetchEvents.test.ts` case: channel reads open and 40 s away re-asks. Update the "90 s" and "10 s" cases only if their numbers no longer straddle the window. Verify the 40 s case fails on `dev` and passes after.
-- [ ] 2.2 Replace "60 s" with "30 s" (one ping interval) in `docs/apollo-client-patterns.md` (the `appForeground` table row and the "A return within 60 s" paragraph) and `docs/local-first-architecture.md` line 36. Verify `grep -n "60 s" docs/apollo-client-patterns.md docs/local-first-architecture.md` finds nothing about resync.
+- [x] 2.1 Set `SERVER_LIVENESS_WINDOW_MS = 30_000` in `src/apollo/refetchEvents.ts`. Its comment states that the API reaps a socket at the tick after its first missed ping (`sous-chef-api` `packages/core/src/context/ws.ts`). Cut the `appForeground` docblock to six lines or fewer (finding 14). Add a `refetchEvents.test.ts` case: channel reads open and 40 s away re-asks. Update the "90 s" and "10 s" cases only if their numbers no longer straddle the window. Verify the 40 s case fails on `dev` and passes after.
+- [x] 2.2 Replace "60 s" with "30 s" (one ping interval) in `docs/apollo-client-patterns.md` (the `appForeground` table row and the "A return within 60 s" paragraph) and `docs/local-first-architecture.md` line 36. Verify `grep -n "60 s" docs/apollo-client-patterns.md docs/local-first-architecture.md` finds nothing about resync.
 
 ## 3. Budget & prices for every editor (finding 1, D1)
 

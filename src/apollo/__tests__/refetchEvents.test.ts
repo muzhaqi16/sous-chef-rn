@@ -361,6 +361,14 @@ describe('resync', () => {
       expect(requests).toEqual(['ListForResync']);
     });
 
+    // The server reaps at the tick after the unanswered ping, which can come
+    // just over one interval after the app left.
+    it('re-asks between one and two ping intervals away', async () => {
+      await returnAfter(40_000);
+
+      expect(requests).toEqual(['ListForResync']);
+    });
+
     it('still resyncs when the socket reconnects after a brief return', async () => {
       await returnAfter(10_000);
       triggers.wsReconnected();

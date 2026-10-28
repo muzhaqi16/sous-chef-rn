@@ -33,7 +33,7 @@ that is the encrypted MMKV instance (`src/native/storage/mmkv.ts`, adapted in
 - Default fetch policy `cache-and-network` → instant cache read + background refresh; after the first
   fetch a watcher settles on `cache-first`. What the device may have missed while backgrounded, offline
   or with the socket down is re-requested by the resync (`src/apollo/refetchEvents.ts`, Apollo 4.2's
-  `RefetchEventManager`): on a return to the app with the live channel closed (or after 60 s away),
+  `RefetchEventManager`): on a return to the app with the live channel closed (or after 30 s away),
   API reachable again and WebSocket reconnect, it waits for the queue to drain, then refetches the
   active queries on screen that have not opted out with `refetchOn: false`; a hidden home tab catches
   up when it is shown (`docs/apollo-client-patterns.md` § Resync).

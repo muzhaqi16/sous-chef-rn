@@ -531,7 +531,7 @@ through Apollo 4.2's `RefetchEventManager` (`src/apollo/refetchEvents.ts`):
 
 | Event             | Fires when                                                                       |
 | ----------------- | -------------------------------------------------------------------------------- |
-| `appForeground`   | The app returns to `active` while the live channel is closed, or after 60 s away |
+| `appForeground`   | The app returns to `active` while the live channel is closed, or after 30 s away |
 | `apiReachable`    | `isApiUnavailable` goes from true to false (link or breaker)                     |
 | `wsReconnected`   | `onWebSocketReconnected`                                                         |
 | `languageChanged` | The resolved language really changes                                             |
@@ -545,12 +545,13 @@ incomplete over it, so `forgetHome` (both the leave and an admin's removal)
 announces `householdLeft`: the screen shown is asked again, and `screenShown`
 catches up the rest.
 
-**A return within 60 s over an open channel asks nothing.** The API ends a
-socket that leaves one of its pings unanswered at the next
-(`WS_PING_INTERVAL_MS`, 30 s), and the device may never see that close. Inside
-two intervals the server still holds the subscriptions, so every change
-reaches the cache on resume, and a drop ends in a reconnect that resyncs on its
-own (`isLiveChannelOpen`, `wsLink.ts`). Past the window the return resyncs
+**A return within 30 s over an open channel asks nothing.** The API ends a
+socket at the tick after the ping it left unanswered (`WS_PING_INTERVAL_MS`,
+30 s), which can come just over one interval after the app stopped, and the
+device may never see that close. Inside one interval the server still holds
+the subscriptions, so every change reaches the cache on resume, and a drop ends
+in a reconnect that resyncs on its own (`isLiveChannelOpen`, `wsLink.ts`).
+Past the window the return resyncs
 whatever the channel reads, which also covers answers that move with the clock
 and carry no event (expiry counts, the day's plan). Measured: a short app
 switch went from 18 requests to none.
