@@ -308,6 +308,8 @@
     "noPantriesTitle": "Crear una despensa",
     "noPantriesDescription": "Configura una despensa para empezar a seguir tu comida",
     "noPantriesAction": "Crear Despensa",
+    "pantriesHiddenTitle": "Las despensas no se te muestran",
+    "pantriesHiddenDescription": "Quien gestiona este hogar puede permitirte ver sus despensas.",
     "searchNoResultsDescription": "¿Quieres añadirlo a tu despensa?",
     "tabEmptyTitle": "Sin artículos en {{tabName}}",
     "tabEmptyDescription": "Los artículos guardados aquí aparecerán en esta pestaña",

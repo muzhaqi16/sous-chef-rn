@@ -68,6 +68,8 @@ export interface PantryContentProps {
   noHomeSelected?: boolean;
   noHomes?: boolean;
   noPantries?: boolean;
+  /** The home has pantries, but the member's pantry view is off. */
+  pantriesHidden?: boolean;
   onSelectHome?: () => void;
   onCreatePantry?: () => void;
 
@@ -120,6 +122,8 @@ export interface PantryEmptyStateProps {
   noHomeSelected?: boolean;
   noHomes?: boolean;
   noPantries?: boolean;
+  /** The home has pantries, but the member's pantry view is off. */
+  pantriesHidden?: boolean;
   onSelectHome?: () => void;
   onCreatePantry?: () => void;
   overallItemCount: number;

@@ -19,6 +19,7 @@ export function PantryEmptyState({
   noHomeSelected,
   noHomes,
   noPantries,
+  pantriesHidden,
   onSelectHome,
   onCreatePantry,
   overallItemCount,
@@ -64,6 +65,18 @@ export function PantryEmptyState({
               }
             : undefined
         }
+      />
+    );
+  }
+
+  if (pantriesHidden) {
+    return (
+      <EmptyState
+        testID={pantryTestIDs.emptyState}
+        icon="eye-off-outline"
+        title={t('pantryScreen.pantriesHiddenTitle')}
+        description={t('pantryScreen.pantriesHiddenDescription')}
+        style={styles.emptyState}
       />
     );
   }

@@ -372,6 +372,7 @@ function PantryMainContent({
         noHomeSelected={screen.noHomeSelected}
         noHomes={screen.noHomes}
         noPantries={screen.noPantries}
+        pantriesHidden={screen.pantriesHidden}
         onSelectHome={onSelectHome}
         onCreatePantry={onCreatePantry}
         onAddItem={handleAddItem}

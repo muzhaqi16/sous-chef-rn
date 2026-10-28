@@ -308,6 +308,8 @@
     "noPantriesTitle": "Krijo një qilar",
     "noPantriesDescription": "Konfiguro një qilar për të nisur ndjekjen e ushqimit",
     "noPantriesAction": "Krijo Qilar",
+    "pantriesHiddenTitle": "Qilarët nuk të shfaqen",
+    "pantriesHiddenDescription": "Kush e menaxhon këtë shtëpi mund të të lejojë të shohësh qilarët e saj.",
     "searchNoResultsDescription": "Dëshiron ta shtosh në qilar?",
     "tabEmptyTitle": "Asnjë artikull në {{tabName}}",
     "tabEmptyDescription": "Artikujt e ruajtur këtu do të shfaqen në këtë skedë",

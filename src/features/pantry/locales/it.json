@@ -308,6 +308,8 @@
     "noPantriesTitle": "Crea una dispensa",
     "noPantriesDescription": "Configura una dispensa per iniziare a tracciare il cibo",
     "noPantriesAction": "Crea Dispensa",
+    "pantriesHiddenTitle": "Le dispense non ti vengono mostrate",
+    "pantriesHiddenDescription": "Chi gestisce questa casa può permetterti di vedere le sue dispense.",
     "searchNoResultsDescription": "Vuoi aggiungerlo alla dispensa?",
     "tabEmptyTitle": "Nessun articolo in {{tabName}}",
     "tabEmptyDescription": "Gli articoli conservati qui appariranno in questa scheda",

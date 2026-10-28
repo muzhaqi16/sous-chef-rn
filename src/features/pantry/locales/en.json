@@ -308,6 +308,8 @@
     "noPantriesTitle": "Create a pantry",
     "noPantriesDescription": "Set up a pantry to start tracking your food",
     "noPantriesAction": "Create Pantry",
+    "pantriesHiddenTitle": "Pantries are hidden from you",
+    "pantriesHiddenDescription": "Someone who manages this home can let you view its pantries.",
     "searchNoResultsDescription": "Would you like to add it to your pantry?",
     "tabEmptyTitle": "No items in {{tabName}}",
     "tabEmptyDescription": "Items stored here will appear in this tab",
