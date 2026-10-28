@@ -26,6 +26,10 @@ fragment ItemReaders on Item {
   defaultConsumeUnit {
     id
     localizedSymbol
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
     type
