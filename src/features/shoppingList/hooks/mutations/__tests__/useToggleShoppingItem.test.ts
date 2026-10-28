@@ -1,5 +1,6 @@
 import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
@@ -83,7 +84,8 @@ describe('useToggleShoppingItem', () => {
     expect(typeof result.current.toggleItem).toBe('function');
   });
 
-  it('returns false when listId is null', async () => {
+  // A false answer has always told the user, whether refused or never sent.
+  it('returns false when listId is null, and says so', async () => {
     const recorded: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
       () =>
@@ -108,9 +110,13 @@ describe('useToggleShoppingItem', () => {
 
     expect(toggleResult).toBe(false);
     expect(recorded).toEqual([]);
+    expect(mockAlert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.updateItemFailed'),
+    );
   });
 
-  it('returns false when item is not found in cache', async () => {
+  it('returns false when item is not found in cache, and says so', async () => {
     // No cache seeding — readFragment will return null, hook bails out.
     const recorded: Array<Record<string, unknown>> = [];
     const { result } = renderHookWithApollo(
@@ -136,6 +142,34 @@ describe('useToggleShoppingItem', () => {
 
     expect(toggleResult).toBe(false);
     expect(recorded).toEqual([]);
+    expect(mockAlert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.updateItemFailed'),
+    );
+  });
+
+  // A store-mode add with a price ticks through this setter.
+  it('says so when a purchase cannot be recorded for a line not in the cache', async () => {
+    const { result } = renderHookWithApollo(
+      () => useToggleShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      { operationMocks: [] },
+    );
+
+    let recordResult!: Awaited<
+      ReturnType<typeof result.current.recordPurchase>
+    >;
+    await act(async () => {
+      recordResult = await result.current.recordPurchase('non-existent', {
+        purchasedQuantity: 1,
+        purchasedPrice: 3,
+      });
+    });
+
+    expect(recordResult).toBe(false);
+    expect(mockAlert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.updateItemFailed'),
+    );
   });
 });
 

@@ -182,19 +182,23 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     alertService.alert(t('labels.error'), t('errors.addItemFailed'));
   };
 
-  /** Ticks the line the scan fulfils, else adds the product and ticks it. */
+  /**
+   * Ticks the line the scan fulfils, else adds the product and ticks it;
+   * whether the product reached the cart.
+   */
   const addToCart = async (
     paid: { quantity: number; totalPrice: number | null } | null,
-  ) => {
+  ): Promise<boolean> => {
     const lineId = cart.line?.id ?? (await addToShoppingList(item)).rowId;
     if (!lineId) {
       alertService.alert(t('labels.error'), t('errors.addItemFailedRetry'));
-      return;
+      return false;
     }
-    // A refused tick has already told the user and re-read the list.
-    if (!(await cart.tick(lineId, paid))) return;
+    // A tick answering false has told the user, refused or never sent.
+    if (!(await cart.tick(lineId, paid))) return false;
     setIsAdded(true);
     onScanAnother();
+    return true;
   };
 
   /** A refusal the amount's fields can show goes on its field; any other is alerted. */
@@ -271,8 +275,8 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const handlePrice = (quantity: number, totalPrice: number | null) => {
     void executeWithLoadingState(
       async () => {
-        await addToCart({ quantity, totalPrice });
-        setIsAskingPrice(false);
+        // A failed add keeps the sheet open with what was typed.
+        if (await addToCart({ quantity, totalPrice })) setIsAskingPrice(false);
       },
       setIsLoading,
       reportAddFailure,

@@ -10,6 +10,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import type { ScannedItem } from '#features/barcode/types';
 import { useAddScannedItem } from '../useAddScannedItem';
+import { UseToggleShoppingItem_ItemFragmentDoc } from '#features/shoppingList/hooks/mutations/useToggleShoppingItem.generated';
 
 const LIST_ID = 'list-1';
 
@@ -147,5 +148,13 @@ describe('adding a scanned item to a shopping list', () => {
 
     expect(added).toEqual({ outcome: 'kept', rowId: 'line-held' });
     expect(rowKeys(cache)).toEqual(['ShoppingListItem:line-held']);
+    // Store mode ticks it next; the tick reads this snapshot or sends nothing.
+    expect(
+      cache.readFragment({
+        id: 'ShoppingListItem:line-held',
+        fragment: UseToggleShoppingItem_ItemFragmentDoc,
+        fragmentName: 'useToggleShoppingItem_item',
+      }),
+    ).not.toBeNull();
   });
 });

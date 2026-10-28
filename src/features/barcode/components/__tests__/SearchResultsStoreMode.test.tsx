@@ -407,6 +407,57 @@ describe('SearchResults from store mode', () => {
     expect(screen.queryByTestId('alternate-btn')).toBeNull();
   });
 
+  describe('the price sheet', () => {
+    const confirmPrice = async () => {
+      const user = userEvent.setup();
+      await user.press(screen.getByTestId('alternate-btn'));
+      await user.press(screen.getByTestId('price-sheet'));
+    };
+
+    // The tick has told the user; closing would lose what they typed.
+    it('stays open when the tick is refused', async () => {
+      mockCart.line = LINE;
+      mockTick.mockResolvedValue(false);
+      renderWithApollo(<SearchResults {...props} />);
+
+      await confirmPrice();
+
+      await waitFor(() => expect(mockTick).toHaveBeenCalled());
+      expect(screen.getByTestId('price-sheet')).toBeTruthy();
+      expect(onScanAnother).not.toHaveBeenCalled();
+    });
+
+    it('stays open, and says so, when the product cannot be added as a line', async () => {
+      const alert = jest.spyOn(alertService, 'alert').mockImplementation();
+      mockAddToShoppingList.mockResolvedValue({
+        outcome: 'reverted',
+        rowId: null,
+      });
+      renderWithApollo(<SearchResults {...props} />);
+
+      await confirmPrice();
+
+      await waitFor(() =>
+        expect(alert).toHaveBeenCalledWith(
+          t('labels.error'),
+          t('errors.addItemFailedRetry'),
+        ),
+      );
+      expect(screen.getByTestId('price-sheet')).toBeTruthy();
+      expect(mockTick).not.toHaveBeenCalled();
+    });
+
+    it('closes once the product is in the cart', async () => {
+      mockCart.line = LINE;
+      renderWithApollo(<SearchResults {...props} />);
+
+      await confirmPrice();
+
+      await waitFor(() => expect(onScanAnother).toHaveBeenCalled());
+      expect(screen.queryByTestId('price-sheet')).toBeNull();
+    });
+  });
+
   it('stays put when the tick is refused', async () => {
     mockCart.line = LINE;
     mockTick.mockResolvedValue(false);

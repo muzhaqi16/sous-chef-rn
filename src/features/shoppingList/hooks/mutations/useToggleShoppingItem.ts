@@ -13,6 +13,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import {
   UseToggleShoppingItem_ItemFragmentDoc,
@@ -49,6 +50,13 @@ export function useToggleShoppingItem({
     context: { localFirst: true },
   });
 
+  // A tick that cannot be sent says so as a refused one does, so a false
+  // answer has always told the user.
+  const unsent = (): false => {
+    alertService.alert(t('labels.error'), t('errors.updateItemFailed'));
+    return false;
+  };
+
   /**
    * Sets a line's purchase state to `wanted`, or flips it when null. A line
    * already in that state is written nothing ahead, and the server answers a
@@ -61,13 +69,13 @@ export function useToggleShoppingItem({
     wanted: boolean | null,
     bought?: PurchasedItemInput,
   ) => {
-    if (!listId) return false;
+    if (!listId) return unsent();
 
     const cacheId = client.cache.identify({
       __typename: 'ShoppingListItem',
       id: itemId,
     });
-    if (!cacheId) return false;
+    if (!cacheId) return unsent();
 
     const snapshot =
       client.cache.readFragment<UseToggleShoppingItem_ItemFragment>({
@@ -75,7 +83,7 @@ export function useToggleShoppingItem({
         fragment: UseToggleShoppingItem_ItemFragmentDoc,
         fragmentName: 'useToggleShoppingItem_item',
       });
-    if (!snapshot) return false;
+    if (!snapshot) return unsent();
 
     const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
     const newStatus = wanted ?? !previousIsPurchased;
@@ -228,13 +236,13 @@ export function useToggleShoppingItem({
     amounts: { purchasedQuantity: number; purchasedPrice: number | null },
     bought?: PurchasedItemInput,
   ) => {
-    if (!listId) return false;
+    if (!listId) return unsent();
 
     const cacheId = client.cache.identify({
       __typename: 'ShoppingListItem',
       id: itemId,
     });
-    if (!cacheId) return false;
+    if (!cacheId) return unsent();
 
     const snapshot =
       client.cache.readFragment<UseToggleShoppingItem_ItemFragment>({
@@ -242,7 +250,7 @@ export function useToggleShoppingItem({
         fragment: UseToggleShoppingItem_ItemFragmentDoc,
         fragmentName: 'useToggleShoppingItem_item',
       });
-    if (!snapshot) return false;
+    if (!snapshot) return unsent();
 
     const previousIsPurchased = snapshot.purchaseInfo.isPurchased;
     const previousUpdatedAt = snapshot.updatedAt;
