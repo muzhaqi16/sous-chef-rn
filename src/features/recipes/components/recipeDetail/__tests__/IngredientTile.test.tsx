@@ -41,9 +41,10 @@ const ingredient = (
   ...overrides,
 });
 
-const renderRow = (value: DisplayIngredient) =>
+const renderRow = (value: DisplayIngredient, showPrice = true) =>
   render(
     <IngredientTile
+      showPrice={showPrice}
       ingredient={value}
       isAdded={false}
       alerts={[]}
@@ -98,6 +99,17 @@ describe('IngredientTile', () => {
   it('shows an estimated price under the name once the recipe has one', () => {
     renderRow(ingredient(1, 'cup', { estimatedPrice: 1.5 }));
     expect(screen.getByText(/1\.50/)).toBeTruthy();
+    expect(screen.getByTestId('tile').props.accessibilityLabel).toMatch(
+      /1\.50/,
+    );
+  });
+
+  it('shows and reads out no price with Budget & prices off', () => {
+    renderRow(ingredient(1, 'cup', { estimatedPrice: 1.5 }), false);
+    expect(screen.queryByText(/1\.50/)).toBeNull();
+    expect(screen.getByTestId('tile').props.accessibilityLabel).not.toMatch(
+      /1\.50/,
+    );
   });
 
   it("shows the catalog item's photo when the ingredient has none", () => {
@@ -123,6 +135,7 @@ describe('IngredientTile', () => {
     const onPress = jest.fn();
     render(
       <IngredientTile
+        showPrice
         ingredient={ingredient(1, 'cup')}
         isAdded={false}
         alerts={[]}
@@ -144,6 +157,7 @@ describe('IngredientTile', () => {
     const onPress = jest.fn();
     render(
       <IngredientTile
+        showPrice
         ingredient={ingredient(8, 'slice')}
         isAdded={false}
         alerts={[
@@ -173,6 +187,7 @@ describe('IngredientTile', () => {
   it('says an avoided food is avoided', () => {
     render(
       <IngredientTile
+        showPrice
         ingredient={ingredient(8, 'slice')}
         isAdded={false}
         alerts={[alert('r-you', 'You', RestrictionSeverity.Preference)]}
@@ -188,6 +203,7 @@ describe('IngredientTile', () => {
   it('stays open once added when flagged, so its sheet can still be read', () => {
     render(
       <IngredientTile
+        showPrice
         ingredient={ingredient(8, 'slice')}
         isAdded
         alerts={[alert('r-ana', 'Ana', RestrictionSeverity.Allergy)]}

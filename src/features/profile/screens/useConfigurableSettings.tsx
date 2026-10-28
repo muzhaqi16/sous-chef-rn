@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useTranslation } from '#/i18n';
+import { getResolvedLanguage, useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
@@ -155,7 +155,8 @@ export const useConfigurableSettings = () => {
         if (config.type === 'modal') {
           return {
             ...baseItem,
-            value: language ?? 'en',
+            // Unpicked, the app follows the device: show what it is in.
+            value: language ?? getResolvedLanguage(),
             options: [...SUPPORTED_LANGUAGES],
             onSave: (v: string) => {
               selectLanguage(v);

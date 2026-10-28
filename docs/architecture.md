@@ -147,6 +147,7 @@ way an eager bundler does, and `platformInstallOrder.test.ts` loads what
 | `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
 | `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
 | `haptics`       | The feedback an action gives when it runs                  | `HapticService` (react-native-haptic-feedback)     |
+| `reviewPrompt`  | Asks the OS for its rating prompt                          | `ReviewPromptModule` (StoreKit, Play In-App Review) |
 | `fileParts`     | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk          |
 | `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
 

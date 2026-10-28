@@ -1,11 +1,14 @@
 import type { NormalizedCacheObject } from '@apollo/client';
 import { storage } from '#/store/deviceStorage';
 import { Telemetry } from '#/services/telemetry';
+import { getResolvedLanguage } from '#/i18n';
 import { logger } from '#/utils/environment';
 import { scheduleIdle } from '#/utils/scheduleIdle';
 
 const CACHE_STORAGE_KEY = 'apollo-cache-v1';
 const CACHE_VERSION_KEY = 'apollo-cache-version';
+// Catalog names are answered in the request's language.
+const CACHE_LANGUAGE_KEY = 'apollo-cache-language';
 /**
  * The persisted SHAPE, not the app version. Bump it for a policy change unsafe
  * on old data, or a server change redefining persisted data: retired ids parse
@@ -161,12 +164,22 @@ class ApolloCachePersistence {
     this.pendingExtractor = null;
   }
 
+  /** The language the stored answers were given in; undefined when none are. */
+  storedLanguage(): string | undefined {
+    if (!storage.isReady()) return undefined;
+    return storage.getString(CACHE_LANGUAGE_KEY);
+  }
+
   /** Leaves nothing a later `load()` could restore. */
   clear(): void {
     if (!storage.isReady()) return;
     try {
       this.cancel();
-      for (const key of [CACHE_STORAGE_KEY, CACHE_VERSION_KEY]) {
+      for (const key of [
+        CACHE_STORAGE_KEY,
+        CACHE_VERSION_KEY,
+        CACHE_LANGUAGE_KEY,
+      ]) {
         storage.remove(key);
       }
       this.lastPersistedSnapshot = null;
@@ -216,6 +229,7 @@ class ApolloCachePersistence {
 
       storage.set(CACHE_STORAGE_KEY, cacheString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
+      storage.set(CACHE_LANGUAGE_KEY, getResolvedLanguage());
       const tWrite = performance.now();
       this.lastPersistedSnapshot = cache;
 

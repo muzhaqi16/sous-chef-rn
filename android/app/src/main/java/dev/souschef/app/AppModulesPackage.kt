@@ -19,6 +19,7 @@ class AppModulesPackage : ReactPackage {
     StartupMarkModule(reactContext),
     TextRecognitionModule(reactContext),
     ReceiptStructuringModule(reactContext),
+    ReviewPromptModule(reactContext),
     WindowBackgroundModule(reactContext),
   )
 

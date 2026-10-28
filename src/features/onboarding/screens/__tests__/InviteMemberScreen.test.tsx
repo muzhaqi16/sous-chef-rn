@@ -6,6 +6,10 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import type { EmailInput as EmailInputComponent } from '#components/molecules/EmailInput';
 import { InviteMemberScreen } from '../InviteMemberScreen';
+import {
+  initialOnboardingProgress,
+  useOnboardingProgressStore,
+} from '#features/onboarding/store/onboardingProgressStore';
 
 const mockNavigateToNextStep = jest.fn();
 // The verification gate is exercised in its own suite; here it always allows
@@ -123,6 +127,7 @@ describe('InviteMemberScreen', () => {
     mockSelectedHomeId = 'h1';
     mockSelectedShoppingListId = 'sl1';
     mockOfflineBannerCause = null;
+    useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
   });
 
   describe('offline', () => {
@@ -291,6 +296,54 @@ describe('InviteMemberScreen', () => {
 
     const { executeWithLoadingState } = require('#/utils/finallyHelpers');
     expect(executeWithLoadingState).toHaveBeenCalled();
+  });
+
+  describe('what the completion summary may say', () => {
+    // The loading wrapper is mocked, so each case runs the send it was handed.
+    const sendTo = async (emails: string[], refusedCount: number) => {
+      jest
+        .spyOn(
+          jest.requireActual(
+            '#features/onboarding/hooks/useSendOnboardingInvites',
+          ),
+          'useSendOnboardingInvites',
+        )
+        .mockReturnValue({
+          sendInvites: jest.fn().mockResolvedValue({ refusedCount }),
+        });
+      const user = userEvent.setup();
+      renderWithApollo(<InviteMemberScreen />);
+      for (const email of emails) {
+        fireEvent.changeText(
+          screen.getByPlaceholderText('Enter email address'),
+          email,
+        );
+        await user.press(screen.getByText('Add'));
+      }
+      await user.press(screen.getByText(/Send.*Invite/));
+      const { executeWithLoadingState } = jest.requireMock(
+        '#/utils/finallyHelpers',
+      );
+      const [send] = jest.mocked(executeWithLoadingState).mock.calls[0] as [
+        () => Promise<void>,
+      ];
+      await send();
+      return useOnboardingProgressStore.getState().invitesSent;
+    };
+
+    afterEach(() => jest.restoreAllMocks());
+
+    it('records invitations that were sent', async () => {
+      expect(await sendTo(['friend@test.com'], 0)).toBe(true);
+    });
+
+    it('records them when only some were refused', async () => {
+      expect(await sendTo(['a@test.com', 'b@test.com'], 1)).toBe(true);
+    });
+
+    it('records none when every address was refused', async () => {
+      expect(await sendTo(['friend@test.com'], 1)).toBe(false);
+    });
   });
 
   it('send button is disabled when no invites to send', () => {

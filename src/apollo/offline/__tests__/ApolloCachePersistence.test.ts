@@ -7,6 +7,7 @@ import {
 } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { storage } from '#/store/deviceStorage';
+import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 import { logger } from '#/utils/environment';
 
@@ -115,6 +116,20 @@ describe('ApolloCachePersistence', () => {
 
       expect(persisted()).toEqual(cache);
       expect(storage.getString(VERSION_KEY)).toBe(CURRENT_VERSION);
+    });
+
+    it('records the language its answers were given in', async () => {
+      const before = getResolvedLanguage();
+      await changeLanguage('it');
+      try {
+        expect(apolloCachePersistence.storedLanguage()).toBeUndefined();
+        schedule({ ROOT_QUERY: { __typename: 'Query' } });
+        settle();
+
+        expect(apolloCachePersistence.storedLanguage()).toBe('it');
+      } finally {
+        await changeLanguage(before);
+      }
     });
 
     it('debounces multiple rapid saves', () => {
@@ -410,6 +425,7 @@ describe('ApolloCachePersistence', () => {
       apolloCachePersistence.clear();
 
       expect(apolloCachePersistence.load()).toBeNull();
+      expect(apolloCachePersistence.storedLanguage()).toBeUndefined();
     });
   });
 });

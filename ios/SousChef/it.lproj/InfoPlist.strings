@@ -1,0 +1,6 @@
+"CFBundleDisplayName" = "Sous Chef";
+"NSCameraUsageDescription" = "Scatta foto degli articoli della dispensa e scansiona codici a barre e scontrini per aggiungere rapidamente prodotti al tuo inventario.";
+"NSFaceIDUsageDescription" = "Usa Face ID per accedere in modo sicuro con le credenziali salvate";
+"NSPhotoLibraryAddUsageDescription" = "Salva le foto dei tuoi articoli nella libreria foto.";
+"NSPhotoLibraryUsageDescription" = "Scegli foto dalla libreria per aggiungere immagini agli articoli della dispensa e alle ricette.";
+"NSUserNotificationsUsageDescription" = "Ricevi notifiche sulle scadenze della dispensa, sugli aggiornamenti delle liste della spesa e sugli inviti alla casa.";

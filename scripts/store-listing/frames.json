@@ -1,0 +1,296 @@
+{
+  "frames": [
+    {
+      "id": "today",
+      "shot": "today.png",
+      "tone": "light",
+      "copy": {
+        "en": {
+          "headline": "Your kitchen,<br><em>at a glance</em>",
+          "sub": "What's expiring, today's meals and recipes you can make now"
+        },
+        "es": {
+          "headline": "Tu cocina,<br><em>de un vistazo</em>",
+          "sub": "Lo que caduca, las comidas de hoy y recetas que puedes preparar ya"
+        },
+        "it": {
+          "headline": "La tua cucina,<br><em>a colpo d'occhio</em>",
+          "sub": "Cosa scade, i pasti di oggi e le ricette che puoi preparare subito"
+        },
+        "sq": {
+          "headline": "Kuzhina jote,<br><em>me një shikim</em>",
+          "sub": "Çfarë skadon, vaktet e sotme dhe recetat që mund të gatuash tani"
+        }
+      }
+    },
+    {
+      "id": "receipt",
+      "shot": "receipt.png",
+      "tone": "brand",
+      "copy": {
+        "en": {
+          "headline": "Scan a receipt.<br>Stock your pantry.",
+          "sub": "Items and prices are read for you. Check them, then add."
+        },
+        "es": {
+          "headline": "Escanea un recibo.<br>Llena tu despensa.",
+          "sub": "Reconocemos artículos y precios. Revísalos y añádelos."
+        },
+        "it": {
+          "headline": "Scansiona lo scontrino.<br>Riempi la dispensa.",
+          "sub": "Articoli e prezzi letti per te. Controllali e aggiungili."
+        },
+        "sq": {
+          "headline": "Skano faturën.<br>Mbush qilarin.",
+          "sub": "Artikujt dhe çmimet lexohen për ty. Kontrolloji dhe shtoji."
+        }
+      }
+    },
+    {
+      "id": "pantry",
+      "shot": "pantry.png",
+      "tone": "light",
+      "copy": {
+        "en": {
+          "headline": "Use it <em>before</em><br><em>it spoils</em>",
+          "sub": "Fridge, freezer and pantry, sorted by what expires next"
+        },
+        "es": {
+          "headline": "Úsalo <em>antes</em><br><em>de que caduque</em>",
+          "sub": "Nevera, congelador y despensa, ordenados por lo que caduca antes"
+        },
+        "it": {
+          "headline": "Usalo <em>prima</em><br><em>che scada</em>",
+          "sub": "Frigo, congelatore e dispensa, in ordine di scadenza"
+        },
+        "sq": {
+          "headline": "Përdore <em>para se</em><br><em>të skadojë</em>",
+          "sub": "Frigoriferi, ngrirja dhe qilari, sipas asaj që skadon më parë"
+        }
+      }
+    },
+    {
+      "id": "recipe",
+      "shot": "recipe.png",
+      "tone": "light",
+      "copy": {
+        "en": {
+          "headline": "Cook with<br><em>what you have</em>",
+          "sub": "Recipe ideas from your pantry, with nutrition at a glance"
+        },
+        "es": {
+          "headline": "Cocina con<br><em>lo que tienes</em>",
+          "sub": "Ideas de recetas según tu despensa, con su información nutricional"
+        },
+        "it": {
+          "headline": "Cucina con<br><em>ciò che hai</em>",
+          "sub": "Idee di ricette dalla tua dispensa, con i valori nutrizionali"
+        },
+        "sq": {
+          "headline": "Gatuaj me<br><em>atë që ke</em>",
+          "sub": "Ide recetash nga qilari yt, me vlerat ushqyese"
+        }
+      }
+    },
+    {
+      "id": "mealplan",
+      "shot": "mealplan.png",
+      "tone": "light",
+      "copy": {
+        "en": {
+          "headline": "Plan the week,<br><em>shop the plan</em>",
+          "sub": "Breakfast to dinner, then turn it into a shopping list"
+        },
+        "es": {
+          "headline": "Planifica la semana,<br><em>compra lo justo</em>",
+          "sub": "Del desayuno a la cena, y luego conviértelo en una lista de compras"
+        },
+        "it": {
+          "headline": "Pianifica la settimana,<br><em>compra il giusto</em>",
+          "sub": "Dalla colazione alla cena, poi trasformalo in una lista della spesa"
+        },
+        "sq": {
+          "headline": "Planifiko javën,<br><em>bli sipas planit</em>",
+          "sub": "Nga mëngjesi te darka, pastaj ktheje në një listë blerjesh"
+        }
+      }
+    },
+    {
+      "id": "list",
+      "shot": "list.png",
+      "tone": "light",
+      "copy": {
+        "en": {
+          "headline": "One list for the<br><em>whole household</em>",
+          "sub": "Share lists that stay in sync as everyone shops"
+        },
+        "es": {
+          "headline": "Una lista para<br><em>todo tu hogar</em>",
+          "sub": "Listas compartidas que se sincronizan mientras todos compran"
+        },
+        "it": {
+          "headline": "Una lista per<br><em>tutta la famiglia</em>",
+          "sub": "Liste condivise che restano sincronizzate mentre fate la spesa"
+        },
+        "sq": {
+          "headline": "Një listë për<br><em>gjithë familjen</em>",
+          "sub": "Lista të përbashkëta që sinkronizohen ndërsa të gjithë blejnë"
+        }
+      }
+    },
+    {
+      "id": "add",
+      "shot": "addmenu.png",
+      "tone": "light",
+      "copy": {
+        "en": {
+          "headline": "Add food<br><em>your way</em>",
+          "sub": "Scan a barcode or a receipt, search, or type it in"
+        },
+        "es": {
+          "headline": "Añade alimentos<br><em>a tu manera</em>",
+          "sub": "Escanea un código de barras o un recibo, busca o escríbelo"
+        },
+        "it": {
+          "headline": "Aggiungi alimenti<br><em>a modo tuo</em>",
+          "sub": "Scansiona un codice a barre o uno scontrino, cerca o scrivilo"
+        },
+        "sq": {
+          "headline": "Shto ushqime<br><em>si të duash</em>",
+          "sub": "Skano barkodin ose faturën, kërko ose shkruaje"
+        }
+      }
+    },
+    {
+      "id": "dark",
+      "shot": "today-dark.png",
+      "tone": "dark",
+      "copy": {
+        "en": {
+          "headline": "Light or dark,<br><em>your call</em>",
+          "sub": "Plus accent colors, text size and high contrast"
+        },
+        "es": {
+          "headline": "Claro u oscuro,<br><em>tú eliges</em>",
+          "sub": "Además, colores de acento, tamaño de texto y alto contraste"
+        },
+        "it": {
+          "headline": "Chiaro o scuro,<br><em>scegli tu</em>",
+          "sub": "In più colori d'accento, dimensione del testo e contrasto elevato"
+        },
+        "sq": {
+          "headline": "E çelët apo e errët,<br><em>zgjidh ti</em>",
+          "sub": "Plus ngjyra theksi, madhësia e tekstit dhe kontrast i lartë"
+        }
+      }
+    }
+  ],
+  "featureGraphic": {
+    "shots": ["pantry.png", "today.png"],
+    "copy": {
+      "en": {
+        "title": "Sous Chef",
+        "tagline": "Pantry, recipes and meal plans for your whole household"
+      },
+      "es": {
+        "title": "Sous Chef",
+        "tagline": "Despensa, recetas y planes de comidas para todo tu hogar"
+      },
+      "it": {
+        "title": "Sous Chef",
+        "tagline": "Dispensa, ricette e piani pasti per tutta la famiglia"
+      },
+      "sq": {
+        "title": "Sous Chef",
+        "tagline": "Qilari, recetat dhe planet e vakteve për gjithë familjen"
+      }
+    }
+  },
+  "header": {
+    "shots": ["pantry.png", "today.png", "receipt.png"],
+    "copy": {
+      "en": {
+        "tagline": "Track your pantry.<br>Cook what you have.<br>Shop what you need."
+      },
+      "es": {
+        "tagline": "Controla tu despensa.<br>Cocina con lo que tienes.<br>Compra lo que necesitas."
+      },
+      "it": {
+        "tagline": "Gestisci la dispensa.<br>Cucina con ciò che hai.<br>Compra ciò che serve."
+      }
+    }
+  },
+  "customProductPages": {
+    "receipts": [
+      "receipt",
+      "add",
+      "pantry",
+      "today",
+      "recipe",
+      "mealplan",
+      "list",
+      "dark"
+    ],
+    "expiry": [
+      "pantry",
+      "today",
+      "recipe",
+      "add",
+      "receipt",
+      "mealplan",
+      "list",
+      "dark"
+    ],
+    "meal-plan": [
+      "mealplan",
+      "recipe",
+      "list",
+      "today",
+      "pantry",
+      "receipt",
+      "add",
+      "dark"
+    ],
+    "shared-list": [
+      "list",
+      "mealplan",
+      "pantry",
+      "receipt",
+      "today",
+      "recipe",
+      "add",
+      "dark"
+    ]
+  },
+  "demoNames": {
+    "_note": "What the demo account's home, pantry, plan, list and storage spots (Pantry, Counter, Freezer, Fridge) are called while a language is captured; English after.",
+    "en": {
+      "home": "Our Kitchen",
+      "pantry": "Kitchen",
+      "plan": "This week",
+      "list": "Weekly groceries",
+      "storage": ["Pantry", "Counter", "Freezer", "Fridge"]
+    },
+    "es": {
+      "home": "Nuestra cocina",
+      "pantry": "Cocina",
+      "plan": "Esta semana",
+      "list": "Compra semanal",
+      "storage": ["Despensa", "Encimera", "Congelador", "Nevera"]
+    },
+    "it": {
+      "home": "La nostra cucina",
+      "pantry": "Cucina",
+      "plan": "Questa settimana",
+      "list": "Spesa settimanale",
+      "storage": ["Dispensa", "Bancone", "Congelatore", "Frigo"]
+    },
+    "sq": {
+      "home": "Kuzhina jonë",
+      "pantry": "Kuzhina",
+      "plan": "Kjo javë",
+      "list": "Pazari i javës",
+      "storage": ["Qilari", "Banaku", "Ngrirësi", "Frigoriferi"]
+    }
+  }
+}

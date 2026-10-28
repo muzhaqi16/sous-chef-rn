@@ -24,6 +24,9 @@ import {
   type CheckInLineToSend,
   type ReceiptToCheckIn,
 } from '../useReceiptCheckIn';
+import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+
+jest.mock('#/domain/reviewPrompt');
 
 const PANTRY_ID = 'pantry-1';
 
@@ -70,6 +73,8 @@ const checkInIds = () =>
   useReceiptDraftStore.getState().draft?.checkIn?.ids ?? [];
 
 describe('useReceiptCheckIn', () => {
+  beforeEach(() => jest.mocked(askForReviewAfterSuccess).mockClear());
+
   it('shows every line in the pantry before the API answers, and keeps what it recorded', async () => {
     const cache = makeCache();
     const checkIn = answering();
@@ -95,6 +100,7 @@ describe('useReceiptCheckIn', () => {
     expect(shownBefore).toEqual(['PantryItem:pi-0', 'PantryItem:pi-1']);
     expect(pantryRows(cache)).toEqual(['PantryItem:pi-0', 'PantryItem:pi-1']);
     expect(outcome).toEqual({ status: 'recorded', added: [0, 1], failed: [] });
+    expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([0, 1]);
     const [fired] = checkIn.fired;
     expect(fired?.input).toMatchObject({
@@ -210,6 +216,7 @@ describe('useReceiptCheckIn', () => {
     expect(pantryRows(cache)).toEqual([]);
     expect(outcome).toMatchObject({ status: 'refused' });
     // Back to send again: nothing counts as added.
+    expect(askForReviewAfterSuccess).not.toHaveBeenCalled();
     expect(useReceiptDraftStore.getState().draft?.added).toEqual([]);
   });
 

@@ -12,6 +12,7 @@ import {
   isNetworkWithheld,
 } from '#store/slices/networkSlice';
 import { queueManager } from './offlineQueue/queueManager';
+import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { LogoutCleanup } from './logoutCleanup';
 import { isLiveChannelOpen, onWebSocketReconnected } from './links/wsLink';
 import { Telemetry } from '#services/telemetry';
@@ -103,15 +104,23 @@ const canCatchUp = (): boolean =>
 
 // Catalog names come in the request's language, so a switch re-reads the
 // screen and each later navigation catches up the rest. Only a real change
-// counts: i18next repeats the language, and rehydration precedes queries.
+// counts: i18next repeats the language. The language rehydration applies is
+// compared with the persisted answers', as the device's can change between
+// launches; with none persisted, a switch before any query finds nothing stale.
 const languageChanged = (client: ApolloClient) => () =>
   new Observable<RefetchEvents['languageChanged']>(observer => {
-    let current = getResolvedLanguage();
+    let current =
+      apolloCachePersistence.storedLanguage() ?? getResolvedLanguage();
     return onLanguageChanged(() => {
       const next = getResolvedLanguage();
       if (next === current) return;
       current = next;
-      if (client.getObservableQueries('all').size === 0) return;
+      if (
+        apolloCachePersistence.storedLanguage() === undefined &&
+        client.getObservableQueries('all').size === 0
+      ) {
+        return;
+      }
       // What was answered before the switch is in the old language.
       startAnswersForSwitch();
       catchUpOnNavigation();

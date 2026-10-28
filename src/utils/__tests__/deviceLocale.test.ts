@@ -1,4 +1,5 @@
 import {
+  deviceLanguage,
   getDeviceDecimalSeparator,
   resetDeviceLocaleCache,
 } from '../deviceLocale';
@@ -63,5 +64,72 @@ describe('getDeviceDecimalSeparator', () => {
     // is the point: this must not re-resolve on every keystroke.
     setNumberFormat(realNumberFormat);
     expect(getDeviceDecimalSeparator()).toBe(',');
+  });
+});
+
+describe('deviceLanguage', () => {
+  const SHIPPED = ['en', 'it', 'es', 'sq'] as const;
+  const realNavigator = Object.getOwnPropertyDescriptor(
+    globalThis,
+    'navigator',
+  );
+
+  /** The device as the app reads it: `navigator.language`, else `Intl`. */
+  function onDevice(navigatorLanguage: string | null, intlLocale?: string) {
+    Object.defineProperty(globalThis, 'navigator', {
+      configurable: true,
+      value:
+        navigatorLanguage === null
+          ? undefined
+          : { language: navigatorLanguage },
+    });
+    if (intlLocale !== undefined) {
+      jest.spyOn(Intl, 'DateTimeFormat').mockImplementation(
+        () =>
+          ({
+            resolvedOptions: () => {
+              if (intlLocale === 'throws') throw new Error('no Intl data');
+              return {
+                locale: intlLocale,
+              } as Intl.ResolvedDateTimeFormatOptions;
+            },
+          } as Intl.DateTimeFormat),
+      );
+    }
+  }
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+    if (realNavigator) {
+      Object.defineProperty(globalThis, 'navigator', realNavigator);
+    } else {
+      delete (globalThis as { navigator?: unknown }).navigator;
+    }
+  });
+
+  it.each([
+    ['es-MX', 'es'],
+    ['it-IT', 'it'],
+    ['sq-AL', 'sq'],
+    ['sq', 'sq'],
+    ['EN-gb', 'en'],
+  ])('a device in %s starts in %s', (locale, expected) => {
+    onDevice(locale);
+    expect(deviceLanguage(SHIPPED, 'en')).toBe(expected);
+  });
+
+  it('a language the app does not ship falls back', () => {
+    onDevice('de-DE');
+    expect(deviceLanguage(SHIPPED, 'en')).toBe('en');
+  });
+
+  it('reads Intl when the host has no navigator language', () => {
+    onDevice(null, 'it-CH');
+    expect(deviceLanguage(SHIPPED, 'en')).toBe('it');
+  });
+
+  it('falls back when neither source can say', () => {
+    onDevice(null, 'throws');
+    expect(deviceLanguage(SHIPPED, 'en')).toBe('en');
   });
 });

@@ -5,6 +5,10 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import { SelectPantryItems } from '../SelectPantryItems';
+import {
+  initialOnboardingProgress,
+  useOnboardingProgressStore,
+} from '#features/onboarding/store/onboardingProgressStore';
 
 const mockNavigateToNextStep = jest.fn();
 const mockNavigateToPreviousStep = jest.fn();
@@ -184,6 +188,7 @@ const onboardingMocks = {
 describe('SelectPantryItems', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
   });
 
   it('renders the title', async () => {
@@ -307,5 +312,7 @@ describe('SelectPantryItems', () => {
     });
     const { errorService } = jest.requireMock('#/services/errorService');
     expect(errorService.reportError).not.toHaveBeenCalled();
+    // The item is in the pantry either way, so the summary may say so.
+    expect(useOnboardingProgressStore.getState().pantryItemsAdded).toBe(true);
   });
 });

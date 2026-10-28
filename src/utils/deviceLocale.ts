@@ -55,6 +55,18 @@ export function getDeviceLocale(): string | null {
 }
 
 /**
+ * The interface language for a user who never picked one: the device's, when
+ * the app ships it ("es-MX" → "es"), else `fallback`.
+ */
+export function deviceLanguage<Language extends string>(
+  supported: readonly Language[],
+  fallback: Language,
+): Language {
+  const primary = getDeviceLocale()?.split('-')[0]?.toLowerCase();
+  return supported.find(language => language === primary) ?? fallback;
+}
+
+/**
  * Test-only: the values cannot change while the app runs.
  * @internal Test seam.
  */

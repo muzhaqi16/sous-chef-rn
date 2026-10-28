@@ -16,6 +16,7 @@ import { stampItemBoughtOnList } from '#features/shoppingList/cache/moveToPantry
 import { readIsPurchased } from '#features/shoppingList/cache/purchase';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { todayKey } from '#/utils/dateUtils';
 import { errorService } from '#/services/errorService';
@@ -384,8 +385,10 @@ export function useReceiptCheckIn(listId: string | undefined) {
     }
     if (queued) {
       setCheckInState('queued');
+      askForReviewAfterSuccess();
       return { status: 'queued' };
     }
+    if (added.length > 0) askForReviewAfterSuccess();
     return { status: 'recorded', added, failed };
   };
 

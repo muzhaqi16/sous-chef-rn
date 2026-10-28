@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View } from 'react-native';
 import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import {
   ModerationContentType,
   RecipeStatus,
@@ -143,6 +144,7 @@ const DetailsNotice: React.FC<{ details: RecipeDetails; saved: boolean }> = ({
 
 const RecipeDetailScreen: React.FC = () => {
   const { t } = useTranslation();
+  const showPrices = useBudgetAndPricesEnabled();
   useScreenTransition('RecipeDetail');
 
   const { toRecipeEdit, toRecipeDetail } = useAppNavigation();
@@ -661,6 +663,7 @@ const RecipeDetailScreen: React.FC = () => {
                     ingredient={ingredient}
                     isAdded={addedIngredients.has(ingredient.id)}
                     alerts={alerts}
+                    showPrice={showPrices}
                     onPress={() =>
                       alerts.length > 0
                         ? setOpenIngredient(ingredient)

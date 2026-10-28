@@ -52,6 +52,7 @@ import {
   catalogFetchKey,
   recordCatalogFetch,
 } from '#features/recipes/store/catalogFetchTimes';
+import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -241,6 +242,19 @@ describe('a session end leaves no data belonging to the previous person', () => 
       held: [],
     });
     expect(registeredSessionScopedStores()).toContain('recipeCaptures');
+  });
+
+  it("forgets what this account's onboarding did", async () => {
+    useOnboardingProgressStore.getState().recordPantryItemsAdded();
+    useOnboardingProgressStore.getState().recordInvitesSent();
+
+    await useStore.getState().endSession('signed_out');
+
+    expect(useOnboardingProgressStore.getState()).toMatchObject({
+      pantryItemsAdded: false,
+      invitesSent: false,
+    });
+    expect(registeredSessionScopedStores()).toContain('onboardingProgress');
   });
 
   it('forgets when this account fetched catalog recipes', async () => {

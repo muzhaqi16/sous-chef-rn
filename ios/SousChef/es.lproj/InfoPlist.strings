@@ -1,0 +1,6 @@
+"CFBundleDisplayName" = "Sous Chef";
+"NSCameraUsageDescription" = "Toma fotos de los artículos de tu despensa y escanea códigos de barras y recibos para añadir productos a tu inventario rápidamente.";
+"NSFaceIDUsageDescription" = "Usa Face ID para acceder de forma segura a tus datos de inicio de sesión guardados";
+"NSPhotoLibraryAddUsageDescription" = "Guarda fotos de tus artículos en tu fototeca.";
+"NSPhotoLibraryUsageDescription" = "Elige fotos de tu fototeca para añadir imágenes a los artículos de tu despensa y a tus recetas.";
+"NSUserNotificationsUsageDescription" = "Recibe notificaciones de caducidad de tu despensa, cambios en tus listas de compras e invitaciones a hogares.";

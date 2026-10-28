@@ -26,6 +26,7 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { Text } from '#components/atoms/Text';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';
 import { logValidationErrors } from '#/utils/validation/common';
 
 type InviteEntry = {
@@ -35,6 +36,7 @@ type InviteEntry = {
 
 export const InviteMemberScreen = () => {
   const { t } = useTranslation();
+  const { recordInvitesSent } = useRecordOnboardingProgress();
   useScreenTransition('InviteMemberScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
   const user = useUser();
@@ -121,6 +123,8 @@ export const InviteMemberScreen = () => {
             },
           );
 
+          // Partly refused still invited someone, which the summary may say.
+          if (refusedCount < invites.length) recordInvitesSent();
           if (refusedCount > 0) {
             reportPartialSuccess();
             return;

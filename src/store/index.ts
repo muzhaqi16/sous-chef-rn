@@ -44,6 +44,7 @@ import { storage, zustandStorage } from '#/store/deviceStorage';
 import { STORAGE_KEY } from '#/store/persistedKeys';
 import { pickFresherSessionTokens } from '#/services/auth/sessionTokens';
 import { requirePlatform } from '#platform/install';
+import { deviceLanguage } from '#/utils/deviceLocale';
 import { logger } from '#/utils/environment';
 import { errorService } from '#/services/errorService';
 import { setTelemetryStateSource } from '#services/telemetry/telemetryState';
@@ -135,16 +136,23 @@ export const handleStoreRehydration = (
     state.preferredCurrency = recordCurrency;
   }
 
-  // Before `isHydrated`, so the first paint is in the user's language. Lazy —
-  // `#/i18n` pulls in `i18n/config`, which has load-time side effects.
-  const language = state?.language;
-  if (language && language !== 'en') {
-    void import('#/i18n')
-      .then(({ changeLanguage }) => {
-        void changeLanguage(language);
-      })
-      .catch(error => logger.warn('Loading the stored language failed', error));
-  }
+  // Before `isHydrated`, so the first paint is in the user's language: their
+  // pick, else the device's. The device's is never stored, so it is followed
+  // until the user picks. Applied even when it is `en`, the starting language:
+  // the cache may hold answers from a launch in another. Lazy — `i18n/config`
+  // has load-time side effects.
+  const picked = state?.language;
+  void Promise.all([import('#/i18n'), import('#/i18n/config')])
+    .then(([{ changeLanguage }, { SUPPORTED_LANGUAGES }]) =>
+      changeLanguage(
+        picked ??
+          deviceLanguage(
+            SUPPORTED_LANGUAGES.map(option => option.value),
+            'en',
+          ),
+      ),
+    )
+    .catch(error => logger.warn('Applying the app language failed', error));
 
   void hydrateSessionTokensThenFinish(state);
 

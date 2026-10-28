@@ -16,6 +16,7 @@ import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { languageLink } from '../links/languageLink';
 import { createOfflineModeLink } from '../links/offlineModeLink';
+import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
 import {
   announceHouseholdLeft,
   connectResyncSources,
@@ -735,6 +736,56 @@ describe('resync', () => {
 
       expect(requests).toEqual([]);
       expect(navigationListeners.size).toBe(0);
+    });
+
+    // The device's language can change between launches: rehydration applies
+    // it before any query exists, over answers persisted in the last one's.
+    describe('at a launch over a persisted cache', () => {
+      const launch = () => {
+        watchers.splice(0).forEach(watcher => watcher.unsubscribe());
+        connectResyncSources(client, { onNavigation });
+      };
+      const openFirstScreen = () =>
+        watchers.push(
+          client
+            .watchQuery({ query: ListQuery, fetchPolicy: 'cache-first' })
+            .subscribe(() => {}),
+        );
+
+      beforeEach(() => {
+        apolloCachePersistence.scheduleExtractAndSave(() => ({}));
+        apolloCachePersistence.flushPending();
+      });
+
+      afterEach(() => {
+        apolloCachePersistence.clear();
+      });
+
+      it('re-asks the first screen when the answers are in another language', async () => {
+        launch();
+        triggers.languageChanged();
+        openFirstScreen();
+        await elapse(0);
+        expect(requests).toEqual([]);
+
+        await pastTheWindow();
+        expect(requests).toEqual(['ListForResync']);
+      });
+
+      it('asks nothing when rehydration applies the answers’ language', async () => {
+        const persistedIn = getResolvedLanguage();
+        // The language i18next starts in, before rehydration applies the pick.
+        watchers.splice(0).forEach(watcher => watcher.unsubscribe());
+        void changeLanguage(persistedIn === 'es' ? 'en' : 'es');
+        await pastTheWindow();
+        launch();
+        void changeLanguage(persistedIn);
+        openFirstScreen();
+        await pastTheWindow();
+
+        expect(requests).toEqual([]);
+        expect(navigationListeners.size).toBe(0);
+      });
     });
 
     it('never re-asks a query that declined resync', async () => {
