@@ -25,9 +25,6 @@ export function useAddItemSheetState({
   // Deferred fetch state - delays query execution until sheet animation completes
   const [shouldFetch, setShouldFetch] = useState(false);
 
-  // Track items currently animating out
-  const [exitingItems, setExitingItems] = useState<Set<string>>(new Set());
-
   // Deferred rendering — waits for sheet animation to finish before rendering suggestions
   const [shouldRenderSuggestions, setShouldRenderSuggestions] = useState(false);
 
@@ -42,7 +39,6 @@ export function useAddItemSheetState({
     if (visible && contextId) {
       // Reset state on open
       setSearchQuery('');
-      setExitingItems(new Set());
       setShouldRenderSuggestions(false);
       if (!deferFetch) {
         setShouldFetch(true);
@@ -71,27 +67,10 @@ export function useAddItemSheetState({
     }
   }, [visible, contextId, deferFetch]);
 
-  // Start exit animation for an item
-  const startExitAnimation = (itemId: string) => {
-    setExitingItems(prev => new Set(prev).add(itemId));
-  };
-
-  // Complete exit animation and remove from tracking
-  const completeExitAnimation = (itemId: string) => {
-    setExitingItems(prev => {
-      const next = new Set(prev);
-      next.delete(itemId);
-      return next;
-    });
-  };
-
   return {
     searchQuery,
     setSearchQuery,
     shouldFetch,
     shouldRenderSuggestions,
-    exitingItems,
-    startExitAnimation,
-    completeExitAnimation,
   };
 }

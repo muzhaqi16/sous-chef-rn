@@ -457,6 +457,10 @@ permanent cache write):**
 - **Shopping:** add (every add surface — `useAddShoppingItem`, `AddToShoppingListSheet`, `AddEditItem`,
   barcode, filtered-pantry, pantry-item-detail, recipe single + batch), remove, toggle-purchased, update,
   quantity ±, reorder/move.
+- **Suggestions:** dismiss and undo a dismissal (`useSuggestionDismissal`: `MarkSuggestionDismissed`,
+  `MarkSuggestionActive`). The add sheet takes the suggestion out of its cached sections first and puts
+  back exactly that entry on a refusal or Undo, never a refetch. Both writes are idempotent on the API,
+  and Undo is sent only after the dismissal settles, so a queued pair replays in order.
 - **Shopping list create** (`useCreateShoppingList`) — the list itself. Plain-create tier: the queue
   replays the original `CreateShoppingList` keyed by the client-minted `input.id`; a duplicate replay
   returns `ConflictError(code: IDEMPOTENT_REPLAY)`, which the queue converges — the first attempt's row

@@ -16,6 +16,11 @@ interface ListItemProps {
   children?: React.ReactNode;
   /** A pressable row's spoken label; title, subtitle and badge when absent. */
   accessibilityLabel?: string;
+  /**
+   * Replaces the pressable row's "Tap to view details" for a row whose tap does
+   * something else; empty when its label already says what the tap does.
+   */
+  accessibilityHint?: string;
   title?: string;
   /** Max lines for the title before truncating. Defaults to 2. */
   titleNumberOfLines?: number;
@@ -35,6 +40,7 @@ interface ListItemProps {
 const ListItemComponent: React.FC<ListItemProps> = ({
   children,
   accessibilityLabel,
+  accessibilityHint,
   title,
   titleNumberOfLines = 2,
   subtitle,
@@ -116,7 +122,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
             accessibilityLabel ??
             accessibilityLabelOf(title, subtitleText, badge?.text)
           }
-          accessibilityHint={t('labels.tapToViewDetails')}
+          accessibilityHint={accessibilityHint ?? t('labels.tapToViewDetails')}
           accessibilityState={{ disabled: isPurchased }}
         >
           {content}

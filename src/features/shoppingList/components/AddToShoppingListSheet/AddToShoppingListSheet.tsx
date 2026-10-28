@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useTranslation } from '#/i18n';
 import type { ShoppingListSuggestionItem } from '#features/shoppingList/hooks/useShoppingListSuggestions';
 import {
@@ -42,10 +42,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   onItemAdded,
 }) => {
   const { t } = useTranslation();
-  const { addItem, removeSuggestion, adding } = useAddToShoppingList({
-    shoppingListId,
-    suggestionsLimit: SHOPPING_SUGGESTIONS_LIMIT,
-  });
+  const { addItem, removeSuggestion, restoreSuggestion } = useAddToShoppingList(
+    {
+      shoppingListId,
+      suggestionsLimit: SHOPPING_SUGGESTIONS_LIMIT,
+    },
+  );
   const showImages = useShowShoppingListImages();
   const tutorial = useShoppingListTutorial();
 
@@ -66,8 +68,12 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Dismiss a junk/unwanted suggestion from the SHOPPING surface.
   const { dismissSuggestion } = useSuggestionDismissal(
     SuggestionSurface.Shopping,
-    suggestionsResult.refetch,
+    { remove: removeSuggestion, restore: restoreSuggestion },
   );
+
+  // Items whose add is in flight: a second tap on the same one is dropped, a
+  // tap on another goes ahead.
+  const pendingItemIds = useRef(new Set<string>());
 
   // Keep the sheet "open" across the barcode navigation so the user lands
   // back on it if they cancel. useStandardBottomSheet dismisses the underlying
@@ -89,21 +95,31 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     onClose();
   };
 
-  // Quick add from the search autocomplete.
-  const handleQuickAddSearchSuggestion = async (item: ItemSuggestion) => {
-    if (!shoppingListId || adding) return;
-
-    // The toast fires ahead of the result: a queued create has none to wait for.
+  /**
+   * Adds one catalog item, taking it off the suggestion lists at once. The
+   * toast fires ahead of the result: a queued create has none to wait for.
+   */
+  const quickAdd = async (item: {
+    itemId: string;
+    name: string;
+    unitId: string | undefined;
+  }) => {
+    if (!shoppingListId || pendingItemIds.current.has(item.itemId)) return;
+    pendingItemIds.current.add(item.itemId);
+    const removal = removeSuggestion(item.itemId);
     toastService.success(
       t(shoppingListSheetConfig.quickAdd.toastMessageKey, { name: item.name }),
     );
 
     const outcome = await addItem({
-      itemId: item.id,
+      itemId: item.itemId,
       itemName: item.name,
-      unitId: item.defaultUnit?.id,
+      unitId: item.unitId,
     });
+    pendingItemIds.current.delete(item.itemId);
     if (outcome === 'reverted') {
+      // Put the tile back and correct the toast that already fired.
+      restoreSuggestion(removal);
       toastService.error(t('errors.addItemFailedRetry'));
       return;
     }
@@ -111,51 +127,22 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     tutorial?.notifyItemAdded();
   };
 
-  // Quick add from a suggestion tile, which animates out as it goes.
-  const handleQuickAddSuggestion = async (
-    shoppingItem: ShoppingListSuggestionItem,
-  ) => {
-    if (
-      !shoppingListId ||
-      adding ||
-      state.exitingItems.has(shoppingItem.itemId)
-    )
-      return;
+  const handleQuickAddSearchSuggestion = (item: ItemSuggestion) =>
+    quickAdd({
+      itemId: item.id,
+      name: item.name,
+      unitId: item.defaultUnit?.id,
+    });
 
-    state.startExitAnimation(shoppingItem.itemId);
-    toastService.success(
-      t(shoppingListSheetConfig.quickAdd.toastMessageKey, {
-        name: shoppingItem.name,
-      }),
-    );
-
-    const outcome = await addItem({
+  const handleQuickAddSuggestion = (shoppingItem: ShoppingListSuggestionItem) =>
+    quickAdd({
       itemId: shoppingItem.itemId,
-      itemName: shoppingItem.name,
+      name: shoppingItem.name,
       // The API's one-tap unit: an Add Again row's own unit, else the item's.
       unitId: shoppingItem.defaultUnitId ?? undefined,
     });
-    if (outcome === 'reverted') {
-      // Put the tile back and correct the toast that already fired.
-      state.completeExitAnimation(shoppingItem.itemId);
-      toastService.error(t('errors.addItemFailedRetry'));
-      return;
-    }
-    onItemAdded?.();
-    tutorial?.notifyItemAdded();
-  };
 
-  // Handle exit animation complete
-  const handleExitComplete = (itemId: string) => {
-    removeSuggestion(itemId);
-    state.completeExitAnimation(itemId);
-  };
-
-  // Dismiss a suggestion: animate it out (cache removal happens on exit
-  // complete, shared with quick-add) and persist the dismissal server-side.
   const handleDismissSuggestion = (item: ShoppingListSuggestionItem) => {
-    if (state.exitingItems.has(item.itemId)) return;
-    state.startExitAnimation(item.itemId);
     dismissSuggestion({ itemId: item.itemId, name: item.name });
   };
 
@@ -200,11 +187,8 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
       onDismissSuggestion={handleDismissSuggestion}
-      isMutating={adding}
       onAddManually={handleAddManually}
       startStep={startStep}
-      exitingItems={state.exitingItems}
-      onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
       showImages={showImages}

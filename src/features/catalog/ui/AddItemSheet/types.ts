@@ -24,9 +24,6 @@ export interface SuggestionGroupConfig<
 }
 
 export interface QuickAddConfig {
-  /** Toast without awaiting the mutation. */
-  fireAndForget: boolean;
-  enableExitAnimations: boolean;
   /** Interpolates `{{name}}`. */
   toastMessageKey: TranslationKey;
 }
@@ -71,15 +68,12 @@ export interface AddItemSheetProps<
   onQuickAddSuggestion: (item: T) => void;
   /** Hides the suggestion from this surface. */
   onDismissSuggestion?: (item: T) => void;
-  isMutating: boolean;
   onAddManually: (searchValue: string) => void;
   /**
    * The step the sheet opens on. `details` is the + menu's "Add manually": the
    * sheet opens on the form, after asking `onAddManually('')` to prep it.
    */
   startStep?: 'search' | 'details';
-  exitingItems?: Set<string>;
-  onExitComplete?: (itemId: string) => void;
   shouldFetch?: boolean;
   initialSearchQuery?: string;
   bottomSheetRef?: RefObject<BottomSheetModalRef>;
@@ -102,7 +96,4 @@ export interface AddItemSheetState {
   /** Deferred until after the sheet's open animation. */
   shouldFetch: boolean;
   shouldRenderSuggestions: boolean;
-  exitingItems: Set<string>;
-  startExitAnimation: (itemId: string) => void;
-  completeExitAnimation: (itemId: string) => void;
 }

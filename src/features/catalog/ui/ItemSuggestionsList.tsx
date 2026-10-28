@@ -1,12 +1,15 @@
 import { View } from 'react-native';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
+import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
+import { RowCard } from '#components/atoms/RowCard';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
-import { resolveImageUrl } from '#utils/imageUtils';
 import { Text } from '#components/atoms/Text';
+import { ListItem } from '#components/molecules/ListItem';
+import { resolveImageUrl } from '#utils/imageUtils';
 import { useTranslation } from '#/i18n';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
+import { QuickAddButton } from '#features/catalog/components/QuickAddButton';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
 interface ItemSuggestionsListProps {
@@ -14,8 +17,6 @@ interface ItemSuggestionsListProps {
   searchQuery: string;
   /** Autocomplete suggestions from the API */
   suggestions: ItemSuggestion[];
-  /** Whether suggestions are currently loading (kept for potential future use) */
-  loading?: boolean;
   /** Position of the "Add manually" option */
   addManuallyPosition: 'top' | 'bottom';
   /** Sheet's testID prefix; names the "Add manually" row for e2e. */
@@ -24,8 +25,6 @@ interface ItemSuggestionsListProps {
   onAddManually: () => void;
   /** Callback when a suggestion is selected */
   onSelectSuggestion: (item: ItemSuggestion) => void;
-  /** Whether quick add is disabled (e.g., during mutation) */
-  quickAddDisabled?: boolean;
   /** Whether to show brand names (default: true) */
   showBrands?: boolean;
   /** When false, rows show no photo even when they have one */
@@ -37,59 +36,39 @@ interface ItemSuggestionsListProps {
 
 interface SuggestionRowProps {
   item: ItemSuggestion;
-  isLast: boolean;
   onSelectSuggestion: (item: ItemSuggestion) => void;
-  quickAddDisabled: boolean;
   showBrands: boolean;
   showImages: boolean;
 }
 
 const SuggestionRow = ({
   item,
-  isLast,
   onSelectSuggestion,
-  quickAddDisabled,
   showBrands,
   showImages,
 }: SuggestionRowProps) => {
   const { t } = useTranslation();
-  const imageUrl = resolveImageUrl(item);
-  const handlePress = () => onSelectSuggestion(item);
-
-  styles.useVariants({ withBorder: !isLast, disabled: quickAddDisabled });
 
   return (
-    <View style={styles.suggestionItem}>
-      {!!showImages && <RowThumbnail uri={imageUrl} />}
-      <View style={styles.suggestionInfo}>
-        <Text role="bodyStrong" numberOfLines={1}>
-          {item.name}
-        </Text>
-        {!!showBrands && item.brands.length > 0 && (
-          <Text
-            role="caption"
-            tone="secondary"
-            style={styles.suggestionBrands}
-            numberOfLines={1}
-          >
-            {item.brands[0]?.name}
-          </Text>
-        )}
-      </View>
-      <AppPressable
-        style={styles.quickAddButton}
-        onPress={handlePress}
-        accessibilityLabel={t('a11y.quickAdd', { name: item.name })}
-        disabled={quickAddDisabled}
-      >
-        <Icon name="add" size={20} tone="primary" />
-      </AppPressable>
-    </View>
+    <RowCard>
+      <ListItem
+        title={item.name}
+        subtitle={showBrands ? item.brands[0]?.name : undefined}
+        leftElement={
+          showImages ? <RowThumbnail uri={resolveImageUrl(item)} /> : null
+        }
+        rightElement={
+          <QuickAddButton
+            onPress={() => onSelectSuggestion(item)}
+            accessibilityLabel={t('a11y.quickAdd', { name: item.name })}
+          />
+        }
+      />
+    </RowCard>
   );
 };
 
 interface AddManuallyOptionProps {
-  isLast: boolean;
   hasResults: boolean;
   searchQuery: string;
   onPress: () => void;
@@ -97,19 +76,16 @@ interface AddManuallyOptionProps {
 }
 
 const AddManuallyOption = ({
-  isLast,
   hasResults,
   searchQuery,
   onPress,
   testIDPrefix,
 }: AddManuallyOptionProps) => {
   const { t } = useTranslation();
-  styles.useVariants({ withBorder: !isLast, disabled: false });
 
   return (
     <AppPressable
-      key="add-manually"
-      style={styles.addManuallyOption}
+      style={styles.action}
       onPress={onPress}
       testID={catalogTestIDs.addManuallyButton(testIDPrefix)}
     >
@@ -123,14 +99,14 @@ const AddManuallyOption = ({
   );
 };
 
-// No `styles.useVariants` here, unlike the rows above: `reportOption` declares
-// no variants, so selecting them would be a no-op.
+// Secondary tone throughout so it doesn't compete with the accent-toned
+// "Add manually" call to action directly above it.
 const ReportItemOption = ({ onPress }: { onPress: () => void }) => {
   const { t } = useTranslation();
 
   return (
     <AppPressable
-      style={styles.reportOption}
+      style={styles.action}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={t('reportItem.footer')}
@@ -150,53 +126,36 @@ export const ItemSuggestionsList = ({
   testIDPrefix,
   onAddManually,
   onSelectSuggestion,
-  quickAddDisabled = false,
   showBrands = true,
   showImages = true,
   onReportItem,
 }: ItemSuggestionsListProps) => {
   const hasResults = suggestions.length > 0;
-
-  // Render "Add manually" option
-  const renderAddManually = (isLast: boolean) => {
-    return (
-      <AddManuallyOption
-        isLast={isLast}
-        hasResults={hasResults}
-        searchQuery={searchQuery}
-        onPress={onAddManually}
-        testIDPrefix={testIDPrefix}
-      />
-    );
-  };
-
-  // Only rendered with results behind it — with none there is nothing to report.
+  // With no results there is nothing to report.
   const showReportOption = !!onReportItem && hasResults;
+
+  const addManually = (
+    <AddManuallyOption
+      hasResults={hasResults}
+      searchQuery={searchQuery}
+      onPress={onAddManually}
+      testIDPrefix={testIDPrefix}
+    />
+  );
 
   return (
     <View style={styles.container}>
-      {addManuallyPosition === 'top' && renderAddManually(!hasResults)}
-      {suggestions.map((item, index) => {
-        // `isLast` drops the row's separator, so it means "nothing follows me"
-        // rather than "last suggestion" — with add-manually or the report row
-        // below, the separator has to stay.
-        const isLast =
-          addManuallyPosition === 'top' &&
-          index === suggestions.length - 1 &&
-          !showReportOption;
-        return (
-          <SuggestionRow
-            key={item.id}
-            item={item}
-            isLast={isLast}
-            onSelectSuggestion={onSelectSuggestion}
-            quickAddDisabled={quickAddDisabled}
-            showBrands={showBrands}
-            showImages={showImages}
-          />
-        );
-      })}
-      {addManuallyPosition === 'bottom' && renderAddManually(!showReportOption)}
+      {addManuallyPosition === 'top' && addManually}
+      {suggestions.map(item => (
+        <SuggestionRow
+          key={item.id}
+          item={item}
+          onSelectSuggestion={onSelectSuggestion}
+          showBrands={showBrands}
+          showImages={showImages}
+        />
+      ))}
+      {addManuallyPosition === 'bottom' && addManually}
       {!!showReportOption && <ReportItemOption onPress={onReportItem} />}
     </View>
   );
@@ -204,69 +163,15 @@ export const ItemSuggestionsList = ({
 
 const styles = StyleSheet.create(theme => ({
   container: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
     marginBottom: theme.spacing.lg,
-    overflow: 'hidden',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
   },
-  suggestionItem: {
+  // A plain action beside the cards, its content in line with theirs.
+  action: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: theme.spacing.md,
     gap: theme.layout.rowSlotGap,
-    // A row without a photo stands as tall as one with.
-    minHeight: theme.sizes.itemCard.compact.image + theme.spacing.md * 2,
-    variants: {
-      withBorder: {
-        true: {
-          borderBottomWidth: theme.borderWidth.hairline,
-          borderBottomColor: theme.colors.border,
-        },
-      },
-    },
-  },
-  suggestionInfo: {
-    flex: 1,
-  },
-  suggestionBrands: {
-    marginTop: theme.spacing['2xs'],
-  },
-  quickAddButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-    variants: {
-      disabled: {
-        true: { opacity: theme.opacity.disabled },
-      },
-    },
-  },
-  addManuallyOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
-    variants: {
-      withBorder: {
-        true: {
-          borderBottomWidth: theme.borderWidth.hairline,
-          borderBottomColor: theme.colors.border,
-        },
-      },
-    },
-  },
-  // Secondary tone throughout so it doesn't compete with the accent-toned
-  // "Add manually" call to action directly above it.
-  reportOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: theme.spacing.md,
-    gap: theme.spacing.sm,
+    paddingVertical: theme.layout.rowInset,
+    paddingHorizontal: theme.layout.rowInsetHorizontal,
+    minHeight: theme.sizes.touchTarget.min,
   },
 }));

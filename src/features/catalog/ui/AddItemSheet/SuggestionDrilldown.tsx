@@ -1,13 +1,33 @@
 import React from 'react';
-import { View } from 'react-native';
+import { View, type CellRendererProps } from 'react-native';
 import { BottomSheetFlatList } from '@gorhom/bottom-sheet';
+import Animated, {
+  LayoutAnimationConfig,
+  LinearTransition,
+} from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { motion } from '#/theme/motion';
 import type { BaseSuggestionItem } from '#features/catalog/types';
+
+const CELL_LAYOUT = LinearTransition.duration(motion.timing.MODERATE);
+
+/**
+ * Glides each cell to its new place when a row above it leaves or returns.
+ * gorhom's list takes no `itemLayoutAnimation`, so the cell carries it, as
+ * Reanimated's own FlatList does.
+ */
+function AnimatedCell<T>({ children, onLayout, style }: CellRendererProps<T>) {
+  return (
+    <Animated.View layout={CELL_LAYOUT} onLayout={onLayout} style={style}>
+      {children}
+    </Animated.View>
+  );
+}
 
 interface SuggestionDrilldownProps<T extends BaseSuggestionItem> {
   /** Section title (e.g. "POPULAR") shown next to the back button */
@@ -27,8 +47,8 @@ interface SuggestionDrilldownProps<T extends BaseSuggestionItem> {
 /**
  * Single-source full list rendered inside the same AddItemSheet — the "More"
  * drill-down target. Uses a virtualized BottomSheetFlatList so a long Popular
- * list scrolls smoothly, and reuses the overview's row renderer (including its
- * quick-add + exit-animation behavior) so adding from here stays consistent.
+ * list scrolls smoothly, and reuses the overview's row renderer so adding from
+ * here behaves the same.
  */
 export function SuggestionDrilldown<T extends BaseSuggestionItem>({
   title,
@@ -56,30 +76,31 @@ export function SuggestionDrilldown<T extends BaseSuggestionItem>({
           {title}
         </Text>
       </View>
-      <BottomSheetFlatList
-        data={items}
-        keyExtractor={(item: T) => item.id}
-        renderItem={({ item }: { item: T }) => renderItem(item)}
-        contentContainerStyle={[
-          styles.listContent,
-          { paddingBottom: insets.bottom + 16 },
-        ]}
-        ItemSeparatorComponent={Separator}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-        ListEmptyComponent={
-          <View style={styles.emptyInset}>
-            <Text role="body" tone="secondary" align="center">
-              {emptyLabel}
-            </Text>
-          </View>
-        }
-      />
+      {/* The rows painted on open do not fade in; one that returns later does. */}
+      <LayoutAnimationConfig skipEntering>
+        <BottomSheetFlatList
+          data={items}
+          keyExtractor={(item: T) => item.id}
+          renderItem={({ item }: { item: T }) => renderItem(item)}
+          CellRendererComponent={AnimatedCell}
+          contentContainerStyle={[
+            styles.listContent,
+            { paddingBottom: insets.bottom + 16 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <View style={styles.emptyInset}>
+              <Text role="body" tone="secondary" align="center">
+                {emptyLabel}
+              </Text>
+            </View>
+          }
+        />
+      </LayoutAnimationConfig>
     </View>
   );
 }
-
-const Separator = () => <View style={styles.rowGap} />;
 
 const styles = StyleSheet.create(theme => ({
   container: {
@@ -99,12 +120,9 @@ const styles = StyleSheet.create(theme => ({
   title: {
     flexShrink: 1,
   },
+  // Each row is a RowCard, which carries the gap below it.
   listContent: {
     paddingHorizontal: theme.spacing.md,
-  },
-  // A gap between rows, not a rule — it draws nothing.
-  rowGap: {
-    height: theme.spacing.xs,
   },
   emptyInset: {
     padding: theme.spacing.xl,

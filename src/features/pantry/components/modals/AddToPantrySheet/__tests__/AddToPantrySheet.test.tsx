@@ -7,7 +7,9 @@ import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
   CreatePantryItemDocument,
+  GetPantryItemSuggestionsDocument,
   RestockPantryItemDocument,
+  type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   ErrorCode,
@@ -59,10 +61,7 @@ jest.mock('#features/catalog/ui/AddItemSheet/AddItemSheet', () => ({
 
 jest.mock('#features/catalog/ui/AddItemSheet/useAddItemSheetState', () => ({
   useAddItemSheetState: jest.fn(() => ({
-    exitingItems: new Set(),
     shouldFetch: true,
-    startExitAnimation: jest.fn(),
-    completeExitAnimation: jest.fn(),
   })),
 }));
 
@@ -743,6 +742,199 @@ describe('AddToPantrySheet', () => {
 
       await waitFor(() => expect(create.fired).toHaveLength(1));
       expect(restock.fired).toHaveLength(0);
+    });
+  });
+
+  /**
+   * A suggestion leaves the cache on the tap, so fast taps on different ones
+   * all go ahead, and a refusal puts back only its own suggestion, at its old
+   * place, without asking for the list again.
+   */
+  describe('suggestion tiles under fast taps', () => {
+    type Sections = NonNullable<
+      GetPantryItemSuggestionsQuery['pantry']
+    >['suggestions'];
+    // `today` only moves the expiring window; the cache does not key on it.
+    const VARIABLES = { pantryId: 'pantry-1', limit: 20, today: '2026-10-28' };
+
+    const popularRow = (itemId: string): Sections['popular'][number] => ({
+      __typename: 'PantryItemSuggestion',
+      id: `popular-${itemId}`,
+      itemId,
+      name: itemId,
+      source: PantrySuggestionSource.Popular,
+      category: null,
+      imageUrl: null,
+      defaultUnitId: null,
+      pantryItemId: null,
+    });
+
+    const seedSuggestions = (
+      popular: string[],
+      lowStock: Sections['lowStock'] = [],
+    ) => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: GetPantryItemSuggestionsDocument,
+        variables: VARIABLES,
+        data: {
+          __typename: 'Query',
+          pantry: {
+            __typename: 'Pantry',
+            id: 'pantry-1',
+            suggestions: {
+              __typename: 'PantrySuggestions',
+              lowStock,
+              expiringSoon: [],
+              recentlyDeleted: [],
+              frequentlyAdded: [],
+              popular: popular.map(popularRow),
+            },
+          },
+        },
+      });
+      return cache;
+    };
+
+    const shown = (cache: ReturnType<typeof makeCache>) => {
+      const sections = cache.readQuery({
+        query: GetPantryItemSuggestionsDocument,
+        variables: VARIABLES,
+      })?.pantry?.suggestions;
+      return {
+        lowStock: sections?.lowStock.map(s => s.itemId),
+        popular: sections?.popular.map(s => s.itemId),
+      };
+    };
+
+    /** The row a tile hands its handler, as `usePantryItemSuggestions` maps it. */
+    const tile = (itemId: string, extra: Record<string, unknown> = {}) => ({
+      id: `popular-${itemId}`,
+      itemId,
+      name: itemId,
+      source: PantrySuggestionSource.Popular,
+      pantryItemId: null,
+      defaultUnitId: null,
+      ...extra,
+    });
+
+    const quickAdd = (item: unknown) =>
+      (sheetProps.current.onQuickAddSuggestion as (row: unknown) => void)(item);
+
+    const created = (match?: (variables: unknown) => boolean) =>
+      recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+          },
+        },
+        ...(match ? { match } : {}),
+      });
+
+    const refusedCreate = (match: (variables: unknown) => boolean) =>
+      recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No add-items access',
+          },
+        },
+        match,
+      });
+
+    const names = (itemId: string) => (variables: unknown) =>
+      JSON.stringify(variables).includes(`"${itemId}"`);
+
+    it('lets two quick adds on different suggestions both go ahead', async () => {
+      const cache = seedSuggestions(['apples', 'bread', 'cheese']);
+      const create = created();
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock],
+      });
+
+      quickAdd(tile('apples'));
+      quickAdd(tile('bread'));
+
+      expect(shown(cache).popular).toEqual(['cheese']);
+      await waitFor(() => expect(create.fired).toHaveLength(2));
+    });
+
+    it('sends one add for a double tap', async () => {
+      const cache = seedSuggestions(['apples', 'bread']);
+      const create = created();
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock],
+      });
+
+      quickAdd(tile('apples'));
+      quickAdd(tile('apples'));
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(create.fired).toHaveLength(1);
+    });
+
+    it('puts back only the refused suggestion, at its old place', async () => {
+      const cache = seedSuggestions(['apples', 'bread', 'cheese']);
+      const refused = refusedCreate(names('apples'));
+      const accepted = created(names('bread'));
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [refused.mock, accepted.mock],
+      });
+
+      quickAdd(tile('apples'));
+      quickAdd(tile('bread'));
+
+      await waitFor(() =>
+        expect(shown(cache).popular).toEqual(['apples', 'cheese']),
+      );
+      expect(toastService.error).toHaveBeenCalledTimes(1);
+    });
+
+    it('puts back a held-stack suggestion whose restock is refused', async () => {
+      const cache = seedSuggestions(
+        [],
+        [
+          {
+            ...popularRow('milk'),
+            id: 'low-milk',
+            source: PantrySuggestionSource.LowStock,
+            pantryItemId: 'pi-9',
+            currentQuantity: null,
+            defaultUnit: null,
+          },
+        ],
+      );
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: {
+          restockPantryItem: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No add-items access',
+          },
+        },
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [restock.mock],
+      });
+
+      quickAdd(
+        tile('milk', {
+          id: 'low-milk',
+          source: PantrySuggestionSource.LowStock,
+          pantryItemId: 'pi-9',
+        }),
+      );
+
+      expect(shown(cache).lowStock).toEqual([]);
+      await waitFor(() => expect(shown(cache).lowStock).toEqual(['milk']));
+      expect(toastService.error).toHaveBeenCalledTimes(1);
     });
   });
 });

@@ -185,8 +185,9 @@ export const commonStyles = StyleSheet.create(theme => ({
     gap: theme.layout.rowSlotGap,
     paddingVertical: theme.layout.rowInset,
     paddingHorizontal: theme.layout.rowInsetHorizontal,
-    // `minHeight`, not a height: a two-line title grows rather than clips.
-    minHeight: theme.sizes.itemCard.compact.height,
+    // `minHeight`, not a height: a two-line title grows rather than clips. A
+    // photo row's height at every density, so a row without one matches it.
+    minHeight: theme.sizes.itemCard.compact.image + theme.layout.rowInset * 2,
   },
   rowTextGap: {
     marginTop: theme.layout.rowTextGap,

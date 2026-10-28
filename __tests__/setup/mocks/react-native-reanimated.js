@@ -235,6 +235,8 @@ jest.mock('react-native-reanimated', () => {
       mass: returnSelf,
       easing: returnSelf,
     },
+    // Only gates its children's layout animations; it renders them as they are.
+    LayoutAnimationConfig: ({ children }) => children,
     SequencedTransition: {
       duration: returnSelf,
       delay: returnSelf,

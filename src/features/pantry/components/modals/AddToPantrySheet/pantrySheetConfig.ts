@@ -42,8 +42,6 @@ export const pantrySheetConfig: AddItemSheetConfig<PantryItemSuggestion> = {
     },
   ],
   quickAdd: {
-    fireAndForget: true,
-    enableExitAnimations: true,
     toastMessageKey: 'addItemSheet.added',
   },
   addDetails: {

@@ -58,11 +58,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   });
 
   // Every cache write and mutation this sheet performs. What stays here is the
-  // toast, the exit animation and the in-flight set.
+  // toast and the in-flight set.
   const {
     addItem,
     restockItem,
     removeSuggestion,
+    restoreSuggestion,
     readStorageLocations,
     findCachedDuplicate,
   } = useAddToPantry({ pantryId, suggestionsLimit: PANTRY_SUGGESTIONS_LIMIT });
@@ -77,7 +78,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Dismiss a junk/unwanted suggestion from the PANTRY surface.
   const { dismissSuggestion } = useSuggestionDismissal(
     SuggestionSurface.Pantry,
-    suggestionsResult.refetch,
+    { remove: removeSuggestion, restore: restoreSuggestion },
   );
 
   // Storage locations read on-demand from cache (no active watcher)
@@ -104,10 +105,12 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const runRestock = async (
     pantryItemId: string,
     item: { id: string; name: string },
+    removal: ReturnType<typeof removeSuggestion>,
   ) => {
     toastService.success(t('addToPantry.restocked', { name: item.name }));
     const outcome = await restockItem(pantryItemId, item);
     if (outcome.status === 'rejected') {
+      restoreSuggestion(removal);
       toastService.error(t('addToPantry.restockFailed'));
       return;
     }
@@ -119,14 +122,15 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   const handleQuickAddSearchSuggestion = async (item: ItemSuggestion) => {
     if (!pantryId || pendingItemIds.current.has(item.id)) return;
     pendingItemIds.current.add(item.id);
+    // Off the suggestion lists at once; a refusal puts back exactly this.
+    const removal = removeSuggestion(item.id);
 
     // Offline-first: the pantry answers "do I already stock this?" itself. The
     // server would refuse the create anyway, and offline it never gets asked —
     // so route to the restock now rather than queueing a doomed create.
     const cachedDuplicate = findCachedDuplicate(item.id, item.defaultUnit?.id);
     if (cachedDuplicate) {
-      removeSuggestion(item.id);
-      await runRestock(cachedDuplicate.existingPantryItemId, item);
+      await runRestock(cachedDuplicate.existingPantryItemId, item, removal);
       pendingItemIds.current.delete(item.id);
       return;
     }
@@ -134,7 +138,6 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     toastService.success(
       t(pantrySheetConfig.quickAdd.toastMessageKey, { name: item.name }),
     );
-    removeSuggestion(item.id);
 
     // A stack the local check could not see (a windowed list, a collaborator's
     // add) is joined by the server: the add is forced.
@@ -142,22 +145,19 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     pendingItemIds.current.delete(item.id);
     if (outcome.status === 'rejected') {
       // The success toast has already fired; correct it.
+      restoreSuggestion(removal);
       toastService.error(t('errors.addItemFailedRetry'));
       return;
     }
     onItemAdded?.();
   };
 
-  // Quick add from a pantry suggestion tile, which animates out as it goes.
+  // Quick add from a pantry suggestion tile, which leaves the list at once and
+  // animates out as it unmounts.
   const handleQuickAddSuggestion = async (pantryItem: PantryItemSuggestion) => {
-    if (
-      !pantryId ||
-      state.exitingItems.has(pantryItem.itemId) ||
-      pendingItemIds.current.has(pantryItem.itemId)
-    )
-      return;
+    if (!pantryId || pendingItemIds.current.has(pantryItem.itemId)) return;
     pendingItemIds.current.add(pantryItem.itemId);
-    state.startExitAnimation(pantryItem.itemId);
+    const removal = removeSuggestion(pantryItem.itemId);
     const catalogItem = { id: pantryItem.itemId, name: pantryItem.name };
 
     // Same local-first check as the search handler above.
@@ -166,7 +166,11 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       pantryItem.defaultUnitId,
     );
     if (cachedDuplicate) {
-      await runRestock(cachedDuplicate.existingPantryItemId, catalogItem);
+      await runRestock(
+        cachedDuplicate.existingPantryItemId,
+        catalogItem,
+        removal,
+      );
       pendingItemIds.current.delete(pantryItem.itemId);
       return;
     }
@@ -176,7 +180,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     // forced add would show a second row until the server joined them.
     const heldStackId = heldStackOf(pantryItem);
     if (heldStackId) {
-      await runRestock(heldStackId, catalogItem);
+      await runRestock(heldStackId, catalogItem, removal);
       pendingItemIds.current.delete(pantryItem.itemId);
       return;
     }
@@ -189,23 +193,14 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
     pendingItemIds.current.delete(pantryItem.itemId);
     if (outcome.status === 'rejected') {
       // Put the tile back and correct the toast that already fired.
-      state.completeExitAnimation(pantryItem.itemId);
+      restoreSuggestion(removal);
       toastService.error(t('errors.addItemFailed'));
       return;
     }
     onItemAdded?.();
   };
 
-  const handleExitComplete = (itemId: string) => {
-    removeSuggestion(itemId);
-    state.completeExitAnimation(itemId);
-  };
-
-  // Dismiss a suggestion: animate it out (cache removal happens on exit
-  // complete, shared with quick-add) and persist the dismissal server-side.
   const handleDismissSuggestion = (item: PantryItemSuggestion) => {
-    if (state.exitingItems.has(item.itemId)) return;
-    state.startExitAnimation(item.itemId);
     dismissSuggestion({ itemId: item.itemId, name: item.name });
   };
 
@@ -228,11 +223,8 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       onQuickAddSearchSuggestion={handleQuickAddSearchSuggestion}
       onQuickAddSuggestion={handleQuickAddSuggestion}
       onDismissSuggestion={handleDismissSuggestion}
-      isMutating={false}
       onAddManually={handleAddManually}
       startStep={startStep}
-      exitingItems={state.exitingItems}
-      onExitComplete={handleExitComplete}
       shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
       renderDetails={({ goBack }) => (

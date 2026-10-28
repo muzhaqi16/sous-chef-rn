@@ -137,9 +137,6 @@ jest.mock('../useAddItemSheetState', () => ({
     setSearchQuery: jest.fn(),
     shouldFetch: true,
     shouldRenderSuggestions: true,
-    exitingItems: new Set(),
-    startExitAnimation: jest.fn(),
-    completeExitAnimation: jest.fn(),
   })),
 }));
 
@@ -181,8 +178,6 @@ const createConfig = (
     },
   ],
   quickAdd: {
-    fireAndForget: false,
-    enableExitAnimations: true,
     toastMessageKey: 'addItemSheet.added',
   },
   addDetails: { enabled: true },
@@ -212,7 +207,6 @@ describe('AddItemSheet', () => {
     suggestions: createSuggestions(),
     onQuickAddSearchSuggestion: jest.fn(),
     onQuickAddSuggestion: jest.fn(),
-    isMutating: false,
     onAddManually: jest.fn(),
   };
 
@@ -434,27 +428,6 @@ describe('AddItemSheet', () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(screen.getByTestId('details-step')).toBeTruthy();
-  });
-
-  it('uses external exitingItems when provided', () => {
-    const exitingItems = new Set(['item-1']);
-    render(
-      <AddItemSheet
-        {...defaultProps}
-        exitingItems={exitingItems}
-        suggestions={createSuggestions({
-          state: 'ready',
-          grouped: {
-            lowStock: [
-              { id: 's1', itemId: 'item-1', name: 'Milk', category: 'Dairy' },
-            ],
-            addAgain: [],
-          },
-        })}
-      />,
-    );
-    // Renders without error; SuggestionListItem receives quickAddDisabled
-    expect(screen.getByTestId('suggestion-Milk')).toBeTruthy();
   });
 
   it('sorts suggestion groups by priority', () => {

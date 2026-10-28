@@ -31,8 +31,6 @@ export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionI
       },
     ],
     quickAdd: {
-      fireAndForget: true,
-      enableExitAnimations: true,
       toastMessageKey: 'addItemSheet.added',
     },
     addDetails: {

@@ -1,5 +1,5 @@
 'use no memo';
-import { renderHook, act } from '@testing-library/react-native';
+import { renderHook } from '@testing-library/react-native';
 import { useAddItemSheetState } from '../useAddItemSheetState';
 
 // Mock requestAnimationFrame and requestIdleCallback
@@ -27,15 +27,5 @@ describe('useAddItemSheetState', () => {
       useAddItemSheetState({ visible: true, contextId: 'ctx-1' }),
     );
     expect(result.current.shouldFetch).toBe(true);
-  });
-
-  it('manages exit animations', () => {
-    const { result } = renderHook(() =>
-      useAddItemSheetState({ visible: true, contextId: 'ctx-1' }),
-    );
-    act(() => result.current.startExitAnimation('item-1'));
-    expect(result.current.exitingItems.has('item-1')).toBe(true);
-    act(() => result.current.completeExitAnimation('item-1'));
-    expect(result.current.exitingItems.has('item-1')).toBe(false);
   });
 });
