@@ -1,10 +1,17 @@
+import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
+import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import {
-  dropDeviceUnitSystem,
   dropUnitSystemAnswers,
   reconcileSettingsReplay,
+  refreshDeviceUnitSystem,
 } from '#/apollo/utils/unitSystemAnswers';
-import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  GetUserSettingsDocument,
+  type GetUserSettingsQuery,
+} from '#operations/auth/user.generated';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 
 const rootFields = (cache: ReturnType<typeof makeCache>) =>
@@ -57,48 +64,77 @@ describe('reconcileSettingsReplay', () => {
   });
 });
 
-describe('dropDeviceUnitSystem', () => {
-  it('drops what SYSTEM meant on the device, so the settings read asks again', () => {
-    const cache = makeCache();
-    cache.writeQuery({
-      query: GetUserSettingsDocument,
+/** The settings as the server answers them, SYSTEM reading as `device`. */
+function settingsAnswer(device: UnitSystem): Unmasked<GetUserSettingsQuery> {
+  const completed = completeMockedResponse({
+    request: { query: GetUserSettingsDocument, variables: {} },
+    result: {
       data: {
-        __typename: 'Query',
         me: {
-          __typename: 'User',
           id: 'user-1',
           settings: {
-            __typename: 'UserSettings',
             id: 'settings-1',
-            theme: 'SYSTEM',
-            compactMode: false,
-            showTutorials: true,
-            autoSync: true,
-            offlineMode: false,
-            shareUsageData: false,
-            shareWithPartners: false,
-            personalizedAds: false,
             preferredUnitSystem: UnitSystem.System,
-            deviceUnitSystem: UnitSystem.Imperial,
-            language: 'en-US',
-            timezone: 'America/New_York',
-            preferredCurrency: 'USD',
-            createdAt: '2026-01-01T00:00:00.000Z',
-            updatedAt: '2026-01-01T00:00:00.000Z',
+            deviceUnitSystem: device,
           },
         },
-      } as never,
+      },
+    },
+  }).result as (vars: Record<string, never>) => {
+    data: Unmasked<GetUserSettingsQuery>;
+  };
+  return completed({}).data;
+}
+
+describe('refreshDeviceUnitSystem', () => {
+  let answer: (result: ApolloLink.Result | Error) => void;
+  let client: ApolloClient;
+
+  beforeEach(() => {
+    client = new ApolloClient({
+      cache: makeCache(),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      link: new ApolloLink(
+        () =>
+          new Observable(observer => {
+            answer = result => {
+              if (result instanceof Error) {
+                observer.error(result);
+                return;
+              }
+              observer.next(result);
+              observer.complete();
+            };
+          }),
+      ),
     });
-
-    dropDeviceUnitSystem(cache);
-
-    const settings = cache.extract()['UserSettings:settings-1'];
-    expect(settings).toMatchObject({ preferredUnitSystem: UnitSystem.System });
-    expect(settings).not.toHaveProperty('deviceUnitSystem');
+    client.cache.writeQuery({
+      query: GetUserSettingsDocument,
+      data: settingsAnswer(UnitSystem.Imperial),
+    });
   });
 
-  it('does nothing before the settings have been read', () => {
-    const cache = makeCache();
-    expect(() => dropDeviceUnitSystem(cache)).not.toThrow();
+  const deviceSystem = () =>
+    client.cache.readQuery({ query: GetUserSettingsDocument })?.me?.settings
+      ?.deviceUnitSystem;
+
+  // Evicted instead, every settings read went incomplete and amounts fell
+  // back to metric until the answer landed.
+  it('keeps the settings readable until the new answer lands over them', async () => {
+    const refreshed = refreshDeviceUnitSystem(client);
+    expect(deviceSystem()).toBe(UnitSystem.Imperial);
+
+    answer({ data: settingsAnswer(UnitSystem.Metric) });
+    await refreshed;
+
+    expect(deviceSystem()).toBe(UnitSystem.Metric);
+  });
+
+  it('keeps the last known system when the re-read fails', async () => {
+    const refreshed = refreshDeviceUnitSystem(client);
+    answer(new Error('Network request failed'));
+    await refreshed;
+
+    expect(deviceSystem()).toBe(UnitSystem.Imperial);
   });
 });

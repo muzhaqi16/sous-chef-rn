@@ -37,8 +37,8 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 
 ## 6. A locale change refreshes in place (finding 7, D8)
 
-- [ ] 6.1 Remove `dropDeviceUnitSystem` from `src/apollo/utils/unitSystemAnswers.ts` and its test. In `src/services/device/deviceRegistration.ts`, after `recordRegisteredLocale` is true, keep `dropUnitSystemAnswers(cache)` and re-ask `GetUserSettingsDocument` with `fetchPolicy: 'network-only'` through the client, reporting a failure through the logger only. Verify `npm run check:dead-modules` passes.
-- [ ] 6.2 In `deviceRegistration.test.ts`, replace the eviction case with: a recorded locale change re-asks settings over the network, and the cached settings stay complete (a `cache.readQuery` of `GetUserSettings` returns data) until the answer lands, then carry its `deviceUnitSystem`. Add a case where the re-ask fails, so the cache keeps the old value. Verify both pass, and that the "stays complete" assertion fails on `dev`.
+- [x] 6.1 Remove `dropDeviceUnitSystem` from `src/apollo/utils/unitSystemAnswers.ts` and its test. In `src/services/device/deviceRegistration.ts`, after `recordRegisteredLocale` is true, keep `dropUnitSystemAnswers(cache)` and re-ask `GetUserSettingsDocument` with `fetchPolicy: 'network-only'` through the client, reporting a failure through the logger only. Verify `npm run check:dead-modules` passes.
+- [x] 6.2 In `deviceRegistration.test.ts`, replace the eviction case with: a recorded locale change re-asks settings over the network, and the cached settings stay complete (a `cache.readQuery` of `GetUserSettings` returns data) until the answer lands, then carry its `deviceUnitSystem`. Add a case where the re-ask fails, so the cache keeps the old value. Verify both pass, and that the "stays complete" assertion fails on `dev`.
 
 ## 7. The report names the page's photo (finding 8, D9)
 

@@ -1,8 +1,9 @@
-import type { ApolloCache } from '@apollo/client';
+import type { ApolloCache, ApolloClient } from '@apollo/client';
 import type { Query } from '#/graphql/generated/schemaTypes';
 import type { ReplayReconciler } from '#/apollo/offlineQueue/types';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { isRecord } from '#/utils/isRecord';
+import { logger } from '#/utils/environment';
 
 /**
  * The root fields the server answers in the caller's unit system (see
@@ -27,14 +28,22 @@ export function dropUnitSystemAnswers(cache: ApolloCache): void {
 }
 
 /**
- * Drops what SYSTEM meant on this device once its locale changes, so the
- * settings read asks again and amounts follow the new locale.
+ * Re-reads what SYSTEM means on this device once its locale changes, written
+ * over the cached answer: evicting it would leave every settings read
+ * incomplete, and amounts in metric, until the answer landed.
  */
-export function dropDeviceUnitSystem(cache: ApolloCache): void {
-  const settings = cache.readQuery({ query: GetUserSettingsDocument })?.me
-    ?.settings;
-  if (!settings) return;
-  cache.evict({ id: cache.identify(settings), fieldName: 'deviceUnitSystem' });
+export async function refreshDeviceUnitSystem(
+  client: ApolloClient,
+): Promise<void> {
+  try {
+    const { error } = await client.query({
+      query: GetUserSettingsDocument,
+      fetchPolicy: 'network-only',
+    });
+    if (error) logger.warn('Device unit system re-read failed:', error);
+  } catch (error) {
+    logger.warn('Device unit system re-read failed:', error);
+  }
 }
 
 /** A settings write replayed from the queue that set the unit system. */
