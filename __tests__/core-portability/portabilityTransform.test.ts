@@ -29,9 +29,7 @@ describe('a host compiles the core with the React Compiler', () => {
   it('runs nothing from React Native’s toolchain', () => {
     expect(
       names.filter(name =>
-        /react-native|unistyles|worklets|reanimated|module-resolver/.test(
-          name,
-        ),
+        /react-native|unistyles|worklets|reanimated|module-resolver/.test(name),
       ),
     ).toEqual([]);
   });

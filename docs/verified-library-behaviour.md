@@ -375,6 +375,7 @@ grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-na
 ### RN's Modal calls onDismiss only on iOS, after UIKit's dismissal
 
 **Claim:**
+
 - **iOS:** when a `<Modal>`'s `visible` turns false, it stays rendered until UIKit's `dismissViewControllerAnimated:completion:` completes, and only then calls `onDismiss`. Unmounting it instead still dismisses it natively, but `onDismiss` never fires.
 - **Android:** `visible` is ignored natively. `visible={false}` renders nothing, which dismisses the Dialog at once, and `onDismiss` never fires.
 

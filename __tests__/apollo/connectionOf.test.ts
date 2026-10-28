@@ -1,5 +1,8 @@
 import { InMemoryCache, gql } from '@apollo/client';
-import { connectionOf, typedConnectionOf } from '#/test-utils/fixtures/connectionOf';
+import {
+  connectionOf,
+  typedConnectionOf,
+} from '#/test-utils/fixtures/connectionOf';
 
 const LISTS = gql`
   query Lists {
@@ -23,13 +26,13 @@ const weekly = { __typename: 'ShoppingList', id: 'sl-1', name: 'Weekly' };
 
 describe('connectionOf', () => {
   it('builds one page of edges, counting the nodes unless told the total', () => {
-    expect(connectionOf([weekly], { totalCount: 3, hasNextPage: true })).toEqual(
-      {
-        totalCount: 3,
-        pageInfo: { hasNextPage: true, endCursor: null },
-        edges: [{ node: weekly }],
-      },
-    );
+    expect(
+      connectionOf([weekly], { totalCount: 3, hasNextPage: true }),
+    ).toEqual({
+      totalCount: 3,
+      pageInfo: { hasNextPage: true, endCursor: null },
+      edges: [{ node: weekly }],
+    });
     expect(connectionOf([]).totalCount).toBe(0);
   });
 
@@ -45,7 +48,11 @@ describe('connectionOf', () => {
       shoppingLists: {
         __typename: 'ShoppingListConnection',
         totalCount: 1,
-        pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: 'c1' },
+        pageInfo: {
+          __typename: 'PageInfo',
+          hasNextPage: false,
+          endCursor: 'c1',
+        },
         edges: [{ __typename: 'ShoppingListEdge', node: weekly }],
       },
     });

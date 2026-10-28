@@ -41,9 +41,12 @@ function reactNativeTies(name: string): string[] {
   ];
 }
 
-it.each(CORE_EXTERNALS)('core may import %s, which needs no React Native', name => {
-  expect(reactNativeTies(name)).toEqual([]);
-});
+it.each(CORE_EXTERNALS)(
+  'core may import %s, which needs no React Native',
+  name => {
+    expect(reactNativeTies(name)).toEqual([]);
+  },
+);
 
 it('makes every other dependency unloadable', () => {
   const outside = dependenciesOutsideCore(dependencies);
