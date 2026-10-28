@@ -10,6 +10,7 @@ import { PantryItemDetail_PantryItemFragmentDoc } from './PantryItemDetail.gener
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
+import { isResourceAccessLostError } from '#/utils/errors/graphqlErrors';
 
 /** The detail screen's item, its batches, and what the server says about both. */
 export function usePantryItemDetailData(itemId: string) {
@@ -56,6 +57,10 @@ export function usePantryItemDetailData(itemId: string) {
   const deletedOnServer =
     !isUnconfirmed &&
     (answeredNoSuchItem || isResourceNotFoundError(itemError));
+  // The stack is there, in a pantry the caller may not view (its home's
+  // pantry view is off for them, or they left the home).
+  const hiddenFromViewer =
+    !isUnconfirmed && isResourceAccessLostError(itemError);
   // A stack merged into another answers as the survivor (USM-3): its id, not
   // this one, is what the screen should show.
   const answered = itemData?.pantryItem;
@@ -90,6 +95,7 @@ export function usePantryItemDetailData(itemId: string) {
     batchTotalCount:
       batchesData?.pantryItemBatchesConnection.totalCount ?? undefined,
     deletedOnServer,
+    hiddenFromViewer,
     mergedIntoId,
     itemLoading,
     itemError,

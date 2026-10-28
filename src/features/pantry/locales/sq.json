@@ -55,7 +55,9 @@
     "shelfLifeOpened": "{{days}} d pas hapjes",
     "packages": "Paketime",
     "removedTitle": "Ky artikull nuk është më në qilarin tënd",
-    "removedBody": "U hoq, ndoshta nga një pajisje tjetër."
+    "removedBody": "U hoq, ndoshta nga një pajisje tjetër.",
+    "hiddenTitle": "Ky artikull nuk të shfaqet",
+    "hiddenBody": "Është në një qilar që nuk mund ta shohësh. Kush e menaxhon shtëpinë mund të të lejojë ta shohësh."
   },
   "pantrySettings": {
     "createTitle": "Krijo qilar të ri",

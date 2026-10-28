@@ -123,6 +123,7 @@ export const PantryItemDetail: React.FC<
     batchPricing,
     batchTotalCount,
     deletedOnServer,
+    hiddenFromViewer,
     mergedIntoId,
     itemLoading,
     itemError,
@@ -262,6 +263,23 @@ export const PantryItemDetail: React.FC<
             description={t('pantryItemDetail.removedBody')}
             action={{ label: t('labels.goBack'), onPress: goBack }}
             testID={pantryTestIDs.itemRemoved}
+          />
+        </View>
+      </CollapsingHeroDetail>
+    );
+  }
+
+  // A refusal, not a failed load: retrying cannot show it.
+  if (hiddenFromViewer) {
+    return (
+      <CollapsingHeroDetail onBack={goBack} testID={pantryTestIDs.itemDetail}>
+        <View style={commonStyles.loadingContainer}>
+          <EmptyState
+            icon="eye-off-outline"
+            title={t('pantryItemDetail.hiddenTitle')}
+            description={t('pantryItemDetail.hiddenBody')}
+            action={{ label: t('labels.goBack'), onPress: goBack }}
+            testID={pantryTestIDs.itemHidden}
           />
         </View>
       </CollapsingHeroDetail>

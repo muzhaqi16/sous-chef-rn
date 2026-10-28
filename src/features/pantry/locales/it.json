@@ -55,7 +55,9 @@
     "shelfLifeOpened": "{{days}} g dopo l'apertura",
     "packages": "Confezioni",
     "removedTitle": "Questo articolo non è più nella tua dispensa",
-    "removedBody": "È stato rimosso, forse da un altro dispositivo."
+    "removedBody": "È stato rimosso, forse da un altro dispositivo.",
+    "hiddenTitle": "Questo articolo non ti viene mostrato",
+    "hiddenBody": "Si trova in una dispensa che non puoi vedere. Chi gestisce la casa può permetterti di vederla."
   },
   "pantrySettings": {
     "createTitle": "Crea nuova dispensa",

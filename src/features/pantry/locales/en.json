@@ -55,7 +55,9 @@
     "shelfLifeOpened": "{{days}}d once opened",
     "packages": "Packages",
     "removedTitle": "This item is no longer in your pantry",
-    "removedBody": "It was removed, perhaps from another device."
+    "removedBody": "It was removed, perhaps from another device.",
+    "hiddenTitle": "This item isn't shown to you",
+    "hiddenBody": "It's in a pantry you can't view. Someone who manages the home can let you see it."
   },
   "pantrySettings": {
     "createTitle": "Create New Pantry",
