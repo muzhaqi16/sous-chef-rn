@@ -47,7 +47,7 @@ export function useAdjustPantryItemQuantity({
       __typename: 'PantryItem',
       id: pantryItemId,
     });
-    const currentItem =
+    const readItem = () =>
       client.cache.readFragment<UseAdjustPantryItemQuantity_PantryItemFragment>(
         {
           id: cacheId,
@@ -55,6 +55,7 @@ export function useAdjustPantryItemQuantity({
           fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
         },
       );
+    const currentItem = readItem();
 
     const writeItem = (data: UseAdjustPantryItemQuantity_PantryItemFragment) =>
       client.cache.writeFragment({
@@ -70,16 +71,23 @@ export function useAdjustPantryItemQuantity({
     // unit is not written ahead: only the server converts it.
     const statedInOwnUnit = !units.newQuantityUnitId;
     const weightInOwnUnit = !units.remainingNetWeightUnitId;
-    if (currentItem && statedInOwnUnit) {
-      const optimistic = enhanceWithVersion(currentItem, {
-        quantity: newQuantity,
-        heldQuantity: newQuantity,
-        ...(remainingNetWeight != null && weightInOwnUnit
-          ? { remainingNetWeight }
-          : {}),
-      });
+    // What the recount writes over the stack, and the stack as it was.
+    const ahead =
+      currentItem && statedInOwnUnit
+        ? {
+            before: currentItem,
+            written: enhanceWithVersion(currentItem, {
+              quantity: newQuantity,
+              heldQuantity: newQuantity,
+              ...(remainingNetWeight != null && weightInOwnUnit
+                ? { remainingNetWeight }
+                : {}),
+            }),
+          }
+        : null;
+    if (ahead) {
       try {
-        writeItem(optimistic);
+        writeItem(ahead.written);
         writeHeldStock(client.cache, pantryItemId, newQuantity);
       } catch (cacheError) {
         errorService.reportError(cacheError, {
@@ -109,10 +117,23 @@ export function useAdjustPantryItemQuantity({
       );
     };
 
+    // A newer answer for the stack since (another member's use) replaced what
+    // this recount wrote, and stays.
+    const stillHolds = (
+      written: UseAdjustPantryItemQuantity_PantryItemFragment,
+    ) => {
+      const now = readItem();
+      return (
+        !!now &&
+        now.version === written.version &&
+        now.updatedAt === written.updatedAt &&
+        now.quantity === written.quantity
+      );
+    };
     const revert = () => {
-      if (currentItem) {
+      if (ahead && stillHolds(ahead.written)) {
         try {
-          writeItem(currentItem);
+          writeItem(ahead.before);
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Revert rejected pantry quantity adjust',

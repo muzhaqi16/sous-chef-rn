@@ -293,6 +293,100 @@ describe('useAdjustPantryItemQuantity', () => {
       activeBatchCount: 1,
     } as const;
 
+    const refusedWhileHeld = () =>
+      recordMock(AdjustPantryItemQuantityDocument, {
+        held: true,
+        data: {
+          adjustPantryItemQuantity: {
+            __typename: 'ConflictError',
+            code: ErrorCode.VersionConflict,
+            message: 'Stale write',
+          },
+        },
+      });
+    const readStack = (cache: ReturnType<typeof seedCache>) =>
+      cache.readFragment({
+        id: 'PantryItem:item-1',
+        fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
+        fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
+      });
+    const recount = (
+      cache: ReturnType<typeof seedCache>,
+      refused: ReturnType<typeof refusedWhileHeld>,
+      quantity: number,
+      units: { newQuantityUnitId?: string } = {},
+    ) => {
+      const { result } = renderHook(() => useAdjustPantryItemQuantity(), {
+        wrapper: createApolloTestWrapper({
+          cache,
+          operationMocks: [refused.mock],
+        }),
+      });
+      let pending: Promise<boolean> | undefined;
+      act(() => {
+        pending = result.current.adjustQuantity(
+          'item-1',
+          quantity,
+          'Recount',
+          1,
+          undefined,
+          units,
+        );
+      });
+      return () => pending;
+    };
+    const seeded = () =>
+      seedCache([
+        {
+          fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
+          fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
+          data: ITEM,
+        },
+      ]);
+
+    it('keeps what arrived for the stack while a refused recount was in flight', async () => {
+      const cache = seeded();
+      const refused = refusedWhileHeld();
+      const pending = recount(cache, refused, 2.5, {
+        newQuantityUnitId: 'u-lb',
+      });
+      await waitFor(() => expect(refused.fired).toHaveLength(1));
+
+      // Another member's use, read back over the socket.
+      cache.writeFragment({
+        fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
+        fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
+        data: {
+          ...ITEM,
+          version: 2,
+          updatedAt: '2026-01-02T00:00:00.000Z',
+          quantity: 1000,
+          heldQuantity: 1000,
+        },
+      });
+      await act(async () => {
+        refused.release();
+        await pending();
+      });
+
+      expect(readStack(cache)).toMatchObject({ quantity: 1000, version: 2 });
+    });
+
+    it('puts back the amount a refused recount in its own unit wrote', async () => {
+      const cache = seeded();
+      const refused = refusedWhileHeld();
+      const pending = recount(cache, refused, 900);
+      await waitFor(() => expect(refused.fired).toHaveLength(1));
+      expect(readStack(cache)?.quantity).toBe(900);
+
+      await act(async () => {
+        refused.release();
+        await pending();
+      });
+
+      expect(readStack(cache)).toMatchObject({ quantity: 1360.78, version: 1 });
+    });
+
     it('sends the pound and writes nothing ahead of the server', async () => {
       const held = recordMock(AdjustPantryItemQuantityDocument, {
         held: true,
