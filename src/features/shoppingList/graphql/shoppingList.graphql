@@ -260,6 +260,10 @@ query GetShoppingListItemsFiltered(
 query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
   shoppingListItem(id: $itemId) {
     id
+    # Every member's purchases; the connection lists only the caller's own.
+    purchaseHistory {
+      purchaseCount
+    }
     purchasesConnection(first: $first, after: $after) {
       edges {
         node {
