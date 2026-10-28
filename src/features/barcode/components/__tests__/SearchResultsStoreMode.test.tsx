@@ -10,6 +10,8 @@ import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { UnitType } from '#/graphql/generated/schemaTypes';
+import { barcodeTestIDs } from '#features/barcode/testIDs';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
 
 const mockAddToShoppingList = jest.fn();
@@ -124,6 +126,34 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
   },
 }));
 
+// The shelf prices have their own tests; here, which list they are read for
+// and that the card shows what they give.
+const mockShelfListIds: (string | null | undefined)[] = [];
+jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
+  useStoreShelfPrices: (_itemId: string, listId: string | null | undefined) => {
+    mockShelfListIds.push(listId);
+    return {
+      rows: listId
+        ? [
+            {
+              storeId: 's-aldi',
+              storeName: 'ALDI',
+              price: '$1.99/jar',
+              perBasis: null,
+              wasPrice: null,
+              usual: null,
+              lowest: null,
+              lastSeen: null,
+              aisle: null,
+              isCheapest: false,
+              isListStore: false,
+            },
+          ]
+        : [],
+    };
+  },
+}));
+
 const onScanAnother = jest.fn();
 const props: SearchResultsProps = {
   item: {
@@ -181,6 +211,23 @@ describe('SearchResults from store mode', () => {
 
     expect(mockPriceListIds.at(-1)).toBeUndefined();
     expect(screen.queryByText(t('barcode.price.usual'))).toBeNull();
+  });
+
+  it('shows the shelf price at each store for the list being shopped, and none outside store mode', () => {
+    const { unmount } = renderWithApollo(<SearchResults {...props} />);
+
+    expect(mockShelfListIds.at(-1)).toBe('list-1');
+    expect(screen.getByTestId(barcodeTestIDs.storeShelfPrices)).toBeTruthy();
+    expect(screen.getByText(t('storeShelfPrices.title'))).toBeTruthy();
+    expect(
+      screen.getByTestId(catalogTestIDs.storeShelfPrice('s-aldi')),
+    ).toBeTruthy();
+    unmount();
+
+    renderWithApollo(<SearchResults {...props} source="shoppingList" />);
+
+    expect(mockShelfListIds.at(-1)).toBeNull();
+    expect(screen.queryByTestId(barcodeTestIDs.storeShelfPrices)).toBeNull();
   });
 
   // The list's own setting: its prices still show, but nobody is asked for one.

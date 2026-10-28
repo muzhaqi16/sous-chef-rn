@@ -20,6 +20,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { useImageUpload } from '#hooks/data/useImageUpload';
+import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import {
   mapFormToCreateItemInput,
   stashPendingFormImages,
@@ -183,6 +184,9 @@ export const useSearchResults = (
   const homeVariables = homeId
     ? { homeId, withHome: true, withPrices: inStoreMode }
     : {};
+  // A store's shelf price is no household's, so it rides with or without one.
+  const shelfPricesOffered = useFeatureFlag('storeShelfPrices');
+  const withShelfPrices = inStoreMode && shelfPricesOffered;
 
   const {
     data: upcData,
@@ -194,6 +198,7 @@ export const useSearchResults = (
       lookup: { upc: { code: barcode, format: upcFormat } },
       pantry: pantryId,
       ...homeVariables,
+      withShelfPrices,
     },
     // `items` is keyed by `filters`, so another code's result never serves this
     // one; network-only is for a code the catalog has gained or changed since.
@@ -216,6 +221,7 @@ export const useSearchResults = (
       lookup: { sku: { sku: barcode } },
       pantry: pantryId,
       ...homeVariables,
+      withShelfPrices,
     },
     skip: skuSkipped,
     fetchPolicy: 'network-only', // As the UPC lookup above.

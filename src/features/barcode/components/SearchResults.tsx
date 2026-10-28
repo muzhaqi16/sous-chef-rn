@@ -39,6 +39,8 @@ import { useProductDietaryAlerts } from '#features/barcode/hooks/useProductDieta
 import { HouseholdAlertsSection } from './HouseholdAlertsSection';
 import { useStorePriceMemory } from '#features/barcode/hooks/useStorePriceMemory';
 import { StorePriceSection } from './StorePriceSection';
+import { useStoreShelfPrices } from '#features/catalog/hooks/useStoreShelfPrices';
+import { StoreShelfPriceSection } from './StoreShelfPriceSection';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
 import { useProductOrigin } from '#features/barcode/hooks/useProductOrigin';
@@ -165,6 +167,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
     item.id,
     source === 'storeMode' && showPrices ? shoppingListId : undefined,
     sheetUnit ?? item.trackingUnit,
+  );
+  const shelfPrices = useStoreShelfPrices(
+    item.id,
+    source === 'storeMode' ? shoppingListId : null,
   );
 
   const onPantryAdded = () => {
@@ -382,6 +388,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         />
 
         <StorePriceSection {...prices} />
+        <StoreShelfPriceSection rows={shelfPrices.rows} />
 
         <DataAttributionNotices
           attributions={item.dataAttributions ?? []}

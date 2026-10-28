@@ -53,8 +53,23 @@ jest.mock('#hooks/data/useImageUpload', () => ({
   })),
 }));
 
+// Only the shelf-price flag is switched here; every other flag reads as built.
+const mockShelfPricesOffered = jest.fn(() => true);
+jest.mock('#hooks/settings/useFeatureFlag', () => {
+  const actual = jest.requireActual<
+    typeof import('#hooks/settings/useFeatureFlag')
+  >('#hooks/settings/useFeatureFlag');
+  return {
+    useFeatureFlag: (flag: Parameters<typeof actual.useFeatureFlag>[0]) =>
+      flag === 'storeShelfPrices'
+        ? mockShelfPricesOffered()
+        : actual.useFeatureFlag(flag),
+  };
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
+  mockShelfPricesOffered.mockReturnValue(true);
   useStore.setState({ selectedHomeId: null });
 });
 
@@ -363,6 +378,48 @@ describe('useSearchResults', () => {
             withHome: true,
             withPrices: false,
           }),
+        ),
+      );
+    });
+
+    // A store's shelf price is no household's: it rides store mode's lookup
+    // with or without one, and no other.
+    it('asks for the shelf price at each store in store mode only', async () => {
+      const inStore = lookupMock('upc', []);
+      const { unmount } = renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        { operationMocks: [inStore.mock] },
+      );
+      await waitFor(() =>
+        expect(inStore.fired).toContainEqual(
+          expect.objectContaining({ withHome: false, withShelfPrices: true }),
+        ),
+      );
+      unmount();
+
+      const fromPantry = lookupMock('upc', []);
+      renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
+        operationMocks: [fromPantry.mock],
+      });
+      await waitFor(() =>
+        expect(fromPantry.fired).toContainEqual(
+          expect.objectContaining({ withShelfPrices: false }),
+        ),
+      );
+    });
+
+    it("asks for no shelf prices with the build's flag off", async () => {
+      mockShelfPricesOffered.mockReturnValue(false);
+      const upc = lookupMock('upc', []);
+
+      renderHookWithApollo(
+        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        { operationMocks: [upc.mock] },
+      );
+
+      await waitFor(() =>
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({ withShelfPrices: false }),
         ),
       );
     });

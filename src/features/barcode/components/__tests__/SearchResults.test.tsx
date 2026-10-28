@@ -111,6 +111,15 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
   useStorePriceMemory: () => ({ lastPaid: null, usual: null, typical: null }),
 }));
 
+// Store mode's shelf prices have their own tests; here, which list they are read for.
+const mockShelfListIds: (string | null | undefined)[] = [];
+jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
+  useStoreShelfPrices: (_itemId: string, listId: string | null | undefined) => {
+    mockShelfListIds.push(listId);
+    return { rows: [] };
+  },
+}));
+
 /** One package counted in a piece, sized by the record: what a scan adds. */
 const ONE_PACKAGE = { packages: { count: 1, unitId: 'unit-pc' } };
 
@@ -145,6 +154,22 @@ describe('SearchResults', () => {
   it('renders Add to Pantry button for pantry source', () => {
     renderWithApollo(<SearchResults {...defaultProps} />);
     expect(screen.getByText('Add to Pantry')).toBeTruthy();
+  });
+
+  it('reads no shelf prices for a scan from the pantry or a list', () => {
+    const { unmount } = renderWithApollo(<SearchResults {...defaultProps} />);
+    expect(mockShelfListIds.at(-1)).toBeNull();
+    unmount();
+
+    renderWithApollo(
+      <SearchResults
+        {...defaultProps}
+        source="shoppingList"
+        shoppingListId="list-1"
+      />,
+    );
+    expect(mockShelfListIds.at(-1)).toBeNull();
+    expect(screen.queryByTestId(barcodeTestIDs.storeShelfPrices)).toBeNull();
   });
 
   it('renders Add to shopping list button for shopping list source', () => {

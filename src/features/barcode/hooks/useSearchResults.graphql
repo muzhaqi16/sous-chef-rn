@@ -5,7 +5,8 @@
 # `displayUnit` and `variationBrand` are that barcode's, never another pack's.
 # An add names `matchedVariation.id` to store exactly those facts.
 # A scan asks once: the product's origin, brand-list matches and the
-# household's dietary alerts come with it, read by their hooks' fragments.
+# household's dietary alerts come with it, read by their hooks' fragments, and
+# in store mode what the household paid and the shelf price at each store.
 # Without a home there are no alerts to read; `$homeId` is then never sent on.
 query ItemByLookup(
   $lookup: ItemLookupInput!
@@ -13,6 +14,7 @@ query ItemByLookup(
   $homeId: ID = ""
   $withHome: Boolean = false
   $withPrices: Boolean = false
+  $withShelfPrices: Boolean = false
 ) {
   items(filters: { lookup: $lookup }, first: 1) {
     edges {
@@ -23,6 +25,7 @@ query ItemByLookup(
         ...useProductBrandListings_item
         ...useProductDietaryAlerts_item @include(if: $withHome)
         ...useStorePriceMemory_item @include(if: $withPrices)
+        ...useStoreShelfPrices_item @include(if: $withShelfPrices)
         # The concepts above the product, nearest first: store mode ticks the
         # list line that names the product or one of them.
         ancestors {
