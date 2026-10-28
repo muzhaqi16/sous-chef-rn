@@ -247,11 +247,6 @@
     "totalPurchases": "Acquisti totali:",
     "emptyTitle": "Nessuna cronologia acquisti",
     "emptySubtitle": "Segna questo articolo come acquistato per iniziare a tracciare la cronologia",
-    "othersOnlyTitle": "Nessun acquisto tuo",
-    "othersOnlyBody_one": "Qualcun altro della tua casa l'ha acquistato. Qui compaiono solo i tuoi acquisti.",
-    "othersOnlyBody_other": "Altri della tua casa l'hanno acquistato {{count}} volte. Qui compaiono solo i tuoi acquisti.",
-    "othersNote_one": "Qualcun altro della tua casa l'ha acquistato un'altra volta. Compaiono solo i tuoi acquisti.",
-    "othersNote_other": "Altri della tua casa l'hanno acquistato altre {{count}} volte. Compaiono solo i tuoi acquisti.",
     "totalSpent": "Totale speso:",
     "averagePrice": "Media / acquisto:"
   },

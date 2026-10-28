@@ -65,8 +65,6 @@ const purchaser = (
 const historyMock = (
   nodes: PurchaseNode[],
   hasNextPage = false,
-  // Every member's purchases; `nodes` are the caller's own.
-  householdCount = nodes.length,
 ): MockFor<typeof GetItemPurchaseHistoryDocument> => ({
   request: {
     query: GetItemPurchaseHistoryDocument,
@@ -76,7 +74,6 @@ const historyMock = (
     data: {
       shoppingListItem: {
         id: '1',
-        purchaseHistory: { purchaseCount: householdCount },
         purchasesConnection: {
           edges: nodes.map(node => ({ node })),
           pageInfo: {
@@ -384,31 +381,6 @@ describe('PurchaseHistoryScreen', () => {
       operationMocks: [historyMock([])],
     });
     expect(await screen.findByText('No purchase history')).toBeTruthy();
-  });
-
-  // The API lists only the caller's own purchases; the count is everyone's.
-  it('says others in the household bought it, rather than that nobody has', async () => {
-    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
-      operationMocks: [historyMock([], false, 3)],
-    });
-
-    expect(
-      await screen.findByText(t('purchaseHistory.othersOnlyTitle')),
-    ).toBeTruthy();
-    expect(
-      screen.getByText(t('purchaseHistory.othersOnlyBody', { count: 3 })),
-    ).toBeTruthy();
-    expect(screen.queryByText(t('purchaseHistory.emptyTitle'))).toBeNull();
-  });
-
-  it("notes the purchases others made beside the user's own", async () => {
-    renderWithApollo(<PurchaseHistoryScreen route={route} />, {
-      operationMocks: [historyMock([purchase], false, 3)],
-    });
-
-    expect(
-      await screen.findByText(t('purchaseHistory.othersNote', { count: 2 })),
-    ).toBeTruthy();
   });
 
   it('renders an error state, not an empty history, when the query fails', async () => {

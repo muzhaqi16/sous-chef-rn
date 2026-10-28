@@ -190,10 +190,9 @@ const makeRenderItem =
 
 const PurchaseHistoryHeader: React.FC<{
   totalCount: number;
-  othersCount: number;
   totalSpent: string;
   averageSpent: string;
-}> = ({ totalCount, othersCount, totalSpent, averageSpent }) => {
+}> = ({ totalCount, totalSpent, averageSpent }) => {
   const { t } = useTranslation();
   const showPrices = useBudgetAndPricesEnabled();
   return (
@@ -220,11 +219,6 @@ const PurchaseHistoryHeader: React.FC<{
           </Text>
         </>
       ) : null}
-      {othersCount > 0 ? (
-        <Text role="caption" tone="secondary" style={styles.statsRow}>
-          {t('purchaseHistory.othersNote', { count: othersCount })}
-        </Text>
-      ) : null}
     </View>
   );
 };
@@ -238,7 +232,6 @@ export const PurchaseHistoryScreen: React.FC<
   const {
     purchases,
     totalCount,
-    othersCount,
     state,
     loadMore,
     hasNextPage,
@@ -272,23 +265,13 @@ export const PurchaseHistoryScreen: React.FC<
       summary={
         <PurchaseHistoryHeader
           totalCount={totalCount}
-          othersCount={othersCount}
           totalSpent={totalSpent}
           averageSpent={averageSpent}
         />
       }
       emptyIcon="receipt-outline"
-      // Bought only by others: say so, rather than asking for a first purchase.
-      emptyTitle={
-        othersCount > 0
-          ? t('purchaseHistory.othersOnlyTitle')
-          : t('purchaseHistory.emptyTitle')
-      }
-      emptyDescription={
-        othersCount > 0
-          ? t('purchaseHistory.othersOnlyBody', { count: othersCount })
-          : t('purchaseHistory.emptySubtitle')
-      }
+      emptyTitle={t('purchaseHistory.emptyTitle')}
+      emptyDescription={t('purchaseHistory.emptySubtitle')}
       componentName="PurchaseHistoryScreen"
     />
   );

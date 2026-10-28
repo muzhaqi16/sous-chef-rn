@@ -247,11 +247,6 @@
     "totalPurchases": "Blerje gjithsej:",
     "emptyTitle": "Pa historik blerjeje",
     "emptySubtitle": "Shëno këtë artikull si të blerë për të nisur ndjekjen e historikut",
-    "othersOnlyTitle": "Asnjë blerje nga ti",
-    "othersOnlyBody_one": "Dikush tjetër në shtëpinë tënde e bleu. Këtu shfaqen vetëm blerjet e tua.",
-    "othersOnlyBody_other": "Të tjerë në shtëpinë tënde e blenë {{count}} herë. Këtu shfaqen vetëm blerjet e tua.",
-    "othersNote_one": "Dikush tjetër në shtëpinë tënde e bleu edhe një herë. Shfaqen vetëm blerjet e tua.",
-    "othersNote_other": "Të tjerë në shtëpinë tënde e blenë edhe {{count}} herë. Shfaqen vetëm blerjet e tua.",
     "totalSpent": "Shpenzuar gjithsej:",
     "averagePrice": "Mesatare / blerje:"
   },

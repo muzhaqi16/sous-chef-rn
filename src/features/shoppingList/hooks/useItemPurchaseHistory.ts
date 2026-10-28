@@ -36,10 +36,6 @@ export function useItemPurchaseHistory(itemId: string) {
     connection?.edges.map(edge => edge.node) ?? [];
 
   const totalCount = connection?.totalCount ?? purchases.length;
-  // The summary counts every member's purchases; the list is the caller's own.
-  const householdCount =
-    data?.shoppingListItem?.purchaseHistory.purchaseCount ?? totalCount;
-  const othersCount = Math.max(0, householdCount - totalCount);
   const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
   const endCursor = connection?.pageInfo.endCursor ?? null;
   const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
@@ -77,7 +73,6 @@ export function useItemPurchaseHistory(itemId: string) {
   return {
     purchases,
     totalCount,
-    othersCount,
     state,
     loadMore,
     hasNextPage,
