@@ -8,6 +8,7 @@ import { screen, fireEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import type { InfoRowProps } from '#components/atoms/InfoRow';
 import { ListSettings } from '../ListSettings';
+import { t } from '#/i18n';
 import { Text as AppText } from '#components/atoms/Text';
 
 const render = (ui: React.ReactElement) => renderWithApollo(ui);
@@ -407,6 +408,39 @@ describe('ListSettings', () => {
     render(<ListSettings route={editRoute} />);
     expect(screen.getByText(/This list is linked to the home/)).toBeTruthy();
   });
+
+  // The API lets a home's OWNER and ADMINs delete its lists; a MEMBER edits.
+  it.each([
+    ['ADMIN', true],
+    ['MEMBER', false],
+  ])(
+    'offers Delete List to a home %s who does not own the list: %s',
+    (role, offered) => {
+      const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');
+      ownerHelpers.isShoppingListOwner.mockReturnValue(false);
+
+      const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+      useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+        shoppingList: {
+          id: 'sl1',
+          name: 'Weekly Groceries',
+          isDefault: true,
+          homeId: 'h1',
+          home: {
+            name: 'Family Home',
+            myMembership: { id: 'm1', role },
+          },
+          createdBy: { id: 'u2' },
+          collaboratorsConnection: { edges: [], totalCount: 0 },
+        },
+        isShared: true,
+        collaborators: [],
+      }));
+
+      render(<ListSettings route={editRoute} />);
+      expect(!!screen.queryByText(t('labels.deleteList'))).toBe(offered);
+    },
+  );
 
   it('navigates to the linked home when a non-owner taps Manage Home', () => {
     const ownerHelpers = require('#features/shoppingList/utils/ownershipHelpers');

@@ -60,11 +60,11 @@ export const ROLE_PERMISSIONS: Record<CollaboratorRole, RoleInfo> = {
     permissions: [
       { labelKey: 'collaboratorRoles.permissions.viewItems', granted: true },
       { labelKey: 'collaboratorRoles.permissions.addItems', granted: true },
+      { labelKey: 'collaboratorRoles.permissions.editItems', granted: true },
       {
         labelKey: 'collaboratorRoles.permissions.markPurchased',
         granted: true,
       },
-      { labelKey: 'collaboratorRoles.permissions.editItems', granted: false },
       { labelKey: 'collaboratorRoles.permissions.removeItems', granted: false },
       {
         labelKey: 'collaboratorRoles.permissions.inviteOthers',

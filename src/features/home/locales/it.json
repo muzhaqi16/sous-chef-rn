@@ -139,7 +139,7 @@
     "descriptions": {
       "viewer": "Può vedere la lista della spesa",
       "shopper": "Può segnare gli articoli come acquistati",
-      "contributor": "Può aggiungere articoli e segnarli come acquistati",
+      "contributor": "Può aggiungere e modificare articoli e segnarli come acquistati",
       "editor": "Può aggiungere, modificare e rimuovere articoli",
       "admin": "Controllo totale, inclusa la possibilità di invitare altri",
       "owner": "Controllo totale sulla lista della spesa"

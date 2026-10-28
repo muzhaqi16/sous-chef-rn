@@ -139,7 +139,7 @@
     "descriptions": {
       "viewer": "Mund të shohë listën e blerjeve",
       "shopper": "Mund t'i shënojë artikujt si të blerë",
-      "contributor": "Mund të shtojë artikuj dhe t'i shënojë si të blerë",
+      "contributor": "Mund të shtojë dhe të modifikojë artikuj dhe t'i shënojë si të blerë",
       "editor": "Mund të shtojë, të modifikojë dhe të heqë artikuj",
       "admin": "Kontroll i plotë, përfshirë ftesën e të tjerëve",
       "owner": "Kontroll i plotë mbi listën e blerjeve"

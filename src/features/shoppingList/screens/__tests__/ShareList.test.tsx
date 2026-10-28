@@ -6,6 +6,8 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { ShareList } from '../ShareList';
 import { kitTestIDs } from '#components/testIDs';
+import { t } from '#/i18n';
+import { useUser } from '#store/useAppStore';
 import { ShoppingListCollaboratorFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 
 const seedCollaboratorCache = () =>
@@ -24,6 +26,7 @@ const seedCollaboratorCache = () =>
         canRemoveItems: true,
         canEditItems: true,
         canMarkPurchased: true,
+        canInviteOthers: true,
         invitedAt: '2024-01-01T00:00:00Z',
         collaborator: null,
       },
@@ -42,6 +45,7 @@ const seedCollaboratorCache = () =>
         canRemoveItems: false,
         canEditItems: false,
         canMarkPurchased: true,
+        canInviteOthers: false,
         invitedAt: '2024-01-05T00:00:00Z',
         collaborator: null,
       },
@@ -95,6 +99,7 @@ const mockCollaborators = [
     canRemoveItems: true,
     canEditItems: true,
     canMarkPurchased: true,
+    canInviteOthers: true,
     invitedAt: '2024-01-01T00:00:00Z',
     collaborator: null,
   },
@@ -110,6 +115,7 @@ const mockCollaborators = [
     canRemoveItems: false,
     canEditItems: false,
     canMarkPurchased: true,
+    canInviteOthers: false,
     invitedAt: '2024-01-05T00:00:00Z',
     collaborator: null,
   },
@@ -333,5 +339,54 @@ describe('ShareList', () => {
     render(<ShareList route={route} />);
     expect(screen.getByText('Leave List')).toBeTruthy();
     expect(screen.getByText('Danger Zone')).toBeTruthy();
+  });
+
+  it('offers the owner the share link and member removal', () => {
+    render(<ShareList route={route} />);
+    expect(
+      screen.getByText(t('shoppingListScreens.publicSharingDisabled')),
+    ).toBeTruthy();
+    expect(
+      screen.getByLabelText(t('shoppingListScreens.removeMemberA11y')),
+    ).toBeTruthy();
+  });
+
+  // On a personal list sharing and the roster are the owner's, and inviting
+  // takes canInviteOthers: the API refuses a collaborator each of them.
+  describe('for a collaborator without canInviteOthers', () => {
+    beforeEach(() => {
+      mockOwnerships = [
+        {
+          __typename: 'ShoppingListOwnership',
+          id: 'o3',
+          userId: 'u3',
+          user: null,
+        },
+      ];
+      jest
+        .mocked(useUser)
+        .mockReturnValue({ id: 'u2', email: 'member@test.com' } as ReturnType<
+          typeof useUser
+        >);
+    });
+
+    afterEach(() => {
+      jest
+        .mocked(useUser)
+        .mockReturnValue({ id: 'u1', email: 'owner@test.com' } as ReturnType<
+          typeof useUser
+        >);
+    });
+
+    it('offers no share link, invite or member removal', () => {
+      render(<ShareList route={route} />);
+      expect(screen.queryByText(t('labels.inviteMembers'))).toBeNull();
+      expect(
+        screen.queryByText(t('shoppingListScreens.publicSharingDisabled')),
+      ).toBeNull();
+      expect(
+        screen.queryByLabelText(t('shoppingListScreens.removeMemberA11y')),
+      ).toBeNull();
+    });
   });
 });

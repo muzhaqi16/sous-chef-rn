@@ -5,6 +5,7 @@ import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shopping
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { ShareInviteSection } from '../ShareInviteSection';
+import { INVITE_ROLES } from '../collaboratorRoles';
 
 jest.mock('#hooks/auth/useEmailVerification', () => ({
   useVerifiedEmailGate: () => ({
@@ -38,9 +39,12 @@ describe('ShareInviteSection', () => {
     const { mock, fired } = recordMock(AddCollaboratorDocument, {
       error: rateLimited(),
     });
-    renderWithApollo(<ShareInviteSection listId="list-1" />, {
-      operationMocks: [mock],
-    });
+    renderWithApollo(
+      <ShareInviteSection listId="list-1" roles={INVITE_ROLES} />,
+      {
+        operationMocks: [mock],
+      },
+    );
 
     await sendInvite();
 
@@ -71,13 +75,51 @@ describe('ShareInviteSection', () => {
         },
       },
     });
-    renderWithApollo(<ShareInviteSection listId="list-1" />, {
-      operationMocks: [mock],
-    });
+    renderWithApollo(
+      <ShareInviteSection listId="list-1" roles={INVITE_ROLES} />,
+      {
+        operationMocks: [mock],
+      },
+    );
 
     await sendInvite();
 
     await waitFor(() => expect(screen.queryByDisplayValue(EMAIL)).toBeNull());
     expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  // A collaborator below the role they would confer is refused by the API,
+  // so the section offers only the roles it is given.
+  it('offers only the roles it is given, starting from the first', async () => {
+    const { mock, fired } = recordMock(AddCollaboratorDocument, {
+      data: {
+        inviteToShoppingList: {
+          __typename: 'InviteToShoppingListPayload',
+          collaborator: { id: 'c-1' },
+        },
+      },
+    });
+    renderWithApollo(
+      <ShareInviteSection
+        listId="list-1"
+        roles={[CollaboratorRole.Viewer, CollaboratorRole.Shopper]}
+      />,
+      { operationMocks: [mock] },
+    );
+
+    expect(screen.queryByText('Editor')).toBeNull();
+    await sendInvite();
+
+    await waitFor(() =>
+      expect(fired).toEqual([
+        {
+          input: {
+            shoppingListId: 'list-1',
+            email: EMAIL,
+            role: CollaboratorRole.Viewer,
+          },
+        },
+      ]),
+    );
   });
 });

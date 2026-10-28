@@ -36,6 +36,7 @@ export const ListSettings: React.FC<
   const { toShareList, toHomeDetail } = useAppNavigation();
   const {
     basedOnTemplate,
+    canDelete,
     collaborators,
     completedShopDate,
     completing,
@@ -420,7 +421,7 @@ export const ListSettings: React.FC<
         </View>
       )}
 
-      {!!listId && !!isOwner && (
+      {!!listId && !!canDelete && (
         <View style={commonStyles.settingsSection}>
           <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
             {t('labels.dangerZone')}

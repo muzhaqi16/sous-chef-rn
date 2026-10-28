@@ -84,6 +84,8 @@ fragment ShoppingListCollaboratorFragment on ShoppingListCollaborator {
   canRemoveItems
   canEditItems
   canMarkPurchased
+  # A collaborator invites only holding it, and only roles whose flags they hold.
+  canInviteOthers
   invitedAt
   collaborator {
     id

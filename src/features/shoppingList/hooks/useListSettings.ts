@@ -27,6 +27,7 @@ import {
   formatRoleDisplay,
   getShoppingListOwnerInfo,
 } from '#features/shoppingList/utils/ownershipHelpers';
+import { canDeleteShoppingList } from '#features/shoppingList/utils/shoppingListPermissions';
 
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { dayAsInstant } from '#/utils/dateUtils';
@@ -106,6 +107,10 @@ export const useListSettings = (listId: string | undefined) => {
 
   const ownership = listOwnershipOf(listId, ownershipSnapshot, user?.id);
   const isOwner = ownership === 'owner';
+  const canDelete = canDeleteShoppingList(
+    isOwner,
+    shoppingList?.home?.myMembership?.role,
+  );
   const role = ownershipSnapshot
     ? getShoppingListRole(
         ownershipSnapshot,
@@ -495,6 +500,7 @@ export const useListSettings = (listId: string | undefined) => {
     handleArchiveToggle,
     handleClearReminder,
     handleCreateFromTemplate,
+    canDelete,
     handleDelete,
     handleGenerateNext,
     handleLeaveList,

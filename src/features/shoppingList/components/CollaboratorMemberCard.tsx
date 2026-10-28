@@ -58,6 +58,8 @@ interface CollaboratorMemberCardProps {
   currentUserId: string | undefined;
   /** When true (home-linked list), the remove button is hidden. */
   isHomeLinked: boolean;
+  /** The viewer owns the list, so may remove members and change their permissions. */
+  canManage: boolean;
   /** When true, this member owns the list — shows an Owner tag, hides remove. */
   isOwner?: boolean;
   /** Open the permissions sheet for this member. */
@@ -70,6 +72,7 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
   member,
   currentUserId,
   isHomeLinked,
+  canManage,
   isOwner = false,
   onPress,
   onRemove,
@@ -87,10 +90,13 @@ export const CollaboratorMemberCard: React.FC<CollaboratorMemberCardProps> = ({
   // button rather than removing your own row here.
   const isCurrentUser =
     !!currentUserId && member.collaboratorId === currentUserId;
-  const canRemove = !isHomeLinked && !isOwner && !isCurrentUser;
+  const canRemove = canManage && !isHomeLinked && !isOwner && !isCurrentUser;
 
   return (
-    <AppPressable style={styles.memberCard} onPress={onPress}>
+    <AppPressable
+      style={styles.memberCard}
+      onPress={canManage ? onPress : undefined}
+    >
       <View style={styles.memberInfo}>
         <View style={styles.avatar}>
           <Text role="bodyStrong" style={styles.avatarText}>

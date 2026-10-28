@@ -139,7 +139,7 @@
     "descriptions": {
       "viewer": "Puede ver la lista de compras",
       "shopper": "Puede marcar artículos como comprados",
-      "contributor": "Puede añadir artículos y marcarlos como comprados",
+      "contributor": "Puede añadir y editar artículos y marcarlos como comprados",
       "editor": "Puede añadir, editar y quitar artículos",
       "admin": "Control total, incluida la invitación a otros",
       "owner": "Control total sobre la lista de compras"

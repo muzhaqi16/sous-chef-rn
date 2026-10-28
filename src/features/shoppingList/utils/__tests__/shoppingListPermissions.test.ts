@@ -4,8 +4,10 @@ import {
   CollaboratorStatus,
 } from '#/graphql/generated/schemaTypes';
 import {
+  getInvitableCollaboratorRoles,
   getShoppingListPermissions,
   getShoppingListPermissionsWithOwner,
+  type CollaboratorInviter,
 } from '../shoppingListPermissions';
 
 const FULL = {
@@ -271,5 +273,69 @@ describe('shoppingListPermissions', () => {
       const list = { homeId: null, ownership: null };
       expect(getShoppingListPermissionsWithOwner(list, 'u1')).toEqual(NONE);
     });
+  });
+});
+
+describe('getInvitableCollaboratorRoles', () => {
+  const ROLES = [
+    CollaboratorRole.Viewer,
+    CollaboratorRole.Shopper,
+    CollaboratorRole.Contributor,
+    CollaboratorRole.Editor,
+    CollaboratorRole.Admin,
+  ];
+  const inviter = (
+    role: CollaboratorRole,
+    flags: Partial<CollaboratorInviter> = {},
+  ): CollaboratorInviter => ({
+    role,
+    canEdit: true,
+    canAddItems: true,
+    canRemoveItems: true,
+    canEditItems: true,
+    canMarkPurchased: true,
+    canInviteOthers: true,
+    ...flags,
+  });
+
+  it('offers nothing without canInviteOthers', () => {
+    expect(
+      getInvitableCollaboratorRoles(
+        inviter(CollaboratorRole.Admin, { canInviteOthers: false }),
+        ROLES,
+      ),
+    ).toEqual([]);
+  });
+
+  it('offers at most the inviter’s own role', () => {
+    expect(
+      getInvitableCollaboratorRoles(inviter(CollaboratorRole.Editor), ROLES),
+    ).toEqual([
+      CollaboratorRole.Viewer,
+      CollaboratorRole.Shopper,
+      CollaboratorRole.Contributor,
+      CollaboratorRole.Editor,
+    ]);
+  });
+
+  // An invite of a role carries that role's flags, each of which the inviter
+  // must hold.
+  it('leaves out a role carrying a flag the inviter lacks', () => {
+    expect(
+      getInvitableCollaboratorRoles(
+        inviter(CollaboratorRole.Admin, { canRemoveItems: false }),
+        ROLES,
+      ),
+    ).toEqual([
+      CollaboratorRole.Viewer,
+      CollaboratorRole.Shopper,
+      CollaboratorRole.Contributor,
+    ]);
+  });
+
+  it('ranks SHOPPER with VIEWER', () => {
+    expect(
+      getInvitableCollaboratorRoles(inviter(CollaboratorRole.Viewer), ROLES),
+    ).toEqual([CollaboratorRole.Viewer, CollaboratorRole.Shopper]);
   });
 });

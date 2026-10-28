@@ -139,7 +139,7 @@
     "descriptions": {
       "viewer": "Can view the shopping list",
       "shopper": "Can mark items as purchased",
-      "contributor": "Can add items and mark as purchased",
+      "contributor": "Can add and edit items and mark them purchased",
       "editor": "Can add, edit, and remove items",
       "admin": "Full control including inviting others",
       "owner": "Full control over the shopping list"

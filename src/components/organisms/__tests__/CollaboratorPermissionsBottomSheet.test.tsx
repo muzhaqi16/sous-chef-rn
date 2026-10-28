@@ -63,6 +63,7 @@ const makeCollaborator = (): ShoppingListCollaboratorFragment => ({
   canRemoveItems: true,
   canEditItems: true,
   canMarkPurchased: true,
+  canInviteOthers: false,
   invitedAt: '2024-01-01T00:00:00Z',
   collaborator: null,
 });

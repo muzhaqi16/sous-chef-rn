@@ -12,10 +12,7 @@ import { EmailInput } from '#components/molecules/EmailInput';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { useInviteCollaborator } from '#features/shoppingList/hooks/useInviteCollaborator';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
-import {
-  ROLE_PERMISSIONS,
-  INVITE_ROLES,
-} from '#features/shoppingList/components/collaboratorRoles';
+import { ROLE_PERMISSIONS } from '#features/shoppingList/components/collaboratorRoles';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import type { Translate } from '#/i18n/types';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
@@ -27,8 +24,8 @@ import {
 } from './shareInviteFormConfig';
 import { logValidationErrors } from '#/utils/validation/common';
 
-const buildRoleOptions = (t: Translate) =>
-  INVITE_ROLES.map(role => ({
+const buildRoleOptions = (t: Translate, roles: readonly CollaboratorRole[]) =>
+  roles.map(role => ({
     key: role,
     icon: ROLE_PERMISSIONS[role].icon,
     label: t(ROLE_PERMISSIONS[role].labelKey),
@@ -36,21 +33,26 @@ const buildRoleOptions = (t: Translate) =>
 
 interface ShareInviteSectionProps {
   listId: string;
+  /** The roles the viewer may invite; never empty. */
+  roles: readonly CollaboratorRole[];
 }
 
 /** Invite-by-email section of the Share screen. */
 export const ShareInviteSection: React.FC<ShareInviteSectionProps> = ({
   listId,
+  roles,
 }) => {
   const { t } = useTranslation();
-  const roleOptions = buildRoleOptions(t);
+  const roleOptions = buildRoleOptions(t, roles);
 
   const { control, handleSubmit, resetField } = useForm<ShareInviteFormValues>({
     resolver: yupResolver(shareInviteSchema),
     defaultValues: shareInviteDefaults(),
   });
   const [selectedRole, setSelectedRole] = useState<CollaboratorRole>(
-    CollaboratorRole.Contributor,
+    roles.includes(CollaboratorRole.Contributor)
+      ? CollaboratorRole.Contributor
+      : roles[0] ?? CollaboratorRole.Viewer,
   );
   const [sharing, setSharing] = useState(false);
 

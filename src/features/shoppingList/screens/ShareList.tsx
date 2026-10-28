@@ -9,6 +9,8 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useRemoveCollaborator } from '#features/shoppingList/hooks/useRemoveCollaborator';
 import { isShoppingListOwner } from '#features/shoppingList/utils/ownershipHelpers';
+import { getInvitableCollaboratorRoles } from '#features/shoppingList/utils/shoppingListPermissions';
+import { INVITE_ROLES } from '#features/shoppingList/components/collaboratorRoles';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
 import type { CollaboratorPermissionsBottomSheetRef } from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
 import CollaboratorPermissionsBottomSheet from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
@@ -22,9 +24,23 @@ import { ShareCodeSection } from '#features/shoppingList/components/ShareCodeSec
 import { ShareInviteSection } from '#features/shoppingList/components/ShareInviteSection';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { SubScreen } from '#components/templates/SubScreen';
-import { CollaboratorStatus } from '#/graphql/generated/schemaTypes';
+import {
+  CollaboratorStatus,
+  type CollaboratorRole,
+} from '#/graphql/generated/schemaTypes';
+import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
+
+/** Sharing is the owner's; a collaborator invites only as far as their own row allows. */
+function invitableRoles(
+  isOwner: boolean,
+  self: ShoppingListCollaboratorFragment | undefined,
+): readonly CollaboratorRole[] {
+  if (isOwner) return INVITE_ROLES;
+  if (self?.status !== CollaboratorStatus.Active) return [];
+  return getInvitableCollaboratorRoles(self, INVITE_ROLES);
+}
 
 export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
@@ -72,6 +88,8 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
       (!!currentUser?.email && c.email === currentUser.email) ||
       c.collaboratorId === currentUser?.id,
   );
+
+  const inviteRoles = invitableRoles(isOwner, currentUserCollaborator);
 
   const activeCollaborators = collaborators.filter(
     c =>
@@ -177,14 +195,18 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
             </View>
           ) : (
             <>
-              <ShareCodeSection
-                listId={listId}
-                isPublic={isPublic}
-                shareCode={shareCode}
-                shareLinkUrl={shoppingList?.shareLink?.universal}
-              />
+              {isOwner ? (
+                <ShareCodeSection
+                  listId={listId}
+                  isPublic={isPublic}
+                  shareCode={shareCode}
+                  shareLinkUrl={shoppingList?.shareLink?.universal}
+                />
+              ) : null}
 
-              <ShareInviteSection listId={listId} />
+              {inviteRoles.length > 0 ? (
+                <ShareInviteSection listId={listId} roles={inviteRoles} />
+              ) : null}
             </>
           )}
 
@@ -199,6 +221,7 @@ export const ShareList: React.FC<StaticScreenProps<{ listId: string }>> = ({
                   member={member}
                   currentUserId={currentUser?.id}
                   isHomeLinked={isHomeLinked}
+                  canManage={isOwner}
                   isOwner={
                     !!member.collaboratorId &&
                     ownerUserIds.has(member.collaboratorId)
