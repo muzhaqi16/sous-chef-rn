@@ -42,7 +42,7 @@ touch neither). Run `/simplify` before each code commit. A test that "fails on
 
 ## 7. The report names the page's photo (finding 8, D9)
 
-- [ ] 7.1 In `src/features/catalog/ui/useReportPhotoHeaderAction.ts`, report `shown.id` when the page shows a catalog photo. Fall back to `image?.catalogImageId` only when the gallery has no photo pages, and offer no report on a page with no catalog photo. Cut the docblock to six lines or fewer (finding 14). Add `useReportPhotoHeaderAction.test.ts` cases: page 2 of three reports the third photo's id; the household's leading upload offers no report while the next page does; a single-image hero reports the entry's `catalogImageId`. Verify the page case fails on `dev` and all pass after.
+- [x] 7.1 In `src/features/catalog/ui/useReportPhotoHeaderAction.ts`, report `shown.id` when the page shows a catalog photo. Fall back to `image?.catalogImageId` only when the gallery has no photo pages, and offer no report on a page with no catalog photo. Cut the docblock to six lines or fewer (finding 14). Add `useReportPhotoHeaderAction.test.ts` cases: page 2 of three reports the third photo's id; the household's leading upload offers no report while the next page does; a single-image hero reports the entry's `catalogImageId`. Verify the page case fails on `dev` and all pass after.
 
 ## 8. A settle event's refetch sends its own request (finding 9, D10)
 

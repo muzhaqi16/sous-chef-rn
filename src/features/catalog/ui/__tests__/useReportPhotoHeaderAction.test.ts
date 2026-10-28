@@ -156,16 +156,54 @@ describe('useReportPhotoHeaderAction', () => {
 
       expect(result.current.actions[0]?.mark).toBeUndefined();
       result.current.actions[0]?.onPress();
-      expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', undefined);
+      expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', 'approved');
+    });
+  });
+
+  describe('over a gallery of photos', () => {
+    const three = {
+      leadImageUrl: null,
+      photos: [
+        photo('front', ItemImageStatus.Approved),
+        photo('side', ItemImageStatus.Approved),
+        photo('back', ItemImageStatus.Approved),
+      ],
+    };
+
+    // Not the entry's lead photo: the one the user swiped to and called wrong.
+    it('reports the photo on the page shown', () => {
+      const result = render(
+        PUBLIC_ITEM,
+        { source: EntryImageSource.Catalog, catalogImageId: 'front' },
+        three,
+      );
+
+      act(() => result.current.onPageChange(2));
+      result.current.actions[0]?.onPress();
+
+      expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', 'back');
     });
 
-    it('leaves the household’s own leading upload unmarked', () => {
-      const [flag] = actions(PUBLIC_ITEM, null, {
-        ...pendingFirst,
-        leadImageUrl: 'https://cdn.test/household.jpg',
-      });
+    it('reports the first photo on the first page', () => {
+      const [report] = actions(PUBLIC_ITEM, null, three);
 
-      expect(flag?.mark).toBeUndefined();
+      report?.onPress();
+
+      expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', 'front');
+    });
+
+    it("offers nothing over the household's own leading upload, and reports the page after it", () => {
+      const result = render(
+        PUBLIC_ITEM,
+        { source: EntryImageSource.Household, catalogImageId: null },
+        { ...three, leadImageUrl: 'https://cdn.test/household.jpg' },
+      );
+      expect(result.current.actions).toEqual([]);
+
+      act(() => result.current.onPageChange(1));
+      result.current.actions[0]?.onPress();
+
+      expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', 'front');
     });
   });
 });

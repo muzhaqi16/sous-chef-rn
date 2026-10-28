@@ -25,16 +25,10 @@ function photoOnPage(gallery: HeroGallery, page: number): ItemPhotoRef | null {
 }
 
 /**
- * A detail screen's photo action, spread into its actions, following the page
- * its `GalleryHero` reports through `onPageChange`.
- *
- * On the user's own upload awaiting review the flag carries a clock and
- * explains instead of reporting: the API returns a PENDING photo to its
- * submitter alone, so it must not read as live.
- *
- * Otherwise "report wrong photo", for a public catalog item showing an approved
- * catalog photo (`imageUrl` is approved-only), naming it by the entry's
- * `catalogImageId`. None for the household's own upload.
+ * A detail screen's photo action, following the page its `GalleryHero` reports
+ * through `onPageChange`: "report wrong photo" naming the catalog photo shown,
+ * none over the household's own upload. On the user's upload awaiting review it
+ * explains instead, as the API returns a PENDING photo to its submitter alone.
  */
 export function useReportPhotoHeaderAction(
   item:
@@ -72,10 +66,17 @@ export function useReportPhotoHeaderAction(
 
   const none = { actions: [], onPageChange: setPage };
   if (!item?.canSuggest) return none;
-  const photoId = image?.catalogImageId ?? undefined;
-  // A household photo with no catalog photo behind it is its own upload.
-  if (image?.source === EntryImageSource.Household && !photoId) return none;
-  if (!photoId && !item.imageUrl) return none;
+  let photoId: string | undefined;
+  if (gallery.photos.length > 0) {
+    // A page showing no catalog photo is the household's own upload.
+    if (!shown) return none;
+    photoId = shown.id;
+  } else {
+    // A single hero is the entry's image; `imageUrl` is approved-only.
+    photoId = image?.catalogImageId ?? undefined;
+    if (image?.source === EntryImageSource.Household && !photoId) return none;
+    if (!photoId && !item.imageUrl) return none;
+  }
 
   const itemId = item.id;
   return {
