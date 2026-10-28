@@ -451,5 +451,20 @@
   },
   "storeBranch": {
     "number": "Store #{{number}}"
+  },
+  "storeShelfPrices": {
+    "title": "Prices at stores",
+    "cheapest": "Cheapest",
+    "sale": "Sale",
+    "listStore": "This list’s store",
+    "was": "was {{price}}",
+    "usually": "Usually {{price}}",
+    "usuallyOver_one": "Usually {{price}} over {{count}} day",
+    "usuallyOver_other": "Usually {{price}} over {{count}} days",
+    "lowestIn_one": "Lowest in {{count}} day",
+    "lowestIn_other": "Lowest in {{count}} days",
+    "lastSeen": "Last seen {{date}}",
+    "showMore_one": "Show {{count}} more",
+    "showMore_other": "Show {{count}} more"
   }
 }

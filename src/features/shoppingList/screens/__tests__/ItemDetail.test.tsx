@@ -25,6 +25,9 @@ import { kitTestIDs } from '#components/testIDs';
 import { ShoppingListItemDetail } from '../ItemDetail';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GetShoppingListItemDocument } from '../useShoppingListItemDetail.generated';
+import { StoreShelfPricesDocument } from '#features/catalog/hooks/useStoreShelfPrices.generated';
+import { catalogTestIDs } from '#features/catalog/testIDs';
+import { t } from '#/i18n';
 import { EntryImageSource } from '#/graphql/generated/schemaTypes';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
@@ -264,6 +267,89 @@ describe('ShoppingListItemDetail', () => {
     expect(screen.queryByText('$4.59')).toBeNull();
     expect(screen.queryByText('Total paid')).toBeNull();
     expect(screen.queryByText('$7.00')).toBeNull();
+  });
+
+  describe('prices at stores', () => {
+    const lineWithItem = () =>
+      buildItemMock(
+        'si1',
+        buildShoppingListItem({ item: { __typename: 'Item', id: 'cat-1' } }),
+      );
+    const priceAt = (id: string, name: string, price: number) => ({
+      __typename: 'ItemStorePrice',
+      store: { __typename: 'Store', id, name },
+      price,
+      regularPrice: price,
+      onPromotion: false,
+      typicalPrice: price,
+      lowestPrice: price,
+      coveredDays: 90,
+      normalizedPrice: null,
+      normalizedBasis: null,
+      isCurrent: true,
+      confirmedAt: '2026-10-26T12:00:00.000Z',
+      aisle: null,
+      unit: { __typename: 'Unit', id: 'u-lb', symbol: 'lb' },
+      currency: {
+        __typename: 'Currency',
+        id: 'usd',
+        code: 'USD',
+        decimalPlaces: 2,
+      },
+    });
+    const shelfMock = (nodes: ReturnType<typeof priceAt>[]) =>
+      recordMock(StoreShelfPricesDocument, {
+        data: {
+          item: {
+            id: 'cat-1',
+            storePricesConnection: {
+              edges: nodes.map(node => ({ node })),
+            },
+          },
+        },
+      });
+
+    it("lists each store's shelf price under its heading", async () => {
+      const shelf = shelfMock([
+        priceAt('s-aldi', 'ALDI', 1.99),
+        priceAt('s-ge', 'Giant Eagle', 2.49),
+      ]);
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [lineWithItem(), shelf.mock],
+      });
+
+      expect(await screen.findByText(t('storeShelfPrices.title'))).toBeTruthy();
+      expect(
+        screen.getByTestId(catalogTestIDs.storeShelfPrice('s-aldi')),
+      ).toBeTruthy();
+      expect(
+        screen.getByTestId(catalogTestIDs.storeShelfPrice('s-ge')),
+      ).toBeTruthy();
+      expect(shelf.fired).toEqual([{ itemId: 'cat-1' }]);
+    });
+
+    it('shows and asks for none with prices turned off', async () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+      const shelf = shelfMock([priceAt('s-aldi', 'ALDI', 1.99)]);
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [lineWithItem(), shelf.mock],
+      });
+
+      await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+      expect(screen.queryByText(t('storeShelfPrices.title'))).toBeNull();
+      expect(shelf.fired).toEqual([]);
+    });
+
+    it('shows no section for an item no store has priced', async () => {
+      const shelf = shelfMock([]);
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [lineWithItem(), shelf.mock],
+      });
+
+      await waitFor(() => expect(shelf.fired).toHaveLength(1));
+      await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+      expect(screen.queryByText(t('storeShelfPrices.title'))).toBeNull();
+    });
   });
 
   it('shows the preferred store', async () => {

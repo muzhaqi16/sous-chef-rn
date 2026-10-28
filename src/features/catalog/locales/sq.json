@@ -451,5 +451,20 @@
   },
   "storeBranch": {
     "number": "Dyqani nr. {{number}}"
+  },
+  "storeShelfPrices": {
+    "title": "Çmimet në dyqane",
+    "cheapest": "Më i liri",
+    "sale": "Në ofertë",
+    "listStore": "Dyqani i kësaj liste",
+    "was": "më parë {{price}}",
+    "usually": "Zakonisht {{price}}",
+    "usuallyOver_one": "Zakonisht {{price}} gjatë {{count}} dite",
+    "usuallyOver_other": "Zakonisht {{price}} gjatë {{count}} ditëve",
+    "lowestIn_one": "Çmimi më i ulët në {{count}} ditë",
+    "lowestIn_other": "Çmimi më i ulët në {{count}} ditë",
+    "lastSeen": "Parë së fundi më {{date}}",
+    "showMore_one": "Shfaq edhe {{count}}",
+    "showMore_other": "Shfaq edhe {{count}}"
   }
 }

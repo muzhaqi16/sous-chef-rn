@@ -14,7 +14,8 @@ export type FeatureFlag =
   | 'recipeCaptureText'
   | 'recipeCaptureUrl'
   | 'storeMode'
-  | 'storeRoutes';
+  | 'storeRoutes'
+  | 'storeShelfPrices';
 
 /**
  * What a build allows when neither the fork nor the build says otherwise. A
@@ -44,6 +45,9 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   storeMode: true,
   // A list's walking order learned from trips (`ShoppingList.storeRoute`).
   storeRoutes: true,
+  // An item's shelf price at each store (`Item.storePricesConnection`); off,
+  // a list line's detail and store mode's scan card show no shelf prices.
+  storeShelfPrices: true,
 };
 
 const isFeatureFlag = (name: string): name is FeatureFlag =>

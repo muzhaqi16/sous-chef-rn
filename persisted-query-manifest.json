@@ -1371,6 +1371,12 @@
       "body": "query StorePriceComparison($itemId: ID!, $listId: ID!) {\n  shoppingList(id: $listId) {\n    id\n    targetStore {\n      id\n      chain {\n        id\n        name\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  itemPriceComparison(input: {itemId: $itemId}) {\n    currency {\n      id\n      code\n      decimalPlaces\n      __typename\n    }\n    rows {\n      basis\n      scope\n      medianPrice\n      meetsMinimumSample\n      store {\n        id\n        __typename\n      }\n      chain {\n        id\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "f6ae50d30ba7d11ea9f0cb0b785f9e55c2d7501ace2e6783bc55ceb35ea1bf10",
+      "name": "StoreShelfPrices",
+      "type": "query",
+      "body": "query StoreShelfPrices($itemId: ID!) {\n  item(id: $itemId) {\n    id\n    ...useStoreShelfPrices_item\n    __typename\n  }\n}\n\nfragment useStoreShelfPrices_item on Item {\n  id\n  storePricesConnection(first: 10) {\n    edges {\n      node {\n        store {\n          id\n          name\n          __typename\n        }\n        price\n        regularPrice\n        onPromotion\n        typicalPrice\n        lowestPrice\n        coveredDays\n        normalizedPrice\n        normalizedBasis\n        isCurrent\n        confirmedAt\n        aisle\n        unit {\n          id\n          symbol\n          __typename\n        }\n        currency {\n          id\n          code\n          decimalPlaces\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "561dd2d899b43ac4cee7aeb9ac02fb85bbcabdf972c6b5b4a26089bc3f9ea8db",
       "name": "TodayCounts",
       "type": "query",

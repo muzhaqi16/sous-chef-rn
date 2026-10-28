@@ -451,5 +451,20 @@
   },
   "storeBranch": {
     "number": "Tienda n.º {{number}}"
+  },
+  "storeShelfPrices": {
+    "title": "Precios en tiendas",
+    "cheapest": "Más barato",
+    "sale": "Oferta",
+    "listStore": "Tienda de esta lista",
+    "was": "antes {{price}}",
+    "usually": "Normalmente {{price}}",
+    "usuallyOver_one": "Normalmente {{price}} en {{count}} día",
+    "usuallyOver_other": "Normalmente {{price}} en {{count}} días",
+    "lowestIn_one": "Precio más bajo en {{count}} día",
+    "lowestIn_other": "Precio más bajo en {{count}} días",
+    "lastSeen": "Visto por última vez el {{date}}",
+    "showMore_one": "Mostrar {{count}} más",
+    "showMore_other": "Mostrar {{count}} más"
   }
 }

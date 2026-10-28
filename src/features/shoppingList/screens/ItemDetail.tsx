@@ -21,6 +21,8 @@ import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
+import { useStoreShelfPrices } from '#features/catalog/hooks/useStoreShelfPrices';
+import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { DataAttributionNotices } from '#components/molecules/DataAttributionNotices';
@@ -116,6 +118,7 @@ export const ShoppingListItemDetail: React.FC<
   // for `detail`.
   const { item, detail, notFound, state, retry } =
     useShoppingListItemDetail(itemId);
+  const shelfPrices = useStoreShelfPrices(item?.item?.id, listId);
 
   const reportPhotoActions = useReportPhotoHeaderAction(
     detail?.item,
@@ -376,6 +379,12 @@ export const ShoppingListItemDetail: React.FC<
             </View>
           )}
         </DetailSection>
+
+        {shelfPrices.rows.length > 0 && (
+          <DetailSection title={t('storeShelfPrices.title')}>
+            <StoreShelfPriceList rows={shelfPrices.rows} />
+          </DetailSection>
+        )}
 
         {!!showNutrition && (
           <DetailSection

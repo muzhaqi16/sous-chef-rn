@@ -17,6 +17,7 @@ describe('resolveFeatureFlags', () => {
       recipeCaptureUrl: true,
       storeMode: true,
       storeRoutes: true,
+      storeShelfPrices: true,
     });
   });
 
@@ -37,6 +38,13 @@ describe('resolveFeatureFlags', () => {
       ingredientPaste: false,
       recipeCaptureText: false,
       recipeCaptureUrl: true,
+    });
+  });
+
+  it('lets a build turn store shelf prices off', () => {
+    expect(resolveFeatureFlags({}, 'storeShelfPrices=off')).toMatchObject({
+      storeShelfPrices: false,
+      budgetAndPrices: true,
     });
   });
 
@@ -62,6 +70,7 @@ describe('resolveFeatureFlags', () => {
       recipeCaptureUrl: true,
       storeMode: true,
       storeRoutes: true,
+      storeShelfPrices: true,
     });
   });
 });

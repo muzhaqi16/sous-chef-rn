@@ -26,6 +26,9 @@ export const catalogTestIDs = {
   /** `PhotoCredit`: a licensed photo's credit and licence links. */
   photoCreditSource: 'photo-credit-source',
   photoCreditLicense: 'photo-credit-license',
+  /** `StoreShelfPriceList`: one store's row, and the control showing the rest. */
+  storeShelfPrice: (storeId: string) => `store-shelf-price-${storeId}`,
+  storeShelfPricesShowMore: 'store-shelf-prices-show-more',
 
   /** `AddItemSheet`, under its host's `testIDPrefix`. */
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,

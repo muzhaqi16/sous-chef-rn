@@ -30,6 +30,9 @@ export const catalogTypePolicies: TypePolicies = {
           return incoming;
         },
       },
+      // A ranked list with no row ids: each answer replaces the last, since
+      // merging two would mix two rankings.
+      storePricesConnection: { merge: false },
     },
   },
   // No id: a query asking for the usual in a second unit joins the summary
