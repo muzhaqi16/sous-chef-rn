@@ -227,10 +227,12 @@ export class QueueManager {
       // Counted, not just logged: `logger` is console-only and console is
       // stripped from release builds, so this skip is invisible on a device
       // otherwise. `reason` is a fixed small set, so cardinality stays bounded.
+      // Every signed-out launch lands here several times: an idle state, so it
+      // logs below production's `warn` floor and the counter carries it.
       Telemetry.increment('offline_queue_drain_skipped_total', 1, {
         reason: 'no_authenticated_user',
       });
-      Telemetry.warn('Queue drain skipped: no authenticated user');
+      Telemetry.debug('Queue drain skipped: no authenticated user');
       return;
     }
 
