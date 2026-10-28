@@ -311,7 +311,7 @@ export const HomeManagement: React.FC = () => {
                     </Text>
                     <Text role="caption" style={styles.previewSubtitle}>
                       {t('labels.memberCount', {
-                        count: previewHome.membersConnection.totalCount,
+                        count: previewHome.memberCount ?? 0,
                       })}
                     </Text>
                   </View>

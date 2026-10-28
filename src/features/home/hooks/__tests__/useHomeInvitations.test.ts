@@ -5,13 +5,14 @@ import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   InviteToHomeDocument,
   JoinHomeByCodeDocument,
-  GetHomeByJoinCodeDocument,
+  ResolveShareLinkDocument,
 } from '#operations/home/home.generated';
 import { alertService } from '#/services/alertService';
 import {
   ErrorCode,
   MembershipRole,
   MembershipStatus,
+  ShareLinkTargetType,
 } from '#/graphql/generated/schemaTypes';
 import { useHomeInvitations } from '../useHomeInvitations';
 
@@ -129,37 +130,30 @@ function buildJoinByCodeMock(
   };
 }
 
-function buildHomeByJoinCodeMock(
-  joinCode: string,
-  home: { id: string; name: string } | null,
-): MockFor<typeof GetHomeByJoinCodeDocument> {
+/** A code's preview: a home's, a list's (which previews no home), or none. */
+function buildShareLinkMock(
+  code: string,
+  target: { homeId: string; name: string } | 'list' | null,
+): MockFor<typeof ResolveShareLinkDocument> {
   return {
-    request: {
-      query: GetHomeByJoinCodeDocument,
-      variables: { joinCode },
-    },
+    request: { query: ResolveShareLinkDocument, variables: { code } },
     result: {
       data: {
-        homeByJoinCode: home
-          ? {
-              // The query selects id, name, isDefault, the members count and
-              // the pantries page — not the home's own version/updatedAt, its
-              // invites, its member edges, or the viewer's membership.
-              __typename: 'Home',
-              id: home.id,
-              name: home.name,
-              isDefault: false,
-              membersConnection: {
-                __typename: 'MembershipConnection',
-                totalCount: 0,
+        resolveShareLink:
+          target === null
+            ? null
+            : target === 'list'
+            ? {
+                targetType: ShareLinkTargetType.ListJoin,
+                listId: 'list-1',
+                name: 'Groceries',
+              }
+            : {
+                targetType: ShareLinkTargetType.HomeJoin,
+                homeId: target.homeId,
+                name: target.name,
+                memberCount: 2,
               },
-              pantriesConnection: {
-                __typename: 'PantryConnection',
-                edges: [],
-                totalCount: 0,
-              },
-            }
-          : null,
       },
     },
   };
@@ -419,8 +413,8 @@ describe('useHomeInvitations', () => {
         () => useHomeInvitations(createOptions()),
         {
           operationMocks: [
-            buildHomeByJoinCodeMock('XYZ789', {
-              id: 'home-1',
+            buildShareLinkMock('XYZ789', {
+              homeId: 'home-1',
               name: 'Test Home',
             }),
           ],
@@ -432,21 +426,36 @@ describe('useHomeInvitations', () => {
         returnValue = await result.current.previewHomeByCode('  XYZ789  ');
       });
 
-      expect(returnValue?.id).toBe('home-1');
+      expect(returnValue?.homeId).toBe('home-1');
       expect(returnValue?.name).toBe('Test Home');
+      expect(returnValue?.memberCount).toBe(2);
     });
 
     it('returns null when query returns no home', async () => {
       const { result } = renderHookWithApollo(
         () => useHomeInvitations(createOptions()),
         {
-          operationMocks: [buildHomeByJoinCodeMock('INVALID', null)],
+          operationMocks: [buildShareLinkMock('INVALID', null)],
         },
       );
 
       let returnValue: PreviewResult | undefined;
       await act(async () => {
         returnValue = await result.current.previewHomeByCode('INVALID');
+      });
+
+      expect(returnValue).toBeNull();
+    });
+
+    it("previews no home for a list's share code", async () => {
+      const { result } = renderHookWithApollo(
+        () => useHomeInvitations(createOptions()),
+        { operationMocks: [buildShareLinkMock('LIST42', 'list')] },
+      );
+
+      let returnValue: PreviewResult | undefined;
+      await act(async () => {
+        returnValue = await result.current.previewHomeByCode('LIST42');
       });
 
       expect(returnValue).toBeNull();
@@ -461,8 +470,8 @@ describe('useHomeInvitations', () => {
           operationMocks: [
             {
               request: {
-                query: GetHomeByJoinCodeDocument,
-                variables: { joinCode: 'ABC123' },
+                query: ResolveShareLinkDocument,
+                variables: { code: 'ABC123' },
               },
               error: new Error('network down'),
             },

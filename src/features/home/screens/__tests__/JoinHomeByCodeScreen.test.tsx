@@ -6,13 +6,14 @@ import { userEvent, waitFor } from '@testing-library/react-native';
 import {
   MembershipRole,
   MembershipStatus,
+  ShareLinkTargetType,
 } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import {
-  GetHomeByJoinCodeDocument,
   GetHomesDocument,
   JoinHomeByCodeDocument,
+  ResolveShareLinkDocument,
 } from '#operations/home/home.generated';
 import { JoinHomeByCodeScreen } from '../JoinHomeByCodeScreen';
 
@@ -71,44 +72,21 @@ const makeRoute = (joinCode?: string) => ({
   params: joinCode ? { joinCode } : {},
 });
 
+/** The code's preview through `resolveShareLink`; null when it names nothing. */
 function buildPreviewMock(
-  joinCode: string,
-  home: {
-    id?: string;
-    name?: string;
-    members?: number;
-    pantries?: number;
-  } | null,
-): MockFor<typeof GetHomeByJoinCodeDocument> {
+  code: string,
+  home: { id?: string; name?: string; members?: number } | null,
+): MockFor<typeof ResolveShareLinkDocument> {
   return {
-    request: { query: GetHomeByJoinCodeDocument, variables: { joinCode } },
+    request: { query: ResolveShareLinkDocument, variables: { code } },
     result: {
       data: {
-        homeByJoinCode: home
+        resolveShareLink: home
           ? {
-              __typename: 'Home',
-              id: home.id ?? 'home-1',
+              targetType: ShareLinkTargetType.HomeJoin,
+              homeId: home.id ?? 'home-1',
               name: home.name ?? 'Family Home',
-              isDefault: false,
-              membersConnection: {
-                __typename: 'MembershipConnection',
-                totalCount: home.members ?? 2,
-              },
-              pantriesConnection: {
-                __typename: 'PantryConnection',
-                totalCount: home.pantries ?? 1,
-                edges: [
-                  {
-                    __typename: 'PantryEdge',
-                    node: {
-                      __typename: 'Pantry',
-                      id: 'pantry-1',
-                      name: 'Kitchen',
-                      isDefault: true,
-                    },
-                  },
-                ],
-              },
+              memberCount: home.members ?? 2,
             }
           : null,
       },
@@ -190,14 +168,12 @@ describe('JoinHomeByCodeScreen', () => {
     const tree = renderWithApollo(
       <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
       {
-        operationMocks: [
-          buildPreviewMock('ABC123', { members: 2, pantries: 1 }),
-        ],
+        operationMocks: [buildPreviewMock('ABC123', { members: 2 })],
       },
     );
     await waitFor(() => expect(tree.getByText('Family Home')).toBeTruthy());
     expect(tree.getByText('Join Home')).toBeTruthy();
-    expect(tree.getByText(/2 members · 1 pantry/)).toBeTruthy();
+    expect(tree.getByText('2 members')).toBeTruthy();
   });
 
   // A second join link opened while the screen shows lands as new params on
@@ -235,7 +211,7 @@ describe('JoinHomeByCodeScreen', () => {
       <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
       {
         operationMocks: [
-          buildPreviewMock('ABC123', { members: 2, pantries: 1 }),
+          buildPreviewMock('ABC123', { members: 2 }),
           buildJoinMock('ABC123'),
         ],
       },
@@ -286,7 +262,7 @@ describe('JoinHomeByCodeScreen', () => {
       {
         cache,
         operationMocks: [
-          buildPreviewMock('ABC123', { members: 2, pantries: 1 }),
+          buildPreviewMock('ABC123', { members: 2 }),
           buildJoinMock('ABC123', { home: null }),
           homesMock,
         ],
@@ -312,7 +288,7 @@ describe('JoinHomeByCodeScreen', () => {
       <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
       {
         operationMocks: [
-          buildPreviewMock('ABC123', { members: 2, pantries: 1 }),
+          buildPreviewMock('ABC123', { members: 2 }),
           buildJoinMock('ABC123', { home: null }),
           failingHomes,
         ],

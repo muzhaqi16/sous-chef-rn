@@ -23,7 +23,7 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 /**
  * Join a home via share link or a typed code. Mirrors
  * {@link JoinByShareCodeScreen} but adds a preview-then-confirm step, so the
- * user sees the home name and counts before committing.
+ * user sees the home name and member count before committing.
  */
 export const JoinHomeByCodeScreen: React.FC<
   StaticScreenProps<{ joinCode?: string } | undefined>
@@ -168,8 +168,7 @@ export const JoinHomeByCodeScreen: React.FC<
     }
 
     // Preview-then-confirm (home is non-null here).
-    const memberCount = home.membersConnection.totalCount ?? 0;
-    const pantryCount = home.pantriesConnection.totalCount ?? 0;
+    const memberCount = home.memberCount ?? 0;
     return (
       <View style={styles.content}>
         <View style={styles.iconContainer}>
@@ -188,8 +187,7 @@ export const JoinHomeByCodeScreen: React.FC<
             align="center"
             style={styles.meta}
           >
-            {t('labels.memberCount', { count: memberCount })} ·{' '}
-            {t('joinHome.pantryCount', { count: pantryCount })}
+            {t('labels.memberCount', { count: memberCount })}
           </Text>
         </View>
         <Button
