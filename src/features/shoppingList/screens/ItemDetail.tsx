@@ -120,12 +120,6 @@ export const ShoppingListItemDetail: React.FC<
     useShoppingListItemDetail(itemId);
   const shelfPrices = useStoreShelfPrices(item?.item?.id, listId);
 
-  const reportPhotoActions = useReportPhotoHeaderAction(
-    detail?.item,
-    detail?.image,
-    shoppingListTestIDs.itemDetailReportPhotoButton,
-  );
-
   const handleEdit = () => {
     toEditItem({ listId, itemId });
   };
@@ -144,6 +138,12 @@ export const ShoppingListItemDetail: React.FC<
   );
 
   const gallery = entryGallery(detail?.image, detail?.item?.photos);
+  const reportPhoto = useReportPhotoHeaderAction(
+    detail?.item,
+    detail?.image,
+    gallery,
+    shoppingListTestIDs.itemDetailReportPhotoButton,
+  );
   const itemPhotos = gallery.photos;
   const nutrition = toShownNutrition(detail?.item?.shownNutrition);
   const nutritionFacts = nutrition?.facts ?? null;
@@ -259,7 +259,7 @@ export const ShoppingListItemDetail: React.FC<
             onPress: handleEdit,
             testID: shoppingListTestIDs.itemDetailEditButton,
           },
-          ...reportPhotoActions,
+          ...reportPhoto.actions,
         ]}
         renderHero={
           hasHero
@@ -271,6 +271,7 @@ export const ShoppingListItemDetail: React.FC<
                     leadImageUrl={gallery.leadImageUrl}
                     height={heroHeight}
                     onPhotoPress={setViewerIndex}
+                    onPageChange={reportPhoto.onPageChange}
                     // The collapse guard for the gallery branch: a dead CDN url
                     // collapses the hero, as on the CachedImage path below.
                     onUnrenderable={() => setFailedHeroUri(imageUrl)}

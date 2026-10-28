@@ -23,8 +23,6 @@ export const catalogTestIDs = {
   entryPhotoChoose: 'entry-photo-choose',
   entryPhotoPickItemPhoto: 'entry-photo-pick-item-photo',
   entryPhotoUseCatalog: 'entry-photo-use-catalog',
-  /** `ItemPhotoCarousel`'s badge on a photo awaiting review. */
-  photoPendingBadge: 'photo-pending-badge',
   /** `PhotoCredit`: a licensed photo's credit and licence links. */
   photoCreditSource: 'photo-credit-source',
   photoCreditLicense: 'photo-credit-license',

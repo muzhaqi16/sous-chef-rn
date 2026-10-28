@@ -1,14 +1,8 @@
 import React from 'react';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  ItemPhotoCarousel,
-  type ItemPhotoRef,
-} from '#features/catalog/ui/ItemPhotoCarousel';
-import {
-  CONTENT_OVERLAP,
-  HEADER_BAND_HEIGHT,
-} from '#components/templates/CollapsingHeroDetail';
+import { ItemPhotoCarousel } from '#features/catalog/ui/ItemPhotoCarousel';
+import type { ItemPhotoRef } from '#features/catalog/ui/useItemPhoto';
+import { CONTENT_OVERLAP } from '#components/templates/CollapsingHeroDetail';
 
 interface GalleryHeroProps {
   /** `Item.photos` fragment refs, in the server's gallery order. */
@@ -23,14 +17,15 @@ interface GalleryHeroProps {
   onPhotoPress?: (index: number) => void;
   /** Fired when the gallery has no renderable image — lets the host collapse. */
   onUnrenderable?: () => void;
+  /** The page now on screen, lead page included. */
+  onPageChange?: (page: number) => void;
 }
 
 /**
  * Standard hero renderer for CollapsingHeroDetail screens backed by an item
  * photo set. Owns the hero treatment in one place — cover resize, square
- * corners, page dots floated above the content card's overlap so they stay
- * visible on multi-photo items, and the pending badge below the status bar and
- * the floating buttons, which the hero runs under.
+ * corners, and page dots floated above the content card's overlap so they stay
+ * visible on multi-photo items.
  */
 export const GalleryHero: React.FC<GalleryHeroProps> = ({
   photos,
@@ -39,24 +34,22 @@ export const GalleryHero: React.FC<GalleryHeroProps> = ({
   height,
   onPhotoPress,
   onUnrenderable,
-}) => {
-  const insets = useSafeAreaInsets();
-  return (
-    <ItemPhotoCarousel
-      photos={photos}
-      fallbackImageUrl={fallbackImageUrl}
-      leadImageUrl={leadImageUrl}
-      imageHeight={height}
-      resizeMode="cover"
-      style={styles.heroInner}
-      overlayDots
-      dotsBottomOffset={CONTENT_OVERLAP + 8}
-      topClearance={insets.top + HEADER_BAND_HEIGHT}
-      onPhotoPress={onPhotoPress}
-      onUnrenderable={onUnrenderable}
-    />
-  );
-};
+  onPageChange,
+}) => (
+  <ItemPhotoCarousel
+    photos={photos}
+    fallbackImageUrl={fallbackImageUrl}
+    leadImageUrl={leadImageUrl}
+    imageHeight={height}
+    resizeMode="cover"
+    style={styles.heroInner}
+    overlayDots
+    dotsBottomOffset={CONTENT_OVERLAP + 8}
+    onPhotoPress={onPhotoPress}
+    onUnrenderable={onUnrenderable}
+    onPageChange={onPageChange}
+  />
+);
 
 const styles = StyleSheet.create(theme => ({
   heroInner: {

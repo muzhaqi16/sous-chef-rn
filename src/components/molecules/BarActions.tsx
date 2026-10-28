@@ -1,5 +1,6 @@
 import React from 'react';
 import { CountBadge } from '#components/atoms/CountBadge';
+import { StatusMark } from '#components/atoms/StatusMark';
 import { View, type LayoutChangeEvent } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -96,6 +97,7 @@ const BarActionButton: React.FC<{
     <View>
       <HeaderActionIcon action={action} />
       <CountBadge count={action.badge} />
+      <StatusMark icon={action.mark} />
     </View>
   );
 

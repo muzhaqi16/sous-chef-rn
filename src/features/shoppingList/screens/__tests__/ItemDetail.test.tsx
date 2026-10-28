@@ -28,7 +28,11 @@ import { GetShoppingListItemDocument } from '../useShoppingListItemDetail.genera
 import { StoreShelfPricesDocument } from '#features/catalog/hooks/useStoreShelfPrices.generated';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { t } from '#/i18n';
-import { EntryImageSource } from '#/graphql/generated/schemaTypes';
+import {
+  EntryImageSource,
+  ItemImageStatus,
+} from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -698,6 +702,45 @@ describe('ShoppingListItemDetail', () => {
     expect(
       await screen.findByTestId('shopping-item-report-photo-button'),
     ).toBeTruthy();
+  });
+
+  // The hero photo carries no label: the flag says the user's upload awaits
+  // review, and explains rather than reporting it.
+  it("marks the flag over the user's photo awaiting review", async () => {
+    mockResolveImageUrl.mockReturnValue('https://cdn.test/mine.jpg');
+    renderWithApollo(<ShoppingListItemDetail route={route} />, {
+      operationMocks: [
+        buildItemMock(
+          'si1',
+          buildShoppingListItem({
+            item: {
+              __typename: 'Item',
+              id: 'i1',
+              canSuggest: true,
+              imageUrl: 'https://cdn.test/bread.jpg',
+              photos: [
+                {
+                  __typename: 'ItemPhoto',
+                  id: 'mine',
+                  url: 'https://cdn.test/mine.jpg',
+                  status: ItemImageStatus.Pending,
+                },
+              ],
+            },
+          }),
+        ),
+      ],
+    });
+    const flag = await screen.findByLabelText(
+      t('itemPhotos.pendingReviewAction'),
+    );
+
+    fireEvent.press(flag);
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      t('itemPhotos.pendingReview'),
+      t('itemPhotos.pendingReviewBody'),
+    );
   });
 
   it('offers no photo report on a line with no catalog item', async () => {

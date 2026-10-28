@@ -277,6 +277,8 @@
   },
   "itemPhotos": {
     "pendingReview": "Pendiente de revisión",
+    "pendingReviewAction": "Foto pendiente de revisión",
+    "pendingReviewBody": "Un administrador revisa esta foto antes de que todos la vean. Hasta entonces solo la ves tú.",
     "viewPhoto": "Ver foto",
     "viewPhotoLabeled": "Ver foto: {{perspective}}",
     "counter": "{{current}} de {{total}}",

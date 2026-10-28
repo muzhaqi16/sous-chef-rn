@@ -1,5 +1,12 @@
-import { renderHook } from '@testing-library/react-native';
-import { EntryImageSource } from '#/graphql/generated/schemaTypes';
+import { act } from '@testing-library/react-native';
+import { t } from '#/i18n';
+import {
+  EntryImageSource,
+  ItemImageStatus,
+} from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import { useReportPhotoHeaderAction } from '../useReportPhotoHeaderAction';
 
 const mockReportWrongPhoto = jest.fn();
@@ -16,15 +23,35 @@ const PUBLIC_ITEM = {
   imageUrl: 'https://cdn.test/primary.jpg',
 };
 
-const actions = (
-  item: Parameters<typeof useReportPhotoHeaderAction>[0],
-  image: Parameters<typeof useReportPhotoHeaderAction>[1],
-) =>
-  renderHook(() => useReportPhotoHeaderAction(item, image, 'report-photo'))
-    .result.current;
+const photo = (
+  id: string,
+  status: ItemImageStatus,
+): ItemPhotoCarousel_ItemPhotoFragment => ({
+  __typename: 'ItemPhoto',
+  id,
+  url: `https://cdn.test/${id}.jpg`,
+  perspective: 'front',
+  isPrimary: false,
+  status,
+  credit: null,
+  variants: [],
+});
+
+const NO_GALLERY = { leadImageUrl: null, photos: [] };
+
+type Args = Parameters<typeof useReportPhotoHeaderAction>;
+
+const render = (item: Args[0], image: Args[1], gallery: Args[2] = NO_GALLERY) =>
+  renderHookWithApollo(() =>
+    useReportPhotoHeaderAction(item, image, gallery, 'report-photo'),
+  ).result;
+
+const actions = (item: Args[0], image: Args[1], gallery?: Args[2]) =>
+  render(item, image, gallery).current.actions;
 
 beforeEach(() => {
   mockReportWrongPhoto.mockClear();
+  jest.mocked(alertService.alert).mockClear();
 });
 
 describe('useReportPhotoHeaderAction', () => {
@@ -34,7 +61,7 @@ describe('useReportPhotoHeaderAction', () => {
       catalogImageId: 'photo-primary',
     });
 
-    report?.onPress?.();
+    report?.onPress();
 
     expect(mockReportWrongPhoto).toHaveBeenCalledWith(
       'item-1',
@@ -49,7 +76,7 @@ describe('useReportPhotoHeaderAction', () => {
       catalogImageId: 'photo-side',
     });
 
-    report?.onPress?.();
+    report?.onPress();
 
     expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', 'photo-side');
   });
@@ -66,7 +93,7 @@ describe('useReportPhotoHeaderAction', () => {
   it('reports the approved main photo when the read names no photo', () => {
     const [report] = actions(PUBLIC_ITEM, null);
 
-    report?.onPress?.();
+    report?.onPress();
 
     expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', undefined);
   });
@@ -82,5 +109,63 @@ describe('useReportPhotoHeaderAction', () => {
         { source: EntryImageSource.Catalog, catalogImageId: 'photo-primary' },
       ),
     ).toEqual([]);
+  });
+
+  // The API returns a PENDING photo to its submitter alone: the flag says so,
+  // since the photo itself carries no label.
+  describe('on the user’s own photo awaiting review', () => {
+    const pendingFirst = {
+      leadImageUrl: null,
+      photos: [
+        photo('mine', ItemImageStatus.Pending),
+        photo('approved', ItemImageStatus.Approved),
+      ],
+    };
+
+    it('marks the flag and explains instead of reporting', () => {
+      const [flag] = actions(PUBLIC_ITEM, null, pendingFirst);
+
+      expect(flag).toMatchObject({
+        icon: 'flag-outline',
+        mark: 'time-outline',
+        accessibilityLabel: t('itemPhotos.pendingReviewAction'),
+      });
+      flag?.onPress();
+      expect(alertService.alert).toHaveBeenCalledWith(
+        t('itemPhotos.pendingReview'),
+        t('itemPhotos.pendingReviewBody'),
+      );
+      expect(mockReportWrongPhoto).not.toHaveBeenCalled();
+    });
+
+    it('marks it where no report is offered', () => {
+      const [flag] = actions(
+        { ...PUBLIC_ITEM, canSuggest: false, imageUrl: null },
+        null,
+        pendingFirst,
+      );
+
+      expect(flag?.mark).toBe('time-outline');
+    });
+
+    it('follows the photo on screen', () => {
+      const result = render(PUBLIC_ITEM, null, pendingFirst);
+      expect(result.current.actions[0]?.mark).toBe('time-outline');
+
+      act(() => result.current.onPageChange(1));
+
+      expect(result.current.actions[0]?.mark).toBeUndefined();
+      result.current.actions[0]?.onPress();
+      expect(mockReportWrongPhoto).toHaveBeenCalledWith('item-1', undefined);
+    });
+
+    it('leaves the household’s own leading upload unmarked', () => {
+      const [flag] = actions(PUBLIC_ITEM, null, {
+        ...pendingFirst,
+        leadImageUrl: 'https://cdn.test/household.jpg',
+      });
+
+      expect(flag?.mark).toBeUndefined();
+    });
   });
 });

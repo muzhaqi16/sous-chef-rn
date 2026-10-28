@@ -167,11 +167,6 @@ export const PantryItemDetail: React.FC<
       ),
   });
 
-  const reportPhotoActions = useReportPhotoHeaderAction(
-    item?.item,
-    item?.image,
-    pantryTestIDs.itemReportPhotoButton,
-  );
   const entryPhoto = useEntryPhoto(selectedHomeId, item?.itemId);
 
   const handleEdit = () => {
@@ -189,6 +184,12 @@ export const PantryItemDetail: React.FC<
   const brandName = item?.brand?.name ?? null;
   const categoryName = item?.item.categories[0]?.category.name ?? null;
   const gallery = entryGallery(item?.image, item?.item.photos);
+  const reportPhoto = useReportPhotoHeaderAction(
+    item?.item,
+    item?.image,
+    gallery,
+    pantryTestIDs.itemReportPhotoButton,
+  );
   const itemPhotos = gallery.photos;
   // The viewer offers "Use this photo" on every photo but the one in use.
   const pickableIndex = itemPhotos.findIndex(
@@ -375,7 +376,7 @@ export const PantryItemDetail: React.FC<
         ] satisfies HeaderAction[])
       : []),
 
-    ...reportPhotoActions,
+    ...reportPhoto.actions,
   ];
 
   return (
@@ -397,6 +398,7 @@ export const PantryItemDetail: React.FC<
                   leadImageUrl={gallery.leadImageUrl}
                   height={heroHeight}
                   onPhotoPress={setViewerIndex}
+                  onPageChange={reportPhoto.onPageChange}
                 />
               )
             : undefined

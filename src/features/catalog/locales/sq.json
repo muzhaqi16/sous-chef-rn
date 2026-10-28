@@ -277,6 +277,8 @@
   },
   "itemPhotos": {
     "pendingReview": "Në pritje të shqyrtimit",
+    "pendingReviewAction": "Foto në pritje të shqyrtimit",
+    "pendingReviewBody": "Një administrator e kontrollon këtë foto para se ta shohin të gjithë. Deri atëherë e sheh vetëm ti.",
     "viewPhoto": "Shiko foton",
     "viewPhotoLabeled": "Shiko foton: {{perspective}}",
     "counter": "{{current}} nga {{total}}",
