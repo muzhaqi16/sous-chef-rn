@@ -61,7 +61,11 @@
   },
   "es": {
     "ios": {
-      "name": "Sous Chef: Despensa y recetas",
+      "name": "Sous Chef: Despensa y compras",
+      "nameByStoreLocale": {
+        "es-MX": "Sous Chef: Despensa y compras",
+        "es-ES": "Sous Chef: Cocina y despensa"
+      },
       "subtitle": "Planifica comidas y compras",
       "promotionalText": "Nuevo: fotografía un recibo y Sous Chef reconoce artículos y precios. Revísalos, añádelos a tu despensa y planifica comidas con lo que compraste.",
       "keywords": "recibo,caducidad,nevera,congelador,inventario,lista,supermercado,codigo,barras,hogar,desperdicio",
@@ -104,5 +108,7 @@
       "fullDescription": "Sous Chef e mban kuzhinën e familjes në një vend: çfarë ka në qilar, në frigorifer dhe në ngrirje, çfarë po skadon, çfarë të gatuash sonte dhe çfarë të blesh më pas.\n\nE RE: SKANO FATURËN E BLERJES\nFotografo një faturë dhe Sous Chef njeh çdo artikull dhe sa pagove. Kontrollo përputhjet dhe shtoji të gjitha në qilar menjëherë. Telefoni e lexon i pari faturën; kur nuk mundet, teksti dërgohet për t'u lexuar pa numrat e kartës dhe të besnikërisë.\n\nDI ÇFARË KE\n• Ndiq ushqimet në qilar, frigorifer, ngrirje dhe çdo vend ruajtjeje që krijon\n• Shih çfarë skadon më parë dhe çfarë po mbaron\n• Shto ushqime me barkod, me faturë, me kërkim ose me dorë\n• Aktivizo kujtesat para se ushqimet të skadojnë\n\nGATUAJ ME ATË QË KE\n• Ide recetash të renditura sipas sa nga çdo recetë ke tashmë në qilar\n• Shih cilët përbërës ke dhe shto pjesën tjetër në listë\n• Ruaj recetat në dosje ose shkruaj tuajat\n• Shëno një recetë si të gatuar dhe hiq përbërësit e saj nga qilari\n\nPLANIFIKO JAVËN\n• Planifiko mëngjesin, drekën, darkën dhe meze për javën ose muajin\n• Ktheje planin në një listë blerjesh që anashkalon atë që ke tashmë\n• Shih një përmbledhje ushqyese të planit\n\nBLINI SË BASHKU\n• Lista blerjesh të përbashkëta që përditësohen për të gjithë në çast\n• Fto familjen dhe zgjidh çfarë mund të bëjë secili\n• Mënyra e dyqanit, buxheti i listës dhe ndjekja e çmimeve, nëse i aktivizon\n\nE MENDUAR PËR FAMILJEN TËNDE\n• Shto dieta, alergji dhe ushqime që shmang, dhe Sous Chef i shënon te produktet e skanuara dhe te recetat. Kontrollo gjithmonë etiketën: të dhënat e produktit mund të jenë të paplota.\n• Temë e çelët dhe e errët, ngjyra theksi, madhësia e tekstit dhe kontrast i lartë\n• Përdore aplikacionin në anglisht, spanjisht, italisht ose shqip\n\nFUNKSIONON PA INTERNET\nShto, ndrysho dhe shëno artikuj pa sinjal; ndryshimet sinkronizohen kur rikthehesh në linjë. Kërkimi, ndarja dhe ftesat kërkojnë lidhje.\n\nTË DHËNAT E TUA\nTë dhënat e kuzhinës sate nuk shiten kurrë dhe nuk ka reklama."
     }
   },
-  "_customProductPages": "App Store custom product pages (drafts, 2026-10-28). Link: https://apps.apple.com/app/id6758162765?ppid=<ppid>. Keywords can only come from the latest APPROVED version's keyword field (4.8.4 today), so each page holds only keywords that 4.8.6 keeps; add 'receipt' to receipts once 4.8.6 is approved. Screenshot order per page: frames.json customProductPages."
+  "_customProductPages": "App Store custom product pages (drafts, 2026-10-28). Link: https://apps.apple.com/app/id6758162765?ppid=<ppid>. Keywords can only come from the latest APPROVED version's keyword field (4.8.4 today), so each page holds only keywords that 4.8.6 keeps; add 'receipt' to receipts once 4.8.6 is approved. Screenshot order per page: frames.json customProductPages.",
+  "_appStoreNames": "An App Store name must be unique across the store, and App Store Connect refused \"Sous Chef: Despensa y recetas\" and \"Sous Chef: Recetas y despensa\" as already used (2026-10-28), so each Spanish storefront has its own name (`nameByStoreLocale`).",
+  "_playReleaseNotes": "Play saves a release's notes only for languages already published on the store listing; a <sq>, <it-IT> or <es-*> block saved while those listings were drafts was dropped (2026-10-28). Add each locale's play.releaseNotes to the release once its listing is live."
 }
