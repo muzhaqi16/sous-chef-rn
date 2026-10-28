@@ -170,9 +170,11 @@ The shopping add path is shared rather than copied:
 - **`createShoppingListRow(cache, { listId, row, line, send, document, fallback })`**
   (`features/shoppingList/cache/createShoppingListRow.ts`) — the whole lifecycle of one row: mint the id,
   write the row, send `AddItemToShoppingList` local-first, settle with `settleMutation`, withdraw the row
-  on a refusal. Returns `{ outcome, failure, data }` and never presents the failure, so each surface keeps
-  its own success and error UX. `useAddShoppingItem`, `useShoppingListItemWrites.createItem`,
-  `useAddPantryItemToShoppingList`, `useAddToShoppingList`, `usePantryItemDetailActions` and
+  on a refusal. Returns `{ id, outcome, failure, data }`, where `id` is the row the line landed on (the
+  server's when it folded the add into a line it held, else the minted id), and never presents the
+  failure, so each surface keeps its own success and error UX. `useAddShoppingItem`,
+  `useShoppingListItemWrites.createItem`, `useAddPantryItemToShoppingList`, `useAddToShoppingList`,
+  `usePantryItemDetailActions` and
   `useAddScannedItem` go through it. A row names the item its line names, unless it states its own
   `itemId` (a scanned line naming a product record still names the record's item).
 - **`reconcileShoppingItemCreateUpdate`** — catalog merge: when the server folded the line into an existing

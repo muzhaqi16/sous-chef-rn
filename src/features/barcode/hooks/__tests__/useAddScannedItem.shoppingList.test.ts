@@ -113,4 +113,39 @@ describe('adding a scanned item to a shopping list', () => {
     expect(readCounts(cache)).toMatchObject(STATED);
     expect(rowKeys(cache)).toEqual([]);
   });
+
+  // The API lands an add for an item the list holds on that line, and the
+  // reconcile takes the minted row out: a tick has only the held line to find.
+  it('names the line the server folded the scan into', async () => {
+    const cache = cacheWithList();
+    const { result } = renderHookWithApollo(
+      () => useAddScannedItem({ pantryId: undefined, shoppingListId: LIST_ID }),
+      {
+        cache,
+        operationMocks: [
+          addAnswer({
+            addItemsToShoppingList: {
+              __typename: 'AddItemsToShoppingListPayload',
+              results: [
+                {
+                  __typename: 'BatchAddShoppingListItemResult',
+                  index: 0,
+                  success: true,
+                  item: { __typename: 'ShoppingListItem', id: 'line-held' },
+                },
+              ],
+            },
+          }),
+        ],
+      },
+    );
+
+    let added: { outcome: string; rowId: string | null } | undefined;
+    await act(async () => {
+      added = await result.current.addToShoppingList(SCANNED);
+    });
+
+    expect(added).toEqual({ outcome: 'kept', rowId: 'line-held' });
+    expect(rowKeys(cache)).toEqual(['ShoppingListItem:line-held']);
+  });
 });

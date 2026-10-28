@@ -1,6 +1,9 @@
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  type AddItemsToShoppingListInput,
+} from '#/graphql/generated/schemaTypes';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { errorService } from '#/services/errorService';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
@@ -115,6 +118,67 @@ describe('createShoppingListRow', () => {
       totalItems: 3,
       remainingItems: 2,
     });
+  });
+
+  it('names the minted row while the create is queued', async () => {
+    const cache = seededCache();
+
+    const outcome = await create(cache, {
+      data: { addItemsToShoppingList: null },
+    }).created;
+
+    const [minted] = rowIds(cache);
+    expect(`ShoppingListItem:${outcome.id}`).toBe(minted);
+  });
+
+  it('names the line the server folded the add into', async () => {
+    const cache = seededCache();
+
+    const outcome = await create(cache, {
+      data: {
+        addItemsToShoppingList: {
+          __typename: 'AddItemsToShoppingListPayload',
+          results: [{ index: 0, success: true, item: { id: 'line-held' } }],
+        },
+      },
+    }).created;
+
+    expect(outcome).toMatchObject({ outcome: 'kept', id: 'line-held' });
+  });
+
+  it('names the minted row when the server kept it', async () => {
+    const cache = seededCache();
+    // The server answers with the id it was sent.
+    const send = jest.fn(
+      ({ variables }: { variables: { input: AddItemsToShoppingListInput } }) =>
+        Promise.resolve({
+          data: {
+            addItemsToShoppingList: {
+              __typename: 'AddItemsToShoppingListPayload',
+              results: [
+                {
+                  index: 0,
+                  success: true,
+                  item: { id: variables.input.items[0]?.id },
+                },
+              ],
+            },
+          },
+        }),
+    );
+
+    const outcome = await createShoppingListRow(cache, {
+      listId: 'list-1',
+      row: { itemName: 'Milk' },
+      line: { item: TYPED_MILK },
+      send,
+      document: AddItemToShoppingListDocument,
+      fallback: 'Could not add it',
+    });
+
+    const sentId = send.mock.calls[0]?.[0].variables.input.items[0]?.id;
+    expect(sentId).toEqual(expect.any(String));
+    expect(outcome).toMatchObject({ outcome: 'kept', id: sentId });
   });
 
   it('withdraws a refused create, uncounts it, and returns the failure', async () => {
