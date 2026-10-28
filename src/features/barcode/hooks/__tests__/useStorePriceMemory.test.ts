@@ -384,6 +384,14 @@ describe('useStorePriceMemory', () => {
     await waitFor(() => expect(inEuros.result.current.usual).not.toBeNull());
 
     expect(inEuros.result.current.compareToUsual(2)).toBeNull();
+
+    // Nor while the list's currency is not yet known.
+    const unknown = renderHookWithApollo(
+      () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, null),
+      { operationMocks: [paid.mock, comparisonMock([]).mock] },
+    );
+    await waitFor(() => expect(unknown.result.current.usual).not.toBeNull());
+    expect(unknown.result.current.compareToUsual(2)).toBeNull();
   });
 
   it('compares nothing when the usual cannot be put on the unit, or there is none', async () => {
