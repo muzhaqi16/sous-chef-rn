@@ -126,6 +126,50 @@ export function getAvailabilityStatus(
   return 'missing';
 }
 
+/** One entry a reviewed cook sends, under the stack it draws on. */
+interface CookDraw {
+  stackName: string;
+  stackUnitId: string;
+  usage: IngredientUsageInput;
+}
+
+/**
+ * The ingredients a cook left undeducted. The API names a skip only by its
+ * stack's name and units, so each skip claims an entry of its own: two entries
+ * drawn from stacks of one name are two skips. A skip no entry claims counts
+ * on its own, so none is hidden.
+ */
+function undeductedIngredients(
+  draws: readonly CookDraw[],
+  skips: readonly {
+    itemName: string;
+    fromUnitId?: string | null;
+    toUnitId: string;
+  }[],
+): Set<string> {
+  const claimed = new Set<number>();
+  const claim = (fits: (draw: CookDraw) => boolean) => {
+    const index = draws.findIndex(
+      (draw, position) => !claimed.has(position) && fits(draw),
+    );
+    if (index === -1) return null;
+    claimed.add(index);
+    return draws[index] ?? null;
+  };
+  const undeducted = new Set<string>();
+  skips.forEach((skip, position) => {
+    const draw =
+      claim(
+        candidate =>
+          candidate.stackName === skip.itemName &&
+          candidate.usage.actualUnitId === skip.fromUnitId &&
+          candidate.stackUnitId === skip.toUnitId,
+      ) ?? claim(candidate => candidate.stackName === skip.itemName);
+    undeducted.add(draw?.usage.recipeIngredientId ?? `skip:${position}`);
+  });
+  return undeducted;
+}
+
 export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const { t } = useTranslation();
   const pantryId = useSelectedPantryId();
@@ -365,49 +409,45 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
   const confirmConsumption = async (cook?: CookEntry) => {
     if (!recipeId || !pantryId) return;
 
-    // Each entry keeps its stack's name: a skip reports the entry by it.
-    const entries: { stackName: string; usage: IngredientUsageInput }[] =
-      editableMatches.flatMap(em => {
-        const swap = em.selectedSubstitute;
-        if (swap) {
-          if (!em.isIncluded) return [];
-          // Its parts are drawn instead; the ingredient's own stacks are not.
-          return swap.parts.map(part => ({
-            stackName: part.stack.itemName,
-            usage: {
-              recipeIngredientId: em.ingredient.id,
-              pantryItemId: part.stack.id,
-              actualQuantity: part.quantity,
-              actualUnitId: part.unitId,
-              substituteId: swap.id,
-            },
-          }));
-        }
-        const pantryItem = em.selectedStack;
-        const quantity = em.adjustedQuantity;
-        if (
-          !em.isIncluded ||
-          !pantryItem ||
-          quantity === null ||
-          quantity <= 0
-        ) {
-          return [];
-        }
-        return [
-          {
-            stackName: pantryItem.itemName,
-            usage: {
-              recipeIngredientId: em.ingredient.id,
-              pantryItemId: pantryItem.id,
-              actualQuantity: quantity,
-              actualUnitId:
-                em.adjustedUnitId ??
-                em.match.suggestedUnit?.id ??
-                pantryItem.unit.id,
-            },
+    // Each entry keeps its stack's name and unit: a skip reports it by them.
+    const entries: CookDraw[] = editableMatches.flatMap(em => {
+      const swap = em.selectedSubstitute;
+      if (swap) {
+        if (!em.isIncluded) return [];
+        // Its parts are drawn instead; the ingredient's own stacks are not.
+        return swap.parts.map(part => ({
+          stackName: part.stack.itemName,
+          stackUnitId: part.stack.unit.id,
+          usage: {
+            recipeIngredientId: em.ingredient.id,
+            pantryItemId: part.stack.id,
+            actualQuantity: part.quantity,
+            actualUnitId: part.unitId,
+            substituteId: swap.id,
           },
-        ];
-      });
+        }));
+      }
+      const pantryItem = em.selectedStack;
+      const quantity = em.adjustedQuantity;
+      if (!em.isIncluded || !pantryItem || quantity === null || quantity <= 0) {
+        return [];
+      }
+      return [
+        {
+          stackName: pantryItem.itemName,
+          stackUnitId: pantryItem.unit.id,
+          usage: {
+            recipeIngredientId: em.ingredient.id,
+            pantryItemId: pantryItem.id,
+            actualQuantity: quantity,
+            actualUnitId:
+              em.adjustedUnitId ??
+              em.match.suggestedUnit?.id ??
+              pantryItem.unit.id,
+          },
+        },
+      ];
+    });
     const ingredientsUsed = entries.map(entry => entry.usage);
 
     if (ingredientsUsed.length === 0) {
@@ -456,14 +496,10 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     }
     // The cook commits whole. What it reports apart are the entries no
     // conversion could take to their stack's unit; queued, every entry replays.
-    // The toast counts ingredients, and a swap's parts are entries of one. A
-    // skip no entry's stack claims still counts, so none is hidden.
-    const notDeducted = new Set(
-      (data?.skippedIngredients ?? []).map(
-        ({ itemName }) =>
-          entries.find(entry => entry.stackName === itemName)?.usage
-            .recipeIngredientId ?? itemName,
-      ),
+    // The toast counts ingredients, and a swap's parts are entries of one.
+    const notDeducted = undeductedIngredients(
+      entries,
+      data?.skippedIngredients ?? [],
     );
     const skippedCount = notDeducted.size;
     const deductedCount = Math.max(

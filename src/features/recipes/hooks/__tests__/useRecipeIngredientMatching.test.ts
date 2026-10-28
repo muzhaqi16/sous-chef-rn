@@ -871,6 +871,10 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
   it.each([
     [[], 'Deducted 2 ingredients from pantry'],
     [['Lemon Juice'], 'Deducted 1 ingredient from pantry (1 not deducted)'],
+    [
+      ['Whole Milk', 'Lemon Juice'],
+      'Deducted 1 ingredient from pantry (1 not deducted)',
+    ],
   ])(
     'counts a swap as one ingredient when the server skips %j',
     async (skipped, toast) => {
@@ -950,6 +954,48 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         'Deducted 1 ingredient from pantry (1 not deducted)',
       );
       await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+    },
+  );
+
+  // The API names a skip by its stack's name alone: butter for the dough and
+  // butter for the topping, drawn from two stacks named alike, are two skips.
+  it.each([
+    [
+      ['Butter', 'Butter'],
+      'Deducted 0 ingredients from pantry (2 not deducted)',
+    ],
+    [['Butter'], 'Deducted 1 ingredient from pantry (1 not deducted)'],
+  ])(
+    'counts each skip of a same-named stack against an entry of its own (%j)',
+    async (skipped, toast) => {
+      const cook = cookMock({ kind: 'success', skipped });
+      const { result } = await loadMatchesFor(
+        [
+          {
+            ...includedMatch,
+            matchedPantryItem: {
+              id: 'pi-1',
+              itemName: 'Butter',
+              unit: { id: 'u-ing-1' },
+            },
+          },
+          {
+            ...secondMatch,
+            matchedPantryItem: {
+              id: 'pi-2',
+              itemName: 'Butter',
+              unit: { id: 'u-ing-2' },
+            },
+          },
+        ],
+        cook,
+      );
+
+      await act(async () => {
+        await result.current.confirmConsumption();
+      });
+
+      expect(mockToastSuccess).toHaveBeenCalledWith(toast);
     },
   );
 
