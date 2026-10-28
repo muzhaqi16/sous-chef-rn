@@ -87,7 +87,11 @@ describe('useSuggestionDismissal', () => {
     expect(writes.remove).toHaveBeenCalledWith('item-1');
     await waitFor(() =>
       expect(fired).toContainEqual({
-        input: { itemId: 'item-1', surface: SuggestionSurface.Shopping },
+        input: {
+          itemId: 'item-1',
+          surface: SuggestionSurface.Shopping,
+          idempotencyKey: expect.any(String),
+        },
       }),
     );
     expect(mockSuccess.mock.calls[0][1].action.label).toBeTruthy();
@@ -218,10 +222,56 @@ describe('useSuggestionDismissal', () => {
     expect(writes.restore).toHaveBeenCalledWith({ itemId: 'item-1' });
     await waitFor(() =>
       expect(undismiss.fired).toContainEqual({
-        input: { itemId: 'item-1', surface: SuggestionSurface.Pantry },
+        input: {
+          itemId: 'item-1',
+          surface: SuggestionSurface.Pantry,
+          idempotencyKey: expect.any(String),
+        },
       }),
     );
     expect(writes.remove).toHaveBeenCalledTimes(1);
+  });
+
+  // The server refuses a key spent on the other mutation, and a shared key
+  // would let one write's re-send stand in for the other.
+  it('keys each dismissal and each Undo on its own', async () => {
+    const writes = cacheWrites();
+    const first = recordMock(MarkSuggestionDismissedDocument, {
+      data: {
+        markSuggestionDismissed: {
+          __typename: 'MarkSuggestionDismissedPayload',
+          itemId: 'item-1',
+          surface: SuggestionSurface.Pantry,
+          dismissed: true,
+        },
+      },
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    });
+    const undismiss = activated();
+    const { result } = renderHookWithApollo(
+      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
+      { operationMocks: [first.mock, undismiss.mock] },
+    );
+
+    act(() => {
+      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
+    });
+    await waitFor(() => expect(first.fired).toHaveLength(1));
+    pressUndo();
+    await waitFor(() => expect(undismiss.fired).toHaveLength(1));
+    act(() => {
+      result.current.dismissSuggestion({ itemId: 'item-2', name: 'Eggs' });
+    });
+    await waitFor(() => expect(first.fired).toHaveLength(2));
+
+    const keyOf = (variables: unknown) =>
+      (variables as { input: { idempotencyKey: string } }).input.idempotencyKey;
+    const keys = [
+      keyOf(first.fired[0]),
+      keyOf(undismiss.fired[0]),
+      keyOf(first.fired[1]),
+    ];
+    expect(new Set(keys).size).toBe(3);
   });
 
   // Two requests in flight could land in either order; the undo must land last.
@@ -385,7 +435,12 @@ describe('useSuggestionDismissal while offline', () => {
     });
     pressUndo();
 
-    const input = { itemId: 'item-1', surface: SuggestionSurface.Pantry };
+    // Each queued write keeps the key it was sent with, so its replays share it.
+    const input = {
+      itemId: 'item-1',
+      surface: SuggestionSurface.Pantry,
+      idempotencyKey: expect.any(String),
+    };
     await waitFor(() =>
       expect(
         queueStore
@@ -396,6 +451,10 @@ describe('useSuggestionDismissal while offline', () => {
         ['MarkSuggestionActive', { input }],
       ]),
     );
+    const [dismissal, undo] = queueStore
+      .getMutationsForUser(USER.id)
+      .map(m => (m.variables as { input: { idempotencyKey: string } }).input);
+    expect(dismissal?.idempotencyKey).not.toBe(undo?.idempotencyKey);
     expect(writes.restore).toHaveBeenCalledTimes(1);
     expect(mockError).not.toHaveBeenCalled();
   });

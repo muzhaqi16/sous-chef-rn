@@ -7,6 +7,7 @@ import {
 import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { settleMutation, type Settled } from '#/apollo/utils/settleMutation';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 interface DismissTarget {
   itemId: string;
@@ -49,8 +50,12 @@ export function useSuggestionDismissal<TRemoval>(
     // Sent after the dismissal settles, so the server cannot apply the two out
     // of order; a dismissal that failed left nothing to undo.
     if ((await dismissed).status === 'failed') return;
+    const idempotencyKey = generateEntityId();
     await settleMutation(
-      () => undismiss({ variables: { input: { itemId, surface } } }),
+      () =>
+        undismiss({
+          variables: { input: { itemId, surface, idempotencyKey } },
+        }),
       {
         document: MarkSuggestionActiveDocument,
         fallback: t('addItemSheet.undoFailed'),
@@ -67,8 +72,12 @@ export function useSuggestionDismissal<TRemoval>(
     const removal = remove(itemId);
     // Already taken: this tap's dismissal is on its way.
     if (removal === null) return;
+    // One key per tap, kept by the queued write and its replays: a re-send
+    // under a spent key writes nothing, so it never undoes a later Undo.
+    const idempotencyKey = generateEntityId();
     const dismissed = settleMutation(
-      () => dismiss({ variables: { input: { itemId, surface } } }),
+      () =>
+        dismiss({ variables: { input: { itemId, surface, idempotencyKey } } }),
       {
         document: MarkSuggestionDismissedDocument,
         fallback: t('addItemSheet.dismissFailed'),
