@@ -38,11 +38,12 @@ target 'SousChef' do
   )
 
   post_install do |installer|
+    # On only where ccache is installed: RN warns on every install otherwise.
     react_native_post_install(
       installer,
       config[:reactNativePath],
       :mac_catalyst_enabled => false,
-      :ccache_enabled => true
+      :ccache_enabled => system('command -v ccache > /dev/null 2>&1')
     )
 
     # RN raises each pod's own target but not its resource bundles, which keep
