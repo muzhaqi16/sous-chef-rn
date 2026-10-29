@@ -4759,7 +4759,8 @@ type DisplayAmount {
   """
   The unit's short form in the request's language, agreeing with quantity as
   MeasureReading.localizedSymbol agrees with its value: 3 lattine, ½
-  lattina; ¼ doz as it is. So a held amount needs no unit selection.
+  lattina; ¼ doz in English, where doz is an abbreviation, ¼ dozzina in
+  Italian. So a held amount needs no unit selection.
   """
   localizedSymbol: String!
   """The amount in unit: 0.25 for a quarter dozen."""
