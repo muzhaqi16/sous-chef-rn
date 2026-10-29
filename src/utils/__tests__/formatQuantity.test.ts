@@ -1,4 +1,6 @@
 import {
+  formatAmountDisplay,
+  formatAmountWithUnit,
   formatQuantity,
   formatQuantityDisplay,
   formatQuantityAsFraction,
@@ -6,9 +8,10 @@ import {
   formatQuantityForInput,
   formatQuantityWithUnit,
   formatNetWeightDisplay,
-  getUnitDisplayText,
   parseStoredQuantityText,
+  unitLabel,
 } from '../formatQuantity';
+import { getI18n } from '#/i18n/config';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
 jest.mock('#/utils/deviceLocale', () => ({
@@ -44,48 +47,50 @@ describe('formatQuantity', () => {
 describe('formatQuantityDisplay', () => {
   it('formats plain quantities without unit', () => {
     expect(formatQuantityDisplay(3)).toBe('3');
-    expect(formatQuantityDisplay(3, '')).toBe('3');
+    expect(formatQuantityDisplay(3, { symbol: '' })).toBe('3');
   });
 
   it('formats quantity with unit', () => {
-    expect(formatQuantityDisplay(3, 'pc')).toBe('3 pc');
+    expect(formatQuantityDisplay(3, { symbol: 'pc' })).toBe('3 pc');
   });
 
   it('upscales grams to kilograms at 1000', () => {
-    expect(formatQuantityDisplay(1500, 'g')).toBe('1.5 kg');
-    expect(formatQuantityDisplay(1000, 'g')).toBe('1 kg');
-    expect(formatQuantityDisplay(2000, 'g')).toBe('2 kg');
+    expect(formatQuantityDisplay(1500, { symbol: 'g' })).toBe('1.5 kg');
+    expect(formatQuantityDisplay(1000, { symbol: 'g' })).toBe('1 kg');
+    expect(formatQuantityDisplay(2000, { symbol: 'g' })).toBe('2 kg');
   });
 
   it('keeps up to three decimals when upscaling', () => {
-    expect(formatQuantityDisplay(1250, 'g')).toBe('1.25 kg');
-    expect(formatQuantityDisplay(1333, 'mL')).toBe('1.333 L');
+    expect(formatQuantityDisplay(1250, { symbol: 'g' })).toBe('1.25 kg');
+    expect(formatQuantityDisplay(1333, { symbol: 'mL' })).toBe('1.333 L');
   });
 
   it('upscales milliliters to liters at 1000', () => {
-    expect(formatQuantityDisplay(1500, 'ml')).toBe('1.5 L');
-    expect(formatQuantityDisplay(3000, 'ml')).toBe('3 L');
+    expect(formatQuantityDisplay(1500, { symbol: 'ml' })).toBe('1.5 L');
+    expect(formatQuantityDisplay(3000, { symbol: 'ml' })).toBe('3 L');
   });
 
   it('does not upscale below 1000', () => {
-    expect(formatQuantityDisplay(999, 'g')).toBe('999 g');
-    expect(formatQuantityDisplay(500, 'ml')).toBe('500 ml');
+    expect(formatQuantityDisplay(999, { symbol: 'g' })).toBe('999 g');
+    expect(formatQuantityDisplay(500, { symbol: 'ml' })).toBe('500 ml');
   });
 
   it('writes a fractional amount as a cooking fraction', () => {
-    expect(formatQuantityDisplay(1.5, 'oz')).toBe('1 1/2 oz');
-    expect(formatQuantityDisplay(10.5, 'oz')).toBe('10 1/2 oz');
+    expect(formatQuantityDisplay(1.5, { symbol: 'oz' })).toBe('1 1/2 oz');
+    expect(formatQuantityDisplay(10.5, { symbol: 'oz' })).toBe('10 1/2 oz');
   });
 
   it('rounds a value no fraction fits to three decimals', () => {
-    expect(formatQuantityDisplay(2.7, 'oz')).toBe('2.7 oz');
-    expect(formatQuantityDisplay(0.07, 'oz')).toBe('0.07 oz');
-    expect(formatQuantityDisplay(2.456, 'oz')).toBe('2.456 oz');
-    expect(formatQuantityDisplay(177.4412, 'oz')).toBe('177.441 oz');
+    expect(formatQuantityDisplay(2.7, { symbol: 'oz' })).toBe('2.7 oz');
+    expect(formatQuantityDisplay(0.07, { symbol: 'oz' })).toBe('0.07 oz');
+    expect(formatQuantityDisplay(2.456, { symbol: 'oz' })).toBe('2.456 oz');
+    expect(formatQuantityDisplay(177.4412, { symbol: 'oz' })).toBe(
+      '177.441 oz',
+    );
   });
 
   it('formats integers cleanly', () => {
-    expect(formatQuantityDisplay(5, 'lb')).toBe('5 lb');
+    expect(formatQuantityDisplay(5, { symbol: 'lb' })).toBe('5 lb');
   });
 });
 
@@ -109,23 +114,177 @@ describe('formatNetWeightDisplay', () => {
       [12.5, 'oz'],
     ] as const) {
       expect(formatNetWeightDisplay(amount, { symbol })).toBe(
-        formatQuantityDisplay(amount, symbol),
+        formatQuantityDisplay(amount, { symbol }),
       );
     }
   });
 });
 
-describe('getUnitDisplayText', () => {
-  it('prefers the symbol over the name', () => {
-    expect(getUnitDisplayText({ symbol: 'g', name: 'gram' })).toBe('g');
+describe('formatAmountDisplay', () => {
+  const can = {
+    symbol: 'can',
+    localizedSymbolForms: { one: 'lata', other: 'latas' },
+  };
+
+  it('shows the label the server agreed with the amount', () => {
+    expect(
+      formatAmountDisplay({
+        quantity: 3,
+        localizedSymbol: 'lattine',
+        unit: can,
+      }),
+    ).toBe('3 lattine');
   });
 
-  it('falls back to the name when the symbol is blank', () => {
-    expect(getUnitDisplayText({ symbol: '', name: 'pinch' })).toBe('pinch');
+  it('reads its unit when the label is blank, as an optimistic amount leaves it', () => {
+    expect(
+      formatAmountDisplay({ quantity: 3, localizedSymbol: '', unit: can }),
+    ).toBe('3 latas');
   });
 
-  it('returns empty for no unit', () => {
-    expect(getUnitDisplayText(null)).toBe('');
+  it('upscales grams and millilitres as every quantity does', () => {
+    expect(
+      formatAmountDisplay({
+        quantity: 1500,
+        localizedSymbol: 'g',
+        unit: { symbol: 'g' },
+      }),
+    ).toBe('1.5 kg');
+  });
+});
+
+describe('formatAmountWithUnit', () => {
+  const can = {
+    symbol: 'can',
+    localizedSymbolForms: { one: 'lata', other: 'latas' },
+  };
+
+  it("writes the figure as every quantity is, with the server's label", () => {
+    expect(
+      formatAmountWithUnit({
+        quantity: 1.25,
+        localizedSymbol: 'lattine',
+        unit: can,
+      }),
+    ).toBe('1 1/4 lattine');
+  });
+
+  it('never upscales: the amount is what the stack holds', () => {
+    expect(
+      formatAmountWithUnit({
+        quantity: 1500,
+        localizedSymbol: 'g',
+        unit: { symbol: 'g' },
+      }),
+    ).toBe('1500 g');
+  });
+});
+
+describe('unitLabel', () => {
+  afterEach(async () => {
+    await getI18n().changeLanguage('en');
+  });
+
+  it('shows the localized short form', () => {
+    expect(unitLabel({ symbol: 'pc', localizedSymbol: 'pz' })).toBe('pz');
+  });
+
+  it('falls back to the canonical symbol, then the name, when the localized one is blank', () => {
+    // An optimistic unit the cache lacked is filled with the SDL neutral, ''.
+    expect(unitLabel({ symbol: 'pc', localizedSymbol: '' })).toBe('pc');
+    expect(unitLabel({ symbol: '', name: 'pinch' })).toBe('pinch');
+  });
+
+  it('is empty for no unit', () => {
+    expect(unitLabel(null)).toBe('');
+    expect(unitLabel({ symbol: null })).toBe('');
+  });
+
+  it('shows the singular short form without a quantity', () => {
+    expect(
+      unitLabel({
+        symbol: 'can',
+        localizedSymbolForms: { one: 'lata', other: 'latas' },
+      }),
+    ).toBe('lata');
+  });
+
+  it('shows the name, singular without a quantity, canonical when blank', () => {
+    const cup = {
+      symbol: 'cup',
+      name: 'cup',
+      localizedNameForms: { one: 'taza', other: 'tazas' },
+    };
+    expect(unitLabel(cup, { form: 'name' })).toBe('taza');
+    expect(unitLabel(cup, { form: 'name', quantity: 3 })).toBe('tazas');
+    expect(
+      unitLabel(
+        { ...cup, localizedNameForms: { one: '', other: '' } },
+        { form: 'name' },
+      ),
+    ).toBe('cup');
+  });
+
+  it('falls back to the singular when the plural is blank', () => {
+    const can = {
+      symbol: 'can',
+      name: 'can',
+      localizedSymbolForms: { one: 'lata', other: '' },
+      localizedNameForms: { one: 'lata', other: '' },
+    };
+    expect(unitLabel(can, { quantity: 3 })).toBe('lata');
+    expect(unitLabel(can, { form: 'name', quantity: 3 })).toBe('lata');
+  });
+
+  // en and sq need one/other; es and it add many (1,000,000). Only 1 reads as
+  // one, and a part of one reads singular: "1/2 cup", "mezzo cucchiaino".
+  it.each([
+    ['en', { one: 'can', other: 'cans' }],
+    ['es', { one: 'lata', other: 'latas' }],
+    ['it', { one: 'lattina', other: 'lattine' }],
+    ['sq', { one: 'paketë', other: 'paketa' }],
+  ])('picks the %s plural by its plural rules', async (language, forms) => {
+    await getI18n().changeLanguage(language);
+    const unit = {
+      symbol: 'x',
+      localizedSymbolForms: forms,
+      localizedNameForms: forms,
+    };
+    for (const quantity of [0, 0.5, 1, 1.5, 2, 1_000_000]) {
+      const expected =
+        quantity === 1 || quantity === 0.5 ? forms.one : forms.other;
+      expect(unitLabel(unit, { quantity })).toBe(expected);
+      expect(unitLabel(unit, { form: 'name', quantity })).toBe(expected);
+    }
+  });
+
+  it('reads only 1 and a part of one as singular where the engine has no Intl.PluralRules', () => {
+    const { PluralRules } = Intl;
+    // Some Hermes builds ship without it.
+    Object.defineProperty(Intl, 'PluralRules', {
+      configurable: true,
+      value: function Missing() {
+        throw new TypeError('Intl.PluralRules is not a constructor');
+      },
+    });
+    try {
+      jest.isolateModules(() => {
+        const isolated: typeof import('../formatQuantity') =
+          jest.requireActual('../formatQuantity');
+        const unit = {
+          symbol: 'can',
+          localizedSymbolForms: { one: 'lata', other: 'latas' },
+        };
+        expect(isolated.unitLabel(unit, { quantity: 0.5 })).toBe('lata');
+        expect(isolated.unitLabel(unit, { quantity: 1 })).toBe('lata');
+        expect(isolated.unitLabel(unit, { quantity: 2 })).toBe('latas');
+      });
+    } finally {
+      Object.defineProperty(Intl, 'PluralRules', {
+        configurable: true,
+        value: PluralRules,
+      });
+    }
   });
 });
 
@@ -226,8 +385,8 @@ describe('formatQuantityForDisplay', () => {
 // included — which is what makes the change safe to take for the speed.
 describe('formatQuantityWithUnit', () => {
   it('puts the unit after the quantity, as the chip shows them', () => {
-    expect(formatQuantityWithUnit(2, 'pc')).toBe('2 pc');
-    expect(formatQuantityWithUnit(1.5, 'cup')).toBe('1 1/2 cup');
+    expect(formatQuantityWithUnit(2, { symbol: 'pc' })).toBe('2 pc');
+    expect(formatQuantityWithUnit(1.5, { symbol: 'cup' })).toBe('1 1/2 cup');
   });
 
   it('is the quantity alone when there is no unit', () => {
@@ -236,9 +395,13 @@ describe('formatQuantityWithUnit', () => {
 
   it("reads the user's own text over the stored float", () => {
     expect(
-      formatQuantityWithUnit(0.33333334, 'cup', {
-        quantityInput: '0.33333334',
-      }),
+      formatQuantityWithUnit(
+        0.33333334,
+        { symbol: 'cup' },
+        {
+          quantityInput: '0.33333334',
+        },
+      ),
     ).toBe('1/3 cup');
   });
 });

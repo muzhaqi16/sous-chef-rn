@@ -3,8 +3,9 @@ import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
-  formatQuantityForDisplay,
+  formatAmountWithUnit,
   isUnchangedQuantity,
+  unitLabel,
 } from '#/utils/formatQuantity';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import type { StorageType } from '#/graphql/generated/schemaTypes';
@@ -19,6 +20,7 @@ import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
 import type { PantryItemFormData } from './PantryItemForm';
 import { editedAmount } from './editedAmount';
+import type { StatedUnit } from '#features/pantry/hooks/mutations/useUpdatePantryItemQuantity';
 import {
   runUnitChange,
   type UnitChangeDeps,
@@ -48,7 +50,7 @@ interface UpdateQuantityArgs {
   itemId: string;
   quantityInput: string;
   quantityValue: number;
-  statedIn?: { id: string; symbol: string; conversionFactor: number } | null;
+  statedIn?: StatedUnit | null;
 }
 
 export interface UsePantryItemFormSubmitParams {
@@ -126,7 +128,8 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
     const edited = editedAmount(currentItem);
 
     try {
-      const unitTyped = !!typedUnit && typedUnit !== edited.unit.symbol;
+      // Against the label the field was seeded with.
+      const unitTyped = !!typedUnit && typedUnit !== unitLabel(edited.unit);
       const unitId =
         params.trackingUnit.id ??
         (unitTyped ? await params.resolveUnitId(null, typedUnit) : null);
@@ -205,9 +208,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
                 ? typedQuantity
                 : edited.quantity,
             packageSize: packageSizeOf(data),
-            shownBefore: `${formatQuantityForDisplay(
-              currentItem.displayAmount.quantity,
-            )} ${currentItem.displayAmount.unit.symbol}`,
+            shownBefore: formatAmountWithUnit(currentItem.displayAmount),
           },
         );
         if (!changed) return;

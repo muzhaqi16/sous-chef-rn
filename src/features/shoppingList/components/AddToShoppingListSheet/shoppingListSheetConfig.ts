@@ -6,7 +6,6 @@ export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionI
   {
     titleKey: 'labels.addToShoppingList',
     testIDPrefix: shoppingListTestIDs.addSheetPrefix,
-    placeholderIcon: 'cart-outline',
     searchPlaceholderKey: 'addItemSheet.searchPlaceholder',
     suggestionGroups: [
       {
@@ -32,8 +31,6 @@ export const shoppingListSheetConfig: AddItemSheetConfig<ShoppingListSuggestionI
       },
     ],
     quickAdd: {
-      fireAndForget: true,
-      enableExitAnimations: true,
       toastMessageKey: 'addItemSheet.added',
     },
     addDetails: {

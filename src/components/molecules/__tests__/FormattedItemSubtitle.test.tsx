@@ -6,16 +6,16 @@ import { FormattedItemSubtitle } from '../FormattedItemSubtitle';
 jest.mock('#components/atoms/QuantityDisplay', () => ({
   QuantityDisplay: ({
     quantity,
-    unitSymbol,
+    unit,
   }: {
     quantity: number | null | undefined;
-    unitSymbol?: string | null;
+    unit?: { symbol?: string | null } | null;
   }) => {
     const { Text } = require('react-native');
     return require('react').createElement(
       Text,
       null,
-      `${quantity}${unitSymbol ? ' ' + unitSymbol : ''}`,
+      `${quantity}${unit?.symbol ? ' ' + unit.symbol : ''}`,
     );
   },
 }));
@@ -28,7 +28,11 @@ describe('FormattedItemSubtitle', () => {
 
   it('renders quantity and weight with separator for qty > 1', () => {
     render(
-      <FormattedItemSubtitle quantity={2} netWeight={100} unitSymbol="g" />,
+      <FormattedItemSubtitle
+        quantity={2}
+        netWeight={100}
+        unit={{ symbol: 'g' }}
+      />,
     );
     expect(screen.getByText('2')).toBeTruthy();
     expect(screen.getByText(/100 g/)).toBeTruthy();
@@ -36,18 +40,22 @@ describe('FormattedItemSubtitle', () => {
 
   it('renders only weight when quantity is 1', () => {
     render(
-      <FormattedItemSubtitle quantity={1} netWeight={3.2} unitSymbol="oz" />,
+      <FormattedItemSubtitle
+        quantity={1}
+        netWeight={3.2}
+        unit={{ symbol: 'oz' }}
+      />,
     );
     expect(screen.getByText(/3.2 oz/)).toBeTruthy();
   });
 
   it('renders only quantity with unit when no weight', () => {
-    render(<FormattedItemSubtitle quantity={5} unitSymbol="cups" />);
+    render(<FormattedItemSubtitle quantity={5} unit={{ symbol: 'cups' }} />);
     expect(screen.getByText(/5 cups/)).toBeTruthy();
   });
 
   it('renders only weight when no quantity', () => {
-    render(<FormattedItemSubtitle netWeight={250} unitSymbol="ml" />);
+    render(<FormattedItemSubtitle netWeight={250} unit={{ symbol: 'ml' }} />);
     expect(screen.getByText(/250 ml/)).toBeTruthy();
   });
 
@@ -61,7 +69,7 @@ describe('FormattedItemSubtitle', () => {
       <FormattedItemSubtitle
         quantity={2}
         netWeight={100}
-        unitSymbol="g"
+        unit={{ symbol: 'g' }}
         additionalInfo="Fresh"
       />,
     );
@@ -74,7 +82,7 @@ describe('FormattedItemSubtitle', () => {
         quantity={0.5}
         initialQuantity={1}
         netWeight={50}
-        unitSymbol="g"
+        unit={{ symbol: 'g' }}
       />,
     );
     expect(screen.getByText(/50 g/)).toBeTruthy();

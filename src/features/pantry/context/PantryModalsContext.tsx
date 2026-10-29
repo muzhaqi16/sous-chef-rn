@@ -92,6 +92,7 @@ export function PantryModalsProvider({
     handleConsumeItem,
     handleWasteItem,
     handleRestockItem,
+    openRestockAsking,
     handleEditItem,
     handleDeleteItem,
   } = usePantryItemActions({
@@ -125,6 +126,13 @@ export function PantryModalsProvider({
     }
   };
 
+  // The add sheet gives way to the restock form when a + needs an amount.
+  const handleRestockNeedsAmount = (itemId: string, reason: string) => {
+    if (!openRestockAsking(itemId, reason)) return false;
+    handleAddSheetClose();
+    return true;
+  };
+
   return (
     <PantryModalsActionsProvider actions={actions}>
       {children}
@@ -151,6 +159,7 @@ export function PantryModalsProvider({
         <RestockPantryItemModal
           visible={restockModal.visible}
           pantryItemId={restockModal.itemId}
+          reason={restockModal.reason}
           onClose={restockModal.close}
           onConfirm={handleConfirmRestock}
         />
@@ -163,6 +172,7 @@ export function PantryModalsProvider({
           pantryId={pantryId}
           onClose={handleAddSheetClose}
           onItemAdded={handleItemAdded}
+          onRestockNeedsAmount={handleRestockNeedsAmount}
           initialSearchQuery={searchQuery}
         />
       )}

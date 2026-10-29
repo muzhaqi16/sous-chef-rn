@@ -21,9 +21,11 @@ import { errorService } from '#/services/errorService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';
 
 export const SelectPantryItems = () => {
   const { t } = useTranslation();
+  const { recordPantryItemsAdded } = useRecordOnboardingProgress();
   useScreenTransition('SelectPantryItems');
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
@@ -142,6 +144,7 @@ export const SelectPantryItems = () => {
               return pantryItemId ? [removeItem(pantryItemId)] : [];
             }),
           ]);
+          if (itemsToAdd.length > 0) recordPantryItemsAdded();
           navigateToNextStep('SelectPantryItems');
         },
         setIsSaving,

@@ -1,6 +1,6 @@
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { ParseIngredientLinesQuery } from '#features/recipes/hooks/useIngredientPaste.generated';
 import type { IngredientFormState } from '#features/recipes/types';
+import { unitLabel } from '#/utils/formatQuantity';
 
 /** The longest line `parseIngredientLines` reads. */
 export const MAX_PASTED_LINE_LENGTH = 500;
@@ -41,7 +41,7 @@ export function toPastedIngredient(line: ParsedLine): PastedIngredient {
     name: line.name,
     quantity: line.quantity,
     unitId: line.unit?.id ?? null,
-    unitLabel: firstNonBlank(line.unit?.symbol, line.unit?.name) ?? '',
+    unitLabel: unitLabel(line.unit),
     itemId: line.item?.id ?? null,
     preparation: line.preparation ?? '',
     notes: line.note ?? '',

@@ -40,6 +40,7 @@ fragment PantryItemBatchFragment on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -47,6 +48,7 @@ fragment PantryItemBatchFragment on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -59,6 +61,7 @@ fragment PantryItemBatchFragment on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -66,6 +69,7 @@ fragment PantryItemBatchFragment on PantryItemBatch {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

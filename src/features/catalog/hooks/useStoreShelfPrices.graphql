@@ -25,6 +25,10 @@ fragment useStoreShelfPrices_item on Item {
         unit {
           id
           symbol
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         currency {
           id

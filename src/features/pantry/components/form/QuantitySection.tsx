@@ -22,7 +22,6 @@ interface QuantitySectionProps {
   ) => void;
   testID?: string;
   unitTestID?: string;
-  unitSymbol?: string | null;
 }
 
 export const QuantitySection: React.FC<QuantitySectionProps> = ({

@@ -13,10 +13,7 @@ import { useToday } from '#hooks/app/useToday';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { expiryLabel } from '#domain/expiry';
-import {
-  formatQuantityDisplay,
-  getUnitDisplayText,
-} from '#utils/formatQuantity';
+import { formatQuantityDisplay } from '#utils/formatQuantity';
 import type { SuggestionsHookResult } from '#features/catalog/types';
 
 /**
@@ -41,10 +38,7 @@ const amountLeft = (row: Sections['lowStock'][number], t: Translate) => {
   }
   return t('addToPantry.amountLeft', {
     count: currentQuantity,
-    amount: formatQuantityDisplay(
-      currentQuantity,
-      getUnitDisplayText(defaultUnit),
-    ),
+    amount: formatQuantityDisplay(currentQuantity, defaultUnit),
   });
 };
 

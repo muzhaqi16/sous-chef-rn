@@ -16,7 +16,7 @@ import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem
 import { ListItem } from '#components/molecules/ListItem';
 import { AnimatedCheckbox } from '#features/shoppingList/components/AnimatedCheckbox';
 import { QuantityBadge } from '#features/shoppingList/components/QuantityBadge';
-import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit, unitLabel } from '#/utils/formatQuantity';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Icon } from '#components/atoms/Icon';
@@ -149,10 +149,13 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     detailText
   );
   const shownReading = complete ? shownLineReading(data, readingSystem) : null;
-  const unitDisplay = shownReading
-    ? shownReading.symbol
-    : firstNonBlank(data.unitName, data.unit?.symbol);
   const shownQuantity = shownReading ? shownReading.value : quantity;
+  const unitDisplay = shownReading
+    ? unitLabel(shownReading, { quantity: shownQuantity })
+    : firstNonBlank(
+        data.unitName,
+        unitLabel(data.unit, { quantity: shownQuantity }),
+      );
   const shownQuantityInput = shownReading ? null : quantityInput;
   // 0.5 kg, not "1/2 kg": a reading takes its unit's notation, as the pantry's do.
   const shownNotation = shownReading
@@ -360,10 +363,14 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             itemName,
             isPurchased && t('labels.purchased'),
             isPendingSync ? t('status.syncing') : detailText,
-            formatQuantityWithUnit(shownQuantity, unitDisplay, {
-              quantityInput: shownQuantityInput,
-              notation: shownNotation,
-            }),
+            formatQuantityWithUnit(
+              shownQuantity,
+              { symbol: unitDisplay },
+              {
+                quantityInput: shownQuantityInput,
+                notation: shownNotation,
+              },
+            ),
             isPurchased && isStocked && t('shoppingList.alreadyInPantry'),
           )}
           // Keyed by id, not index: a drag would repoint an index-keyed testID at

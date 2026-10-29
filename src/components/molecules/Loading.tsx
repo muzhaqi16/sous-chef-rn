@@ -1,5 +1,4 @@
 import React from 'react';
-import { useTranslation } from '#/i18n';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View, ActivityIndicator } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -38,17 +37,12 @@ export const Loading: React.FC<LoadingProps> = ({
   style,
   testID,
 }) => {
-  const { t } = useTranslation();
   const brand = spinnerKind === 'brand';
 
   return (
     <View style={[styles.container, style]} testID={testID}>
       {brand ? (
-        <SousChefLoader
-          size="small"
-          showBrand={false}
-          message={message ?? t('labels.loading')}
-        />
+        <SousChefLoader size="small" showBrand={false} message={message} />
       ) : color != null ? (
         <ActivityIndicator size={size} color={color} style={styles.spinner} />
       ) : (

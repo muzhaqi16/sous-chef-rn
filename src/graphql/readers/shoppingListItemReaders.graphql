@@ -32,6 +32,10 @@ fragment ShoppingListItemReaders on ShoppingListItem {
     canSuggest
     displayUnit {
       id
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -63,6 +67,10 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   netWeight
   netWeightUnit {
     id
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
@@ -121,6 +129,10 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   }
   unit {
     id
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
     type

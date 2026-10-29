@@ -5,7 +5,10 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { Icon } from '#components/atoms/Icon';
-import { formatQuantityForDisplay } from '#utils/formatQuantity';
+import {
+  formatQuantityForDisplay,
+  formatQuantityWithUnit,
+} from '#utils/formatQuantity';
 import { formatMonthDayYear } from '#utils/formatters/date';
 import { purchaseDay } from '#utils/dateUtils';
 import { useFragment } from '@apollo/client/react';
@@ -336,9 +339,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.minQuantity != null && item.minQuantity > 0 && (
         <InfoRow
           label={t('pantryItemDetail.fields.minStock')}
-          value={`${formatQuantityForDisplay(item.minQuantity)} ${
-            item.unit.name
-          }`}
+          value={formatQuantityWithUnit(item.minQuantity, item.unit)}
           icon="alert-circle-outline"
           showColon={false}
           labelTone="secondary"
@@ -350,9 +351,7 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
       {item.restockQuantity != null && item.restockQuantity > 0 && (
         <InfoRow
           label={t('pantryItemDetail.fields.restockAt')}
-          value={`${formatQuantityForDisplay(item.restockQuantity)} ${
-            item.unit.name
-          }`}
+          value={formatQuantityWithUnit(item.restockQuantity, item.unit)}
           icon="refresh-outline"
           showColon={false}
           labelTone="secondary"

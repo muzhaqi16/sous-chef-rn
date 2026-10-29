@@ -28,6 +28,11 @@ export interface AppConfig {
      * from `keychainNamespace` — re-deriving it strands the stored value.
      */
     lastBiometricEmailKey: string;
+    /** Store pages as https links: each store's app opens its own listing. */
+    storeListings: {
+      ios: string;
+      android: string;
+    };
   };
   /**
    * Which features ship; absent means shipped. The FORK-level switch, where a
@@ -62,6 +67,10 @@ export const appConfig: AppConfig = {
     },
     keychainNamespace: 'dev.souschef.app',
     lastBiometricEmailKey: 'souschefrn-email',
+    storeListings: {
+      ios: 'https://apps.apple.com/app/id6758162765',
+      android: 'https://play.google.com/store/apps/details?id=dev.souschef.app',
+    },
   },
   features: {},
   featureFlags: {},

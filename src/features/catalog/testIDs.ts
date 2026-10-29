@@ -35,8 +35,7 @@ export const catalogTestIDs = {
   addItemSheetSearchInput: (prefix: string) => `${prefix}-search-input`,
   addManuallyButton: (prefix: string) => `${prefix}-add-manually-button`,
 
-  /** `SuggestionListItem` / `BottomSheetAutocompleteInput`, under the field's id. */
-  suggestionDismiss: (fieldID: string) => `${fieldID}-dismiss`,
+  /** `BottomSheetAutocompleteInput`, under the field's id. */
   suggestion: (fieldID: string, index: number) =>
     `${fieldID}-suggestion-${index}`,
   autocompleteSearch: (fieldID: string) => `${fieldID}-search`,

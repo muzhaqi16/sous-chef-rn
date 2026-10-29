@@ -242,6 +242,10 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { useShoppingListRowOptions } from '../SortableListThemeContext';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 // Build a ShoppingListItem cache entry that satisfies the SortableItem_item
 // fragment selection. Passing the entry's `__typename`/`id` ref as `itemRef`
@@ -853,15 +857,16 @@ describe('SwipeableListItem (SortableItem)', () => {
   // The server reads a line's weight or volume in each unit system; the row
   // shows the user's while that reading still describes the line.
   describe('the amount in the user\u2019s unit system', () => {
-    const unit = (id: string, symbol: string, type: UnitType) => ({
-      unitId: id,
-      symbol,
-      displayAsFraction: false,
-      type,
-    });
+    const unit = (id: string, symbol: string, type: UnitType) =>
+      readingAsAbbreviation({
+        unitId: id,
+        symbol,
+        displayAsFraction: false,
+        type,
+      });
     const twoPounds = seedItem({
       quantity: 2,
-      unit: { __typename: 'Unit', id: 'unit-lb', symbol: 'lb' },
+      unit: asAbbreviation({ __typename: 'Unit', id: 'unit-lb', symbol: 'lb' }),
       amount: {
         __typename: 'Measure',
         value: 2,
@@ -894,7 +899,11 @@ describe('SwipeableListItem (SortableItem)', () => {
       renderRow(
         seedItem({
           quantity: 1.1,
-          unit: { __typename: 'Unit', id: 'unit-lb', symbol: 'lb' },
+          unit: asAbbreviation({
+            __typename: 'Unit',
+            id: 'unit-lb',
+            symbol: 'lb',
+          }),
           amount: {
             __typename: 'Measure',
             value: 1.1,
@@ -922,7 +931,11 @@ describe('SwipeableListItem (SortableItem)', () => {
         seedItem({
           quantity: 3,
           unitName: 'cans',
-          unit: { __typename: 'Unit', id: 'unit-pc', symbol: 'pc' },
+          unit: asAbbreviation({
+            __typename: 'Unit',
+            id: 'unit-pc',
+            symbol: 'pc',
+          }),
           amount: {
             __typename: 'Measure',
             value: 3,

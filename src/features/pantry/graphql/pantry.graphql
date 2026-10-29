@@ -67,9 +67,14 @@ query GetPantry(
           heldQuantity
           displayAmount {
             quantity
+            localizedSymbol
             unit {
               id
               symbol
+              localizedSymbolForms {
+                one
+                other
+              }
             }
           }
           expiresOn
@@ -83,6 +88,10 @@ query GetPantry(
           unit {
             id
             symbol
+            localizedSymbolForms {
+              one
+              other
+            }
           }
           ...pantryItem_listed
         }
@@ -154,6 +163,10 @@ query GetPantryItemSuggestions(
         defaultUnit {
           id
           symbol
+          localizedSymbolForms {
+            one
+            other
+          }
         }
       }
       expiringSoon {
@@ -307,6 +320,14 @@ query GetPantryLedgerAnalytics(
           unitId
           unitName
           unitSymbol
+          unit {
+            id
+            symbol
+            localizedSymbolForms {
+              one
+              other
+            }
+          }
           totalQuantity
           count
         }
@@ -314,6 +335,14 @@ query GetPantryLedgerAnalytics(
           unitId
           unitName
           unitSymbol
+          unit {
+            id
+            symbol
+            localizedSymbolForms {
+              one
+              other
+            }
+          }
           totalQuantity
           count
         }
@@ -342,6 +371,14 @@ query GetPantryLedgerAnalytics(
           amount
           currencyCode
           unitSymbol
+          unit {
+            id
+            symbol
+            localizedSymbolForms {
+              one
+              other
+            }
+          }
         }
         costByStore {
           storeId
@@ -355,6 +392,14 @@ query GetPantryLedgerAnalytics(
             amount
             currencyCode
             unitSymbol
+            unit {
+              id
+              symbol
+              localizedSymbolForms {
+                one
+                other
+              }
+            }
           }
         }
       }
@@ -379,6 +424,10 @@ query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
       type
       unitRole
       commonFractions
@@ -401,6 +450,10 @@ query RestockUnitsForPantryItem($pantryItemId: ID!) {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
       type
       unitRole
       commonFractions
@@ -657,9 +710,14 @@ mutation CreatePantryItemUsage(
           heldQuantity
           displayAmount {
             quantity
+            localizedSymbol
             unit {
               id
               symbol
+              localizedSymbolForms {
+                one
+                other
+              }
             }
           }
           isLowStock
@@ -947,6 +1005,40 @@ query GetPantryItemBatchHistory(
   $first: Int
   $after: String
 ) {
+  # The units its rows read off the stack (`BatchListItem_pantryItem`), in the
+  # same request; a core document spreads no component's fragment.
+  pantryItem(id: $pantryItemId) {
+    id
+    unit {
+      id
+      symbol
+      localizedSymbolForms {
+        one
+        other
+      }
+    }
+    displayUnit {
+      id
+      symbol
+      localizedSymbolForms {
+        one
+        other
+      }
+      type
+      hasStandardCountFactor
+      baseUnitId
+      conversionFactor
+      commonFractions
+    }
+    netWeightUnit {
+      id
+      symbol
+      localizedSymbolForms {
+        one
+        other
+      }
+    }
+  }
   pantryItemBatchesConnection(
     pantryItemId: $pantryItemId
     first: $first
@@ -1124,6 +1216,10 @@ query GetPantryItemUsageHistory(
             id
             name
             symbol
+            localizedSymbolForms {
+              one
+              other
+            }
           }
           usedAt
           purpose
@@ -1143,6 +1239,7 @@ query GetPantryItemUsageHistory(
               value
               unitId
               symbol
+              localizedSymbol
               displayAsFraction
               type
             }
@@ -1150,6 +1247,7 @@ query GetPantryItemUsageHistory(
               value
               unitId
               symbol
+              localizedSymbol
               displayAsFraction
               type
             }

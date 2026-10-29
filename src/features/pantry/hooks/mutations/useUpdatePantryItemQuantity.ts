@@ -20,17 +20,23 @@ import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 import { todayKey } from '#/utils/dateUtils';
+import { unitLabel } from '#/utils/formatQuantity';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;
 }
+
+/** A unit as the stack's shown amount holds it, whole from the cache. */
+export type StatedUnit = NonNullable<
+  Parameters<typeof writeHeldStock>[3]
+>['unit'] & { conversionFactor: number };
 
 interface UpdateQuantityParams {
   itemId: string;
   quantityInput: string;
   quantityValue: number;
   /** The count multiple the amount is stated in (a dozen); else the stack's own unit. */
-  statedIn?: { id: string; symbol: string; conversionFactor: number } | null;
+  statedIn?: StatedUnit | null;
 }
 
 export function useUpdatePantryItemQuantity({
@@ -108,11 +114,8 @@ export function useUpdatePantryItemQuantity({
       ? {
           __typename: 'DisplayAmount',
           quantity: newQuantity,
-          unit: {
-            __typename: 'Unit',
-            id: statedIn.id,
-            symbol: statedIn.symbol,
-          },
+          localizedSymbol: unitLabel(statedIn, { quantity: newQuantity }),
+          unit: statedIn,
         }
       : undefined;
     try {

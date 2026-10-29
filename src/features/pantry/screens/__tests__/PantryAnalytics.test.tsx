@@ -291,6 +291,7 @@ describe('PantryAnalytics', () => {
       amount,
       currencyCode,
       unitSymbol,
+      unit: null,
     });
 
     /** Renders the screen over a ledger whose cost block is the one given. */

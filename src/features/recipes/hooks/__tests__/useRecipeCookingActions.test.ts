@@ -20,6 +20,9 @@ import { UseRecipeData_RecipeFragmentDoc } from '#features/recipes/hooks/useReci
 import type { RootState } from '#store';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
+import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+
+jest.mock('#/domain/reviewPrompt');
 
 // useRecipeIngredientMatching (used internally) reads the selected pantry id.
 jest.mock('#store/useAppStore', () => ({
@@ -103,6 +106,8 @@ const cook = (
   });
 
 describe('useRecipeCookingActions', () => {
+  beforeEach(() => jest.mocked(askForReviewAfterSuccess).mockClear());
+
   it('cookExternalError when recipeId is undefined', async () => {
     const { result } = renderHookWithApollo(() =>
       useRecipeCookingActions({ recipeId: undefined }),
@@ -139,6 +144,7 @@ describe('useRecipeCookingActions', () => {
         'Recipe marked as cooked! Ingredients deducted from pantry.',
       ),
     );
+    expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
   });
 
   // Omitted, the server deducts from the default pantry of the default home.
@@ -287,6 +293,7 @@ describe('useRecipeCookingActions', () => {
       ),
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
+    expect(askForReviewAfterSuccess).not.toHaveBeenCalled();
   });
 
   it('skip review sends a client-minted id and the selected pantry', async () => {

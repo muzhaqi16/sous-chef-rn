@@ -107,23 +107,10 @@ const convertToScannedItem = (
   unitId: item.units.find(u => u.isDefault)?.unitId,
   netWeight: item.netWeight ?? undefined,
   netWeightKind: item.netWeightKind ?? undefined,
-  displayUnit: item.displayUnit
-    ? {
-        id: item.displayUnit.id,
-        name: item.displayUnit.name,
-        symbol: item.displayUnit.symbol,
-      }
-    : undefined,
+  displayUnit: item.displayUnit ?? undefined,
   packageSize: item.packageSize ?? undefined,
   packs: item.packs ?? undefined,
-  trackingUnit: item.trackingUnit
-    ? {
-        id: item.trackingUnit.id,
-        name: item.trackingUnit.name,
-        symbol: item.trackingUnit.symbol,
-        type: item.trackingUnit.type,
-      }
-    : undefined,
+  trackingUnit: item.trackingUnit ?? undefined,
   suggestedPackageUnit: item.suggestedPackageUnit ?? undefined,
   // The brand typed into the create form is the item's; a scan's is the
   // barcode's own.

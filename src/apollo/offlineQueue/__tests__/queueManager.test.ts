@@ -367,7 +367,7 @@ describe('QueueManager', () => {
         );
       });
 
-      it('keeps the skip branches at warn', async () => {
+      it('keeps a signed-out drain below warn', async () => {
         mockedGetState.mockReturnValue({
           user: null,
           accessToken: null,
@@ -376,8 +376,30 @@ describe('QueueManager', () => {
 
         await manager.processQueue();
 
-        expect(Telemetry.warn).toHaveBeenCalledWith(
+        expect(Telemetry.warn).not.toHaveBeenCalled();
+        expect(Telemetry.debug).toHaveBeenCalledWith(
           'Queue drain skipped: no authenticated user',
+        );
+        expect(Telemetry.increment).toHaveBeenCalledWith(
+          'offline_queue_drain_skipped_total',
+          1,
+          { reason: 'no_authenticated_user' },
+        );
+      });
+
+      it('keeps the API-unavailable skip at warn', async () => {
+        mockedGetState.mockReturnValue({
+          user: { id: 'user-1' },
+          accessToken: 'token',
+          isOnline: true,
+          apiReachable: false,
+        });
+
+        await manager.processQueue();
+
+        expect(Telemetry.warn).toHaveBeenCalledWith(
+          'Queue drain skipped: API unavailable',
+          { is_online: true },
         );
       });
     });

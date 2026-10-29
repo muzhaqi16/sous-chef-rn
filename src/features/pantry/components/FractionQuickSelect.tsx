@@ -2,7 +2,11 @@ import React from 'react';
 import { View } from 'react-native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
-import { formatQuantityAsFraction } from '#/utils/formatQuantity';
+import {
+  formatQuantityAsFraction,
+  unitLabel,
+  type UnitLabelSource,
+} from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 
 interface FractionQuickSelectProps {
@@ -10,8 +14,8 @@ interface FractionQuickSelectProps {
   fractions: number[];
   onSelect: (value: number) => void;
   selectedValue?: number;
-  /** Unit symbol to display next to the fraction, e.g. "cup" */
-  unitSymbol?: string;
+  /** The unit shown after each fraction, e.g. "cup" */
+  unit?: UnitLabelSource;
   /** When true, format labels as fractions (1/4) instead of decimals (0.25) */
   displayAsFraction?: boolean;
 }
@@ -31,7 +35,7 @@ export const FractionQuickSelect: React.FC<FractionQuickSelectProps> = ({
   fractions,
   onSelect,
   selectedValue,
-  unitSymbol,
+  unit,
   displayAsFraction,
 }) => {
   if (fractions.length === 0) return null;
@@ -44,7 +48,8 @@ export const FractionQuickSelect: React.FC<FractionQuickSelectProps> = ({
             selectedValue != null &&
             Math.abs(selectedValue - value) < TOLERANCE;
           const label = formatLabel(value, displayAsFraction);
-          const chipLabel = unitSymbol ? `${label} ${unitSymbol}` : label;
+          const unitText = unitLabel(unit, { quantity: value });
+          const chipLabel = unitText ? `${label} ${unitText}` : label;
 
           return (
             <Pressable

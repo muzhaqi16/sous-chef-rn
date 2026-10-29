@@ -79,6 +79,19 @@ const toCandidate = (
   };
 };
 
+/** One choice per text the sheet shows: the first such item in the API's order. */
+const distinctChoices = (
+  candidates: ReceiptCandidate[],
+): ReceiptCandidate[] => {
+  const shown = new Set<string>();
+  return candidates.filter(({ itemName, detail }) => {
+    const label = `${itemName}\n${detail ?? ''}`;
+    if (shown.has(label)) return false;
+    shown.add(label);
+    return true;
+  });
+};
+
 /**
  * The catalog items the API proposes for a receipt's lines, and the step that
  * confirms them, so the same printed line at the same store resolves to them
@@ -138,8 +151,10 @@ export function useReceiptMatches(
     matches.set(Number(line.clientId), {
       ...(best && sure ? { preselect: best } : {}),
       ...(best && !sure ? { guess: best } : {}),
-      candidates: line.candidates.map(candidate =>
-        toCandidate(candidate, line.candidates),
+      candidates: distinctChoices(
+        line.candidates.map(candidate =>
+          toCandidate(candidate, line.candidates),
+        ),
       ),
     });
   }

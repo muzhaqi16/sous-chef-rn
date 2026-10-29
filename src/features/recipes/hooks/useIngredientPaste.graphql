@@ -9,6 +9,10 @@ query ParseIngredientLines($input: ParseIngredientLinesInput!) {
         id
         name
         symbol
+        localizedSymbolForms {
+          one
+          other
+        }
       }
       preparation
       note

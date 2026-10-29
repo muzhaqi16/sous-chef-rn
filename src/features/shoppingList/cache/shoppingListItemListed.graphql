@@ -12,6 +12,10 @@ fragment shoppingListItem_listed on ShoppingListItem {
   unit {
     id
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   amount {
     value
@@ -20,6 +24,7 @@ fragment shoppingListItem_listed on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -27,6 +32,7 @@ fragment shoppingListItem_listed on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

@@ -29,7 +29,7 @@ import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
 import { daysUntilExpiry } from '#domain/expiry';
 import { useToday } from '#hooks/app/useToday';
-import { formatQuantityDisplay } from '#/utils/formatQuantity';
+import { formatAmountDisplay } from '#/utils/formatQuantity';
 import { currentReading, formatReading } from '#domain/measure';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
@@ -198,7 +198,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   );
   const quantity = heldReading
     ? formatReading(heldReading)
-    : formatQuantityDisplay(displayAmount.quantity, displayAmount.unit.symbol);
+    : formatAmountDisplay(displayAmount);
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
   // Each of the row's four text slots has ONE owner, and an absent value leaves

@@ -12,6 +12,10 @@ import {
   type UseHeldStacks_PantryFragment,
 } from '../useHeldStacks.generated';
 import { useHeldStacks, type HeldStack } from '../useHeldStacks';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 type Row = UseHeldStacks_PantryFragment['itemsConnection']['edges'][number];
 
@@ -22,14 +26,15 @@ const reading = (
   value: number,
   unitId: string,
   type: UnitType,
-): HeldStack['held']['metric'] => ({
-  __typename: 'MeasureReading',
-  value,
-  unitId,
-  symbol: unitId,
-  displayAsFraction: false,
-  type,
-});
+): HeldStack['held']['metric'] =>
+  readingAsAbbreviation({
+    __typename: 'MeasureReading',
+    value,
+    unitId,
+    symbol: unitId,
+    displayAsFraction: false,
+    type,
+  });
 
 const stack = (
   id: string,
@@ -45,7 +50,8 @@ const stack = (
   displayAmount: {
     __typename: 'DisplayAmount',
     quantity: 2,
-    unit: { __typename: 'Unit', id: unit.id, symbol: unit.id },
+    localizedSymbol: unit.id,
+    unit: asAbbreviation({ __typename: 'Unit', id: unit.id, symbol: unit.id }),
   },
   held: {
     __typename: 'Measure',

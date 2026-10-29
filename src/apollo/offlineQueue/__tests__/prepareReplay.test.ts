@@ -30,6 +30,7 @@ import {
   hasReplayPreparation,
   prepareReplay,
 } from '#/apollo/offlineQueue/prepareReplay';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 type Cache = ReturnType<typeof makeCache>;
 
@@ -44,7 +45,7 @@ const cacheWithUnit = (id: string, symbol: string): Cache => {
   const cache = makeCache();
   cache.writeFragment({
     fragment: UNIT,
-    data: { __typename: 'Unit', id, symbol },
+    data: asAbbreviation({ __typename: 'Unit', id, symbol }),
   });
   return cache;
 };

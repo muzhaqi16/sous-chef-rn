@@ -26,6 +26,7 @@ import {
   usePantryItemFormSubmit,
   type UsePantryItemFormSubmitParams,
 } from '../usePantryItemFormSubmit';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/utils/fractionUtils', () => ({
   parseFractionalInput: jest.fn((input: string) => {
@@ -655,7 +656,8 @@ describe('usePantryItemFormSubmit', () => {
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 2,
-        unit: { __typename: 'Unit', id: 'unit-1', symbol: 'L' },
+        localizedSymbol: 'L',
+        unit: asAbbreviation({ __typename: 'Unit', id: 'unit-1', symbol: 'L' }),
       },
       version: 1,
       updatedAt: '2026-01-01',
@@ -674,14 +676,14 @@ describe('usePantryItemFormSubmit', () => {
       storageNotes: null,
       tags: [],
       item: null,
-      unit: {
+      unit: asAbbreviation({
         __typename: 'Unit',
         id: 'unit-1',
         name: 'Liter',
         symbol: 'L',
         type: UnitType.Volume,
         displayAsFraction: false,
-      },
+      }),
       netWeightUnit: null,
       storageLocation: null,
       packageBreakdown: null,

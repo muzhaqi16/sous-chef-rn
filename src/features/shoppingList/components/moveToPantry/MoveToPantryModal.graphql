@@ -7,6 +7,10 @@ fragment MoveToPantryModal_shoppingListItem on ShoppingListItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
     # A package size goes with a counted unit (moveToPantryFormConfig).
     type
   }

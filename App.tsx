@@ -20,6 +20,7 @@ import { OfflineTransitionAnnouncer } from '#components/atoms/OfflineTransitionA
 import { ThemedStatusBar } from '#components/atoms/ThemedStatusBar';
 import { AppErrorBoundary } from '#components/providers/ErrorBoundary';
 import { useAppLifecycle } from '#/app/useAppLifecycle';
+import { UpdateRequiredGate } from '#/app/UpdateRequiredGate';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
 import { CoreDataProvider } from '#bootstrap/CoreDataProvider';
@@ -92,6 +93,10 @@ const App = () => {
                            indicator is `OfflineStatusPill`, rendered inline in
                            each screen's header — nothing global occupies the
                            top inset.
+                        1b. UpdateRequiredGate - draws its dialog over the app
+                            content once the server refuses this build. In the
+                            tree, so a native-stack modal or an alert covers it
+                            until closed; a native Modal there would be lost.
                         2. OfflineTransitionAnnouncer - renders null; reads the
                            offline/online transition to a screen reader once.
                         3. GlobalBackdrop - covers everything including status bar
@@ -101,11 +106,13 @@ const App = () => {
                         4. BottomSheetModal portals (including ActionTray) render on top via @gorhom/bottom-sheet */}
                         <ThemedStatusBar />
                         <View style={styles.container}>
-                          <AlertProvider>
-                            <NotificationProvider>
-                              <Navigation />
-                            </NotificationProvider>
-                          </AlertProvider>
+                          <UpdateRequiredGate>
+                            <AlertProvider>
+                              <NotificationProvider>
+                                <Navigation />
+                              </NotificationProvider>
+                            </AlertProvider>
+                          </UpdateRequiredGate>
                           <OfflineTransitionAnnouncer />
                         </View>
                         <GlobalBackdrop />

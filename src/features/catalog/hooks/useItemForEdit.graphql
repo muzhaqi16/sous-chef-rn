@@ -55,6 +55,10 @@ fragment useItemForEdit_item on Item {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   brands {
     id

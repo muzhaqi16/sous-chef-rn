@@ -861,6 +861,46 @@ describe('useReceiptReview', () => {
       ]);
     });
 
+    it('offers one choice for candidates nothing tells apart: the first', async () => {
+      // No brand and no pack size: nothing the sheet could show sets them apart.
+      const spinach = (id: string) => ({
+        item: {
+          id,
+          name: 'Baby Spinach',
+          brands: [],
+          netWeightKind: NetWeightKind.Reference,
+        },
+      });
+      const resolve = recordMock(ResolveReceiptLinesDocument, {
+        data: {
+          resolveReceiptLines: {
+            lines: [
+              {
+                clientId: '3',
+                best: null,
+                candidates: [
+                  spinach('spinach-1'),
+                  spinach('spinach-2'),
+                  spinach('spinach-3'),
+                ],
+              },
+            ],
+          },
+        },
+      });
+      const { result } = await setup({ resolve });
+
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+      expect(
+        result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
+          itemId,
+          detail,
+        })),
+      ).toEqual([{ itemId: 'spinach-1', detail: null }]);
+    });
+
     it('keeps a line the user left out, out, whatever the API proposes', async () => {
       const { result } = await setup({ resolve: resolved() });
       await waitFor(() =>

@@ -13,6 +13,7 @@ import { unitPriceFromTotal } from '#features/shoppingList/utils/purchasePrice';
 import type { PurchaseAmountItem } from './usePurchaseAmountModal';
 import type { PurchasedItemInput } from '#/graphql/generated/schemaTypes';
 import { useListCurrency } from './useListCurrency';
+import { unitLabel } from '#/utils/formatQuantity';
 
 /**
  * Store mode's cart for a scanned product: the list line it fulfils and how to
@@ -81,7 +82,7 @@ export function useStoreModeCart(
         id: open.id,
         itemName: firstNonBlank(open.itemName) ?? t('labels.item'),
         requestedQuantity: open.quantity ?? 1,
-        unitName: firstNonBlank(open.unit?.symbol, open.unitName) ?? null,
+        unitName: firstNonBlank(unitLabel(open.unit), open.unitName) ?? null,
         // The price sheet's hint only: a typed estimate, else the suggestion.
         estimatedPrice: open.priceEstimate.estimated ?? suggested,
       }
@@ -91,7 +92,7 @@ export function useStoreModeCart(
     /** The line left to buy that the scan fulfils, as the price sheet shows it. */
     line,
     /** The unit the line counts in; null for a line with none of its own. */
-    unit: open?.unit ? { id: open.unit.id, symbol: open.unit.symbol } : null,
+    unit: open?.unit ?? null,
     /** A line for the product is already in the cart. */
     inCart: match?.inCart ?? false,
     /**

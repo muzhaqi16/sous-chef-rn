@@ -7,7 +7,9 @@ import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
   CreatePantryItemDocument,
+  GetPantryItemSuggestionsDocument,
   RestockPantryItemDocument,
+  type GetPantryItemSuggestionsQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import {
   ErrorCode,
@@ -16,6 +18,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { AddToPantrySheet } from '../AddToPantrySheet';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -59,10 +62,7 @@ jest.mock('#features/catalog/ui/AddItemSheet/AddItemSheet', () => ({
 
 jest.mock('#features/catalog/ui/AddItemSheet/useAddItemSheetState', () => ({
   useAddItemSheetState: jest.fn(() => ({
-    exitingItems: new Set(),
     shouldFetch: true,
-    startExitAnimation: jest.fn(),
-    completeExitAnimation: jest.fn(),
   })),
 }));
 
@@ -370,6 +370,10 @@ describe('AddToPantrySheet', () => {
                   __typename
                   id
                   symbol
+                  localizedSymbolForms {
+                    one
+                    other
+                  }
                 }
               }
             }
@@ -419,7 +423,7 @@ describe('AddToPantrySheet', () => {
         itemName: 'Milk',
         quantity: 3,
         item: { __typename: 'Item', id: 'item-1' },
-        unit: { __typename: 'Unit', id: 'unit-l', symbol: 'L' },
+        unit: asAbbreviation({ __typename: 'Unit', id: 'unit-l', symbol: 'L' }),
       },
     };
 
@@ -526,9 +530,8 @@ describe('AddToPantrySheet', () => {
       expect(readQuantity(cache)).toBe(4);
     });
 
-    it('adds one package to a stack held by volume as the API counts an add, never 1 L', async () => {
-      // A restock refuses packages nothing sizes; a forced add counts them in
-      // a counted stack of the item.
+    it('restocks a stack held by volume by one package for the server to size, never 1 L', async () => {
+      // A forced add would name no stack, and could land on another one.
       const cache = seedStocked([stockedEdge]);
       typedUnit(cache, 'unit-l', UnitType.Volume);
       const create = recordMock(CreatePantryItemDocument, {
@@ -547,13 +550,12 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(milkInLitres);
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
-      expect(create.fired[0]?.input).toMatchObject({
-        item: { id: 'item-1' },
+      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      expect(restock.fired[0]?.input).toMatchObject({
+        id: 'pi-1',
         amount: { packages: { count: 1 } },
-        forceAdd: true,
       });
-      expect(restock.fired).toHaveLength(0);
+      expect(create.fired).toHaveLength(0);
       // The held litres never move by 1 L.
       expect(readQuantity(cache)).toBe(3);
     });
@@ -718,14 +720,79 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(suggestionRow(PantrySuggestionSource.LowStock, 'pi-held'));
 
-      // The stack is past the loaded window, so its unit is unknown: a forced
-      // add joins the item's counted stack, or counts it as the API counts an add.
-      await waitFor(() => expect(create.fired).toHaveLength(1));
-      expect(create.fired[0]).toMatchObject({
-        input: { amount: { packages: { count: 1 } }, forceAdd: true },
+      // The stack is past the loaded window, so its unit is unknown: the
+      // server sizes the package, on the stack the row names.
+      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      expect(restock.fired[0]).toMatchObject({
+        input: { id: 'pi-held', amount: { packages: { count: 1 } } },
       });
-      expect(restock.fired).toHaveLength(0);
-      expect(toastService.success).toHaveBeenCalledWith('Restocked Milk');
+      expect(create.fired).toHaveLength(0);
+      await waitFor(() =>
+        expect(toastService.success).toHaveBeenCalledWith('Restocked Milk'),
+      );
+    });
+
+    describe('a restock the server cannot size', () => {
+      const unsized = () =>
+        recordMock(RestockPantryItemDocument, {
+          data: {
+            restockPantryItem: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: 'state how much one package holds',
+              field: 'amount.packages.size',
+            },
+          },
+        });
+
+      const tapExpiring = () => {
+        const quickAdd = sheetProps.current.onQuickAddSuggestion as (
+          row: unknown,
+        ) => void;
+        quickAdd(suggestionRow(PantrySuggestionSource.ExpiringSoon, 'pi-held'));
+      };
+
+      it('asks for the amount on the restock form, with no toast', async () => {
+        const onRestockNeedsAmount = jest.fn(() => true);
+        renderWithApollo(
+          <AddToPantrySheet
+            {...defaultProps}
+            onRestockNeedsAmount={onRestockNeedsAmount}
+          />,
+          { cache: makeCache(), operationMocks: [unsized().mock] },
+        );
+
+        tapExpiring();
+
+        await waitFor(() =>
+          expect(onRestockNeedsAmount).toHaveBeenCalledWith(
+            'pi-held',
+            expect.stringContaining('how much one package'),
+          ),
+        );
+        expect(toastService.success).not.toHaveBeenCalled();
+        expect(toastService.error).not.toHaveBeenCalled();
+        expect(defaultProps.onItemAdded).not.toHaveBeenCalled();
+      });
+
+      it('says why on a toast when no form can ask', async () => {
+        renderWithApollo(
+          <AddToPantrySheet
+            {...defaultProps}
+            onRestockNeedsAmount={() => false}
+          />,
+          { cache: makeCache(), operationMocks: [unsized().mock] },
+        );
+
+        tapExpiring();
+
+        await waitFor(() =>
+          expect(toastService.error).toHaveBeenCalledWith(
+            expect.stringContaining('how much one package'),
+          ),
+        );
+        expect(toastService.success).not.toHaveBeenCalled();
+      });
     });
 
     it('adds an Add Again row, never restocking the removed stack it names', async () => {
@@ -743,6 +810,199 @@ describe('AddToPantrySheet', () => {
 
       await waitFor(() => expect(create.fired).toHaveLength(1));
       expect(restock.fired).toHaveLength(0);
+    });
+  });
+
+  /**
+   * A suggestion leaves the cache on the tap, so fast taps on different ones
+   * all go ahead, and a refusal puts back only its own suggestion, at its old
+   * place, without asking for the list again.
+   */
+  describe('suggestion tiles under fast taps', () => {
+    type Sections = NonNullable<
+      GetPantryItemSuggestionsQuery['pantry']
+    >['suggestions'];
+    // `today` only moves the expiring window; the cache does not key on it.
+    const VARIABLES = { pantryId: 'pantry-1', limit: 20, today: '2026-10-28' };
+
+    const popularRow = (itemId: string): Sections['popular'][number] => ({
+      __typename: 'PantryItemSuggestion',
+      id: `popular-${itemId}`,
+      itemId,
+      name: itemId,
+      source: PantrySuggestionSource.Popular,
+      category: null,
+      imageUrl: null,
+      defaultUnitId: null,
+      pantryItemId: null,
+    });
+
+    const seedSuggestions = (
+      popular: string[],
+      lowStock: Sections['lowStock'] = [],
+    ) => {
+      const cache = makeCache();
+      cache.writeQuery({
+        query: GetPantryItemSuggestionsDocument,
+        variables: VARIABLES,
+        data: {
+          __typename: 'Query',
+          pantry: {
+            __typename: 'Pantry',
+            id: 'pantry-1',
+            suggestions: {
+              __typename: 'PantrySuggestions',
+              lowStock,
+              expiringSoon: [],
+              recentlyDeleted: [],
+              frequentlyAdded: [],
+              popular: popular.map(popularRow),
+            },
+          },
+        },
+      });
+      return cache;
+    };
+
+    const shown = (cache: ReturnType<typeof makeCache>) => {
+      const sections = cache.readQuery({
+        query: GetPantryItemSuggestionsDocument,
+        variables: VARIABLES,
+      })?.pantry?.suggestions;
+      return {
+        lowStock: sections?.lowStock.map(s => s.itemId),
+        popular: sections?.popular.map(s => s.itemId),
+      };
+    };
+
+    /** The row a tile hands its handler, as `usePantryItemSuggestions` maps it. */
+    const tile = (itemId: string, extra: Record<string, unknown> = {}) => ({
+      id: `popular-${itemId}`,
+      itemId,
+      name: itemId,
+      source: PantrySuggestionSource.Popular,
+      pantryItemId: null,
+      defaultUnitId: null,
+      ...extra,
+    });
+
+    const quickAdd = (item: unknown) =>
+      (sheetProps.current.onQuickAddSuggestion as (row: unknown) => void)(item);
+
+    const created = (match?: (variables: unknown) => boolean) =>
+      recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'CreatePantryItemPayload',
+            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+          },
+        },
+        ...(match ? { match } : {}),
+      });
+
+    const refusedCreate = (match: (variables: unknown) => boolean) =>
+      recordMock(CreatePantryItemDocument, {
+        data: {
+          createPantryItem: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No add-items access',
+          },
+        },
+        match,
+      });
+
+    const names = (itemId: string) => (variables: unknown) =>
+      JSON.stringify(variables).includes(`"${itemId}"`);
+
+    it('lets two quick adds on different suggestions both go ahead', async () => {
+      const cache = seedSuggestions(['apples', 'bread', 'cheese']);
+      const create = created();
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock],
+      });
+
+      quickAdd(tile('apples'));
+      quickAdd(tile('bread'));
+
+      expect(shown(cache).popular).toEqual(['cheese']);
+      await waitFor(() => expect(create.fired).toHaveLength(2));
+    });
+
+    it('sends one add for a double tap', async () => {
+      const cache = seedSuggestions(['apples', 'bread']);
+      const create = created();
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [create.mock],
+      });
+
+      quickAdd(tile('apples'));
+      quickAdd(tile('apples'));
+
+      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await new Promise(resolve => setTimeout(resolve, 50));
+      expect(create.fired).toHaveLength(1);
+    });
+
+    it('puts back only the refused suggestion, at its old place', async () => {
+      const cache = seedSuggestions(['apples', 'bread', 'cheese']);
+      const refused = refusedCreate(names('apples'));
+      const accepted = created(names('bread'));
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [refused.mock, accepted.mock],
+      });
+
+      quickAdd(tile('apples'));
+      quickAdd(tile('bread'));
+
+      await waitFor(() =>
+        expect(shown(cache).popular).toEqual(['apples', 'cheese']),
+      );
+      expect(toastService.error).toHaveBeenCalledTimes(1);
+    });
+
+    it('puts back a held-stack suggestion whose restock is refused', async () => {
+      const cache = seedSuggestions(
+        [],
+        [
+          {
+            ...popularRow('milk'),
+            id: 'low-milk',
+            source: PantrySuggestionSource.LowStock,
+            pantryItemId: 'pi-9',
+            currentQuantity: null,
+            defaultUnit: null,
+          },
+        ],
+      );
+      const restock = recordMock(RestockPantryItemDocument, {
+        data: {
+          restockPantryItem: {
+            __typename: 'ForbiddenError',
+            code: ErrorCode.Forbidden,
+            message: 'No add-items access',
+          },
+        },
+      });
+      renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
+        cache,
+        operationMocks: [restock.mock],
+      });
+
+      quickAdd(
+        tile('milk', {
+          id: 'low-milk',
+          source: PantrySuggestionSource.LowStock,
+          pantryItemId: 'pi-9',
+        }),
+      );
+
+      expect(shown(cache).lowStock).toEqual([]);
+      await waitFor(() => expect(shown(cache).lowStock).toEqual(['milk']));
+      expect(toastService.error).toHaveBeenCalledTimes(1);
     });
   });
 });

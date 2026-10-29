@@ -4,13 +4,13 @@ import { QuantityInputFeedback } from '../QuantityInputFeedback';
 
 const cups = (quantity: number) => ({
   quantity,
-  unitSymbol: 'cup',
+  unit: { symbol: 'cup' },
   displayAsFraction: true,
 });
 
 const props = {
   available: cups(2),
-  consumeUnitSymbol: 'cup',
+  consumeUnit: { symbol: 'cup' },
   isConvertedUnit: false,
   previewText: null,
   previewLoading: false,
@@ -37,13 +37,21 @@ describe('QuantityInputFeedback', () => {
   });
 
   it('names each amount in its own unit: what is left in pieces, the stock in dozens', () => {
-    const dozens = { quantity: 3, unitSymbol: 'doz', displayAsFraction: null };
+    const dozens = {
+      quantity: 3,
+      unit: { symbol: 'doz' },
+      displayAsFraction: null,
+    };
     const { rerender } = render(
       <QuantityInputFeedback
         {...props}
-        consumeUnitSymbol="pc"
+        consumeUnit={{ symbol: 'pc' }}
         available={dozens}
-        remaining={{ quantity: 11, unitSymbol: 'pc', displayAsFraction: false }}
+        remaining={{
+          quantity: 11,
+          unit: { symbol: 'pc' },
+          displayAsFraction: false,
+        }}
       />,
     );
     expect(screen.getByText('Remaining: 11 pc')).toBeTruthy();
@@ -51,9 +59,13 @@ describe('QuantityInputFeedback', () => {
     rerender(
       <QuantityInputFeedback
         {...props}
-        consumeUnitSymbol="pc"
+        consumeUnit={{ symbol: 'pc' }}
         available={dozens}
-        remaining={{ quantity: -4, unitSymbol: 'pc', displayAsFraction: false }}
+        remaining={{
+          quantity: -4,
+          unit: { symbol: 'pc' },
+          displayAsFraction: false,
+        }}
       />,
     );
     expect(screen.getByText('Exceeds available (3 doz)')).toBeTruthy();

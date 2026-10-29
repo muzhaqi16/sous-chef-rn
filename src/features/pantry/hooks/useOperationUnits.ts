@@ -11,6 +11,7 @@ import type { UnitRole } from '#/graphql/generated/schemaTypes';
 import { UnitSource, UnitType } from '#/graphql/generated/schemaTypes';
 import { countFactorOver } from '#domain/stockDisplay';
 import type { PickableUnit } from '#features/pantry/types';
+import type { UnitLabelSource } from '#/utils/formatQuantity';
 
 export enum PantryOperation {
   Consume = 'CONSUME',
@@ -23,8 +24,7 @@ export type SelectedUnitInfo = PickableUnit;
 
 export interface RankedUnitInfo {
   unitId: string;
-  unitName: string;
-  unitSymbol: string;
+  unit: UnitLabelSource;
   unitType: UnitType;
   isTrackingUnit: boolean;
   role: UnitRole;
@@ -86,8 +86,7 @@ function toRankedUnitInfo(
 ): RankedUnitInfo {
   return {
     unitId: ru.unit.id,
-    unitName: ru.unit.name,
-    unitSymbol: ru.unit.symbol,
+    unit: ru.unit,
     unitType: ru.unit.type,
     isTrackingUnit: ru.unit.id === trackingUnitId,
     role: ru.unit.unitRole,
@@ -141,8 +140,7 @@ function buildGroups(
 function toSelectedUnitInfo(unit: RankedUnitInfo): SelectedUnitInfo {
   return {
     unitId: unit.unitId,
-    unitSymbol: unit.unitSymbol,
-    unitName: unit.unitName,
+    unit: unit.unit,
     unitType: unit.unitType,
     isTrackingUnit: unit.isTrackingUnit,
     conversionRatio: unit.conversionRatio,

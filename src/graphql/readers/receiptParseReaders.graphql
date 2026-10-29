@@ -7,6 +7,14 @@ fragment ReceiptParseReaders on ReceiptParse {
       appliesTo
       code
       kind
+      measureUnit {
+        id
+        localizedSymbolForms {
+          one
+          other
+        }
+        symbol
+      }
       product
       quantity
       text

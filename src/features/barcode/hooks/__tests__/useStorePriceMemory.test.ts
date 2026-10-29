@@ -18,6 +18,7 @@ import {
   UseStorePriceMemory_ItemFragmentDoc,
 } from '../useStorePriceMemory.generated';
 import { useStorePriceMemory } from '../useStorePriceMemory';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#store/useAppStore', () => ({
   useSelectedHomeId: () => 'home-1',
@@ -188,7 +189,7 @@ describe('useStorePriceMemory', () => {
           lastPaid: {
             __typename: 'HouseholdPaidPrice',
             unitPrice: 6.49,
-            unit: { __typename: 'Unit', ...JAR },
+            unit: asAbbreviation({ __typename: 'Unit', ...JAR }),
             normalizedPrice: 6.5,
             basis: 'PER_LB' as unknown as PriceBasis,
             store: null,

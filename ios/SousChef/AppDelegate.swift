@@ -172,4 +172,9 @@ class ReactNativeDelegate: RCTDefaultReactNativeFactoryDelegate {
 #endif
   }
 
+  // The launch screen's colour, not React Native's `systemBackgroundColor`:
+  // the root view shows until the first React frame, and white flashes there.
+  override func customize(_ rootView: RCTRootView) {
+    rootView.backgroundColor = UIColor(named: "LaunchBackground")
+  }
 }

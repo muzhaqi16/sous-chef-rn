@@ -21,13 +21,22 @@ fragment PantryItemForm_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
     type
   }
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   # Only the server sets it, so a stack created offline has none. Its factor
@@ -36,6 +45,10 @@ fragment PantryItemForm_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     conversionFactor
   }
@@ -43,12 +56,20 @@ fragment PantryItemForm_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   # The unit the household uses the stack in; a use opens on it.
   consumeUnit {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   # netWeight as the detail shows it, which the size field opens on.
   packageSize {
@@ -58,6 +79,7 @@ fragment PantryItemForm_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -65,6 +87,7 @@ fragment PantryItemForm_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

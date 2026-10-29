@@ -33,7 +33,7 @@ import {
   getDaysInPantry,
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
-import { formatNetWeightDisplay } from '#utils/formatQuantity';
+import { formatNetWeightDisplay, unitLabel } from '#utils/formatQuantity';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import {
@@ -235,7 +235,9 @@ export const PantryItemDetail: React.FC<
     item?.remainingPortions != null && item.portionUnit
       ? t('pantryItemCard.portionsLeft', {
           count: item.remainingPortions,
-          unit: item.portionUnit.symbol || item.portionUnit.name,
+          unit: unitLabel(item.portionUnit, {
+            quantity: item.remainingPortions,
+          }),
         })
       : null;
 
@@ -524,15 +526,11 @@ export const PantryItemDetail: React.FC<
           <DetailSection flush>
             <BatchSection
               batches={batches}
-              unitSymbol={item.unit.symbol}
-              netWeightUnitSymbol={item.netWeightUnit?.symbol}
-              netWeightUnitId={item.netWeightUnit?.id}
               totalCount={batchTotalCount}
               onViewAll={() =>
                 toPantryBatchHistory({
                   pantryItemId: itemId,
                   itemName: item.itemName,
-                  unitSymbol: item.unit.symbol,
                 })
               }
               onCorrectSize={

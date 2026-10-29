@@ -8,6 +8,7 @@ import { GetStoresDocument } from '#operations/store/store.generated';
 import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
 import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
+import { selectUnitsFetchedAt } from '#store/slices/appSlice';
 import { fromServer } from '#/apollo/utils/fromServer';
 import {
   useAppStore,
@@ -53,7 +54,7 @@ export function useDataPreloading() {
   const isPantryQueryComplete = useIsPantryQueryComplete();
   const isReady = hasInitializedHomeData || isPantryQueryComplete;
 
-  const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
+  const lastUnitsFetchedAt = useAppStore(selectUnitsFetchedAt);
   const lastCategoriesFetchedAt = useAppStore(
     state => state.lastCategoriesFetchedAt,
   );

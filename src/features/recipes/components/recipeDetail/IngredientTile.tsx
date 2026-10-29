@@ -18,8 +18,7 @@ import {
   type HouseholdAlert,
 } from '#domain/dietary';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
-import { formatQuantityForDisplay } from '#/utils/formatQuantity';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { formatQuantityForDisplay, unitLabel } from '#/utils/formatQuantity';
 import { radii } from '#/theme/foundations/radii';
 import { type } from '#/theme/foundations/type';
 
@@ -30,6 +29,8 @@ interface IngredientTileProps {
   isAdded: boolean;
   /** The household's alerts on it; with any, a tap opens them instead of adding. */
   alerts: HouseholdAlert[];
+  /** Budget & prices is on; off, no price is shown or read out. */
+  showPrice: boolean;
   onPress: () => void;
   testID?: string;
 }
@@ -56,6 +57,7 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
   ingredient,
   isAdded,
   alerts,
+  showPrice,
   onPress,
   testID,
 }) => {
@@ -68,14 +70,15 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
   const value = converted?.value ?? ingredient.quantity;
   // No amount ("salt, to taste"), or a legacy zero standing for none: show none.
   const quantity = value ? formatQuantityForDisplay(value) : null;
-  const unit = firstNonBlank(
-    converted ? converted.unit.symbol : null,
-    ingredient.unit?.symbol,
-  );
+  const unit = unitLabel(converted ? converted.unit : ingredient.unit, {
+    quantity: value ?? null,
+  });
   const amount = [quantity, unit].filter(Boolean).join(' ');
   // US dollars, null until the recipe is first saved. Never derived from the name.
   const price =
-    ingredient.estimatedPrice != null ? money(ingredient.estimatedPrice) : null;
+    showPrice && ingredient.estimatedPrice != null
+      ? money(ingredient.estimatedPrice)
+      : null;
   // The API resolves `image` to an absolute address, a catalog item's first.
   const imageUrl = ingredient.image ?? ingredient.item?.imageUrl;
   const ordered = strictestFirst(alerts);

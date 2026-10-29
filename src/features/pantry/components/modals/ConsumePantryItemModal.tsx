@@ -157,7 +157,7 @@ const ConsumeActionFields: React.FC<{
         <QuantityInputFeedback
           remaining={remaining}
           available={available}
-          consumeUnitSymbol={shared.activeUnitSymbol}
+          consumeUnit={shared.activeUnit}
           isConvertedUnit={shared.isConvertedUnit}
           previewText={conversion.previewText}
           previewLoading={conversion.previewLoading}

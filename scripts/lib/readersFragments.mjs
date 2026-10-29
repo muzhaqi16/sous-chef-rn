@@ -2,7 +2,8 @@
  * `<Type>Readers`: the union of what the app's queries read on an entity, for a
  * mutation that changes one to spread (Relay's rule). Spreads are flattened so
  * no consumer fragment's connections come along; connections and views are
- * excluded, conflicting arguments aliased, and a variable argument renamed to
+ * excluded, conflicting arguments aliased (by the alias every document gives
+ * the field, where they agree), and a variable argument renamed to
  * the argument's own name for the spreading operation to declare. A `SHARED`
  * value type is selected once, as the union every readers file reads on it.
  */
@@ -32,8 +33,9 @@ const SHARED = new Set(['ItemPhoto', 'Measure', 'ShownNutrition']);
 const readersFile = (type, dir) =>
   join(dir, `${type[0].toLowerCase()}${type.slice(1)}${SUFFIX}.graphql`);
 
-// A selection tree: Map<type condition, Map<key, { name, args, sub }>>, where
-// the key is the field name plus its printed arguments.
+// A selection tree: Map<type condition, Map<key, { name, args, sub, names }>>,
+// where the key is the field name plus its printed arguments and `names` the
+// response names documents give it.
 const newTree = () => new Map();
 
 function normalizeArguments(field, args, where) {
@@ -105,7 +107,8 @@ function addSelections(
     const key = `${name}(${args.map(print).join(', ')})`;
     const group = tree.get(parentType.name) ?? new Map();
     tree.set(parentType.name, group);
-    const entry = group.get(key) ?? { name, args, sub: null };
+    const entry = group.get(key) ?? { name, args, sub: null, names: new Set() };
+    entry.names.add(selection.alias?.value ?? name);
     group.set(key, entry);
     if (selection.selectionSet) {
       entry.sub ??= newTree();
@@ -130,10 +133,14 @@ function mergeTree(into, from) {
       if (!existing) {
         target.set(key, {
           ...entry,
+          names: new Set(entry.names),
           sub: entry.sub && mergeTree(newTree(), entry.sub),
         });
-      } else if (entry.sub) {
-        existing.sub = mergeTree(existing.sub ?? newTree(), entry.sub);
+      } else {
+        for (const name of entry.names) existing.names.add(name);
+        if (entry.sub) {
+          existing.sub = mergeTree(existing.sub ?? newTree(), entry.sub);
+        }
       }
     }
   }
@@ -258,6 +265,7 @@ function toSelectionSet(schema, tree, type, variables) {
       a.localeCompare(b),
     );
     const taken = new Map();
+    const used = new Set();
     const fields = entries.map(([, entry]) => {
       const field = conditionType.getFields()[entry.name];
       for (const arg of entry.args) {
@@ -275,12 +283,21 @@ function toSelectionSet(schema, tree, type, variables) {
       }
       const seenCount = (taken.get(entry.name) ?? 0) + 1;
       taken.set(entry.name, seenCount);
+      // The readers type then reads as every document's does.
+      const [agreed] = entry.names.size === 1 ? entry.names : [];
+      const responseName =
+        agreed !== undefined && !used.has(agreed)
+          ? agreed
+          : seenCount > 1
+          ? `${entry.name}_${seenCount}`
+          : entry.name;
+      used.add(responseName);
       return {
         kind: Kind.FIELD,
         alias:
-          seenCount > 1
-            ? { kind: Kind.NAME, value: `${entry.name}_${seenCount}` }
-            : undefined,
+          responseName === entry.name
+            ? undefined
+            : { kind: Kind.NAME, value: responseName },
         name: { kind: Kind.NAME, value: entry.name },
         arguments: entry.args,
         selectionSet: entry.sub

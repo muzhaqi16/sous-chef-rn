@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
@@ -10,6 +10,7 @@ import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import { useOnboardingSummary } from '#features/onboarding/hooks/useOnboardingSummary';
 
 export const OnboardingCompleteScreen = () => {
   const { t } = useTranslation();
@@ -20,6 +21,15 @@ export const OnboardingCompleteScreen = () => {
   const [error, setError] = useState<string | null>(null);
 
   const { completeOnboarding } = useCompleteOnboarding(user?.id);
+  const summary = useOnboardingSummary();
+  // Only what the user has: a skipped step is never claimed.
+  const lines: { done: boolean; key: TranslationKey }[] = [
+    { done: summary.homeAndPantry, key: 'onBoarding.summaryHomeAndPantry' },
+    { done: summary.shoppingList, key: 'onBoarding.summaryShoppingList' },
+    { done: summary.pantryItems, key: 'onBoarding.summaryInitialPantryItems' },
+    { done: summary.invites, key: 'onBoarding.summaryInvitedFamily' },
+  ];
+  const completed = lines.filter(line => line.done).map(line => line.key);
 
   const handleComplete = async () => {
     if (!user?.id) {
@@ -45,7 +55,11 @@ export const OnboardingCompleteScreen = () => {
   return (
     <OnBoardingWrapper
       title={t('onBoarding.completeTitle')}
-      subtitle={t('onBoarding.completeSubtitle')}
+      subtitle={
+        summary.homeAndPantry
+          ? t('onBoarding.completeSubtitle')
+          : t('onBoarding.readyToStart')
+      }
       testID={onboardingTestIDs.completeScreen}
     >
       <View style={styles.container}>
@@ -53,24 +67,29 @@ export const OnboardingCompleteScreen = () => {
           <Icon name="checkmark" size={44} tone="onSuccess" />
         </View>
 
-        <Text role="heading" align="center" style={styles.congratsText}>
-          {t('onBoarding.congratulations')}
-        </Text>
-
-        <View style={styles.summaryList}>
-          <Text role="body" tone="secondary" style={styles.summaryItem}>
-            {`• ${t('onBoarding.summaryHomeAndPantry')}`}
+        {completed.length > 0 ? (
+          <>
+            <Text role="heading" align="center" style={styles.congratsText}>
+              {t('onBoarding.congratulations')}
+            </Text>
+            <View style={styles.summaryList}>
+              {completed.map(key => (
+                <Text
+                  key={key}
+                  role="body"
+                  tone="secondary"
+                  style={styles.summaryItem}
+                >
+                  {`• ${t(key)}`}
+                </Text>
+              ))}
+            </View>
+          </>
+        ) : (
+          <Text role="body" align="center" style={styles.congratsText}>
+            {t('onBoarding.nothingSetUp')}
           </Text>
-          <Text role="body" tone="secondary" style={styles.summaryItem}>
-            {`• ${t('onBoarding.summaryShoppingList')}`}
-          </Text>
-          <Text role="body" tone="secondary" style={styles.summaryItem}>
-            {`• ${t('onBoarding.summaryInitialPantryItems')}`}
-          </Text>
-          <Text role="body" tone="secondary" style={styles.summaryItem}>
-            {`• ${t('onBoarding.summaryInvitedFamily')}`}
-          </Text>
-        </View>
+        )}
 
         <Text
           role="caption"

@@ -14,6 +14,7 @@ import {
   type WriteHeldStock_PantryItemFragment,
   type WriteHeldStock_ShownInFragment,
 } from './stock.generated';
+import { unitLabel } from '#/utils/formatQuantity';
 
 type ShownAmount = WriteHeldStock_PantryItemFragment['displayAmount'];
 type CountedIn = WriteHeldStock_PantryItemFragment['unit'];
@@ -34,11 +35,9 @@ function shownAmount(
   return {
     __typename: 'DisplayAmount',
     quantity: amount.quantity,
-    unit: {
-      __typename: 'Unit',
-      id: amount.unit.id,
-      symbol: amount.unit.symbol,
-    },
+    // The server's pick by the same rule, until it answers.
+    localizedSymbol: unitLabel(amount.unit, { quantity: amount.quantity }),
+    unit: amount.unit,
   };
 }
 

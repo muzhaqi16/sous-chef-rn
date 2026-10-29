@@ -47,12 +47,14 @@ describe('QuantityDisplay', () => {
   });
 
   it('appends unit symbol when showUnit is true', () => {
-    render(<QuantityDisplay quantity={2} unitSymbol="kg" />);
+    render(<QuantityDisplay quantity={2} unit={{ symbol: 'kg' }} />);
     expect(screen.getByText('2 kg')).toBeTruthy();
   });
 
   it('does not append unit when showUnit is false', () => {
-    render(<QuantityDisplay quantity={2} unitSymbol="kg" showUnit={false} />);
+    render(
+      <QuantityDisplay quantity={2} unit={{ symbol: 'kg' }} showUnit={false} />,
+    );
     expect(screen.getByText('2')).toBeTruthy();
   });
 
@@ -63,7 +65,11 @@ describe('QuantityDisplay', () => {
 
   it('renders quantityInput with unit', () => {
     render(
-      <QuantityDisplay quantity={0.5} quantityInput="1/2" unitSymbol="cup" />,
+      <QuantityDisplay
+        quantity={0.5}
+        quantityInput="1/2"
+        unit={{ symbol: 'cup' }}
+      />,
     );
     expect(screen.getByText('1/2 cup')).toBeTruthy();
   });

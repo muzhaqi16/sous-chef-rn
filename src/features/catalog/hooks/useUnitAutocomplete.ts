@@ -8,17 +8,22 @@ import {
 import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
-import { filterByTerm } from '#hooks/search/useLocalSearch';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import { filterByTerm, type Accessor } from '#hooks/search/useLocalSearch';
+import { selectUnitsFetchedAt, type CachedUnit } from '#store/slices/appSlice';
 import { scheduleIdle } from '#/utils/scheduleIdle';
 
-export interface UnitItem {
-  id: string;
-  name: string;
-  symbol: string;
-  type?: UnitType;
-  abbreviation?: string;
-}
+export type UnitItem = CachedUnit;
+
+// The app's language as well as the canonical English, so "tbsp" still finds
+// tablespoon under Italian.
+const UNIT_SEARCH_KEYS: ReadonlyArray<Accessor<UnitItem>> = [
+  'symbol',
+  'name',
+  unit => unit.localizedSymbolForms?.one,
+  unit => unit.localizedSymbolForms?.other,
+  unit => unit.localizedNameForms?.one,
+  unit => unit.localizedNameForms?.other,
+];
 
 /** 24 hours in milliseconds — matches backend refresh cadence for common units */
 const UNITS_CACHE_TTL = 24 * 60 * 60 * 1000;
@@ -28,7 +33,7 @@ export function useUnitAutocomplete() {
   const isOnline = useIsOnline();
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
-  const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
+  const lastUnitsFetchedAt = useAppStore(selectUnitsFetchedAt);
   const setLastUnitsFetchedAt = useAppStore(
     state => state.setLastUnitsFetchedAt,
   );
@@ -98,7 +103,7 @@ export function useUnitAutocomplete() {
   const fallbackItems: UnitItem[] = cachedUnits;
 
   const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
-    return [...filterByTerm(items, term, ['symbol', 'name'])];
+    return [...filterByTerm(items, term, UNIT_SEARCH_KEYS)];
   };
 
   const autocomplete = useAutocompleteSearch<UnitItem>({

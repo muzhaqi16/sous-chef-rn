@@ -9,6 +9,7 @@ import {
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { errorService } from '#/services/errorService';
@@ -100,6 +101,7 @@ export function useBatchMoveToPantry({
     if (settled.status === 'queued') {
       toastService.success(t('moveToPantry.queued'));
       onSuccess?.();
+      askForReviewAfterSuccess();
       return;
     }
 
@@ -138,6 +140,7 @@ export function useBatchMoveToPantry({
           skipped: alreadyThere,
         }),
       );
+      askForReviewAfterSuccess();
     } else if (alreadyThereCount > 0) {
       // Nothing moved because the pantry already held these lines. That is a
       // success for the user, not the "nothing could be moved" message.

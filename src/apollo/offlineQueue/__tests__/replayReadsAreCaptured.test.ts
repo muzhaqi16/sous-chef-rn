@@ -8,6 +8,7 @@ import { makeCache } from '#/apollo/cache';
 import { makeQueuedMutation } from '#/test-utils/queuedMutation';
 import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
 import { captureReplayInputs } from '#/apollo/offlineQueue/prepareReplay';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 describe('replay reads are captured when queued', () => {
   it.each(Object.keys(REPLAY_PREPARATIONS))(
@@ -21,7 +22,11 @@ describe('replay reads are captured when queued', () => {
             symbol
           }
         `,
-        data: { __typename: 'Unit', id: 'unit-1', symbol: 'tbsp' },
+        data: asAbbreviation({
+          __typename: 'Unit',
+          id: 'unit-1',
+          symbol: 'tbsp',
+        }),
       });
       const mutation = makeQueuedMutation({
         operationName,

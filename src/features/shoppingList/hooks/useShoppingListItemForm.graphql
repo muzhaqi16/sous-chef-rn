@@ -33,5 +33,9 @@ fragment useShoppingListItemForm_item on ShoppingListItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
 }

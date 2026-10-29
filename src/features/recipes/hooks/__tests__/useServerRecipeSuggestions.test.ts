@@ -10,6 +10,7 @@ import { RecipeSuggestionsDocument } from '../useServerRecipeSuggestions.generat
 import { getI18n } from '#/i18n/config';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
+import { useStore } from '#store';
 
 jest.mock('#hooks/app/useToday', () => ({
   useToday: () => '2026-10-14',
@@ -46,6 +47,132 @@ const renderSuggestions = (operationMocks: MockedResponse[], enabled = true) =>
   renderHookWithApollo(() => useServerRecipeSuggestions(enabled), {
     operationMocks,
   });
+
+/** A ranking the server gives for one home only. */
+const homeRanking = (
+  homeId: string,
+  edges: Edge[],
+  options: { held?: boolean } = {},
+) =>
+  recordMock(RecipeSuggestionsDocument, {
+    data: { recipeSuggestions: { edges } },
+    match: vars => vars.homeId === homeId,
+    maxUsageCount: Number.POSITIVE_INFINITY,
+    ...options,
+  });
+
+const ids = (rows: RecipeRow[]) => shown(rows).map(item => item.id);
+
+beforeEach(() => {
+  useStore.setState({ selectedHomeId: null });
+});
+
+describe('useServerRecipeSuggestions per home', () => {
+  it("asks for the selected home's ranking", async () => {
+    useStore.setState({ selectedHomeId: 'home-a' });
+    const homeA = homeRanking('home-a', [edge('r-a', 90)]);
+    const { result } = renderSuggestions([homeA.mock]);
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+
+    expect(homeA.fired[0]).toEqual({
+      first: 20,
+      today: '2026-10-14',
+      homeId: 'home-a',
+    });
+  });
+
+  it('asks for every pantry the user may view when no home is selected', async () => {
+    const suggestions = suggestionsMock([edge('r-1', 50)]);
+    const { result } = renderSuggestions([suggestions.mock]);
+
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+
+    expect(suggestions.fired[0]?.homeId).toBeUndefined();
+  });
+
+  it("shows the new home's ranking after a switch, never the old one's meanwhile", async () => {
+    useStore.setState({ selectedHomeId: 'home-a' });
+    const homeA = homeRanking('home-a', [edge('r-a', 90)]);
+    const homeB = homeRanking('home-b', [edge('r-b', 40)], { held: true });
+    const { result } = renderSuggestions([homeA.mock, homeB.mock]);
+    await waitFor(() =>
+      expect(ids(result.current.rows)).toEqual(['recipe-r-a']),
+    );
+
+    act(() => {
+      useStore.setState({ selectedHomeId: 'home-b' });
+    });
+
+    await waitFor(() => expect(homeB.fired).toHaveLength(1));
+    expect(result.current.rows).toEqual([]);
+    expect(result.current.loading).toBe(true);
+
+    act(() => {
+      homeB.release();
+    });
+
+    await waitFor(() =>
+      expect(ids(result.current.rows)).toEqual(['recipe-r-b']),
+    );
+  });
+
+  it("shows a home's own cached ranking when switching back offline", async () => {
+    useStore.setState({ selectedHomeId: 'home-a' });
+    const homeA = recordMock(RecipeSuggestionsDocument, {
+      data: { recipeSuggestions: { edges: [edge('r-a', 90)] } },
+      match: vars => vars.homeId === 'home-a',
+      maxUsageCount: 1,
+    });
+    const homeAOffline = recordMock(RecipeSuggestionsDocument, {
+      error: new Error('network down'),
+      match: vars => vars.homeId === 'home-a',
+      maxUsageCount: Number.POSITIVE_INFINITY,
+    });
+    const homeB = homeRanking('home-b', [edge('r-b', 40)]);
+    const { result } = renderSuggestions([
+      homeA.mock,
+      homeAOffline.mock,
+      homeB.mock,
+    ]);
+    await waitFor(() =>
+      expect(ids(result.current.rows)).toEqual(['recipe-r-a']),
+    );
+    act(() => {
+      useStore.setState({ selectedHomeId: 'home-b' });
+    });
+    await waitFor(() =>
+      expect(ids(result.current.rows)).toEqual(['recipe-r-b']),
+    );
+
+    act(() => {
+      useStore.setState({ selectedHomeId: 'home-a' });
+    });
+
+    await waitFor(() =>
+      expect(ids(result.current.rows)).toEqual(['recipe-r-a']),
+    );
+    expect(result.current.unanswered).toBe(false);
+  });
+
+  it("keeps no other home's answer when the new home's ask fails", async () => {
+    useStore.setState({ selectedHomeId: 'home-a' });
+    const homeA = homeRanking('home-a', [edge('r-a', 90)]);
+    const refused = recordMock(RecipeSuggestionsDocument, {
+      error: new Error('not a member of this home'),
+      match: vars => vars.homeId === 'home-gone',
+    });
+    const { result } = renderSuggestions([homeA.mock, refused.mock]);
+    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+
+    act(() => {
+      useStore.setState({ selectedHomeId: 'home-gone' });
+    });
+
+    await waitFor(() => expect(result.current.unanswered).toBe(true));
+    expect(result.current.rows).toEqual([]);
+  });
+});
 
 describe('useServerRecipeSuggestions', () => {
   it("lists the server's suggestions in its order, each opening its recipe", async () => {

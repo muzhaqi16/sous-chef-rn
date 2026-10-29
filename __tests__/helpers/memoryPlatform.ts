@@ -185,6 +185,7 @@ export function createMemoryPlatform(): PlatformServices {
     appearance: { applyTheme: () => {}, apply: () => {} },
     imagePrefetch: { prefetch: () => {} },
     haptics: { selection: () => {}, warning: () => {} },
+    reviewPrompt: { request: () => {} },
     fileParts: streamedFileParts,
     screen: createMemoryScreen(),
   };

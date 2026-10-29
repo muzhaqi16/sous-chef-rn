@@ -36,7 +36,9 @@ interface UsePantryItemActionsOptions {
 // One modal at a time, holding only the id: the modal reads the item through
 // `useFragment`, so a write to it shows in the open modal.
 type ModalType = 'consume' | 'waste' | 'restock';
-type ActiveModal = { type: null } | { type: ModalType; itemId: string };
+type ActiveModal =
+  | { type: null }
+  | { type: ModalType; itemId: string; reason?: string };
 
 const CLOSED_MODAL: ActiveModal = { type: null };
 
@@ -203,6 +205,13 @@ export function usePantryItemActions({
     if (hasItemInCache(itemId)) setActiveModal({ type, itemId });
   };
 
+  /** The restock form, asking for the amount for `reason`; false when it cannot open. */
+  const openRestockAsking = (itemId: string, reason: string): boolean => {
+    if (!hasItemInCache(itemId)) return false;
+    setActiveModal({ type: 'restock', itemId, reason });
+    return true;
+  };
+
   // Handler to edit item (for swipe action)
   const handleEditItem = (itemId: string) => {
     navigateTo.pantryItem({ itemId });
@@ -230,7 +239,10 @@ export function usePantryItemActions({
     // Modal states with close handlers
     consumeModal: modalState('consume'),
     wasteModal: modalState('waste'),
-    restockModal: modalState('restock'),
+    restockModal: {
+      ...modalState('restock'),
+      reason: activeModal.type === 'restock' ? activeModal.reason : undefined,
+    },
 
     // Confirmation handlers (for modal submit)
     handleConfirmConsume,
@@ -241,6 +253,7 @@ export function usePantryItemActions({
     handleConsumeItem: opensModal('consume'),
     handleWasteItem: opensModal('waste'),
     handleRestockItem: opensModal('restock'),
+    openRestockAsking,
     handleEditItem,
     handleDeleteItem,
   };

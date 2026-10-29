@@ -10,6 +10,7 @@ import { alertService } from '#/services/alertService';
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import { useUpdatePantryItemQuantity } from '../useUpdatePantryItemQuantity';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/services/errorService');
 
@@ -34,14 +35,14 @@ const STOCK = gql`
   }
 `;
 
-const UNIT = {
+const UNIT = asAbbreviation({
   __typename: 'Unit',
   id: 'unit-1',
   name: 'piece',
   symbol: 'pc',
   type: UnitType.Count,
   displayAsFraction: false,
-};
+});
 
 it('writes and sends nothing for a quantity no parser can read', async () => {
   const cache = seedCache([
@@ -90,7 +91,12 @@ it('sets an amount stated in dozens as the pieces it stands for', async () => {
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 1,
-        unit: { __typename: 'Unit', id: 'u-doz', symbol: 'doz' },
+        localizedSymbol: 'doz',
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'u-doz',
+          symbol: 'doz',
+        }),
       },
       unit: UNIT,
     },
@@ -120,7 +126,10 @@ it('sets an amount stated in dozens as the pieces it stands for', async () => {
       itemId: 'pi-1',
       quantityInput: '2',
       quantityValue: 2,
-      statedIn: { id: 'u-doz', symbol: 'doz', conversionFactor: 12 },
+      statedIn: {
+        ...asAbbreviation({ __typename: 'Unit', id: 'u-doz', symbol: 'doz' }),
+        conversionFactor: 12,
+      },
     });
   });
 

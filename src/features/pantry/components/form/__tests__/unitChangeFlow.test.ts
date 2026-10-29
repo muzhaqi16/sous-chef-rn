@@ -17,6 +17,7 @@ import {
   type UnitChangeDeps,
   type UnitChangeTarget,
 } from '../unitChangeFlow';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 const mockAlert = jest.mocked(alertService.alert);
 
@@ -24,12 +25,13 @@ const unit = (
   id: string,
   symbol: string,
   displayAsFraction = true,
-): UnitChangePreview['toUnit'] => ({
-  __typename: 'Unit',
-  id,
-  symbol,
-  displayAsFraction,
-});
+): UnitChangePreview['toUnit'] =>
+  asAbbreviation({
+    __typename: 'Unit',
+    id,
+    symbol,
+    displayAsFraction,
+  });
 
 const PC = unit('u-pc', 'pc');
 const DOZ = unit('u-doz', 'doz', false);
@@ -316,25 +318,29 @@ describe('runUnitChange', () => {
   describe('a dozen on a stack of pieces, which only changes how it reads', () => {
     const reads = (
       quantity: number,
-      text: string,
+      localizedSymbol: string,
     ): UnitChangePreview['displayAmountAfter'] => ({
       __typename: 'DisplayAmount',
       quantity,
-      text,
+      localizedSymbol,
+      fraction: null,
     });
-    const shownIn = (held: number, text: string) =>
+    const shownIn = (
+      held: number,
+      shown: UnitChangePreview['displayAmountAfter'],
+    ) =>
       converted({
         toUnit: PC,
         quantityBefore: held,
         quantityAfter: held,
-        displayAmountAfter: reads(held, text),
+        displayAmountAfter: shown,
       });
-    const setToDozen = (text: string) =>
+    const setToDozen = () =>
       ready(
         setTo(12, {
           toUnit: PC,
           quantityBefore: 11,
-          displayAmountAfter: reads(1, text),
+          displayAmountAfter: reads(1, 'doz'),
         }),
       );
     const ONE_DOZEN: UnitChangeTarget = {
@@ -344,7 +350,7 @@ describe('runUnitChange', () => {
     };
 
     it('asks whether it is a dozen now, or keeps the count', async () => {
-      const d = deps(ready(shownIn(11, '11 pc')), setToDozen('1 doz'));
+      const d = deps(ready(shownIn(11, reads(11, 'pc'))), setToDozen());
       pressNext('Set to');
 
       await runUnitChange(d, ONE_DOZEN);
@@ -361,7 +367,7 @@ describe('runUnitChange', () => {
     });
 
     it('keeps the count and only changes how it reads', async () => {
-      const d = deps(ready(shownIn(11, '11 pc')), setToDozen('1 doz'));
+      const d = deps(ready(shownIn(11, reads(11, 'pc'))), setToDozen());
       pressNext('Keep');
 
       await runUnitChange(d, ONE_DOZEN);
@@ -370,7 +376,7 @@ describe('runUnitChange', () => {
     });
 
     it('confirms once where both read the same', async () => {
-      const d = deps(ready(shownIn(12, '1 doz')), setToDozen('1 doz'));
+      const d = deps(ready(shownIn(12, reads(1, 'doz'))), setToDozen());
       pressNext('Change unit');
 
       await runUnitChange(d, { ...ONE_DOZEN, shownBefore: '12 pc' });
@@ -379,6 +385,30 @@ describe('runUnitChange', () => {
       expect(d.change).toHaveBeenCalledWith(
         expect.objectContaining({ quantity: 1 }),
       );
+    });
+
+    it('shows a fraction where the server does, written as every quantity is', async () => {
+      const quarter: UnitChangePreview['displayAmountAfter'] = {
+        __typename: 'DisplayAmount',
+        quantity: 0.25,
+        localizedSymbol: 'dz',
+        fraction: '¼',
+      };
+      const d = deps(
+        ready(shownIn(3, quarter)),
+        ready(
+          setTo(12, {
+            toUnit: PC,
+            quantityBefore: 3,
+            displayAmountAfter: quarter,
+          }),
+        ),
+      );
+      pressNext('Change unit');
+
+      await runUnitChange(d, { ...ONE_DOZEN, shownBefore: '3 pc' });
+
+      expect(alertMessage()).toBe('3 pc → 1/4 dz\nExact conversion.');
     });
   });
 

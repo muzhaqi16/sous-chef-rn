@@ -1,6 +1,7 @@
 import { renderHook, act, waitFor } from '@testing-library/react-native';
 import { useShoppingListItemForm } from '../useShoppingListItemForm';
 import type { UseShoppingListItemForm_ItemFragment } from '../useShoppingListItemForm.generated';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 // Mock parseFractionalInput
 jest.mock('#/utils/fractionUtils', () => ({
@@ -198,12 +199,12 @@ describe('useShoppingListItemForm', () => {
           createFragment({
             brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
             netWeight: 500,
-            netWeightUnit: {
+            netWeightUnit: asAbbreviation({
               __typename: 'Unit',
               id: 'unit-g',
               name: 'gram',
               symbol: 'g',
-            },
+            }),
           }),
         );
       });
@@ -508,12 +509,12 @@ describe('useShoppingListItemForm', () => {
           },
           brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
           netWeight: 500,
-          netWeightUnit: {
+          netWeightUnit: asAbbreviation({
             __typename: 'Unit',
             id: 'unit-g',
             name: 'gram',
             symbol: 'g',
-          },
+          }),
           ...overrides,
         });
       });

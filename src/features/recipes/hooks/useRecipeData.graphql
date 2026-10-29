@@ -104,6 +104,10 @@ fragment useRecipeData_recipe on Recipe {
           id
           name
           symbol
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         # Viewer-scoped: the server converts to the reader's preferred system.
         # Null when the ingredient names no unit, or no seeded unit of that
@@ -113,6 +117,10 @@ fragment useRecipeData_recipe on Recipe {
           unit {
             id
             symbol
+            localizedSymbolForms {
+              one
+              other
+            }
           }
         }
         image

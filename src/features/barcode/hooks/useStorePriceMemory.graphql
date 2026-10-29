@@ -21,6 +21,10 @@ fragment useStorePriceMemory_item on Item {
         id
         name
         symbol
+        localizedSymbolForms {
+          one
+          other
+        }
       }
       normalizedPrice
       basis

@@ -194,7 +194,7 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.6.0` (2026-10-21).**
+**Verified against `react-native-unistyles@3.7.0` (2026-10-28, in source).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
@@ -216,7 +216,8 @@ Reanimated re-applies only the props it owns.
 
 **Verified against `react-native-unistyles@3.5.3` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator; first measured on 3.5.0 on an iOS simulator),** by running
+emulator; first measured on 3.5.0 on an iOS simulator; the skip below is
+unchanged in 3.7.0, 2026-10-28),** by running
 `UnistylesShadowRegistry.verify()` after every commit. Right after the
 Unistyles theme commit there were 0 mismatches; the next React commit put
 `CollapsingHeroDetail`'s hero back on the old theme. With a
@@ -241,7 +242,11 @@ Re-check: remove the sentinel from `CollapsingHeroDetail`'s hero, then open a
 fresh `PantryItemDetail`, `setTheme('DARK')`, and navigate away and back.
 `UnistylesShadowRegistry.verify()` (module
 `react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
-then reports `dot` / `heroInner` mismatches.
+then reports `dot` / `heroInner` mismatches. In source:
+
+```
+grep -n -B 3 "getHasBeenPromoted" node_modules/react-native-unistyles/cxx/hybridObjects/HybridShadowRegistry.cpp
+```
 
 ### A Unistyles reader inside a ScopedTheme ignores theme events
 
@@ -250,7 +255,7 @@ then reports `dot` / `heroInner` mismatches.
 not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
 A view styled by `StyleSheet.create` is updated natively and does follow.
 
-**Verified against `react-native-unistyles@3.6.0` (2026-10-21, in source; on
+**Verified against `react-native-unistyles@3.7.0` (2026-10-28, in source; on
 an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
 with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
 `scopedTheme` is the scope's name.
@@ -274,7 +279,7 @@ values. `useUnistyles` and `withUnistyles` catch up on their own.
 
 **Verified against `react-native-unistyles@3.5.3` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator); the hook's source is unchanged in 3.6.0 (2026-10-21).** With Profile two levels down the stack, the theme went from dark to
+emulator); the hook's source is unchanged in 3.7.0 (2026-10-28).** With Profile two levels down the stack, the theme went from dark to
 light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
 avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
 the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports
@@ -370,6 +375,7 @@ grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-na
 ### RN's Modal calls onDismiss only on iOS, after UIKit's dismissal
 
 **Claim:**
+
 - **iOS:** when a `<Modal>`'s `visible` turns false, it stays rendered until UIKit's `dismissViewControllerAnimated:completion:` completes, and only then calls `onDismiss`. Unmounting it instead still dismisses it natively, but `onDismiss` never fires.
 - **Android:** `visible` is ignored natively. `visible={false}` renders nothing, which dismisses the Dialog at once, and `onDismiss` never fires.
 

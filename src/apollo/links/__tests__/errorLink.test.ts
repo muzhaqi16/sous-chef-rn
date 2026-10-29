@@ -10,19 +10,20 @@ jest.mock('../../logoutCleanup', () => ({
     isInLogoutProcess: jest.fn(() => false),
   },
 }));
-jest.mock('../../clientUpgradeNotice', () => ({
-  announceClientUpgradeRequired: jest.fn(),
-}));
 // `endSession` and not `clearAuth`: a server verdict that the session is over
 // has to clear the persisted Apollo cache too, or the signed-out account's
 // entities are restored for whoever signs in on this device next.
 const mockEndSession = jest.fn(() => Promise.resolve());
 const mockClearAuth = jest.fn();
+const mockMarkClientUpgradeRequired = jest.fn();
+let mockClientUpgradeRequired = false;
 jest.mock('#store', () => ({
   useStore: {
     getState: jest.fn(() => ({
       endSession: mockEndSession,
       clearAuth: mockClearAuth,
+      clientUpgradeRequired: mockClientUpgradeRequired,
+      markClientUpgradeRequired: mockMarkClientUpgradeRequired,
     })),
   },
 }));
@@ -38,7 +39,6 @@ import { LogoutCleanup } from '../../logoutCleanup';
 import { attemptTokenRefresh } from '../refreshToken';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
-import { announceClientUpgradeRequired } from '../../clientUpgradeNotice';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 
@@ -91,6 +91,7 @@ const settle = () => undefined;
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockClientUpgradeRequired = false;
 });
 
 const expiredToken = () =>
@@ -306,30 +307,44 @@ describe('errorLink — CLIENT_UPGRADE_REQUIRED', () => {
     expect(attemptTokenRefresh).not.toHaveBeenCalled();
   });
 
+  const refuse = () =>
+    runWithError([
+      {
+        message: 'Client upgrade required: 5.0.0',
+        extensions: {
+          code: 'CLIENT_UPGRADE_REQUIRED',
+          minimumVersion: '5.0.0',
+        },
+      },
+    ]);
+
   // The refusal lands on every operation, so without a user-visible signal the
   // app just fails silently everywhere.
-  it('announces the upgrade to the user', async () => {
-    await expect(
-      runWithError([
-        {
-          message: 'Client upgrade required: 5.0.0',
-          extensions: {
-            code: 'CLIENT_UPGRADE_REQUIRED',
-            minimumVersion: '5.0.0',
-          },
-        },
-      ]),
-    ).rejects.toBeDefined();
+  it('raises the update dialog through the store latch', async () => {
+    await expect(refuse()).rejects.toBeDefined();
 
-    expect(announceClientUpgradeRequired).toHaveBeenCalled();
+    expect(mockMarkClientUpgradeRequired).toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('below the server minimum (5.0.0)'),
+    );
   });
 
-  it('does not announce for an unrelated error', async () => {
+  // Polls and resyncs keep arriving while the dialog stands; one line says why.
+  it('logs only the refusal that set the latch', async () => {
+    mockClientUpgradeRequired = true;
+
+    await expect(refuse()).rejects.toBeDefined();
+
+    expect(mockMarkClientUpgradeRequired).toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+  });
+
+  it('does not raise the dialog for an unrelated error', async () => {
     await runWithError([
       { message: 'Token expired', extensions: { code: 'UNAUTHENTICATED' } },
     ]).catch(() => undefined);
 
-    expect(announceClientUpgradeRequired).not.toHaveBeenCalled();
+    expect(mockMarkClientUpgradeRequired).not.toHaveBeenCalled();
   });
 
   it('still refreshes for a genuine auth error (guards the early bail)', async () => {

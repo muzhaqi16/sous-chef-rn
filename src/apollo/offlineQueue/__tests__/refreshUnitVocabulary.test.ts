@@ -5,6 +5,7 @@ import {
   clearApolloClient,
 } from '#/apollo/clientRegistry';
 import { refreshUnitVocabulary } from '#/apollo/offlineQueue/refreshUnitVocabulary';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#store', () => ({
   useStore: {
@@ -46,12 +47,12 @@ describe('refreshUnitVocabulary keeps what the retry needs', () => {
       query: UNITS_QUERY,
       data: {
         units: [
-          {
+          asAbbreviation({
             __typename: 'Unit',
             id: 'unit-retired',
             symbol: 'tbsp',
             name: 'Tablespoon',
-          },
+          }),
         ],
       },
     });

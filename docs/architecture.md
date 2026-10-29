@@ -60,33 +60,33 @@ Every production file in `src/` belongs to one of two layers:
 What the core is for, and why a web host would run this app on
 react-native-web, is [`web-host-decision.md`](web-host-decision.md).
 
-| Entry                 | Layer  | Paths under `src/`                                                                                                             |
-| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------ |
-| platform              | core   | `platform/**`                                                                                                                  |
-| apollo                | core   | `apollo/**`                                                                                                                    |
-| bootstrap             | core   | `bootstrap/**`                                                                                                                 |
-| domain                | core   | `domain/**`                                                                                                                    |
-| graphql               | core   | `graphql/**`                                                                                                                   |
-| i18n                  | core   | `i18n/**`                                                                                                                      |
-| config                | core   | `config/**`                                                                                                                    |
-| store                 | core   | `store/**`                                                                                                                     |
-| types                 | core   | `types/**`                                                                                                                     |
-| utils                 | core   | `utils/**`                                                                                                                     |
-| services/auth         | core   | `services/auth/**`, `services/authService.ts`                                                                                  |
-| services              | core   | `services/{subscriptions,telemetry}/**`, `services/{alertService,destructiveConfirm,errorService,toastService}.ts` |
-| hooks                 | core   | `hooks/{apollo,auth,data,deepLink,search,settings,utils}/**`                                                                   |
-| hooks/session         | core   | `hooks/{app,offline,subscriptions}/**`                                                                                         |
-| theme/foundations     | core   | `theme/foundations/**`                                                                                                         |
-| features/utils        | core   | `features/*/utils/**`                                                                                                          |
-| features/graphql      | core   | `features/*/graphql/**`                                                                                                        |
-| features/cache        | core   | `features/*/cache/**`                                                                                                          |
-| features/data         | core   | `features/*/{hooks,offline,store,locales,constants}/**`                                                                        |
-| features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,staticTypes}.ts`                   |
-| app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                                |
-| services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts`            |
-| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,permissions,performance,device}/**`                                                           |
-| theme runtime         | mobile | `theme/*.ts`                                                                                                                   |
-| features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts`            |
+| Entry                 | Layer  | Paths under `src/`                                                                                                  |
+| --------------------- | ------ | ------------------------------------------------------------------------------------------------------------------- |
+| platform              | core   | `platform/**`                                                                                                       |
+| apollo                | core   | `apollo/**`                                                                                                         |
+| bootstrap             | core   | `bootstrap/**`                                                                                                      |
+| domain                | core   | `domain/**`                                                                                                         |
+| graphql               | core   | `graphql/**`                                                                                                        |
+| i18n                  | core   | `i18n/**`                                                                                                           |
+| config                | core   | `config/**`                                                                                                         |
+| store                 | core   | `store/**`                                                                                                          |
+| types                 | core   | `types/**`                                                                                                          |
+| utils                 | core   | `utils/**`                                                                                                          |
+| services/auth         | core   | `services/auth/**`, `services/authService.ts`                                                                       |
+| services              | core   | `services/{subscriptions,telemetry}/**`, `services/{alertService,destructiveConfirm,errorService,toastService}.ts`  |
+| hooks                 | core   | `hooks/{apollo,auth,data,deepLink,search,settings,utils}/**`                                                        |
+| hooks/session         | core   | `hooks/{app,offline,subscriptions}/**`                                                                              |
+| theme/foundations     | core   | `theme/foundations/**`                                                                                              |
+| features/utils        | core   | `features/*/utils/**`                                                                                               |
+| features/graphql      | core   | `features/*/graphql/**`                                                                                             |
+| features/cache        | core   | `features/*/cache/**`                                                                                               |
+| features/data         | core   | `features/*/{hooks,offline,store,locales,constants}/**`                                                             |
+| features/declarations | core   | `features/*/{manifest.static,types,pushCopy}.ts`, `features/{registry.static,registry.cache,staticTypes}.ts`        |
+| app shell             | mobile | `{app,assets,components,constants,context,native,navigation,screens,styles}/**`                                     |
+| services (device)     | mobile | `services/{push,permissions,haptic,notifications,performance,biometric,device}/**`, `services/NavigationService.ts` |
+| hooks (UI and device) | mobile | `hooks/{ui,animations,navigation,permissions,performance,device}/**`                                                |
+| theme runtime         | mobile | `theme/*.ts`                                                                                                        |
+| features (UI)         | mobile | `features/*/{screens,components,ui,context}/**`, `features/*/{manifest,testIDs}.ts`, `features/{registry,types}.ts` |
 
 **Classify by folder; move only what mixes.** A file takes its layer from where
 it sits, so a new file needs no registration, and a file that would need an
@@ -147,6 +147,7 @@ way an eager bundler does, and `platformInstallOrder.test.ts` loads what
 | `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
 | `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
 | `haptics`       | The feedback an action gives when it runs                  | `HapticService` (react-native-haptic-feedback)     |
+| `reviewPrompt`  | Asks the OS for its rating prompt                          | `ReviewPromptModule` (StoreKit, Play In-App Review) |
 | `fileParts`     | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk          |
 | `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
 

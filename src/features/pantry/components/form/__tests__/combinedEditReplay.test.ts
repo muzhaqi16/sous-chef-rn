@@ -20,6 +20,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import type { QueuedMutation } from '#/apollo/offlineQueue/types';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 /**
  * Offline, the edit form queues its quantity write and its field write with the
@@ -175,13 +176,13 @@ function startServer() {
       __typename: 'PantryItem',
       id: 'item-1',
       pantryId: 'pantry-1',
-      unit: {
+      unit: asAbbreviation({
         __typename: 'Unit',
         id: 'unit-1',
         symbol: 'L',
         name: 'Liter',
         type: UnitType.Volume,
-      },
+      }),
     },
   });
   mockClient = new ApolloClient({

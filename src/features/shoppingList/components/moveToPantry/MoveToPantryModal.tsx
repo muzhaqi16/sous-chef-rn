@@ -14,6 +14,7 @@ import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   formatQuantityForDisplay,
   formatQuantityForInput,
+  unitLabel,
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { StorageState, type UnitType } from '#/graphql/generated/schemaTypes';
@@ -115,7 +116,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // The unit that price is per: the line's, else the purchase's.
   const [seededUnit, setSeededUnit] = useState<{
     id: string | null;
-    symbol: string;
+    label: string;
   } | null>(null);
   const [amountsTouched, setAmountsTouched] = useState(false);
   const [priceTouched, setPriceTouched] = useState(false);
@@ -129,19 +130,19 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   // free-text `unitName` show "bag" while submitting the purchase's unit id.
   const resolvedUnit = shoppingListItem?.unit
     ? {
-        symbol: shoppingListItem.unit.symbol,
+        label: unitLabel(shoppingListItem.unit),
         id: shoppingListItem.unit.id,
         type: shoppingListItem.unit.type,
       }
     : shoppingListItem?.unitName
-    ? { symbol: shoppingListItem.unitName, id: null, type: null }
+    ? { label: shoppingListItem.unitName, id: null, type: null }
     : purchasedUnit
     ? {
-        symbol: purchasedUnit.unitSymbol,
+        label: purchasedUnit.unitSymbol,
         id: purchasedUnit.unit.id,
         type: purchasedUnit.unit.type,
       }
-    : { symbol: '', id: null, type: null };
+    : { label: '', id: null, type: null };
 
   // Reset form when modal opens with new item (render-time state update).
   // Key on the item id (not the materialized object) so cache updates to the
@@ -173,7 +174,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       seedThisPass = {
         ...moveToPantryDefaults(StorageState.Ambient),
         quantityInput: formatQuantityForInput(seedQuantity) || '1',
-        unitValue: resolvedUnit.symbol,
+        unitValue: resolvedUnit.label,
         unitId: resolvedUnit.id,
         unitType: resolvedUnit.type,
         pantryId: selectedPantryId,
@@ -183,7 +184,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       };
       unitIdThisPass = resolvedUnit.id;
       setSeededUnitPrice(purchasedUnitPrice);
-      setSeededUnit({ id: resolvedUnit.id, symbol: resolvedUnit.symbol });
+      setSeededUnit({ id: resolvedUnit.id, label: resolvedUnit.label });
       setAmountsTouched(false);
       setPriceTouched(false);
     }
@@ -208,7 +209,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       };
       setSeededUnit({
         id: purchasedUnit.unit.id,
-        symbol: purchasedUnit.unitSymbol,
+        label: purchasedUnit.unitSymbol,
       });
     }
     if (!amountsTouched && purchasedQuantity != null) {
@@ -235,7 +236,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   const paidInSeededUnit = (id: string | null, text: string) => {
     if (seededUnit === null) return false;
     if (id !== null) return id === seededUnit.id;
-    return seededUnit.id === null && text.trim() === seededUnit.symbol;
+    return seededUnit.id === null && text.trim() === seededUnit.label;
   };
 
   // A quantity edit holds the PER-UNIT price and re-derives the total (3 of 5
@@ -302,8 +303,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     if (unit) {
       setValue('unitId', unit.id);
       setValue('unitType', unit.type);
-      setValue('unitValue', unit.symbol);
-      reprice(values.quantityInput, unit.id, unit.symbol);
+      setValue('unitValue', unit.label);
+      reprice(values.quantityInput, unit.id, unit.label);
     }
     const size = await unitNamed(
       values.packageSizeUnitValue,
@@ -312,7 +313,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     if (size) {
       setValue('packageSizeUnitId', size.id);
       setValue('packageSizeUnitType', size.type);
-      setValue('packageSizeUnitValue', size.symbol);
+      setValue('packageSizeUnitValue', size.label);
     }
   };
 
@@ -326,7 +327,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   };
 
   // The same resolution the fields use, so this cannot render an empty unit.
-  const lineUnitLabel = resolvedUnit.symbol;
+  const lineUnitLabel = resolvedUnit.label;
 
   const perUnitPrice = shownUnitPrice(
     parseMoneyInput(actualPriceInput),

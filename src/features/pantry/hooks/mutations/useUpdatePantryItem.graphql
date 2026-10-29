@@ -11,9 +11,14 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   heldQuantity
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   version
@@ -45,6 +50,10 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     displayAsFraction
   }
@@ -52,6 +61,10 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   storageLocation {
     id
@@ -68,12 +81,20 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalNetWeight
   }
@@ -84,6 +105,10 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalContentUnits
     remainingWeight
@@ -91,6 +116,10 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
 }

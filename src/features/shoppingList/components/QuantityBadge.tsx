@@ -44,10 +44,14 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
     quantityInput,
     notation,
   });
-  const accessibilityText = formatQuantityWithUnit(quantity, unit, {
-    quantityInput,
-    notation,
-  });
+  const accessibilityText = formatQuantityWithUnit(
+    quantity,
+    { symbol: unit },
+    {
+      quantityInput,
+      notation,
+    },
+  );
 
   const isDisabled = disabled || isPurchased;
 

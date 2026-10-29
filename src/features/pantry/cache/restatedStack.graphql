@@ -33,6 +33,10 @@ fragment restatedStack_usage on PantryItem {
           id
           name
           symbol
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         usedAt
         purpose

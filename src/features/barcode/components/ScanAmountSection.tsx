@@ -86,15 +86,14 @@ export const ScanAmountSection: React.FC<ScanAmountSectionProps> = ({
     name: 'consumeUnitId',
   });
 
-  const amount = formatQuantityWithUnit(
-    parseFractionalInput(quantityInput),
-    unitDisplay,
-  );
+  const amount = formatQuantityWithUnit(parseFractionalInput(quantityInput), {
+    symbol: unitDisplay,
+  });
   const size =
     packaged && sizeInput.trim()
       ? formatQuantityWithUnit(
           parseDecimalInput(sizeInput),
-          sizeUnitDisplay,
+          { symbol: sizeUnitDisplay },
           AS_DECIMAL,
         )
       : null;

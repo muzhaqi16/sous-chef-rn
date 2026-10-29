@@ -605,7 +605,8 @@
   "appUpdate": {
     "title": "Nevojitet përditësim",
     "message": "Ky version i {{appName}} nuk mund të lidhet më me serverin. Përditësoje në versionin e fundit për të vazhduar ta përdorësh aplikacionin.",
-    "available": "Një version i ri i {{appName}} është i disponueshëm."
+    "available": "Një version i ri i {{appName}} është i disponueshëm.",
+    "storeNotOpened": "Dyqani nuk u hap. Përditëso {{appName}} nga dyqani i aplikacioneve në pajisjen tënde."
   },
   "empty": {
     "noItems": "Ende pa artikuj",

@@ -15,6 +15,7 @@ import {
   NetWeightKind,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 // AddItemForm drags in the whole form stack (react-hook-form, autocompletes,
 // image picker). This suite is about what SuggestEditForm renders *around* it.
@@ -66,7 +67,12 @@ const itemData = ({ canEdit = false, canSuggest = true } = {}): MockDataFor<
     imageUrl: null,
     canEdit,
     canSuggest,
-    displayUnit: { __typename: 'Unit', id: 'unit-g', name: 'g', symbol: 'g' },
+    displayUnit: asAbbreviation({
+      __typename: 'Unit',
+      id: 'unit-g',
+      name: 'g',
+      symbol: 'g',
+    }),
     brands: [],
   },
 });

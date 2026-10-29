@@ -12,7 +12,6 @@ import {
   formatQuantityWithUnit,
   type QuantityDisplayOptions,
 } from '#utils/formatQuantity';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   formatReading,
   readingOf,
@@ -87,11 +86,7 @@ export const ProductResultCard: React.FC<ItemCardProps> = ({
     ? formatReading(readingOf(packageSize, readingSystem))
     : item.netWeight == null
     ? null
-    : formatQuantityWithUnit(
-        item.netWeight,
-        firstNonBlank(item.displayUnit?.symbol, item.displayUnit?.name),
-        AS_DECIMAL,
-      );
+    : formatQuantityWithUnit(item.netWeight, item.displayUnit, AS_DECIMAL);
   // Only a PACKAGE figure is the pack's size; the others say what they measure.
   const netWeightLine =
     amount === null

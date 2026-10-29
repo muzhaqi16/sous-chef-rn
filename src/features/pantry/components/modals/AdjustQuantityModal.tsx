@@ -197,7 +197,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
                 <FormattedItemSubtitle
                   quantity={pantryItem.quantity}
                   displayAsFraction={pantryItem.unit.displayAsFraction}
-                  unitSymbol={pantryItem.unit.symbol}
+                  unit={pantryItem.unit}
                 />
               )}
             </View>

@@ -152,6 +152,11 @@ export interface Haptics {
   warning(): void;
 }
 
+/** The OS's own rating prompt; whether it appears is the OS's call. */
+export interface ReviewPrompt {
+  request(): void;
+}
+
 /** How a picked file joins a multipart body. */
 export interface FileParts {
   append(form: FormData, name: string, file: ImageFile, mimeType: string): void;
@@ -192,6 +197,7 @@ export interface PlatformServices {
   appearance: Appearance;
   imagePrefetch: ImagePrefetch;
   haptics: Haptics;
+  reviewPrompt: ReviewPrompt;
   fileParts: FileParts;
   screen: ScreenHooks;
 }

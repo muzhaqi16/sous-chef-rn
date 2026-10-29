@@ -16,6 +16,7 @@ import { presentNativeAlert } from '#native/nativeAlert';
 import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 import { streamedFileParts } from '#native/fileParts';
 import { HapticService } from '#services/haptic/HapticService';
+import { ReviewPrompt } from '#native/ReviewPrompt';
 
 // `null` is untyped but real: Android reports no state until its first change.
 const lifecycleState = (status: AppStateStatus | null): AppLifecycleState =>
@@ -67,6 +68,7 @@ installPlatform({
     selection: () => HapticService.selection(),
     warning: () => HapticService.warning(),
   },
+  reviewPrompt: { request: () => ReviewPrompt.request() },
   fileParts: streamedFileParts,
   screen: reactNavigationScreenHooks,
 });

@@ -8,6 +8,7 @@ import {
   type EditableMatch,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { IngredientMatchRow } from '../IngredientMatchRow';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
   getAvailabilityStatus: jest.fn(
@@ -25,6 +26,7 @@ type ShownAmount = NonNullable<
 const shown = (quantity: number, symbol: string): ShownAmount => ({
   __typename: 'DisplayAmount',
   quantity,
+  localizedSymbol: symbol,
   unit: { __typename: 'Unit', id: symbol, symbol },
 });
 
@@ -139,7 +141,12 @@ describe('IngredientMatchRow', () => {
     __typename: 'PantryItem',
     id,
     itemName,
-    unit: { __typename: 'Unit', id: 'u-ml', name: 'milliliter', symbol: 'mL' },
+    unit: asAbbreviation({
+      __typename: 'Unit',
+      id: 'u-ml',
+      name: 'milliliter',
+      symbol: 'mL',
+    }),
     displayAmount: shown(amount, 'mL'),
   });
 
@@ -354,7 +361,12 @@ describe('IngredientMatchRow', () => {
         __typename: 'PantryItem',
         id: 'p1',
         itemName: 'White Sugar',
-        unit: { __typename: 'Unit', id: 'u1', name: 'cup', symbol: 'cups' },
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'u1',
+          name: 'cup',
+          symbol: 'cups',
+        }),
         displayAmount: shown(5, 'cups'),
       },
     });
@@ -368,7 +380,12 @@ describe('IngredientMatchRow', () => {
         __typename: 'PantryItem',
         id: 'p1',
         itemName: 'White Sugar',
-        unit: { __typename: 'Unit', id: 'u1', name: 'cup', symbol: 'cups' },
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'u1',
+          name: 'cup',
+          symbol: 'cups',
+        }),
         displayAmount: shown(1.25, 'cups'),
       },
     });
@@ -382,12 +399,12 @@ describe('IngredientMatchRow', () => {
         __typename: 'PantryItem',
         id: 'p1',
         itemName: 'Milk',
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u1',
           name: 'millilitre',
           symbol: 'mL',
-        },
+        }),
         displayAmount: shown(177.4412, 'mL'),
       },
     });
@@ -401,7 +418,12 @@ describe('IngredientMatchRow', () => {
         __typename: 'PantryItem',
         id: 'p1',
         itemName: 'Eggs',
-        unit: { __typename: 'Unit', id: 'pc', name: 'piece', symbol: 'pc' },
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'pc',
+          name: 'piece',
+          symbol: 'pc',
+        }),
         displayAmount: shown(3, 'doz'),
       },
     });
@@ -504,12 +526,12 @@ describe('IngredientMatchRow', () => {
 
   it('renders suggested unit symbol', () => {
     const withUnit = makeMatch('Flour', {
-      suggestedUnit: {
+      suggestedUnit: asAbbreviation({
         __typename: 'Unit',
         id: 'u2',
         name: 'cup',
         symbol: 'cups',
-      },
+      }),
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={withUnit} />);
     expect(screen.getByText('cups')).toBeTruthy();

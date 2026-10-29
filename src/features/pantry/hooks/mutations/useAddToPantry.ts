@@ -9,16 +9,41 @@ import { findCachedPantryItemDuplicate } from '#features/pantry/utils/pantryCach
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 import { extractNodes } from '#/utils/connectionUtils';
+import {
+  putSuggestionBack,
+  takeSuggestion,
+  type SuggestionRemoval,
+} from '#domain/suggestionRemoval';
 
 interface UseAddToPantryArgs {
   pantryId: string | undefined;
   suggestionsLimit: number;
 }
 
+type Sections = NonNullable<
+  GetPantryItemSuggestionsQuery['pantry']
+>['suggestions'];
+
+/** What `removeSuggestion` took from each section, for `restoreSuggestion`. */
+interface PantrySuggestionRemoval {
+  readonly pantryId: string;
+  readonly lowStock: SuggestionRemoval<Sections['lowStock'][number]> | null;
+  readonly expiringSoon: SuggestionRemoval<
+    Sections['expiringSoon'][number]
+  > | null;
+  readonly recentlyDeleted: SuggestionRemoval<
+    Sections['recentlyDeleted'][number]
+  > | null;
+  readonly frequentlyAdded: SuggestionRemoval<
+    Sections['frequentlyAdded'][number]
+  > | null;
+  readonly popular: SuggestionRemoval<Sections['popular'][number]> | null;
+}
+
 /**
  * Every cache write and mutation the add-to-pantry sheet performs; the sheet
- * keeps the toast, exit animation and in-flight set. The create is
- * `usePantryIntake`, so the sheet's two entry points cannot drift.
+ * keeps the toast and the in-flight set. The create is `usePantryIntake`, so
+ * the sheet's two entry points cannot drift.
  */
 export function useAddToPantry({
   pantryId,
@@ -30,36 +55,101 @@ export function useAddToPantry({
 
   const { restock } = usePantryRestock(pantryId);
 
-  /** Drop a suggestion from every list it appears in, synchronously. */
-  const removeSuggestion = (itemId: string) => {
-    if (!pantryId) return;
-    client.cache.updateQuery<GetPantryItemSuggestionsQuery>(
-      {
-        query: GetPantryItemSuggestionsDocument,
-        variables: { pantryId, limit: suggestionsLimit },
-      },
-      data => {
-        if (!data?.pantry) return data;
-        const { pantry } = data;
-        const sections = pantry.suggestions;
-        const without = <T extends { itemId: string }>(list: readonly T[]) =>
-          list.filter(s => s.itemId !== itemId);
-        return {
-          ...data,
-          pantry: {
-            ...pantry,
-            suggestions: {
-              ...sections,
-              lowStock: without(sections.lowStock),
-              expiringSoon: without(sections.expiringSoon),
-              recentlyDeleted: without(sections.recentlyDeleted),
-              frequentlyAdded: without(sections.frequentlyAdded),
-              popular: without(sections.popular),
-            },
+  const readSuggestions = (forPantry: string) => {
+    const variables = { pantryId: forPantry, limit: suggestionsLimit };
+    const data = client.cache.readQuery<GetPantryItemSuggestionsQuery>({
+      query: GetPantryItemSuggestionsDocument,
+      variables,
+    });
+    return { data, variables };
+  };
+
+  /**
+   * Drops a suggestion from every list it appears in, synchronously, and
+   * returns what it took so `restoreSuggestion` can put it back in place;
+   * `null` when no list held it, as after a second tap.
+   */
+  const removeSuggestion = (itemId: string): PantrySuggestionRemoval | null => {
+    if (!pantryId) return null;
+    const { data, variables } = readSuggestions(pantryId);
+    if (!data?.pantry) return null;
+    const { pantry } = data;
+    const sections = pantry.suggestions;
+    const lowStock = takeSuggestion(sections.lowStock, itemId);
+    const expiringSoon = takeSuggestion(sections.expiringSoon, itemId);
+    const recentlyDeleted = takeSuggestion(sections.recentlyDeleted, itemId);
+    const frequentlyAdded = takeSuggestion(sections.frequentlyAdded, itemId);
+    const popular = takeSuggestion(sections.popular, itemId);
+    const took = [
+      lowStock,
+      expiringSoon,
+      recentlyDeleted,
+      frequentlyAdded,
+      popular,
+    ].some(section => section.removal !== null);
+    if (!took) return null;
+    client.cache.writeQuery<GetPantryItemSuggestionsQuery>({
+      query: GetPantryItemSuggestionsDocument,
+      variables,
+      data: {
+        ...data,
+        pantry: {
+          ...pantry,
+          suggestions: {
+            ...sections,
+            lowStock: lowStock.list,
+            expiringSoon: expiringSoon.list,
+            recentlyDeleted: recentlyDeleted.list,
+            frequentlyAdded: frequentlyAdded.list,
+            popular: popular.list,
           },
-        };
+        },
       },
-    );
+    });
+    return {
+      pantryId,
+      lowStock: lowStock.removal,
+      expiringSoon: expiringSoon.removal,
+      recentlyDeleted: recentlyDeleted.removal,
+      frequentlyAdded: frequentlyAdded.removal,
+      popular: popular.removal,
+    };
+  };
+
+  /** Puts back what `removeSuggestion` took, each entry at its old place. */
+  const restoreSuggestion = (removal: PantrySuggestionRemoval | null) => {
+    if (!removal) return;
+    const { data, variables } = readSuggestions(removal.pantryId);
+    if (!data?.pantry) return;
+    const { pantry } = data;
+    const sections = pantry.suggestions;
+    client.cache.writeQuery<GetPantryItemSuggestionsQuery>({
+      query: GetPantryItemSuggestionsDocument,
+      variables,
+      data: {
+        ...data,
+        pantry: {
+          ...pantry,
+          suggestions: {
+            ...sections,
+            lowStock: putSuggestionBack(sections.lowStock, removal.lowStock),
+            expiringSoon: putSuggestionBack(
+              sections.expiringSoon,
+              removal.expiringSoon,
+            ),
+            recentlyDeleted: putSuggestionBack(
+              sections.recentlyDeleted,
+              removal.recentlyDeleted,
+            ),
+            frequentlyAdded: putSuggestionBack(
+              sections.frequentlyAdded,
+              removal.frequentlyAdded,
+            ),
+            popular: putSuggestionBack(sections.popular, removal.popular),
+          },
+        },
+      },
+    });
   };
 
   /** The pantry's storage locations, read once from cache with no watcher. */
@@ -104,6 +194,7 @@ export function useAddToPantry({
     addItem,
     restockItem,
     removeSuggestion,
+    restoreSuggestion,
     readStorageLocations,
     findCachedDuplicate,
   };

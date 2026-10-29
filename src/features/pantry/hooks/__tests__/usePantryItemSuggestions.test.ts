@@ -11,6 +11,7 @@ import {
 import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSuggestions } from '../usePantryItemSuggestions';
 import { todayKey } from '#/utils/dateUtils';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: (item: { imageUrl?: string | null } | null | undefined) =>
@@ -191,11 +192,11 @@ describe('usePantryItemSuggestions', () => {
   describe('the context a row shows in place of its category', () => {
     const litres: Pick<Suggestion, 'defaultUnitId' | 'defaultUnit'> = {
       defaultUnitId: 'unit-l',
-      defaultUnit: {
+      defaultUnit: asAbbreviation({
         __typename: 'SuggestionUnit',
         id: 'unit-l',
         symbol: 'L',
-      },
+      }),
     };
 
     const firstRows = async (suggestion: Suggestion) => {

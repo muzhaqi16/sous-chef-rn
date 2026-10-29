@@ -1,5 +1,4 @@
 import React, { Suspense, useEffect, useRef } from 'react';
-import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import type { StaticParamList, Theme } from '@react-navigation/native';
 import {
@@ -241,7 +240,6 @@ function resolveNavTarget(
 }
 
 export function Navigation() {
-  const { t } = useTranslation();
   // React Navigation's `theme` prop must be a plain object, so `useUnistyles()` is
   // required. Reads are narrowed to `theme.colors.*` so its Proxy subscriptions
   // fire on color changes only, not on every runtime tick.
@@ -332,11 +330,7 @@ export function Navigation() {
       <Suspense
         fallback={
           <View style={styles.suspenseFallback}>
-            <SousChefLoader
-              size="small"
-              showBrand={false}
-              message={t('labels.loading')}
-            />
+            <SousChefLoader size="small" showBrand={false} />
           </View>
         }
       >

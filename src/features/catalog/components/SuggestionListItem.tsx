@@ -1,250 +1,106 @@
-import React, { useEffect, useLayoutEffect, useRef } from 'react';
-import { View } from 'react-native';
+import React from 'react';
 import { useTranslation } from '#/i18n';
-import { AppPressable } from '#components/atoms/AppPressable';
-import { StyleSheet } from 'react-native-unistyles';
 import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
+  FadeIn,
+  LinearTransition,
   withTiming,
+  type LayoutAnimation,
 } from 'react-native-reanimated';
-import { scheduleOnRN } from 'react-native-worklets';
-import { Icon, type IconLibrary } from '#components/atoms/Icon';
-import { CachedImage } from '#components/atoms/CachedImage';
+import { IconButton } from '#components/atoms/IconButton';
+import { RowCard } from '#components/atoms/RowCard';
+import { RowThumbnail } from '#components/atoms/RowThumbnail';
+import { ListItem } from '#components/molecules/ListItem';
 import { SLIDE_PRESETS } from '#constants/animations';
-import { Text } from '#components/atoms/Text';
-import { catalogTestIDs } from '#features/catalog/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
+import { motion } from '#/theme/motion';
+import { QuickAddButton } from '#features/catalog/components/QuickAddButton';
 
 export interface SuggestionListItemProps {
   imageUrl?: string | null;
   title: string;
   subtitle?: string | null;
-  placeholderIcon?: string;
-  placeholderIconLibrary?: IconLibrary;
-  onPress?: () => void;
-  onQuickAdd?: () => void;
+  /** Adds the item; the whole row and its + both call it. */
+  onQuickAdd: () => void;
   /** When provided, shows a muted ✕ control that dismisses this suggestion */
   onDismiss?: () => void;
-  quickAddDisabled?: boolean;
-  testID?: string;
-  /** When true, play exit animation (slide right + fade out) */
-  isExiting?: boolean;
-  /** Called after exit animation completes */
-  onExitComplete?: () => void;
-  /** When false, always show placeholder icon regardless of imageUrl */
+  /** When false, the row shows no photo even when it has one */
   showImage?: boolean;
 }
 
-const EXIT_CONFIG = SLIDE_PRESETS.exitWithFade;
+const EXIT_DISTANCE = SLIDE_PRESETS.exitWithFade.slideDistance;
+const EXIT_OPACITY = SLIDE_PRESETS.exitWithFade.opacityTarget;
+const EXIT_DURATION = SLIDE_PRESETS.exitWithFade.duration;
+
+// `withTiming` reads the device's Reduce Motion setting itself.
+const slideOutWithFade = (): LayoutAnimation => {
+  'worklet';
+  return {
+    initialValues: { opacity: 1, transform: [{ translateX: 0 }] },
+    animations: {
+      opacity: withTiming(EXIT_OPACITY, { duration: EXIT_DURATION }),
+      transform: [
+        {
+          translateX: withTiming(EXIT_DISTANCE, { duration: EXIT_DURATION }),
+        },
+      ],
+    },
+  };
+};
+
+const ENTERING = FadeIn.duration(motion.timing.FAST);
+const LAYOUT = LinearTransition.duration(motion.timing.MODERATE);
 
 /**
- * SuggestionListItem - Item row with image, title, subtitle, and quick-add button.
- *
- * Always wraps content in Animated.View so the component tree stays stable when
- * isExiting transitions. This prevents the flicker caused by unmounting/remounting.
+ * A suggestion row. It leaves when its suggestion leaves the data: the row
+ * animates out as it unmounts and the rows below glide into its place, so no
+ * render ever waits on the animation.
  */
 export const SuggestionListItem = ({
   imageUrl,
   title,
   subtitle,
-  placeholderIcon = 'cube-outline',
-  placeholderIconLibrary = 'Ionicons',
-  onPress,
   onQuickAdd,
   onDismiss,
-  quickAddDisabled = false,
-  testID,
-  isExiting = false,
-  onExitComplete,
   showImage = true,
 }: SuggestionListItemProps) => {
   const { t } = useTranslation();
-  const translateX = useSharedValue(0);
-  const opacity = useSharedValue(1);
-
-  const onExitCompleteRef = useRef(onExitComplete);
-  useEffect(() => {
-    onExitCompleteRef.current = onExitComplete;
-  }, [onExitComplete]);
-
-  // Pre-defined in RN runtime scope — scheduleOnRN requires this pattern
-  const notifyExitComplete = () => {
-    onExitCompleteRef.current?.();
-  };
-
-  useLayoutEffect(() => {
-    if (isExiting) {
-      translateX.set(
-        withTiming(EXIT_CONFIG.slideDistance, {
-          duration: EXIT_CONFIG.duration,
-        }),
-      );
-      opacity.set(
-        withTiming(
-          EXIT_CONFIG.opacityTarget,
-          { duration: EXIT_CONFIG.duration },
-          finished => {
-            'worklet';
-            if (finished) {
-              scheduleOnRN(notifyExitComplete);
-            }
-          },
-        ),
-      );
-    } else {
-      // Reset for error rollback — item reappears without animation
-      translateX.set(0);
-      opacity.set(1);
-    }
-  }, [isExiting, translateX, opacity]);
-
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.get() }],
-    opacity: opacity.get(),
-  }));
-
-  const disabled = quickAddDisabled || isExiting;
-
-  const handlePress = () => {
-    if (onPress) {
-      onPress();
-    } else if (onQuickAdd) {
-      onQuickAdd();
-    }
-  };
+  const addLabel = t('labels.addNamed', { name: title });
 
   return (
-    <Animated.View style={animatedStyle}>
-      <AppPressable
-        style={styles.container}
-        onPress={handlePress}
-        disabled={!onPress && !onQuickAdd}
-        testID={testID}
-      >
-        {!!showImage && (
-          <View style={styles.imageContainer}>
-            {imageUrl ? (
-              <CachedImage
-                uri={imageUrl}
-                style={styles.image}
-                displaySize={40}
-              />
-            ) : (
-              <View style={styles.imagePlaceholder}>
-                <Icon
-                  name={placeholderIcon}
-                  size={20}
-                  tone="primary"
-                  library={placeholderIconLibrary}
+    <Animated.View
+      entering={ENTERING}
+      exiting={slideOutWithFade}
+      layout={LAYOUT}
+    >
+      <RowCard>
+        <ListItem
+          title={title}
+          subtitle={subtitle}
+          leftElement={showImage ? <RowThumbnail uri={imageUrl} /> : null}
+          onPress={onQuickAdd}
+          // The tap adds, so the label says so and no "view details" follows.
+          accessibilityLabel={addLabel}
+          accessibilityHint=""
+          rightElement={
+            <>
+              {!!onDismiss && (
+                <IconButton
+                  name="close"
+                  size="sm"
+                  tone="iconTertiary"
+                  onPress={onDismiss}
+                  accessibilityLabel={t('labels.dismissNamed', {
+                    name: title,
+                  })}
                 />
-              </View>
-            )}
-          </View>
-        )}
-        <View style={styles.info}>
-          <Text role="bodyStrong" numberOfLines={1}>
-            {title}
-          </Text>
-          {!!subtitle && (
-            <Text
-              role="caption"
-              tone="secondary"
-              style={styles.subtitle}
-              numberOfLines={1}
-            >
-              {subtitle}
-            </Text>
-          )}
-        </View>
-        {!!onDismiss && (
-          <AppPressable
-            style={styles.dismissButton}
-            onPress={onDismiss}
-            disabled={isExiting}
-            hitSlop={hitSlop.md}
-            accessibilityRole="button"
-            accessibilityLabel={t('labels.dismissNamed', { name: title })}
-            testID={
-              testID ? catalogTestIDs.suggestionDismiss(testID) : undefined
-            }
-          >
-            <Icon
-              name="close"
-              size={18}
-              tone={isExiting ? 'iconDisabled' : 'iconTertiary'}
-            />
-          </AppPressable>
-        )}
-        {!!onQuickAdd && (
-          <AppPressable
-            style={styles.quickAddButton}
-            onPress={onQuickAdd}
-            disabled={disabled}
-            hitSlop={hitSlop.md}
-            accessibilityRole="button"
-            accessibilityLabel={t('labels.addNamed', { name: title })}
-          >
-            <Icon
-              name="add"
-              size={20}
-              tone={disabled ? 'iconDisabled' : 'primary'}
-            />
-          </AppPressable>
-        )}
-      </AppPressable>
+              )}
+              <QuickAddButton
+                onPress={onQuickAdd}
+                accessibilityLabel={addLabel}
+              />
+            </>
+          }
+        />
+      </RowCard>
     </Animated.View>
   );
 };
-
-const styles = StyleSheet.create(theme => ({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: theme.colors.surfaceVariant,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    paddingHorizontal: theme.spacing.md,
-    paddingVertical: theme.spacing.sm,
-  },
-  imageContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-    marginRight: theme.spacing.md,
-  },
-  image: {
-    width: 40,
-    height: 40,
-  },
-  imagePlaceholder: {
-    width: 40,
-    height: 40,
-    backgroundColor: theme.colors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  info: {
-    flex: 1,
-  },
-  subtitle: {
-    marginTop: theme.spacing['2xs'],
-  },
-  dismissButton: {
-    width: 36,
-    height: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: theme.spacing.xs,
-  },
-  quickAddButton: {
-    width: 36,
-    height: 36,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primaryLight,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-}));

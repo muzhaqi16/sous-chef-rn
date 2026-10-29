@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
+import { LayoutAnimationConfig } from 'react-native-reanimated';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
@@ -44,11 +45,8 @@ export function AddItemSheet<
   onQuickAddSearchSuggestion,
   onQuickAddSuggestion,
   onDismissSuggestion,
-  isMutating,
   onAddManually,
   startStep = 'search',
-  exitingItems: externalExitingItems,
-  onExitComplete,
   initialSearchQuery = '',
   showImages = true,
   tutorialHint,
@@ -86,9 +84,6 @@ export function AddItemSheet<
 
   // Destructure for stable references in callbacks
   const { setSearchQuery } = state;
-
-  // Use external exiting items if provided, otherwise use internal state
-  const exitingItems = externalExitingItems ?? state.exitingItems;
 
   // Autocomplete search — debounceMs: 0 because the search bar already debounces
   const autocomplete = useItemAutocomplete({ debounceMs: 0 });
@@ -174,34 +169,23 @@ export function AddItemSheet<
     resetAutocomplete();
   };
 
-  // Render a suggestion item with exit animation support. `dismissible` adds
-  // the ✕ control for sources the API can suppress.
-  const renderSuggestionItem = (item: T, dismissible = false) => {
-    const itemId = item.itemId;
-    const isExiting = exitingItems.has(itemId);
-
-    return (
-      <SuggestionListItem
-        key={item.id}
-        imageUrl={item.imageUrl}
-        title={item.name}
-        subtitle={item.subtitle ?? item.category}
-        placeholderIcon={config.placeholderIcon}
-        onQuickAdd={() => onQuickAddSuggestion(item)}
-        onDismiss={
-          dismissible && onDismissSuggestion
-            ? () => onDismissSuggestion(item)
-            : undefined
-        }
-        quickAddDisabled={isExiting}
-        isExiting={isExiting}
-        onExitComplete={
-          onExitComplete ? () => onExitComplete(itemId) : undefined
-        }
-        showImage={showImages}
-      />
-    );
-  };
+  // A suggestion row; it leaves with the data and animates out as it unmounts.
+  // `dismissible` adds the ✕ control for sources the API can suppress.
+  const renderSuggestionItem = (item: T, dismissible = false) => (
+    <SuggestionListItem
+      key={item.id}
+      imageUrl={item.imageUrl}
+      title={item.name}
+      subtitle={item.subtitle ?? item.category}
+      onQuickAdd={() => onQuickAddSuggestion(item)}
+      onDismiss={
+        dismissible && onDismissSuggestion
+          ? () => onDismissSuggestion(item)
+          : undefined
+      }
+      showImage={showImages}
+    />
+  );
 
   // Render a section of suggestions — capped to a preview, with a "More"
   // affordance that drills into the source's full list.
@@ -232,11 +216,9 @@ export function AddItemSheet<
             </AppPressable>
           )}
         </View>
-        <View style={styles.suggestionList}>
-          {preview.map(item =>
-            renderSuggestionItem(item, !!groupConfig.dismissible),
-          )}
-        </View>
+        {preview.map(item =>
+          renderSuggestionItem(item, !!groupConfig.dismissible),
+        )}
       </View>
     );
   };
@@ -316,13 +298,10 @@ export function AddItemSheet<
               <ItemSuggestionsList
                 searchQuery={state.searchQuery}
                 suggestions={autocomplete.displayItems}
-                loading={autocomplete.isLoading}
                 addManuallyPosition={config.addManuallyPosition}
                 testIDPrefix={config.testIDPrefix}
                 onAddManually={handleAddManually}
                 onSelectSuggestion={handleSelectSearchSuggestion}
-                quickAddDisabled={isMutating}
-                placeholderIcon={config.placeholderIcon}
                 showBrands={false}
                 showImages={showImages}
                 onReportItem={() => setStep('report')}
@@ -359,14 +338,16 @@ export function AddItemSheet<
                     </Text>
                   </View>
                 ) : (
-                  <>
+                  // The rows painted with the sheet do not fade in; a row that
+                  // arrives later (a refill, an undo) does.
+                  <LayoutAnimationConfig skipEntering>
                     {/* Render suggestion sections in priority order. Copy
                         before sorting — `.sort()` mutates in place, and the
                         array belongs to the caller's `config` prop. */}
                     {[...config.suggestionGroups]
                       .sort((a, b) => a.priority - b.priority)
                       .map(renderSuggestionSection)}
-                  </>
+                  </LayoutAnimationConfig>
                 )}
               </>
             )}
@@ -420,8 +401,5 @@ const styles = StyleSheet.create(theme => ({
   },
   suggestionSection: {
     marginBottom: theme.spacing.lg,
-  },
-  suggestionList: {
-    gap: theme.spacing.xs,
   },
 }));

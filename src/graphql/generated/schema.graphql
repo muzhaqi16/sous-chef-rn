@@ -4756,6 +4756,13 @@ type DisplayAmount {
   is set: ⅓ doz is not 0.33 doz.
   """
   fraction: String
+  """
+  The unit's short form in the request's language, agreeing with quantity as
+  MeasureReading.localizedSymbol agrees with its value: 3 lattine, ½
+  lattina; ¼ doz in English, where doz is an abbreviation, ¼ dozzina in
+  Italian. So a held amount needs no unit selection.
+  """
+  localizedSymbol: String!
   """The amount in unit: 0.25 for a quarter dozen."""
   quantity: Float!
   """
@@ -7705,6 +7712,15 @@ type ItemUnitSuggestion {
   id: ID!
   isDefault: Boolean!
   isPreferred: Boolean!
+  """
+  The short form to show, in the request's language, as Unit.localizedSymbol
+  """
+  localizedSymbol(
+    """How many it follows: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
+  """Both forms of localizedSymbol, as Unit.localizedSymbolForms"""
+  localizedSymbolForms: PluralForms!
   name: String!
   symbol: String!
   type: UnitType!
@@ -8220,6 +8236,9 @@ type LowStockItem {
   pantryName: String!
   restockQuantity: Float
   unitId: ID!
+  """
+  The stack's unit label: in the request's language, agreeing with currentQuantity, while it spells the stack's unit; a label the user gave is returned as written
+  """
   unitName: String!
 }
 
@@ -8536,6 +8555,10 @@ union MarkStorageLocationAsDefaultResult = ConflictError | ForbiddenError | Mark
 Input to restore a previously-dismissed item so it can be suggested again.
 """
 input MarkSuggestionActiveInput {
+  """
+  A CUID2 minted per restore for an offline queue: a resend under a spent key writes nothing, so it never undoes a later markSuggestionDismissed
+  """
+  idempotencyKey: ID
   """Catalog item to start suggesting again."""
   itemId: ID!
   """Which surface to restore it on (pantry vs shopping)."""
@@ -8562,6 +8585,10 @@ union MarkSuggestionActiveResult = ConflictError | ForbiddenError | MarkSuggesti
 Input to hide a catalog item from a user's suggestions on a given surface.
 """
 input MarkSuggestionDismissedInput {
+  """
+  A CUID2 minted per dismissal for an offline queue: a resend under a spent key writes nothing, so it never undoes a later markSuggestionActive
+  """
+  idempotencyKey: ID
   """Catalog item to stop suggesting."""
   itemId: ID!
   """Which surface to hide it from (pantry vs shopping)."""
@@ -9174,6 +9201,12 @@ type Measure {
 type MeasureReading {
   """Whether unit shows its amounts as fractions (cups do)."""
   displayAsFraction: Boolean!
+  """
+  The unit's short form in the request's language, agreeing with value
+  (unit.localizedSymbol(quantity: value): g and lb as they are, 3 cans as
+  3 latas in Spanish), so a reading needs no unit selection.
+  """
+  localizedSymbol: String!
   """The symbol of unit (lb, g, can), so a reading needs no unit selection."""
   symbol: String!
   """The dimension of unit: weight, volume or count."""
@@ -10324,7 +10357,9 @@ type Mutation {
   markStorageLocationAsDefault(input: MarkStorageLocationAsDefaultInput!): MarkStorageLocationAsDefaultResult!
   """
   Mark a previously-dismissed item active again so it can appear in your
-  suggestions on the given surface.
+  suggestions on the given surface. Restoring an item not dismissed, or a
+  resend under a spent idempotencyKey, writes nothing and answers as the first
+  send did.
   """
   markSuggestionActive(input: MarkSuggestionActiveInput!): MarkSuggestionActiveResult!
   """
@@ -10334,7 +10369,8 @@ type Mutation {
   Affects the RECENTLY_DELETED, FREQUENTLY_ADDED, and POPULAR sources on the
   chosen surface; low-stock and expiring-soon alerts are never suppressed.
   Dismissals are per-user, so on shared lists/homes only your own
-  suggestions are affected.
+  suggestions are affected. Dismissing an item already dismissed, or a resend
+  under a spent idempotencyKey, writes nothing and answers as the first send did.
   """
   markSuggestionDismissed(input: MarkSuggestionDismissedInput!): MarkSuggestionDismissedResult!
   """
@@ -11609,9 +11645,11 @@ input PackagesInput {
   """
   One package's net content. Omitted: the list line's stated size, else the
   item's own PACKAGE size when the item is one pack (a product holding one
-  barcode), else, on a move, the list line's own amount as one package. A
-  size the catalog only infers is never used. With none, a create or a move
-  counts the packages in a counted stack of the item; a restock is refused.
+  barcode), else, on a move, the list line's own amount as one package, and
+  on a restock, the stack's last purchase (one more of what was last bought).
+  One of these that cannot be expressed in the stack's unit is skipped; a size
+  the catalog only infers is never used. With none, a create or a move counts
+  the packages in a counted stack of the item; a restock is refused.
   """
   size: PackageSizeInput
   """
@@ -12797,7 +12835,13 @@ sections (recentlyDeleted, frequentlyAdded, popular) omit items the pantry
 holds and items the viewer dismissed.
 """
 type PantrySuggestions {
-  """Stacks expiring within expirationDays, soonest first"""
+  """
+  Stacks expiring within expirationDays, soonest first, that a restock has not
+  answered: a stack leaves once its stock lasting past the window (batches
+  expiring later, or never) is above zero and above its low-stock minimum when
+  lowStockAlert is set. The pantry's expiringSoon filter, its stats and expiry
+  notifications still count the expiring stock until it is used or removed.
+  """
   expiringSoon: [PantryItemSuggestion!]!
   """
   Items this pantry's home adds to its pantries most often, whoever added them
@@ -13029,6 +13073,12 @@ type ParsedReceiptLine {
   """The printed article or barcode number"""
   code: String
   kind: ReceiptLineKind!
+  """
+  The vocabulary unit the printed unit names (pc is piece, lb is pound), to
+  show in the request's language through its localizedSymbol or
+  localizedName; null when it names none. unit stays as printed.
+  """
+  measureUnit: Unit
   """The product name as printed, on an ITEM"""
   product: String
   """
@@ -13100,6 +13150,20 @@ enum Plan {
 type PlatformStat {
   count: Int!
   platform: MobilePlatform!
+}
+
+"""
+A text's two forms by plural category. Pick one per number with the
+language's plural rules (Intl.PluralRules): one where they read the number
+as one, and for any part of one (½ cup); other for every other number, zero
+included. A language whose rules have further categories (few, many) takes
+other for them, as every shipped language does.
+"""
+type PluralForms {
+  """The form for one, and for any part of one: 1 can, ½ cup"""
+  one: String!
+  """The form for every other number: 0 cans, 2 cans"""
+  other: String!
 }
 
 """Sub-input for power/battery status"""
@@ -13442,7 +13506,9 @@ type Purchase {
   unknown rather than zero.
   """
   unitPrice: Float
-  """The unit as written when the purchase was recorded"""
+  """
+  The unit as written when the purchase was recorded. While it spells unit itself (its name or symbol, in any language) it reads in the request's language, agreeing with quantity, as unit.localizedSymbol(quantity:); a label of the client's own is returned as written
+  """
   unitSymbol: String!
   """When the purchase last changed"""
   updatedAt: DateTime!
@@ -14357,7 +14423,8 @@ type Query {
     recipeId: ID!
   ): CookingLogConnection!
   """
-  Recipes the caller could cook from what their pantries hold. Published
+  Recipes the caller could cook from what the pantries in scope hold: that
+  home's with homeId, else every pantry the caller may view. Published
   recipes anyone can discover, and the caller's own and saved ones, come
   first when at least half their non-optional ingredients are held: best
   covered first, with stock about to expire lifting the recipes that use it.
@@ -14377,6 +14444,10 @@ type Query {
   recipeSuggestions(
     """How many suggestions: 20 when omitted, at most 100"""
     first: Int
+    """
+    Only this home's pantries, those the caller may view; refused unless the caller is an active member. Every pantry the caller may view when omitted
+    """
+    homeId: ID
     """
     The caller's own calendar date, as YYYY-MM-DD. With it, stock expiring within 3 days lifts the recipes that use it
     """
@@ -15167,10 +15238,16 @@ type Recipe {
   """
   latestRevision: RecipeRevision
   """
-  How much of this recipe you can already make from your pantry, 0-100.
-  Null when unauthenticated.
+  How much of this recipe you can already make from the pantries in scope,
+  0-100: that home's with homeId, else every pantry you may view. Null when
+  unauthenticated.
   """
-  matchPercentage: Float
+  matchPercentage(
+    """
+    Only this home's pantries, those you may view; refused unless you are an active member. Every pantry you may view when omitted
+    """
+    homeId: ID
+  ): Float
   """
   The viewer's meal-plan items that use this recipe: from plans they own or
   share through an active home membership, soonest first. Empty for an
@@ -16136,14 +16213,15 @@ type RecipeSuggestionConnection {
 """A suggested recipe, and why it was suggested."""
 type RecipeSuggestionEdge {
   """
-  The share of the recipe's non-optional ingredients the caller's pantries
-  hold, from 0 to 100: the figure Recipe.matchPercentage reports.
+  The share of the recipe's non-optional ingredients the pantries in scope
+  hold, from 0 to 100: the figure Recipe.matchPercentage reports for the same
+  homeId.
   """
   coverage: Int!
   cursor: String!
   """
-  The caller's stacks expiring within 3 days of today that the recipe would
-  use; empty when today was not sent.
+  The stacks in the pantries in scope expiring within 3 days of today that
+  the recipe would use; empty when today was not sent.
   """
   expiringStacks: [PantryItem!]!
   node: Recipe!
@@ -17781,7 +17859,7 @@ type ShoppingListItem {
   """The unit quantity is counted in; null when the line has none"""
   unit: Unit
   """
-  The label shown for unit: the label the client gave, else the unit's symbol; null when the line has no unit or none was recorded
+  The label shown for unit: the label the client gave, else the unit's symbol; null when the line has no unit or none was recorded. While it spells unit itself (its name or symbol, in any language) it reads in the request's language, agreeing with quantity, as unit.localizedSymbol(quantity:); a label of the client's own is returned as written
   """
   unitName: String
   """When the line last changed"""
@@ -19136,6 +19214,15 @@ Contains only the fields needed for one-tap add UI.
 """
 type SuggestionUnit {
   id: ID!
+  """
+  The short form to show, in the request's language, as Unit.localizedSymbol
+  """
+  localizedSymbol(
+    """How many it follows: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
+  """Both forms of localizedSymbol, as Unit.localizedSymbolForms"""
+  localizedSymbolForms: PluralForms!
   name: String!
   symbol: String!
 }
@@ -19475,10 +19562,46 @@ type Unit {
   id: ID!
   isCommon: Boolean!
   isMetric: Boolean!
+  """
+  The unit's name in the request's language (Accept-Language), singular or
+  plural as that language's plural rules read quantity, and singular for any
+  part of one (½ cup) or without one. English when the language has no name
+  for the unit; a household's own unit keeps its name.
+  """
+  localizedName(
+    """How many: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
+  """Both forms of localizedName, picked per number as PluralForms says"""
+  localizedNameForms: PluralForms!
+  """
+  The unit's short form in the request's language. A standard symbol (g, kg,
+  mL, L, oz, lb, fl oz…) is the same in every language; another unit takes
+  the language's abbreviation (pz), else its name there (bolsa), else symbol.
+  English keeps symbol. Where the short form is the unit's name (bolsa, can),
+  it is singular or plural as localizedName reads quantity (2 bolsas, 3 cans);
+  an abbreviation or a standard symbol never changes.
+  """
+  localizedSymbol(
+    """How many it follows: picks singular or plural; omitted, the singular"""
+    quantity: Float
+  ): String!
+  """
+  Both forms of localizedSymbol, for a client that picks one per number it
+  shows (a list's rows, an amount being edited) as PluralForms says; one
+  field, so no alias per form.
+  """
+  localizedSymbolForms: PluralForms!
   minPrecision: Float!
+  """
+  The canonical English name, in every language; localizedName is the one to show
+  """
   name: String!
   notes: String
   sortOrder: Int!
+  """
+  The canonical symbol, in every language; localizedSymbol is the one to show
+  """
   symbol: String!
   type: UnitType!
   unitRole: UnitRole!
@@ -19493,6 +19616,10 @@ type UnitCostAverage {
   """The average, rounded to the currency's minor unit"""
   amount: Float!
   currencyCode: CurrencyCode!
+  """
+  The unit the cost is per, for its text in the request's language; null when the restocks named none
+  """
+  unit: Unit
   """
   The symbol of the unit the cost is per; null when the restocks named none
   """
@@ -21025,6 +21152,12 @@ type UsageBySource {
 type UsageByUnit {
   count: Int!
   totalQuantity: Float!
+  """
+  The unit, for its text in the request's language
+  (unit.localizedSymbol(quantity: totalQuantity)); null for records that
+  named no unit, which unitId reports as "unknown".
+  """
+  unit: Unit
   unitId: ID!
   unitName: String!
   unitSymbol: String!

@@ -13,6 +13,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { usePantryRestock } from '../usePantryRestock';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 const ROW_ID = 'pi-oats';
 
@@ -25,6 +26,10 @@ const ROW = gql`
     unit {
       id
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
 `;
@@ -45,7 +50,11 @@ function cacheWithRow(held = 3) {
       quantity: held,
       heldQuantity: held,
       activeBatchCount: 1,
-      unit: { __typename: 'Unit', id: 'unit-bag', symbol: 'bag' },
+      unit: asAbbreviation({
+        __typename: 'Unit',
+        id: 'unit-bag',
+        symbol: 'bag',
+      }),
     },
   });
   return cache;
@@ -65,14 +74,17 @@ const queuedRestock = () => {
   return recordMock(RestockPantryItemDocument, { data });
 };
 
-const refusedRestock = (code: ErrorCode = ErrorCode.ValidationFailed) =>
+const refusedRestock = (
+  code: ErrorCode = ErrorCode.ValidationFailed,
+  field = 'amount',
+) =>
   recordMock(RestockPantryItemDocument, {
     data: {
       restockPantryItem: {
         __typename: 'ValidationError',
         code,
         message: 'nope',
-        field: 'amount',
+        field,
       },
     },
   });
@@ -200,7 +212,7 @@ describe('usePantryRestock', () => {
       });
     });
 
-    expect(outcome).toEqual({ status: 'rejected' });
+    expect(outcome).toEqual({ status: 'rejected', sizeRefusal: null });
     expect(readRow(cache)).toMatchObject({
       quantity: 3,
       heldQuantity: 3,
@@ -260,8 +272,8 @@ describe('usePantryRestock', () => {
       });
     });
 
-    it('adds packages nothing sizes as the API counts an add, not as a restock', async () => {
-      // The API refuses them on a restock.
+    it('restocks the stack it names by packages nothing sizes, for the server to size', async () => {
+      // An add would name no stack, and could land on another one.
       const create = recordMock(CreatePantryItemDocument, {
         data: { createPantryItem: null },
       });
@@ -280,10 +292,68 @@ describe('usePantryRestock', () => {
       });
 
       expect(outcome).toEqual({ status: 'restocked' });
+      expect(create.fired).toHaveLength(0);
+      expect(restock.fired[0]?.input).toMatchObject({
+        id: ROW_ID,
+        amount: { packages: { count: 2 } },
+      });
+    });
+
+    it('says when the server could not size the packages', async () => {
+      const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+        cache: makeCache(),
+        operationMocks: [
+          refusedRestock(ErrorCode.ValidationFailed, 'amount.packages.size')
+            .mock,
+        ],
+      });
+
+      let outcome;
+      await act(async () => {
+        outcome = await result.current.restock(ROW_ID, {
+          bought: { count: 1, item: OATS },
+          present: 'none',
+        });
+      });
+
+      expect(outcome).toEqual({
+        status: 'rejected',
+        sizeRefusal: expect.stringContaining('how much one package'),
+      });
+    });
+
+    it('adds a count in a unit the stack is not counted in', async () => {
+      // The row's unit (bag) is counted; the buyer counted boxes.
+      const cache = cacheWithRow(3);
+      cache.writeFragment({
+        id: cache.identify({ __typename: 'Unit', id: 'unit-bag' }),
+        fragment: gql`
+          fragment _CountedBagOther on Unit {
+            id
+            type
+          }
+        `,
+        data: { __typename: 'Unit', id: 'unit-bag', type: 'COUNT' },
+      });
+      const create = recordMock(CreatePantryItemDocument, {
+        data: { createPantryItem: null },
+      });
+      const restock = queuedRestock();
+      const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
+        cache,
+        operationMocks: [create.mock, restock.mock],
+      });
+
+      await act(async () => {
+        await result.current.restock(ROW_ID, {
+          bought: { count: 1, unitId: 'unit-box', item: OATS },
+          present: 'none',
+        });
+      });
+
       expect(restock.fired).toHaveLength(0);
       expect(create.fired[0]?.input).toMatchObject({
-        item: { id: 'item-oats' },
-        amount: { packages: { count: 2 } },
+        amount: { packages: { count: 1, unitId: 'unit-box' } },
         forceAdd: true,
       });
     });

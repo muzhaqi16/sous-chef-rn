@@ -25,6 +25,7 @@ import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { getVersionConflictMessage } from '#/utils/errors/versionConflict';
 import { useMoveToPantry, type MoveToPantryInput } from '../useMoveToPantry';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   ...jest.requireActual('#features/shoppingList/cache/moveToPantry'),
@@ -458,13 +459,13 @@ describe('useMoveToPantry pantry item count', () => {
         cache,
         item: createItem({
           quantity: 1,
-          unit: {
+          unit: asAbbreviation({
             __typename: 'Unit',
             id: 'unit-line',
             name: 'line unit',
             symbol: 'lu',
             type: unitType,
-          },
+          }),
         }),
         input: { amount: { packages: { count: 2 } }, totalCost: 3.98 },
       });

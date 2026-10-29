@@ -1,6 +1,4 @@
 import { ApolloLink } from '@apollo/client';
-import { getMainDefinition } from '@apollo/client/utilities';
-import { Kind, OperationTypeNode } from 'graphql';
 import { authLink } from './authLink';
 import { languageLink } from './languageLink';
 import { createConsoleLink } from './consoleLink';
@@ -10,18 +8,8 @@ import { createNetworkStatusLink } from './networkStatusLink';
 import { createClientReleaseLink } from './clientReleaseLink';
 import { errorLink } from './errorLink';
 import { retryLink } from './retryLink';
-import { createHttpLink } from './httpLink';
-import { wsLink } from './wsLink';
-import { persistedQueryLink } from './persistedQueryLink';
+import { createTransportLink } from './transportLink';
 import { createQueueLink } from '../offlineQueue/queueLink';
-
-const isSubscription: Parameters<typeof ApolloLink.split>[0] = ({ query }) => {
-  const def = getMainDefinition(query);
-  return (
-    def.kind === Kind.OPERATION_DEFINITION &&
-    def.operation === OperationTypeNode.SUBSCRIPTION
-  );
-};
 
 /**
  * Create link chain for Apollo client
@@ -56,13 +44,7 @@ export function createLink() {
   // Order matters: offlineModeLink first, so blocked queries never reach
   // retryLink/errorLink as doomed requests. Deduplication is Apollo's own
   // `queryDeduplication: true`.
-  // HTTP transport with APQ / operation-safelist hashes. The persisted-query
-  // link sits on the HTTP branch only: subscriptions ride graphql-ws where the
-  // APQ protocol (and the server's safelist plugin) does not apply.
-  const httpTransport = ApolloLink.from([persistedQueryLink, createHttpLink()]);
-
-  // Subscriptions → WebSocket; all other operations → HTTP with retry.
-  const transportLink = ApolloLink.split(isSubscription, wsLink, httpTransport);
+  const transportLink = createTransportLink();
 
   return ApolloLink.from([
     offlineModeLink, // Block queries when effectively offline (before telemetry to skip tracking)

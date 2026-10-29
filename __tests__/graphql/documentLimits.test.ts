@@ -37,13 +37,15 @@
  * `config/sections/http.ts` and `config/sections/publicApi.ts` (the defaults):
  *
  *     MAX_QUERY_DEPTH=10         MAX_QUERY_COST=3500     MAX_QUERY_LENGTH=20000
- *     MAX_QUERY_TOKENS=2000
+ *     MAX_QUERY_TOKENS=2000      MAX_ALIASES=15
  *     MAX_SUBSCRIPTION_DEPTH=4   MAX_SUBSCRIPTION_COMPLEXITY=500
  *     OBJECT_COST=1  SCALAR_COST=0  DEPTH_COST_FACTOR=1.5
  *     MAX_NESTED_PAGINATION_PRODUCT=100000
  *
- * `countDepth` / `computeCost` below are ports of
- * `@escape.tech/graphql-armor-max-depth` and `-cost-limit`. To re-derive them,
+ * `countDepth` / `computeCost` / `countAliases` below are ports of
+ * `@escape.tech/graphql-armor-max-depth`, `-cost-limit` and `-max-aliases`.
+ * The alias rule counts every alias a fragment holds again at each spread, so
+ * a unit two fragments both label counts twice though the response merges it. To re-derive them,
  * run the real rules over these documents — `validate(schema, doc, [rule])`
  * with `maxDepthRule` / `costLimitRule` from the API's `node_modules` — and
  * compare per operation.
@@ -87,6 +89,7 @@ const OBJECT_COST = 1;
 const SCALAR_COST = 0;
 const DEPTH_COST_FACTOR = 1.5;
 const MAX_NESTED_PAGINATION_PRODUCT = 100000;
+const MAX_ALIASES = 15;
 
 function collectGraphqlFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -164,6 +167,37 @@ function countDepth(
     }
   }
   return depth;
+}
+
+/** Port of `@escape.tech/graphql-armor-max-aliases` (`__typename` allowed). */
+function countAliases(
+  node: ASTNode,
+  visited = new Map<string, number>(),
+): number {
+  let aliases =
+    node.kind === Kind.FIELD &&
+    node.alias &&
+    node.alias.value !== '__typename' &&
+    node.name.value !== '__typename'
+      ? 1
+      : 0;
+  const selectionSet = 'selectionSet' in node ? node.selectionSet : undefined;
+  if (selectionSet) {
+    for (const child of selectionSet.selections) {
+      aliases += countAliases(child, visited);
+    }
+  } else if (node.kind === Kind.FRAGMENT_SPREAD) {
+    const name = node.name.value;
+    if (visited.has(name)) return visited.get(name) ?? 0;
+    visited.set(name, -1);
+    const fragment = fragments.get(name);
+    if (fragment) {
+      const inFragment = countAliases(fragment, visited);
+      if (visited.get(name) === -1) visited.set(name, inFragment);
+      aliases += inFragment;
+    }
+  }
+  return aliases;
 }
 
 /** Port of `@escape.tech/graphql-armor-cost-limit` with `flattenFragments: true`. */
@@ -410,6 +444,35 @@ describe('HTTP document limits', () => {
       }
     },
   );
+});
+
+describe('alias limit', () => {
+  const operations = [...httpOperations, ...subscriptions];
+
+  it.each(operations.map(o => [o.name, o]))(
+    '%s sends no more aliases than the server allows',
+    (_name, operation) => {
+      const { name, file, def } = operation;
+      const aliases = countAliases(def);
+      if (aliases > MAX_ALIASES) {
+        throw new Error(
+          `${name} (${file}) sends ${aliases} aliases; the server allows ` +
+            `${MAX_ALIASES}. An alias counts at every spread of the fragment ` +
+            `it sits in; a unit's plural is \`localizedSymbolForms\`, no alias.`,
+        );
+      }
+    },
+  );
+
+  it('would catch an operation over the limit', () => {
+    const overLimit = parse(
+      `query Over { ${Array.from(
+        { length: MAX_ALIASES + 1 },
+        (_, i) => `a${i}: __schema { queryType { name } }`,
+      ).join(' ')} }`,
+    ).definitions[0]!;
+    expect(countAliases(overLimit)).toBe(MAX_ALIASES + 1);
+  });
 });
 
 describe('document size limits', () => {

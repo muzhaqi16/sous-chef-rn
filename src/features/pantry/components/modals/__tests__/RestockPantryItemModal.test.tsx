@@ -181,6 +181,25 @@ describe('RestockPantryItemModal', () => {
     expect(screen.getByText('Expiration Date')).toBeTruthy();
   });
 
+  describe('opened with a reason the amount is asked', () => {
+    const REASON = "We don't know how much one package of this holds.";
+
+    it('shows it on the amount field', () => {
+      render(<RestockPantryItemModal {...defaultProps} reason={REASON} />);
+
+      expect(
+        screen.getByTestId('field-Quantity to Add-error'),
+      ).toHaveTextContent(REASON);
+    });
+
+    it('clears it once the amount is edited', () => {
+      render(<RestockPantryItemModal {...defaultProps} reason={REASON} />);
+      fireEvent.changeText(screen.getByTestId('field-Quantity to Add'), '2');
+
+      expect(screen.queryByTestId('field-Quantity to Add-error')).toBeNull();
+    });
+  });
+
   describe('an entry that cannot be restocked', () => {
     const INVALID_PAID = 'Enter the amount paid, like 3.49, or leave it empty.';
     const type = (label: string, text: string) =>

@@ -8,6 +8,7 @@ import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { ARROW_SIZE } from './spotlightConstants';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { kitTestIDs } from '#components/testIDs';
 
 interface SpotlightTooltipProps {
   /** Absolute position ({left,width,top|bottom}) of the tooltip card. */
@@ -26,8 +27,10 @@ interface SpotlightTooltipProps {
 
 /**
  * Tooltip card rendered by {@link SpotlightCoachMark}: title/subtitle, step
- * dots, and the Done/Next action. Purely presentational — the parent owns all
- * geometry and animation and passes computed position/animated styles in.
+ * dots, and its actions: Skip on the left, Next or Done on the right. Skip
+ * lives here, not over the screen, because the parent already keeps the card
+ * clear of the hole and on screen, and a floating one landed on header buttons.
+ * Purely presentational — the parent owns all geometry and animation.
  */
 export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
   containerStyle,
@@ -41,6 +44,8 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
   onNext,
 }) => {
   const { t } = useTranslation();
+  const isLast =
+    totalSteps != null && stepIndex != null && stepIndex >= totalSteps - 1;
 
   const animatedTheme = useAnimatedTheme();
   const surfaceStyle = useAnimatedStyle(() => {
@@ -71,29 +76,46 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
           ))}
         </View>
       ) : null}
-      {totalSteps != null &&
-      stepIndex != null &&
-      stepIndex >= totalSteps - 1 ? (
-        <Pressable
-          onPress={onDismiss}
-          style={styles.nextButton}
-          hitSlop={hitSlop.md}
-        >
-          <Text role="bodyStrong" tone="accent">
-            {t('labels.done')}
-          </Text>
-        </Pressable>
-      ) : onNext ? (
-        <Pressable
-          onPress={onNext}
-          style={styles.nextButton}
-          hitSlop={hitSlop.md}
-        >
-          <Text role="bodyStrong" tone="accent">
-            {t('labels.next')} ›
-          </Text>
-        </Pressable>
-      ) : null}
+      <View style={styles.actions}>
+        {/* Done already ends the tutorial; a Skip beside it would repeat it. */}
+        {isLast ? null : (
+          <Pressable
+            onPress={onDismiss}
+            style={styles.actionButton}
+            hitSlop={hitSlop.md}
+            accessibilityRole="button"
+            accessibilityHint={t('tutorial.skipTutorial')}
+            testID={kitTestIDs.spotlightSkipButton}
+          >
+            <Text role="bodyStrong" tone="secondary">
+              {totalSteps != null && totalSteps > 1
+                ? t('labels.skipAll')
+                : t('labels.skip')}
+            </Text>
+          </Pressable>
+        )}
+        {isLast ? (
+          <Pressable
+            onPress={onDismiss}
+            style={styles.trailingAction}
+            hitSlop={hitSlop.md}
+          >
+            <Text role="bodyStrong" tone="accent">
+              {t('labels.done')}
+            </Text>
+          </Pressable>
+        ) : onNext ? (
+          <Pressable
+            onPress={onNext}
+            style={styles.trailingAction}
+            hitSlop={hitSlop.md}
+          >
+            <Text role="bodyStrong" tone="accent">
+              {t('labels.next')} ›
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
     </Animated.View>
   );
 };
@@ -127,9 +149,17 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     backgroundColor: active ? theme.colors.primary : theme.colors.border,
   }),
-  nextButton: {
-    alignSelf: 'flex-end',
+  actions: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginTop: theme.spacing.md,
+  },
+  actionButton: {
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
+  },
+  trailingAction: {
+    marginLeft: 'auto',
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.sm,
   },

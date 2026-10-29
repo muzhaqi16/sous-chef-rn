@@ -21,8 +21,8 @@ import { formatNumberForInput } from '#/utils/formatters/number';
 import {
   formatQuantityForInput,
   parseStoredQuantityText,
+  unitLabel,
 } from '#/utils/formatQuantity';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import { refByIdOrName } from '#/utils/refInput';
 import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 import {
@@ -71,10 +71,7 @@ export function useShoppingListItemForm(
     // text no parser reads ("a pinch") stays as the person wrote it.
     const typed = item.quantityInput?.trim();
     const typedValue = typed ? parseStoredQuantityText(typed) : null;
-    const netWeightUnitLabel = firstNonBlank(
-      item.netWeightUnit?.symbol,
-      item.netWeightUnit?.name,
-    );
+    const netWeightUnitLabel = unitLabel(item.netWeightUnit);
     reset({
       itemName: item.itemName ?? '',
       quantityInput:
@@ -92,7 +89,7 @@ export function useShoppingListItemForm(
       brand: item.brand?.name ?? '',
       brandId: item.brand?.id ?? null,
       netWeight: formatNumberForInput(item.netWeight),
-      netWeightUnit: netWeightUnitLabel ?? '',
+      netWeightUnit: netWeightUnitLabel,
       netWeightUnitId: item.netWeightUnit?.id ?? null,
     });
   };

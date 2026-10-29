@@ -153,6 +153,7 @@ import {
   createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { writeLocalShoppingList } from '#features/shoppingList/cache/list';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 const mockedSchema = addMocksToSchema({
   schema: makeExecutableSchema({
@@ -207,6 +208,32 @@ async function runAgainstSchema<T = Record<string, unknown>>(
   });
   if (result.errors) throw new Error(JSON.stringify(result.errors, null, 2));
   return result.data as T;
+}
+
+/**
+ * Writes an answer as Apollo does when it arrives, through its own document, so
+ * aliased fields land under their field names. Linking a row whose entity was
+ * never written would merge the response object by its keys instead.
+ */
+function landAnswer(
+  cache: ApolloCache,
+  document: DocumentNode,
+  variables: Record<string, unknown>,
+  result: object,
+): void {
+  const operation = document.definitions.find(
+    definition => definition.kind === Kind.OPERATION_DEFINITION,
+  );
+  cache.write({
+    query: document,
+    variables,
+    result,
+    dataId:
+      operation?.kind === Kind.OPERATION_DEFINITION &&
+      operation.operation === 'query'
+        ? 'ROOT_QUERY'
+        : 'ROOT_MUTATION',
+  });
 }
 
 /** Renders `diff.missing` as a readable assertion message. */
@@ -512,14 +539,14 @@ describe('optimistic entity completeness', () => {
         id: cache.identify({ __typename: 'Unit', id: 'unit-1' }),
         fragment: TestUnitFragment,
         fragmentName: '_TestUnit',
-        data: {
+        data: asAbbreviation({
           __typename: 'Unit',
           id: 'unit-1',
           name: 'liter',
           symbol: 'L',
           type: UnitType.Volume,
           displayAsFraction: false,
-        },
+        }),
       });
 
       addLocalRow(cache, 'client-cuid-2', {
@@ -553,18 +580,20 @@ describe('optimistic entity completeness', () => {
 
     it('keeps GetPantry complete after the CreatePantryItem response lands', async () => {
       const cache = await seedPantryCache();
-      const created = await runAgainstSchema<{
-        createPantryItem: { pantryItem: PantryItemRef & { pantryId: string } };
-        // The mocks resolve every field regardless of the input, so this only
-        // has to satisfy the required-variable check.
-      }>(CreatePantryItemDocument, {
+      // The mocks resolve every field regardless of the input, so this only
+      // has to satisfy the required-variable check.
+      const variables = {
         input: { pantryId: 'pantry-1', item: { id: 'item-1' } },
         today: '2026-09-22',
-      });
+      };
+      const created = await runAgainstSchema<{
+        createPantryItem: { pantryItem: PantryItemRef & { pantryId: string } };
+      }>(CreatePantryItemDocument, variables);
       const pantryItem = created.createPantryItem.pantryItem;
       pantryItem.id = 'server-item-1';
       pantryItem.pantryId = 'pantry-1';
 
+      landAnswer(cache, CreatePantryItemDocument, variables, created);
       addToPantryItemsCache(cache, 'pantry-1', pantryItem);
 
       expectCompletePantry(readPantry(cache));
@@ -575,22 +604,24 @@ describe('optimistic entity completeness', () => {
       // this response is the only field source for the row linked into the
       // connection — on the online update and on the offline replay alike.
       const cache = await seedPantryCache();
-      const moved = await runAgainstSchema<{
-        moveShoppingItemToPantry: {
-          pantryItem: PantryItemRef & { pantryId: string };
-        };
-      }>(MoveShoppingItemToPantryDocument, {
+      const variables = {
         input: {
           shoppingListItemId: 'list-item-1',
           pantryId: 'pantry-1',
           amount: { measured: { quantity: 1 } },
         },
         today: '2026-09-22',
-      });
+      };
+      const moved = await runAgainstSchema<{
+        moveShoppingItemToPantry: {
+          pantryItem: PantryItemRef & { pantryId: string };
+        };
+      }>(MoveShoppingItemToPantryDocument, variables);
       const pantryItem = moved.moveShoppingItemToPantry.pantryItem;
       pantryItem.id = 'server-item-restocked';
       pantryItem.pantryId = 'pantry-1';
 
+      landAnswer(cache, MoveShoppingItemToPantryDocument, variables, moved);
       addToPantryItemsCache(cache, 'pantry-1', pantryItem);
 
       expectCompletePantry(readPantry(cache));
@@ -600,11 +631,7 @@ describe('optimistic entity completeness', () => {
       // A checked-in line answers with the stack it recorded, the held one on a
       // restock: the only field source for the row the reconcile links.
       const cache = await seedPantryCache();
-      const checkedIn = await runAgainstSchema<{
-        createReceiptCheckIn: {
-          results: { pantryItem: PantryItemRef & { pantryId: string } }[];
-        };
-      }>(CreateReceiptCheckInDocument, {
+      const variables = {
         input: {
           id: 'checkin-1',
           pantryId: 'pantry-1',
@@ -612,13 +639,19 @@ describe('optimistic entity completeness', () => {
           lines: [],
         },
         today: '2026-10-15',
-      });
+      };
+      const checkedIn = await runAgainstSchema<{
+        createReceiptCheckIn: {
+          results: { pantryItem: PantryItemRef & { pantryId: string } }[];
+        };
+      }>(CreateReceiptCheckInDocument, variables);
       const [first] = checkedIn.createReceiptCheckIn.results;
       expect(first).toBeDefined();
       const pantryItem = first!.pantryItem;
       pantryItem.id = 'server-item-checked-in';
       pantryItem.pantryId = 'pantry-1';
 
+      landAnswer(cache, CreateReceiptCheckInDocument, variables, checkedIn);
       addToPantryItemsCache(cache, 'pantry-1', pantryItem);
 
       expectCompletePantry(readPantry(cache));
@@ -630,14 +663,16 @@ describe('optimistic entity completeness', () => {
       // write triggers no fetch on a mounted watcher, so a field this misses
       // blanks the viewer's list until the screen is remounted.
       const cache = await seedPantryCache();
+      const variables = { ids: ['server-item-from-event'] };
       const event = await runAgainstSchema<{
         pantryItemsByIds: Array<PantryItemRef & { pantryId: string }>;
-      }>(PantryItemsForEventsDocument, { ids: ['server-item-from-event'] });
+      }>(PantryItemsForEventsDocument, variables);
       const [item] = event.pantryItemsByIds;
       if (!item) throw new Error('the schema answered no row');
       item.id = 'server-item-from-event';
       item.pantryId = 'pantry-1';
 
+      landAnswer(cache, PantryItemsForEventsDocument, variables, event);
       addToPantryItemsCache(cache, 'pantry-1', item);
 
       expectCompletePantry(readPantry(cache));
@@ -684,14 +719,14 @@ describe('optimistic entity completeness', () => {
               displayAsFraction
             }
           `,
-          data: {
+          data: asAbbreviation({
             __typename: 'Unit',
             id: 'unit-1',
             name: 'gram',
             symbol: 'g',
             type: 'WEIGHT',
             displayAsFraction: false,
-          },
+          }),
         });
 
         addLocalRow(cache, 'client-cuid-unit', {

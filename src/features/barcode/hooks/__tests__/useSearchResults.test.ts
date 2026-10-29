@@ -29,6 +29,7 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
+import { readingAsAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 type LookupNode = MockPart<ItemByLookupQuery['items']['edges'][number]['node']>;
 
@@ -253,12 +254,12 @@ describe('useSearchResults', () => {
           netWeightKind: 'SERVING',
           brandId: 'brand-pack',
           brandName: 'Pack Brand',
-          trackingUnit: {
+          trackingUnit: expect.objectContaining({
             id: 'unit-can',
             name: 'can',
             symbol: 'can',
             type: UnitType.Count,
-          },
+          }),
         },
       ],
       [
@@ -270,22 +271,22 @@ describe('useSearchResults', () => {
             __typename: 'Measure',
             value: 1360.78,
             unitId: 'unit-g',
-            metric: {
+            metric: readingAsAbbreviation({
               __typename: 'MeasureReading',
               value: 1.36,
               unitId: 'unit-kg',
               symbol: 'kg',
               displayAsFraction: false,
               type: UnitType.Weight,
-            },
-            imperial: {
+            }),
+            imperial: readingAsAbbreviation({
               __typename: 'MeasureReading',
               value: 3,
               unitId: 'unit-lb',
               symbol: 'lb',
               displayAsFraction: false,
               type: UnitType.Weight,
-            },
+            }),
           },
         },
         {

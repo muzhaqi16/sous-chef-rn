@@ -8,6 +8,10 @@ fragment SortableItem_item on ShoppingListItem {
   unit {
     id
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   # quantity read in each unit system: the row shows a weight or volume in the
   # user's while it is still the figure quantity holds.
@@ -18,6 +22,7 @@ fragment SortableItem_item on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -25,6 +30,7 @@ fragment SortableItem_item on ShoppingListItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }

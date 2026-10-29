@@ -15,6 +15,7 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import type { GetPantryQuery } from '#features/pantry/graphql/pantry.generated';
+import { asAbbreviation, readingAsAbbreviation } from './unitLabels';
 
 // The document's own shapes. Annotating a builder with one narrows every
 // `__typename` inside it, and fails the build when the selection gains a field
@@ -80,14 +81,14 @@ function connection<TN extends string, ET extends string, T>(
 
 // A count reads as stored in both systems.
 function countHeld(value: number): PantryItemNode['held'] {
-  const reading: PantryItemNode['held']['metric'] = {
+  const reading: PantryItemNode['held']['metric'] = readingAsAbbreviation({
     __typename: 'MeasureReading',
     value,
     unitId: 'unit-piece',
     symbol: 'pc',
     displayAsFraction: false,
     type: UnitType.Count,
-  };
+  });
   return {
     __typename: 'Measure',
     value,
@@ -111,7 +112,12 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     displayAmount: {
       __typename: 'DisplayAmount',
       quantity: item.heldQuantity ?? item.quantity ?? 1,
-      unit: { __typename: 'Unit', id: 'unit-piece', symbol: 'pc' },
+      localizedSymbol: 'pc',
+      unit: asAbbreviation({
+        __typename: 'Unit',
+        id: 'unit-piece',
+        symbol: 'pc',
+      }),
     },
     held: countHeld(item.heldQuantity ?? item.quantity ?? 1),
     consumeUnit: null,
@@ -133,14 +139,14 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
       imageUrl: null,
       images: [],
     },
-    unit: {
+    unit: asAbbreviation({
       __typename: 'Unit',
       id: 'unit-piece',
       name: 'piece',
       symbol: 'pc',
       type: UnitType.Count,
       displayAsFraction: false,
-    },
+    }),
     displayUnit: null,
     netWeightUnit: null,
     storageLocation: null,

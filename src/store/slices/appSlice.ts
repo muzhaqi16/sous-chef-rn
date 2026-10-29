@@ -3,14 +3,19 @@ import type { RootState } from '../index';
 import type {
   CategorySuggestion,
   ItemSuggestion,
+  PluralForms,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { dedupeById } from '#utils/dedupeById';
+import { carriesLabelForms } from '#/utils/formatQuantity';
 
-interface Unit {
+/** A common unit as the device keeps it for offline search and resolution. */
+export interface CachedUnit {
   id: string;
   name: string;
   symbol: string;
+  localizedSymbolForms?: Pick<PluralForms, 'one' | 'other'> | null;
+  localizedNameForms?: Pick<PluralForms, 'one' | 'other'> | null;
   abbreviation?: string;
   type?: UnitType;
 }
@@ -57,7 +62,7 @@ export interface AppState {
   // needs it and holding it would be the only copy in app memory.
   postLoginCredentials: { email: string } | null;
 
-  cachedUnits: Unit[];
+  cachedUnits: CachedUnit[];
   lastUnitsFetchedAt: number | null;
 
   // Reference data warmed while online for offline-first autocomplete.
@@ -77,7 +82,7 @@ export interface AppState {
   setNavigationState: (state: NavigationState) => void;
   setPostLoginCredentials: (credentials: { email: string } | null) => void;
 
-  setCachedUnits: (units: Unit[]) => void;
+  setCachedUnits: (units: CachedUnit[]) => void;
   setLastUnitsFetchedAt: (timestamp: number) => void;
 
   setCachedCategories: (categories: CategorySuggestion[]) => void;
@@ -108,6 +113,15 @@ export const initialAppState = {
   lastStoresFetchedAt: null,
   cachedItemSuggestions: [],
 };
+
+/**
+ * When the device's common units were fetched; null while any of them lacks
+ * its plural forms (cached by an older build), so they are fetched again.
+ */
+export const selectUnitsFetchedAt = (state: AppState): number | null =>
+  state.cachedUnits.some(unit => !carriesLabelForms(unit))
+    ? null
+    : state.lastUnitsFetchedAt;
 
 export const createAppSlice: StateCreator<
   RootState,

@@ -25,6 +25,11 @@ fragment ItemReaders on Item {
   }
   defaultConsumeUnit {
     id
+    localizedSymbol
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
     type
@@ -32,6 +37,10 @@ fragment ItemReaders on Item {
   description
   displayUnit {
     id
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
@@ -62,6 +71,10 @@ fragment ItemReaders on Item {
   packs {
     container {
       id
+      localizedSymbolForms {
+        one
+        other
+      }
       symbol
     }
     count
@@ -83,6 +96,10 @@ fragment ItemReaders on Item {
   storeDepartment
   suggestedPackageUnit {
     id
+    localizedSymbolForms {
+      one
+      other
+    }
     symbol
   }
   tags

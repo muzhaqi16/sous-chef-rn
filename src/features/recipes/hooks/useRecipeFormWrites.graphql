@@ -42,6 +42,10 @@ fragment useRecipeFormWrites_recipe on Recipe {
           id
           name
           symbol
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         image
         isOptional
@@ -96,6 +100,10 @@ fragment useRecipeFormWrites_recipe on Recipe {
           id
           name
           symbol
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         isOptional
         notes

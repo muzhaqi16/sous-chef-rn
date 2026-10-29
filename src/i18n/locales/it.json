@@ -605,7 +605,8 @@
   "appUpdate": {
     "title": "Aggiornamento necessario",
     "message": "Questa versione di {{appName}} non può più connettersi al server. Aggiorna all'ultima versione per continuare a usare l'app.",
-    "available": "È disponibile una nuova versione di {{appName}}."
+    "available": "È disponibile una nuova versione di {{appName}}.",
+    "storeNotOpened": "Lo store non si è aperto. Aggiorna {{appName}} dallo store del tuo dispositivo."
   },
   "empty": {
     "noItems": "Ancora nessun articolo",
@@ -678,7 +679,7 @@
   "navigation": {
     "tabs": {
       "shoppingList": "Lista",
-      "mealPlan": "Piano pasti"
+      "mealPlan": "Pasti"
     }
   },
   "numberInputSheet": {

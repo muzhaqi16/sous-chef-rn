@@ -5,6 +5,7 @@ import {
   formatQuantityForDisplay,
   formatQuantityForInput,
   resolveQuantityNotation,
+  unitLabel,
 } from '#/utils/formatQuantity';
 import { inCountedUnit } from '#domain/stockDisplay';
 import type {
@@ -26,7 +27,7 @@ function alertExceeds(
         amount: formatQuantityForDisplay(cap.quantity, {
           notation: resolveQuantityNotation(null, cap.displayAsFraction),
         }),
-        unit: cap.unitSymbol,
+        unit: unitLabel(cap.unit, { quantity: cap.quantity }),
       },
     ),
   );
@@ -84,7 +85,7 @@ export function validateDeductionQuantity(
   if (deduction > cap) {
     alertExceeds(actionVerb, {
       quantity: cap,
-      unitSymbol: shared.activeUnitSymbol,
+      unit: shared.activeUnit,
       displayAsFraction: shared.displayAsFractionOf(shared.activeUnitId),
     });
     return null;

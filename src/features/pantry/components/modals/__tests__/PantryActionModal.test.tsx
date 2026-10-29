@@ -7,6 +7,8 @@ import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
 import { PantryActionModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/PantryActionModal.generated';
 import type { PantryActionSharedState } from '#features/pantry/types';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { unitLabel } from '#/utils/formatQuantity';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -72,15 +74,15 @@ jest.mock('#components/molecules/FormattedItemSubtitle', () => {
   return {
     FormattedItemSubtitle: ({
       quantity,
-      unitSymbol,
+      unit,
     }: {
       quantity?: number | null;
-      unitSymbol?: string | null;
+      unit?: { symbol?: string | null } | null;
     }) =>
       require('react').createElement(
         RN.Text,
         null,
-        `${quantity} ${unitSymbol || ''}`,
+        `${quantity} ${unit?.symbol || ''}`,
       ),
   };
 });
@@ -149,7 +151,8 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         displayAmount: {
           __typename: 'DisplayAmount',
           quantity: 5,
-          unit: { __typename: 'Unit', id: 'u1', symbol: 'lbs' },
+          localizedSymbol: 'lbs',
+          unit: asAbbreviation({ __typename: 'Unit', id: 'u1', symbol: 'lbs' }),
         },
         activeBatchCount: 1,
         netWeight: null,
@@ -158,14 +161,14 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         portionUnit: null,
         remainingPortions: null,
         lastUsedAt: null,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u1',
           symbol: 'lbs',
           name: 'Pounds',
           type: 'WEIGHT',
           displayAsFraction: false,
-        },
+        }),
         displayUnit: null,
         netWeightUnit: null,
         consumeUnit: null,
@@ -268,7 +271,7 @@ describe('PantryActionModal', () => {
     });
     const shared = mockRenderActionFields.mock.calls[0]![0];
     expect(shared.trackingQuantity).toBe(5);
-    expect(shared.activeUnitSymbol).toBe('lbs');
+    expect(unitLabel(shared.activeUnit)).toBe('lbs');
   });
 
   it('passes trackingUnitId to renderActionFields', () => {
@@ -286,18 +289,19 @@ describe('PantryActionModal', () => {
     const user = userEvent.setup();
     renderWithApollo(<PantryActionModal {...defaultProps} />, {
       cache: makeCache({
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: '',
           symbol: '',
           name: '',
           type: 'COUNT',
           displayAsFraction: false,
-        },
+        }),
         displayAmount: {
           __typename: 'DisplayAmount',
           quantity: 5,
-          unit: { __typename: 'Unit', id: '', symbol: '' },
+          localizedSymbol: '',
+          unit: asAbbreviation({ __typename: 'Unit', id: '', symbol: '' }),
         },
       }),
     });
@@ -373,17 +377,18 @@ describe('PantryActionModal', () => {
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 3,
-        unit: { __typename: 'Unit', id: 'doz', symbol: 'doz' },
+        localizedSymbol: 'doz',
+        unit: asAbbreviation({ __typename: 'Unit', id: 'doz', symbol: 'doz' }),
       },
-      unit: {
+      unit: asAbbreviation({
         __typename: 'Unit',
         id: 'pc',
         symbol: 'pc',
         name: 'piece',
         type: 'COUNT',
         displayAsFraction: false,
-      },
-      displayUnit: {
+      }),
+      displayUnit: asAbbreviation({
         __typename: 'Unit',
         id: 'doz',
         symbol: 'doz',
@@ -392,12 +397,11 @@ describe('PantryActionModal', () => {
         baseUnitId: 'pc',
         conversionFactor: 12,
         commonFractions: [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4],
-      },
+      }),
     };
     const dozen = {
       unitId: 'doz',
-      unitSymbol: 'doz',
-      unitName: 'dozen',
+      unit: { symbol: 'doz', name: 'dozen' },
       unitType: 'COUNT',
       isTrackingUnit: false,
       countFactor: 12,
@@ -416,12 +420,12 @@ describe('PantryActionModal', () => {
       const shared = renderedState();
       expect(shared.showStock(24)).toEqual({
         quantity: 2,
-        unitSymbol: 'doz',
+        unit: expect.objectContaining({ symbol: 'doz' }),
         displayAsFraction: null,
       });
       expect(shared.showStock(11)).toEqual({
         quantity: 11,
-        unitSymbol: 'pc',
+        unit: expect.objectContaining({ symbol: 'pc' }),
         displayAsFraction: false,
       });
     });
@@ -452,12 +456,12 @@ describe('PantryActionModal', () => {
           cache: makeCache({
             ...eggs,
             netWeight: 50,
-            netWeightUnit: {
+            netWeightUnit: asAbbreviation({
               __typename: 'Unit',
               id: 'g',
               name: 'gram',
               symbol: 'g',
-            },
+            }),
           }),
         },
       );

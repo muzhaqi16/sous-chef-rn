@@ -16,6 +16,7 @@ import {
 import { Items_RowFragmentDoc } from '../items.generated';
 import { createMockCache, invokeFieldModifier } from './helpers/mockCache';
 import type { MockedCache } from './helpers/mockCache';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 describe('addLocalShoppingListItem: the row', () => {
   const writeLine = (
@@ -83,7 +84,12 @@ describe('addLocalShoppingListItem: the row', () => {
           symbol
         }
       `,
-      data: { __typename: 'Unit', id: 'unit-g', name: 'gram', symbol: 'g' },
+      data: asAbbreviation({
+        __typename: 'Unit',
+        id: 'unit-g',
+        name: 'gram',
+        symbol: 'g',
+      }),
     });
     cache.writeFragment({
       fragment: gql`

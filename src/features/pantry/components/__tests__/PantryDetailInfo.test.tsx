@@ -9,6 +9,7 @@ import {
   ItemCondition,
 } from '#/graphql/generated/schemaTypes';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => true),
@@ -43,10 +44,16 @@ const baseItem: PantryDetailInfo_PantryItemFragment = {
   displayAmount: {
     __typename: 'DisplayAmount',
     quantity: 2,
-    unit: { __typename: 'Unit', id: 'u1', symbol: 'L' },
+    localizedSymbol: 'L',
+    unit: asAbbreviation({ __typename: 'Unit', id: 'u1', symbol: 'L' }),
   },
   costCurrency: null,
-  unit: { __typename: 'Unit', id: 'u1', name: 'liters', symbol: 'L' },
+  unit: asAbbreviation({
+    __typename: 'Unit',
+    id: 'u1',
+    name: 'liters',
+    symbol: 'L',
+  }),
   storageLocation: null,
   brand: null,
   store: null,
@@ -462,8 +469,8 @@ describe('PantryDetailInfo', () => {
   it('formats the Min Stock and Restock At quantities', () => {
     const item = { ...baseItem, minQuantity: 0.5, restockQuantity: 1.3333334 };
     render(<PantryDetailInfo {...defaultProps} itemRef={item} />);
-    expect(screen.getByText('1/2 liters')).toBeTruthy();
-    expect(screen.getByText('1 1/3 liters')).toBeTruthy();
+    expect(screen.getByText('1/2 L')).toBeTruthy();
+    expect(screen.getByText('1 1/3 L')).toBeTruthy();
   });
 
   it('renders Min Stock row when minQuantity is set', () => {

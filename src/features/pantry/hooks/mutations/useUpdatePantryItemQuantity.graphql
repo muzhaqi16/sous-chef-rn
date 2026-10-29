@@ -7,9 +7,14 @@ fragment useUpdatePantryItemQuantity_pantryItem on PantryItem {
   heldQuantity
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
 }

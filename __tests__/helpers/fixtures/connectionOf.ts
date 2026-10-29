@@ -18,7 +18,11 @@ interface TypedConnection<Type extends string, Node> {
 /** One page of `nodes`, for a mock whose `__typename`s the SDL completion fills. */
 export const connectionOf = <Node>(
   nodes: readonly Node[],
-  { totalCount = nodes.length, hasNextPage = false, endCursor = null }: Page = {},
+  {
+    totalCount = nodes.length,
+    hasNextPage = false,
+    endCursor = null,
+  }: Page = {},
 ) => ({
   totalCount,
   pageInfo: { hasNextPage, endCursor },

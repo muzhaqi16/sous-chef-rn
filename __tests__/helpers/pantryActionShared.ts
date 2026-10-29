@@ -2,6 +2,7 @@ import { UnitType } from '#/graphql/generated/schemaTypes';
 import { shownStock } from '#domain/stockDisplay';
 import type { PantryActionSharedState } from '#features/pantry/types';
 
+const CUP = { symbol: 'cup' };
 const PIECE = { id: 'pc', symbol: 'pc' };
 const DOZEN = {
   id: 'doz',
@@ -24,16 +25,16 @@ export function pantryActionShared(
     notes: '',
     setNotes: jest.fn(),
     trackingQuantity,
-    trackingUnitSymbol: 'cup',
+    trackingUnit: CUP,
     trackingUnitId: 'u1',
     displayAsFractionOf: () => true,
-    activeUnitSymbol: 'cup',
+    activeUnit: CUP,
     activeUnitId: 'u1',
     isConvertedUnit: false,
     exactFactor: 1,
     showStock: held => ({
       quantity: held,
-      unitSymbol: state.trackingUnitSymbol,
+      unit: state.trackingUnit,
       displayAsFraction: state.displayAsFractionOf(state.trackingUnitId),
     }),
     pantryItemId: 'pi1',
@@ -43,7 +44,7 @@ export function pantryActionShared(
     availableInSelectedUnit: null,
     availableLoading: false,
     remainingNetWeight: null,
-    netWeightUnitSymbol: undefined,
+    netWeightUnit: undefined,
     netWeightUnitId: undefined,
     isDualTracked: false,
     ...overrides,
@@ -60,10 +61,10 @@ export function eggsShared(
   unit: 'pc' | 'doz',
 ): PantryActionSharedState {
   return pantryActionShared(pieces, {
-    trackingUnitSymbol: 'pc',
+    trackingUnit: PIECE,
     trackingUnitId: 'pc',
     displayAsFractionOf: () => false,
-    activeUnitSymbol: unit,
+    activeUnit: unit === 'doz' ? DOZEN : PIECE,
     activeUnitId: unit,
     isConvertedUnit: unit === 'doz',
     exactFactor: unit === 'doz' ? 12 : 1,
@@ -71,7 +72,7 @@ export function eggsShared(
       const shown = shownStock(held, PIECE, DOZEN);
       return {
         quantity: shown.quantity,
-        unitSymbol: shown.unit.symbol,
+        unit: shown.unit,
         displayAsFraction: shown.unit === PIECE ? false : null,
       };
     },

@@ -688,7 +688,7 @@ describe('usePantryItemDetailActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Discard Expired Item',
-        expect.stringContaining('3 cups'),
+        expect.stringContaining('3 c '),
         expect.any(Array),
       );
     });
@@ -706,7 +706,7 @@ describe('usePantryItemDetailActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Discard Expired Item',
-        expect.stringContaining('remaining 1 1/4 cups'),
+        expect.stringContaining('remaining 1 1/4 c '),
         expect.any(Array),
       );
     });
@@ -724,7 +724,7 @@ describe('usePantryItemDetailActions', () => {
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Discard Expired Item',
-        expect.stringContaining('remaining 1.333 cups'),
+        expect.stringContaining('remaining 1.333 c '),
         expect.any(Array),
       );
     });

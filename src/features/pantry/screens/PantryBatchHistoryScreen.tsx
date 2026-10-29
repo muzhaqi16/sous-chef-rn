@@ -19,14 +19,13 @@ const getItemType = (item: PantryItemBatchFragment) =>
 type RouteParams = {
   pantryItemId: string;
   itemName: string;
-  unitSymbol?: string;
 };
 
 export const PantryBatchHistoryScreen: React.FC<
   StaticScreenProps<RouteParams>
 > = ({ route }) => {
   const { t } = useTranslation();
-  const { pantryItemId, itemName, unitSymbol } = route.params;
+  const { pantryItemId, itemName } = route.params;
   const { openBatch } = useOpenPantryItemBatch();
   const { wasteBatch } = useWastePantryItemBatch();
   const permissions = usePantryPermissions();
@@ -46,7 +45,6 @@ export const PantryBatchHistoryScreen: React.FC<
   }: ListRenderItemInfo<PantryItemBatchFragment>) => (
     <BatchListItem
       batch={item}
-      unitSymbol={unitSymbol}
       onOpen={permissions.canEditItems ? openBatch : undefined}
       onWaste={permissions.canRemoveItems ? wasteBatch : undefined}
     />

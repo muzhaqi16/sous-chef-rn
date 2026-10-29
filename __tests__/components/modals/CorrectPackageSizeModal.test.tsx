@@ -12,6 +12,10 @@ import {
   type CorrectPackageSizeModal_PantryItemFragment,
 } from '#features/pantry/components/modals/CorrectPackageSizeModal.generated';
 import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('../../../src/hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: () => ({
@@ -78,14 +82,15 @@ const BATCH_ID = 'b1';
 type Batch = CorrectPackageSizeModal_BatchFragment;
 type Reading = NonNullable<Batch['remaining']>['metric'];
 
-const reading = (value: number, id: string, symbol: string): Reading => ({
-  __typename: 'MeasureReading',
-  value,
-  unitId: id,
-  symbol,
-  displayAsFraction: false,
-  type: UnitType.Weight,
-});
+const reading = (value: number, id: string, symbol: string): Reading =>
+  readingAsAbbreviation({
+    __typename: 'MeasureReading',
+    value,
+    unitId: id,
+    symbol,
+    displayAsFraction: false,
+    type: UnitType.Weight,
+  });
 
 const measure = (
   value: number,
@@ -103,19 +108,24 @@ const ounces: CorrectPackageSizeModal_PantryItemFragment = {
   __typename: 'PantryItem',
   id: PANTRY_ITEM_ID,
   itemName: 'Pasta sauce',
-  netWeightUnit: {
+  netWeightUnit: asAbbreviation({
     __typename: 'Unit',
     id: 'u-oz',
     name: 'ounce',
     symbol: 'oz',
-  },
+  }),
   unit: { __typename: 'Unit', id: 'u-jar' },
 };
 
 const grams: CorrectPackageSizeModal_PantryItemFragment = {
   ...ounces,
   itemName: 'Honey',
-  netWeightUnit: { __typename: 'Unit', id: 'u-g', name: 'gram', symbol: 'g' },
+  netWeightUnit: asAbbreviation({
+    __typename: 'Unit',
+    id: 'u-g',
+    name: 'gram',
+    symbol: 'g',
+  }),
 };
 
 // A 3 LB honey jar, stored in the stack's grams, half used.

@@ -44,6 +44,15 @@ query ReceiptParse($id: ID!) {
         code
         quantity
         unit
+        # The printed unit as a known unit, to show in the app's language.
+        measureUnit {
+          id
+          symbol
+          localizedSymbolForms {
+            one
+            other
+          }
+        }
         unitPrice
         amount
         appliesTo

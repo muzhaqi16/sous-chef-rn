@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useMoney } from '#/domain/money';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useTranslation } from '#/i18n';
-import { formatNetWeightDisplay } from '#utils/formatQuantity';
+import { formatNetWeightDisplay, unitLabel } from '#utils/formatQuantity';
 import { useShoppingListItemDetail } from './useShoppingListItemDetail';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { Icon } from '#components/atoms/Icon';
@@ -212,10 +212,9 @@ export const ShoppingListItemDetail: React.FC<
       ]
     : [];
 
-  const unitSymbol = firstNonBlank(
-    item.unitName,
-    item.item?.displayUnit?.symbol,
-  );
+  // The line's own label first: a counted line reads "3 cans" of pieces.
+  const lineLabel = firstNonBlank(item.unitName);
+  const lineUnit = lineLabel ? { symbol: lineLabel } : item.item?.displayUnit;
 
   // Priority is stored as an Int (0 low, 1 medium, 2 high); map it back to the
   // localized label so the detail matches the form's segmented control instead
@@ -309,7 +308,7 @@ export const ShoppingListItemDetail: React.FC<
               quantity={item.quantity}
               quantityInput={item.quantityInput}
               displayFormat={item.displayFormat}
-              unitSymbol={unitSymbol}
+              unit={lineUnit}
             />
           </DetailRow>
           {!!item.category && (
@@ -336,7 +335,7 @@ export const ShoppingListItemDetail: React.FC<
             <DetailRow label={t('labels.purchased')}>
               <FormattedItemSubtitle
                 quantity={purchasedQuantity}
-                unitSymbol={unitSymbol}
+                unit={lineUnit}
               />
             </DetailRow>
           )}
@@ -347,7 +346,7 @@ export const ShoppingListItemDetail: React.FC<
                 {perUnitSubline != null && (
                   <PerUnitHint
                     price={money(perUnitSubline)}
-                    unit={unitSymbol}
+                    unit={unitLabel(lineUnit)}
                   />
                 )}
               </View>

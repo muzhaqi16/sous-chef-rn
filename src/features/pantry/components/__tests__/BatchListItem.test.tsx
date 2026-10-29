@@ -12,6 +12,10 @@ import type { PantryItemBatchFragment } from '#features/pantry/graphql/pantryFra
 import { BatchListItem } from '../BatchListItem';
 import { BatchListItem_PantryItemFragmentDoc } from '../BatchListItem.generated';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => true),
@@ -45,9 +49,33 @@ const batch = (quantity: number): PantryItemBatchFragment => ({
   purchase: null,
 });
 
+const unitOf = (symbol: string) =>
+  asAbbreviation({ __typename: 'Unit', id: `unit-${symbol}`, symbol });
+
+/** The batch's stack, where its row reads the stack's units from. */
+const stackCache = (
+  { unit = 'pc', netWeightUnit }: { unit?: string; netWeightUnit?: string },
+  cache = makeCache(),
+) => {
+  cache.writeFragment({
+    fragment: BatchListItem_PantryItemFragmentDoc,
+    fragmentName: 'BatchListItem_pantryItem',
+    data: {
+      __typename: 'PantryItem',
+      id: 'pi1',
+      unit: unitOf(unit),
+      displayUnit: null,
+      netWeightUnit: netWeightUnit ? unitOf(netWeightUnit) : null,
+    },
+  });
+  return cache;
+};
+
 describe('BatchListItem', () => {
   it('renders a fractional batch quantity as a cooking fraction', () => {
-    renderWithApollo(<BatchListItem batch={batch(1.25)} unitSymbol="cup" />);
+    renderWithApollo(<BatchListItem batch={batch(1.25)} />, {
+      cache: stackCache({ unit: 'cup' }),
+    });
     expect(screen.getByText('1 1/4 cup')).toBeTruthy();
   });
 
@@ -59,13 +87,17 @@ describe('BatchListItem', () => {
     const priced = { ...batch(2), costPerUnit: 1.25, totalCost: 2.5 };
 
     it('shows the cost per unit with budget & prices on', () => {
-      renderWithApollo(<BatchListItem batch={priced} unitSymbol="pc" />);
+      renderWithApollo(<BatchListItem batch={priced} />, {
+        cache: stackCache({}),
+      });
       expect(screen.getByText('$1.25/unit')).toBeTruthy();
     });
 
     it('shows no cost with budget & prices off, and still the batch', () => {
       jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
-      renderWithApollo(<BatchListItem batch={priced} unitSymbol="pc" />);
+      renderWithApollo(<BatchListItem batch={priced} />, {
+        cache: stackCache({}),
+      });
 
       expect(screen.queryByText(/1\.25/)).toBeNull();
       expect(screen.getByText('2 pc')).toBeTruthy();
@@ -73,12 +105,9 @@ describe('BatchListItem', () => {
   });
 
   it("shows the batch's own package size", () => {
-    renderWithApollo(
-      <BatchListItem
-        batch={{ ...batch(1), netWeight: 22 }}
-        netWeightUnitSymbol="oz"
-      />,
-    );
+    renderWithApollo(<BatchListItem batch={{ ...batch(1), netWeight: 22 }} />, {
+      cache: stackCache({ netWeightUnit: 'oz' }),
+    });
     expect(screen.getByText('Package: 22 oz')).toBeTruthy();
   });
 
@@ -100,11 +129,14 @@ describe('BatchListItem', () => {
   });
 
   it('rounds a batch quantity no fraction fits to three decimals', () => {
-    renderWithApollo(<BatchListItem batch={batch(177.4412)} unitSymbol="mL" />);
+    renderWithApollo(<BatchListItem batch={batch(177.4412)} />, {
+      cache: stackCache({ unit: 'mL' }),
+    });
     expect(screen.getByText('177.441 mL')).toBeTruthy();
   });
 
   describe('on a stack of pieces shown in dozens', () => {
+    const DOZEN_FRACTIONS: number[] = [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4];
     const eggsCache = () => {
       const cache = makeCache();
       cache.writeFragment({
@@ -113,8 +145,8 @@ describe('BatchListItem', () => {
         data: {
           __typename: 'PantryItem',
           id: 'pi1',
-          unit: { __typename: 'Unit', id: 'pc', symbol: 'pc' },
-          displayUnit: {
+          unit: asAbbreviation({ __typename: 'Unit', id: 'pc', symbol: 'pc' }),
+          displayUnit: asAbbreviation({
             __typename: 'Unit',
             id: 'doz',
             symbol: 'doz',
@@ -122,22 +154,23 @@ describe('BatchListItem', () => {
             hasStandardCountFactor: true,
             baseUnitId: 'pc',
             conversionFactor: 12,
-            commonFractions: [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4],
-          },
+            commonFractions: DOZEN_FRACTIONS,
+          }),
+          netWeightUnit: null,
         },
       });
       return cache;
     };
 
     it('shows a whole dozen or a common fraction of one in dozens', () => {
-      renderWithApollo(<BatchListItem batch={batch(18)} unitSymbol="pc" />, {
+      renderWithApollo(<BatchListItem batch={batch(18)} />, {
         cache: eggsCache(),
       });
       expect(screen.getByText('1 1/2 doz')).toBeTruthy();
     });
 
     it('shows any other count in pieces, never a decimal of a dozen', () => {
-      renderWithApollo(<BatchListItem batch={batch(11)} unitSymbol="pc" />, {
+      renderWithApollo(<BatchListItem batch={batch(11)} />, {
         cache: eggsCache(),
       });
       expect(screen.getByText('11 pc')).toBeTruthy();
@@ -151,14 +184,15 @@ describe('BatchListItem', () => {
       value: number,
       id: string,
       symbol: string,
-    ): BatchSize['metric'] => ({
-      __typename: 'MeasureReading',
-      value,
-      unitId: id,
-      symbol,
-      displayAsFraction: false,
-      type: UnitType.Weight,
-    });
+    ): BatchSize['metric'] =>
+      readingAsAbbreviation({
+        __typename: 'MeasureReading',
+        value,
+        unitId: id,
+        symbol,
+        displayAsFraction: false,
+        type: UnitType.Weight,
+      });
     const packageSize: BatchSize = {
       __typename: 'Measure',
       value: 180,
@@ -166,15 +200,11 @@ describe('BatchListItem', () => {
       metric: reading(180, 'unit-g', 'g'),
       imperial: reading(6.35, 'unit-oz', 'oz'),
     };
-    const cache = makeCache();
+    const cache = stackCache({ netWeightUnit: 'g' });
     writeUnitSystemSettings(cache, UnitSystem.System, UnitSystem.Imperial);
 
     renderWithApollo(
-      <BatchListItem
-        batch={{ ...batch(1), netWeight: 180, packageSize }}
-        netWeightUnitSymbol="g"
-        netWeightUnitId="unit-g"
-      />,
+      <BatchListItem batch={{ ...batch(1), netWeight: 180, packageSize }} />,
       { cache },
     );
     expect(screen.getByText('Package: 6.35 oz')).toBeTruthy();

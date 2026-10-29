@@ -19,6 +19,7 @@ import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersis
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
+import { unitLabel, type UnitLabelSource } from '#/utils/formatQuantity';
 
 export interface QuantityEditItem {
   id: string;
@@ -31,8 +32,7 @@ export interface QuantityEditItem {
   version: number;
   itemUnits: Array<{
     id: string;
-    symbol: string;
-    name: string;
+    unit: UnitLabelSource;
     isDefault: boolean;
     isPreferred: boolean;
   }>;
@@ -99,9 +99,10 @@ export function useQuantityEditModal(
       ? shownLineReading(liveItem, readingSystem)
       : null;
   const storedUnit = selectedItemRaw?.unit ?? null;
+  // A reading names its own unit, carried whole like the stored one.
   const shownUnit = shown
-    ? { id: shown.unitId, symbol: shown.symbol, name: shown.symbol }
-    : storedUnit;
+    ? { id: shown.unitId, unit: shown }
+    : storedUnit && { id: storedUnit.id, unit: storedUnit };
 
   const selectedItem: QuantityEditItem | null = selectedItemRaw
     ? {
@@ -109,7 +110,9 @@ export function useQuantityEditModal(
         itemName: firstNonBlank(selectedItemRaw.itemName) ?? t('labels.item'),
         quantity: shown?.value ?? selectedItemRaw.quantity ?? 0,
         unitName:
-          firstNonBlank(shownUnit?.symbol, selectedItemRaw.unitName) ?? null,
+          // As the sheet's chip reads it, so an untouched sheet saves nothing.
+          firstNonBlank(unitLabel(shownUnit?.unit), selectedItemRaw.unitName) ??
+          null,
         unitId: shownUnit?.id ?? null,
         category: firstNonBlank(selectedItemRaw.category) ?? null,
         imageUrl: resolveImageUrl(selectedItemRaw),
@@ -117,15 +120,7 @@ export function useQuantityEditModal(
         // Units are available on the Full fragment (detail view) but not the Display
         // fragment used in list views. Provide the shown unit as the only option.
         itemUnits: shownUnit
-          ? [
-              {
-                id: shownUnit.id,
-                symbol: shownUnit.symbol,
-                name: shownUnit.name,
-                isDefault: true,
-                isPreferred: true,
-              },
-            ]
+          ? [{ ...shownUnit, isDefault: true, isPreferred: true }]
           : [],
       }
     : null;

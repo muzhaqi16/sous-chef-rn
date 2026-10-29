@@ -7,6 +7,10 @@ import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { CompleteOnboardingDocument } from '#operations/auth/user.generated';
 import { UserRole } from '#/graphql/generated/schemaTypes';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
+import {
+  useOnboardingSummary,
+  type OnboardingSummary,
+} from '#features/onboarding/hooks/useOnboardingSummary';
 
 jest.mock('#store/useAppStore', () => {
   const mockUpdateUser = jest.fn();
@@ -28,6 +32,17 @@ jest.mock('#store/useAppStore', () => {
 });
 
 jest.mock('#hooks/performance/useScreenTransition');
+jest.mock('#features/onboarding/hooks/useOnboardingSummary');
+
+const summaryOf = (done: Partial<OnboardingSummary>): void => {
+  jest.mocked(useOnboardingSummary).mockReturnValue({
+    homeAndPantry: false,
+    shoppingList: false,
+    pantryItems: false,
+    invites: false,
+    ...done,
+  });
+};
 
 jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
   OnBoardingWrapper: ({
@@ -100,31 +115,54 @@ function buildCompleteOnboardingMock(): MockFor<
 }
 
 describe('OnboardingCompleteScreen', () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    summaryOf({ homeAndPantry: true, shoppingList: true });
+  });
 
   it('renders all set title', () => {
     renderWithApollo(<OnboardingCompleteScreen />);
     expect(screen.getByText('All set!')).toBeTruthy();
   });
 
-  it('renders subtitle', () => {
+  it('says the home is ready when one is in place', () => {
     renderWithApollo(<OnboardingCompleteScreen />);
     expect(screen.getByText('Your home is ready to use')).toBeTruthy();
   });
 
-  it('renders congratulations text', () => {
+  it('lists every step the user completed', () => {
+    summaryOf({
+      homeAndPantry: true,
+      shoppingList: true,
+      pantryItems: true,
+      invites: true,
+    });
     renderWithApollo(<OnboardingCompleteScreen />);
     expect(
       screen.getByText("Congratulations! You've successfully set up:"),
     ).toBeTruthy();
-  });
-
-  it('renders summary items', () => {
-    renderWithApollo(<OnboardingCompleteScreen />);
     expect(screen.getByText(/Your home and pantry/)).toBeTruthy();
     expect(screen.getByText(/Your shopping list/)).toBeTruthy();
     expect(screen.getByText(/Initial pantry items/)).toBeTruthy();
     expect(screen.getByText(/Invited family/)).toBeTruthy();
+  });
+
+  it('never claims invitations or pantry items the user skipped', () => {
+    renderWithApollo(<OnboardingCompleteScreen />);
+    expect(screen.getByText(/Your home and pantry/)).toBeTruthy();
+    expect(screen.getByText(/Your shopping list/)).toBeTruthy();
+    expect(screen.queryByText(/Initial pantry items/)).toBeNull();
+    expect(screen.queryByText(/Invited family/)).toBeNull();
+  });
+
+  it('with nothing set up, says so and lists nothing', () => {
+    summaryOf({});
+    renderWithApollo(<OnboardingCompleteScreen />);
+    expect(screen.getByText("You're ready to start")).toBeTruthy();
+    expect(screen.getByText(/You skipped setup for now/)).toBeTruthy();
+    expect(screen.queryByText(/Congratulations/)).toBeNull();
+    expect(screen.queryByText(/Your home and pantry/)).toBeNull();
+    expect(screen.queryByText('Your home is ready to use')).toBeNull();
   });
 
   it('renders the Get Started button', () => {

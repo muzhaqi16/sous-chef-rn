@@ -6,9 +6,14 @@ fragment PantryItemCard_pantryItem on PantryItem {
   isLowStock
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   # displayAmount read in each unit system: the row shows it while it is
@@ -20,6 +25,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -27,6 +33,7 @@ fragment PantryItemCard_pantryItem on PantryItem {
       value
       unitId
       symbol
+      localizedSymbol
       displayAsFraction
       type
     }
@@ -41,6 +48,10 @@ fragment PantryItemCard_pantryItem on PantryItem {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   remainingPortions
   activeBatchCount
@@ -63,11 +74,19 @@ fragment PantryItemCard_pantryItem on PantryItem {
   unit {
     id
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   netWeightUnit {
     id
     name
     symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   storageLocation {
     id
@@ -79,12 +98,20 @@ fragment PantryItemCard_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalNetWeight
   }
@@ -95,6 +122,10 @@ fragment PantryItemCard_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalContentUnits
     remainingWeight
@@ -102,6 +133,10 @@ fragment PantryItemCard_pantryItem on PantryItem {
       id
       name
       symbol
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
 }

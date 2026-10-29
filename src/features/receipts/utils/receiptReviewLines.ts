@@ -1,4 +1,5 @@
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
+import type { UnitLabelSource } from '#/utils/formatQuantity';
 import type { ParsedReceipt } from './parsedReceipt';
 import { toCents } from './money';
 
@@ -11,6 +12,8 @@ export interface ReceiptReviewLine {
   code?: string;
   quantity?: number;
   unit?: string;
+  /** The known unit `unit` names, to show in the app's language. */
+  measureUnit?: UnitLabelSource;
   /** What was paid for the line once its discounts are taken off. */
   price?: number;
   /** What its discounts took off, never more than its amount. */
@@ -58,6 +61,7 @@ export function receiptReviewLines(
       if (line.code) review.code = line.code;
       if (line.quantity !== undefined) review.quantity = line.quantity;
       if (line.unit) review.unit = line.unit;
+      if (line.measureUnit) review.measureUnit = line.measureUnit;
       if (line.lineTotal !== undefined) {
         const amount = toCents(line.lineTotal);
         const taken = Math.min(

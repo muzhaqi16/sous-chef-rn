@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { QuantityDisplay } from '#components/atoms/QuantityDisplay';
 import type { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import { Text } from '#components/atoms/Text';
+import { unitLabel, type UnitLabelSource } from '#/utils/formatQuantity';
 
 interface FormattedItemSubtitleProps {
   quantity?: number | null;
@@ -13,7 +14,7 @@ interface FormattedItemSubtitleProps {
   displayFormat?: DisplayFormat | null;
   displayAsFraction?: boolean | null;
   netWeight?: number | null;
-  unitSymbol?: string | null;
+  unit?: UnitLabelSource | null;
   additionalInfo?: string; // For storage state, category, etc.
 }
 
@@ -28,7 +29,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   displayFormat,
   displayAsFraction,
   netWeight,
-  unitSymbol,
+  unit,
   additionalInfo,
 }) => {
   const { t } = useTranslation();
@@ -46,7 +47,9 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   // Handle edge cases
   const hasQuantity = displayQuantity != null && displayQuantity >= 0;
   const hasWeight = displayWeight != null && displayWeight > 0;
-  const hasUnit = unitSymbol != null && unitSymbol.trim() !== '';
+  const hasUnit = unitLabel(unit) !== '';
+  // The weight's unit agrees with the weight.
+  const weightUnit = unitLabel(unit, { quantity: displayWeight });
 
   // Case 1: Both quantity and weight
   if (hasQuantity && hasWeight && hasUnit) {
@@ -58,7 +61,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
       return (
         <View style={styles.container}>
           <Text role="caption" tone="primary">
-            {displayWeight} {unitSymbol}
+            {displayWeight} {weightUnit}
           </Text>
           {!!additionalInfo && (
             <>
@@ -92,11 +95,11 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           {isPartialSingleItem
             ? t('itemSubtitle.weightRemaining', {
                 weight: displayWeight,
-                unit: unitSymbol,
+                unit: weightUnit,
               })
             : t('itemSubtitle.weight', {
                 weight: displayWeight,
-                unit: unitSymbol,
+                unit: weightUnit,
               })}
         </Text>
         {!!additionalInfo && (
@@ -121,7 +124,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
           quantity={displayQuantity}
           quantityInput={isPartialSingleItem ? undefined : quantityInput}
           displayFormat={displayFormat}
-          unitSymbol={unitSymbol}
+          unit={unit}
           displayAsFraction={displayAsFraction}
           style={styles.quantity}
         />
@@ -152,7 +155,7 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
     return (
       <View style={styles.container}>
         <Text role="caption" tone="primary">
-          {displayWeight} {unitSymbol}
+          {displayWeight} {weightUnit}
         </Text>
         {!!additionalInfo && (
           <>

@@ -62,8 +62,8 @@ android {
         applicationId "dev.souschef.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 205
-        versionName "4.8.5"
+        versionCode 206
+        versionName "4.8.6"
         testBuildType System.getProperty('testBuildType', 'debug')
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
@@ -158,6 +158,9 @@ dependencies {
     // Receipt line labelling (ReceiptStructuringModule): Gemini Nano through
     // AICore, so no model ships in the APK. Needs Kotlin >= 2.2 (2.3 metadata).
     implementation("com.google.mlkit:genai-prompt:1.0.0-beta4")
+    // In-app review sheet (ReviewPromptModule); its testing FakeReviewManager
+    // drives debug builds, which Play did not install.
+    implementation("com.google.android.play:review:2.0.2")
 
     // Detox dependencies
     androidTestImplementation('com.wix:detox:+')

@@ -18,6 +18,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import type { QueueStore } from '../queueStore';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 /**
  * A replay the device could not BUILD is not a refusal. The server never saw
@@ -120,7 +121,11 @@ const cacheRetiredUnit = () =>
         symbol
       }
     `,
-    data: { __typename: 'Unit', id: 'unit-old', symbol: 'tbsp' },
+    data: asAbbreviation({
+      __typename: 'Unit',
+      id: 'unit-old',
+      symbol: 'tbsp',
+    }),
   });
 
 describe('a replay that cannot be prepared on the device', () => {

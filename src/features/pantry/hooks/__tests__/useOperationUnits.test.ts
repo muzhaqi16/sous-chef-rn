@@ -12,6 +12,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
 import { useOperationUnits, PantryOperation } from '../useOperationUnits';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 type RankedUnit =
   ConsumptionUnitsForPantryItemQuery['consumptionUnitsForPantryItem'][number];
@@ -26,7 +27,7 @@ function makeRankedUnit(
     defaultIncrement: null,
     commonFractions: null,
     isWholeContainer: false,
-    unit: {
+    unit: asAbbreviation({
       __typename: 'Unit',
       id: 'unit-1',
       name: 'gram',
@@ -36,7 +37,7 @@ function makeRankedUnit(
       commonFractions: null,
       displayAsFraction: false,
       hasStandardCountFactor: false,
-    },
+    }),
     ...overrides,
   };
 }
@@ -151,7 +152,7 @@ describe('useOperationUnits', () => {
       const weight = result.current.groups.find(
         group => group.type === UnitType.Weight,
       );
-      expect(weight?.units.map(unit => unit.unitSymbol)).toEqual(['g']);
+      expect(weight?.units.map(unit => unit.unit.symbol)).toEqual(['g']);
     });
 
     it('uses restock query when operation is Restock', async () => {
@@ -235,7 +236,7 @@ describe('useOperationUnits', () => {
     ) =>
       makeRankedUnit({
         source,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id,
           name: id,
@@ -245,7 +246,7 @@ describe('useOperationUnits', () => {
           commonFractions: null,
           displayAsFraction: false,
           hasStandardCountFactor,
-        },
+        }),
       });
 
     const renderConsume = (units: ReturnType<typeof makeRankedUnit>[]) =>
@@ -310,7 +311,7 @@ describe('useOperationUnits', () => {
               consumptionMock([
                 makeRankedUnit({
                   rank: 1,
-                  unit: {
+                  unit: asAbbreviation({
                     __typename: 'Unit',
                     id: 'u-g',
                     name: 'gram',
@@ -319,11 +320,11 @@ describe('useOperationUnits', () => {
                     unitRole: UnitRole.Measurement,
                     commonFractions: null,
                     displayAsFraction: false,
-                  },
+                  }),
                 }),
                 makeRankedUnit({
                   rank: 2,
-                  unit: {
+                  unit: asAbbreviation({
                     __typename: 'Unit',
                     id: 'u-ml',
                     name: 'milliliter',
@@ -332,11 +333,11 @@ describe('useOperationUnits', () => {
                     unitRole: UnitRole.Measurement,
                     commonFractions: null,
                     displayAsFraction: false,
-                  },
+                  }),
                 }),
                 makeRankedUnit({
                   rank: 3,
-                  unit: {
+                  unit: asAbbreviation({
                     __typename: 'Unit',
                     id: 'u-piece',
                     name: 'piece',
@@ -345,11 +346,11 @@ describe('useOperationUnits', () => {
                     unitRole: UnitRole.Portion,
                     commonFractions: null,
                     displayAsFraction: false,
-                  },
+                  }),
                 }),
                 makeRankedUnit({
                   rank: 4,
-                  unit: {
+                  unit: asAbbreviation({
                     __typename: 'Unit',
                     id: 'u-oz',
                     name: 'ounce',
@@ -358,7 +359,7 @@ describe('useOperationUnits', () => {
                     unitRole: UnitRole.Measurement,
                     commonFractions: null,
                     displayAsFraction: false,
-                  },
+                  }),
                 }),
               ]),
             ],
@@ -395,7 +396,7 @@ describe('useOperationUnits', () => {
                 makeRankedUnit({ rank: 1, source: UnitSource.TrackingUnit }),
                 makeRankedUnit({
                   rank: 2,
-                  unit: {
+                  unit: asAbbreviation({
                     __typename: 'Unit',
                     id: 'u-ml',
                     name: 'milliliter',
@@ -404,7 +405,7 @@ describe('useOperationUnits', () => {
                     unitRole: UnitRole.Measurement,
                     commonFractions: null,
                     displayAsFraction: false,
-                  },
+                  }),
                 }),
               ]),
             ],
@@ -416,8 +417,7 @@ describe('useOperationUnits', () => {
 
       expect(result.current.defaultUnit).toEqual({
         unitId: 'unit-1',
-        unitSymbol: 'g',
-        unitName: 'gram',
+        unit: expect.objectContaining({ symbol: 'g', name: 'gram' }),
         unitType: UnitType.Weight,
         isTrackingUnit: true,
         conversionRatio: null,
@@ -429,7 +429,7 @@ describe('useOperationUnits', () => {
     describe('a stack the household uses in tablespoons', () => {
       const tbsp = makeRankedUnit({
         rank: 1,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u-tbsp',
           name: 'tablespoon',
@@ -438,7 +438,7 @@ describe('useOperationUnits', () => {
           unitRole: UnitRole.Measurement,
           commonFractions: null,
           displayAsFraction: true,
-        },
+        }),
       });
       const grams = makeRankedUnit({ rank: 2 });
 
@@ -486,7 +486,7 @@ describe('useOperationUnits', () => {
         makeRankedUnit({
           rank: 1,
           source,
-          unit: {
+          unit: asAbbreviation({
             __typename: 'Unit',
             id: 'u-tbsp',
             name: 'tablespoon',
@@ -495,7 +495,7 @@ describe('useOperationUnits', () => {
             unitRole: UnitRole.Measurement,
             commonFractions: null,
             displayAsFraction: true,
-          },
+          }),
         });
       const grams = makeRankedUnit({ rank: 2 });
 

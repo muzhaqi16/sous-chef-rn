@@ -26,9 +26,7 @@ import {
 } from '@shopify/react-native-skia';
 import { scheduleOnRN } from 'react-native-worklets';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
 
-import { Text } from '#components/atoms/Text';
 import { useShowTutorials } from '#store/useAppStore';
 import {
   HOLE_PADDING,
@@ -42,7 +40,6 @@ import { SpotlightTooltip } from './SpotlightTooltip';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface TargetRect {
   x: number;
@@ -85,7 +82,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   allowGesturePassthrough,
   onNext,
 }) => {
-  const { t } = useTranslation();
   const tutorialsEnabled = useShowTutorials();
   const { theme } = useUnistyles();
   const { height: screenHeight, width: screenWidth } = useWindowDimensions();
@@ -388,33 +384,6 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           onDismiss={onDismiss}
           onNext={onNext}
         />
-
-        {/* Skip button — position adapts to avoid overlapping the target hole */}
-        <Pressable
-          onPress={onDismiss}
-          style={[
-            styles.skipButton,
-            // When the hole is near the top, place skip in whichever top
-            // corner is farther from the hole's center: a hole centered on
-            // the right half would cover the default top-right spot, so move
-            // skip to the left; a left-anchored hole (even a wide one) keeps
-            // skip at its default top-right.
-            holeTop < theme.spacing['4xl'] &&
-            holeLeft + holeWidth / 2 > screenWidth / 2
-              ? { right: undefined, left: theme.spacing.lg }
-              : undefined,
-          ]}
-          hitSlop={hitSlop.lg}
-          accessibilityRole="button"
-          accessibilityLabel={t('tutorial.skipTutorial')}
-          testID={kitTestIDs.spotlightSkipButton}
-        >
-          <Text role="bodyStrong" style={styles.skipText}>
-            {totalSteps != null && totalSteps > 1
-              ? t('labels.skipAll')
-              : t('labels.skip')}
-          </Text>
-        </Pressable>
       </View>
     </GestureDetector>
   );
@@ -481,16 +450,5 @@ const styles = StyleSheet.create(theme => ({
   },
   holeTap: {
     position: 'absolute',
-  },
-  skipButton: {
-    position: 'absolute',
-    top: theme.spacing['3xl'],
-    right: theme.spacing.lg,
-    zIndex: theme.zIndex.raised,
-    paddingVertical: theme.spacing.sm,
-    paddingHorizontal: theme.spacing.md,
-  },
-  skipText: {
-    color: theme.colors.onScrim,
   },
 }));

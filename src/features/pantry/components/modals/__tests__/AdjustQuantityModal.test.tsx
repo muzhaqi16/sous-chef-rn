@@ -6,6 +6,10 @@ import { t } from '#/i18n';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/AdjustQuantityModal.generated';
 import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
@@ -114,14 +118,14 @@ jest.mock('#components/molecules/FormattedItemSubtitle', () => {
   return {
     FormattedItemSubtitle: ({
       quantity,
-      unitSymbol,
+      unit,
     }: React.ComponentProps<
       typeof import('#components/molecules/FormattedItemSubtitle').FormattedItemSubtitle
     >) =>
       require('react').createElement(
         RN.Text,
         null,
-        `${quantity} ${unitSymbol || ''}`,
+        `${quantity} ${unit?.symbol || ''}`,
       ),
   };
 });
@@ -152,14 +156,15 @@ const reading = (
   unitId: string,
   symbol: string,
   type = UnitType.Weight,
-) => ({
-  __typename: 'MeasureReading',
-  value,
-  unitId,
-  symbol,
-  displayAsFraction: false,
-  type,
-});
+) =>
+  readingAsAbbreviation({
+    __typename: 'MeasureReading',
+    value,
+    unitId,
+    symbol,
+    displayAsFraction: false,
+    type,
+  });
 
 const measure = (
   value: number,
@@ -189,17 +194,22 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         quantity: 3,
         lastUsedAt: null,
         remainingNetWeight: null,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u1',
           symbol: 'cups',
           displayAsFraction: false,
-        },
+        }),
         netWeightUnit: null,
         displayAmount: {
           __typename: 'DisplayAmount',
           quantity: 3,
-          unit: { __typename: 'Unit', id: 'u1', symbol: 'cups' },
+          localizedSymbol: 'cups',
+          unit: asAbbreviation({
+            __typename: 'Unit',
+            id: 'u1',
+            symbol: 'cups',
+          }),
         },
         held: NO_READING,
         remaining: null,
@@ -214,16 +224,17 @@ function honeyCache() {
   const cache = makeCache({
     itemName: 'Honey',
     quantity: 1360.78,
-    unit: {
+    unit: asAbbreviation({
       __typename: 'Unit',
       id: 'u-g',
       symbol: 'g',
       displayAsFraction: false,
-    },
+    }),
     displayAmount: {
       __typename: 'DisplayAmount',
       quantity: 1360.78,
-      unit: { __typename: 'Unit', id: 'u-g', symbol: 'g' },
+      localizedSymbol: 'g',
+      unit: asAbbreviation({ __typename: 'Unit', id: 'u-g', symbol: 'g' }),
     },
     held: measure(
       1360.78,
@@ -304,12 +315,12 @@ describe('AdjustQuantityModal', () => {
     renderWithApollo(<AdjustQuantityModal {...defaultProps} />, {
       cache: makeCache({
         quantity: 0.33333334,
-        unit: {
+        unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u1',
           symbol: 'cups',
           displayAsFraction: true,
-        },
+        }),
       }),
     });
     expect(screen.getByDisplayValue('1/3')).toBeTruthy();

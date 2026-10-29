@@ -135,16 +135,17 @@ export const handleStoreRehydration = (
     state.preferredCurrency = recordCurrency;
   }
 
-  // Before `isHydrated`, so the first paint is in the user's language. Lazy —
-  // `#/i18n` pulls in `i18n/config`, which has load-time side effects.
-  const language = state?.language;
-  if (language && language !== 'en') {
-    void import('#/i18n')
-      .then(({ changeLanguage }) => {
-        void changeLanguage(language);
-      })
-      .catch(error => logger.warn('Loading the stored language failed', error));
-  }
+  // Before `isHydrated`, so the first paint is in the user's language: their
+  // pick, else the device's. The device's is never stored, so it is followed
+  // until the user picks. Applied even when it is `en`, the starting language:
+  // the cache may hold answers from a launch in another. Lazy — `i18n/config`
+  // has load-time side effects.
+  const picked = state?.language;
+  void import('#/i18n')
+    .then(({ changeLanguage, deviceAppLanguage }) =>
+      changeLanguage(picked ?? deviceAppLanguage()),
+    )
+    .catch(error => logger.warn('Applying the app language failed', error));
 
   void hydrateSessionTokensThenFinish(state);
 

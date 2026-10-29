@@ -1199,7 +1199,40 @@ function mergeOverSchema(
       report,
     );
   }
+  labelAsStated(merged, override as Record<string, unknown>);
   return merged;
+}
+
+/**
+ * A unit stated by its symbol or name alone reads as an abbreviation reads in
+ * English: its label is what was stated, singular and plural; an amount reads
+ * its unit's. Left to the schema it would read "mock-string"; a test of a
+ * localized label states the label itself.
+ */
+function labelAsStated(
+  merged: Record<string, unknown>,
+  stated: Record<string, unknown>,
+): void {
+  const unstated = (label: string) => label in merged && !(label in stated);
+  const fillForms = (label: string, text: unknown) => {
+    const forms = merged[label];
+    if (typeof text !== 'string' || !unstated(label)) return;
+    if (forms && typeof forms === 'object') {
+      merged[label] = { ...forms, one: text, other: text };
+    }
+  };
+  const { symbol, name, unit } = stated;
+  if (typeof symbol === 'string' && unstated('localizedSymbol')) {
+    merged.localizedSymbol = symbol;
+  }
+  fillForms('localizedSymbolForms', symbol);
+  fillForms('localizedNameForms', name);
+  // An amount or a reading: its own short form beside its unit.
+  const unitSymbol =
+    unit && typeof unit === 'object' && 'symbol' in unit ? unit.symbol : null;
+  if (typeof unitSymbol === 'string' && unstated('localizedSymbol')) {
+    merged.localizedSymbol = unitSymbol;
+  }
 }
 
 // The client adds `__typename` to every selection set before it sends an

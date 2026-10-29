@@ -10,6 +10,10 @@ fragment PantryItemReaders on PantryItem {
   condition
   consumeUnit {
     id
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
@@ -20,9 +24,14 @@ fragment PantryItemReaders on PantryItem {
   costPerUnit
   createdAt
   displayAmount {
+    localizedSymbol
     quantity
     unit {
       id
+      localizedSymbolForms {
+        one
+        other
+      }
       symbol
     }
   }
@@ -32,6 +41,10 @@ fragment PantryItemReaders on PantryItem {
     commonFractions
     conversionFactor
     hasStandardCountFactor
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
     type
@@ -85,12 +98,20 @@ fragment PantryItemReaders on PantryItem {
   netWeight
   netWeightUnit {
     id
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
   packageBreakdown {
     contentUnit {
       id
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -101,6 +122,10 @@ fragment PantryItemReaders on PantryItem {
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -115,6 +140,10 @@ fragment PantryItemReaders on PantryItem {
   pantryId
   portionUnit {
     id
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
@@ -134,6 +163,10 @@ fragment PantryItemReaders on PantryItem {
   quantityBreakdown {
     contentUnit {
       id
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -142,6 +175,10 @@ fragment PantryItemReaders on PantryItem {
     remainingWeight
     remainingWeightUnit {
       id
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -169,6 +206,10 @@ fragment PantryItemReaders on PantryItem {
   unit {
     id
     displayAsFraction
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
     type

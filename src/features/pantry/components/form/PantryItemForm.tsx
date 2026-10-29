@@ -48,10 +48,7 @@ import {
   type PageName,
 } from '#features/catalog/ui/AddItemForm/fields';
 import { formatNumberForInput } from '#/utils/formatters/number';
-import {
-  formatQuantityForInput,
-  getUnitDisplayText,
-} from '#/utils/formatQuantity';
+import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import type { PantryItemForm_PantryItemFragment } from './PantryItemForm.generated';
@@ -142,13 +139,13 @@ const packageSizeFields = (
   if (reading && reading.unitId !== item.unit.id) {
     return {
       netWeight: formatNumberForInput(reading.value),
-      netWeightUnit: reading.symbol,
+      netWeightUnit: unitLabel(reading),
       netWeightUnitId: reading.unitId,
     };
   }
   return {
     netWeight: formatNumberForInput(item.netWeight),
-    netWeightUnit: getUnitDisplayText(item.netWeightUnit),
+    netWeightUnit: unitLabel(item.netWeightUnit),
     netWeightUnitId: item.netWeightUnit?.id ?? '',
   };
 };
@@ -159,12 +156,12 @@ const formValuesFromItem = (
 ): PantryItemFormData => ({
   itemName: item.itemName,
   quantityInput: formatQuantityForInput(editedAmount(item).quantity) || '1',
-  unit: editedAmount(item).unit.symbol,
+  unit: unitLabel(editedAmount(item).unit),
   minQuantity: decimalQuantityInput(item.minQuantity),
   restockQuantity: decimalQuantityInput(item.restockQuantity),
   brand: item.brand?.name ?? '',
   ...packageSizeFields(item, system),
-  consumeUnit: getUnitDisplayText(item.consumeUnit),
+  consumeUnit: unitLabel(item.consumeUnit),
   consumeUnitId: item.consumeUnit?.id ?? '',
   storageState: item.storageState,
   condition: item.condition,
@@ -321,8 +318,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     setValue('netWeightUnitId', unitId ?? '', { shouldDirty: true });
     revalidateNetWeight();
   };
-
-  const item = existingPantryItem;
 
   const unitChange = usePantryUnitChange();
 
@@ -507,7 +502,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
               onUnitSelected={handleUnitSelected}
               testID={pantryTestIDs.editItemQuantityInput}
               unitTestID={pantryTestIDs.editItemUnitPicker}
-              unitSymbol={item?.unit.symbol}
             />
 
             <CollapsibleSection

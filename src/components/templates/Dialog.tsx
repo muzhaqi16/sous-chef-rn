@@ -1,5 +1,5 @@
-import React from 'react';
-import { ScrollView, View } from 'react-native';
+import React, { useEffect } from 'react';
+import { BackHandler, ScrollView, View } from 'react-native';
 import { KeyboardAvoidingView } from 'react-native-keyboard-controller';
 import { StyleSheet } from 'react-native-unistyles';
 import { Modal } from '#components/atoms/themedComponents';
@@ -14,6 +14,14 @@ interface DialogProps {
   onRequestClose: () => void;
   /** A `DialogBody`, optionally followed by a `DialogFooter`. */
   children: React.ReactNode;
+  /**
+   * Draws over what its host renders before it, not in a native Modal: iOS
+   * presents a Modal from the root view controller, refuses while a screen or
+   * alert is presented there, and RN never asks again. For a dialog that must
+   * not be lost, mounted above navigation by a host that hides what it covers
+   * from screen readers.
+   */
+  inTree?: boolean;
 }
 
 /**
@@ -26,15 +34,21 @@ export const Dialog: React.FC<DialogProps> = ({
   visible,
   onRequestClose,
   children,
-}) => (
-  <Modal
-    visible={visible}
-    transparent
-    animationType="fade"
-    onRequestClose={onRequestClose}
-    statusBarTranslucent
-    navigationBarTranslucent
-  >
+  inTree = false,
+}) => {
+  useEffect(() => {
+    if (!inTree || !visible) return;
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        onRequestClose();
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [inTree, visible, onRequestClose]);
+
+  const surface = (
     <View style={styles.scrim}>
       {/* Reanimated drives this node's paddingBottom, so it takes no themed style. */}
       <KeyboardAvoidingView behavior="padding" style={styles.fill}>
@@ -43,8 +57,29 @@ export const Dialog: React.FC<DialogProps> = ({
         </View>
       </KeyboardAvoidingView>
     </View>
-  </Modal>
-);
+  );
+
+  if (inTree) {
+    return visible ? (
+      <View style={styles.overlay} accessibilityViewIsModal>
+        {surface}
+      </View>
+    ) : null;
+  }
+
+  return (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onRequestClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+    >
+      {surface}
+    </Modal>
+  );
+};
 
 /** Scrolls when the keyboard or a large text size leaves too little room. */
 export const DialogBody: React.FC<{ children: React.ReactNode }> = ({
@@ -66,6 +101,9 @@ export const DialogFooter: React.FC<{ children: React.ReactNode }> = ({
 }) => <View style={styles.footer}>{children}</View>;
 
 const styles = StyleSheet.create((theme, rt) => ({
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+  },
   scrim: {
     flex: 1,
     backgroundColor: theme.colors.overlays.medium,
@@ -73,8 +111,8 @@ const styles = StyleSheet.create((theme, rt) => ({
   fill: {
     flex: 1,
   },
-  // The Modal is full-screen (`statusBarTranslucent`), so it clears the safe
-  // area itself.
+  // Full-screen either way (a `statusBarTranslucent` Modal, or the edge-to-edge
+  // root an in-tree host sits in), so it clears the safe area itself.
   centre: {
     flex: 1,
     justifyContent: 'center',

@@ -28,6 +28,7 @@ import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
+import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -391,7 +392,11 @@ describe('createQueueLink', () => {
             symbol
           }
         `,
-        data: { __typename: 'Unit', id: 'unit-1', symbol: 'tbsp' },
+        data: asAbbreviation({
+          __typename: 'Unit',
+          id: 'unit-1',
+          symbol: 'tbsp',
+        }),
       });
       const operation = makeOperation({
         query: UpdateShoppingListItemDocument,

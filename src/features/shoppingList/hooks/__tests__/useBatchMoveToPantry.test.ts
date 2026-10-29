@@ -11,6 +11,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
+import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+
+jest.mock('#/domain/reviewPrompt');
 
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
@@ -147,6 +150,8 @@ function cacheWithPurchasedRows(
 }
 
 describe('useBatchMoveToPantry', () => {
+  beforeEach(() => jest.mocked(askForReviewAfterSuccess).mockClear());
+
   it('returns batchMoveToPantry function and loading state', () => {
     const { result } = renderHookWithApollo(() =>
       useBatchMoveToPantry({ currentListId: 'list-1', purchasedItems: [] }),
@@ -214,6 +219,7 @@ describe('useBatchMoveToPantry', () => {
     });
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Moved 3 items to pantry');
+    expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
   });
 
   it('shows success toast with singular item text', async () => {
@@ -505,6 +511,7 @@ describe('useBatchMoveToPantry', () => {
 
     expect(mockAlert).toHaveBeenCalled();
     expect(mockOnSuccess).not.toHaveBeenCalled();
+    expect(askForReviewAfterSuccess).not.toHaveBeenCalled();
   });
 
   /**
@@ -538,6 +545,7 @@ describe('useBatchMoveToPantry', () => {
 
     expect(mockOnSuccess).toHaveBeenCalled();
     expect(mockAlert).not.toHaveBeenCalled();
+    expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
     // The client cannot know how many rows the server will move: the input
     // carries only the list id, while `purchasedItems` is the slice on screen.
     // Claiming a count here was right only when the whole list was loaded.

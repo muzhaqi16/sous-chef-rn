@@ -29,6 +29,10 @@ query RecipeSubstitutes(
               forUnit {
                 id
                 symbol
+                localizedSymbolForms {
+                  one
+                  other
+                }
               }
             }
             scaled
@@ -37,6 +41,10 @@ query RecipeSubstitutes(
               unit {
                 id
                 symbol
+                localizedSymbolForms {
+                  one
+                  other
+                }
               }
               inPantry
               item {
@@ -50,9 +58,14 @@ query RecipeSubstitutes(
                   id
                   name
                   symbol
+                  localizedSymbolForms {
+                    one
+                    other
+                  }
                 }
                 displayAmount {
                   quantity
+                  localizedSymbol
                   unit {
                     id
                     symbol
