@@ -208,6 +208,7 @@ function buildItem(
         overrides.quantity ??
         2,
       localizedSymbol: overrides.shown?.symbol ?? overrides.unitSymbol ?? 'gal',
+      fraction: null,
       unit: asAbbreviation({
         __typename: 'Unit',
         id: overrides.shown ? 'unit-shown' : 'unit-1',

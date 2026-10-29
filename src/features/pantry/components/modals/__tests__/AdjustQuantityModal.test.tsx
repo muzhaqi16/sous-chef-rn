@@ -205,6 +205,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
           __typename: 'DisplayAmount',
           quantity: 3,
           localizedSymbol: 'cups',
+          fraction: null,
           unit: asAbbreviation({
             __typename: 'Unit',
             id: 'u1',
@@ -234,6 +235,7 @@ function honeyCache() {
       __typename: 'DisplayAmount',
       quantity: 1360.78,
       localizedSymbol: 'g',
+      fraction: null,
       unit: asAbbreviation({ __typename: 'Unit', id: 'u-g', symbol: 'g' }),
     },
     held: measure(

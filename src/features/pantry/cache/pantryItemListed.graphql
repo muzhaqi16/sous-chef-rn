@@ -11,6 +11,7 @@ fragment pantryItem_listed on PantryItem {
   displayAmount {
     quantity
     localizedSymbol
+    fraction
     unit {
       id
       symbol

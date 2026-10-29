@@ -320,6 +320,7 @@ query MatchRecipeIngredientsToPantry(
       displayAmount {
         quantity
         localizedSymbol
+        fraction
         unit {
           id
           symbol
@@ -341,6 +342,7 @@ query MatchRecipeIngredientsToPantry(
       displayAmount {
         quantity
         localizedSymbol
+        fraction
         unit {
           id
           symbol

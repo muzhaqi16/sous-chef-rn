@@ -193,16 +193,14 @@ describe('formatHeldAmount', () => {
     metric: { value: 0, unitId: 'unit-none', symbol: '' },
     imperial: { value: 0, unitId: 'unit-none', symbol: '' },
   };
-  const liters = (quantity: number, displayAsFraction = false) => ({
-    displayAmount: { quantity, unit: { id: 'u-l', symbol: 'L' } },
-    unit: { id: 'u-l', displayAsFraction },
+  const liters = (quantity: number, fraction: string | null = null) => ({
+    displayAmount: { quantity, fraction, unit: { id: 'u-l', symbol: 'L' } },
     held: NO_READING,
   });
 
   it('reads it in the user’s system while the reading describes it', () => {
     const weighed = {
       displayAmount: { quantity: 100, unit: { id: 'u-g', symbol: 'g' } },
-      unit: { id: 'u-g', displayAsFraction: false },
       held: {
         value: 100,
         unitId: 'u-g',
@@ -230,7 +228,6 @@ describe('formatHeldAmount', () => {
       formatHeldAmount(
         {
           displayAmount: { quantity: 1, unit: { id: 'u-doz', symbol: 'doz' } },
-          unit: { id: 'u-pc', displayAsFraction: false },
           held: NO_READING,
         },
         UnitSystem.Metric,
@@ -238,10 +235,11 @@ describe('formatHeldAmount', () => {
     ).toBe('1 doz');
   });
 
-  it('writes a cooking fraction for a unit that shows them', () => {
-    expect(formatHeldAmount(liters(1.25, true), UnitSystem.Metric)).toBe(
+  it('writes a fraction where the server shows one, else a number', () => {
+    expect(formatHeldAmount(liters(1.25, '¼'), UnitSystem.Metric)).toBe(
       '1 1/4 L',
     );
+    expect(formatHeldAmount(liters(1.25), UnitSystem.Metric)).toBe('1.25 L');
   });
 
   // The short form an Italian reader sees is a name, and agrees with the count.
@@ -249,17 +247,28 @@ describe('formatHeldAmount', () => {
     const cans = (quantity: number) => ({
       displayAmount: {
         quantity,
+        fraction: null,
         unit: {
           id: 'u-can',
           symbol: 'can',
           localizedSymbolForms: { one: 'lattina', other: 'lattine' },
         },
       },
-      unit: { id: 'u-can', displayAsFraction: false },
       held: NO_READING,
     });
     expect(formatHeldAmount(cans(3), UnitSystem.Metric)).toBe('3 lattine');
     expect(formatHeldAmount(cans(1), UnitSystem.Metric)).toBe('1 lattina');
+    // A part of one reads singular only as a fraction.
+    expect(formatHeldAmount(cans(0.5), UnitSystem.Metric)).toBe('0.5 lattine');
+    expect(
+      formatHeldAmount(
+        {
+          ...cans(0.5),
+          displayAmount: { ...cans(0.5).displayAmount, fraction: '½' },
+        },
+        UnitSystem.Metric,
+      ),
+    ).toBe('1/2 lattina');
   });
 
   it('rounds to three decimals for a unit that does not', () => {

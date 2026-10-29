@@ -4758,9 +4758,9 @@ type DisplayAmount {
   fraction: String
   """
   The unit's short form in the request's language, agreeing with quantity as
-  MeasureReading.localizedSymbol agrees with its value: 3 lattine, ½
-  lattina; ¼ doz in English, where doz is an abbreviation, ¼ dozzina in
-  Italian. So a held amount needs no unit selection.
+  it is shown: 3 lattine; a part of one singular as a fraction (½ dozzina,
+  ¼ doz in English, where doz is an abbreviation), plural as a decimal (0.5
+  lattine). So a held amount needs no unit selection.
   """
   localizedSymbol: String!
   """The amount in unit: 0.25 for a quarter dozen."""
@@ -13155,14 +13155,17 @@ type PlatformStat {
 """
 A text's two forms by plural category. Pick one per number with the
 language's plural rules (Intl.PluralRules): one where they read the number
-as one, and for any part of one (½ cup); other for every other number, zero
-included. A language whose rules have further categories (few, many) takes
-other for them, as every shipped language does.
+as one, and for a part of one shown as a fraction (½ cup); other for every
+other number: the same part shown as a decimal (0.5 cups), and zero. A
+language whose rules have further categories (few, many) takes other for
+them, as every shipped language does.
 """
 type PluralForms {
-  """The form for one, and for any part of one: 1 can, ½ cup"""
+  """
+  The form for one, and for a part of one shown as a fraction: 1 can, ½ cup
+  """
   one: String!
-  """The form for every other number: 0 cans, 2 cans"""
+  """The form for every other number: 0 cans, 0.5 cups, 2 cans"""
   other: String!
 }
 
@@ -19564,9 +19567,10 @@ type Unit {
   isMetric: Boolean!
   """
   The unit's name in the request's language (Accept-Language), singular or
-  plural as that language's plural rules read quantity, and singular for any
-  part of one (½ cup) or without one. English when the language has no name
-  for the unit; a household's own unit keeps its name.
+  plural as that language's plural rules read quantity, and singular for a
+  part of one where this unit shows amounts as fractions (½ cup, as
+  displayAsFraction says) or without one. English when the language has no
+  name for the unit; a household's own unit keeps its name.
   """
   localizedName(
     """How many: picks singular or plural; omitted, the singular"""

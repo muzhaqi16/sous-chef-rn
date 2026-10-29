@@ -14,6 +14,7 @@ fragment writeHeldStock_pantryItem on PantryItem {
   displayAmount {
     quantity
     localizedSymbol
+    fraction
     unit {
       id
       symbol
@@ -41,6 +42,20 @@ fragment writeHeldStock_shownIn on PantryItem {
     baseUnitId
     conversionFactor
     commonFractions
+  }
+}
+
+# Whether the units an amount may be shown in show fractions, read (never
+# written, partial allowed) to state `displayAmount.fraction` as the server will.
+fragment writeHeldStock_notation on PantryItem {
+  id
+  unit {
+    id
+    displayAsFraction
+  }
+  displayUnit {
+    id
+    displayAsFraction
   }
 }
 

@@ -23,10 +23,15 @@ type ShownAmount = NonNullable<
   EditableMatch['match']['matchedPantryItem']
 >['displayAmount'];
 
-const shown = (quantity: number, symbol: string): ShownAmount => ({
+const shown = (
+  quantity: number,
+  symbol: string,
+  fraction: string | null = null,
+): ShownAmount => ({
   __typename: 'DisplayAmount',
   quantity,
   localizedSymbol: symbol,
+  fraction,
   unit: { __typename: 'Unit', id: symbol, symbol },
 });
 
@@ -374,7 +379,7 @@ describe('IngredientMatchRow', () => {
     expect(screen.getByText(/White Sugar/)).toBeTruthy();
   });
 
-  it('renders the matched pantry quantity as a cooking fraction', () => {
+  it('renders the matched pantry quantity as a fraction where the server shows one', () => {
     const matched = makeMatch('Sugar', {
       matchedPantryItem: {
         __typename: 'PantryItem',
@@ -386,7 +391,7 @@ describe('IngredientMatchRow', () => {
           name: 'cup',
           symbol: 'cups',
         }),
-        displayAmount: shown(1.25, 'cups'),
+        displayAmount: shown(1.25, 'cups', '¼'),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);

@@ -7,14 +7,16 @@ import {
 import {
   InTrackingUnit_EnteredUnitFragmentDoc,
   InTrackingUnit_PantryItemFragmentDoc,
+  WriteHeldStock_NotationFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
   WriteHeldStock_ShownInFragmentDoc,
   type InTrackingUnit_EnteredUnitFragment,
   type InTrackingUnit_PantryItemFragment,
+  type WriteHeldStock_NotationFragment,
   type WriteHeldStock_PantryItemFragment,
   type WriteHeldStock_ShownInFragment,
 } from './stock.generated';
-import { unitLabel } from '#/utils/formatQuantity';
+import { statedAmount } from '#/utils/formatQuantity';
 
 type ShownAmount = WriteHeldStock_PantryItemFragment['displayAmount'];
 type CountedIn = WriteHeldStock_PantryItemFragment['unit'];
@@ -32,11 +34,24 @@ function shownAmount(
     fragmentName: 'writeHeldStock_shownIn',
   })?.displayUnit;
   const amount = shownStock(heldQuantity, unit, shownIn);
+  const notation = cache.readFragment<WriteHeldStock_NotationFragment>({
+    id,
+    fragment: WriteHeldStock_NotationFragmentDoc,
+    fragmentName: 'writeHeldStock_notation',
+    returnPartialData: true,
+  });
+  const shownInUnit = [notation?.unit, notation?.displayUnit].find(
+    candidate => candidate?.id === amount.unit.id,
+  );
   return {
     __typename: 'DisplayAmount',
     quantity: amount.quantity,
-    // The server's pick by the same rule, until it answers.
-    localizedSymbol: unitLabel(amount.unit, { quantity: amount.quantity }),
+    // As the server states it, by the same rule, until it answers.
+    ...statedAmount(
+      amount.quantity,
+      amount.unit,
+      shownInUnit?.displayAsFraction,
+    ),
     unit: amount.unit,
   };
 }

@@ -48,8 +48,11 @@ export const FormattedItemSubtitle: React.FC<FormattedItemSubtitleProps> = ({
   const hasQuantity = displayQuantity != null && displayQuantity >= 0;
   const hasWeight = displayWeight != null && displayWeight > 0;
   const hasUnit = unitLabel(unit) !== '';
-  // The weight's unit agrees with the weight.
-  const weightUnit = unitLabel(unit, { quantity: displayWeight });
+  // The weight's unit agrees with the weight, written as a plain number.
+  const weightUnit = unitLabel(unit, {
+    quantity: displayWeight,
+    notation: 'decimal',
+  });
 
   // Case 1: Both quantity and weight
   if (hasQuantity && hasWeight && hasUnit) {

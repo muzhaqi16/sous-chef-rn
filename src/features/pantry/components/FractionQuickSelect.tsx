@@ -48,7 +48,10 @@ export const FractionQuickSelect: React.FC<FractionQuickSelectProps> = ({
             selectedValue != null &&
             Math.abs(selectedValue - value) < TOLERANCE;
           const label = formatLabel(value, displayAsFraction);
-          const unitText = unitLabel(unit, { quantity: value });
+          const unitText = unitLabel(unit, {
+            quantity: value,
+            notation: displayAsFraction ? 'mixed' : 'decimal',
+          });
           const chipLabel = unitText ? `${label} ${unitText}` : label;
 
           return (

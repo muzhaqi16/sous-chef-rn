@@ -113,6 +113,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
       __typename: 'DisplayAmount',
       quantity: item.heldQuantity ?? item.quantity ?? 1,
       localizedSymbol: 'pc',
+      fraction: null,
       unit: asAbbreviation({
         __typename: 'Unit',
         id: 'unit-piece',

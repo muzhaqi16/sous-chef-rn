@@ -150,6 +150,11 @@ export interface UnitLabelOptions {
   form?: 'symbol' | 'name';
   /** The quantity the label follows, which picks its plural. */
   quantity?: number | null;
+  /**
+   * How that quantity is written, as `formatQuantityForDisplay` takes it: a
+   * part of one reads singular only as a fraction ("1/2 cup", "0.5 cups").
+   */
+  notation?: QuantityNotation;
 }
 
 // One per language: building a PluralRules parses locale data. `null` records
@@ -157,9 +162,17 @@ export interface UnitLabelOptions {
 const pluralRulesByLanguage = new Map<string, Intl.PluralRules | null>();
 
 // The API's own pick (PluralForms): one where the language reads the number as
-// one, and for any part of one ("1/2 cup").
-function readsAsOne(quantity: number | null | undefined): boolean {
-  if (quantity == null || (quantity > 0 && quantity < 1)) return true;
+// one, and for a part of one written as a fraction. A number reads by its size
+// as written, to three places: -1 is one, 0.0001 is zero.
+function readsAsOne(
+  quantity: number | null | undefined,
+  notation: QuantityNotation,
+): boolean {
+  if (quantity == null) return true;
+  const size = Number(Math.abs(quantity).toFixed(MAX_DECIMALS));
+  if (size > 0 && size < 1) {
+    if (formatQuantityAsFraction(size, notation).includes('/')) return true;
+  }
   const language = getResolvedLanguage();
   let rules = pluralRulesByLanguage.get(language);
   if (rules === undefined) {
@@ -170,7 +183,7 @@ function readsAsOne(quantity: number | null | undefined): boolean {
     }
     pluralRulesByLanguage.set(language, rules);
   }
-  return rules ? rules.select(quantity) === 'one' : quantity === 1;
+  return rules ? rules.select(size) === 'one' : size === 1;
 }
 
 /** Whether a unit holds the forms its label is picked from. */
@@ -184,11 +197,11 @@ export const carriesLabelForms = (unit: UnitLabelSource): boolean =>
  */
 export function unitLabel(
   unit: UnitLabelSource | null | undefined,
-  { form = 'symbol', quantity }: UnitLabelOptions = {},
+  { form = 'symbol', quantity, notation = 'mixed' }: UnitLabelOptions = {},
 ): string {
   if (!unit) return '';
   // A blank plural reads as the localized singular before the canonical one.
-  const plural = !readsAsOne(quantity);
+  const plural = !readsAsOne(quantity, notation);
   const label =
     form === 'name'
       ? firstNonBlank(
@@ -213,7 +226,7 @@ export function formatQuantityWithUnit(
   unit: UnitLabelSource | null | undefined,
   options: QuantityDisplayOptions = {},
 ): string {
-  const label = unitLabel(unit, { quantity });
+  const label = unitLabel(unit, { quantity, notation: options.notation });
   return `${formatQuantityForDisplay(quantity, options)} ${label}`.trim();
 }
 
@@ -266,51 +279,77 @@ export function formatQuantityDisplay(
 }
 
 /**
- * A held amount, as `formatQuantityDisplay` shows it, in the short form the
- * server agreed with its quantity: "3 lattine". A blank one (an optimistic
- * amount) reads its unit.
+ * A held amount, as `formatQuantityDisplay` shows it, written as the server
+ * shows it (a fraction only where it states one) in the short form it agreed
+ * with that: "3 lattine", "0.5 lattine", "1/2 dozzina". A blank short form (an
+ * optimistic amount) reads its unit.
  */
 export function formatAmountDisplay(amount: HeldAmount): string {
+  const notation = heldNotation(amount);
   return displayPhrase(
     amount.quantity,
     amount.unit?.symbol,
-    amountLabel(amount),
+    amountLabel(amount, notation),
+    notation,
   );
 }
 
 interface HeldAmount {
   quantity: number;
   localizedSymbol?: string | null;
+  /** The server's: null where it shows the amount as a number. */
+  fraction?: string | null;
   unit?: UnitLabelSource | null;
 }
 
-/**
- * A held amount as `formatQuantityWithUnit` writes a quantity, in the short
- * form the server agreed with it: "3 lattine".
- */
-export function formatAmountWithUnit(
-  amount: HeldAmount,
-  options: QuantityDisplayOptions = {},
-): string {
-  const figure = formatQuantityForDisplay(amount.quantity, options);
-  return `${figure} ${amountLabel(amount)}`.trim();
+/** A held amount as `formatQuantityWithUnit` writes a quantity: "3 lattine". */
+export function formatAmountWithUnit(amount: HeldAmount): string {
+  const notation = heldNotation(amount);
+  const figure = formatQuantityForDisplay(amount.quantity, { notation });
+  return `${figure} ${amountLabel(amount, notation)}`.trim();
 }
 
+/**
+ * A held amount as the server states it, for a write before it answers: its
+ * fraction where its unit shows one, and the short form agreeing with that.
+ */
+export function statedAmount(
+  quantity: number,
+  unit: UnitLabelSource,
+  displayAsFraction: boolean | null | undefined,
+): { fraction: string | null; localizedSymbol: string } {
+  const notation = resolveQuantityNotation(null, displayAsFraction);
+  const figure = formatQuantityAsFraction(Math.abs(quantity), notation);
+  const fraction = figure.includes('/') ? figure.split(' ').pop() : null;
+  return {
+    fraction: fraction ?? null,
+    localizedSymbol: unitLabel(unit, { quantity, notation }),
+  };
+}
+
+// Unknown (no `fraction` read) keeps the cooking form every quantity takes.
+const heldNotation = (amount: HeldAmount): QuantityNotation =>
+  amount.fraction === null ? 'decimal' : 'mixed';
+
 /** The short form a held amount shows: the server's, else its unit's. */
-function amountLabel(amount: HeldAmount): string {
+function amountLabel(amount: HeldAmount, notation: QuantityNotation): string {
   const { quantity, unit } = amount;
-  return firstNonBlank(amount.localizedSymbol) ?? unitLabel(unit, { quantity });
+  return (
+    firstNonBlank(amount.localizedSymbol) ??
+    unitLabel(unit, { quantity, notation })
+  );
 }
 
 function displayPhrase(
   quantity: number,
   symbol: string | null | undefined,
   label: string,
+  notation?: QuantityNotation,
 ): string {
   if (quantity >= 1000 && symbol && (symbol === 'g' || isMillilitre(symbol))) {
     return `${formatQuantity(quantity / 1000)} ${symbol === 'g' ? 'kg' : 'L'}`;
   }
-  return `${formatQuantityForDisplay(quantity)} ${label}`.trim();
+  return `${formatQuantityForDisplay(quantity, { notation })} ${label}`.trim();
 }
 
 /** A package size, as `formatQuantityDisplay` shows it; null when none is stated. */

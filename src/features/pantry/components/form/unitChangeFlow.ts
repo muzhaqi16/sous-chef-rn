@@ -92,9 +92,7 @@ const amountText = (quantity: number | null | undefined, unit: PreviewUnit) =>
 const shownAfter = (preview: UnitChangePreview) => {
   const after = preview.displayAmountAfter;
   if (!after) return amountText(preview.quantityAfter, preview.toUnit);
-  return formatAmountWithUnit(after, {
-    notation: after.fraction ? 'mixed' : 'decimal',
-  });
+  return formatAmountWithUnit(after);
 };
 
 const beforeAfter = (

@@ -124,6 +124,7 @@ export function pantryItemData(
         __typename: 'DisplayAmount',
         quantity: held,
         localizedSymbol: trackingUnit.symbol,
+        fraction: null,
         unit: asAbbreviation({
           __typename: 'Unit',
           id: trackingUnit.id,

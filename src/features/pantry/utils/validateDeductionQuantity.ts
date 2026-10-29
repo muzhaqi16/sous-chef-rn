@@ -17,6 +17,7 @@ function alertExceeds(
   actionVerb: 'consume' | 'waste',
   cap: ShownQuantity,
 ): void {
+  const notation = resolveQuantityNotation(null, cap.displayAsFraction);
   alertService.alert(
     t('labels.error'),
     t(
@@ -24,10 +25,8 @@ function alertExceeds(
         ? 'deduction.exceedsAvailableWaste'
         : 'deduction.exceedsAvailableConsume',
       {
-        amount: formatQuantityForDisplay(cap.quantity, {
-          notation: resolveQuantityNotation(null, cap.displayAsFraction),
-        }),
-        unit: unitLabel(cap.unit, { quantity: cap.quantity }),
+        amount: formatQuantityForDisplay(cap.quantity, { notation }),
+        unit: unitLabel(cap.unit, { quantity: cap.quantity, notation }),
       },
     ),
   );

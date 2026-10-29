@@ -18,6 +18,7 @@ fragment PantryActionModal_pantryItem on PantryItem {
   displayAmount {
     quantity
     localizedSymbol
+    fraction
     unit {
       id
       symbol
