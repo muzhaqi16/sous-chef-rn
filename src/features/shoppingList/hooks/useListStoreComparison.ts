@@ -8,7 +8,7 @@ import {
 type Comparison = ListStoreComparisonQuery['shoppingListStoreComparison'];
 type Candidate = Comparison['candidates'][number];
 
-/** A candidate as the section shows it: the branch, or the chain when chains are compared. */
+/** A candidate as the section shows it: a branch. */
 export type StoreComparisonCandidate = Pick<
   Candidate,
   | 'estimatedTotal'
@@ -22,7 +22,7 @@ export type StoreComparisonCandidate = Pick<
   key: string;
   name: string;
   address: string | null;
-  /** The chain a branch fills its gaps from; null when chains are compared. */
+  /** The chain the branch fills its gaps from. */
   chainName: string | null;
 };
 
@@ -42,15 +42,13 @@ function toCandidate({
   chain,
   ...asAnswered
 }: Candidate): StoreComparisonCandidate | null {
-  const branch = scope === PriceComparisonScope.Store;
-  const named = branch ? store : chain;
-  if (!named) return null;
+  if (!store) return null;
   return {
     ...asAnswered,
-    key: named.id,
-    name: named.name,
-    address: branch ? store?.address ?? null : null,
-    chainName: branch ? chain?.name ?? null : null,
+    key: store.id,
+    name: store.name,
+    address: store.address ?? null,
+    chainName: chain?.name ?? null,
   };
 }
 
@@ -69,16 +67,15 @@ function toComparison(comparison: Comparison): StoreComparison {
   };
 }
 
-/** Where a list is cheapest, by branch or by chain; null until answered. */
-export function useListStoreComparison(
-  listId: string | undefined,
-  scope: PriceComparisonScope,
-) {
+/** Where a list is cheapest, by branch; null until answered. */
+export function useListStoreComparison(listId: string | undefined) {
   const { data, loading, error } = useQuery(
     ListStoreComparisonDocument,
     listId
       ? {
-          variables: { input: { listId, scope } },
+          variables: {
+            input: { listId, scope: PriceComparisonScope.Store },
+          },
           // Prices move as items are ticked: each open asks again.
           fetchPolicy: 'cache-and-network',
           // A preview: the resync would spend the 30-a-minute budget.

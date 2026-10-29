@@ -297,23 +297,23 @@ describe('useUpdateShoppingList', () => {
             __typename: 'UpdateShoppingListPayload',
             shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
             storeComparison: {
-              scope: PriceComparisonScope.Chain,
+              scope: PriceComparisonScope.Store,
               comparableLines: 7,
             },
           },
         },
-        PriceComparisonScope.Chain,
+        PriceComparisonScope.Store,
       );
 
       expect(update.fired[0]).toMatchObject({
         withComparison: true,
-        comparisonScope: PriceComparisonScope.Chain,
+        comparisonScope: PriceComparisonScope.Store,
       });
       expect(
         cache.readQuery({
           query: ListStoreComparisonDocument,
           variables: {
-            input: { listId: 'list-1', scope: PriceComparisonScope.Chain },
+            input: { listId: 'list-1', scope: PriceComparisonScope.Store },
           },
         })?.shoppingListStoreComparison.comparableLines,
       ).toBe(7);

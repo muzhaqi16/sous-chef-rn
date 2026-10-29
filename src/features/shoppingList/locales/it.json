@@ -86,8 +86,6 @@
     "suggestedLinePriceSimilar": "≈ {{price}}, prodotti simili",
     "storeComparison": {
       "title": "Dove costa meno",
-      "scopeStores": "Negozi",
-      "scopeChains": "Catene",
       "yourStore": "Il tuo negozio",
       "notEnoughPrices": "Prezzi ancora insufficienti",
       "pricedHere_one": "{{count}} con prezzo qui",

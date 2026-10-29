@@ -4,7 +4,7 @@ import { useUser } from '#store/useAppStore';
 import { useDataState } from '#hooks/data/useDataState';
 import { toastService } from '#/services/toastService';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import type { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
+import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { listOwnershipOf } from '#features/shoppingList/utils/ownershipHelpers';
@@ -74,14 +74,13 @@ export function useListBudget(listId: string) {
   };
 
   // The comparison on screen comes back in the same answer as the store.
-  const pickStore = (
-    store: { id: string; name: string } | null,
-    comparisonShown: PriceComparisonScope,
-  ) => {
+  const pickStore = (store: { id: string; name: string } | null) => {
     if (store?.id === list?.targetStore?.id) return;
-    updateShoppingList(listId, { targetStore: store }, comparisonShown).catch(
-      reportFailure,
-    );
+    updateShoppingList(
+      listId,
+      { targetStore: store },
+      PriceComparisonScope.Store,
+    ).catch(reportFailure);
   };
 
   return {

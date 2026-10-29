@@ -3,11 +3,9 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { Loading } from '#components/molecules/Loading';
-import { ModeTabs } from '#components/molecules/ModeTabs';
 import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { useIsOnline } from '#store/useAppStore';
-import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
 import { formatCurrency } from '#/utils/formatters/number';
 import { formatRelativeToNow } from '#/utils/formatters/date';
 import {
@@ -17,23 +15,13 @@ import {
 } from '#features/shoppingList/hooks/useListStoreComparison';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
-const SCOPES = [PriceComparisonScope.Store, PriceComparisonScope.Chain];
-
-interface StoreComparisonSectionProps {
-  listId: string;
-  scope: PriceComparisonScope;
-  onScopeChange: (scope: PriceComparisonScope) => void;
-}
-
 /** Where the list's unbought items cost least, from recorded prices. */
-export const StoreComparisonSection: React.FC<StoreComparisonSectionProps> = ({
+export const StoreComparisonSection: React.FC<{ listId: string }> = ({
   listId,
-  scope,
-  onScopeChange,
 }) => {
   const { t } = useTranslation();
   const isOnline = useIsOnline();
-  const { comparison, loading, failed } = useListStoreComparison(listId, scope);
+  const { comparison, loading, failed } = useListStoreComparison(listId);
 
   const body = () => {
     if (loading) return <Loading size="small" />;
@@ -57,16 +45,6 @@ export const StoreComparisonSection: React.FC<StoreComparisonSectionProps> = ({
       <Text role="bodyStrong" style={commonStyles.settingsSectionTitle}>
         {t('shoppingListScreens.storeComparison.title')}
       </Text>
-      <ModeTabs
-        options={SCOPES}
-        value={scope}
-        onChange={onScopeChange}
-        formatLabel={value =>
-          value === PriceComparisonScope.Store
-            ? t('shoppingListScreens.storeComparison.scopeStores')
-            : t('shoppingListScreens.storeComparison.scopeChains')
-        }
-      />
       <View style={styles.body}>{body()}</View>
     </View>
   );

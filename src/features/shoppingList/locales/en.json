@@ -86,8 +86,6 @@
     "suggestedLinePriceSimilar": "≈ {{price}}, similar products",
     "storeComparison": {
       "title": "Where it's cheapest",
-      "scopeStores": "Stores",
-      "scopeChains": "Chains",
       "yourStore": "Your store",
       "notEnoughPrices": "Not enough prices yet",
       "pricedHere_one": "{{count}} priced here",

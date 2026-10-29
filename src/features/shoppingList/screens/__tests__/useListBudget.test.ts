@@ -239,17 +239,14 @@ describe('useListBudget', () => {
     const { result } = render({ operationMocks: [update.mock] });
 
     act(() => {
-      result.current.pickStore(
-        { id: 'store-1', name: 'Giant Eagle' },
-        PriceComparisonScope.Chain,
-      );
+      result.current.pickStore({ id: 'store-1', name: 'Giant Eagle' });
     });
 
     await waitFor(() =>
       expect(update.fired[0]).toMatchObject({
         input: { planning: { targetStoreId: 'store-1' } },
         withComparison: true,
-        comparisonScope: PriceComparisonScope.Chain,
+        comparisonScope: PriceComparisonScope.Store,
       }),
     );
     expect(result.current.list?.targetStore?.name).toBe('Giant Eagle');

@@ -86,8 +86,6 @@
     "suggestedLinePriceSimilar": "≈ {{price}}, productos similares",
     "storeComparison": {
       "title": "Dónde sale más barato",
-      "scopeStores": "Tiendas",
-      "scopeChains": "Cadenas",
       "yourStore": "Tu tienda",
       "notEnoughPrices": "Aún no hay suficientes precios",
       "pricedHere_one": "{{count}} con precio aquí",

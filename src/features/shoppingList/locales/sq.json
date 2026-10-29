@@ -86,8 +86,6 @@
     "suggestedLinePriceSimilar": "≈ {{price}}, produkte të ngjashme",
     "storeComparison": {
       "title": "Ku kushton më pak",
-      "scopeStores": "Dyqane",
-      "scopeChains": "Zinxhirë",
       "yourStore": "Dyqani yt",
       "notEnoughPrices": "Ende jo mjaft çmime",
       "pricedHere_one": "{{count}} me çmim këtu",

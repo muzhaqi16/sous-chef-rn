@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { fireEvent, screen } from '@testing-library/react-native';
+import React from 'react';
+import { screen } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
@@ -16,16 +16,8 @@ type Comparison = MockDataFor<
 >['shoppingListStoreComparison'];
 type Candidate = NonNullable<NonNullable<Comparison>['candidates']>[number];
 
-// The settings screen holds the scope, so a change of store restates it.
 function Section() {
-  const [scope, setScope] = useState(PriceComparisonScope.Store);
-  return (
-    <StoreComparisonSection
-      listId="list-1"
-      scope={scope}
-      onScopeChange={setScope}
-    />
-  );
+  return <StoreComparisonSection listId="list-1" />;
 }
 
 // The rest is completed from the SDL.
@@ -112,15 +104,13 @@ describe('StoreComparisonSection', () => {
     ).toBeTruthy();
   });
 
-  it('compares chains when asked', async () => {
+  it('compares store branches', async () => {
     const query = renderWith([]);
     await screen.findByText('Compares 10 items on this list.');
 
-    fireEvent.press(screen.getByText('Chains'));
-
-    expect(query.fired).toContainEqual({
-      input: { listId: 'list-1', scope: PriceComparisonScope.Chain },
-    });
+    expect(query.fired).toEqual([
+      { input: { listId: 'list-1', scope: PriceComparisonScope.Store } },
+    ]);
   });
 
   // The rest of Budget & prices reads from the device; this needs the server.

@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
-import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
 import { useTranslation } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -21,10 +20,6 @@ export const ListBudget: React.FC<StaticScreenProps<{ listId: string }>> = ({
   const { listId } = route.params;
   const { t } = useTranslation();
   const budget = useListBudget(listId);
-  // The comparison on screen, which a pick of store restates in its answer.
-  const [comparisonScope, setComparisonScope] = useState(
-    PriceComparisonScope.Store,
-  );
   const { list } = budget;
 
   return (
@@ -50,15 +45,9 @@ export const ListBudget: React.FC<StaticScreenProps<{ listId: string }>> = ({
           <StoreSection
             store={list.targetStore}
             canEdit={budget.canEdit}
-            onPick={store => {
-              budget.pickStore(store, comparisonScope);
-            }}
+            onPick={budget.pickStore}
           />
-          <StoreComparisonSection
-            listId={listId}
-            scope={comparisonScope}
-            onScopeChange={setComparisonScope}
-          />
+          <StoreComparisonSection listId={listId} />
         </>
       ) : null}
     </SubScreen>
