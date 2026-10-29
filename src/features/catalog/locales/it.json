@@ -78,7 +78,6 @@
     "allAdded": "Tutto aggiunto",
     "dismiss": "Ignora suggerimento",
     "dismissed": "{{name}} rimosso",
-    "undo": "Annulla",
     "dismissFailed": "Impossibile rimuovere il suggerimento",
     "undoFailed": "Impossibile annullare",
     "sections": {

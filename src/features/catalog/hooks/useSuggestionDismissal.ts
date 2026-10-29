@@ -87,7 +87,7 @@ export function useSuggestionDismissal<TRemoval>(
     );
     toastService.success(t('addItemSheet.dismissed', { name }), {
       action: {
-        label: t('addItemSheet.undo'),
+        label: t('labels.undo'),
         onPress: () => {
           void undo(itemId, removal, dismissed);
         },

@@ -78,7 +78,6 @@
     "allAdded": "Todo añadido",
     "dismiss": "Descartar sugerencia",
     "dismissed": "Se eliminó {{name}}",
-    "undo": "Deshacer",
     "dismissFailed": "No se pudo quitar la sugerencia",
     "undoFailed": "No se pudo deshacer",
     "sections": {

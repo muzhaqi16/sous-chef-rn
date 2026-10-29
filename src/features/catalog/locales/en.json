@@ -78,7 +78,6 @@
     "allAdded": "All added",
     "dismiss": "Dismiss suggestion",
     "dismissed": "Removed {{name}}",
-    "undo": "Undo",
     "dismissFailed": "Couldn't remove suggestion",
     "undoFailed": "Couldn't undo",
     "sections": {
