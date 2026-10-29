@@ -1,18 +1,9 @@
 import { useLazyQuery } from '@apollo/client/react';
-import type { PluralForms, UnitType } from '#/graphql/generated/schemaTypes';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { useCachedUnits, useIsOnline } from '#store/useAppStore';
+import type { CachedUnit as HeldUnit } from '#store/slices/appSlice';
 import { unitLabel } from '#/utils/formatQuantity';
-
-interface HeldUnit {
-  id: string;
-  name: string;
-  symbol: string;
-  localizedSymbolForms?: Pick<PluralForms, 'one' | 'other'> | null;
-  localizedNameForms?: Pick<PluralForms, 'one' | 'other'> | null;
-  abbreviation?: string;
-  type?: UnitType;
-}
 
 /** A unit a typed text names, as the field shows and checks it. */
 export interface ResolvedUnit {

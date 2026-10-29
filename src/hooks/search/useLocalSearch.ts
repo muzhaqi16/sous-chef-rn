@@ -4,7 +4,7 @@
  * SUBSTRING not fuzzy, because that is what they did — `searchUtils` is the
  * fuzzy path for a list that wants typo tolerance.
  */
-type Accessor<T> = keyof T | ((item: T) => string | null | undefined);
+export type Accessor<T> = keyof T | ((item: T) => string | null | undefined);
 
 const read = <T>(item: T, key: Accessor<T>): string | null | undefined => {
   if (typeof key === 'function') return key(item);

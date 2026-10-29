@@ -6,28 +6,17 @@ import {
   GetCommonUnitsDocument,
 } from '#operations/item/unit.generated';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
-import { selectUnitsFetchedAt } from '#store/slices/appSlice';
 import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
-import { filterByTerm } from '#hooks/search/useLocalSearch';
-import type { PluralForms, UnitType } from '#/graphql/generated/schemaTypes';
+import { filterByTerm, type Accessor } from '#hooks/search/useLocalSearch';
+import { selectUnitsFetchedAt, type CachedUnit } from '#store/slices/appSlice';
 import { scheduleIdle } from '#/utils/scheduleIdle';
 
-export interface UnitItem {
-  id: string;
-  name: string;
-  symbol: string;
-  localizedSymbolForms?: Pick<PluralForms, 'one' | 'other'> | null;
-  localizedNameForms?: Pick<PluralForms, 'one' | 'other'> | null;
-  type?: UnitType;
-  abbreviation?: string;
-}
+export type UnitItem = CachedUnit;
 
 // The app's language as well as the canonical English, so "tbsp" still finds
 // tablespoon under Italian.
-const UNIT_SEARCH_KEYS: ReadonlyArray<
-  keyof UnitItem | ((unit: UnitItem) => string | undefined)
-> = [
+const UNIT_SEARCH_KEYS: ReadonlyArray<Accessor<UnitItem>> = [
   'symbol',
   'name',
   unit => unit.localizedSymbolForms?.one,
