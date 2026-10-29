@@ -16,6 +16,7 @@ import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { storeBranchLabel } from '#features/catalog/ui/storeBranchLabel';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useReceiptFlowExits } from './receiptFlowExits';
 import { toastService } from '#/services/toastService';
 import { rowType } from '#/theme/foundations/type';
 import { hitSlop } from '#/theme/foundations/sizes';
@@ -113,6 +114,7 @@ export const ReceiptReviewScreen: React.FC = () => {
   const money = useMoney();
   const today = useToday();
   const { toPantryMain } = useAppNavigation();
+  const exits = useReceiptFlowExits();
   const {
     rows,
     merchant,
@@ -291,6 +293,7 @@ export const ReceiptReviewScreen: React.FC = () => {
   const handleAdd = async () => {
     const { sent, held } = await addChosen();
     if (sent > 0) {
+      exits?.added(sent);
       toastService.success(
         pantryName
           ? t('receipts.review.addedTo', { count: sent, pantry: pantryName })
@@ -301,7 +304,8 @@ export const ReceiptReviewScreen: React.FC = () => {
     // lines still waiting for a match, to add once matched.
     if (held > 0 || rows.some(row => row.status === 'pending')) return;
     applied.current = true;
-    toPantryMain();
+    if (exits) exits.finished();
+    else toPantryMain();
   };
 
   // A day read from the receipt shows as text that opens the calendar.

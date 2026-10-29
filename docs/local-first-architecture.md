@@ -453,7 +453,7 @@ query-blocking, orthogonal to connectivity.
 permanent cache write):**
 
 - **Pantry:** create (every add surface — `usePantryItemSubmission`, `AddToPantrySheet`,
-  `SelectPantryItems` onboarding, barcode), delete.
+  `SelectPantryItems` (onboarding's staples), barcode), delete.
 - **Shopping:** add (every add surface — `useAddShoppingItem`, `AddToShoppingListSheet`, `AddEditItem`,
   barcode, filtered-pantry, pantry-item-detail, recipe single + batch), remove, toggle-purchased, update,
   quantity ±, reorder/move.

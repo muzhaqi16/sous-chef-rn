@@ -10,6 +10,7 @@ import type { ReceiptReviewRow } from '../../hooks/useReceiptReview';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
 import { ReceiptReviewScreen } from '../ReceiptReviewScreen';
+import { ReceiptFlowExitsProvider } from '../receiptFlowExits';
 
 const mockToPantryMain = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
@@ -196,6 +197,29 @@ describe('ReceiptReviewScreen Add', () => {
       'Added 2 items to Kitchen Pantry',
     );
     expect(mockToPantryMain).toHaveBeenCalledTimes(1);
+  });
+
+  it('reports what it added and finishes through a borrowing flow’s exits', async () => {
+    mockAddChosen.mockResolvedValue({ sent: 2, held: 0 });
+    const exits = {
+      toReview: jest.fn(),
+      close: jest.fn(),
+      added: jest.fn(),
+      finished: jest.fn(),
+    };
+    const screen = renderWithApollo(
+      <ReceiptFlowExitsProvider actions={exits}>
+        <ReceiptReviewScreen />
+      </ReceiptFlowExitsProvider>,
+    );
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(exits.added).toHaveBeenCalledWith(2);
+    expect(exits.finished).toHaveBeenCalledTimes(1);
+    expect(mockToPantryMain).not.toHaveBeenCalled();
   });
 
   it('leaves the receipt once, when the review is gone, however often it changes while open', async () => {

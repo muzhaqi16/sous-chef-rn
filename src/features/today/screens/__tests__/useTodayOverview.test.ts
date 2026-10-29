@@ -487,6 +487,33 @@ describe('a home with no pantry', () => {
     await waitFor(() => expect(result.current.overview.state).toBe('empty'));
   });
 
+  it('states how many homes the user is in once the homes have loaded, and null before', async () => {
+    inHousehold('p1');
+    const ready = renderOverview([
+      plansMock(false),
+      suggestionsMock(0),
+      listsMock(false),
+    ]);
+    expect(ready.result.current.overview.homeCount).toBe(1);
+
+    mockedCurrentPantry.mockReturnValue({
+      pantry: null,
+      pantries: [],
+      setSelectedPantryId: jest.fn(),
+      currentHome: null,
+      selectedHomeId: null,
+      homeCount: 0,
+      isReady: false,
+    });
+    const loading = renderOverview([
+      plansMock(false),
+      suggestionsMock(0),
+      listsMock(false),
+    ]);
+    expect(loading.result.current.overview.homeCount).toBeNull();
+    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+  });
+
   it('is still loading while the home itself has not arrived', async () => {
     inHouseholdWithoutPantry({ homeLoaded: false });
     const { result } = renderOverview([

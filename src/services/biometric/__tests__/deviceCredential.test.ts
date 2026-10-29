@@ -113,7 +113,9 @@ import { authService } from '#/services/authService';
 import {
   biometricService,
   renewStoredSignIn,
+  resolvePostSignInGate,
 } from '#/services/biometric/deviceCredential';
+import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { registerMobileSessionHost } from '#/app/mobileSessionHost';
 
 // A sign-out drops the slot through the step the app registers.
@@ -794,5 +796,21 @@ describe('a device credential the device could not store', () => {
       'enrolled',
     );
     expect(revokes()).toHaveLength(0);
+  });
+});
+
+describe('the first sign-in after onboarding', () => {
+  // Onboarding has no biometric step, so nothing defers the offer to it.
+  it('offers enrolment to an account that has just finished onboarding', async () => {
+    mockHasCredentials.mockResolvedValueOnce(false);
+    const user = {
+      id: 'user-new',
+      email: 'chef@example.com',
+      onBoarded: true,
+    } as LoginUserFragment;
+
+    expect(
+      await resolvePostSignInGate(user, 'chef@example.com', false, 'token'),
+    ).toBe('biometricSetup');
   });
 });

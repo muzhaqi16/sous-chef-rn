@@ -1,10 +1,16 @@
 'use no memo';
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import {
+  screen,
+  fireEvent,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import { SelectPantryItems } from '../SelectPantryItems';
+import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import {
   initialOnboardingProgress,
   useOnboardingProgressStore,
@@ -80,11 +86,13 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
     title,
     subtitle,
     children,
+    primaryAction,
     testID,
   }: {
     title?: string;
     subtitle?: string;
     children?: React.ReactNode;
+    primaryAction?: React.ReactNode;
     testID?: string;
   }) => {
     const { View, Text } = require('react-native');
@@ -93,6 +101,7 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
         <Text>{title}</Text>
         <Text>{subtitle}</Text>
         {children}
+        {primaryAction}
       </View>
     );
   },
@@ -308,11 +317,131 @@ describe('SelectPantryItems', () => {
     fireEvent.press(await screen.findByTestId('action-button'));
 
     await waitFor(() => {
-      expect(mockNavigateToNextStep).toHaveBeenCalledWith('SelectPantryItems');
+      expect(mockNavigateToNextStep).toHaveBeenCalledWith('Staples');
     });
     const { errorService } = jest.requireMock('#/services/errorService');
     expect(errorService.reportError).not.toHaveBeenCalled();
     // The item is in the pantry either way, so the summary may say so.
-    expect(useOnboardingProgressStore.getState().pantryItemsAdded).toBe(true);
+    expect(useOnboardingProgressStore.getState().stapleItems).toBe(1);
+  });
+});
+
+describe('SelectPantryItems as staples', () => {
+  const kept = [
+    { id: 'i1', name: 'Milk', storageState: 'REFRIGERATED' },
+    { id: 'i2', name: 'Peas', storageState: 'FROZEN' },
+    { id: 'i3', name: 'Rice', storageState: 'NONE' },
+  ];
+  const keptItems = {
+    totalCount: kept.length,
+    edges: kept.map((node, i) => ({
+      cursor: `c${i}`,
+      node: { ...node, imageUrl: null, displayUnit: null },
+    })),
+    pageInfo: { hasNextPage: false, endCursor: null },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
+  });
+
+  it('asks for foods only, as the curated path accepts, grouped fridge, freezer and pantry', async () => {
+    const { useSelectableItems } = jest.requireMock(
+      '#features/onboarding/hooks/useSelectableItems',
+    );
+    useSelectableItems.mockImplementation(
+      ({ initialItems }: { initialItems: unknown[] }) => ({
+        items: initialItems,
+        selectedItems: [],
+        toggleItem: jest.fn(),
+        isMaxReached: false,
+      }),
+    );
+    let filters: Record<string, unknown> | undefined;
+    renderWithApollo(<SelectPantryItems />, {
+      mocks: onboardingMocks,
+      resolvers: () => ({
+        Query: {
+          items: (
+            _root: unknown,
+            args: { filters?: Record<string, unknown> },
+          ) => {
+            filters = args.filters;
+            return keptItems;
+          },
+        },
+      }),
+    });
+
+    const fridge = await screen.findByTestId(
+      onboardingTestIDs.staplesGroup('REFRIGERATED'),
+    );
+    // The curated path applies only these; any other filter is refused.
+    expect(Object.keys(filters ?? {}).sort()).toEqual([
+      'curation',
+      'level',
+      'types',
+    ]);
+    expect(filters?.level).toBe('CONCEPT');
+    expect(within(fridge).getByText('Fridge')).toBeTruthy();
+    expect(within(fridge).getByText('Milk')).toBeTruthy();
+    expect(
+      within(
+        screen.getByTestId(onboardingTestIDs.staplesGroup('FROZEN')),
+      ).getByText('Peas'),
+    ).toBeTruthy();
+    // A food kept anywhere else is the pantry's.
+    expect(
+      within(
+        screen.getByTestId(onboardingTestIDs.staplesGroup('AMBIENT')),
+      ).getByText('Rice'),
+    ).toBeTruthy();
+  });
+
+  it('adds each staple where it is kept and counts them', async () => {
+    const { useSelectableItems } = jest.requireMock(
+      '#features/onboarding/hooks/useSelectableItems',
+    );
+    const chosen = kept.slice(0, 2).map(item => ({
+      ...item,
+      imageUrl: null,
+      displayUnit: null,
+      selected: true,
+    }));
+    useSelectableItems.mockReturnValue({
+      items: chosen,
+      selectedItems: chosen,
+      toggleItem: jest.fn(),
+      isMaxReached: false,
+    });
+    const states: string[] = [];
+    renderWithApollo(<SelectPantryItems />, {
+      mocks: onboardingMocks,
+      resolvers: () => ({
+        Mutation: {
+          createPantryItem: (
+            _root: unknown,
+            args: { input: { storage: { storageState: string } } },
+          ) => {
+            states.push(args.input.storage.storageState);
+            return {
+              __typename: 'DuplicatePantryItemError',
+              message: 'Item already exists in this pantry',
+              code: 'PANTRY_ITEM_ALREADY_EXISTS',
+              existingPantryItemIds: ['existing-1'],
+            };
+          },
+        },
+      }),
+    });
+
+    fireEvent.press(await screen.findByTestId('action-button'));
+
+    await waitFor(() => {
+      expect(mockNavigateToNextStep).toHaveBeenCalledWith('Staples');
+    });
+    expect(states.sort()).toEqual(['FROZEN', 'REFRIGERATED']);
+    expect(useOnboardingProgressStore.getState().stapleItems).toBe(2);
   });
 });

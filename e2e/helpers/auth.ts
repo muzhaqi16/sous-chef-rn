@@ -17,7 +17,6 @@ import { TEST_USER } from '../fixtures/testData';
 import { launchAppWithFabricWorkaround } from '../init';
 import { ApiUnreachableError, getAuthTokens } from './tokenProvider';
 import { authTestIDs } from '../../src/features/auth/testIDs';
-import { onboardingTestIDs } from '../../src/features/onboarding/testIDs';
 import { pantryTestIDs } from '../../src/features/pantry/testIDs';
 import { shoppingListTestIDs } from '../../src/features/shoppingList/testIDs';
 import { todayTestIDs } from '../../src/features/today/testIDs';
@@ -133,19 +132,6 @@ export async function dismissBiometricPromptIfPresent() {
         kitTestIDs.biometricSkip(authTestIDs.postLoginBiometricView),
       );
       console.log('✅ Post-login biometric setup skipped');
-    },
-    3000,
-  );
-
-  // The onboarding biometric setup screen, which only real devices reach.
-  await waitIfPresent(
-    element(by.id(onboardingTestIDs.biometricSetupScreen)),
-    async () => {
-      console.log('📱 Skipping onboarding biometric setup...');
-      await tapByID(
-        kitTestIDs.biometricSkip(onboardingTestIDs.biometricSetupView),
-      );
-      console.log('✅ Biometric setup skipped');
     },
     3000,
   );

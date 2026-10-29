@@ -28,6 +28,10 @@ jest.mock('#store/useAppStore', () => ({
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: () => false,
 }));
+let mockRestrictionsInPlay: boolean | null = true;
+jest.mock('#features/profile/hooks/useRestrictionsInPlay', () => ({
+  useRestrictionsInPlay: () => mockRestrictionsInPlay,
+}));
 
 const TANI = {
   id: 'm-tani',
@@ -104,8 +108,23 @@ const alertsMock = () =>
     },
   });
 
+const cleanRecipeMock = () =>
+  recordMock(RecipeDietaryAlertsDocument, {
+    data: {
+      recipe: {
+        id: 'recipe-1',
+        ingredientsConnection: {
+          edges: [row('rice-row', [])],
+          pageInfo: { hasNextPage: false, endCursor: 'c-1' },
+          totalCount: 1,
+        },
+      },
+    },
+  });
+
 beforeEach(() => {
   mockHomeId = 'home-1';
+  mockRestrictionsInPlay = true;
 });
 
 describe('useRecipeDietaryAlerts', () => {
@@ -218,5 +237,54 @@ describe('useRecipeDietaryAlerts', () => {
     expect(recipe?.recipe?.id).toBe('recipe-1');
     expect(recipe?.recipe?.ingredientsConnection.totalCount).toBe(4);
     expect(recipe?.recipe?.ingredientsConnection.edges).toHaveLength(4);
+  });
+
+  describe('the label caveat', () => {
+    const answeredWith = async (
+      mock: ReturnType<typeof recordMock>,
+      inPlay: boolean | null,
+    ) => {
+      mockRestrictionsInPlay = inPlay;
+      const { result } = renderHookWithApollo(
+        () => useRecipeDietaryAlerts('recipe-1'),
+        { operationMocks: [mock.mock] },
+      );
+      await waitFor(() => expect(result.current.check).toBe('checked'));
+      return result.current;
+    };
+
+    it('shows beside a flagged ingredient', async () => {
+      expect((await answeredWith(alertsMock(), false)).caveat).toBe(true);
+    });
+
+    it('shows on a recipe with no flagged ingredient while a restriction is in play', async () => {
+      expect((await answeredWith(cleanRecipeMock(), true)).caveat).toBe(true);
+    });
+
+    it('shows while it is not yet known whether a restriction is in play', async () => {
+      expect((await answeredWith(cleanRecipeMock(), null)).caveat).toBe(true);
+    });
+
+    it('is absent when no restriction anywhere can alert', async () => {
+      expect((await answeredWith(cleanRecipeMock(), false)).caveat).toBe(
+        false,
+      );
+    });
+
+    it('is absent before the check answers and without a home', () => {
+      const loading = renderHookWithApollo(
+        () => useRecipeDietaryAlerts('recipe-1'),
+        { operationMocks: [cleanRecipeMock().mock] },
+      );
+      expect(loading.result.current.check).toBe('loading');
+      expect(loading.result.current.caveat).toBe(false);
+
+      mockHomeId = null;
+      const noHome = renderHookWithApollo(
+        () => useRecipeDietaryAlerts('recipe-1'),
+        { operationMocks: [] },
+      );
+      expect(noHome.result.current.caveat).toBe(false);
+    });
   });
 });

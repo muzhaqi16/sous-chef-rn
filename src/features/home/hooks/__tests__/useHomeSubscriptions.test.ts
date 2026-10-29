@@ -13,7 +13,7 @@ import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
-import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
+import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/useOnboardingInvites.generated';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import { HomeInvitesForEventDocument } from '../useHomeSubscriptions.generated';
 import { useStore } from '#store/index';

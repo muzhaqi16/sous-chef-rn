@@ -107,7 +107,6 @@ const selectPreferences = (state: RootState) => ({
 const selectNavigationUtils = (state: RootState) => ({
   getUserNavigationState: state.getUserNavigationState,
   setUserNavigationState: state.setUserNavigationState,
-  setOnBoardingStep: state.setOnBoardingStep,
   setOnboarded: state.setOnboarded,
 });
 

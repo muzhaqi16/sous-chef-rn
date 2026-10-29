@@ -11,6 +11,8 @@ import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { ReceiptScanScreen } from '../ReceiptScanScreen';
+import { ReceiptFlowExitsProvider } from '../receiptFlowExits';
+import { kitTestIDs } from '#components/testIDs';
 
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: jest.fn(), toReceiptReview: jest.fn() }),
@@ -205,4 +207,24 @@ describe('ReceiptScanScreen', () => {
       for (const text of alsoShown) expect(screen.getByText(text)).toBeTruthy();
     },
   );
+});
+
+describe('ReceiptScanScreen under a borrowing flow', () => {
+  it('closes through the flow’s exit, not the receipts stack', () => {
+    const exits = {
+      toReview: jest.fn(),
+      close: jest.fn(),
+      added: jest.fn(),
+      finished: jest.fn(),
+    };
+    const screen = renderWithApollo(
+      <ReceiptFlowExitsProvider actions={exits}>
+        <ReceiptScanScreen />
+      </ReceiptFlowExitsProvider>,
+    );
+
+    fireEvent.press(screen.getByTestId(kitTestIDs.headerCloseButton));
+
+    expect(exits.close).toHaveBeenCalledTimes(1);
+  });
 });

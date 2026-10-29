@@ -63,6 +63,8 @@ export interface DietaryProfileData {
   fatTarget?: number | null;
   mealsPerDay: number;
   snacksPerDay: number;
+  /** How many people the user cooks for; null when not answered. */
+  cooksFor?: number | null;
   cookingSkillLevel?: CookingSkillLevel | null;
   maxPrepTimeMinutes?: number | null;
   maxCookTimeMinutes?: number | null;
@@ -199,6 +201,7 @@ export const useDietaryProfile = ({
       fatTarget: profile.fatTarget,
       mealsPerDay: profile.mealsPerDay || 3,
       snacksPerDay: profile.snacksPerDay || 1,
+      cooksFor: profile.cooksFor,
       cookingSkillLevel: profile.cookingSkillLevel,
       maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
       maxCookTimeMinutes: profile.maxCookTimeMinutes,
@@ -216,6 +219,7 @@ export const useDietaryProfile = ({
     fatTarget?: number | null;
     mealsPerDay?: number;
     snacksPerDay?: number;
+    cooksFor?: number | null;
     cookingSkillLevel?: CookingSkillLevel | null;
     maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;

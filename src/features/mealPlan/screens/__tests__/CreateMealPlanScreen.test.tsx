@@ -104,7 +104,22 @@ jest.mock('#components/molecules/DatePickerField', () => ({
 }));
 
 jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: () => null,
+  EditableCounter: ({
+    value,
+    onChangeText,
+  }: {
+    value: string;
+    onChangeText: (text: string) => void;
+  }) => {
+    const { TextInput } = require('react-native');
+    return (
+      <TextInput
+        testID="servings-counter"
+        value={value}
+        onChangeText={onChangeText}
+      />
+    );
+  },
 }));
 
 jest.mock('#features/mealPlan/components/TemplateBrowserSheet', () => ({
@@ -179,5 +194,49 @@ describe('CreateMealPlanScreen', () => {
       }),
       expect.anything(),
     );
+  });
+
+  describe('servings', () => {
+    const servings = (tree: ReturnType<typeof render>) =>
+      tree.getByTestId('servings-counter').props.value;
+
+    afterEach(() => {
+      (useDietaryProfile as jest.Mock).mockReturnValue({ profile: null });
+    });
+
+    it('start at who the user cooks for', () => {
+      (useDietaryProfile as jest.Mock).mockReturnValue({
+        profile: { cooksFor: 4 },
+      });
+
+      expect(servings(render(<CreateMealPlanScreen />))).toBe('4');
+    });
+
+    it('start at two when that was not answered', () => {
+      expect(servings(render(<CreateMealPlanScreen />))).toBe('2');
+    });
+
+    it('take a late answer into an untouched field', () => {
+      const tree = render(<CreateMealPlanScreen />);
+
+      (useDietaryProfile as jest.Mock).mockReturnValue({
+        profile: { cooksFor: 5 },
+      });
+      tree.rerender(<CreateMealPlanScreen />);
+
+      expect(servings(tree)).toBe('5');
+    });
+
+    it('never take a late answer over the count the user chose', () => {
+      const tree = render(<CreateMealPlanScreen />);
+      fireEvent.changeText(tree.getByTestId('servings-counter'), '3');
+
+      (useDietaryProfile as jest.Mock).mockReturnValue({
+        profile: { cooksFor: 4 },
+      });
+      tree.rerender(<CreateMealPlanScreen />);
+
+      expect(servings(tree)).toBe('3');
+    });
   });
 });

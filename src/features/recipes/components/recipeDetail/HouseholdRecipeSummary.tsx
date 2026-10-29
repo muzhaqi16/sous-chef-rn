@@ -14,15 +14,18 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 interface HouseholdRecipeSummaryProps {
   check: HouseholdCheck;
   alerts: HouseholdAlert[];
+  /** Whether the label caveat shows; on its own when nothing matched. */
+  caveat: boolean;
 }
 
 /**
  * Who in the household a recipe affects, near the top of its page. Nothing
- * found shows nothing: the app never calls a recipe safe.
+ * found shows only the label caveat: the app never calls a recipe safe.
  */
 export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
   check,
   alerts,
+  caveat,
 }) => {
   const { t } = useTranslation();
 
@@ -39,8 +42,21 @@ export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
       </Card>
     );
   }
-  if ((check !== 'checked' && check !== 'stale') || alerts.length === 0) {
-    return null;
+  if (check !== 'checked' && check !== 'stale') return null;
+  if (alerts.length === 0) {
+    if (!caveat) return null;
+    return (
+      <Card style={styles.card} testID={recipesTestIDs.householdCaveat}>
+        {check === 'stale' && (
+          <Text role="caption" tone="secondary">
+            {t('dietaryAlerts.stale')}
+          </Text>
+        )}
+        <Text role="caption" tone="secondary">
+          {t('dietaryAlerts.checkLabel')}
+        </Text>
+      </Card>
+    );
   }
 
   return (
@@ -54,7 +70,7 @@ export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
           {t('dietaryAlerts.stale')}
         </Text>
       )}
-      <Text role="caption" tone="tertiary">
+      <Text role="caption" tone="secondary">
         {t('dietaryAlerts.checkLabel')}
       </Text>
     </Card>

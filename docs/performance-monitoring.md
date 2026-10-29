@@ -348,7 +348,7 @@ const MyComponent = () => {
 - **Shopping List:** ShoppingListMain, ItemDetail
 - **Recipe:** RecipeMain, RecipeSearch, RecipeDetail
 - **Home:** HomeManagement, HomeDetailScreen, StorageLocationsScreen
-- **Onboarding:** BiometricSetupScreen, InviteMemberScreen, OnboardingCompleteScreen, ProfilePictureUploadScreen, CreateShoppingListScreen, CreateHomeScreen, SelectPantryItems
+- **Onboarding:** OnboardingSetupScreen, HouseholdStepScreen, DietaryStepScreen, ReceiptStepScreen, SelectPantryItems, OnboardingCompleteScreen
 - **Profile:** ProfileScreen
 - **Notifications:** NotificationListScreen
 

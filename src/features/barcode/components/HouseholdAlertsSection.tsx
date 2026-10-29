@@ -19,6 +19,8 @@ import { barcodeTestIDs } from '#features/barcode/testIDs';
 interface HouseholdAlertsSectionProps {
   check: HouseholdCheck;
   alerts: HouseholdAlert[];
+  /** Whether the label caveat shows; on its own when nothing matched. */
+  caveat: boolean;
   alternatives: DietaryAlternative[];
   /** Opens an alternative's own result; absent, the alternatives only list. */
   onOpenAlternative?: (alternative: DietaryAlternative) => void;
@@ -26,11 +28,12 @@ interface HouseholdAlertsSectionProps {
 
 /**
  * What a scanned product means for the household, above the card's actions.
- * Nothing found shows nothing: the app never calls a product safe.
+ * Nothing found shows only the label caveat: the app never calls a product safe.
  */
 export const HouseholdAlertsSection: React.FC<HouseholdAlertsSectionProps> = ({
   check,
   alerts,
+  caveat,
   alternatives,
   onOpenAlternative,
 }) => {
@@ -49,8 +52,21 @@ export const HouseholdAlertsSection: React.FC<HouseholdAlertsSectionProps> = ({
       </Card>
     );
   }
-  if ((check !== 'checked' && check !== 'stale') || alerts.length === 0) {
-    return null;
+  if (check !== 'checked' && check !== 'stale') return null;
+  if (alerts.length === 0) {
+    if (!caveat) return null;
+    return (
+      <Card style={styles.card} testID={barcodeTestIDs.householdCaveat}>
+        {check === 'stale' && (
+          <Text role="caption" tone="secondary">
+            {t('dietaryAlerts.stale')}
+          </Text>
+        )}
+        <Text role="caption" tone="secondary">
+          {t('dietaryAlerts.checkLabel')}
+        </Text>
+      </Card>
+    );
   }
 
   return (
@@ -64,7 +80,7 @@ export const HouseholdAlertsSection: React.FC<HouseholdAlertsSectionProps> = ({
           {t('dietaryAlerts.stale')}
         </Text>
       )}
-      <Text role="caption" tone="tertiary">
+      <Text role="caption" tone="secondary">
         {t('dietaryAlerts.checkLabel')}
       </Text>
       {alternatives.length > 0 && (

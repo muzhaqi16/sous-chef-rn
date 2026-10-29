@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { View, ScrollView } from 'react-native';
+import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
 import { StyleSheet } from 'react-native-unistyles';
-import { useTranslation } from '#/i18n';
+import { useTranslation, type TranslationKey } from '#/i18n';
 import { usePantryItemSelection } from '#features/pantry/hooks/usePantryItemSelection';
 import { useOnboardingNavigation } from '#features/onboarding/screens/useOnboardingNavigation';
 import { useSelectableItems } from '#features/onboarding/hooks/useSelectableItems';
@@ -23,10 +23,29 @@ import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';
 
+/** Where a staple is kept, each a group of its own; the rest is the pantry. */
+const STAPLE_GROUPS: readonly {
+  state: StorageState;
+  labelKey: TranslationKey;
+}[] = [
+  {
+    state: StorageState.Refrigerated,
+    labelKey: 'storageStateShort.REFRIGERATED',
+  },
+  { state: StorageState.Frozen, labelKey: 'storageStateShort.FROZEN' },
+  { state: StorageState.Ambient, labelKey: 'storageStateShort.AMBIENT' },
+];
+
+const groupOf = (state: StorageState): StorageState =>
+  state === StorageState.Refrigerated || state === StorageState.Frozen
+    ? state
+    : StorageState.Ambient;
+
+/** The receipt step's alternative: foods picked by where they are kept. */
 export const SelectPantryItems = () => {
   const { t } = useTranslation();
-  const { recordPantryItemsAdded } = useRecordOnboardingProgress();
-  useScreenTransition('SelectPantryItems');
+  const { recordStapleItems } = useRecordOnboardingProgress();
+  useScreenTransition('Staples');
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
   const selectedPantryId = useSelectedPantryId();
@@ -72,8 +91,8 @@ export const SelectPantryItems = () => {
       <OnBoardingWrapper
         title={t('onBoarding.stockPantryTitle')}
         subtitle={t('onBoarding.stockPantrySubtitle')}
-        onBack={() => navigateToPreviousStep('SelectPantryItems')}
-        onSkip={() => navigateToNextStep('SelectPantryItems')}
+        onBack={() => navigateToPreviousStep('Staples')}
+        onSkip={() => navigateToNextStep('Staples')}
       >
         <SousChefLoader
           size="small"
@@ -89,8 +108,8 @@ export const SelectPantryItems = () => {
       <OnBoardingWrapper
         title={t('onBoarding.stockPantryTitle')}
         subtitle={t('onBoarding.stockPantrySubtitle')}
-        onBack={() => navigateToPreviousStep('SelectPantryItems')}
-        onSkip={() => navigateToNextStep('SelectPantryItems')}
+        onBack={() => navigateToPreviousStep('Staples')}
+        onSkip={() => navigateToNextStep('Staples')}
       >
         <View style={styles.errorContainer}>
           <Text
@@ -130,7 +149,7 @@ export const SelectPantryItems = () => {
                 }),
                 quantity: null,
                 storage: {
-                  storageState: StorageState.Ambient,
+                  storageState: item.storageState,
                   condition: ItemCondition.Good,
                 },
                 purchase: {
@@ -144,98 +163,99 @@ export const SelectPantryItems = () => {
               return pantryItemId ? [removeItem(pantryItemId)] : [];
             }),
           ]);
-          if (itemsToAdd.length > 0) recordPantryItemsAdded();
-          navigateToNextStep('SelectPantryItems');
+          recordStapleItems(itemsToAdd.length);
+          navigateToNextStep('Staples');
         },
         setIsSaving,
         error => {
           errorService.reportError(error, {
             operation: 'SelectPantryItems.updatePantryItems',
           });
-          navigateToNextStep('SelectPantryItems');
+          navigateToNextStep('Staples');
         },
       );
       return;
     }
-    navigateToNextStep('SelectPantryItems');
+    navigateToNextStep('Staples');
   };
 
   return (
     <OnBoardingWrapper
       title={t('onBoarding.stockPantryTitle')}
       subtitle={t('onBoarding.stockPantrySubtitleOptional')}
-      onBack={() => navigateToPreviousStep('SelectPantryItems')}
-      onSkip={() => navigateToNextStep('SelectPantryItems')}
+      onBack={() => navigateToPreviousStep('Staples')}
+      onSkip={() => navigateToNextStep('Staples')}
+      primaryAction={
+        <Button
+          title={
+            isSaving
+              ? t('labels.saving')
+              : isFirstVisit
+              ? selectedItems.length === 0
+                ? t('labels.addItems')
+                : t(
+                    selectedItems.length === 1
+                      ? 'onBoarding.addItemSingular'
+                      : 'onBoarding.addItemPlural',
+                    { count: selectedItems.length },
+                  )
+              : hasChanges
+              ? t('labels.saveChanges')
+              : t('labels.continue')
+          }
+          onPress={onNext}
+          variant="primary"
+          disabled={isSaving || (isFirstVisit && selectedItems.length === 0)}
+        />
+      }
       testID={onboardingTestIDs.selectPantryItemsScreen}
     >
-      <ScrollView
-        style={styles.form}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <Text
-          role="caption"
-          tone="secondary"
-          align="center"
-          style={styles.helperText}
-        >
+      <View style={styles.listContent}>
+        <Text role="caption" tone="secondary" align="center">
           {t('labels.selected', { count: selectedItems.length })}
         </Text>
-        <View style={styles.chipContainer}>
-          {items.map(item => (
-            <AnimatedChip
-              key={item.id}
-              label={item.name}
-              selected={item.selected}
-              onPress={() => toggleItem(item.id)}
-              disabled={!item.selected && isMaxReached}
-              imageUrl={item.imageUrl ?? undefined}
-            />
-          ))}
-        </View>
-      </ScrollView>
-
-      <Button
-        title={
-          isSaving
-            ? t('labels.saving')
-            : isFirstVisit
-            ? selectedItems.length === 0
-              ? t('labels.addItems')
-              : t(
-                  selectedItems.length === 1
-                    ? 'onBoarding.addItemSingular'
-                    : 'onBoarding.addItemPlural',
-                  { count: selectedItems.length },
-                )
-            : hasChanges
-            ? t('labels.saveChanges')
-            : t('labels.continue')
-        }
-        onPress={onNext}
-        variant="primary"
-        disabled={isSaving || (isFirstVisit && selectedItems.length === 0)}
-      />
+        {STAPLE_GROUPS.map(group => {
+          const inGroup = items.filter(
+            item => groupOf(item.storageState) === group.state,
+          );
+          return inGroup.length > 0 ? (
+            <View
+              key={group.state}
+              style={styles.group}
+              testID={onboardingTestIDs.staplesGroup(group.state)}
+            >
+              <Text role="bodyStrong">{t(group.labelKey)}</Text>
+              <View style={styles.chipContainer}>
+                {inGroup.map(item => (
+                  <AnimatedChip
+                    key={item.id}
+                    label={item.name}
+                    selected={item.selected}
+                    onPress={() => toggleItem(item.id)}
+                    disabled={!item.selected && isMaxReached}
+                    imageUrl={item.imageUrl ?? undefined}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null;
+        })}
+      </View>
     </OnBoardingWrapper>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  form: {
-    flex: 1,
-    marginBottom: theme.spacing.base,
-  },
-  helperText: {
-    marginBottom: theme.spacing.md,
-  },
   listContent: {
+    gap: theme.spacing.lg,
     paddingBottom: theme.spacing.md,
-    paddingHorizontal: theme.spacing.sm,
+  },
+  group: {
+    gap: theme.spacing.sm,
   },
   chipContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
     gap: theme.spacing.sm,
   },
   errorContainer: {

@@ -202,6 +202,35 @@ describe('useNotificationSettings', () => {
     expect(success).toBe(true);
   });
 
+  it('writes push and expiry alerts together in one request', async () => {
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
+      data: updatedPrefs({ pushEnabled: true, expirationNotifications: true }),
+    });
+
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
+    });
+
+    await act(async () => {
+      await result.current.updateMultipleSettings({
+        pushEnabled: true,
+        expirationNotifications: true,
+      });
+    });
+
+    expect(update.fired).toEqual([
+      {
+        input: {
+          channels: { pushEnabled: true },
+          expiration: { expirationNotifications: true },
+        },
+      },
+    ]);
+  });
+
   it('reflects the server-confirmed value so the toggle stays put', async () => {
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: updatedPrefs({ pushEnabled: false }),

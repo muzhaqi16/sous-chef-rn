@@ -29,8 +29,10 @@ describe('useOnboardingSummary', () => {
     expect(result.current).toEqual({
       homeAndPantry: false,
       shoppingList: false,
-      pantryItems: false,
-      invites: false,
+      cooksFor: null,
+      dietarySaved: false,
+      receiptItems: 0,
+      stapleItems: 0,
     });
   });
 
@@ -49,11 +51,21 @@ describe('useOnboardingSummary', () => {
     expect(result.current.homeAndPantry).toBe(false);
   });
 
-  it('says pantry items were added and invitations sent only once recorded', () => {
+  it("reads each step's result as the steps record it", () => {
     const { result } = renderHook(() => useOnboardingSummary());
-    act(() => useOnboardingProgressStore.getState().recordPantryItemsAdded());
-    expect(result.current).toMatchObject({ pantryItems: true, invites: false });
-    act(() => useOnboardingProgressStore.getState().recordInvitesSent());
-    expect(result.current.invites).toBe(true);
+    act(() => {
+      const progress = useOnboardingProgressStore.getState();
+      progress.recordCooksFor(2);
+      progress.recordDietarySaved(true);
+      progress.recordReceiptItems(4);
+      progress.recordReceiptItems(3);
+      progress.recordStapleItems(5);
+    });
+    expect(result.current).toMatchObject({
+      cooksFor: 2,
+      dietarySaved: true,
+      receiptItems: 7,
+      stapleItems: 5,
+    });
   });
 });

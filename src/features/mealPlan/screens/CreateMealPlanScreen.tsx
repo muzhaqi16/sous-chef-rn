@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 
@@ -33,6 +33,7 @@ import type { Translate } from '#/i18n/types';
 import { logValidationErrors } from '#/utils/validation/common';
 import {
   createMealPlanDefaults,
+  DEFAULT_PLAN_SERVINGS,
   createMealPlanSchema,
   PERSONAL_VALUE,
   type CreateMealPlanFormValues,
@@ -76,13 +77,19 @@ export const CreateMealPlanScreen: React.FC = () => {
   });
   const selectedHomeId = useSelectedHomeId();
 
-  const { control, handleSubmit, setError } = useForm<CreateMealPlanFormValues>(
-    {
+  const cooksFor = dietaryProfile?.cooksFor ?? null;
+  const { control, handleSubmit, setError, getFieldState, setValue } =
+    useForm<CreateMealPlanFormValues>({
       resolver: yupResolver(createMealPlanSchema),
-      defaultValues: createMealPlanDefaults(selectedHomeId),
+      defaultValues: createMealPlanDefaults(selectedHomeId, cooksFor),
       mode: 'onTouched',
-    },
-  );
+    });
+  // The profile can answer after the form mounted: it fills servings only
+  // while the user has not changed them.
+  useEffect(() => {
+    if (cooksFor === null || getFieldState('servings').isDirty) return;
+    setValue('servings', String(cooksFor));
+  }, [cooksFor, getFieldState, setValue]);
 
   const homeOptions = (() => {
     const opts = [{ label: t('mealPlan.personal'), value: PERSONAL_VALUE }];
@@ -134,7 +141,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     const endDate = computeEndDate(startDate, planType);
     const homeId = homeSelection !== PERSONAL_VALUE ? homeSelection : undefined;
     const descriptionValue = description.trim() || undefined;
-    const servingsValue = parseInt(servings) || 2;
+    const servingsValue = parseInt(servings) || DEFAULT_PLAN_SERVINGS;
     // Empty clears the budget; ignore a non-numeric entry rather than send NaN.
     const parsedBudget = budget.trim() === '' ? undefined : Number(budget);
     const budgetValue =

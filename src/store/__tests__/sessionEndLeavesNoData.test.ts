@@ -245,14 +245,14 @@ describe('a session end leaves no data belonging to the previous person', () => 
   });
 
   it("forgets what this account's onboarding did", async () => {
-    useOnboardingProgressStore.getState().recordPantryItemsAdded();
-    useOnboardingProgressStore.getState().recordInvitesSent();
+    useOnboardingProgressStore.getState().recordReceiptItems(5);
+    useOnboardingProgressStore.getState().recordCooksFor(4);
 
     await useStore.getState().endSession('signed_out');
 
     expect(useOnboardingProgressStore.getState()).toMatchObject({
-      pantryItemsAdded: false,
-      invitesSent: false,
+      receiptItems: 0,
+      cooksFor: null,
     });
     expect(registeredSessionScopedStores()).toContain('onboardingProgress');
   });

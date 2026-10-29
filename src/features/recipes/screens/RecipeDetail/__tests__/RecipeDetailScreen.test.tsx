@@ -145,8 +145,17 @@ jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
   ShoppingListPickerSheet: () => null,
 }));
 
+let mockCookDialog: { defaultServings?: number } = {};
 jest.mock('#features/recipes/ui/MarkCookedModal', () => ({
-  MarkCookedModal: () => null,
+  MarkCookedModal: (props: { defaultServings: number }) => {
+    mockCookDialog = props;
+    return null;
+  },
+}));
+
+let mockCooksFor: number | null = null;
+jest.mock('#features/profile/hooks/useCooksFor', () => ({
+  useCooksFor: () => mockCooksFor,
 }));
 
 jest.mock(
@@ -713,6 +722,40 @@ describe('RecipeDetail', () => {
       ).toBeDisabled();
       fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
       expect(handleAddSingleIngredient).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the cook dialog', () => {
+    const cooking = {
+      recipeId: 'r1',
+      displayData: {
+        dataAttributions: [],
+        details: 'complete',
+        title: 'Cooking Recipe',
+        image: null,
+        servings: 6,
+        ingredients: [],
+        instructions: [],
+      },
+      backendRecipe: { createdBy: { id: 'user-1' } },
+      cookedModalVisible: true,
+    };
+
+    afterEach(() => {
+      mockCooksFor = null;
+    });
+
+    it('starts at who the user cooks for', () => {
+      mockCooksFor = 4;
+      renderDetail(cooking);
+
+      expect(mockCookDialog.defaultServings).toBe(4);
+    });
+
+    it("starts at the recipe's servings when that was not answered", () => {
+      renderDetail(cooking);
+
+      expect(mockCookDialog.defaultServings).toBe(6);
     });
   });
 

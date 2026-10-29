@@ -1,7 +1,11 @@
 import { renderHook, act } from '@testing-library/react-native';
-import { CommonActions } from '@react-navigation/native';
-import { useOnboardingNavigation } from '../useOnboardingNavigation';
-import { OnBoardingSteps } from '#store/slices/navigationSlice';
+import { CommonActions, StackActions } from '@react-navigation/native';
+import {
+  onboardingProgress,
+  useOnboardingNavigation,
+  visibleOnboardingSteps,
+  type OnboardingStep,
+} from '../useOnboardingNavigation';
 
 const mockDispatch = jest.fn();
 
@@ -15,34 +19,27 @@ jest.mock('@react-navigation/native', () => {
   };
 });
 
-const mockSetOnBoardingStep = jest.fn();
-const mockSetUserNavigationState = jest.fn();
-
+let mockPantryId: string | null = 'pantry-1';
 jest.mock('#store/useAppStore', () => ({
-  useNavigationUtils: jest.fn(() => ({
-    setUserNavigationState: mockSetUserNavigationState,
-    setOnBoardingStep: mockSetOnBoardingStep,
-  })),
+  useSelectedPantryId: () => mockPantryId,
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockPantryId = 'pantry-1';
 });
 
 describe('useOnboardingNavigation', () => {
   describe('navigateToNextStep', () => {
-    it('navigates to the next step in the list', () => {
+    it('replaces setup with the first question, so back never returns to it', () => {
       const { result } = renderHook(() => useOnboardingNavigation());
 
       act(() => {
-        result.current.navigateToNextStep('CreateHome');
+        result.current.navigateToNextStep('OnboardingSetup');
       });
 
       expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('CreateShoppingList'),
-      );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
-        OnBoardingSteps.createShoppingList,
+        StackActions.replace('Household'),
       );
     });
 
@@ -50,7 +47,7 @@ describe('useOnboardingNavigation', () => {
       const { result } = renderHook(() => useOnboardingNavigation());
 
       act(() => {
-        result.current.navigateToNextStep('BiometricSetup');
+        result.current.navigateToNextStep('Receipt');
       });
 
       expect(mockDispatch).toHaveBeenCalledWith(
@@ -59,8 +56,36 @@ describe('useOnboardingNavigation', () => {
           routes: [{ name: 'OnboardingComplete' }],
         }),
       );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
-        OnBoardingSteps.complete,
+    });
+
+    it("finishes a sub-route's step as the step itself", () => {
+      const { result } = renderHook(() => useOnboardingNavigation());
+
+      act(() => {
+        result.current.navigateToNextStep('OnboardingReceiptReview');
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'OnboardingComplete' }],
+        }),
+      );
+    });
+
+    it('passes over the receipt step with no pantry to stock', () => {
+      mockPantryId = null;
+      const { result } = renderHook(() => useOnboardingNavigation());
+
+      act(() => {
+        result.current.navigateToNextStep('Dietary');
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'OnboardingComplete' }],
+        }),
       );
     });
 
@@ -72,71 +97,103 @@ describe('useOnboardingNavigation', () => {
       });
 
       expect(mockDispatch).not.toHaveBeenCalled();
-      expect(mockSetOnBoardingStep).not.toHaveBeenCalled();
-    });
-
-    it('sets the correct enum for each step transition', () => {
-      const { result } = renderHook(() => useOnboardingNavigation());
-
-      act(() => {
-        result.current.navigateToNextStep('CreateShoppingList');
-      });
-
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
-        OnBoardingSteps.selectPantryItems,
-      );
     });
   });
 
   describe('navigateToPreviousStep', () => {
-    it('navigates to the previous step', () => {
+    it('goes back to the previous question', () => {
       const { result } = renderHook(() => useOnboardingNavigation());
 
       act(() => {
-        result.current.navigateToPreviousStep('CreateShoppingList');
+        result.current.navigateToPreviousStep('Receipt');
       });
 
       expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('CreateHome'),
-      );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
-        OnBoardingSteps.createHome,
+        CommonActions.navigate('Dietary'),
       );
     });
 
-    it('does nothing when on the first step', () => {
+    it('goes back from a sub-route to its own step', () => {
       const { result } = renderHook(() => useOnboardingNavigation());
 
       act(() => {
-        result.current.navigateToPreviousStep('CreateHome');
+        result.current.navigateToPreviousStep('Staples');
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.navigate('Receipt'),
+      );
+    });
+
+    it('never goes back to setup, which is not a question', () => {
+      const { result } = renderHook(() => useOnboardingNavigation());
+
+      act(() => {
+        result.current.navigateToPreviousStep('Household');
       });
 
       expect(mockDispatch).not.toHaveBeenCalled();
-      expect(mockSetOnBoardingStep).not.toHaveBeenCalled();
     });
   });
+});
 
-  describe('skipToStep', () => {
-    it('navigates directly to a valid step', () => {
-      const { result } = renderHook(() => useOnboardingNavigation());
+describe('the visible sequence', () => {
+  // A step shown only with a pantry, between two always shown.
+  const steps: OnboardingStep[] = [
+    { id: 'OnboardingSetup', numbered: true },
+    {
+      id: 'Receipt',
+      numbered: true,
+      shownWhen: ({ hasPantry }) => hasPantry,
+    },
+    { id: 'OnboardingComplete', numbered: true },
+  ];
 
-      act(() => {
-        result.current.skipToStep('InviteMembers');
-      });
+  it('passes over a hidden step and does not count it', () => {
+    const context = { hasPantry: false };
 
-      expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('InviteMembers'),
-      );
-      expect(mockSetOnBoardingStep).toHaveBeenCalledWith(
-        OnBoardingSteps.inviteMembers,
-      );
-    });
-  });
-
-  it('exposes setUserNavigationState', () => {
-    const { result } = renderHook(() => useOnboardingNavigation());
-    expect(result.current.setUserNavigationState).toBe(
-      mockSetUserNavigationState,
+    expect(visibleOnboardingSteps(context, steps).map(step => step.id)).toEqual(
+      ['OnboardingSetup', 'OnboardingComplete'],
     );
+    expect(onboardingProgress('OnboardingComplete', context, steps)).toEqual({
+      step: 2,
+      total: 2,
+    });
+  });
+
+  it('counts the step once it is shown', () => {
+    expect(
+      onboardingProgress('OnboardingComplete', { hasPantry: true }, steps),
+    ).toEqual({ step: 3, total: 3 });
+  });
+
+  it("numbers a sub-route as its step, so staples reads the receipt step's number", () => {
+    const context = { hasPantry: true };
+
+    expect(onboardingProgress('Staples', context)).toEqual(
+      onboardingProgress('Receipt', context),
+    );
+    expect(onboardingProgress('Receipt', context)).toEqual({
+      step: 3,
+      total: 3,
+    });
+  });
+
+  it('reads "Step 2 of 2" on the dietary step with no pantry', () => {
+    expect(onboardingProgress('Dietary', { hasPantry: false })).toEqual({
+      step: 2,
+      total: 2,
+    });
+  });
+
+  it('gives an unnumbered or unknown route no number', () => {
+    // The real flow: setup and completion are not questions.
+    expect(
+      onboardingProgress('OnboardingSetup', { hasPantry: true }),
+    ).toBeNull();
+    expect(
+      onboardingProgress('OnboardingComplete', { hasPantry: true }),
+    ).toBeNull();
+    expect(onboardingProgress('SomewhereElse', { hasPantry: true })).toBeNull();
   });
 });

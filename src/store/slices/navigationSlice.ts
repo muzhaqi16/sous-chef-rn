@@ -11,20 +11,9 @@ export interface DeepLinkAction {
   timestamp: number;
 }
 
-export enum OnBoardingSteps {
-  createHome = 'createHome',
-  createShoppingList = 'createShoppingList',
-  selectPantryItems = 'selectPantryItems',
-  profilePictureUpload = 'profilePictureUpload',
-  inviteMembers = 'inviteMembers',
-  complete = 'complete',
-}
-
 interface UserNavigationState {
-  hasCompletedOnboarding?: boolean;
   /** The device-region currency default has been applied once for this account. */
   currencyDefaultApplied?: boolean;
-  isNewUser?: boolean;
   biometricDeclinedPermanently?: boolean;
   credentialPromptDeclined?: boolean;
   // User chose "skip for now" on the email verification screen. Lets an
@@ -35,14 +24,6 @@ interface UserNavigationState {
 }
 
 export interface NavigationState {
-  // Onboarding navigation state — source of truth for "which onboarding screen
-  // is current". Persisted across app restarts so a user mid-onboarding lands
-  // back on the same step. Distinct from OnboardingContext.activeStepIndex,
-  // which is a session-only Reanimated SharedValue driving the progress-bar
-  // animation. Both update together via useOnboardingNavigation; the store is
-  // the persistent state, the context is the animation driver.
-  onBoardingStep: OnBoardingSteps | null;
-
   // Selected resources
   selectedHomeId: string | null;
   selectedPantryId: string | null;
@@ -66,7 +47,6 @@ export interface NavigationState {
   pendingDeepLinkAction: DeepLinkAction | null;
 
   // Actions
-  setOnBoardingStep: (step: OnBoardingSteps | null) => void;
   setSelectedHomeId: (id: string | null) => void;
   setSelectedPantryId: (id: string | null) => void;
   setSelectedShoppingListId: (id: string | null) => void;
@@ -86,7 +66,6 @@ export interface NavigationState {
 }
 
 const initialNavigationState = {
-  onBoardingStep: null,
   selectedHomeId: null,
   selectedPantryId: null,
   selectedShoppingListId: null,
@@ -105,12 +84,6 @@ export const createNavigationSlice: StateCreator<
   NavigationState
 > = (set, get) => ({
   ...initialNavigationState,
-
-  setOnBoardingStep: step => {
-    set(state => {
-      state.onBoardingStep = step;
-    });
-  },
 
   setSelectedHomeId: id => {
     set(state => {

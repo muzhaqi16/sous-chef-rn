@@ -331,6 +331,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     error,
     refetch,
     updateNotificationSetting,
+    updateMultipleSettings,
     resetToDefaults,
     isQuietTime,
   };

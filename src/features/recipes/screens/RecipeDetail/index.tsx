@@ -47,6 +47,8 @@ import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
 import { HouseholdRecipeSummary } from '#features/recipes/components/recipeDetail/HouseholdRecipeSummary';
 import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
+import { useCooksFor } from '#features/profile/hooks/useCooksFor';
+import { startingServings } from '#domain/servings';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
 import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
@@ -269,6 +271,7 @@ const RecipeDetailScreen: React.FC = () => {
   const [showReportSheet, setShowReportSheet] = useState(false);
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
+  const cooksFor = useCooksFor();
   // Swaps are offered where the household flags an ingredient.
   const substitutes = useRecipeSubstitutes(
     recipeId,
@@ -620,6 +623,7 @@ const RecipeDetailScreen: React.FC = () => {
         <HouseholdRecipeSummary
           check={household.check}
           alerts={household.summary}
+          caveat={household.caveat}
         />
 
         {/* Description */}
@@ -758,9 +762,10 @@ const RecipeDetailScreen: React.FC = () => {
       <MarkCookedModal
         visible={cookedModalVisible}
         recipeName={displayData.title}
-        defaultServings={
-          displayData.servings === 0 ? 1 : displayData.servings ?? 1
-        }
+        defaultServings={startingServings(
+          cooksFor,
+          displayData.servings === 0 ? 1 : displayData.servings ?? 1,
+        )}
         onClose={() => setCookedModalVisible(false)}
         onConfirm={handleMarkAsCooked}
         hasPantry={ingredientMatching.hasPantry}

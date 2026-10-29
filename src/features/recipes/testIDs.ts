@@ -49,6 +49,8 @@ export const recipesTestIDs = {
   /** The recipe page's household dietary summary, and its offline note. */
   householdSummary: 'recipe-household-summary',
   householdUnchecked: 'recipe-household-unchecked',
+  /** The label caveat alone, on a checked recipe that flagged nothing. */
+  householdCaveat: 'recipe-household-caveat',
   /** An ingredient's tile on the recipe page, keyed by its place in the list. */
   ingredientTile: (index: number) => `recipe-ingredient-${index}`,
   /** A flagged ingredient's sheet: who it affects, what can stand in, add. */

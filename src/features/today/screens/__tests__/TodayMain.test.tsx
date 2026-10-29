@@ -6,6 +6,7 @@ import {
   screen,
   within,
 } from '@testing-library/react-native';
+import { t } from '#/i18n';
 import { useStore } from '#store';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { kitTestIDs } from '#components/testIDs';
@@ -97,6 +98,7 @@ type Overview = ReturnType<typeof useTodayOverview>;
 const overviewOf = (overrides: Partial<Overview> = {}): Overview => ({
   householdName: 'Test Home',
   selectedHomeId: 'h1',
+  homeCount: 2,
   unreadCount: 0,
   state: 'ready',
   needsHousehold: false,
@@ -414,8 +416,8 @@ describe("Today's +", () => {
 });
 
 describe('tutorial', () => {
-  it("points Pantry's household step, under its old id, at the title", () => {
-    renderToday();
+  it("points Pantry's household step, under its old id, at the title, for a user in two homes", () => {
+    renderToday({ homeCount: 2 });
 
     // The measured view is the title row inside the pressable title.
     const [titleRow] = screen.getByTestId(todayTestIDs.householdTitle).children;
@@ -428,6 +430,24 @@ describe('tutorial', () => {
     ]);
     expect(options?.targetRects.household).toEqual(TITLE_RECT);
     expect(options?.canStart).toBe(true);
+  });
+
+  it('never teaches switching homes to a user with one home', () => {
+    renderToday({ homeCount: 1 });
+
+    const [options] = mockedTutorial.mock.lastCall ?? [];
+    expect(options?.steps.map(step => [step.featureId, step.rectKey])).toEqual([
+      ['today_tutorial_your_home', 'household'],
+    ]);
+    expect(options?.steps[0]?.title).toBe(t('today.tutorialYourHomeTitle'));
+    expect(options?.canStart).toBe(true);
+  });
+
+  it('does not start while the number of homes is unknown', () => {
+    renderToday({ homeCount: null });
+
+    const [options] = mockedTutorial.mock.lastCall ?? [];
+    expect(options?.canStart).toBe(false);
   });
 
   it('waits for the overview before starting', () => {

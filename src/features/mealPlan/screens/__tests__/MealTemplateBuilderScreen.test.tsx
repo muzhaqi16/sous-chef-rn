@@ -109,8 +109,18 @@ jest.mock('#components/atoms/FormTextArea', () => ({
 jest.mock('#components/molecules/FormSelect', () => ({
   FormSelect: () => null,
 }));
+// Each counter's value, by its label: the servings fields under test.
+const mockCounters: Record<string, string> = {};
 jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: () => null,
+  EditableCounter: ({ label, value }: { label: string; value: string }) => {
+    mockCounters[label] = value;
+    return null;
+  },
+}));
+
+let mockCooksFor: number | null = null;
+jest.mock('#features/profile/hooks/useCooksFor', () => ({
+  useCooksFor: () => mockCooksFor,
 }));
 
 describe('MealTemplateBuilderScreen', () => {
@@ -331,6 +341,51 @@ describe('MealTemplateBuilderScreen', () => {
       expect(
         screen.queryByTestId(mealPlanTestIDs.templateItemRecipe),
       ).toBeNull();
+    });
+  });
+
+  describe('where servings start', () => {
+    afterEach(() => {
+      mockCooksFor = null;
+      mockLoadedTemplate = null;
+      mockLoadedItems = [];
+    });
+
+    it('starts a new template and its meals at who the user cooks for', () => {
+      mockCooksFor = 4;
+      renderWithApollo(
+        <MealTemplateBuilderScreen route={{ params: undefined }} />,
+      );
+
+      expect(mockCounters['Default Servings']).toBe('4');
+      expect(mockCounters.Servings).toBe('4');
+    });
+
+    it('starts at two when that was not answered', () => {
+      renderWithApollo(
+        <MealTemplateBuilderScreen route={{ params: undefined }} />,
+      );
+
+      expect(mockCounters['Default Servings']).toBe('2');
+    });
+
+    it('keeps the servings an edited template already has', async () => {
+      mockCooksFor = 4;
+      mockLoadedTemplate = {
+        id: 'tmpl-s',
+        name: 'Summer Week',
+        category: 'WEEKLY',
+        description: '',
+        defaultServings: 6,
+        tags: [],
+      };
+      renderWithApollo(
+        <MealTemplateBuilderScreen
+          route={{ params: { templateId: 'tmpl-s' } }}
+        />,
+      );
+
+      await waitFor(() => expect(mockCounters['Default Servings']).toBe('6'));
     });
   });
 });

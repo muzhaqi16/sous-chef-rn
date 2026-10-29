@@ -3,7 +3,6 @@ import { errorService } from '#/services/errorService';
 import { View, Platform, Linking } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
@@ -15,7 +14,7 @@ import {
   useNotificationSettings,
   type NotificationSettings,
 } from '#features/notifications/hooks/useNotificationSettings';
-import { useNotificationPermissions } from '#features/notifications/screens/useNotificationPermissions';
+import { useTurnOnPush } from '#features/notifications/screens/useTurnOnPush';
 import { useResyncPermissionOnReturn } from '#features/notifications/screens/useResyncPermissionOnReturn';
 import {
   CHANNEL_SETTINGS,
@@ -76,9 +75,6 @@ export const NotificationSettingsScreen: React.FC = () => {
   const [updating, setUpdating] = useState<string | null>(null);
   const [frequencyPickerVisible, setFrequencyPickerVisible] = useState(false);
   const [thresholdPickerVisible, setThresholdPickerVisible] = useState(false);
-  const { hasPermission, requestPermissions, checkPermissions } =
-    useNotificationPermissions();
-
   const {
     settings,
     loading,
@@ -87,9 +83,13 @@ export const NotificationSettingsScreen: React.FC = () => {
     error,
     refetch,
     updateNotificationSetting,
+    updateMultipleSettings,
     resetToDefaults,
     isQuietTime,
   } = useNotificationSettings();
+  const { hasPermission, checkPermissions, turnOnPush } = useTurnOnPush(
+    updateMultipleSettings,
+  );
 
   // `settings` always has a value (defaults are filled in), so availability has
   // to come from `hasPreferences`.
@@ -111,55 +111,10 @@ export const NotificationSettingsScreen: React.FC = () => {
     key: keyof NotificationSettings,
     value: boolean | string | number | ExpirationFrequency,
   ) => {
-    // Special handling for push notification toggle
     if (key === 'pushEnabled' && value === true) {
       void executeWithLoadingState(
         async () => {
-          const granted = await requestPermissions();
-
-          if (!granted) {
-            alertService.alert(
-              t('notifications.permissionRequiredTitle'),
-              t('notifications.permissionRequiredMessage'),
-              [
-                { text: t('labels.cancel'), style: 'cancel' },
-                {
-                  text: t('labels.openSettings'),
-                  onPress: () => {
-                    if (Platform.OS === 'ios') {
-                      void Linking.openURL('app-settings:').catch(error =>
-                        logger.warn(
-                          'Opening the system settings failed',
-                          error,
-                        ),
-                      );
-                    } else {
-                      void Linking.openSettings().catch(error =>
-                        logger.warn(
-                          'Opening the system settings failed',
-                          error,
-                        ),
-                      );
-                    }
-                  },
-                },
-              ],
-            );
-            return;
-          }
-
-          const success = await updateNotificationSetting(key, value);
-          if (!success) {
-            alertService.alert(
-              t('labels.error'),
-              t('notifications.updateFailed'),
-            );
-            return;
-          }
-
-          // This is where permission is granted (the login flow does not
-          // prompt), so re-register to deliver the push token to the server.
-          registerDeviceInBackground();
+          await turnOnPush();
         },
         isLoading => setUpdating(isLoading ? key : null),
         error => {

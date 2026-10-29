@@ -1,12 +1,19 @@
 import { createNativeStackScreen } from '@react-navigation/native-stack';
-import { ImageCropScreen } from '#features/profile/screens/ImageCropScreen';
-import { CreateHomeScreen } from './createHome/CreateHomeScreen';
-import { CreateShoppingListScreen } from './CreateShoppingListScreen';
+import {
+  ReceiptReviewScreen,
+  ReceiptScanScreen,
+} from '#features/receipts/screens/registration';
+import { topInsetWith } from '#navigation/layouts/TopInsetLayout';
+import { OnboardingReceiptExits } from '#features/onboarding/components/OnboardingReceiptExits';
+import { OnboardingSetupScreen } from './OnboardingSetupScreen';
+import { HouseholdStepScreen } from './HouseholdStepScreen';
+import { DietaryStepScreen } from './DietaryStepScreen';
+import { ReceiptStepScreen } from './ReceiptStepScreen';
 import { SelectPantryItems } from './SelectPantryItems';
-import { ProfilePictureUploadScreen } from './ProfilePictureUploadScreen';
-import { InviteMemberScreen } from './InviteMemberScreen';
 import { OnboardingCompleteScreen } from './OnboardingCompleteScreen';
-import { BiometricSetupScreen } from './BiometricSetupScreen';
+
+// The receipts feature's own screens, given onboarding's exits.
+const receiptLayout = topInsetWith(OnboardingReceiptExits);
 
 /**
  * The onboarding stack's screens, spread into `OnboardingStack`. Must stay a
@@ -15,39 +22,38 @@ import { BiometricSetupScreen } from './BiometricSetupScreen';
  * would otherwise derive a path from the screen name.
  */
 export const onboardingScreens = {
-  CreateHome: createNativeStackScreen({
-    screen: CreateHomeScreen,
-    linking: 'onboarding/home',
+  OnboardingSetup: createNativeStackScreen({
+    screen: OnboardingSetupScreen,
+    linking: 'onboarding/setup',
   }),
-  CreateShoppingList: createNativeStackScreen({
-    screen: CreateShoppingListScreen,
-    linking: 'onboarding/shopping-list',
+  Household: createNativeStackScreen({
+    screen: HouseholdStepScreen,
+    linking: 'onboarding/household',
   }),
-  SelectPantryItems: createNativeStackScreen({
-    screen: SelectPantryItems,
-    linking: 'onboarding/pantry-items',
+  Dietary: createNativeStackScreen({
+    screen: DietaryStepScreen,
+    linking: 'onboarding/dietary',
   }),
-  ProfilePictureUpload: createNativeStackScreen({
-    screen: ProfilePictureUploadScreen,
-    linking: 'onboarding/profile-picture',
+  Receipt: createNativeStackScreen({
+    screen: ReceiptStepScreen,
+    linking: 'onboarding/receipt',
   }),
-  // Onboarding registers its own ImageCrop so cropping stays inside the flow.
-  ImageCrop: createNativeStackScreen({
-    screen: ImageCropScreen,
+  OnboardingReceiptScan: createNativeStackScreen({
+    screen: ReceiptScanScreen,
     linking: null,
+    layout: receiptLayout,
   }),
-  InviteMembers: createNativeStackScreen({
-    screen: InviteMemberScreen,
-    linking: 'onboarding/invite',
+  OnboardingReceiptReview: createNativeStackScreen({
+    screen: ReceiptReviewScreen,
+    linking: null,
+    layout: receiptLayout,
+  }),
+  Staples: createNativeStackScreen({
+    screen: SelectPantryItems,
+    linking: 'onboarding/staples',
   }),
   OnboardingComplete: createNativeStackScreen({
     screen: OnboardingCompleteScreen,
     linking: 'onboarding/complete',
-  }),
-  // Without `linking: null`, auto mode derives `biometric-setup` here AND on
-  // RootNavigator's post-login screen, and two claims on one pattern throw.
-  BiometricSetup: createNativeStackScreen({
-    screen: BiometricSetupScreen,
-    linking: null,
   }),
 };

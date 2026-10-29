@@ -75,7 +75,6 @@ export function mockAppStore(state: Partial<RootState>) {
     useNavigationUtils: jest.fn(() => ({
       getUserNavigationState: state.getUserNavigationState,
       setUserNavigationState: state.setUserNavigationState,
-      setOnBoardingStep: state.setOnBoardingStep,
       setOnboarded: state.setOnboarded,
     })),
   };

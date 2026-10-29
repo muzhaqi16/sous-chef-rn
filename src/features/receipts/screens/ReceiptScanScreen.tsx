@@ -9,6 +9,7 @@ import { ErrorState } from '#components/molecules/ErrorState';
 import { Loading } from '#components/molecules/Loading';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useReceiptFlowExits } from './receiptFlowExits';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { alertService } from '#/services/alertService';
 import { useTranslation, type TranslationKey } from '#/i18n';
@@ -102,7 +103,10 @@ const READING_BANNER: Record<ServerReadingStatus, ReadingBanner | null> = {
 
 export const ReceiptScanScreen: React.FC = () => {
   const { t } = useTranslation();
-  const { goBack, toReceiptReview } = useAppNavigation();
+  const navigation = useAppNavigation();
+  const exits = useReceiptFlowExits();
+  const goBack = exits?.close ?? navigation.goBack;
+  const toReceiptReview = exits?.toReview ?? navigation.toReceiptReview;
   const serverParsing = useFeatureFlag('receiptParsing');
   const deviceReading = useFeatureFlag('deviceReceiptReading');
   const {
