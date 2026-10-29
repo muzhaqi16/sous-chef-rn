@@ -450,9 +450,6 @@
     "selectedCount_one": "{{count}} elemento seleccionado",
     "selectedCount_other": "{{count}} elementos seleccionados"
   },
-  "storeBranch": {
-    "number": "Tienda n.º {{number}}"
-  },
   "storeShelfPrices": {
     "title": "Precios en tiendas",
     "cheapest": "Más barato",
@@ -467,5 +464,36 @@
     "lastSeen": "Visto por última vez el {{date}}",
     "showMore_one": "Mostrar {{count}} más",
     "showMore_other": "Mostrar {{count}} más"
+  },
+  "usualStores": {
+    "title": "Tus tiendas",
+    "addStore": "Añadir una tienda",
+    "pinned": "Fijada",
+    "pin": "Fijar",
+    "unpin": "Dejar de fijar",
+    "addedViaReceipt": "De un recibo",
+    "addedViaPurchase": "De una compra",
+    "addedViaListStore": "Tienda de una lista",
+    "addedViaPicked": "Añadida por tu hogar",
+    "lastUsed": "Último uso: {{date}}",
+    "notCompared": "No se compara: sin usar en 90 días",
+    "removed": "Se quitó {{name}}",
+    "emptyTitle": "Aún no hay tiendas",
+    "emptyBody": "Las tiendas aparecen aquí cuando escaneas un recibo, compras en modo tienda o eliges la tienda de una lista.",
+    "limitTitle": "Demasiadas tiendas",
+    "limitBody": "Puedes tener hasta 20 tiendas. Quita una o deja de fijarla e inténtalo de nuevo.",
+    "saveFailed": "No se pudieron guardar tus tiendas"
+  },
+  "storePicker": {
+    "searchPlaceholder": "Busca por nombre o dirección de la tienda",
+    "zipLabel": "Código postal",
+    "zipRefused": "Aún no conocemos ese código postal. Prueba otro o busca por nombre.",
+    "notListed": "¿No aparece? Añadir «{{name}}»",
+    "addedToStores": "Añadida a tus tiendas",
+    "needsConnectionTitle": "Buscar tiendas requiere conexión",
+    "needsConnectionBody": "Estas son las tiendas donde compras. Conéctate para encontrar otras.",
+    "nothingNear": "No se encontraron tiendas cerca de aquí.",
+    "nothingNamed": "Ninguna tienda coincide con «{{term}}».",
+    "hint": "Busca por nombre o escribe un código postal para ver las tiendas cercanas."
   }
 }

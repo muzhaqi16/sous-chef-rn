@@ -14,7 +14,7 @@ import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
-import { storeBranchLabel } from '#features/catalog/ui/storeBranchLabel';
+import { storeBranchLabel } from '#domain/stores';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useReceiptFlowExits } from './receiptFlowExits';
 import { toastService } from '#/services/toastService';

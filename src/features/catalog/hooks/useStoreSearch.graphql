@@ -1,0 +1,17 @@
+# Stores near a zip or a point, nearest first, narrowed by a typed term.
+# Consumer: useStoreSearch.
+query NearbyStores($input: NearbyStoresInput!) {
+  nearbyStores(input: $input) {
+    distanceKm
+    store {
+      id
+      name
+      address
+      storeNumber
+      chain {
+        id
+        name
+      }
+    }
+  }
+}

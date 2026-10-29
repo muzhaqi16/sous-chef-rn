@@ -4,6 +4,8 @@
  * its keypad does not offer. Both follow the DEVICE, because the keypad does
  * (see `deviceLocale`). `Intl` is treated as possibly-absent throughout.
  */
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import type { Translate } from '#/i18n/types';
 import { getDeviceDecimalSeparator } from '../deviceLocale';
 
 /**
@@ -161,6 +163,27 @@ export function localizeNumericHint(text: string): string {
   const separator = getDeviceDecimalSeparator();
   if (separator === '.') return text;
   return text.replace(/(\d)\.(\d)/g, `$1${separator}$2`);
+}
+
+const KM_PER_MILE = 1.609344;
+
+/**
+ * A distance in the reader's units: miles for imperial, else kilometres, whole
+ * from 1 up and to one decimal below it, so a nearby store never reads "0 mi".
+ */
+export function formatDistance(
+  km: number,
+  readingSystem: UnitSystem,
+  t: Translate,
+): string {
+  const imperial = readingSystem === UnitSystem.Imperial;
+  const value = imperial ? km / KM_PER_MILE : km;
+  const distance = formatDecimal(value, {
+    maximumFractionDigits: value < 1 ? 1 : 0,
+  });
+  return imperial
+    ? t('labels.distance.mi', { distance })
+    : t('labels.distance.km', { distance });
 }
 
 /**

@@ -53,6 +53,7 @@ import {
   recordCatalogFetch,
 } from '#features/recipes/store/catalogFetchTimes';
 import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
+import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -255,6 +256,16 @@ describe('a session end leaves no data belonging to the previous person', () => 
       cooksFor: null,
     });
     expect(registeredSessionScopedStores()).toContain('onboardingProgress');
+  });
+
+  it('forgets the zip code this account found stores near', async () => {
+    useStorePickerStore.getState().setLastZip('15220');
+    expect(useStorePickerStore.getState().lastZip).toBe('15220');
+
+    await useStore.getState().endSession('signed_out');
+
+    expect(useStorePickerStore.getState().lastZip).toBeNull();
+    expect(registeredSessionScopedStores()).toContain('storePicker');
   });
 
   it('forgets when this account fetched catalog recipes', async () => {

@@ -518,6 +518,12 @@
     "unknownHome": "Shtëpi e panjohur",
     "unknownLoss": "Humbje e panjohur",
     "undo": "Zhbëj",
+    "anyStore": "{{chain}} (çdo dyqan)",
+    "storeNumber": "Dyqani nr. {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Përditëso",
     "updated": "Përditësuar",
     "usage": "Përdorimi",

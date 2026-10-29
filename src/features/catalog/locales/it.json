@@ -450,9 +450,6 @@
     "selectedCount_one": "{{count}} elemento selezionato",
     "selectedCount_other": "{{count}} elementi selezionati"
   },
-  "storeBranch": {
-    "number": "Punto vendita n. {{number}}"
-  },
   "storeShelfPrices": {
     "title": "Prezzi nei negozi",
     "cheapest": "Il più economico",
@@ -467,5 +464,36 @@
     "lastSeen": "Visto l’ultima volta il {{date}}",
     "showMore_one": "Mostra {{count}} altro",
     "showMore_other": "Mostra altri {{count}}"
+  },
+  "usualStores": {
+    "title": "I tuoi negozi",
+    "addStore": "Aggiungi un negozio",
+    "pinned": "Fissato",
+    "pin": "Fissa",
+    "unpin": "Non fissare",
+    "addedViaReceipt": "Da uno scontrino",
+    "addedViaPurchase": "Da un acquisto",
+    "addedViaListStore": "Negozio di una lista",
+    "addedViaPicked": "Aggiunto dalla tua casa",
+    "lastUsed": "Ultimo uso: {{date}}",
+    "notCompared": "Non confrontato: inutilizzato da 90 giorni",
+    "removed": "Rimosso: {{name}}",
+    "emptyTitle": "Ancora nessun negozio",
+    "emptyBody": "I negozi compaiono qui quando scansioni uno scontrino, fai la spesa in modalità negozio o scegli il negozio di una lista.",
+    "limitTitle": "Troppi negozi",
+    "limitBody": "Puoi tenere fino a 20 negozi. Rimuovine uno o smetti di fissarlo, poi riprova.",
+    "saveFailed": "Impossibile salvare i tuoi negozi"
+  },
+  "storePicker": {
+    "searchPlaceholder": "Cerca per nome o indirizzo del negozio",
+    "zipLabel": "CAP",
+    "zipRefused": "Non conosciamo ancora questo CAP. Provane un altro o cerca per nome.",
+    "notListed": "Non c'è? Aggiungi «{{name}}»",
+    "addedToStores": "Aggiunto ai tuoi negozi",
+    "needsConnectionTitle": "Per trovare negozi serve una connessione",
+    "needsConnectionBody": "Questi sono i negozi dove fai la spesa. Connettiti per trovarne altri.",
+    "nothingNear": "Nessun negozio trovato qui vicino.",
+    "nothingNamed": "Nessun negozio corrisponde a «{{term}}».",
+    "hint": "Cerca per nome o inserisci un CAP per vedere i negozi vicini."
   }
 }

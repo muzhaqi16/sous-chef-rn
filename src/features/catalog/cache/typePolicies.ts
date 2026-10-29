@@ -47,6 +47,8 @@ export const catalogTypePolicies: TypePolicies = {
       },
       // A scan's lookup stores the item whole, so a by-id read off it asks nothing.
       item: readByIdFromCache('Item'),
+      // Each answer and each local write is the whole list (writeUsualStores).
+      usualStores: { merge: false },
     },
   },
 };

@@ -1,0 +1,25 @@
+# The stores a household shops at. Read by useUsualStores, for the
+# usual-stores screen, the store picker's "Added" and the receipt review's
+# learned store. Written only by writeUsualStores (cache/usualStores.ts).
+query UsualStores($homeId: ID) {
+  usualStores(homeId: $homeId) {
+    id
+    addedVia
+    pinned
+    compared
+    lastUsedAt
+    store {
+      id
+      name
+      address
+      chain {
+        id
+        name
+      }
+    }
+    chain {
+      id
+      name
+    }
+  }
+}

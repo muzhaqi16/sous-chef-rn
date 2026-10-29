@@ -1,0 +1,59 @@
+# A household's usual-store writes, local-first. Each is absolute and safe to
+# repeat, and answers the whole list, which writeUsualStores writes over the
+# UsualStores query.
+mutation AddUsualStore($input: AddUsualStoreInput!) {
+  addUsualStore(input: $input) {
+    __typename
+    ... on AddUsualStorePayload {
+      usualStores {
+        id
+        ...UsualStoreReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation UpdateUsualStore($input: UpdateUsualStoreInput!) {
+  updateUsualStore(input: $input) {
+    __typename
+    ... on UpdateUsualStorePayload {
+      usualStores {
+        id
+        ...UsualStoreReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}
+
+mutation RemoveUsualStore($input: RemoveUsualStoreInput!) {
+  removeUsualStore(input: $input) {
+    __typename
+    ... on RemoveUsualStorePayload {
+      usualStores {
+        id
+        ...UsualStoreReaders
+      }
+    }
+    ... on Error {
+      code
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

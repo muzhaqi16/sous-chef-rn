@@ -89,6 +89,8 @@ const ENUM_DEFAULTS = {
   'MealPlanItem.mealType': 'DINNER',
   'MealTemplate.category': 'CUSTOM',
   'MealTemplateItem.mealType': 'DINNER',
+  // Every local usual-store write states how the store came; this stands in for none.
+  'UsualStore.addedVia': 'PICKED',
 };
 
 /**
@@ -161,6 +163,27 @@ const TARGETS = [
     unmasked: true,
     fragments: {
       useCreateStore_row: ['NEUTRAL_LOCAL_STORE', 'UseCreateStore_RowFragment'],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'catalog',
+      'cache',
+      'usualStores.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'catalog',
+      'cache',
+      'usualStoreRowNeutral.generated.ts',
+    ),
+    typesFrom: './usualStores.generated',
+    unmasked: true,
+    fragments: {
+      usualStores_row: ['NEUTRAL_LOCAL_USUAL_STORE', 'UsualStores_RowFragment'],
     },
   },
   {

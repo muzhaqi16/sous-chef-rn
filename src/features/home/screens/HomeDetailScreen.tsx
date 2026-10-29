@@ -55,7 +55,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 }) => {
   useScreenTransition('HomeDetailScreen');
   const { t } = useTranslation();
-  const { goBack, toStorageLocations, toHomeDietaryNeeds } = useAppNavigation();
+  const { goBack, toStorageLocations, toHomeDietaryNeeds, toUsualStores } =
+    useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
   const currentUser = useUser();
@@ -346,6 +347,18 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
           title={t('labels.storageLocations')}
           subtitle={t('homeDetail.storageLocationsSubtitle')}
           onPress={() => toStorageLocations({ homeId })}
+        />
+      ),
+    },
+    {
+      title: t('homeDetail.storesSectionTitle'),
+      content: (
+        <ThemedNavigationRow
+          icon="storefront-outline"
+          title={t('usualStores.title')}
+          subtitle={t('homeDetail.usualStoresRowSubtitle')}
+          onPress={() => toUsualStores({ homeId })}
+          testID={homeTestIDs.usualStoresRow}
         />
       ),
     },

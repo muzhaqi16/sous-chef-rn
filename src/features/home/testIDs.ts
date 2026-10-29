@@ -11,6 +11,8 @@ export const homeTestIDs = {
   /** The home details entry that opens the household's dietary needs. */
   dietaryNeedsRow: 'home-dietary-needs-row',
   dietaryNeedsScreen: 'home-dietary-needs-screen',
+  /** The home details entry that opens the household's usual stores. */
+  usualStoresRow: 'home-usual-stores-row',
   /** One sharing member's card on the dietary needs screen. */
   dietaryNeedsMember: (membershipId: string) =>
     `home-dietary-needs-member-${membershipId}`,

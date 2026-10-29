@@ -125,6 +125,10 @@ export function useAppNavigation() {
       navigation.navigate('HomeDietaryNeeds', params),
     toStorageLocations: (params: RootStackParamList['StorageLocations']) =>
       navigation.navigate('StorageLocations', params),
+    toUsualStores: (params: RootStackParamList['UsualStores']) =>
+      navigation.navigate('UsualStores', params),
+    toStorePicker: (params: RootStackParamList['StorePicker']) =>
+      navigation.navigate('StorePicker', params),
     toImageCrop: (params: RootStackParamList['ImageCrop']) =>
       navigation.navigate('ImageCrop', params),
     toProfilePhotoUpload: () => navigation.navigate('ProfilePhotoUpload'),

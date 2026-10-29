@@ -1,6 +1,9 @@
+import { t } from '#/i18n';
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import {
   currencySymbol,
   formatCurrency,
+  formatDistance,
   UNKNOWN_AMOUNT,
   formatDecimal,
   formatNumberForInput,
@@ -202,5 +205,18 @@ describe('currencySymbol', () => {
   it('falls back to the code without Intl', () => {
     withoutIntl();
     expect(currencySymbol('EUR')).toBe('EUR');
+  });
+});
+
+describe('formatDistance', () => {
+  it('reads miles for imperial and kilometres for metric', () => {
+    expect(formatDistance(6.4, UnitSystem.Imperial, t)).toBe('4 mi');
+    expect(formatDistance(6.4, UnitSystem.Metric, t)).toBe('6 km');
+  });
+
+  // A store round the corner reads its distance, not "0 mi".
+  it('keeps one decimal under one unit', () => {
+    expect(formatDistance(0.5, UnitSystem.Imperial, t)).toBe('0.3 mi');
+    expect(formatDistance(0.5, UnitSystem.Metric, t)).toBe('0.5 km');
   });
 });

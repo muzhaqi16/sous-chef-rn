@@ -1,3 +1,5 @@
+# Stores by name or address: useStoreSearch, for every store field and the
+# store picker. The chain offers "any" of its stores.
 query SearchStores($search: String!, $limit: Int) {
   stores(filters: { search: $search }, first: $limit) {
     edges {
@@ -7,6 +9,10 @@ query SearchStores($search: String!, $limit: Int) {
         address
         # Read with the address where a picked store's branch is shown.
         storeNumber
+        chain {
+          id
+          name
+        }
       }
     }
     totalCount

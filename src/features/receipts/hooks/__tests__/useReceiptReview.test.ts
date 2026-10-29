@@ -1063,6 +1063,7 @@ describe('useReceiptReview', () => {
                   name: 'Kroger #87',
                   address: '200 Side St',
                   storeNumber: '87',
+                  chain: null,
                 },
               },
             ],

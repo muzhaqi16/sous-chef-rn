@@ -518,6 +518,12 @@
     "unknownHome": "Casa sconosciuta",
     "unknownLoss": "Perdita sconosciuta",
     "undo": "Annulla",
+    "anyStore": "{{chain}} (qualsiasi negozio)",
+    "storeNumber": "Punto vendita n. {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Aggiorna",
     "updated": "Aggiornato",
     "usage": "Utilizzo",

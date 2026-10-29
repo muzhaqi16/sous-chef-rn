@@ -518,6 +518,12 @@
     "unknownHome": "Unknown Home",
     "unknownLoss": "Unknown Loss",
     "undo": "Undo",
+    "anyStore": "{{chain}} (any store)",
+    "storeNumber": "Store #{{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Update",
     "updated": "Updated",
     "usage": "Usage",

@@ -80,6 +80,13 @@ const REPLAY_SAFETY_BASELINE: Record<
   UpdateNotificationPreferences: 'absolute-update',
   UpdateUserPreferences: 'absolute-update',
   UpdateUserProfile: 'absolute-update',
+  // A household's usual stores: each sets one row, named by the household and
+  // an existing store or chain (`target`), to added, pinned or removed. The SDL
+  // calls each "Safe to repeat", and the queue replays a household's writes in
+  // the order they were made, so a replay never outlasts a later tap.
+  AddUsualStore: 'absolute-update',
+  RemoveUsualStore: 'absolute-update',
+  UpdateUsualStore: 'absolute-update',
 };
 
 /**

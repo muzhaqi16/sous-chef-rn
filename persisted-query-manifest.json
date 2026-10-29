@@ -75,6 +75,12 @@
       "body": "mutation AddTemplateItem($input: AddTemplateItemInput!) {\n  addTemplateItem(input: $input) {\n    __typename\n    ... on AddTemplateItemPayload {\n      mealTemplate {\n        id\n        ...MealTemplateReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment MealTemplateReaders on MealTemplate {\n  id\n  category\n  createdAt\n  defaultServings\n  description\n  durationDays\n  home {\n    id\n    myMembership {\n      id\n      role\n      __typename\n    }\n    name\n    __typename\n  }\n  homeId\n  lastUsedAt\n  name\n  tags\n  updatedAt\n  usageCount\n  user {\n    id\n    __typename\n  }\n  __typename\n}"
     },
     {
+      "id": "0105cae429472401e83f88fd660d11fbefad2693a5314573a0089f504587437a",
+      "name": "AddUsualStore",
+      "type": "mutation",
+      "body": "mutation AddUsualStore($input: AddUsualStoreInput!) {\n  addUsualStore(input: $input) {\n    __typename\n    ... on AddUsualStorePayload {\n      usualStores {\n        id\n        ...UsualStoreReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment UsualStoreReaders on UsualStore {\n  id\n  addedVia\n  chain {\n    id\n    name\n    __typename\n  }\n  compared\n  lastUsedAt\n  pinned\n  store {\n    id\n    address\n    chain {\n      id\n      name\n      __typename\n    }\n    name\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "efb76f0677879f4b5d3b795b5e8fa5b091d4ce84f091f59e39ea82e993dd1665",
       "name": "AdjustPantryItemQuantity",
       "type": "mutation",
@@ -1053,6 +1059,12 @@
       "body": "subscription MyShoppingListsEvents {\n  myShoppingListsEvents {\n    subtype\n    mutation\n    listId\n    originatorClientId\n    actorUserId\n    timestamp\n    updatedFields\n    clearedItemIds\n    node {\n      __typename\n      ... on ShoppingListItem {\n        id\n        __typename\n      }\n      ... on ShoppingList {\n        id\n        __typename\n      }\n      ... on ShoppingListCollaborator {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "e552ce0916ce3c31562e843db449c404abbded8b6de61bb7718d1508d1405707",
+      "name": "NearbyStores",
+      "type": "query",
+      "body": "query NearbyStores($input: NearbyStoresInput!) {\n  nearbyStores(input: $input) {\n    distanceKm\n    store {\n      id\n      name\n      address\n      storeNumber\n      chain {\n        id\n        name\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "06c6255834e662551eaa1ab46aa02431cf0390fb46cb8eba0b648eedecbb1c1a",
       "name": "NotificationEvents",
       "type": "subscription",
@@ -1245,6 +1257,12 @@
       "body": "mutation RemoveTemplateItem($input: RemoveTemplateItemInput!) {\n  removeTemplateItem(input: $input) {\n    __typename\n    ... on RemoveTemplateItemPayload {\n      mealTemplateItem {\n        id\n        __typename\n      }\n      mealTemplate {\n        id\n        ...MealTemplateReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment MealTemplateReaders on MealTemplate {\n  id\n  category\n  createdAt\n  defaultServings\n  description\n  durationDays\n  home {\n    id\n    myMembership {\n      id\n      role\n      __typename\n    }\n    name\n    __typename\n  }\n  homeId\n  lastUsedAt\n  name\n  tags\n  updatedAt\n  usageCount\n  user {\n    id\n    __typename\n  }\n  __typename\n}"
     },
     {
+      "id": "77bd7d400f5c95cafbf9f93783a5f614eaf01d5ea0dc5556591c212c4748ffe1",
+      "name": "RemoveUsualStore",
+      "type": "mutation",
+      "body": "mutation RemoveUsualStore($input: RemoveUsualStoreInput!) {\n  removeUsualStore(input: $input) {\n    __typename\n    ... on RemoveUsualStorePayload {\n      usualStores {\n        id\n        ...UsualStoreReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment UsualStoreReaders on UsualStore {\n  id\n  addedVia\n  chain {\n    id\n    name\n    __typename\n  }\n  compared\n  lastUsedAt\n  pinned\n  store {\n    id\n    address\n    chain {\n      id\n      name\n      __typename\n    }\n    name\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "2d83be943d6841ef18dbb4b0a61d0ca1109144858437556450a4f0b3956653d3",
       "name": "RequestPasswordReset",
       "type": "mutation",
@@ -1323,10 +1341,10 @@
       "body": "query SearchRecipes($query: String!, $filters: RecipeFilters, $first: Int, $after: String) {\n  findRecipes(query: $query, filters: $filters, first: $first, after: $after) {\n    edges {\n      cursor\n      node {\n        __typename\n        ... on Recipe {\n          id\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          freeOf\n          isSaved\n          __typename\n        }\n        ... on CatalogRecipeHit {\n          provider\n          providerRecipeId\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          freeOf\n          likes\n          __typename\n        }\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    catalogAvailable\n    __typename\n  }\n}"
     },
     {
-      "id": "12b0ff5aa37e666f1e8077fb9fbfbeb1dbf919a96fba06d244ee31c6b4c51faa",
+      "id": "44a6e8962cb2be754429890b1cbda471d657bed031a87497acd4ecdaf25a2745",
       "name": "SearchStores",
       "type": "query",
-      "body": "query SearchStores($search: String!, $limit: Int) {\n  stores(filters: {search: $search}, first: $limit) {\n    edges {\n      node {\n        id\n        name\n        address\n        storeNumber\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
+      "body": "query SearchStores($search: String!, $limit: Int) {\n  stores(filters: {search: $search}, first: $limit) {\n    edges {\n      node {\n        id\n        name\n        address\n        storeNumber\n        chain {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
     },
     {
       "id": "999b5a6aafcd9355a50229e3223aed60a632ed3b6935ac7dc3d71c694642c295",
@@ -1563,10 +1581,22 @@
       "body": "mutation UpdateUserProfile($input: UpdateProfileInput!) {\n  updateProfile(input: $input) {\n    __typename\n    ... on UpdateProfilePayload {\n      userProfile {\n        id\n        userId\n        firstName\n        lastName\n        displayName\n        bio\n        avatar\n        coverImage\n        phone\n        website\n        dateOfBirth\n        gender\n        profileVisibility\n        createdAt\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on NotFoundError {\n      resource\n      resourceId\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
+      "id": "606a87410c0e868d69e84299e2e96899bd4cec9cb0ad1fac25381dde4ae34eb1",
+      "name": "UpdateUsualStore",
+      "type": "mutation",
+      "body": "mutation UpdateUsualStore($input: UpdateUsualStoreInput!) {\n  updateUsualStore(input: $input) {\n    __typename\n    ... on UpdateUsualStorePayload {\n      usualStores {\n        id\n        ...UsualStoreReaders\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}\n\nfragment UsualStoreReaders on UsualStore {\n  id\n  addedVia\n  chain {\n    id\n    name\n    __typename\n  }\n  compared\n  lastUsedAt\n  pinned\n  store {\n    id\n    address\n    chain {\n      id\n      name\n      __typename\n    }\n    name\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "1bc762ebf909d0091bb5fb1d39eb14206f301674e4e33fa0064b6099fd8bb068",
       "name": "UserEvents",
       "type": "subscription",
       "body": "subscription UserEvents($userId: ID!) {\n  userEvents(userId: $userId) {\n    subtype\n    mutation\n    actorUserId\n    originatorClientId\n    updatedFields\n    timestamp\n    userId\n    reasonCode\n    failedLoginCount\n    warningCount\n    parents {\n      homeId\n      shoppingListId\n      receiptParseId\n      recipeCaptureId\n      __typename\n    }\n    node {\n      ... on User {\n        id\n        email\n        displayName\n        emailVerified\n        role\n        onBoarded\n        __typename\n      }\n      ... on UserProfile {\n        id\n        firstName\n        lastName\n        displayName\n        bio\n        avatar\n        phone\n        dateOfBirth\n        gender\n        profileVisibility\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
+      "id": "04b677b02c021873fb6380edcd5376806e0d6956675b1d85fcfcc26b226226c4",
+      "name": "UsualStores",
+      "type": "query",
+      "body": "query UsualStores($homeId: ID) {\n  usualStores(homeId: $homeId) {\n    id\n    addedVia\n    pinned\n    compared\n    lastUsedAt\n    store {\n      id\n      name\n      address\n      chain {\n        id\n        name\n        __typename\n      }\n      __typename\n    }\n    chain {\n      id\n      name\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "784034e105dbaf94cf9d858eadc8cc4eea9279e7c2db8d00cd491ebcf55bbdf5",

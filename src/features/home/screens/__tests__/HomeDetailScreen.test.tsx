@@ -342,6 +342,17 @@ describe('HomeDetailScreen', () => {
     expect(getByText('Storage Locations')).toBeTruthy();
   });
 
+  // Reachable from Home settings with prices off, unlike Budget & prices.
+  it("opens the home's usual stores", () => {
+    const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
+
+    fireEvent.press(getByText('Your stores'));
+
+    expect(useAppNavigation().toUsualStores).toHaveBeenCalledWith({
+      homeId: 'home-1',
+    });
+  });
+
   it('does not show leave home for owner', () => {
     const { queryByText } = render(<HomeDetailScreen {...defaultProps} />);
     expect(queryByText('Leave Home')).toBeNull();

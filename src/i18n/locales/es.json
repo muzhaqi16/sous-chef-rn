@@ -518,6 +518,12 @@
     "unknownHome": "Hogar desconocido",
     "unknownLoss": "Pérdida desconocida",
     "undo": "Deshacer",
+    "anyStore": "{{chain}} (cualquier tienda)",
+    "storeNumber": "Tienda n.º {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Actualizar",
     "updated": "Actualizado",
     "usage": "Uso",
