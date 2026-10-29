@@ -42,8 +42,10 @@ fragment useRecipeFormWrites_recipe on Recipe {
           id
           name
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         image
         isOptional
@@ -98,8 +100,10 @@ fragment useRecipeFormWrites_recipe on Recipe {
           id
           name
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         isOptional
         notes

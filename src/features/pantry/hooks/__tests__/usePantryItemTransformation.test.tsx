@@ -252,8 +252,7 @@ describe('formatHeldAmount', () => {
         unit: {
           id: 'u-can',
           symbol: 'can',
-          localizedSymbol: 'lattina',
-          symbolOther: 'lattine',
+          localizedSymbolForms: { one: 'lattina', other: 'lattine' },
         },
       },
       unit: { id: 'u-can', displayAsFraction: false },

@@ -80,6 +80,7 @@ function createMockPantryItem(overrides: DeepPartial<PantryItem> = {}) {
     displayAmount: {
       __typename: 'DisplayAmount',
       quantity: held,
+      localizedSymbol: overrides.unit?.symbol ?? 'pc',
       unit: asAbbreviation({
         __typename: 'Unit',
         id: overrides.unit?.id ?? 'unit-piece',

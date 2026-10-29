@@ -151,6 +151,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         displayAmount: {
           __typename: 'DisplayAmount',
           quantity: 5,
+          localizedSymbol: 'lbs',
           unit: asAbbreviation({ __typename: 'Unit', id: 'u1', symbol: 'lbs' }),
         },
         activeBatchCount: 1,
@@ -299,6 +300,7 @@ describe('PantryActionModal', () => {
         displayAmount: {
           __typename: 'DisplayAmount',
           quantity: 5,
+          localizedSymbol: '',
           unit: asAbbreviation({ __typename: 'Unit', id: '', symbol: '' }),
         },
       }),
@@ -375,6 +377,7 @@ describe('PantryActionModal', () => {
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 3,
+        localizedSymbol: 'doz',
         unit: asAbbreviation({ __typename: 'Unit', id: 'doz', symbol: 'doz' }),
       },
       unit: asAbbreviation({

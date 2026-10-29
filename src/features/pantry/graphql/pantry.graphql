@@ -67,11 +67,14 @@ query GetPantry(
           heldQuantity
           displayAmount {
             quantity
+            localizedSymbol
             unit {
               id
               symbol
-              localizedSymbol
-              symbolOther: localizedSymbol(quantity: 2)
+              localizedSymbolForms {
+                one
+                other
+              }
             }
           }
           expiresOn
@@ -85,8 +88,10 @@ query GetPantry(
           unit {
             id
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
           ...pantryItem_listed
         }
@@ -158,8 +163,10 @@ query GetPantryItemSuggestions(
         defaultUnit {
           id
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
       }
       expiringSoon {
@@ -316,8 +323,10 @@ query GetPantryLedgerAnalytics(
           unit {
             id
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
           totalQuantity
           count
@@ -329,8 +338,10 @@ query GetPantryLedgerAnalytics(
           unit {
             id
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
           totalQuantity
           count
@@ -363,8 +374,10 @@ query GetPantryLedgerAnalytics(
           unit {
             id
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
         }
         costByStore {
@@ -382,8 +395,10 @@ query GetPantryLedgerAnalytics(
             unit {
               id
               symbol
-              localizedSymbol
-              symbolOther: localizedSymbol(quantity: 2)
+              localizedSymbolForms {
+                one
+                other
+              }
             }
           }
         }
@@ -409,8 +424,10 @@ query ConsumptionUnitsForPantryItem($pantryItemId: ID!) {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       type
       unitRole
       commonFractions
@@ -433,8 +450,10 @@ query RestockUnitsForPantryItem($pantryItemId: ID!) {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       type
       unitRole
       commonFractions
@@ -691,11 +710,14 @@ mutation CreatePantryItemUsage(
           heldQuantity
           displayAmount {
             quantity
+            localizedSymbol
             unit {
               id
               symbol
-              localizedSymbol
-              symbolOther: localizedSymbol(quantity: 2)
+              localizedSymbolForms {
+                one
+                other
+              }
             }
           }
           isLowStock
@@ -990,14 +1012,18 @@ query GetPantryItemBatchHistory(
     unit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     displayUnit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       type
       hasStandardCountFactor
       baseUnitId
@@ -1007,8 +1033,10 @@ query GetPantryItemBatchHistory(
     netWeightUnit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   pantryItemBatchesConnection(
@@ -1188,8 +1216,10 @@ query GetPantryItemUsageHistory(
             id
             name
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
           usedAt
           purpose

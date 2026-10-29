@@ -1203,28 +1203,36 @@ function mergeOverSchema(
   return merged;
 }
 
-// The response keys a unit's labels are aliased under (`unitLabel`).
-const SYMBOL_LABELS = ['localizedSymbol', 'symbolOther'];
-const NAME_LABELS = ['localizedName', 'nameOther'];
-
 /**
  * A unit stated by its symbol or name alone reads as an abbreviation reads in
- * English: its label is what was stated. Left to the schema it would read
- * "mock-string"; a test of a localized label states the label itself.
+ * English: its label is what was stated, singular and plural; an amount reads
+ * its unit's. Left to the schema it would read "mock-string"; a test of a
+ * localized label states the label itself.
  */
 function labelAsStated(
   merged: Record<string, unknown>,
   stated: Record<string, unknown>,
 ): void {
-  const fill = (source: string, labels: readonly string[]) => {
-    const value = stated[source];
-    if (typeof value !== 'string') return;
-    for (const label of labels) {
-      if (label in merged && !(label in stated)) merged[label] = value;
+  const unstated = (label: string) => label in merged && !(label in stated);
+  const fillForms = (label: string, text: unknown) => {
+    const forms = merged[label];
+    if (typeof text !== 'string' || !unstated(label)) return;
+    if (forms && typeof forms === 'object') {
+      merged[label] = { ...forms, one: text, other: text };
     }
   };
-  fill('symbol', SYMBOL_LABELS);
-  fill('name', NAME_LABELS);
+  const { symbol, name, unit } = stated;
+  if (typeof symbol === 'string' && unstated('localizedSymbol')) {
+    merged.localizedSymbol = symbol;
+  }
+  fillForms('localizedSymbolForms', symbol);
+  fillForms('localizedNameForms', name);
+  // An amount or a reading: its own short form beside its unit.
+  const unitSymbol =
+    unit && typeof unit === 'object' && 'symbol' in unit ? unit.symbol : null;
+  if (typeof unitSymbol === 'string' && unstated('localizedSymbol')) {
+    merged.localizedSymbol = unitSymbol;
+  }
 }
 
 // The client adds `__typename` to every selection set before it sends an
@@ -1606,16 +1614,7 @@ function selectionSetFor(record: Record<string, unknown>): string {
   return `__typename ${selections.join(' ')}`;
 }
 
-// The fields a unit's plural aliases stand for (`unitLabel`), so a seeded
-// plural lands where the production documents read it.
-const LABEL_ALIASES: Partial<Record<string, string>> = {
-  symbolOther: 'symbolOther: localizedSymbol(quantity: 2)',
-  nameOther: 'nameOther: localizedName(quantity: 2)',
-};
-
 function selectionFor(key: string, value: unknown): string {
-  const label = LABEL_ALIASES[key];
-  if (label !== undefined && typeof value === 'string') return label;
   if (Array.isArray(value)) {
     // The union of the entries' keys, so a heterogeneous list keeps every
     // field some entry carries rather than only the first entry's.

@@ -5,7 +5,10 @@ fragment CorrectPackageSizeModal_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   # The server refuses a package size stated in the tracking unit.
   unit {

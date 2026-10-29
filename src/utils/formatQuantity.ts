@@ -1,6 +1,7 @@
 import Fraction from 'fraction.js';
 import { formatNumberForInput } from '#/utils/formatters/number';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
+import type { PluralForms } from '#/graphql/generated/schemaTypes';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { getResolvedLanguage } from '#/i18n';
 
@@ -129,19 +130,20 @@ export function formatQuantityForDisplay(
 }
 
 /**
- * A unit as a document selects it to be shown: the singular forms plain, the
- * plurals aliased (`symbolOther: localizedSymbol(quantity: 2)`, and `nameOther`
- * on `localizedName`), one alias a unit under the API's alias cap. A unit known
- * only as text is `{ symbol: text }`.
+ * A unit as a document selects it to be shown: its forms, singular and plural
+ * (`localizedSymbolForms`, `localizedNameForms`); a reading's or an item
+ * suggestion's own `localizedSymbol`. A unit known only as text is
+ * `{ symbol: text }`.
  */
 export interface UnitLabelSource {
   symbol?: string | null;
   name?: string | null;
   localizedSymbol?: string | null;
-  symbolOther?: string | null;
-  localizedName?: string | null;
-  nameOther?: string | null;
+  localizedSymbolForms?: LabelForms | null;
+  localizedNameForms?: LabelForms | null;
 }
+
+type LabelForms = Partial<Pick<PluralForms, 'one' | 'other'>>;
 
 export interface UnitLabelOptions {
   /** `name` shows the unit's name in place of its short form. */
@@ -154,7 +156,10 @@ export interface UnitLabelOptions {
 // an engine without `Intl.PluralRules`, which some Hermes builds are.
 const pluralRulesByLanguage = new Map<string, Intl.PluralRules | null>();
 
-function readsAsOne(quantity: number): boolean {
+// The API's own pick (PluralForms): one where the language reads the number as
+// one, and for any part of one ("1/2 cup").
+function readsAsOne(quantity: number | null | undefined): boolean {
+  if (quantity == null || (quantity > 0 && quantity < 1)) return true;
   const language = getResolvedLanguage();
   let rules = pluralRulesByLanguage.get(language);
   if (rules === undefined) {
@@ -178,19 +183,14 @@ export function unitLabel(
   { form = 'symbol', quantity }: UnitLabelOptions = {},
 ): string {
   if (!unit) return '';
-  // A part of one reads singular in every language here: "1/2 cup".
-  const partOfOne = quantity != null && quantity > 0 && quantity < 1;
-  const plural = quantity != null && !partOfOne && !readsAsOne(quantity);
+  const asOne = readsAsOne(quantity);
+  const pick = (forms: LabelForms | null | undefined) =>
+    forms && (asOne ? forms.one : forms.other);
   const label =
     form === 'name'
-      ? firstNonBlank(
-          plural ? unit.nameOther : null,
-          unit.localizedName,
-          unit.name,
-          unit.symbol,
-        )
+      ? firstNonBlank(pick(unit.localizedNameForms), unit.name, unit.symbol)
       : firstNonBlank(
-          plural ? unit.symbolOther : null,
+          pick(unit.localizedSymbolForms),
           unit.localizedSymbol,
           unit.symbol,
           unit.name,
@@ -253,11 +253,42 @@ export function formatQuantityDisplay(
   quantity: number,
   unit?: UnitLabelSource | null,
 ): string {
-  const symbol = unit?.symbol ?? '';
-  if (quantity >= 1000 && (symbol === 'g' || isMillilitre(symbol))) {
+  return displayPhrase(quantity, unit?.symbol, unitLabel(unit, { quantity }));
+}
+
+/**
+ * A held amount, as `formatQuantityDisplay` shows it, in the short form the
+ * server agreed with its quantity: "3 lattine". A blank one (an optimistic
+ * amount) reads its unit.
+ */
+export function formatAmountDisplay(amount: HeldAmount): string {
+  return displayPhrase(
+    amount.quantity,
+    amount.unit?.symbol,
+    amountLabel(amount),
+  );
+}
+
+interface HeldAmount {
+  quantity: number;
+  localizedSymbol?: string | null;
+  unit?: UnitLabelSource | null;
+}
+
+/** The short form a held amount shows: the server's, else its unit's. */
+export function amountLabel(amount: HeldAmount): string {
+  const { quantity, unit } = amount;
+  return firstNonBlank(amount.localizedSymbol) ?? unitLabel(unit, { quantity });
+}
+
+function displayPhrase(
+  quantity: number,
+  symbol: string | null | undefined,
+  label: string,
+): string {
+  if (quantity >= 1000 && symbol && (symbol === 'g' || isMillilitre(symbol))) {
     return `${formatQuantity(quantity / 1000)} ${symbol === 'g' ? 'kg' : 'L'}`;
   }
-  const label = unitLabel(unit, { quantity });
   return `${formatQuantityForDisplay(quantity)} ${label}`.trim();
 }
 

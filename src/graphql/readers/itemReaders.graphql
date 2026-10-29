@@ -37,8 +37,10 @@ fragment ItemReaders on Item {
   description
   displayUnit {
     id
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
@@ -69,8 +71,10 @@ fragment ItemReaders on Item {
   packs {
     container {
       id
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       symbol
     }
     count
@@ -92,8 +96,10 @@ fragment ItemReaders on Item {
   storeDepartment
   suggestedPackageUnit {
     id
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     symbol
   }
   tags

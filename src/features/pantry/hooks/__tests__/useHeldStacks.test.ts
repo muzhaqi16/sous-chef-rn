@@ -50,6 +50,7 @@ const stack = (
   displayAmount: {
     __typename: 'DisplayAmount',
     quantity: 2,
+    localizedSymbol: unit.id,
     unit: asAbbreviation({ __typename: 'Unit', id: unit.id, symbol: unit.id }),
   },
   held: {

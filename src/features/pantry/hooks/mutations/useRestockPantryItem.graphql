@@ -9,11 +9,14 @@ fragment useRestockPantryItem_pantryItem on PantryItem {
   heldQuantity
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   isLowStock
@@ -26,8 +29,10 @@ fragment useRestockPantryItem_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   packageBreakdown {
     count
@@ -35,16 +40,20 @@ fragment useRestockPantryItem_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalNetWeight
   }
@@ -55,8 +64,10 @@ fragment useRestockPantryItem_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalContentUnits
     remainingWeight
@@ -64,8 +75,10 @@ fragment useRestockPantryItem_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
 }

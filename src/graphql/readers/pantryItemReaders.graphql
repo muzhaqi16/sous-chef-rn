@@ -10,7 +10,10 @@ fragment PantryItemReaders on PantryItem {
   condition
   consumeUnit {
     id
-    localizedSymbol
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
@@ -21,11 +24,14 @@ fragment PantryItemReaders on PantryItem {
   costPerUnit
   createdAt
   displayAmount {
+    localizedSymbol
     quantity
     unit {
       id
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       symbol
     }
   }
@@ -35,8 +41,10 @@ fragment PantryItemReaders on PantryItem {
     commonFractions
     conversionFactor
     hasStandardCountFactor
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
     type
@@ -90,16 +98,20 @@ fragment PantryItemReaders on PantryItem {
   netWeight
   netWeightUnit {
     id
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
   packageBreakdown {
     contentUnit {
       id
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -110,8 +122,10 @@ fragment PantryItemReaders on PantryItem {
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -126,8 +140,10 @@ fragment PantryItemReaders on PantryItem {
   pantryId
   portionUnit {
     id
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }
@@ -147,8 +163,10 @@ fragment PantryItemReaders on PantryItem {
   quantityBreakdown {
     contentUnit {
       id
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -157,8 +175,10 @@ fragment PantryItemReaders on PantryItem {
     remainingWeight
     remainingWeightUnit {
       id
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       name
       symbol
     }
@@ -186,8 +206,10 @@ fragment PantryItemReaders on PantryItem {
   unit {
     id
     displayAsFraction
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
     type

@@ -72,7 +72,12 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
         id,
         quantity,
         heldQuantity: quantity,
-        displayAmount: { __typename: 'DisplayAmount', quantity, unit },
+        displayAmount: {
+          __typename: 'DisplayAmount',
+          quantity,
+          localizedSymbol: 'ea',
+          unit,
+        },
         unit,
       };
       return [
@@ -112,6 +117,7 @@ const seedEggs = (held: number) => {
     displayAmount: {
       __typename: 'DisplayAmount',
       quantity: held / 12,
+      localizedSymbol: 'doz',
       unit: DOZEN,
     },
     unit: PIECE,

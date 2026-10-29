@@ -24,11 +24,14 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   heldQuantity
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   held {
@@ -67,8 +70,10 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   remainingPortions
   activeBatchCount
@@ -91,16 +96,20 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     displayAsFraction
   }
   displayUnit {
     id
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     hasStandardCountFactor
     baseUnitId
@@ -111,8 +120,10 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   consumeUnit {
     id
@@ -128,16 +139,20 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalNetWeight
   }
@@ -148,8 +163,10 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalContentUnits
     remainingWeight
@@ -157,8 +174,10 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
 }

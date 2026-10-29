@@ -213,10 +213,11 @@ describe('useUnitAutocomplete', () => {
         id: 'u2',
         name: 'Tablespoon',
         symbol: 'tbsp',
-        localizedSymbol: 'cucchiaio',
-        symbolOther: 'cucchiai',
-        localizedName: 'cucchiaio',
-        nameOther: 'cucchiai',
+        localizedSymbolForms: {
+          one: 'cucchiaio',
+          other: 'cucchiai',
+        },
+        localizedNameForms: { one: 'cucchiaio', other: 'cucchiai' },
       },
     ];
     const { result } = renderHookWithApollo(

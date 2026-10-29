@@ -15,11 +15,14 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   heldQuantity
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   # displayAmount read in each unit system, as the row reads it.
@@ -99,8 +102,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   remainingPortions
   activeBatchCount
@@ -174,8 +179,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     displayAsFraction
   }
@@ -183,8 +190,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   storageLocation {
     id
@@ -197,16 +206,20 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     perUnitNetWeight
     perUnitNetWeightUnit {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalNetWeight
     # Both weights read in the user's unit system.
@@ -258,8 +271,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
     totalContentUnits
     remainingWeight
@@ -267,8 +282,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       id
       name
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   brand {
@@ -319,8 +336,10 @@ fragment PantryItemDetail_pantryItem on PantryItem {
           id
           name
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         usedAt
         purpose

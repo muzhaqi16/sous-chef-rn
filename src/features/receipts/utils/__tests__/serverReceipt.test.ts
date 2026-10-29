@@ -113,8 +113,11 @@ describe('fromServerReceipt', () => {
       __typename: 'Unit',
       id: 'unit-pc',
       symbol: 'pc',
-      localizedSymbol: 'pz',
-      symbolOther: 'pz',
+      localizedSymbolForms: {
+        __typename: 'PluralForms',
+        one: 'pz',
+        other: 'pz',
+      },
     };
     const [named, unnamed] = receiptReviewLines(
       fromServerReceipt({

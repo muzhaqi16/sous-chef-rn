@@ -19,8 +19,8 @@ const ROOT = path.join(__dirname, '..', '..');
 const LOCALIZED_FIELDS = new Set([
   'localizedSymbol',
   'localizedName',
-  'symbolOther',
-  'nameOther',
+  'localizedSymbolForms',
+  'localizedNameForms',
 ]);
 
 // Display picks the label; search matches what the user typed against it.

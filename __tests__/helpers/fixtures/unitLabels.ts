@@ -5,12 +5,22 @@
  */
 export const asAbbreviation = <const T extends { symbol: string }>(
   unit: T,
-): T & { localizedSymbol: T['symbol']; symbolOther: T['symbol'] } => ({
+): T & {
+  localizedSymbolForms: {
+    __typename: 'PluralForms';
+    one: T['symbol'];
+    other: T['symbol'];
+  };
+} => ({
   ...unit,
-  localizedSymbol: unit.symbol,
-  symbolOther: unit.symbol,
+  localizedSymbolForms: {
+    __typename: 'PluralForms',
+    one: unit.symbol,
+    other: unit.symbol,
+  },
 });
 
+/** A reading's short form agrees with its own value. */
 export const readingAsAbbreviation = <const T extends { symbol: string }>(
   reading: T,
 ): T & { localizedSymbol: T['symbol'] } => ({

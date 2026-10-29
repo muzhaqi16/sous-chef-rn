@@ -1,4 +1,5 @@
 import {
+  formatAmountDisplay,
   formatQuantity,
   formatQuantityDisplay,
   formatQuantityAsFraction,
@@ -118,6 +119,39 @@ describe('formatNetWeightDisplay', () => {
   });
 });
 
+describe('formatAmountDisplay', () => {
+  const can = {
+    symbol: 'can',
+    localizedSymbolForms: { one: 'lata', other: 'latas' },
+  };
+
+  it('shows the label the server agreed with the amount', () => {
+    expect(
+      formatAmountDisplay({
+        quantity: 3,
+        localizedSymbol: 'lattine',
+        unit: can,
+      }),
+    ).toBe('3 lattine');
+  });
+
+  it('reads its unit when the label is blank, as an optimistic amount leaves it', () => {
+    expect(
+      formatAmountDisplay({ quantity: 3, localizedSymbol: '', unit: can }),
+    ).toBe('3 latas');
+  });
+
+  it('upscales grams and millilitres as every quantity does', () => {
+    expect(
+      formatAmountDisplay({
+        quantity: 1500,
+        localizedSymbol: 'g',
+        unit: { symbol: 'g' },
+      }),
+    ).toBe('1.5 kg');
+  });
+});
+
 describe('unitLabel', () => {
   afterEach(async () => {
     await getI18n().changeLanguage('en');
@@ -142,8 +176,7 @@ describe('unitLabel', () => {
     expect(
       unitLabel({
         symbol: 'can',
-        localizedSymbol: 'lata',
-        symbolOther: 'latas',
+        localizedSymbolForms: { one: 'lata', other: 'latas' },
       }),
     ).toBe('lata');
   });
@@ -152,19 +185,26 @@ describe('unitLabel', () => {
     const cup = {
       symbol: 'cup',
       name: 'cup',
-      localizedName: 'taza',
-      nameOther: 'tazas',
+      localizedNameForms: { one: 'taza', other: 'tazas' },
     };
     expect(unitLabel(cup, { form: 'name' })).toBe('taza');
+    expect(unitLabel(cup, { form: 'name', quantity: 3 })).toBe('tazas');
     expect(
-      unitLabel({ ...cup, localizedName: '', nameOther: '' }, { form: 'name' }),
+      unitLabel(
+        { ...cup, localizedNameForms: { one: '', other: '' } },
+        { form: 'name' },
+      ),
     ).toBe('cup');
   });
 
   it('falls back to the singular when the plural is blank', () => {
     expect(
       unitLabel(
-        { symbol: 'can', localizedSymbol: 'lata', symbolOther: '' },
+        {
+          symbol: 'can',
+          localizedSymbol: 'lata',
+          localizedSymbolForms: { one: 'lata', other: '' },
+        },
         { quantity: 3 },
       ),
     ).toBe('lata');
@@ -181,10 +221,8 @@ describe('unitLabel', () => {
     await getI18n().changeLanguage(language);
     const unit = {
       symbol: 'x',
-      localizedSymbol: forms.one,
-      symbolOther: forms.other,
-      localizedName: forms.one,
-      nameOther: forms.other,
+      localizedSymbolForms: forms,
+      localizedNameForms: forms,
     };
     for (const quantity of [0, 0.5, 1, 1.5, 2, 1_000_000]) {
       const expected =
@@ -194,7 +232,7 @@ describe('unitLabel', () => {
     }
   });
 
-  it('reads only 1 as singular where the engine has no Intl.PluralRules', () => {
+  it('reads only 1 and a part of one as singular where the engine has no Intl.PluralRules', () => {
     const { PluralRules } = Intl;
     // Some Hermes builds ship without it.
     Object.defineProperty(Intl, 'PluralRules', {
@@ -209,9 +247,9 @@ describe('unitLabel', () => {
           jest.requireActual('../formatQuantity');
         const unit = {
           symbol: 'can',
-          localizedSymbol: 'lata',
-          symbolOther: 'latas',
+          localizedSymbolForms: { one: 'lata', other: 'latas' },
         };
+        expect(isolated.unitLabel(unit, { quantity: 0.5 })).toBe('lata');
         expect(isolated.unitLabel(unit, { quantity: 1 })).toBe('lata');
         expect(isolated.unitLabel(unit, { quantity: 2 })).toBe('latas');
       });

@@ -164,8 +164,10 @@ mutation CreateItem($input: CreateItemInput!) {
           id
           name
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         packageSize {
           value
@@ -221,15 +223,19 @@ mutation CreateItem($input: CreateItemInput!) {
             id
             name
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
           contentUnit {
             id
             name
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
         }
       }

@@ -9,30 +9,30 @@ import { useAppStore, useIsOnline } from '#store/useAppStore';
 import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import type { PluralForms, UnitType } from '#/graphql/generated/schemaTypes';
 import { scheduleIdle } from '#/utils/scheduleIdle';
 
 export interface UnitItem {
   id: string;
   name: string;
   symbol: string;
-  localizedSymbol?: string;
-  symbolOther?: string;
-  localizedName?: string;
-  nameOther?: string;
+  localizedSymbolForms?: Pick<PluralForms, 'one' | 'other'> | null;
+  localizedNameForms?: Pick<PluralForms, 'one' | 'other'> | null;
   type?: UnitType;
   abbreviation?: string;
 }
 
 // The app's language as well as the canonical English, so "tbsp" still finds
 // tablespoon under Italian.
-const UNIT_SEARCH_KEYS: ReadonlyArray<keyof UnitItem> = [
+const UNIT_SEARCH_KEYS: ReadonlyArray<
+  keyof UnitItem | ((unit: UnitItem) => string | undefined)
+> = [
   'symbol',
   'name',
-  'localizedSymbol',
-  'symbolOther',
-  'localizedName',
-  'nameOther',
+  unit => unit.localizedSymbolForms?.one,
+  unit => unit.localizedSymbolForms?.other,
+  unit => unit.localizedNameForms?.one,
+  unit => unit.localizedNameForms?.other,
 ];
 
 /** 24 hours in milliseconds — matches backend refresh cadence for common units */

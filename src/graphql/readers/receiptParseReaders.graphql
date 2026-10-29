@@ -9,8 +9,10 @@ fragment ReceiptParseReaders on ReceiptParse {
       kind
       measureUnit {
         id
-        localizedSymbol
-        symbolOther: localizedSymbol(quantity: 2)
+        localizedSymbolForms {
+          one
+          other
+        }
         symbol
       }
       product

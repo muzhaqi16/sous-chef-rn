@@ -3,6 +3,7 @@ import type { RootState } from '../index';
 import type {
   CategorySuggestion,
   ItemSuggestion,
+  PluralForms,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { dedupeById } from '#utils/dedupeById';
@@ -11,10 +12,8 @@ interface Unit {
   id: string;
   name: string;
   symbol: string;
-  localizedSymbol?: string;
-  symbolOther?: string;
-  localizedName?: string;
-  nameOther?: string;
+  localizedSymbolForms?: Pick<PluralForms, 'one' | 'other'> | null;
+  localizedNameForms?: Pick<PluralForms, 'one' | 'other'> | null;
   abbreviation?: string;
   type?: UnitType;
 }

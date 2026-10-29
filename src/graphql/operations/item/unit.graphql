@@ -7,8 +7,10 @@ query GetUnitBySymbol($symbol: String!) {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     isMetric
     notes
@@ -30,10 +32,14 @@ query SearchUnits($query: String!, $type: UnitType, $limit: Int) {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
-    localizedName
-    nameOther: localizedName(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
+    localizedNameForms {
+      one
+      other
+    }
     type
     isMetric
     isCommon
@@ -48,10 +54,14 @@ query GetCommonUnits($type: UnitType, $limit: Int) {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
-    localizedName
-    nameOther: localizedName(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
+    localizedNameForms {
+      one
+      other
+    }
     type
     isMetric
     isCommon

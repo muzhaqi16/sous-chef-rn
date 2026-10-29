@@ -11,8 +11,10 @@ fragment useQuantityEditModal_item on ShoppingListItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   # The amount as the row reads it, which the sheet opens on.
   amount {
@@ -64,7 +66,9 @@ fragment useQuantityEditModal_updateQuantityResult on ShoppingListItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
 }

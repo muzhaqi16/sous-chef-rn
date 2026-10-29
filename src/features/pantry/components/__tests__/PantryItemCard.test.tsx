@@ -207,6 +207,7 @@ function buildItem(
         overrides.heldQuantity ??
         overrides.quantity ??
         2,
+      localizedSymbol: overrides.shown?.symbol ?? overrides.unitSymbol ?? 'gal',
       unit: asAbbreviation({
         __typename: 'Unit',
         id: overrides.shown ? 'unit-shown' : 'unit-1',

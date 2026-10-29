@@ -37,7 +37,7 @@
  * `config/sections/http.ts` and `config/sections/publicApi.ts` (the defaults):
  *
  *     MAX_QUERY_DEPTH=10         MAX_QUERY_COST=3500     MAX_QUERY_LENGTH=20000
- *     MAX_QUERY_TOKENS=2000      MAX_ALIASES=20
+ *     MAX_QUERY_TOKENS=2000      MAX_ALIASES=15
  *     MAX_SUBSCRIPTION_DEPTH=4   MAX_SUBSCRIPTION_COMPLEXITY=500
  *     OBJECT_COST=1  SCALAR_COST=0  DEPTH_COST_FACTOR=1.5
  *     MAX_NESTED_PAGINATION_PRODUCT=100000
@@ -90,7 +90,7 @@ const SCALAR_COST = 0;
 const DEPTH_COST_FACTOR = 1.5;
 const MAX_NESTED_PAGINATION_PRODUCT = 100000;
 // 15 until the API raised it for a unit's plural (localized-unit-names, g).
-const MAX_ALIASES = 20;
+const MAX_ALIASES = 15;
 
 function collectGraphqlFiles(dir: string, out: string[] = []): string[] {
   for (const entry of readdirSync(dir)) {
@@ -458,8 +458,8 @@ describe('alias limit', () => {
       if (aliases > MAX_ALIASES) {
         throw new Error(
           `${name} (${file}) sends ${aliases} aliases; the server allows ` +
-            `${MAX_ALIASES}. A unit's plural is one alias wherever it is ` +
-            `selected, so a unit two fragments both select counts twice.`,
+            `${MAX_ALIASES}. An alias counts at every spread of the fragment ` +
+            `it sits in; a unit's plural is \`localizedSymbolForms\`, no alias.`,
         );
       }
     },

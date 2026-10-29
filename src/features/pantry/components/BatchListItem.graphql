@@ -6,14 +6,18 @@ fragment BatchListItem_pantryItem on PantryItem {
   unit {
     id
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   displayUnit {
     id
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     hasStandardCountFactor
     baseUnitId
@@ -23,7 +27,9 @@ fragment BatchListItem_pantryItem on PantryItem {
   netWeightUnit {
     id
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
 }

@@ -52,8 +52,10 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     type
   }
   sortOrder

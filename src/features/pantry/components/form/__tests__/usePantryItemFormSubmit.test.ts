@@ -656,6 +656,7 @@ describe('usePantryItemFormSubmit', () => {
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 2,
+        localizedSymbol: 'L',
         unit: asAbbreviation({ __typename: 'Unit', id: 'unit-1', symbol: 'L' }),
       },
       version: 1,

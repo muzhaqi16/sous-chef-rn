@@ -35,8 +35,10 @@ query RecipeCapture($id: ID!) {
           id
           name
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         preparation
         note

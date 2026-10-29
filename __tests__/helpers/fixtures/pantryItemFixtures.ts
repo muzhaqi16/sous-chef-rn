@@ -123,6 +123,7 @@ export function pantryItemData(
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: held,
+        localizedSymbol: trackingUnit.symbol,
         unit: asAbbreviation({
           __typename: 'Unit',
           id: trackingUnit.id,

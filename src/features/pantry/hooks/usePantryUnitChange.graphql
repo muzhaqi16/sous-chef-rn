@@ -9,15 +9,19 @@ query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {
     fromUnit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       displayAsFraction
     }
     toUnit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
       displayAsFraction
     }
     quantityBefore
@@ -39,7 +43,9 @@ query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {
     # confirmation shows this, so no dozen is computed on the device.
     displayAmountAfter {
       quantity
-      text
+      localizedSymbol
+      whole
+      fraction
     }
     refusal {
       code
@@ -58,19 +64,24 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
   heldQuantity
   displayAmount {
     quantity
+    localizedSymbol
     unit {
       id
       symbol
-      localizedSymbol
-      symbolOther: localizedSymbol(quantity: 2)
+      localizedSymbolForms {
+        one
+        other
+      }
     }
   }
   unit {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     type
     displayAsFraction
   }
@@ -80,8 +91,10 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   minQuantity
   restockQuantity

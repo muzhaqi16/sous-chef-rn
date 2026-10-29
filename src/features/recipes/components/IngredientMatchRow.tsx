@@ -17,7 +17,7 @@ import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
-  formatQuantityDisplay,
+  formatAmountDisplay,
   formatQuantityForInput,
   unitLabel,
 } from '#/utils/formatQuantity';
@@ -40,7 +40,7 @@ const BADGE_CONFIG: Record<
 };
 
 const stackAmount = (stack: PantryStackOption) =>
-  formatQuantityDisplay(stack.displayAmount.quantity, stack.displayAmount.unit);
+  formatAmountDisplay(stack.displayAmount);
 
 const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   editableMatch,

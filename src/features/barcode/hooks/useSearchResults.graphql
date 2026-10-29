@@ -72,8 +72,10 @@ query ItemByLookup(
           id
           name
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         # The scanned pack's PACKAGE size, read in each unit system with the
         # label's own figure: what the card and the add's size prefill show.
@@ -125,8 +127,10 @@ query ItemByLookup(
           container {
             id
             symbol
-            localizedSymbol
-            symbolOther: localizedSymbol(quantity: 2)
+            localizedSymbolForms {
+              one
+              other
+            }
           }
         }
         # The result's nutrition card and the full sheet it opens: the item's
@@ -162,8 +166,10 @@ query ItemByLookup(
           id
           name
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
           type
           displayAsFraction
         }
@@ -172,8 +178,10 @@ query ItemByLookup(
         suggestedPackageUnit {
           id
           symbol
-          localizedSymbol
-          symbolOther: localizedSymbol(quantity: 2)
+          localizedSymbolForms {
+            one
+            other
+          }
         }
         categories {
           id
@@ -229,8 +237,10 @@ fragment useSearchResults_item on Item {
     id
     name
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   packageSize {
     value

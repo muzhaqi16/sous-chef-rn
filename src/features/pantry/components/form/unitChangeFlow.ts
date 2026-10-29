@@ -8,6 +8,8 @@ import {
   PantryUnitChangeResolution,
 } from '#/graphql/generated/schemaTypes';
 import {
+  amountLabel,
+  formatQuantityForDisplay,
   formatQuantityWithUnit,
   resolveQuantityNotation,
   unitLabel,
@@ -83,10 +85,20 @@ const amountText = (quantity: number | null | undefined, unit: PreviewUnit) =>
     notation: resolveQuantityNotation(null, unit.displayAsFraction),
   });
 
-/** The stack as it will read: the server's text, so no dozen is worked out here. */
-const shownAfter = (preview: UnitChangePreview) =>
-  preview.displayAmountAfter?.text ??
-  amountText(preview.quantityAfter, preview.toUnit);
+/**
+ * The stack as it will read, in the server's figures, so no dozen is worked
+ * out here: its fraction as written ("¼ doz"), else its number in the
+ * device's locale, and the short form agreeing with it.
+ */
+const shownAfter = (preview: UnitChangePreview) => {
+  const after = preview.displayAmountAfter;
+  if (!after) return amountText(preview.quantityAfter, preview.toUnit);
+  const whole = after.whole != null && after.whole > 0 ? after.whole : '';
+  const figure = after.fraction
+    ? `${whole}${after.fraction}`
+    : formatQuantityForDisplay(after.quantity, { notation: 'decimal' });
+  return `${figure} ${amountLabel(after)}`.trim();
+};
 
 const beforeAfter = (
   before: number | null | undefined,

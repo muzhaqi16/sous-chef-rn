@@ -26,7 +26,8 @@ type ShownAmount = NonNullable<
 const shown = (quantity: number, symbol: string): ShownAmount => ({
   __typename: 'DisplayAmount',
   quantity,
-  unit: asAbbreviation({ __typename: 'Unit', id: symbol, symbol }),
+  localizedSymbol: symbol,
+  unit: { __typename: 'Unit', id: symbol, symbol },
 });
 
 describe('IngredientMatchRow', () => {

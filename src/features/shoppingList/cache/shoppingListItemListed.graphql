@@ -12,8 +12,10 @@ fragment shoppingListItem_listed on ShoppingListItem {
   unit {
     id
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   amount {
     value

@@ -44,6 +44,7 @@ const baseItem: PantryDetailInfo_PantryItemFragment = {
   displayAmount: {
     __typename: 'DisplayAmount',
     quantity: 2,
+    localizedSymbol: 'L',
     unit: asAbbreviation({ __typename: 'Unit', id: 'u1', symbol: 'L' }),
   },
   costCurrency: null,

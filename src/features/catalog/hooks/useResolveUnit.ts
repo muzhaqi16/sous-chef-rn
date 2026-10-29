@@ -1,5 +1,5 @@
 import { useLazyQuery } from '@apollo/client/react';
-import type { UnitType } from '#/graphql/generated/schemaTypes';
+import type { PluralForms, UnitType } from '#/graphql/generated/schemaTypes';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
 import { useCachedUnits, useIsOnline } from '#store/useAppStore';
 import { unitLabel } from '#/utils/formatQuantity';
@@ -8,10 +8,8 @@ interface HeldUnit {
   id: string;
   name: string;
   symbol: string;
-  localizedSymbol?: string;
-  symbolOther?: string;
-  localizedName?: string;
-  nameOther?: string;
+  localizedSymbolForms?: Pick<PluralForms, 'one' | 'other'> | null;
+  localizedNameForms?: Pick<PluralForms, 'one' | 'other'> | null;
   abbreviation?: string;
   type?: UnitType;
 }
@@ -33,10 +31,10 @@ const labelsOf = (unit: HeldUnit) =>
     unit.symbol,
     unit.abbreviation,
     unit.name,
-    unit.localizedSymbol,
-    unit.symbolOther,
-    unit.localizedName,
-    unit.nameOther,
+    unit.localizedSymbolForms?.one,
+    unit.localizedSymbolForms?.other,
+    unit.localizedNameForms?.one,
+    unit.localizedNameForms?.other,
   ].flatMap(label => (label ? [label.toLowerCase()] : []));
 
 // One letter added, dropped or changed.

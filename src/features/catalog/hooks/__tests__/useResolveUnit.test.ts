@@ -27,10 +27,8 @@ const TABLESPOON_IT = {
   id: 'unit-tbsp',
   name: 'tablespoon',
   symbol: 'tbsp',
-  localizedSymbol: 'cucchiaio',
-  symbolOther: 'cucchiai',
-  localizedName: 'cucchiaio',
-  nameOther: 'cucchiai',
+  localizedSymbolForms: { one: 'cucchiaio', other: 'cucchiai' },
+  localizedNameForms: { one: 'cucchiaio', other: 'cucchiai' },
   type: UnitType.Volume,
 };
 
@@ -175,10 +173,8 @@ describe('useResolveUnit in the app language', () => {
       cachedUnits: [
         {
           ...TABLESPOON_IT,
-          localizedSymbol: 'lugë gjelle',
-          symbolOther: 'lugë gjelle',
-          localizedName: 'lugë gjelle',
-          nameOther: 'lugë gjelle',
+          localizedSymbolForms: { one: 'lugë gjelle', other: 'lugë gjelle' },
+          localizedNameForms: { one: 'lugë gjelle', other: 'lugë gjelle' },
         },
       ],
       isOnline: false,

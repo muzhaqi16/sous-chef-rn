@@ -91,6 +91,7 @@ it('sets an amount stated in dozens as the pieces it stands for', async () => {
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 1,
+        localizedSymbol: 'doz',
         unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u-doz',

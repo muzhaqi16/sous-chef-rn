@@ -10,8 +10,10 @@ fragment usePurchaseAmountModal_item on ShoppingListItem {
   unit {
     id
     symbol
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   priceEstimate {
     estimated

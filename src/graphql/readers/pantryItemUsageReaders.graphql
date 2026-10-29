@@ -15,8 +15,10 @@ fragment PantryItemUsageReaders on PantryItemUsage {
   totalCost
   usageUnit {
     id
-    localizedSymbol
-    symbolOther: localizedSymbol(quantity: 2)
+    localizedSymbolForms {
+      one
+      other
+    }
     name
     symbol
   }

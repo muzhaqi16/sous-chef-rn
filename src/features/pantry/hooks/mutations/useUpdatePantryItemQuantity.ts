@@ -20,6 +20,7 @@ import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 import { todayKey } from '#/utils/dateUtils';
+import { unitLabel } from '#/utils/formatQuantity';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;
@@ -113,6 +114,7 @@ export function useUpdatePantryItemQuantity({
       ? {
           __typename: 'DisplayAmount',
           quantity: newQuantity,
+          localizedSymbol: unitLabel(statedIn, { quantity: newQuantity }),
           unit: statedIn,
         }
       : undefined;

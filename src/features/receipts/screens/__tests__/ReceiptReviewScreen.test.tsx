@@ -142,7 +142,10 @@ describe('ReceiptReviewScreen rows', () => {
   // The API names the known unit a printed one stands for; the line reads it
   // in the app's language until the user types a unit of their own.
   it('shows a printed unit as the unit it names, else as printed', () => {
-    const piece = { symbol: 'pc', localizedSymbol: 'pz', symbolOther: 'pz' };
+    const piece = {
+      symbol: 'pc',
+      localizedSymbolForms: { one: 'pz', other: 'pz' },
+    };
     mockRows = [
       row({
         printed: 'TOMATOES',
