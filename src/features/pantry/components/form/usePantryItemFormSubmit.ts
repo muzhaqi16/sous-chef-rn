@@ -3,7 +3,7 @@ import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
-  formatQuantityWithUnit,
+  formatAmountWithUnit,
   isUnchangedQuantity,
   unitLabel,
 } from '#/utils/formatQuantity';
@@ -208,10 +208,7 @@ export function usePantryItemFormSubmit(params: UsePantryItemFormSubmitParams) {
                 ? typedQuantity
                 : edited.quantity,
             packageSize: packageSizeOf(data),
-            shownBefore: formatQuantityWithUnit(
-              currentItem.displayAmount.quantity,
-              currentItem.displayAmount.unit,
-            ),
+            shownBefore: formatAmountWithUnit(currentItem.displayAmount),
           },
         );
         if (!changed) return;

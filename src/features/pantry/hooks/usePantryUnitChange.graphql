@@ -44,7 +44,6 @@ query PreviewPantryItemUnitChange($input: PreviewPantryItemUnitChangeInput!) {
     displayAmountAfter {
       quantity
       localizedSymbol
-      whole
       fraction
     }
     refusal {

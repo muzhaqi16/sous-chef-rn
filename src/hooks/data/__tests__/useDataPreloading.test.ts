@@ -12,6 +12,7 @@ import { GetStoresDocument } from '#operations/store/store.generated';
 import { CategoryType, UnitType } from '#/graphql/generated/schemaTypes';
 import { makeCache } from '#/apollo/cache';
 import { useDataPreloading } from '../useDataPreloading';
+import type { AppState } from '#store/slices/appSlice';
 
 // Run idle-deferred work synchronously so the warming fires within the test.
 const originalRequestIdleCallback = globalThis.requestIdleCallback;
@@ -29,6 +30,7 @@ let mockIsOnline = true;
 const mockState = {
   hasInitializedHomeData: true,
   isPantryQueryComplete: false,
+  cachedUnits: [] as AppState['cachedUnits'],
   lastUnitsFetchedAt: null as number | null,
   lastCategoriesFetchedAt: null as number | null,
   lastBrandsFetchedAt: null as number | null,
@@ -90,6 +92,7 @@ beforeEach(() => {
   mockNetwork.apiReachable = true;
   mockState.hasInitializedHomeData = true;
   mockState.isPantryQueryComplete = false;
+  mockState.cachedUnits = [];
   mockState.lastUnitsFetchedAt = null;
   mockState.lastCategoriesFetchedAt = null;
   mockState.lastBrandsFetchedAt = null;
@@ -192,6 +195,27 @@ describe('useDataPreloading', () => {
     expect(mockSetters.setCachedUnits).toHaveBeenCalledWith([
       expect.objectContaining({ id: 'u-fresh' }),
     ]);
+  });
+
+  it('refetches units cached without their plural forms, though stamped today', async () => {
+    const now = Date.now();
+    mockState.cachedUnits = [{ id: 'u-old', name: 'can', symbol: 'can' }];
+    mockState.lastUnitsFetchedAt = now;
+    mockState.lastCategoriesFetchedAt = now;
+    mockState.lastBrandsFetchedAt = now;
+    mockState.lastStoresFetchedAt = now;
+    const units = recordMock(GetCommonUnitsDocument, {
+      data: { units: [{ id: 'u-fresh' }] },
+    });
+
+    renderHookWithApollo(() => useDataPreloading(), {
+      operationMocks: [units.mock],
+    });
+
+    await waitFor(() =>
+      expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled(),
+    );
+    expect(units.fired).toHaveLength(1);
   });
 
   it('does not stamp a refresh the network was withheld from', async () => {

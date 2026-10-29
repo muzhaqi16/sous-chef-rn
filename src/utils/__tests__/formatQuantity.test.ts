@@ -1,5 +1,6 @@
 import {
   formatAmountDisplay,
+  formatAmountWithUnit,
   formatQuantity,
   formatQuantityDisplay,
   formatQuantityAsFraction,
@@ -152,6 +153,33 @@ describe('formatAmountDisplay', () => {
   });
 });
 
+describe('formatAmountWithUnit', () => {
+  const can = {
+    symbol: 'can',
+    localizedSymbolForms: { one: 'lata', other: 'latas' },
+  };
+
+  it("writes the figure as every quantity is, with the server's label", () => {
+    expect(
+      formatAmountWithUnit({
+        quantity: 1.25,
+        localizedSymbol: 'lattine',
+        unit: can,
+      }),
+    ).toBe('1 1/4 lattine');
+  });
+
+  it('never upscales: the amount is what the stack holds', () => {
+    expect(
+      formatAmountWithUnit({
+        quantity: 1500,
+        localizedSymbol: 'g',
+        unit: { symbol: 'g' },
+      }),
+    ).toBe('1500 g');
+  });
+});
+
 describe('unitLabel', () => {
   afterEach(async () => {
     await getI18n().changeLanguage('en');
@@ -198,16 +226,14 @@ describe('unitLabel', () => {
   });
 
   it('falls back to the singular when the plural is blank', () => {
-    expect(
-      unitLabel(
-        {
-          symbol: 'can',
-          localizedSymbol: 'lata',
-          localizedSymbolForms: { one: 'lata', other: '' },
-        },
-        { quantity: 3 },
-      ),
-    ).toBe('lata');
+    const can = {
+      symbol: 'can',
+      name: 'can',
+      localizedSymbolForms: { one: 'lata', other: '' },
+      localizedNameForms: { one: 'lata', other: '' },
+    };
+    expect(unitLabel(can, { quantity: 3 })).toBe('lata');
+    expect(unitLabel(can, { form: 'name', quantity: 3 })).toBe('lata');
   });
 
   // en and sq need one/other; es and it add many (1,000,000). Only 1 reads as

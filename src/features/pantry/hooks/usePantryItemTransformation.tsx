@@ -17,8 +17,8 @@ import {
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import {
+  formatAmountWithUnit,
   formatQuantityForDisplay,
-  formatQuantityWithUnit,
   resolveQuantityNotation,
   unitLabel,
   type UnitLabelSource,
@@ -122,6 +122,7 @@ function breakdownWeight(
 interface HeldAmountSource {
   displayAmount: {
     quantity: number;
+    localizedSymbol?: string | null;
     unit: UnitLabelSource & { id: string; symbol: string };
   };
   unit: { id: string; displayAsFraction: boolean };
@@ -145,7 +146,8 @@ export function formatHeldAmount(
   );
   if (reading) return formatReading(reading);
   const inOwnUnit = shown.unit.id === item.unit.id;
-  return formatQuantityWithUnit(shown.quantity, shown.unit, {
+  // The short form the server agreed with the amount, as the row shows it.
+  return formatAmountWithUnit(shown, {
     notation: resolveQuantityNotation(
       null,
       inOwnUnit ? item.unit.displayAsFraction : null,

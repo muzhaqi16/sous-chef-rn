@@ -173,6 +173,10 @@ function readsAsOne(quantity: number | null | undefined): boolean {
   return rules ? rules.select(quantity) === 'one' : quantity === 1;
 }
 
+/** Whether a unit holds the forms its label is picked from. */
+export const carriesLabelForms = (unit: UnitLabelSource): boolean =>
+  unit.localizedSymbolForms != null;
+
 /**
  * How a unit reads on screen, in the app's language. A blank localized field
  * (an optimistic unit filled with the SDL neutral) falls back to the canonical
@@ -183,14 +187,19 @@ export function unitLabel(
   { form = 'symbol', quantity }: UnitLabelOptions = {},
 ): string {
   if (!unit) return '';
-  const asOne = readsAsOne(quantity);
-  const pick = (forms: LabelForms | null | undefined) =>
-    forms && (asOne ? forms.one : forms.other);
+  // A blank plural reads as the localized singular before the canonical one.
+  const plural = !readsAsOne(quantity);
   const label =
     form === 'name'
-      ? firstNonBlank(pick(unit.localizedNameForms), unit.name, unit.symbol)
+      ? firstNonBlank(
+          plural ? unit.localizedNameForms?.other : null,
+          unit.localizedNameForms?.one,
+          unit.name,
+          unit.symbol,
+        )
       : firstNonBlank(
-          pick(unit.localizedSymbolForms),
+          plural ? unit.localizedSymbolForms?.other : null,
+          unit.localizedSymbolForms?.one,
           unit.localizedSymbol,
           unit.symbol,
           unit.name,
@@ -275,8 +284,20 @@ interface HeldAmount {
   unit?: UnitLabelSource | null;
 }
 
+/**
+ * A held amount as `formatQuantityWithUnit` writes a quantity, in the short
+ * form the server agreed with it: "3 lattine".
+ */
+export function formatAmountWithUnit(
+  amount: HeldAmount,
+  options: QuantityDisplayOptions = {},
+): string {
+  const figure = formatQuantityForDisplay(amount.quantity, options);
+  return `${figure} ${amountLabel(amount)}`.trim();
+}
+
 /** The short form a held amount shows: the server's, else its unit's. */
-export function amountLabel(amount: HeldAmount): string {
+function amountLabel(amount: HeldAmount): string {
   const { quantity, unit } = amount;
   return firstNonBlank(amount.localizedSymbol) ?? unitLabel(unit, { quantity });
 }

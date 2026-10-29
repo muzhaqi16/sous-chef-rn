@@ -7,6 +7,7 @@ import type {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { dedupeById } from '#utils/dedupeById';
+import { carriesLabelForms } from '#/utils/formatQuantity';
 
 interface Unit {
   id: string;
@@ -111,6 +112,15 @@ export const initialAppState = {
   lastStoresFetchedAt: null,
   cachedItemSuggestions: [],
 };
+
+/**
+ * When the device's common units were fetched; null while any of them lacks
+ * its plural forms (cached by an older build), so they are fetched again.
+ */
+export const selectUnitsFetchedAt = (state: AppState): number | null =>
+  state.cachedUnits.some(unit => !carriesLabelForms(unit))
+    ? null
+    : state.lastUnitsFetchedAt;
 
 export const createAppSlice: StateCreator<
   RootState,

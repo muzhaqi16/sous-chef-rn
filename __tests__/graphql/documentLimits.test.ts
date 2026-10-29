@@ -89,7 +89,6 @@ const OBJECT_COST = 1;
 const SCALAR_COST = 0;
 const DEPTH_COST_FACTOR = 1.5;
 const MAX_NESTED_PAGINATION_PRODUCT = 100000;
-// 15 until the API raised it for a unit's plural (localized-unit-names, g).
 const MAX_ALIASES = 15;
 
 function collectGraphqlFiles(dir: string, out: string[] = []): string[] {

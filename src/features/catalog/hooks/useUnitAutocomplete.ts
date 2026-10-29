@@ -6,6 +6,7 @@ import {
   GetCommonUnitsDocument,
 } from '#operations/item/unit.generated';
 import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { selectUnitsFetchedAt } from '#store/slices/appSlice';
 import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
@@ -43,7 +44,7 @@ export function useUnitAutocomplete() {
   const isOnline = useIsOnline();
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
-  const lastUnitsFetchedAt = useAppStore(state => state.lastUnitsFetchedAt);
+  const lastUnitsFetchedAt = useAppStore(selectUnitsFetchedAt);
   const setLastUnitsFetchedAt = useAppStore(
     state => state.setLastUnitsFetchedAt,
   );

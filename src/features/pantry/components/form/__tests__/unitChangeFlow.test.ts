@@ -323,7 +323,6 @@ describe('runUnitChange', () => {
       __typename: 'DisplayAmount',
       quantity,
       localizedSymbol,
-      whole: null,
       fraction: null,
     });
     const shownIn = (
@@ -388,12 +387,11 @@ describe('runUnitChange', () => {
       );
     });
 
-    it('shows a fraction as the server writes it, in the app language', async () => {
+    it('shows a fraction where the server does, written as every quantity is', async () => {
       const quarter: UnitChangePreview['displayAmountAfter'] = {
         __typename: 'DisplayAmount',
         quantity: 0.25,
         localizedSymbol: 'dz',
-        whole: 0,
         fraction: '¼',
       };
       const d = deps(
@@ -410,7 +408,7 @@ describe('runUnitChange', () => {
 
       await runUnitChange(d, { ...ONE_DOZEN, shownBefore: '3 pc' });
 
-      expect(alertMessage()).toBe('3 pc → ¼ dz\nExact conversion.');
+      expect(alertMessage()).toBe('3 pc → 1/4 dz\nExact conversion.');
     });
   });
 
