@@ -55,6 +55,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
     __typename: 'DisplayAmount',
     quantity: 5,
     localizedSymbol: 'g',
+    fraction: null,
     unit: asAbbreviation({ __typename: 'Unit', id: 'unit-1', symbol: 'g' }),
   },
   version: 1,

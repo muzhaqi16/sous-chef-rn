@@ -92,6 +92,7 @@ it('sets an amount stated in dozens as the pieces it stands for', async () => {
         __typename: 'DisplayAmount',
         quantity: 1,
         localizedSymbol: 'doz',
+        fraction: null,
         unit: asAbbreviation({
           __typename: 'Unit',
           id: 'u-doz',
@@ -128,6 +129,7 @@ it('sets an amount stated in dozens as the pieces it stands for', async () => {
       quantityValue: 2,
       statedIn: {
         ...asAbbreviation({ __typename: 'Unit', id: 'u-doz', symbol: 'doz' }),
+        displayAsFraction: true,
         conversionFactor: 12,
       },
     });

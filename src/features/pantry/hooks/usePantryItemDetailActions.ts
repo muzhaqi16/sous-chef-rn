@@ -229,19 +229,18 @@ export function usePantryItemDetailActions({
     if (!item) return;
 
     const hasBatches = (item.activeBatchCount ?? 0) > 0;
+    const notation = resolveQuantityNotation(
+      null,
+      item.unit?.displayAsFraction,
+    );
     const title = hasBatches
       ? t('pantryItemDetail.discardBatchesTitle')
       : t('pantryItemDetail.discardItemTitle');
     const body = hasBatches
       ? t('pantryItemDetail.discardBatchesBody')
       : t('pantryItemDetail.discardItemBody', {
-          quantity: formatQuantityForDisplay(item.quantity, {
-            notation: resolveQuantityNotation(
-              null,
-              item.unit?.displayAsFraction,
-            ),
-          }),
-          unit: unitLabel(item.unit, { quantity: item.quantity }),
+          quantity: formatQuantityForDisplay(item.quantity, { notation }),
+          unit: unitLabel(item.unit, { quantity: item.quantity, notation }),
         });
 
     alertService.alert(

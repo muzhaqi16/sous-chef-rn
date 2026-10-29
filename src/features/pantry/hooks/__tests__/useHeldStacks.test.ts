@@ -51,6 +51,7 @@ const stack = (
     __typename: 'DisplayAmount',
     quantity: 2,
     localizedSymbol: unit.id,
+    fraction: null,
     unit: asAbbreviation({ __typename: 'Unit', id: unit.id, symbol: unit.id }),
   },
   held: {

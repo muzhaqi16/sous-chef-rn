@@ -19,7 +19,6 @@ import { formatMonthDayYear } from '#/utils/formatters/date';
 import {
   formatAmountWithUnit,
   formatQuantityForDisplay,
-  resolveQuantityNotation,
   unitLabel,
   type UnitLabelSource,
 } from '#/utils/formatQuantity';
@@ -115,7 +114,7 @@ function breakdownWeight(
       }
     : {
         weight: formatQuantityForDisplay(stored, { notation: 'decimal' }),
-        weightUnit: unitLabel(unit, { quantity: stored }),
+        weightUnit: unitLabel(unit, { quantity: stored, notation: 'decimal' }),
       };
 }
 
@@ -123,16 +122,15 @@ interface HeldAmountSource {
   displayAmount: {
     quantity: number;
     localizedSymbol?: string | null;
+    fraction?: string | null;
     unit: UnitLabelSource & { id: string; symbol: string };
   };
-  unit: { id: string; displayAsFraction: boolean };
   held: BreakdownMeasure;
 }
 
 /**
  * What a stack holds, as its row shows it ("1 doz" for 12 pc): in the user's
- * unit system while `held` still describes it; else as stored, in the stack
- * unit's own notation when shown in that unit.
+ * unit system while `held` still describes it; else as the server shows it.
  */
 export function formatHeldAmount(
   item: HeldAmountSource,
@@ -145,14 +143,7 @@ export function formatHeldAmount(
     system,
   );
   if (reading) return formatReading(reading);
-  const inOwnUnit = shown.unit.id === item.unit.id;
-  // The short form the server agreed with the amount, as the row shows it.
-  return formatAmountWithUnit(shown, {
-    notation: resolveQuantityNotation(
-      null,
-      inOwnUnit ? item.unit.displayAsFraction : null,
-    ),
-  });
+  return formatAmountWithUnit(shown);
 }
 
 export const formatPackageBreakdown = (

@@ -32,13 +32,11 @@ export const QuantityDisplay: React.FC<QuantityDisplayProps> = ({
   style,
   showUnit = true,
 }) => {
-  const text = formatQuantityForDisplay(quantity, {
-    quantityInput,
-    notation: resolveQuantityNotation(displayFormat, displayAsFraction),
-  });
+  const notation = resolveQuantityNotation(displayFormat, displayAsFraction);
+  const text = formatQuantityForDisplay(quantity, { quantityInput, notation });
 
   if (!text) return <Text style={style}>-</Text>;
-  const label = showUnit ? unitLabel(unit, { quantity }) : '';
+  const label = showUnit ? unitLabel(unit, { quantity, notation }) : '';
 
   return (
     <Text style={style}>

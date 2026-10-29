@@ -66,6 +66,7 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
         __typename: 'Unit',
         id: 'unit-1',
         symbol: 'ea',
+        displayAsFraction: false,
       });
       const data = {
         __typename: 'PantryItem',
@@ -76,6 +77,7 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
           __typename: 'DisplayAmount',
           quantity,
           localizedSymbol: 'ea',
+          fraction: null,
           unit,
         },
         unit,
@@ -95,7 +97,12 @@ const cachedItem = (cache: ReturnType<typeof seedPantryItems>, id = 'item-1') =>
     fragment: STOCK,
   });
 
-const PIECE = asAbbreviation({ __typename: 'Unit', id: 'pc', symbol: 'pc' });
+const PIECE = asAbbreviation({
+  __typename: 'Unit',
+  id: 'pc',
+  symbol: 'pc',
+  displayAsFraction: false,
+});
 const DOZEN = asAbbreviation({
   __typename: 'Unit',
   id: 'doz',
@@ -105,6 +112,7 @@ const DOZEN = asAbbreviation({
   baseUnitId: 'pc',
   conversionFactor: 12,
   commonFractions: [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4],
+  displayAsFraction: true,
 });
 
 /** A stack of eggs counted in pieces and shown in dozens, as the server holds one. */
@@ -118,6 +126,7 @@ const seedEggs = (held: number) => {
       __typename: 'DisplayAmount',
       quantity: held / 12,
       localizedSymbol: 'doz',
+      fraction: null,
       unit: DOZEN,
     },
     unit: PIECE,

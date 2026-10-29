@@ -30,6 +30,7 @@ fragment PantryItemForm_pantryItem on PantryItem {
   displayAmount {
     quantity
     localizedSymbol
+    fraction
     unit {
       id
       symbol
@@ -51,6 +52,7 @@ fragment PantryItemForm_pantryItem on PantryItem {
     }
     type
     conversionFactor
+    displayAsFraction
   }
   netWeightUnit {
     id

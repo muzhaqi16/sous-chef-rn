@@ -150,17 +150,15 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   );
   const shownReading = complete ? shownLineReading(data, readingSystem) : null;
   const shownQuantity = shownReading ? shownReading.value : quantity;
-  const unitDisplay = shownReading
-    ? unitLabel(shownReading, { quantity: shownQuantity })
-    : firstNonBlank(
-        data.unitName,
-        unitLabel(data.unit, { quantity: shownQuantity }),
-      );
-  const shownQuantityInput = shownReading ? null : quantityInput;
   // 0.5 kg, not "1/2 kg": a reading takes its unit's notation, as the pantry's do.
   const shownNotation = shownReading
     ? readingNotation(shownReading)
     : undefined;
+  const shownAs = { quantity: shownQuantity, notation: shownNotation };
+  const unitDisplay = shownReading
+    ? unitLabel(shownReading, shownAs)
+    : firstNonBlank(data.unitName, unitLabel(data.unit, shownAs));
+  const shownQuantityInput = shownReading ? null : quantityInput;
   // `resolveImageUrl` takes a structural { item?: { images, imageUrl } }, so the
   // fragment data feeds it directly.
   const imageUrl = resolveImageUrl(data);

@@ -20,7 +20,7 @@ import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
 import { writeHeldStock } from '#features/pantry/cache/stock';
 import { todayKey } from '#/utils/dateUtils';
-import { unitLabel } from '#/utils/formatQuantity';
+import { statedAmount } from '#/utils/formatQuantity';
 
 interface UseUpdatePantryItemQuantityOptions {
   refetch?: () => void;
@@ -29,7 +29,7 @@ interface UseUpdatePantryItemQuantityOptions {
 /** A unit as the stack's shown amount holds it, whole from the cache. */
 export type StatedUnit = NonNullable<
   Parameters<typeof writeHeldStock>[3]
->['unit'] & { conversionFactor: number };
+>['unit'] & { conversionFactor: number; displayAsFraction: boolean };
 
 interface UpdateQuantityParams {
   itemId: string;
@@ -114,7 +114,7 @@ export function useUpdatePantryItemQuantity({
       ? {
           __typename: 'DisplayAmount',
           quantity: newQuantity,
-          localizedSymbol: unitLabel(statedIn, { quantity: newQuantity }),
+          ...statedAmount(newQuantity, statedIn, statedIn.displayAsFraction),
           unit: statedIn,
         }
       : undefined;

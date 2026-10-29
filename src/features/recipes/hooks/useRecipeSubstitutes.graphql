@@ -66,6 +66,7 @@ query RecipeSubstitutes(
                 displayAmount {
                   quantity
                   localizedSymbol
+                  fraction
                   unit {
                     id
                     symbol

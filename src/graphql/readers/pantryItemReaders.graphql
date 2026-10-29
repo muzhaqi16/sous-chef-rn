@@ -24,6 +24,7 @@ fragment PantryItemReaders on PantryItem {
   costPerUnit
   createdAt
   displayAmount {
+    fraction
     localizedSymbol
     quantity
     unit {
@@ -40,6 +41,7 @@ fragment PantryItemReaders on PantryItem {
     baseUnitId
     commonFractions
     conversionFactor
+    displayAsFraction
     hasStandardCountFactor
     localizedSymbolForms {
       one

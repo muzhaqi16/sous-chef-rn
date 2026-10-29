@@ -7,6 +7,7 @@ import {
   formatQuantityForDisplay,
   formatQuantityForInput,
   formatQuantityWithUnit,
+  statedAmount,
   formatNetWeightDisplay,
   parseStoredQuantityText,
   unitLabel,
@@ -142,6 +143,25 @@ describe('formatAmountDisplay', () => {
     ).toBe('3 latas');
   });
 
+  it("writes a number where the server shows one, as the server's label reads", () => {
+    expect(
+      formatAmountDisplay({
+        quantity: 0.5,
+        localizedSymbol: 'lattine',
+        fraction: null,
+        unit: can,
+      }),
+    ).toBe('0.5 lattine');
+    expect(
+      formatAmountDisplay({
+        quantity: 0.5,
+        localizedSymbol: 'lattina',
+        fraction: '½',
+        unit: can,
+      }),
+    ).toBe('1/2 lattina');
+  });
+
   it('upscales grams and millilitres as every quantity does', () => {
     expect(
       formatAmountDisplay({
@@ -177,6 +197,31 @@ describe('formatAmountWithUnit', () => {
         unit: { symbol: 'g' },
       }),
     ).toBe('1500 g');
+  });
+});
+
+describe('statedAmount', () => {
+  const dozen = {
+    symbol: 'doz',
+    localizedSymbolForms: { one: 'dozzina', other: 'dozzine' },
+  };
+
+  it('states a fraction where the unit shows one, with the singular it reads', () => {
+    expect(statedAmount(1.25, dozen, true)).toEqual({
+      fraction: '1/4',
+      localizedSymbol: 'dozzine',
+    });
+    expect(statedAmount(0.25, dozen, true)).toEqual({
+      fraction: '1/4',
+      localizedSymbol: 'dozzina',
+    });
+  });
+
+  it('states a number where the unit shows none, read plural', () => {
+    expect(statedAmount(0.5, dozen, false)).toEqual({
+      fraction: null,
+      localizedSymbol: 'dozzine',
+    });
   });
 });
 
@@ -256,6 +301,32 @@ describe('unitLabel', () => {
       expect(unitLabel(unit, { quantity })).toBe(expected);
       expect(unitLabel(unit, { form: 'name', quantity })).toBe(expected);
     }
+  });
+
+  it('reads a part of one singular only as a fraction is written', () => {
+    const can = {
+      symbol: 'can',
+      localizedSymbolForms: { one: 'lata', other: 'latas' },
+    };
+    expect(unitLabel(can, { quantity: 0.5 })).toBe('lata');
+    expect(unitLabel(can, { quantity: 0.5, notation: 'decimal' })).toBe(
+      'latas',
+    );
+    // No cooking fraction fits 0.7, so it is written as a number.
+    expect(unitLabel(can, { quantity: 0.7 })).toBe('latas');
+    expect(formatQuantityWithUnit(0.5, can, { notation: 'decimal' })).toBe(
+      '0.5 latas',
+    );
+  });
+
+  it('reads a number by its size as written, to three places', () => {
+    const can = {
+      symbol: 'can',
+      localizedSymbolForms: { one: 'lata', other: 'latas' },
+    };
+    expect(unitLabel(can, { quantity: -1 })).toBe('lata');
+    expect(unitLabel(can, { quantity: 0.0001 })).toBe('latas');
+    expect(unitLabel(can, { quantity: 0.9999 })).toBe('lata');
   });
 
   it('reads only 1 and a part of one as singular where the engine has no Intl.PluralRules', () => {

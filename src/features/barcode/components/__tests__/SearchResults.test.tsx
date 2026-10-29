@@ -712,6 +712,7 @@ describe('SearchResults', () => {
             __typename: 'DisplayAmount',
             quantity: 2,
             localizedSymbol: 'pc',
+            fraction: null,
             unit: asAbbreviation({
               __typename: 'Unit',
               id: 'unit-pc',

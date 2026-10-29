@@ -68,6 +68,7 @@ query GetPantry(
           displayAmount {
             quantity
             localizedSymbol
+            fraction
             unit {
               id
               symbol
@@ -711,6 +712,7 @@ mutation CreatePantryItemUsage(
           displayAmount {
             quantity
             localizedSymbol
+            fraction
             unit {
               id
               symbol

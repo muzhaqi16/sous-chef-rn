@@ -287,6 +287,7 @@ describe('useAdjustPantryItemQuantity', () => {
         __typename: 'DisplayAmount',
         quantity: 1360.78,
         localizedSymbol: 'g',
+        fraction: null,
         unit: asAbbreviation({ __typename: 'Unit', id: 'u-g', symbol: 'g' }),
       },
       isLowStock: false,
