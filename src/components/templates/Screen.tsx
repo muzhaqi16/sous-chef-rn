@@ -202,9 +202,13 @@ export const Screen: React.FC<ScreenProps> = props => {
           keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
           keyboardDismissMode={KEYBOARD_DISMISS_MODE}
           refreshControl={plainRefresh}
-          {...(footer && footerHeight > 0
-            ? { bottomOffset: footerHeight }
-            : {})}
+          // Open, the keyboard covers the footer's bottom inset; a focused
+          // field keeps the usual gap above the part that still shows.
+          uniProps={theme => ({
+            bottomOffset:
+              theme.spacing.md +
+              (footer ? Math.max(footerHeight - insets.bottom, 0) : 0),
+          })}
         >
           {body}
         </ThemedKeyboardAwareScrollView>
