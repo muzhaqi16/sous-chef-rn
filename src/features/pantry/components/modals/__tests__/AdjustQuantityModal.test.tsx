@@ -1,7 +1,8 @@
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { AdjustQuantityModal } from '#features/pantry/components/modals/AdjustQuantityModal';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { t } from '#/i18n';
 import { AdjustQuantityModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/AdjustQuantityModal.generated';
 import { UnitSystem, UnitType } from '#/graphql/generated/schemaTypes';
@@ -249,6 +250,14 @@ function honeyCache() {
   return cache;
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AdjustQuantityModal', () => {
   const defaultProps = {
     visible: true,
@@ -353,7 +362,8 @@ describe('AdjustQuantityModal', () => {
     );
     await user.press(screen.getByTestId('confirm-btn'));
 
-    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    await drainTimers();
+    expect(onConfirm).toHaveBeenCalled();
     expect(onConfirm.mock.calls[0]?.[0]).toBe(2.7182818);
   });
 
@@ -374,7 +384,8 @@ describe('AdjustQuantityModal', () => {
     );
     await user.press(screen.getByTestId('confirm-btn'));
 
-    await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+    await drainTimers();
+    expect(onConfirm).toHaveBeenCalled();
     expect(onConfirm.mock.calls[0]?.[0]).toBe(5);
   });
 
@@ -405,7 +416,8 @@ describe('AdjustQuantityModal', () => {
       );
       await user.press(screen.getByTestId('confirm-btn'));
 
-      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalled();
       expect(onConfirm.mock.calls[0]).toEqual([
         2.5,
         'Recount',
@@ -428,7 +440,8 @@ describe('AdjustQuantityModal', () => {
       );
       await user.press(screen.getByTestId('confirm-btn'));
 
-      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalled();
       expect(onConfirm.mock.calls[0]).toEqual([
         1360.78,
         'Recount',

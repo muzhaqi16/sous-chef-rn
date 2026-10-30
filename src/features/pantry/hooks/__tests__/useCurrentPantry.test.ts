@@ -1,10 +1,10 @@
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import {
   homesData,
@@ -30,6 +30,14 @@ jest.mock('#store/useAppStore', () => ({
   })),
   useIsHomeSelectionReady: jest.fn(() => mockStoreState.isHomeSelectionReady),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -86,11 +94,11 @@ describe('useCurrentPantry', () => {
       ]),
     });
 
-    await waitFor(() => expect(result.current.isReady).toBe(true));
-    await waitFor(() =>
-      expect(result.current.pantry).toEqual(
-        expect.objectContaining({ id: 'pantry-2', name: 'Garage Pantry' }),
-      ),
+    await drainTimers();
+    expect(result.current.isReady).toBe(true);
+    await drainTimers();
+    expect(result.current.pantry).toEqual(
+      expect.objectContaining({ id: 'pantry-2', name: 'Garage Pantry' }),
     );
   });
 
@@ -108,10 +116,9 @@ describe('useCurrentPantry', () => {
       ]),
     });
 
-    await waitFor(() =>
-      expect(result.current.pantry).toEqual(
-        expect.objectContaining({ id: 'pantry-1', name: 'Default' }),
-      ),
+    await drainTimers();
+    expect(result.current.pantry).toEqual(
+      expect.objectContaining({ id: 'pantry-1', name: 'Default' }),
     );
   });
 
@@ -132,10 +139,9 @@ describe('useCurrentPantry', () => {
       ]),
     });
 
-    await waitFor(() =>
-      expect(result.current.pantry).toEqual(
-        expect.objectContaining({ id: 'pantry-1' }),
-      ),
+    await drainTimers();
+    expect(result.current.pantry).toEqual(
+      expect.objectContaining({ id: 'pantry-1' }),
     );
   });
 
@@ -164,7 +170,8 @@ describe('useCurrentPantry', () => {
       cache: cacheWithHomes([{ id: 'home-1', pantries: [] }]),
     });
 
-    await waitFor(() => expect(result.current.pantry).toBeNull());
+    await drainTimers();
+    expect(result.current.pantry).toBeNull();
   });
 
   it('returns null when selectedPantryId points to a deleted pantry', async () => {
@@ -176,7 +183,8 @@ describe('useCurrentPantry', () => {
       cache: cacheWithHomes([{ id: 'home-1', pantries: [] }]),
     });
 
-    await waitFor(() => expect(result.current.pantry).toBeNull());
+    await drainTimers();
+    expect(result.current.pantry).toBeNull();
   });
 
   it('clears stale selectedPantryId pointing to a missing pantry', async () => {
@@ -188,9 +196,8 @@ describe('useCurrentPantry', () => {
       cache: cacheWithHomes([{ id: 'home-1', pantries: [] }]),
     });
 
-    await waitFor(() =>
-      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(null),
-    );
+    await drainTimers();
+    expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(null);
   });
 
   it('returns all pantries from current home', async () => {
@@ -209,7 +216,8 @@ describe('useCurrentPantry', () => {
       ]),
     });
 
-    await waitFor(() => expect(result.current.pantries).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.pantries).toHaveLength(2);
   });
 
   it('returns currentHome when ready', async () => {
@@ -222,10 +230,9 @@ describe('useCurrentPantry', () => {
       ]),
     });
 
-    await waitFor(() =>
-      expect(result.current.currentHome).toEqual(
-        expect.objectContaining({ id: 'home-1', name: 'Test Home' }),
-      ),
+    await drainTimers();
+    expect(result.current.currentHome).toEqual(
+      expect.objectContaining({ id: 'home-1', name: 'Test Home' }),
     );
   });
 
