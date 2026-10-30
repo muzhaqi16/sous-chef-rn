@@ -54,7 +54,6 @@ const REFUSED = {
     removeRecipeFromFavorites: {
       __typename: 'ForbiddenError',
       code: ErrorCode.Forbidden,
-      message: 'no',
     },
   },
 };

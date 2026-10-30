@@ -127,7 +127,6 @@ function fakePantryServer() {
             [field]: {
               __typename: 'ConflictError',
               code: ErrorCode.VersionConflict,
-              message: 'Version conflict',
             },
           },
         };

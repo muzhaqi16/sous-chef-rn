@@ -102,7 +102,7 @@ const alertsMock = () =>
             ]),
             row('rice-row', []),
           ],
-          pageInfo: { hasNextPage: false, endCursor: 'c-4' },
+          pageInfo: {},
           totalCount: 4,
         },
       },
@@ -116,7 +116,7 @@ const cleanRecipeMock = () =>
         id: 'recipe-1',
         ingredientsConnection: {
           edges: [row('rice-row', [])],
-          pageInfo: { hasNextPage: false, endCursor: 'c-1' },
+          pageInfo: {},
           totalCount: 1,
         },
       },
@@ -207,8 +207,6 @@ describe('useRecipeDietaryAlerts', () => {
               ),
               pageInfo: {
                 __typename: 'PageInfo',
-                hasNextPage: false,
-                endCursor: 'c-4',
               },
               totalCount: 4,
             },

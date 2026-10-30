@@ -88,7 +88,7 @@ describe('a queued notification delete', () => {
     mockClient = replayClient(DeleteMultipleNotificationsDocument, {
       deleteMultipleNotifications: {
         __typename: 'DeleteMultipleNotificationsPayload',
-        summary: { __typename: 'BulkSummary', total: 2 },
+        summary: { __typename: 'BulkSummary' },
       },
     });
 
@@ -109,9 +109,6 @@ describe('a queued mark-read of a notification deleted elsewhere', () => {
       markNotificationAsRead: {
         __typename: 'NotFoundError',
         code: ErrorCode.NotFound,
-        message: 'gone',
-        resource: 'Notification',
-        resourceId: 'n1',
       },
     });
     seedFragment(mockClient.cache, {

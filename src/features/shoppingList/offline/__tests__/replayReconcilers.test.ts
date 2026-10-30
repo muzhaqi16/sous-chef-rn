@@ -137,7 +137,7 @@ describe('a single row merged into an existing line', () => {
   const answer = (item: object) => ({
     addItemsToShoppingList: {
       __typename: 'AddItemsToShoppingListPayload',
-      results: [{ index: 0, success: true, item }],
+      results: [{ item }],
     },
   });
   const data = answer(merged);
@@ -216,7 +216,7 @@ describe('a typed name the service matched to an item it holds', () => {
     return {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
-        results: [{ index: 0, success: true, item: line }],
+        results: [{ item: line }],
       },
     };
   };
@@ -273,9 +273,9 @@ describe('a replayed batch the service accepted in part', () => {
     addItemsToShoppingList: {
       __typename: 'AddItemsToShoppingListPayload',
       results: [
-        { index: 0, success: true, item: { id: 'minted-a' } },
-        { index: 1, success: false, item: null },
-        { index: 2, success: true, item: { id: 'held-eggs' } },
+        { item: { id: 'minted-a' } },
+        { item: null },
+        { item: { id: 'held-eggs' } },
       ],
     },
   };
@@ -379,7 +379,6 @@ describe('a delete whose answer names the deleted row', () => {
       {
         removeItemFromShoppingList: {
           __typename: 'RemoveItemFromShoppingListPayload',
-          converged: false,
           shoppingListItem: { id: 'row-soap' },
         },
       },

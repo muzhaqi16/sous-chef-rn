@@ -28,42 +28,26 @@ function seedTemplateWithRecipeBackedRow() {
       mealTemplate: {
         __typename: 'MealTemplate',
         id: 'tpl-1',
-        name: 'Week A',
-        description: null,
         category: TemplateCategory.Custom,
-        defaultServings: 2,
         tags: [],
-        updatedAt: '2026-08-01T00:00:00.000Z',
         itemsConnection: {
           __typename: 'MealTemplateItemConnection',
-          totalCount: 1,
           edges: [
             {
               __typename: 'MealTemplateItemEdge',
               node: {
                 __typename: 'MealTemplateItem',
                 id: 'item-1',
-                dayOffset: 0,
                 mealType: MealType.Dinner,
-                customMealName: null,
-                servings: 2,
-                notes: null,
                 recipe: {
                   __typename: 'Recipe',
-                  version: 1,
                   id: 'rec-9',
-                  name: 'Ragu',
-                  imageUrl: null,
-                  servings: 4,
-                  totalTimeMinutes: 90,
                 },
               },
             },
           ],
           pageInfo: {
             __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
           },
         },
       },
@@ -95,34 +79,23 @@ describe('the template editor snapshots the recipe it can overwrite', () => {
         mealTemplate: {
           __typename: 'MealTemplate',
           id: 'tpl-2',
-          name: 'Week B',
-          description: null,
           category: TemplateCategory.Custom,
-          defaultServings: 2,
           tags: [],
-          updatedAt: '2026-08-01T00:00:00.000Z',
           itemsConnection: {
             __typename: 'MealTemplateItemConnection',
-            totalCount: 1,
             edges: [
               {
                 __typename: 'MealTemplateItemEdge',
                 node: {
                   __typename: 'MealTemplateItem',
                   id: 'item-2',
-                  dayOffset: 1,
                   mealType: MealType.Lunch,
-                  customMealName: 'Leftovers',
-                  servings: 1,
-                  notes: null,
                   recipe: null,
                 },
               },
             ],
             pageInfo: {
               __typename: 'PageInfo',
-              hasNextPage: false,
-              endCursor: null,
             },
           },
         },

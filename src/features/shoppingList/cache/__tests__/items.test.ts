@@ -49,8 +49,6 @@ describe('addLocalShoppingListItem: the row', () => {
       quantityInput: null,
       unitName: null,
       category: null,
-      notes: null,
-      displayFormat: 'AUTO',
       item: null,
       unit: null,
     });

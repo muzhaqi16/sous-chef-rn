@@ -489,7 +489,6 @@ describe('useBatchMoveToPantry', () => {
       movePurchasedItemsToPantry: {
         __typename: 'ForbiddenError',
         code: ErrorCode.Forbidden,
-        message: 'Not allowed',
       },
     };
     const move = recordMock(MovePurchasedItemsToPantryDocument, {
@@ -712,7 +711,6 @@ describe('counters are adjusted exactly once', () => {
     const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
       movePurchasedItemsToPantry: {
         __typename: 'ValidationError',
-        message: 'nope',
       },
     };
     const refused = recordMock(MovePurchasedItemsToPantryDocument, {

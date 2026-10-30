@@ -90,12 +90,7 @@ describe('useRecipePayoff', () => {
               expiringStacks: [],
               node: {
                 __typename: 'Recipe',
-                version: 1,
                 id: 'peanut-noodles',
-                name: 'Peanut noodles',
-                imageUrl: null,
-                servings: 2,
-                totalTimeMinutes: 20,
               },
             },
           ],

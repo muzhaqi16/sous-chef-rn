@@ -33,11 +33,8 @@ const successMock = (variables: {
           __typename: 'PantryItem',
           id: variables.input.id,
           version: 1,
-          updatedAt: '2026-01-01T00:00:00.000Z',
           quantity: variables.input.newQuantity,
           remainingNetWeight: variables.input.remainingNetWeight ?? null,
-          lastUsedAt: null,
-          activeBatchCount: 0,
         },
       },
     },
@@ -281,20 +278,13 @@ describe('useAdjustPantryItemQuantity', () => {
       __typename: 'PantryItem',
       id: 'item-1',
       version: 1,
-      updatedAt: '2026-01-01T00:00:00.000Z',
       quantity: 1360.78,
-      heldQuantity: 1360.78,
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 1360.78,
-        localizedSymbol: 'g',
-        fraction: null,
         unit: asAbbreviation({ __typename: 'Unit', id: 'u-g', symbol: 'g' }),
       },
-      isLowStock: false,
       remainingNetWeight: null,
-      lastUsedAt: null,
-      activeBatchCount: 1,
     } as const;
 
     const refusedWhileHeld = () =>
@@ -363,9 +353,7 @@ describe('useAdjustPantryItemQuantity', () => {
         data: {
           ...ITEM,
           version: 2,
-          updatedAt: '2026-01-02T00:00:00.000Z',
           quantity: 1000,
-          heldQuantity: 1000,
         },
       });
       await act(async () => {
@@ -397,7 +385,7 @@ describe('useAdjustPantryItemQuantity', () => {
         data: {
           adjustPantryItemQuantity: {
             __typename: 'AdjustPantryItemQuantityPayload',
-            pantryItem: { ...ITEM, quantity: 1133.98, heldQuantity: 1133.98 },
+            pantryItem: { ...ITEM, quantity: 1133.98 },
           },
         },
       });

@@ -70,8 +70,6 @@ function seed(): InMemoryCache {
           edges: [],
           pageInfo: {
             __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
           },
         },
       },

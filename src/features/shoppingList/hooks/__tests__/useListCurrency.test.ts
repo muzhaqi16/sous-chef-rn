@@ -23,7 +23,6 @@ function renderFor(listCurrency: string | null) {
     fragment: UseListCurrency_ListFragmentDoc,
     data: {
       __typename: 'ShoppingList',
-      version: 1,
       id: 'list-1',
       currency: listCurrency,
     },

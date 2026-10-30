@@ -23,19 +23,7 @@ function seedFeed(unreadCount: number): InMemoryCache {
       __typename: 'Notification',
       id: 'n1',
       status: NotificationStatus.Sent,
-      title: 'Seeded',
-      message: 'Seeded message',
       type: NotificationType.ExpiryReminder,
-      category: 'PANTRY',
-      priority: 'NORMAL',
-      payload: null,
-      actionUrl: null,
-      sourceId: null,
-      sourceType: null,
-      sentAt: '2026-01-01T00:00:00.000Z',
-      readAt: null,
-      expiresAt: null,
-      isAuthoredContent: false,
     },
   ]);
   seedQuery(cache, {
@@ -46,7 +34,6 @@ function seedFeed(unreadCount: number): InMemoryCache {
         __typename: 'NotificationSummary',
         id: 'user-1',
         unreadCount,
-        hasUrgent: false,
       },
     },
   });

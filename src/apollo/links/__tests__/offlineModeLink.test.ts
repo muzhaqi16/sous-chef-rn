@@ -65,7 +65,7 @@ function makeForward(): ApolloLink.ForwardFunction {
   return jest.fn(
     () =>
       new Observable<ApolloLink.Result>(observer => {
-        observer.next({ data: { ok: true } });
+        observer.next({ data: {} });
         observer.complete();
       }),
   );

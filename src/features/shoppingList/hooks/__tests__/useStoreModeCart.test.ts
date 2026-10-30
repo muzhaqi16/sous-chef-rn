@@ -54,7 +54,6 @@ const node = ({
   unitId,
 }: LineSeed) => ({
   __typename: 'ShoppingListItem',
-  version: 1,
   id,
   itemName,
   quantity: 2,
@@ -76,7 +75,7 @@ const node = ({
           amount: suggested,
           currency: { __typename: 'Currency', code: suggestedIn },
         },
-  item: { __typename: 'Item', version: 1, id: itemId },
+  item: { __typename: 'Item', id: itemId },
 });
 
 const tabVariables = (isPurchased: boolean) => ({
@@ -95,7 +94,6 @@ const tabResponse = (isPurchased: boolean, lines: LineSeed[]) => ({
     data: {
       shoppingList: {
         __typename: 'ShoppingList',
-        version: 1,
         id: LIST,
         itemsConnection: {
           __typename: 'ShoppingListItemConnection',
@@ -132,7 +130,7 @@ function seedTab(
 const seedList = (cache: ReturnType<typeof seedCache>, currency = 'USD') =>
   seedFragment(cache, {
     fragment: UseListCurrency_ListFragmentDoc,
-    data: { __typename: 'ShoppingList', version: 1, id: LIST, currency },
+    data: { __typename: 'ShoppingList', id: LIST, currency },
   });
 
 function renderCart(

@@ -32,18 +32,7 @@ function successMock() {
             id: input.id,
             name: input.name,
             type: StorageType.PantryShelf,
-            icon: null,
-            color: null,
-            temperature: null,
-            description: null,
-            isClimateControlled: false,
-            capacity: null,
-            capacityUnit: null,
-            sortOrder: 0,
-            isDefault: false,
-            currentItemCount: 0,
             homeId: HOME_ID,
-            parentLocation: null,
           },
         },
       };
@@ -113,10 +102,7 @@ describe('useCreateStorageLocation', () => {
             edges: [],
             pageInfo: {
               __typename: 'PageInfo',
-              hasNextPage: false,
-              endCursor: null,
             },
-            totalCount: 0,
           },
         },
       });
@@ -158,10 +144,7 @@ describe('useCreateStorageLocation', () => {
           edges: [],
           pageInfo: {
             __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
           },
-          totalCount: 0,
         },
       },
     });

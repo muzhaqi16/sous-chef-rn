@@ -76,7 +76,7 @@ describe('createShoppingListRow', () => {
   it('sends the minted line local-first under the id it wrote', async () => {
     const cache = seededCache();
     const { created, send } = create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     });
 
     await created;
@@ -97,7 +97,7 @@ describe('createShoppingListRow', () => {
     const cache = seededCache();
 
     const { created } = create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     });
     const [minted] = rowIds(cache);
     const named = cache.extract()[minted ?? '']?.item;
@@ -110,7 +110,7 @@ describe('createShoppingListRow', () => {
     const cache = seededCache();
 
     const outcome = await create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     }).created;
 
     expect(outcome).toMatchObject({ outcome: 'kept', failure: null });
@@ -125,7 +125,7 @@ describe('createShoppingListRow', () => {
     const cache = seededCache();
 
     const outcome = await create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     }).created;
 
     const [minted] = rowIds(cache);
@@ -139,7 +139,7 @@ describe('createShoppingListRow', () => {
       data: {
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
-          results: [{ index: 0, success: true, item: { id: 'line-held' } }],
+          results: [{ item: { id: 'line-held' } }],
         },
       },
     }).created;
@@ -158,8 +158,6 @@ describe('createShoppingListRow', () => {
               __typename: 'AddItemsToShoppingListPayload',
               results: [
                 {
-                  index: 0,
-                  success: true,
                   item: { id: variables.input.items[0]?.id },
                 },
               ],
@@ -190,7 +188,6 @@ describe('createShoppingListRow', () => {
         addItemsToShoppingList: {
           __typename: 'ForbiddenError',
           code: ErrorCode.Forbidden,
-          message: 'no',
         },
       },
     }).created;
@@ -211,7 +208,7 @@ describe('createShoppingListRow', () => {
       data: {
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
-          results: [{ index: 0, success: false, item: null }],
+          results: [{ item: null }],
         },
       },
     }).created;

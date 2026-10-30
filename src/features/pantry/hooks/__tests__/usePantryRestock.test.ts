@@ -85,7 +85,6 @@ const refusedRestock = (
       restockPantryItem: {
         __typename: 'ValidationError',
         code,
-        message: 'nope',
         field,
       },
     },
@@ -277,7 +276,7 @@ describe('usePantryRestock', () => {
     it('restocks the stack it names by packages nothing sizes, for the server to size', async () => {
       // An add would name no stack, and could land on another one.
       const create = recordMock(CreatePantryItemDocument, {
-        data: { createPantryItem: null },
+        data: {},
       });
       const restock = queuedRestock();
       const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
@@ -338,7 +337,7 @@ describe('usePantryRestock', () => {
         data: { __typename: 'Unit', id: 'unit-bag', type: 'COUNT' },
       });
       const create = recordMock(CreatePantryItemDocument, {
-        data: { createPantryItem: null },
+        data: {},
       });
       const restock = queuedRestock();
       const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
@@ -391,11 +390,8 @@ describe('usePantryRestock', () => {
           __typename: 'Query',
           pantryItemBatchesConnection: {
             __typename: 'PantryItemBatchConnection',
-            totalCount: 0,
             pageInfo: {
               __typename: 'PageInfo',
-              hasNextPage: false,
-              endCursor: null,
             },
             edges: [],
           },

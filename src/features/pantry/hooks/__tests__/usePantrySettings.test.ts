@@ -48,7 +48,6 @@ describe('usePantrySettings.setDefault', () => {
       markDefault({
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
-        message: 'not allowed',
         field: 'id',
       }),
     ]);
@@ -62,9 +61,6 @@ describe('usePantrySettings.setDefault', () => {
       markDefault({
         __typename: 'NotFoundError',
         code: ErrorCode.NotFound,
-        message: 'gone',
-        resource: 'Pantry',
-        resourceId: 'pantry-1',
       }),
     ]);
 
@@ -94,7 +90,6 @@ describe('usePantrySettings.setDefault', () => {
           __typename: 'Pantry',
           id: 'pantry-1',
           name: 'Kitchen',
-          isDefault: true,
           homeId: 'home-1',
         },
       }),

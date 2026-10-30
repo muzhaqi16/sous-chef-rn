@@ -45,12 +45,11 @@ describe('useProductOrigin', () => {
   it('reads what the lookup stored without asking again', async () => {
     const cache = makeCache();
     seedFragment(cache, {
-      id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
+      id: cache.identify({ __typename: 'Item', id: 'item-1' }),
       fragment: UseProductOrigin_ItemFragmentDoc,
       fragmentName: 'useProductOrigin_item',
       data: {
         __typename: 'Item',
-        version: 1,
         id: 'item-1',
         origin: {
           __typename: 'ProductOrigin',
@@ -166,12 +165,11 @@ describe('useProductOrigin', () => {
   it('credits nobody for a source this build predates', async () => {
     const cache = makeCache();
     seedFragment(cache, {
-      id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
+      id: cache.identify({ __typename: 'Item', id: 'item-1' }),
       fragment: UseProductOrigin_ItemFragmentDoc,
       fragmentName: 'useProductOrigin_item',
       data: {
         __typename: 'Item',
-        version: 1,
         id: 'item-1',
         origin: null,
         brandOwner: {

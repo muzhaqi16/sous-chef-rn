@@ -82,7 +82,6 @@ const CONVERGED: Answer = {
 const NOT_FOUND: Answer = {
   __typename: 'NotFoundError',
   code: ErrorCode.NotFound,
-  resource: 'ShoppingListCollaborator',
 };
 const FORBIDDEN: Answer = {
   __typename: 'ForbiddenError',

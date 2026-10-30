@@ -51,7 +51,6 @@ function convergedDeleteMock() {
       deletePantryItem: {
         __typename: 'DeletePantryItemPayload',
         converged: true,
-        pantryItem: null,
       },
     },
   });

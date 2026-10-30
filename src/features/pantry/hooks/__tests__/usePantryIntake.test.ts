@@ -327,7 +327,6 @@ describe('usePantryIntake', () => {
           createPantryItem: {
             __typename: 'ValidationError',
             code: ErrorCode.ValidationFailed,
-            message: 'nope',
             field: 'quantity',
           },
         },
