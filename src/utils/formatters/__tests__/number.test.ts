@@ -232,5 +232,7 @@ describe('formatDistance', () => {
   it('keeps one decimal under one unit', () => {
     expect(formatDistance(0.5, UnitSystem.Imperial, t)).toBe('0.3 mi');
     expect(formatDistance(0.5, UnitSystem.Metric, t)).toBe('0.5 km');
+    expect(formatDistance(0.02, UnitSystem.Imperial, t)).toBe('0.1 mi');
+    expect(formatDistance(0, UnitSystem.Metric, t)).toBe('0.1 km');
   });
 });

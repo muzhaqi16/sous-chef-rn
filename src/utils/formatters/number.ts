@@ -196,7 +196,8 @@ export function formatDistance(
   t: Translate,
 ): string {
   const imperial = readingSystem === UnitSystem.Imperial;
-  const value = imperial ? km / KM_PER_MILE : km;
+  // A tenth is the least shown: one decimal would round a closer store to 0.
+  const value = Math.max(imperial ? km / KM_PER_MILE : km, 0.1);
   const distance = formatDecimal(value, {
     maximumFractionDigits: value < 1 ? 1 : 0,
   });
