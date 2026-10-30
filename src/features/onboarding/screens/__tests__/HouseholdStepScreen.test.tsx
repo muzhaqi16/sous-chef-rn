@@ -1,10 +1,11 @@
 'use no memo';
 import React from 'react';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import type { ApolloCache } from '@apollo/client';
 import { t } from '#/i18n';
 import { makeCache } from '#/apollo/cache';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { memoryScreen } from '#/test-utils/memoryPlatform';
 import {
   GetDietaryProfileDocument,
@@ -73,11 +74,20 @@ async function renderStep(update = queuedUpdate()) {
     cache,
     operationMocks: [profileMock().mock, update.mock],
   });
-  await waitFor(() => expect(cachedCooksFor(cache)).toBeNull());
+  await drainTimers();
+  expect(cachedCooksFor(cache)).toBeNull();
   return { cache, update };
 }
 
 const recordedCooksFor = () => useOnboardingProgressStore.getState().cooksFor;
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -103,9 +113,8 @@ describe('HouseholdStepScreen', () => {
       screen.getByTestId(onboardingTestIDs.householdChoice('one')),
     );
 
-    await waitFor(() =>
-      expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household'),
-    );
+    await drainTimers();
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household');
     expect(recordedCooksFor()).toBe(1);
     expect(cachedCooksFor(cache)).toBe(1);
     expect(update.fired).toEqual([{ input: { cooksFor: 1 } }]);
@@ -119,9 +128,8 @@ describe('HouseholdStepScreen', () => {
       screen.getByTestId(onboardingTestIDs.householdChoice('two')),
     );
 
-    await waitFor(() =>
-      expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household'),
-    );
+    await drainTimers();
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household');
     expect(update.fired).toEqual([{ input: { cooksFor: 2 } }]);
     expect(recordedCooksFor()).toBe(2);
   });
@@ -140,9 +148,8 @@ describe('HouseholdStepScreen', () => {
 
     await user.press(screen.getByText(t('labels.continue')));
 
-    await waitFor(() =>
-      expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household'),
-    );
+    await drainTimers();
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household');
     expect(cachedCooksFor(cache)).toBe(4);
     expect(update.fired).toEqual([{ input: { cooksFor: 4 } }]);
   });
@@ -181,9 +188,8 @@ describe('HouseholdStepScreen', () => {
     await user.press(
       screen.getByTestId(onboardingTestIDs.householdChoice('two')),
     );
-    await waitFor(() =>
-      expect(mockNavigateToNextStep).toHaveBeenCalledTimes(1),
-    );
+    await drainTimers();
+    expect(mockNavigateToNextStep).toHaveBeenCalledTimes(1);
 
     // The next step covers this one, then goes back to it.
     act(() => memoryScreen().setFocused(false));
@@ -192,9 +198,8 @@ describe('HouseholdStepScreen', () => {
     await user.press(
       screen.getByTestId(onboardingTestIDs.householdChoice('one')),
     );
-    await waitFor(() =>
-      expect(mockNavigateToNextStep).toHaveBeenCalledTimes(2),
-    );
+    await drainTimers();
+    expect(mockNavigateToNextStep).toHaveBeenCalledTimes(2);
     expect(recordedCooksFor()).toBe(1);
   });
 

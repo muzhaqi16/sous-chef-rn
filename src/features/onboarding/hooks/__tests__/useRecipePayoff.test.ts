@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
@@ -6,6 +5,7 @@ import {
   type MockDataFor,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { RecipeSuggestionsDocument } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
 import { useStore } from '#store';
 import { useRecipePayoff } from '../useRecipePayoff';
@@ -65,6 +65,14 @@ const renderPayoff = (edges: Edge[], cache = makeCache()) => {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   mockFlagOn = true;
   mockRestrictionsInPlay = false;
   useStore.setState({ selectedHomeId: 'home-1' });
@@ -103,9 +111,8 @@ describe('useRecipePayoff', () => {
       cache,
     );
 
-    await waitFor(() =>
-      expect(ids(result.current.rows)).toEqual(['shakshuka', 'frittata']),
-    );
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['shakshuka', 'frittata']);
     expect(everShown.has('peanut-noodles')).toBe(false);
     expect(screened.fired).toEqual([
       {
@@ -120,28 +127,30 @@ describe('useRecipePayoff', () => {
   it('shows up to three', async () => {
     const { result } = renderPayoff(['a', 'b', 'c', 'd'].map(id => edge(id)));
 
-    await waitFor(() =>
-      expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']),
-    );
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']);
   });
 
   it('leaves out a recipe the pantry holds nothing of', async () => {
     const { result } = renderPayoff([edge('a', 0), edge('b', 40)]);
 
-    await waitFor(() => expect(ids(result.current.rows)).toEqual(['b']));
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['b']);
   });
 
   it('shows none with no candidate', async () => {
     const { result, screened } = renderPayoff([]);
 
-    await waitFor(() => expect(screened.fired).toHaveLength(1));
+    await drainTimers();
+    expect(screened.fired).toHaveLength(1);
     expect(result.current.rows).toEqual([]);
   });
 
   it('says to check the label when a restriction applies, or none is known yet', async () => {
     mockRestrictionsInPlay = true;
     const { result, rerender } = renderPayoff([edge('a')]);
-    await waitFor(() => expect(ids(result.current.rows)).toEqual(['a']));
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['a']);
     expect(result.current.showCheckLabel).toBe(true);
 
     mockRestrictionsInPlay = null;
@@ -152,7 +161,8 @@ describe('useRecipePayoff', () => {
   it('shows no label caveat when no restriction applies', async () => {
     const { result } = renderPayoff([edge('a')]);
 
-    await waitFor(() => expect(ids(result.current.rows)).toEqual(['a']));
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['a']);
     expect(result.current.showCheckLabel).toBe(false);
   });
 

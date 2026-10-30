@@ -5,7 +5,6 @@ import {
   render,
   screen,
   userEvent,
-  waitFor,
   within,
 } from '@testing-library/react-native';
 import { t } from '#/i18n';
@@ -17,6 +16,7 @@ import {
   type OnboardingSummary,
 } from '#features/onboarding/hooks/useOnboardingSummary';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockUpdateUser = jest.fn();
 jest.mock('#store/useAppStore', () => ({
@@ -151,6 +151,14 @@ async function getStarted(
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   summaryOf(HOME_READY);
   mockPayoff = [];
@@ -274,11 +282,10 @@ describe('OnboardingCompleteScreen', () => {
 
       await user.press(screen.getByText(t('onBoarding.inviteHousehold')));
 
-      await waitFor(() =>
-        expect(mockShareUrl).toHaveBeenCalledWith(
-          'https://app.souschef.dev/join-home/ABC123',
-          t('homeDetail.shareLinkMessage'),
-        ),
+      await drainTimers();
+      expect(mockShareUrl).toHaveBeenCalledWith(
+        'https://app.souschef.dev/join-home/ABC123',
+        t('homeDetail.shareLinkMessage'),
       );
     });
 
@@ -308,14 +315,12 @@ describe('OnboardingCompleteScreen', () => {
       render(<OnboardingCompleteScreen />);
 
       await user.press(screen.getByText(t('onBoarding.inviteHousehold')));
-      expect(
-        await screen.findByText(t('onBoarding.inviteFailed')),
-      ).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(t('onBoarding.inviteFailed'))).toBeTruthy();
       await getStarted(user, t('labels.notNow'));
 
-      await waitFor(() =>
-        expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true }),
-      );
+      await drainTimers();
+      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
     });
   });
 
@@ -326,9 +331,8 @@ describe('OnboardingCompleteScreen', () => {
 
       await getStarted(user, t('onBoarding.notifyTurnOn'));
 
-      await waitFor(() =>
-        expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true }),
-      );
+      await drainTimers();
+      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
       expect(mockTurnOnPush).toHaveBeenCalledWith({
         expirationNotifications: true,
       });
@@ -340,9 +344,8 @@ describe('OnboardingCompleteScreen', () => {
 
       await getStarted(user, t('labels.notNow'));
 
-      await waitFor(() =>
-        expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true }),
-      );
+      await drainTimers();
+      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
       expect(mockTurnOnPush).not.toHaveBeenCalled();
     });
 
@@ -355,9 +358,8 @@ describe('OnboardingCompleteScreen', () => {
       await getStarted(user);
 
       expect(alertService.alert).not.toHaveBeenCalled();
-      await waitFor(() =>
-        expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true }),
-      );
+      await drainTimers();
+      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
     });
 
     it('asks when the device allows but push is off', async () => {
@@ -382,8 +384,9 @@ describe('OnboardingCompleteScreen', () => {
 
     await getStarted(user, t('labels.notNow'));
 
+    await drainTimers();
     expect(
-      await screen.findByText(t('onBoarding.completeOnboardingError')),
+      screen.getByText(t('onBoarding.completeOnboardingError')),
     ).toBeTruthy();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });

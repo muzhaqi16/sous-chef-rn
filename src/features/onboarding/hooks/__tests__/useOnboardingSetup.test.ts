@@ -2,12 +2,12 @@
 
 jest.mock('#/services/errorService');
 
-import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateHomeDocument,
   GetHomesDocument,
@@ -82,7 +82,8 @@ async function renderSetup(...mocks: ReturnType<typeof recordMock>[]) {
     cache,
     operationMocks: mocks.map(m => m.mock),
   });
-  await waitFor(() => expect(rendered.result.current.loading).toBe(false));
+  await drainTimers();
+  expect(rendered.result.current.loading).toBe(false);
   return { ...rendered, cache };
 }
 
@@ -91,11 +92,19 @@ async function runSetup(
   createMissingHome = true,
 ): Promise<OnboardingSetupOutcome> {
   let outcome: OnboardingSetupOutcome = { status: 'failed', message: '' };
-  await act(async () => {
-    outcome = await rendered.result.current.run({ createMissingHome });
-  });
+  outcome = await drained(() =>
+    rendered.result.current.run({ createMissingHome }),
+  );
   return outcome;
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useOnboardingSetup, offline', () => {
   beforeEach(() => {
@@ -203,7 +212,10 @@ describe('useOnboardingSetup, offline', () => {
     expect(await runSetup(rendered, false)).toEqual({ status: 'done' });
 
     expect(home.fired).toHaveLength(0);
-    expect(list.fired[0]?.input).not.toHaveProperty('homeId', expect.anything());
+    expect(list.fired[0]?.input).not.toHaveProperty(
+      'homeId',
+      expect.anything(),
+    );
     expect(useStore.getState().selectedHomeId).toBeNull();
   });
 

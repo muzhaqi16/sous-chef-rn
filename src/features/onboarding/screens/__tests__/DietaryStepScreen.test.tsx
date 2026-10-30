@@ -4,7 +4,6 @@ import {
   render,
   screen,
   userEvent,
-  waitFor,
   within,
 } from '@testing-library/react-native';
 import { t } from '#/i18n';
@@ -15,6 +14,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { DietaryStepScreen } from '../DietaryStepScreen';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockSave = jest.fn().mockResolvedValue(true);
 jest.mock('#features/onboarding/hooks/useDietaryIntake', () => ({
@@ -85,13 +85,22 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
 const label = (key: Parameters<typeof t>[0]) => t(key);
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockHomes = [{ id: 'home-1', name: 'Maya Home', shared: true }];
 });
 
 async function continueStep(user: ReturnType<typeof userEvent.setup>) {
   await user.press(screen.getByText(t('labels.continue')));
-  await waitFor(() => expect(mockSave).toHaveBeenCalled());
+  await drainTimers();
+  expect(mockSave).toHaveBeenCalled();
   return mockSave.mock.calls[0]?.[0];
 }
 
@@ -237,9 +246,8 @@ describe('DietaryStepScreen', () => {
 
     await continueStep(user);
 
-    expect(
-      await screen.findByText(t('onBoarding.dietarySaveFailed')),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(t('onBoarding.dietarySaveFailed'))).toBeTruthy();
     expect(mockNavigateToNextStep).not.toHaveBeenCalled();
   });
 });
