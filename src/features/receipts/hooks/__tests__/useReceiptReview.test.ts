@@ -48,9 +48,10 @@ import {
   sentLinesOf,
 } from '../../__tests__/helpers/receiptFixtures';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
-import { useReceiptReview } from '../useReceiptReview';
+import { useReceiptReview, type LearnedStore } from '../useReceiptReview';
 import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
@@ -238,6 +239,7 @@ async function setup({
   resolve,
   resolveAgain,
   storeCreate,
+  storeRemove,
   held = PANTRY,
   listHeld = false,
   listFor = listItems,
@@ -258,6 +260,8 @@ async function setup({
   resolveAgain?: ReturnType<typeof recordMock>;
   /** The store a confirm adds when the receipt's shop is not on file. */
   storeCreate?: ReturnType<typeof recordMock>;
+  /** The removal an Undo of a learned store sends. */
+  storeRemove?: ReturnType<typeof recordMock>;
   /** What the pantry holds before the receipt is added. */
   held?: MockDataFor<typeof GetPantryDocument>;
 } = {}) {
@@ -291,6 +295,7 @@ async function setup({
         ...(resolve ? [resolve.mock] : []),
         ...(resolveAgain ? [resolveAgain.mock] : []),
         ...(storeCreate ? [storeCreate.mock] : []),
+        ...(storeRemove ? [storeRemove.mock] : []),
       ],
     },
   );
@@ -1722,16 +1727,19 @@ describe('useReceiptReview', () => {
 
     const confirmed = async (
       options: Parameters<typeof setup>[0],
-    ): Promise<{ learned: unknown; cache: ReturnType<typeof makeCache> }> => {
+    ): Promise<{
+      learned: LearnedStore | null;
+      cache: ReturnType<typeof makeCache>;
+    }> => {
       const cache = options?.cache ?? makeCache();
       const { result, addChosen } = await setup({ ...options, cache });
       await waitFor(() =>
         expect(result.current.review.matchState).toBe('done'),
       );
       const outcome = (await addChosen()) as {
-        learned: Promise<unknown>;
+        learned: Promise<LearnedStore | null>;
       };
-      let learned: unknown;
+      let learned: LearnedStore | null = null;
       await act(async () => {
         learned = await outcome.learned;
       });
@@ -1753,6 +1761,36 @@ describe('useReceiptReview', () => {
           entry => entry.store?.id === 'store-27',
         ),
       ).toMatchObject({ addedVia: UsualStoreSource.Receipt });
+    });
+
+    it("undoes the learned store, and the receipt's items stay in the pantry", async () => {
+      const storeRemove = recordMock(RemoveUsualStoreDocument, {
+        data: {
+          removeUsualStore: {
+            __typename: 'RemoveUsualStorePayload',
+            usualStores: [{ id: 'home-1:store-ge' }],
+          },
+        },
+      });
+      const { learned, cache } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-ge']),
+        storeRemove,
+      });
+      const added = pantryItemNames(cache);
+      expect(added).toContain('Whole milk');
+
+      await act(async () => {
+        await learned?.undo();
+      });
+
+      expect(storeRemove.fired.map(vars => inputOf(vars))).toEqual([
+        { homeId: 'home-1', target: { storeId: 'store-27' } },
+      ]);
+      expect(
+        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
+      ).toEqual(['store-ge']);
+      expect(pantryItemNames(cache)).toEqual(added);
     });
 
     it('learns nothing when the check-in is refused whole', async () => {
