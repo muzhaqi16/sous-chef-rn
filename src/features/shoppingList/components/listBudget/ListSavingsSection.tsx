@@ -22,14 +22,14 @@ const statusOf = (store: SavingsStore, t: TranslateFn): string | null => {
   if (store.total === null) return t('listSavings.notEnoughPrices');
   const { saving } = store;
   if (!saving) return null;
-  const on = t('listSavings.onItems', { count: saving.coveredLines });
-  const said =
-    saving.kind === 'aboutTheSame'
-      ? t('listSavings.aboutTheSame')
-      : saving.kind === 'save'
-      ? t('listSavings.save', { amount: saving.amount })
-      : t('listSavings.more', { amount: saving.amount });
-  return `${said} ${on}`;
+  const count = saving.coveredLines;
+  if (saving.kind === 'aboutTheSame') {
+    return t('listSavings.aboutTheSameOnItems', { count });
+  }
+  const { amount } = saving;
+  return saving.kind === 'save'
+    ? t('listSavings.saveOnItems', { amount, count })
+    : t('listSavings.moreOnItems', { amount, count });
 };
 
 /**
