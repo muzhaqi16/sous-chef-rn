@@ -61,6 +61,7 @@ const answer = savingsAnswer([
         amount: 5.99,
         product: {
           __typename: 'Item',
+          version: 1,
           id: 'i-af',
           name: 'Appleton Farms Bacon',
         },

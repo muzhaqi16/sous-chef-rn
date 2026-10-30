@@ -16,10 +16,12 @@ query RecipeSuggestions(
       coverage
       # The stacks expiring within three days of `today` that it would use.
       expiringStacks {
+        version
         id
         itemName
       }
       node {
+        version
         id
         name
         imageUrl

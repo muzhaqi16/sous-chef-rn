@@ -95,6 +95,7 @@ export function homeNode(home: HomeFixture): HomeNode {
       'MembershipEdge',
       (home.members ?? []).map(m => ({
         __typename: 'Membership',
+        version: 1,
         id: m.id,
         homeId: home.id,
         userId: m.userId ?? `user-${m.id}`,
@@ -123,6 +124,7 @@ export function homeNode(home: HomeFixture): HomeNode {
       'HomeInviteEdge',
       (home.invites ?? []).map(i => ({
         __typename: 'HomeInvite',
+        version: 1,
         id: i.id,
         email: i.email ?? `invite-${i.id}@example.com`,
         recipientName: i.recipientName ?? null,
@@ -137,6 +139,7 @@ export function homeNode(home: HomeFixture): HomeNode {
       'PantryEdge',
       (home.pantries ?? []).map(p => ({
         __typename: 'Pantry',
+        version: 1,
         id: p.id,
         name: p.name ?? `Pantry ${p.id}`,
         isDefault: p.isDefault ?? false,
@@ -144,6 +147,7 @@ export function homeNode(home: HomeFixture): HomeNode {
     ),
     myMembership: {
       __typename: 'Membership',
+      version: 1,
       id: `mm-${home.id}`,
       role: MembershipRole.Owner,
       canManageHome: true,

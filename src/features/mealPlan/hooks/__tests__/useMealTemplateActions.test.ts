@@ -82,6 +82,7 @@ const template = (
             customMealName: null,
             recipe: {
               __typename: 'Recipe',
+              version: 1,
               id: 'recipe-1',
               name: 'Ragu',
               imageUrl: null,
@@ -125,7 +126,11 @@ const PLAN_ID = 'plan-1';
 const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
   cache
     .readFragment({
-      id: cache.identify({ __typename: 'MealPlan', id: planId ?? '' }),
+      id: cache.identify({
+        __typename: 'MealPlan',
+        version: 1,
+        id: planId ?? '',
+      }),
       fragment: MealPlanMain_MealPlanFragmentDoc,
       fragmentName: 'MealPlanMain_mealPlan',
     })
@@ -151,7 +156,7 @@ const createItemMock = () =>
     data: {
       createMealPlanItem: {
         __typename: 'CreateMealPlanItemPayload',
-        mealPlanItem: { __typename: 'MealPlanItem', id: 'meal-1' },
+        mealPlanItem: { __typename: 'MealPlanItem', version: 1, id: 'meal-1' },
       },
     },
     partial: true,

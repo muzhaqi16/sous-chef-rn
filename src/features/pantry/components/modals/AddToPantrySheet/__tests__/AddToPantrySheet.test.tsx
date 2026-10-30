@@ -249,6 +249,7 @@ describe('AddToPantrySheet', () => {
         data: {
           pantry: {
             __typename: 'Pantry',
+            version: 1,
             id: 'pantry-1',
             stats: { __typename: 'PantryStats', totalItems: 70 },
             itemsConnection: {
@@ -258,7 +259,7 @@ describe('AddToPantrySheet', () => {
                 {
                   __typename: 'PantryItemEdge',
                   cursor: 'pi-1',
-                  node: { __typename: 'PantryItem', id: 'pi-1' },
+                  node: { __typename: 'PantryItem', version: 1, id: 'pi-1' },
                 },
               ],
             },
@@ -291,9 +292,10 @@ describe('AddToPantrySheet', () => {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
             // The held stack's id, not the minted one: the add joined it.
-            pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-1' },
             pantry: {
               __typename: 'Pantry',
+              version: 1,
               id: 'pantry-1',
               stats: { __typename: 'PantryStats', totalItems: 70 },
             },
@@ -401,6 +403,7 @@ describe('AddToPantrySheet', () => {
         data: {
           pantry: {
             __typename: 'Pantry',
+            version: 1,
             id: 'pantry-1',
             stats: { __typename: 'PantryStats', totalItems: edges.length },
             itemsConnection: {
@@ -419,10 +422,11 @@ describe('AddToPantrySheet', () => {
       cursor: 'pi-1',
       node: {
         __typename: 'PantryItem',
+        version: 1,
         id: 'pi-1',
         itemName: 'Milk',
         quantity: 3,
-        item: { __typename: 'Item', id: 'item-1' },
+        item: { __typename: 'Item', version: 1, id: 'item-1' },
         unit: asAbbreviation({ __typename: 'Unit', id: 'unit-l', symbol: 'L' }),
       },
     };
@@ -440,7 +444,7 @@ describe('AddToPantrySheet', () => {
         pantryItemUsage: {
           __typename: 'PantryItemUsage',
           id: 'usage-1',
-          pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+          pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-1' },
         },
       },
     } as const;
@@ -462,7 +466,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -594,7 +598,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -622,7 +626,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -649,7 +653,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -688,7 +692,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -701,7 +705,11 @@ describe('AddToPantrySheet', () => {
             pantryItemUsage: {
               __typename: 'PantryItemUsage',
               id: 'usage-1',
-              pantryItem: { __typename: 'PantryItem', id: 'pi-held' },
+              pantryItem: {
+                __typename: 'PantryItem',
+                version: 1,
+                id: 'pi-held',
+              },
             },
           },
         },
@@ -849,6 +857,7 @@ describe('AddToPantrySheet', () => {
           __typename: 'Query',
           pantry: {
             __typename: 'Pantry',
+            version: 1,
             id: 'pantry-1',
             suggestions: {
               __typename: 'PantrySuggestions',
@@ -894,7 +903,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
         ...(match ? { match } : {}),

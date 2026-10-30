@@ -27,6 +27,7 @@ fragment UpdateShoppingListItem_item on ShoppingListItem {
   }
   sortOrder
   item {
+    version
     id
     imageUrl
     images {

@@ -16,6 +16,7 @@ query GetHomes($first: Int, $after: String) {
         isDefault
         version
         myMembership {
+          version
           id
           role
           canManageHome
@@ -28,6 +29,7 @@ query GetHomes($first: Int, $after: String) {
         pantriesConnection(first: 10) {
           edges {
             node {
+              version
               id
               name
               isDefault
@@ -214,6 +216,7 @@ mutation DeleteHome($input: DeleteHomeInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       home {
+        version
         id
       }
     }
@@ -236,6 +239,7 @@ mutation InviteToHome($input: InviteToHomeInput!) {
     __typename
     ... on InviteToHomePayload {
       homeInvite {
+        version
         id
         ...HomeInviteReaders
       }
@@ -294,6 +298,7 @@ mutation DeclineHomeInvite($input: DeclineHomeInviteInput!) {
     __typename
     ... on DeclineHomeInvitePayload {
       homeInvite {
+        version
         id
       }
     }
@@ -341,6 +346,7 @@ mutation RemoveMember($input: RemoveMemberInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       membership {
+        version
         id
       }
     }
@@ -365,6 +371,7 @@ mutation DeleteHomeInvite($input: DeleteHomeInviteInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       homeInvite {
+        version
         id
       }
     }
@@ -423,6 +430,7 @@ mutation LeaveHome($input: LeaveHomeInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       membership {
+        version
         id
       }
     }
@@ -478,9 +486,11 @@ subscription HomeEvents($homeId: ID!) {
     node {
       __typename
       ... on Membership {
+        version
         id
       }
       ... on HomeInvite {
+        version
         id
       }
     }

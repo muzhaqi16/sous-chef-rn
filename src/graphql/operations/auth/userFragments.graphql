@@ -16,12 +16,14 @@ fragment LoginUser on User {
   createdAt
   defaultHomeId
   defaultHome {
+    version
     id
     name
     isDefault
     pantriesConnection {
       edges {
         node {
+          version
           id
           isDefault
         }

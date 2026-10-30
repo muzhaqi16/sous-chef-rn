@@ -4,6 +4,7 @@ fragment ShoppingListReaders on ShoppingList {
   basedOnTemplate {
     id
     name
+    version
   }
   budgetAmount
   canMoveToPantry
@@ -23,8 +24,10 @@ fragment ShoppingListReaders on ShoppingList {
     myMembership {
       id
       role
+      version
     }
     name
+    version
   }
   homeId
   isCompleted

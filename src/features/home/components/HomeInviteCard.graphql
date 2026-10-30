@@ -1,4 +1,5 @@
 fragment HomeInviteCard_invite on HomeInvite {
+  version
   id
   email
   recipientName

@@ -60,6 +60,7 @@ query GetDietaryProfile {
         intolerance
         healthGoal
         item {
+          version
           id
           name
         }
@@ -149,6 +150,7 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
           intolerance
           healthGoal
           item {
+            version
             id
             name
           }
@@ -190,6 +192,7 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
         intolerance
         healthGoal
         item {
+          version
           id
           name
         }

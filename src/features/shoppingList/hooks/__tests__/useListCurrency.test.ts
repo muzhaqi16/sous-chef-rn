@@ -20,7 +20,12 @@ function renderFor(listCurrency: string | null) {
   const cache = seedCache([]);
   cache.writeFragment({
     fragment: UseListCurrency_ListFragmentDoc,
-    data: { __typename: 'ShoppingList', id: 'list-1', currency: listCurrency },
+    data: {
+      __typename: 'ShoppingList',
+      version: 1,
+      id: 'list-1',
+      currency: listCurrency,
+    },
   });
   const asked = listAnswer('USD');
   const rendered = renderHookWithApollo(() => useListCurrency('list-1'), {

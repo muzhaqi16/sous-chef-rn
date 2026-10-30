@@ -1,5 +1,6 @@
 # The currency a price recorded on the list is in.
 fragment useListCurrency_list on ShoppingList {
+  version
   id
   currency
 }
@@ -7,6 +8,7 @@ fragment useListCurrency_list on ShoppingList {
 # Asked only while the device lacks it: a scan opened before the list loaded.
 query ListCurrency($id: ID!) {
   shoppingList(id: $id) {
+    version
     id
     ...useListCurrency_list
   }

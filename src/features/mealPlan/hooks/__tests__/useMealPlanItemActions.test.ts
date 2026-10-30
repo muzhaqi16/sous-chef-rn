@@ -64,6 +64,7 @@ const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
   date: '2026-09-22',
   recipe: {
     __typename: 'Recipe',
+    version: 1,
     id: 'r-1',
     name: 'Pasta',
     servings: 1,
@@ -83,7 +84,7 @@ const writeItem = (cache: InMemoryCache, item: FullItem) =>
 
 const readItem = (cache: InMemoryCache, id: string = 'mpi-1') =>
   cache.readFragment({
-    id: cache.identify({ __typename: 'MealPlanItem', id }),
+    id: cache.identify({ __typename: 'MealPlanItem', version: 1, id }),
     fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
     fragmentName: 'MealPlanItemActions_optimisticFullItem',
   });
@@ -453,6 +454,7 @@ describe('useMealPlanItemActions', () => {
     }): MockDataFor<typeof GetMealPlanDocument> => ({
       mealPlan: {
         __typename: 'MealPlan',
+        version: 1,
         id: PLAN_ID,
         mealPlanItemsConnection: {
           edges: [

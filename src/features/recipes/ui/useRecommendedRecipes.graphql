@@ -2,6 +2,7 @@
 # ids, so each recipe is read on its own.
 query RecommendedRecipe($id: ID!) {
   recipe(id: $id) {
+    version
     id
     ...RecommendedRecipeCard_recipe
   }

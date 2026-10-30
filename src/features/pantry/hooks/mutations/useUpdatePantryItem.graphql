@@ -39,6 +39,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   storageNotes
   tags
   item {
+    version
     id
     imageUrl
     images {
@@ -73,6 +74,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     type
   }
   brand {
+    version
     id
     name
   }

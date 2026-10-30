@@ -243,6 +243,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
       fragment: MoveToPantryModal_ShoppingListItemFragmentDoc,
       data: {
         __typename: 'ShoppingListItem',
+        version: 1,
         id: ITEM_ID,
         itemName: 'Milk',
         quantity: 2,
@@ -398,6 +399,7 @@ describe('MoveToPantryModal', () => {
       __typename: 'Query',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
+        version: 1,
         id: ITEM_ID,
         purchasesConnection: {
           __typename: 'PurchaseConnection',
@@ -411,6 +413,7 @@ describe('MoveToPantryModal', () => {
               __typename: 'PurchaseEdge',
               node: {
                 __typename: 'Purchase',
+                version: 1,
                 id: 'pu1',
                 unitSymbol: unit.symbol,
                 unit: { __typename: 'Unit', id: 'u-purchase', type: unit.type },

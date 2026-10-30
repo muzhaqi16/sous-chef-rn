@@ -12,6 +12,7 @@ query GetOnboardingItems(
     edges {
       cursor
       node {
+        version
         id
         name
         imageUrl
@@ -82,6 +83,7 @@ query SearchItemsSemantic(
   ) {
     edges {
       node {
+        version
         id
         name
         type
@@ -102,6 +104,7 @@ query SearchItemsSemantic(
         brands {
           id
           brand {
+            version
             id
             name
           }
@@ -110,6 +113,7 @@ query SearchItemsSemantic(
           id
           isPrimary
           category {
+            version
             id
             name
             type
@@ -124,6 +128,7 @@ query SearchBrands($search: String!, $limit: Int) {
   brands(filters: { search: $search }, first: $limit) {
     edges {
       node {
+        version
         id
         name
       }
@@ -198,6 +203,7 @@ mutation CreateItem($input: CreateItemInput!) {
         brands {
           id
           brand {
+            version
             id
             name
           }
@@ -207,12 +213,14 @@ mutation CreateItem($input: CreateItemInput!) {
           id
           isPrimary
           category {
+            version
             id
             name
             type
           }
         }
         units {
+          version
           id
           unitId
           isDefault
@@ -328,6 +336,7 @@ query GetCategories($first: Int = 100) {
   categories(first: $first) {
     edges {
       node {
+        version
         id
         name
         type
@@ -346,6 +355,7 @@ query GetBrands($first: Int = 100) {
   brands(first: $first) {
     edges {
       node {
+        version
         id
         name
       }

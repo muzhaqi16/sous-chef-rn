@@ -23,5 +23,6 @@ fragment ShownNutritionReaders on ShownNutrition {
   typicalOf {
     id
     name
+    version
   }
 }

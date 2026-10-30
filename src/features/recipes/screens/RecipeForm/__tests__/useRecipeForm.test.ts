@@ -519,6 +519,7 @@ describe('useRecipeForm', () => {
       ingredientsPage: OVER_THE_LIMIT,
       pendingRevision: {
         __typename: 'RecipeRevision',
+        version: 1,
         id: 'rev-1',
         proposed: {
           __typename: 'RecipeContent',
@@ -548,6 +549,7 @@ describe('useRecipeForm', () => {
               quantity: 2,
               item: {
                 __typename: 'Item',
+                version: 1,
                 id: 'item-oil',
                 name: 'Olive oil',
                 imageUrl: null,

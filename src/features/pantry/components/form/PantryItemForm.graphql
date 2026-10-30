@@ -3,6 +3,7 @@
 # detect "dirty" changes. Mutation calls pass only the
 # `itemId` — `useUpdatePantryItem` reads its own narrow fragment from cache.
 fragment PantryItemForm_pantryItem on PantryItem {
+  version
   id
   pantryId
   itemName
@@ -100,15 +101,18 @@ fragment PantryItemForm_pantryItem on PantryItem {
     type
   }
   brand {
+    version
     id
     name
   }
   item {
+    version
     id
     categories {
       id
       isPrimary
       category {
+        version
         id
         name
       }

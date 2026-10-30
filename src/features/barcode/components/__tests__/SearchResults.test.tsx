@@ -56,6 +56,7 @@ jest.mock('#features/shoppingList/cache/items', () => {
     addLocalShoppingListItem: jest.fn(),
     createLocalShoppingListItem: jest.fn((id: string) => ({
       __typename: 'ShoppingListItem',
+      version: 1,
       id,
     })),
   };
@@ -214,7 +215,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -252,7 +257,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -275,7 +284,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -341,7 +354,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -413,7 +430,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -439,7 +460,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -466,7 +491,11 @@ describe('SearchResults', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+            pantryItem: {
+              __typename: 'PantryItem',
+              version: 1,
+              id: 'pantry-item-new',
+            },
           },
         },
       });
@@ -591,7 +620,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -700,9 +733,10 @@ describe('SearchResults', () => {
         fragmentName: 'useHeldStacks_pantryItem',
         data: {
           __typename: 'PantryItem',
+          version: 1,
           id: 'stack-milk',
           createdAt: '2026-01-01T00:00:00.000Z',
-          item: { __typename: 'Item', id: mockItem.id },
+          item: { __typename: 'Item', version: 1, id: mockItem.id },
           unit: {
             __typename: 'Unit',
             id: 'unit-pc',
@@ -784,7 +818,11 @@ describe('SearchResults', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+            pantryItem: {
+              __typename: 'PantryItem',
+              version: 1,
+              id: 'pantry-item-new',
+            },
           },
         },
       });

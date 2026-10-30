@@ -41,6 +41,7 @@ export const savingsLine = (
   itemName: string,
 ): SavingsCell['line'] => ({
   __typename: 'ShoppingListItem',
+  version: 1,
   id,
   itemName,
   image: null,

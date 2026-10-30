@@ -792,6 +792,7 @@ describe('optimistic entity completeness', () => {
         const cache = await seedPantryCache();
         const realItem = {
           __typename: 'Item',
+          version: 1,
           id: 'catalog-item-1',
           name: 'Whole Milk',
           canEdit: true,
@@ -850,6 +851,7 @@ describe('optimistic entity completeness', () => {
               isPrimary: true,
               category: {
                 __typename: 'Category',
+                version: 1,
                 id: 'cat-1',
                 name: 'Dairy',
               },
@@ -861,6 +863,7 @@ describe('optimistic entity completeness', () => {
           fragment: gql`
             fragment _SeedCatalogItem on Item {
               id
+              version
               name
               canEdit
               imageUrl
@@ -920,6 +923,7 @@ describe('optimistic entity completeness', () => {
                 isPrimary
                 category {
                   id
+                  version
                   name
                 }
               }
@@ -1014,6 +1018,7 @@ describe('optimistic entity completeness', () => {
           id: 'from-recipe',
           shoppingList: {
             __typename: 'ShoppingList',
+            version: 1,
             id: 'list-1',
             totalItems: 1,
             completedItems: 0,

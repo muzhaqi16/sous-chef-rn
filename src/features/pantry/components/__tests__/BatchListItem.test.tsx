@@ -62,6 +62,7 @@ const stackCache = (
     fragmentName: 'BatchListItem_pantryItem',
     data: {
       __typename: 'PantryItem',
+      version: 1,
       id: 'pi1',
       unit: unitOf(unit),
       displayUnit: null,
@@ -144,6 +145,7 @@ describe('BatchListItem', () => {
         fragmentName: 'BatchListItem_pantryItem',
         data: {
           __typename: 'PantryItem',
+          version: 1,
           id: 'pi1',
           unit: asAbbreviation({ __typename: 'Unit', id: 'pc', symbol: 'pc' }),
           displayUnit: asAbbreviation({

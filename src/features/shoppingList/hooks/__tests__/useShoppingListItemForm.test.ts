@@ -197,7 +197,12 @@ describe('useShoppingListItemForm', () => {
       act(() => {
         result.current.setFromItem(
           createFragment({
-            brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
+            brand: {
+              __typename: 'Brand',
+              version: 1,
+              id: 'brand-1',
+              name: 'Oatly',
+            },
             netWeight: 500,
             netWeightUnit: asAbbreviation({
               __typename: 'Unit',
@@ -507,7 +512,12 @@ describe('useShoppingListItemForm', () => {
             __typename: 'ShoppingListItemStoreInfo',
             preferredStore: null,
           },
-          brand: { __typename: 'Brand', id: 'brand-1', name: 'Oatly' },
+          brand: {
+            __typename: 'Brand',
+            version: 1,
+            id: 'brand-1',
+            name: 'Oatly',
+          },
           netWeight: 500,
           netWeightUnit: asAbbreviation({
             __typename: 'Unit',

@@ -35,6 +35,7 @@ fragment ShoppingListCollaboratorReaders on ShoppingListCollaborator {
     id
     description
     name
+    version
   }
   status
 }

@@ -123,6 +123,7 @@ const makeBackendRecipe = (
   overrides?: Partial<MaterializedRecipe>,
 ): MaterializedRecipe => ({
   __typename: 'Recipe',
+  version: 1,
   id: 'recipe-1',
   name: 'Test Recipe',
   description: null,
@@ -480,6 +481,7 @@ describe('useRecipeReviews', () => {
         fragment: AGGREGATES,
         data: {
           __typename: 'Recipe',
+          version: 1,
           id: 'recipe-1',
           totalReviews: 3,
           rating4Count: 1,
@@ -491,7 +493,7 @@ describe('useRecipeReviews', () => {
     const aggregatesIn = (cache: ReturnType<typeof makeCache>) =>
       cache.readFragment({
         fragment: AGGREGATES,
-        from: { __typename: 'Recipe', id: 'recipe-1' },
+        from: { __typename: 'Recipe', version: 1, id: 'recipe-1' },
       });
 
     it('on create', async () => {

@@ -8,6 +8,7 @@ query SearchAvoidableFoods($query: String!, $first: Int!) {
   ) {
     edges {
       node {
+        version
         id
         ...AvoidFoodRow_item
       }

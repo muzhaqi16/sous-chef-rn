@@ -157,7 +157,7 @@ describe('event envelope written to the cache after a local delete', () => {
           pantryId: 'pantry-1',
           timestamp: '2026-01-01T00:00:00.000Z',
           mergedIds: null,
-          node: { __typename: 'PantryItem', id: itemId },
+          node: { __typename: 'PantryItem', version: 1, id: itemId },
         },
       },
     });
@@ -165,6 +165,7 @@ describe('event envelope written to the cache after a local delete', () => {
     // The evicted row is back as a bare `{ id }` …
     expect(cache.extract()[`PantryItem:${itemId}`]).toEqual({
       __typename: 'PantryItem',
+      version: 1,
       id: itemId,
     });
     // … its edge is readable again, and the list query cannot be satisfied from
@@ -184,6 +185,7 @@ describe('event envelope written to the cache after a local delete', () => {
 
     expect(cache.extract()[`ShoppingListItem:${itemId}`]).toEqual({
       __typename: 'ShoppingListItem',
+      version: 1,
       id: itemId,
     });
     expect(diffList(cache).complete).toBe(false);
@@ -220,7 +222,7 @@ function writeShoppingEvent(
         timestamp: '2026-01-01T00:00:00.000Z',
         updatedFields: [],
         clearedItemIds: [],
-        node: { __typename: 'ShoppingListItem', id: itemId },
+        node: { __typename: 'ShoppingListItem', version: 1, id: itemId },
       },
     },
   });

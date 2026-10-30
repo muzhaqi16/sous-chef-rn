@@ -102,6 +102,7 @@ const similarAt = (
   store: at,
   product: {
     __typename: 'Item',
+    version: 1,
     id: 'item-appleton',
     name: 'Appleton Farms Bacon',
   },
@@ -134,11 +135,12 @@ const cacheWith = (
 ) => {
   const cache = makeCache();
   cache.writeFragment({
-    id: cache.identify({ __typename: 'Item', id: 'item-1' }),
+    id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
     fragment: UseStoreShelfPrices_ItemFragmentDoc,
     fragmentName: 'useStoreShelfPrices_item',
     data: {
       __typename: 'Item',
+      version: 1,
       id: 'item-1',
       storePricesConnection: connectionOf(nodes),
       similarStorePrices: similar,
@@ -146,7 +148,11 @@ const cacheWith = (
   });
   if (targetStoreId) {
     cache.writeFragment({
-      id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+      id: cache.identify({
+        __typename: 'ShoppingList',
+        version: 1,
+        id: 'list-1',
+      }),
       fragment: UseStoreShelfPrices_ListFragmentDoc,
       fragmentName: 'useStoreShelfPrices_list',
       data: {
@@ -223,11 +229,12 @@ describe('useStoreShelfPrices', () => {
     await waitFor(() => expect(result.current.rows).toHaveLength(2));
 
     cache.writeFragment({
-      id: cache.identify({ __typename: 'Item', id: 'item-1' }),
+      id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
       fragment: UseStoreShelfPrices_ItemFragmentDoc,
       fragmentName: 'useStoreShelfPrices_item',
       data: {
         __typename: 'Item',
+        version: 1,
         id: 'item-1',
         storePricesConnection: connectionOf([priceAt(GIANT_EAGLE)]),
         similarStorePrices: [],

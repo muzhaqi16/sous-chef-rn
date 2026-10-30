@@ -57,6 +57,7 @@ query GetPantry(
           # `pantryItem_listed` carries what the cells read by id: the card,
           # and the Consume/Waste/Restock modals opened from this list, which
           # would otherwise open on an incomplete cache read and render blank.
+          version
           id
           itemName
           # The CATALOG item's id, which is what a shopping-list add sends —
@@ -149,6 +150,7 @@ query GetPantryItemSuggestions(
   $today: LocalDate!
 ) {
   pantry(id: $pantryId) {
+    version
     id
     suggestions(limit: $limit, today: $today) {
       lowStock {
@@ -218,6 +220,7 @@ query GetPantryItemSuggestions(
 # Analytics are now fields on Pantry type
 query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantry(id: $pantryId) {
+    version
     id
     usageAnalytics(filters: $filter) {
       totalUsageCount
@@ -256,6 +259,7 @@ query GetPantryUsageAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
 
 query GetPantryWasteAnalytics($pantryId: ID!, $filter: AnalyticsFilters) {
   pantry(id: $pantryId) {
+    version
     id
     wasteAnalytics(filters: $filter) {
       totalWasteCount
@@ -303,6 +307,7 @@ query GetPantryLedgerAnalytics(
   $granularity: PeriodGranularity
 ) {
   pantry(id: $pantryId) {
+    version
     id
     ledgerAnalytics(filters: $filter, granularity: $granularity) {
       granularity
@@ -530,6 +535,7 @@ mutation DeletePantry($input: DeletePantryInput!) {
     __typename
     ... on DeletePantryPayload {
       pantry {
+        version
         id
       }
     }
@@ -657,6 +663,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!, $today: LocalDate!) {
     ... on DeletePantryItemPayload {
       converged
       pantryItem {
+        version
         id
       }
       pantry {
@@ -1010,6 +1017,7 @@ query GetPantryItemBatchHistory(
   # The units its rows read off the stack (`BatchListItem_pantryItem`), in the
   # same request; a core document spreads no component's fragment.
   pantryItem(id: $pantryItemId) {
+    version
     id
     unit {
       id
@@ -1173,9 +1181,11 @@ subscription PantryEvents($pantryId: ID!) {
     node {
       __typename
       ... on PantryItem {
+        version
         id
       }
       ... on Pantry {
+        version
         id
       }
       ... on PantryItemUsage {
@@ -1196,6 +1206,7 @@ query GetPantryItemUsageHistory(
   $after: String
 ) {
   pantryItem(id: $pantryItemId) {
+    version
     id
     # Newest first, stated rather than assumed: the summary panel labels
     # `usageRecords[0]` the most recent entry, and a default order is the

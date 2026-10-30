@@ -49,6 +49,7 @@ function seedTemplateWithRecipeBackedRow() {
                 notes: null,
                 recipe: {
                   __typename: 'Recipe',
+                  version: 1,
                   id: 'rec-9',
                   name: 'Ragu',
                   imageUrl: null,

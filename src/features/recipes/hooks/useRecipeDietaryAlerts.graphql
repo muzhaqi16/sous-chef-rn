@@ -12,6 +12,7 @@ query RecipeDietaryAlerts(
   $ingredientsFirst: Int!
 ) {
   recipe(id: $recipeId) {
+    version
     id
     ingredientsConnection(first: $ingredientsFirst) {
       edges {
@@ -20,6 +21,7 @@ query RecipeDietaryAlerts(
           dietaryAlerts(homeId: $homeId) {
             state
             membership {
+              version
               id
               userId
               role
@@ -31,6 +33,7 @@ query RecipeDietaryAlerts(
               intolerance
               healthGoal
               item {
+                version
                 id
                 name
               }

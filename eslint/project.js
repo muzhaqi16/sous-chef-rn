@@ -315,6 +315,7 @@ const overrides = [
       // the root field's level); `documentLimits.test.ts` holds the exact rule.
       '@graphql-eslint/selection-set-depth': ['error', { maxDepth: 9 }],
       'sous-chef/selects-key-field-directly': 'error',
+      'sous-chef/network-read-selects-version': 'error',
       // JS/TS rules that traverse the AST do not understand GraphQL's.
       'no-barrel-files/no-barrel-files': 'off',
       'react-hooks/rules-of-hooks': 'off',

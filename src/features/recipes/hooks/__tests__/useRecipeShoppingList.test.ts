@@ -288,6 +288,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       unit: null,
       item: {
         __typename: 'Item',
+        version: 1,
         id: 'item-salt',
         name: 'Salt',
         imageUrl: null,
@@ -522,6 +523,7 @@ function seedListedLines(cache: InMemoryCache) {
       cursor: id,
       node: {
         __typename: 'ShoppingListItem',
+        version: 1,
         id,
         purchaseInfo: {
           __typename: 'ShoppingListItemPurchaseInfo',
@@ -535,6 +537,7 @@ function seedListedLines(cache: InMemoryCache) {
     fragment: LINES,
     data: {
       __typename: 'ShoppingList',
+      version: 1,
       id: 'sl-1',
       active: lines(['sli-live'], false),
       bought: lines(['sli-bought'], true),

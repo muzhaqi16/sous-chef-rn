@@ -50,7 +50,7 @@ function inHousehold(pantryId: string | null) {
     : null;
   mockedCurrentPantry.mockReturnValue({
     pantry,
-    pantries: pantry ? [{ __typename: 'Pantry', ...pantry }] : [],
+    pantries: pantry ? [{ __typename: 'Pantry', version: 1, ...pantry }] : [],
     setSelectedPantryId: jest.fn(),
     currentHome: pantryId ? testHome : undefined,
     selectedHomeId: pantryId ? 'h1' : null,
@@ -600,6 +600,7 @@ describe("a new day's counts", () => {
         __typename: 'Query',
         pantry: {
           __typename: 'Pantry',
+          version: 1,
           id: 'p1',
           stats: { __typename: 'PantryStats', ...stats(9, 1, 3) },
         },

@@ -39,7 +39,7 @@ const invite = (id: string, listId: string, name: string): PendingNode => ({
   id,
   role: CollaboratorRole.Editor,
   inviterName: 'Alice',
-  shoppingList: { __typename: 'ShoppingList', id: listId, name },
+  shoppingList: { __typename: 'ShoppingList', version: 1, id: listId, name },
 });
 
 const pendingAnswer = (
@@ -91,6 +91,7 @@ async function withPendingInvites(
           {
             node: {
               __typename: 'ShoppingList',
+              version: 1,
               id: 'list-own',
               homeId: null,
               home: null,
@@ -195,6 +196,7 @@ describe('usePendingListInvites', () => {
           },
           shoppingList: {
             __typename: 'ShoppingList',
+            version: 1,
             id: 'list-1',
             name: 'Weekly groceries',
             homeId: null,

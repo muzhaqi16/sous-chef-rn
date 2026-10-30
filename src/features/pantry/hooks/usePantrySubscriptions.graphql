@@ -4,8 +4,10 @@ fragment usePantrySubscriptions_expirationNotification on ExpirationNotification
   actionTaken
   genericNotificationId
   pantryItem {
+    version
     id
     item {
+      version
       id
       name
       imageUrl
@@ -85,6 +87,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     catalogImageId
   }
   item {
+    version
     id
     imageUrl
     images {

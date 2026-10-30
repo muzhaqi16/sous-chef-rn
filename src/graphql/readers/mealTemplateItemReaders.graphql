@@ -11,6 +11,7 @@ fragment MealTemplateItemReaders on MealTemplateItem {
     name
     servings
     totalTimeMinutes
+    version
   }
   servings
 }

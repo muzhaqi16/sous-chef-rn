@@ -85,6 +85,7 @@ const savedRecipeNodes = [
     lastCookedAt: null,
     recipe: {
       __typename: 'Recipe',
+      version: 1,
       id: 'r1',
       name: 'Pasta Carbonara',
       description: null,
@@ -106,6 +107,7 @@ const savedRecipeNodes = [
     lastCookedAt: null,
     recipe: {
       __typename: 'Recipe',
+      version: 1,
       id: 'r2',
       name: 'Chicken Salad',
       description: null,
@@ -462,6 +464,7 @@ describe('AddMealSheet', () => {
   describe('a recipe the API holds', () => {
     const held = (id: string, name: string): FoundRecipe => ({
       __typename: 'Recipe',
+      version: 1,
       id,
       name,
       imageUrl: null,

@@ -29,6 +29,7 @@ function renderCard(recipe: null | { name: string }) {
       lastCookedAt: null,
       recipe: recipe && {
         __typename: 'Recipe',
+        version: 1,
         id: 'recipe-1',
         name: recipe.name,
         description: null,

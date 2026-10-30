@@ -171,12 +171,13 @@ describe('useStorePriceMemory', () => {
   it('shows the bare price on a basis this build predates', async () => {
     const cache = makeCache();
     cache.writeFragment({
-      id: cache.identify({ __typename: 'Item', id: 'pb' }),
+      id: cache.identify({ __typename: 'Item', version: 1, id: 'pb' }),
       fragment: UseStorePriceMemory_ItemFragmentDoc,
       fragmentName: 'useStorePriceMemory_item',
       variables: { homeId: 'home-1' },
       data: {
         __typename: 'Item',
+        version: 1,
         id: 'pb',
         usualUnit: { __typename: 'Unit', id: 'u-jar' },
         householdPriceSummary: {
@@ -202,11 +203,16 @@ describe('useStorePriceMemory', () => {
       },
     });
     cache.writeFragment({
-      id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+      id: cache.identify({
+        __typename: 'ShoppingList',
+        version: 1,
+        id: 'list-1',
+      }),
       fragment: UseStorePriceMemory_ListFragmentDoc,
       fragmentName: 'useStorePriceMemory_list',
       data: {
         __typename: 'ShoppingList',
+        version: 1,
         id: 'list-1',
         targetStore: null,
       },

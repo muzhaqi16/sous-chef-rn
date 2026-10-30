@@ -3,6 +3,7 @@
 # and each row reads its own fragment by id
 # (`listedFragmentsCoverCells.test.ts`).
 fragment shoppingListItem_listed on ShoppingListItem {
+  version
   id
   itemName
   quantity
@@ -57,6 +58,7 @@ fragment shoppingListItem_listed on ShoppingListItem {
     catalogImageId
   }
   item {
+    version
     id
     imageUrl
     images {

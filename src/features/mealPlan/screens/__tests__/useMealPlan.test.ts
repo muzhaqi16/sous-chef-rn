@@ -100,6 +100,7 @@ describe('useMealPlan', () => {
         data: {
           mealPlan: {
             __typename: 'MealPlan',
+            version: 1,
             id: 'plan-3',
             name: 'Week one',
             mealPlanItemsConnection: {
@@ -107,6 +108,7 @@ describe('useMealPlan', () => {
                 {
                   node: {
                     __typename: 'MealPlanItem',
+                    version: 1,
                     id: 'item-1',
                     servings: 2,
                     customMealName: 'Soup',
@@ -147,6 +149,7 @@ describe('useMealPlan', () => {
           fragmentName: 'MealPlanMain_item',
           data: {
             __typename: 'MealPlanItem',
+            version: 1,
             id: 'item-1',
             servings: 4,
             customMealName: 'Soup',
@@ -170,7 +173,11 @@ describe('useMealPlan', () => {
           {
             fragment: MealPlanMain_MealPlanFragmentDoc,
             fragmentName: 'MealPlanMain_mealPlan',
-            id: cache.identify({ __typename: 'MealPlan', id: 'plan-3' }),
+            id: cache.identify({
+              __typename: 'MealPlan',
+              version: 1,
+              id: 'plan-3',
+            }),
           },
           plan => (plan ? { ...plan, name: 'Week two' } : plan),
         );
@@ -189,12 +196,14 @@ describe('useMealPlan', () => {
     ): MockDataFor<typeof GetMealPlanDocument> => ({
       mealPlan: {
         __typename: 'MealPlan',
+        version: 1,
         id: 'plan-4',
         name: 'A long month',
         mealPlanItemsConnection: {
           edges: ids.map(id => ({
             node: {
               __typename: 'MealPlanItem',
+              version: 1,
               id,
               servings: 1,
               customMealName: `Meal ${id}`,

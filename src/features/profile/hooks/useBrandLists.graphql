@@ -11,6 +11,7 @@ query BrandLists {
       reason
       version
       brand {
+        version
         id
         name
       }
@@ -22,6 +23,13 @@ query BrandLists {
 fragment useBrandLists_row on BrandList {
   id
   ...BrandListReaders
+}
+
+# The version the cache holds for a brand an add names, so the entry written
+# locally never states one the server didn't give.
+fragment useBrandLists_heldBrand on Brand {
+  id
+  version
 }
 
 mutation CreateBrandList($input: CreateBrandListInput!) {
@@ -67,6 +75,7 @@ mutation DeleteBrandList($input: DeleteBrandListInput!) {
     __typename
     ... on DeleteBrandListPayload {
       brandList {
+        version
         id
       }
       converged
@@ -86,6 +95,7 @@ mutation AddBrandToList($input: AddBrandToListInput!) {
     __typename
     ... on AddBrandToListPayload {
       brandListEntry {
+        version
         id
       }
       brandList {
@@ -108,6 +118,7 @@ mutation RemoveBrandFromList($input: RemoveBrandFromListInput!) {
     __typename
     ... on RemoveBrandFromListPayload {
       brandListEntry {
+        version
         id
       }
       converged

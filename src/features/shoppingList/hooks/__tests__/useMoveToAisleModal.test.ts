@@ -22,6 +22,7 @@ const LINE: UseMoveToAisleModal_ItemFragment = {
   storeDepartmentOverride: null,
   item: {
     __typename: 'Item',
+    version: 1,
     id: 'item-1',
     storeDepartment: StoreDepartment.Other,
   },
@@ -48,7 +49,11 @@ function setup(
     act(() => result.current.moveTo(department));
   const readLine = () =>
     cache.readFragment({
-      id: cache.identify({ __typename: 'ShoppingListItem', id: 'line-1' }),
+      id: cache.identify({
+        __typename: 'ShoppingListItem',
+        version: 1,
+        id: 'line-1',
+      }),
       fragment: UseMoveToAisleModal_ItemFragmentDoc,
       fragmentName: 'useMoveToAisleModal_item',
     });
@@ -111,6 +116,7 @@ describe('useMoveToAisleModal', () => {
       storeDepartmentOverride: StoreDepartment.Frozen,
       item: {
         __typename: 'Item',
+        version: 1,
         id: 'item-1',
         storeDepartment: StoreDepartment.DairyEggs,
       },

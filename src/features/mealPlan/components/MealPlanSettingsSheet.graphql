@@ -1,6 +1,7 @@
 # Component fragment for the MealPlanSettingsSheet. Reads the metadata
 # displayed in the sheet header + nutrition + generated-lists section.
 fragment MealPlanSettingsSheet_mealPlan on MealPlan {
+  version
   id
   name
   description
@@ -12,6 +13,7 @@ fragment MealPlanSettingsSheet_mealPlan on MealPlan {
     id
   }
   home {
+    version
     id
     name
   }
@@ -27,6 +29,7 @@ fragment MealPlanSettingsSheet_mealPlan on MealPlan {
   generatedShoppingListsConnection {
     edges {
       node {
+        version
         id
         name
       }

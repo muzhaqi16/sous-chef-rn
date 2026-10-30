@@ -5,6 +5,7 @@
 # mode. Keyed by the item and the home, so a product read before still shows
 # it offline at the shelf.
 fragment useStorePriceMemory_item on Item {
+  version
   id
   # Aliased: the lookup asks for the pantry's.
   usualUnit: trackingUnit {
@@ -67,6 +68,7 @@ fragment useStorePriceMemory_item on Item {
 # The store the list is shopped at and its chain, whose typical price shows.
 # The scan's lookup carries it in store mode beside the item.
 fragment useStorePriceMemory_list on ShoppingList {
+  version
   id
   targetStore {
     id
@@ -80,10 +82,12 @@ fragment useStorePriceMemory_list on ShoppingList {
 # The same for an item that came another way than the scan's lookup.
 query StorePriceMemory($itemId: ID!, $homeId: ID!, $listId: ID!) {
   item(id: $itemId) {
+    version
     id
     ...useStorePriceMemory_item
   }
   shoppingList(id: $listId) {
+    version
     id
     ...useStorePriceMemory_list
   }
@@ -94,6 +98,7 @@ query StorePriceMemory($itemId: ID!, $homeId: ID!, $listId: ID!) {
 # the lookup stored rather than replacing it.
 query HouseholdUsualUnitPrice($itemId: ID!, $homeId: ID!, $unitId: ID!) {
   item(id: $itemId) {
+    version
     id
     householdPriceSummary(homeId: $homeId) {
       usual {

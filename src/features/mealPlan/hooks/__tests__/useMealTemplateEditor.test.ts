@@ -197,6 +197,7 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
 
   const RECIPE = {
     __typename: 'Recipe',
+    version: 1,
     id: 'recipe-1',
     name: 'Carbonara',
     imageUrl: null,
@@ -436,6 +437,7 @@ describe("a row loaded by the editor's own query", () => {
   it('clears a refused recipe pick on a row that had none', async () => {
     const RECIPE = {
       __typename: 'Recipe',
+      version: 1,
       id: 'recipe-1',
       name: 'Carbonara',
       imageUrl: null,
@@ -493,6 +495,7 @@ describe("a row loaded by the editor's own query", () => {
     // there was no next fetch to repair it.
     const RECIPE = {
       __typename: 'Recipe',
+      version: 1,
       id: 'recipe-1',
       name: 'Carbonara',
       imageUrl: null,
@@ -504,7 +507,7 @@ describe("a row loaded by the editor's own query", () => {
       {
         ...EDITOR_LOADED_ITEM,
         customMealName: null,
-        recipe: { __typename: 'Recipe', id: 'recipe-1' },
+        recipe: { __typename: 'Recipe', version: 1, id: 'recipe-1' },
       },
     ]);
     const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {

@@ -3,6 +3,7 @@
 # its prop type is the corresponding `*_pantryItem` shape, and useFragment
 # scopes cache subscriptions to just this fragment's fields.
 fragment PantryDetailInfo_pantryItem on PantryItem {
+  version
   id
   condition
   quantity
@@ -54,10 +55,12 @@ fragment PantryDetailInfo_pantryItem on PantryItem {
     name
   }
   brand {
+    version
     id
     name
   }
   purchase {
+    version
     id
     purchaseDate
     # Both: the Purchased row shows the total, Cost/Unit already shows the split.

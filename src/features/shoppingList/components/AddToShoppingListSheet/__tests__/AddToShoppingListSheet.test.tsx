@@ -68,6 +68,7 @@ const seedSuggestions = (popular: string[]) => {
       __typename: 'Query',
       shoppingList: {
         __typename: 'ShoppingList',
+        version: 1,
         id: 'list-1',
         suggestions: {
           __typename: 'ShoppingListSuggestions',

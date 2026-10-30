@@ -102,6 +102,7 @@ function countHeld(value: number): PantryItemNode['held'] {
 function pantryItemNode(item: PantryItemFixture): PantryItemNode {
   return {
     __typename: 'PantryItem',
+    version: 1,
     id: item.id,
     itemId: `item-${item.id}`,
     itemName: item.itemName ?? `Item ${item.id}`,
@@ -136,6 +137,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     activeBatchCount: 0,
     item: {
       __typename: 'Item',
+      version: 1,
       id: `item-${item.id}`,
       imageUrl: null,
       images: [],

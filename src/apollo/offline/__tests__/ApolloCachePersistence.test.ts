@@ -15,7 +15,7 @@ const CACHE_KEY = 'apollo-cache-v1';
 const VERSION_KEY = 'apollo-cache-version';
 // Identifies the shape of a persisted blob, not the app version that wrote it
 // — `CURRENT_CACHE_VERSION` in ApolloCachePersistence. Keep in step with it.
-const CURRENT_VERSION = 'shape-6';
+const CURRENT_VERSION = 'shape-7';
 
 const schedule = (cache: NormalizedCacheObject) =>
   apolloCachePersistence.scheduleExtractAndSave(() => cache);

@@ -22,6 +22,7 @@ import { useRecipeTextSearch } from '../useRecipeTextSearch';
 
 const heldRecipe: FoundRecipe = {
   __typename: 'Recipe',
+  version: 1,
   id: 'recipe-1',
   name: 'Pasta al Forno',
   imageUrl: 'https://cdn.example.com/forno.jpg',

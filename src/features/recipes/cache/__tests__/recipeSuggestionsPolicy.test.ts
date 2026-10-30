@@ -14,6 +14,7 @@ const ranking = (...ids: string[]): RecipeSuggestionsQuery => ({
       expiringStacks: [],
       node: {
         __typename: 'Recipe',
+        version: 1,
         id,
         name: id,
         imageUrl: null,

@@ -26,6 +26,7 @@ fragment UserReaders on User {
       item {
         id
         name
+        version
       }
       notes
       severity

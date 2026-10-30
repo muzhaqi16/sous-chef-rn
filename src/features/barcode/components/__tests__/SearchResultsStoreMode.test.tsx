@@ -258,7 +258,12 @@ describe('SearchResults from store mode', () => {
   it('offers no add with price for a list that does not track prices', () => {
     renderWithApollo(<SearchResults {...props} />, {
       cache: seedCache([
-        { __typename: 'ShoppingList', id: 'list-1', priceTracking: false },
+        {
+          __typename: 'ShoppingList',
+          version: 1,
+          id: 'list-1',
+          priceTracking: false,
+        },
       ]),
     });
 

@@ -43,9 +43,10 @@ const stack = (
   itemId = OATS,
 ): HeldStack => ({
   __typename: 'PantryItem',
+  version: 1,
   id,
   createdAt,
-  item: { __typename: 'Item', id: itemId },
+  item: { __typename: 'Item', version: 1, id: itemId },
   unit: { __typename: 'Unit', ...unit, displayAsFraction: false },
   displayAmount: {
     __typename: 'DisplayAmount',

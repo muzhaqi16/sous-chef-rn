@@ -237,6 +237,7 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     catalogImageId
   }
   item {
+    version
     id
     imageUrl
     images {
@@ -247,6 +248,7 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
     storeDepartment
   }
   shoppingList {
+    version
     id
     totalItems
     completedItems
@@ -276,6 +278,7 @@ fragment AddedShoppingListItemFields on ShoppingListItem {
 # offline still reads complete. `priority` and the price estimates the server's
 # own copy carries are absent for that reason: no writer produces them.
 fragment CopyableShoppingListFragment on ShoppingList {
+  version
   id
   name
   description
@@ -288,6 +291,7 @@ fragment CopyableShoppingListFragment on ShoppingList {
   ) {
     edges {
       node {
+        version
         id
         itemName
         quantity
@@ -297,6 +301,7 @@ fragment CopyableShoppingListFragment on ShoppingList {
         unitName
         sortOrder
         item {
+          version
           id
         }
         unit {
@@ -315,6 +320,7 @@ fragment CopyableShoppingListFragment on ShoppingList {
   ) {
     edges {
       node {
+        version
         id
         itemName
         quantity
@@ -324,6 +330,7 @@ fragment CopyableShoppingListFragment on ShoppingList {
         unitName
         sortOrder
         item {
+          version
           id
         }
         unit {

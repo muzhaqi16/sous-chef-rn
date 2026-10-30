@@ -78,6 +78,7 @@ fragment PantryItemBatchFragment on PantryItemBatch {
   # When the stock was bought (a receipt's day for a receipt), where createdAt
   # is when the batch was recorded; null on an unpriced add.
   purchase {
+    version
     id
     purchaseDate
   }

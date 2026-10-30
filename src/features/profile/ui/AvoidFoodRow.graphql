@@ -1,4 +1,5 @@
 fragment AvoidFoodRow_item on Item {
+  version
   id
   name
   imageUrl
@@ -6,6 +7,7 @@ fragment AvoidFoodRow_item on Item {
     id
     isPrimary
     category {
+      version
       id
       name
     }

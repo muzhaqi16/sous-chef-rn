@@ -13,6 +13,7 @@ import {
   DeleteBrandListDocument,
   RemoveBrandFromListDocument,
   UpdateBrandListDocument,
+  UseBrandLists_HeldBrandFragmentDoc,
   UseBrandLists_RowFragmentDoc,
   type BrandListsQuery,
   type UseBrandLists_RowFragment,
@@ -63,6 +64,19 @@ function readRow(cache: ApolloCache, id: string): ListRow | null {
         fragmentName: 'useBrandLists_row',
       })
     : null;
+}
+
+/** The brand's version as the cache holds it; 0 for one it has never read. */
+function heldBrandVersion(cache: ApolloCache, brandId: string): number {
+  const cacheId = cache.identify({ __typename: 'Brand', id: brandId });
+  const held = cacheId
+    ? cache.readFragment({
+        id: cacheId,
+        fragment: UseBrandLists_HeldBrandFragmentDoc,
+        fragmentName: 'useBrandLists_heldBrand',
+      })
+    : null;
+  return held?.version ?? 0;
 }
 
 function writeRow(cache: ApolloCache, row: ListRow): void {
@@ -239,7 +253,12 @@ export function useBrandLists({
           id,
           reason,
           version: 0,
-          brand: { __typename: 'Brand', id: brand.id, name: brand.name },
+          brand: {
+            __typename: 'Brand',
+            id: brand.id,
+            name: brand.name,
+            version: heldBrandVersion(client.cache, brand.id),
+          },
         },
       ],
     });

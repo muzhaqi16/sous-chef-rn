@@ -80,6 +80,7 @@ query GetMealTemplateForEdit($id: ID!, $itemsFirst: Int!, $itemsAfter: String) {
           # query never asked", and a refused edit wrote null over a link it
           # had never seen.
           recipe {
+            version
             id
             name
             imageUrl

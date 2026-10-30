@@ -2,6 +2,7 @@
 # Pantry read one `Pantry.stats` field. It loads no items.
 query TodayCounts($id: ID!, $today: LocalDate!) {
   pantry(id: $id) {
+    version
     id
     stats(today: $today) {
       totalItems

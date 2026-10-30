@@ -35,12 +35,25 @@ export function useDietarySharing() {
   );
 
   const writeShared = (membershipId: string, shared: boolean) => {
+    const cacheId = client.cache.identify({
+      __typename: 'Membership',
+      id: membershipId,
+    });
+    const held = cacheId
+      ? client.cache.readFragment({
+          id: cacheId,
+          fragment: UseDietarySharing_MembershipFragmentDoc,
+          fragmentName: 'useDietarySharing_membership',
+        })
+      : null;
     client.cache.writeFragment({
       fragment: UseDietarySharing_MembershipFragmentDoc,
       fragmentName: 'useDietarySharing_membership',
       data: {
         __typename: 'Membership',
         id: membershipId,
+        // The server raises it; a local write keeps the one it holds.
+        version: held?.version ?? 0,
         sharesDietaryNeeds: shared,
       },
     });

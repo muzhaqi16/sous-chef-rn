@@ -19,9 +19,11 @@ fragment MealPlanDisplay on MealPlan {
   budgetAmount
   homeId
   home {
+    version
     id
     name
     myMembership {
+      version
       id
       role
     }
@@ -63,9 +65,11 @@ fragment MealTemplateDisplay on MealTemplate {
   lastUsedAt
   homeId
   home {
+    version
     id
     name
     myMembership {
+      version
       id
       role
     }
@@ -90,6 +94,7 @@ fragment MealTemplateItemFragment on MealTemplateItem {
   servings
   notes
   recipe {
+    version
     id
     name
     imageUrl

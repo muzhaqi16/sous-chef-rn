@@ -11,6 +11,7 @@ query GetPendingListInvites($first: Int!) {
           role
           inviterName
           shoppingList {
+            version
             id
             name
           }

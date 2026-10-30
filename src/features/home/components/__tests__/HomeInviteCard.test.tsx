@@ -26,6 +26,7 @@ function buildInvite(
 ): HomeInviteCard_InviteFragment {
   return {
     __typename: 'HomeInvite',
+    version: 1,
     id: '1',
     email: 'user@test.com',
     recipientName: 'Test User',

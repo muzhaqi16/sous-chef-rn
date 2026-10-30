@@ -23,6 +23,7 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   purchase {
     id
     purchaseDate
+    version
   }
   quantity
   remaining {

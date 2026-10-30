@@ -104,6 +104,7 @@ fragment usePantryUnitChange_pantryItem on PantryItem {
   lastUsedAt
   totalCost
   purchase {
+    version
     id
     purchaseDate
     totalPrice

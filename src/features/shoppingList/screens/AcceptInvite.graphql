@@ -12,6 +12,7 @@ fragment AcceptInvite_shoppingListInvite on ShoppingListCollaborator {
     }
   }
   shoppingList {
+    version
     id
     name
     description
@@ -39,10 +40,12 @@ query GetShoppingListInviteByToken($token: String!) {
 # they are not fetched by the query, so including them would cause
 # `useFragment` to report `complete: false`.
 fragment AcceptInvite_homeInvite on HomeInvite {
+  version
   id
   role
   inviterName
   home {
+    version
     id
     name
   }
@@ -63,6 +66,7 @@ fragment AcceptInvite_homeInvite on HomeInvite {
 # screen can read them off the unmasked result; the rest displays via the spread.
 query GetHomeInviteByToken($token: String!) {
   homeInviteByToken(token: $token) {
+    version
     id
     role
     status

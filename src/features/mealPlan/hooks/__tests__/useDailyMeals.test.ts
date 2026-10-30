@@ -30,6 +30,7 @@ const makeItem = (
   const name = recipe?.name ?? 'Omelette';
   return {
     __typename: 'MealPlanItem',
+    version: 1,
     id: 'item-1',
     date: todayKey,
     mealType: MealType.Breakfast,
@@ -39,6 +40,7 @@ const makeItem = (
         ? null
         : {
             __typename: 'Recipe',
+            version: 1,
             // One recipe entity per name: the cache normalizes by id.
             id: `recipe-${name}`,
             name,
@@ -61,6 +63,7 @@ const refsOf = (items: DailyMeals_ItemFragment[]): DailyMealsItem[] =>
   items.map(({ id }) => ({
     ...toFragmentRef<typeof DailyMeals_ItemFragmentDoc>({
       __typename: 'MealPlanItem',
+      version: 1,
       id,
     }),
     id,

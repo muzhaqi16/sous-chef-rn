@@ -58,10 +58,11 @@ const meal = (id: string, version: number = 1) => ({
 const seedPlan = (mealIds: string[]): InMemoryCache => {
   const cache = makeCache();
   cache.writeFragment({
-    id: cache.identify({ __typename: 'MealPlan', id: PLAN_ID }),
+    id: cache.identify({ __typename: 'MealPlan', version: 1, id: PLAN_ID }),
     fragment: PLAN_MEALS,
     data: {
       __typename: 'MealPlan',
+      version: 1,
       id: PLAN_ID,
       mealPlanItemsConnection: {
         __typename: 'MealPlanItemConnection',
@@ -83,7 +84,7 @@ const seedPlan = (mealIds: string[]): InMemoryCache => {
 const planMealIds = (cache: InMemoryCache) =>
   cache
     .readFragment<PlanMeals>({
-      id: cache.identify({ __typename: 'MealPlan', id: PLAN_ID }),
+      id: cache.identify({ __typename: 'MealPlan', version: 1, id: PLAN_ID }),
       fragment: PLAN_MEALS,
     })
     ?.mealPlanItemsConnection.edges.map(({ node }) => node.id);
@@ -94,7 +95,11 @@ const SERVER_VERSION = 4;
 /** What a replay's normalization writes before the reconciler runs. */
 const writeServerMeal = (cache: InMemoryCache) =>
   cache.writeFragment({
-    id: cache.identify({ __typename: 'MealPlanItem', id: SERVER_ID }),
+    id: cache.identify({
+      __typename: 'MealPlanItem',
+      version: 1,
+      id: SERVER_ID,
+    }),
     fragment: gql`
       fragment TestServerMeal on MealPlanItem {
         id
@@ -275,7 +280,7 @@ describe.each([
           deleteMealPlan: {
             __typename: 'DeleteMealPlanPayload',
             converged: false,
-            mealPlan: { __typename: 'MealPlan', id },
+            mealPlan: { __typename: 'MealPlan', version: 1, id },
           },
         } satisfies DeleteMealPlanMutation,
       }),

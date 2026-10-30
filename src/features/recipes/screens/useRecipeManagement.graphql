@@ -2,6 +2,7 @@ query MyRecipes($cursor: String, $first: Int = 25) {
   recipes(after: $cursor, first: $first) {
     edges {
       node {
+        version
         id
         # Selected at the parent so the screen can filter the connection
         # without materializing each masked node. Already fetched inside

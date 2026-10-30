@@ -35,6 +35,7 @@ mutation CreateReceiptCheckIn(
           ...ItemReaders
         }
         purchase {
+          version
           id
           ...PurchaseReaders
         }

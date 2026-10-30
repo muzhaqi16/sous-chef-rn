@@ -56,6 +56,7 @@ export function readRecipeRef(
     recipe ?? {
       __typename: 'Recipe',
       id: recipeId,
+      version: 0,
       name: '',
       imageUrl: null,
       servings: 0,

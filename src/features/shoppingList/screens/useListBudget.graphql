@@ -1,6 +1,7 @@
 # What Budget & prices reads on a list: its spend, budget, store and tracking,
 # and who may edit it, which decides whether the screen offers its controls.
 fragment useListBudget_list on ShoppingList {
+  version
   id
   currency
   budgetAmount
@@ -12,8 +13,10 @@ fragment useListBudget_list on ShoppingList {
   }
   homeId
   home {
+    version
     id
     myMembership {
+      version
       id
       role
     }

@@ -4,6 +4,7 @@
 # (`ItemByLookup`) carries it so a scan asks once. Each `first` is a literal so
 # both read one cache entry.
 fragment useStoreShelfPrices_item on Item {
+  version
   id
   storePricesConnection(first: 10) {
     edges {
@@ -45,6 +46,7 @@ fragment useStoreShelfPrices_item on Item {
       name
     }
     product {
+      version
       id
       name
     }
@@ -88,6 +90,7 @@ fragment useStoreShelfPrices_list on ShoppingList {
 # The same for an item no scan lookup brought.
 query StoreShelfPrices($itemId: ID!) {
   item(id: $itemId) {
+    version
     id
     ...useStoreShelfPrices_item
   }

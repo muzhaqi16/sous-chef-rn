@@ -14,7 +14,7 @@ const CACHE_LANGUAGE_KEY = 'apollo-cache-language';
  * on old data, or a server change redefining persisted data: retired ids parse
  * cleanly and are still wrong. `cacheSchemaVersion.test.ts` pins it.
  */
-const CURRENT_CACHE_VERSION = 'shape-6';
+const CURRENT_CACHE_VERSION = 'shape-7';
 /** Freshly allocated by every `extract()`, so its reference is never stable. */
 const META_KEY = '__META';
 const DEBOUNCE_MS = 3000;

@@ -10,6 +10,7 @@ fragment RecipeIngredientFragment on RecipeIngredient {
   quantity
   estimatedPrice
   item {
+    version
     id
     name
     imageUrl

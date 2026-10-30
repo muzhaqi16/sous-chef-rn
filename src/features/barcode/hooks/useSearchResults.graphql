@@ -19,6 +19,7 @@ query ItemByLookup(
   $withShelfPrices: Boolean = false
 ) {
   shoppingList(id: $listId) @include(if: $withPrices) {
+    version
     id
     ...useStorePriceMemory_list
   }
@@ -26,6 +27,7 @@ query ItemByLookup(
     edges {
       cursor
       node {
+        version
         id
         ...useProductOrigin_item
         ...useProductBrandListings_item
@@ -35,6 +37,7 @@ query ItemByLookup(
         # The concepts above the product, nearest first: store mode ticks the
         # list line that names the product or one of them.
         ancestors {
+          version
           id
         }
         imageUrl
@@ -163,6 +166,7 @@ query ItemByLookup(
             servingUnit
           }
           typicalOf {
+            version
             id
             name
           }
@@ -193,22 +197,26 @@ query ItemByLookup(
           id
           isPrimary
           category {
+            version
             id
             name
             type
           }
         }
         units {
+          version
           id
           isDefault
           unitId
         }
         variationBrand {
+          version
           id
           name
           # The company the brand is part of, as the catalog names it: the
           # card's owner line.
           parent {
+            version
             id
             name
           }

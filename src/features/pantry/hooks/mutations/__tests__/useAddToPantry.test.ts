@@ -43,6 +43,7 @@ const buildData = ({
   __typename: 'Query',
   pantry: {
     __typename: 'Pantry',
+    version: 1,
     id: 'pantry-1',
     suggestions: {
       __typename: 'PantrySuggestions',
