@@ -1,9 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { CorrectPackageSizeModal } from '#features/pantry/components/modals/CorrectPackageSizeModal';
 import { renderWithApollo, seedCache } from '../../helpers/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { writeUnitSystemSettings } from '../../helpers/fixtures/userSettingsFixtures';
 import {
   CorrectPackageSizeModal_BatchFragmentDoc,
@@ -172,6 +173,14 @@ const sauceJar: Batch = {
   remaining: null,
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('CorrectPackageSizeModal', () => {
   const onConfirm = jest.fn().mockResolvedValue(true);
   const defaultProps = {
@@ -225,7 +234,8 @@ describe('CorrectPackageSizeModal', () => {
   describe('in the user’s unit system', () => {
     it('opens on the size as it reads, never the stored grams', async () => {
       renderModal(grams, honeyJar, UnitSystem.Imperial);
-      expect(await screen.findByText('Package size: 3 lb')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
       expect(screen.getByText('Remaining: 1.5 lb')).toBeTruthy();
       expect(screen.getByLabelText('Actual package size').props.value).toBe(
         '3',
@@ -235,7 +245,8 @@ describe('CorrectPackageSizeModal', () => {
 
     it('opens on kilograms for a metric user', async () => {
       renderModal(grams, honeyJar, UnitSystem.Metric);
-      expect(await screen.findByText('Package size: 1.36 kg')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Package size: 1.36 kg')).toBeTruthy();
       expect(screen.getByLabelText('Actual package size').props.value).toBe(
         '1.36',
       );
@@ -243,19 +254,19 @@ describe('CorrectPackageSizeModal', () => {
 
     it('saves 2.5 lb as typed, for the server to convert', async () => {
       renderModal(grams, honeyJar, UnitSystem.Imperial);
-      await screen.findByText('Package size: 3 lb');
+      await drainTimers();
+      expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
 
       fireEvent.changeText(screen.getByLabelText('Actual package size'), '2.5');
       fireEvent.changeText(screen.getByLabelText('Reason'), 'Misread label');
       fireEvent.press(screen.getByLabelText('confirm'));
 
-      await waitFor(() =>
-        expect(onConfirm).toHaveBeenCalledWith({
-          netWeight: 2.5,
-          netWeightUnitId: 'u-lb',
-          reason: 'Misread label',
-        }),
-      );
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalledWith({
+        netWeight: 2.5,
+        netWeightUnitId: 'u-lb',
+        reason: 'Misread label',
+      });
     });
 
     // The server keeps the stack's grams (1133.98 g) and reads them back.
@@ -273,7 +284,8 @@ describe('CorrectPackageSizeModal', () => {
         },
         UnitSystem.Imperial,
       );
-      expect(await screen.findByText('Package size: 2.5 lb')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Package size: 2.5 lb')).toBeTruthy();
       expect(screen.getByLabelText('Actual package size').props.value).toBe(
         '2.5',
       );
@@ -285,7 +297,8 @@ describe('CorrectPackageSizeModal', () => {
         honeyJar,
         UnitSystem.Imperial,
       );
-      await screen.findByText('Package size: 3 lb');
+      await drainTimers();
+      expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
       expect(screen.getByLabelText('Actual package size').props.value).toBe(
         '1360.78',
       );

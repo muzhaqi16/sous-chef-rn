@@ -15,17 +15,12 @@
 jest.unmock('#/services/alertService');
 import React from 'react';
 import { Platform } from 'react-native';
-import {
-  act,
-  render,
-  screen,
-  userEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { Modal } from '#components/atoms/themedComponents';
 import { AlertProvider } from '../AlertProvider';
 import { alertService } from '#/services/alertService';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const FAILED = 'Failed to update settings. Please try again.';
 
@@ -42,6 +37,14 @@ const showAlert = (
   buttons?: Parameters<typeof alertService.alert>[2],
 ) => act(() => alertService.alert(title, message, buttons));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AlertProvider', () => {
   it('collapses a repeated informational alert into one dismissal', async () => {
     const user = userEvent.setup();
@@ -51,7 +54,8 @@ describe('AlertProvider', () => {
     showAlert('Error', FAILED);
     showAlert('Error', FAILED);
 
-    expect(await screen.findByText(FAILED)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(FAILED)).toBeTruthy();
 
     // One dismissal clears all three — they were the same message.
     await user.press(screen.getByText('OK'));
@@ -66,11 +70,13 @@ describe('AlertProvider', () => {
     showAlert('Error', FAILED);
     showAlert('Error', 'Failed to add item');
 
-    expect(await screen.findByText('Failed to add item')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Failed to add item')).toBeTruthy();
     await user.press(screen.getByText('OK'));
 
     // The earlier, different alert is still waiting.
-    expect(await screen.findByText(FAILED)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(FAILED)).toBeTruthy();
   });
 
   it('never collapses alerts that carry a decision', async () => {
@@ -86,11 +92,13 @@ describe('AlertProvider', () => {
     showAlert('Delete Item', 'Are you sure?', confirmButtons);
     showAlert('Delete Item', 'Are you sure?', confirmButtons);
 
-    expect(await screen.findByText('Are you sure?')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Are you sure?')).toBeTruthy();
     await user.press(screen.getByText('Delete'));
 
     // Second confirmation survives, and its callback is still pending.
-    expect(await screen.findByText('Are you sure?')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Are you sure?')).toBeTruthy();
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
@@ -114,7 +122,8 @@ describe('AlertProvider', () => {
     it('gives the stable id to the top card only', async () => {
       renderProvider();
       showTwoStackedAlerts();
-      expect(await screen.findByText('second message')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('second message')).toBeTruthy();
 
       expect(allWithHidden('alert-modal')).toHaveLength(1);
       // The one behind is still present and inspectable, just not 'the alert'.
@@ -124,7 +133,8 @@ describe('AlertProvider', () => {
     it('gives button ids to the top card only', async () => {
       renderProvider();
       showTwoStackedAlerts();
-      expect(await screen.findByText('second message')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('second message')).toBeTruthy();
 
       // Both cards render a button at index 0; only one answers to the id.
       expect(allWithHidden('alert-button-0')).toHaveLength(1);
@@ -133,7 +143,8 @@ describe('AlertProvider', () => {
     it('still exposes the alert when only one is showing', async () => {
       renderProvider();
       showAlert('Only', 'only message', [{ text: 'OK' }]);
-      expect(await screen.findByText('only message')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('only message')).toBeTruthy();
 
       expect(allWithHidden('alert-modal')).toHaveLength(1);
       expect(allWithHidden('alert-button-0')).toHaveLength(1);
@@ -168,7 +179,8 @@ describe('AlertProvider', () => {
         { text: 'Send', onPress: scan, afterClose: true },
       ]);
 
-      await user.press(await screen.findByText('Send'));
+      await drainTimers();
+      await user.press(screen.getByText('Send'));
       expect(screen.queryByText('consent')).toBeNull();
       expect(scan).not.toHaveBeenCalled();
 
@@ -185,7 +197,8 @@ describe('AlertProvider', () => {
         { text: 'Delete', onPress: remove },
       ]);
 
-      await user.press(await screen.findByText('Delete'));
+      await drainTimers();
+      await user.press(screen.getByText('Delete'));
       expect(remove).toHaveBeenCalledTimes(1);
     });
 
@@ -202,7 +215,8 @@ describe('AlertProvider', () => {
         },
         { text: 'Send', onPress: send, afterClose: true },
       ]);
-      expect(await screen.findByText('consent')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('consent')).toBeTruthy();
 
       act(() => {
         (
@@ -225,14 +239,16 @@ describe('AlertProvider', () => {
       showAlert('Send photos?', 'consent', [
         { text: 'Send', onPress: scan, afterClose: true },
       ]);
-      await user.press(await screen.findByText('Send'));
+      await drainTimers();
+      await user.press(screen.getByText('Send'));
 
       // The first close is reported while a new alert is already showing.
       showAlert('Offline', 'no connection');
       reportDismissed();
       expect(scan).not.toHaveBeenCalled();
 
-      await user.press(await screen.findByText('OK'));
+      await drainTimers();
+      await user.press(screen.getByText('OK'));
       reportDismissed();
       expect(scan).toHaveBeenCalledTimes(1);
     });
@@ -249,8 +265,10 @@ describe('AlertProvider', () => {
         { text: 'Send', onPress: scan, afterClose: true },
       ]);
 
-      await user.press(await screen.findByText('Send'));
-      await waitFor(() => expect(scan).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      await user.press(screen.getByText('Send'));
+      await drainTimers();
+      expect(scan).toHaveBeenCalledTimes(1);
     });
   });
 });
