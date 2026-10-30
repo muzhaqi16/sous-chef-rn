@@ -1,12 +1,13 @@
 import { toastService } from '#/services/toastService';
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { useRoute } from '@react-navigation/native';
 import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
 import { authService } from '#/services/authService';
 import {
@@ -156,7 +157,8 @@ const renderOnForm = async (extraMocks: MockedResponse[] = []) => {
   const result = renderWithApollo(<ResetPasswordScreen />, {
     operationMocks: [validateMock(), ...extraMocks],
   });
-  await screen.findByText('Reset Your Password');
+  await drainTimers();
+  expect(screen.getByText('Reset Your Password')).toBeTruthy();
   return result;
 };
 
@@ -202,6 +204,14 @@ const NEW_PASSWORD_INPUT = () =>
 const CONFIRM_PASSWORD_INPUT = () =>
   screen.getByTestId('password-input-Confirm your new password');
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('ResetPasswordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -226,7 +236,8 @@ describe('ResetPasswordScreen', () => {
     const user = userEvent.setup();
 
     await user.type(NEW_PASSWORD_INPUT(), 'N');
-    await waitFor(() => expect(NEW_PASSWORD_INPUT().props.value).toBe('N'));
+    await drainTimers();
+    expect(NEW_PASSWORD_INPUT().props.value).toBe('N');
 
     expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBeUndefined();
   });
@@ -237,18 +248,16 @@ describe('ResetPasswordScreen', () => {
 
     await user.type(NEW_PASSWORD_INPUT(), 'NewPass123');
     await user.type(CONFIRM_PASSWORD_INPUT(), 'NewPass123');
-    await waitFor(() =>
-      expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBeUndefined(),
-    );
+    await drainTimers();
+    expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBeUndefined();
 
     // The fix belongs to the OTHER field: the rule reports on the
     // confirmation while reading the new password.
     await user.type(NEW_PASSWORD_INPUT(), '4');
 
-    await waitFor(() =>
-      expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBe(
-        'Passwords must match',
-      ),
+    await drainTimers();
+    expect(CONFIRM_PASSWORD_INPUT().props.accessibilityHint).toBe(
+      'Passwords must match',
     );
   });
 
@@ -300,7 +309,8 @@ describe('ResetPasswordScreen', () => {
       operationMocks: [validateMock(PasswordActionStatus.InvalidOrExpired)],
     });
 
-    expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Invalid Reset Link')).toBeTruthy();
     expect(mockLogout).not.toHaveBeenCalled();
   });
 
@@ -325,7 +335,8 @@ describe('ResetPasswordScreen', () => {
       operationMocks: [validateMock('error')],
     });
 
-    expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Invalid Reset Link')).toBeTruthy();
     expect(mockLogout).not.toHaveBeenCalled();
   });
 
@@ -390,7 +401,8 @@ describe('ResetPasswordScreen', () => {
     await submitNewPassword();
 
     // A spent link must take the user off the form — it can never succeed.
-    expect(await screen.findByText('Invalid Reset Link')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Invalid Reset Link')).toBeTruthy();
   });
 
   // The server ended every session of the link's account, perhaps this one, so
@@ -406,7 +418,8 @@ describe('ResetPasswordScreen', () => {
 
     const user = await submitNewPassword();
 
-    expect(await screen.findByText('Password reset')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Password reset')).toBeTruthy();
     expect(mockLogout).toHaveBeenCalledTimes(1);
     expect(mockLogout).toHaveBeenCalledWith({
       keepBiometricCredentials: true,
@@ -429,7 +442,8 @@ describe('ResetPasswordScreen', () => {
 
     await submitNewPassword();
 
-    expect(await screen.findByText('Password reset')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Password reset')).toBeTruthy();
     expect(mockLogout).not.toHaveBeenCalled();
   });
 
@@ -449,10 +463,9 @@ describe('ResetPasswordScreen', () => {
     await submitNewPassword();
 
     // The mocked PasswordInput surfaces its errorMessage as the a11y hint.
-    await waitFor(() =>
-      expect(NEW_PASSWORD_INPUT().props.accessibilityHint).toBe(
-        'That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.',
-      ),
+    await drainTimers();
+    expect(NEW_PASSWORD_INPUT().props.accessibilityHint).toBe(
+      'That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.',
     );
 
     // The server's own prose is English by construction and must never render.
