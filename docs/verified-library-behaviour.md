@@ -732,6 +732,26 @@ Answering the in-flight read from the cache releases the watcher at once:
 flight from the cache, so the person's change shows at once and an older
 answer cannot undo it.
 
+### Apollo: a type merge never sees a normalized row's fields
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** a type-level `merge` on a type with an `id` receives references,
+never the row's fields. That holds for a plain `InMemoryCache` and for
+`makeCache()`, for a row under a root field and in a list.
+- It runs for the parent field that holds the row (`getMergeFunction(parent,
+  field, childTypename)`).
+- The row's own fields are collected in `incomingById` and stored with
+  `store.merge(dataId, …)`, which no policy sees.
+- A field-level `merge` can't read the incoming row's other fields.
+
+So nothing in the cache can compare a row's old and new copies. With nothing
+guarding it, a copy with a lower `version` simply replaces a newer one.
+
+**What depends on it:** the `sync/answer-ordering` guard runs in the link
+chain, before Apollo stores an answer, and not as a type policy.
+
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 
 Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind
