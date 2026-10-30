@@ -494,6 +494,17 @@ describe('useStoreShelfPrices', () => {
 
       expect(similarRows[0]?.mightBeCheaper).toBe(false);
     });
+
+    it('word a piece at its own per-piece price once, as the store rows do', async () => {
+      const { similarRows } = await similarFrom([
+        similarAt(ALDI, { basis: PriceBasis.Each, normalizedPrice: 4.49 }),
+      ]);
+
+      expect(similarRows[0]).toMatchObject({
+        price: t('labels.pricePer.each', { price: usd(4.49) }),
+        perBasis: null,
+      });
+    });
   });
 
   it('shows no rows when the request fails', async () => {
