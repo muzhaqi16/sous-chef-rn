@@ -9,6 +9,7 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { memoryScreen } from '#/test-utils/memoryPlatform';
 import { MealType } from '#/graphql/generated/schemaTypes';
@@ -513,10 +514,10 @@ describe('a home with no pantry', () => {
       listsMock(false),
     ]);
     expect(loading.result.current.overview.homeCount).toBeNull();
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
   });
 
   it('is still loading while the home itself has not arrived', async () => {
+    jest.useFakeTimers();
     inHouseholdWithoutPantry({ homeLoaded: false });
     const { result } = renderOverview([
       plansMock(false),
@@ -524,7 +525,7 @@ describe('a home with no pantry', () => {
       listsMock(false),
     ]);
 
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(result.current.overview.state).toBe('loading');
   });
 });
@@ -553,6 +554,7 @@ it('shows the plan covering today, not the one last opened on Meal Plan', async 
 });
 
 it('plans nothing for today when no plan covers it', async () => {
+  jest.useFakeTimers();
   const plans = recordMock(GetMealPlansDocument, {
     data: {
       mealPlans: connectionOf([
@@ -586,8 +588,8 @@ it('plans nothing for today when no plan covers it', async () => {
     listsMock(),
   ]);
 
-  await waitFor(() => expect(plan.fired).toHaveLength(1));
-  await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+  await drainTimers();
+  expect(plan.fired).toHaveLength(1);
   expect(result.current.overview.meals).toEqual([]);
 });
 
@@ -612,20 +614,20 @@ describe("a new day's counts", () => {
   }
 
   it('are confirmed with the server once, then answered from the cache', async () => {
+    jest.useFakeTimers();
     const counts = countsMock(stats(9, 6, 3));
     const { result } = renderOverview(
       [counts, plansMock(), planMock(), suggestionsMock(), listsMock()],
       cacheWithYesterdaysCounts(),
     );
 
-    await waitFor(() =>
-      expect(result.current.overview.counts?.expired).toBe(6),
-    );
+    await drainTimers();
+    expect(result.current.overview.counts?.expired).toBe(6);
     expect(counts.fired).toEqual([{ id: 'p1', today: TODAY }]);
 
     act(() => memoryScreen().setFocused(false));
     act(() => memoryScreen().setFocused(true));
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(counts.fired).toHaveLength(1);
     expect(result.current.overview.counts?.expired).toBe(6);
   });
