@@ -1,7 +1,8 @@
 'use no memo';
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListSheet } from '../GenerateShoppingListSheet';
 
@@ -160,6 +161,14 @@ const defaultProps = {
   loading: false,
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('GenerateShoppingListSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -218,9 +227,8 @@ describe('GenerateShoppingListSheet', () => {
     renderSheet();
     await user.press(screen.getByText('Existing List'));
     expect(screen.getByText('Select a list')).toBeTruthy();
-    await waitFor(() =>
-      expect(screen.getByText('Weekly Groceries')).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByText('Weekly Groceries')).toBeTruthy();
     expect(screen.getByText('Party Supplies')).toBeTruthy();
   });
 

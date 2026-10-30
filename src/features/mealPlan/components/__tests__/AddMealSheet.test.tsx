@@ -1,11 +1,6 @@
 'use no memo';
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { AddMealSheet } from '../AddMealSheet';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
@@ -145,6 +140,7 @@ import {
   type MockedResponse,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { Diet, ExternalSource } from '#/graphql/generated/schemaTypes';
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { SearchRecipesDocument } from '#features/recipes/hooks/useRecipeSearch.generated';
@@ -207,6 +203,14 @@ const typeAndSearch = (text: string) => {
 const { useSavedRecipes: mockUseSavedRecipes } = jest.requireMock<{
   useSavedRecipes: jest.Mock;
 }>('#features/recipes/screens/useSavedRecipes');
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('AddMealSheet', () => {
   beforeEach(() => {
@@ -367,9 +371,8 @@ describe('AddMealSheet', () => {
 
     fireEvent.press(screen.getByText('Search all recipes for "zzz"'));
 
-    expect(
-      await screen.findByText('No recipes match your search'),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('No recipes match your search')).toBeTruthy();
   });
 
   it('asks the catalog only when Search is pressed, never while typing', async () => {
@@ -379,14 +382,14 @@ describe('AddMealSheet', () => {
     for (const text of ['Lasa', 'Lasag', 'Lasagn', 'Lasagna']) {
       fireEvent.changeText(searchField(), text);
     }
-    await waitFor(() =>
-      expect(screen.getByText('Search all recipes for "Lasagna"')).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByText('Search all recipes for "Lasagna"')).toBeTruthy();
     expect(search.fired).toEqual([]);
 
     fireEvent(searchField(), 'submitEditing');
 
-    await waitFor(() => expect(search.fired).toHaveLength(1));
+    await drainTimers();
+    expect(search.fired).toHaveLength(1);
     expect(search.fired[0]).toEqual(
       expect.objectContaining({ query: 'Lasagna' }),
     );
@@ -413,7 +416,8 @@ describe('AddMealSheet', () => {
         opened,
       ]);
       typeAndSearch('Lasagna');
-      fireEvent.press(await screen.findByText('Lasagna'));
+      await drainTimers();
+      fireEvent.press(screen.getByText('Lasagna'));
     };
 
     it('is opened through the API by its provider and id, then planned', async () => {
@@ -427,11 +431,10 @@ describe('AddMealSheet', () => {
       });
       await pickLasagna(open.mock);
 
-      await waitFor(() =>
-        expect(defaultProps.onAddRecipe).toHaveBeenCalledWith(
-          'recipe-42',
-          expect.anything(),
-        ),
+      await drainTimers();
+      expect(defaultProps.onAddRecipe).toHaveBeenCalledWith(
+        'recipe-42',
+        expect.anything(),
       );
       expect(open.fired).toEqual([
         expect.objectContaining({
@@ -454,9 +457,8 @@ describe('AddMealSheet', () => {
       });
       await pickLasagna(gone.mock);
 
-      await waitFor(() =>
-        expect(toastService.error).toHaveBeenCalledWith('Recipe not found'),
-      );
+      await drainTimers();
+      expect(toastService.error).toHaveBeenCalledWith('Recipe not found');
       expect(defaultProps.onAddRecipe).not.toHaveBeenCalled();
       expect(defaultProps.onClose).not.toHaveBeenCalled();
     });
@@ -483,7 +485,8 @@ describe('AddMealSheet', () => {
         open.mock,
       ]);
       typeAndSearch('Stew');
-      fireEvent.press(await screen.findByText('Beef Stew'));
+      await drainTimers();
+      fireEvent.press(screen.getByText('Beef Stew'));
 
       expect(defaultProps.onAddRecipe).toHaveBeenCalledWith(
         'r9',
@@ -501,7 +504,8 @@ describe('AddMealSheet', () => {
       ]);
       typeAndSearch('Pasta');
 
-      expect(await screen.findByText('Pasta Bake')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Pasta Bake')).toBeTruthy();
       expect(screen.getAllByText('Pasta Carbonara')).toHaveLength(1);
     });
 
@@ -511,7 +515,8 @@ describe('AddMealSheet', () => {
       ]);
       typeAndSearch('chiken');
 
-      expect(await screen.findByText('Chicken Salad')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Chicken Salad')).toBeTruthy();
       expect(screen.getAllByText('Chicken Salad')).toHaveLength(1);
     });
   });

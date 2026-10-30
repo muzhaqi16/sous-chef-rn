@@ -1,5 +1,4 @@
 'use no memo';
-import { act, waitFor } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
@@ -7,6 +6,7 @@ import {
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { SortOrder } from '#/graphql/generated/schemaTypes';
@@ -63,6 +63,14 @@ jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
 }));
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -103,7 +111,8 @@ describe('useMealPlans', () => {
     const { result } = renderHookWithApollo(() => useMealPlans(), {
       operationMocks: [emptyMock()],
     });
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
     expect(result.current.state.mealPlans).toEqual([]);
   });
 
@@ -113,7 +122,8 @@ describe('useMealPlans', () => {
       operationMocks: [planData([plan])],
       cache: seedPlanCache([plan]),
     });
-    await waitFor(() => expect(result.current.state.mealPlans).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.state.mealPlans).toHaveLength(1);
     expect(result.current.state.mealPlans[0]!.id).toBe('1');
   });
 
@@ -127,9 +137,8 @@ describe('useMealPlans', () => {
       operationMocks: [planData([activePlan])],
       cache: seedPlanCache([activePlan]),
     });
-    await waitFor(() =>
-      expect(result.current.state.currentPlan?.id).toBe('active'),
-    );
+    await drainTimers();
+    expect(result.current.state.currentPlan?.id).toBe('active');
   });
 
   // A plan's last day is one of its days: it is current until that day ends.
@@ -149,9 +158,8 @@ describe('useMealPlans', () => {
         cache: seedPlanCache(plans),
       });
 
-      await waitFor(() =>
-        expect(result.current.state.mealPlans).toHaveLength(2),
-      );
+      await drainTimers();
+      expect(result.current.state.mealPlans).toHaveLength(2);
       expect(result.current.state.currentPlan?.id).toBe('today');
     },
   );
@@ -166,9 +174,8 @@ describe('useMealPlans', () => {
       cache: seedPlanCache(plans),
     });
 
-    await waitFor(() =>
-      expect(result.current.state.currentPlan?.id).toBe('upcoming'),
-    );
+    await drainTimers();
+    expect(result.current.state.currentPlan?.id).toBe('upcoming');
   });
 
   it("follows a plan's own edit, which leaves the list query's result as it was", async () => {
@@ -178,11 +185,10 @@ describe('useMealPlans', () => {
       operationMocks: [planData([plan])],
       cache,
     });
-    await waitFor(() =>
-      expect(result.current.state.currentPlan?.id).toBe('active'),
-    );
+    await drainTimers();
+    expect(result.current.state.currentPlan?.id).toBe('active');
 
-    await act(async () => {
+    await drained(async () => {
       cache.updateFragment(
         {
           fragment: MealPlanDisplayFragmentDoc,
@@ -193,10 +199,7 @@ describe('useMealPlans', () => {
       );
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(result.current.state.currentPlan?.name).toBe('Renamed'),
-    );
+    expect(result.current.state.currentPlan?.name).toBe('Renamed');
     expect(result.current.state.mealPlans[0]?.name).toBe('Renamed');
   });
 
@@ -213,9 +216,8 @@ describe('useMealPlans', () => {
     const isCurrentVariant = (variables: unknown) =>
       (variables as { filters?: { startDate?: string } }).filters?.startDate !==
       undefined;
-    await waitFor(() =>
-      expect(recorded.fired.some(isCurrentVariant)).toBe(true),
-    );
+    await drainTimers();
+    expect(recorded.fired.some(isCurrentVariant)).toBe(true);
     const currentVariant = recorded.fired.find(isCurrentVariant) as {
       first: number;
     };
@@ -232,13 +234,12 @@ describe('useMealPlans', () => {
       operationMocks: [recorded.mock],
     });
 
-    await waitFor(() =>
-      expect(recorded.fired).toContainEqual({
-        first: 3,
-        filters: { startDate: TODAY },
-        orderBy: { startDate: SortOrder.Asc },
-      }),
-    );
+    await drainTimers();
+    expect(recorded.fired).toContainEqual({
+      first: 3,
+      filters: { startDate: TODAY },
+      orderBy: { startDate: SortOrder.Asc },
+    });
   });
 
   // `currentMealPlan` (API-18) names the plan covering today in the same round
@@ -263,7 +264,8 @@ describe('useMealPlans', () => {
         operationMocks: [recorded.mock, recorded.mock],
       });
 
-      await waitFor(() => expect(recorded.fired).toHaveLength(1));
+      await drainTimers();
+      expect(recorded.fired).toHaveLength(1);
       expect(recorded.fired.some(isCurrentVariant)).toBe(false);
       if (current.planId) {
         expect(result.current.state.currentPlan?.id).toBe('today');
@@ -279,9 +281,8 @@ describe('useMealPlans', () => {
         { operationMocks: [recorded.mock, recorded.mock] },
       );
 
-      await waitFor(() =>
-        expect(recorded.fired.some(isCurrentVariant)).toBe(true),
-      );
+      await drainTimers();
+      expect(recorded.fired.some(isCurrentVariant)).toBe(true);
     });
   });
 
@@ -326,21 +327,15 @@ describe('useMealPlans', () => {
       const { result } = renderHookWithApollo(() => useMealPlans(), {
         operationMocks: [server.mock],
       });
-      await waitFor(() =>
-        expect(result.current.state.mealPlans).toHaveLength(20),
-      );
+      await drainTimers();
+      expect(result.current.state.mealPlans).toHaveLength(20);
       expect(result.current.state.hasMore).toBe(true);
       expect(result.current.state.mealPlans.map(p => p.id)).not.toContain(
         'old',
       );
 
-      await act(async () => {
-        await result.current.actions.loadMore();
-      });
-
-      await waitFor(() =>
-        expect(result.current.state.mealPlans.map(p => p.id)).toContain('old'),
-      );
+      await drained(() => result.current.actions.loadMore());
+      expect(result.current.state.mealPlans.map(p => p.id)).toContain('old');
       expect(result.current.state.mealPlans).toHaveLength(21);
       expect(result.current.state.hasMore).toBe(false);
     });
@@ -351,9 +346,8 @@ describe('useMealPlans', () => {
         operationMocks: [server.mock],
       });
 
-      await waitFor(() =>
-        expect(result.current.state.currentPlan?.id).toBe('nearest'),
-      );
+      await drainTimers();
+      expect(result.current.state.currentPlan?.id).toBe('nearest');
       expect(result.current.state.mealPlans.map(p => p.id)).not.toContain(
         'nearest',
       );

@@ -1,9 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -130,6 +131,14 @@ jest.mock('#features/mealPlan/components/TemplatePreviewSheet', () => ({
   TemplatePreviewSheet: () => null,
 }));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('CreateMealPlanScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -185,7 +194,8 @@ describe('CreateMealPlanScreen', () => {
     fireEvent.press(getByTestId('start-date-pick'));
     fireEvent.press(getByTestId('form-save'));
 
-    await waitFor(() => expect(mockCreateMealPlan).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockCreateMealPlan).toHaveBeenCalled();
     // A weekly plan: the picked Monday through the Sunday, both days of it.
     expect(mockCreateMealPlan).toHaveBeenCalledWith(
       expect.objectContaining({

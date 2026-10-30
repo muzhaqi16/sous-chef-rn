@@ -1,4 +1,3 @@
-import { act, waitFor } from '@testing-library/react-native';
 import type { TypedDocumentNode } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -6,6 +5,7 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateMealTemplateDocument,
   UpdateMealTemplateDocument,
@@ -35,6 +35,14 @@ const readTemplate = (cache: ReturnType<typeof seedCache>) =>
     fragmentName: 'useMealTemplateEditor_template',
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useMealTemplateEditor', () => {
   it('createTemplate returns the minted id when the create is queued offline', async () => {
     const { result } = renderHookWithApollo(() => useMealTemplateEditor(), {
@@ -50,13 +58,13 @@ describe('useMealTemplateEditor', () => {
     });
 
     let id: string | null = null;
-    await act(async () => {
-      id = await result.current.createTemplate({
+    id = await drained(() =>
+      result.current.createTemplate({
         name: 'New',
         category: TemplateCategory.Weekly,
         items: [],
-      });
-    });
+      }),
+    );
     expect(typeof id).toBe('string');
     expect(id).toBeTruthy();
   });
@@ -84,13 +92,13 @@ describe('useMealTemplateEditor', () => {
     });
 
     let id: string | null = 'unset';
-    await act(async () => {
-      id = await result.current.createTemplate({
+    id = await drained(() =>
+      result.current.createTemplate({
         name: '',
         category: TemplateCategory.Weekly,
         items: [],
-      });
-    });
+      }),
+    );
     expect(id).toBeNull();
   });
 
@@ -110,7 +118,7 @@ describe('useMealTemplateEditor', () => {
     });
 
     let ok: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.updateTemplate('tpl-1', {
         name: 'Renamed',
       });
@@ -146,13 +154,12 @@ describe('useMealTemplateEditor', () => {
     });
 
     let ok: boolean | undefined;
-    await act(async () => {
-      ok = await result.current.updateTemplate('tpl-1', { name: 'Renamed' });
-    });
+    ok = await drained(() =>
+      result.current.updateTemplate('tpl-1', { name: 'Renamed' }),
+    );
     expect(ok).toBe(false);
-    await waitFor(() => {
-      expect(readTemplate(cache)?.name).toBe('Weeknight Dinners');
-    });
+    await drainTimers();
+    expect(readTemplate(cache)?.name).toBe('Weeknight Dinners');
   });
 
   it('addItem returns false on a rejection', async () => {
@@ -175,15 +182,15 @@ describe('useMealTemplateEditor', () => {
     });
 
     let ok: boolean | undefined;
-    await act(async () => {
-      ok = await result.current.addItem({
+    ok = await drained(() =>
+      result.current.addItem({
         templateId: 'tpl-1',
         dayOffset: 0,
         mealType: MealType.Breakfast,
         meal: { customMealName: 'Oats' },
         servings: 1,
-      });
-    });
+      }),
+    );
     expect(ok).toBe(false);
   });
 });
@@ -246,12 +253,12 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
       operationMocks: [queuedUpdate],
     });
 
-    await act(async () => {
-      await result.current.updateItem({
+    await drained(() =>
+      result.current.updateItem({
         id: 'item-1',
         meal: { customMealName: 'Leftovers' },
-      });
-    });
+      }),
+    );
 
     const item = readItem(cache, 'item-1') as {
       customMealName: string | null;
@@ -270,12 +277,12 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
       operationMocks: [queuedUpdate],
     });
 
-    await act(async () => {
-      await result.current.updateItem({
+    await drained(() =>
+      result.current.updateItem({
         id: 'item-2',
         meal: { recipeId: 'recipe-1' },
-      });
-    });
+      }),
+    );
 
     const item = readItem(cache, 'item-2') as {
       customMealName: string | null;
@@ -294,9 +301,9 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
       operationMocks: [queuedUpdate],
     });
 
-    await act(async () => {
-      await result.current.updateItem({ id: 'item-1', servings: 5 });
-    });
+    await drained(() =>
+      result.current.updateItem({ id: 'item-1', servings: 5 }),
+    );
 
     const item = readItem(cache, 'item-1') as {
       servings: number;
@@ -419,9 +426,9 @@ describe("a row loaded by the editor's own query", () => {
       ],
     });
 
-    await act(async () => {
-      await result.current.updateItem({ id: 'item-9', servings: 6 });
-    });
+    await drained(() =>
+      result.current.updateItem({ id: 'item-9', servings: 6 }),
+    );
 
     const item = cache.readFragment<{ servings: number }>({
       id: 'MealTemplateItem:item-9',
@@ -461,12 +468,12 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let saved: boolean | undefined;
-    await act(async () => {
-      saved = await result.current.updateItem({
+    saved = await drained(() =>
+      result.current.updateItem({
         id: 'item-9',
         meal: { recipeId: 'recipe-1' },
-      });
-    });
+      }),
+    );
     expect(saved).toBe(false);
 
     // The row carried `recipe: null`, so the snapshot RECORDS null and the
@@ -526,12 +533,12 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let saved: boolean | undefined;
-    await act(async () => {
-      saved = await result.current.updateItem({
+    saved = await drained(() =>
+      result.current.updateItem({
         id: 'item-9',
         meal: { customMealName: 'Leftovers' },
-      });
-    });
+      }),
+    );
     expect(saved).toBe(false);
 
     const item = cache.readFragment<{
@@ -567,9 +574,7 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let removed: boolean | undefined;
-    await act(async () => {
-      removed = await result.current.removeItem('item-9', 'tpl-9');
-    });
+    removed = await drained(() => result.current.removeItem('item-9', 'tpl-9'));
 
     expect(removed).toBe(false);
     // The row the user can still see must be the row that still exists.
@@ -597,7 +602,7 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let removed: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const pending = result.current.removeItem('item-9', 'tpl-9');
       // Local-first: gone before the request settles.
       expect(mealsInEditor(cache)).toEqual([]);
@@ -623,14 +628,14 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let added: boolean | undefined;
-    await act(async () => {
-      added = await result.current.addItem({
+    added = await drained(() =>
+      result.current.addItem({
         templateId: 'tpl-9',
         dayOffset: 2,
         mealType: MealType.Dinner,
         meal: { customMealName: 'Stew' },
-      });
-    });
+      }),
+    );
 
     expect(added).toBe(true);
     // Appended as an edge, and the editor's read of the template stays whole.
@@ -656,14 +661,14 @@ describe("a row loaded by the editor's own query", () => {
     });
 
     let added: boolean | undefined;
-    await act(async () => {
-      added = await result.current.addItem({
+    added = await drained(() =>
+      result.current.addItem({
         templateId: 'tpl-9',
         dayOffset: 2,
         mealType: MealType.Dinner,
         meal: { customMealName: 'Stew' },
-      });
-    });
+      }),
+    );
 
     expect(added).toBe(false);
     expect(mealsInEditor(cache)).toEqual(['item-9']);

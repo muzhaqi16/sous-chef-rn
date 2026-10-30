@@ -1,7 +1,8 @@
 'use no memo';
 import React from 'react';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { MealTemplateBuilderScreen } from '../MealTemplateBuilderScreen';
@@ -122,6 +123,14 @@ let mockCooksFor: number | null = null;
 jest.mock('#features/profile/hooks/useCooksFor', () => ({
   useCooksFor: () => mockCooksFor,
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('MealTemplateBuilderScreen', () => {
   it('renders the create form with a "New Template" title', () => {
@@ -287,7 +296,8 @@ describe('MealTemplateBuilderScreen', () => {
         screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
       );
 
-      await waitFor(() => expect(mockUpdateItem).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(mockUpdateItem).toHaveBeenCalledTimes(1);
       expect(mockUpdateItem).toHaveBeenCalledWith({
         id: 'item-1',
         dayOffset: 0,
@@ -313,7 +323,8 @@ describe('MealTemplateBuilderScreen', () => {
         screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
       );
 
-      await waitFor(() => expect(mockAddItem).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(mockAddItem).toHaveBeenCalledTimes(1);
       expect(mockAddItem).toHaveBeenCalledWith(
         expect.objectContaining({
           templateId: 'tmpl-r',
@@ -334,9 +345,8 @@ describe('MealTemplateBuilderScreen', () => {
         screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
       );
 
-      await waitFor(() =>
-        expect(screen.queryByText('No meals added yet')).toBeNull(),
-      );
+      await drainTimers();
+      expect(screen.queryByText('No meals added yet')).toBeNull();
       expect(screen.getByText('Pesto Pasta')).toBeTruthy();
       expect(
         screen.queryByTestId(mealPlanTestIDs.templateItemRecipe),
@@ -385,7 +395,8 @@ describe('MealTemplateBuilderScreen', () => {
         />,
       );
 
-      await waitFor(() => expect(mockCounters['Default Servings']).toBe('6'));
+      await drainTimers();
+      expect(mockCounters['Default Servings']).toBe('6');
     });
   });
 });
