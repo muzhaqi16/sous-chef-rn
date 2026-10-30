@@ -7,6 +7,7 @@ import { createAnswerOrderingLink } from '#/apollo/links/answerOrderingLink';
 import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
 import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
 import type { LocalWriteTable } from '#/apollo/pendingWrites/types';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const ROW = gql`
   query FenceRow {
@@ -133,30 +134,28 @@ function setUp() {
     })?.probeRow;
   const refresh = () =>
     client.query({ query: ROW, fetchPolicy: 'network-only' });
-  // Past the window a rebuild waits in.
-  const tick = () => new Promise(resolve => setTimeout(resolve, 60));
-  return {
-    cache,
-    client,
-    pending,
-    answer,
-    write,
-    shown,
-    refresh,
-    requests,
-    tick,
-  };
+  return { cache, client, pending, answer, write, shown, refresh, requests };
 }
+
+// The rebuild window and a page's landing run on the test's clock. A drain also
+// passes the read fence's cap, so none runs while a confirmed write waits.
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('a pending write and the reads around it', () => {
   it('stays when a refresh sent while it was on its way answers last', async () => {
-    const { cache, answer, write, shown, refresh, tick } = setUp();
+    const { cache, answer, write, shown, refresh } = setUp();
     cache.writeQuery({ query: ROW, data: { probeRow: row('Milk', false) } });
 
     const pin = write(PIN, { id: 'row-1', pinned: true });
-    await tick();
+    await drainTimers();
     const late = refresh();
-    await tick();
+    await drainTimers();
 
     answer('PinRow', {
       pinRow: { __typename: 'ProbeItem', id: 'row-1', pinned: true },
@@ -166,7 +165,7 @@ describe('a pending write and the reads around it', () => {
 
     answer('FenceRow', { probeRow: row('Milk', false) });
     await late;
-    await tick();
+    await drainTimers();
 
     expect(shown()?.pinned).toBe(true);
     expect(
@@ -178,27 +177,27 @@ describe('a pending write and the reads around it', () => {
   });
 
   it('shows what a later read says of it, once it has landed', async () => {
-    const { cache, answer, write, shown, refresh, tick } = setUp();
+    const { cache, answer, write, shown, refresh } = setUp();
     cache.writeQuery({ query: ROW, data: { probeRow: row('Milk', false) } });
 
     const pin = write(PIN, { id: 'row-1', pinned: true });
-    await tick();
+    await drainTimers();
     answer('PinRow', {
       pinRow: { __typename: 'ProbeItem', id: 'row-1', pinned: true },
     });
     await pin;
 
     const later = refresh();
-    await tick();
+    await drainTimers();
     answer('FenceRow', { probeRow: row('Milk', false) });
     await later;
-    await tick();
+    await drainTimers();
 
     expect(shown()?.pinned).toBe(false);
   });
 
   it('lands a late read’s other changes under the write, with no second request', async () => {
-    const { cache, client, answer, write, shown, requests, tick } = setUp();
+    const { cache, client, answer, write, shown, requests } = setUp();
     cache.writeQuery({ query: ROW, data: { probeRow: row('Milk', false) } });
     const seen: unknown[] = [];
     const watching = client
@@ -207,19 +206,19 @@ describe('a pending write and the reads around it', () => {
         fetchPolicy: 'cache-and-network',
       })
       .subscribe(({ data }) => seen.push(data?.probeRow));
-    await tick();
+    await drainTimers();
 
     const pin = write(PIN, { id: 'row-1', pinned: true });
-    await tick();
+    await drainTimers();
     expect(seen.at(-1)).toMatchObject({ pinned: true });
 
     answer('FenceRow', { probeRow: row('Oat milk', false) });
-    await tick();
+    await drainTimers();
     answer('PinRow', {
       pinRow: { __typename: 'ProbeItem', id: 'row-1', pinned: true },
     });
     await pin;
-    await tick();
+    await drainTimers();
 
     expect(shown()).toMatchObject({ name: 'Oat milk', pinned: true });
     expect(requests.filter(name => name === 'FenceRow')).toHaveLength(1);
@@ -227,7 +226,7 @@ describe('a pending write and the reads around it', () => {
   });
 
   it('keeps a removed row out of the list when a page from before it lands', async () => {
-    const { cache, client, answer, write, tick } = setUp();
+    const { cache, client, answer, write } = setUp();
     cache.writeQuery({
       query: ROWS,
       data: { probeRows: [listed('a'), listed('b')] },
@@ -238,16 +237,16 @@ describe('a pending write and the reads around it', () => {
       fetchPolicy: 'network-only',
       context: { page: true },
     });
-    await tick();
+    await drainTimers();
     const removal = write(REMOVE, { id: 'b' });
-    await tick();
+    await drainTimers();
     answer('RemoveRow', { removeRow: { __typename: 'ProbeItem', id: 'b' } });
     await removal;
 
     answer('FenceRows', { probeRows: [listed('a'), listed('b')] });
     await page;
-    await tick();
-    await tick();
+    await drainTimers();
+    await drainTimers();
 
     const ids = cache
       .readQuery<{ probeRows: { id: string }[] }>({

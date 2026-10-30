@@ -1,6 +1,7 @@
 import { gql } from '@apollo/client';
 import { createApolloClient } from '#/apollo/client';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const ROW = gql`
   query PendingOverAnswer {
@@ -68,6 +69,14 @@ jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
 
 const mockTicked = () => TICKED;
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('a pending write as the server answers', () => {
   it('ends showing the answer’s rename with the tick, which never reads unticked', async () => {
     const client = createApolloClient();
@@ -90,7 +99,7 @@ describe('a pending write as the server answers', () => {
 
     mockAnswers.push({ probeRow: row('Oat milk', false) });
     await client.query({ query: ROW, fetchPolicy: 'network-only' });
-    await new Promise(resolve => setTimeout(resolve, 60));
+    await drainTimers();
     stop();
 
     expect(seen).not.toContain(false);

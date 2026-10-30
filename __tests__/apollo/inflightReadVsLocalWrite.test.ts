@@ -1,9 +1,9 @@
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
-import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { recordMock, testMockLink } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
   readUsualStores,
@@ -39,7 +39,6 @@ const entry = (
 const banksville = entry('s1', 'Giant Eagle Banksville');
 const market = entry('s2', 'Giant Eagle Market District');
 const VARIABLES = { homeId: 'home-1' };
-const tick = () => new Promise(resolve => setTimeout(resolve, 50));
 
 type Stores =
   | ReadonlyArray<{ id?: string | null; pinned?: boolean | null } | null>
@@ -96,36 +95,41 @@ function openWithRefreshHeld(extraLinks: ApolloLink[] = []) {
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('a read in flight against a newer local write (Apollo 4.2.12)', () => {
   it('hides the write and the server’s answer to it, then overwrites both', async () => {
     const list = openWithRefreshHeld();
-    await waitFor(() => expect(list.refresh.fired).toHaveLength(1));
-    await act(tick);
+    await drainTimers();
+    expect(list.refresh.fired).toHaveLength(1);
     expect(list.delivered).toEqual([false]);
 
     list.pinLocally();
-    await act(tick);
+    await drainTimers();
     // The cache holds the write; the watcher delivers nothing while its read is out.
     expect(list.cached()).toBe(true);
     expect(list.delivered).toEqual([false]);
 
-    await act(async () => {
-      await list.client.mutate({
-        mutation: UpdateUsualStoreDocument,
-        variables: {
-          input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true },
-        },
-      });
-      await tick();
+    const pinned = list.client.mutate({
+      mutation: UpdateUsualStoreDocument,
+      variables: {
+        input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true },
+      },
     });
+    await drainTimers();
+    await pinned;
     // The server's answer to the pin is not delivered either.
     expect(list.cached()).toBe(true);
     expect(list.delivered).toEqual([false]);
 
-    await act(async () => {
-      list.refresh.release();
-      await tick();
-    });
+    list.refresh.release();
+    await drainTimers();
     // The late answer, from before the pin, is written last.
     expect(list.cached()).toBe(false);
     expect(list.delivered).toEqual([false, false]);
@@ -168,22 +172,18 @@ describe('a read in flight against a newer local write (Apollo 4.2.12)', () => {
       });
     });
     const list = openWithRefreshHeld([answerFromCache]);
-    await waitFor(() => expect(list.refresh.fired).toHaveLength(1));
-    await act(tick);
+    await drainTimers();
+    expect(list.refresh.fired).toHaveLength(1);
     list.pinLocally();
-    await act(tick);
+    await drainTimers();
     expect(list.delivered).toEqual([false]);
 
-    await act(async () => {
-      answers[0]?.();
-      await tick();
-    });
+    answers[0]?.();
+    await drainTimers();
     expect(list.delivered).toEqual([false, true]);
 
-    await act(async () => {
-      list.refresh.release();
-      await tick();
-    });
+    list.refresh.release();
+    await drainTimers();
     expect(list.cached()).toBe(true);
     expect(list.delivered).toEqual([false, true]);
     list.close();
