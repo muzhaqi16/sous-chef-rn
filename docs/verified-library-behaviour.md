@@ -707,6 +707,31 @@ and sends nothing.
 After a switch, every navigation refetches only the active queries not answered
 since it, because a refetch at the switch cannot reach a paused screen.
 
+### Apollo: a read in flight hides a newer write, then overwrites it
+
+Verified 2026-10-29 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/inflightReadVsLocalWrite.test.ts`.
+
+**Claim:** while a `cache-and-network` watcher's network read is in flight, the
+watcher delivers no cache change. That includes a local write and the
+mutation's answer to it. When the read answers, its data (from before the
+write) is written last, and that is what the watcher shows. In the source, the
+write reaches the watcher as `notify()` → `reobserveCacheFirst()`, and
+`_reobserve` keeps the in-flight link subscription, so the cache's answer waits
+behind it.
+
+Answering the in-flight read from the cache releases the watcher at once:
+
+- The link emits the cache's complete read while its subscriber is still open.
+- The network's late answer is then dropped.
+- Closing the network subscription first closes the subscriber, and the
+  watcher never hears the answer.
+
+**What depends on it:** `src/apollo/links/localWritePrecedenceLink.ts` and the
+`sync/local-write-precedence` spec. A local-first write answers every read in
+flight from the cache, so the person's change shows at once and an older
+answer cannot undo it.
+
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 
 Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind
