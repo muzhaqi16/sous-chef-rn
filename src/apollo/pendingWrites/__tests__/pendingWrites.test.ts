@@ -414,6 +414,51 @@ describe('PendingWrites', () => {
       await edit.result;
     });
 
+    describe('after an answer, while a layer still shows the old row', () => {
+      const answeredAtTwo = async (pending: PendingWrites) => {
+        const first = held(pending, SET_QUANTITY, {
+          id: 'row-1',
+          quantity: 2,
+          version: 1,
+        });
+        await Promise.resolve();
+        first.answer(applied({ setQuantity: { id: 'row-1', version: 2 } }));
+        await first.result;
+      };
+
+      it('locks the next write at the version the answer returned', async () => {
+        const { pending } = seeded();
+        await answeredAtTwo(pending);
+
+        const next = held(pending, SET_QUANTITY, {
+          id: 'row-1',
+          quantity: 3,
+          version: 1,
+        });
+        await new Promise(resolve => setImmediate(resolve));
+
+        expect(next.sent[0]?.variables.input).toMatchObject({ version: 2 });
+        next.answer(applied({ setQuantity: { id: 'row-1', version: 3 } }));
+        await next.result;
+      });
+
+      it('keeps a newer version a read brought since', async () => {
+        const { pending } = seeded();
+        await answeredAtTwo(pending);
+
+        const next = held(pending, SET_QUANTITY, {
+          id: 'row-1',
+          quantity: 3,
+          version: 5,
+        });
+        await new Promise(resolve => setImmediate(resolve));
+
+        expect(next.sent[0]?.variables.input).toMatchObject({ version: 5 });
+        next.answer(applied({ setQuantity: { id: 'row-1', version: 6 } }));
+        await next.result;
+      });
+    });
+
     it('sends two writes to one row in order', async () => {
       const { pending } = seeded();
       const first = held(pending, SET_QUANTITY, { id: 'row-1', quantity: 2 });

@@ -4,6 +4,8 @@ import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 import {
   AddItemToShoppingListDocument,
+  CreateShoppingListDocument,
+  DeleteShoppingListDocument,
   GetShoppingListItemsFilteredDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
@@ -13,10 +15,13 @@ import {
 import { Items_RowFragmentDoc } from '#features/shoppingList/cache/items.generated';
 import {
   addRows,
+  createList,
+  removeList,
   removeRows,
   reorderRow,
   updateRow,
   type AddRowsInputs,
+  type CreateListInputs,
   type RemoveRowsInputs,
   type ReorderRowInputs,
   type UpdateRowInputs,
@@ -609,5 +614,189 @@ describe('with a list of both kinds of row', () => {
 
       expect(shownIds(list, false)).toEqual(['later', 'held']);
     });
+  });
+});
+
+describe('a list', () => {
+  const OVERVIEW = gql`
+    query LocalWritesOverview($homeId: ID) {
+      shoppingLists(first: 20, homeId: $homeId) {
+        totalCount
+        edges {
+          node {
+            id
+          }
+        }
+      }
+    }
+  `;
+
+  const overview = () => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: OVERVIEW,
+      variables: { homeId: 'home-a' },
+      data: {
+        shoppingLists: {
+          __typename: 'ShoppingListConnection',
+          totalCount: 1,
+          edges: [
+            {
+              __typename: 'ShoppingListEdge',
+              node: { __typename: 'ShoppingList', id: 'held-list' },
+            },
+          ],
+        },
+      },
+    });
+    return {
+      cache,
+      writes: new PendingWrites(cache, {
+        CreateShoppingList: createList,
+        DeleteShoppingList: removeList,
+      }),
+    };
+  };
+
+  type Overview = ReturnType<typeof overview>;
+
+  const listIds = ({ cache }: Overview, optimistic = true) =>
+    cache
+      .readQuery<{ shoppingLists: { edges: { node: { id: string } }[] } }>({
+        query: OVERVIEW,
+        variables: { homeId: 'home-a' },
+        optimistic,
+      })
+      ?.shoppingLists.edges.map(({ node }) => node.id);
+
+  const create = ({ writes }: Overview, homeId: string | null = 'home-a') => {
+    const inputs: CreateListInputs = {
+      list: { id: 'minted-list', name: 'Dinner', homeId },
+      owner: { id: 'user-1' },
+      rows: [{ id: 'line-1', shoppingListId: 'minted-list', itemName: 'Milk' }],
+      now: NOW,
+    };
+    return writes.begin(
+      CreateShoppingListDocument,
+      { input: { id: 'minted-list', name: 'Dinner' } },
+      inputs,
+    );
+  };
+
+  it('shows a new list with its lines, however often it is rebuilt', () => {
+    const list = overview();
+
+    create(list);
+    list.writes.rebuild();
+
+    expect(listIds(list)).toEqual(['minted-list', 'held-list']);
+    expect(listIds(list, false)).toEqual(['held-list']);
+    expect(list.cache.extract(true)).toHaveProperty([
+      'ShoppingListItem:line-1',
+    ]);
+  });
+
+  it('leaves nothing of a refused list', () => {
+    const list = overview();
+
+    list.writes.drop(create(list).id);
+
+    expect(listIds(list)).toEqual(['held-list']);
+    expect(
+      list.cache.extract(true)['ShoppingList:minted-list'],
+    ).toBeUndefined();
+  });
+
+  it('files an answered list under the home the server chose', () => {
+    const list = overview();
+    const { id } = create(list, null);
+
+    list.writes.confirm(id, {
+      createShoppingList: {
+        __typename: 'CreateShoppingListPayload',
+        shoppingList: { id: 'minted-list', homeId: 'home-b' },
+      },
+    });
+    list.writes.rebuild();
+
+    expect(listIds(list)).toEqual(['held-list']);
+  });
+
+  it('keeps a variant of its lines a read brought before the answer', () => {
+    const list = overview();
+    const { id } = create(list);
+    seedQuery(list.cache, {
+      query: GetShoppingListItemsFilteredDocument,
+      variables: { id: 'minted-list', first: 20, isPurchased: false },
+      data: {
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'minted-list',
+          version: 1,
+          itemsConnection: {
+            totalCount: 1,
+            edges: [
+              {
+                cursor: 'c-line',
+                node: {
+                  __typename: 'ShoppingListItem',
+                  id: 'line-1',
+                  version: 1,
+                  purchaseInfo: { isPurchased: false },
+                },
+              },
+            ],
+          },
+        },
+      },
+    });
+
+    list.writes.confirm(id, {
+      createShoppingList: {
+        __typename: 'CreateShoppingListPayload',
+        shoppingList: { id: 'minted-list', homeId: 'home-a' },
+      },
+    });
+    list.writes.rebuild();
+
+    expect(
+      list.cache
+        .readQuery({
+          query: GetShoppingListItemsFilteredDocument,
+          variables: { id: 'minted-list', first: 20, isPurchased: false },
+        })
+        ?.shoppingList?.itemsConnection.edges.map(({ node }) => node.id),
+    ).toEqual(['line-1']);
+  });
+
+  const remove = ({ writes }: Overview) =>
+    writes.begin(DeleteShoppingListDocument, { input: { id: 'held-list' } });
+
+  it('hides a deleted list, however often it is rebuilt', () => {
+    const list = overview();
+
+    remove(list);
+    list.writes.rebuild();
+
+    expect(listIds(list)).toEqual([]);
+    expect(listIds(list, false)).toEqual(['held-list']);
+  });
+
+  it('brings a list back whole when its delete is refused', () => {
+    const list = overview();
+
+    list.writes.drop(remove(list).id);
+
+    expect(listIds(list)).toEqual(['held-list']);
+  });
+
+  it('leaves nothing of a list its delete answered for', () => {
+    const list = overview();
+
+    list.writes.confirm(remove(list).id, {});
+    list.writes.rebuild();
+
+    expect(listIds(list)).toEqual([]);
+    expect(list.cache.extract()).not.toHaveProperty(['ShoppingList:held-list']);
   });
 });

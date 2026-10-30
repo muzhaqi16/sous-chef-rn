@@ -1,22 +1,16 @@
 /**
- * Local-first: the list is cached PERMANENTLY before firing under the minted
- * `input.id`; the caller's own replay answers IDEMPOTENT_REPLAY (applied), and an
- * id another account holds answers CONFLICT, which withdraws and reports it.
- * Lines it is made with are cached with it and the first 50 ride the create.
+ * Local-first: the list is held under the minted `input.id` until the server
+ * answers; the caller's own replay answers IDEMPOTENT_REPLAY (applied), and an
+ * id another account holds answers CONFLICT, which drops it and reports it.
+ * The first 50 lines it is made with ride the create and show with it.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  addShoppingListToQueryCache,
-  revertOptimisticShoppingList,
-  writeLocalShoppingList,
-} from '#features/shoppingList/cache/list';
-import {
-  ADD_ITEMS_BATCH_LIMIT,
-  buildAddItemsReconcileUpdate,
-} from '#features/shoppingList/cache/items';
-import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
+import { ADD_ITEMS_BATCH_LIMIT } from '#features/shoppingList/cache/createShoppingListRow';
+import type { LocalShoppingListItem } from '#features/shoppingList/cache/items';
+import type { CreateListInputs } from '#features/shoppingList/offline/localWrites';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -25,13 +19,12 @@ import type {
   BatchAddShoppingListItemInput,
   CreateShoppingListInput,
 } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
 
 /** Lines a new list is made with, each under the id minted for it. */
 export interface StartingLines<TItem extends BatchAddShoppingListItemInput> {
   items: readonly TItem[];
-  /** Caches the lines under the new list's id, before the create fires. */
-  write: (listId: string) => void;
+  /** What a line shows under the new list's id until the server answers. */
+  rowOf: (line: TItem, listId: string) => LocalShoppingListItem | null;
 }
 
 /**
@@ -52,16 +45,6 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
 
   const [mutate, { loading }] = useMutation(CreateShoppingListDocument, {
     context: { localFirst: true },
-    update(cache, result, options) {
-      const created = appliedPayload(result.data);
-      if (!created) return;
-      addShoppingListToQueryCache(cache, created.shoppingList);
-      buildAddItemsReconcileUpdate({ listId: created.shoppingList.id })(
-        cache,
-        result,
-        options,
-      );
-    },
   });
 
   const createShoppingList = async <
@@ -74,53 +57,34 @@ export function useCreateShoppingList(fallbackErrorMessage: string) {
     const items = lines?.items ?? [];
     const sent = items.slice(0, ADD_ITEMS_BATCH_LIMIT);
     const unsent = items.slice(ADD_ITEMS_BATCH_LIMIT);
-    const lineIds = items.flatMap(line => (line.id ? [line.id] : []));
-    const writeLines = lines?.write ?? (() => {});
 
-    // Materializing the ownership row needs an auth identity; without one the
-    // create falls back to online-only (no create surface should hit this).
-    if (user) {
-      try {
-        writeLocalShoppingList(client.cache, id, input, user);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Create Shopping List (optimistic)',
-        });
-      }
-      // The lines still ride the create, and its answer writes the server's.
-      try {
-        writeLines(id);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Create Shopping List lines (optimistic)',
-        });
-      }
-    }
-
-    const settled = await settleMutation(
-      () =>
-        mutate({
-          variables: {
-            input: { ...input, id, ...(sent.length > 0 && { items: sent }) },
-          },
-        }),
-      {
-        document: CreateShoppingListDocument,
-        fallback: fallbackErrorMessage,
-        present: 'none',
-        onFailed: () => {
-          if (!user) return;
-          // Every starting line was cached, the unsent ones included.
-          try {
-            withdrawShoppingListItems(client.cache, id, lineIds);
-            revertOptimisticShoppingList(client.cache, id);
-          } catch (cacheError) {
-            errorService.reportError(cacheError, {
-              operation: 'Revert failed Shopping List create',
-            });
-          }
-        },
+    const inputs: CreateListInputs = {
+      list: {
+        id,
+        name: input.name,
+        isDefault: input.isDefault,
+        homeId: input.homeId,
       },
+      // Materializing the ownership row needs an auth identity; without one the
+      // create is online-only (no create surface should hit this).
+      owner: user && {
+        id: user.id,
+        email: user.email,
+        displayName: user.displayName,
+      },
+      rows: sent.flatMap(line => lines?.rowOf(line, id) ?? []),
+      now: new Date().toISOString(),
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      CreateShoppingListDocument,
+      { input: { ...input, id, ...(sent.length > 0 && { items: sent }) } },
+      write =>
+        settleMutation(() => mutate(write), {
+          document: CreateShoppingListDocument,
+          fallback: fallbackErrorMessage,
+          present: 'none',
+        }),
+      inputs,
     );
 
     if (settled.status === 'failed') {

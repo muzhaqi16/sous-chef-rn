@@ -14,14 +14,13 @@ import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
 } from './useUpdateShoppingList.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import type {
   ListStatus,
   ShoppingListPlanningInput,
 } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
 
 interface ShoppingListSettingsUpdate {
   name?: string;
@@ -57,29 +56,23 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       targetStore === undefined
         ? undefined
         : targetStore && { __typename: 'Store', ...targetStore };
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<UseUpdateShoppingList_ListFragment>({
-          id: cacheId,
-          fragment: UseUpdateShoppingList_ListFragmentDoc,
-          fragmentName: 'useUpdateShoppingList_list',
-          optimistic: true,
-        })
-      : null;
-
-    const writeList = (data: UseUpdateShoppingList_ListFragment) =>
-      client.cache.writeFragment({
-        id: cacheId,
+    const snapshot =
+      client.cache.readFragment<UseUpdateShoppingList_ListFragment>({
+        id: client.cache.identify({ __typename: 'ShoppingList', id }),
         fragment: UseUpdateShoppingList_ListFragmentDoc,
         fragmentName: 'useUpdateShoppingList_list',
-        data,
+        optimistic: true,
       });
 
-    if (snapshot) {
-      // Built before the try — a conditional spread inside a try body bails the
-      // React Compiler out of this hook.
-      const optimisticList = {
-        ...snapshot,
+    // The server requires the version: an update sent without one reports success
+    // while overwriting a concurrent edit. The snapshot's is the one to send.
+    if (!snapshot) {
+      throw new GraphQLNetworkError(fallbackErrorMessage);
+    }
+
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: {
         ...(updates.name !== undefined && { name: updates.name }),
         ...(updates.isDefault !== undefined && {
           isDefault: updates.isDefault,
@@ -93,53 +86,22 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
         }),
         ...(localStore !== undefined && { targetStore: localStore }),
         updatedAt: new Date().toISOString(),
-      };
-      try {
-        writeList(optimisticList);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Update Shopping List (optimistic)',
-        });
-      }
-    }
-
-    const revert = () => {
-      if (snapshot) {
-        try {
-          writeList(snapshot);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected Shopping List update',
-          });
-        }
-      }
-    };
-
-    // The server requires the version: an update sent without one reports success
-    // while overwriting a concurrent edit. The snapshot's is the one to send.
-    if (!snapshot) {
-      throw new GraphQLNetworkError(fallbackErrorMessage);
-    }
-
-    const settled = await settleMutation(
-      () =>
-        mutate({
-          variables: {
-            input: {
-              id,
-              ...fields,
-              ...(planning !== undefined && { planning }),
-              version: snapshot.version,
-            },
-          },
-        }),
-      {
+      },
+      variables: {
+        input: {
+          id,
+          ...fields,
+          ...(planning !== undefined && { planning }),
+          version: snapshot.version,
+        },
+      },
+      mutate,
+      settle: {
         document: UpdateShoppingListDocument,
         fallback: fallbackErrorMessage,
-        onFailed: revert,
         present: 'none',
       },
-    );
+    });
     if (settled.failure) throw new GraphQLNetworkError(settled.failure.body);
 
     // Queued (offline / API down): the permanent write stands and the update

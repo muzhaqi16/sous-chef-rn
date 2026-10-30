@@ -1,3 +1,4 @@
+import { gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
@@ -7,8 +8,17 @@ import {
   UpdateShoppingListReminderDocument,
   DeleteShoppingListReminderDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UseShoppingListReminder_ListFragmentDoc } from '../useShoppingListReminder.generated';
 import { useShoppingListReminder } from '../useShoppingListReminder';
+
+const LIST_FRAGMENT = gql`
+  fragment useShoppingListReminder_list on ShoppingList {
+    id
+    reminderEnabled
+    reminderDate
+    version
+    updatedAt
+  }
+`;
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -23,8 +33,9 @@ const readReminder = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ reminderEnabled: boolean; reminderDate: string | null }>(
     {
       id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
-      fragment: UseShoppingListReminder_ListFragmentDoc,
+      fragment: LIST_FRAGMENT,
       fragmentName: 'useShoppingListReminder_list',
+      optimistic: true,
     },
   );
 

@@ -54,6 +54,7 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),

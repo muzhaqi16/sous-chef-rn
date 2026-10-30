@@ -55,6 +55,8 @@ export class PendingWrites {
   private rebuildOwed = false;
   private layered = false;
   private sending = new Map<string, Sending>();
+  /** The newest version answers returned: a layer's copy of a row can lag it. */
+  private answeredVersions = new Map<string, number>();
 
   constructor(
     private readonly cache: ApolloCache,
@@ -147,13 +149,14 @@ export class PendingWrites {
 
     let data: unknown;
     const settled = await settle({
-      variables: onReturnedVersion(variables, subjectIds, landed),
+      variables: this.onAnsweredVersion(variables, subjectIds),
       context: { localFirst: true, pendingWriteId: write.id },
       update: (_cache, result) => {
         data = result.data;
       },
     });
     if (settled.status === 'applied') {
+      this.noteAnsweredVersion(subjectIds, data ?? settled.data);
       this.confirm(write.id, data ?? settled.data);
     } else if (settled.status === 'failed') {
       this.drop(write.id);
@@ -228,6 +231,7 @@ export class PendingWrites {
   clear(): void {
     this.writes = [];
     this.queued.clear();
+    this.answeredVersions.clear();
     this.rebuild();
   }
 
@@ -274,6 +278,32 @@ export class PendingWrites {
         this.layerId(),
       );
     }
+  }
+
+  private noteAnsweredVersion(
+    subjectIds: readonly string[],
+    data: unknown,
+  ): void {
+    const [subject] = subjectIds;
+    const returned = subject ? returnedVersionOf(data, subject) : undefined;
+    if (subject && returned !== undefined) {
+      this.answeredVersions.set(subject, returned);
+    }
+  }
+
+  /** Versions only rise, so what an answer returned is never older than the lock. */
+  private onAnsweredVersion<TVariables extends OperationVariables>(
+    variables: TVariables,
+    subjectIds: readonly string[],
+  ): TVariables {
+    const { input } = variables;
+    const [subject] = subjectIds;
+    if (!isRecord(input) || !subject) return variables;
+    const lock = versionOf(input);
+    const answered = this.answeredVersions.get(subject);
+    return lock === undefined || answered === undefined || answered <= lock
+      ? variables
+      : { ...variables, input: { ...input, version: answered } };
   }
 
   private layerId(): string {
@@ -353,26 +383,6 @@ function writeAnswerAgain(
     id: 'ROOT_MUTATION',
     fields: (_value, { DELETE }) => DELETE,
   });
-}
-
-/** Variables moved onto the version an earlier write to the subject returned. */
-function onReturnedVersion<TVariables extends OperationVariables>(
-  variables: TVariables,
-  subjectIds: readonly string[],
-  landed: readonly Answered[],
-): TVariables {
-  const { input } = variables;
-  const [subject] = subjectIds;
-  if (!isRecord(input) || versionOf(input) === undefined || !subject) {
-    return variables;
-  }
-  const returned = landed
-    .map(({ data }) => returnedVersionOf(data, subject))
-    .filter(version => version !== undefined)
-    .at(-1);
-  return returned === undefined
-    ? variables
-    : { ...variables, input: { ...input, version: returned } };
 }
 
 const instances = new WeakMap<ApolloCache, PendingWrites>();

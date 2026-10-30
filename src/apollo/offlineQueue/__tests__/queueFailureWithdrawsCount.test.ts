@@ -22,15 +22,7 @@ import {
   CreatePantryItemDocument,
   UpdatePantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import {
-  AddItemToShoppingListDocument,
-  MoveShoppingItemToPantryDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
-import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
-import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
-import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
-import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
-import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { stampItemKeptOnListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { readMovedToPantryAt } from '#features/shoppingList/cache/purchase';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
@@ -170,79 +162,6 @@ describe('handleQueueFailure withdraws the eager pantry count', () => {
     handleQueueFailure(failure());
 
     expect(totalItems()).toBe(1);
-  });
-});
-
-const LIST = gql`
-  query SeedList($id: ID!) {
-    shoppingList(id: $id) {
-      __typename
-      id
-      totalItems
-      completedItems
-      remainingItems
-      completionRate
-    }
-  }
-`;
-
-describe('handleQueueFailure withdraws every row of a refused batch add', () => {
-  const rows = ['row-a', 'row-b', 'row-c'];
-
-  beforeEach(async () => {
-    jest.clearAllMocks();
-    await cache.reset();
-    seedQuery(cache, {
-      query: LIST,
-      variables: { id: 'list-1' },
-      data: {
-        shoppingList: {
-          __typename: 'ShoppingList',
-          id: 'list-1',
-          totalItems: 5,
-          completedItems: 0,
-          remainingItems: 5,
-          completionRate: 0,
-        },
-      },
-    });
-    for (const id of rows) {
-      seedFragment(cache, {
-        id: cache.identify({ __typename: 'ShoppingListItem', id }),
-        fragment: gql`
-          fragment SeedRow on ShoppingListItem {
-            id
-          }
-        `,
-        data: { __typename: 'ShoppingListItem', id },
-      });
-    }
-  });
-
-  it.each([
-    AddItemToShoppingListDocument,
-    AddItemsToShoppingListFromRecipeDocument,
-    BarcodeAddItemToShoppingListDocument,
-    AddItemToShoppingListFromFilteredPantryDocument,
-    AddItemToShoppingListFromPantryItemDocument,
-    AddDerivedItemsToShoppingListDocument,
-  ])('removes all three rows and restores the count (%#)', document => {
-    handleQueueFailure(
-      failure({
-        operationName: operationNameOf(document),
-        entityType: 'ShoppingListItem',
-        entityId: 'row-a',
-        variables: {
-          input: { shoppingListId: 'list-1', items: rows.map(id => ({ id })) },
-        },
-      }),
-    );
-
-    const snapshot = cache.extract();
-    expect(rows.filter(id => `ShoppingListItem:${id}` in snapshot)).toEqual([]);
-    expect(
-      (snapshot['ShoppingList:list-1'] as { totalItems?: number }).totalItems,
-    ).toBe(2);
   });
 });
 

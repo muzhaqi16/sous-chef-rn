@@ -307,6 +307,32 @@ export function moveShoppingListItemToUnpurchased(
   updateItemsConnectionForPurchaseStatusChange(cache, listId, item.id, false);
 }
 
+/** Whether a cached `isPurchased: false` variant lists the row. */
+export function isListedToBuy(
+  cache: ApolloCache,
+  listId: string,
+  itemId: string,
+): boolean {
+  let listed = false;
+  cache.modify({
+    id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+    fields: {
+      itemsConnection(
+        existing: ConnectionData | undefined,
+        { readField, storeFieldName },
+      ) {
+        listed ||=
+          isUnpurchasedVariant(storeFieldName) &&
+          (existing?.edges ?? []).some(
+            edge => readField<string>('id', edge.node) === itemId,
+          );
+        return existing;
+      },
+    },
+  });
+  return listed;
+}
+
 /**
  * Moves an answered row's edge between the variants. The answer states the
  * list's counts, and a read may have moved the row already, so this counts

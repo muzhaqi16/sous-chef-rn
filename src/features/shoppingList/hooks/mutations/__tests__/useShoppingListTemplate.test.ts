@@ -1,3 +1,4 @@
+import { gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
@@ -10,9 +11,18 @@ import {
   MarkAsTemplateDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CopyableShoppingListFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { UseShoppingListTemplate_ListFragmentDoc } from '../useShoppingListTemplate.generated';
 import { useShoppingListTemplate } from '../useShoppingListTemplate';
 import { useStore } from '#store';
+
+const LIST_FRAGMENT = gql`
+  fragment useShoppingListTemplate_list on ShoppingList {
+    id
+    isTemplate
+    templateName
+    version
+    updatedAt
+  }
+`;
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -26,8 +36,9 @@ const LIST = {
 const readTemplate = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ isTemplate: boolean; templateName: string | null }>({
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
-    fragment: UseShoppingListTemplate_ListFragmentDoc,
+    fragment: LIST_FRAGMENT,
     fragmentName: 'useShoppingListTemplate_list',
+    optimistic: true,
   });
 
 describe('useShoppingListTemplate', () => {
@@ -234,14 +245,15 @@ describe('useShoppingListTemplate', () => {
       // The copy is in the cache, under the minted id, before any server answer.
       const copied = cache.readFragment<{ name: string }>({
         id: cache.identify({ __typename: 'ShoppingList', id: newId! }),
-        fragment: UseShoppingListTemplate_ListFragmentDoc,
+        fragment: LIST_FRAGMENT,
         fragmentName: 'useShoppingListTemplate_list',
+        optimistic: true,
       });
       expect(copied).not.toBeNull();
       const lineIds = fired.input?.items?.map(i => i.id) ?? [];
       expect(lineIds).toHaveLength(2);
       for (const lineId of lineIds) {
-        expect(cache.extract()[`ShoppingListItem:${lineId}`]).toBeDefined();
+        expect(cache.extract(true)[`ShoppingListItem:${lineId}`]).toBeDefined();
       }
     });
 

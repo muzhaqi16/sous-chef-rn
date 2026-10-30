@@ -1,3 +1,4 @@
+import { gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
@@ -7,8 +8,18 @@ import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UseCompleteShoppingList_ListFragmentDoc } from '../useCompleteShoppingList.generated';
 import { useCompleteShoppingList } from '../useCompleteShoppingList';
+
+const LIST_FRAGMENT = gql`
+  fragment useCompleteShoppingList_list on ShoppingList {
+    id
+    status
+    isCompleted
+    completedShopDate
+    version
+    updatedAt
+  }
+`;
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -27,8 +38,9 @@ const readState = (cache: ReturnType<typeof seedCache>) =>
     completedShopDate: string | null;
   }>({
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
-    fragment: UseCompleteShoppingList_ListFragmentDoc,
+    fragment: LIST_FRAGMENT,
     fragmentName: 'useCompleteShoppingList_list',
+    optimistic: true,
   });
 
 describe('useCompleteShoppingList', () => {

@@ -32,6 +32,7 @@ jest.mock('#components/atoms/Icon', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),

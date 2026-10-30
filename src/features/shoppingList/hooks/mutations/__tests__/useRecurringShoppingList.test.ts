@@ -36,6 +36,7 @@ const readRecurring = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: UseRecurringShoppingList_ListFragmentDoc,
     fragmentName: 'useRecurringShoppingList_list',
+    optimistic: true,
   });
 
 describe('useRecurringShoppingList', () => {
@@ -296,7 +297,7 @@ describe('useRecurringShoppingList', () => {
 
       // The pointer moved in the cache too, before any server answer.
       expect(readRecurring(cache)?.recurringPattern).toBe('WEEKLY');
-      const copied = cache.extract()[`ShoppingList:${newId!}`];
+      const copied = cache.extract(true)[`ShoppingList:${newId!}`];
       expect(copied).toBeDefined();
     });
 
@@ -374,6 +375,7 @@ describe('useRecurringShoppingList', () => {
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
         fragment: UseRecurringShoppingList_ListFragmentDoc,
         fragmentName: 'useRecurringShoppingList_list',
+        optimistic: true,
       })?.nextRecurringDate;
       expect(pointer).toBe(RECURRING.nextRecurringDate);
     });
@@ -403,6 +405,7 @@ describe('useRecurringShoppingList', () => {
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
         fragment: UseRecurringShoppingList_ListFragmentDoc,
         fragmentName: 'useRecurringShoppingList_list',
+        optimistic: true,
       })?.nextRecurringDate;
       expect(pointer).not.toBe(RECURRING.nextRecurringDate);
     });

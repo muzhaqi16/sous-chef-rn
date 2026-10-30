@@ -23,6 +23,12 @@ import {
   type LocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import {
+  hideShoppingList,
+  linkCreatedShoppingList,
+  removeShoppingListFromCache,
+  writeLocalShoppingList,
+} from '#features/shoppingList/cache/list';
+import {
   readIsPurchased,
   writePurchaseInfo,
 } from '#features/shoppingList/cache/purchase';
@@ -39,7 +45,9 @@ export type AddRowsInputs = {
  */
 function keptRows(data: unknown): { id: string }[] {
   const payload: unknown = appliedPayload(data);
-  const results: unknown = isRecord(payload) ? payload.results : undefined;
+  const results: unknown = isRecord(payload)
+    ? payload.results ?? payload.itemResults
+    : undefined;
   if (!Array.isArray(results)) return [];
   return results.flatMap((result: unknown) => {
     if (!isRecord(result) || result.success === false) return [];
@@ -149,5 +157,56 @@ export const reorderRow: LocalWrite<ReorderRowInputs> = {
   // The answer writes the row, and its order may not be the one worked out here.
   commit(cache, { inputs: { listId } }) {
     sortShoppingListRows(cache, listId);
+  },
+};
+
+export type CreateListInputs = {
+  list: {
+    id: string;
+    name: string;
+    isDefault?: boolean | null;
+    homeId?: string | null;
+  };
+  /** No auth identity means no ownership row, so the list waits for its answer. */
+  owner: {
+    id: string;
+    email?: string | null;
+    displayName?: string | null;
+  } | null;
+  /** The lines the create carries. */
+  rows: LocalShoppingListItem[];
+  now: string;
+};
+
+export const createList: LocalWrite<CreateListInputs> = {
+  apply(cache, { inputs: { list, owner, rows, now } }) {
+    if (!owner) return;
+    writeLocalShoppingList(cache, list.id, list, owner, now);
+    rows.forEach(row => addLocalShoppingListItem(cache, list.id, row, now));
+  },
+  // The server picks the home of a list that names none.
+  commit(cache, { inputs: { list } }, data) {
+    const payload: unknown = appliedPayload(data);
+    const created = isRecord(payload) ? payload.shoppingList : undefined;
+    const answered = isRecord(created) ? created.homeId : undefined;
+    linkCreatedShoppingList(cache, {
+      __typename: 'ShoppingList',
+      id: list.id,
+      homeId: typeof answered === 'string' ? answered : list.homeId ?? null,
+    });
+    keptRows(data).forEach(row =>
+      addNewItemToShoppingListCache(cache, list.id, row, false),
+    );
+  },
+};
+
+export const removeList: LocalWrite = {
+  apply(cache, { variables }) {
+    const list = rowOf(variables);
+    if (list) hideShoppingList(cache, list.id);
+  },
+  commit(cache, { variables }) {
+    const list = rowOf(variables);
+    if (list) removeShoppingListFromCache(cache, list.id);
   },
 };

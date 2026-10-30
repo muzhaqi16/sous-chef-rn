@@ -8,18 +8,10 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { MarkAsTemplateDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  UseShoppingListTemplate_ListFragmentDoc,
-  type UseShoppingListTemplate_ListFragment,
-} from './useShoppingListTemplate.generated';
 import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { listFromTemplate } from '#features/shoppingList/utils/listFromTemplate';
 import { useCopyShoppingList } from './useCopyShoppingList';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  snapshotFields,
-  writeEntityFields,
-} from '#/apollo/utils/localFirstFields';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { toastService } from '#/services/toastService';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -38,31 +30,16 @@ export function useShoppingListTemplate() {
     id: string,
     templateName: string,
   ): Promise<boolean> => {
-    const entity = { __typename: 'ShoppingList', id };
-    const patch = { isTemplate: true, templateName };
-    const held =
-      client.cache.readFragment<UseShoppingListTemplate_ListFragment>({
-        id: client.cache.identify(entity),
-        fragment: UseShoppingListTemplate_ListFragmentDoc,
-        fragmentName: 'useShoppingListTemplate_list',
-        returnPartialData: true,
-        optimistic: true,
-      });
-    const previous = snapshotFields(held, patch);
-    writeEntityFields(client.cache, entity, patch);
-    const revert = () => writeEntityFields(client.cache, entity, previous);
-
-    const settled = await settleMutation(
-      () =>
-        markMutation({
-          variables: { input: { id, templateName } },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: { isTemplate: true, templateName },
+      variables: { input: { id, templateName } },
+      mutate: markMutation,
+      settle: {
         document: MarkAsTemplateDocument,
         fallback: t('shoppingListScreens.failedToSaveTemplate'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 

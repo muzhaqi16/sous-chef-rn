@@ -17,11 +17,12 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
-  AddItemsToShoppingListFromRecipeDocument,
-  CreateShoppingListForRecipeDocument,
-} from '../useRecipeShoppingList.generated';
+  CreateShoppingListDocument,
+  GetShoppingListsLiteDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { AddItemsToShoppingListFromRecipeDocument } from '../useRecipeShoppingList.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
@@ -30,6 +31,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: unknown) => unknown) =>
     selector({ setSelectedShoppingListId: jest.fn() }),
   useSelectedShoppingListId: jest.fn(() => undefined),
+  useUser: jest.fn(() => ({ id: 'user-1', email: 'cook@example.com' })),
 }));
 
 const mockToastSuccess = jest.mocked(toastService.success);
@@ -211,13 +213,33 @@ const refusedEntry = (index: number): AddResult => ({
   failure: { code: ErrorCode.ValidationFailed },
 });
 
-const appliedAdd = (results: AddResult[], list?: AddPayload['shoppingList']) =>
+/** The list as the server states it, holding `count` rows to buy. */
+const listHolding = (count: number): AddPayload['shoppingList'] => ({
+  id: 'sl-1',
+  totalItems: count,
+  completedItems: 0,
+  remainingItems: count,
+  completionRate: 0,
+});
+
+/** The list after a batch on an empty one. */
+const listAfter = (results: AddResult[]) =>
+  listHolding(
+    results.filter(
+      result => result.success && result.outcome !== CreateOutcome.Merged,
+    ).length,
+  );
+
+const appliedAdd = (
+  results: AddResult[],
+  list: AddPayload['shoppingList'] = listAfter(results),
+) =>
   recordMock(AddItemsToShoppingListFromRecipeDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
         results,
-        ...(list && { shoppingList: list }),
+        shoppingList: list,
       },
     },
   });
@@ -244,11 +266,17 @@ const refusedAdd = () =>
 const QUANTITY_COPY =
   "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.";
 
+/** What the list shows once the writes answered have left their layers. */
+const shown = (cache: InMemoryCache) => {
+  pendingWritesOf(cache).rebuild();
+  return cache.extract(true);
+};
+
 const cachedRow = (cache: InMemoryCache, id: string) =>
-  cache.extract()[`ShoppingListItem:${id}`];
+  shown(cache)[`ShoppingListItem:${id}`];
 
 const cachedTotal = (cache: InMemoryCache) =>
-  (cache.extract()['ShoppingList:sl-1'] as { totalItems: number }).totalItems;
+  (shown(cache)['ShoppingList:sl-1'] as { totalItems: number }).totalItems;
 
 /** Adds one ingredient on its own, as its row's add button does. */
 const addOne = (
@@ -548,10 +576,11 @@ function seedListedLines(cache: InMemoryCache) {
 }
 
 const listedIds = (cache: InMemoryCache) => {
+  pendingWritesOf(cache).rebuild();
   const held = cache.readFragment<{
     active: { edges: { node: { id: string } }[] };
     bought: { edges: { node: { id: string } }[] };
-  }>({ id: 'ShoppingList:sl-1', fragment: LINES });
+  }>({ id: 'ShoppingList:sl-1', fragment: LINES, optimistic: true });
   return {
     active: held?.active.edges.map(edge => edge.node.id).sort(),
     bought: held?.bought.edges.map(edge => edge.node.id).sort(),
@@ -742,6 +771,7 @@ describe('useRecipeShoppingList — Add All', () => {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
         results: itemsOf(vars).map((row, index) => accepted(index, row.id)),
+        shoppingList: listHolding(addAll.fired.flatMap(itemsOf).length),
       },
     });
     const addAll = recordMock(AddItemsToShoppingListFromRecipeDocument, {
@@ -867,6 +897,7 @@ describe('useRecipeShoppingList — Add All', () => {
               results: itemsOf(vars).map((row, index) =>
                 accepted(index, row.id),
               ),
+              shoppingList: listHolding(50),
             },
           }
         : {
@@ -1012,23 +1043,23 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
       }>({ query: LISTS_QUERY, variables })
       ?.shoppingLists.edges.map(edge => edge.node.id);
 
-  const createListMock: MockFor<typeof CreateShoppingListForRecipeDocument> = {
+  const createListMock: MockFor<typeof CreateShoppingListDocument> = {
     request: {
-      query: CreateShoppingListForRecipeDocument,
+      query: CreateShoppingListDocument,
       variables: () => true,
     },
-    result: {
+    result: variables => ({
       data: {
         createShoppingList: {
           __typename: 'CreateShoppingListPayload',
           shoppingList: {
-            id: 'sl-new',
+            id: String(variables.input.id),
             homeId: 'home-a',
             home: { id: 'home-a' },
           },
         },
       },
-    },
+    }),
   };
 
   it("adds the new list to its own home's and the unscoped variants only", async () => {
@@ -1050,9 +1081,9 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
     });
 
     await waitFor(() =>
-      expect(readIds(cache, { homeId: 'home-a' })).toEqual(['sl-new']),
+      expect(readIds(cache, { homeId: 'home-a' })).toEqual(['gen-id-1']),
     );
-    expect(readIds(cache, { homeId: null })).toEqual(['sl-new']);
+    expect(readIds(cache, { homeId: null })).toEqual(['gen-id-1']);
     expect(readIds(cache, { homeId: 'home-b' })).toEqual([]);
     expect(readIds(cache, { filters: { isTemplate: true } })).toEqual([]);
   });

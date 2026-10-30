@@ -40,6 +40,7 @@ const mockRemoveFromMealTemplates = jest.fn();
 const mockAddEdge = jest.fn();
 const mockRemoveEdge = jest.fn();
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   // The updater factories are stubbed so each call site can be asserted, but
   // the pure helpers keep their real behaviour — a fully-partial factory drops
   // whatever the module gains next.

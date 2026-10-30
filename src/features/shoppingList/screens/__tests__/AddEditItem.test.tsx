@@ -78,9 +78,6 @@ jest.mock('#features/shoppingList/cache/items', () => ({
   addLocalShoppingListItem: jest.fn(),
   createLocalShoppingListItem: jest.fn((id: string) => ({ id })),
 }));
-jest.mock('#features/shoppingList/cache/withdraw', () => ({
-  withdrawShoppingListItems: jest.fn(),
-}));
 jest.mock('#/services/errorService');
 jest.mock('#/utils/finallyHelpers');
 

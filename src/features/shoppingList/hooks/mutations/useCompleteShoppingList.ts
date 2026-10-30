@@ -10,16 +10,8 @@ import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  UseCompleteShoppingList_ListFragmentDoc,
-  type UseCompleteShoppingList_ListFragment,
-} from './useCompleteShoppingList.generated';
 import { ListStatus } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  snapshotFields,
-  writeEntityFields,
-} from '#/apollo/utils/localFirstFields';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 
 export function useCompleteShoppingList() {
   const { t } = useTranslation();
@@ -33,73 +25,49 @@ export function useCompleteShoppingList() {
     { context: { localFirst: true } },
   );
 
-  /** Writes `patch` over the list and returns what restores the held values. */
-  const applyOptimistic = (
-    id: string,
-    patch: Partial<UseCompleteShoppingList_ListFragment>,
-  ): (() => void) => {
-    const entity = { __typename: 'ShoppingList', id };
-    const held =
-      client.cache.readFragment<UseCompleteShoppingList_ListFragment>({
-        id: client.cache.identify(entity),
-        fragment: UseCompleteShoppingList_ListFragmentDoc,
-        fragmentName: 'useCompleteShoppingList_list',
-        returnPartialData: true,
-        optimistic: true,
-      });
-    const previous = snapshotFields(held, patch);
-    writeEntityFields(client.cache, entity, patch);
-    return () => writeEntityFields(client.cache, entity, previous);
-  };
-
   const completeList = async (
     id: string,
     totalCost?: number,
   ): Promise<boolean> => {
     const now = new Date().toISOString();
-    const revert = applyOptimistic(id, {
-      status: ListStatus.Completed,
-      isCompleted: true,
-      completedShopDate: now,
-    });
-
-    const input = {
-      id,
-      completedShopDate: now,
-      ...(totalCost !== undefined && { totalCost }),
-    };
-    const settled = await settleMutation(
-      () =>
-        completeMutation({
-          variables: { input },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: {
+        status: ListStatus.Completed,
+        isCompleted: true,
+        completedShopDate: now,
+      },
+      variables: {
+        input: {
+          id,
+          completedShopDate: now,
+          ...(totalCost !== undefined && { totalCost }),
+        },
+      },
+      mutate: completeMutation,
+      settle: {
         document: CompleteShoppingListDocument,
         fallback: t('shoppingListScreens.failedToComplete'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 
   const reactivateList = async (id: string): Promise<boolean> => {
-    const revert = applyOptimistic(id, {
-      status: ListStatus.Active,
-      isCompleted: false,
-      completedShopDate: null,
-    });
-
-    const settled = await settleMutation(
-      () =>
-        reactivateMutation({
-          variables: { input: { id } },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: {
+        status: ListStatus.Active,
+        isCompleted: false,
+        completedShopDate: null,
+      },
+      variables: { input: { id } },
+      mutate: reactivateMutation,
+      settle: {
         document: MarkShoppingListActiveDocument,
         fallback: t('shoppingListScreens.failedToReactivate'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 

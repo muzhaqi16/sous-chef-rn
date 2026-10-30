@@ -26,6 +26,7 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),

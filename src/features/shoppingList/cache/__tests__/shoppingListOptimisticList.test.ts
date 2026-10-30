@@ -8,7 +8,7 @@
 
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { revertOptimisticShoppingList, writeLocalShoppingList } from '../list';
+import { writeLocalShoppingList } from '../list';
 import { List_RowFragmentDoc } from '../list.generated';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
@@ -103,7 +103,13 @@ function writeList(
     name: 'Groceries',
   },
 ) {
-  writeLocalShoppingList(cache, LIST_ID, input, OWNER);
+  writeLocalShoppingList(
+    cache,
+    LIST_ID,
+    input,
+    OWNER,
+    '2026-10-30T10:00:00.000Z',
+  );
   return cache.readFragment({
     id: `ShoppingList:${LIST_ID}`,
     fragment: List_RowFragmentDoc,
@@ -177,7 +183,7 @@ describe('writeLocalShoppingList: the row', () => {
     const linked = writeList(cache, { name: 'Groceries', homeId: 'home-1' });
     expect(linked?.home).toMatchObject({ id: 'home-1', name: 'Casa' });
 
-    const unknownHome = writeList(cache, {
+    const unknownHome = writeList(makeCache(), {
       name: 'Groceries',
       homeId: 'home-9',
     });
@@ -326,28 +332,6 @@ describe('writeLocalShoppingList: the caches it joins', () => {
     const detail = cache.readQuery({
       query: LIST_BY_ID_QUERY,
       variables: { id: 'c0000000000000000unknown1' },
-    });
-    expect(detail).toBeNull();
-  });
-});
-
-describe('revertOptimisticShoppingList', () => {
-  it('removes the overview edge and evicts the entity', () => {
-    const cache = makeCache();
-    seedEmptyOverview(cache);
-    writeList(cache);
-
-    revertOptimisticShoppingList(cache, LIST_ID);
-
-    const overview = cache.readQuery<{
-      shoppingLists: { totalCount: number; edges: unknown[] };
-    }>({ query: LISTS_OVERVIEW_QUERY, variables: { homeId: null } });
-    expect(overview?.shoppingLists.totalCount).toBe(0);
-    expect(overview?.shoppingLists.edges).toEqual([]);
-
-    const detail = cache.readQuery({
-      query: LIST_BY_ID_QUERY,
-      variables: { id: LIST_ID },
     });
     expect(detail).toBeNull();
   });

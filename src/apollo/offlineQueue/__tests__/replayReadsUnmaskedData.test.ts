@@ -11,7 +11,9 @@ import {
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { QueueManager } from '../queueManager';
+import { queueStore } from '../queueStore';
 
 /**
  * The replay's reconcilers read fields that sit inside fragment spreads, and a
@@ -135,23 +137,6 @@ describe('a replayed batch add the server merged into an existing row', () => {
         },
       },
     ]);
-    seedFragment(mockClient.cache, {
-      id: mockClient.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: 'row-minted',
-      }),
-      fragment: gql`
-        fragment ReplayMintedRow on ShoppingListItem {
-          id
-          itemName
-        }
-      `,
-      data: {
-        __typename: 'ShoppingListItem',
-        id: 'row-minted',
-        itemName: 'Milk',
-      },
-    });
     const entry = makeQueuedMutation({
       ...queuedMutationFor(AddItemToShoppingListDocument),
       variables: {
@@ -163,16 +148,34 @@ describe('a replayed batch add the server merged into an existing row', () => {
           ],
         },
       },
+      pendingWrite: {
+        id: 'held-add',
+        inputs: {
+          listId: 'list-1',
+          rows: [
+            {
+              id: 'row-minted',
+              shoppingListId: 'list-1',
+              itemName: 'Milk',
+            },
+          ],
+          now: '2026-10-30T10:00:00.000Z',
+        },
+      },
     });
+    queueStore.setCurrentUserId(entry.userId);
+    queueStore.addMutation(entry);
+    const pending = pendingWritesOf(mockClient.cache);
+    pending.restore(queueStore.getPendingWrites());
+    const shown = () =>
+      mockClient?.cache.extract(true)['ShoppingListItem:row-minted'];
+    expect(shown()).toBeDefined();
 
     await new QueueManager()['executeMutation'](entry);
+    pending.rebuild();
+    queueStore.removeMutation(entry.id);
 
-    const mintedKey = mockClient.cache.identify({
-      __typename: 'ShoppingListItem',
-      id: 'row-minted',
-    });
-    expect(mintedKey).toBeDefined();
+    expect(shown()).toBeUndefined();
     expect(totalItemsOf(mockClient)).toBe(4);
-    expect(mockClient.cache.extract()).not.toHaveProperty([mintedKey]);
   });
 });

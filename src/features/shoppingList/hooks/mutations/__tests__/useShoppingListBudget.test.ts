@@ -22,6 +22,7 @@ const readBudget = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: UseShoppingListBudget_ListFragmentDoc,
     fragmentName: 'useShoppingListBudget_list',
+    optimistic: true,
   });
 
 const okMock = () => ({

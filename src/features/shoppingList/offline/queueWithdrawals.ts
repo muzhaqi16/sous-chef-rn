@@ -4,13 +4,8 @@
  * created does not restore that half.
  */
 import { restoreItemToShoppingListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
-import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
-import type {
-  CountWithdrawalTable,
-  UnlinkWithdrawalTable,
-} from '#/apollo/offlineQueue/types';
-import { isRecord } from '#/utils/isRecord';
+import type { UnlinkWithdrawalTable } from '#/apollo/offlineQueue/types';
 
 export const restoreMovedShoppingListItem: UnlinkWithdrawalTable[string] = (
   cache,
@@ -29,24 +24,4 @@ export const restoreMovedShoppingListItem: UnlinkWithdrawalTable[string] = (
     return;
   }
   restoreItemToShoppingListAfterMoveToPantry(cache, input.shoppingListItemId);
-};
-
-/**
- * A refused batch add minted every row in `input.items` and counted each one;
- * the failure handler's evict reaches only the first. A row already gone was
- * already uncounted.
- */
-export const withdrawAddedShoppingListItems: CountWithdrawalTable[string] = (
-  cache,
-  variables,
-) => {
-  const input: unknown = variables.input;
-  if (!isRecord(input)) return;
-  const { shoppingListId, items } = input;
-  if (typeof shoppingListId !== 'string' || !Array.isArray(items)) return;
-
-  const ids = items.flatMap((row: unknown) =>
-    isRecord(row) && typeof row.id === 'string' ? [row.id] : [],
-  );
-  withdrawShoppingListItems(cache, shoppingListId, ids);
 };

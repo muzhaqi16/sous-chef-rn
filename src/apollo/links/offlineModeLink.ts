@@ -13,6 +13,7 @@ import { t } from '#/i18n';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { operationNameOf } from '../utils/documentOperation';
+import { HELD_BY_LAYER } from '../utils/heldByLayer';
 
 /**
  * Reach the network through the user's offline mode: RefreshToken for token
@@ -52,16 +53,18 @@ export const createOfflineModeLink = () => {
       return forward(operation);
     }
 
-    let cached: Record<string, unknown> | null = null;
-    try {
-      cached = operation.client.cache.readQuery<Record<string, unknown>>({
-        query: operation.query,
-        variables: operation.variables,
-        optimistic: false,
-      });
-    } catch {
-      cached = null;
-    }
+    const read = (optimistic: boolean) => {
+      try {
+        return operation.client.cache.readQuery<Record<string, unknown>>({
+          query: operation.query,
+          variables: operation.variables,
+          optimistic,
+        });
+      } catch {
+        return null;
+      }
+    };
+    const cached = read(false);
 
     // Cache hit — serve it (idempotent re-write, see matrix above).
     if (cached !== null) {
@@ -75,6 +78,15 @@ export const createOfflineModeLink = () => {
       });
       return new Observable<ApolloLink.Result>(observer => {
         observer.next({ data });
+        observer.complete();
+      });
+    }
+
+    // Only a pending write holds it: shown, and never stored as the server's.
+    const held = read(true);
+    if (held !== null) {
+      return new Observable<ApolloLink.Result>(observer => {
+        observer.next({ data: held, extensions: { [HELD_BY_LAYER]: true } });
         observer.complete();
       });
     }

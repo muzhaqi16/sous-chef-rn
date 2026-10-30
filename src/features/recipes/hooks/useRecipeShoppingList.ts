@@ -6,25 +6,20 @@ import { CreateOutcome } from '#/graphql/generated/schemaTypes';
 import type { MaterializedRecipe, DisplayIngredient } from './useRecipeData';
 import {
   AddItemsToShoppingListFromRecipeDocument,
-  CreateShoppingListForRecipeDocument,
   type AddItemsToShoppingListFromRecipeMutation,
 } from './useRecipeShoppingList.generated';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { useActiveShoppingListId } from '#features/shoppingList/hooks/useActiveShoppingListId';
 import { useAppStore } from '#store/useAppStore';
-import { addShoppingListToQueryCache } from '#features/shoppingList/cache/list';
-import { settleMutation, settledStatus } from '#/apollo/utils/settleMutation';
+import { settledStatus } from '#/apollo/utils/settleMutation';
 import { toastService } from '#/services/toastService';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import {
-  addItemsInSlices,
-  addLocalShoppingListItem,
-  buildAddItemsReconcileUpdate,
-  createLocalShoppingListItem,
-} from '#features/shoppingList/cache/items';
+import { addItemsInSlices } from '#features/shoppingList/cache/createShoppingListRow';
+import { isListedToBuy } from '#features/shoppingList/cache/connections';
+import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
+import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { logger } from '#/utils/environment';
-import { errorService } from '#/services/errorService';
 import {
   recipeShoppingRows,
   type RecipeShoppingRow,
@@ -54,30 +49,29 @@ interface AddTally {
 }
 
 /**
- * Reconciles a batch's results and counts them. A MERGED line is an update
+ * Counts a batch's answer, before it is committed. A MERGED line is an update
  * only when the list already showed it: the server also answers MERGED for a
  * bought or removed line it reuses, which reappears on the list.
  */
-function reconcileAndTally(tally: AddTally) {
-  return (
-    cache: ApolloCache,
-    result: { data?: AddItemsToShoppingListFromRecipeMutation | null },
-    options: Parameters<ReturnType<typeof buildAddItemsReconcileUpdate>>[2],
-  ): void => {
-    const lines = appliedPayload(result.data)?.results ?? [];
-    buildAddItemsReconcileUpdate({
-      onLine: ({ position, clientId, refused, listedBefore }) => {
-        if (refused) {
-          if (clientId) tally.refused.add(clientId);
-        } else if (
-          listedBefore &&
-          lines[position]?.outcome === CreateOutcome.Merged
-        ) {
-          tally.updated += 1;
-        }
-      },
-    })(cache, result, options);
-  };
+function tallyLines(
+  cache: ApolloCache,
+  tally: AddTally,
+  listId: string,
+  sent: readonly { id: string }[],
+  data: AddItemsToShoppingListFromRecipeMutation | null | undefined,
+): void {
+  const lines = appliedPayload(data)?.results ?? [];
+  lines.forEach(line => {
+    if (line.success === false || !line.item) {
+      const refused = sent[line.index];
+      if (refused) tally.refused.add(refused.id);
+    } else if (
+      line.outcome === CreateOutcome.Merged &&
+      isListedToBuy(cache, listId, line.item.id)
+    ) {
+      tally.updated += 1;
+    }
+  });
 }
 
 /**
@@ -104,45 +98,6 @@ function sendSlice<TResult extends { data?: unknown; error?: unknown }>(
   );
 }
 
-/**
- * Writes the rows before the add fires, so they show at once and survive being
- * queued: an `update` callback only runs with a server payload.
- */
-function writeLocalRows(
-  cache: ApolloCache,
-  listId: string,
-  rows: readonly RecipeShoppingRow[],
-): void {
-  cache.batch({
-    update: batched => {
-      for (const { input, display } of rows) {
-        const row = createLocalShoppingListItem(input.id, {
-          shoppingListId: listId,
-          itemName: display.itemName,
-          quantity: display.quantity,
-          quantityInput: null,
-          unitName: display.unitName,
-          category: null,
-          itemId: display.itemId,
-          unitId: undefined,
-        });
-        try {
-          addLocalShoppingListItem(
-            batched,
-            listId,
-            row,
-            new Date().toISOString(),
-          );
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Add recipe ingredients (optimistic)',
-          });
-        }
-      }
-    },
-  });
-}
-
 export function useRecipeShoppingList({
   recipeId,
   backendRecipe,
@@ -161,6 +116,9 @@ export function useRecipeShoppingList({
     shoppingLists.find(list => list.id === listId) ?? null;
 
   const client = useApolloClient();
+  const { createShoppingList } = useCreateShoppingList(
+    t('errors.createShoppingListFailed'),
+  );
 
   // State
   const [addingToList, setAddingToList] = useState(false);
@@ -186,16 +144,6 @@ export function useRecipeShoppingList({
   };
 
   // Mutations
-  const [createShoppingListMutation] = useMutation(
-    CreateShoppingListForRecipeDocument,
-    {
-      update(cache, { data }) {
-        const payload = appliedPayload(data);
-        if (payload) addShoppingListToQueryCache(cache, payload.shoppingList);
-      },
-    },
-  );
-
   // One door for a single ingredient and for the whole recipe: a batch add
   // whose rows the device derives and mints, so both queue and replay.
   const [addItemsMutation] = useMutation(
@@ -209,20 +157,39 @@ export function useRecipeShoppingList({
     rows: readonly RecipeShoppingRow[],
     fallback: string,
   ): Promise<AddOutcome> => {
-    writeLocalRows(client.cache, listId, rows);
     const tally: AddTally = { updated: 0, refused: new Set() };
+    const displays = new Map(rows.map(row => [row.input.id, row.display]));
     const failure = await addItemsInSlices(
       client.cache,
       listId,
       rows.map(row => row.input),
-      slice =>
+      line => {
+        const display = displays.get(line.id);
+        return display
+          ? createLocalShoppingListItem(line.id, {
+              shoppingListId: listId,
+              itemName: display.itemName,
+              quantity: display.quantity,
+              quantityInput: null,
+              unitName: display.unitName,
+              category: null,
+              itemId: display.itemId,
+              unitId: undefined,
+            })
+          : null;
+      },
+      write =>
         sendSlice(
           () =>
             addItemsMutation({
-              variables: { input: { shoppingListId: listId, items: slice } },
-              update: reconcileAndTally(tally),
+              ...write,
+              update: (cache, result) => {
+                const { items } = write.variables.input;
+                tallyLines(cache, tally, listId, items, result.data);
+                write.update(cache, result);
+              },
             }),
-          slice,
+          write.variables.input.items,
           tally.refused,
         ),
       { document: AddItemsToShoppingListFromRecipeDocument, fallback },
@@ -374,32 +341,17 @@ export function useRecipeShoppingList({
 
     void executeWithLoadingState(
       async () => {
-        const fallback = t('errors.createShoppingListFailed');
-        const settled = await settleMutation(
-          () =>
-            createShoppingListMutation({
-              variables: {
-                input: {
-                  name: name.trim(),
-                  description: t('recipes.createdFromRecipe'),
-                  isDefault: false,
-                  tags: ['recipe-created'],
-                },
-              },
-            }),
-          {
-            document: CreateShoppingListForRecipeDocument,
-            fallback,
-            present: 'none',
-          },
-        );
-
-        const createPayload = appliedPayload(settled.data);
-        if (!createPayload) {
-          toastService.error(settled.failure?.body ?? fallback);
+        const created = await createShoppingList({
+          name: name.trim(),
+          description: t('recipes.createdFromRecipe'),
+          isDefault: false,
+          tags: ['recipe-created'],
+        });
+        if (created.status === 'failed') {
+          toastService.error(created.body);
           return;
         }
-        const newList = createPayload.shoppingList;
+        const newList = created.shoppingList;
 
         setSelectedShoppingListId(newList.id);
         setListPickerVisible(false);

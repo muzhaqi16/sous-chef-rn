@@ -55,7 +55,6 @@ import {
 } from '#features/mealPlan/cache/mealTemplateItem';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { makeCache } from '#/apollo/cache';
-import { CreateShoppingListForRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   GetMealPlansDocument,
   MealPlanForEventDocument,
@@ -1116,6 +1115,7 @@ describe('optimistic entity completeness', () => {
         'client-list-1',
         { name: 'Offline list', homeId: 'home-1' },
         { id: 'user-1', email: 'user@example.com' },
+        '2026-10-30T10:00:00.000Z',
       );
 
       const diff = cache.diff({
@@ -1139,6 +1139,7 @@ describe('optimistic entity completeness', () => {
         'client-list-detail',
         { name: 'Offline list', homeId: 'home-1' },
         { id: 'user-1', email: 'user@example.com' },
+        '2026-10-30T10:00:00.000Z',
       );
 
       const diff = cache.diff({
@@ -1839,13 +1840,6 @@ describe('optimistic entity completeness', () => {
         'ShoppingList (createShoppingList)',
         'shoppingLists',
       );
-      expectWriterCoversReader(
-        CreateShoppingListForRecipeDocument,
-        'shoppingList',
-        GetShoppingListsLiteDocument,
-        'ShoppingList (createShoppingListForRecipe)',
-        'shoppingLists',
-      );
     });
 
     // The subscription links a bare `{ __typename, id }` after its read-back
@@ -1916,18 +1910,6 @@ describe('optimistic entity completeness', () => {
     // the same mutation. They are field-identical today; this is what holds
     // them that way when one side is edited.
     it('twin writers of one entity select the same fields', () => {
-      expectWritersAgree(
-        {
-          document: CreateShoppingListDocument,
-          field: 'shoppingList',
-          label: 'CreateShoppingList',
-        },
-        {
-          document: CreateShoppingListForRecipeDocument,
-          field: 'shoppingList',
-          label: 'CreateShoppingListForRecipe',
-        },
-      );
       expectWritersAgree(
         { document: CreateHomeDocument, field: 'home', label: 'CreateHome' },
         {

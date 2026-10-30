@@ -26,6 +26,7 @@ import { t } from '#/i18n';
 import type { AddRowsInputs } from '#features/shoppingList/offline/localWrites';
 import {
   createLocalShoppingListItem,
+  type LocalShoppingListItem,
   type OptimisticShoppingListItemFields,
 } from './items';
 
@@ -91,6 +92,48 @@ function refusedLine(data: unknown): boolean {
 function landedRowId(data: unknown): string | null {
   const item = answeredLine(data)?.item;
   return isRecord(item) && typeof item.id === 'string' ? item.id : null;
+}
+
+/** The API refuses a batch add, or a create's lines, past this many. */
+export const ADD_ITEMS_BATCH_LIMIT = 50;
+
+/**
+ * Sends lines as batch adds the API accepts, each slice settled on its own and
+ * holding only its own rows, so a refusal takes back exactly those. Returns the
+ * first failure, for the caller to present, or null when every slice applied or
+ * queued.
+ */
+export async function addItemsInSlices<TItem extends { id?: string | null }>(
+  cache: ApolloCache,
+  listId: string,
+  items: readonly TItem[],
+  rowOf: (line: TItem) => LocalShoppingListItem | null,
+  send: (
+    write: LocalWriteSend<{
+      input: { shoppingListId: string; items: TItem[] };
+    }>,
+  ) => Promise<{ data?: unknown; error?: unknown }>,
+  settle: { document: DocumentNode; fallback: string },
+): Promise<SettledFailure | null> {
+  let firstFailure: SettledFailure | null = null;
+  // In order: a queued slice replays behind the one before it.
+  for (let start = 0; start < items.length; start += ADD_ITEMS_BATCH_LIMIT) {
+    const slice = items.slice(start, start + ADD_ITEMS_BATCH_LIMIT);
+    const inputs: AddRowsInputs = {
+      listId,
+      rows: slice.flatMap(line => rowOf(line) ?? []),
+      now: new Date().toISOString(),
+    };
+    const settled = await pendingWritesOf(cache).send(
+      settle.document,
+      { input: { shoppingListId: listId, items: slice } },
+      write =>
+        settleMutation(() => send(write), { ...settle, present: 'none' }),
+      inputs,
+    );
+    firstFailure ??= settled.failure ?? null;
+  }
+  return firstFailure;
 }
 
 export async function createShoppingListRow<TData>(

@@ -47,10 +47,6 @@ jest.mock('#features/shoppingList/cache/items', () => ({
   })),
 }));
 
-jest.mock('#features/shoppingList/cache/withdraw', () => ({
-  withdrawShoppingListItems: jest.fn(),
-}));
-
 const mockConvertExpiredToWaste = jest.fn();
 const mockAdjustQuantity = jest.fn();
 const mockCorrectPackageSize = jest.fn().mockResolvedValue(true);

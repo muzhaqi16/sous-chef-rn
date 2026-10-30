@@ -27,12 +27,12 @@ export async function drainTimers(): Promise<void> {
  * until nothing is pending, and hands back its result. `await act(async () =>
  * { await work(); })` hangs there, as the answer's timer never fires.
  */
-export async function drained<T>(start: () => T | Promise<T>): Promise<T> {
-  let started: T | Promise<T> | undefined;
+export async function drained<T>(start: () => T): Promise<Awaited<T>> {
+  let started: T | undefined;
   act(() => {
     started = start();
   });
-  const outcome = Promise.resolve(started as T | Promise<T>);
+  const outcome = Promise.resolve(started as T);
   // Read after the drain, when a rejection would otherwise count as unhandled.
   outcome.catch(() => undefined);
   await drainTimers();

@@ -38,6 +38,7 @@ const readName = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: UseUpdateShoppingList_ListFragmentDoc,
     fragmentName: 'useUpdateShoppingList_list',
+    optimistic: true,
   })?.name;
 
 describe('useUpdateShoppingList', () => {
@@ -184,6 +185,7 @@ describe('useUpdateShoppingList', () => {
           id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
           fragment: UseUpdateShoppingList_ListFragmentDoc,
           fragmentName: 'useUpdateShoppingList_list',
+          optimistic: true,
         })?.budgetAmount,
       ).toBe(150);
       await promise;
@@ -216,6 +218,7 @@ describe('useUpdateShoppingList', () => {
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
         fragment: UseUpdateShoppingList_ListFragmentDoc,
         fragmentName: 'useUpdateShoppingList_list',
+        optimistic: true,
       })?.targetStore;
 
     await act(async () => {

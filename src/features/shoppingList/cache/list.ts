@@ -20,11 +20,10 @@ import {
   skipOtherHomeVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { isRecord } from '#/utils/isRecord';
 import { matchesFilter } from './connections';
 
 /** What a list's row holds, as far as the cache knows it. */
-export type ShoppingListSnapshot = Record<string, unknown> & {
+type ShoppingListRow = Record<string, unknown> & {
   __typename: 'ShoppingList';
   id: string;
   homeId: string | null;
@@ -70,7 +69,7 @@ const removeShoppingListFromQueryCache = createRemoveFromQueryConnectionUpdater(
  * Write a list row — held data kept, the rest neutral — and link it into the
  * overview.
  */
-function writeListRow(cache: ApolloCache, row: ShoppingListSnapshot): void {
+function writeListRow(cache: ApolloCache, row: ShoppingListRow): void {
   writeLocalEntity(cache, {
     fragment: List_RowFragmentDoc,
     fragmentName: 'list_row',
@@ -84,12 +83,20 @@ function writeListRow(cache: ApolloCache, row: ShoppingListSnapshot): void {
 /**
  * Seed both filtered `itemsConnection` variants empty, which is what makes a
  * new list usable offline: a `cache.modify` never creates one. Only a list the
- * device created may say it has no items.
+ * device created may say it has no items, and one a read brought stays.
  */
 function writeEmptyItemVariants(cache: ApolloCache, listId: string): void {
+  const id = cache.identify({ __typename: 'ShoppingList', id: listId });
   for (const isPurchased of [false, true]) {
+    const held = cache.readFragment({
+      id,
+      fragment: List_EmptyItemsVariantFragmentDoc,
+      variables: { isPurchased },
+      optimistic: true,
+    });
+    if (held) continue;
     cache.writeFragment({
-      id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+      id,
       fragment: List_EmptyItemsVariantFragmentDoc,
       variables: { isPurchased },
       data: {
@@ -115,13 +122,16 @@ function writeEmptyItemVariants(cache: ApolloCache, listId: string): void {
  * `id` is the client-minted cuid sent as `input.id`, so create and replay
  * converge on one row. The owner and the linked home are what the cache holds;
  * an owner it lacks comes from the auth identity, a home it lacks is left out.
+ * A list already held is the server's.
  */
 export function writeLocalShoppingList(
   cache: ApolloCache,
   id: string,
   input: { name: string; isDefault?: boolean | null; homeId?: string | null },
   owner: { id: string; email?: string | null; displayName?: string | null },
+  now: string,
 ): void {
+  if (isHeld(cache, { __typename: 'ShoppingList', id })) return;
   const user = { __typename: 'User', id: owner.id };
   const homeId = input.homeId ?? null;
   const home = homeId ? { __typename: 'Home', id: homeId } : null;
@@ -131,7 +141,7 @@ export function writeLocalShoppingList(
     id,
     // The server owns the version; its response carries the real one.
     version: 1,
-    updatedAt: new Date().toISOString(),
+    updatedAt: now,
     name: input.name,
     isDefault: input.isDefault ?? false,
     totalItems: 0,
@@ -173,41 +183,25 @@ export function removeShoppingListFromCache(
   safeEvict(cache, 'ShoppingList', listId);
 }
 
-/** Reverse {@link writeLocalShoppingList} when the create is rejected. */
-export function revertOptimisticShoppingList(
-  cache: ApolloCache,
-  listId: string,
-): void {
-  removeShoppingListFromCache(cache, listId);
-}
-
 /**
- * Snapshot a list's row before a local-first delete, so a refusal can restore
- * it with {@link restoreShoppingList}. Null when the cache has no such list.
+ * Takes a list out from a layer, where `evict` leaves what the server holds:
+ * deleting its fields hides it, and a list already hidden changes nothing.
  */
-export function readShoppingListSnapshot(
-  cache: ApolloCache,
-  listId: string,
-): ShoppingListSnapshot | null {
-  const row: unknown = cache.readFragment({
-    id: cache.identify({ __typename: 'ShoppingList', id: listId }),
-    fragment: List_RowFragmentDoc,
-    fragmentName: 'list_row',
-    returnPartialData: true,
-    optimistic: true,
+export function hideShoppingList(cache: ApolloCache, listId: string): void {
+  const list = { __typename: 'ShoppingList', id: listId };
+  if (!isHeld(cache, list)) return;
+  removeShoppingListFromQueryCache(cache, listId, { evictItem: false });
+  cache.modify({
+    id: cache.identify(list),
+    fields: (_value, { DELETE }) => DELETE,
   });
-  if (!isRecord(row)) return null;
-  const homeId = typeof row.homeId === 'string' ? row.homeId : null;
-  return { ...row, __typename: 'ShoppingList', id: listId, homeId };
 }
 
-/**
- * Put back a list whose delete the server refused. Its items left the device
- * with it, so they stay unknown for the next read to fetch, never empty.
- */
-export function restoreShoppingList(
+/** What a create's answer cannot state: the overview's edge and the item lists. */
+export function linkCreatedShoppingList(
   cache: ApolloCache,
-  snapshot: ShoppingListSnapshot,
+  list: { __typename: 'ShoppingList'; id: string; homeId: string | null },
 ): void {
-  writeListRow(cache, snapshot);
+  writeEmptyItemVariants(cache, list.id);
+  addShoppingListToQueryCache(cache, list);
 }

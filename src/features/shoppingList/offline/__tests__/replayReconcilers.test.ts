@@ -1,17 +1,15 @@
 /**
- * The shopping replay reconcilers on a real cache: what a list reads after a
- * replay the server answered differently than the local write assumed.
+ * What a shopping replay moves when the server answers with another row, and
+ * what a list reads once a delete's answer has named its row.
  */
 
 import { gql, type InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import {
-  addLocalShoppingListItem,
-  createLocalShoppingListItem,
-} from '#features/shoppingList/cache/items';
 import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
-import { reconcileShoppingAddReplay } from '../replayReconcilers';
-import { withdrawAddedShoppingListItems } from '../queueWithdrawals';
+import {
+  reconcileShoppingAddReplay,
+  reconcileShoppingCreateReplay,
+} from '../replayReconcilers';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LIST = gql`
@@ -32,14 +30,6 @@ const LIST = gql`
         }
       }
     }
-  }
-`;
-
-const ROW = gql`
-  fragment ReplayReconcilersProbeRow on ShoppingListItem {
-    id
-    itemName
-    quantity
   }
 `;
 
@@ -87,19 +77,6 @@ function seedList(held: ReturnType<typeof row>[]): InMemoryCache {
   return cache;
 }
 
-/** A line added locally under `id`, counted as the add sites count it. */
-function mint(cache: InMemoryCache, id: string, itemName: string) {
-  addLocalShoppingListItem(
-    cache,
-    'list-1',
-    createLocalShoppingListItem(id, {
-      shoppingListId: 'list-1',
-      itemName,
-    }),
-    '2026-10-30T10:00:00.000Z',
-  );
-}
-
 /** What the list reads, or null when the read is incomplete. */
 function readList(cache: InMemoryCache) {
   const diff = cache.diff<ListRead>({
@@ -120,219 +97,80 @@ function readList(cache: InMemoryCache) {
   };
 }
 
-/** Apollo writes the replay's result before the reconciler runs. */
-const writeServerRow = (cache: InMemoryCache, value: ReturnType<typeof row>) =>
-  seedFragment(cache, { fragment: ROW, data: value });
-
-describe('a single row merged into an existing line', () => {
-  const variables = {
-    input: {
-      shoppingListId: 'list-1',
-      items: [{ id: 'minted-milk', item: { itemName: 'Milk' } }],
-    },
-  };
-  const merged = row('held-milk', 'Milk', 3);
-  const answer = (item: object) => ({
-    addItemsToShoppingList: {
-      __typename: 'AddItemsToShoppingListPayload',
-      results: [{ item }],
-    },
-  });
-  const data = answer(merged);
-
-  function replayed() {
-    const cache = seedList([row('held-milk', 'Milk', 2)]);
-    mint(cache, 'minted-milk', 'Milk');
-    writeServerRow(cache, merged);
-    return cache;
-  }
-
-  it('shows only the merged line, with the quantity the service states', () => {
-    const cache = replayed();
-
-    reconcileShoppingAddReplay(cache, variables, data);
-
-    expect(readList(cache)).toEqual({
-      total: 1,
-      remaining: 1,
-      rows: [['held-milk', 3]],
-    });
-  });
-
-  it('equals a single application when it runs again', () => {
-    const cache = replayed();
-    reconcileShoppingAddReplay(cache, variables, data);
-    const once = cache.extract();
-
-    reconcileShoppingAddReplay(cache, variables, data);
-
-    expect(cache.extract()).toEqual(once);
-  });
-
-  it('leaves a line the service created under the minted id', () => {
-    const cache = seedList([]);
-    mint(cache, 'minted-milk', 'Milk');
-
-    reconcileShoppingAddReplay(
-      cache,
-      variables,
-      answer(row('minted-milk', 'Milk', 1)),
-    );
-
-    expect(readList(cache)?.rows).toEqual([['minted-milk', 1]]);
-  });
+const merged = (id: string, version?: number) => ({
+  success: true,
+  item: { id, version },
 });
 
-describe('a typed name the service matched to an item it holds', () => {
-  const variables = {
-    input: {
-      shoppingListId: 'list-1',
-      items: [
-        {
-          id: 'minted-pepper',
-          item: { inline: { id: 'item-minted', name: 'Cubanelle pepper' } },
+describe('a replayed batch add', () => {
+  const adoptionsOf = (items: unknown[], results: unknown[]) => {
+    const adopt = jest.fn();
+    reconcileShoppingAddReplay(
+      makeCache(),
+      { input: { shoppingListId: 'list-1', items } },
+      {
+        addItemsToShoppingList: {
+          __typename: 'AddItemsToShoppingListPayload',
+          results,
         },
-      ],
-    },
-  };
-  const LINE_ITEM = gql`
-    fragment ReplayReconcilersProbeLineItem on ShoppingListItem {
-      id
-      item {
-        id
-      }
-    }
-  `;
-  /** The answer's line, naming `itemId`, as Apollo writes it before the reconciler. */
-  const answered = (cache: InMemoryCache, itemId: string) => {
-    const line = {
-      __typename: 'ShoppingListItem',
-      id: 'minted-pepper',
-      item: { __typename: 'Item', id: itemId },
-    };
-    seedFragment(cache, { fragment: LINE_ITEM, data: line });
-    return {
-      addItemsToShoppingList: {
-        __typename: 'AddItemsToShoppingListPayload',
-        results: [{ item: line }],
       },
-    };
-  };
-  const lineItem = (cache: InMemoryCache) =>
-    cache.extract()['ShoppingListItem:minted-pepper']?.item;
-
-  function mintedTyped() {
-    const cache = seedList([]);
-    addLocalShoppingListItem(
-      cache,
-      'list-1',
-      createLocalShoppingListItem('minted-pepper', {
-        shoppingListId: 'list-1',
-        itemName: 'Cubanelle pepper',
-        itemId: 'item-minted',
-      }),
-      '2026-10-30T10:00:00.000Z',
+      adopt,
     );
-    return cache;
-  }
+    return adopt.mock.calls.map(([adoption]: unknown[]) => adoption);
+  };
 
-  it('names the held item, and the minted one goes', () => {
-    const cache = mintedTyped();
-    expect(lineItem(cache)).toEqual({ __ref: 'Item:item-minted' });
-
-    reconcileShoppingAddReplay(cache, variables, answered(cache, 'item-held'));
-
-    expect(lineItem(cache)).toEqual({ __ref: 'Item:item-held' });
-    expect(cache.extract()).not.toHaveProperty('Item:item-minted');
-    expect(readList(cache)?.rows).toEqual([['minted-pepper', 1]]);
+  it('moves the writes behind a merged line onto the row the server kept', () => {
+    expect(adoptionsOf([{ id: 'minted' }], [merged('held', 4)])).toEqual([
+      { mintedId: 'minted', survivingId: 'held', version: 4 },
+    ]);
   });
 
-  it('keeps the item the service created under the minted id', () => {
-    const cache = mintedTyped();
+  it('moves nothing for a line the server kept under its minted id', () => {
+    expect(adoptionsOf([{ id: 'minted' }], [merged('minted')])).toEqual([]);
+  });
 
-    reconcileShoppingAddReplay(
-      cache,
-      variables,
-      answered(cache, 'item-minted'),
-    );
+  it('moves nothing for a refused line', () => {
+    expect(
+      adoptionsOf(
+        [{ id: 'minted-a' }, { id: 'minted-b' }],
+        [
+          { success: false, item: null },
+          { success: false, item: { id: 'held' } },
+        ],
+      ),
+    ).toEqual([]);
+  });
 
-    expect(lineItem(cache)).toEqual({ __ref: 'Item:item-minted' });
-    expect(cache.extract()).toHaveProperty('Item:item-minted');
+  it('pairs a line by the index the server echoes, not its position', () => {
+    expect(
+      adoptionsOf(
+        [{ id: 'minted-a' }, { id: 'minted-b' }],
+        [{ ...merged('held', 2), index: 1 }],
+      ),
+    ).toEqual([{ mintedId: 'minted-b', survivingId: 'held', version: 2 }]);
   });
 });
 
-describe('a replayed batch the service accepted in part', () => {
-  const variables = {
-    input: {
-      shoppingListId: 'list-1',
-      items: [{ id: 'minted-a' }, { id: 'minted-b' }, { id: 'minted-c' }],
-    },
-  };
-  const data = {
-    addItemsToShoppingList: {
-      __typename: 'AddItemsToShoppingListPayload',
-      results: [
-        { item: { id: 'minted-a' } },
-        { item: null },
-        { item: { id: 'held-eggs' } },
-      ],
-    },
-  };
+describe('a replayed create made with lines', () => {
+  it('moves the writes behind a merged line', () => {
+    const adopt = jest.fn();
 
-  function replayed() {
-    const cache = seedList([row('held-eggs', 'Eggs', 12)]);
-    mint(cache, 'minted-a', 'Bread');
-    mint(cache, 'minted-b', 'Soap');
-    mint(cache, 'minted-c', 'Eggs');
-    return cache;
-  }
-
-  it('withdraws the refused row, folds the merged one, keeps the rest', () => {
-    const cache = replayed();
-
-    reconcileShoppingAddReplay(cache, variables, data);
-
-    expect(readList(cache)).toEqual({
-      total: 2,
-      remaining: 2,
-      rows: expect.arrayContaining([
-        ['minted-a', 1],
-        ['held-eggs', 12],
-      ]),
-    });
-    expect(readList(cache)?.rows).toHaveLength(2);
-  });
-
-  it('equals a single application when it runs again', () => {
-    const cache = replayed();
-    reconcileShoppingAddReplay(cache, variables, data);
-    const once = cache.extract();
-
-    reconcileShoppingAddReplay(cache, variables, data);
-
-    expect(cache.extract()).toEqual(once);
-  });
-});
-
-describe('a refused batch withdrawn by the queue', () => {
-  it('takes every minted row out, and its count, once', () => {
-    const cache = seedList([row('held-eggs', 'Eggs', 12)]);
-    mint(cache, 'minted-a', 'Bread');
-    mint(cache, 'minted-b', 'Soap');
-    const variables = {
-      input: {
-        shoppingListId: 'list-1',
-        items: [{ id: 'minted-a' }, { id: 'minted-b' }],
+    reconcileShoppingCreateReplay(
+      makeCache(),
+      { input: { id: 'list-1', items: [{ id: 'minted' }] } },
+      {
+        createShoppingList: {
+          __typename: 'CreateShoppingListPayload',
+          itemResults: [merged('held', 7)],
+        },
       },
-    };
+      adopt,
+    );
 
-    withdrawAddedShoppingListItems(cache, variables, 'minted-a');
-    withdrawAddedShoppingListItems(cache, variables, 'minted-a');
-
-    expect(readList(cache)).toEqual({
-      total: 1,
-      remaining: 1,
-      rows: [['held-eggs', 12]],
+    expect(adopt).toHaveBeenCalledWith({
+      mintedId: 'minted',
+      survivingId: 'held',
+      version: 7,
     });
   });
 });

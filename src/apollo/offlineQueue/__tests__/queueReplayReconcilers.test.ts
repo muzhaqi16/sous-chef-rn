@@ -14,18 +14,12 @@ import {
   CreateShoppingListDocument,
   MoveShoppingItemToPantryDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
-import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
-import { CreateOutcome } from '#/graphql/generated/schemaTypes';
 
 jest.mock('#/apollo/clientRegistry', () => ({
   getApolloClient: () => ({ cache: {} }),
   registerApolloClient: jest.fn(),
   clearApolloClient: jest.fn(),
-}));
-jest.mock('#features/shoppingList/cache/withdraw', () => ({
-  withdrawShoppingListItems: jest.fn(),
 }));
 jest.mock('#features/shoppingList/cache/connections', () => ({
   ...jest.requireActual('#features/shoppingList/cache/connections'),
@@ -176,304 +170,59 @@ describe('reconcileReplaySuccess — MoveShoppingItemToPantry', () => {
  * while refusing some of its rows inside `results`. Each refused row was shown
  * locally and has nothing left to send it, so it is withdrawn; the rest stay.
  */
-describe('reconcileReplaySuccess — AddItemToShoppingList batch', () => {
-  const addOperation = operationNameOf(AddItemToShoppingListDocument);
-  const variables = {
-    input: {
-      shoppingListId: 'list-1',
-      items: [{ id: 'row-a' }, { id: 'row-b' }],
-    },
-  };
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('withdraws only the rows the server refused inside the batch', () => {
-    reconcileReplaySuccess(addOperation, variables, {
-      addItemsToShoppingList: {
-        __typename: 'AddItemsToShoppingListPayload',
-        results: [{ success: true }, { success: false }],
-      },
-    });
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledTimes(1);
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['row-b'],
-      { countsSettled: false },
-    );
-  });
-
-  // The payload carries the list's totals, resolved after the whole batch — so
-  // the refused row is already out of the count, and a relative decrement on
-  // top would take it out twice.
-  it('leaves the count alone when the payload brought the totals', () => {
-    reconcileReplaySuccess(addOperation, variables, {
-      addItemsToShoppingList: {
-        __typename: 'AddItemsToShoppingListPayload',
-        shoppingList: { id: 'list-1', totalItems: 4 },
-        results: [{ success: true, item: { id: 'row-a' } }, { success: false }],
-      },
-    });
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['row-b'],
-      { countsSettled: true },
-    );
-  });
-
-  it('pairs a result to its row by the index the server echoes', () => {
-    reconcileReplaySuccess(addOperation, variables, {
-      addItemsToShoppingList: {
-        __typename: 'AddItemsToShoppingListPayload',
-        results: [
-          { success: false, index: 1 },
-          { success: true, index: 0 },
-        ],
-      },
-    });
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['row-b'],
-      expect.anything(),
-    );
-  });
-
-  it('folds a row the server merged into an existing one', () => {
-    reconcileReplaySuccess(addOperation, variables, {
-      addItemsToShoppingList: {
-        __typename: 'AddItemsToShoppingListPayload',
-        results: [{ success: true, item: { id: 'existing-row' } }],
-      },
-    });
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['row-a'],
-      { countsSettled: false },
-    );
-    expect(addNewItemToShoppingListCache).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      expect.objectContaining({ id: 'existing-row' }),
-      false,
-    );
-  });
-});
-
-// A list created with lines settles them as the batch add does, under the
-// list id the create minted.
-describe('reconcileReplaySuccess — CreateShoppingList with lines', () => {
-  const createOperation = operationNameOf(CreateShoppingListDocument);
-  const variables = {
-    input: {
-      id: 'list-new',
-      name: 'Groceries',
-      items: [{ id: 'row-a' }, { id: 'row-b' }],
-    },
-  };
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('withdraws the lines the server refused, the list settling its count', () => {
-    reconcileReplaySuccess(createOperation, variables, {
-      createShoppingList: {
-        __typename: 'CreateShoppingListPayload',
-        shoppingList: { id: 'list-new', totalItems: 1 },
-        itemResults: [
-          { index: 0, success: true, item: { id: 'row-a' } },
-          { index: 1, success: false, item: null },
-        ],
-      },
-    });
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-new',
-      ['row-b'],
-      { countsSettled: true },
-    );
-  });
-});
-
-/**
- * One row replays as `SyncShoppingListItem`, whose variables carry the row
- * under `item` and answer in the sync shape. The service merges a line into
- * the list's existing row for the same item, so the payload can name that row.
- */
-describe('reconcileReplaySuccess — AddItemToShoppingList merged into a held line', () => {
-  const addOperation = operationNameOf(AddItemToShoppingListDocument);
-  const replayed = {
-    input: { shoppingListId: 'list-1', items: [{ id: 'row-a' }] },
-  };
-  const answeredWith = (item: object, shoppingList?: object) => ({
+describe('reconcileReplaySuccess — the shopping adds', () => {
+  const merged = {
     addItemsToShoppingList: {
       __typename: 'AddItemsToShoppingListPayload',
-      ...(shoppingList && { shoppingList }),
-      results: [{ index: 0, success: true, item }],
-    },
-  });
-
-  beforeEach(() => jest.clearAllMocks());
-
-  it('withdraws the minted row and links the one the service merged it into', () => {
-    const adopt = jest.fn();
-    reconcileReplaySuccess(
-      addOperation,
-      replayed,
-      answeredWith({ id: 'existing-row', version: 7 }),
-      adopt,
-    );
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['row-a'],
-      { countsSettled: false },
-    );
-    expect(addNewItemToShoppingListCache).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      expect.objectContaining({ id: 'existing-row' }),
-      false,
-    );
-    expect(adopt).toHaveBeenCalledWith({
-      mintedId: 'row-a',
-      survivingId: 'existing-row',
-      version: 7,
-    });
-  });
-
-  it("moves no count when the answer stated the list's", () => {
-    reconcileReplaySuccess(
-      addOperation,
-      replayed,
-      answeredWith({ id: 'existing-row' }, { id: 'list-1', totalItems: 3 }),
-    );
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['row-a'],
-      { countsSettled: true },
-    );
-  });
-
-  it('leaves a row the service created under the minted id', () => {
-    const adopt = jest.fn();
-    reconcileReplaySuccess(
-      addOperation,
-      replayed,
-      answeredWith({ id: 'row-a' }),
-      adopt,
-    );
-
-    expect(addNewItemToShoppingListCache).not.toHaveBeenCalled();
-    expect(adopt).not.toHaveBeenCalled();
-  });
-});
-
-describe('reconcileReplaySuccess — recipe copies of the shopping adds', () => {
-  beforeEach(() => jest.clearAllMocks());
-
-  it('withdraws a row the server refused inside a replayed recipe batch', () => {
-    reconcileReplaySuccess(
-      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
-      {
-        input: {
-          shoppingListId: 'list-1',
-          items: [{ id: 'row-a' }, { id: 'row-b' }],
-        },
-      },
-      {
-        addItemsToShoppingList: {
-          __typename: 'AddItemsToShoppingListPayload',
-          results: [
-            { index: 0, success: true, item: { id: 'row-a' } },
-            { index: 1, success: false },
-          ],
-        },
-      },
-    );
-
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['row-b'],
-      { countsSettled: false },
-    );
-  });
-
-  // A single ingredient is a batch of one, so it replays through the same door.
-  const oneIngredient = {
-    input: {
-      shoppingListId: 'list-1',
-      items: [
+      results: [
         {
-          id: 'minted-1',
-          item: { itemName: 'Flour' },
-          recipeContext: { recipeId: 'recipe-1', recipeIngredientId: 'ri-1' },
+          index: 0,
+          success: true,
+          item: { id: 'row-held', version: 3 },
         },
       ],
     },
   };
-  const answeredWith = (outcome: CreateOutcome, item: object) => ({
-    addItemsToShoppingList: {
-      __typename: 'AddItemsToShoppingListPayload',
-      results: [{ index: 0, success: true, outcome, item }],
+
+  it.each([
+    AddItemToShoppingListDocument,
+    AddItemsToShoppingListFromRecipeDocument,
+  ])(
+    'moves the writes behind a merged line onto the row the server kept (%#)',
+    document => {
+      const adopt = jest.fn();
+
+      reconcileReplaySuccess(
+        operationNameOf(document),
+        { input: { shoppingListId: 'list-1', items: [{ id: 'minted-1' }] } },
+        merged,
+        adopt,
+      );
+
+      expect(adopt).toHaveBeenCalledWith({
+        mintedId: 'minted-1',
+        survivingId: 'row-held',
+        version: 3,
+      });
     },
-  });
+  );
 
-  it('folds a merged single ingredient line into the row the server kept', () => {
+  it('moves the writes behind a list created with a merged line', () => {
     const adopt = jest.fn();
+
     reconcileReplaySuccess(
-      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
-      oneIngredient,
-      answeredWith(CreateOutcome.Merged, { id: 'existing-row', version: 4 }),
+      operationNameOf(CreateShoppingListDocument),
+      { input: { id: 'list-1', items: [{ id: 'minted-1' }] } },
+      {
+        createShoppingList: {
+          __typename: 'CreateShoppingListPayload',
+          itemResults: merged.addItemsToShoppingList.results,
+        },
+      },
       adopt,
     );
 
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      ['minted-1'],
-      { countsSettled: false },
-    );
-    expect(addNewItemToShoppingListCache).toHaveBeenCalledWith(
-      {},
-      'list-1',
-      expect.objectContaining({ id: 'existing-row' }),
-      false,
-    );
-    // Writes still queued against the minted id move to the row it merged into.
-    expect(adopt).toHaveBeenCalledWith({
-      mintedId: 'minted-1',
-      survivingId: 'existing-row',
-      version: 4,
-    });
-  });
-
-  it('leaves a single ingredient line the server created under its id', () => {
-    const adopt = jest.fn();
-    reconcileReplaySuccess(
-      operationNameOf(AddItemsToShoppingListFromRecipeDocument),
-      oneIngredient,
-      answeredWith(CreateOutcome.Created, { id: 'minted-1' }),
-      adopt,
-    );
-
-    // Whatever the reconciler was handed to withdraw, it names no row.
-    const withdrawnIds = jest
-      .mocked(withdrawShoppingListItems)
-      .mock.calls.flatMap(([, , ids]) => ids);
-    expect(withdrawnIds).toEqual([]);
-    expect(addNewItemToShoppingListCache).not.toHaveBeenCalled();
-    expect(adopt).not.toHaveBeenCalled();
+    expect(adopt).toHaveBeenCalledTimes(1);
   });
 });
 

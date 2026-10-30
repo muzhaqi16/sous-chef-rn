@@ -5,20 +5,14 @@
  * parent-before-children.
  */
 
-import type { ApolloCache } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  addItemsInSlices,
-  addLocalShoppingListItem,
-  buildAddItemsReconcileUpdate,
-  createLocalShoppingListItem,
-} from '#features/shoppingList/cache/items';
+import { addItemsInSlices } from '#features/shoppingList/cache/createShoppingListRow';
+import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import type { DerivedList } from '#features/shoppingList/utils/listFromTemplate';
 import { t } from '#/i18n';
-import { errorService } from '#/services/errorService';
 
 export function useCopyShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
@@ -26,10 +20,7 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     useCreateShoppingList(fallbackErrorMessage);
   const [addItems, { loading: adding }] = useMutation(
     AddItemToShoppingListDocument,
-    {
-      context: { localFirst: true },
-      update: buildAddItemsReconcileUpdate({}),
-    },
+    { context: { localFirst: true } },
   );
 
   /**
@@ -47,18 +38,9 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       }),
     };
 
-    // One batch: watchers re-read once for the whole copy, not once per line.
-    const write = (listId: string) =>
-      client.cache.batch({
-        update: cache => {
-          for (const line of derived.items) {
-            writeLineToCache(cache, listId, line.id, derived);
-          }
-        },
-      });
     const created = await createShoppingList(input, {
       items: derived.items,
-      write,
+      rowOf: (line, listId) => rowOf(line.id, listId, derived),
     });
     if (created.status === 'failed') {
       toastService.error(created.body);
@@ -70,10 +52,8 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       client.cache,
       listId,
       created.unsent,
-      slice =>
-        addItems({
-          variables: { input: { shoppingListId: listId, items: slice } },
-        }),
+      line => rowOf(line.id, listId, derived),
+      addItems,
       {
         document: AddItemToShoppingListDocument,
         fallback: fallbackErrorMessage,
@@ -84,18 +64,14 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
     return listId;
   };
 
-  function writeLineToCache(
-    cache: ApolloCache,
-    listId: string,
+  function rowOf(
     lineId: string | null | undefined,
+    listId: string,
     derived: DerivedList,
   ) {
-    if (!lineId) return;
-    const display = derived.display.get(lineId);
-    if (!display) return;
-    // Built before the try: a value block inside one bails the whole function
-    // out of the React Compiler.
-    const row = createLocalShoppingListItem(lineId, {
+    const display = lineId ? derived.display.get(lineId) : undefined;
+    if (!lineId || !display) return null;
+    return createLocalShoppingListItem(lineId, {
       shoppingListId: listId,
       itemName: display.itemName || t('labels.item'),
       quantity: display.quantity,
@@ -105,13 +81,6 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       itemId: display.itemId,
       unitId: display.unitId,
     });
-    try {
-      addLocalShoppingListItem(cache, listId, row, new Date().toISOString());
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Copy shopping list (optimistic)',
-      });
-    }
   }
 
   return { copyList, copying: creating || adding };

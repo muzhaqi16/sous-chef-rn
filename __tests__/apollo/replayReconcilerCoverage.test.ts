@@ -3,8 +3,6 @@ import * as path from 'node:path';
 import * as ts from 'typescript';
 import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
 import { REPLAY_RECONCILERS } from '#/apollo/offlineQueue/replayRegistry';
-import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   SRC,
   authoredMutations,
@@ -250,16 +248,6 @@ describe('replay reconciler coverage', () => {
     // A rename that made the scan match nothing would pass by checking nothing.
     expect(updates.length).toBeGreaterThanOrEqual(10);
     expect(pairedUpdates.length).toBeGreaterThanOrEqual(5);
-  });
-
-  it('follows an update through the modules it calls', () => {
-    // `buildAddItemsReconcileUpdate` evicts three calls deep, in another module.
-    expect(
-      pairedUpdates.some(
-        update =>
-          update.operation === operationNameOf(AddItemToShoppingListDocument),
-      ),
-    ).toBe(true);
   });
 
   it('gives every queueable adopting or withdrawing update a replay reconciler', () => {

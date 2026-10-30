@@ -102,7 +102,7 @@ describe('useDeleteShoppingList', () => {
     );
   });
 
-  it('restores a refused delete with its items unknown, not empty', async () => {
+  it('brings a refused delete back with its items', async () => {
     const cache = cacheWithList();
     const refusal: MockFor<typeof DeleteShoppingListDocument> = {
       request: { query: DeleteShoppingListDocument, variables: () => true },
@@ -128,15 +128,19 @@ describe('useDeleteShoppingList', () => {
     const id = cache.identify({ __typename: 'ShoppingList', id: LIST_ID });
     expect(kept).toBe(false);
     expect(
-      cache.readFragment<{ totalItems: number }>({ id, fragment: LIST })
-        ?.totalItems,
+      cache.readFragment<{ totalItems: number }>({
+        id,
+        fragment: LIST,
+        optimistic: true,
+      })?.totalItems,
     ).toBe(12);
     expect(
       cache.readFragment({
         id,
         fragment: List_EmptyItemsVariantFragmentDoc,
         variables: { isPurchased: false },
+        optimistic: true,
       }),
-    ).toBeNull();
+    ).not.toBeNull();
   });
 });

@@ -1,18 +1,12 @@
 /**
- * Local-first: the list leaves the cache PERMANENTLY before firing, so the delete
- * survives an offline queue — a list already gone counts as deleted. A failure
- * restores the snapshot (items repopulate on refetch).
+ * Local-first: the list is hidden until the server answers, so the delete
+ * survives an offline queue — a list already gone counts as deleted.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  restoreShoppingList,
-  readShoppingListSnapshot,
-  removeShoppingListFromCache,
-} from '#features/shoppingList/cache/list';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 
 export function useDeleteShoppingList() {
@@ -25,41 +19,17 @@ export function useDeleteShoppingList() {
 
   /** `true` once the list is gone or its delete is queued; `false` when refused. */
   const deleteShoppingList = async (id: string): Promise<boolean> => {
-    // Snapshot first so a server rejection can restore the list.
-    const snapshot = readShoppingListSnapshot(client.cache, id);
-
-    try {
-      removeShoppingListFromCache(client.cache, id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Shopping List (optimistic)',
-      });
-    }
-
-    const restore = () => {
-      if (!snapshot) return;
-      try {
-        restoreShoppingList(client.cache, snapshot);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Restore refused Shopping List delete',
-        });
-      }
-    };
-
     // Toasted rather than alerted: the list simply reappears where it was.
-    const settled = await settleMutation(
-      () =>
-        mutate({
-          variables: { input: { id } },
+    const settled = await pendingWritesOf(client.cache).send(
+      DeleteShoppingListDocument,
+      { input: { id } },
+      write =>
+        settleMutation(() => mutate(write), {
+          document: DeleteShoppingListDocument,
+          fallback: t('errors.deleteShoppingListFailed'),
+          removal: true,
+          present: 'toast',
         }),
-      {
-        document: DeleteShoppingListDocument,
-        fallback: t('errors.deleteShoppingListFailed'),
-        removal: true,
-        onFailed: restore,
-        present: 'toast',
-      },
     );
     return settled.status !== 'failed';
   };

@@ -18,6 +18,7 @@ const readDefault = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ isDefault: boolean }>({
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: IS_DEFAULT,
+    optimistic: true,
   })?.isDefault;
 
 const seedList = () =>
