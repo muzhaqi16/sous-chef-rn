@@ -16,7 +16,7 @@ import {
   formatCurrency,
   formatDistance,
 } from '#/utils/formatters/number';
-import { formatQuantityWithUnit } from '#/utils/formatQuantity';
+import { formatPackageSize } from '#/utils/formatQuantity';
 import { resolveImageUrl } from '#utils/imageUtils';
 import {
   ListSavingsDocument,
@@ -127,7 +127,7 @@ function toListSavings(
         ? minor(thereAmount) - minor(amount)
         : 0;
     const size = line.packageNetWeight
-      ? formatQuantityWithUnit(line.packageNetWeight, line.packageNetWeightUnit)
+      ? formatPackageSize(line.packageNetWeight, line.packageNetWeightUnit)
       : null;
     return {
       lineId: line.line.id,

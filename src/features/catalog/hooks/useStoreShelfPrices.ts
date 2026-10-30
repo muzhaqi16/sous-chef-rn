@@ -14,7 +14,7 @@ import {
   UseStoreShelfPrices_ListFragmentDoc,
   type UseStoreShelfPrices_ItemFragment,
 } from './useStoreShelfPrices.generated';
-import { formatQuantityWithUnit, unitLabel } from '#/utils/formatQuantity';
+import { formatPackageSize, unitLabel } from '#/utils/formatQuantity';
 
 /** One store's shelf price for an item, worded for its row. */
 export interface StoreShelfPriceRow {
@@ -174,10 +174,7 @@ function similarRowOf(
     comparableKey(similar.basis, currency.code),
   );
   const size = similar.packageNetWeight
-    ? formatQuantityWithUnit(
-        similar.packageNetWeight,
-        similar.packageNetWeightUnit,
-      )
+    ? formatPackageSize(similar.packageNetWeight, similar.packageNetWeightUnit)
     : null;
   return {
     storeId: similar.store.id,

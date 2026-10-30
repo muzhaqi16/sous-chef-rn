@@ -147,7 +147,7 @@ describe('useListSavings', () => {
     expect(aldiBacon).toMatchObject({
       kind: 'similar',
       price: '$5.99',
-      product: 'Appleton Farms Bacon · 12 oz',
+      product: 'Appleton Farms Bacon · 12\u00a0oz', // a size never splits
     });
   });
 

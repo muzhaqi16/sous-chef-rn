@@ -6,6 +6,7 @@ import {
   formatQuantityAsFraction,
   formatQuantityForDisplay,
   formatQuantityForInput,
+  formatPackageSize,
   formatQuantityWithUnit,
   statedAmount,
   formatNetWeightDisplay,
@@ -454,6 +455,15 @@ describe('formatQuantityForDisplay', () => {
 // The set measured on device when the fraction stopped being seeded from a
 // float. Every value renders exactly as it did — the fraction-vs-decimal choice
 // included — which is what makes the change safe to take for the speed.
+describe('formatPackageSize', () => {
+  it('keeps a size on one line: every space is a no-break space', () => {
+    expect(formatPackageSize(12, { symbol: 'oz' })).toBe('12\u00a0oz');
+    expect(formatPackageSize(1.5, { symbol: 'cup' })).toBe(
+      '1\u00a01/2\u00a0cup',
+    );
+  });
+});
+
 describe('formatQuantityWithUnit', () => {
   it('puts the unit after the quantity, as the chip shows them', () => {
     expect(formatQuantityWithUnit(2, { symbol: 'pc' })).toBe('2 pc');

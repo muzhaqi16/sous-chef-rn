@@ -467,7 +467,7 @@ describe('useStoreShelfPrices', () => {
         {
           storeId: 's-aldi',
           storeName: 'ALDI',
-          product: 'Appleton Farms Bacon · 12 oz',
+          product: 'Appleton Farms Bacon · 12\u00a0oz', // a size never splits
           price: t('labels.pricePer.unit', { price: usd(4.49), unit: 'pc' }),
           perBasis: t('labels.pricePer.kg', { price: usd(13.2) }),
           mightBeCheaper: true,
