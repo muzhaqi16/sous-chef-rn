@@ -1,4 +1,4 @@
-import React, { useLayoutEffect } from 'react';
+import React, { useLayoutEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import {
@@ -32,11 +32,11 @@ import { FRAMES, FRAME_MS } from '#components/atoms/sousChefLoaderFrames';
 const COLORS = colors.illustration;
 
 /** Every size draws the same 200-unit art, scaled; the bag is 90 units wide. */
-const SIZES = {
-  small: { canvas: 120, scale: 0.6 },
-  medium: { canvas: 180, scale: 0.9 },
-  large: { canvas: 240, scale: 1.2 },
-};
+const ART_SIDE = 200;
+const SIZES = { small: 0.6, medium: 0.9, large: 1.2 };
+
+/** The banner's width in the art; a message that widens it scales the art to match. */
+const BANNER_WIDTH = 168;
 
 /** One loop is two tosses; with no message given, each toss swaps the banner's. */
 const HALF_MS = 2350;
@@ -410,16 +410,10 @@ const drawScene = (canvas: SkCanvas, p: FramePosition) => {
   drawSpark(canvas, YELLOW_SPARK, p, PAINT.baguette);
 };
 
-/**
- * Sits the banner against the bag's base, in the canvas's empty lower band:
- * over the bag, a message long enough to wrap hides half the illustration.
- */
-const bannerGeometry = ({
-  canvas,
-  scale,
-}: (typeof SIZES)[keyof typeof SIZES]) => ({
-  marginTop: (BAG_BOTTOM + ART_OFFSET_Y) * scale - canvas / 2,
-  minWidth: 168 * scale,
+/** Past twice its size's canvas, the message wraps instead of growing the banner. */
+const bannerGeometry = (scale: number) => ({
+  minWidth: BANNER_WIDTH * scale,
+  maxWidth: ART_SIDE * scale * 2,
   minHeight: 42 * scale,
 });
 
@@ -505,13 +499,26 @@ interface BannerProps {
   messages: readonly string[];
   label: string;
   clock: SharedValue<number>;
+  onWidth: (width: number) => void;
 }
 
 /** The banner sizes to its longest message; the others overlay that one. */
-const Banner: React.FC<BannerProps> = ({ size, messages, label, clock }) => {
+const Banner: React.FC<BannerProps> = ({
+  size,
+  messages,
+  label,
+  clock,
+  onWidth,
+}) => {
   // Variants reach only the component that sets them, so the banner sets its own.
   componentStyles.useVariants({ size });
   const animatedTheme = useAnimatedTheme();
+  const ref = useRef<View>(null);
+  // Fabric measures synchronously here, so the art has its size before the first
+  // paint; `onLayout` follows a later change (a rotation, a new message).
+  useLayoutEffect(() => {
+    ref.current?.measure((_x, _y, width) => onWidth(width));
+  }, [onWidth]);
   const lengths = messages.map(text => text.length);
   const flowSlot = lengths.indexOf(Math.max(...lengths));
   const alternates = messages.length > 1;
@@ -526,6 +533,8 @@ const Banner: React.FC<BannerProps> = ({ size, messages, label, clock }) => {
 
   return (
     <View
+      ref={ref}
+      onLayout={event => onWidth(event.nativeEvent.layout.width)}
       style={componentStyles.banner}
       accessible
       accessibilityRole="text"
@@ -579,7 +588,9 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
   showBrand = true,
 }) => {
   const { t } = useTranslation();
-  const config = SIZES[size];
+  const [bannerWidth, setBannerWidth] = useState(0);
+  const scale = Math.max(SIZES[size], bannerWidth / BANNER_WIDTH);
+  const side = ART_SIDE * scale;
 
   const messages =
     message === undefined
@@ -612,7 +623,6 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
     const { ms } = tossOf(clock.get());
     return ms < STILL_UNTIL_MS ? 0 : ms;
   });
-  const { canvas: side, scale } = config;
   // One worklet records the whole scene, so the canvas holds one picture, not a node per shape.
   const picture = useDerivedValue(() => {
     const p = framePosition(canvasMs.get());
@@ -640,12 +650,17 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
         </View>
       )}
 
-      {/* androidWarmup paints the first frame before Android's GPU surface is ready. */}
+      {/* androidWarmup paints the first frame before Android's GPU surface is ready.
+          A new size mounts a new canvas: Skia can leave one resized after mount blank. */}
       <Canvas
+        key={Math.round(side)}
         androidWarmup
         style={{
-          width: config.canvas,
-          height: config.canvas,
+          width: side,
+          height: side,
+          // The banner rises into the empty band under the bag to meet its base;
+          // over the bag, a wrapped message would hide half the illustration.
+          marginBottom: (BAG_BOTTOM + ART_OFFSET_Y) * scale - side / 2,
         }}
       >
         <Picture picture={picture} />
@@ -657,6 +672,7 @@ export const SousChefLoader: React.FC<SousChefLoaderProps> = ({
         messages={messages}
         label={message ?? t('labels.pleaseWait')}
         clock={clock}
+        onWidth={setBannerWidth}
       />
     </View>
   );
@@ -683,7 +699,6 @@ const componentStyles = StyleSheet.create(theme => ({
   banner: {
     alignItems: 'center',
     justifyContent: 'center',
-    maxWidth: '100%',
     overflow: 'hidden',
     paddingHorizontal: theme.spacing.lg,
     paddingVertical: theme.spacing.xs,
