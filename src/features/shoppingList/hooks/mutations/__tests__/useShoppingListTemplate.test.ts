@@ -98,6 +98,7 @@ describe('useShoppingListTemplate', () => {
     const TEMPLATE = {
       __typename: 'ShoppingList',
       id: 'template-1',
+      version: 1,
       name: 'Weekly Staples',
       description: 'Every week',
       budgetAmount: 40,
@@ -116,6 +117,7 @@ describe('useShoppingListTemplate', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-1',
+              version: 1,
               itemName: 'Tomatoes',
               quantity: 2,
               quantityInput: '2',
@@ -123,7 +125,7 @@ describe('useShoppingListTemplate', () => {
               notes: null,
               unitName: 'pc',
               sortOrder: 'a0',
-              item: { __typename: 'Item', id: 'item-1' },
+              item: { __typename: 'Item', id: 'item-1', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-1' },
             },
           },
@@ -142,6 +144,7 @@ describe('useShoppingListTemplate', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-2',
+              version: 1,
               itemName: 'Milk',
               quantity: 1,
               quantityInput: '1',
@@ -149,7 +152,7 @@ describe('useShoppingListTemplate', () => {
               notes: null,
               unitName: 'l',
               sortOrder: 'a1',
-              item: { __typename: 'Item', id: 'item-2' },
+              item: { __typename: 'Item', id: 'item-2', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-2' },
             },
           },

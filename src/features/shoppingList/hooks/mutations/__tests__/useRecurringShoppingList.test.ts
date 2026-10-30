@@ -137,6 +137,7 @@ describe('useRecurringShoppingList', () => {
     const COPYABLE = {
       __typename: 'ShoppingList',
       id: 'list-1',
+      version: 1,
       name: 'Weekly Shop',
       description: null,
       budgetAmount: null,
@@ -155,6 +156,7 @@ describe('useRecurringShoppingList', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-1',
+              version: 1,
               itemName: 'Tomatoes',
               quantity: 2,
               quantityInput: '2',
@@ -162,7 +164,7 @@ describe('useRecurringShoppingList', () => {
               notes: null,
               unitName: 'pc',
               sortOrder: 'a0',
-              item: { __typename: 'Item', id: 'item-1' },
+              item: { __typename: 'Item', id: 'item-1', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-1' },
             },
           },
@@ -181,6 +183,7 @@ describe('useRecurringShoppingList', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-2',
+              version: 1,
               itemName: 'Milk',
               quantity: 1,
               quantityInput: '1',
@@ -188,7 +191,7 @@ describe('useRecurringShoppingList', () => {
               notes: null,
               unitName: 'l',
               sortOrder: 'a1',
-              item: { __typename: 'Item', id: 'item-2' },
+              item: { __typename: 'Item', id: 'item-2', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-2' },
             },
           },

@@ -52,6 +52,21 @@ const CASES = [
     reports: false,
   },
   {
+    name: 'the key of a row a removal returns',
+    code: 'mutation Probe($input: DeleteShoppingListInput!) { deleteShoppingList(input: $input) { ... on DeleteShoppingListPayload { shoppingList { id } } } }',
+    reports: false,
+  },
+  {
+    name: 'a row a removal returns with more than its key',
+    code: 'mutation Probe($input: DeleteShoppingListInput!) { deleteShoppingList(input: $input) { ... on DeleteShoppingListPayload { shoppingList { id name } } } }',
+    reports: true,
+  },
+  {
+    name: 'the key of a row a write returns',
+    code: 'mutation Probe($input: CompleteShoppingListInput!) { completeShoppingList(input: $input) { ... on CompleteShoppingListPayload { shoppingList { id } } } }',
+    reports: true,
+  },
+  {
     // Reachability is by name: operations on disk spread this one.
     name: 'a fragment an operation spreads, without version',
     code: 'fragment ShoppingListReaders on ShoppingList { id name }',

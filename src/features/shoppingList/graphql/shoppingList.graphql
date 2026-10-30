@@ -612,7 +612,6 @@ mutation DeleteShoppingList($input: DeleteShoppingListInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       shoppingList {
-        version
         id
       }
     }
@@ -762,7 +761,6 @@ mutation RemoveItemFromShoppingList($input: RemoveItemFromShoppingListInput!) {
     __typename
     ... on RemoveItemFromShoppingListPayload {
       shoppingListItem {
-        version
         id
       }
       shoppingList {
@@ -930,7 +928,6 @@ mutation RemoveItemsFromShoppingList(
         executionTime
       }
       shoppingListItems {
-        version
         id
       }
       shoppingList {

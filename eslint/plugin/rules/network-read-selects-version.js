@@ -1,6 +1,8 @@
 const { getNamedType, isInterfaceType, isObjectType } = require('graphql');
+const { REMOVAL } = require('../../../scripts/lib/removalField');
 
 const VERSION = 'version';
+const KEY_FIELDS = new Set(['id', '__typename']);
 
 /** Per document set: every fragment an operation spreads, at any depth. */
 const reachableBySiblings = new WeakMap();
@@ -53,6 +55,21 @@ const definitionOf = node => {
   return current;
 };
 
+const rootFieldOf = (node, definition) => {
+  let current = node;
+  while (current.parent.parent !== definition) current = current.parent;
+  return current;
+};
+
+/** The key of a row a removal returns: the client evicts it, unread. */
+const isRemovedKey = (node, definition) =>
+  definition?.operation === 'mutation' &&
+  REMOVAL.test(rootFieldOf(node, definition).name.value) &&
+  node.selections.every(
+    selection =>
+      selection.kind === 'Field' && KEY_FIELDS.has(selection.name.value),
+  );
+
 /** @type {import('eslint').Rule.RuleModule} */
 module.exports = {
   meta: {
@@ -85,6 +102,7 @@ module.exports = {
         if (!(isObjectType(type) || isInterfaceType(type))) return;
         if (!(VERSION in type.getFields())) return;
         if (selectsVersion(node, siblingOperations)) return;
+        if (isRemovedKey(node, definition)) return;
         const [first] = node.selections;
         context.report({
           node,

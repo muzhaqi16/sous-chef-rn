@@ -23,7 +23,6 @@ mutation CreateReceiptCheckIn(
         index
         clientId
         success
-        alreadyRecorded
         # `code` decides what the user is told; `errorId` goes to diagnostics.
         # `reason` is a server string never shown.
         failure {

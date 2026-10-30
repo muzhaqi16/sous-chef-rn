@@ -105,7 +105,6 @@ mutation DeleteMealPlan($input: DeleteMealPlanInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       mealPlan {
-        version
         id
       }
     }
@@ -188,7 +187,6 @@ mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       mealPlanItem {
-        version
         id
       }
       mealPlan {

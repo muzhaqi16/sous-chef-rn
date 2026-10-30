@@ -280,7 +280,7 @@ describe.each([
           deleteMealPlan: {
             __typename: 'DeleteMealPlanPayload',
             converged: false,
-            mealPlan: { __typename: 'MealPlan', version: 1, id },
+            mealPlan: { __typename: 'MealPlan', id },
           },
         } satisfies DeleteMealPlanMutation,
       }),

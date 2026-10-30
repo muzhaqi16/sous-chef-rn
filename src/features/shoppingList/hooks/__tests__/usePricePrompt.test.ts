@@ -27,6 +27,7 @@ const USER = {
 const list = (priceReadiness: { enough: boolean } | null) => ({
   __typename: 'ShoppingList',
   id: 'list-1',
+  version: 1,
   priceReadiness: priceReadiness && {
     __typename: 'PriceReadiness',
     ...priceReadiness,

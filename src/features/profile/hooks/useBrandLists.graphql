@@ -75,7 +75,6 @@ mutation DeleteBrandList($input: DeleteBrandListInput!) {
     __typename
     ... on DeleteBrandListPayload {
       brandList {
-        version
         id
       }
       converged
@@ -118,7 +117,6 @@ mutation RemoveBrandFromList($input: RemoveBrandFromListInput!) {
     __typename
     ... on RemoveBrandFromListPayload {
       brandListEntry {
-        version
         id
       }
       converged

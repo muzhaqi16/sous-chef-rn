@@ -154,7 +154,6 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
       # True when the removal was already done: a replay, or another device.
       converged
       recipe {
-        version
         id
       }
     }

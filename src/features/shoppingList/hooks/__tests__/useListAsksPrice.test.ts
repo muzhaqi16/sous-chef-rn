@@ -12,6 +12,7 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 const list = (priceTracking: boolean) => ({
   __typename: 'ShoppingList',
   id: 'list-1',
+  version: 1,
   priceTracking,
 });
 

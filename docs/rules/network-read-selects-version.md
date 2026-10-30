@@ -18,4 +18,6 @@ Select `version` beside the row's other fields: `shoppingList(id: $id) { id vers
 
 A fragment no operation spreads. The cache writers pass such a fragment's generated document to `readFragment` / `writeFragment` from TypeScript, so it never reaches the network, and a local write must not state a version the server didn't give. Types without a `version` field are exempt too.
 
+The key of a row a removal returns (`deleteShoppingList { shoppingList { id } }`). The client evicts the row, so the answer holds nothing to order, and `find-stale-cache-fields` holds a removal to its key. A removal's row selecting anything more still reports.
+
 Source: [`eslint/plugin/rules/network-read-selects-version.js`](../../eslint/plugin/rules/network-read-selects-version.js) · spec: [`__tests__/lint/rules/network-read-selects-version.test.ts`](../../__tests__/lint/rules/network-read-selects-version.test.ts)

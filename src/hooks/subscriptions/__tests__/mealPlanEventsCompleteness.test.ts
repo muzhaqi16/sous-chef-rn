@@ -249,6 +249,6 @@ describe('MealPlanEvents completeness', () => {
     const fragments = collectFragments([MealPlanEventsDocument]);
     expect(
       fieldPaths(subscriptionPlanBranch(MealPlanEventsDocument), fragments),
-    ).toEqual(['id']);
+    ).toEqual(['version', 'id']);
   });
 });

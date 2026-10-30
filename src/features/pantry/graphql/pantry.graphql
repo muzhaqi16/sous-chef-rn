@@ -535,7 +535,6 @@ mutation DeletePantry($input: DeletePantryInput!) {
     __typename
     ... on DeletePantryPayload {
       pantry {
-        version
         id
       }
     }
@@ -663,7 +662,6 @@ mutation DeletePantryItem($input: DeletePantryItemInput!, $today: LocalDate!) {
     ... on DeletePantryItemPayload {
       converged
       pantryItem {
-        version
         id
       }
       pantry {
