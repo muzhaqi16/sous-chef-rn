@@ -1,4 +1,4 @@
-import { gql } from '@apollo/client';
+import { gql, type Reference } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 
 /**
@@ -168,6 +168,71 @@ describe('an optimistic layer over the root', () => {
   });
 });
 
+describe('taking a row away inside a layer', () => {
+  const held = (cache: ProbeCache, optimistic: boolean) =>
+    cache.readFragment<{ quantity: number }>({
+      id: 'ProbeItem:row-1',
+      fragment: QUANTITY,
+      optimistic,
+    });
+
+  it('evict does nothing to a row the layer does not hold', () => {
+    const cache = seeded();
+
+    cache.recordOptimisticTransaction(c => {
+      c.evict({ id: 'ProbeItem:row-1' });
+    }, 'write-1');
+
+    expect(held(cache, true)).toMatchObject({ quantity: 1 });
+  });
+
+  it('modify with DELETE hides the row, and the root keeps it', () => {
+    const cache = seeded();
+
+    cache.recordOptimisticTransaction(c => {
+      c.modify({
+        id: 'ProbeItem:row-1',
+        fields: (_value, { DELETE }) => DELETE,
+      });
+    }, 'write-1');
+
+    expect(held(cache, true)).toBeNull();
+    expect(held(cache, false)).toMatchObject({ quantity: 1 });
+    expect(optimisticRead(cache)).toBeUndefined();
+
+    cache.removeOptimistic('write-1');
+
+    expect(held(cache, true)).toMatchObject({ quantity: 1 });
+  });
+
+  it('a list filtered in a layer leaves the root’s list whole', () => {
+    const cache = makeCache();
+    cache.writeQuery({
+      query: ROW_LIST,
+      data: { probeRows: [row('Milk', 1), row('Oat', 1, 'row-2')] },
+    });
+
+    cache.recordOptimisticTransaction(c => {
+      c.modify<{ probeRows: readonly Reference[] }>({
+        id: 'ROOT_QUERY',
+        fields: {
+          probeRows: (rows, { readField }) =>
+            (rows as readonly Reference[]).filter(
+              ref => readField('id', ref) !== 'row-2',
+            ),
+        },
+      });
+    }, 'write-1');
+
+    const ids = (optimistic: boolean) =>
+      cache
+        .readQuery<ProbeRowsData>({ query: ROW_LIST, optimistic })
+        ?.probeRows.map(({ id }) => id);
+    expect(ids(true)).toEqual(['row-1']);
+    expect(ids(false)).toEqual(['row-1', 'row-2']);
+  });
+});
+
 describe('removing a layer', () => {
   it('replays the layers above it, in order, over what is left', () => {
     const cache = seeded();
@@ -205,7 +270,7 @@ describe('removing a layer', () => {
 
 describe('changing layers around a batch', () => {
   const watching = (cache: ProbeCache) => {
-    const seen: (ProbeRowData['probeRow'] | undefined)[] = [];
+    const seen: unknown[] = [];
     cache.watch<ProbeRowData>({
       query: ROW,
       optimistic: true,

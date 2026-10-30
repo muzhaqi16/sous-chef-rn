@@ -776,9 +776,33 @@ inside `cache.write` too. The one way to change layers with one notification is
 runs over the old layers, then again over the root as they are removed, and a
 watcher hears once.
 
+**Removing a row inside a layer is not `evict`.** `evict` deletes only from a
+layer that owns the row and stops at the layer the transaction runs in, so a row
+in the root stays. `cache.modify` with `DELETE` hides it and leaves the root's
+copy, and a list filtered in a layer leaves the root's list whole.
+
 **What depends on it:** `src/apollo/pendingWrites/` and the
 `sync/pending-writes` spec: pending writes share one generation id, a rebuild
 swaps the generation, and it runs after the answer's batch, not inside it.
+
+### Apollo: a merge cannot read a row that selects its parent
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** in a field `merge`, `readField('id', ref)` on an incoming row returns
+`undefined` when the row selects the object that holds the field. Apollo stores
+nothing until it has walked the whole answer, then stores entities in the order
+it first met them. A row's own entry goes in after its children, so a row that
+selects its parent puts the parent ahead of itself, and the parent's `merge`
+runs while the row is not in the store.
+
+So a merge that filters rows by `readField` drops every row the device has never
+held. A later answer stores them fine, which hides it: the same page asked for
+twice lands the second time.
+
+**What depends on it:** `readEdgeNodeId` in `src/apollo/cacheFieldPolicies.ts`
+reads a row's id from its reference, never through the store.
 
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 
