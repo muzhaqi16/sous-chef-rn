@@ -57,6 +57,38 @@ function writeOrder() {
   };
 }
 
+/** What a store's entry goes back to if its write fails. */
+interface Rollback {
+  before: UsualStoreEntry | undefined;
+}
+
+/**
+ * Each store's unsettled writes, oldest first. A write made behind another
+ * holds that one's change as its `before`, so when the first fails, the next
+ * takes the first's `before` and never puts the failed change back.
+ */
+function rollbacks() {
+  const held = new Map<string, Rollback[]>();
+  return {
+    hold(key: string, before: UsualStoreEntry | undefined): Rollback {
+      const rollback = { before };
+      held.set(key, [...(held.get(key) ?? []), rollback]);
+      return rollback;
+    },
+    failed(key: string, rollback: Rollback) {
+      const waiting = held.get(key) ?? [];
+      const at = waiting.indexOf(rollback);
+      const next = at === -1 ? undefined : waiting[at + 1];
+      if (next) next.before = rollback.before;
+    },
+    settled(key: string, rollback: Rollback) {
+      const waiting = (held.get(key) ?? []).filter(r => r !== rollback);
+      if (waiting.length > 0) held.set(key, waiting);
+      else held.delete(key);
+    },
+  };
+}
+
 /**
  * A household's usual-store writes (`homeId` null: the caller's own), each
  * shown at once and sent local-first. Each answers the whole list, which
@@ -69,6 +101,7 @@ export function useUsualStoreWrites(homeId: string | null) {
   const { cache } = client;
   // Made once, for this hook's life: a screen that leaves takes it along.
   const [order] = useState(writeOrder);
+  const [undo] = useState(rollbacks);
   const answer = (
     into: ApolloCache,
     usualStores: readonly UsualStoreEntry[] | undefined,
@@ -117,18 +150,28 @@ export function useUsualStoreWrites(homeId: string | null) {
     options: Pick<SettleOptions, 'document' | 'copy' | 'removal'>,
   ) => {
     const key = storeChoiceKey(choice);
-    const before = replaceUsualStore(cache, homeId, key, change);
+    const rollback = undo.hold(
+      key,
+      replaceUsualStore(cache, homeId, key, change),
+    );
     return order
       .after(() =>
         settleMutation(() => send(storeChoiceTarget(choice)), {
           ...options,
           fallback: t('usualStores.saveFailed'),
           onFailed: () => {
-            replaceUsualStore(cache, homeId, key, () => before ?? null);
+            undo.failed(key, rollback);
+            replaceUsualStore(
+              cache,
+              homeId,
+              key,
+              () => rollback.before ?? null,
+            );
           },
         }),
       )
       .then(settled => {
+        undo.settled(key, rollback);
         // "Could you save?" compares the list at these stores. It is another
         // feature's query, so it is named rather than imported.
         if (settled.status === 'applied') {

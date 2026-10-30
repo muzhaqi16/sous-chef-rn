@@ -15,6 +15,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
+  readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
 } from '#features/catalog/cache/usualStores';
@@ -329,6 +330,46 @@ describe('useUsualStoreWrites', () => {
         result.current.read.stores?.find(row => row.key === 'store:s2'),
       ).toMatchObject({ pinned: false }),
     );
+  });
+
+  // Pinning counts toward the 20 as well, so the pin behind a refused add is
+  // refused too; its undo must not bring back the add's row.
+  it('keeps a store out when its add and the pin behind it are refused', async () => {
+    const overTheLimit = {
+      __typename: 'ValidationError',
+      code: ErrorCode.ValidationFailed,
+      message: 'Value is out of the permitted range',
+      field: 'target',
+    } as const;
+    const add = recordMock(AddUsualStoreDocument, {
+      data: { addUsualStore: overTheLimit },
+    });
+    const pin = recordMock(UpdateUsualStoreDocument, {
+      data: { updateUsualStore: overTheLimit },
+    });
+    const cache = seeded();
+    const { result } = renderHookWithApollo(useBoth, {
+      cache,
+      operationMocks: [add.mock, pin.mock],
+    });
+    const aldi = { store: { id: 's3', name: 'ALDI Wilkinsburg' } };
+
+    let added: Promise<boolean> | undefined;
+    let pinned: Promise<boolean> | undefined;
+    act(() => {
+      added = result.current.writes.add(aldi);
+      pinned = result.current.writes.setPinned(aldi, true);
+    });
+    await act(async () => {
+      await expect(added).resolves.toBe(false);
+      await expect(pinned).resolves.toBe(false);
+    });
+
+    expect(pin.fired).toHaveLength(1);
+    expect(readUsualStores(cache, 'home-1')?.map(row => row.id)).toEqual([
+      banksville.id,
+      marketDistrict.id,
+    ]);
   });
 });
 
