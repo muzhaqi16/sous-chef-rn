@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
@@ -179,11 +179,13 @@ function renderOverview(
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
   inHousehold('p1');
   mockedFlag.mockReturnValue(true);
 });
 
 afterEach(() => {
+  jest.useRealTimers();
   act(() => memoryScreen().setFocused(true));
 });
 
@@ -197,13 +199,12 @@ it("reads the current pantry's counts for today", async () => {
     listsMock(),
   ]);
 
-  await waitFor(() =>
-    expect(result.current.overview.counts).toEqual({
-      expired: 6,
-      expiring: 3,
-      lowStock: 0,
-    }),
-  );
+  await drainTimers();
+  expect(result.current.overview.counts).toEqual({
+    expired: 6,
+    expiring: 3,
+    lowStock: 0,
+  });
   expect(counts.fired).toEqual([{ id: 'p1', today: TODAY }]);
   expect(result.current.overview.householdName).toBe('Test Home');
 });
@@ -211,7 +212,8 @@ it("reads the current pantry's counts for today", async () => {
 it("lists only today's meals, each with its meal type and recipe", async () => {
   const { result } = renderOverview();
 
-  await waitFor(() => expect(result.current.overview.meals).toHaveLength(1));
+  await drainTimers();
+  expect(result.current.overview.meals).toHaveLength(1);
   expect(result.current.overview.meals[0]).toMatchObject({
     id: 'mi1',
     mealTypeLabel: 'Dinner',
@@ -222,9 +224,8 @@ it("lists only today's meals, each with its meal type and recipe", async () => {
 it("previews the first three of Recipes' pantry suggestions, in order", async () => {
   const { result } = renderOverview();
 
-  await waitFor(() =>
-    expect(result.current.overview.suggestions.items).toHaveLength(3),
-  );
+  await drainTimers();
+  expect(result.current.overview.suggestions.items).toHaveLength(3);
   expect(result.current.overview.suggestions.fromPantry).toBe(true);
   expect(result.current.overview.suggestions.items.map(s => s.title)).toEqual([
     'Recipe 1',
@@ -244,7 +245,8 @@ it('previews no suggestions with pantry suggestions switched off', async () => {
     listsMock(),
   ]);
 
-  await waitFor(() => expect(result.current.overview.counts).not.toBeNull());
+  await drainTimers();
+  expect(result.current.overview.counts).not.toBeNull();
   expect(suggestions.fired).toHaveLength(0);
   expect(result.current.overview.suggestions).toEqual({
     items: [],
@@ -260,10 +262,10 @@ it('asks every section again on a pull to refresh, and spins until all answer', 
   const suggestions = suggestionsMock();
   const lists = listsMock();
   const { result } = renderOverview([counts, plans, plan, suggestions, lists]);
-  await waitFor(() => expect(result.current.overview.meals).toHaveLength(1));
-  await waitFor(() =>
-    expect(result.current.overview.suggestions.items).toHaveLength(3),
-  );
+  await drainTimers();
+  expect(result.current.overview.meals).toHaveLength(1);
+  await drainTimers();
+  expect(result.current.overview.suggestions.items).toHaveLength(3);
   const before = [counts, plans, plan, suggestions, lists].map(
     mock => mock.fired.length,
   );
@@ -271,7 +273,8 @@ it('asks every section again on a pull to refresh, and spins until all answer', 
   act(() => result.current.overview.refresh());
 
   expect(result.current.overview.refreshing).toBe(true);
-  await waitFor(() => expect(result.current.overview.refreshing).toBe(false));
+  await drainTimers();
+  expect(result.current.overview.refreshing).toBe(false);
   // At least once more each: a plans answer can re-run the plan's read too.
   [counts, plans, plan, suggestions, lists].forEach((mock, index) => {
     expect(mock.fired.length).toBeGreaterThan(before[index] ?? 0);
@@ -281,13 +284,12 @@ it('asks every section again on a pull to refresh, and spins until all answer', 
 it('summarizes the active list as the items left to buy', async () => {
   const { result } = renderOverview();
 
-  await waitFor(() =>
-    expect(result.current.overview.shopping).toEqual({
-      id: 'l1',
-      name: 'Weekly',
-      itemsLeft: 5,
-    }),
-  );
+  await drainTimers();
+  expect(result.current.overview.shopping).toEqual({
+    id: 'l1',
+    name: 'Weekly',
+    itemsLeft: 5,
+  });
 });
 
 it('is a first run for an empty pantry with no plan or list', async () => {
@@ -298,7 +300,8 @@ it('is a first run for an empty pantry with no plan or list', async () => {
     listsMock(false),
   ]);
 
-  await waitFor(() => expect(result.current.overview.state).toBe('empty'));
+  await drainTimers();
+  expect(result.current.overview.state).toBe('empty');
 });
 
 it('is a first run with no household', () => {
@@ -316,13 +319,15 @@ it('is not a first run while a list exists', async () => {
     listsMock(),
   ]);
 
-  await waitFor(() => expect(result.current.overview.shopping).not.toBeNull());
+  await drainTimers();
+  expect(result.current.overview.shopping).not.toBeNull();
   expect(result.current.overview.state).toBe('ready');
 });
 
 it('keeps no read running while another tab is in view', async () => {
   const { result } = renderOverview();
-  await waitFor(() => expect(result.current.overview.shopping).not.toBeNull());
+  await drainTimers();
+  expect(result.current.overview.shopping).not.toBeNull();
 
   act(() => memoryScreen().setFocused(false));
 
@@ -345,7 +350,8 @@ it('reads a pantry switched while hidden once Today is back in view', async () =
     suggestionsMock(),
     listsMock(),
   ]);
-  await waitFor(() => expect(counts.fired).toHaveLength(1));
+  await drainTimers();
+  expect(counts.fired).toHaveLength(1);
 
   act(() => memoryScreen().setFocused(false));
   inHousehold('p2');
@@ -353,13 +359,13 @@ it('reads a pantry switched while hidden once Today is back in view', async () =
   expect(counts.fired).toHaveLength(1);
 
   act(() => memoryScreen().setFocused(true));
-  await waitFor(() =>
-    expect(counts.fired).toEqual([
-      { id: 'p1', today: TODAY },
-      { id: 'p2', today: TODAY },
-    ]),
-  );
-  await waitFor(() => expect(result.current.overview.counts).not.toBeNull());
+  await drainTimers();
+  expect(counts.fired).toEqual([
+    { id: 'p1', today: TODAY },
+    { id: 'p2', today: TODAY },
+  ]);
+  await drainTimers();
+  expect(result.current.overview.counts).not.toBeNull();
 });
 
 it('keeps its counts when a later read fails, never reading as offline', async () => {
@@ -375,13 +381,15 @@ it('keeps its counts when a later read fails, never reading as offline', async (
     suggestionsMock(),
     listsMock(),
   ]);
-  await waitFor(() => expect(result.current.overview.state).toBe('ready'));
+  await drainTimers();
+  expect(result.current.overview.state).toBe('ready');
 
   await act(async () => {
     result.current.overview.retry();
   });
 
-  await waitFor(() => expect(failed.fired).toHaveLength(1));
+  await drainTimers();
+  expect(failed.fired).toHaveLength(1);
   expect(result.current.overview.state).toBe('ready');
   expect(result.current.overview.counts).toEqual({
     expired: 6,
@@ -399,7 +407,8 @@ it("follows the pantry's stats when another tab's write moves them", async () =>
     suggestionsMock(),
     listsMock(),
   ]);
-  await waitFor(() => expect(result.current.overview.counts?.expired).toBe(6));
+  await drainTimers();
+  expect(result.current.overview.counts?.expired).toBe(6);
 
   // What a consume's payload writes: the pantry's readers, stats included.
   act(() => {
@@ -431,7 +440,8 @@ it("follows the pantry's stats when another tab's write moves them", async () =>
     });
   });
 
-  await waitFor(() => expect(result.current.overview.counts?.expired).toBe(5));
+  await drainTimers();
+  expect(result.current.overview.counts?.expired).toBe(5);
   expect(counts.fired).toHaveLength(1);
 });
 
@@ -446,10 +456,10 @@ it('reports a failed count read as a failure, never as an empty household', asyn
     listsMock(false),
   ]);
 
-  await waitFor(() => expect(counts.fired).toHaveLength(1));
-  await waitFor(() =>
-    expect(['error', 'offline']).toContain(result.current.overview.state),
-  );
+  await drainTimers();
+  expect(counts.fired).toHaveLength(1);
+  await drainTimers();
+  expect(['error', 'offline']).toContain(result.current.overview.state);
 });
 
 describe('a home with no pantry', () => {
@@ -462,7 +472,8 @@ describe('a home with no pantry', () => {
       listsMock(),
     ]);
 
-    await waitFor(() => expect(result.current.overview.meals).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.overview.meals).toHaveLength(1);
     expect(result.current.overview.state).toBe('ready');
     expect(result.current.overview.counts).toBeNull();
   });
@@ -470,12 +481,14 @@ describe('a home with no pantry', () => {
   // `skipToken` keeps the deleted pantry's last answer; it is not this home's.
   it('shows no counts once the pantry that had them is deleted', async () => {
     const { result, rerender } = renderOverview();
-    await waitFor(() => expect(result.current.overview.counts).not.toBeNull());
+    await drainTimers();
+    expect(result.current.overview.counts).not.toBeNull();
 
     inHouseholdWithoutPantry({ homeLoaded: true });
     rerender({});
 
-    await waitFor(() => expect(result.current.overview.counts).toBeNull());
+    await drainTimers();
+    expect(result.current.overview.counts).toBeNull();
     expect(result.current.overview.state).toBe('ready');
   });
 
@@ -487,7 +500,8 @@ describe('a home with no pantry', () => {
       listsMock(false),
     ]);
 
-    await waitFor(() => expect(result.current.overview.state).toBe('empty'));
+    await drainTimers();
+    expect(result.current.overview.state).toBe('empty');
   });
 
   it('states how many homes the user is in once the homes have loaded, and null before', async () => {
@@ -517,7 +531,6 @@ describe('a home with no pantry', () => {
   });
 
   it('is still loading while the home itself has not arrived', async () => {
-    jest.useFakeTimers();
     inHouseholdWithoutPantry({ homeLoaded: false });
     const { result } = renderOverview([
       plansMock(false),
@@ -548,13 +561,13 @@ it('shows the plan covering today, not the one last opened on Meal Plan', async 
     listsMock(),
   ]);
 
-  await waitFor(() => expect(result.current.overview.meals).toHaveLength(1));
+  await drainTimers();
+  expect(result.current.overview.meals).toHaveLength(1);
   expect(result.current.overview.meals[0]?.id).toBe('mi1');
   useStore.setState({ selectedMealPlanId: null });
 });
 
 it('plans nothing for today when no plan covers it', async () => {
-  jest.useFakeTimers();
   const plans = recordMock(GetMealPlansDocument, {
     data: {
       mealPlans: connectionOf([
@@ -614,7 +627,6 @@ describe("a new day's counts", () => {
   }
 
   it('are confirmed with the server once, then answered from the cache', async () => {
-    jest.useFakeTimers();
     const counts = countsMock(stats(9, 6, 3));
     const { result } = renderOverview(
       [counts, plansMock(), planMock(), suggestionsMock(), listsMock()],
@@ -641,7 +653,8 @@ describe("a new day's counts", () => {
       cacheWithYesterdaysCounts(),
     );
 
-    await waitFor(() => expect(counts.fired).toHaveLength(1));
+    await drainTimers();
+    expect(counts.fired).toHaveLength(1);
     expect(result.current.overview.state).toBe('ready');
     expect(result.current.overview.counts?.expired).toBe(1);
   });

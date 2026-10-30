@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { GraphQLError, Kind, valueFromASTUntyped, visit } from 'graphql';
 import {
   recordMock,
@@ -29,9 +29,6 @@ jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
-// The field reports once typing pauses: a row arrives only after that wait.
-const ARRIVES = { timeout: 3000 };
-
 const BACON = { id: 'bacon', name: 'Bacon' };
 const TURKEY_BACON = { id: 'turkey-bacon', name: 'Turkey Bacon' };
 
@@ -52,8 +49,6 @@ const type = (text: string) => {
 };
 const row = (id: string) =>
   screen.queryByTestId(profileTestIDs.avoidCandidate(id));
-const findRow = (id: string) =>
-  screen.findByTestId(profileTestIDs.avoidCandidate(id), {}, ARRIVES);
 
 /** The `filters` the document sends `searchItems`, as plain values. */
 const searchFilters = () => {
@@ -80,13 +75,16 @@ beforeEach(() => {
   });
 });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
 afterEach(() => {
   jest.useRealTimers();
 });
 
 describe('AvoidFoodSheet search', () => {
   it('lists nothing and asks nothing for an empty or short term', async () => {
-    jest.useFakeTimers();
     const search = searchMock([BACON]);
     renderWithApollo(sheet(true), { operationMocks: [search.mock] });
 
@@ -108,8 +106,9 @@ describe('AvoidFoodSheet search', () => {
     renderWithApollo(sheet(true), { operationMocks: [search.mock] });
 
     type('bac');
+    await drainTimers();
 
-    await findRow(BACON.id);
+    expect(row(BACON.id)).toBeTruthy();
     expect(screen.getByText('Bacon')).toBeTruthy();
     expect(screen.getByText('Turkey Bacon')).toBeTruthy();
     expect(search.fired).toEqual([expect.objectContaining({ query: 'bac' })]);
@@ -120,13 +119,10 @@ describe('AvoidFoodSheet search', () => {
     renderWithApollo(sheet(true), { operationMocks: [searchMock([]).mock] });
 
     type('zzz');
+    await drainTimers();
 
     expect(
-      await screen.findByText(
-        t('empty.noResultsFor', { query: 'zzz' }),
-        {},
-        ARRIVES,
-      ),
+      screen.getByText(t('empty.noResultsFor', { query: 'zzz' })),
     ).toBeTruthy();
   });
 
@@ -136,10 +132,13 @@ describe('AvoidFoodSheet search', () => {
     });
 
     type('bacon');
-    await findRow(BACON.id);
+    await drainTimers();
+    expect(row(BACON.id)).toBeTruthy();
 
     type('');
-    await waitFor(() => expect(row(BACON.id)).toBeNull(), ARRIVES);
+    await drainTimers();
+
+    expect(row(BACON.id)).toBeNull();
   });
 
   it('lists nothing when opened again after a search', async () => {
@@ -148,7 +147,8 @@ describe('AvoidFoodSheet search', () => {
     });
 
     type('bacon');
-    await findRow(BACON.id);
+    await drainTimers();
+    expect(row(BACON.id)).toBeTruthy();
 
     rerender(sheet(false));
     rerender(sheet(true));
@@ -157,7 +157,6 @@ describe('AvoidFoodSheet search', () => {
   });
 
   it('says the search needs a connection while offline, and asks nothing', async () => {
-    jest.useFakeTimers();
     storeApi.setState({ isOnline: false, apiReachable: null });
     const search = searchMock([BACON]);
     renderWithApollo(sheet(true), { operationMocks: [search.mock] });
@@ -188,9 +187,8 @@ describe('AvoidFoodSheet search', () => {
     renderWithApollo(sheet(true), { operationMocks: [throttled] });
 
     type('bacon');
+    await drainTimers();
 
-    expect(
-      await screen.findByText(t('errors.codes.rateLimitExceeded'), {}, ARRIVES),
-    ).toBeTruthy();
+    expect(screen.getByText(t('errors.codes.rateLimitExceeded'))).toBeTruthy();
   });
 });
