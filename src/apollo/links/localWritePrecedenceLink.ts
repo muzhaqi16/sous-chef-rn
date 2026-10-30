@@ -28,7 +28,12 @@ interface Read {
   writes: Set<Write>;
 }
 
+// Every query passes this link, so each document is walked once.
+const incremental = new WeakMap<DocumentNode, boolean>();
+
 const isIncremental = (query: DocumentNode): boolean => {
+  const known = incremental.get(query);
+  if (known !== undefined) return known;
   let found = false;
   visit(query, {
     Directive(node) {
@@ -39,6 +44,7 @@ const isIncremental = (query: DocumentNode): boolean => {
       return undefined;
     },
   });
+  incremental.set(query, found);
   return found;
 };
 
@@ -72,12 +78,49 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
       void client
         .query({ query, variables, fetchPolicy: 'network-only' })
         .catch(() => undefined);
-    } else if (read.held) {
+    } else if (read.held && !read.observer.closed) {
+      // Sent again through this link, so a later write catches it as well.
       read.held = false;
       read.landed = false;
       inFlight.add(read);
-      read.network = read.forward(read.operation).subscribe(read.observer);
+      send(read);
     }
+  };
+
+  /** Sends a read on, answering its caller unless a write has caught it. */
+  const send = (read: Read) => {
+    const { operation, observer } = read;
+    const land = () => {
+      read.landed = true;
+      finish(read);
+    };
+    read.network = read.forward(operation).subscribe({
+      next: value => {
+        if (read.answered) {
+          read.stale ||=
+            canonicalStringify(value.data ?? null) !==
+            canonicalStringify(cacheRead(operation, true).result ?? null);
+          return;
+        }
+        if (!read.held) observer.next(value);
+      },
+      error: (error: unknown) => {
+        if (read.answered || read.held) {
+          land();
+          return;
+        }
+        inFlight.delete(read);
+        observer.error(error);
+      },
+      complete: () => {
+        if (read.answered || read.held) {
+          land();
+          return;
+        }
+        inFlight.delete(read);
+        observer.complete();
+      },
+    });
   };
 
   const catchRead = (read: Read, write: Write) => {
@@ -111,37 +154,7 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
         writes: new Set(),
       };
       inFlight.add(read);
-      const land = () => {
-        read.landed = true;
-        finish(read);
-      };
-      read.network = forward(operation).subscribe({
-        next: value => {
-          if (read.answered) {
-            read.stale ||=
-              canonicalStringify(value.data ?? null) !==
-              canonicalStringify(cacheRead(operation, true).result ?? null);
-            return;
-          }
-          if (!read.held) observer.next(value);
-        },
-        error: (error: unknown) => {
-          if (read.answered || read.held) {
-            land();
-            return;
-          }
-          inFlight.delete(read);
-          observer.error(error);
-        },
-        complete: () => {
-          if (read.answered || read.held) {
-            land();
-            return;
-          }
-          inFlight.delete(read);
-          observer.complete();
-        },
-      });
+      send(read);
       return () => {
         if (read.answered) return;
         inFlight.delete(read);

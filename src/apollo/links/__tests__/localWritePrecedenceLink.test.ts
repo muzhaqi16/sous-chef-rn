@@ -332,6 +332,71 @@ describe('localWritePrecedenceLink', () => {
     list.close();
   });
 
+  it('holds a read sent again when a later write catches it as well', async () => {
+    const refresh = recordMock(UsualStoresDocument, {
+      data: { usualStores: [aldi] },
+      held: true,
+      maxUsageCount: 1,
+    });
+    const resent = recordMock(UsualStoresDocument, {
+      data: { usualStores: [aldi] },
+      held: true,
+      maxUsageCount: 1,
+    });
+    const third = recordMock(UsualStoresDocument, {
+      data: { usualStores: [aldi] },
+      maxUsageCount: 1,
+    });
+    const pinMock = recordMock(UpdateUsualStoreDocument, {
+      data: pinAnswer([pinnedMarket, banksville]),
+      maxUsageCount: 2,
+    });
+    const cache = makeCache();
+    writeUsualStores(cache, 'home-1', [banksville, market]);
+    const client = new ApolloClient({
+      cache,
+      link: ApolloLink.from([
+        createLocalWritePrecedenceLink(),
+        testMockLink([refresh.mock, resent.mock, third.mock, pinMock.mock]),
+      ]),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    });
+    const pin = () =>
+      client.mutate({
+        mutation: UpdateUsualStoreDocument,
+        variables: {
+          input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true },
+        },
+        context: { localFirst: true },
+      });
+    // Another household's list, which the cache cannot answer.
+    const subscription = client
+      .watchQuery({
+        query: UsualStoresDocument,
+        variables: { homeId: 'home-2' },
+        fetchPolicy: 'cache-and-network',
+      })
+      .subscribe(() => undefined);
+    await waitFor(() => expect(refresh.fired).toHaveLength(1));
+
+    await act(async () => {
+      await pin();
+      refresh.release();
+      await tick();
+    });
+    await waitFor(() => expect(resent.fired).toHaveLength(1));
+
+    // A second write while the read is out again: its answer is held too.
+    await act(async () => {
+      await pin();
+      resent.release();
+      await tick();
+    });
+
+    await waitFor(() => expect(third.fired).toHaveLength(1));
+    subscription.unsubscribe();
+  });
+
   it('passes a deferred read through untouched', async () => {
     const answer = { data: { me: { __typename: 'User', id: 'u1' } } };
     const forwarded: string[] = [];
