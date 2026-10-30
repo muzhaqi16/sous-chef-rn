@@ -6,6 +6,7 @@ import {
   screen,
   userEvent,
   waitFor,
+  within,
 } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
@@ -33,8 +34,12 @@ jest.mock('#features/onboarding/hooks/useCompleteOnboarding', () => ({
 }));
 
 let mockPayoff: unknown[] = [];
+let mockShowCheckLabel = false;
 jest.mock('#features/onboarding/hooks/useRecipePayoff', () => ({
-  useRecipePayoff: () => ({ rows: mockPayoff }),
+  useRecipePayoff: () => ({
+    rows: mockPayoff,
+    showCheckLabel: mockShowCheckLabel,
+  }),
 }));
 
 const mockInviteLink = jest.fn();
@@ -113,6 +118,21 @@ const summaryOf = (done: Partial<OnboardingSummary>): void => {
 
 const HOME_READY = { homeAndPantry: true, shoppingList: true };
 
+const SHAKSHUKA = {
+  source: 'suggestion',
+  edge: {
+    coverage: 80,
+    expiringStacks: [],
+    node: {
+      id: 'r1',
+      name: 'Shakshuka',
+      imageUrl: null,
+      servings: 2,
+      totalTimeMinutes: 25,
+    },
+  },
+};
+
 /** The summary's lines in order, read off their bullets. */
 const summaryLines = () =>
   screen.getAllByText(/^• /).map(node => String(node.props.children).slice(2));
@@ -134,6 +154,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   summaryOf(HOME_READY);
   mockPayoff = [];
+  mockShowCheckLabel = false;
   mockVerified = true;
   mockPushEnabled = false;
   mockHasPermission = false;
@@ -216,27 +237,32 @@ describe('OnboardingCompleteScreen', () => {
     });
 
     it('shows the pantry recipes', () => {
-      mockPayoff = [
-        {
-          source: 'suggestion',
-          edge: {
-            coverage: 80,
-            expiringStacks: [],
-            node: {
-              id: 'r1',
-              name: 'Shakshuka',
-              imageUrl: null,
-              servings: 2,
-              totalTimeMinutes: 25,
-            },
-          },
-        },
-      ];
+      mockPayoff = [SHAKSHUKA];
       render(<OnboardingCompleteScreen />);
 
       expect(screen.getByTestId(onboardingTestIDs.payoff)).toBeTruthy();
       expect(screen.getByText(t('recipes.basedOnPantry'))).toBeTruthy();
       expect(screen.getByText('Shakshuka')).toBeTruthy();
+      expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
+    });
+
+    it('says to check the label under them when a restriction applies', () => {
+      mockPayoff = [SHAKSHUKA];
+      mockShowCheckLabel = true;
+      render(<OnboardingCompleteScreen />);
+
+      expect(
+        within(screen.getByTestId(onboardingTestIDs.payoff)).getByText(
+          t('dietaryAlerts.checkLabel'),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('shows no caveat on its own when there is no recipe', () => {
+      mockShowCheckLabel = true;
+      render(<OnboardingCompleteScreen />);
+
+      expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
     });
   });
 

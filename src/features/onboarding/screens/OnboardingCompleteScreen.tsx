@@ -101,7 +101,7 @@ export const OnboardingCompleteScreen = () => {
   const { completeOnboarding } = useCompleteOnboarding(user?.id);
   const summary = useOnboardingSummary();
   const homeId = useSelectedHomeId();
-  const { rows: payoff } = useRecipePayoff();
+  const payoff = useRecipePayoff();
   const { settings, updateMultipleSettings } = useNotificationSettings();
   const { hasPermission, turnOnPush } = useTurnOnPush(updateMultipleSettings);
   // Only what the user has: a skipped step is never claimed.
@@ -205,7 +205,10 @@ export const OnboardingCompleteScreen = () => {
           </Text>
         )}
 
-        <RecipePayoff rows={payoff} />
+        <RecipePayoff
+          rows={payoff.rows}
+          showCheckLabel={payoff.showCheckLabel}
+        />
 
         {homeId && summary.cooksFor !== null && summary.cooksFor > 1 ? (
           <InviteHousehold homeId={homeId} />

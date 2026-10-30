@@ -12,15 +12,16 @@ import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
 import type { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
-interface RecipePayoffProps {
-  rows: ReturnType<typeof useRecipePayoff>['rows'];
-}
+type RecipePayoffProps = Pick<
+  ReturnType<typeof useRecipePayoff>,
+  'rows' | 'showCheckLabel'
+>;
 
 /**
  * What the pantry can already make, shown, not opened: the app is not mounted
  * until onboarding completes, and Today previews the same suggestions.
  */
-export const RecipePayoff = ({ rows }: RecipePayoffProps) => {
+export const RecipePayoff = ({ rows, showCheckLabel }: RecipePayoffProps) => {
   const { t } = useTranslation();
   if (rows.length === 0) return null;
 
@@ -45,6 +46,11 @@ export const RecipePayoff = ({ rows }: RecipePayoffProps) => {
           </View>
         </RowCard>
       ))}
+      {showCheckLabel ? (
+        <Text role="caption" tone="secondary">
+          {t('dietaryAlerts.checkLabel')}
+        </Text>
+      ) : null}
     </View>
   );
 };

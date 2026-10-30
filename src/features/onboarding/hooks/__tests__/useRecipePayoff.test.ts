@@ -18,6 +18,12 @@ jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: () => mockFlagOn,
 }));
 
+// Its own reads are tested in profile; this pins what the payoff makes of it.
+let mockRestrictionsInPlay: boolean | null = false;
+jest.mock('#features/profile/hooks/useRestrictionsInPlay', () => ({
+  useRestrictionsInPlay: () => mockRestrictionsInPlay,
+}));
+
 type Edge = NonNullable<
   NonNullable<
     NonNullable<
@@ -59,6 +65,7 @@ const renderPayoff = (edges: Edge[], cache = makeCache()) => {
 
 beforeEach(() => {
   mockFlagOn = true;
+  mockRestrictionsInPlay = false;
   useStore.setState({ selectedHomeId: 'home-1' });
 });
 
@@ -132,6 +139,24 @@ describe('useRecipePayoff', () => {
 
     await waitFor(() => expect(screened.fired).toHaveLength(1));
     expect(result.current.rows).toEqual([]);
+  });
+
+  it('says to check the label when a restriction applies, or none is known yet', async () => {
+    mockRestrictionsInPlay = true;
+    const { result, rerender } = renderPayoff([edge('a')]);
+    await waitFor(() => expect(ids(result.current.rows)).toEqual(['a']));
+    expect(result.current.showCheckLabel).toBe(true);
+
+    mockRestrictionsInPlay = null;
+    rerender({});
+    expect(result.current.showCheckLabel).toBe(true);
+  });
+
+  it('shows no label caveat when no restriction applies', async () => {
+    const { result } = renderPayoff([edge('a')]);
+
+    await waitFor(() => expect(ids(result.current.rows)).toEqual(['a']));
+    expect(result.current.showCheckLabel).toBe(false);
   });
 
   it('asks for nothing with pantry suggestions off', () => {
