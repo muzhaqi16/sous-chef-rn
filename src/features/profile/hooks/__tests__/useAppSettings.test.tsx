@@ -11,6 +11,8 @@ import {
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
+import { writeUserSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { useAppSettings } from '../useAppSettings';
 
 jest.mock('#store/useAppStore', () =>
@@ -86,6 +88,72 @@ describe('useAppSettings', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     expect(result.current.settings.preferredUnitSystem).toBe(UnitSystem.System);
+  });
+
+  // A refresh already in flight answers with the state from before the flip;
+  // as in production, the write answers it from the cache instead.
+  it('shows a switch flipped while the settings are refreshing, and keeps it', async () => {
+    const cache = makeCache();
+    writeUserSettings(cache, { budgetAndPrices: false });
+    const refresh = recordMock(GetUserSettingsDocument, {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'user-1',
+          settings: {
+            __typename: 'UserSettings',
+            id: 'settings-1',
+            budgetAndPrices: false,
+          },
+        },
+      },
+      held: true,
+      maxUsageCount: 1,
+    });
+    // Asked again once the write settles, so the server's answer holds it.
+    const reread = recordMock(GetUserSettingsDocument, {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'user-1',
+          settings: {
+            __typename: 'UserSettings',
+            id: 'settings-1',
+            budgetAndPrices: true,
+          },
+        },
+      },
+    });
+    const flip = recordMock(UpdateUserPreferencesDocument, {
+      data: {
+        updateSettings: {
+          __typename: 'UpdateSettingsPayload',
+          userSettings: {
+            __typename: 'UserSettings',
+            id: 'settings-1',
+            budgetAndPrices: true,
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => useAppSettings(), {
+      cache,
+      operationMocks: [refresh.mock, reread.mock, flip.mock],
+      links: [createLocalWritePrecedenceLink()],
+    });
+    await waitFor(() => expect(refresh.fired).toHaveLength(1));
+    expect(result.current.settings.budgetAndPrices).toBe(false);
+
+    await act(async () => {
+      await result.current.updateAppSetting('budgetAndPrices', true);
+    });
+    expect(result.current.settings.budgetAndPrices).toBe(true);
+
+    await act(async () => {
+      refresh.release();
+    });
+    await waitFor(() => expect(reread.fired).toHaveLength(1));
+    expect(result.current.settings.budgetAndPrices).toBe(true);
   });
 
   describe('a unit-system change', () => {
