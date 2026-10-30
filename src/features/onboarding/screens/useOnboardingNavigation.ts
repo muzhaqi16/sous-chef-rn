@@ -115,7 +115,11 @@ export function useOnboardingNavigation() {
             .reverse()
             .find(step => step.numbered);
     if (!previous) return;
-    navigation.dispatch(CommonActions.navigate(previous.id));
+    // `pop`: back to the step's own screen, with what it holds. A bare
+    // navigate reuses only a route above this one, so it pushes a blank step.
+    navigation.dispatch(
+      CommonActions.navigate(previous.id, undefined, { pop: true }),
+    );
   };
 
   /** Opens one of a step's sub-routes. */

@@ -1,13 +1,11 @@
 'use no memo';
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
 import type { ApolloCache } from '@apollo/client';
 import { t } from '#/i18n';
 import { makeCache } from '#/apollo/cache';
-import {
-  recordMock,
-  renderWithApollo,
-} from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { memoryScreen } from '#/test-utils/memoryPlatform';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
@@ -168,6 +166,36 @@ describe('HouseholdStepScreen', () => {
       screen.getByText(t('onBoarding.householdPeople', { count: 3 })),
     ).toBeTruthy();
     expect(screen.queryByRole('textbox')).toBeNull();
+  });
+
+  it('takes a new answer when the person comes back to the step', async () => {
+    const user = userEvent.setup();
+    await renderStep(
+      recordMock(UpdateDietaryProfileDocument, {
+        data: { updateDietaryProfile: null },
+        partial: true,
+        maxUsageCount: 2,
+      }),
+    );
+
+    await user.press(
+      screen.getByTestId(onboardingTestIDs.householdChoice('two')),
+    );
+    await waitFor(() =>
+      expect(mockNavigateToNextStep).toHaveBeenCalledTimes(1),
+    );
+
+    // The next step covers this one, then goes back to it.
+    act(() => memoryScreen().setFocused(false));
+    act(() => memoryScreen().setFocused(true));
+
+    await user.press(
+      screen.getByTestId(onboardingTestIDs.householdChoice('one')),
+    );
+    await waitFor(() =>
+      expect(mockNavigateToNextStep).toHaveBeenCalledTimes(2),
+    );
+    expect(recordedCooksFor()).toBe(1);
   });
 
   it('records and writes nothing when skipped', async () => {

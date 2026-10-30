@@ -109,7 +109,7 @@ describe('useOnboardingNavigation', () => {
       });
 
       expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('Dietary'),
+        CommonActions.navigate('Dietary', undefined, { pop: true }),
       );
     });
 
@@ -121,7 +121,7 @@ describe('useOnboardingNavigation', () => {
       });
 
       expect(mockDispatch).toHaveBeenCalledWith(
-        CommonActions.navigate('Receipt'),
+        CommonActions.navigate('Receipt', undefined, { pop: true }),
       );
     });
 

@@ -149,7 +149,8 @@ export const SelectPantryItems = () => {
                 }),
                 quantity: null,
                 storage: {
-                  storageState: item.storageState,
+                  // Kept where its group said: one with no state is the pantry's.
+                  storageState: groupOf(item.storageState),
                   condition: ItemCondition.Good,
                 },
                 purchase: {

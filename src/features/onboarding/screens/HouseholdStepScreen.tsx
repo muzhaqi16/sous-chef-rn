@@ -9,6 +9,7 @@ import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { COOKS_FOR_MAX, FAMILY_DEFAULT, FAMILY_MIN } from '#domain/servings';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
 import { useHouseholdAnswer } from '#features/onboarding/hooks/useHouseholdAnswer';
@@ -25,6 +26,13 @@ export const HouseholdStepScreen = () => {
   const [familySize, setFamilySize] = useState(FAMILY_DEFAULT);
   // The count being saved: its row reads as chosen until the step moves on.
   const [saving, setSaving] = useState<number | null>(null);
+  // Back on this step, the question is open again.
+  const isFocused = useIsScreenFocused();
+  const [wasFocused, setWasFocused] = useState(isFocused);
+  if (isFocused !== wasFocused) {
+    setWasFocused(isFocused);
+    if (isFocused) setSaving(null);
+  }
 
   const answer = async (count: number) => {
     setSaving(count);
