@@ -37,6 +37,7 @@ jest.mock('#/utils/connectionUtils', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
 

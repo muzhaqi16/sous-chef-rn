@@ -1,5 +1,6 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { waitFor } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   recordMock,
   renderHookWithApollo,
@@ -96,6 +97,7 @@ jest.mock('#/utils/connectionUtils', () => {
 // We have to mock safeEvictMany since the hook calls it; it tries to access
 // real Apollo internals otherwise.
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   safeEvictMany: jest.fn(),
 }));
 
@@ -578,12 +580,13 @@ describe('useDefaultHome', () => {
         },
       });
 
-    // One macrotask: long enough for a request fired from an effect to reach
-    // the mock link, which is what `fired` records.
-    const flushPendingRequests = () =>
-      act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
 
     it('is selected locally and never sent to MarkHomeAsDefault', async () => {
       const markDefault = recordMarkDefault();
@@ -601,15 +604,11 @@ describe('useDefaultHome', () => {
         ],
       });
 
-      await waitFor(() =>
-        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(
-          'new-home',
-        ),
-      );
+      await drainTimers();
+      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith('new-home');
       expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
         'new-pantry',
       );
-      await flushPendingRequests();
       expect(markDefault.fired).toEqual([]);
     });
 
@@ -630,12 +629,8 @@ describe('useDefaultHome', () => {
         ],
       });
 
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
-          true,
-        ),
-      );
-      await flushPendingRequests();
+      await drainTimers();
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
       expect(markDefault.fired).toEqual([]);
     });
   });
