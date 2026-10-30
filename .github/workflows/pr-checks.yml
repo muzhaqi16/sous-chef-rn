@@ -276,8 +276,18 @@ jobs:
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
 
+      # A cold run compiles the whole app before its tests run, most of this
+      # job's time. Jest keys an entry by its file's content, so a stale one is
+      # never read.
+      - name: Restore Jest cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/jest
+          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          restore-keys: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-
+
       - name: Run unit tests
-        run: npm test -- --coverage
+        run: npm test -- --coverage --cacheDirectory="$HOME/.cache/jest"
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
@@ -285,6 +295,15 @@ jobs:
         with:
           files: ./coverage/lcov.info
           flags: unittests
+
+      # Saved however the tests ended: a run the time limit stopped has still
+      # compiled the app, and `actions/cache` alone saves only on success.
+      - name: Save Jest cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ~/.cache/jest
+          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
   # Render-performance comparison. RECORDS, never fails the build.
   #
