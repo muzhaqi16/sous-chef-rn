@@ -15,6 +15,8 @@ import { LOCAL_WRITES } from './localWriteRegistry';
 import { readFenceOf } from './readFence';
 import type { LocalWriteTable, PendingWrite } from './types';
 
+const REBUILD_WINDOW_MS = 50;
+
 /** What `send` hands the mutation: a replay reads the same context off its entry. */
 export interface LocalWriteSend {
   variables: OperationVariables;
@@ -206,18 +208,24 @@ export class PendingWrites {
     this.rebuild();
   }
 
-  /** After the batch the server's answer is written in, which undoes a layer change. */
+  /**
+   * After the batch the server's answer is written in, which undoes a layer
+   * change, and shared by every answer that lands in the window, as a rebuild
+   * costs each pending write. Pending values hold meanwhile; only what the
+   * server changed around them lags.
+   */
   scheduleRebuild(): void {
-    if (this.writes.length === 0 || this.rebuildOwed) return;
+    if (!this.layered || this.rebuildOwed) return;
     this.rebuildOwed = true;
-    queueMicrotask(() => {
+    setTimeout(() => {
       if (this.rebuildOwed) this.rebuild();
-    });
+    }, REBUILD_WINDOW_MS);
   }
 
   rebuild(): void {
     this.rebuildOwed = false;
-    if (this.writes.length === 0 && !this.layered) return;
+    const hadLayers = this.layered;
+    if (this.writes.length === 0 && !hadLayers) return;
     const previous = this.layerId();
     this.generation += 1;
     this.layered = this.writes.length > 0;
@@ -225,11 +233,24 @@ export class PendingWrites {
       this.cache.removeOptimistic(previous);
       return;
     }
+    // Apollo runs `update` over the old layers, and again over the root as they
+    // are removed. Only the second is kept, so the first is skipped.
+    let runs = 0;
     this.cache.batch({
       optimistic: this.layerId(),
       removeOptimistic: previous,
-      update: layer => this.applyAll(layer, this.writes),
+      update: layer => {
+        runs += 1;
+        if (runs > 1 || !hadLayers) this.applyAll(layer, this.writes);
+      },
     });
+    // A cache reset took the old layers, so nothing ran it a second time.
+    if (hadLayers && runs === 1) {
+      this.cache.recordOptimisticTransaction(
+        layer => this.applyAll(layer, this.writes),
+        this.layerId(),
+      );
+    }
   }
 
   private layerId(): string {
@@ -282,7 +303,7 @@ export class PendingWrites {
       },
     });
     this.remove(write.id);
-    this.rebuild();
+    this.scheduleRebuild();
   }
 }
 

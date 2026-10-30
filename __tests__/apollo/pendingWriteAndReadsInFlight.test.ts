@@ -133,7 +133,8 @@ function setUp() {
     })?.probeRow;
   const refresh = () =>
     client.query({ query: ROW, fetchPolicy: 'network-only' });
-  const tick = () => new Promise(resolve => setTimeout(resolve, 0));
+  // Past the window a rebuild waits in.
+  const tick = () => new Promise(resolve => setTimeout(resolve, 60));
   return {
     cache,
     client,

@@ -190,7 +190,7 @@ describe('PendingWrites', () => {
         pending.scheduleRebuild();
       },
     });
-    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 60));
 
     expect(rebuild).toHaveBeenCalledTimes(1);
     expect(shown(cache)).toMatchObject({ name: 'Oat', quantity: 5 });
@@ -289,6 +289,43 @@ describe('PendingWrites', () => {
 
     expect(shownRows(cache)).toEqual(['row-2']);
     expect(cache.extract()['ProbeItem:row-2']).toBeUndefined();
+  });
+
+  it('runs each write once in a rebuild, over the server’s data', () => {
+    const apply = jest.fn(TABLE.SetQuantity!.apply);
+    const cache = makeCache();
+    cache.writeQuery({ query: ROW, data: { probeRow: row('Milk', 1) } });
+    const pending = new PendingWrites(cache, {
+      SetQuantity: { apply },
+    });
+    pending.begin(SET_QUANTITY, { input: { quantity: 5 } });
+    apply.mockClear();
+
+    pending.rebuild();
+
+    expect(apply).toHaveBeenCalledTimes(1);
+    expect(shown(cache)?.quantity).toBe(5);
+  });
+
+  it('lays the writes back after a cache reset took their layers', async () => {
+    const { cache, pending } = seeded();
+    pending.begin(SET_QUANTITY, { input: { quantity: 5 } });
+
+    await cache.reset();
+    cache.writeQuery({ query: ROW, data: { probeRow: row('Milk', 1) } });
+    pending.rebuild();
+
+    expect(shown(cache)?.quantity).toBe(5);
+  });
+
+  it('lifts the last write’s layer once it commits', async () => {
+    const { cache, pending } = seeded();
+    const { id } = pending.begin(SET_QUANTITY, { input: { quantity: 5 } });
+
+    pending.confirm(id, {});
+    await new Promise(resolve => setTimeout(resolve, 60));
+
+    expect(shown(cache)?.quantity).toBe(1);
   });
 
   it('leaves no layer when cleared', () => {

@@ -90,7 +90,7 @@ describe('a pending write as the server answers', () => {
 
     mockAnswers.push({ probeRow: row('Oat milk', false) });
     await client.query({ query: ROW, fetchPolicy: 'network-only' });
-    await Promise.resolve();
+    await new Promise(resolve => setTimeout(resolve, 60));
     stop();
 
     expect(seen).not.toContain(false);
