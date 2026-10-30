@@ -1,0 +1,70 @@
+# Could you save? The list's unbought lines priced at its store and the
+# household's usual stores, line by line, in one answer (rate-limited per
+# minute). Read by useListSavings for the section and by useStoreSavingsLines
+# for a store's item view, from the same cache entry. A write that changes it re-reads it: a change of
+# the list's store (useUpdateShoppingList) and a usual-store write
+# (useUsualStoreWrites, by this operation's name).
+query ListSavings($listId: ID!) {
+  shoppingListStoreSavings(input: { listId: $listId }) {
+    answeredAt
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+    candidates {
+      store {
+        id
+        name
+        address
+      }
+      chain {
+        id
+        name
+      }
+      isTarget
+      standIn {
+        distanceKm
+        store {
+          id
+          name
+        }
+      }
+      total
+      savingVsTarget {
+        amount
+        targetAmount
+        coveredLines
+        aboutTheSame
+      }
+      lines {
+        kind
+        line {
+          id
+          itemName
+          image {
+            url
+            source
+            catalogImageId
+          }
+        }
+        product {
+          id
+          name
+        }
+        amount
+        isCurrent
+        observedAt
+        packageNetWeight
+        packageNetWeightUnit {
+          id
+          symbol
+          localizedSymbolForms {
+            one
+            other
+          }
+        }
+      }
+    }
+  }
+}

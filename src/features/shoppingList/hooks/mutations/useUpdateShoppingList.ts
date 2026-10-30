@@ -9,7 +9,7 @@ import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ListStoreSavingsDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
+import { ListSavingsDocument } from '#features/shoppingList/hooks/useListSavings.generated';
 import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
@@ -40,25 +40,11 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const client = useApolloClient();
   const [mutate] = useMutation(UpdateShoppingListDocument, {
     context: { localFirst: true },
-    update(cache, { data }, { variables }) {
-      const savings = appliedPayload(data)?.storeSavings;
-      if (!savings || !variables) return;
-      cache.writeQuery({
-        query: ListStoreSavingsDocument,
-        variables: { input: { listId: variables.input.id } },
-        data: { __typename: 'Query', shoppingListStoreSavings: savings },
-      });
-    },
   });
 
-  /**
-   * `restateSavings`: the savings are on screen, and a change of store
-   * restates them in the same answer.
-   */
   const updateShoppingList = async (
     id: string,
     updates: ShoppingListSettingsUpdate,
-    { restateSavings = false }: { restateSavings?: boolean } = {},
   ) => {
     const { targetStore, ...fields } = updates;
     const planning =
@@ -134,7 +120,6 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
 
-    const withSavings = targetStore !== undefined && restateSavings;
     const settled = await settleMutation(
       () =>
         mutate({
@@ -145,7 +130,6 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
               ...(planning !== undefined && { planning }),
               version: snapshot.version,
             },
-            ...(withSavings && { withSavings }),
           },
         }),
       {
@@ -160,11 +144,11 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
     // Queued (offline / API down): the permanent write stands and the update
     // replays keyed by the list id; there is no server entity to return.
     const updated = appliedPayload(settled.data)?.shoppingList ?? null;
-    // The list's store prices every line's suggestion, which the list the
-    // response carries does not restate.
+    // The list's store prices every line's suggestion and the savings against
+    // it, which the list the response carries does not restate.
     if (updated && targetStore !== undefined) {
       void client.refetchQueries({
-        include: [GetShoppingListItemsFilteredDocument],
+        include: [GetShoppingListItemsFilteredDocument, ListSavingsDocument],
       });
     }
     return updated;

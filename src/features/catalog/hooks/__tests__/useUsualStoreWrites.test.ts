@@ -114,6 +114,40 @@ describe('useUsualStoreWrites', () => {
     ]);
   });
 
+  // "Could you save?" compares the list at these stores.
+  it('re-reads the list savings once a write is applied, not while it is queued', async () => {
+    const refetchQueries = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
+    const pinned = recordMock(UpdateUsualStoreDocument, {
+      data: {
+        updateUsualStore: {
+          __typename: 'UpdateUsualStorePayload',
+          usualStores: [{ ...banksville, pinned: true }, marketDistrict],
+        },
+      },
+      maxUsageCount: 1,
+    });
+    const queued = recordMock(UpdateUsualStoreDocument, {
+      data: { updateUsualStore: null },
+    });
+    const { result } = renderHookWithApollo(useBoth, {
+      cache: seeded(),
+      operationMocks: [pinned.mock, queued.mock],
+    });
+    const banks = { store: { id: 's1', name: 'Giant Eagle Banksville' } };
+
+    await act(async () => {
+      await result.current.writes.setPinned(banks, true);
+    });
+    expect(refetchQueries).toHaveBeenCalledTimes(1);
+    expect(refetchQueries).toHaveBeenCalledWith({ include: ['ListSavings'] });
+
+    await act(async () => {
+      await result.current.writes.setPinned(banks, false);
+    });
+    expect(refetchQueries).toHaveBeenCalledTimes(1);
+    refetchQueries.mockRestore();
+  });
+
   it('adds a picked store at once, and the answer names it once', async () => {
     const aldi = entry('s3', 'ALDI Wilkinsburg', {
       addedVia: UsualStoreSource.Picked,

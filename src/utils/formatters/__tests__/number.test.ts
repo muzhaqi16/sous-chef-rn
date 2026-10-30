@@ -2,6 +2,7 @@ import { t } from '#/i18n';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import {
   currencySymbol,
+  formatApproximateCurrency,
   formatCurrency,
   formatDistance,
   UNKNOWN_AMOUNT,
@@ -120,6 +121,19 @@ describe('formatDecimal', () => {
     expect(
       formatDecimal(3, { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
     ).toBe('3.00');
+  });
+});
+
+describe('formatApproximateCurrency', () => {
+  it('rounds to whole units, in the locale’s placement', () => {
+    onLocale('en-US');
+    expect(formatApproximateCurrency(7.6, 'USD')).toBe(
+      formatCurrency(8, 'USD').replace('.00', ''),
+    );
+
+    onLocale('es-ES');
+    expect(formatApproximateCurrency(1234.5, 'EUR')).toContain('1235');
+    expect(formatApproximateCurrency(1234.5, 'EUR')).not.toContain(',');
   });
 });
 

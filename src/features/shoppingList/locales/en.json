@@ -83,21 +83,6 @@
     "listStoreDesc": "Where you're shopping. Prices you enter when you mark items purchased are saved for this store.",
     "approxPrice": "≈ {{price}}",
     "suggestedLinePriceSimilar": "≈ {{price}}, similar products",
-    "storeComparison": {
-      "title": "Where it's cheapest",
-      "yourStore": "Your store",
-      "pricedHere_one": "{{count}} priced here",
-      "pricedHere_other": "{{count}} priced here",
-      "typical_one": "{{count}} at a typical price",
-      "typical_other": "{{count}} at typical prices",
-      "compared_one": "Compares {{count}} item on this list.",
-      "compared_other": "Compares {{count}} items on this list.",
-      "leftOut_one": "{{count}} item can't be compared: it isn't in the catalog, or its unit doesn't convert.",
-      "leftOut_other": "{{count}} items can't be compared: they aren't in the catalog, or their unit doesn't convert.",
-      "truncated": "Only the first 200 items are compared.",
-      "empty": "No store has enough recorded prices for this list yet. Every price entered when an item is ticked helps.",
-      "failed": "Couldn't compare stores right now."
-    },
     "costSummary": {
       "title": "Cost",
       "toGo": "To go",

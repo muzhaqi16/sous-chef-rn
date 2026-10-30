@@ -263,7 +263,6 @@ describe('useListBudget', () => {
     await waitFor(() =>
       expect(update.fired[0]).toMatchObject({
         input: { planning: { targetStoreId: 'store-1' } },
-        withSavings: true,
       }),
     );
     expect(result.current.list?.targetStore?.name).toBe('Giant Eagle');

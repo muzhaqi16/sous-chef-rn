@@ -76,14 +76,9 @@ export function useListBudget(listId: string) {
     return 'saved';
   };
 
-  // The savings on screen come back in the same answer as the store.
   const pickStore = (store: { id: string; name: string } | null) => {
     if (store?.id === list?.targetStore?.id) return;
-    updateShoppingList(
-      listId,
-      { targetStore: store },
-      { restateSavings: true },
-    ).catch(reportFailure);
+    updateShoppingList(listId, { targetStore: store }).catch(reportFailure);
   };
 
   return {

@@ -83,21 +83,6 @@
     "listStoreDesc": "Dove fai la spesa. I prezzi che inserisci quando segni gli articoli come acquistati vengono salvati per questo negozio.",
     "approxPrice": "≈ {{price}}",
     "suggestedLinePriceSimilar": "≈ {{price}}, prodotti simili",
-    "storeComparison": {
-      "title": "Dove costa meno",
-      "yourStore": "Il tuo negozio",
-      "pricedHere_one": "{{count}} con prezzo qui",
-      "pricedHere_other": "{{count}} con prezzo qui",
-      "typical_one": "{{count}} a prezzo tipico",
-      "typical_other": "{{count}} a prezzi tipici",
-      "compared_one": "Confronta {{count}} articolo di questa lista.",
-      "compared_other": "Confronta {{count}} articoli di questa lista.",
-      "leftOut_one": "{{count}} articolo non si può confrontare: non è nel catalogo o la sua unità non si converte.",
-      "leftOut_other": "{{count}} articoli non si possono confrontare: non sono nel catalogo o la loro unità non si converte.",
-      "truncated": "Si confrontano solo i primi 200 articoli.",
-      "empty": "Nessun negozio ha ancora abbastanza prezzi registrati per questa lista. Ogni prezzo inserito spuntando un articolo aiuta.",
-      "failed": "Impossibile confrontare i negozi in questo momento."
-    },
     "costSummary": {
       "title": "Costo",
       "toGo": "Da comprare",

@@ -16,6 +16,10 @@ import {
 } from '../useListBudget.generated';
 
 jest.mock('#hooks/navigation/useAppNavigation');
+// The account has Budget & prices on, so "Could you save?" shows.
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: () => true,
+}));
 
 const OWNER = {
   id: 'user-1',
@@ -104,18 +108,18 @@ describe('ListBudget', () => {
     );
   });
 
-  it("answers first: the cost, then where it's cheaper, then the settings", () => {
+  it('answers first: the cost, then what other stores would save, then the settings', () => {
     renderScreen();
 
     const order = screen
-      .getAllByTestId(/^list-(budget|store-comparison)/)
+      .getAllByTestId(/^list-(budget|savings)/)
       .map(node => node.props.testID as string);
     const at = (testID: string) => order.indexOf(testID);
     expect(at(shoppingListTestIDs.costSummary)).toBeGreaterThan(-1);
     expect(at(shoppingListTestIDs.costSummary)).toBeLessThan(
-      at(shoppingListTestIDs.storeComparison),
+      at(shoppingListTestIDs.listSavings),
     );
-    expect(at(shoppingListTestIDs.storeComparison)).toBeLessThan(
+    expect(at(shoppingListTestIDs.listSavings)).toBeLessThan(
       at(shoppingListTestIDs.listPriceSettings),
     );
   });

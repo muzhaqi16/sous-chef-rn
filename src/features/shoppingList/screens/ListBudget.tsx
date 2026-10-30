@@ -4,15 +4,15 @@ import { useTranslation } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { CostSummary } from '#features/shoppingList/components/listBudget/CostSummary';
-import { StoreComparisonSection } from '#features/shoppingList/components/listBudget/StoreComparisonSection';
+import { ListSavingsSection } from '#features/shoppingList/components/listBudget/ListSavingsSection';
 import { ListPriceSettings } from '#features/shoppingList/components/listBudget/ListPriceSettings';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useListBudget } from './useListBudget';
 
 /**
  * A list's money on a screen of its own, answers first: what is left to buy
- * costs and what that leaves of the budget, then where it's cheaper, then the
- * budget, store and price asks. Each control saves itself.
+ * costs and what that leaves of the budget, then what other stores would
+ * save, then the budget, store and price asks. Each control saves itself.
  */
 export const ListBudget: React.FC<StaticScreenProps<{ listId: string }>> = ({
   route,
@@ -39,7 +39,7 @@ export const ListBudget: React.FC<StaticScreenProps<{ listId: string }>> = ({
             costToGo={budget.costToGo}
             canEdit={budget.canEdit}
           />
-          <StoreComparisonSection listId={listId} />
+          <ListSavingsSection listId={listId} homeId={list.homeId ?? null} />
           <ListPriceSettings
             currency={list.currency}
             budgetAmount={list.budgetAmount}

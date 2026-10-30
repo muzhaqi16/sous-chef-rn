@@ -190,6 +190,8 @@ export function useAppNavigation() {
       navigation.navigate('PurchaseHistory', params),
     toStoreMode: (params: RootStackParamList['StoreMode']) =>
       navigation.navigate('StoreMode', params),
+    toStoreSavingsItems: (params: RootStackParamList['StoreSavingsItems']) =>
+      navigation.navigate('StoreSavingsItems', params),
 
     // One RecipeDetail serves every tab that opens it, so its own fork and edit
     // actions stay wherever the user opened it from.

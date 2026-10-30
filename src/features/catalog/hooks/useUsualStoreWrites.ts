@@ -65,7 +65,8 @@ function writeOrder() {
  */
 export function useUsualStoreWrites(homeId: string | null) {
   const { t } = useTranslation();
-  const { cache } = useApolloClient();
+  const client = useApolloClient();
+  const { cache } = client;
   // Made once, for this hook's life: a screen that leaves takes it along.
   const [order] = useState(writeOrder);
   const answer = (
@@ -127,7 +128,14 @@ export function useUsualStoreWrites(homeId: string | null) {
           },
         }),
       )
-      .then(settled => settled.status !== 'failed');
+      .then(settled => {
+        // "Could you save?" compares the list at these stores. It is another
+        // feature's query, so it is named rather than imported.
+        if (settled.status === 'applied') {
+          void client.refetchQueries({ include: ['ListSavings'] });
+        }
+        return settled.status !== 'failed';
+      });
   };
 
   const remove = (choice: StoreChoice) =>

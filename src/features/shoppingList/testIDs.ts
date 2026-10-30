@@ -18,8 +18,9 @@ export const shoppingListTestIDs = {
   clearAllButton: 'shopping-list-clear-all',
   /** List settings: the store the list is shopped at. */
   listSettingsStore: 'list-settings-store',
-  /** List settings: where the list is cheapest, and one candidate by its id. */
-  storeComparison: 'list-store-comparison',
+  /** Budget & prices: Could you save?, and its link to the household's stores. */
+  listSavings: 'list-savings',
+  listSavingsYourStores: 'list-savings-your-stores',
   listBudgetScreen: 'list-budget-screen',
   listBudgetStore: 'list-budget-store',
   budgetInput: 'list-budget-input',
@@ -30,7 +31,11 @@ export const shoppingListTestIDs = {
   listPriceSettings: 'list-budget-settings',
   priceTrackingSwitch: 'list-budget-price-tracking',
   budgetAndPricesButton: 'shopping-list-budget-and-prices',
-  storeComparisonCandidate: (id: string) => `list-store-comparison-${id}`,
+  /** A store in Could you save?, by its key, and its item view. */
+  listSavingsStore: (key: string) => `list-savings-${key}`,
+  storeSavingsItemsScreen: 'store-savings-items-screen',
+  /** Its rows, through `kitTestIDs.listItem` by position. */
+  storeSavingsLine: 'store-savings-line',
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */
   tabBarPrefix: 'filter-tab',

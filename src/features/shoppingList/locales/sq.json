@@ -83,21 +83,6 @@
     "listStoreDesc": "Ku bën pazar. Çmimet që fut kur shënon artikujt si të blerë ruhen për këtë dyqan.",
     "approxPrice": "≈ {{price}}",
     "suggestedLinePriceSimilar": "≈ {{price}}, produkte të ngjashme",
-    "storeComparison": {
-      "title": "Ku kushton më pak",
-      "yourStore": "Dyqani yt",
-      "pricedHere_one": "{{count}} me çmim këtu",
-      "pricedHere_other": "{{count}} me çmim këtu",
-      "typical_one": "{{count}} me çmim të zakonshëm",
-      "typical_other": "{{count}} me çmime të zakonshme",
-      "compared_one": "Krahasohet {{count}} artikull i kësaj liste.",
-      "compared_other": "Krahasohen {{count}} artikuj të kësaj liste.",
-      "leftOut_one": "{{count}} artikull nuk mund të krahasohet: nuk është në katalog ose njësia e tij nuk konvertohet.",
-      "leftOut_other": "{{count}} artikuj nuk mund të krahasohen: nuk janë në katalog ose njësia e tyre nuk konvertohet.",
-      "truncated": "Krahasohen vetëm 200 artikujt e parë.",
-      "empty": "Asnjë dyqan nuk ka ende mjaft çmime të regjistruara për këtë listë. Çdo çmim i futur kur shënohet një artikull ndihmon.",
-      "failed": "Dyqanet nuk mund të krahasohen tani."
-    },
     "costSummary": {
       "title": "Kostoja",
       "toGo": "Për të blerë",

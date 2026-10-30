@@ -14,7 +14,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '../useUpdateShoppingList';
 import { useShoppingListBudget } from '../useShoppingListBudget';
 import { ApolloClient } from '@apollo/client';
-import { ListStoreSavingsDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
+import { ListSavingsDocument } from '#features/shoppingList/hooks/useListSavings.generated';
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -197,7 +197,6 @@ describe('useUpdateShoppingList', () => {
           planning: { budgetAmount: 150, currency: 'USD' },
           version: 1,
         },
-        withSavings: false,
       },
     ]);
   });
@@ -243,7 +242,6 @@ describe('useUpdateShoppingList', () => {
           planning: { targetStoreId: 'store-1' },
           version: 1,
         },
-        withSavings: false,
       },
       {
         input: {
@@ -252,82 +250,52 @@ describe('useUpdateShoppingList', () => {
           planning: { targetStoreId: null },
           version: 1,
         },
-        withSavings: false,
       },
     ]);
   });
 
-  // The list's store prices every line's suggestion and marks the savings'
-  // target. The answer restates the savings on screen, not the lines.
+  // The list's store prices every line's suggestion and is what the savings
+  // compare against: once the change is applied, both are read again.
   describe('what the store prices', () => {
     const toCostco = { id: 'store-1', name: 'Costco' };
     const saveStore = async (
       result: MockDataFor<typeof UpdateShoppingListDocument>,
-      restateSavings?: boolean,
     ) => {
       const refetchQueries = jest.spyOn(
         ApolloClient.prototype,
         'refetchQueries',
       );
-      const cache = seedList();
       const update = recordMock(UpdateShoppingListDocument, { data: result });
       const hook = renderHookWithApollo(
         () => useUpdateShoppingList('Failed to save'),
-        { cache, operationMocks: [update.mock] },
+        { cache: seedList(), operationMocks: [update.mock] },
       );
       await act(async () => {
-        await hook.result.current.updateShoppingList(
-          'list-1',
-          { name: 'Groceries', targetStore: toCostco },
-          { restateSavings },
-        );
+        await hook.result.current.updateShoppingList('list-1', {
+          name: 'Groceries',
+          targetStore: toCostco,
+        });
       });
-      return { refetchQueries, cache, update };
+      return refetchQueries;
     };
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('re-reads the lines, and the savings on screen come with the answer', async () => {
-      const { refetchQueries, cache, update } = await saveStore(
-        {
-          updateShoppingList: {
-            __typename: 'UpdateShoppingListPayload',
-            shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
-            storeSavings: { comparableLines: 7 },
-          },
-        },
-        true,
-      );
-
-      expect(update.fired[0]).toMatchObject({ withSavings: true });
-      expect(
-        cache.readQuery({
-          query: ListStoreSavingsDocument,
-          variables: { input: { listId: 'list-1' } },
-        })?.shoppingListStoreSavings.comparableLines,
-      ).toBe(7);
-      expect(refetchQueries).toHaveBeenCalledWith({
-        include: [GetShoppingListItemsFilteredDocument],
-      });
-    });
-
-    // Store mode changes the store with no savings on screen.
-    it('asks for no savings when none are shown', async () => {
-      const { update } = await saveStore({
+    it('re-reads the lines and the savings once the change is applied', async () => {
+      const refetchQueries = await saveStore({
         updateShoppingList: {
           __typename: 'UpdateShoppingListPayload',
           shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
         },
       });
 
-      expect(update.fired[0]).not.toMatchObject({ withSavings: true });
+      expect(refetchQueries).toHaveBeenCalledWith({
+        include: [GetShoppingListItemsFilteredDocument, ListSavingsDocument],
+      });
     });
 
     it('is not asked while the change waits in the queue', async () => {
-      const { refetchQueries } = await saveStore(
-        { updateShoppingList: null },
-        true,
-      );
+      const refetchQueries = await saveStore({ updateShoppingList: null });
 
       expect(refetchQueries).not.toHaveBeenCalled();
     });

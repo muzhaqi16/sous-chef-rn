@@ -91,8 +91,12 @@ export const DEFAULT_CURRENCY = 'USD';
 
 const currencyFormatters = new Map<string, Intl.NumberFormat | null>();
 
-function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
-  const cached = currencyFormatters.get(currency);
+function getCurrencyFormatter(
+  currency: string,
+  wholeUnits = false,
+): Intl.NumberFormat | null {
+  const key = wholeUnits ? `${currency}:whole` : currency;
+  const cached = currencyFormatters.get(key);
   if (cached !== undefined) return cached;
 
   let formatter: Intl.NumberFormat | null = null;
@@ -100,11 +104,12 @@ function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
     formatter = new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency,
+      ...(wholeUnits && { maximumFractionDigits: 0, minimumFractionDigits: 0 }),
     });
   } catch {
     formatter = null;
   }
-  currencyFormatters.set(currency, formatter);
+  currencyFormatters.set(key, formatter);
   return formatter;
 }
 
@@ -142,6 +147,20 @@ export function formatCurrency(
   const formatter = getCurrencyFormatter(currency);
   if (!formatter) return `${currency} ${formatDecimal(value, money)}`;
   return formatter.format(value);
+}
+
+/** A rough amount ("about $8"), in the currency's whole units. */
+export function formatApproximateCurrency(
+  value: number,
+  currency: string,
+): string {
+  const rounded = Math.round(value);
+  const formatter = getCurrencyFormatter(currency, true);
+  if (formatter) return formatter.format(rounded);
+  return `${currency} ${formatDecimal(rounded, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
 }
 
 /**

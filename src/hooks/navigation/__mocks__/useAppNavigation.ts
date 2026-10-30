@@ -17,6 +17,8 @@ const mockNavigation = {
   toVerifyEmail: jest.fn(),
   toShareList: jest.fn(),
   toStoreMode: jest.fn(),
+  toShoppingListItemDetail: jest.fn(),
+  toStoreSavingsItems: jest.fn(),
   toListBudget: jest.fn(),
   toHomeDetail: jest.fn(),
   toHomeDietaryNeeds: jest.fn(),
