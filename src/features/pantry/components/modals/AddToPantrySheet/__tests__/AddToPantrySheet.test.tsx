@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react-native';
+import { act, screen, waitFor } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
@@ -901,7 +901,11 @@ describe('AddToPantrySheet', () => {
     });
 
     const quickAdd = (item: unknown) =>
-      (sheetProps.current.onQuickAddSuggestion as (row: unknown) => void)(item);
+      (
+        sheetProps.current.onQuickAddSuggestion as (
+          row: unknown,
+        ) => Promise<void>
+      )(item);
 
     const created = (match?: (variables: unknown) => boolean) =>
       recordMock(CreatePantryItemDocument, {
@@ -937,8 +941,8 @@ describe('AddToPantrySheet', () => {
         operationMocks: [create.mock],
       });
 
-      quickAdd(tile('apples'));
-      quickAdd(tile('bread'));
+      void quickAdd(tile('apples'));
+      void quickAdd(tile('bread'));
 
       expect(shown(cache).popular).toEqual(['cheese']);
       await waitFor(() => expect(create.fired).toHaveLength(2));
@@ -952,11 +956,11 @@ describe('AddToPantrySheet', () => {
         operationMocks: [create.mock],
       });
 
-      quickAdd(tile('apples'));
-      quickAdd(tile('apples'));
+      // Each tap settles only with its own add, so a second send is in by then.
+      await act(() =>
+        Promise.all([quickAdd(tile('apples')), quickAdd(tile('apples'))]),
+      );
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
-      await new Promise(resolve => setTimeout(resolve, 50));
       expect(create.fired).toHaveLength(1);
     });
 
@@ -969,8 +973,8 @@ describe('AddToPantrySheet', () => {
         operationMocks: [refused.mock, accepted.mock],
       });
 
-      quickAdd(tile('apples'));
-      quickAdd(tile('bread'));
+      void quickAdd(tile('apples'));
+      void quickAdd(tile('bread'));
 
       await waitFor(() =>
         expect(shown(cache).popular).toEqual(['apples', 'cheese']),
@@ -1006,7 +1010,7 @@ describe('AddToPantrySheet', () => {
         operationMocks: [restock.mock],
       });
 
-      quickAdd(
+      void quickAdd(
         tile('milk', {
           id: 'low-milk',
           source: PantrySuggestionSource.LowStock,
