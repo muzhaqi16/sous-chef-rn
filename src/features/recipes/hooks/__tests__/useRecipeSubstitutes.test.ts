@@ -6,6 +6,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetRecipeDocument,
@@ -247,7 +248,7 @@ describe('useRecipeSubstitutes', () => {
       data: Unmasked<GetRecipeQuery>;
     };
     const cache = seedCache([]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetRecipeDocument,
       variables: recipeVars,
       data: completed(recipeVars).data,

@@ -4,6 +4,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealTemplateDocument,
@@ -350,7 +351,7 @@ describe("a row loaded by the editor's own query", () => {
   /** The cache as opening the template in the editor leaves it. */
   const loadedInEditor = () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetMealTemplateForEditDocument,
       variables: EDIT_VARS,
       data: {

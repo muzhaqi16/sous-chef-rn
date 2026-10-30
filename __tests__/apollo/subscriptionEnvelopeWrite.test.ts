@@ -41,6 +41,7 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { removeFromShoppingListItemsCache } from '#features/shoppingList/hooks/mutations/utils';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const mockedSchema = addMocksToSchema({
   schema: makeExecutableSchema({
@@ -94,7 +95,7 @@ async function seedPantry() {
     PANTRY_VARS,
   );
   data.pantry!.id = 'pantry-1';
-  cache.writeQuery({ query: GetPantryDocument, variables: PANTRY_VARS, data });
+  seedQuery(cache, { query: GetPantryDocument, variables: PANTRY_VARS, data });
   const itemId = data.pantry!.itemsConnection.edges[0]!.node.id;
   return { cache, itemId };
 }
@@ -105,7 +106,7 @@ async function seedList() {
     Unmasked<GetShoppingListItemsFilteredQuery>
   >(GetShoppingListItemsFilteredDocument, LIST_VARS);
   data.shoppingList!.id = 'list-1';
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetShoppingListItemsFilteredDocument,
     variables: LIST_VARS,
     data,

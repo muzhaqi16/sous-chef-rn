@@ -8,6 +8,7 @@ import {
   renderWithApollo,
   type MockDataFor,
   type MockedResponse,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   NotificationCategory,
@@ -228,7 +229,7 @@ describe('NotificationDetailScreen', () => {
     it('is withdrawn when the server stops naming the stack while the screen is open', async () => {
       const cache = makeCache();
       const write = (row: ServerRow) =>
-        cache.writeFragment({
+        seedFragment(cache, {
           fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
           fragmentName: 'useNotificationsOnLaunch_notification',
           data: row,

@@ -8,6 +8,7 @@ import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/sh
 import { errorService } from '#/services/errorService';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { createShoppingListRow } from '../createShoppingListRow';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#/services/errorService');
 
@@ -23,7 +24,7 @@ const LIST = gql`
 
 function seededCache() {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: LIST,
     data: {
       __typename: 'ShoppingList',

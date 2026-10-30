@@ -5,6 +5,7 @@ import {
   renderHookWithApollo,
   type MockDataFor,
   type MockedResponse,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import {
@@ -83,7 +84,7 @@ const cacheHoldingMilk = (
       })),
     },
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: CatalogRecipesForItemDocument,
     variables: { ingredients: ['milk'], first: 5 },
     data,

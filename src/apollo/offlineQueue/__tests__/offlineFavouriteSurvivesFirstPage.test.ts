@@ -6,6 +6,7 @@ import {
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const SAVED = gql`
   query SavedIds {
@@ -57,12 +58,12 @@ describe('an offline favourite and a first-page read', () => {
       }),
     );
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: SAVED,
       data: page(['saved-1', 'saved-offline']),
     });
 
-    cache.writeQuery({ query: SAVED, data: page(['saved-1']) });
+    seedQuery(cache, { query: SAVED, data: page(['saved-1']) });
 
     const read = cache.readQuery<ReturnType<typeof page>>({ query: SAVED });
     expect(

@@ -2,6 +2,7 @@
 
 import { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 /** Shape read back by the `id imageUrl` fragments exercised below. */
 interface ItemImageResult {
@@ -70,7 +71,7 @@ describe('cache.ts', () => {
     `;
 
     it('preserves existing suggestions when incoming is null', () => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         data: {
           shoppingList: {
@@ -80,7 +81,7 @@ describe('cache.ts', () => {
           },
         },
       });
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         data: {
           shoppingList: {
@@ -95,7 +96,7 @@ describe('cache.ts', () => {
     });
 
     it('replaces suggestions with new incoming data', () => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         data: {
           shoppingList: {
@@ -105,7 +106,7 @@ describe('cache.ts', () => {
           },
         },
       });
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         data: {
           shoppingList: {
@@ -132,7 +133,7 @@ describe('cache.ts', () => {
     const gql = require('graphql-tag').default;
 
     it('preserves existing imageUrl when incoming is undefined', () => {
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`
           fragment ItemImg on Item {
@@ -143,7 +144,7 @@ describe('cache.ts', () => {
         data: { __typename: 'Item', id: 'item-1', imageUrl: 'http://img.png' },
       });
       // Write without imageUrl field (undefined)
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`
           fragment ItemName on Item {
@@ -165,7 +166,7 @@ describe('cache.ts', () => {
     });
 
     it('allows explicit null through for imageUrl (user removes image)', () => {
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`
           fragment ItemImg on Item {
@@ -175,7 +176,7 @@ describe('cache.ts', () => {
         `,
         data: { __typename: 'Item', id: 'item-1', imageUrl: 'http://img.png' },
       });
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Item', id: 'item-1' }),
         fragment: gql`
           fragment ItemImgNull on Item {
@@ -228,7 +229,7 @@ describe('cache.ts', () => {
     `;
 
     it('returns incoming when no existing data', () => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: {},
         data: {
@@ -257,7 +258,7 @@ describe('cache.ts', () => {
 
     it('deduplicates edges by node ID on pagination', () => {
       // Write first page
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: {},
         data: {
@@ -278,7 +279,7 @@ describe('cache.ts', () => {
         },
       });
       // Write second page with cursor (includes duplicate m-1)
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { membersCursor: 'cursor-1' },
         data: {
@@ -315,7 +316,7 @@ describe('cache.ts', () => {
     });
 
     it('returns existing when incoming is falsy', () => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: {},
         data: {
@@ -380,7 +381,7 @@ describe('cache.ts', () => {
           }
         }
       `;
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { homeId: 'h-1' },
         data: {
@@ -434,14 +435,14 @@ describe('cache.ts', () => {
           }
         }
       `;
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { homeId: 'h-1' },
         data: {
           storageLocations: [{ __typename: 'StorageLocation', id: 'sl-1' }],
         },
       });
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { homeId: 'h-1' },
         data: { storageLocations: null },
@@ -467,7 +468,7 @@ describe('cache.ts', () => {
 
     it('merges partial profile updates without losing fields', () => {
       // UserProfile has keyFields: ['id'], so it requires an id field
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'User', id: 'u-1' }),
         fragment: gql`
           fragment UserProfileFrag on User {
@@ -490,7 +491,7 @@ describe('cache.ts', () => {
           },
         },
       });
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'User', id: 'u-1' }),
         fragment: gql`
           fragment UserAvatar on User {

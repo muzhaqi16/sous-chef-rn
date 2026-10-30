@@ -6,6 +6,8 @@ import {
   renderHookWithApollo,
   seedCache,
   type MockedResponse,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   MarkNotificationAsReadDocument,
@@ -102,7 +104,7 @@ const seedFeed = (
 ) => {
   const cache = seedRows(rows);
   if (unreadCount !== null) {
-    cache.writeQuery({
+    seedQuery(cache, {
       query: NotificationSummaryDocument,
       data: {
         __typename: 'Query',
@@ -416,7 +418,7 @@ describe('useNotificationSync — the cached badge', () => {
       const pending = result.current.syncDelete('n1');
       // Lands between the eviction and the refusal, exactly as an in-flight
       // query result or a subscription push would.
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Notification', id: 'n2' })!,
         fragment: gql`
           fragment _TestOther on Notification {

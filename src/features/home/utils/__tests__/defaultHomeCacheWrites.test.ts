@@ -4,6 +4,7 @@ import {
   applyDefaultHome,
   restoreDefaultHome,
 } from '../defaultHomeCacheWrites';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const HOMES = gql`
   query TestHomes {
@@ -34,7 +35,7 @@ interface HomesResult {
 
 const seed = (homes: Array<{ id: string; isDefault: boolean }>) => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: HOMES,
     data: {
       homes: {
@@ -81,7 +82,7 @@ describe('applyDefaultHome', () => {
 
   it('reaches a home cached outside the connection', () => {
     const cache = seed([{ id: 'home-A', isDefault: true }]);
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Home:home-new',
       fragment: HOME_FIELDS,
       data: { __typename: 'Home', id: 'home-new', isDefault: false },
@@ -107,7 +108,7 @@ describe('applyDefaultHome retried once the target lands', () => {
     expect(holders(cache)).toEqual(['home-A']);
 
     // It arrives — a create's `update`, or a join's refetch.
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Home:home-new',
       fragment: HOME_FIELDS,
       data: { __typename: 'Home', id: 'home-new', isDefault: false },

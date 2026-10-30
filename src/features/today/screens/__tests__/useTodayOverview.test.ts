@@ -6,6 +6,8 @@ import { useStore } from '#store';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { memoryScreen } from '#/test-utils/memoryPlatform';
@@ -400,7 +402,7 @@ it("follows the pantry's stats when another tab's write moves them", async () =>
 
   // What a consume's payload writes: the pantry's readers, stats included.
   act(() => {
-    result.current.client.cache.writeFragment({
+    seedFragment(result.current.client.cache, {
       fragment: PantryReadersFragmentDoc,
       fragmentName: 'PantryReaders',
       variables: { today: TODAY },
@@ -593,7 +595,7 @@ describe("a new day's counts", () => {
   /** Yesterday's counts, as a cold start restores them: `stats` has no day in its key. */
   function cacheWithYesterdaysCounts() {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: TodayCountsDocument,
       variables: { id: 'p1', today: '2026-03-09' },
       data: {

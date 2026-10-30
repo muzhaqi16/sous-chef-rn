@@ -24,6 +24,7 @@ import {
   UseQuantityEditModal_ItemFragmentDoc,
   type UseQuantityEditModal_ItemFragment,
 } from '#features/shoppingList/hooks/useQuantityEditModal.generated';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 /**
  * A nested object with no type policy is REPLACED on write, not merged
@@ -141,7 +142,7 @@ const narrowItem: Unmasked<UseToggleShoppingItem_ItemFragment> = {
 
 function seedFullItem() {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: ITEM_CACHE_ID,
     fragment: ItemDetail_ShoppingListItemFragmentDoc,
     fragmentName: 'ItemDetail_shoppingListItem',
@@ -165,7 +166,7 @@ describe('nested value objects on ShoppingListItem', () => {
     const cache = seedFullItem();
     expect(readDetail(cache)).not.toBeNull();
 
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ITEM_CACHE_ID,
       fragment: UseToggleShoppingItem_ItemFragmentDoc,
       fragmentName: 'useToggleShoppingItem_item',
@@ -191,7 +192,7 @@ describe('nested value objects on ShoppingListItem', () => {
   it('takes the incoming value for fields the narrow write does carry', () => {
     const cache = seedFullItem();
 
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ITEM_CACHE_ID,
       fragment: UseToggleShoppingItem_ItemFragmentDoc,
       fragmentName: 'useToggleShoppingItem_item',
@@ -220,7 +221,7 @@ describe('nested value objects on ShoppingListItem', () => {
       cache: ReturnType<typeof makeCache>,
       isPurchased: boolean,
     ) =>
-      cache.writeFragment({
+      seedFragment(cache, {
         id: ITEM_CACHE_ID,
         fragment: UseToggleShoppingItem_ItemFragmentDoc,
         fragmentName: 'useToggleShoppingItem_item',
@@ -296,7 +297,7 @@ describe('the entry photo on ShoppingListItem', () => {
 
   const seedWithPhoto = (image: EntryImage) => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ITEM_CACHE_ID,
       fragment: ItemDetail_ShoppingListItemFragmentDoc,
       fragmentName: 'ItemDetail_shoppingListItem',
@@ -306,7 +307,7 @@ describe('the entry photo on ShoppingListItem', () => {
   };
 
   const writeRow = (cache: ReturnType<typeof makeCache>, image: EntryImage) =>
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ITEM_CACHE_ID,
       fragment: UseQuantityEditModal_ItemFragmentDoc,
       fragmentName: 'useQuantityEditModal_item',

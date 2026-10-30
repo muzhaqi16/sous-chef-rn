@@ -4,6 +4,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetMealTemplateDocument,
@@ -130,7 +131,7 @@ describe('useMealTemplate', () => {
     const { cache, result } = await loadTemplate();
 
     await act(async () => {
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: MealTemplateItemFragmentDoc,
         fragmentName: 'MealTemplateItemFragment',
         data: item('i2', 0),

@@ -18,6 +18,7 @@ import {
   completeMockedResponse,
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetMealPlanDocument,
@@ -509,7 +510,7 @@ describe('generating a shopping list from a cached meal plan', () => {
         data: Unmasked<GetMealPlanQuery>;
       };
       const cache = seedUnlinked();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetMealPlanDocument,
         variables,
         data: screenResult(variables).data,

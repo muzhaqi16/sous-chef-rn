@@ -7,6 +7,7 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -740,7 +741,7 @@ describe('the stocked stamp follows the purchased flag', () => {
   /** A line that was purchased AND already moved into the pantry. */
   function seedStockedItem() {
     const cache = seedShoppingItem();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:item-1',
       fragment: RECORD,
       data: {

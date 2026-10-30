@@ -11,7 +11,7 @@
  * every other fixture is held to.
  */
 import { gql } from '@apollo/client';
-import { seedCache } from '#/test-utils/apolloMockProvider';
+import { seedCache, seedFragment } from '#/test-utils/apolloMockProvider';
 
 const BRANDS = gql`
   fragment SeedProbe_ItemBrands on Item {
@@ -74,7 +74,7 @@ describe('a seeded collection of entities is normalized', () => {
     // write to the child reaches every reader of the parent. Stored as a blob,
     // the parent kept its own frozen copy and this was invisible.
     const cache = seeded();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Brand:brand-1',
       fragment: gql`
         fragment SeedProbe_BrandRename on Brand {
@@ -103,12 +103,8 @@ const guard = require('../setup/apolloCacheWriteGuard') as {
 describe('a seed can be held to a real selection', () => {
   afterEach(() => guard.resetCollectedCacheWriteErrors());
 
-  it('reports a fixture too thin for the fragment it names', () => {
-    // The point of the checked form. A derived selection is built FROM the
-    // fixture's keys, so it can never be incomplete and cannot hold the seed to
-    // anything — which is why suites in the migration had to be fixed by
-    // hand-enlarging fixtures instead of being told what was missing.
-    seedCache([
+  it('completes a fixture too thin for the fragment it names', () => {
+    const cache = seedCache([
       {
         fragment: BRANDS,
         fragmentName: 'SeedProbe_ItemBrands',
@@ -117,11 +113,14 @@ describe('a seed can be held to a real selection', () => {
       },
     ]);
 
-    const reported = guard.peekCollectedCacheWriteErrors();
-    guard.resetCollectedCacheWriteErrors();
-    expect(reported.map(e => e.message).join('\n')).toContain(
-      "Missing field 'brands'",
-    );
+    expect(guard.peekCollectedCacheWriteErrors()).toEqual([]);
+    expect(
+      cache.readFragment({
+        id: 'Item:item-3',
+        fragment: BRANDS,
+        fragmentName: 'SeedProbe_ItemBrands',
+      }),
+    ).toMatchObject({ name: 'Salt', brands: expect.any(Array) });
   });
 
   it('says nothing when the derived form is used, which is the gap', () => {

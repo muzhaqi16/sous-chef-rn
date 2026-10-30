@@ -1,7 +1,10 @@
 import { act, waitFor } from '@testing-library/react-native';
 import { requirePlatform } from '#platform/install';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import {
@@ -293,7 +296,7 @@ describe('usePantryItemSuggestions', () => {
   it('shows cached suggestions while offline', async () => {
     useStore.setState({ isOnline: false, apiReachable: null });
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetPantryItemSuggestionsDocument,
       variables: VARIABLES,
       data: buildData([makeSuggestion()]),

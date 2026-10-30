@@ -2,6 +2,7 @@ import type { ApolloCache } from '@apollo/client';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
 import type { QueryDataFor } from '../apolloMockProvider';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 type Settings = NonNullable<
   NonNullable<QueryDataFor<typeof GetUserSettingsDocument>['me']>['settings']
@@ -44,7 +45,7 @@ export function writeUserSettings(
       },
     },
   };
-  cache.writeQuery({ query: GetUserSettingsDocument, data });
+  seedQuery(cache, { query: GetUserSettingsDocument, data });
 }
 
 /** `writeUserSettings` with a unit system, for `useReadingSystem`. */

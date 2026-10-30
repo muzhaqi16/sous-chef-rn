@@ -2,7 +2,10 @@
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { act, screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { PantryItemCard } from '../PantryItemCard';
 import { StatusLine } from '#components/atoms/StatusLine';
@@ -292,7 +295,7 @@ function buildItem(
 
 function buildCache(item: PantryItemCard_PantryItemFragment) {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id:
       cache.identify({ __typename: item.__typename, id: item.id }) ??
       `PantryItem:${item.id}`,

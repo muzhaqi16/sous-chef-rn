@@ -251,6 +251,17 @@ const PRODUCTION_FIXTURES: Fixture[] = [
 
 const TEST_FIXTURES: Fixture[] = [
   {
+    id: 'rawCacheSeed',
+    invalid: [
+      'cache.writeQuery({ query: Q, data });',
+      'client.cache.writeFragment({ id, fragment: F, data });',
+    ],
+    valid: [
+      'seedQuery(cache, { query: Q, data });',
+      'seedFragment(cache, { id, fragment: F, data });',
+    ],
+  },
+  {
     id: 'apolloReactMock',
     invalid: ['jest.mock("@apollo/client/react");'],
     valid: ['jest.mock("#/services/haptic");'],

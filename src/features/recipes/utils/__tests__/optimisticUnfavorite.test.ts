@@ -4,6 +4,7 @@ import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { FavoritesViewerDocument } from '#features/recipes/cache/favorites.generated';
 import { performOptimisticUnfavorite } from '../optimisticUnfavorite';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const SAVED_LIST_WITH_COUNT = gql`
   fragment _TestSavedListWithCount on User {
@@ -67,13 +68,14 @@ function setUp(totalCount?: number | null) {
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
     link: ApolloLink.empty(),
   });
-  cache.writeQuery({
+  seedQuery(cache, {
     query: FavoritesViewerDocument,
     data: { __typename: 'Query', me: { __typename: 'User', id: 'u1' } },
   });
   const edges = [edge('r1'), edge('r2')];
   const connection = { __typename: 'SavedRecipeConnection', edges };
-  cache.writeFragment(
+  seedFragment(
+    cache,
     totalCount === undefined
       ? {
           id: 'User:u1',

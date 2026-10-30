@@ -476,6 +476,7 @@ Patterns: `docs/development.md` § Testing.
   `error`, never a stubbed throw.
 - A mock's `data` is completed from the SDL: state only what you assert on;
   `partial: true` opts out. `operationMocks: []` is not "answer from the schema".
+  A cache seed is too, through `seedQuery` / `seedFragment` (`rawCacheSeed`).
 - **`Environment` and `Telemetry` are auto-mocked** (`jest.setup.js`): override
   with `mockReturnValue`, never a partial `jest.mock` factory.
 - Never stub a react-hook-form form with an object: use the real hook, and pair

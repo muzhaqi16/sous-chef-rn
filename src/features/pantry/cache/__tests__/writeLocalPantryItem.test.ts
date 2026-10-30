@@ -2,6 +2,7 @@ import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { writeLocalPantryItem } from '../writeLocalPantryItem';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 /**
  * A local row fills in what the create cannot know and never what the device
@@ -62,7 +63,7 @@ const detail = (cache: Cache, id: string) =>
 describe('writeLocalPantryItem', () => {
   it('keeps the catalog fields a narrower query cached', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: SCANNED_ITEM,
       data: {
         __typename: 'Item',
@@ -93,7 +94,7 @@ describe('writeLocalPantryItem', () => {
 
   it('completes a nested value the cache holds only in part', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: CREATED_ITEM,
       data: {
         __typename: 'Item',
@@ -125,7 +126,7 @@ describe('writeLocalPantryItem', () => {
 
   it('keeps a null the server supplied', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment NullShelfLife on Item {
           id

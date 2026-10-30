@@ -13,6 +13,8 @@ import {
   type MockDataFor,
   type MockedResponse,
   type MockFor,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealPlanDocument,
@@ -168,7 +170,7 @@ describe('useMealPlanActions', () => {
 
   const planAtVersion = (version: number) => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: PLAN_VERSION,
       data: {
         __typename: 'MealPlan',
@@ -455,7 +457,7 @@ describe('useMealPlanActions', () => {
       }
     `;
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PLANS,
       data: {
         mealPlans: {

@@ -2,6 +2,7 @@ import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
 import {
@@ -143,7 +144,7 @@ describe('useDataPreloading', () => {
 
   it('refreshes an expired time-to-live from the server, not the cache', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetCommonUnitsDocument,
       data: {
         __typename: 'Query',

@@ -16,6 +16,7 @@ import {
   renderHookWithApollo,
   seedCache,
   type QueryDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
@@ -592,7 +593,7 @@ describe('usePantrySubscriptions: the counts after a change made elsewhere', () 
     // else moved the counts until they were read back.
     const variables = { id: 'pantry-1', today: todayKey() };
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PantrySummaryForEventDocument,
       variables,
       data: summary(14),

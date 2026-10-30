@@ -1,5 +1,8 @@
 import { act } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import {
   GetPantryItemSuggestionsDocument,
@@ -62,7 +65,7 @@ const buildData = ({
 
 const seed = (layout: Layout) => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetPantryItemSuggestionsDocument,
     variables: VARIABLES,
     data: buildData(layout),

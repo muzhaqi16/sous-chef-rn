@@ -7,6 +7,7 @@ import {
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const SAVED = gql`
   query SavedIdsInFlight {
@@ -70,12 +71,12 @@ describe('a create whose replay is in flight', () => {
   it('keeps its edge when a first page lands before the replay answers', () => {
     queueCreate(QueueStatus.PROCESSING);
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: SAVED,
       data: page(['saved-1', 'saved-offline']),
     });
 
-    cache.writeQuery({ query: SAVED, data: page(['saved-1']) });
+    seedQuery(cache, { query: SAVED, data: page(['saved-1']) });
 
     const read = cache.readQuery<ReturnType<typeof page>>({ query: SAVED });
     expect(
@@ -86,12 +87,12 @@ describe('a create whose replay is in flight', () => {
   it('lets the first page drop it once the replay has landed', () => {
     queueCreate(QueueStatus.SUCCESS);
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: SAVED,
       data: page(['saved-1', 'saved-offline']),
     });
 
-    cache.writeQuery({ query: SAVED, data: page(['saved-1']) });
+    seedQuery(cache, { query: SAVED, data: page(['saved-1']) });
 
     const read = cache.readQuery<ReturnType<typeof page>>({ query: SAVED });
     expect(

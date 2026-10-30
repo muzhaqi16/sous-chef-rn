@@ -6,7 +6,11 @@ import type { BarAction } from '#components/molecules/BarActions';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import {
   DeletePantryDocument,
   GetPantryDocument,
@@ -126,7 +130,7 @@ jest.mock('#/styles/commonStyles', () => ({
 
 function cacheWithPantry(pantry: PantryFixture): InMemoryCache {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetPantryDocument,
     variables: {
       id: pantry.id,

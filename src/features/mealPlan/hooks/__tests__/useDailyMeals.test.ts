@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
   seedCache,
   toFragmentRef,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { useDailyMeals, type DailyMealsItem } from '../useDailyMeals';
 import {
@@ -251,7 +252,7 @@ describe('useDailyMeals', () => {
     const { result } = renderDailyMeals(items, cache);
 
     await act(async () => {
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: DailyMeals_ItemFragmentDoc,
         fragmentName: 'DailyMeals_item',
         data: makeItem({ id: 'i1', mealType: MealType.Dinner }),
@@ -294,7 +295,7 @@ describe('useDailyMeals', () => {
     expect([...result.current.daysWithMeals]).toEqual([todayKey]);
 
     await act(async () => {
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: DailyMeals_ItemFragmentDoc,
         fragmentName: 'DailyMeals_item',
         data: makeItem({ id: 'i1', date: otherDayKey }),

@@ -6,6 +6,7 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   type MockedResponse,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { CreateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useCreateShoppingList } from '../useCreateShoppingList';
@@ -223,7 +224,7 @@ describe('useCreateShoppingList', () => {
       const items = lines(count);
       const writeLines = (listId: string) => {
         for (const line of items) {
-          cache.writeFragment({
+          seedFragment(cache, {
             fragment: LINE,
             data: {
               __typename: 'ShoppingListItem',

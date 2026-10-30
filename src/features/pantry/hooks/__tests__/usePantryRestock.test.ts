@@ -5,6 +5,8 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreatePantryItemDocument,
@@ -42,7 +44,7 @@ type Row = {
 
 function cacheWithRow(held = 3) {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: ROW,
     data: {
       __typename: 'PantryItem',
@@ -244,7 +246,7 @@ describe('usePantryRestock', () => {
     it('restocks a counted stack by the count, in its unit', async () => {
       // The row's unit (bag) is counted.
       const cache = cacheWithRow(3);
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id: 'unit-bag' }),
         fragment: gql`
           fragment _CountedBag on Unit {
@@ -325,7 +327,7 @@ describe('usePantryRestock', () => {
     it('adds a count in a unit the stack is not counted in', async () => {
       // The row's unit (bag) is counted; the buyer counted boxes.
       const cache = cacheWithRow(3);
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id: 'unit-bag' }),
         fragment: gql`
           fragment _CountedBagOther on Unit {
@@ -382,7 +384,7 @@ describe('usePantryRestock', () => {
   describe('the batches the server builds', () => {
     const cacheWithBatches = () => {
       const cache = cacheWithRow();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: ROW_ID },
         data: {

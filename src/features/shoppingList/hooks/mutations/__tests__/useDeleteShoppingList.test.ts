@@ -2,7 +2,10 @@ import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { List_EmptyItemsVariantFragmentDoc } from '#features/shoppingList/cache/list.generated';
@@ -47,7 +50,7 @@ const edge = (id: string) => ({
 function cacheWithList() {
   const cache = makeCache();
   const id = cache.identify({ __typename: 'ShoppingList', id: LIST_ID });
-  cache.writeFragment({
+  seedFragment(cache, {
     id,
     fragment: LIST,
     data: {
@@ -57,7 +60,7 @@ function cacheWithList() {
       totalItems: 12,
     },
   });
-  cache.writeFragment({
+  seedFragment(cache, {
     id,
     fragment: UNPURCHASED,
     data: {

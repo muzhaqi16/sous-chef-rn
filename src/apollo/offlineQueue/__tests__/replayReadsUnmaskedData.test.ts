@@ -2,7 +2,10 @@ import { ApolloClient, gql } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -38,7 +41,7 @@ const replayClient = (
   results: Array<Record<string, unknown>>,
 ): ApolloClient => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: LIST_TOTALS,
     data: {
@@ -132,7 +135,7 @@ describe('a replayed batch add the server merged into an existing row', () => {
         },
       },
     ]);
-    mockClient.cache.writeFragment({
+    seedFragment(mockClient.cache, {
       id: mockClient.cache.identify({
         __typename: 'ShoppingListItem',
         id: 'row-minted',

@@ -15,6 +15,7 @@ import {
   settleShoppingItemDelete,
 } from '../replayReconcilers';
 import { withdrawAddedShoppingListItems } from '../queueWithdrawals';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LIST = gql`
   query ReplayReconcilersProbeList($id: ID!) {
@@ -65,7 +66,7 @@ const row = (id: string, itemName: string, quantity: number) => ({
 /** A list holding `held`, with its counters to match. */
 function seedList(held: ReturnType<typeof row>[]): InMemoryCache {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: LIST,
     variables: { id: 'list-1' },
     data: {
@@ -123,7 +124,7 @@ function readList(cache: InMemoryCache) {
 
 /** Apollo writes the replay's result before the reconciler runs. */
 const writeServerRow = (cache: InMemoryCache, value: ReturnType<typeof row>) =>
-  cache.writeFragment({ fragment: ROW, data: value });
+  seedFragment(cache, { fragment: ROW, data: value });
 
 describe('a single row merged into an existing line', () => {
   const variables = {
@@ -211,7 +212,7 @@ describe('a typed name the service matched to an item it holds', () => {
       id: 'minted-pepper',
       item: { __typename: 'Item', id: itemId },
     };
-    cache.writeFragment({ fragment: LINE_ITEM, data: line });
+    seedFragment(cache, { fragment: LINE_ITEM, data: line });
     return {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
@@ -350,7 +351,7 @@ describe('a delete whose answer names the deleted row', () => {
     return cache;
   }
   const stub = (cache: InMemoryCache) =>
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment ReplayReconcilersProbeStub on ShoppingListItem {
           id

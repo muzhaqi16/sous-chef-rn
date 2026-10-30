@@ -16,10 +16,11 @@ import { MealType, TemplateCategory } from '#/graphql/generated/schemaTypes';
 import { GetMealTemplateForEditDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 import { readTemplateItem } from '../mealTemplateItem';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 function seedTemplateWithRecipeBackedRow() {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetMealTemplateForEditDocument,
     variables: { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
     data: {
@@ -86,7 +87,7 @@ describe('the template editor snapshots the recipe it can overwrite', () => {
 
   it('still reports a genuinely absent recipe as null', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetMealTemplateForEditDocument,
       variables: { id: 'tpl-2', itemsFirst: MEALS_PAGE_SIZE },
       data: {

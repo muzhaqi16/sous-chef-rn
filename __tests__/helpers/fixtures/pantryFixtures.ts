@@ -1,6 +1,6 @@
 /**
  * Test fixture builders that match the production GraphQL document selection
- * for `GetPantry`. Use with `cache.writeQuery({ query: GetPantryDocument, ... })`
+ * for `GetPantry`. Use with `seedQuery(cache, { query: GetPantryDocument, ... })`
  * to seed the cache without losing fields to selection-set mismatches.
  *
  * Production code reads `normalizePantry(pantry).items`, but the document
@@ -175,7 +175,7 @@ function storageLocationNode(loc: StorageLocationFixture): StorageLocationNode {
 
 /**
  * Build the full `GetPantry` query result. Pass to
- * `cache.writeQuery({ query: GetPantryDocument, variables: { id }, data: ... })`.
+ * `seedQuery(cache, { query: GetPantryDocument, variables: { id }, data: ... })`.
  */
 export function pantryData(pantry: PantryFixture): Unmasked<GetPantryQuery> {
   const items = pantry.items ?? [];

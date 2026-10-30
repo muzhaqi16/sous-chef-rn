@@ -6,6 +6,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -90,7 +91,7 @@ interface SeededPantry {
 
 function seededCache(itemIds: string[]) {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: PANTRY,
     variables: { id: 'pantry-1' },
     data: {

@@ -9,6 +9,7 @@ import type {
 import {
   renderHookWithApollo,
   recordMock,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   NotificationEventsDocument,
@@ -297,7 +298,7 @@ const seededCache = (
       },
     },
   };
-  cache.writeQuery({ query: GetUnreadNotificationsDocument, data });
+  seedQuery(cache, { query: GetUnreadNotificationsDocument, data });
   return cache;
 };
 

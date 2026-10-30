@@ -1,7 +1,7 @@
 import {
   ApolloClient,
   ApolloLink,
-  InMemoryCache,
+  type InMemoryCache,
   Observable,
   gql,
 } from '@apollo/client';
@@ -16,6 +16,8 @@ import {
   GetUserSettingsDocument,
   type GetUserSettingsQuery,
 } from '#operations/auth/user.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 
 jest.mock('#store', () => ({
   useStore: { getState: jest.fn() },
@@ -39,7 +41,7 @@ const MOCK_MUTATION = gql`
 
 function makeOperation(
   query: DocumentNode,
-  cache: InMemoryCache = new InMemoryCache(),
+  cache: InMemoryCache = makeCache(),
 ): ApolloLink.Operation {
   return {
     query,
@@ -168,9 +170,9 @@ describe('createOfflineModeLink', () => {
       isOnline: true,
       apiReachable: false,
     });
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     const cachedData = { items: [{ __typename: 'Item', id: '1' }] };
-    cache.writeQuery({ query: MOCK_QUERY, data: cachedData });
+    seedQuery(cache, { query: MOCK_QUERY, data: cachedData });
 
     const forward = makeForward();
     const { value } = observe(
@@ -185,9 +187,9 @@ describe('createOfflineModeLink', () => {
       offlineModeEnabled: false,
       isOnline: false,
     });
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     const cachedData = { items: [{ __typename: 'Item', id: '1' }] };
-    cache.writeQuery({ query: MOCK_QUERY, data: cachedData });
+    seedQuery(cache, { query: MOCK_QUERY, data: cachedData });
 
     const forward = makeForward();
     const { emitted, completed, value } = observe(
@@ -218,12 +220,12 @@ describe('createOfflineModeLink', () => {
       isOnline: false,
       apiReachable: null,
     });
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     const cachedData: GetUserSettingsQuery = {
       __typename: 'Query',
       me: { __typename: 'User', id: 'u1', settings: null },
     };
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetUserSettingsDocument,
       data: cachedData,
     });
@@ -247,8 +249,8 @@ describe('createOfflineModeLink', () => {
         offlineModeEnabled: true,
         isOnline: true,
       });
-      const cache = new InMemoryCache();
-      cache.writeQuery({ query: MOCK_QUERY, data: { items: [] } });
+      const cache = makeCache();
+      seedQuery(cache, { query: MOCK_QUERY, data: { items: [] } });
       observe(link.request(makeOperation(MOCK_QUERY, cache), makeForward()));
       expect(Telemetry.increment).toHaveBeenCalledWith(
         'offline_reads_served_total',

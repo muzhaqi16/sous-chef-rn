@@ -19,6 +19,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { QueryDataFor } from '#/test-utils/apolloMockProvider';
 import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const node = (
   id: string,
@@ -74,7 +75,7 @@ const write = (cache: InMemoryCache, ids: string[], unread: number) => {
       },
     },
   };
-  cache.writeQuery({ query: GetNotificationsDocument, variables: VARS, data });
+  seedQuery(cache, { query: GetNotificationsDocument, variables: VARS, data });
 };
 
 // The query's own generated type is masked; these assertions reach through

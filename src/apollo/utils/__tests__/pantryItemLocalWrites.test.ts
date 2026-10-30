@@ -19,6 +19,7 @@ import {
   revertOptimisticPantryItem,
   type PantryItemRef,
 } from '#features/pantry/cache/items';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const PANTRY = gql`
   query SeedPantry($id: ID!) {
@@ -47,7 +48,7 @@ const PANTRY = gql`
 
 function seed() {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: PANTRY,
     variables: { id: 'p-1' },
     data: {
@@ -85,7 +86,7 @@ function seed() {
 const row = (id: string): PantryItemRef => ({ __typename: 'PantryItem', id });
 
 const writeRow = (cache: ReturnType<typeof makeCache>, id: string) =>
-  cache.writeFragment({
+  seedFragment(cache, {
     id: `PantryItem:${id}`,
     fragment: gql`
       fragment SeedRow on PantryItem {

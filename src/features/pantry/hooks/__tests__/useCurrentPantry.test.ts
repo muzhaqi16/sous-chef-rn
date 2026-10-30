@@ -1,7 +1,10 @@
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { waitFor } from '@testing-library/react-native';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import {
   homesData,
@@ -42,7 +45,7 @@ beforeEach(() => {
  */
 function cacheWithHomes(homes: HomeFixture[]): InMemoryCache {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetHomesDocument,
     data: homesData(homes),
   });

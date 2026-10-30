@@ -4,6 +4,7 @@ import { StoreLineMatch, UnitSystem } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   ALDI,
@@ -44,7 +45,7 @@ const answering = (answer: SavingsAnswer) =>
 
 const cached = (answer: SavingsAnswer) => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: ListSavingsDocument,
     variables: VARIABLES,
     data: { __typename: 'Query', shoppingListStoreSavings: answer },

@@ -7,6 +7,8 @@ import {
   seedCache,
   type MockDataFor,
   type RecordedMock,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -351,7 +353,7 @@ describe('useMoveToPantry pantry item count', () => {
   function seededCache(): InMemoryCache {
     const { makeCache } = require('#/apollo/cache');
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Pantry:pantry-1',
       fragment: STATS_FRAGMENT,
       data: {
@@ -360,7 +362,7 @@ describe('useMoveToPantry pantry item count', () => {
         stats: { __typename: 'PantryStats', totalItems: 63 },
       },
     });
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Pantry:pantry-1',
       fragment: ROWS_FRAGMENT,
       data: {
@@ -628,7 +630,7 @@ describe('useMoveToPantry keeping the row on the list', () => {
       },
     };
     const write = (isPurchased: boolean, edges: unknown[]) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LIST_QUERY,
         variables: { listId: 'list-1', isPurchased },
         data: {

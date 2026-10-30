@@ -5,6 +5,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetRecipeDocument,
@@ -218,7 +219,7 @@ describe('useRecipeDietaryAlerts', () => {
       data: Unmasked<GetRecipeQuery>;
     };
     const cache = seedCache([]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetRecipeDocument,
       variables: recipeVars,
       data: completed(recipeVars).data,
@@ -266,9 +267,7 @@ describe('useRecipeDietaryAlerts', () => {
     });
 
     it('is absent when no restriction anywhere can alert', async () => {
-      expect((await answeredWith(cleanRecipeMock(), false)).caveat).toBe(
-        false,
-      );
+      expect((await answeredWith(cleanRecipeMock(), false)).caveat).toBe(false);
     });
 
     it('is absent before the check answers and without a home', () => {

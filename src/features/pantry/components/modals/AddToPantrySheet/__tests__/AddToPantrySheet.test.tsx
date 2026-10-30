@@ -2,7 +2,12 @@
 import React from 'react';
 import { screen, waitFor } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  recordMock,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -243,7 +248,7 @@ describe('AddToPantrySheet', () => {
 
     const seedCache = () => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: SEED_PANTRY,
         variables: { id: 'pantry-1' },
         data: {
@@ -392,7 +397,7 @@ describe('AddToPantrySheet', () => {
 
     const seedStocked = (edges: unknown[]) => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: STOCKED_PANTRY,
         variables: {
           id: 'pantry-1',
@@ -505,7 +510,7 @@ describe('AddToPantrySheet', () => {
       id: string,
       type: UnitType,
     ) =>
-      cache.writeFragment({
+      seedFragment(cache, {
         id: `Unit:${id}`,
         fragment: gql`
           fragment StockedUnitType on Unit {
@@ -850,7 +855,7 @@ describe('AddToPantrySheet', () => {
       lowStock: Sections['lowStock'] = [],
     ) => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetPantryItemSuggestionsDocument,
         variables: VARIABLES,
         data: {

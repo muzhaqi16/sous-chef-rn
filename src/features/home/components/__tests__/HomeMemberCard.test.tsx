@@ -5,6 +5,7 @@ import { t } from '#/i18n';
 import {
   renderWithApollo,
   toFragmentRef,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { HomeMemberCard } from '../HomeMemberCard';
 import {
@@ -60,7 +61,7 @@ function renderCard(
   memberRole: MembershipRole = member.role,
 ) {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'Membership', id: member.id }),
     fragment: HomeMemberCard_MemberFragmentDoc,
     fragmentName: 'HomeMemberCard_member',

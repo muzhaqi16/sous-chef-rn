@@ -5,6 +5,7 @@ import {
   completeMockedResponse,
   renderWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { formatCurrency } from '#/utils/formatters/number';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
@@ -68,7 +69,7 @@ function cachedList() {
   }).result as (vars: typeof variables) => {
     data: Unmasked<ListBudgetQuery>;
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: ListBudgetDocument,
     variables,
     data: completed(variables).data,

@@ -7,6 +7,7 @@ import {
 } from '#features/recipes/screens/useSavedRecipes.generated';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { reconcileAddRecipeToFavoritesReplay } from '../replayReconcilers';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const MINTED_ID = 'minted-saved-1';
 const SERVER_ID = 'server-saved-1';
@@ -56,7 +57,7 @@ const ID_ONLY = gql`
 
 function seed(): InMemoryCache {
   const cache = makeCache();
-  cache.writeQuery<MySavedRecipesQuery>({
+  seedQuery<MySavedRecipesQuery>(cache, {
     query: MySavedRecipesDocument,
     data: {
       __typename: 'Query',
@@ -76,7 +77,7 @@ function seed(): InMemoryCache {
       },
     },
   });
-  cache.writeQuery({
+  seedQuery(cache, {
     query: SavedRecipeFoldersDocument,
     data: { __typename: 'Query', savedRecipeFolders: [] },
   });
@@ -86,7 +87,7 @@ function seed(): InMemoryCache {
 }
 
 function writeServerRow(cache: InMemoryCache, id: string) {
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'SavedRecipe', id }),
     fragment: SERVER_ROW,
     data: {

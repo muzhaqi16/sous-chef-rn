@@ -386,6 +386,25 @@ const overrides = [
     },
   },
   {
+    // The seed helper itself; probes of what a raw write or a layer's write
+    // does, on types the SDL lacks; and the project that cannot load the helper.
+    files: [
+      '__tests__/helpers/apolloMockProvider.tsx',
+      '__tests__/apollo/normalizedRowMergeProbe.test.ts',
+      '__tests__/apollo/pendingLayerProbe.test.ts',
+      '__tests__/apollo/pendingWriteOverServerAnswer.test.ts',
+      '__tests__/core-portability/**/*.ts',
+      'src/apollo/__tests__/refetchEvents.test.ts',
+      'src/apollo/links/__tests__/answerOrderingLink.test.ts',
+      'src/apollo/pendingWrites/__tests__/pendingWrites.test.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': restrictedSyntaxForTests({
+        allow: ['rawCacheSeed'],
+      }),
+    },
+  },
+  {
     files: ['src/**/*.ts', 'src/**/*.tsx', 'App.tsx'],
     languageOptions: { parserOptions: TYPED },
     rules: {

@@ -19,6 +19,7 @@ import {
   settleMealPlanDelete,
   settleMealTemplateDelete,
 } from '../replayReconcilers';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const PLAN_ID = 'plan-1';
 const MINTED_ID = 'minted-meal-1';
@@ -57,7 +58,7 @@ const meal = (id: string, version: number = 1) => ({
 
 const seedPlan = (mealIds: string[]): InMemoryCache => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'MealPlan', version: 1, id: PLAN_ID }),
     fragment: PLAN_MEALS,
     data: {
@@ -94,7 +95,7 @@ const SERVER_VERSION = 4;
 
 /** What a replay's normalization writes before the reconciler runs. */
 const writeServerMeal = (cache: InMemoryCache) =>
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({
       __typename: 'MealPlanItem',
       version: 1,
@@ -232,7 +233,7 @@ const seedList = (
   typename: 'MealPlan' | 'MealTemplate',
 ): InMemoryCache => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query,
     data: {
       [field]: {
@@ -272,7 +273,7 @@ describe.each([
     settle: settleMealPlanDelete,
     operation: operationNameOf(DeleteMealPlanDocument),
     writeResponse: (cache: InMemoryCache, id: string) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: DeleteMealPlanDocument,
         variables: { input: { id } },
         data: {
@@ -294,7 +295,7 @@ describe.each([
     settle: settleMealTemplateDelete,
     operation: operationNameOf(DeleteMealTemplateDocument),
     writeResponse: (cache: InMemoryCache, id: string) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: DeleteMealTemplateDocument,
         variables: { input: { id } },
         data: {

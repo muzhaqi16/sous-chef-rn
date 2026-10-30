@@ -3,6 +3,7 @@ import { t } from '#/i18n';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { formatCountryName } from '#/utils/formatters/region';
@@ -43,7 +44,7 @@ describe('useProductOrigin', () => {
   // What a scan's barcode lookup leaves in the cache: the item with its origin.
   it('reads what the lookup stored without asking again', async () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
       fragment: UseProductOrigin_ItemFragmentDoc,
       fragmentName: 'useProductOrigin_item',
@@ -164,7 +165,7 @@ describe('useProductOrigin', () => {
   // credited to nobody.
   it('credits nobody for a source this build predates', async () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
       fragment: UseProductOrigin_ItemFragmentDoc,
       fragmentName: 'useProductOrigin_item',

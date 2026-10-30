@@ -7,7 +7,10 @@ import {
   reconcileSettingsReplay,
   refreshDeviceUnitSystem,
 } from '#/apollo/utils/unitSystemAnswers';
-import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import {
   GetUserSettingsDocument,
   type GetUserSettingsQuery,
@@ -108,7 +111,7 @@ describe('refreshDeviceUnitSystem', () => {
           }),
       ),
     });
-    client.cache.writeQuery({
+    seedQuery(client.cache, {
       query: GetUserSettingsDocument,
       data: settingsAnswer(UnitSystem.Imperial),
     });

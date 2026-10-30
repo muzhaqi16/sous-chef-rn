@@ -9,6 +9,7 @@ import { queueStore } from '../offlineQueue/queueStore';
 import { QueueStatus } from '../offlineQueue/types';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { ForkRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 interface RecipeListResult {
   recipes: {
@@ -90,14 +91,14 @@ describe('a recipe-list refetch while a fork is queued', () => {
 
   const refetchWithoutFork = () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RECIPE_LIST,
       data: page([
         { id: 'fork-1', name: 'Soup (copy)' },
         { id: 'source-1', name: 'Soup' },
       ]),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RECIPE_LIST,
       data: page([{ id: 'source-1', name: 'Soup' }]),
     });

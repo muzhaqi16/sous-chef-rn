@@ -281,6 +281,12 @@ const TEST_SYNTAX = [
       'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors.',
   },
   {
+    id: 'rawCacheSeed',
+    selector: 'CallExpression[callee.property.name=/^write(Query|Fragment)$/]',
+    message:
+      'Seed with seedQuery / seedFragment from __tests__/helpers/apolloMockProvider: they complete `data` from the SDL as a mock is, so a seed states only what the test asserts on and a field a query gains breaks no test. A raw write takes every selected field by hand.',
+  },
+  {
     id: 'bareInMemoryCache',
     selector:
       'Program:has(ImportDeclaration[source.value=/apolloMockProvider$/]) NewExpression[callee.name="InMemoryCache"]',

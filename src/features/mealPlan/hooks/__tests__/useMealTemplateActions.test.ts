@@ -6,6 +6,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type QueryDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealTemplateDocument,
@@ -112,7 +113,7 @@ const template = (
 /** A cache holding the template the way opening it leaves it. */
 const seeded = (data = template()): InMemoryCache => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetMealTemplateDocument,
     variables: { id: TEMPLATE_ID, itemsFirst: MEALS_PAGE_SIZE },
     data,
@@ -566,7 +567,7 @@ describe('useMealTemplateActions', () => {
         }
       `;
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: TEMPLATES,
         data: {
           mealTemplates: {

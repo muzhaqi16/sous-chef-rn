@@ -7,6 +7,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { usePantrySettings } from '#features/pantry/hooks/usePantrySettings';
 import {
@@ -109,7 +110,7 @@ describe('usePantrySettings, a toggle and a save inside one round trip', () => {
   // sent alongside it at the old one was refused as changed elsewhere.
   it('sends the save at the version the toggle answered with', async () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment SeedPantryVersion on Pantry {
           id
@@ -187,7 +188,7 @@ describe('usePantrySettings.savePantryFields', () => {
   `;
   const seedRow = (version?: number) => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: PANTRY_ROW,
       data: {
         __typename: 'Pantry',
@@ -197,7 +198,7 @@ describe('usePantrySettings.savePantryFields', () => {
       },
     });
     if (version !== undefined) {
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: PANTRY_VERSION,
         data: { __typename: 'Pantry', id: 'pantry-1', version },
       });

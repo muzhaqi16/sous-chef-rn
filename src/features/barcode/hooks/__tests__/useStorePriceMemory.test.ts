@@ -4,6 +4,7 @@ import { t } from '#/i18n';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   PriceBasis,
@@ -170,7 +171,7 @@ describe('useStorePriceMemory', () => {
   // state: the cache holds what an older build parsed. The price shows alone.
   it('shows the bare price on a basis this build predates', async () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({ __typename: 'Item', version: 1, id: 'pb' }),
       fragment: UseStorePriceMemory_ItemFragmentDoc,
       fragmentName: 'useStorePriceMemory_item',
@@ -202,7 +203,7 @@ describe('useStorePriceMemory', () => {
         },
       },
     });
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({
         __typename: 'ShoppingList',
         version: 1,

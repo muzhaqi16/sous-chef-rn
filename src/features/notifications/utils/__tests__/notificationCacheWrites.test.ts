@@ -29,6 +29,7 @@ import {
   cachedUnreadNotificationIds,
   readNotificationStatus,
 } from '../notificationCacheWrites';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const USER = 'me';
 
@@ -87,7 +88,7 @@ const seed = (
       },
     },
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetNotificationsDocument,
     variables: { filter: undefined, first: 30 },
     data,
@@ -150,7 +151,7 @@ describe('notification cache writes', () => {
   it('a live arrival joins the feed without touching the badge', () => {
     seed(cache, [['1', NotificationStatus.Sent]], 1);
     // The subscription normalizes the entity; only the edge and badge are ours.
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Notification:2',
       fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
       fragmentName: 'useNotificationsOnLaunch_notification',

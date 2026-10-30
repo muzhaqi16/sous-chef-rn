@@ -3,7 +3,10 @@ import React from 'react';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { makeCache } from '#/apollo/cache';
 import { screen, act, fireEvent, within } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import type { PantryItem } from '#/graphql/generated/schemaTypes';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -32,7 +35,7 @@ function renderContent(
 ) {
   const cache = makeCache();
   for (const item of items) {
-    cache.writeFragment({
+    seedFragment(cache, {
       id:
         cache.identify({ __typename: item.__typename, id: item.id }) ??
         `PantryItem:${item.id}`,

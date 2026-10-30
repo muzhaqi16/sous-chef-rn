@@ -33,6 +33,7 @@ import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/ho
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { stampItemKeptOnListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { readMovedToPantryAt } from '#features/shoppingList/cache/purchase';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 jest.mock('../queueStore', () => ({
   queueStore: { removeMutation: jest.fn() },
@@ -70,7 +71,7 @@ const PANTRY = gql`
 `;
 
 function seed() {
-  cache.writeQuery({
+  seedQuery(cache, {
     query: PANTRY,
     variables: { id: 'p-1' },
     data: {
@@ -191,7 +192,7 @@ describe('handleQueueFailure withdraws every row of a refused batch add', () => 
   beforeEach(async () => {
     jest.clearAllMocks();
     await cache.reset();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LIST,
       variables: { id: 'list-1' },
       data: {
@@ -206,7 +207,7 @@ describe('handleQueueFailure withdraws every row of a refused batch add', () => 
       },
     });
     for (const id of rows) {
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'ShoppingListItem', id }),
         fragment: gql`
           fragment SeedRow on ShoppingListItem {
@@ -266,7 +267,7 @@ describe('handleQueueFailure un-stamps a refused keep-on-list move', () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     await cache.reset();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({ __typename: 'ShoppingListItem', id: 'sli-1' }),
       fragment: ROW,
       data: {

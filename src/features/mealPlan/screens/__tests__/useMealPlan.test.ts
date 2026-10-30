@@ -4,6 +4,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import {
@@ -144,7 +145,7 @@ describe('useMealPlan', () => {
       expect(result.current.itemDetails[0]?.servings).toBe(2);
 
       await act(async () => {
-        cache.writeFragment({
+        seedFragment(cache, {
           fragment: MealPlanMain_ItemFragmentDoc,
           fragmentName: 'MealPlanMain_item',
           data: {

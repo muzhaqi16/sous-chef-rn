@@ -12,6 +12,8 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetPantryDocument,
@@ -1057,7 +1059,7 @@ describe('useReceiptReview', () => {
       });
       const cache = makeCache();
       // A store the user picks was read with its address by the picker.
-      cache.writeQuery({
+      seedQuery(cache, {
         query: SearchStoresDocument,
         variables: { search: 'kroger', limit: 20 },
         data: {
@@ -1329,7 +1331,7 @@ describe('useReceiptReview', () => {
       readByServer();
       useStore.getState().setSelectedShoppingListId('list-1');
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStores_ListFragmentDoc,
         fragmentName: 'useHeldStores_list',
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
@@ -1351,7 +1353,7 @@ describe('useReceiptReview', () => {
       expect(known.result.current.review.storeOffer).toBeNull();
       known.unmount();
 
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStores_StoreFragmentDoc,
         fragmentName: 'useHeldStores_store',
         id: cache.identify({ __typename: 'Store', id: 'store-label' }),
@@ -1385,7 +1387,7 @@ describe('useReceiptReview', () => {
         printedStore: { name: 'Kroger', address: '412 Main St' },
       });
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseReceiptReview_StoreFragmentDoc,
         fragmentName: 'useReceiptReview_store',
         id: cache.identify({ __typename: 'Store', id: 'store-label' }),

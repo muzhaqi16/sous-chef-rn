@@ -5,6 +5,7 @@ import {
   type MockDataFor,
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { RemoveCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -36,7 +37,7 @@ const LIST_WITH_COLLABORATOR = gql`
 
 const seededCache = () => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: 'ShoppingList:list-1',
     fragment: LIST_WITH_COLLABORATOR,
     data: {

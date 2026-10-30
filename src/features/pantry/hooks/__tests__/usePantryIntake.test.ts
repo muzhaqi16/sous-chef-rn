@@ -5,6 +5,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -50,7 +51,7 @@ const STOCKED_PANTRY = gql`
 
 function cacheHolding(pantryItemId: string) {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: STOCKED_PANTRY,
     variables: {
       id: PANTRY_ID,
@@ -359,7 +360,7 @@ describe('usePantryIntake', () => {
 
   it('names the unit the pantry holds an item in, and null for one it does not', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: gql`
         query SeedHeldUnit(
           $id: ID!

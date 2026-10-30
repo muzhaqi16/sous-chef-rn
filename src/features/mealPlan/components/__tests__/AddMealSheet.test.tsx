@@ -143,6 +143,7 @@ import {
   recordMock,
   seedCache,
   type MockedResponse,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { Diet, ExternalSource } from '#/graphql/generated/schemaTypes';
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
@@ -176,7 +177,7 @@ function renderWithApollo(
   // Also seed the nested Recipe entries (seedCache doesn't recurse into
   // referenced entities).
   for (const node of savedRecipeNodes) {
-    cache.writeFragment({
+    seedFragment(cache, {
       id: `Recipe:${node.recipe.id}`,
       fragment: require('../SavedRecipeRow.generated')
         .SavedRecipeRow_SavedRecipeFragmentDoc,

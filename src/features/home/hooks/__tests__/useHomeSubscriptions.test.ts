@@ -8,6 +8,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
@@ -29,7 +30,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 // The viewer's row in `home-1`, as the home list caches it.
 const cacheWithViewerMembership = (membershipId: string) => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'Home', id: 'home-1' }),
     fragment: gql`
       fragment TestViewerMembership on Home {

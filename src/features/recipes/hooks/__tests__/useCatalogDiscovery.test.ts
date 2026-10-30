@@ -6,6 +6,7 @@ import {
   renderHookWithApollo,
   type MockDataFor,
   type MockedResponse,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   Diet,
@@ -370,7 +371,7 @@ describe('useCatalogDiscovery', () => {
 
   it('shows the first screenful of a new list, even one as long as the last', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: RANDOM_VARIABLES,
       data: cachedRandomPage(25),
@@ -394,7 +395,7 @@ describe('useCatalogDiscovery', () => {
 
   it('asks again for a page the cache holds from when the catalog was down', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: CatalogRecipesByIngredientsDocument,
       variables: { ingredients: ['tomato'], first: 25 },
       data: cachedPantryPage(0, false),
@@ -410,7 +411,7 @@ describe('useCatalogDiscovery', () => {
 
   it('answers from the cache when it holds a whole page', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: CatalogRecipesByIngredientsDocument,
       variables: { ingredients: ['tomato'], first: 25 },
       data: cachedPantryPage(3),
@@ -554,7 +555,7 @@ describe('useCatalogDiscovery', () => {
 
   it('shows a page fetched over a day ago while it asks for a fresh one', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: CatalogRecipesByIngredientsDocument,
       variables: PANTRY_VARIABLES,
       data: cachedPantryPage(3),

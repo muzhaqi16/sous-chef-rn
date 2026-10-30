@@ -5,7 +5,7 @@ import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, seedQuery } from '#/test-utils/apolloMockProvider';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
@@ -112,7 +112,7 @@ beforeEach(() => {
 
 function buildCache(): InMemoryCache {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetHomeDocument,
     variables: { homeId: 'h1' },
     data: {
@@ -123,7 +123,7 @@ function buildCache(): InMemoryCache {
       }),
     },
   });
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetPantryDocument,
     variables: {
       id: 'p1',
@@ -133,7 +133,7 @@ function buildCache(): InMemoryCache {
     },
     data: pantryData({ id: 'p1' }),
   });
-  cache.writeQuery({
+  seedQuery(cache, {
     query: PantryItemForEditDocument,
     variables: { id: 'item-1' },
     data: pantryItemData({ id: 'item-1', quantity: 5 }),

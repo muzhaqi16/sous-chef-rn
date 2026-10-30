@@ -5,7 +5,7 @@ import {
   type RenderHookOptions,
   type RenderOptions,
 } from '@testing-library/react-native';
-import type { InMemoryCache } from '@apollo/client';
+import type { ApolloCache, Cache, InMemoryCache } from '@apollo/client';
 import { gql, type OperationVariables } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { isRecord } from '#/utils/isRecord';
@@ -56,8 +56,8 @@ export type MockDataFor<TDocument> = TDocument extends TypedDocumentNode<
   : never;
 
 /**
- * The COMPLETE result a document reads, for `cache.writeQuery` — which, unlike
- * a mock, is not completed from the SDL and so takes every selected field.
+ * The COMPLETE result a document reads, for a raw `cache.writeQuery`, which is
+ * not completed from the SDL. A seed uses {@link seedQuery}, which is.
  */
 export type QueryDataFor<TDocument> = TDocument extends TypedDocumentNode<
   infer TData,
@@ -241,9 +241,27 @@ interface ResolvedApolloTestOptions extends SharedApolloTestOptions {
 let sharedMockStore: IMockStore | null = null;
 let sharedMockedSchema: GraphQLSchema | null = null;
 
+const seedRootOf = (typeName: string): string => `seed_${typeName}`;
+
+/**
+ * A root field per composite type, so a fragment can be completed: execution
+ * needs a path to its type, and many types are reachable only through an input
+ * the mocked schema cannot satisfy. Only completion selects these.
+ */
+function withSeedRoots(schema: GraphQLSchema): GraphQLSchema {
+  const fields = Object.values(schema.getTypeMap())
+    .filter(type => isCompositeType(type) && !type.name.startsWith('__'))
+    .map(type => `${seedRootOf(type.name)}: ${type.name}`);
+  return extendSchema(
+    schema,
+    parse(`extend type Query { ${fields.join(' ')} }`),
+    { assumeValidSDL: true },
+  );
+}
+
 function getMockedSchema(): GraphQLSchema {
   if (sharedMockedSchema) return sharedMockedSchema;
-  const baseSchema = getBaseSchema();
+  const baseSchema = withSeedRoots(getBaseSchema());
   sharedMockStore = createMockStore({
     schema: baseSchema,
     mocks: DEFAULT_SCALAR_MOCKS,
@@ -720,6 +738,9 @@ import type {
 import { typeFromAST } from 'graphql';
 import {
   buildASTSchema,
+  extendSchema,
+  isCompositeType,
+  Kind,
   defaultFieldResolver,
   executeSync,
   parse,
@@ -736,6 +757,7 @@ import {
   validate,
   KnownDirectivesRule,
   NoUnusedVariablesRule,
+  type FragmentDefinitionNode,
   type GraphQLInputType,
   type OperationDefinitionNode,
 } from 'graphql';
@@ -958,6 +980,8 @@ function installStatedShape(schema: GraphQLSchema): void {
 /** Paths where the caller stated something the operation cannot return. */
 interface MergeReport {
   unknownKeys: string[];
+  /** A seed's stated key stands: a cache test may select fields the SDL lacks. */
+  keepUnknownKeys?: boolean;
 }
 
 /**
@@ -1188,7 +1212,8 @@ function mergeOverSchema(
       checkable &&
       baseRecord &&
       key !== '__typename' &&
-      !(key in baseRecord)
+      !(key in baseRecord) &&
+      !report.keepUnknownKeys
     ) {
       report.unknownKeys.push(fieldPath === '' ? key : `${fieldPath}.${key}`);
       continue;
@@ -1383,6 +1408,7 @@ function completeFromSchema(
   variables: Record<string, unknown>,
   overrideData: unknown,
   checkValues = true,
+  checkKeys = true,
 ): unknown {
   const document = transformLikeTheClient(query);
 
@@ -1410,7 +1436,10 @@ function completeFromSchema(
       executed = undefined;
     }
     if (executed?.data) {
-      const report: MergeReport = { unknownKeys: [] };
+      const report: MergeReport = {
+        unknownKeys: [],
+        keepUnknownKeys: !checkKeys,
+      };
       const merged = mergeOverSchema(executed.data, overrideData, '', report);
       if (report.unknownKeys.length > 0) {
         reportUnknownFixtureKeys(document, report.unknownKeys);
@@ -1532,6 +1561,80 @@ export function inputOf(
   return vars.input;
 }
 
+type SeedVariables = OperationVariables | undefined;
+
+const completeSeed = (
+  document: DocumentNode,
+  variables: SeedVariables,
+  data: unknown,
+): unknown => completeFromSchema(document, variables ?? {}, data, false, false);
+
+/** A query whose only selection is the fragment, on its type's seed root. */
+function fragmentAsQuery(
+  fragment: DocumentNode,
+  fragmentName: string | undefined,
+): { document: DocumentNode; root: string } | null {
+  const target = fragment.definitions.find(
+    (definition): definition is FragmentDefinitionNode =>
+      definition.kind === Kind.FRAGMENT_DEFINITION &&
+      (fragmentName === undefined || definition.name.value === fragmentName),
+  );
+  if (!target) return null;
+  const root = seedRootOf(target.typeCondition.name.value);
+  const query = parse(`{ ${root} { ...${target.name.value} } }`);
+  return {
+    root,
+    document: {
+      ...query,
+      definitions: [...query.definitions, ...fragment.definitions],
+    },
+  };
+}
+
+/**
+ * `cache.writeQuery`, completed from the SDL as a mock's `data` is, so a seed
+ * states only what its test asserts on and a field a query gains breaks none.
+ * `cache.writeQuery` itself stays for a test whose subject is incomplete data.
+ */
+export function seedQuery<
+  TData,
+  TVariables extends OperationVariables = OperationVariables,
+>(
+  cache: ApolloCache,
+  options: Omit<Cache.WriteQueryOptions<TData, TVariables>, 'data'> & {
+    data: DeepPartial<Unmasked<TData>>;
+  },
+): void {
+  cache.writeQuery({
+    ...options,
+    data: completeSeed(options.query, options.variables, options.data),
+  } as Cache.WriteQueryOptions<TData, TVariables>);
+}
+
+/** {@link seedQuery} for `cache.writeFragment`. */
+export function seedFragment<
+  TData,
+  TVariables extends OperationVariables = OperationVariables,
+>(
+  cache: ApolloCache,
+  options: Omit<Cache.WriteFragmentOptions<TData, TVariables>, 'data'> & {
+    data: DeepPartial<Unmasked<TData>>;
+  },
+): void {
+  const asQuery = fragmentAsQuery(options.fragment, options.fragmentName);
+  const completed = asQuery
+    ? completeSeed(asQuery.document, options.variables, {
+        [asQuery.root]: options.data,
+      })
+    : undefined;
+  // A type the SDL does not know has no root, and stays as the seed states it.
+  const row = isRecord(completed) ? completed[asQuery?.root ?? ''] : undefined;
+  cache.writeFragment({
+    ...options,
+    data: row ?? options.data,
+  } as Cache.WriteFragmentOptions<TData, TVariables>);
+}
+
 /**
  * Pre-write entities into a fresh `InMemoryCache` and return the cache. Use
  * with `createApolloTestWrapper({ cache })` (or pass to MockedProvider's
@@ -1554,7 +1657,7 @@ export function seedCache(entries: SeedEntry[]): InMemoryCache {
     const identified = cache.identify(
       data as Parameters<InMemoryCache['identify']>[0],
     );
-    cache.writeFragment({
+    seedFragment(cache, {
       id: identified ?? `${data.__typename}:${data.id}`,
       fragment,
       ...(fragmentName === undefined ? {} : { fragmentName }),
@@ -1567,13 +1670,12 @@ export function seedCache(entries: SeedEntry[]): InMemoryCache {
 type SeedData = Record<string, unknown> & { __typename: string; id: string };
 
 /**
- * A seed checked against a REAL selection.
+ * A seed written for a REAL selection, completed from the SDL.
  *
- * The derived form below cannot be incomplete by construction — its selection
- * comes from the fixture's own keys — which removes the completeness contract
- * for every test that seeds. Passing the production document the consumer
- * actually reads restores it: a fixture too thin for that selection reports a
- * missing field instead of quietly defining its own idea of complete.
+ * The derived form below selects only the fixture's own keys, so a reader of
+ * any other field misses. Passing the production document the consumer actually
+ * reads writes every field it selects, and the fixture states only what its test
+ * asserts on.
  */
 export interface SeedWithFragment {
   data: SeedData;

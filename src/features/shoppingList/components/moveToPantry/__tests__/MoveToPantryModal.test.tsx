@@ -8,6 +8,7 @@ import {
   seedCache,
   type MockFor,
   type QueryDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   MoveToPantryModal_ShoppingListItemFragmentDoc,
@@ -473,7 +474,7 @@ describe('MoveToPantryModal', () => {
       const cache = makeCache(line);
       const variables = { id: ITEM_ID };
       if (warm) {
-        cache.writeQuery({
+        seedQuery(cache, {
           query: MoveToPantryPurchaseInfoDocument,
           variables,
           data: purchaseData(purchase),

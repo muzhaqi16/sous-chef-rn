@@ -24,6 +24,7 @@ import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createTestStore } from '#/test-utils/createTestStore';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 // A no-op link is enough — these tests never fire a network request. They
 // write directly into the cache via `cache.writeQuery` (modeling the
@@ -64,7 +65,7 @@ function makeAuthenticatedSetup() {
     link: noopLink,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
   });
-  cache.writeQuery({
+  seedQuery(cache, {
     query: SEED_QUERY,
     data: {
       me: { __typename: 'User', id: seededUser.id, email: seededUser.email },
@@ -122,7 +123,7 @@ describe('integration: logout clears Apollo cache and Zustand auth state', () =>
 
     const nextUser = { ...seededUser, id: 'user-2', email: 'next@example.com' };
     store.getState().setAuth(nextUser, 'next-access', 'next-refresh');
-    cache.writeQuery({
+    seedQuery(cache, {
       query: SEED_QUERY,
       data: {
         me: { __typename: 'User', id: nextUser.id, email: nextUser.email },

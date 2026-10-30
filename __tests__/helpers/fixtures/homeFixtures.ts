@@ -1,7 +1,7 @@
 /**
  * Test fixture builders that mirror the production GraphQL document selection
  * for `GetHomes` (HomeListFragment). Tests must match the document selection
- * exactly when seeding via `cache.writeQuery`, otherwise Apollo silently drops
+ * exactly when seeding via `seedQuery`, otherwise Apollo silently drops
  * unselected fields and the production normalization path breaks.
  *
  * Use these helpers instead of writing flat `{ home: { pantries: [] } }`
@@ -194,7 +194,7 @@ export function homeDetailNode(home: HomeFixture): HomeDetailNode {
 }
 
 /**
- * Build the full GetHomes query result. Pass to `cache.writeQuery({ query: GetHomesDocument, data: ... })`
+ * Build the full GetHomes query result. Pass to `seedQuery(cache, { query: GetHomesDocument, data: ... })`
  * or to `recordMock(GetHomesDocument, { data: ... })`.
  */
 export function homesData(homes: HomeFixture[]): Unmasked<GetHomesQuery> {

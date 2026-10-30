@@ -5,6 +5,8 @@ import {
   completeMockedResponse,
   renderHookWithApollo,
   seedCache,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetShoppingListItemsFilteredDocument,
@@ -119,7 +121,7 @@ function seedTab(
     .result as (vars: typeof variables) => {
     data: Unmasked<GetShoppingListItemsFilteredQuery>;
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetShoppingListItemsFilteredDocument,
     variables,
     data: completed(variables).data,
@@ -128,7 +130,7 @@ function seedTab(
 
 /** The list as the device holds it once store mode has read it. */
 const seedList = (cache: ReturnType<typeof seedCache>, currency = 'USD') =>
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: UseListCurrency_ListFragmentDoc,
     data: { __typename: 'ShoppingList', version: 1, id: LIST, currency },
   });

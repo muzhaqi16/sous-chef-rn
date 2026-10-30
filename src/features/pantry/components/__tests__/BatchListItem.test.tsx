@@ -1,6 +1,9 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -57,7 +60,7 @@ const stackCache = (
   { unit = 'pc', netWeightUnit }: { unit?: string; netWeightUnit?: string },
   cache = makeCache(),
 ) => {
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: BatchListItem_PantryItemFragmentDoc,
     fragmentName: 'BatchListItem_pantryItem',
     data: {
@@ -140,7 +143,7 @@ describe('BatchListItem', () => {
     const DOZEN_FRACTIONS: number[] = [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4];
     const eggsCache = () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: BatchListItem_PantryItemFragmentDoc,
         fragmentName: 'BatchListItem_pantryItem',
         data: {

@@ -18,6 +18,7 @@ import {
   removeItemFromShoppingListForMoveToPantry,
   restoreItemToShoppingListAfterMoveToPantry,
 } from '../moveToPantry';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LIST_COUNTS = gql`
   fragment ListCounts on ShoppingList {
@@ -63,7 +64,7 @@ const ITEMS_QUERY = gql`
 
 function seed({ completedItems = 2 } = {}) {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: ITEMS_QUERY,
     variables: { listId: 'sl-1', isPurchased: true },
     data: {
@@ -146,7 +147,7 @@ describe('removeItemFromShoppingListForMoveToPantry counters', () => {
   it('does not touch completedItems for an unpurchased row', () => {
     const cache = seed();
     // Seed the unpurchased variant too, so the row has a connection to leave.
-    cache.writeQuery({
+    seedQuery(cache, {
       query: ITEMS_QUERY,
       variables: { listId: 'sl-1', isPurchased: false },
       data: {

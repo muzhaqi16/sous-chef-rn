@@ -7,6 +7,7 @@ import {
   type UseDuplicateMealPlan_MealPlanFragment,
 } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { typedConnectionOf } from './connectionOf';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 type PlanMeal = PlanSource['mealPlanItems'][number];
 
@@ -71,7 +72,7 @@ export const seedPlanSource = (
     }),
   };
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify(data),
     fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
     fragmentName: 'useDuplicateMealPlan_mealPlan',

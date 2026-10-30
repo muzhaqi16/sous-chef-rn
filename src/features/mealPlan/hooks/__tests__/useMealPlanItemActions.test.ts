@@ -11,6 +11,7 @@ import {
   inputOf,
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealPlanItemDocument,
@@ -75,7 +76,7 @@ const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
 });
 
 const writeItem = (cache: InMemoryCache, item: FullItem) =>
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify(item),
     fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
     fragmentName: 'MealPlanItemActions_optimisticFullItem',

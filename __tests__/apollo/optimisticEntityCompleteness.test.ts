@@ -154,6 +154,7 @@ import {
 } from '#features/shoppingList/cache/items';
 import { writeLocalShoppingList } from '#features/shoppingList/cache/list';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const mockedSchema = addMocksToSchema({
   schema: makeExecutableSchema({
@@ -274,7 +275,7 @@ async function seedPantryCache() {
   );
   // The mocked schema resolves every field, so the pantry is always present.
   data.pantry!.id = 'pantry-1';
-  cache.writeQuery({ query: GetPantryDocument, variables: PANTRY_VARS, data });
+  seedQuery(cache, { query: GetPantryDocument, variables: PANTRY_VARS, data });
   return cache;
 }
 
@@ -535,7 +536,7 @@ describe('optimistic entity completeness', () => {
       const cache = await seedPantryCache();
       // A unit id at an add site always comes from something already fetched
       // (unit autocomplete, an item's defaultUnit), so model that.
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id: 'unit-1' }),
         fragment: TestUnitFragment,
         fragmentName: '_TestUnit',
@@ -708,7 +709,7 @@ describe('optimistic entity completeness', () => {
         // read reports `Can't find field 'isMetric'` and blanks offline. It
         // bites precisely when the Unit IS cached, which no case above covers.
         const cache = await seedPantryCache();
-        cache.writeFragment({
+        seedFragment(cache, {
           id: 'Unit:unit-1',
           fragment: gql`
             fragment _SeedListShapedUnit on Unit {
@@ -858,7 +859,7 @@ describe('optimistic entity completeness', () => {
             },
           ],
         };
-        cache.writeFragment({
+        seedFragment(cache, {
           id: cache.identify(realItem),
           fragment: gql`
             fragment _SeedCatalogItem on Item {
@@ -969,7 +970,7 @@ describe('optimistic entity completeness', () => {
       >(GetShoppingListItemsFilteredDocument, LIST_VARS);
       // The mocked schema resolves every field, so the list is always present.
       data.shoppingList!.id = 'list-1';
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetShoppingListItemsFilteredDocument,
         variables: LIST_VARS,
         data,
@@ -1009,7 +1010,7 @@ describe('optimistic entity completeness', () => {
       >(GetShoppingListItemsFilteredDocument, LIST_VARS);
       const sample = created.shoppingList!.itemsConnection.edges[0]!.node;
 
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'ShoppingListItem:from-recipe',
         fragment: AddedShoppingListItemFieldsFragmentDoc,
         fragmentName: 'AddedShoppingListItemFields',
@@ -1052,11 +1053,11 @@ describe('optimistic entity completeness', () => {
       if (!item) throw new Error('the schema answered no row');
       item.id = 'item-from-event';
 
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'ShoppingListItem:item-from-event',
         fragment: UseShoppingListSubscriptions_ItemFragmentDoc,
         fragmentName: 'useShoppingListSubscriptions_item',
-        data: item as never,
+        data: item,
       });
       addNewItemToShoppingListCache(cache, 'list-1', { id: 'item-from-event' });
 
@@ -1103,7 +1104,7 @@ describe('optimistic entity completeness', () => {
         GetShoppingListsLiteDocument,
         vars,
       );
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetShoppingListsLiteDocument,
         variables: vars,
         data,
@@ -1275,7 +1276,7 @@ describe('optimistic entity completeness', () => {
         PLAN_VARS,
       );
       data.mealPlan!.id = 'plan-1';
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetMealPlanDocument,
         variables: PLAN_VARS,
         data,
@@ -1375,7 +1376,7 @@ describe('optimistic entity completeness', () => {
         const cache = makeCache();
         const data = await runAgainstSchema<TemplateRead>(query, TEMPLATE_VARS);
         data.mealTemplate!.id = 'tpl-1';
-        cache.writeQuery({ query, variables: TEMPLATE_VARS, data });
+        seedQuery(cache, { query, variables: TEMPLATE_VARS, data });
         const loaded = data.mealTemplate!.itemsConnection.edges.map(
           edge => edge.node.id,
         );
@@ -1447,7 +1448,7 @@ describe('optimistic entity completeness', () => {
         MySavedRecipesDocument,
         {},
       );
-      cache.writeQuery({ query: MySavedRecipesDocument, data });
+      seedQuery(cache, { query: MySavedRecipesDocument, data });
 
       writeLocalFavorite(cache, 'saved-1', 'recipe-uncached', {
         folder: 'Soups',
@@ -1478,7 +1479,7 @@ describe('optimistic entity completeness', () => {
         MyRecipesDocument,
         {},
       );
-      cache.writeQuery({ query: MyRecipesDocument, data });
+      seedQuery(cache, { query: MyRecipesDocument, data });
 
       writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
 
@@ -1542,7 +1543,7 @@ describe('optimistic entity completeness', () => {
         GetHomesDocument,
         vars,
       );
-      cache.writeQuery({ query: GetHomesDocument, variables: vars, data });
+      seedQuery(cache, { query: GetHomesDocument, variables: vars, data });
 
       writeLocalHome(
         cache,

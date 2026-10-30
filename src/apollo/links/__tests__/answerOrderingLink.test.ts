@@ -3,6 +3,7 @@ import type { DocumentNode } from 'graphql';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createAnswerOrderingLink } from '../answerOrderingLink';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const ITEM = gql`
   query ProbeItem {
@@ -94,7 +95,7 @@ describe('answerOrderingLink', () => {
   it('keeps a confirmed change when an answer from before it arrives late', async () => {
     const { cache, read } = client([{ probeItem: item(1, 'Milk', 'OTHER') }]);
     // The server confirmed the person's change at version 2.
-    cache.writeQuery({
+    seedQuery(cache, {
       query: ITEM,
       data: { probeItem: item(2, 'Milk', 'DAIRY') },
     });
@@ -108,7 +109,7 @@ describe('answerOrderingLink', () => {
 
   it('keeps a newer copy when answers arrive out of order', async () => {
     const { cache, read } = client([{ probeItem: item(2, 'Whole milk') }]);
-    cache.writeQuery({ query: ITEM, data: { probeItem: item(3, 'Oat milk') } });
+    seedQuery(cache, { query: ITEM, data: { probeItem: item(3, 'Oat milk') } });
 
     const answered = await read(ITEM);
 
@@ -131,7 +132,7 @@ describe('answerOrderingLink', () => {
         },
       },
     ]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LIST,
       data: {
         probeList: {
@@ -159,7 +160,7 @@ describe('answerOrderingLink', () => {
 
   it('lands another member’s newer change', async () => {
     const { cache, read } = client([{ probeItem: item(4, 'Skimmed milk') }]);
-    cache.writeQuery({ query: ITEM, data: { probeItem: item(3, 'Milk') } });
+    seedQuery(cache, { query: ITEM, data: { probeItem: item(3, 'Milk') } });
 
     await read(ITEM);
 
@@ -172,7 +173,7 @@ describe('answerOrderingLink', () => {
     const { cache, read } = client([
       { probeItem: item(3, 'Milk', 'BEVERAGES') },
     ]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: ITEM,
       data: { probeItem: item(3, 'Milk', 'DAIRY') },
     });
@@ -186,7 +187,7 @@ describe('answerOrderingLink', () => {
 
   it('keeps the answer’s value for a field the device does not hold', async () => {
     const { cache, read } = client([{ probeItem: item(1, 'Milk', 'DAIRY') }]);
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Item:item-1',
       fragment: gql`
         fragment ProbeHeld on Item {
@@ -207,7 +208,7 @@ describe('answerOrderingLink', () => {
 
   it('judges against the server’s copy, never an optimistic layer above it', async () => {
     const { cache, read } = client([{ probeItem: item(2, 'From the server') }]);
-    cache.writeQuery({ query: ITEM, data: { probeItem: item(1, 'Milk') } });
+    seedQuery(cache, { query: ITEM, data: { probeItem: item(1, 'Milk') } });
     cache.recordOptimisticTransaction(layer => {
       layer.writeQuery({
         query: ITEM,
@@ -225,7 +226,7 @@ describe('answerOrderingLink', () => {
 
   it('follows named and inline fragments', async () => {
     const { cache, read } = client([{ probeItem: item(1, 'Milk', 'OTHER') }]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: SPREAD,
       data: { probeItem: item(2, 'Oat milk', 'DAIRY') },
     });
@@ -239,7 +240,7 @@ describe('answerOrderingLink', () => {
 
   it('lands a row when either copy has no version', async () => {
     const { cache, read } = client([{ probeItem: item(1, 'Milk') }]);
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Item:item-1',
       fragment: gql`
         fragment ProbeUnversioned on Item {

@@ -3,7 +3,11 @@ import { MockLink } from '@apollo/client/testing';
 import type { DocumentNode } from 'graphql';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -110,7 +114,7 @@ describe('a queued mark-read of a notification deleted elsewhere', () => {
         resourceId: 'n1',
       },
     });
-    mockClient.cache.writeFragment({
+    seedFragment(mockClient.cache, {
       id: 'Notification:n1',
       fragment: NOTIFICATION,
       data: {
@@ -150,7 +154,7 @@ describe('a queued mark-read replayed later', () => {
         },
       },
     });
-    mockClient.cache.writeQuery({
+    seedQuery(mockClient.cache, {
       query: NotificationSummaryDocument,
       data: {
         __typename: 'Query',

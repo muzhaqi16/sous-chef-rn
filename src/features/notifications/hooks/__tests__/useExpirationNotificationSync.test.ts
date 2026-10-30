@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
   seedCache,
   type MockFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { MarkExpirationActionDocument } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
@@ -37,7 +38,7 @@ function seedFeed(unreadCount: number): InMemoryCache {
       isAuthoredContent: false,
     },
   ]);
-  cache.writeQuery({
+  seedQuery(cache, {
     query: NotificationSummaryDocument,
     data: {
       __typename: 'Query',

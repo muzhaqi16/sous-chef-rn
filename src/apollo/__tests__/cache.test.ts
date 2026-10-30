@@ -13,6 +13,7 @@ import { QueueStatus } from '../offlineQueue/types';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { typedConnectionOf } from '#/test-utils/fixtures/connectionOf';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 type NodeRef = { __typename: string; id: string; name?: string };
 type Edge = { __typename: string; node: NodeRef };
@@ -139,7 +140,7 @@ describe('cache', () => {
     ids: string[],
     page: Page = {},
   ) =>
-    cache.writeQuery({
+    seedQuery(cache, {
       query: HOME_QUERY,
       variables: { id: 'home-1', after: page.after },
       data: {
@@ -299,7 +300,7 @@ describe('cache', () => {
       ids: string[],
       page: Page = {},
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: SINGLE_PAGE_QUERY,
         variables: { id: 'list-1' },
         data: {
@@ -442,7 +443,7 @@ describe('cache', () => {
       cache: ReturnType<typeof makeCache>,
       variables: { homeId?: string; first?: number },
       shoppingLists: ReturnType<typeof page> | null,
-    ) => cache.writeQuery({ query: QUERY, variables, data: { shoppingLists } });
+    ) => seedQuery(cache, { query: QUERY, variables, data: { shoppingLists } });
 
     const readIds = (
       cache: ReturnType<typeof makeCache>,
@@ -509,7 +510,7 @@ describe('cache', () => {
       orderBy: Record<string, string>,
       ids: string[],
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LOCATIONS_QUERY,
         variables: { id: 'p1', orderBy },
         data: {
@@ -561,7 +562,7 @@ describe('cache', () => {
 
     it('preserves existing on null incoming', () => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: STORAGE_QUERY,
         variables: { homeId: 'h1' },
         data: {
@@ -570,7 +571,7 @@ describe('cache', () => {
           ],
         },
       });
-      cache.writeQuery({
+      seedQuery(cache, {
         query: STORAGE_QUERY,
         variables: { homeId: 'h1' },
         data: { storageLocations: null },
@@ -600,7 +601,7 @@ describe('cache', () => {
 
     it('preserves existing suggestions on null incoming', () => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LIST_SUGGESTIONS_QUERY,
         variables: { id: 'list-1' },
         data: {
@@ -620,7 +621,7 @@ describe('cache', () => {
           },
         },
       });
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LIST_SUGGESTIONS_QUERY,
         variables: { id: 'list-1' },
         data: {
@@ -665,7 +666,7 @@ describe('cache', () => {
       ids: string[],
       page: Page = {},
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: PANTRY_CONNECTION_QUERY,
         variables: { id: 'p1', after: page.after },
         data: {
@@ -764,7 +765,7 @@ describe('cache', () => {
       const cache = makeCache();
 
       // Initial single-page load: 2 items cached
-      cache.writeQuery({
+      seedQuery(cache, {
         query: PANTRY_CONNECTION_QUERY,
         variables: { id: 'p1' },
         data: {
@@ -795,7 +796,7 @@ describe('cache', () => {
 
       // Transient/partial refetch (connection blip): no cursor, hasNextPage:false,
       // EMPTY edges, and no authoritative totalCount. Must NOT wipe the cache.
-      cache.writeQuery({
+      seedQuery(cache, {
         query: PANTRY_CONNECTION_QUERY,
         variables: { id: 'p1' },
         data: {
@@ -827,7 +828,7 @@ describe('cache', () => {
       const cache = makeCache();
 
       // Initial load: 2 items, totalCount 2
-      cache.writeQuery({
+      seedQuery(cache, {
         query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
         variables: { id: 'p1' },
         data: {
@@ -858,7 +859,7 @@ describe('cache', () => {
       });
 
       // Server authoritatively reports an empty list (everything removed).
-      cache.writeQuery({
+      seedQuery(cache, {
         query: PANTRY_CONNECTION_QUERY_WITH_COUNT,
         variables: { id: 'p1' },
         data: {
@@ -920,7 +921,7 @@ describe('cache', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       variables: { id: string; after?: string } = { id: 'list-1' },
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LIST_QUERY,
         variables,
         data: {
@@ -1146,7 +1147,7 @@ describe('cache', () => {
       ids: string[],
       page: Page = {},
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LIST_CONNECTION_QUERY,
         variables: { id: 'list-1', after: page.after },
         data: {
@@ -1234,7 +1235,7 @@ describe('cache', () => {
     `;
 
     const writePage = (cache: InMemoryCache, ids: string[], page: Page = {}) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: MEAL_PLAN_QUERY,
         variables: { id: 'mp1', mealsFirst: 2, mealsAfter: page.after },
         data: {
@@ -1338,7 +1339,7 @@ describe('cache', () => {
     it('holds one list per recipe whatever arguments read it', () => {
       const cache = makeCache();
 
-      cache.writeQuery({
+      seedQuery(cache, {
         query: RECIPE_QUERY,
         variables: { id: 'r1', ingredientsFirst: 2 },
         data: {
@@ -1363,7 +1364,7 @@ describe('cache', () => {
     it('reads a list written with no arguments through a selection that carries them', () => {
       const cache = makeCache();
 
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Recipe:r1',
         fragment: BARE_INGREDIENTS_FRAGMENT,
         data: {
@@ -1384,7 +1385,7 @@ describe('cache', () => {
   describe('User.profile merge', () => {
     it('merges partial profile updates', () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'User:user-1',
         fragment: gql`
           fragment UserProfile on User {
@@ -1407,7 +1408,7 @@ describe('cache', () => {
         },
       });
       // Write another partial profile update
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'User:user-1',
         fragment: gql`
           fragment UserProfileUpdate on User {
@@ -1447,7 +1448,7 @@ describe('cache', () => {
   describe('Item field merge policies', () => {
     it('Item.nutritions preserves existing when incoming is undefined', () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemNutritions on Item {
@@ -1461,7 +1462,7 @@ describe('cache', () => {
           nutritions: { calories: 100 },
         },
       });
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemNameOnly on Item {
@@ -1491,7 +1492,7 @@ describe('cache', () => {
 
     it('Item.images preserves existing when incoming is undefined', () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemImages on Item {
@@ -1505,7 +1506,7 @@ describe('cache', () => {
           images: [{ url: 'test.jpg', kind: 'MAIN' }],
         },
       });
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemNameOnly on Item {
@@ -1535,7 +1536,7 @@ describe('cache', () => {
 
     it('Item.imageUrl allows explicit null to remove image', () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemWithImage on Item {
@@ -1549,7 +1550,7 @@ describe('cache', () => {
           imageUrl: 'https://example.com/img.jpg',
         },
       });
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemRemoveImage on Item {
@@ -1581,7 +1582,7 @@ describe('cache', () => {
       const cache = makeCache();
 
       // Write partial data
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'ShoppingListItem:item-1',
         fragment: gql`
           fragment ItemPartial on ShoppingListItem {
@@ -1597,7 +1598,7 @@ describe('cache', () => {
       });
 
       // Write more fields for the same entity (merge:true allows field-level merge)
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'ShoppingListItem:item-1',
         fragment: gql`
           fragment ItemVersion on ShoppingListItem {
@@ -1632,7 +1633,7 @@ describe('cache', () => {
       const cache = makeCache();
 
       // Write item with imageUrl
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemWithImage on Item {
@@ -1650,7 +1651,7 @@ describe('cache', () => {
       });
 
       // Write item without imageUrl (imageUrl not in fragment, so not touched)
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Item:item-1',
         fragment: gql`
           fragment ItemNameOnly on Item {
@@ -1702,14 +1703,14 @@ describe('cache', () => {
         const variables = { id: 'gone-1' };
         const held = parse(`fragment Held on ${typename} { id version }`);
         const write = (version: number) =>
-          cache.writeFragment({
+          seedFragment(cache, {
             fragment: held,
             data: { __typename: typename, id: 'gone-1', version },
           });
         write(2);
 
         // Deleted elsewhere: the device missed the removal.
-        cache.writeQuery({ query, variables, data: { [field]: null } });
+        seedQuery(cache, { query, variables, data: { [field]: null } });
         expect(cache.readQuery({ query, variables })).toEqual({
           [field]: null,
         });
@@ -1744,12 +1745,12 @@ describe('cache', () => {
         );
         const variables = { id: 'reused-1' };
 
-        cache.writeQuery({ query, variables, data: { [field]: null } });
+        seedQuery(cache, { query, variables, data: { [field]: null } });
         expect(cache.readQuery({ query, variables })).toEqual({
           [field]: null,
         });
 
-        cache.writeFragment({
+        seedFragment(cache, {
           fragment: parse(`fragment WrittenBack on ${typename} { id }`),
           data: { __typename: typename, id: 'reused-1' },
         });

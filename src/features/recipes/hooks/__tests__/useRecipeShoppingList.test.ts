@@ -14,6 +14,8 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -532,7 +534,7 @@ function seedListedLines(cache: InMemoryCache) {
       },
     })),
   });
-  cache.writeFragment({
+  seedFragment(cache, {
     id: 'ShoppingList:sl-1',
     fragment: LINES,
     data: {
@@ -992,7 +994,7 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
   `;
   type Variant = { homeId?: string | null; filters?: { isTemplate: boolean } };
   const seed = (cache: InMemoryCache, variables: Variant) =>
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LISTS_QUERY,
       variables,
       data: {

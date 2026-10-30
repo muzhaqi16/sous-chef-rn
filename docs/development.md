@@ -345,10 +345,15 @@ code relies on.
   returned cache as `{ cache }` to `renderHookWithApollo`.
   A nested collection of identified entities is stored as its own records and
   referenced, so a later write to a child reaches every reader of the parent.
-  **Prefer the checked form** — `seedCache([{ fragment: SomeDoc, data }])` —
-  which holds the seed to a REAL selection; the derived form builds its
-  selection from the fixture's own keys, so it can never be incomplete and
-  therefore cannot hold the seed to anything.
+  **Prefer the fragment form** — `seedCache([{ fragment: SomeDoc, data }])` —
+  which writes a REAL selection, completed from the SDL; the derived form
+  selects only the fixture's own keys, so a reader of any other field misses.
+- **`seedQuery(cache, …)` / `seedFragment(cache, …)`** — `cache.writeQuery` and
+  `writeFragment`, with `data` completed from the real SDL as a mock's is, so a
+  seed states only what the test asserts on and a field a query gains breaks no
+  test. A stated key stands even where the SDL lacks it, and a type the SDL does
+  not know is written as stated. A raw write in a test is an error
+  (`rawCacheSeed`).
 - **Pick ONE mocking strategy.** `operationMocks` and `mocks`/`resolvers` are
   mutually exclusive by type, because combined, the second is discarded in
   silence and a suite runs its hook on defaults with every test passing.

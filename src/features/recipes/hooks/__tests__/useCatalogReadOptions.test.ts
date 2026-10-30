@@ -1,5 +1,8 @@
 import { makeCache } from '#/apollo/cache';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import {
   catalogFetchKey,
@@ -51,7 +54,7 @@ const page = (catalogAvailable: boolean): RandomCatalogRecipesQuery => ({
 /** A cache holding a page; a complete one records its arrival as it is written. */
 const holding = (catalogAvailable: boolean) => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: RandomCatalogRecipesDocument,
     variables: VARIABLES,
     data: page(catalogAvailable),
@@ -121,7 +124,7 @@ describe('useCatalogReadOptions', () => {
     const cache = holding(false);
     const { result, rerender } = render(cache, { variables: VARIABLES });
 
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
       data: page(true),

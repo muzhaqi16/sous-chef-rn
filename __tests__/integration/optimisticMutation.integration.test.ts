@@ -46,6 +46,7 @@ import {
   testMockLink,
   type MockDataFor,
   type MockedResponse,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
@@ -98,7 +99,7 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
     sortOrder: 'a0',
     item: null,
   };
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'ShoppingListItem', id: ITEM_ID })!,
     fragment: ShoppingListItemDisplayFragmentDoc,
     fragmentName: 'ShoppingListItemDisplayFragment',

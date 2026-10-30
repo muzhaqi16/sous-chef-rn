@@ -9,6 +9,7 @@ import {
   writeLocalIntake,
 } from '#features/pantry/cache/localIntake';
 import { reconcileCreatePantryItemReplay } from '../replayReconcilers';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 const typed = { inline: { id: 'item-minted', name: 'Cubanelle pepper' } };
 const variables = {
@@ -42,7 +43,7 @@ function answered(cache: InMemoryCache, itemId: string) {
     id: 'minted-row',
     item: { __typename: 'Item', id: itemId },
   };
-  cache.writeFragment({ fragment: ROW_ITEM, data: pantryItem });
+  seedFragment(cache, { fragment: ROW_ITEM, data: pantryItem });
   return {
     createPantryItem: { __typename: 'CreatePantryItemPayload', pantryItem },
   };

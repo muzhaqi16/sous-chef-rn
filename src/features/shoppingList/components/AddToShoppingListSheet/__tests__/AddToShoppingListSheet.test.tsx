@@ -1,6 +1,10 @@
 import React from 'react';
 import { act, waitFor } from '@testing-library/react-native';
-import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  recordMock,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import {
   AddItemToShoppingListDocument,
@@ -61,7 +65,7 @@ const row = (itemId: string): Sections['popular'][number] => ({
 
 const seedSuggestions = (popular: string[]) => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetShoppingListSuggestionsDocument,
     variables: VARIABLES,
     data: {

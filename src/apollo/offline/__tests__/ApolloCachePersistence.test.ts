@@ -10,6 +10,7 @@ import { storage } from '#/store/deviceStorage';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { apolloCachePersistence } from '../ApolloCachePersistence';
 import { logger } from '#/utils/environment';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 const CACHE_KEY = 'apollo-cache-v1';
 const VERSION_KEY = 'apollo-cache-version';
@@ -187,7 +188,7 @@ describe('ApolloCachePersistence', () => {
     // unreachable.
     it('skips a save when two extracts of an unchanged cache match', () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Unit:u1',
         fragment: gql`
           fragment PersistProbe on Unit {
@@ -213,7 +214,7 @@ describe('ApolloCachePersistence', () => {
 
     it('does not skip when only the retained-root set changed', () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Unit:u1',
         fragment: gql`
           fragment PersistProbePin on Unit {
@@ -241,7 +242,7 @@ describe('ApolloCachePersistence', () => {
 
     it('does not persist a pin whose entity is gone', () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Unit:u1',
         fragment: gql`
           fragment PersistProbeDead on Unit {
@@ -271,7 +272,7 @@ describe('ApolloCachePersistence', () => {
           name
         }
       `;
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Unit:u1',
         fragment,
         data: { __typename: 'Unit', id: 'u1', name: 'gram' },
@@ -279,7 +280,7 @@ describe('ApolloCachePersistence', () => {
       schedule(cache.extract());
       settle();
 
-      cache.writeFragment({
+      seedFragment(cache, {
         id: 'Unit:u1',
         fragment,
         data: { __typename: 'Unit', id: 'u1', name: 'kilogram' },

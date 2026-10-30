@@ -3,6 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { useStore } from '#store';
 import { useListCurrency } from '../useListCurrency';
@@ -18,7 +19,7 @@ const listAnswer = (currency: string | null) =>
 
 function renderFor(listCurrency: string | null) {
   const cache = seedCache([]);
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: UseListCurrency_ListFragmentDoc,
     data: {
       __typename: 'ShoppingList',

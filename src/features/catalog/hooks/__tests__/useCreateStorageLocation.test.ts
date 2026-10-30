@@ -3,6 +3,7 @@ import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateStorageLocationDocument,
@@ -102,7 +103,7 @@ describe('useCreateStorageLocation', () => {
   it("adds the new location to its own home's list only", async () => {
     const cache = makeCache();
     const seedEmpty = (homeId: string) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetStorageLocationsDocument,
         variables: { homeId },
         data: {
@@ -147,7 +148,7 @@ describe('useCreateStorageLocation', () => {
 
   it('shows a queued location from its local row alone', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetStorageLocationsDocument,
       variables: { homeId: HOME_ID },
       data: {

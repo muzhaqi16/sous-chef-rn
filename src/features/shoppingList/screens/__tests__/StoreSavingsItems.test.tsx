@@ -2,7 +2,11 @@ import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { StoreLineMatch, UnitSystem } from '#/graphql/generated/schemaTypes';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import {
   ALDI,
   GIANT_EAGLE,
@@ -87,7 +91,7 @@ const route = {
 
 const renderScreen = () => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: ListSavingsDocument,
     variables: { listId: 'list-1' },
     data: { __typename: 'Query', shoppingListStoreSavings: answer },

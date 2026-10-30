@@ -6,6 +6,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 
 import { gql } from '@apollo/client';
 import { makeCache } from '../cache';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 // ---------------------------------------------------------------------------
 // Local result types for untyped (raw gql) cache reads
@@ -115,7 +116,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1', ...vars },
         data: {
@@ -292,7 +293,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1', ...vars },
         data: {
@@ -430,7 +431,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'list-1', ...vars },
         data: {
@@ -548,7 +549,7 @@ describe('cache pagination integration', () => {
       });
 
       // Write to filtered entry
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY_WITH_FILTER,
         variables: { id: 'list-1', filters: { purchased: true } },
         data: {
@@ -672,7 +673,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'list-1', ...vars },
         data: {
@@ -842,7 +843,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'p-1', ...vars },
         data: {
@@ -921,7 +922,7 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Write with orderBy: NAME_ASC
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY_WITH_ORDER,
         variables: { id: 'p-1', orderBy: 'NAME_ASC' },
         data: {
@@ -938,7 +939,7 @@ describe('cache pagination integration', () => {
       });
 
       // Write with orderBy: NAME_DESC
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY_WITH_ORDER,
         variables: { id: 'p-1', orderBy: 'NAME_DESC' },
         data: {
@@ -1009,7 +1010,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: vars ?? {},
         data: {
@@ -1170,7 +1171,7 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Page 1: server says totalCount=5
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1194,7 +1195,7 @@ describe('cache pagination integration', () => {
       expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
 
       // Page 2: server says totalCount=5 still
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1', after: 'c2' },
         data: {
@@ -1219,7 +1220,7 @@ describe('cache pagination integration', () => {
       expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
 
       // Refetch: totalCount changed to 3 (items were deleted)
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1284,7 +1285,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'p-1', ...vars },
         data: {
@@ -1424,7 +1425,7 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Initial write
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1448,7 +1449,7 @@ describe('cache pagination integration', () => {
       const conn1 = result1?.home?.shoppingListsConnection;
 
       // Refetch with same edges, same pageInfo, same totalCount
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1478,7 +1479,7 @@ describe('cache pagination integration', () => {
     it('returns new reference when totalCount changes', () => {
       const cache = makeCache();
 
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1502,7 +1503,7 @@ describe('cache pagination integration', () => {
       const conn1 = result1?.home?.shoppingListsConnection;
 
       // Refetch with same edges but different totalCount
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1692,7 +1693,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'pi-1', first: 30, ...vars },
         data: {
@@ -1831,7 +1832,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query,
         variables: { pantryItemId: 'pi-1', ...vars },
         data: {
@@ -1980,8 +1981,8 @@ describe('cache pagination integration', () => {
       });
       const cache = makeCache();
 
-      cache.writeQuery({ query: QUERY, data: answer(['a', 'b'], true) });
-      cache.writeQuery({
+      seedQuery(cache, { query: QUERY, data: answer(['a', 'b'], true) });
+      seedQuery(cache, {
         query: QUERY,
         variables: { after: 'c-b' },
         data: answer(['c', 'd'], false),
@@ -2040,8 +2041,8 @@ describe('cache pagination integration', () => {
       });
       const cache = makeCache();
 
-      cache.writeQuery({ query: QUERY, data: answer(['a', 'b'], true) });
-      cache.writeQuery({
+      seedQuery(cache, { query: QUERY, data: answer(['a', 'b'], true) });
+      seedQuery(cache, {
         query: QUERY,
         variables: { after: 'c-b' },
         data: answer(['c', 'd'], false),

@@ -7,6 +7,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreatePantryItemUsageDocument,
@@ -576,7 +577,7 @@ describe('usePantryItemActions', () => {
       // refill — and offline there is no response, so the batch section stays
       // empty for the rest of the session and the emptied field persists.
       const cache = seedPantryItems();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: 'item-1' },
         data: {

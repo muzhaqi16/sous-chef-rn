@@ -6,6 +6,8 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { DeleteRecipeFolderDocument } from '#features/recipes/graphql/recipe.generated';
 import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
@@ -196,7 +198,7 @@ describe('folder actions move the recipes, not just the folder list', () => {
   `;
 
   function seed(cache: InMemoryCache) {
-    cache.writeQuery({
+    seedQuery(cache, {
       query: SavedRecipeFoldersDocument,
       data: {
         __typename: 'Query',
@@ -204,14 +206,14 @@ describe('folder actions move the recipes, not just the folder list', () => {
       },
     });
     for (const id of ['saved-1', 'saved-2']) {
-      cache.writeFragment({
+      seedFragment(cache, {
         id: `SavedRecipe:${id}`,
         fragment: SAVED_RECIPE,
         data: { __typename: 'SavedRecipe', id, folder: 'Weeknight' },
       });
     }
     // A recipe in another folder must not be touched.
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'SavedRecipe:saved-3',
       fragment: SAVED_RECIPE,
       data: { __typename: 'SavedRecipe', id: 'saved-3', folder: 'Favorites' },

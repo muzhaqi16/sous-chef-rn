@@ -28,7 +28,11 @@
  * test rather than only under a full `npm test`.
  */
 import { gql } from '@apollo/client';
-import { seedCache } from '#/test-utils/apolloMockProvider';
+import {
+  seedCache,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 
 const ROW = gql`
   fragment PurchaseRow on ShoppingListItem {
@@ -60,7 +64,7 @@ describe('the default test cache is the production cache', () => {
     // `isPurchased` changes. A bare cache has no merge function, so the write
     // simply replaces and nothing is cleared.
     const cache = seedCache([]);
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:probe',
       fragment: ROW,
       data: {
@@ -74,7 +78,7 @@ describe('the default test cache is the production cache', () => {
       },
     });
 
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:probe',
       fragment: gql`
         fragment FlipOnly on ShoppingListItem {
@@ -113,7 +117,7 @@ describe('the default test cache is the production cache', () => {
     // `... on Error` match a `ForbiddenError`; without it Apollo cannot tell,
     // drops `code`, and every screen reading an error code sees nothing.
     const cache = seedCache([]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: ERROR_RESULT,
       data: {
         probe: {

@@ -29,11 +29,12 @@ jest.mock('#/app/apolloClient', () => ({
 }));
 
 import { setupBadgeSync } from '../badgeSync';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const mockSetBadgeCount = notifee.setBadgeCount as jest.Mock;
 
 const writeCount = (count: number) =>
-  mockCache.writeQuery({
+  seedQuery(mockCache, {
     query: NotificationSummaryDocument,
     data: {
       __typename: 'Query',
@@ -114,7 +115,7 @@ describe('setupBadgeSync', () => {
     teardown = setupBadgeSync();
     mockSetBadgeCount.mockClear();
 
-    mockCache.writeFragment({
+    seedFragment(mockCache, {
       id: 'NotificationSummary:me',
       fragment: NotificationSummaryReadersFragmentDoc,
       data: {

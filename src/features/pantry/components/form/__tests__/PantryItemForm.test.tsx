@@ -5,7 +5,12 @@ import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
@@ -317,7 +322,7 @@ function buildCache(opts: {
 }): InMemoryCache {
   const cache = makeCache();
 
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetHomeDocument,
     variables: { homeId: 'h1' },
     data: {
@@ -329,7 +334,7 @@ function buildCache(opts: {
     },
   });
 
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetPantryDocument,
     variables: {
       id: 'p1',
@@ -341,7 +346,7 @@ function buildCache(opts: {
   });
 
   if (opts.itemId) {
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PantryItemForEditDocument,
       variables: { id: opts.itemId },
       data: pantryItemData({
@@ -441,7 +446,7 @@ describe('PantryItemForm — edit mode', () => {
   // mounted field subscriber mid-render, which React refuses.
   it('re-seeds from a late server answer without updating a field mid-render', async () => {
     const cache = buildCache({});
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: PantryItemForm_PantryItemFragmentDoc,
       fragmentName: 'PantryItemForm_pantryItem',
       data: pantryItemData({ id: 'item-1', itemName: 'Flour' }).pantryItem,
@@ -582,7 +587,7 @@ describe('PantryItemForm — package size in the user’s units', () => {
       imperial: reading(3, 'unit-lb', 'lb'),
     };
     if (trackingUnitId) stack.unit = { ...stack.unit, id: trackingUnitId };
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PantryItemForEditDocument,
       variables: { id: 'item-1' },
       data,
@@ -629,7 +634,7 @@ describe('PantryItemForm — the unit it is used in', () => {
       name: 'tablespoon',
       symbol: 'tbsp',
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PantryItemForEditDocument,
       variables: { id: 'item-1' },
       data,

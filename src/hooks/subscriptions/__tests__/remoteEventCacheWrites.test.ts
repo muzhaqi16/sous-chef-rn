@@ -17,6 +17,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import {
@@ -151,7 +152,7 @@ describe('a pantry item created elsewhere', () => {
     });
     const cache = makeCache();
     for (const filters of Object.values(PANTRY_VARIANTS)) {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: PANTRY_VARIANT,
         variables: { id: 'pantry-1', filters },
         data: {
@@ -233,7 +234,7 @@ describe('a meal plan created elsewhere', () => {
     useStore.setState({ selectedHomeId: 'home-1', isHomeSelectionReady: true });
     const cache = makeCache();
     for (const filters of Object.values(PLAN_VARIANTS)) {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: MEAL_PLANS_VARIANT,
         variables: { filters },
         data: {
@@ -491,7 +492,7 @@ const LIST_VARIANT: TypedDocumentNode<
 function seedList(): InMemoryCache {
   const cache = makeCache();
   const variant = (isPurchased: boolean, ids: string[]) =>
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LIST_VARIANT,
       variables: { id: 'list-1', isPurchased },
       data: {

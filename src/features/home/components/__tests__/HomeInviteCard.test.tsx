@@ -5,6 +5,7 @@ import { screen } from '@testing-library/react-native';
 import {
   renderWithApollo,
   toFragmentRef,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { HomeInviteCard } from '../HomeInviteCard';
 import {
@@ -44,7 +45,7 @@ function buildInvite(
  */
 function buildCache(invite: HomeInviteCard_InviteFragment) {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id:
       cache.identify({ __typename: invite.__typename, id: invite.id }) ??
       `HomeInvite:${invite.id}`,

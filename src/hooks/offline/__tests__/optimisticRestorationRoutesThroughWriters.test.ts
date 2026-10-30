@@ -15,6 +15,7 @@ import type { ApolloClient } from '@apollo/client';
 import { renderHook } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { useOptimisticDataRestorationMultiple } from '../useOptimisticDataRestoration';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 const mockGetAllForType = jest.fn<
   Map<string, Record<string, unknown>>,
@@ -65,7 +66,7 @@ type Row = {
 };
 
 const seedStockedRow = () => {
-  cache.writeFragment({
+  seedFragment(cache, {
     id: 'ShoppingListItem:sli-1',
     fragment: ROW,
     data: {
@@ -131,7 +132,7 @@ describe('optimistic restoration routes through the owning writer', () => {
   });
 
   it('still merges a field no writer owns', () => {
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:sli-1',
       fragment: gql`
         fragment RestoreOther on ShoppingListItem {

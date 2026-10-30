@@ -6,6 +6,7 @@ import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
 import {
@@ -477,7 +478,7 @@ describe('useRecipeReviews', () => {
     `;
     const seededCache = () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: AGGREGATES,
         data: {
           __typename: 'Recipe',

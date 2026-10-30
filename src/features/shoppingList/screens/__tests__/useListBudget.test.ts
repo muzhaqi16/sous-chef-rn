@@ -5,6 +5,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -65,7 +66,7 @@ function cacheWith(list: ListSeed = {}) {
   }).result as (vars: typeof variables) => {
     data: Unmasked<ListBudgetQuery>;
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: ListBudgetDocument,
     variables,
     data: completed(variables).data,

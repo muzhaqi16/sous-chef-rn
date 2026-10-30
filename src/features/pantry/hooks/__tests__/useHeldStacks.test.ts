@@ -4,6 +4,7 @@ import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   HeldStacksDocument,
@@ -68,7 +69,7 @@ const BAG = { id: 'u-bag', type: UnitType.Count };
 const GRAMS = { id: 'u-g', type: UnitType.Weight };
 
 function writeStack(cache: ReturnType<typeof makeCache>, row: HeldStack) {
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: UseHeldStacks_PantryItemFragmentDoc,
     fragmentName: 'useHeldStacks_pantryItem',
     data: row,
@@ -80,7 +81,7 @@ function writeRows(
   cache: ReturnType<typeof makeCache>,
   rows: { id: string; itemId: string }[],
 ) {
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: UseHeldStacks_PantryFragmentDoc,
     fragmentName: 'useHeldStacks_pantry',
     variables: {

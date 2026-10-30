@@ -10,6 +10,7 @@ import {
   createApolloTestWrapper,
   recordMock,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { UseAdjustPantryItemQuantity_PantryItemFragmentDoc } from '../useAdjustPantryItemQuantity.generated';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
@@ -356,7 +357,7 @@ describe('useAdjustPantryItemQuantity', () => {
       await waitFor(() => expect(refused.fired).toHaveLength(1));
 
       // Another member's use, read back over the socket.
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
         fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
         data: {

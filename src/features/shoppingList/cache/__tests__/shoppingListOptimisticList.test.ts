@@ -10,6 +10,7 @@ import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { revertOptimisticShoppingList, writeLocalShoppingList } from '../list';
 import { List_RowFragmentDoc } from '../list.generated';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LISTS_OVERVIEW_QUERY = gql`
   query TestShoppingLists($homeId: ID) {
@@ -82,7 +83,7 @@ const OWNER = { id: 'user-1', email: 'tani@example.com' };
 const LIST_ID = 'c0000000000000000000list1';
 
 function seedEmptyOverview(cache: ReturnType<typeof makeCache>) {
-  cache.writeQuery({
+  seedQuery(cache, {
     query: LISTS_OVERVIEW_QUERY,
     variables: { homeId: null },
     data: {
@@ -113,7 +114,7 @@ function writeList(
 describe('writeLocalShoppingList: the row', () => {
   it('materializes owner display data from the cached canonical User entity', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({ __typename: 'User', id: OWNER.id }),
       fragment: gql`
         fragment TestUser on User {
@@ -162,7 +163,7 @@ describe('writeLocalShoppingList: the row', () => {
 
   it('resolves the linked home name from cache and degrades to null when missing', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({ __typename: 'Home', id: 'home-1' }),
       fragment: gql`
         fragment TestHome on Home {
@@ -193,7 +194,7 @@ describe('writeLocalShoppingList: the caches it joins', () => {
     // edge would make the whole read incomplete and blank the picker.
     const cache = makeCache();
     seedEmptyOverview(cache);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: TEMPLATES_QUERY,
       data: {
         shoppingLists: {
@@ -253,7 +254,7 @@ describe('writeLocalShoppingList: the caches it joins', () => {
       cache: ReturnType<typeof makeCache>,
       homeId: string | null,
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LISTS_BY_HOME_QUERY,
         variables: { homeId },
         data: {

@@ -1,4 +1,4 @@
-import { InMemoryCache, Observable } from '@apollo/client';
+import { type InMemoryCache, Observable } from '@apollo/client';
 import type {
   ApolloClient,
   OperationVariables,
@@ -30,6 +30,8 @@ import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/s
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -107,7 +109,7 @@ function makeOperation(options: {
     extensions: {},
     // The link reads only the cache, where the queued write's row is.
     client: {
-      cache: options.cache ?? new InMemoryCache(),
+      cache: options.cache ?? makeCache(),
     } as Partial<ApolloClient> as ApolloClient,
   };
 }
@@ -450,8 +452,8 @@ describe('createQueueLink', () => {
         isOnline: false,
         user: { id: 'user-1' },
       });
-      const cache = new InMemoryCache();
-      cache.writeFragment({
+      const cache = makeCache();
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id: 'unit-1' }),
         fragment: gql`
           fragment QueuedUnit on Unit {

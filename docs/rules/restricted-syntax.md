@@ -96,17 +96,19 @@ production set plus these.
 
 ## Test-only entries
 
-| Id                  | Bans                                                                  |
-| ------------------- | --------------------------------------------------------------------- |
-| `apolloReactMock`   | `jest.mock('@apollo/client/react')`.                                  |
-| `bareInMemoryCache` | `new InMemoryCache()` in a suite that imports the Apollo mock helper. |
-| `typenameAsConst`   | `__typename: 'X' as const` in place of typing the fixture.            |
+| Id                  | Bans                                                                                                           |
+| ------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `apolloReactMock`   | `jest.mock('@apollo/client/react')`.                                                                           |
+| `bareInMemoryCache` | `new InMemoryCache()` in a suite that imports the Apollo mock helper.                                          |
+| `rawCacheSeed`      | `cache.writeQuery` / `writeFragment` in a test. Use `seedQuery` / `seedFragment`, which complete from the SDL. |
+| `typenameAsConst`   | `__typename: 'X' as const` in place of typing the fixture.                                                     |
 
 ## Exemptions
 
 A file-scoped override in `eslint/project.js`, never a disable comment:
 
-| Files                             | Allows            |
-| --------------------------------- | ----------------- |
-| `src/utils/parseDecimalInput.ts`  | `parseFloat`      |
-| The bottom-sheet hooks and owners | `imperativeSheet` |
+| Files                                             | Allows            |
+| ------------------------------------------------- | ----------------- |
+| `src/utils/parseDecimalInput.ts`                  | `parseFloat`      |
+| The bottom-sheet hooks and owners                 | `imperativeSheet` |
+| The seed helper, cache probes, `core-portability` | `rawCacheSeed`    |

@@ -3,6 +3,7 @@ import {
   RecipeSuggestionsDocument,
   type RecipeSuggestionsQuery,
 } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const ranking = (...ids: string[]): RecipeSuggestionsQuery => ({
   __typename: 'Query',
@@ -33,12 +34,12 @@ describe('Query.recipeSuggestions', () => {
     const cache = makeCache();
     const variables = { first: 20, today: '2026-10-14' };
 
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables,
       data: ranking('a', 'b'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables,
       data: ranking('c'),
@@ -51,12 +52,12 @@ describe('Query.recipeSuggestions', () => {
 
   it('keeps a ranking per day', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-14' },
       data: ranking('today'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-15' },
       data: ranking('tomorrow'),
@@ -79,17 +80,17 @@ describe('Query.recipeSuggestions', () => {
       today: '2026-10-14',
       homeId,
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: forHome('home-a'),
       data: ranking('a'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: forHome('home-b'),
       data: ranking('b'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: forHome(),
       data: ranking('every'),
@@ -111,7 +112,7 @@ describe('Query.recipeSuggestions', () => {
     const cache = makeCache();
     const unscreened = { first: 20, today: '2026-10-14', homeId: 'home-a' };
     const screened = { ...unscreened, excludeDietaryConflicts: true };
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: screened,
       data: ranking('shakshuka'),
@@ -124,7 +125,7 @@ describe('Query.recipeSuggestions', () => {
       }),
     ).toBeNull();
 
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: unscreened,
       data: ranking('peanut-noodles', 'shakshuka'),
@@ -142,7 +143,7 @@ describe('Query.recipeSuggestions', () => {
 
   it("answers nothing for a home it has no ranking for, not another home's", () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-14', homeId: 'home-a' },
       data: ranking('a'),

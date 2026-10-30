@@ -5,6 +5,7 @@ import { t } from '#/i18n';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
@@ -134,7 +135,7 @@ const cacheWith = (
   similar: SimilarPrice[] = [],
 ) => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
     fragment: UseStoreShelfPrices_ItemFragmentDoc,
     fragmentName: 'useStoreShelfPrices_item',
@@ -147,7 +148,7 @@ const cacheWith = (
     },
   });
   if (targetStoreId) {
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({
         __typename: 'ShoppingList',
         version: 1,
@@ -228,7 +229,7 @@ describe('useStoreShelfPrices', () => {
     );
     await waitFor(() => expect(result.current.rows).toHaveLength(2));
 
-    cache.writeFragment({
+    seedFragment(cache, {
       id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
       fragment: UseStoreShelfPrices_ItemFragmentDoc,
       fragmentName: 'useStoreShelfPrices_item',

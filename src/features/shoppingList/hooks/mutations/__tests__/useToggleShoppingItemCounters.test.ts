@@ -8,6 +8,7 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -106,7 +107,7 @@ function seed(completedItems: number) {
           },
         ]
       : [];
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LIST,
       variables: { id: 'list-1', isPurchased },
       data: {

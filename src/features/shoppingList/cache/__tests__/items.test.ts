@@ -17,6 +17,7 @@ import { Items_RowFragmentDoc } from '../items.generated';
 import { createMockCache, invokeFieldModifier } from './helpers/mockCache';
 import type { MockedCache } from './helpers/mockCache';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 describe('addLocalShoppingListItem: the row', () => {
   const writeLine = (
@@ -76,7 +77,7 @@ describe('addLocalShoppingListItem: the row', () => {
 
   it('keeps the unit and catalog item the cache holds', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment HeldUnit on Unit {
           id
@@ -91,7 +92,7 @@ describe('addLocalShoppingListItem: the row', () => {
         symbol: 'g',
       }),
     });
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment HeldItem on Item {
           id
@@ -122,7 +123,7 @@ describe('addLocalShoppingListItem: the row', () => {
   // The API's rule: a line made offline is shelved where its item is.
   it("starts in its item's aisle, else OTHER", () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment HeldDepartment on Item {
           id

@@ -4,6 +4,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { RecipeSuggestionsDocument } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
 import { useStore } from '#store';
@@ -75,7 +76,7 @@ describe('useRecipePayoff', () => {
   it('eggs in the pantry, peanuts avoided: shows the screened egg recipes, never the unscreened ranking', async () => {
     // The Recipes tab's unscreened ranking, already cached for the same day and home.
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-29', homeId: 'home-1' },
       data: {

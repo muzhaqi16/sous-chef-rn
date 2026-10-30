@@ -7,6 +7,8 @@ import {
   renderHookWithApollo,
   type MockFor,
   type MockedResponse,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   AddRecipeToFavoritesDocument,
@@ -65,7 +67,7 @@ const SAVED_RECIPE_FRAGMENT = gql`
 
 /** An empty saved list, so the favorite has a connection to join. */
 function seedFavoriteCache(cache: InMemoryCache = makeCache()) {
-  cache.writeQuery<MySavedRecipesQuery>({
+  seedQuery<MySavedRecipesQuery>(cache, {
     query: MySavedRecipesDocument,
     data: {
       __typename: 'Query',
@@ -282,7 +284,7 @@ describe('useRecipeFavoriteState', () => {
 
     it('lists a new folder once the save lands', async () => {
       const cache = seedFavoriteCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: SavedRecipeFoldersDocument,
         data: { __typename: 'Query', savedRecipeFolders: ['Favorites'] },
       });
@@ -347,7 +349,7 @@ describe('useRecipeFavoriteState', () => {
 
     it('lists the saved row, complete, with the recipe the cache holds', async () => {
       const cache = seedFavoriteCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }),
         fragment: SAVED_ROW_RECIPE_FRAGMENT,
         data: {
@@ -400,7 +402,7 @@ describe('useRecipeFavoriteState', () => {
 
     it('re-points the heart at the earlier save by reference and releases the minted row when refused', async () => {
       const cache = seedFavoriteCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }),
         fragment: SAVED_DETAILS_FRAGMENT,
         data: {

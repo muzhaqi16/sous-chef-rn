@@ -14,7 +14,10 @@ import {
 } from '#features/pantry/hooks/useHeldStacks.generated';
 import type { HeldStack } from '#features/pantry/hooks/useHeldStacks';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { recordMock } from '#/test-utils/apolloMockProvider';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
@@ -728,7 +731,7 @@ describe('SearchResults', () => {
       type: UnitType.Count,
     });
     act(() => {
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStacks_PantryItemFragmentDoc,
         fragmentName: 'useHeldStacks_pantryItem',
         data: {
@@ -763,7 +766,7 @@ describe('SearchResults', () => {
           },
         },
       });
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStacks_PantryFragmentDoc,
         fragmentName: 'useHeldStacks_pantry',
         variables: {
