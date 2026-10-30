@@ -6864,6 +6864,19 @@ type Item {
   preferredTrackingUnit: Unit
   """ID of preferredTrackingUnit, or null when not configured."""
   preferredTrackingUnitId: ID
+  """
+  Where this item is cheaper, by store and by chain: what itemPriceComparison
+  answers for it, by the same rules, defaults and bounds, so a barcode lookup
+  carries it. The items of one request are compared in one read.
+  """
+  priceComparison(
+    """The currency compared; the caller's own when omitted"""
+    currency: CurrencyCode
+    """One barcode of the item; all of them when omitted"""
+    gtin: String
+    """How far back observations count: default 90 days, at most 365"""
+    windowDays: Int
+  ): ItemPriceComparison!
   """Price observations recorded for this item, newest first by default."""
   priceHistoryConnection(
     """Resume after this cursor: a previous page's endCursor"""
