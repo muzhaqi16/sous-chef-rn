@@ -1,7 +1,17 @@
 # Ranked on the server from one home's pantries (every pantry the user may view
 # when `homeId` is omitted) and the dietary profile: one page, with no cursor.
-query RecipeSuggestions($first: Int!, $today: LocalDate!, $homeId: ID) {
-  recipeSuggestions(first: $first, today: $today, homeId: $homeId) {
+query RecipeSuggestions(
+  $first: Int!
+  $today: LocalDate!
+  $homeId: ID
+  $excludeDietaryConflicts: Boolean
+) {
+  recipeSuggestions(
+    first: $first
+    today: $today
+    homeId: $homeId
+    excludeDietaryConflicts: $excludeDietaryConflicts
+  ) {
     edges {
       coverage
       # The stacks expiring within three days of `today` that it would use.

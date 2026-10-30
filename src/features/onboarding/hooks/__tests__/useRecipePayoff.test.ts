@@ -1,12 +1,16 @@
-import { renderHook } from '@testing-library/react-native';
+import { waitFor } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import {
-  initialOnboardingProgress,
-  useOnboardingProgressStore,
-} from '#features/onboarding/store/onboardingProgressStore';
+  recordMock,
+  renderHookWithApollo,
+  type MockDataFor,
+} from '#/test-utils/apolloMockProvider';
+import { RecipeSuggestionsDocument } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
+import { useStore } from '#store';
 import { useRecipePayoff } from '../useRecipePayoff';
 
-jest.mock('#store/useAppStore', () => ({
-  useSelectedHomeId: () => 'home-1',
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => '2026-10-29',
 }));
 
 let mockFlagOn = true;
@@ -14,87 +18,127 @@ jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: () => mockFlagOn,
 }));
 
-let mockRestrictionsInPlay: boolean | null = false;
-jest.mock('#features/profile/hooks/useRestrictionsInPlay', () => ({
-  useRestrictionsInPlay: () => mockRestrictionsInPlay,
-}));
+type Edge = NonNullable<
+  NonNullable<
+    NonNullable<
+      MockDataFor<typeof RecipeSuggestionsDocument>['recipeSuggestions']
+    >['edges']
+  >[number]
+>;
 
-const suggestion = (id: string, coverage: number) => ({
-  source: 'suggestion',
-  edge: {
-    coverage,
-    expiringStacks: [],
-    node: { id, name: id, imageUrl: null, servings: 2, totalTimeMinutes: 20 },
-  },
+const edge = (id: string, coverage = 50): Edge => ({
+  coverage,
+  expiringStacks: [],
+  node: { id },
 });
-let mockRows: ReturnType<typeof suggestion>[] = [];
-const mockSuggestions = jest.fn((enabled: boolean) => ({
-  rows: enabled ? mockRows : [],
-}));
-jest.mock('#features/recipes/hooks/useServerRecipeSuggestions', () => ({
-  useServerRecipeSuggestions: (enabled: boolean) => mockSuggestions(enabled),
-}));
+
+/** The server's screened ranking: what it judged free of dietary alerts. */
+const screenedRanking = (edges: Edge[]) =>
+  recordMock(RecipeSuggestionsDocument, {
+    data: { recipeSuggestions: { edges } },
+    match: vars => vars.excludeDietaryConflicts === true,
+  });
 
 const ids = (rows: { edge: { node: { id: string } } }[]) =>
   rows.map(row => row.edge.node.id);
-const askedFor = () => mockSuggestions.mock.calls.some(([enabled]) => enabled);
+
+const renderPayoff = (edges: Edge[], cache = makeCache()) => {
+  const screened = screenedRanking(edges);
+  // Every recipe any render showed, so a flash of a cached answer counts too.
+  const everShown = new Set<string>();
+  const rendered = renderHookWithApollo(
+    () => {
+      const payoff = useRecipePayoff();
+      ids(payoff.rows).forEach(id => everShown.add(id));
+      return payoff;
+    },
+    { cache, operationMocks: [screened.mock] },
+  );
+  return { ...rendered, screened, everShown };
+};
 
 beforeEach(() => {
-  jest.clearAllMocks();
   mockFlagOn = true;
-  mockRestrictionsInPlay = false;
-  mockRows = [];
-  useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
+  useStore.setState({ selectedHomeId: 'home-1' });
 });
 
+afterEach(() => useStore.setState({ selectedHomeId: null }));
+
 describe('useRecipePayoff', () => {
-  it('shows up to three for a user with no restriction', () => {
-    mockRows = ['a', 'b', 'c', 'd'].map(id => suggestion(id, 50));
-    const { result } = renderHook(() => useRecipePayoff());
+  it('eggs in the pantry, peanuts avoided: shows the screened egg recipes, never the unscreened ranking', async () => {
+    // The Recipes tab's unscreened ranking, already cached for the same day and home.
+    const cache = makeCache();
+    cache.writeQuery({
+      query: RecipeSuggestionsDocument,
+      variables: { first: 20, today: '2026-10-29', homeId: 'home-1' },
+      data: {
+        __typename: 'Query',
+        recipeSuggestions: {
+          __typename: 'RecipeSuggestionConnection',
+          edges: [
+            {
+              __typename: 'RecipeSuggestionEdge',
+              coverage: 90,
+              expiringStacks: [],
+              node: {
+                __typename: 'Recipe',
+                id: 'peanut-noodles',
+                name: 'Peanut noodles',
+                imageUrl: null,
+                servings: 2,
+                totalTimeMinutes: 20,
+              },
+            },
+          ],
+        },
+      },
+    });
 
-    expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']);
+    const { result, screened, everShown } = renderPayoff(
+      [edge('shakshuka', 80), edge('frittata', 60)],
+      cache,
+    );
+
+    await waitFor(() =>
+      expect(ids(result.current.rows)).toEqual(['shakshuka', 'frittata']),
+    );
+    expect(everShown.has('peanut-noodles')).toBe(false);
+    expect(screened.fired).toEqual([
+      {
+        first: 20,
+        today: '2026-10-29',
+        homeId: 'home-1',
+        excludeDietaryConflicts: true,
+      },
+    ]);
   });
 
-  it('leaves out a recipe the pantry holds nothing of', () => {
-    mockRows = [suggestion('a', 0), suggestion('b', 40)];
-    const { result } = renderHook(() => useRecipePayoff());
+  it('shows up to three', async () => {
+    const { result } = renderPayoff(['a', 'b', 'c', 'd'].map(id => edge(id)));
 
-    expect(ids(result.current.rows)).toEqual(['b']);
+    await waitFor(() =>
+      expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']),
+    );
   });
 
-  it('shows none with no candidate', () => {
-    const { result } = renderHook(() => useRecipePayoff());
+  it('leaves out a recipe the pantry holds nothing of', async () => {
+    const { result } = renderPayoff([edge('a', 0), edge('b', 40)]);
 
+    await waitFor(() => expect(ids(result.current.rows)).toEqual(['b']));
+  });
+
+  it('shows none with no candidate', async () => {
+    const { result, screened } = renderPayoff([]);
+
+    await waitFor(() => expect(screened.fired).toHaveLength(1));
     expect(result.current.rows).toEqual([]);
-  });
-
-  it('asks for none for a user with a saved restriction, until the API screens them', () => {
-    mockRestrictionsInPlay = true;
-    mockRows = [suggestion('a', 50)];
-    const { result } = renderHook(() => useRecipePayoff());
-
-    expect(result.current.rows).toEqual([]);
-    expect(askedFor()).toBe(false);
-  });
-
-  it('asks for none while it is unknown whether a restriction is in play', () => {
-    mockRestrictionsInPlay = null;
-    renderHook(() => useRecipePayoff());
-
-    expect(askedFor()).toBe(false);
-  });
-
-  it('asks for none once this onboarding saved a restriction', () => {
-    useOnboardingProgressStore.setState({ dietarySaved: true });
-    renderHook(() => useRecipePayoff());
-
-    expect(askedFor()).toBe(false);
   });
 
   it('asks for nothing with pantry suggestions off', () => {
     mockFlagOn = false;
-    renderHook(() => useRecipePayoff());
+    const { result, screened } = renderPayoff([edge('a')]);
 
-    expect(askedFor()).toBe(false);
+    expect(result.current.rows).toEqual([]);
+    expect(screened.fired).toEqual([]);
   });
 });

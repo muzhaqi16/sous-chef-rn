@@ -106,6 +106,39 @@ describe('Query.recipeSuggestions', () => {
     expect(read()).toEqual(['every']);
   });
 
+  it('keeps a screened ranking apart from the unscreened one for the same day and home', () => {
+    const cache = makeCache();
+    const unscreened = { first: 20, today: '2026-10-14', homeId: 'home-a' };
+    const screened = { ...unscreened, excludeDietaryConflicts: true };
+    cache.writeQuery({
+      query: RecipeSuggestionsDocument,
+      variables: screened,
+      data: ranking('shakshuka'),
+    });
+
+    expect(
+      cache.readQuery({
+        query: RecipeSuggestionsDocument,
+        variables: unscreened,
+      }),
+    ).toBeNull();
+
+    cache.writeQuery({
+      query: RecipeSuggestionsDocument,
+      variables: unscreened,
+      data: ranking('peanut-noodles', 'shakshuka'),
+    });
+
+    expect(
+      idsIn(
+        cache.readQuery({
+          query: RecipeSuggestionsDocument,
+          variables: screened,
+        }),
+      ),
+    ).toEqual(['shakshuka']);
+  });
+
   it("answers nothing for a home it has no ranking for, not another home's", () => {
     const cache = makeCache();
     cache.writeQuery({
