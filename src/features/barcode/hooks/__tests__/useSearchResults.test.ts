@@ -11,6 +11,7 @@ import {
   type MockedResponse,
   type MockPart,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { CreateItemDocument } from '#operations/item/item.generated';
 import {
@@ -99,6 +100,10 @@ const SAMPLE_UPC_ITEM = {
   variationBrand: null,
   matchedVariation: null,
 } satisfies LookupNode;
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useSearchResults', () => {
   describe('before the lookups answer', () => {
@@ -499,6 +504,7 @@ describe('useSearchResults', () => {
     });
 
     it('keeps the new-item form closed when the lookup fails', async () => {
+      jest.useFakeTimers();
       // The SKU lookup would answer, with nothing: it must not be asked.
       const sku = lookupMock('sku', []);
       const { result } = renderHookWithApollo(
@@ -512,12 +518,8 @@ describe('useSearchResults', () => {
         },
       );
 
-      await waitFor(() =>
-        expect(result.current.error).toBe(t('errors.networkError')),
-      );
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      });
+      await drainTimers();
+      expect(result.current.error).toBe(t('errors.networkError'));
       // Offline is not "unknown": the product may exist, so nothing offers
       // to create it.
       expect(sku.fired).toEqual([]);

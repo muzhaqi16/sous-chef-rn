@@ -5,6 +5,7 @@ import {
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { usePreferredCurrency } from '#/domain/money';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
@@ -24,6 +25,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  jest.useRealTimers();
   useStore.setState({ user: null, preferredCurrency: DEFAULT_CURRENCY });
 });
 
@@ -87,13 +89,15 @@ describe('useAccountCurrencySync', () => {
 
   // The region default may still apply to it; nothing here states a currency.
   it('leaves an account with no settings as it is', async () => {
+    jest.useFakeTimers();
     const read = settingsRead(null);
     const { result } = renderHookWithApollo(useSyncedCurrency, {
       operationMocks: [read.mock],
     });
 
-    await waitFor(() => expect(read.fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
+
+    expect(read.fired).toHaveLength(1);
     expect(result.current.currency).toBe('USD');
     expect(useStore.getState().user?.preferredCurrency).toBe('USD');
   });

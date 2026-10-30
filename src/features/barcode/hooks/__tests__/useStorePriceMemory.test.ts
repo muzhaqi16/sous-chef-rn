@@ -6,6 +6,7 @@ import {
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   PriceBasis,
   PriceComparisonScope,
@@ -104,6 +105,10 @@ const render = (mocks: ReturnType<typeof recordMock>[]) =>
   );
 
 describe('useStorePriceMemory', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   // Store mode mounts the card per scan: the same product scanned again reads
   // what it already holds. A second ask would be answered, and counted.
   it('asks once for a product scanned twice', async () => {
@@ -119,13 +124,15 @@ describe('useStorePriceMemory', () => {
         { cache, operationMocks: [memory.mock] },
       );
 
+    jest.useFakeTimers();
     const first = mount();
-    await waitFor(() => expect(first.result.current.typical).not.toBeNull());
+    await drainTimers();
+    expect(first.result.current.typical).not.toBeNull();
     first.unmount();
     const second = mount();
 
     expect(second.result.current.typical).not.toBeNull();
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(memory.fired).toHaveLength(1);
   });
 

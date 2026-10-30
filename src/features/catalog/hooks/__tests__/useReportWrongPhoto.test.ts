@@ -3,6 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
 import { alertService } from '#/services/alertService';
@@ -34,6 +35,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useReportWrongPhoto', () => {
   it('asks before sending anything', () => {
     const { mock, fired } = sentReport();
@@ -52,6 +57,7 @@ describe('useReportWrongPhoto', () => {
   });
 
   it('sends nothing when the user cancels', async () => {
+    jest.useFakeTimers();
     const { mock, fired } = sentReport();
     const { result } = renderHookWithApollo(() => useReportWrongPhoto(), {
       operationMocks: [mock],
@@ -60,7 +66,7 @@ describe('useReportWrongPhoto', () => {
     result.current.reportWrongPhoto('item-1');
     press('Cancel');
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(fired).toHaveLength(0);
   });
 

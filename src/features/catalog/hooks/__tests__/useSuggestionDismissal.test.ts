@@ -12,6 +12,7 @@ import {
   renderHookWithApollo,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   MarkSuggestionDismissedDocument,
   MarkSuggestionActiveDocument,
@@ -71,6 +72,10 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useSuggestionDismissal', () => {
   it('takes the suggestion out before sending, and offers Undo', async () => {
     const writes = cacheWrites();
@@ -100,6 +105,7 @@ describe('useSuggestionDismissal', () => {
   });
 
   it('sends one dismissal for a double tap', async () => {
+    jest.useFakeTimers();
     const taken = new Set<string>();
     const writes = {
       remove: jest.fn((itemId: string) => {
@@ -120,8 +126,7 @@ describe('useSuggestionDismissal', () => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
 
-    await waitFor(() => expect(fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
     expect(fired).toHaveLength(1);
     expect(mockSuccess).toHaveBeenCalledTimes(1);
   });
@@ -153,6 +158,7 @@ describe('useSuggestionDismissal', () => {
   });
 
   it('leaves a queued dismissal hidden, with nothing restored or reported', async () => {
+    jest.useFakeTimers();
     // The offline queue resolves a queued write with its payload field null.
     const writes = cacheWrites();
     const { fired, mock } = recordMock(MarkSuggestionDismissedDocument, {
@@ -168,8 +174,8 @@ describe('useSuggestionDismissal', () => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
 
-    await waitFor(() => expect(fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
+    expect(fired).toHaveLength(1);
     expect(writes.restore).not.toHaveBeenCalled();
     expect(mockError).not.toHaveBeenCalled();
   });
@@ -276,6 +282,7 @@ describe('useSuggestionDismissal', () => {
 
   // Two requests in flight could land in either order; the undo must land last.
   it('Undo waits for the dismissal to settle before undismissing', async () => {
+    jest.useFakeTimers();
     const writes = cacheWrites();
     const dismiss = recordMock(MarkSuggestionDismissedDocument, {
       held: true,
@@ -300,17 +307,17 @@ describe('useSuggestionDismissal', () => {
     pressUndo();
 
     expect(writes.restore).toHaveBeenCalledTimes(1);
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
     expect(undismiss.fired).toHaveLength(0);
 
-    act(() => {
-      dismiss.release();
-    });
+    dismiss.release();
 
-    await waitFor(() => expect(undismiss.fired).toHaveLength(1));
+    await drainTimers();
+    expect(undismiss.fired).toHaveLength(1);
   });
 
   it('Undo of a refused dismissal sends nothing', async () => {
+    jest.useFakeTimers();
     const writes = cacheWrites();
     const { mock } = recordMock(MarkSuggestionDismissedDocument, {
       data: {
@@ -330,11 +337,12 @@ describe('useSuggestionDismissal', () => {
     act(() => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
-    await waitFor(() => expect(writes.restore).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(writes.restore).toHaveBeenCalledTimes(1);
 
     pressUndo();
 
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
     expect(undismiss.fired).toHaveLength(0);
   });
 

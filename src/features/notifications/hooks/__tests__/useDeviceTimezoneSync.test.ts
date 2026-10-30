@@ -2,6 +2,7 @@ import { act, waitFor } from '@testing-library/react-native';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   recordMock,
   renderHookWithApollo,
@@ -105,6 +106,10 @@ beforeEach(() => {
  * 22:00–08:00 window mutes mid-afternoon in New York. `registerDevice` carries
  * a timezone too, but nothing reads it.
  */
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useDeviceTimezoneSync', () => {
   // A morning meal-plan reminder is scheduled in this zone too, so it is kept
   // in step whether or not quiet hours are on.
@@ -184,6 +189,7 @@ describe('useDeviceTimezoneSync', () => {
    * on failure retries forever. The retry belongs on the next launch instead.
    */
   it('does not retry a refused write within the same mount', async () => {
+    jest.useFakeTimers();
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: {
         updateNotificationPreferences: {
@@ -199,8 +205,7 @@ describe('useDeviceTimezoneSync', () => {
       operationMocks: [prefsQueryMock(), settingsQueryMock(), update.mock],
     });
 
-    await waitFor(() => expect(update.fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
     expect(update.fired).toHaveLength(1);
   });
 });
@@ -238,6 +243,7 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
     ],
     ['creates no settings for an account that has none', null],
   ])('%s', async (_name, held) => {
+    jest.useFakeTimers();
     const cache = makeCache();
     const update = settingsUpdate('America/New_York');
 
@@ -246,16 +252,15 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
       operationMocks: [matchingPrefs(), settingsQueryMock(held), update.mock],
     });
 
-    await waitFor(() =>
-      expect(
-        cache.readQuery({ query: GetUserSettingsDocument })?.me,
-      ).toMatchObject({ settings: held === null ? null : { timezone: held } }),
-    );
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
+    expect(
+      cache.readQuery({ query: GetUserSettingsDocument })?.me,
+    ).toMatchObject({ settings: held === null ? null : { timezone: held } });
     expect(update.fired).toEqual([]);
   });
 
   it('does not retry a refused settings write within the same mount', async () => {
+    jest.useFakeTimers();
     const cache = makeCache();
     const update = recordMock(UpdateUserPreferencesDocument, {
       data: {
@@ -273,8 +278,7 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
       operationMocks: [matchingPrefs(), settingsQueryMock('UTC'), update.mock],
     });
 
-    await waitFor(() => expect(update.fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
     expect(update.fired).toHaveLength(1);
     // The refusal puts the zone the server holds back.
     expect(heldSettingsZone(cache)).toBe('UTC');

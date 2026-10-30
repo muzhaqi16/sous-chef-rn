@@ -15,6 +15,7 @@ import {
   completeMockedResponse,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { useNotificationsOnLaunch } from '../useNotificationsOnLaunch';
 
@@ -81,14 +82,16 @@ const pastTheResyncWindow = () =>
 
 describe('useNotificationsOnLaunch', () => {
   it('waits for the deferred start before loading unread notifications', async () => {
+    jest.useFakeTimers();
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(USER.id), { wrapper });
 
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(requests).toEqual([]);
 
     act(() => mockFireDeferred?.());
-    await waitFor(() => expect(requests).toEqual(['GetUnreadNotifications']));
+    await drainTimers();
+    expect(requests).toEqual(['GetUnreadNotifications']);
     client.stop();
   });
 
@@ -122,11 +125,12 @@ describe('useNotificationsOnLaunch', () => {
   });
 
   it('loads nothing while signed out', async () => {
+    jest.useFakeTimers();
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(undefined), { wrapper });
 
     expect(mockFireDeferred).toBeNull();
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(requests).toEqual([]);
     client.stop();
   });

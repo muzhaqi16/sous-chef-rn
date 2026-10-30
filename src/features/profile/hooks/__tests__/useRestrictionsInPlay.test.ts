@@ -3,6 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   HealthGoal,
   Intolerance,
@@ -80,6 +81,10 @@ const render = (...mocks: ReturnType<typeof recordMock>[]) =>
     operationMocks: mocks.map(m => m.mock),
   });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useRestrictionsInPlay', () => {
   it('is in play with the user’s own restriction', async () => {
     const { result } = render(ownProfile([peanutAllergy]), homeNeeds([]));
@@ -102,16 +107,17 @@ describe('useRestrictionsInPlay', () => {
   });
 
   it('is unknown while a read has not answered', async () => {
+    jest.useFakeTimers();
     const failedNeeds = recordMock(HomeDietaryNeedsDocument, {
       error: new Error('Network request failed'),
     });
     const noProfile = ownProfile(null);
     const { result } = render(noProfile, failedNeeds);
-    await waitFor(() => {
-      expect(noProfile.fired).toHaveLength(1);
-      expect(failedNeeds.fired).toHaveLength(1);
-    });
-    await new Promise(resolve => setTimeout(resolve, 0));
+
+    await drainTimers();
+
+    expect(noProfile.fired).toHaveLength(1);
+    expect(failedNeeds.fired).toHaveLength(1);
     expect(result.current).toBeNull();
   });
 });

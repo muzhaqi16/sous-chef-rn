@@ -2,6 +2,7 @@ import { waitFor } from '@testing-library/react-native';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { useStore } from '#store';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { followDeviceLanguage } from '../followDeviceLanguage';
 
 const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
@@ -31,6 +32,7 @@ describe('followDeviceLanguage', () => {
   });
 
   afterEach(async () => {
+    jest.useRealTimers();
     stop();
     if (realNavigator)
       Object.defineProperty(globalThis, 'navigator', realNavigator);
@@ -49,9 +51,10 @@ describe('followDeviceLanguage', () => {
     useStore.setState({ language: 'sq' });
     await changeLanguage('sq');
     deviceSetTo('it-IT');
+    jest.useFakeTimers();
     returnFromSettings();
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(getResolvedLanguage()).toBe('sq');
   });
 
@@ -65,9 +68,10 @@ describe('followDeviceLanguage', () => {
 
   it('changes nothing while the app is away', async () => {
     deviceSetTo('it-IT');
+    jest.useFakeTimers();
     memoryLifecycle().moveTo('background');
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(getResolvedLanguage()).toBe('en');
   });
 });
