@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import type { MockedResponse } from '#/test-utils/apolloMockProvider';
 import {
   GetPantryUsageAnalyticsDocument,
@@ -7,6 +7,7 @@ import {
 } from '#features/pantry/graphql/pantry.generated';
 import { PeriodGranularity, DateRange } from '#/graphql/generated/schemaTypes';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { makeCache } from '#/apollo/cache';
 import { usePantryAnalytics } from '../usePantryAnalytics';
 
@@ -22,6 +23,14 @@ const mockedNetworkBlocked = jest.requireMock('#hooks/app/useIsApiUnavailable');
 
 const setNetworkBlocked = (blocked: boolean) =>
   mockedNetworkBlocked.useIsApiUnavailable.mockReturnValue(blocked);
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => setNetworkBlocked(false));
 
@@ -140,7 +149,8 @@ describe('usePantryAnalytics', () => {
       { wrapper: createApolloTestWrapper({ operationMocks: defaultMocks() }) },
     );
 
-    await waitFor(() => expect(anyLoading(result.current)).toBe(false));
+    await drainTimers();
+    expect(anyLoading(result.current)).toBe(false);
 
     // Fixtures state the fields under test; the rest of each selection set is
     // filled from the SDL, so this checks the hook routes each query to the
@@ -237,7 +247,8 @@ describe('usePantryAnalytics', () => {
       );
 
       expect(anyLoading(result.current)).toBe(true);
-      await waitFor(() => expect(anyLoading(result.current)).toBe(false));
+      await drainTimers();
+      expect(anyLoading(result.current)).toBe(false);
     });
 
     /**
@@ -260,7 +271,8 @@ describe('usePantryAnalytics', () => {
           }),
         },
       );
-      await waitFor(() => expect(anyLoading(first.result.current)).toBe(false));
+      await drainTimers();
+      expect(anyLoading(first.result.current)).toBe(false);
       first.unmount();
 
       // Same cache, fresh mocks — a second visit to the tab.
@@ -300,7 +312,8 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.usageError).toBeDefined());
+      await drainTimers();
+      expect(result.current.usageError).toBeDefined();
       expect(result.current.wasteError).toBeUndefined();
       expect(result.current.ledgerError).toBeUndefined();
     });
@@ -313,7 +326,8 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.usageError).toBeDefined());
+      await drainTimers();
+      expect(result.current.usageError).toBeDefined();
       expect(result.current.usageOffline).toBe(false);
     });
   });
@@ -335,7 +349,8 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.usageOffline).toBe(true));
+      await drainTimers();
+      expect(result.current.usageOffline).toBe(true);
       expect(result.current.usageError).toBeUndefined();
       expect(result.current.usageData).toBeNull();
     });
@@ -350,7 +365,8 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.usageOffline).toBe(true));
+      await drainTimers();
+      expect(result.current.usageOffline).toBe(true);
       // Only the usage query is mocked as failing; the other two resolve, so a
       // blanket "we're offline" flag would be wrong for them.
       expect(result.current.wasteOffline).toBe(false);
@@ -374,7 +390,8 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.usageError).toBeDefined());
+      await drainTimers();
+      expect(result.current.usageError).toBeDefined();
       await expect(result.current.refetch()).resolves.toBeUndefined();
     });
 
@@ -386,7 +403,8 @@ describe('usePantryAnalytics', () => {
         },
       );
 
-      await waitFor(() => expect(anyLoading(result.current)).toBe(false));
+      await drainTimers();
+      expect(anyLoading(result.current)).toBe(false);
 
       expect(typeof result.current.refetch).toBe('function');
     });

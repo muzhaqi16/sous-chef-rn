@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { renderHook } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   ConsumptionUnitsForPantryItemDocument,
@@ -11,6 +11,7 @@ import {
   UnitSource,
 } from '#/graphql/generated/schemaTypes';
 import { createApolloTestWrapper } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useOperationUnits, PantryOperation } from '../useOperationUnits';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
@@ -87,6 +88,14 @@ const defaultOptions = {
   netWeightUnitId: null,
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useOperationUnits', () => {
   describe('query routing', () => {
     it('uses consumption query when operation is Consume', async () => {
@@ -103,7 +112,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.allUnits).toHaveLength(1);
     });
 
@@ -121,7 +131,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.allUnits).toHaveLength(1);
     });
 
@@ -148,7 +159,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       const weight = result.current.groups.find(
         group => group.type === UnitType.Weight,
       );
@@ -169,7 +181,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.allUnits).toHaveLength(1);
     });
   });
@@ -271,7 +284,8 @@ describe('useOperationUnits', () => {
         countUnit('bulb', false),
       ]);
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.allUnits.map(u => u.unitId)).toEqual([
         'dozen',
         'bulb',
@@ -283,7 +297,8 @@ describe('useOperationUnits', () => {
         countUnit('clove', false, UnitSource.Curated),
       ]);
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.allUnits.map(u => u.unitId)).toEqual(['clove']);
     });
 
@@ -292,7 +307,8 @@ describe('useOperationUnits', () => {
         countUnit('head', false, UnitSource.TrackingUnit),
       ]);
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.allUnits.map(u => u.unitId)).toEqual(['head']);
     });
   });
@@ -367,7 +383,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
 
       expect(result.current.groups).toHaveLength(3);
       expect(result.current.groups[0]!.type).toBe(UnitType.Weight);
@@ -413,7 +430,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
 
       expect(result.current.defaultUnit).toEqual({
         unitId: 'unit-1',
@@ -460,7 +478,8 @@ describe('useOperationUnits', () => {
             }),
           },
         );
-        await waitFor(() => expect(result.current.loading).toBe(false));
+        await drainTimers();
+        expect(result.current.loading).toBe(false);
         return result.current.defaultUnit?.unitId;
       };
 
@@ -516,7 +535,8 @@ describe('useOperationUnits', () => {
             }),
           },
         );
-        await waitFor(() => expect(result.current.loading).toBe(false));
+        await drainTimers();
+        expect(result.current.loading).toBe(false);
         return result.current.defaultUnit?.unitId;
       };
 
@@ -570,7 +590,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
 
       expect(result.current.defaultIncrement).toBe(50);
       expect(result.current.defaultCommonFractions).toEqual([0.25, 0.5, 0.75]);
@@ -590,7 +611,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
 
       expect(result.current.defaultUnit).toBeNull();
       expect(result.current.defaultIncrement).toBeNull();
@@ -614,7 +636,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.groups).toEqual([]);
       expect(result.current.defaultUnit).toBeNull();
     });
@@ -633,7 +656,8 @@ describe('useOperationUnits', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drainTimers();
+      expect(result.current.loading).toBe(false);
       expect(result.current.groups).toEqual([]);
       expect(result.current.defaultUnit).toBeNull();
     });

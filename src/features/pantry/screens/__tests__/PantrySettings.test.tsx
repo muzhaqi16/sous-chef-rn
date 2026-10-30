@@ -5,12 +5,13 @@ import React from 'react';
 import type { BarAction } from '#components/molecules/BarActions';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   DeletePantryDocument,
   GetPantryDocument,
@@ -26,6 +27,11 @@ import {
 import { alertService } from '#/services/alertService';
 import { Text as AppText } from '#components/atoms/Text';
 import { PantrySettings } from '../PantrySettings';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -154,6 +160,14 @@ const defaultPantry: PantryFixture = {
   items: [{ id: 'i1' }, { id: 'i2' }],
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('PantrySettings', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -232,7 +246,8 @@ describe('PantrySettings', () => {
         .UNSAFE_getAllByType(AppText)
         .find(node => node.props.children === 'Save')?.props.tone;
 
-    await screen.findByDisplayValue('Kitchen Pantry');
+    await drainTimers();
+    expect(screen.getByDisplayValue('Kitchen Pantry')).toBeTruthy();
     expect(saveTone()).toBe('primary');
 
     fireEvent.changeText(
@@ -345,12 +360,11 @@ describe('PantrySettings', () => {
 
       await confirmDelete();
 
-      await waitFor(() =>
-        expect(restorePantryToHomeCache).toHaveBeenCalledWith(
-          expect.anything(),
-          'h1',
-          'p1',
-        ),
+      await drainTimers();
+      expect(restorePantryToHomeCache).toHaveBeenCalledWith(
+        expect.anything(),
+        'h1',
+        'p1',
       );
     });
   });

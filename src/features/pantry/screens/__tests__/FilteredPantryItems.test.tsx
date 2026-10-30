@@ -1,12 +1,30 @@
 'use no memo';
 
 import React from 'react';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { FilteredPantryItems } from '../FilteredPantryItems';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
+
+// Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
+jest.mock('#hooks/performance/useFlashListPerformance', () => {
+  const actual = jest.requireActual(
+    '#hooks/performance/useFlashListPerformance',
+  );
+  return {
+    ...actual,
+    useFlashListPerformance: (list: unknown, options: object) =>
+      actual.useFlashListPerformance(list, { ...options, reportInterval: 0 }),
+  };
+});
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 // Structural shape consumed by the screen via the mocked `usePantryManagement`.
 type MockPantryItem = {
@@ -280,6 +298,14 @@ const makeRoute = (
   params: mode ? { mode } : undefined,
 });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('FilteredPantryItems', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -371,7 +397,8 @@ describe('FilteredPantryItems', () => {
 
       fireEvent.press(screen.getAllByLabelText('Add to shopping list')[0]!);
 
-      await waitFor(() => expect(mockAddToList).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockAddToList).toHaveBeenCalled();
       // The fixtures give every row a catalog id unlike its own, so passing
       // the row id through is visible rather than coincidentally equal. The
       // list id leads: a row adds to the list already selected.
