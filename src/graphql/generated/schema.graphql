@@ -13025,10 +13025,16 @@ type PantryStockCheckResult {
   answer: StockCheckAnswer!
   """Why the entry failed; set exactly when success is false"""
   failure: BatchElementFailure
-  """The stack as it stands after the check; null when the entry failed"""
+  """
+  The stack as it stands after the check; null when the entry failed, or on
+  a replay when the stack has been deleted since
+  """
   pantryItem: PantryItem
   """The entry's stack, as sent"""
   pantryItemId: ID!
+  """
+  Whether the check applied to the stack; a replay answers what the first send did
+  """
   success: Boolean!
 }
 
