@@ -752,6 +752,34 @@ guarding it, a copy with a lower `version` simply replaces a newer one.
 **What depends on it:** the `sync/answer-ordering` guard runs in the link
 chain, before Apollo stores an answer, and not as a type policy.
 
+### Apollo: an optimistic layer copies the whole entity
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/pendingLayerProbe.test.ts`.
+
+**Claim:** a layer's write merges with what it sees below and stores the whole
+entity, so it hides the root's later change to any field it copied, and to a
+whole list it touched, until it is removed and added again. A field it never
+copied falls through. Over the same root:
+
+- The layer's value survives a root write of the same field.
+- `extract()` holds the root only; `extract(true)` holds the layer too.
+- `gc()` keeps a row only a layer names.
+- Removing a layer replays the layers above it, in order. Every layer sharing
+  an id is removed together.
+
+**A layer can't be changed inside `cache.batch({ update })`.** `batch` restores
+`optimisticData` as `update` returns, so a layer added or removed there is
+silently undone. Apollo writes every answer inside a batch, so this holds
+inside `cache.write` too. The one way to change layers with one notification is
+`cache.batch({ optimistic: next, removeOptimistic: current, update })`: `update`
+runs over the old layers, then again over the root as they are removed, and a
+watcher hears once.
+
+**What depends on it:** `src/apollo/pendingWrites/` and the
+`sync/pending-writes` spec: pending writes share one generation id, a rebuild
+swaps the generation, and it runs after the answer's batch, not inside it.
+
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 
 Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind
