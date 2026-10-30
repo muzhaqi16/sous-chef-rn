@@ -2814,6 +2814,14 @@ input CreateReceiptCheckInInput {
   """
   locale: String
   """
+  The merchant the device read, for a receipt read on the device. With no
+  receiptParseId, when the store is the household's own label, the branch it
+  names (its address, or its store number under the label's chain) is found
+  or created and the household's rows move onto it. A receiptParseId wins
+  over it; a shared store is never changed.
+  """
+  merchant: ReceiptMerchantInput
+  """
   The receipt's merchant header, when no store is given; it places the chain the lines are remembered under
   """
   merchantHeader: String
