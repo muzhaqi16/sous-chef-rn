@@ -52,9 +52,12 @@ export function writeUsualStores(
   });
 }
 
+const LOCAL_ID_PREFIX = 'local-';
+
 /**
  * Keeps only the entries a removal's answer names, which states the list by
- * its keys: a refresh that landed after the local removal put it back.
+ * its keys: a refresh that landed after the local removal put it back. An
+ * entry the server has not named yet stays: no refresh brings one back.
  */
 export function keepUsualStores(
   cache: ApolloCache,
@@ -67,7 +70,9 @@ export function keepUsualStores(
   writeUsualStores(
     cache,
     homeId,
-    held.filter(entry => kept.has(entry.id)),
+    held.filter(
+      entry => kept.has(entry.id) || entry.id.startsWith(LOCAL_ID_PREFIX),
+    ),
   );
 }
 
@@ -109,7 +114,7 @@ export function localUsualStore(
   choice: StoreChoice,
   addedVia: UsualStoreSource,
 ): UsualStoreEntry | null {
-  const id = `local-${storeChoiceKey(choice)}`;
+  const id = `${LOCAL_ID_PREFIX}${storeChoiceKey(choice)}`;
   writeLocalEntity(cache, {
     fragment: UsualStores_RowFragmentDoc,
     fragmentName: 'usualStores_row',

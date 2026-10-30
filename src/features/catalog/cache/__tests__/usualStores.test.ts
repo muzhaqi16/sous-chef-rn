@@ -96,6 +96,29 @@ describe('keepUsualStores', () => {
 
     expect(storeIds(readUsualStores(cache, 'home-1'))).toEqual(['s1']);
   });
+
+  // An add whose answer gave way to a later removal's still shows.
+  it('keeps a store the server has not named yet', () => {
+    const cache = makeCache();
+    writeUsualStores(cache, 'home-1', [
+      entry('home-1:s1', { id: 's1', name: 'Giant Eagle Banksville' }),
+      entry('home-1:s2', { id: 's2', name: 'Giant Eagle Market District' }),
+    ]);
+    const picked = localUsualStore(
+      cache,
+      { store: { id: 's3', name: 'ALDI Wilkinsburg' } },
+      UsualStoreSource.Picked,
+    );
+    if (!picked) throw new Error('no local entry');
+    writeUsualStores(cache, 'home-1', [
+      ...(readUsualStores(cache, 'home-1') ?? []),
+      picked,
+    ]);
+
+    keepUsualStores(cache, 'home-1', ['home-1:s1', 'home-1:s3']);
+
+    expect(storeIds(readUsualStores(cache, 'home-1'))).toEqual(['s1', 's3']);
+  });
 });
 
 describe('localUsualStore', () => {
