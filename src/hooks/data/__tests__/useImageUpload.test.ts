@@ -1,11 +1,12 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
 import {
   ConfirmItemImageUploadDocument,
@@ -100,6 +101,14 @@ function buildUpdateProfileMock(
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockXhr.status = 200;
   mockXhr.onload = null;
@@ -176,12 +185,12 @@ describe('useImageUpload', () => {
       });
 
       let uploaded: ItemImagesResult = [];
-      await act(async () => {
-        uploaded = await result.current.uploadItemImages(
+      uploaded = await drained(() =>
+        result.current.uploadItemImages(
           [{ ...file, perspective: 'front' }],
           'item-1',
-        );
-      });
+        ),
+      );
       return uploaded;
     }
 
@@ -218,12 +227,12 @@ describe('useImageUpload', () => {
       });
 
       let key: string | null = null;
-      await act(async () => {
-        key = await result.current.uploadUnconfirmed(
+      key = await drained(() =>
+        result.current.uploadUnconfirmed(
           { ...file, type: 'image/jpeg' },
           ImageUploadPurpose.ReceiptPhoto,
-        );
-      });
+        ),
+      );
 
       expect(key).toBe('receipt-photos/u1/p1.jpg');
       expect(presign.fired).toEqual([
@@ -250,15 +259,15 @@ describe('useImageUpload', () => {
         const stopped = new AbortController();
         stopped.abort();
 
-        await act(async () => {
-          await expect(
+        await drained(() =>
+          expect(
             result.current.uploadUnconfirmed(
               photo,
               ImageUploadPurpose.ReceiptPhoto,
               { signal: stopped.signal },
             ),
-          ).rejects.toThrow('Upload was cancelled');
-        });
+          ).rejects.toThrow('Upload was cancelled'),
+        );
 
         expect(presign.fired).toEqual([]);
         expect(mockXhr.open).not.toHaveBeenCalled();
@@ -282,7 +291,8 @@ describe('useImageUpload', () => {
             { signal: sending.signal },
           );
         });
-        await waitFor(() => expect(mockXhr.send).toHaveBeenCalled());
+        await drainTimers();
+        expect(mockXhr.send).toHaveBeenCalled();
         sending.abort();
 
         await expect(uploading).rejects.toThrow('Upload was cancelled');
@@ -304,7 +314,8 @@ describe('useImageUpload', () => {
           ImageUploadPurpose.ReceiptPhoto,
         );
       });
-      await waitFor(() => expect(presign.fired).toHaveLength(1));
+      await drainTimers();
+      expect(presign.fired).toHaveLength(1);
       unmount();
       presign.release();
 
@@ -348,9 +359,9 @@ describe('useImageUpload', () => {
       });
 
       let uploaded: ItemImagesResult | undefined;
-      await act(async () => {
-        uploaded = await result.current.uploadItemImages([file], 'item-1');
-      });
+      uploaded = await drained(() =>
+        result.current.uploadItemImages([file], 'item-1'),
+      );
 
       expect(uploaded).toEqual([]);
       expect(mockXhr.open).not.toHaveBeenCalled();
@@ -397,9 +408,7 @@ describe('useImageUpload', () => {
         ],
       });
 
-      await act(async () => {
-        await result.current.uploadItemImages([file], 'item-1');
-      });
+      await drained(() => result.current.uploadItemImages([file], 'item-1'));
 
       const rows = cache.extract();
       expect(rows['PantryItem:p1']?.image).toMatchObject(pending);
@@ -416,12 +425,12 @@ describe('useImageUpload', () => {
         operationMocks: [mock, recordConfirm().mock],
       });
 
-      await act(async () => {
-        await result.current.uploadItemImages(
+      await drained(() =>
+        result.current.uploadItemImages(
           [{ ...file, type: 'image/jpg' }],
           'item-1',
-        );
-      });
+        ),
+      );
 
       expect(fired).toContainEqual({
         input: expect.objectContaining({ mime: 'image/jpeg' }),
@@ -455,15 +464,15 @@ describe('useImageUpload', () => {
         operationMocks: [recordPresign().mock, mock],
       });
 
-      await act(async () => {
-        await result.current.uploadItemImages(
+      await drained(() =>
+        result.current.uploadItemImages(
           [
             { ...file, perspective: 'front' },
             { ...file, perspective: 'back', isPrimary: true },
           ],
           'item-1',
-        );
-      });
+        ),
+      );
 
       const flags = fired.map(
         variables =>
@@ -491,9 +500,9 @@ describe('useImageUpload', () => {
     });
 
     let profile: ProfileResult | undefined;
-    await act(async () => {
-      profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
-    });
+    profile = await drained(() =>
+      result.current.updateProfileAvatarUrl('http://img.jpg'),
+    );
 
     expect(profile?.id).toBe('u1');
     expect(profile?.avatar).toBe('http://img.jpg');
@@ -514,9 +523,9 @@ describe('useImageUpload', () => {
     });
 
     let profile: ProfileResult | undefined;
-    await act(async () => {
-      profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
-    });
+    profile = await drained(() =>
+      result.current.updateProfileAvatarUrl('http://img.jpg'),
+    );
 
     expect(profile).toBeNull();
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -540,9 +549,9 @@ describe('useImageUpload', () => {
     });
 
     let profile: ProfileResult | undefined;
-    await act(async () => {
-      profile = await result.current.updateProfileAvatarUrl('http://img.jpg');
-    });
+    profile = await drained(() =>
+      result.current.updateProfileAvatarUrl('http://img.jpg'),
+    );
 
     expect(profile).toBeNull();
     expect(Telemetry.increment).toHaveBeenCalledWith(
@@ -568,13 +577,13 @@ describe('useImageUpload', () => {
     const onError = jest.fn();
 
     let returnVal: ProfileUploadResult | undefined;
-    await act(async () => {
-      returnVal = await result.current.uploadProfileImage(
+    returnVal = await drained(() =>
+      result.current.uploadProfileImage(
         { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
         undefined,
         { onError },
-      );
-    });
+      ),
+    );
 
     expect(returnVal).toBeNull();
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -590,12 +599,12 @@ describe('useImageUpload', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
 
     let results: ItemImagesResult | undefined;
-    await act(async () => {
-      results = await result.current.uploadItemImages(
+    results = await drained(() =>
+      result.current.uploadItemImages(
         [{ uri: 'file://a.jpg', perspective: 'front' }],
         'item1',
-      );
-    });
+      ),
+    );
 
     expect(results).toEqual([]);
   });
@@ -637,13 +646,13 @@ describe('useImageUpload', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
 
-    await act(async () => {
-      await result.current.uploadProfileImage(
+    await drained(() =>
+      result.current.uploadProfileImage(
         { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
         undefined,
         { onError },
-      );
-    });
+      ),
+    );
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
@@ -662,13 +671,13 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    await act(async () => {
-      await result.current.uploadProfileImage({
+    await drained(() =>
+      result.current.uploadProfileImage({
         uri: 'file://img.jpg',
         fileSize: 1000,
         type: 'image/jpeg',
-      });
-    });
+      }),
+    );
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
@@ -683,13 +692,13 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    await act(async () => {
-      await result.current.uploadProfileImage({
+    await drained(() =>
+      result.current.uploadProfileImage({
         uri: 'file://img.jpg',
         fileSize: 1000,
         type: 'image/jpeg',
-      });
-    });
+      }),
+    );
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Upload Failed',
@@ -709,12 +718,12 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    await act(async () => {
-      await result.current.uploadItemImages(
+    await drained(() =>
+      result.current.uploadItemImages(
         [{ uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' }],
         'item-1',
-      );
-    });
+      ),
+    );
 
     expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -734,13 +743,13 @@ describe('useImageUpload', () => {
     const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();
 
-    await act(async () => {
-      await result.current.uploadProfileImage(
+    await drained(() =>
+      result.current.uploadProfileImage(
         { uri: 'file://img.jpg', fileSize: 1000, type: 'image/jpeg' },
         undefined,
         { onError },
-      );
-    });
+      ),
+    );
 
     expect(onError).toHaveBeenCalled();
     // An error with no `code` can't be classified, so it must not leak its
@@ -761,13 +770,13 @@ describe('useImageUpload', () => {
 
     const { result } = renderHookWithApollo(() => useImageUpload());
 
-    await act(async () => {
-      await result.current.uploadProfileImage({
+    await drained(() =>
+      result.current.uploadProfileImage({
         uri: 'file://img.jpg',
         fileSize: 1000,
         type: 'image/jpeg',
-      });
-    });
+      }),
+    );
 
     // A thrown string has no `code` either — same translated fallback.
     expect(alertService.alert).toHaveBeenCalledWith(

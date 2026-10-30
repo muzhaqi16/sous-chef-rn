@@ -1,7 +1,7 @@
 'use no memo';
 
 import { captureOnData } from '#/test-utils/subscriptionCapture';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
@@ -63,6 +63,14 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 }));
 
 const mockUseAppStore = require('#store/useAppStore').useAppStore;
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -153,9 +161,8 @@ describe('useShoppingListSubscriptions', () => {
     });
 
     // Read-backs gather for 150 ms before one by-ids read.
-    await waitFor(() =>
-      expect(addNewItemToShoppingListCache).toHaveBeenCalled(),
-    );
+    await drainTimers();
+    expect(addNewItemToShoppingListCache).toHaveBeenCalled();
     expect(mockClient.query).toHaveBeenCalledWith(
       expect.objectContaining({ variables: { ids: ['i1'] } }),
     );
@@ -383,9 +390,8 @@ describe('useShoppingListSubscriptions: another device toggles a row twice', () 
     // Back to back, faster than any animation could run.
     getOnData()(event('ITEM_COMPLETED'), { cache: mockCache });
     getOnData()(event('ITEM_UNCOMPLETED'), { cache: mockCache });
-    await waitFor(() =>
-      expect(moveShoppingListItemToUnpurchased).toHaveBeenCalled(),
-    );
+    await drainTimers();
+    expect(moveShoppingListItemToUnpurchased).toHaveBeenCalled();
 
     expect(moveShoppingListItemToPurchased).toHaveBeenCalledTimes(1);
     expect(moveShoppingListItemToUnpurchased).toHaveBeenCalledTimes(1);
@@ -399,16 +405,11 @@ describe('useShoppingListSubscriptions: another device toggles a row twice', () 
 });
 
 describe('useShoppingListSubscriptions: event envelope and the cache', () => {
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('keeps the envelope out of the cache, so an event for a just-deleted row cannot re-create it', async () => {
     // The server echoes our own delete before the mutation resolves, while the
     // row is already evicted. A cacheable subscription would normalise
     // `node { id }` into a bare ShoppingListItem and leave the list query
     // incomplete — see `__tests__/apollo/subscriptionEnvelopeWrite.test.ts`.
-    jest.useFakeTimers();
     const cache = makeCache();
     const event = jest.fn(() => ({
       data: {

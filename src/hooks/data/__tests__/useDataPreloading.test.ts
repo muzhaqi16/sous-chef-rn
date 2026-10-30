@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
@@ -18,6 +17,14 @@ import type { AppState } from '#store/slices/appSlice';
 
 // Run idle-deferred work synchronously so the warming fires within the test.
 const originalRequestIdleCallback = globalThis.requestIdleCallback;
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeAll(() => {
   globalThis.requestIdleCallback = (cb: IdleRequestCallback) => {
     cb({ didTimeout: false, timeRemaining: () => 50 });
@@ -110,9 +117,8 @@ describe('useDataPreloading', () => {
       operationMocks: referenceMocks(),
     });
 
-    await waitFor(() => {
-      expect(mockSetters.setCachedCategories).toHaveBeenCalled();
-    });
+    await drainTimers();
+    expect(mockSetters.setCachedCategories).toHaveBeenCalled();
     expect(mockSetters.setCachedBrands).toHaveBeenCalled();
     expect(mockSetters.setCachedStores).toHaveBeenCalled();
     expect(mockSetters.setCachedUnits).toHaveBeenCalled();
@@ -124,7 +130,6 @@ describe('useDataPreloading', () => {
   });
 
   it('does not warm when offline', async () => {
-    jest.useFakeTimers();
     mockIsOnline = false;
     renderHookWithApollo(() => useDataPreloading(), {
       operationMocks: referenceMocks(),
@@ -136,7 +141,6 @@ describe('useDataPreloading', () => {
   });
 
   it('does not warm before core data is loaded', async () => {
-    jest.useFakeTimers();
     mockState.hasInitializedHomeData = false;
     mockState.isPantryQueryComplete = false;
     renderHookWithApollo(() => useDataPreloading(), {
@@ -185,9 +189,8 @@ describe('useDataPreloading', () => {
       cache,
     });
 
-    await waitFor(() =>
-      expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled(),
-    );
+    await drainTimers();
+    expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled();
     expect(units.fired).toHaveLength(1);
     expect(mockSetters.setCachedUnits).toHaveBeenCalledWith([
       expect.objectContaining({ id: 'u-fresh' }),
@@ -209,14 +212,12 @@ describe('useDataPreloading', () => {
       operationMocks: [units.mock],
     });
 
-    await waitFor(() =>
-      expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled(),
-    );
+    await drainTimers();
+    expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled();
     expect(units.fired).toHaveLength(1);
   });
 
   it('does not stamp a refresh the network was withheld from', async () => {
-    jest.useFakeTimers();
     mockNetwork.apiReachable = false;
     const units = recordMock(GetCommonUnitsDocument, {
       data: { units: [{ id: 'u-fresh' }] },

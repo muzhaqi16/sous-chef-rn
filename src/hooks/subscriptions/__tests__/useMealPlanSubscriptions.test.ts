@@ -4,11 +4,12 @@ import {
   captureOnData,
   type CapturedOnData,
 } from '#/test-utils/subscriptionCapture';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
@@ -568,8 +569,7 @@ describe('useMealPlanSubscriptions: a home the server has not created yet', () =
       unconfirmedCreates.confirm('home-1');
     });
 
-    await waitFor(() =>
-      expect(events.fired).toContainEqual({ homeId: 'home-1' }),
-    );
+    await drainTimers();
+    expect(events.fired).toContainEqual({ homeId: 'home-1' });
   });
 });

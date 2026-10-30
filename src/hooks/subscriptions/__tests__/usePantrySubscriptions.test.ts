@@ -8,7 +8,7 @@ import {
   captureOnData,
   type CapturedOnData,
 } from '#/test-utils/subscriptionCapture';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -18,6 +18,7 @@ import {
   type QueryDataFor,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
@@ -621,7 +622,8 @@ describe('usePantrySubscriptions: the counts after a change made elsewhere', () 
       );
     }
     await flushSummaryRead();
-    await waitFor(() => expect(read.fired).toEqual([variables]));
+    await drainTimers();
+    expect(read.fired).toEqual([variables]);
     // MockLink answers on a timer of its own.
     await flushSummaryRead();
 
@@ -659,8 +661,7 @@ describe('usePantrySubscriptions: a pantry the server has not created yet', () =
       unconfirmedCreates.confirm('pantry-1');
     });
 
-    await waitFor(() =>
-      expect(events.fired).toContainEqual({ pantryId: 'pantry-1' }),
-    );
+    await drainTimers();
+    expect(events.fired).toContainEqual({ pantryId: 'pantry-1' });
   });
 });

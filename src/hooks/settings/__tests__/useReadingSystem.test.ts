@@ -1,9 +1,9 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { useReadingSystem } from '../useReadingSystem';
@@ -26,6 +26,14 @@ const settingsMock = (
   };
   return recordMock(GetUserSettingsDocument, { data });
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useReadingSystem', () => {
   it.each([
@@ -57,6 +65,7 @@ describe('useReadingSystem', () => {
     const { result } = renderHookWithApollo(() => useReadingSystem(), {
       operationMocks: [settingsMock(preferred, device).mock],
     });
-    await waitFor(() => expect(result.current).toBe(expected));
+    await drainTimers();
+    expect(result.current).toBe(expected);
   });
 });

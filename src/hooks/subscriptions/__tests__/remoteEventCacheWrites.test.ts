@@ -5,7 +5,7 @@
  * read back complete before it is linked, and a create joins only the filtered
  * list variants it matches.
  */
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   gql,
   type InMemoryCache,
@@ -19,6 +19,7 @@ import {
   type MockDataFor,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import {
   MealPlanSubtype,
@@ -202,7 +203,8 @@ describe('a pantry item created elsewhere', () => {
       );
     });
     await settle();
-    await waitFor(() => expect(readBack.fired).toHaveLength(1));
+    await drainTimers();
+    expect(readBack.fired).toHaveLength(1);
     await settle();
 
     const idsIn = (filters: Record<string, unknown> | undefined) =>
@@ -273,7 +275,8 @@ describe('a meal plan created elsewhere', () => {
       );
     });
     await settle();
-    await waitFor(() => expect(readBack.fired).toHaveLength(1));
+    await drainTimers();
+    expect(readBack.fired).toHaveLength(1);
     await settle();
 
     const idsIn = (filters: Record<string, unknown> | undefined) =>
@@ -331,7 +334,8 @@ describe('a meal-template item added elsewhere', () => {
       { operationMocks: [template.mock, readBack.mock] },
     );
     await settle();
-    await waitFor(() => expect(result.current.ids).toEqual(['item-1']));
+    await drainTimers();
+    expect(result.current.ids).toEqual(['item-1']);
     const firstLoaded = renders.findIndex(ids => ids !== undefined);
 
     await act(async () => {
@@ -351,9 +355,8 @@ describe('a meal-template item added elsewhere', () => {
 
     // The read-back restates the first page of the same one list the screen
     // reads, so the new meal joins it as an edge.
-    await waitFor(() =>
-      expect(result.current.ids).toEqual(['item-1', 'item-2']),
-    );
+    await drainTimers();
+    expect(result.current.ids).toEqual(['item-1', 'item-2']);
     expect(readBack.fired).toEqual([
       { id: 'tpl-1', itemsFirst: MEALS_PAGE_SIZE },
     ]);
@@ -395,9 +398,8 @@ describe('a meal removed elsewhere', () => {
       { cache, operationMocks: [opened.mock, reRead.mock] },
     );
     await settle();
-    await waitFor(() =>
-      expect(result.current.ids).toEqual(['meal-1', 'meal-2']),
-    );
+    await drainTimers();
+    expect(result.current.ids).toEqual(['meal-1', 'meal-2']);
 
     await act(async () => {
       onData()(
@@ -431,16 +433,16 @@ describe('a meal removed elsewhere', () => {
       jest.advanceTimersByTime(500);
     });
     await settle();
-    await waitFor(() =>
-      expect(reRead.fired).toEqual([
-        {
-          id: 'plan-1',
-          mealsFirst: MEALS_PAGE_SIZE,
-          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
-        },
-      ]),
-    );
-    await waitFor(() => expect(result.current.ids).toEqual(['meal-2']));
+    await drainTimers();
+    expect(reRead.fired).toEqual([
+      {
+        id: 'plan-1',
+        mealsFirst: MEALS_PAGE_SIZE,
+        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+      },
+    ]);
+    await drainTimers();
+    expect(result.current.ids).toEqual(['meal-2']);
   });
 });
 
@@ -595,7 +597,8 @@ describe('a row ticked off, then back on, by another member', () => {
     };
 
     await announce(MutationType.ItemCompleted);
-    await waitFor(() => expect(bought.fired).toEqual([{ ids: ['item-1'] }]));
+    await drainTimers();
+    expect(bought.fired).toEqual([{ ids: ['item-1'] }]);
     await settle();
 
     expect(read(cache, false)).toEqual({ ids: ['item-2'], totalCount: 1 });
@@ -608,7 +611,8 @@ describe('a row ticked off, then back on, by another member', () => {
     });
 
     await announce(MutationType.ItemUncompleted);
-    await waitFor(() => expect(unbought.fired).toEqual([{ ids: ['item-1'] }]));
+    await drainTimers();
+    expect(unbought.fired).toEqual([{ ids: ['item-1'] }]);
     await settle();
 
     expect(read(cache, false)).toEqual({

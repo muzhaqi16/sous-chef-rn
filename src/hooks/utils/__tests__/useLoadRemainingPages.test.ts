@@ -1,4 +1,4 @@
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { useLoadRemainingPages } from '../useLoadRemainingPages';
 
@@ -24,13 +24,20 @@ const page = (
   ...overrides,
 });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 afterEach(() => {
   jest.useRealTimers();
 });
 
 describe('loading the rest of a collection', () => {
   it('stops when a page settles without adding anything', async () => {
-    jest.useFakeTimers();
     const state = page({});
     const { result } = renderHook(
       () =>
@@ -59,7 +66,9 @@ describe('loading the rest of a collection', () => {
       { initialProps: { current: state } },
     );
 
-    await waitFor(() => expect(state.loadMore).toHaveBeenCalled());
+    // One frame: a loop whose pages keep adding rows never drains.
+    await act(() => jest.advanceTimersToNextTimerAsync());
+    expect(state.loadMore).toHaveBeenCalled();
     rerender({ current: { ...state, items: [...items] } });
 
     expect(result.current).toBe(true);
@@ -73,7 +82,8 @@ describe('loading the rest of a collection', () => {
           .isLoadingRemainingPages,
       { initialProps: { enabled: true } },
     );
-    await waitFor(() => expect(result.current).toBe(false), { timeout: 3000 });
+    await drainTimers();
+    expect(result.current).toBe(false);
 
     rerender({ enabled: false });
     rerender({ enabled: true });
@@ -117,7 +127,8 @@ describe('a load-all that stops on a failed page', () => {
 
     rerender({ term: 'apple' });
 
-    await waitFor(() => expect(state.loadMore).toHaveBeenCalled());
+    await drainTimers();
+    expect(state.loadMore).toHaveBeenCalled();
   });
 
   it('starts again on retry', async () => {
@@ -129,11 +140,11 @@ describe('a load-all that stops on a failed page', () => {
 
     act(() => result.current.retry());
 
-    await waitFor(() => expect(state.loadMore).toHaveBeenCalled());
+    await drainTimers();
+    expect(state.loadMore).toHaveBeenCalled();
   });
 
   it('stops again when the retried page fails too', async () => {
-    jest.useFakeTimers();
     const state = page({ loadMoreError: true });
     const { result } = renderHook(() =>
       useLoadRemainingPages(true, false, state, 'term'),
