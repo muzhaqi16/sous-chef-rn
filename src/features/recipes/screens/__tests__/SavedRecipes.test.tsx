@@ -1,13 +1,31 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { SavedRecipeFoldersDocument } from '#features/recipes/graphql/recipe.generated';
 import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import type { TagPickerProps } from '#features/recipes/components/TagPicker';
 import { kitTestIDs } from '#components/testIDs';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { SavedRecipes } from '../SavedRecipes';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
+
+// Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
+jest.mock('#hooks/performance/useFlashListPerformance', () => {
+  const actual = jest.requireActual(
+    '#hooks/performance/useFlashListPerformance',
+  );
+  return {
+    ...actual,
+    useFlashListPerformance: (list: unknown, options: object) =>
+      actual.useFlashListPerformance(list, { ...options, reportInterval: 0 }),
+  };
+});
 
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
@@ -54,6 +72,14 @@ function savedPage(
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('SavedRecipes tag filter', () => {
   it('loads the remaining pages when the tag picker opens, so a tag used only on page 2 is offered', async () => {
     const saved = recordMock(MySavedRecipesDocument, {
@@ -70,16 +96,16 @@ describe('SavedRecipes tag filter', () => {
       operationMocks: [saved.mock, folders.mock],
     });
 
-    const tagsTab = await screen.findByTestId(
+    await drainTimers();
+    const tagsTab = screen.getByTestId(
       kitTestIDs.filterTab(recipesTestIDs.savedRecipesFilterTabPrefix, 'tags'),
     );
     expect(saved.fired.some(vars => vars.after)).toBe(false);
 
     fireEvent.press(tagsTab);
 
-    await waitFor(() =>
-      expect(screen.getByTestId('tag-picker-probe')).toHaveTextContent('Vegan'),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('tag-picker-probe')).toHaveTextContent('Vegan');
     expect(saved.fired.some(vars => vars.after === 'page-1')).toBe(true);
     expect(screen.queryByText('loading')).toBeNull();
   });
@@ -105,50 +131,51 @@ describe('SavedRecipes search over a page that fails to load', () => {
 
   it('says the results are incomplete instead of "No results"', async () => {
     const failedPage = renderWithFailingSecondPage();
+    await drainTimers();
     fireEvent.changeText(
-      await screen.findByPlaceholderText('Search saved recipes...'),
+      screen.getByPlaceholderText('Search saved recipes...'),
       'Banana',
     );
 
-    await waitFor(() => expect(failedPage.fired.length).toBeGreaterThan(0));
-    expect(
-      await screen.findByText("Couldn't load all your recipes"),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(failedPage.fired.length).toBeGreaterThan(0);
+    await drainTimers();
+    expect(screen.getByText("Couldn't load all your recipes")).toBeTruthy();
     expect(screen.queryByText('No results for "Banana"')).toBeNull();
   });
 
   it('loads again when the reader retries', async () => {
     const failedPage = renderWithFailingSecondPage();
+    await drainTimers();
     fireEvent.changeText(
-      await screen.findByPlaceholderText('Search saved recipes...'),
+      screen.getByPlaceholderText('Search saved recipes...'),
       'Banana',
     );
-    await screen.findByText("Couldn't load all your recipes");
+    await drainTimers();
+    expect(screen.getByText("Couldn't load all your recipes")).toBeTruthy();
     const attempts = failedPage.fired.length;
 
     fireEvent.press(screen.getByText('Retry'));
 
-    await waitFor(() =>
-      expect(failedPage.fired.length).toBeGreaterThan(attempts),
-    );
+    await drainTimers();
+    expect(failedPage.fired.length).toBeGreaterThan(attempts);
   });
   // Rows that matched are shown, but the page that failed may hold more.
   it('flags the matches it shows as possibly incomplete, with a retry', async () => {
     const failedPage = renderWithFailingSecondPage();
+    await drainTimers();
     fireEvent.changeText(
-      await screen.findByPlaceholderText('Search saved recipes...'),
+      screen.getByPlaceholderText('Search saved recipes...'),
       'Apple',
     );
-    const notice = await screen.findByTestId(
-      recipesTestIDs.searchIncompleteNotice,
-    );
+    await drainTimers();
+    const notice = screen.getByTestId(recipesTestIDs.searchIncompleteNotice);
     expect(notice).toBeTruthy();
     const attempts = failedPage.fired.length;
 
     fireEvent.press(screen.getByTestId(recipesTestIDs.searchIncompleteRetry));
 
-    await waitFor(() =>
-      expect(failedPage.fired.length).toBeGreaterThan(attempts),
-    );
+    await drainTimers();
+    expect(failedPage.fired.length).toBeGreaterThan(attempts);
   });
 });

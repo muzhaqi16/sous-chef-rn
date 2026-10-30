@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { t } from '#/i18n';
 import {
@@ -8,6 +7,7 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetRecipeDocument,
   type GetRecipeQuery,
@@ -114,6 +114,14 @@ const substitutesMock = () =>
     },
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useRecipeSubstitutes', () => {
   beforeEach(() => {
     mockHomeId = 'home-1';
@@ -126,9 +134,8 @@ describe('useRecipeSubstitutes', () => {
       { operationMocks: [mock.mock] },
     );
 
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
     expect(mock.fired[0]).toMatchObject({
       homeId: 'home-1',
       pantryId: 'pantry-1',
@@ -185,9 +192,8 @@ describe('useRecipeSubstitutes', () => {
       () => useRecipeSubstitutes('recipe-1', true),
       { operationMocks: [substitutesMock().mock] },
     );
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
 
     mockHomeId = null;
     rerender({});
@@ -204,9 +210,8 @@ describe('useRecipeSubstitutes', () => {
         initialProps: { wanted: true },
       },
     );
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
 
     rerender({ wanted: false });
 
@@ -254,9 +259,8 @@ describe('useRecipeSubstitutes', () => {
       () => useRecipeSubstitutes('recipe-1', true),
       { cache, operationMocks: [substitutesMock().mock] },
     );
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
 
     const recipe = cache.readQuery({
       query: GetRecipeDocument,

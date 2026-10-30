@@ -1,10 +1,11 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { useServerRecipeSuggestions } from '../useServerRecipeSuggestions';
 import { RecipeSuggestionsDocument } from '../useServerRecipeSuggestions.generated';
 import { getI18n } from '#/i18n/config';
@@ -64,6 +65,14 @@ const homeRanking = (
 const ids = (rows: RecipeRow[]) => shown(rows).map(item => item.id);
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   useStore.setState({ selectedHomeId: null });
 });
 
@@ -73,7 +82,8 @@ describe('useServerRecipeSuggestions per home', () => {
     const homeA = homeRanking('home-a', [edge('r-a', 90)]);
     const { result } = renderSuggestions([homeA.mock]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     expect(homeA.fired[0]).toEqual({
       first: 20,
@@ -86,7 +96,8 @@ describe('useServerRecipeSuggestions per home', () => {
     const suggestions = suggestionsMock([edge('r-1', 50)]);
     const { result } = renderSuggestions([suggestions.mock]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     expect(suggestions.fired[0]?.homeId).toBeUndefined();
   });
@@ -96,15 +107,15 @@ describe('useServerRecipeSuggestions per home', () => {
     const homeA = homeRanking('home-a', [edge('r-a', 90)]);
     const homeB = homeRanking('home-b', [edge('r-b', 40)], { held: true });
     const { result } = renderSuggestions([homeA.mock, homeB.mock]);
-    await waitFor(() =>
-      expect(ids(result.current.rows)).toEqual(['recipe-r-a']),
-    );
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['recipe-r-a']);
 
     act(() => {
       useStore.setState({ selectedHomeId: 'home-b' });
     });
 
-    await waitFor(() => expect(homeB.fired).toHaveLength(1));
+    await drainTimers();
+    expect(homeB.fired).toHaveLength(1);
     expect(result.current.rows).toEqual([]);
     expect(result.current.loading).toBe(true);
 
@@ -112,9 +123,8 @@ describe('useServerRecipeSuggestions per home', () => {
       homeB.release();
     });
 
-    await waitFor(() =>
-      expect(ids(result.current.rows)).toEqual(['recipe-r-b']),
-    );
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['recipe-r-b']);
   });
 
   it("shows a home's own cached ranking when switching back offline", async () => {
@@ -135,23 +145,20 @@ describe('useServerRecipeSuggestions per home', () => {
       homeAOffline.mock,
       homeB.mock,
     ]);
-    await waitFor(() =>
-      expect(ids(result.current.rows)).toEqual(['recipe-r-a']),
-    );
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['recipe-r-a']);
     act(() => {
       useStore.setState({ selectedHomeId: 'home-b' });
     });
-    await waitFor(() =>
-      expect(ids(result.current.rows)).toEqual(['recipe-r-b']),
-    );
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['recipe-r-b']);
 
     act(() => {
       useStore.setState({ selectedHomeId: 'home-a' });
     });
 
-    await waitFor(() =>
-      expect(ids(result.current.rows)).toEqual(['recipe-r-a']),
-    );
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['recipe-r-a']);
     expect(result.current.unanswered).toBe(false);
   });
 
@@ -163,13 +170,15 @@ describe('useServerRecipeSuggestions per home', () => {
       match: vars => vars.homeId === 'home-gone',
     });
     const { result } = renderSuggestions([homeA.mock, refused.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     act(() => {
       useStore.setState({ selectedHomeId: 'home-gone' });
     });
 
-    await waitFor(() => expect(result.current.unanswered).toBe(true));
+    await drainTimers();
+    expect(result.current.unanswered).toBe(true);
     expect(result.current.rows).toEqual([]);
   });
 });
@@ -180,7 +189,8 @@ describe('useServerRecipeSuggestions', () => {
       suggestionsMock([edge('r-own', 80), edge('r-pub', 60)]).mock,
     ]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(2);
 
     expect(shown(result.current.rows).map(item => item.id)).toEqual([
       'recipe-r-own',
@@ -196,7 +206,8 @@ describe('useServerRecipeSuggestions', () => {
     const suggestions = suggestionsMock([edge('r-1', 50)]);
     const { result } = renderSuggestions([suggestions.mock]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     expect(suggestions.fired[0]).toEqual({ first: 20, today: '2026-10-14' });
   });
@@ -217,7 +228,8 @@ describe('useServerRecipeSuggestions', () => {
       suggestionsMock([edge('r-1', 70, expiring)]).mock,
     ]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     expect(shown(result.current.rows)[0]?.subtitle).toContain(uses);
   });
@@ -225,11 +237,10 @@ describe('useServerRecipeSuggestions', () => {
   it('asks the server again on refresh', async () => {
     const suggestions = suggestionsMock([edge('r-1', 50)]);
     const { result } = renderSuggestions([suggestions.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await drained(() => result.current.refresh());
 
     expect(suggestions.fired).toHaveLength(2);
   });
@@ -249,7 +260,8 @@ describe('useServerRecipeSuggestions', () => {
   ])('$name', async ({ answer }) => {
     const { result } = renderSuggestions([answer()]);
 
-    await waitFor(() => expect(result.current.unanswered).toBe(true));
+    await drainTimers();
+    expect(result.current.unanswered).toBe(true);
     expect(result.current.rows).toEqual([]);
   });
 
@@ -262,11 +274,10 @@ describe('useServerRecipeSuggestions', () => {
       error: new Error('network down'),
     });
     const { result } = renderSuggestions([answered.mock, failed.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await drained(() => result.current.refresh());
 
     expect(failed.fired).toHaveLength(1);
     expect(result.current.rows).toHaveLength(1);

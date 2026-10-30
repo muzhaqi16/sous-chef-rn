@@ -1,5 +1,4 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import type { MockFor, MockDataFor } from '#/test-utils/apolloMockProvider';
@@ -8,6 +7,7 @@ import {
   recordMock,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
 import {
   CreateRecipeReviewDocument,
@@ -178,6 +178,14 @@ const makeBackendRecipe = (
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -192,7 +200,8 @@ describe('useRecipeReviews', () => {
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
     expect(result.current.state.totalReviews).toBe(3);
     expect(result.current.state.averageRating).toBe(4.2);
@@ -209,7 +218,8 @@ describe('useRecipeReviews', () => {
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
     // rev-1 has helpful=3, rev-2 has helpful=1
     expect(result.current.state.reviews[0]!.id).toBe('rev-1');
@@ -228,26 +238,24 @@ describe('useRecipeReviews', () => {
         }),
       { operationMocks: [buildGetRecipeReviewsMock()], cache },
     );
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
     expect(result.current.state.reviews.map(r => r.id)).toEqual([
       'rev-1',
       'rev-2',
     ]);
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({ __typename: 'RecipeReview', id: 'rev-2' }),
         fields: { helpful: () => 5 },
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(result.current.state.reviews.map(r => r.id)).toEqual([
-        'rev-2',
-        'rev-1',
-      ]),
-    );
+    expect(result.current.state.reviews.map(r => r.id)).toEqual([
+      'rev-2',
+      'rev-1',
+    ]);
   });
 
   it('identifies current user review', async () => {
@@ -260,7 +268,8 @@ describe('useRecipeReviews', () => {
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
     expect(result.current.state.userReview?.id).toBe('rev-2');
     expect(result.current.state.hasReviewed).toBe(true);
@@ -283,7 +292,8 @@ describe('useRecipeReviews', () => {
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
     expect(result.current.state.isOwnRecipe).toBe(true);
   });
 
@@ -297,7 +307,8 @@ describe('useRecipeReviews', () => {
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
     expect(result.current.state.isOwnRecipe).toBe(false);
   });
 
@@ -311,7 +322,8 @@ describe('useRecipeReviews', () => {
       { operationMocks: [buildGetRecipeReviewsMock()] },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
     // rev-1 comes back with viewerHasVotedHelpful: true …
     expect(
@@ -353,19 +365,15 @@ describe('useRecipeReviews', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
     const target = result.current.state.reviews.find(r => r.id === 'rev-2')!;
     expect(result.current.actions.hasVotedHelpful(target)).toBe(false);
 
-    await act(async () => {
-      await result.current.actions.toggleHelpful('rev-2', true);
-    });
-
-    await waitFor(() => {
-      const updated = result.current.state.reviews.find(r => r.id === 'rev-2')!;
-      expect(result.current.actions.hasVotedHelpful(updated)).toBe(true);
-      expect(updated.helpful).toBe(2);
-    });
+    await drained(() => result.current.actions.toggleHelpful('rev-2', true));
+    const updated = result.current.state.reviews.find(r => r.id === 'rev-2')!;
+    expect(result.current.actions.hasVotedHelpful(updated)).toBe(true);
+    expect(updated.helpful).toBe(2);
   });
 
   it('createReview calls mutation and shows toast', async () => {
@@ -385,11 +393,10 @@ describe('useRecipeReviews', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.actions.createReview(5, 'Amazing!');
-    });
+    await drained(() => result.current.actions.createReview(5, 'Amazing!'));
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Review submitted');
   });
@@ -416,11 +423,10 @@ describe('useRecipeReviews', () => {
       { operationMocks: [buildGetRecipeReviewsMock(), mock] },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.actions.createReview(5, 'Mine');
-    });
+    await drained(() => result.current.actions.createReview(5, 'Mine'));
 
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(mockToastError).toHaveBeenCalledTimes(1);
@@ -453,11 +459,10 @@ describe('useRecipeReviews', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.actions.createReview(4, 'Solid');
-    });
+    await drained(() => result.current.actions.createReview(4, 'Solid'));
 
     // Without a client-minted id, a retried create collapses into an
     // indistinguishable "already reviewed" CONFLICT (offline-sync contract).
@@ -520,11 +525,10 @@ describe('useRecipeReviews', () => {
           ],
         },
       );
-      await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+      await drainTimers();
+      expect(result.current.state.reviews).toHaveLength(2);
 
-      await act(async () => {
-        await result.current.actions.createReview(5, 'Amazing!');
-      });
+      await drained(() => result.current.actions.createReview(5, 'Amazing!'));
 
       expect(aggregatesIn(cache)).toMatchObject({
         totalReviews: 4,
@@ -555,11 +559,12 @@ describe('useRecipeReviews', () => {
           ],
         },
       );
-      await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+      await drainTimers();
+      expect(result.current.state.reviews).toHaveLength(2);
 
-      await act(async () => {
-        await result.current.actions.updateReview('rev-2', { rating: 5 });
-      });
+      await drained(() =>
+        result.current.actions.updateReview('rev-2', { rating: 5 }),
+      );
 
       expect(aggregatesIn(cache)).toMatchObject({
         rating4Count: 0,
@@ -584,11 +589,10 @@ describe('useRecipeReviews', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.actions.deleteReview('rev-2');
-    });
+    await drained(() => result.current.actions.deleteReview('rev-2'));
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
   });
@@ -624,11 +628,10 @@ describe('useRecipeReviews', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.actions.deleteReview('rev-2');
-    });
+    await drained(() => result.current.actions.deleteReview('rev-2'));
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Review deleted');
     expect(result.current.state.reviews.map(r => r.id)).not.toContain('rev-2');
@@ -662,16 +665,14 @@ describe('useRecipeReviews', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.reviews).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.reviews).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.actions.deleteReview('rev-2');
-    });
+    await drained(() => result.current.actions.deleteReview('rev-2'));
 
     expect(mockToastError).toHaveBeenCalled();
-    await waitFor(() =>
-      expect(result.current.state.reviews.map(r => r.id)).toContain('rev-2'),
-    );
+    await drainTimers();
+    expect(result.current.state.reviews.map(r => r.id)).toContain('rev-2');
   });
 
   it('returns defaults when backendRecipe is null', async () => {
@@ -681,7 +682,8 @@ describe('useRecipeReviews', () => {
     );
 
     // For a null recipe response, reviews stays empty
-    await waitFor(() => expect(result.current.state.reviews).toEqual([]));
+    await drainTimers();
+    expect(result.current.state.reviews).toEqual([]);
 
     expect(result.current.state.totalReviews).toBe(0);
     expect(result.current.state.averageRating).toBe(0);
