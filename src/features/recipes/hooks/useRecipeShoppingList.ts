@@ -127,7 +127,12 @@ function writeLocalRows(
           unitId: undefined,
         });
         try {
-          addLocalShoppingListItem(batched, listId, row);
+          addLocalShoppingListItem(
+            batched,
+            listId,
+            row,
+            new Date().toISOString(),
+          );
         } catch (cacheError) {
           errorService.reportError(cacheError, {
             operation: 'Add recipe ingredients (optimistic)',

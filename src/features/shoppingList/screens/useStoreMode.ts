@@ -100,7 +100,6 @@ export function useStoreMode(listId: string) {
     purchasedItems: rawPurchasedItems,
     toggleItem,
     removeItem,
-    refetchItems: refetch,
   });
 
   const { t } = useTranslation();

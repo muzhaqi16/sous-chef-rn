@@ -1,10 +1,4 @@
-import {
-  ApolloClient,
-  type Cache,
-  type NormalizedCacheObject,
-  type OperationVariables,
-  type Reference,
-} from '@apollo/client';
+import { ApolloClient, type NormalizedCacheObject } from '@apollo/client';
 import { logger } from '#/utils/environment';
 import { createLink } from './links/index';
 import { proactiveTokenRefresh } from './links/refreshToken';
@@ -20,6 +14,7 @@ import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { queueStore } from './offlineQueue/queueStore';
 import { pendingWritesOf } from './pendingWrites/pendingWrites';
+import { onCacheWrite } from './utils/onCacheWrite';
 import { storage } from '#/store/deviceStorage';
 import { CLIENT_NAME, clientVersion } from './clientIdentity';
 import { APOLLO_DEFAULT_OPTIONS } from './defaultOptions';
@@ -197,49 +192,7 @@ function setupCachePersistence(
     return Promise.resolve();
   });
 
-  // Wrap cache methods to persist after operations. The InMemoryCache itself,
-  // not `client.cache`: only it declares gc's `resetResultCache` option.
-  const originalWrite = cache.write.bind(cache);
-  const originalEvict = cache.evict.bind(cache);
-  const originalModify = cache.modify.bind(cache);
-  const originalGc = cache.gc.bind(cache);
-
-  // `write`/`modify` keep their generic signatures so the wrappers stay
-  // assignable; `evict` is non-generic and typed via Parameters<>. None report
-  // a dirty id — a query result names only `ROOT_QUERY` while normalizing into
-  // any number of entities, so change detection scans the whole cache instead.
-  cache.write = function <
-    TData = unknown,
-    TVariables extends OperationVariables = OperationVariables,
-  >(
-    writeOptions: Cache.WriteOptions<TData, TVariables>,
-  ): Reference | undefined {
-    const result = originalWrite(writeOptions);
-    afterRootWrite();
-    return result;
-  };
-
-  cache.evict = function (...args: Parameters<typeof originalEvict>) {
-    const result = originalEvict(...args);
-    afterRootWrite();
-    return result;
-  };
-
-  cache.modify = function <
-    Entity extends Record<string, unknown> = Record<string, unknown>,
-  >(options: Cache.ModifyOptions<Entity>): boolean {
-    const result = originalModify(options);
-    afterRootWrite();
-    return result;
-  };
-
-  // No forced `resetResultCache`: an evict already invalidates every read of
-  // the entity. Verified: #apollo-gc-needs-no-result-cache-reset-to-drop-evicted-entities
-  cache.gc = function (gcOptions?: { resetResultCache?: boolean }) {
-    const result = originalGc(gcOptions);
-    afterRootWrite();
-    return result;
-  };
+  onCacheWrite(cache, afterRootWrite);
 
   logger.info('✅ Apollo: Cache persistence enabled');
 }

@@ -197,7 +197,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         <ShoppingListDetailsStep
           shoppingListId={shoppingListId}
           prefilledItemName={prefilledItemName}
-          refetch={() => Promise.resolve(suggestionsResult.refetch())}
           onClose={goBack}
           onSuccess={handleAddDetailsSuccess}
         />

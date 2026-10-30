@@ -5,15 +5,17 @@
  * targets `itemsConnection` and tells variants apart by `storeFieldName`.
  */
 
-import type { ApolloCache } from '@apollo/client';
+import type { ApolloCache, Reference } from '@apollo/client';
 import {
   type ConnectionData,
   createRemoveFromParentConnectionUpdater,
   safeEvictMany,
 } from '#/apollo/utils/cacheUpdaters';
+import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import type { ShoppingList } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { Connections_ListCountersFragmentDoc } from './connections.generated';
+import { readIsPurchased } from './purchase';
 
 type ListCounter = keyof Pick<
   ShoppingList,
@@ -120,12 +122,11 @@ export const removeFromShoppingListItemsConnection =
     'ShoppingListItem',
   );
 
-/** Clear every item of one purchase status from the cache in a single write. */
-function clearItemsFromCache(
+/** Clear ALL purchased items from cache in a single write. */
+export function clearAllPurchasedItemsFromCache(
   cache: ApolloCache,
   listId: string,
   itemIds: string[],
-  isPurchased: boolean,
 ): void {
   const parentCacheId = cache.identify({
     __typename: 'ShoppingList',
@@ -141,11 +142,7 @@ function clearItemsFromCache(
         existing: ConnectionData | undefined,
         { storeFieldName },
       ) {
-        if (
-          !matchesFilter(storeFieldName, 'isPurchased', isPurchased) ||
-          !existing
-        )
-          return existing;
+        if (!isPurchasedVariant(storeFieldName) || !existing) return existing;
         // Remove exactly the ids the mutation was given, NOT the whole
         // connection. The list is paginated, so `itemIds` is what was loaded
         // at tap time and the server clears only those — emptying the
@@ -169,13 +166,11 @@ function clearItemsFromCache(
           ),
         };
       },
-      ...(isPurchased && {
-        // Subtracted, not zeroed, for the same reason as the edges above: only
-        // the ids that were sent are gone.
-        completedItems(existing: number = 0) {
-          return Math.max(0, existing - itemIds.length);
-        },
-      }),
+      // Subtracted, not zeroed, for the same reason as the edges above: only
+      // the ids that were sent are gone.
+      completedItems(existing: number = 0) {
+        return Math.max(0, existing - itemIds.length);
+      },
       totalItems(existing: number = 0) {
         return Math.max(0, existing - itemIds.length);
       },
@@ -188,29 +183,12 @@ function clearItemsFromCache(
   );
 }
 
-/** Clear ALL purchased items from cache. */
-export function clearAllPurchasedItemsFromCache(
-  cache: ApolloCache,
-  listId: string,
-  itemIds: string[],
-): void {
-  clearItemsFromCache(cache, listId, itemIds, true);
-}
-
-/** Clear ALL unpurchased items from cache. */
-export function clearAllUnpurchasedItemsFromCache(
-  cache: ApolloCache,
-  listId: string,
-  itemIds: string[],
-): void {
-  clearItemsFromCache(cache, listId, itemIds, false);
-}
-
 function updateItemsConnectionForPurchaseStatusChange(
   cache: ApolloCache,
   listId: string,
   itemId: string,
   movingToPurchased: boolean,
+  { countsSettled = false }: { countsSettled?: boolean } = {},
 ): void {
   try {
     const parentCacheId = cache.identify({
@@ -238,13 +216,17 @@ function updateItemsConnectionForPurchaseStatusChange(
           if (!existing?.edges) return existing;
           const edges = existing.edges;
 
-          const removeItemEdges = () => ({
-            ...existing,
-            edges: edges.filter(
+          const removeItemEdges = () => {
+            const kept = edges.filter(
               edge => readField<string>('id', edge.node) !== itemId,
-            ),
-            totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
-          });
+            );
+            if (countsSettled && kept.length === edges.length) return existing;
+            return {
+              ...existing,
+              edges: kept,
+              totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
+            };
+          };
 
           const addItemEdge = () => {
             const alreadyExists = edges.some(
@@ -278,23 +260,25 @@ function updateItemsConnectionForPurchaseStatusChange(
 
           return existing;
         },
-        completedItems(existing: number = 0) {
-          return nextCompleted(existing);
-        },
-        // Keep the derived stats in sync with the new completedItems so the
-        // progress header doesn't go stale until the next refetch.
-        remainingItems(existing: number, { readField }) {
-          const total = readField<number>('totalItems');
-          const completed = readField<number>('completedItems');
-          if (total === undefined || completed === undefined) return existing;
-          return Math.max(0, total - nextCompleted(completed));
-        },
-        completionRate(existing: number, { readField }) {
-          const total = readField<number>('totalItems');
-          const completed = readField<number>('completedItems');
-          if (total === undefined || completed === undefined) return existing;
-          return total > 0 ? nextCompleted(completed) / total : 0;
-        },
+        ...(!countsSettled && {
+          completedItems(existing: number = 0) {
+            return nextCompleted(existing);
+          },
+          // Keep the derived stats in sync with the new completedItems so the
+          // progress header doesn't go stale until the next refetch.
+          remainingItems(existing: number, { readField }) {
+            const total = readField<number>('totalItems');
+            const completed = readField<number>('completedItems');
+            if (total === undefined || completed === undefined) return existing;
+            return Math.max(0, total - nextCompleted(completed));
+          },
+          completionRate(existing: number, { readField }) {
+            const total = readField<number>('totalItems');
+            const completed = readField<number>('completedItems');
+            if (total === undefined || completed === undefined) return existing;
+            return total > 0 ? nextCompleted(completed) / total : 0;
+          },
+        }),
       },
     });
   } catch (error) {
@@ -321,6 +305,157 @@ export function moveShoppingListItemToUnpurchased(
   item: { id: string },
 ): void {
   updateItemsConnectionForPurchaseStatusChange(cache, listId, item.id, false);
+}
+
+/**
+ * Moves an answered row's edge between the variants. The answer states the
+ * list's counts, and a read may have moved the row already, so this counts
+ * nothing and takes out only an edge it finds.
+ */
+export function moveAnsweredShoppingListItem(
+  cache: ApolloCache,
+  listId: string,
+  itemId: string,
+  isPurchased: boolean,
+): void {
+  updateItemsConnectionForPurchaseStatusChange(
+    cache,
+    listId,
+    itemId,
+    isPurchased,
+    { countsSettled: true },
+  );
+}
+
+const withoutEdges =
+  (rows: ReadonlySet<string | undefined>) =>
+  (existing: ConnectionData | undefined) => {
+    if (!existing?.edges) return existing;
+    const edges = existing.edges.filter(edge => !rows.has(edge.node.__ref));
+    const removed = existing.edges.length - edges.length;
+    if (removed === 0) return existing;
+    return {
+      ...existing,
+      edges,
+      totalCount: Math.max(0, (existing.totalCount ?? 0) - removed),
+    };
+  };
+
+/** The list's counters without some rows; a count the cache lacks stays absent. */
+function countersWithout(
+  counters: ListCounters,
+  rows: number,
+  purchased: number,
+): Partial<Record<ListCounter, () => number>> {
+  const next: ListCounters = {};
+  if (counters.totalItems !== undefined) {
+    next.totalItems = Math.max(0, counters.totalItems - rows);
+  }
+  if (counters.completedItems !== undefined) {
+    next.completedItems = Math.max(0, counters.completedItems - purchased);
+  }
+  const { totalItems, completedItems } = next;
+  if (totalItems !== undefined && completedItems !== undefined) {
+    next.remainingItems = Math.max(0, totalItems - completedItems);
+    next.completionRate = totalItems > 0 ? completedItems / totalItems : 0;
+  }
+  const fields: Partial<Record<ListCounter, () => number>> = {};
+  for (const field of LIST_COUNTERS) {
+    const value = next[field];
+    if (value !== undefined) fields[field] = () => value;
+  }
+  return fields;
+}
+
+/**
+ * Takes rows out of a list from a layer, where `evict` leaves a row the server
+ * holds: deleting its fields hides it. A row already hidden counts nothing, so
+ * a rebuild changes nothing.
+ */
+export function hideShoppingListRows(
+  cache: ApolloCache,
+  listId: string,
+  ids: readonly string[],
+): void {
+  const rows = ids
+    .map(id => ({ __typename: 'ShoppingListItem', id }))
+    .filter(row => isHeld(cache, row));
+  if (rows.length === 0) return;
+  const listCacheId = cache.identify({
+    __typename: 'ShoppingList',
+    id: listId,
+  });
+  if (!listCacheId) return;
+
+  const purchased = rows.filter(({ id }) => readIsPurchased(cache, id)).length;
+  cache.modify({
+    id: listCacheId,
+    fields: {
+      itemsConnection: withoutEdges(
+        new Set(rows.map(row => cache.identify(row))),
+      ),
+      ...countersWithout(
+        readListCounters(cache, listCacheId),
+        rows.length,
+        purchased,
+      ),
+    },
+  });
+  for (const row of rows) {
+    cache.modify({
+      id: cache.identify(row),
+      fields: (_value, { DELETE }) => DELETE,
+    });
+  }
+}
+
+/** Removes answered rows from the server's data; the answer states the counts. */
+export function dropShoppingListRows(
+  cache: ApolloCache,
+  listId: string,
+  ids: readonly string[],
+): void {
+  const rows = ids.map(id => ({ typename: 'ShoppingListItem', id }));
+  cache.modify({
+    id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+    fields: {
+      itemsConnection: withoutEdges(
+        new Set(
+          ids.map(id => cache.identify({ __typename: 'ShoppingListItem', id })),
+        ),
+      ),
+    },
+  });
+  safeEvictMany(cache, rows);
+}
+
+/** Puts the rows still to buy, the one variant ordered by `sortOrder`, in order. */
+export function sortShoppingListRows(cache: ApolloCache, listId: string): void {
+  cache.modify({
+    id: cache.identify({ __typename: 'ShoppingList', id: listId }),
+    fields: {
+      itemsConnection(
+        existing: ConnectionData | undefined,
+        { storeFieldName, readField },
+      ) {
+        if (!isUnpurchasedVariant(storeFieldName)) return existing;
+        const keyOf = (node: Reference | undefined) => ({
+          sortOrder: (node ? readField<string>('sortOrder', node) : '') ?? '',
+          id: (node ? readField<string>('id', node) : '') ?? '',
+        });
+        return {
+          ...existing,
+          edges: [...(existing?.edges ?? [])].sort((a, b) => {
+            const first = keyOf(readField<Reference>('node', a));
+            const second = keyOf(readField<Reference>('node', b));
+            if (first.sortOrder < second.sortOrder) return -1;
+            if (first.sortOrder > second.sortOrder) return 1;
+            return first.id.localeCompare(second.id);
+          }),
+        };
+      },
+    },
+  });
 }
 
 /**

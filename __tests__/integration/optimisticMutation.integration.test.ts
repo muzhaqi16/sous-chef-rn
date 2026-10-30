@@ -112,6 +112,7 @@ function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
     id: cache.identify({ __typename: 'ShoppingListItem', id: ITEM_ID })!,
     fragment: ShoppingListItemDisplayFragmentDoc,
     fragmentName: 'ShoppingListItemDisplayFragment',
+    optimistic: true,
   });
   return item?.purchaseInfo?.isPurchased;
 }

@@ -40,7 +40,7 @@ import {
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { removeFromShoppingListItemsCache } from '#features/shoppingList/hooks/mutations/utils';
+import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const mockedSchema = addMocksToSchema({
@@ -195,7 +195,7 @@ describe('event envelope written to the cache after a local delete', () => {
   it('an evicting removal drops the edge too, so the stub leaves the list complete', async () => {
     const { cache, itemId } = await seedList();
 
-    removeFromShoppingListItemsCache(cache, 'list-1', itemId, {
+    removeFromShoppingListItemsConnection(cache, 'list-1', itemId, {
       evictItem: true,
     });
     writeShoppingEvent(cache, itemId);

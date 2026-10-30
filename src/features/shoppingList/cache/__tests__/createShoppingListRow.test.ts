@@ -7,6 +7,7 @@ import {
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { errorService } from '#/services/errorService';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { createShoppingListRow } from '../createShoppingListRow';
 import { seedFragment } from '#/test-utils/apolloMockProvider';
 
@@ -42,10 +43,11 @@ const listCounts = (cache: ReturnType<typeof makeCache>) =>
   cache.readFragment<{ totalItems: number; remainingItems: number }>({
     id: 'ShoppingList:list-1',
     fragment: LIST,
+    optimistic: true,
   });
 
 const rowIds = (cache: ReturnType<typeof makeCache>) =>
-  Object.keys(cache.extract()).filter(key =>
+  Object.keys(cache.extract(true)).filter(key =>
     key.startsWith('ShoppingListItem:'),
   );
 
@@ -82,15 +84,17 @@ describe('createShoppingListRow', () => {
     await created;
 
     const [minted] = rowIds(cache);
-    expect(send).toHaveBeenCalledWith({
-      variables: {
-        input: {
-          shoppingListId: 'list-1',
-          items: [{ item: TYPED_MILK, id: minted?.split(':')[1] }],
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: {
+          input: {
+            shoppingListId: 'list-1',
+            items: [{ item: TYPED_MILK, id: minted?.split(':')[1] }],
+          },
         },
-      },
-      context: { localFirst: true },
-    });
+        context: expect.objectContaining({ localFirst: true }),
+      }),
+    );
   });
 
   it('names the typed item on the row before the API answers', async () => {
@@ -100,7 +104,7 @@ describe('createShoppingListRow', () => {
       data: {},
     });
     const [minted] = rowIds(cache);
-    const named = cache.extract()[minted ?? '']?.item;
+    const named = cache.extract(true)[minted ?? '']?.item;
     await created;
 
     expect(named).toEqual({ __ref: 'Item:item-minted' });
@@ -212,6 +216,7 @@ describe('createShoppingListRow', () => {
         },
       },
     }).created;
+    pendingWritesOf(cache).rebuild();
 
     expect(outcome).toMatchObject({
       outcome: 'reverted',

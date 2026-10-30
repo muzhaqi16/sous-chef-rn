@@ -194,10 +194,8 @@ describe('useToggleShoppingItem counters on a refused toggle', () => {
       await pending;
     });
 
-    // Its value is newer than the snapshot, so the revert stays relative and the
-    // list re-reads for the server's count.
+    // Dropped, the toggle leaves what the server's side wrote.
     expect(counts(cache)?.completedItems).toBe(3);
-    expect(refetch).toHaveBeenCalled();
   });
 });
 

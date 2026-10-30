@@ -32,13 +32,11 @@ import { reconcileSettingsReplay } from '#/apollo/utils/unitSystemAnswers';
 import {
   reconcileShoppingAddReplay,
   reconcileShoppingCreateReplay,
-  settleShoppingItemDelete,
 } from '#features/shoppingList/offline/replayReconcilers';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
   MoveShoppingItemToPantryDocument,
-  RemoveItemFromShoppingListDocument,
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
@@ -100,7 +98,6 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [DeletePantryDocument, settlePantryDelete],
   ...forEachBatchAdd(reconcileShoppingAddReplay),
   [CreateShoppingListDocument, reconcileShoppingCreateReplay],
-  [RemoveItemFromShoppingListDocument, settleShoppingItemDelete],
   [UpdateUserPreferencesDocument, reconcileSettingsReplay],
 ]);
 

@@ -192,7 +192,6 @@ export const ShoppingListMainContent: React.FC<
     purchasedItems: rawPurchasedItems,
     toggleItem,
     removeItem,
-    refetchItems,
   });
 
   // A tap toggles purchased with default values, no sheet; a long-press

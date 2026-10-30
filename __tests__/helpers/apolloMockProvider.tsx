@@ -8,6 +8,8 @@ import {
 import type { ApolloCache, Cache, InMemoryCache } from '@apollo/client';
 import { gql, type OperationVariables } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { onCacheWrite } from '#/apollo/utils/onCacheWrite';
 import { isRecord } from '#/utils/isRecord';
 import { SchemaLink } from '@apollo/client/link/schema';
 import { MockedProvider } from '@apollo/client/testing/react';
@@ -590,6 +592,18 @@ export function completeMockedResponse(mock: MockedResponse): MockedResponse {
   } as MockedResponse;
 }
 
+const rebuilt = new WeakSet<InMemoryCache>();
+
+/** The rebuild `createApolloClient` wires, so a pending write lies over what lands under it. */
+function rebuildOverServerWrites(cache: InMemoryCache): void {
+  if (rebuilt.has(cache)) return;
+  rebuilt.add(cache);
+  const pending = pendingWritesOf(cache);
+  onCacheWrite(cache, () => {
+    if (!pending.isApplying) pending.scheduleRebuild();
+  });
+}
+
 export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   const {
     operationMocks,
@@ -622,6 +636,7 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   // `cache` — the escape hatch is the parameter, not the default.
   // Guarded by `__tests__/apollo/testCacheIsTheProductionCache.test.ts`.
   const cache = providedCache ?? makeCache();
+  rebuildOverServerWrites(cache);
 
   // An EMPTY array is still a choice of strategy: it says "no per-operation
   // mocks", not "answer everything from the schema". Falling through hands 14

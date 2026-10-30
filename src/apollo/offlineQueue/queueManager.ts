@@ -775,6 +775,9 @@ export class QueueManager {
           : moved;
       },
     );
+    pendingWritesOf(requireApolloClient().cache).followQueue(
+      queueStore.getPendingWrites(),
+    );
     // Nothing under the minted id is replayed onto the survivor at launch:
     // the carried writes' own responses state the survivor's values.
     optimisticDataPersistence.clearEntityById(mintedId);

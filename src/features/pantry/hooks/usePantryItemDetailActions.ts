@@ -6,7 +6,6 @@ import { errorService } from '#/services/errorService';
 import { typedItemRef } from '#/utils/refInput';
 import { AddItemToShoppingListFromPantryItemDocument } from './usePantryItemDetailActions.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
-import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
@@ -127,12 +126,7 @@ export function usePantryItemDetailActions({
 
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromPantryItemDocument,
-    {
-      context: { localFirst: true },
-      // Reconcile swallows its own errors internally, so no wrap is needed here
-      // (wrapping would bail the React Compiler out of this hook).
-      update: buildAddItemsReconcileUpdate({ listId: selectedShoppingListId }),
-    },
+    { context: { localFirst: true } },
   );
 
   const { convertExpiredToWaste } = useConvertExpiredToWaste({

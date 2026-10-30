@@ -5,7 +5,6 @@ import {
   AcquisitionMethod,
   type StockAmountInput,
 } from '#/graphql/generated/schemaTypes';
-import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { refByIdOrName } from '#/utils/refInput';
@@ -66,10 +65,7 @@ export function useAddScannedItem({
 
   const [addToShoppingListMutation] = useMutation(
     BarcodeAddItemToShoppingListDocument,
-    {
-      context: { localFirst: true },
-      update: buildAddItemsReconcileUpdate({ listId: shoppingListId }),
-    },
+    { context: { localFirst: true } },
   );
 
   // A size goes only when the user gave one: one sent is kept as the user's,

@@ -32,6 +32,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { handleQueueFailure } from '../queueFailureHandler';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { QueueStatus } from '../types';
@@ -525,6 +526,38 @@ describe("a merged create's queued writes", () => {
         error: expect.objectContaining({ type: 'conflict' }),
       }),
     );
+  });
+
+  it('take their held change onto the merged entry', async () => {
+    queueShoppingAdd();
+    queueStore.addMutation(
+      makeQueuedMutation({
+        id: 'check',
+        ...queuedMutationFor(UpdateShoppingListItemDocument),
+        variables: {
+          input: {
+            id: 'minted-2',
+            version: 1,
+            purchaseTracking: { isPurchased: true },
+          },
+        },
+        pendingWrite: { id: 'held-tick', inputs: {} },
+        createdAt: NOW + 1,
+      }),
+    );
+    const pending = pendingWritesOf(mockClient.cache);
+    pending.restore(queueStore.getPendingWrites());
+    let heldWhenSent: unknown;
+    mockClient.mutate.mockResolvedValueOnce(shoppingMerge);
+    mockClient.mutate.mockImplementationOnce(() => {
+      heldWhenSent = pending.get('held-tick')?.variables.input;
+      return Promise.resolve({ data: {} });
+    });
+    const { manager } = managerWithHandlers();
+
+    await manager.processQueue();
+
+    expect(heldWhenSent).toMatchObject({ id: 'surviving-2', version: 3 });
   });
 
   it('carry a consumption and a check-off onto the merged entries', async () => {

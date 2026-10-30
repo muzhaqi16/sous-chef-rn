@@ -14,19 +14,17 @@ import type {
   ShoppingListItem,
   UpdateShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { parseStoredQuantityText } from '#/utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
-import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import {
   createShoppingListRow,
   type ShoppingRowFields,
   type ShoppingRowLine,
 } from '#features/shoppingList/cache/createShoppingListRow';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { errorService } from '#/services/errorService';
+import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from '#/i18n';
@@ -82,7 +80,7 @@ export function useShoppingListItemWrites(
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const { data, refetch } = useQuery(
+  const { data } = useQuery(
     ShoppingListItemForEditDocument,
     itemId ? { variables: { id: itemId } } : skipToken,
   );
@@ -101,11 +99,7 @@ export function useShoppingListItemWrites(
       ? itemFragmentResult.data
       : null;
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    // Reconcile the server response with the item written into the cache before
-    // the create fired.
-    update: buildAddItemsReconcileUpdate({ listId }),
-  });
+  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
 
   const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
     context: { localFirst: true },
@@ -137,45 +131,21 @@ export function useShoppingListItemWrites(
     input: UpdateShoppingListItemInput,
     onConflictRefresh: () => void,
   ): Promise<boolean> => {
-    // Local-first: the edit shows at once and survives a restart while queued.
-    const fields = localItemFields(input);
-    writeEntityFields(
-      client.cache,
-      { __typename: 'ShoppingListItem', id: input.id },
-      fields,
-    );
-    const clearPersisted = optimisticDataPersistence.trackFields(
-      'ShoppingListItem',
-      input.id,
-      fields,
-    );
-
+    const inputs: UpdateRowInputs = { fields: localItemFields(input) };
     // A refusal naming a field gets that field's copy: this mutation carries
     // brand, net weight, unit and storage in one call.
-    const settled = await settleMutation(
-      () =>
-        updateItemMutation({
-          variables: { input },
-          onCompleted: result => {
-            if (appliedPayload(result)) clearPersisted();
-          },
+    const settled = await pendingWritesOf(client.cache).send(
+      UpdateShoppingListItemDocument,
+      { input },
+      write =>
+        settleMutation(() => updateItemMutation(write), {
+          document: UpdateShoppingListItemDocument,
+          fallback: t('shoppingListScreens.serverNotUpdated', {
+            action: t('shoppingListScreens.updated'),
+          }),
+          onConflictRefresh,
         }),
-      {
-        document: UpdateShoppingListItemDocument,
-        fallback: t('shoppingListScreens.serverNotUpdated', {
-          action: t('shoppingListScreens.updated'),
-        }),
-        onConflictRefresh,
-        // The server still holds the item as it was; re-reading restores it.
-        onFailed: () => {
-          clearPersisted();
-          void refetch().catch(error =>
-            errorService.reportError(error, {
-              operation: 'ShoppingListItemWrites.refetch',
-            }),
-          );
-        },
-      },
+      inputs,
     );
     return settled.status !== 'failed';
   };

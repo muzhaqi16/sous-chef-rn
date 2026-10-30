@@ -106,7 +106,7 @@ export function useCopyShoppingList(fallbackErrorMessage: string) {
       unitId: display.unitId,
     });
     try {
-      addLocalShoppingListItem(cache, listId, row);
+      addLocalShoppingListItem(cache, listId, row, new Date().toISOString());
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Copy shopping list (optimistic)',

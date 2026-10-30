@@ -6,7 +6,7 @@ import { carriesListTotals } from '#features/shoppingList/cache/items';
 import { addNewItemToShoppingListCache } from '#features/shoppingList/cache/connections';
 import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
-import { adoptServerEntityId, safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
 
@@ -115,15 +115,3 @@ function settleReplayedLines(
     adopt?.({ mintedId, survivingId: item.id, version: item.version });
   }
 }
-
-/**
- * An applied delete answers with its row's `{ id }`, which re-creates the entity
- * the local removal evicted; it goes again. A converged replay answers `null`.
- */
-export const settleShoppingItemDelete: Reconciler = (cache, variables) => {
-  const input: unknown = variables.input;
-  if (!isRecord(input)) return;
-  if (typeof input.id === 'string') {
-    safeEvict(cache, 'ShoppingListItem', input.id);
-  }
-};

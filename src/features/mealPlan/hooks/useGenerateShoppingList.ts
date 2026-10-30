@@ -316,7 +316,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       itemId: line.item.itemId,
     });
     try {
-      addLocalShoppingListItem(cache, listId, row);
+      addLocalShoppingListItem(cache, listId, row, new Date().toISOString());
     } catch (cacheError) {
       errorService.reportError(cacheError, {
         operation: 'Generate shopping list (optimistic)',

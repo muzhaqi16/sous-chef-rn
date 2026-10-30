@@ -13,13 +13,15 @@ import { generateId } from '#/utils/generateId';
 import { isRecord } from '#/utils/isRecord';
 import { LOCAL_WRITES } from './localWriteRegistry';
 import { readFenceOf } from './readFence';
-import type { LocalWriteTable, PendingWrite } from './types';
+import type { LocalInputs, LocalWriteTable, PendingWrite } from './types';
 
 const REBUILD_WINDOW_MS = 50;
 
 /** What `send` hands the mutation: a replay reads the same context off its entry. */
-export interface LocalWriteSend {
-  variables: OperationVariables;
+export interface LocalWriteSend<
+  TVariables extends OperationVariables = OperationVariables,
+> {
+  variables: TVariables;
   context: { localFirst: true; pendingWriteId: string };
   /** Masking applies only to what `mutate` returns; a commit reads the whole answer. */
   update: (cache: ApolloCache, result: { data?: unknown }) => void;
@@ -69,7 +71,11 @@ export class PendingWrites {
   }
 
   /** Never inside `cache.batch`, which undoes a layer added in its `update`. */
-  begin(document: DocumentNode, variables: OperationVariables): PendingWrite {
+  begin(
+    document: DocumentNode,
+    variables: OperationVariables,
+    given: LocalInputs = {},
+  ): PendingWrite {
     const operationName = operationNameOf(document);
     const local = this.table[operationName];
     if (!local) {
@@ -80,7 +86,7 @@ export class PendingWrites {
       operationName,
       document,
       variables,
-      inputs: local.capture?.(this.cache, variables) ?? {},
+      inputs: { ...given, ...local.capture?.(this.cache, variables) },
     };
     this.writes.push(write);
     this.layered = true;
@@ -97,14 +103,16 @@ export class PendingWrites {
    * before its row's create, or at a version the earlier write moved. A write
    * on a row whose create was refused is refused with it, and only that
    * create's failure is reported. `settle` runs the mutation and reads its
-   * outcome. Queued, the write stays pending and the queue carries it.
+   * outcome. Queued, the write stays pending and the queue carries it. `given`
+   * is what only the caller knows, such as a new row's display.
    */
-  async send<TSettled extends Settled<unknown>>(
+  async send<TData, TVariables extends OperationVariables>(
     document: DocumentNode,
-    variables: OperationVariables,
-    settle: (send: LocalWriteSend) => Promise<TSettled>,
-  ): Promise<TSettled | Settled<unknown>> {
-    const write = this.begin(document, variables);
+    variables: TVariables,
+    settle: (send: LocalWriteSend<TVariables>) => Promise<Settled<TData>>,
+    given?: LocalInputs,
+  ): Promise<Settled<TData>> {
+    const write = this.begin(document, variables, given);
     const { subjectIds, mintedIds } = queuedSubject({
       mutation: document,
       variables,
@@ -134,7 +142,7 @@ export class PendingWrites {
       this.sending.delete(write.id);
       this.drop(write.id);
       answer({ settled: refused.settled, data: undefined });
-      return refused.settled;
+      return { ...refused.settled, data: undefined };
     }
 
     let data: unknown;
@@ -192,6 +200,21 @@ export class PendingWrites {
     const gone = [...this.queued].filter(id => !holding.has(id));
     if (gone.length === 0) return;
     gone.forEach(id => this.remove(id));
+    this.rebuild();
+  }
+
+  /**
+   * The queue moved its writes onto a merged row, or let some go: the layers
+   * show what it will send, and a queued write it dropped goes with it.
+   */
+  followQueue(stored: readonly PendingWrite[]): void {
+    const carried = new Map(stored.map(({ id, variables }) => [id, variables]));
+    const gone = [...this.queued].filter(id => !carried.has(id));
+    gone.forEach(id => this.remove(id));
+    this.writes = this.writes.map(write => ({
+      ...write,
+      variables: carried.get(write.id) ?? write.variables,
+    }));
     this.rebuild();
   }
 
@@ -333,11 +356,11 @@ function writeAnswerAgain(
 }
 
 /** Variables moved onto the version an earlier write to the subject returned. */
-function onReturnedVersion(
-  variables: OperationVariables,
+function onReturnedVersion<TVariables extends OperationVariables>(
+  variables: TVariables,
   subjectIds: readonly string[],
   landed: readonly Answered[],
-): OperationVariables {
+): TVariables {
   const { input } = variables;
   const [subject] = subjectIds;
   if (!isRecord(input) || versionOf(input) === undefined || !subject) {

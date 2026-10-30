@@ -51,7 +51,6 @@ const renderStep = (
   render(
     <ShoppingListDetailsStep
       shoppingListId="list-1"
-      refetch={jest.fn().mockResolvedValue(undefined)}
       onClose={jest.fn()}
       onSuccess={jest.fn()}
       {...overrides}

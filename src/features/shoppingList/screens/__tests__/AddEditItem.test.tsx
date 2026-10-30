@@ -1246,8 +1246,6 @@ describe('AddEditItem', () => {
     await drainTimers();
 
     expect(alertService.alert).toHaveBeenCalledTimes(1);
-    // The refusal's refetch re-delivered the stored item.
-    expect(stored.fired).toHaveLength(2);
     expect(
       screen.getByTestId(shoppingListTestIDs.editItemForm.nameInput).props
         .value,

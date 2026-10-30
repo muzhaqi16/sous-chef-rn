@@ -10,10 +10,7 @@ import {
   createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
 import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
-import {
-  reconcileShoppingAddReplay,
-  settleShoppingItemDelete,
-} from '../replayReconcilers';
+import { reconcileShoppingAddReplay } from '../replayReconcilers';
 import { withdrawAddedShoppingListItems } from '../queueWithdrawals';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
@@ -99,6 +96,7 @@ function mint(cache: InMemoryCache, id: string, itemName: string) {
       shoppingListId: 'list-1',
       itemName,
     }),
+    '2026-10-30T10:00:00.000Z',
   );
 }
 
@@ -233,6 +231,7 @@ describe('a typed name the service matched to an item it holds', () => {
         itemName: 'Cubanelle pepper',
         itemId: 'item-minted',
       }),
+      '2026-10-30T10:00:00.000Z',
     );
     return cache;
   }
@@ -365,26 +364,5 @@ describe('a delete whose answer names the deleted row', () => {
     stub(cache);
 
     expect(readList(cache)?.rows).toEqual([['row-bread', 1]]);
-  });
-
-  it('takes the stub out again on a replay after an offline cold start', () => {
-    const before = removedLocally();
-    const cache = makeCache();
-    cache.restore(before.extract());
-    stub(cache);
-
-    settleShoppingItemDelete(
-      cache,
-      { input: { id: 'row-soap' } },
-      {
-        removeItemFromShoppingList: {
-          __typename: 'RemoveItemFromShoppingListPayload',
-          shoppingListItem: { id: 'row-soap' },
-        },
-      },
-    );
-
-    expect(readList(cache)?.rows).toEqual([['row-bread', 1]]);
-    expect(cache.extract()).not.toHaveProperty('ShoppingListItem:row-soap');
   });
 });

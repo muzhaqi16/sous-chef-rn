@@ -7,7 +7,7 @@ export function useShoppingListItemMutations(
   listId: string | null | undefined,
   refetch: () => Promise<unknown>,
 ) {
-  const { removeItem } = useRemoveShoppingItem({ listId, refetch });
+  const { removeItem } = useRemoveShoppingItem({ listId });
   const { toggleItem, recordPurchase } = useToggleShoppingItem({
     listId,
     refetch,

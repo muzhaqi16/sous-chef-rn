@@ -5,7 +5,6 @@ import {
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import {
@@ -56,12 +55,9 @@ function setup(
       }),
       fragment: UseMoveToAisleModal_ItemFragmentDoc,
       fragmentName: 'useMoveToAisleModal_item',
+      optimistic: true,
     });
-  const readPersisted = () => {
-    optimisticDataPersistence.flush();
-    return optimisticDataPersistence.get('ShoppingListItem', 'line-1');
-  };
-  return { result, update, moveTo, readLine, readPersisted };
+  return { result, update, moveTo, readLine };
 }
 
 const queued: MockDataFor<typeof UpdateShoppingListItemDocument> = {
@@ -70,7 +66,6 @@ const queued: MockDataFor<typeof UpdateShoppingListItemDocument> = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  optimisticDataPersistence.clearAll();
 });
 
 describe('useMoveToAisleModal', () => {
@@ -86,16 +81,12 @@ describe('useMoveToAisleModal', () => {
 
   // Queued offline, the line must stay in its new aisle through a restart.
   it('moves the line at once, and sends its own aisle on the line update', async () => {
-    const { result, update, moveTo, readLine, readPersisted } = setup(queued);
+    const { result, update, moveTo, readLine } = setup(queued);
 
     await moveTo(StoreDepartment.Frozen);
 
     expect(result.current.visible).toBe(false);
     expect(readLine()).toMatchObject({
-      storeDepartment: StoreDepartment.Frozen,
-      storeDepartmentOverride: StoreDepartment.Frozen,
-    });
-    expect(readPersisted()).toEqual({
       storeDepartment: StoreDepartment.Frozen,
       storeDepartmentOverride: StoreDepartment.Frozen,
     });
@@ -141,7 +132,7 @@ describe('useMoveToAisleModal', () => {
   });
 
   it('returns the line to its aisle when the server refuses the move', async () => {
-    const { moveTo, readLine, readPersisted } = setup({
+    const { moveTo, readLine } = setup({
       updateShoppingListItem: { __typename: 'ValidationError' },
     });
 
@@ -152,6 +143,5 @@ describe('useMoveToAisleModal', () => {
       storeDepartmentOverride: null,
     });
     // Both fields it kept for a restart are let go.
-    expect(readPersisted()).toEqual({});
   });
 });

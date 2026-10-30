@@ -28,6 +28,7 @@ describe('addLocalShoppingListItem: the row', () => {
       cache,
       fields.shoppingListId,
       createLocalShoppingListItem('c-1', fields),
+      '2026-10-30T10:00:00.000Z',
     );
     return cache.readFragment({
       id: 'ShoppingListItem:c-1',

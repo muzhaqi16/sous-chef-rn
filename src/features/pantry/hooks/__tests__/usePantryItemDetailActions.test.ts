@@ -12,7 +12,6 @@ import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.genera
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import { alertService } from '#/services/alertService';
 import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
-import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 
 const mockNavigateTo = {
@@ -620,11 +619,6 @@ describe('usePantryItemDetailActions', () => {
         await result.current.handleAddToShoppingList();
       });
 
-      expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-        expect.anything(),
-        'list-1',
-        [expect.any(String)],
-      );
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
         expect.any(String),
@@ -660,7 +654,6 @@ describe('usePantryItemDetailActions', () => {
         await result.current.handleAddToShoppingList();
       });
 
-      expect(withdrawShoppingListItems).not.toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(result.current.addToListStatus).toBe('success');
     });

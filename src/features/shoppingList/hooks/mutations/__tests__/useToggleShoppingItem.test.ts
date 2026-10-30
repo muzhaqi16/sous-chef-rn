@@ -341,7 +341,7 @@ describe('useToggleShoppingItem — toggleItem', () => {
     expect(moveShoppingListItemToPurchased).toHaveBeenCalledWith(
       expect.anything(),
       'list-1',
-      { id: 'item-1' },
+      expect.objectContaining({ id: 'item-1' }),
     );
     expect(moveShoppingListItemToUnpurchased).not.toHaveBeenCalled();
     expect(mockAlert).not.toHaveBeenCalled();
@@ -381,7 +381,7 @@ describe('useToggleShoppingItem — toggleItem', () => {
     expect(moveShoppingListItemToUnpurchased).toHaveBeenCalledWith(
       expect.anything(),
       'list-1',
-      { id: 'item-1' },
+      expect.objectContaining({ id: 'item-1' }),
     );
     expect(moveShoppingListItemToPurchased).not.toHaveBeenCalled();
   });
@@ -546,7 +546,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     expect(moveShoppingListItemToPurchased).toHaveBeenCalledWith(
       expect.anything(),
       'list-1',
-      { id: 'item-1' },
+      expect.objectContaining({ id: 'item-1' }),
     );
     expect(readPurchased(cache)).toBe(true);
     // The mutation carried the cached snapshot version + entered amounts.
@@ -656,12 +656,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
         purchaseTracking: { isPurchased: true, purchasedQuantity: 2 },
       },
     });
-    // The resolved error-union rejection reverts the optimistic purchase.
-    expect(moveShoppingListItemToUnpurchased).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      { id: 'item-1' },
-    );
+    // The resolved error-union rejection drops the held purchase.
     expect(readPurchased(cache)).toBe(false);
     expect(mockAlert).toHaveBeenCalledTimes(1);
   });
@@ -765,7 +760,11 @@ describe('the stocked stamp follows the purchased flag', () => {
         movedToPantryAt: string | null;
         purchasedQuantity: number | null;
       };
-    }>({ id: 'ShoppingListItem:item-1', fragment: RECORD })?.purchaseInfo;
+    }>({
+      id: 'ShoppingListItem:item-1',
+      fragment: RECORD,
+      optimistic: true,
+    })?.purchaseInfo;
 
   it('clears the stamp when the line is un-purchased', async () => {
     const cache = seedStockedItem();

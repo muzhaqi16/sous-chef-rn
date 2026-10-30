@@ -1,12 +1,10 @@
 /**
- * Local-first: cached PERMANENTLY before firing, as an `optimisticResponse` rolls
- * back on the queue's null result; the minted `input.id` makes a replay converge.
- * A merge into an existing catalog row answers its id: adopt it, evict the cuid.
+ * Local-first: the row is held until the server answers; the minted `input.id`
+ * makes a replay converge.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
@@ -16,37 +14,18 @@ import {
   parseDecimalInput,
 } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { errorService } from '#/services/errorService';
 import { refByIdOrName, typedItemRef } from '#/utils/refInput';
 import { lineUnitFields } from '#features/shoppingList/utils/lineUnit';
 
 interface UseAddShoppingItemOptions {
   listId: string | null | undefined;
-  refetch: () => Promise<unknown>;
 }
 
-export function useAddShoppingItem({
-  listId,
-  refetch,
-}: UseAddShoppingItemOptions) {
+export function useAddShoppingItem({ listId }: UseAddShoppingItemOptions) {
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    update: buildAddItemsReconcileUpdate({
-      listId,
-      wrap: {
-        operation: 'Cache update failed for addItem, will refetch:',
-        refetch: () => {
-          void refetch().catch(error =>
-            errorService.reportError(error, {
-              operation: 'AddShoppingItem.refetch',
-            }),
-          );
-        },
-      },
-    }),
-  });
+  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
 
   /** `true` once the item is added or its create is queued; `false` when refused. */
   const addItem = async (input: ShoppingListItemInput): Promise<boolean> => {

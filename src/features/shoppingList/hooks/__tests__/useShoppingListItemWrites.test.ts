@@ -14,7 +14,6 @@ import {
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ShoppingListItemForEditDocument } from '../useShoppingListItemWrites.generated';
 import { toastService } from '#/services/toastService';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { useShoppingListItemWrites } from '../useShoppingListItemWrites';
 
@@ -43,11 +42,6 @@ type Item = {
 };
 
 const EDIT = { itemName: 'Oat milk', notes: 'organic' };
-
-const readPersisted = () => {
-  optimisticDataPersistence.flush();
-  return optimisticDataPersistence.get('ShoppingListItem', 'item-1');
-};
 
 function setup(outcome: 'applied' | 'refused') {
   const cache = seedCache([
@@ -92,24 +86,23 @@ function setup(outcome: 'applied' | 'refused') {
     cache.readFragment<Item>({
       id: cache.identify({ __typename: 'ShoppingListItem', id: 'item-1' }),
       fragment: ITEM,
+      optimistic: true,
     });
   return { ...rendered, itemQuery, readItem };
 }
 
 beforeEach(() => {
   jest.clearAllMocks();
-  optimisticDataPersistence.clearAll();
   jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
 });
 
 describe('useShoppingListItemWrites.updateItem', () => {
-  it('writes the edit into the cache before the server answers, and records it for a restart', async () => {
+  it('shows the edit before the server answers, for a restart', async () => {
     const { result, readItem } = setup('applied');
     // Loaded, not only sent: a refetch of a query still in flight is deduplicated.
     await waitFor(() => expect(result.current.itemData).not.toBeNull());
 
     let written: Item | null = null;
-    let persisted: Record<string, unknown> = {};
     await act(async () => {
       const pending = result.current.updateItem(
         { id: 'item-1', version: 3, quantity: '1 1/2', ...EDIT },
@@ -117,7 +110,6 @@ describe('useShoppingListItemWrites.updateItem', () => {
       );
       // Offline nothing else lands: the queue resolves the write with no payload.
       written = readItem();
-      persisted = readPersisted();
       await pending;
     });
 
@@ -126,7 +118,6 @@ describe('useShoppingListItemWrites.updateItem', () => {
       quantity: 1.5,
       quantityInput: '1 1/2',
     });
-    expect(persisted).toMatchObject(EDIT);
   });
 
   it('reads the API text it sends as API text on a comma device', async () => {
@@ -147,11 +138,10 @@ describe('useShoppingListItemWrites.updateItem', () => {
     expect(written).toMatchObject({ quantity: 1.25, quantityInput: '1.250' });
   });
 
-  it('drops the recorded edit and re-reads the item when the server refuses it', async () => {
-    const { result, itemQuery } = setup('refused');
-    // Loaded, not only sent: a refetch of a query still in flight is deduplicated.
+  it('shows the item as it was when the server refuses the edit', async () => {
+    const { result, readItem } = setup('refused');
     await waitFor(() => expect(result.current.itemData).not.toBeNull());
-    const readsBefore = itemQuery.fired.length;
+    const before = readItem() ?? {};
 
     let updated: boolean | undefined;
     await act(async () => {
@@ -162,11 +152,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
     });
 
     expect(updated).toBe(false);
-    expect(readPersisted()).toEqual({});
-    await waitFor(
-      () => expect(itemQuery.fired.length).toBeGreaterThan(readsBefore),
-      { timeout: 3000 },
-    );
+    expect(readItem()).toMatchObject(before);
   });
 });
 
@@ -273,11 +259,12 @@ describe('useShoppingListItemWrites.createItem, for a typed name', () => {
     return { cache, add, ...rendered };
   }
 
-  const lineOf = (cache: ReturnType<typeof seedCache>) => {
-    const [key] = Object.keys(cache.extract()).filter(id =>
+  const lineOf = (cache: ReturnType<typeof seedCache>, optimistic = false) => {
+    const stored = cache.extract(optimistic);
+    const [key] = Object.keys(stored).filter(id =>
       id.startsWith('ShoppingListItem:'),
     );
-    return key ? cache.extract()[key] : undefined;
+    return key ? stored[key] : undefined;
   };
 
   it('re-points a typed item the API matched to one it holds', async () => {
@@ -289,7 +276,7 @@ describe('useShoppingListItemWrites.createItem, for a typed name', () => {
         { itemName: 'Cubanelle pepper', quantity: 1 },
         { item: typed, quantity: '1' },
       );
-      namedBefore = lineOf(cache)?.item;
+      namedBefore = lineOf(cache, true)?.item;
       await adding;
     });
 

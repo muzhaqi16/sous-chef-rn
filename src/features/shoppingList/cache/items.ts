@@ -13,7 +13,7 @@ import {
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM,
   NEUTRAL_LOCAL_SHOPPING_LIST_ITEM_BY_TYPE,
 } from './shoppingListItemRowNeutral.generated';
-import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
 import {
   DisplayFormat,
@@ -225,18 +225,25 @@ function heldItemDepartment(
 }
 
 /**
- * Writes the FULL display entity, its edge and recomputed stats PERMANENTLY
- * before the create fires, so an offline create survives to replay. `item.id`
- * MUST be the client-minted cuid sent as `input.id`, or the replay dupes.
+ * Writes the FULL display entity, its edge and recomputed stats, so an offline
+ * create shows on every screen. `item.id` MUST be the client-minted cuid sent
+ * as `input.id`, or the replay dupes. A row already held is the server's, with
+ * its version and its place in the totals: only its edge is written.
  */
 export function addLocalShoppingListItem(
   cache: ApolloCache,
   listId: string,
   line: LocalShoppingListItem,
+  now: string,
 ): void {
+  const item = { __typename: 'ShoppingListItem', id: line.id };
+  if (isHeld(cache, item)) {
+    addNewItemToShoppingListCache(cache, listId, item, false);
+    return;
+  }
+
   // 1. The row, complete for every screen: what the create knows, else what the
   //    cache holds (a catalog item's image, a unit's symbol), else neutral.
-  const now = new Date().toISOString();
   writeLocalEntity(cache, {
     fragment: Items_RowFragmentDoc,
     fragmentName: 'items_row',
@@ -273,7 +280,6 @@ export function addLocalShoppingListItem(
       unit: line.unitId ? { __typename: 'Unit', id: line.unitId } : null,
     },
   });
-  const item = { __typename: 'ShoppingListItem', id: line.id };
 
   const parentCacheId = cache.identify({
     __typename: 'ShoppingList',

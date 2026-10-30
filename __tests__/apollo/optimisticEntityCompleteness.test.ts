@@ -1085,6 +1085,7 @@ describe('optimistic entity completeness', () => {
           itemId: 'catalog-1',
           unitId: 'unit-2',
         }),
+        '2026-10-30T10:00:00.000Z',
       );
 
       const diff = cache.diff({
