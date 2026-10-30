@@ -4,6 +4,7 @@ import { captureOnData } from '#/test-utils/subscriptionCapture';
 import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
 import { MyShoppingListsEventsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
@@ -398,40 +399,41 @@ describe('useShoppingListSubscriptions: another device toggles a row twice', () 
 });
 
 describe('useShoppingListSubscriptions: event envelope and the cache', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('keeps the envelope out of the cache, so an event for a just-deleted row cannot re-create it', async () => {
     // The server echoes our own delete before the mutation resolves, while the
     // row is already evicted. A cacheable subscription would normalise
     // `node { id }` into a bare ShoppingListItem and leave the list query
     // incomplete — see `__tests__/apollo/subscriptionEnvelopeWrite.test.ts`.
+    jest.useFakeTimers();
     const cache = makeCache();
+    const event = jest.fn(() => ({
+      data: {
+        myShoppingListsEvents: {
+          subtype: ShoppingListSubtype.ItemsChanged,
+          mutation: MutationType.ItemRemoved,
+          listId: 'list-1',
+          originatorClientId: 'device_other',
+          actorUserId: 'user-2',
+          updatedFields: [],
+          clearedItemIds: [],
+          node: { __typename: 'ShoppingListItem', id: 'item-1' },
+        },
+      },
+    }));
     renderHookWithApollo(() => useShoppingListSubscriptions('user-1'), {
       cache,
       operationMocks: [
-        {
-          request: { query: MyShoppingListsEventsDocument },
-          result: {
-            data: {
-              myShoppingListsEvents: {
-                subtype: ShoppingListSubtype.ItemsChanged,
-                mutation: MutationType.ItemRemoved,
-                listId: 'list-1',
-                originatorClientId: 'device_other',
-                actorUserId: 'user-2',
-                updatedFields: [],
-                clearedItemIds: [],
-                node: { __typename: 'ShoppingListItem', id: 'item-1' },
-              },
-            },
-          },
-        },
+        { request: { query: MyShoppingListsEventsDocument }, result: event },
       ],
     });
 
-    // MockLink delivers the subscription result on a (real) timer.
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 20));
-    });
+    await drainTimers();
 
+    expect(event).toHaveBeenCalledTimes(1);
     expect(cache.extract()['ShoppingListItem:item-1']).toBeUndefined();
     expect(cache.extract().ROOT_SUBSCRIPTION).toBeUndefined();
   });

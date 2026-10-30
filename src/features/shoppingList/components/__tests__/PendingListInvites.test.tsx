@@ -5,6 +5,7 @@ import {
   renderWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CollaboratorRole,
   CollaboratorStatus,
@@ -23,6 +24,10 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
     throw new Error("Couldn't find a navigation object.");
   },
 }));
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 const pending = (
   edges: NonNullable<
@@ -182,6 +187,7 @@ describe('PendingListInvites', () => {
   });
 
   it('renders nothing while no invite is pending', async () => {
+    jest.useFakeTimers();
     const none = pending([]);
     renderWithApollo(
       <PendingListInvites
@@ -193,12 +199,9 @@ describe('PendingListInvites', () => {
       },
     );
 
-    await waitFor(() => expect(none.fired).toHaveLength(1));
-    // Let the empty answer land before asserting it renders nothing.
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    await drainTimers();
 
+    expect(none.fired).toHaveLength(1);
     expect(screen.queryByTestId(shoppingListTestIDs.pendingInvites)).toBeNull();
   });
 });

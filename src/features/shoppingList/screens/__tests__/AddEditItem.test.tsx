@@ -3,7 +3,6 @@
 import React from 'react';
 import type { TextInputProps } from 'react-native';
 import {
-  act,
   fireEvent,
   screen,
   userEvent,
@@ -11,6 +10,7 @@ import {
 } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { alertService } from '#/services/alertService';
 import type { AlertButton } from '#platform/presenters';
@@ -530,6 +530,7 @@ describe('AddEditItem', () => {
   // form into every test after it — which is how a case expecting an empty
   // form got one pre-filled with another test's values.
   afterEach(() => {
+    jest.useRealTimers();
     jest.restoreAllMocks();
     jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
     mockRealCounter.current = false;
@@ -1221,17 +1222,19 @@ describe('AddEditItem', () => {
   });
 
   it('keeps what the user typed when the edit is refused', async () => {
+    jest.useFakeTimers();
     const user = userEvent.setup();
-    renderWithApollo(<AddEditItem route={editRoute} />, {
-      operationMocks: [
-        buildItemForEditMock('item1'),
-        buildUpdateItemRefusedMock(),
-      ],
+    const stored = recordMock(ShoppingListItemForEditDocument, {
+      data: { shoppingListItem: buildItemForEdit('item1') },
     });
+    renderWithApollo(<AddEditItem route={editRoute} />, {
+      operationMocks: [stored.mock, buildUpdateItemRefusedMock()],
+    });
+    await drainTimers();
     const nameInput = screen.getByTestId(
       shoppingListTestIDs.editItemForm.nameInput,
     );
-    await waitFor(() => expect(nameInput.props.value).toBe('Milk'));
+    expect(nameInput.props.value).toBe('Milk');
 
     fireEvent.changeText(nameInput, 'Oat Milk');
     fireEvent.changeText(
@@ -1240,9 +1243,11 @@ describe('AddEditItem', () => {
     );
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
-    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
-    // Let the refusal's refetch re-deliver the stored item.
-    await act(() => new Promise<void>(resolve => setTimeout(resolve, 50)));
+    await drainTimers();
+
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
+    // The refusal's refetch re-delivered the stored item.
+    expect(stored.fired).toHaveLength(2);
     expect(
       screen.getByTestId(shoppingListTestIDs.editItemForm.nameInput).props
         .value,
