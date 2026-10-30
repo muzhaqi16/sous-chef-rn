@@ -21,7 +21,7 @@ if [ "$saw_ref" = 1 ] && [ "$only_tags" = 1 ]; then
   exit 0
 fi
 
-# The cheap whole-tree checks (i18n, codegen orphans, version sync, startup
+# The cheap whole-tree checks (i18n, version sync, startup
 # origin, launch-arg auth) run in pre-commit: together they cost ~0.2s, and a
 # broken locale key is worth hearing about at the commit that broke it.
 

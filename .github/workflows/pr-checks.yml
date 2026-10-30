@@ -226,9 +226,6 @@ jobs:
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
 
-      - name: Codegen orphans
-        run: node scripts/check-codegen-orphans.mjs
-
       - name: Version sync
         run: node scripts/check-version-sync.mjs
 

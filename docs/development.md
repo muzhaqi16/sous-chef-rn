@@ -173,7 +173,8 @@ npm run codegen
 Three steps run in order:
 
 1. `codegen:schema` — pulls the schema into `src/graphql/generated/schema.graphql`
-2. `graphql-codegen` — emits `*.generated.ts` next to each operation file
+2. `graphql-codegen` — emits `*.generated.ts` next to each operation file; one it no longer writes is deleted (`codegen.ts`'s
+   `beforeAllFileWrite` hook)
 3. `codegen:manifest` — regenerates `persisted-query-manifest.json`
 
 Generated files are **committed**. The pre-push hook re-runs codegen and fails
@@ -181,7 +182,6 @@ if your committed copies are stale.
 
 ```bash
 npm run codegen:watch          # regenerate on change while developing
-npm run check:codegen-orphans  # find .generated.ts files with no source .graphql
 ```
 
 `npm run lint` validates every `.graphql` operation against the pulled schema
@@ -478,7 +478,6 @@ The whole-tree gates, and where each runs:
 | Gate                                | Holds                                                                                                                                                                                                                              | Runs in               |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
 | `check-i18n`                        | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged                                                                                                                                                        | pre-commit, CI        |
-| `check-codegen-orphans`             | no `.generated.ts` without its `.graphql` source (they break `tsc`)                                                                                                                                                                | pre-commit, CI        |
 | `check-version-sync`                | `package.json`, `versionName` and every `MARKETING_VERSION` agree                                                                                                                                                                  | pre-commit, CI        |
 | `check-startup-origin`              | the startup clock is the first module Metro's output evaluates                                                                                                                                                                     | pre-commit, CI        |
 | `check-launch-arg-auth`             | no distributable build accepts an injected session                                                                                                                                                                                 | pre-commit, CI, build |
@@ -539,11 +538,11 @@ only. Detection does not depend on either.
 
 ### Git hooks (installed by husky on `npm install`)
 
-| Hook           | Runs                                                                                                                                                                                                                                                                                               |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **pre-commit** | `lint-staged --no-revert` — ESLint + Prettier + related Jest tests on staged files; a failed task never resets the shared tree — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
-| **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required                                                                                                                                                                                                                 |
-| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                                              |
+| Hook           | Runs                                                                                                                                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **pre-commit** | `lint-staged --no-revert` — ESLint + Prettier + related Jest tests on staged files; a failed task never resets the shared tree — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
+| **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required                                                                                                                                                                                        |
+| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                     |
 
 The split is by cost. The five sub-second checks run per commit so a broken
 locale key or a version drift surfaces at the commit that caused it. The five
@@ -606,14 +605,13 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 
 **Codegen**
 
-| Command                 | Description                                          |
-| ----------------------- | ---------------------------------------------------- |
-| `codegen`               | Schema pull + types + persisted query manifest       |
-| `codegen:schema`        | Schema pull only                                     |
-| `codegen:manifest`      | Persisted query manifest only                        |
-| `codegen:watch`         | Regenerate on change                                 |
-| `check:codegen-orphans` | Orphaned `.generated.ts` files                       |
-| `genenv`                | Regenerate `src/config/env.generated.ts` from `.env` |
+| Command            | Description                                          |
+| ------------------ | ---------------------------------------------------- |
+| `codegen`          | Schema pull + types + persisted query manifest       |
+| `codegen:schema`   | Schema pull only                                     |
+| `codegen:manifest` | Persisted query manifest only                        |
+| `codegen:watch`    | Regenerate on change                                 |
+| `genenv`           | Regenerate `src/config/env.generated.ts` from `.env` |
 
 **Quality**
 

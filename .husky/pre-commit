@@ -33,7 +33,6 @@ npx lint-staged --no-revert || exit 1
 # A build that accepts an injected session must never be one anyone else
 # receives. Cheap to check, and impossible to notice by reading the diff.
 node scripts/check-i18n.mjs || exit 1
-node scripts/check-codegen-orphans.mjs || exit 1
 node scripts/check-version-sync.mjs || exit 1
 node scripts/check-startup-origin.mjs || exit 1
 node scripts/check-launch-arg-auth.mjs || exit 1
