@@ -79,7 +79,7 @@ function buildOptimisticMealTemplate(
     description: input.description ?? null,
     category: input.category ?? TemplateCategory.Custom,
     durationDays: input.durationDays ?? 7,
-    defaultServings: input.defaultServings ?? 2,
+    defaultServings: input.defaultServings ?? 4,
     tags: input.tags ?? [],
     usageCount: 0,
     lastUsedAt: null,

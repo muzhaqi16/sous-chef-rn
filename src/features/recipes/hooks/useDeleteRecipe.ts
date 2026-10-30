@@ -1,6 +1,9 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeleteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import { removeMyRecipesEdge } from '#features/recipes/utils/recipeCacheWriters';
+import {
+  forgetMyRecipesLists,
+  removeMyRecipesEdge,
+} from '#features/recipes/utils/recipeCacheWriters';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
@@ -36,6 +39,8 @@ export function useDeleteRecipe() {
         document: DeleteRecipeDocument,
         fallback: t('recipes.deleteRecipeFailed'),
         removal: true,
+        // Refused, so the recipe stands: the lists re-read to show it again.
+        onFailed: () => forgetMyRecipesLists(client.cache),
       },
     );
     return settled.status !== 'failed';
