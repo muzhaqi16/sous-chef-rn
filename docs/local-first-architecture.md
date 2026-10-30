@@ -215,7 +215,10 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   - (c) it names a row an undelivered queued write changes (`getUndeliveredIds`: pending, replaying or
     parked for re-auth), as its subject or a parent (`dependencyIdsOf`). Sent at once it would overtake
     that write: an edit before the create it names, or a second write at the same base version. It
-    queues behind it (`queuedReason: 'behind-queued'`) and `drainAfterPass` sends it next;
+    queues behind it (`queuedReason: 'behind-queued'`) and `drainAfterPass` sends it next. A write
+    still in flight online is not in the queue, so an edit made while its row's create is on the wire
+    is sent at once, and can meet `NotFoundError` or a `VERSION_CONFLICT` against the local row's
+    version. That window is an open gap;
   - (d) a `localFirst` write sent online fails with a network error before any result.
 
   Offline, a mutation NOT on the allowlist fails fast with `OfflineRejectedError`, an honest immediate
