@@ -2,10 +2,21 @@ import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
 import { useReviewPromptStore } from '#store/reviewPromptStore';
 import {
+  _resetToastMoments,
+  _setToastsShowing,
+  noteTrouble,
+} from '#/services/toastService';
+import { memoryLifecycle } from '#/test-utils/memoryPlatform';
+import {
   askForReviewAfterSuccess,
+  CALM_AFTER_TROUBLE_MS,
   DAYS_BETWEEN_REQUESTS,
   isDueForReview,
+  QUIET_MS,
 } from '#/domain/reviewPrompt';
+
+// The real one: the request waits on its toasts and the trouble it has seen.
+jest.unmock('#/services/toastService');
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const NOW = Date.UTC(2026, 9, 28, 12);
@@ -69,9 +80,14 @@ describe('askForReviewAfterSuccess', () => {
       user: { ...(useStore.getState().user ?? {}), id: 'u1', onBoarded: value },
     } as Partial<ReturnType<typeof useStore.getState>>);
 
+  const after = (ms: number) => {
+    jest.advanceTimersByTime(ms);
+  };
+
   beforeEach(() => {
+    jest.useFakeTimers({ now: NOW });
+    _resetToastMoments();
     request = jest.spyOn(requirePlatform('reviewPrompt'), 'request');
-    jest.spyOn(Date, 'now').mockReturnValue(NOW);
     jest.replaceProperty(
       requirePlatform('platformInfo'),
       'appVersion',
@@ -79,34 +95,100 @@ describe('askForReviewAfterSuccess', () => {
     );
     useReviewPromptStore.setState({ ...pacing(), activeDays: [...THREE_DAYS] });
     onboarded(true);
+    memoryLifecycle().moveTo('active');
   });
 
-  afterEach(() => jest.restoreAllMocks());
+  afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
+    jest.restoreAllMocks();
+  });
 
-  it('asks the OS once the device is due, and records it', () => {
+  it('asks the OS once the toasts are quiet, and records it', () => {
     askForReviewAfterSuccess();
+    expect(request).not.toHaveBeenCalled();
+
+    after(QUIET_MS);
     expect(request).toHaveBeenCalledTimes(1);
     expect(useReviewPromptStore.getState()).toMatchObject({
-      lastRequestedAt: NOW,
+      lastRequestedAt: NOW + QUIET_MS,
       lastRequestedVersion: '4.8.7',
     });
+  });
+
+  // Its toast may carry an Undo: the OS sheet must never cover it.
+  it('waits for the success toast to go, then for quiet', () => {
+    _setToastsShowing(true);
+    askForReviewAfterSuccess();
+    after(QUIET_MS * 3);
+    expect(request).not.toHaveBeenCalled();
+
+    _setToastsShowing(false);
+    after(QUIET_MS - 1);
+    expect(request).not.toHaveBeenCalled();
+    after(1);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('starts the quiet again when another toast comes and goes', () => {
+    askForReviewAfterSuccess();
+    after(QUIET_MS - 1);
+    _setToastsShowing(true);
+    _setToastsShowing(false);
+    after(QUIET_MS - 1);
+    expect(request).not.toHaveBeenCalled();
+    after(1);
+    expect(request).toHaveBeenCalledTimes(1);
   });
 
   it('asks once, not again on the next success', () => {
     askForReviewAfterSuccess();
     askForReviewAfterSuccess();
+    after(QUIET_MS);
+    askForReviewAfterSuccess();
+    after(QUIET_MS);
     expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('never asks someone who has just seen an error', () => {
+    noteTrouble();
+    after(CALM_AFTER_TROUBLE_MS - QUIET_MS - 1);
+    askForReviewAfterSuccess();
+    after(QUIET_MS);
+    expect(request).not.toHaveBeenCalled();
+
+    after(1);
+    askForReviewAfterSuccess();
+    after(QUIET_MS);
+    expect(request).toHaveBeenCalledTimes(1);
+  });
+
+  it('asks nothing when an error shows while it waits', () => {
+    askForReviewAfterSuccess();
+    noteTrouble();
+    after(QUIET_MS);
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('asks nothing once the app has gone to the background', () => {
+    askForReviewAfterSuccess();
+    memoryLifecycle().moveTo('background');
+    after(QUIET_MS);
+    expect(request).not.toHaveBeenCalled();
+    expect(useReviewPromptStore.getState().lastRequestedAt).toBeNull();
   });
 
   it('never asks during onboarding', () => {
     onboarded(false);
     askForReviewAfterSuccess();
+    after(QUIET_MS);
     expect(request).not.toHaveBeenCalled();
   });
 
   it('never asks a user on their second day', () => {
     useReviewPromptStore.setState({ activeDays: THREE_DAYS.slice(1) });
     askForReviewAfterSuccess();
+    after(QUIET_MS);
     expect(request).not.toHaveBeenCalled();
   });
 });

@@ -14,6 +14,7 @@ import type {
 import { toastHoldMs } from '#platform/presenters';
 import { TOAST } from '#/constants/animations';
 import { HapticService } from '#services/haptic/HapticService';
+import { _setToastsShowing } from '#/services/toastService';
 
 // `_setToastDispatch` is the ONLY way into the provider, so the mock captures
 // what it registers rather than discarding it; the helpers below fire through
@@ -32,6 +33,7 @@ jest.mock('#/services/toastService', () => ({
     registered = fn;
     while (pending.length) fn(pending.shift() as ToastOptions);
   }),
+  _setToastsShowing: jest.fn(),
   toastService: {
     success: jest.fn(),
     error: jest.fn(),
@@ -508,6 +510,25 @@ describe('ToastProvider', () => {
       outlastQueueDelay();
       expect(screen.queryByText('Removed A')).toBeNull();
       expect(isLive('success')).toBe(false);
+    });
+
+    // What a request that would interrupt (the App Store rating) waits on.
+    it('tells the toast service a toast is up until the last queued one has gone', () => {
+      const showing = jest.mocked(_setToastsShowing);
+      const show = mountProvider();
+      expect(showing).toHaveBeenLastCalledWith(false);
+
+      show({ message: 'Removed A', type: 'success', action: undo() });
+      show({ message: 'Could not remove', type: 'error' });
+      expect(showing).toHaveBeenLastCalledWith(true);
+
+      outlastHold();
+      outlastQueueDelay();
+      expect(screen.getByText('Could not remove')).toBeTruthy();
+      expect(showing).toHaveBeenLastCalledWith(true);
+
+      advance(toastHoldMs({ message: 'Could not remove' }) + 50);
+      expect(showing).toHaveBeenLastCalledWith(false);
     });
 
     it('queues a toast of another type behind the displayed one', () => {

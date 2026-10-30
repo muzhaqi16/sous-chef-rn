@@ -1,5 +1,12 @@
 jest.unmock('../toastService');
-import { _setToastDispatch, toastService } from '../toastService';
+jest.unmock('../alertService');
+import { alertService } from '../alertService';
+import {
+  _resetToastMoments,
+  _setToastDispatch,
+  lastTroubleAt,
+  toastService,
+} from '../toastService';
 
 describe('toastService', () => {
   let dispatch: jest.Mock;
@@ -61,5 +68,31 @@ describe('toastService', () => {
       'orphaned',
     );
     warnSpy.mockRestore();
+  });
+});
+
+describe('the trouble a person has seen', () => {
+  beforeEach(() => {
+    _resetToastMoments();
+    _setToastDispatch(jest.fn());
+  });
+
+  it('is an error or a warning toast, never a success or info', () => {
+    toastService.success('Saved');
+    toastService.info('Synced');
+    expect(lastTroubleAt()).toBeNull();
+
+    toastService.warning('Offline');
+    expect(lastTroubleAt()).not.toBeNull();
+    _resetToastMoments();
+    toastService.error('Failed');
+    expect(lastTroubleAt()).not.toBeNull();
+  });
+
+  it('is any alert, which reports what went wrong', () => {
+    jest.spyOn(console, 'warn').mockImplementation(() => {});
+    alertService.alert('Could not save');
+    expect(lastTroubleAt()).not.toBeNull();
+    jest.restoreAllMocks();
   });
 });
