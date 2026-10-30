@@ -25,6 +25,7 @@ import {
 import { useStore } from '#store';
 import {
   CreateOutcome,
+  ErrorCode,
   NetWeightKind,
   ReceiptMatchConfidence,
   ReceiptMatchMethod,
@@ -1752,6 +1753,28 @@ describe('useReceiptReview', () => {
           entry => entry.store?.id === 'store-27',
         ),
       ).toMatchObject({ addedVia: UsualStoreSource.Receipt });
+    });
+
+    it('learns nothing when the check-in is refused whole', async () => {
+      const { learned, cache } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-ge']),
+        checkIn: recordMock(CreateReceiptCheckInDocument, {
+          data: {
+            createReceiptCheckIn: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: 'Refused',
+              field: 'storeId',
+            },
+          },
+        }),
+      });
+
+      expect(learned).toBeNull();
+      expect(
+        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
+      ).toEqual(['store-ge']);
     });
 
     it('learns nothing of a store the household already has', async () => {

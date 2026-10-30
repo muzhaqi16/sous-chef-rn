@@ -338,7 +338,13 @@ export function useReceiptReview() {
     const choice: StoreChoice = { store: { id, name } };
     const key = storeChoiceKey(choice);
     if (known.some(row => row.key === key)) return null;
-    return { name, undo: usualStoreWrites.learn(choice, recorded) };
+    const undo = usualStoreWrites.learn(choice, recorded);
+    // Refused whole, the check-in recorded nothing: the store never joined.
+    if (!(await recorded)) {
+      await undo();
+      return null;
+    }
+    return { name, undo };
   };
 
   /**
