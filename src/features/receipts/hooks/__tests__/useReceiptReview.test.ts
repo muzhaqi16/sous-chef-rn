@@ -4,6 +4,10 @@ import { act, waitFor } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
 import {
+  readUsualStores,
+  writeUsualStores,
+} from '#features/catalog/cache/usualStores';
+import {
   inputOf,
   recordMock,
   renderHookWithApollo,
@@ -26,6 +30,7 @@ import {
   ReceiptMatchMethod,
   ReceiptParser,
   UnitType,
+  UsualStoreSource,
 } from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
 import { t } from '#/i18n';
@@ -420,7 +425,7 @@ describe('useReceiptReview', () => {
       shownBefore = pantryItemNames(cache);
     });
     // Both show in the pantry before the API is asked.
-    expect(outcome).toEqual({ sent: 2, held: 0 });
+    expect(outcome).toMatchObject({ sent: 2, held: 0 });
     expect(shownBefore.sort()).toEqual(['Bananas', 'Whole milk']);
     await addChosen();
 
@@ -500,7 +505,7 @@ describe('useReceiptReview', () => {
       });
     });
 
-    expect(await addChosen()).toEqual({ sent: 2, held: 0 });
+    expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
 
     expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
     expect(result.current.review.pendingCount).toBe(0);
@@ -537,7 +542,7 @@ describe('useReceiptReview', () => {
         });
       });
 
-      expect(await addChosen()).toEqual({ sent: 1, held: 1 });
+      expect(await addChosen()).toMatchObject({ sent: 1, held: 1 });
 
       expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
         expect.objectContaining({ clientId: '3' }),
@@ -1221,7 +1226,7 @@ describe('useReceiptReview', () => {
       expect(checkIn.fired).toHaveLength(0);
       expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
       // A second tap sends nothing, and adds no second store.
-      expect(await confirm()).toEqual({ sent: 0, held: 0 });
+      expect(await confirm()).toMatchObject({ sent: 0, held: 0 });
 
       await act(async () => storeCreate.release());
       await waitFor(() => expect(checkIn.fired).toHaveLength(1));
@@ -1680,6 +1685,109 @@ describe('useReceiptReview', () => {
       expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
         expect.not.objectContaining({ shoppingListItemId: expect.anything() }),
       ]);
+    });
+  });
+
+  // The check-in adds a receipt's new store on the server; the device shows it.
+  describe('a store new to the household', () => {
+    const resolved = () =>
+      recordMock(ResolveReceiptLinesDocument, { data: RESOLVED });
+
+    // The household's stores, already read; Kroger #412 among them or not.
+    const knowing = (storeIds: string[]) => {
+      const cache = makeCache();
+      writeUsualStores(
+        cache,
+        'home-1',
+        storeIds.map(id => ({
+          __typename: 'UsualStore',
+          id: `home-1:${id}`,
+          addedVia: UsualStoreSource.Receipt,
+          pinned: false,
+          compared: true,
+          lastUsedAt: '2026-10-20T12:00:00.000Z',
+          store: {
+            __typename: 'Store',
+            id,
+            name: id,
+            address: null,
+            chain: null,
+          },
+          chain: null,
+        })),
+      );
+      return cache;
+    };
+
+    const confirmed = async (
+      options: Parameters<typeof setup>[0],
+    ): Promise<{ learned: unknown; cache: ReturnType<typeof makeCache> }> => {
+      const cache = options?.cache ?? makeCache();
+      const { result, addChosen } = await setup({ ...options, cache });
+      await waitFor(() =>
+        expect(result.current.review.matchState).toBe('done'),
+      );
+      const outcome = (await addChosen()) as {
+        learned: Promise<unknown>;
+      };
+      let learned: unknown;
+      await act(async () => {
+        learned = await outcome.learned;
+      });
+      return { learned, cache };
+    };
+
+    it("learns the receipt's store, and shows it among the household's", async () => {
+      const { learned, cache } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-ge']),
+      });
+
+      expect(learned).toEqual({
+        name: 'Kroger #412',
+        undo: expect.any(Function),
+      });
+      expect(
+        readUsualStores(cache, 'home-1')?.find(
+          entry => entry.store?.id === 'store-27',
+        ),
+      ).toMatchObject({ addedVia: UsualStoreSource.Receipt });
+    });
+
+    it('learns nothing of a store the household already has', async () => {
+      const { learned } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-27']),
+      });
+
+      expect(learned).toBeNull();
+    });
+
+    // An Undo then could remove a store the household already had.
+    it("learns nothing while the household's stores were never read", async () => {
+      const { learned, cache } = await confirmed({ resolve: resolved() });
+
+      expect(learned).toBeNull();
+      expect(readUsualStores(cache, 'home-1')).toBeNull();
+    });
+
+    it('learns a store the confirm adds, under the id it minted', async () => {
+      const coOp = {
+        name: 'East End Food Co-Op',
+        address: '7516 Meade Street',
+      };
+      const storeCreate = creating(coOp);
+      const { learned, cache } = await confirmed({
+        resolve: proposing(coOp),
+        storeCreate,
+        cache: knowing(['store-ge']),
+      });
+
+      const minted = String(inputOf(storeCreate.fired[0] ?? {}).id);
+      expect(learned).toMatchObject({ name: 'East End Food Co-Op' });
+      expect(
+        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
+      ).toContain(minted);
     });
   });
 });

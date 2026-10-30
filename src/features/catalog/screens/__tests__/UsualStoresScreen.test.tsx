@@ -3,10 +3,7 @@ import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
-import {
-  recordMock,
-  renderWithApollo,
-} from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
   writeUsualStores,
@@ -76,7 +73,7 @@ beforeEach(() => {
 
 describe('UsualStoresScreen', () => {
   // The screen reads cache-and-network, so each open shows the server's list.
-  it("shows a store another member added once the server answers", async () => {
+  it('shows a store another member added once the server answers', async () => {
     const aldi = entry('s3', 'ALDI Wilkinsburg', {
       addedVia: UsualStoreSource.Picked,
     });
@@ -118,7 +115,9 @@ describe('UsualStoresScreen', () => {
     renderScreen([answering([banksville, marketDistrict]).mock, pin.mock]);
     await screen.findByText('Giant Eagle Market District');
 
-    fireEvent.press(screen.getByTestId(catalogTestIDs.usualStorePin('store:s2')));
+    fireEvent.press(
+      screen.getByTestId(catalogTestIDs.usualStorePin('store:s2')),
+    );
 
     expect(await screen.findByText('Pinned')).toBeTruthy();
     expect(pin.fired).toEqual([
@@ -131,7 +130,7 @@ describe('UsualStoresScreen', () => {
       data: {
         removeUsualStore: {
           __typename: 'RemoveUsualStorePayload',
-          usualStores: [banksville],
+          usualStores: [{ id: banksville.id }],
         },
       },
     });

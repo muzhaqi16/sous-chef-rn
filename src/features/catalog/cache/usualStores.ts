@@ -53,6 +53,25 @@ export function writeUsualStores(
 }
 
 /**
+ * Keeps only the entries a removal's answer names, which states the list by
+ * its keys: a refresh that landed after the local removal put it back.
+ */
+export function keepUsualStores(
+  cache: ApolloCache,
+  homeId: string | null,
+  ids: readonly string[],
+): void {
+  const held = readUsualStores(cache, homeId);
+  if (!held) return;
+  const kept = new Set(ids);
+  writeUsualStores(
+    cache,
+    homeId,
+    held.filter(entry => kept.has(entry.id)),
+  );
+}
+
+/**
  * Replaces `key`'s entry in place, or adds it last (null takes it out), and
  * answers the one it replaced. Nothing is written to a list never read: it
  * would claim to be the whole list.

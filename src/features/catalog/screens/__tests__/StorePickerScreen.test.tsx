@@ -4,6 +4,7 @@ import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { requirePlatform } from '#/platform/install';
 import {
   inputOf,
   recordMock,
@@ -87,6 +88,7 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+  jest.restoreAllMocks();
   useStore.setState({ isOnline: true });
 });
 
@@ -169,5 +171,36 @@ describe('StorePickerScreen', () => {
     expect(
       screen.queryByPlaceholderText('Search by store name or address'),
     ).toBeNull();
+  });
+
+  describe('stores near me', () => {
+    const location = () => requirePlatform('approximateLocation');
+
+    it('asks nothing when the picker opens', () => {
+      const access = jest.spyOn(location(), 'access');
+      renderPicker([]);
+
+      expect(screen.getByText('Stores near me')).toBeTruthy();
+      expect(screen.queryByText('Find stores near you')).toBeNull();
+      expect(access).not.toHaveBeenCalled();
+    });
+
+    it('explains before the OS asks, and a decline leaves the zip code with no second prompt', async () => {
+      jest.spyOn(location(), 'access').mockResolvedValue(null);
+      const requestAccess = jest.spyOn(location(), 'requestAccess');
+      renderPicker([]);
+
+      fireEvent.press(screen.getByText('Stores near me'));
+      expect(await screen.findByText('Find stores near you')).toBeTruthy();
+      expect(requestAccess).not.toHaveBeenCalled();
+
+      fireEvent.press(screen.getByText('Not now'));
+
+      await waitFor(() =>
+        expect(screen.queryByText('Stores near me')).toBeNull(),
+      );
+      expect(screen.getByText('Zip code')).toBeTruthy();
+      expect(requestAccess).not.toHaveBeenCalled();
+    });
   });
 });

@@ -36,7 +36,7 @@ const needsMock = (
   });
 
 describe('useHomeDietaryNeeds', () => {
-  it('names each sharing member with their restrictions, an avoided item by its name', async () => {
+  it("groups each sharing member's needs strictest first, an avoided item by its name", async () => {
     const { result } = renderHookWithApollo(
       () => useHomeDietaryNeeds('home-1'),
       {
@@ -88,24 +88,36 @@ describe('useHomeDietaryNeeds', () => {
         userId: 'u-ana',
         role: MembershipRole.Member,
         displayName: 'Ana',
-        restrictions: [
+        groups: [
           {
-            id: 'r-1',
-            label: t('recipes.intolerance.PEANUT'),
-            kind: 'avoid',
-            severity: RestrictionSeverity.Allergy,
+            group: 'allergicTo',
+            needs: [
+              {
+                id: 'r-1',
+                label: t('recipes.intolerance.PEANUT'),
+                severity: RestrictionSeverity.Allergy,
+              },
+            ],
           },
           {
-            id: 'r-2',
-            label: 'Bacon',
-            kind: 'avoid',
-            severity: RestrictionSeverity.Preference,
+            group: 'avoids',
+            needs: [
+              {
+                id: 'r-2',
+                label: 'Bacon',
+                severity: RestrictionSeverity.Preference,
+              },
+            ],
           },
           {
-            id: 'r-3',
-            label: t('recipes.diet.VEGAN'),
-            kind: 'diet',
-            severity: RestrictionSeverity.Preference,
+            group: 'follows',
+            needs: [
+              {
+                id: 'r-3',
+                label: t('recipes.diet.VEGAN'),
+                severity: RestrictionSeverity.Preference,
+              },
+            ],
           },
         ],
       },

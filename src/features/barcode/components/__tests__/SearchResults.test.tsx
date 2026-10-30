@@ -117,9 +117,10 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
 // Store mode's shelf prices have their own tests; here, which list they are read for.
 const mockShelfListIds: (string | null | undefined)[] = [];
 jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
+  ...jest.requireActual('#features/catalog/hooks/useStoreShelfPrices'),
   useStoreShelfPrices: (_itemId: string, listId: string | null | undefined) => {
     mockShelfListIds.push(listId);
-    return { rows: [] };
+    return { rows: [], similarRows: [] };
   },
 }));
 

@@ -14,7 +14,7 @@ import {
   UseStoreShelfPrices_ListFragmentDoc,
   type UseStoreShelfPrices_ItemFragment,
 } from './useStoreShelfPrices.generated';
-import { unitLabel } from '#/utils/formatQuantity';
+import { formatQuantityWithUnit, unitLabel } from '#/utils/formatQuantity';
 
 /** One store's shelf price for an item, worded for its row. */
 export interface StoreShelfPriceRow {
@@ -35,8 +35,32 @@ export interface StoreShelfPriceRow {
   isListStore: boolean;
 }
 
+/** Another product of the item's kind at one store, worded for its row. */
+export interface SimilarShelfPriceRow {
+  storeId: string;
+  storeName: string;
+  /** The product priced and its size: "Appleton Farms Bacon · 12 oz". */
+  product: string;
+  /** What a shopper pays now, per the unit it is sold in. */
+  price: string;
+  /** The price per kg, L or piece. */
+  perBasis: string | null;
+  /** Cheaper per kg, L or piece than the cheapest current same-product price. */
+  mightBeCheaper: boolean;
+}
+
 type StorePrice =
   UseStoreShelfPrices_ItemFragment['storePricesConnection']['edges'][number]['node'];
+type SimilarPrice =
+  UseStoreShelfPrices_ItemFragment['similarStorePrices'][number];
+
+// Compared to the currency's smallest coin, as a shopper reads them.
+const coinsOf = (amount: number, decimalPlaces: number) =>
+  Math.round(amount * 10 ** decimalPlaces);
+
+// Prices compare only on one basis and in one currency.
+const comparableKey = (basis: PriceBasis, currencyCode: string) =>
+  `${basis}:${currencyCode}`;
 
 /** The days the API's typical and lowest prices span. */
 const PRICE_HISTORY_DAYS = 90;
@@ -112,11 +136,86 @@ function rowOf(
   };
 }
 
+function similarRowOf(
+  similar: SimilarPrice,
+  cheapestSame: ReadonlyMap<string, number>,
+  t: Translate,
+): SimilarShelfPriceRow {
+  const { currency } = similar;
+  const money = (amount: number) =>
+    formatCurrency(amount, currency.code, currency.decimalPlaces);
+  const cheapest = cheapestSame.get(
+    comparableKey(similar.basis, currency.code),
+  );
+  const size = similar.packageNetWeight
+    ? formatQuantityWithUnit(
+        similar.packageNetWeight,
+        similar.packageNetWeightUnit,
+      )
+    : null;
+  return {
+    storeId: similar.store.id,
+    storeName: similar.store.name,
+    product: [similar.product.name, size].filter(Boolean).join(' · '),
+    price: t('labels.pricePer.unit', {
+      price: money(similar.price),
+      unit: unitLabel(similar.unit),
+    }),
+    perBasis: pricePerBasis(t, similar.basis, money(similar.normalizedPrice)),
+    mightBeCheaper:
+      cheapest !== undefined &&
+      coinsOf(similar.normalizedPrice, currency.decimalPlaces) < cheapest,
+  };
+}
+
+/**
+ * The similar products worth showing: at a store that lacks the item, or
+ * cheaper per kg, L or piece than the item there.
+ */
+function similarRowsOf(
+  edges: UseStoreShelfPrices_ItemFragment['storePricesConnection']['edges'],
+  similar: UseStoreShelfPrices_ItemFragment['similarStorePrices'],
+  t: Translate,
+): SimilarShelfPriceRow[] {
+  const current = edges.map(({ node }) => node).filter(node => node.isCurrent);
+  const cheapestSame = new Map<string, number>();
+  const sameAt = new Map<string, StorePrice>();
+  for (const node of current) {
+    sameAt.set(node.store.id, node);
+    if (!node.normalizedBasis || node.normalizedPrice == null) continue;
+    const key = comparableKey(node.normalizedBasis, node.currency.code);
+    const coins = coinsOf(node.normalizedPrice, node.currency.decimalPlaces);
+    const held = cheapestSame.get(key);
+    if (held === undefined || coins < held) cheapestSame.set(key, coins);
+  }
+  return similar
+    .filter(row => {
+      const same = sameAt.get(row.store.id);
+      if (!same) return true;
+      return (
+        same.normalizedBasis === row.basis &&
+        same.normalizedPrice != null &&
+        same.currency.code === row.currency.code &&
+        coinsOf(row.normalizedPrice, row.currency.decimalPlaces) <
+          coinsOf(same.normalizedPrice, same.currency.decimalPlaces)
+      );
+    })
+    .map(row => similarRowOf(row, cheapestSame, t));
+}
+
+/** Whether a host shows its prices section: any store priced either way. */
+export const hasShelfPrices = (prices: {
+  rows: readonly unknown[];
+  similarRows: readonly unknown[];
+}): boolean => prices.rows.length > 0 || prices.similarRows.length > 0;
+
 /**
  * An item's shelf price at each store that collected one, in the server's
- * order: current prices cheapest first, then the stale. Nothing is asked or
- * shown without a list, with Budget & prices off, or with the build's
- * `storeShelfPrices` off. The list's store is tagged when the list names one.
+ * order: current prices cheapest first, then the stale; then another product
+ * of its kind at each of the household's stores, where it lacks the item or
+ * costs less per unit. Nothing is asked or shown without a list, with Budget
+ * & prices off, or with the build's `storeShelfPrices` off. The list's store
+ * is tagged when the list names one.
  */
 export function useStoreShelfPrices(
   itemId: string | undefined,
@@ -149,6 +248,9 @@ export function useStoreShelfPrices(
   const edges = item.complete ? item.data.storePricesConnection.edges : [];
   const listStoreId = list.complete ? list.data.targetStore?.id : undefined;
   return {
+    similarRows: item.complete
+      ? similarRowsOf(edges, item.data.similarStorePrices, t)
+      : [],
     rows: edges.map(({ node }, index) =>
       rowOf(
         node,

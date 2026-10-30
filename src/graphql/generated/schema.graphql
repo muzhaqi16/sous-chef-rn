@@ -18964,7 +18964,16 @@ type Store {
   """
   chain: StoreChain
   createdAt: DateTime!
+  """
+  Whether this store has a shelf price of its own collected in the last 8
+  days, the window priceStandIn reads. A household's recorded prices do not
+  count. False for a store priced only through its priceStandIn.
+  """
+  hasCollectedPrices: Boolean!
   id: ID!
+  """
+  When a store import last wrote the store's price details. Whether prices are collected here is hasCollectedPrices.
+  """
   lastPriceUpdate: DateTime
   name: String!
   """Pantry items sourced from this store that you can see."""
@@ -19022,6 +19031,9 @@ type Store {
     """Sort order; newest first when omitted"""
     orderBy: ItemStoreSkuOrderBy
   ): ItemStoreSkuConnection!
+  """
+  An admin's or a store import's mark that the store's chain offers a price API. Whether prices are collected here is hasCollectedPrices.
+  """
   supportsPriceAPI: Boolean!
   updatedAt: DateTime!
 }

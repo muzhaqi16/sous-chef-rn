@@ -300,7 +300,10 @@ describe('ShoppingListItemDetail', () => {
         decimalPlaces: 2,
       },
     });
-    const shelfMock = (nodes: ReturnType<typeof priceAt>[]) =>
+    const shelfMock = (
+      nodes: ReturnType<typeof priceAt>[],
+      similarStorePrices: object[] = [],
+    ) =>
       recordMock(StoreShelfPricesDocument, {
         data: {
           item: {
@@ -308,6 +311,7 @@ describe('ShoppingListItemDetail', () => {
             storePricesConnection: {
               edges: nodes.map(node => ({ node })),
             },
+            similarStorePrices,
           },
         },
       });
@@ -329,6 +333,37 @@ describe('ShoppingListItemDetail', () => {
         screen.getByTestId(catalogTestIDs.storeShelfPrice('s-ge')),
       ).toBeTruthy();
       expect(shelf.fired).toEqual([{ itemId: 'cat-1' }]);
+    });
+
+    // A store that lacks the product still shows, as another product of its kind.
+    it('lists similar products under the stores, even with no store pricing the item', async () => {
+      const shelf = shelfMock(
+        [],
+        [
+          {
+            store: { id: 's-kroger', name: 'Kroger' },
+            product: { id: 'cat-2', name: 'Kroger Whole Milk' },
+            price: 3.29,
+            unit: { id: 'u-gal', symbol: 'gal' },
+            packageNetWeight: null,
+            packageNetWeightUnit: null,
+            normalizedPrice: 0.87,
+            basis: 'PER_L',
+            currency: { id: 'usd', code: 'USD', decimalPlaces: 2 },
+          },
+        ],
+      );
+      renderWithApollo(<ShoppingListItemDetail route={route} />, {
+        operationMocks: [lineWithItem(), shelf.mock],
+      });
+
+      expect(
+        await screen.findByText(t('storeShelfPrices.similarTitle')),
+      ).toBeTruthy();
+      expect(screen.getByText('Kroger Whole Milk')).toBeTruthy();
+      expect(
+        screen.getByTestId(catalogTestIDs.storeShelfSimilarPrice('s-kroger')),
+      ).toBeTruthy();
     });
 
     it('shows and asks for none with prices turned off', async () => {

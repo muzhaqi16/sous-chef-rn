@@ -244,6 +244,28 @@
       "noStore": "No store chosen"
     }
   },
+  "listSavings": {
+    "title": "Could you save?",
+    "listStore": "Your list's store",
+    "save": "Save about {{amount}}",
+    "more": "About {{amount}} more",
+    "aboutTheSame": "About the same",
+    "onItems_one": "on {{count}} item",
+    "onItems_other": "on {{count}} items",
+    "notEnoughPrices": "Not enough prices yet",
+    "standIn": "Prices from {{store}}, {{distance}} away",
+    "pricesAsOf": "Prices as of {{age}}",
+    "needsConnection": "Comparing stores needs a connection",
+    "empty": "No stores to compare yet. Add the stores you shop at.",
+    "similar": "Similar",
+    "estimated": "Estimated",
+    "estimatedHint": "A typical price, not this store's",
+    "noPrice": "No price",
+    "lastSeen": "Last seen {{date}}",
+    "atListStore": "{{price}} at your list's store",
+    "cheaperBy": "{{amount}} cheaper",
+    "dearerBy": "{{amount}} more"
+  },
   "purchaseHistory": {
     "quantityLabel": "Quantity:",
     "priceLabel": "Price:",

@@ -28,6 +28,8 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 
 type Connection = UseStoreShelfPrices_ItemFragment['storePricesConnection'];
 type StorePrice = Connection['edges'][number]['node'];
+type SimilarPrice =
+  UseStoreShelfPrices_ItemFragment['similarStorePrices'][number];
 
 const USD: StorePrice['currency'] = {
   __typename: 'Currency',
@@ -45,6 +47,11 @@ const PIECE: StorePrice['unit'] = asAbbreviation({
   __typename: 'Unit',
   id: 'u-pc',
   symbol: 'pc',
+});
+const OZ: SimilarPrice['unit'] = asAbbreviation({
+  __typename: 'Unit',
+  id: 'u-oz',
+  symbol: 'oz',
 });
 const SEEN = '2026-10-16T18:11:52.922Z';
 
@@ -86,10 +93,36 @@ const connectionOf = (nodes: StorePrice[]): Connection => ({
   edges: nodes.map(node => ({ __typename: 'ItemStorePriceEdge', node })),
 });
 
+/** Appleton Farms bacon, 12 oz, at $4.49: $13.20 a kilogram. */
+const similarAt = (
+  at: SimilarPrice['store'],
+  overrides: Partial<SimilarPrice> = {},
+): SimilarPrice => ({
+  __typename: 'SimilarStorePrice',
+  store: at,
+  product: {
+    __typename: 'Item',
+    id: 'item-appleton',
+    name: 'Appleton Farms Bacon',
+  },
+  price: 4.49,
+  unit: PIECE,
+  packageNetWeight: 12,
+  packageNetWeightUnit: OZ,
+  normalizedPrice: 13.2,
+  basis: PriceBasis.PerKg,
+  currency: USD,
+  ...overrides,
+});
+
 const pricesMock = (nodes: StorePrice[]) =>
   recordMock(StoreShelfPricesDocument, {
     data: {
-      item: { id: 'item-1', storePricesConnection: connectionOf(nodes) },
+      item: {
+        id: 'item-1',
+        storePricesConnection: connectionOf(nodes),
+        similarStorePrices: [],
+      },
     },
   });
 
@@ -97,6 +130,7 @@ const pricesMock = (nodes: StorePrice[]) =>
 const cacheWith = (
   nodes: StorePrice[],
   targetStoreId: string | null = null,
+  similar: SimilarPrice[] = [],
 ) => {
   const cache = makeCache();
   cache.writeFragment({
@@ -107,6 +141,7 @@ const cacheWith = (
       __typename: 'Item',
       id: 'item-1',
       storePricesConnection: connectionOf(nodes),
+      similarStorePrices: similar,
     },
   });
   if (targetStoreId) {
@@ -195,6 +230,7 @@ describe('useStoreShelfPrices', () => {
         __typename: 'Item',
         id: 'item-1',
         storePricesConnection: connectionOf([priceAt(GIANT_EAGLE)]),
+        similarStorePrices: [],
       },
     });
 
@@ -368,10 +404,14 @@ describe('useStoreShelfPrices', () => {
       const answer = pricesMock([priceAt(KROGER)]);
       const { result } = renderHookWithApollo(
         () => useStoreShelfPrices('item-1', listId),
-        { cache: cacheWith([priceAt(KROGER)]), operationMocks: [answer.mock] },
+        {
+          cache: cacheWith([priceAt(KROGER)], null, [similarAt(ALDI)]),
+          operationMocks: [answer.mock],
+        },
       );
       // Rendering settles before any request could be sent.
       await waitFor(() => expect(result.current.rows).toEqual([]));
+      expect(result.current.similarRows).toEqual([]);
       expect(answer.fired).toEqual([]);
     };
 
@@ -390,6 +430,69 @@ describe('useStoreShelfPrices', () => {
 
     it('outside a list', async () => {
       await expectNothing(null);
+    });
+  });
+
+  // Oscar Mayer bacon 16 oz at Giant Eagle ($15.41/kg) and Kroger ($16.51/kg).
+  describe('similar products', () => {
+    const oscarMayer = [
+      priceAt(GIANT_EAGLE, {
+        price: 6.99,
+        normalizedPrice: 15.41,
+        normalizedBasis: PriceBasis.PerKg,
+      }),
+      priceAt(KROGER, {
+        price: 7.49,
+        normalizedPrice: 16.51,
+        normalizedBasis: PriceBasis.PerKg,
+      }),
+    ];
+    const similarFrom = async (similar: SimilarPrice[]) => {
+      const { result } = renderHookWithApollo(
+        () => useStoreShelfPrices('item-1', 'list-1'),
+        { cache: cacheWith(oscarMayer, null, similar) },
+      );
+      await waitFor(() => expect(result.current.rows).toHaveLength(2));
+      return result.current;
+    };
+
+    it("follow the item's own stores, naming the product, its size and its price per kg", async () => {
+      const { rows, similarRows } = await similarFrom([similarAt(ALDI)]);
+
+      expect(rows.map(row => [row.storeName, row.isCheapest])).toEqual([
+        ['Giant Eagle', true],
+        ['Kroger - Weirton', false],
+      ]);
+      expect(similarRows).toEqual([
+        {
+          storeId: 's-aldi',
+          storeName: 'ALDI',
+          product: 'Appleton Farms Bacon · 12 oz',
+          price: t('labels.pricePer.unit', { price: usd(4.49), unit: 'pc' }),
+          perBasis: t('labels.pricePer.kg', { price: usd(13.2) }),
+          mightBeCheaper: true,
+        },
+      ]);
+    });
+
+    it('show none for a line naming only a food', async () => {
+      expect((await similarFrom([])).similarRows).toEqual([]);
+    });
+
+    it('leave out a product dearer per kg than the item at the same store', async () => {
+      const { similarRows } = await similarFrom([
+        similarAt(GIANT_EAGLE, { normalizedPrice: 18 }),
+      ]);
+
+      expect(similarRows).toEqual([]);
+    });
+
+    it('never read "might be cheaper" against another basis', async () => {
+      const { similarRows } = await similarFrom([
+        similarAt(ALDI, { basis: PriceBasis.Each, normalizedPrice: 4.49 }),
+      ]);
+
+      expect(similarRows[0]?.mightBeCheaper).toBe(false);
     });
   });
 

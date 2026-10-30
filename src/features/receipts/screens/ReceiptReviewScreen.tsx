@@ -291,7 +291,7 @@ export const ReceiptReviewScreen: React.FC = () => {
 
   // The check-in runs on without the review: its lines are in the pantry now.
   const handleAdd = async () => {
-    const { sent, held } = await addChosen();
+    const { sent, held, learned } = await addChosen();
     if (sent > 0) {
       exits?.added(sent);
       toastService.success(
@@ -300,6 +300,22 @@ export const ReceiptReviewScreen: React.FC = () => {
           : t('receipts.review.addedCount', { count: sent }),
       );
     }
+    // An info toast queues behind the items' success toast; its Undo outlives
+    // this screen, which the review leaves at once.
+    void learned.then(newStore => {
+      if (!newStore) return;
+      toastService.info(
+        t('receipts.review.storeLearned', { store: newStore.name }),
+        {
+          action: {
+            label: t('labels.undo'),
+            onPress: () => {
+              void newStore.undo();
+            },
+          },
+        },
+      );
+    });
     // A line that still lacks something keeps the review, saying which; so do
     // lines still waiting for a match, to add once matched.
     if (held > 0 || rows.some(row => row.status === 'pending')) return;

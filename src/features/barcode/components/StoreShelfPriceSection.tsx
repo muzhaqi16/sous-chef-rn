@@ -3,7 +3,10 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { Card } from '#components/atoms/Card';
 import { Text } from '#components/atoms/Text';
-import type { StoreShelfPriceRow } from '#features/catalog/hooks/useStoreShelfPrices';
+import {
+  hasShelfPrices,
+  type useStoreShelfPrices,
+} from '#features/catalog/hooks/useStoreShelfPrices';
 import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { barcodeTestIDs } from '#features/barcode/testIDs';
 
@@ -12,15 +15,15 @@ import { barcodeTestIDs } from '#features/barcode/testIDs';
  * household's price lines. With no store priced, the section is left out.
  */
 export const StoreShelfPriceSection: React.FC<{
-  rows: readonly StoreShelfPriceRow[];
-}> = ({ rows }) => {
+  prices: ReturnType<typeof useStoreShelfPrices>;
+}> = ({ prices }) => {
   const { t } = useTranslation();
-  if (rows.length === 0) return null;
+  if (!hasShelfPrices(prices)) return null;
 
   return (
     <Card style={styles.card} testID={barcodeTestIDs.storeShelfPrices}>
       <Text role="bodyStrong">{t('storeShelfPrices.title')}</Text>
-      <StoreShelfPriceList rows={rows} />
+      <StoreShelfPriceList prices={prices} />
     </Card>
   );
 };

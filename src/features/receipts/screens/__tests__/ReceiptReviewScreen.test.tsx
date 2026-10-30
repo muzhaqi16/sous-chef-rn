@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { userEvent } from '@testing-library/react-native';
+import { userEvent, waitFor } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { makeCache } from '#/apollo/cache';
@@ -27,7 +27,20 @@ let mockStoreLocation: {
   storeNumber: string | null;
 } | null = null;
 const mockChooseStore = jest.fn();
-const mockAddChosen = jest.fn<Promise<{ sent: number; held: number }>, []>();
+const mockAddChosen = jest.fn<
+  Promise<{
+    sent: number;
+    held: number;
+    learned: Promise<{ name: string; undo: () => Promise<void> } | null>;
+  }>,
+  []
+>();
+// A receipt from a store the household already has: nothing learned.
+const added = (sent: number, held: number) => ({
+  sent,
+  held,
+  learned: Promise.resolve(null),
+});
 const mockFinish = jest.fn();
 jest.mock('../../hooks/useReceiptReview', () => ({
   useReceiptReview: () => ({
@@ -186,7 +199,7 @@ describe('ReceiptReviewScreen Add', () => {
   });
 
   it('goes to the pantry as soon as the lines are shown there, without waiting on the API', async () => {
-    mockAddChosen.mockResolvedValue({ sent: 2, held: 0 });
+    mockAddChosen.mockResolvedValue(added(2, 0));
     const screen = renderWithApollo(<ReceiptReviewScreen />);
 
     await userEvent
@@ -199,8 +212,41 @@ describe('ReceiptReviewScreen Add', () => {
     expect(mockToPantryMain).toHaveBeenCalledTimes(1);
   });
 
+  it("says a new store joined the household's, behind the items' toast, with Undo", async () => {
+    const undo = jest.fn(() => Promise.resolve());
+    mockAddChosen.mockResolvedValue({
+      sent: 2,
+      held: 0,
+      learned: Promise.resolve({ name: 'ALDI Wilkinsburg', undo }),
+    });
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(toastService.success).toHaveBeenCalledWith(
+      'Added 2 items to Kitchen Pantry',
+    );
+    await waitFor(() =>
+      expect(toastService.info).toHaveBeenCalledWith(
+        'ALDI Wilkinsburg is now one of your stores',
+        expect.objectContaining({
+          action: expect.objectContaining({ label: 'Undo' }),
+        }),
+      ),
+    );
+    (
+      toastService.info as jest.Mock<
+        void,
+        [string, { action: { onPress: () => void } }]
+      >
+    ).mock.calls[0]?.[1].action.onPress();
+    expect(undo).toHaveBeenCalledTimes(1);
+  });
+
   it('reports what it added and finishes through a borrowing flow’s exits', async () => {
-    mockAddChosen.mockResolvedValue({ sent: 2, held: 0 });
+    mockAddChosen.mockResolvedValue(added(2, 0));
     const exits = {
       toReview: jest.fn(),
       close: jest.fn(),
@@ -223,7 +269,7 @@ describe('ReceiptReviewScreen Add', () => {
   });
 
   it('leaves the receipt once, when the review is gone, however often it changes while open', async () => {
-    mockAddChosen.mockResolvedValue({ sent: 2, held: 0 });
+    mockAddChosen.mockResolvedValue(added(2, 0));
     const screen = renderWithApollo(<ReceiptReviewScreen />);
 
     await userEvent
@@ -239,7 +285,7 @@ describe('ReceiptReviewScreen Add', () => {
   });
 
   it('stays on the review while a line still lacks something', async () => {
-    mockAddChosen.mockResolvedValue({ sent: 1, held: 1 });
+    mockAddChosen.mockResolvedValue(added(1, 1));
     const screen = renderWithApollo(<ReceiptReviewScreen />);
 
     await userEvent

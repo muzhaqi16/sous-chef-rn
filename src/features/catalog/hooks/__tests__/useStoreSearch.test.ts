@@ -158,6 +158,25 @@ describe('useStoreSearch', () => {
     expect(search.fired).toEqual([]);
   });
 
+  // The first hundred stores by name are not "near you".
+  it('lists no warmed stores before a term when asked not to', () => {
+    useStore.setState({
+      cachedStores: [{ id: 'cached-1', name: 'Corner Grocer', address: null }],
+    } as never);
+    const { result } = renderHookWithApollo(
+      () =>
+        useStoreSearch({
+          household: { homeId: 'home-1' },
+          listBeforeTyping: false,
+        }),
+      { cache: withUsualStores(), operationMocks: [] },
+    );
+
+    expect(result.current.options).toEqual([]);
+    expect(result.current.answered).toBe(false);
+    useStore.setState({ cachedStores: [] } as never);
+  });
+
   it('asks nothing for one character', () => {
     const search = recordMock(SearchStoresDocument, {
       data: { stores: { edges: [] } },

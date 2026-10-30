@@ -1,6 +1,7 @@
 import { makeCache } from '#/apollo/cache';
 import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
+  keepUsualStores,
   localUsualStore,
   readUsualStores,
   writeUsualStores,
@@ -79,6 +80,21 @@ describe('writeUsualStores', () => {
     const answered = readUsualStores(cache, 'home-1');
     expect(storeIds(answered)).toEqual(['s1', 's2']);
     expect(answered?.map(each => each.id)).toEqual(['home-1:s1', 'home-1:s2']);
+  });
+});
+
+describe('keepUsualStores', () => {
+  // A refresh that landed after a local removal put the store back.
+  it("keeps only the stores a removal's answer names", () => {
+    const cache = makeCache();
+    writeUsualStores(cache, 'home-1', [
+      entry('home-1:s1', { id: 's1', name: 'Giant Eagle Banksville' }),
+      entry('home-1:s2', { id: 's2', name: 'Giant Eagle Market District' }),
+    ]);
+
+    keepUsualStores(cache, 'home-1', ['home-1:s1']);
+
+    expect(storeIds(readUsualStores(cache, 'home-1'))).toEqual(['s1']);
   });
 });
 

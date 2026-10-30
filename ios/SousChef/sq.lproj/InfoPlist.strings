@@ -1,6 +1,7 @@
 "CFBundleDisplayName" = "Sous Chef";
 "NSCameraUsageDescription" = "Bëj foto të artikujve të qilarit dhe skano barkode e fatura për të shtuar shpejt produkte në inventar.";
 "NSFaceIDUsageDescription" = "Përdor Face ID për të hyrë në mënyrë të sigurt me kredencialet e ruajtura";
+"NSLocationWhenInUseUsageDescription" = "Gjej dyqanet pranë teje. Mjafton vendndodhja e përafërt, dhe vlen edhe një kod postar.";
 "NSPhotoLibraryAddUsageDescription" = "Ruaj fotot e artikujve në galerinë e fotove.";
 "NSPhotoLibraryUsageDescription" = "Zgjidh foto nga galeria për t'u shtuar imazhe artikujve të qilarit dhe recetave.";
 "NSUserNotificationsUsageDescription" = "Merr njoftime për skadimet në qilar, përditësimet e listave të blerjeve dhe ftesat për në shtëpi.";

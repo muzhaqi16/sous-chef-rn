@@ -17,6 +17,7 @@ import { reactNavigationScreenHooks } from '#hooks/navigation/screenHooks';
 import { streamedFileParts } from '#native/fileParts';
 import { HapticService } from '#services/haptic/HapticService';
 import { ReviewPrompt } from '#native/ReviewPrompt';
+import { ApproximateLocation } from '#native/ApproximateLocation';
 
 // `null` is untyped but real: Android reports no state until its first change.
 const lifecycleState = (status: AppStateStatus | null): AppLifecycleState =>
@@ -69,6 +70,7 @@ installPlatform({
     warning: () => HapticService.warning(),
   },
   reviewPrompt: { request: () => ReviewPrompt.request() },
+  approximateLocation: ApproximateLocation,
   fileParts: streamedFileParts,
   screen: reactNavigationScreenHooks,
 });

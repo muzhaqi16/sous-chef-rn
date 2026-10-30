@@ -244,6 +244,28 @@
       "noStore": "Asnjë dyqan i zgjedhur"
     }
   },
+  "listSavings": {
+    "title": "A mund të kursesh?",
+    "listStore": "Dyqani i listës sate",
+    "save": "Kursen rreth {{amount}}",
+    "more": "Rreth {{amount}} më shumë",
+    "aboutTheSame": "Pothuajse njësoj",
+    "onItems_one": "në {{count}} artikull",
+    "onItems_other": "në {{count}} artikuj",
+    "notEnoughPrices": "Ende jo mjaft çmime",
+    "standIn": "Çmime nga {{store}}, {{distance}} larg",
+    "pricesAsOf": "Çmime nga {{age}}",
+    "needsConnection": "Për të krahasuar dyqanet duhet lidhje",
+    "empty": "Ende asnjë dyqan për të krahasuar. Shto dyqanet ku blen.",
+    "similar": "I ngjashëm",
+    "estimated": "I vlerësuar",
+    "estimatedHint": "Një çmim tipik, jo i këtij dyqani",
+    "noPrice": "Pa çmim",
+    "lastSeen": "Parë së fundi më {{date}}",
+    "atListStore": "{{price}} në dyqanin e listës sate",
+    "cheaperBy": "{{amount}} më lirë",
+    "dearerBy": "{{amount}} më shtrenjtë"
+  },
   "purchaseHistory": {
     "quantityLabel": "Sasia:",
     "priceLabel": "Çmimi:",

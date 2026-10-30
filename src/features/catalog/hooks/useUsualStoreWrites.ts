@@ -17,6 +17,7 @@ import {
   type StoreChoice,
 } from '#domain/stores';
 import {
+  keepUsualStores,
   localUsualStore,
   replaceUsualStore,
   writeUsualStores,
@@ -83,9 +84,19 @@ export function useUsualStoreWrites(homeId: string | null) {
     context: { localFirst: true },
     update: (into, { data }) => answer(into, appliedPayload(data)?.usualStores),
   });
+  // A removal's answer names the list by its keys only.
   const [removeStore] = useMutation(RemoveUsualStoreDocument, {
     context: { localFirst: true },
-    update: (into, { data }) => answer(into, appliedPayload(data)?.usualStores),
+    update: (into, { data }) => {
+      const kept = appliedPayload(data)?.usualStores;
+      if (kept && order.isLatest()) {
+        keepUsualStores(
+          into,
+          homeId,
+          kept.map(entry => entry.id),
+        );
+      }
+    },
   });
 
   // A household keeps at most 20 it added or pinned.
@@ -106,23 +117,32 @@ export function useUsualStoreWrites(homeId: string | null) {
   ) => {
     const key = storeChoiceKey(choice);
     const before = replaceUsualStore(cache, homeId, key, change);
-    return order.after(() =>
-      settleMutation(() => send(storeChoiceTarget(choice)), {
-        ...options,
-        fallback: t('usualStores.saveFailed'),
-        onFailed: () => {
-          replaceUsualStore(cache, homeId, key, () => before ?? null);
-        },
-      }),
-    ).then(settled => settled.status !== 'failed');
+    return order
+      .after(() =>
+        settleMutation(() => send(storeChoiceTarget(choice)), {
+          ...options,
+          fallback: t('usualStores.saveFailed'),
+          onFailed: () => {
+            replaceUsualStore(cache, homeId, key, () => before ?? null);
+          },
+        }),
+      )
+      .then(settled => settled.status !== 'failed');
   };
+
+  const remove = (choice: StoreChoice) =>
+    write(
+      choice,
+      () => null,
+      target => removeStore({ variables: { input: { homeId, target } } }),
+      { document: RemoveUsualStoreDocument, removal: true },
+    );
 
   return {
     add: (choice: StoreChoice) =>
       write(
         choice,
-        held =>
-          held ?? localUsualStore(cache, choice, UsualStoreSource.Picked),
+        held => held ?? localUsualStore(cache, choice, UsualStoreSource.Picked),
         target => addStore({ variables: { input: { homeId, target } } }),
         { document: AddUsualStoreDocument, copy: overTheLimit },
       ),
@@ -135,12 +155,25 @@ export function useUsualStoreWrites(homeId: string | null) {
           updateStore({ variables: { input: { homeId, target, pinned } } }),
         { document: UpdateUsualStoreDocument, copy: overTheLimit },
       ),
-    remove: (choice: StoreChoice) =>
-      write(
-        choice,
-        () => null,
-        target => removeStore({ variables: { input: { homeId, target } } }),
-        { document: RemoveUsualStoreDocument, removal: true },
-      ),
+    remove: (choice: StoreChoice) => remove(choice),
+    /**
+     * A store the household's activity adds on the server, a receipt's, shown
+     * at once with no write of its own. Its undo puts the list back, and once
+     * `recorded` settles true (answered, or queued ahead) removes it there.
+     */
+    learn: (choice: StoreChoice, recorded: Promise<boolean>) => {
+      const key = storeChoiceKey(choice);
+      const before = replaceUsualStore(
+        cache,
+        homeId,
+        key,
+        held =>
+          held ?? localUsualStore(cache, choice, UsualStoreSource.Receipt),
+      );
+      return async () => {
+        replaceUsualStore(cache, homeId, key, () => before ?? null);
+        if (await recorded) await remove(choice);
+      };
+    },
   };
 }

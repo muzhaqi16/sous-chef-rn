@@ -463,7 +463,9 @@
     "lowestIn_other": "Prezzo più basso in {{count}} giorni",
     "lastSeen": "Visto l’ultima volta il {{date}}",
     "showMore_one": "Mostra {{count}} altro",
-    "showMore_other": "Mostra altri {{count}}"
+    "showMore_other": "Mostra altri {{count}}",
+    "similarTitle": "Prodotti simili",
+    "mightBeCheaper": "Potrebbe costare meno"
   },
   "usualStores": {
     "title": "I tuoi negozi",
@@ -494,6 +496,12 @@
     "needsConnectionBody": "Questi sono i negozi dove fai la spesa. Connettiti per trovarne altri.",
     "nothingNear": "Nessun negozio trovato qui vicino.",
     "nothingNamed": "Nessun negozio corrisponde a «{{term}}».",
-    "hint": "Cerca per nome o inserisci un CAP per vedere i negozi vicini."
+    "hint": "Cerca per nome o inserisci un CAP per vedere i negozi vicini.",
+    "nearMe": "Negozi vicino a me",
+    "nearMeTitle": "Trova negozi vicino a te",
+    "nearMeBody": "{{appName}} usa la tua posizione approssimativa per mostrarti i negozi della zona. Non serve la posizione esatta, e va bene anche un CAP.",
+    "locating": "Ricerca dei negozi vicini…",
+    "locationOff": "La posizione è disattivata per {{appName}}. Attivala in Impostazioni o inserisci un CAP.",
+    "locationFailed": "Impossibile capire dove ti trovi. Inserisci un CAP."
   }
 }

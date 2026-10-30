@@ -1,7 +1,8 @@
 # An item's shelf price at each store that collected one, cheapest current
-# first: a list line's detail reads it here, and store mode's scan lookup
-# (`ItemByLookup`) carries it so a scan asks once. `first` is a literal so both
-# read one cache entry.
+# first, and another product of its kind at each of the household's stores: a
+# list line's detail reads it here, and store mode's scan lookup
+# (`ItemByLookup`) carries it so a scan asks once. Each `first` is a literal so
+# both read one cache entry.
 fragment useStoreShelfPrices_item on Item {
   id
   storePricesConnection(first: 10) {
@@ -36,6 +37,41 @@ fragment useStoreShelfPrices_item on Item {
           decimalPlaces
         }
       }
+    }
+  }
+  similarStorePrices(first: 10) {
+    store {
+      id
+      name
+    }
+    product {
+      id
+      name
+    }
+    price
+    unit {
+      id
+      symbol
+      localizedSymbolForms {
+        one
+        other
+      }
+    }
+    packageNetWeight
+    packageNetWeightUnit {
+      id
+      symbol
+      localizedSymbolForms {
+        one
+        other
+      }
+    }
+    normalizedPrice
+    basis
+    currency {
+      id
+      code
+      decimalPlaces
     }
   }
 }

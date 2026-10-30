@@ -118,7 +118,8 @@
       "sectionNotMatchedYet_other": "{{count}} lines not matched yet",
       "matchFailedTitle": "Couldn't look up the products",
       "matchFailedBody": "Tap to try again once you are online. You can also choose each product yourself.",
-      "storeWhereHint": "Changes the store"
+      "storeWhereHint": "Changes the store",
+      "storeLearned": "{{store}} is now one of your stores"
     },
     "photoSend": {
       "title": "Send the photo to be read?",

@@ -129,10 +129,14 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
 // The shelf prices have their own tests; here, which list they are read for
 // and that the card shows what they give.
 const mockShelfListIds: (string | null | undefined)[] = [];
+// Another product of the item's kind, for the case that has one.
+let mockSimilarRows: object[] = [];
 jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
+  ...jest.requireActual('#features/catalog/hooks/useStoreShelfPrices'),
   useStoreShelfPrices: (_itemId: string, listId: string | null | undefined) => {
     mockShelfListIds.push(listId);
     return {
+      similarRows: listId ? mockSimilarRows : [],
       rows: listId
         ? [
             {
@@ -228,6 +232,26 @@ describe('SearchResults from store mode', () => {
 
     expect(mockShelfListIds.at(-1)).toBeNull();
     expect(screen.queryByTestId(barcodeTestIDs.storeShelfPrices)).toBeNull();
+  });
+
+  it('shows similar products under the stores, from the same lookup', () => {
+    mockSimilarRows = [
+      {
+        storeId: 's-kroger',
+        storeName: 'Kroger',
+        product: 'Kroger Creamy Peanut Butter · 16 oz',
+        price: '$1.79/jar',
+        perBasis: '$3.95/kg',
+        mightBeCheaper: true,
+      },
+    ];
+    renderWithApollo(<SearchResults {...props} />);
+
+    expect(screen.getByText(t('storeShelfPrices.similarTitle'))).toBeTruthy();
+    expect(
+      screen.getByTestId(catalogTestIDs.storeShelfSimilarPrice('s-kroger')),
+    ).toBeTruthy();
+    mockSimilarRows = [];
   });
 
   // The list's own setting: its prices still show, but nobody is asked for one.

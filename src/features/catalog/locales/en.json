@@ -463,7 +463,9 @@
     "lowestIn_other": "Lowest in {{count}} days",
     "lastSeen": "Last seen {{date}}",
     "showMore_one": "Show {{count}} more",
-    "showMore_other": "Show {{count}} more"
+    "showMore_other": "Show {{count}} more",
+    "similarTitle": "Similar products",
+    "mightBeCheaper": "Might be cheaper"
   },
   "usualStores": {
     "title": "Your stores",
@@ -494,6 +496,12 @@
     "needsConnectionBody": "These are the stores you shop at. Connect to find others.",
     "nothingNear": "No stores found near here.",
     "nothingNamed": "No stores match “{{term}}”.",
-    "hint": "Search by name, or enter a zip code to see the stores near it."
+    "hint": "Search by name, or enter a zip code to see the stores near it.",
+    "nearMe": "Stores near me",
+    "nearMeTitle": "Find stores near you",
+    "nearMeBody": "{{appName}} uses your approximate location to list the stores around you. Precise location isn't needed, and a zip code works too.",
+    "locating": "Finding stores near you…",
+    "locationOff": "Location is off for {{appName}}. Turn it on in Settings, or enter a zip code.",
+    "locationFailed": "Couldn't tell where you are. Enter a zip code instead."
   }
 }

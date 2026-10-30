@@ -430,16 +430,13 @@ describe('useHomeDetailManagement', () => {
       });
     });
 
-    describe('handleRoleSelect', () => {
-      it('sends the picked role at the cached version', async () => {
+    describe('changeRole', () => {
+      it('sends the role at the cached version', async () => {
         const update = appliedMock();
         const { result, cache } = await renderLoaded([update.mock]);
 
-        act(() => {
-          result.current.changeRole('m-1', MembershipRole.Owner, 'Alice');
-        });
         await act(async () => {
-          await result.current.handleRoleSelect(MembershipRole.Admin);
+          await result.current.changeRole('m-1', MembershipRole.Admin);
         });
 
         expect(update.fired).toEqual([
@@ -449,53 +446,7 @@ describe('useHomeDetailManagement', () => {
           version: 4,
           role: MembershipRole.Admin,
         });
-        expect(result.current.rolePickerState.visible).toBe(false);
         expect(alertService.alert).not.toHaveBeenCalled();
-      });
-
-      it('sends nothing when the role picked is the one already held', async () => {
-        const update = appliedMock();
-        const { result } = await renderLoaded([update.mock]);
-
-        act(() => {
-          result.current.changeRole('m-1', MembershipRole.Owner, 'Alice');
-        });
-        await act(async () => {
-          await result.current.handleRoleSelect(MembershipRole.Owner);
-        });
-
-        expect(update.fired).toEqual([]);
-        expect(result.current.rolePickerState.visible).toBe(false);
-      });
-    });
-  });
-
-  describe('changeRole', () => {
-    it.each([
-      [
-        'sets rolePickerState with correct values',
-        'm-1',
-        MembershipRole.Member,
-        'Alice',
-      ],
-      [
-        'sets rolePickerState with member name',
-        'm-2',
-        MembershipRole.Admin,
-        'Bob',
-      ],
-    ])('%s', async (_name, membershipId, currentRole, memberName) => {
-      const { result } = await renderLoaded();
-
-      act(() => {
-        result.current.changeRole(membershipId, currentRole, memberName);
-      });
-
-      expect(result.current.rolePickerState).toEqual({
-        visible: true,
-        membershipId,
-        currentRole,
-        memberName,
       });
     });
   });

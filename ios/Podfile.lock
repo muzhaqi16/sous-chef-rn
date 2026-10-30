@@ -3159,7 +3159,7 @@ SPEC CHECKSUMS:
   RNGestureHandler: 0099c580b39852fedd18458e7af4d0e3e038d683
   RNKeychain: 6778b35b5bd067c322f8479526ac09b1d61f31d0
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
-  RNPermissions: 8aae1f041c4770e24329aae4f1a60e0d2fb1e93b
+  RNPermissions: 64d0b4bc04663ebed27a42b69c2f0df699d2b4d4
   RNReactNativeHapticFeedback: 16e5f7fd37e2acc5a33ea14f48bfd88ff43776ee
   RNReanimated: 51c9f6dcd9787f260c9bb9ac28b097270f15c5fc
   RNScreens: de068bbd7d91b820fedac25c597d4b14830de74b
@@ -3169,6 +3169,6 @@ SPEC CHECKSUMS:
   VisionCamera: f84550cffbbf23f3cac7a3d1d2e66e5098a4e8eb
   Yoga: 18b74b3ade30bebc1904004dfaceae1dd02a330a
 
-PODFILE CHECKSUM: 76acc5d3ab453af3cb129f793f11929e756fa491
+PODFILE CHECKSUM: 53fadeddfe238d5e179e5915d2023cee6bf87478
 
 COCOAPODS: 1.16.2

@@ -1,15 +1,39 @@
 import { useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import type {
-  MembershipRole,
+import {
   RestrictionSeverity,
+  type MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import { restrictionLabel } from '#domain/dietary';
 import { useDataState } from '#hooks/data/useDataState';
 import { HomeDietaryNeedsDocument } from './useHomeDietaryNeeds.generated';
 
-/** What a restriction asks of the cook: a diet followed, a goal, or a food avoided. */
-export type RestrictionKind = 'diet' | 'goal' | 'avoid';
+/**
+ * What a need asks of the cook: a food avoided at its severity, a diet
+ * followed, a goal aimed at.
+ */
+export type NeedGroup =
+  | 'allergicTo'
+  | 'intolerantTo'
+  | 'avoids'
+  | 'follows'
+  | 'goals';
+
+/** Strictest first: the order a cook reads them. */
+const GROUP_ORDER: readonly NeedGroup[] = [
+  'allergicTo',
+  'intolerantTo',
+  'avoids',
+  'follows',
+  'goals',
+];
+
+export interface DietaryNeed {
+  id: string;
+  /** Worded to show. */
+  label: string;
+  severity: RestrictionSeverity;
+}
 
 /** One member who shares with the home, and what the home sees of them. */
 export interface MemberDietaryNeeds {
@@ -17,21 +41,26 @@ export interface MemberDietaryNeeds {
   userId: string;
   role: MembershipRole;
   displayName: string | null;
-  /** Strictest first, as the server orders them; each worded to show. */
-  restrictions: {
-    id: string;
-    label: string;
-    kind: RestrictionKind;
-    severity: RestrictionSeverity;
-  }[];
+  /** Only the groups the member holds, in `GROUP_ORDER`. */
+  groups: { group: NeedGroup; needs: DietaryNeed[] }[];
 }
 
-function kindOf(restriction: {
+function groupOf(restriction: {
   diet: unknown;
   healthGoal: unknown;
-}): RestrictionKind {
-  if (restriction.diet) return 'diet';
-  return restriction.healthGoal ? 'goal' : 'avoid';
+  severity: RestrictionSeverity;
+}): NeedGroup {
+  if (restriction.diet) return 'follows';
+  if (restriction.healthGoal) return 'goals';
+  switch (restriction.severity) {
+    case RestrictionSeverity.Allergy:
+      return 'allergicTo';
+    case RestrictionSeverity.Intolerance:
+      return 'intolerantTo';
+    case RestrictionSeverity.Preference:
+    case RestrictionSeverity.Goal:
+      return 'avoids';
+  }
 }
 
 /**
@@ -51,12 +80,16 @@ export function useHomeDietaryNeeds(homeId: string) {
       userId: membership.userId,
       role: membership.role,
       displayName: membership.displayName,
-      restrictions: restrictions.map(restriction => ({
-        id: restriction.id,
-        label: restrictionLabel(restriction, t),
-        kind: kindOf(restriction),
-        severity: restriction.severity,
-      })),
+      groups: GROUP_ORDER.map(group => ({
+        group,
+        needs: restrictions
+          .filter(restriction => groupOf(restriction) === group)
+          .map(restriction => ({
+            id: restriction.id,
+            label: restrictionLabel(restriction, t),
+            severity: restriction.severity,
+          })),
+      })).filter(({ needs }) => needs.length > 0),
     }),
   );
 

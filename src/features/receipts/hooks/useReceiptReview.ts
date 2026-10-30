@@ -40,6 +40,9 @@ import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
 import { storeOfferOf } from '../utils/storeOfferOf';
 import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
+import { useUsualStores } from '#features/catalog/hooks/useUsualStores';
+import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
+import { storeChoiceKey, type StoreChoice } from '#domain/stores';
 import { toDateKey } from '#/utils/dateUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -82,6 +85,13 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
  * the item the API is sure of) and the open line of the active shopping list
  * it matches, and the step that adds the chosen ones to the current pantry.
  */
+/** A store new to the household, which the receipt's check-in adds to it. */
+export interface LearnedStore {
+  name: string;
+  /** Takes it back out, once the check-in has added it. */
+  undo: () => Promise<void>;
+}
+
 export function useReceiptReview() {
   const { t } = useTranslation();
   const draft = useReceiptDraft();
@@ -101,7 +111,14 @@ export function useReceiptReview() {
     fetchPolicy: 'cache-first',
   });
   const listId = useActiveShoppingListId(lists);
-  const { pantry } = useCurrentPantry();
+  const { pantry, currentHome } = useCurrentPantry();
+  // The household's stores, to tell a receipt's new store from a known one.
+  const homeId = currentHome?.id ?? null;
+  const { stores: usualStores } = useUsualStores(homeId, {
+    fetchPolicy: 'cache-first',
+    skip: !currentHome,
+  });
+  const usualStoreWrites = useUsualStoreWrites(homeId);
   const pantryId = pantry?.id;
   const { heldUnitOf } = usePantryIntake(pantryId);
   const { resolveUnitId } = useResolveUnit();
@@ -305,12 +322,38 @@ export function useReceiptReview() {
   };
 
   /**
+   * The receipt's store, written into the household's stores when it is new
+   * to them, as the check-in adds it on the server. Nothing is learned while
+   * the household's stores were never read: an Undo must not remove a store
+   * the household already had.
+   */
+  const learnStore = async (
+    storeId: string | Promise<string | undefined>,
+    recorded: Promise<boolean>,
+  ): Promise<LearnedStore | null> => {
+    const known = usualStores;
+    const name = store?.name ?? proposedStore?.name;
+    const id = await storeId;
+    if (!known || !id || !name) return null;
+    const choice: StoreChoice = { store: { id, name } };
+    const key = storeChoiceKey(choice);
+    if (known.some(row => row.key === key)) return null;
+    return { name, undo: usualStoreWrites.learn(choice, recorded) };
+  };
+
+  /**
    * Records the chosen lines in one check-in, without waiting on the API: every
    * line shows in the pantry before this returns. A line that still lacks its
-   * product, unit or price stays, saying which.
+   * product, unit or price stays, saying which. `learned` is the receipt's
+   * store, once known, when it is new to the household.
    */
-  const addChosen = async (): Promise<{ sent: number; held: number }> => {
-    if (!pantryId) return { sent: 0, held: pending.length };
+  const addChosen = async (): Promise<{
+    sent: number;
+    held: number;
+    learned: Promise<LearnedStore | null>;
+  }> => {
+    const none = Promise.resolve(null);
+    if (!pantryId) return { sent: 0, held: pending.length, learned: none };
     setPreparing(true);
     // A typed unit goes as the unit it names, from the device's units first.
     const resolved = await Promise.all(
@@ -331,7 +374,7 @@ export function useReceiptReview() {
       Math.max(1, Math.ceil(resolved.length / LINES_PER_CHECK_IN)),
     );
     const minted = useReceiptDraftStore.getState().draft?.checkIn;
-    if (!minted) return { sent: 0, held: pending.length };
+    if (!minted) return { sent: 0, held: pending.length, learned: none };
 
     const toSend: CheckInLineToSend[] = [];
     const lacking: Partial<Record<number, CheckInLineNeed>> = {};
@@ -364,26 +407,38 @@ export function useReceiptReview() {
     setNeeds(lacking);
 
     const orderDiscount = draft?.parsed ? orderDiscountOf(draft.parsed) : 0;
+    let learned: Promise<LearnedStore | null> = none;
     if (toSend.length > 0) {
-      checkIn(
+      // Online, the check-in waits for the store's create; its lines don't.
+      const storeId = store?.id ?? addProposedStore();
+      const recorded = checkIn(
         {
           checkInIds: minted.ids,
           pantryId,
           purchasedOn,
           purchasedAt: purchaseMomentOf(purchasedOn, draft?.purchaseTime),
-          // Online, the check-in waits for the store's create; its lines don't.
-          storeId: store?.id ?? addProposedStore(),
+          storeId,
           ...(listId && links.size > 0 ? { shoppingListId: listId } : {}),
           ...(receiptParseId ? { receiptParseId } : {}),
           ...(!store && merchantHeader ? { merchantHeader } : {}),
           ...(orderDiscount ? { orderDiscount } : {}),
         },
         toSend,
-      ).catch((error: unknown) => {
-        errorService.reportError(error, { operation: 'Check in a receipt' });
-      });
+      ).then(
+        // Refused whole: nothing was recorded, so nothing joins the stores.
+        outcome => outcome.status !== 'refused',
+        (error: unknown) => {
+          errorService.reportError(error, { operation: 'Check in a receipt' });
+          return false;
+        },
+      );
+      learned = learnStore(storeId, recorded);
     }
-    return { sent: toSend.length, held: Object.keys(lacking).length };
+    return {
+      sent: toSend.length,
+      held: Object.keys(lacking).length,
+      learned,
+    };
   };
 
   return {

@@ -6,11 +6,7 @@ import { filterByTerm, matchesTerm } from '#hooks/search/useLocalSearch';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
-import {
-  chainOption,
-  storeOption,
-  type StoreOption,
-} from '#domain/stores';
+import { chainOption, storeOption, type StoreOption } from '#domain/stores';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
 import { useAutocompleteSearch } from './useAutocompleteSearch';
 import { useUsualStores } from './useUsualStores';
@@ -39,6 +35,11 @@ interface StoreSearchOptions {
   place?: StoreSearchPlace | null;
   /** Also offer each chain a term names, as any of its stores. */
   chains?: boolean;
+  /**
+   * Lists the warmed store cache before a term is typed, as a store field
+   * does; the picker waits for a term or a place instead.
+   */
+  listBeforeTyping?: boolean;
   maxResults?: number;
 }
 
@@ -52,6 +53,7 @@ export function useStoreSearch({
   household,
   place = null,
   chains = false,
+  listBeforeTyping = true,
   maxResults = 10,
 }: StoreSearchOptions = {}) {
   const isOnline = useIsOnline();
@@ -112,7 +114,9 @@ export function useStoreSearch({
       ? null
       : place
       ? nearby.data?.nearbyStores ?? null
-      : byName.displayItems.map(store => ({ store, distanceKm: null }));
+      : search || listBeforeTyping
+      ? byName.displayItems.map(store => ({ store, distanceKm: null }))
+      : null;
 
   const stores = found?.map(({ store, distanceKm }) => {
     const option = storeOption(store, { distanceKm });

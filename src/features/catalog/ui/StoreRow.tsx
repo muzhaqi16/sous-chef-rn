@@ -15,6 +15,8 @@ interface StoreRowProps {
   option: StoreOption;
   /** Read once per list (`useReadingSystem`), for the distance. */
   readingSystem: UnitSystem;
+  /** A line under the branch, such as where its prices come from. */
+  detail?: string;
   /** The line under the branch saying what state the store is in. */
   status?: { tone: StatusTone; text: string };
   /** Marks a store the household already has. */
@@ -30,6 +32,7 @@ interface StoreRowProps {
 export const StoreRow: React.FC<StoreRowProps> = ({
   option,
   readingSystem,
+  detail,
   status,
   markAdded = false,
   trailing,
@@ -40,18 +43,29 @@ export const StoreRow: React.FC<StoreRowProps> = ({
   const { t } = useTranslation();
   const { title, subtitle } = describeStoreOption(option, t, readingSystem);
   const added = markAdded && option.added ? t('labels.added') : undefined;
-  const label = accessibilityLabelOf(title, subtitle, status?.text, added);
+  const label = accessibilityLabelOf(
+    title,
+    subtitle,
+    detail,
+    status?.text,
+    added,
+  );
 
   const row = (
     <ListItem
       title={title}
       titleNumberOfLines={1}
       subtitle={
-        subtitle || status ? (
+        subtitle || detail || status ? (
           <>
             {subtitle ? (
               <Text role={rowType.subtitle} numberOfLines={1}>
                 {subtitle}
+              </Text>
+            ) : null}
+            {detail ? (
+              <Text role={rowType.subtitle} numberOfLines={2}>
+                {detail}
               </Text>
             ) : null}
             {status ? (

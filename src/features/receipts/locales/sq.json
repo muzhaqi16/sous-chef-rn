@@ -118,7 +118,8 @@
       "sectionNotMatchedYet_other": "{{count}} rreshta ende pa përputhje",
       "matchFailedTitle": "Produktet nuk u kërkuan dot",
       "matchFailedBody": "Prek për të provuar përsëri kur të jesh në linjë. Mund ta zgjedhësh edhe vetë çdo produkt.",
-      "storeWhereHint": "Ndryshon dyqanin"
+      "storeWhereHint": "Ndryshon dyqanin",
+      "storeLearned": "{{store}} tani është një nga dyqanet e tua"
     },
     "photoSend": {
       "title": "Ta dërgojmë foton për ta lexuar?",

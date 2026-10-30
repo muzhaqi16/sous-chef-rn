@@ -5,7 +5,10 @@ import { useTranslation } from '#/i18n';
 import { Badge } from '#components/atoms/Badge';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import type { StoreShelfPriceRow } from '#features/catalog/hooks/useStoreShelfPrices';
+import type {
+  SimilarShelfPriceRow,
+  StoreShelfPriceRow,
+} from '#features/catalog/hooks/useStoreShelfPrices';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
 /** The stores shown before the rest are asked for. */
@@ -67,36 +70,107 @@ const PriceRow: React.FC<{ row: StoreShelfPriceRow }> = ({ row }) => {
   );
 };
 
-interface StoreShelfPriceListProps {
-  rows: readonly StoreShelfPriceRow[];
-}
+/** Another product of the item's kind: never the cheapest, maybe cheaper. */
+const SimilarRow: React.FC<{ row: SimilarShelfPriceRow }> = ({ row }) => {
+  const { t } = useTranslation();
+  return (
+    <View
+      style={styles.row}
+      testID={catalogTestIDs.storeShelfSimilarPrice(row.storeId)}
+    >
+      <View style={styles.store}>
+        <Text role="body">{row.storeName}</Text>
+        <Text role="caption" tone="secondary">
+          {row.product}
+        </Text>
+        {!!row.mightBeCheaper && (
+          <View style={styles.badges}>
+            <Badge variant="primary">
+              {t('storeShelfPrices.mightBeCheaper')}
+            </Badge>
+          </View>
+        )}
+      </View>
+      <View style={styles.price}>
+        <Text role="bodyStrong" style={styles.priceText}>
+          {row.price}
+        </Text>
+        {!!row.perBasis && (
+          <Text role="caption" tone="secondary" style={styles.priceText}>
+            {row.perBasis}
+          </Text>
+        )}
+      </View>
+    </View>
+  );
+};
 
-/**
- * An item's shelf price at each store, in the order given: three at first, the
- * rest on request. Its host gives it a heading and a container.
- */
-export const StoreShelfPriceList: React.FC<StoreShelfPriceListProps> = ({
-  rows,
-}) => {
+/** The first few of `items`, and the rest on request. */
+function FirstFew<T extends { storeId: string }>({
+  items,
+  render,
+  showMoreTestID,
+}: {
+  items: readonly T[];
+  render: (item: T) => React.ReactElement;
+  showMoreTestID: string;
+}) {
   const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
-  const shown = expanded ? rows : rows.slice(0, FIRST_SHOWN);
-  const hidden = rows.length - shown.length;
-
+  const shown = expanded ? items : items.slice(0, FIRST_SHOWN);
+  const hidden = items.length - shown.length;
   return (
-    <View style={styles.list}>
-      {shown.map(row => (
-        <PriceRow key={row.storeId} row={row} />
+    <>
+      {shown.map(item => (
+        <React.Fragment key={item.storeId}>{render(item)}</React.Fragment>
       ))}
       {hidden > 0 && (
         <Button
           variant="ghost"
           size="small"
           onPress={() => setExpanded(true)}
-          testID={catalogTestIDs.storeShelfPricesShowMore}
+          testID={showMoreTestID}
         >
           {t('storeShelfPrices.showMore', { count: hidden })}
         </Button>
+      )}
+    </>
+  );
+}
+
+interface StoreShelfPriceListProps {
+  /** `useStoreShelfPrices`' answer. */
+  prices: {
+    rows: readonly StoreShelfPriceRow[];
+    similarRows: readonly SimilarShelfPriceRow[];
+  };
+}
+
+/**
+ * An item's shelf price at each store, in the order given, then similar
+ * products under their own heading: three of each at first, the rest on
+ * request. Its host gives it a heading and a container.
+ */
+export const StoreShelfPriceList: React.FC<StoreShelfPriceListProps> = ({
+  prices,
+}) => {
+  const { t } = useTranslation();
+  return (
+    <View style={styles.list}>
+      <FirstFew
+        items={prices.rows}
+        render={row => <PriceRow row={row} />}
+        showMoreTestID={catalogTestIDs.storeShelfPricesShowMore}
+      />
+      {prices.similarRows.length > 0 && (
+        <>
+          <Text role="bodyStrong">{t('storeShelfPrices.similarTitle')}</Text>
+          <FirstFew
+            items={prices.similarRows}
+            render={row => <SimilarRow row={row} />}
+            showMoreTestID={catalogTestIDs.storeShelfSimilarShowMore}
+          />
+        </>
       )}
     </View>
   );

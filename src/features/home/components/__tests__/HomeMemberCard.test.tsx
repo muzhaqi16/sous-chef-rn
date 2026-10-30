@@ -66,21 +66,26 @@ function renderCard(
     fragmentName: 'HomeMemberCard_member',
     data: { ...member, role: memberRole },
   });
-  return renderWithApollo(
+  const onChangeRole = jest.fn();
+  const onRemove = jest.fn();
+  renderWithApollo(
     <HomeMemberCard
       memberRef={toFragmentRef<typeof HomeMemberCard_MemberFragmentDoc>(member)}
       displayName="Jane"
       isCurrentUser={false}
       viewer={viewer}
       onUpdatePermission={jest.fn()}
-      onChangeRole={jest.fn()}
-      onRemove={jest.fn()}
+      onChangeRole={onChangeRole}
+      onRemove={onRemove}
       onTransferOwnership={onTransfer}
       transferDisabled={transferDisabled}
     />,
     { cache },
   );
+  return { onChangeRole, onRemove };
 }
+
+const memberRow = () => screen.queryByRole('button', { name: /Jane/ });
 
 describe('HomeMemberCard', () => {
   it('offers "Make Owner" to the owner when no transfer is running', () => {
@@ -103,12 +108,32 @@ describe('HomeMemberCard', () => {
     expect(onTransfer).not.toHaveBeenCalled();
   });
 
+  it('sets a role from the sheet, and not the one the member holds', () => {
+    const { onChangeRole } = renderCard(false, jest.fn());
+    fireEvent.press(memberRow()!);
+
+    fireEvent.press(screen.getByText(t('labels.guest')));
+    expect(onChangeRole).toHaveBeenCalledWith(MembershipRole.Guest);
+
+    onChangeRole.mockClear();
+    fireEvent.press(screen.getAllByText(t('labels.member')).at(-1)!);
+    expect(onChangeRole).not.toHaveBeenCalled();
+  });
+
+  it('removes from the sheet', () => {
+    const { onRemove } = renderCard(false, jest.fn());
+
+    fireEvent.press(screen.getByRole('button', { name: t('labels.remove') }));
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
   // The API's roster ceiling: below OWNER a manager reaches only roles under
   // their own, and switches on only flags they hold.
   it('lets an admin manage a member', () => {
     renderCard(false, jest.fn(), viewerAs(MembershipRole.Admin));
 
-    expect(screen.getByText(t('homeDetail.changeRole'))).toBeOnTheScreen();
+    expect(memberRow()).toBeOnTheScreen();
+    expect(screen.getByText(t('labels.role'))).toBeOnTheScreen();
     expect(screen.queryByText(t('homeDetail.makeOwner'))).toBeNull();
   });
 
@@ -120,7 +145,8 @@ describe('HomeMemberCard', () => {
       MembershipRole.Admin,
     );
 
-    expect(screen.queryByText(t('homeDetail.changeRole'))).toBeNull();
+    expect(memberRow()).toBeNull();
+    expect(screen.queryByText(t('labels.role'))).toBeNull();
   });
 
   it('does not let a member holding canManageHome manage a peer', () => {
@@ -130,12 +156,11 @@ describe('HomeMemberCard', () => {
       viewerAs(MembershipRole.Member, { canManageHome: true }),
     );
 
-    expect(screen.queryByText(t('homeDetail.changeRole'))).toBeNull();
+    expect(memberRow()).toBeNull();
   });
 
   it("disables switching on a flag the admin doesn't hold", () => {
     renderCard(false, jest.fn(), viewerAs(MembershipRole.Admin));
-    fireEvent.press(screen.getByText(t('homeDetail.permissions')));
 
     expect(
       screen.getByRole('switch', { name: t('homeDetail.permEditPantry') }),

@@ -463,7 +463,9 @@
     "lowestIn_other": "Çmimi më i ulët në {{count}} ditë",
     "lastSeen": "Parë së fundi më {{date}}",
     "showMore_one": "Shfaq edhe {{count}}",
-    "showMore_other": "Shfaq edhe {{count}}"
+    "showMore_other": "Shfaq edhe {{count}}",
+    "similarTitle": "Produkte të ngjashme",
+    "mightBeCheaper": "Mund të jetë më lirë"
   },
   "usualStores": {
     "title": "Dyqanet e tua",
@@ -494,6 +496,12 @@
     "needsConnectionBody": "Këto janë dyqanet ku blen. Lidhu për të gjetur të tjera.",
     "nothingNear": "Nuk u gjet asnjë dyqan këtu afër.",
     "nothingNamed": "Asnjë dyqan nuk përputhet me “{{term}}”.",
-    "hint": "Kërko sipas emrit ose shkruaj një kod postar për të parë dyqanet afër."
+    "hint": "Kërko sipas emrit ose shkruaj një kod postar për të parë dyqanet afër.",
+    "nearMe": "Dyqanet pranë meje",
+    "nearMeTitle": "Gjej dyqane pranë teje",
+    "nearMeBody": "{{appName}} përdor vendndodhjen tënde të përafërt për të shfaqur dyqanet përreth. Nuk i duhet vendndodhja e saktë, dhe mjafton edhe një kod postar.",
+    "locating": "Po kërkojmë dyqane pranë teje…",
+    "locationOff": "Vendndodhja është e çaktivizuar për {{appName}}. Aktivizoje te Cilësimet ose shkruaj një kod postar.",
+    "locationFailed": "Nuk u kuptua dot ku ndodhesh. Shkruaj një kod postar."
   }
 }

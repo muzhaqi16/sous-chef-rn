@@ -463,7 +463,9 @@
     "lowestIn_other": "Precio más bajo en {{count}} días",
     "lastSeen": "Visto por última vez el {{date}}",
     "showMore_one": "Mostrar {{count}} más",
-    "showMore_other": "Mostrar {{count}} más"
+    "showMore_other": "Mostrar {{count}} más",
+    "similarTitle": "Productos similares",
+    "mightBeCheaper": "Podría ser más barato"
   },
   "usualStores": {
     "title": "Tus tiendas",
@@ -494,6 +496,12 @@
     "needsConnectionBody": "Estas son las tiendas donde compras. Conéctate para encontrar otras.",
     "nothingNear": "No se encontraron tiendas cerca de aquí.",
     "nothingNamed": "Ninguna tienda coincide con «{{term}}».",
-    "hint": "Busca por nombre o escribe un código postal para ver las tiendas cercanas."
+    "hint": "Busca por nombre o escribe un código postal para ver las tiendas cercanas.",
+    "nearMe": "Tiendas cerca de mí",
+    "nearMeTitle": "Buscar tiendas cerca de ti",
+    "nearMeBody": "{{appName}} usa tu ubicación aproximada para mostrar las tiendas de tu zona. No necesita la ubicación exacta, y también sirve un código postal.",
+    "locating": "Buscando tiendas cerca de ti…",
+    "locationOff": "La ubicación está desactivada para {{appName}}. Actívala en Ajustes o escribe un código postal.",
+    "locationFailed": "No se pudo saber dónde estás. Escribe un código postal."
   }
 }

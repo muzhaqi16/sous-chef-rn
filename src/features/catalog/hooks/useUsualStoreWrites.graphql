@@ -1,6 +1,7 @@
 # A household's usual-store writes, local-first. Each is absolute and safe to
 # repeat, and answers the whole list, which writeUsualStores writes over the
-# UsualStores query.
+# UsualStores query; a removal reads only the keys, as removals do, and the
+# next read of the list restates the rest.
 mutation AddUsualStore($input: AddUsualStoreInput!) {
   addUsualStore(input: $input) {
     __typename
@@ -45,7 +46,6 @@ mutation RemoveUsualStore($input: RemoveUsualStoreInput!) {
     ... on RemoveUsualStorePayload {
       usualStores {
         id
-        ...UsualStoreReaders
       }
     }
     ... on Error {

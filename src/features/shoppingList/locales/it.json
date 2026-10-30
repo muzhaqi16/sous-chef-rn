@@ -244,6 +244,28 @@
       "noStore": "Nessun negozio scelto"
     }
   },
+  "listSavings": {
+    "title": "Potresti risparmiare?",
+    "listStore": "Il negozio della tua lista",
+    "save": "Risparmi circa {{amount}}",
+    "more": "Circa {{amount}} in più",
+    "aboutTheSame": "Più o meno uguale",
+    "onItems_one": "su {{count}} articolo",
+    "onItems_other": "su {{count}} articoli",
+    "notEnoughPrices": "Prezzi ancora insufficienti",
+    "standIn": "Prezzi di {{store}}, a {{distance}}",
+    "pricesAsOf": "Prezzi di {{age}}",
+    "needsConnection": "Per confrontare i negozi serve una connessione",
+    "empty": "Ancora nessun negozio da confrontare. Aggiungi i negozi dove fai la spesa.",
+    "similar": "Simile",
+    "estimated": "Stimato",
+    "estimatedHint": "Un prezzo tipico, non di questo negozio",
+    "noPrice": "Nessun prezzo",
+    "lastSeen": "Visto l'ultima volta il {{date}}",
+    "atListStore": "{{price}} al negozio della tua lista",
+    "cheaperBy": "{{amount}} in meno",
+    "dearerBy": "{{amount}} in più"
+  },
   "purchaseHistory": {
     "quantityLabel": "Quantità:",
     "priceLabel": "Prezzo:",

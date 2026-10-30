@@ -13,10 +13,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
-import {
-  ErrorCode,
-  UsualStoreSource,
-} from '#/graphql/generated/schemaTypes';
+import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
   writeUsualStores,
   type UsualStoreEntry,
@@ -186,7 +183,7 @@ describe('useUsualStoreWrites', () => {
       data: {
         removeUsualStore: {
           __typename: 'RemoveUsualStorePayload',
-          usualStores: [banksville],
+          usualStores: [{ id: banksville.id }],
         },
       },
     });
@@ -207,7 +204,9 @@ describe('useUsualStoreWrites', () => {
     });
 
     act(() => {
-      void result.current.writes.remove({ store: { id: 's2', name: 'Giant Eagle Market District' } });
+      void result.current.writes.remove({
+        store: { id: 's2', name: 'Giant Eagle Market District' },
+      });
     });
     await waitFor(() =>
       expect(names(result.current.read.stores)).toEqual([
@@ -216,7 +215,9 @@ describe('useUsualStoreWrites', () => {
     );
 
     await act(async () => {
-      await result.current.writes.add({ store: { id: 's2', name: 'Giant Eagle Market District' } });
+      await result.current.writes.add({
+        store: { id: 's2', name: 'Giant Eagle Market District' },
+      });
     });
     await waitFor(() =>
       expect(names(result.current.read.stores)).toEqual([
@@ -245,7 +246,9 @@ describe('useUsualStoreWrites', () => {
 
     let saved: Promise<boolean> | undefined;
     act(() => {
-      saved = result.current.writes.remove({ store: { id: 's2', name: 'Giant Eagle Market District' } });
+      saved = result.current.writes.remove({
+        store: { id: 's2', name: 'Giant Eagle Market District' },
+      });
     });
     await act(async () => {
       await expect(saved).resolves.toBe(false);
@@ -277,7 +280,10 @@ describe('useUsualStoreWrites', () => {
     });
 
     await act(async () => {
-      await result.current.writes.setPinned({ store: { id: 's2', name: 'Giant Eagle Market District' } }, true);
+      await result.current.writes.setPinned(
+        { store: { id: 's2', name: 'Giant Eagle Market District' } },
+        true,
+      );
     });
 
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -288,6 +294,83 @@ describe('useUsualStoreWrites', () => {
       expect(
         result.current.read.stores?.find(row => row.key === 'store:s2'),
       ).toMatchObject({ pinned: false }),
+    );
+  });
+});
+
+// A receipt's check-in adds its store on the server; the device shows it at once.
+describe('a store learned from a receipt', () => {
+  const aldi = { store: { id: 's3', name: 'ALDI Wilkinsburg' } };
+
+  it('shows at once, as from a receipt, and sends nothing of its own', () => {
+    const { result } = renderHookWithApollo(useBoth, {
+      cache: seeded(),
+      operationMocks: [],
+    });
+
+    act(() => {
+      result.current.writes.learn(aldi, Promise.resolve(true));
+    });
+
+    return waitFor(() =>
+      expect(
+        result.current.read.stores?.find(row => row.key === 'store:s3'),
+      ).toMatchObject({ addedVia: UsualStoreSource.Receipt }),
+    );
+  });
+
+  it('undoes at once, and removes it once the check-in is recorded', async () => {
+    const remove = recordMock(RemoveUsualStoreDocument, {
+      data: {
+        removeUsualStore: {
+          __typename: 'RemoveUsualStorePayload',
+          usualStores: [{ id: banksville.id }, { id: marketDistrict.id }],
+        },
+      },
+    });
+    const { result, unmount } = renderHookWithApollo(useBoth, {
+      cache: seeded(),
+      operationMocks: [remove.mock],
+    });
+    let undo: (() => Promise<void>) | undefined;
+    act(() => {
+      undo = result.current.writes.learn(aldi, Promise.resolve(true));
+    });
+
+    // The review has left by the time Undo is pressed.
+    unmount();
+    await act(async () => {
+      await undo?.();
+    });
+
+    expect(remove.fired).toEqual([
+      { input: { homeId: 'home-1', target: { storeId: 's3' } } },
+    ]);
+  });
+
+  it('sends nothing for a check-in that was refused', async () => {
+    const remove = recordMock(RemoveUsualStoreDocument, {
+      data: { removeUsualStore: null },
+    });
+    const { result } = renderHookWithApollo(useBoth, {
+      cache: seeded(),
+      operationMocks: [remove.mock],
+    });
+    let undo: (() => Promise<void>) | undefined;
+    act(() => {
+      undo = result.current.writes.learn(aldi, Promise.resolve(false));
+    });
+
+    await act(async () => {
+      await undo?.();
+    });
+
+    expect(remove.fired).toEqual([]);
+    await waitFor(() =>
+      expect(names(result.current.read.stores)).toEqual([
+        'Giant Eagle Banksville',
+        'Giant Eagle Market District',
+      ]),
     );
   });
 });
@@ -321,8 +404,14 @@ describe('useUsualStoreWrites while offline', () => {
     const { result } = renderHook(useBoth, { wrapper });
 
     await act(async () => {
-      await result.current.writes.setPinned({ store: { id: 's2', name: 'Giant Eagle Market District' } }, true);
-      await result.current.writes.setPinned({ store: { id: 's2', name: 'Giant Eagle Market District' } }, false);
+      await result.current.writes.setPinned(
+        { store: { id: 's2', name: 'Giant Eagle Market District' } },
+        true,
+      );
+      await result.current.writes.setPinned(
+        { store: { id: 's2', name: 'Giant Eagle Market District' } },
+        false,
+      );
     });
 
     const target = { storeId: 's2' };
@@ -332,13 +421,57 @@ describe('useUsualStoreWrites while offline', () => {
           .getMutationsForUser(USER.id)
           .map(m => [m.operationName, m.variables]),
       ).toEqual([
-        ['UpdateUsualStore', { input: { homeId: 'home-1', target, pinned: true } }],
-        ['UpdateUsualStore', { input: { homeId: 'home-1', target, pinned: false } }],
+        [
+          'UpdateUsualStore',
+          { input: { homeId: 'home-1', target, pinned: true } },
+        ],
+        [
+          'UpdateUsualStore',
+          { input: { homeId: 'home-1', target, pinned: false } },
+        ],
       ]),
     );
     expect(
       result.current.read.stores?.find(row => row.key === 'store:s2'),
     ).toMatchObject({ pinned: false });
     expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  // A queued check-in resolves its learning as recorded: the removal queues
+  // behind it, and the queue sends them in that order.
+  it("queues an Undo's removal while the receipt's check-in waits", async () => {
+    const client = new ApolloClient({
+      cache: seeded(),
+      link: ApolloLink.from([createQueueLink(), new MockLink([])]),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(ApolloProvider, { client, children });
+    const { result } = renderHook(useBoth, { wrapper });
+    let undo: (() => Promise<void>) | undefined;
+    act(() => {
+      undo = result.current.writes.learn(
+        { store: { id: 's3', name: 'ALDI Wilkinsburg' } },
+        Promise.resolve(true),
+      );
+    });
+
+    await act(async () => {
+      await undo?.();
+    });
+
+    expect(
+      queueStore
+        .getMutationsForUser(USER.id)
+        .map(m => [m.operationName, m.variables]),
+    ).toEqual([
+      [
+        'RemoveUsualStore',
+        { input: { homeId: 'home-1', target: { storeId: 's3' } } },
+      ],
+    ]);
+    expect(
+      result.current.read.stores?.some(row => row.key === 'store:s3'),
+    ).toBe(false);
   });
 });

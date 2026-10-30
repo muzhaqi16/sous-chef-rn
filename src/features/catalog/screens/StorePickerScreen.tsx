@@ -4,9 +4,11 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
+import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { FormInput } from '#components/atoms/FormInput';
 import { RowCard } from '#components/atoms/RowCard';
 import { Text } from '#components/atoms/Text';
+import { Button } from '#components/molecules/Button';
 import { ListItem } from '#components/molecules/ListItem';
 import { Loading } from '#components/molecules/Loading';
 import { SearchBar } from '#components/molecules/SearchBar';
@@ -16,6 +18,7 @@ import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { toastService } from '#/services/toastService';
 import type { StoreChoice } from '#domain/stores';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
+import { useNearMe } from '#features/catalog/hooks/useNearMe';
 import { useStoreSearch } from '#features/catalog/hooks/useStoreSearch';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
 import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
@@ -43,10 +46,17 @@ export const StorePickerScreen: React.FC<
   // Null until typed: the stored zip fills the field, hydrated or not yet.
   const [typedZip, setTypedZip] = useState<string | null>(null);
   const zip = typedZip ?? lastZip ?? '';
+  const nearMe = useNearMe();
+  // A whole zip wins; else the device's place, once the person asked for it.
   const search = useStoreSearch({
     household: { homeId },
-    place: US_ZIP.test(zip) ? { zip } : null,
+    place: US_ZIP.test(zip)
+      ? { zip }
+      : nearMe.place
+      ? { point: nearMe.place }
+      : null,
     chains: true,
+    listBeforeTyping: false,
     maxResults: 20,
   });
   const writes = useUsualStoreWrites(homeId);
@@ -108,9 +118,44 @@ export const StorePickerScreen: React.FC<
               textContentType="postalCode"
               autoComplete="postal-code"
               maxLength={5}
-              error={search.zipRefused ? t('storePicker.zipRefused') : undefined}
+              error={
+                search.zipRefused ? t('storePicker.zipRefused') : undefined
+              }
               testID={catalogTestIDs.storePickerZip}
             />
+            {nearMe.state === 'blocked' ? (
+              <>
+                <Text role="caption" tone="secondary">
+                  {t('storePicker.locationOff')}
+                </Text>
+                <Button
+                  variant="ghost"
+                  size="small"
+                  title={t('labels.openSettings')}
+                  onPress={nearMe.openSettings}
+                />
+              </>
+            ) : nearMe.state === 'declined' ? null : (
+              <>
+                {nearMe.state === 'failed' ? (
+                  <Text role="caption" tone="secondary">
+                    {t('storePicker.locationFailed')}
+                  </Text>
+                ) : null}
+                <Button
+                  variant="outline"
+                  size="small"
+                  icon="navigate-outline"
+                  title={t('storePicker.nearMe')}
+                  loading={nearMe.state === 'locating'}
+                  onPress={() => {
+                    setTypedZip('');
+                    void nearMe.ask();
+                  }}
+                  testID={catalogTestIDs.storePickerNearMe}
+                />
+              </>
+            )}
           </>
         ) : (
           <View style={styles.offline}>
@@ -158,6 +203,31 @@ export const StorePickerScreen: React.FC<
           )}
         />
       </View>
+      <Dialog
+        visible={nearMe.state === 'explaining'}
+        onRequestClose={nearMe.decline}
+      >
+        <DialogBody>
+          <Text role="title">{t('storePicker.nearMeTitle')}</Text>
+          <Text role="body" tone="secondary">
+            {t('storePicker.nearMeBody')}
+          </Text>
+        </DialogBody>
+        <DialogFooter>
+          <Button
+            variant="ghost"
+            title={t('labels.notNow')}
+            onPress={nearMe.decline}
+          />
+          <Button
+            title={t('labels.continue')}
+            onPress={() => {
+              void nearMe.allow();
+            }}
+            testID={catalogTestIDs.storePickerNearMeContinue}
+          />
+        </DialogFooter>
+      </Dialog>
     </SubScreen>
   );
 };

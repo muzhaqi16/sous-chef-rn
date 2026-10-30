@@ -118,7 +118,8 @@
       "sectionNotMatchedYet_other": "{{count}} líneas aún sin coincidencia",
       "matchFailedTitle": "No se pudieron buscar los productos",
       "matchFailedBody": "Toca para reintentar cuando tengas conexión. También puedes elegir cada producto tú mismo.",
-      "storeWhereHint": "Cambia la tienda"
+      "storeWhereHint": "Cambia la tienda",
+      "storeLearned": "{{store}} ahora es una de tus tiendas"
     },
     "photoSend": {
       "title": "¿Enviar la foto para leerla?",
