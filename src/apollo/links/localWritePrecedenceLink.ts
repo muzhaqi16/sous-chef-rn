@@ -186,8 +186,8 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
       };
     });
 
-  // Apollo stores a page a tick after its request ends, and the fence must
-  // still hold then, or a page from before a removal puts the row back.
+  // A page is stored a tick after its request ends, and the fence must still
+  // hold then, or a page from before a removal puts the row back.
   const pageThrough = (
     operation: ApolloLink.Operation,
     forward: ApolloLink.ForwardFunction,
@@ -250,9 +250,8 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
   };
 
   return new ApolloLink((operation, forward) => {
-    // A `fetchMore` page (`context.page`) is its own `no-cache` request: it never
-    // holds the list's watcher back, and the cache can only answer it with the
-    // list already shown, so it passes untouched.
+    // A page (`context.page`) is its own request beside the list's watcher, and
+    // the cache can only answer it with the list already shown, so it passes.
     if (isQueryOperation(operation.query)) {
       if (operation.getContext().page === true) {
         return pageThrough(operation, forward);

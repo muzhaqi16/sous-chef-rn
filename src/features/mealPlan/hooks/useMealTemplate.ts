@@ -15,7 +15,7 @@ interface GroupedDay {
 }
 
 export function useMealTemplate(templateId: string | undefined) {
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     GetMealTemplateDocument,
     templateId
       ? { variables: { id: templateId, itemsFirst: MEALS_PAGE_SIZE } }
@@ -30,7 +30,7 @@ export function useMealTemplate(templateId: string | undefined) {
     selector: result => result.mealTemplate?.itemsConnection,
     key: templateId ?? '',
     loading,
-    fetchMore,
+    observable,
     cursorVariableName: 'itemsAfter',
     refetch,
   });

@@ -6,7 +6,7 @@ import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
 
 /** The template an edit session loads; undefined while creating a new one. */
 export function useMealTemplateForEdit(templateId: string | undefined) {
-  const { data, loading, fetchMore, refetch } = useQuery(
+  const { data, loading, observable, refetch } = useQuery(
     GetMealTemplateForEditDocument,
     templateId
       ? { variables: { id: templateId, itemsFirst: MEALS_PAGE_SIZE } }
@@ -20,7 +20,7 @@ export function useMealTemplateForEdit(templateId: string | undefined) {
     selector: result => result.mealTemplate?.itemsConnection,
     key: templateId ?? '',
     loading,
-    fetchMore,
+    observable,
     cursorVariableName: 'itemsAfter',
     refetch,
   });

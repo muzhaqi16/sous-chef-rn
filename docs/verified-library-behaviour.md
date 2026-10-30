@@ -752,6 +752,33 @@ guarding it, a copy with a lower `version` simply replaces a newer one.
 **What depends on it:** the `sync/answer-ordering` guard runs in the link
 chain, before Apollo stores an answer, and not as a type policy.
 
+### Apollo: a watcher hears no cache change while an operation is out
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check: `notify` in
+`core/ObservableQuery.js`, and
+`npx jest src/features/shoppingList/hooks/__tests__/usePaginatedShoppingItems.pageDuringTick.test.ts`.
+
+**Claim:** `notify` delivers a cache change only with `activeOperations` empty,
+unless the policy is `cache-only` or `cache-and-network`. A `fetchMore` is an
+operation, and a list settles on `cache-first` after its first read, so a write
+made while a page is out renders when the page lands. A root write and a layer
+are held back alike. `fetchPage` reads a page beside the watcher for this reason.
+
+A watcher hears of a write on a zero timer (`scheduleNotify`), so a `client.query`
+resolves before its list shows the page: the next turn is the first it has.
+
+### Apollo: a link must emit, and a result's `extensions` reach the write
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/offlineMissThroughLayer.test.ts`.
+
+**Claim:** a link chain that completes with no value fails the read ("The link
+chain completed without emitting a value"), so a link cannot simply decline to
+answer. `markQueryResult` passes `result.extensions` to `cache.writeQuery`, which
+passes them to `write`, and then reads the result back from an optimistic diff.
+So an answer `AppCache.write` declines still reaches the watcher, complete, from
+the layers, and stores nothing.
+
 ### Apollo: an optimistic layer copies the whole entity
 
 Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:

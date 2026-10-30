@@ -1,4 +1,5 @@
-import { usePagination, type FetchMoreFn } from '#hooks/utils/usePagination';
+import type { PagedQuery } from '#hooks/utils/fetchPage';
+import { usePagination } from '#hooks/utils/usePagination';
 import { usePreservedConnection } from '#hooks/apollo/usePreservedConnection';
 
 /**
@@ -27,9 +28,9 @@ export interface UseConnectionDataConfig<TData, C extends ConnectionResult> {
   key: string;
   /** Whether the query is currently loading */
   loading: boolean;
-  /** Apollo fetchMore function */
-  fetchMore: FetchMoreFn;
-  /** Additional variables for fetchMore (e.g., parent entity ID, filters) */
+  /** The list's query: `observable` from its `useQuery`. */
+  observable: PagedQuery;
+  /** Additional variables a page needs beyond the list's own. */
   fetchMoreVariables?: Record<string, unknown>;
   /** Cursor variable name (default: 'after') */
   cursorVariableName?: string;
@@ -64,7 +65,7 @@ export function useConnectionData<TData, C extends ConnectionResult>(
     selector,
     key,
     loading,
-    fetchMore,
+    observable,
     fetchMoreVariables,
     cursorVariableName = 'after',
     refetch,
@@ -81,7 +82,7 @@ export function useConnectionData<TData, C extends ConnectionResult>(
     pageInfo: preserved.pageInfo,
     loading,
     itemCount: items.length,
-    fetchMore,
+    observable,
     fetchMoreVariables,
     cursorVariableName,
     restart: refetch,

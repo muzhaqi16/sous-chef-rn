@@ -231,6 +231,23 @@ describe('a tick while the next page loads', () => {
     await act(() => paged);
   });
 
+  it('shows a tick at once while the page is still loading', async () => {
+    const { nextPage, loadMore, tick, expectPageAsked, expectListSettlesOn } =
+      setup();
+    await expectListSettlesOn(['p1', 'p2']);
+
+    const paged = loadMore();
+    await expectPageAsked();
+    const ticked = tick('p1');
+
+    await expectListSettlesOn(['p2']);
+
+    nextPage.release();
+    await expectListSettlesOn(['p2', 'p3', 'p4']);
+    await act(() => paged);
+    await act(() => ticked);
+  });
+
   it('keeps the tick and the page when the page lands before the tick is answered', async () => {
     const {
       nextPage,

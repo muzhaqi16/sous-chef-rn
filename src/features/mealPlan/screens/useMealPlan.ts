@@ -31,7 +31,7 @@ export function useMealPlan(
   // Skipping makes the ack the fetch trigger.
   const isUnconfirmed = useIsCreateUnconfirmed(id);
 
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     GetMealPlanDocument,
     !id || isUnconfirmed || skip
       ? skipToken
@@ -63,7 +63,7 @@ export function useMealPlan(
     selector: plan => plan.mealPlanItemsConnection,
     key: id ?? '',
     loading,
-    fetchMore,
+    observable,
     cursorVariableName: 'mealsAfter',
     refetch,
   });

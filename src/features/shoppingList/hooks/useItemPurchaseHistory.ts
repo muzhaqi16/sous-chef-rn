@@ -1,10 +1,9 @@
-import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import {
   GetItemPurchaseHistoryDocument,
   type GetItemPurchaseHistoryQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
+import { usePagination } from '#hooks/utils/usePagination';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 
@@ -20,7 +19,7 @@ export type PurchaseItem = NonNullable<
  * the summary, and a frequently re-bought item runs past one page.
  */
 export function useItemPurchaseHistory(itemId: string) {
-  const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     GetItemPurchaseHistoryDocument,
     {
       variables: { itemId, first: PAGE_SIZE },
@@ -36,19 +35,18 @@ export function useItemPurchaseHistory(itemId: string) {
     connection?.edges.map(edge => edge.node) ?? [];
 
   const totalCount = connection?.totalCount ?? purchases.length;
-  const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo.endCursor ?? null;
-  const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
-
-  const loadMore = () => {
-    if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
-    void loadPageWithCursorRecovery({
-      fetchMore,
-      refetch,
-      variables: { itemId, first: PAGE_SIZE, after: endCursor },
-      operation: 'PurchaseHistory.loadMore',
-    });
-  };
+  const {
+    hasMore: hasNextPage,
+    isLoadingMore: isFetchingMore,
+    loadMore,
+  } = usePagination({
+    pageInfo: connection?.pageInfo,
+    loading,
+    itemCount: purchases.length,
+    observable,
+    cursorVariableName: 'after',
+    restart: refetch,
+  });
 
   // A failed read is not an empty history: rendering both as the empty state
   // advises buying something the user may already own, exactly when the app

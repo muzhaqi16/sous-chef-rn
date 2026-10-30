@@ -29,6 +29,8 @@ const walk = (dir: string, out: string[] = []): string[] => {
 
 /** Sites that deliberately go to the network, with why. */
 const NETWORK_ONLY_CALLERS: Record<string, string> = {
+  'hooks/utils/fetchPage.ts':
+    'a page is never answered from the list the cache already merged',
   'features/notifications/hooks/useNotificationActionData.ts':
     'reseeds an expiration link the cache may hold stale',
   'features/notifications/hooks/useNotifications.ts':
