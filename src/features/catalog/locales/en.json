@@ -502,6 +502,7 @@
     "nearMeBody": "{{appName}} uses your approximate location to list the stores around you. Precise location isn't needed, and a zip code works too.",
     "locating": "Finding stores near you…",
     "locationOff": "Location is off for {{appName}}. Turn it on in Settings, or enter a zip code.",
-    "locationFailed": "Couldn't tell where you are. Enter a zip code instead."
+    "locationFailed": "Couldn't tell where you are. Enter a zip code instead.",
+    "hasPrices": "Has prices"
   }
 }

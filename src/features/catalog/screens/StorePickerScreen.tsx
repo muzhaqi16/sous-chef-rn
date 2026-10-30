@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
@@ -6,6 +6,7 @@ import { useTranslation } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { FormInput } from '#components/atoms/FormInput';
+import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
 import { RowCard } from '#components/atoms/RowCard';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
@@ -14,8 +15,10 @@ import { Loading } from '#components/molecules/Loading';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { toastService } from '#/services/toastService';
+import { scheduleIdle } from '#/utils/scheduleIdle';
 import type { StoreChoice } from '#domain/stores';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { useNearMe } from '#features/catalog/hooks/useNearMe';
@@ -46,7 +49,15 @@ export const StorePickerScreen: React.FC<
   // Null until typed: the stored zip fills the field, hydrated or not yet.
   const [typedZip, setTypedZip] = useState<string | null>(null);
   const zip = typedZip ?? lastZip ?? '';
+  const zipInput = useRef<ThemedTextInputRef>(null);
   const nearMe = useNearMe();
+  const pricesShown = useBudgetAndPricesEnabled();
+  // A decline offers the zip code instead, once the dialog or the OS prompt
+  // has gone: a field under a closing window may not take the keyboard.
+  useEffect(() => {
+    if (nearMe.state !== 'declined') return;
+    return scheduleIdle(() => zipInput.current?.focus());
+  }, [nearMe.state]);
   // A whole zip wins; else the device's place, once the person asked for it.
   const search = useStoreSearch({
     household: { homeId },
@@ -56,6 +67,7 @@ export const StorePickerScreen: React.FC<
       ? { point: nearMe.place }
       : null,
     chains: true,
+    markPrices: pricesShown,
     listBeforeTyping: false,
     maxResults: 20,
   });
@@ -105,10 +117,13 @@ export const StorePickerScreen: React.FC<
                   value={search.term}
                   onChangeText={search.setTerm}
                   placeholder={t('storePicker.searchPlaceholder')}
+                  // A store's name is no dictionary word: iOS turns "aldi" into "Adi".
+                  autoCorrect={false}
                   isLoading={search.loading}
                   testID={catalogTestIDs.storePickerSearch}
                 />
                 <FormInput
+                  ref={zipInput}
                   label={t('storePicker.zipLabel')}
                   value={zip}
                   onChangeText={text => {
@@ -192,6 +207,11 @@ export const StorePickerScreen: React.FC<
             option={item}
             readingSystem={readingSystem}
             markAdded
+            status={
+              item.hasPrices
+                ? { tone: 'info', text: t('storePicker.hasPrices') }
+                : undefined
+            }
             onPress={
               item.added
                 ? undefined

@@ -100,7 +100,9 @@ describe('useStoreSearch', () => {
     const { result } = render({ zip: '15220' }, [nearby.mock]);
 
     await waitFor(() => expect(result.current.options).toHaveLength(2));
-    expect(nearby.fired).toEqual([{ input: { near: { zip: '15220' } } }]);
+    expect(nearby.fired).toEqual([
+      { input: { near: { zip: '15220' } }, withPrices: false },
+    ]);
     expect(
       result.current.options.map(option => [
         option.key,
@@ -122,7 +124,10 @@ describe('useStoreSearch', () => {
     type(result, 'aldi');
 
     await waitFor(() => expect(result.current.options).toHaveLength(2));
-    expect(search.fired).toEqual([{ search: 'aldi', limit: 20 }]);
+    // Only the picker marks priced stores.
+    expect(search.fired).toEqual([
+      { search: 'aldi', limit: 20, withPrices: false },
+    ]);
     expect(result.current.options).toEqual([
       expect.objectContaining({
         key: 'chain:chain-aldi',
@@ -153,6 +158,7 @@ describe('useStoreSearch', () => {
     await waitFor(() =>
       expect(nearby.fired).toContainEqual({
         input: { near: { point: { lat: 40.44, lng: -79.99 } }, search: 'aldi' },
+        withPrices: false,
       }),
     );
     expect(search.fired).toEqual([]);

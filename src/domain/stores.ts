@@ -16,9 +16,7 @@ export const storeChoiceKey = (choice: StoreChoice): string =>
   choice.store ? `store:${choice.store.id}` : `chain:${choice.chain.id}`;
 
 /** A choice as every usual-store write names it. */
-export const storeChoiceTarget = (
-  choice: StoreChoice,
-): UsualStoreTargetInput =>
+export const storeChoiceTarget = (choice: StoreChoice): UsualStoreTargetInput =>
   choice.store ? { storeId: choice.store.id } : { chainId: choice.chain.id };
 
 interface ChoiceRecord {
@@ -49,7 +47,9 @@ export const storeBranchLabel = (
 ): string | undefined => {
   const where = firstNonBlank(address);
   if (where) return where;
-  return storeNumber ? t('labels.storeNumber', { number: storeNumber }) : undefined;
+  return storeNumber
+    ? t('labels.storeNumber', { number: storeNumber })
+    : undefined;
 };
 
 /** A store, or a whole chain, as a list offers it. */
@@ -62,6 +62,8 @@ export interface StoreOption {
   distanceKm: number | null;
   /** Already one of the household's stores. */
   added: boolean;
+  /** Priced from shelf prices, its own or a nearby branch's; asked only by the picker. */
+  hasPrices: boolean;
 }
 
 interface StoreRecord {
@@ -73,7 +75,11 @@ interface StoreRecord {
 
 export const storeOption = (
   store: StoreRecord,
-  { distanceKm = null, added = false }: Partial<StoreOption> = {},
+  {
+    distanceKm = null,
+    added = false,
+    hasPrices = false,
+  }: Partial<StoreOption> = {},
 ): StoreOption => {
   const choice: StoreChoice = { store: { id: store.id, name: store.name } };
   return {
@@ -83,6 +89,7 @@ export const storeOption = (
     storeNumber: store.storeNumber ?? null,
     distanceKm,
     added,
+    hasPrices,
   };
 };
 
@@ -98,6 +105,7 @@ export const chainOption = (
     storeNumber: null,
     distanceKm: null,
     added,
+    hasPrices: false,
   };
 };
 

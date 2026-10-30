@@ -502,6 +502,7 @@
     "nearMeBody": "{{appName}} usa la tua posizione approssimativa per mostrarti i negozi della zona. Non serve la posizione esatta, e va bene anche un CAP.",
     "locating": "Ricerca dei negozi vicini…",
     "locationOff": "La posizione è disattivata per {{appName}}. Attivala in Impostazioni o inserisci un CAP.",
-    "locationFailed": "Impossibile capire dove ti trovi. Inserisci un CAP."
+    "locationFailed": "Impossibile capire dove ti trovi. Inserisci un CAP.",
+    "hasPrices": "Prezzi disponibili"
   }
 }

@@ -502,6 +502,7 @@
     "nearMeBody": "{{appName}} përdor vendndodhjen tënde të përafërt për të shfaqur dyqanet përreth. Nuk i duhet vendndodhja e saktë, dhe mjafton edhe një kod postar.",
     "locating": "Po kërkojmë dyqane pranë teje…",
     "locationOff": "Vendndodhja është e çaktivizuar për {{appName}}. Aktivizoje te Cilësimet ose shkruaj një kod postar.",
-    "locationFailed": "Nuk u kuptua dot ku ndodhesh. Shkruaj një kod postar."
+    "locationFailed": "Nuk u kuptua dot ku ndodhesh. Shkruaj një kod postar.",
+    "hasPrices": "Ka çmime"
   }
 }

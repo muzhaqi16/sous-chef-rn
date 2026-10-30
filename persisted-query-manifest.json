@@ -1059,10 +1059,10 @@
       "body": "subscription MyShoppingListsEvents {\n  myShoppingListsEvents {\n    subtype\n    mutation\n    listId\n    originatorClientId\n    actorUserId\n    timestamp\n    updatedFields\n    clearedItemIds\n    node {\n      __typename\n      ... on ShoppingListItem {\n        id\n        __typename\n      }\n      ... on ShoppingList {\n        id\n        __typename\n      }\n      ... on ShoppingListCollaborator {\n        id\n        __typename\n      }\n    }\n    __typename\n  }\n}"
     },
     {
-      "id": "e552ce0916ce3c31562e843db449c404abbded8b6de61bb7718d1508d1405707",
+      "id": "25988cce00e871b1403a1715e276fd841205cd9ff22cbd1b7e5410dde635ec88",
       "name": "NearbyStores",
       "type": "query",
-      "body": "query NearbyStores($input: NearbyStoresInput!) {\n  nearbyStores(input: $input) {\n    distanceKm\n    store {\n      id\n      name\n      address\n      storeNumber\n      chain {\n        id\n        name\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query NearbyStores($input: NearbyStoresInput!, $withPrices: Boolean = false) {\n  nearbyStores(input: $input) {\n    distanceKm\n    store {\n      id\n      name\n      address\n      storeNumber\n      chain {\n        id\n        name\n        __typename\n      }\n      hasCollectedPrices @include(if: $withPrices)\n      priceStandIn @include(if: $withPrices) {\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "06c6255834e662551eaa1ab46aa02431cf0390fb46cb8eba0b648eedecbb1c1a",
@@ -1341,10 +1341,10 @@
       "body": "query SearchRecipes($query: String!, $filters: RecipeFilters, $first: Int, $after: String) {\n  findRecipes(query: $query, filters: $filters, first: $first, after: $after) {\n    edges {\n      cursor\n      node {\n        __typename\n        ... on Recipe {\n          id\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          freeOf\n          isSaved\n          __typename\n        }\n        ... on CatalogRecipeHit {\n          provider\n          providerRecipeId\n          name\n          imageUrl\n          servings\n          totalTimeMinutes\n          diets\n          freeOf\n          likes\n          __typename\n        }\n      }\n      __typename\n    }\n    pageInfo {\n      hasNextPage\n      endCursor\n      __typename\n    }\n    catalogAvailable\n    __typename\n  }\n}"
     },
     {
-      "id": "44a6e8962cb2be754429890b1cbda471d657bed031a87497acd4ecdaf25a2745",
+      "id": "348f48b259ee37c9ac99d90489af5f66660adb5c9d04b5f0d51f66885278e9ba",
       "name": "SearchStores",
       "type": "query",
-      "body": "query SearchStores($search: String!, $limit: Int) {\n  stores(filters: {search: $search}, first: $limit) {\n    edges {\n      node {\n        id\n        name\n        address\n        storeNumber\n        chain {\n          id\n          name\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
+      "body": "query SearchStores($search: String!, $limit: Int, $withPrices: Boolean = false) {\n  stores(filters: {search: $search}, first: $limit) {\n    edges {\n      node {\n        id\n        name\n        address\n        storeNumber\n        chain {\n          id\n          name\n          __typename\n        }\n        hasCollectedPrices @include(if: $withPrices)\n        priceStandIn @include(if: $withPrices) {\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    totalCount\n    __typename\n  }\n}"
     },
     {
       "id": "999b5a6aafcd9355a50229e3223aed60a632ed3b6935ac7dc3d71c694642c295",

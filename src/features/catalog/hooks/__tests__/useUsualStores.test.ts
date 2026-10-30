@@ -62,6 +62,7 @@ describe('useUsualStores', () => {
       storeNumber: null,
       distanceKm: null,
       added: true,
+      hasPrices: false,
       pinned: false,
       compared: true,
       addedVia: UsualStoreSource.Receipt,
@@ -85,7 +86,11 @@ describe('useUsualStores', () => {
   it('puts pinned stores first, then compared ones, then the most recently used', async () => {
     const { result } = render(
       answering([
-        { ...giantEagle, lastUsedAt: '2026-06-01T12:00:00.000Z', compared: false },
+        {
+          ...giantEagle,
+          lastUsedAt: '2026-06-01T12:00:00.000Z',
+          compared: false,
+        },
         anyAldi,
         {
           ...giantEagle,
@@ -98,13 +103,19 @@ describe('useUsualStores', () => {
           ...giantEagle,
           id: 'home-1:s3',
           lastUsedAt: '2026-10-28T12:00:00.000Z',
-          store: { ...giantEagle.store, id: 's3', name: 'Giant Eagle Market District' },
+          store: {
+            ...giantEagle.store,
+            id: 's3',
+            name: 'Giant Eagle Market District',
+          },
         },
       ]).mock,
     );
 
     await waitFor(() => expect(result.current.stores).toHaveLength(4));
-    expect(result.current.stores?.map(row => storeChoiceName(row.choice, t))).toEqual([
+    expect(
+      result.current.stores?.map(row => storeChoiceName(row.choice, t)),
+    ).toEqual([
       'Kroger Banksville',
       'Giant Eagle Market District',
       'ALDI (any store)',
@@ -127,9 +138,9 @@ describe('useUsualStores', () => {
     const { result } = render(offline.mock, 'cache-and-network', cache);
 
     await waitFor(() => expect(offline.fired).toHaveLength(1));
-    expect(result.current.stores?.map(row => storeChoiceName(row.choice, t))).toEqual([
-      'ALDI (any store)',
-    ]);
+    expect(
+      result.current.stores?.map(row => storeChoiceName(row.choice, t)),
+    ).toEqual(['ALDI (any store)']);
     expect(result.current.error).toBeUndefined();
     expect(result.current.loading).toBe(false);
   });

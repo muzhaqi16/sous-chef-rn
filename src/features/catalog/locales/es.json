@@ -502,6 +502,7 @@
     "nearMeBody": "{{appName}} usa tu ubicación aproximada para mostrar las tiendas de tu zona. No necesita la ubicación exacta, y también sirve un código postal.",
     "locating": "Buscando tiendas cerca de ti…",
     "locationOff": "La ubicación está desactivada para {{appName}}. Actívala en Ajustes o escribe un código postal.",
-    "locationFailed": "No se pudo saber dónde estás. Escribe un código postal."
+    "locationFailed": "No se pudo saber dónde estás. Escribe un código postal.",
+    "hasPrices": "Tiene precios"
   }
 }

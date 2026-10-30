@@ -1,9 +1,17 @@
 import React from 'react';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { TextInput } from 'react-native';
+import {
+  act,
+  fireEvent,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { requirePlatform } from '#/platform/install';
 import {
   inputOf,
@@ -22,10 +30,16 @@ import {
 } from '#features/catalog/cache/usualStores';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { AddUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
+import { NearbyStoresDocument } from '#features/catalog/hooks/useStoreSearch.generated';
+import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
+import { catalogTestIDs } from '#features/catalog/testIDs';
 import { StorePickerScreen } from '../StorePickerScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(),
+}));
 
 const route = {
   key: 'StorePicker',
@@ -84,12 +98,14 @@ const type = (text: string) => {
 beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
+  jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
 });
 
 afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
   useStore.setState({ isOnline: true });
+  useStorePickerStore.setState({ lastZip: null });
 });
 
 describe('StorePickerScreen', () => {
@@ -173,8 +189,100 @@ describe('StorePickerScreen', () => {
     ).toBeNull();
   });
 
+  it('searches a store name as typed, never autocorrected', () => {
+    renderPicker([]);
+
+    expect(
+      screen.getByPlaceholderText('Search by store name or address').props,
+    ).toMatchObject({ autoCorrect: false });
+  });
+
+  describe('the prices mark', () => {
+    // Mt. Lebanon has shelf prices of its own, Dormont a nearby branch's, and
+    // Kroger Banksville neither. Asked without prices, the answer has none.
+    const nearby = () =>
+      recordMock(NearbyStoresDocument, {
+        dataFor: (vars): MockDataFor<typeof NearbyStoresDocument> => {
+          const row = (
+            id: string,
+            name: string,
+            own: boolean,
+            standIn: boolean,
+          ): NonNullable<
+            MockDataFor<typeof NearbyStoresDocument>['nearbyStores']
+          >[number] => ({
+            distanceKm: 1,
+            store: {
+              id,
+              name,
+              address: null,
+              storeNumber: null,
+              chain: null,
+              ...(vars.withPrices
+                ? {
+                    hasCollectedPrices: own,
+                    priceStandIn: standIn
+                      ? { __typename: 'PriceStandIn' }
+                      : null,
+                  }
+                : {}),
+            },
+          });
+          return {
+            nearbyStores: [
+              row('s-ge-ml', 'Giant Eagle Mt. Lebanon', true, false),
+              row('s-ge-d', 'Giant Eagle Dormont', false, true),
+              row('s-kr-b', 'Kroger Banksville', false, false),
+            ],
+          };
+        },
+      });
+    const listNear15220 = async () => {
+      fireEvent.changeText(
+        screen.getByTestId(catalogTestIDs.storePickerZip),
+        '15220',
+      );
+      await screen.findByText('Kroger Banksville');
+    };
+    const markOn = (storeId: string) =>
+      within(
+        screen.getByTestId(catalogTestIDs.storePickerRow(`store:${storeId}`)),
+      ).queryByText('Has prices');
+
+    it("marks a store priced from its own shelf prices or a nearby branch's", async () => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+      const near = nearby();
+      renderPicker([near.mock]);
+
+      await listNear15220();
+
+      expect(near.fired).toEqual([
+        expect.objectContaining({ withPrices: true }),
+      ]);
+      expect(markOn('s-ge-ml')).toBeTruthy();
+      expect(markOn('s-ge-d')).toBeTruthy();
+      expect(markOn('s-kr-b')).toBeNull();
+    });
+
+    it('marks none, and asks for no prices, with Budget & prices off', async () => {
+      const near = nearby();
+      renderPicker([near.mock]);
+
+      await listNear15220();
+
+      expect(near.fired).toEqual([
+        expect.objectContaining({ withPrices: false }),
+      ]);
+      expect(screen.queryByText('Has prices')).toBeNull();
+    });
+  });
+
   describe('stores near me', () => {
     const location = () => requirePlatform('approximateLocation');
+    // The mock's one `focus` is shared by every input; its `this` says which.
+    const zipField = expect.objectContaining({
+      props: expect.objectContaining({ testID: catalogTestIDs.storePickerZip }),
+    });
 
     it('asks nothing when the picker opens', () => {
       const access = jest.spyOn(location(), 'access');
@@ -188,6 +296,7 @@ describe('StorePickerScreen', () => {
     it('explains before the OS asks, and a decline leaves the zip code with no second prompt', async () => {
       jest.spyOn(location(), 'access').mockResolvedValue(null);
       const requestAccess = jest.spyOn(location(), 'requestAccess');
+      const focus = jest.spyOn(TextInput.prototype, 'focus');
       renderPicker([]);
 
       fireEvent.press(screen.getByText('Stores near me'));
@@ -196,11 +305,27 @@ describe('StorePickerScreen', () => {
 
       fireEvent.press(screen.getByText('Not now'));
 
-      await waitFor(() =>
-        expect(screen.queryByText('Stores near me')).toBeNull(),
-      );
-      expect(screen.getByText('Zip code')).toBeTruthy();
+      await waitFor(() => expect(focus.mock.contexts).toContainEqual(zipField));
+      expect(screen.queryByText('Stores near me')).toBeNull();
       expect(requestAccess).not.toHaveBeenCalled();
+    });
+
+    it("offers the zip code when the OS prompt is declined, and doesn't ask again", async () => {
+      jest.spyOn(location(), 'access').mockResolvedValue(null);
+      const requestAccess = jest
+        .spyOn(location(), 'requestAccess')
+        .mockResolvedValue('denied');
+      const focus = jest.spyOn(TextInput.prototype, 'focus');
+      renderPicker([]);
+
+      fireEvent.press(screen.getByText('Stores near me'));
+      fireEvent.press(
+        await screen.findByTestId(catalogTestIDs.storePickerNearMeContinue),
+      );
+
+      await waitFor(() => expect(focus.mock.contexts).toContainEqual(zipField));
+      expect(screen.queryByText('Stores near me')).toBeNull();
+      expect(requestAccess).toHaveBeenCalledTimes(1);
     });
   });
 });

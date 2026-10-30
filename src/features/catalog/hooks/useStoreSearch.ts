@@ -23,6 +23,8 @@ interface FoundStore {
   address?: string | null;
   storeNumber?: string | null;
   chain?: { id: string; name: string } | null;
+  hasCollectedPrices?: boolean;
+  priceStandIn?: object | null;
 }
 
 const MIN_TERM = 2;
@@ -35,6 +37,8 @@ interface StoreSearchOptions {
   place?: StoreSearchPlace | null;
   /** Also offer each chain a term names, as any of its stores. */
   chains?: boolean;
+  /** Marks a store priced from shelf prices; the picker passes Budget & prices. */
+  markPrices?: boolean;
   /**
    * Lists the warmed store cache before a term is typed, as a store field
    * does; the picker waits for a term or a place instead.
@@ -53,6 +57,7 @@ export function useStoreSearch({
   household,
   place = null,
   chains = false,
+  markPrices = false,
   listBeforeTyping = true,
   maxResults = 10,
 }: StoreSearchOptions = {}) {
@@ -72,9 +77,9 @@ export function useStoreSearch({
   const byName = useAutocompleteSearch<FoundStore>({
     search: term => {
       if (place) return;
-      void searchStores({ variables: { search: term, limit: 20 } }).catch(
-        error => logger.warn('Store search failed', error),
-      );
+      void searchStores({
+        variables: { search: term, limit: 20, withPrices: markPrices },
+      }).catch(error => logger.warn('Store search failed', error));
     },
     getResults: () => named.data?.stores.edges.map(edge => edge.node) ?? [],
     loading: named.loading,
@@ -99,6 +104,7 @@ export function useStoreSearch({
               near: place.point ? { point: place.point } : { zip: place.zip },
               ...(search && { search }),
             },
+            withPrices: markPrices,
           },
           fetchPolicy: 'cache-first',
           // A search: the resync would re-ask for a list nobody is reading.
@@ -119,7 +125,10 @@ export function useStoreSearch({
       : null;
 
   const stores = found?.map(({ store, distanceKm }) => {
-    const option = storeOption(store, { distanceKm });
+    const option = storeOption(store, {
+      distanceKm,
+      hasPrices: !!store.hasCollectedPrices || !!store.priceStandIn,
+    });
     return { ...option, added: added.has(option.key) };
   });
   const chainsNamed = new Map<string, StoreOption>();

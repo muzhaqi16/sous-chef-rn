@@ -1,6 +1,7 @@
 # Stores by name or address: useStoreSearch, for every store field and the
-# store picker. The chain offers "any" of its stores.
-query SearchStores($search: String!, $limit: Int) {
+# store picker. The chain offers "any" of its stores. Only the picker sets
+# `withPrices`, to mark a store priced from shelf prices.
+query SearchStores($search: String!, $limit: Int, $withPrices: Boolean = false) {
   stores(filters: { search: $search }, first: $limit) {
     edges {
       node {
@@ -12,6 +13,10 @@ query SearchStores($search: String!, $limit: Int) {
         chain {
           id
           name
+        }
+        hasCollectedPrices @include(if: $withPrices)
+        priceStandIn @include(if: $withPrices) {
+          __typename
         }
       }
     }
