@@ -62,6 +62,7 @@ export interface ReceiptToCheckIn
     | 'purchasedAt'
     | 'shoppingListId'
     | 'receiptParseId'
+    | 'merchant'
     | 'merchantHeader'
     | 'orderDiscount'
   > {

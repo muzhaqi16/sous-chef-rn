@@ -1321,6 +1321,8 @@ describe('useReceiptReview', () => {
           receiptParseId: 'parse-1',
         }),
       ]);
+      // The server's parse locates it: the phone's reading stays home.
+      expect(fired(checkIn)[0]).not.toHaveProperty('merchant');
     });
 
     it("offers the active list's shop when the cache knows it has no address", async () => {
@@ -1414,7 +1416,7 @@ describe('useReceiptReview', () => {
       });
     });
 
-    it('offers none for a receipt read on the phone: nothing would locate it', async () => {
+    it('offers none for a receipt read on the phone that names no place', async () => {
       readByServer({ parsedBy: 'device' });
       useStore.getState().setCachedStores([KROGER_LABEL]);
       const { result } = await setup({ resolve: unplaced(OFFER) });
@@ -1423,6 +1425,35 @@ describe('useReceiptReview', () => {
       );
 
       expect(result.current.review.storeOffer).toBeNull();
+    });
+
+    // The API takes the merchant the phone read as read, so a check-in at the
+    // household's own store places it at that address.
+    it('offers it for a receipt read on the phone that names its address, and sends what the phone read', async () => {
+      readByServer({
+        parsedBy: 'device',
+        printedStore: { name: 'Kroger', address: '412 Main St' },
+      });
+      const { result, checkIn, addChosen } = await setup({
+        resolve: unplaced(OFFER),
+      });
+      await waitFor(() =>
+        expect(result.current.review.storeOffer).toEqual(OFFER),
+      );
+
+      await act(async () => {
+        result.current.review.chooseStore(OFFER);
+        result.current.review.chooseLine(1, MILK);
+      });
+      await addChosen();
+
+      expect(fired(checkIn)).toEqual([
+        expect.objectContaining({
+          storeId: 'store-label',
+          merchant: { name: 'Kroger', address: '412 Main St' },
+        }),
+      ]);
+      expect(fired(checkIn)[0]).not.toHaveProperty('receiptParseId');
     });
   });
 

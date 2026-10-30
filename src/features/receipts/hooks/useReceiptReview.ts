@@ -37,6 +37,7 @@ import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
 import { UseReceiptReview_StoreFragmentDoc } from './useReceiptReview.generated';
 import { useHeldStores } from './useHeldStores';
 import { unlocatedStoreNamed } from '../utils/unlocatedStoreNamed';
+import { merchantInputOf } from '../utils/merchantInput';
 import { storeOfferOf } from '../utils/storeOfferOf';
 import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
@@ -208,37 +209,38 @@ export function useReceiptReview() {
     fragmentName: 'useReceiptReview_store',
     from: store ? { __typename: 'Store', id: store.id } : null,
   });
-  // The server's reading, which the check-in locates an unlocated store from.
+  // What the check-in locates an unlocated store from: the server's reading,
+  // else the merchant the phone read, which the API takes as read.
   const receiptParseId =
     draft?.parsedBy === 'server' ? draft.parseId : undefined;
+  const phoneMerchant = receiptParseId
+    ? null
+    : merchantInputOf(draft?.printedStore);
+  const locates =
+    !!receiptParseId ||
+    !!firstNonBlank(phoneMerchant?.address, phoneMerchant?.storeNumber);
   const picked = placed.complete ? placed.data : null;
   // A pick with no place of its own is placed where the receipt says on check-in.
   const takesReceiptPlace =
-    !!picked &&
-    !!receiptParseId &&
-    !firstNonBlank(picked.address, picked.storeNumber);
+    !!picked && locates && !firstNonBlank(picked.address, picked.storeNumber);
   const pickedPlace = takesReceiptPlace ? draft?.printedStore ?? null : picked;
   const located = store ? pickedPlace : proposedStore;
   const heldStores = useHeldStores(listId);
   // Offered, never placed.
-  const storeOffer = storeOfferOf(
-    { parseId: receiptParseId, store },
-    matchState,
-    {
-      api: completableStore
-        ? { id: completableStore.id, name: completableStore.name }
-        : null,
-      device: unlocatedStoreNamed(
-        [
-          draft?.parsed?.merchant,
-          draft?.printedStore?.name,
-          proposedStore?.name,
-          proposedStore?.chain?.name,
-        ],
-        heldStores,
-      ),
-    },
-  );
+  const storeOffer = storeOfferOf({ locates, store }, matchState, {
+    api: completableStore
+      ? { id: completableStore.id, name: completableStore.name }
+      : null,
+    device: unlocatedStoreNamed(
+      [
+        draft?.parsed?.merchant,
+        draft?.printedStore?.name,
+        proposedStore?.name,
+        proposedStore?.chain?.name,
+      ],
+      heldStores,
+    ),
+  });
   // Judged where it was read, by the rule its lines follow: the server's, or
   // the same rules on the phone, which know a discount never taken off.
   const totalsGap = draft?.totalsGap ?? null;
@@ -426,6 +428,7 @@ export function useReceiptReview() {
           storeId,
           ...(listId && links.size > 0 ? { shoppingListId: listId } : {}),
           ...(receiptParseId ? { receiptParseId } : {}),
+          ...(phoneMerchant ? { merchant: phoneMerchant } : {}),
           ...(!store && merchantHeader ? { merchantHeader } : {}),
           ...(orderDiscount ? { orderDiscount } : {}),
         },
