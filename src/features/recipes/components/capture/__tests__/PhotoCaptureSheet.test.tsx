@@ -1,12 +1,8 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useRecipeCapture } from '#features/recipes/hooks/useRecipeCapture';
@@ -33,6 +29,14 @@ let mockPhotos = {
 jest.mock('#features/recipes/components/capture/useCapturePhotos', () => ({
   useCapturePhotos: () => mockPhotos,
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -82,7 +86,8 @@ describe('PhotoCaptureSheet', () => {
 
     fireEvent.press(sendButton());
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
     expect(mockStart).toHaveBeenCalledWith({
       source: 'photo',
       photoKeys: ['key-1', 'key-2'],
@@ -96,13 +101,12 @@ describe('PhotoCaptureSheet', () => {
 
     fireEvent.press(sendButton());
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          "The photos didn't upload. Check your connection and try again.",
-        ),
-      ).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(
+      screen.getByText(
+        "The photos didn't upload. Check your connection and try again.",
+      ),
+    ).toBeTruthy();
     expect(mockStart).not.toHaveBeenCalled();
   });
 
@@ -141,7 +145,8 @@ describe('PhotoCaptureSheet', () => {
 
     fireEvent.press(sendButton());
 
-    expect(await screen.findByText('This needs a Premium plan.')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('This needs a Premium plan.')).toBeTruthy();
     expect(refused.fired).toHaveLength(1);
     expect(onDismiss).not.toHaveBeenCalled();
   });

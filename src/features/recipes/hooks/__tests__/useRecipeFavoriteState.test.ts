@@ -1,5 +1,5 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql, type InMemoryCache } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
@@ -10,6 +10,7 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   AddRecipeToFavoritesDocument,
   SavedRecipeFoldersDocument,
@@ -32,6 +33,14 @@ const SERVER_SAVED_ID = 'server-saved-2';
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-saved-1'),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -187,12 +196,12 @@ async function save(
   act(() => {
     result.current.handleSaveRecipe(...args);
   });
-  await waitFor(() =>
-    expect(
-      mockToastSuccess.mock.calls.length + mockToastError.mock.calls.length,
-    ).toBe(1),
-  );
-  await waitFor(() => expect(result.current.saving).toBe(false));
+  await drainTimers();
+  expect(
+    mockToastSuccess.mock.calls.length + mockToastError.mock.calls.length,
+  ).toBe(1);
+  await drainTimers();
+  expect(result.current.saving).toBe(false);
 }
 
 describe('useRecipeFavoriteState', () => {

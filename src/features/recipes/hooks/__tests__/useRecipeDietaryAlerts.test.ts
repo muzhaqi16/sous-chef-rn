@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import {
   completeMockedResponse,
@@ -7,6 +6,7 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetRecipeDocument,
   type GetRecipeQuery,
@@ -124,6 +124,14 @@ const cleanRecipeMock = () =>
   });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   mockHomeId = 'home-1';
   mockRestrictionsInPlay = true;
 });
@@ -135,7 +143,8 @@ describe('useRecipeDietaryAlerts', () => {
       { operationMocks: [alertsMock().mock] },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
     expect(
       result.current.summary.map(alert => [alert.id, alert.state]),
     ).toEqual([
@@ -167,7 +176,8 @@ describe('useRecipeDietaryAlerts', () => {
       { operationMocks: [withErrors] },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('stale'));
+    await drainTimers();
+    expect(result.current.check).toBe('stale');
     expect(result.current.summary).toHaveLength(2);
   });
 
@@ -227,7 +237,8 @@ describe('useRecipeDietaryAlerts', () => {
       () => useRecipeDietaryAlerts('recipe-1'),
       { cache, operationMocks: [alertsMock().mock] },
     );
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
 
     const recipe = cache.readQuery({
       query: GetRecipeDocument,
@@ -248,7 +259,8 @@ describe('useRecipeDietaryAlerts', () => {
         () => useRecipeDietaryAlerts('recipe-1'),
         { operationMocks: [mock.mock] },
       );
-      await waitFor(() => expect(result.current.check).toBe('checked'));
+      await drainTimers();
+      expect(result.current.check).toBe('checked');
       return result.current;
     };
 

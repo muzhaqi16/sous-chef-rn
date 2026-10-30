@@ -1,4 +1,3 @@
-import { act, waitFor } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -16,6 +15,7 @@ import {
   type MockedResponse,
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
@@ -88,6 +88,14 @@ function renderData(
   );
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useRecipeData', () => {
   describe('a recipe opened by id', () => {
     it('shows the API recipe', async () => {
@@ -103,7 +111,8 @@ describe('useRecipeData', () => {
         ),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
@@ -134,7 +143,8 @@ describe('useRecipeData', () => {
           }),
         ),
       ]);
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
           hasPendingRevision: true,
@@ -156,7 +166,8 @@ describe('useRecipeData', () => {
           }),
         ),
       ]);
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
           hasPendingRevision: false,
@@ -172,7 +183,8 @@ describe('useRecipeData', () => {
         ),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
@@ -196,7 +208,8 @@ describe('useRecipeData', () => {
         ),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
@@ -223,9 +236,8 @@ describe('useRecipeData', () => {
         recipeMock(catalogRecipe(ExternalSyncStatus.Synced, { name: 'API' })),
       ]);
 
-      await waitFor(() =>
-        expect(result.current.displayData?.title).toBe('API'),
-      );
+      await drainTimers();
+      expect(result.current.displayData?.title).toBe('API');
       expect(result.current.loading).toBe(false);
     });
   });
@@ -244,7 +256,8 @@ describe('useRecipeData', () => {
       });
       const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
 
-      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
+      await drainTimers();
+      expect(shownIds(result)).toEqual(['i1', 'i2']);
       expect(get.fired).toEqual([
         { id: 'r1', ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE },
       ]);
@@ -266,16 +279,15 @@ describe('useRecipeData', () => {
       });
       const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
 
-      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
+      await drainTimers();
+      expect(shownIds(result)).toEqual(['i1', 'i2']);
       expect(
         result.current.backendRecipe?.ingredientsConnection.pageInfo
           .hasNextPage,
       ).toBe(true);
 
       // A pull reads the same one page again: nothing follows the cursor.
-      await act(async () => {
-        await result.current.refetch();
-      });
+      await drained(() => result.current.refetch());
 
       const onePage = {
         id: 'r1',
@@ -301,7 +313,8 @@ describe('useRecipeData', () => {
         recipeMock(catalogRecipe(syncStatus)),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData?.details).toBe(details);
     });
@@ -329,7 +342,8 @@ describe('useRecipeData', () => {
 
       const { result } = renderData({ recipeId: 'r1' }, [future]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData?.details).toBe('complete');
     });
@@ -390,7 +404,8 @@ describe('useRecipeData', () => {
         (params: UseRecipeDataParams) => useRecipeData(params),
         { operationMocks: [mock], cache: makeCache(), initialProps },
       );
-      await waitFor(() => expect(rendered.result.current.loading).toBe(false));
+      await drainTimers();
+      expect(rendered.result.current.loading).toBe(false);
       return rendered;
     };
 
@@ -444,9 +459,8 @@ describe('useRecipeData', () => {
         [recipeMock(recipe)],
         cache,
       );
-      await waitFor(() =>
-        expect(rendered.result.current.backendRecipe).toBeDefined(),
-      );
+      await drainTimers();
+      expect(rendered.result.current.backendRecipe).toBeDefined();
       return { cache, ...rendered };
     };
 
@@ -456,27 +470,23 @@ describe('useRecipeData', () => {
       );
       expect(result.current.backendRecipe?.savedDetails).toBeNull();
 
-      await act(async () => {
+      await drained(async () => {
         writeLocalFavorite(cache, 'saved-1', 'r1', { notes: 'Less salt' });
         await Promise.resolve();
       });
-      await waitFor(() =>
-        expect(result.current.backendRecipe?.savedDetails?.notes).toBe(
-          'Less salt',
-        ),
+      expect(result.current.backendRecipe?.savedDetails?.notes).toBe(
+        'Less salt',
       );
 
-      await act(async () => {
+      await drained(async () => {
         cache.modify({
           id: cache.identify({ __typename: 'SavedRecipe', id: 'saved-1' }),
           fields: { personalRating: () => 4 },
         });
         await Promise.resolve();
       });
-      await waitFor(() =>
-        expect(result.current.backendRecipe?.savedDetails?.personalRating).toBe(
-          4,
-        ),
+      expect(result.current.backendRecipe?.savedDetails?.personalRating).toBe(
+        4,
       );
     });
 
@@ -486,17 +496,14 @@ describe('useRecipeData', () => {
       );
       expect(result.current.displayData?.details).toBe('pending');
 
-      await act(async () => {
+      await drained(async () => {
         cache.modify({
           id: cache.identify({ __typename: 'RecipeSourceMapping', id: 'sm-1' }),
           fields: { syncStatus: () => ExternalSyncStatus.Synced },
         });
         await Promise.resolve();
       });
-
-      await waitFor(() =>
-        expect(result.current.displayData?.details).toBe('complete'),
-      );
+      expect(result.current.displayData?.details).toBe('complete');
     });
   });
 });
