@@ -1,5 +1,6 @@
 import { ApolloClient, ApolloLink, Observable, gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
+import type { DocumentNode } from 'graphql';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import {
@@ -67,6 +68,7 @@ function open({
   rereads = [] as UsualStoreEntry[][],
   homeId = 'home-1',
   watchNow = true,
+  context = {},
 } = {}) {
   const refresh = recordMock(UsualStoresDocument, {
     data: { usualStores: refreshed },
@@ -85,10 +87,22 @@ function open({
   });
   const cache = makeCache();
   writeUsualStores(cache, 'home-1', [banksville, market]);
+  /** Each operation the link passes on, as the rest of the chain sees it. */
+  const forwarded: Array<{
+    name: string | undefined;
+    context: Record<string, unknown>;
+  }> = [];
   const client = new ApolloClient({
     cache,
     link: ApolloLink.from([
       createLocalWritePrecedenceLink(),
+      new ApolloLink((operation, forward) => {
+        forwarded.push({
+          name: operation.operationName,
+          context: operation.getContext(),
+        });
+        return forward(operation);
+      }),
       testMockLink([refresh.mock, ...reasks.map(r => r.mock), pinMock.mock]),
     ]),
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
@@ -101,6 +115,7 @@ function open({
         query: UsualStoresDocument,
         variables: { homeId },
         fetchPolicy: 'cache-and-network',
+        context,
       })
       .subscribe(result => {
         delivered.push(pinnedIn(result.data?.usualStores));
@@ -113,6 +128,7 @@ function open({
     refresh,
     reasks,
     pinMock,
+    forwarded,
     delivered,
     cached: (home = 'home-1') => readUsualStores(cache, home) ?? undefined,
     /** The pin as a hook sends it: written first, then sent local-first. */
@@ -252,6 +268,61 @@ describe('localWritePrecedenceLink', () => {
     list.close();
   });
 
+  it('asks again with the context the read was sent with', async () => {
+    const list = await openWithRefreshInFlight({
+      refreshed: [banksville, market, aldi],
+      rereads: [[pinnedMarket, banksville, aldi]],
+      context: { allowDuringLogout: true },
+    });
+    await act(async () => {
+      await list.pin();
+      await tick();
+    });
+
+    await act(async () => {
+      list.refresh.release();
+      await tick();
+    });
+
+    await waitFor(() => expect(list.reasks[0]?.fired).toHaveLength(1));
+    const reads = list.forwarded.filter(op => op.name === 'UsualStores');
+    expect(reads).toHaveLength(2);
+    expect(reads[1]?.context.allowDuringLogout).toBe(true);
+    list.close();
+  });
+
+  it('leaves a read alone when the write did not change its data', async () => {
+    const shadyside = entry('s4', 'Giant Eagle Shadyside');
+    const list = open({
+      homeId: 'home-2',
+      watchNow: false,
+      refreshed: [aldi, shadyside],
+      rereads: [[aldi, shadyside]],
+    });
+    writeUsualStores(list.cache, 'home-2', [aldi]);
+    list.watch();
+    await waitFor(() => expect(list.refresh.fired).toHaveLength(1));
+    await act(tick);
+
+    await act(async () => {
+      await list.pin();
+      await tick();
+    });
+    await act(async () => {
+      list.refresh.release();
+      await tick();
+      await tick();
+    });
+
+    // Another home's list is no part of the pin: the server's answer stands.
+    expect(list.cached('home-2')?.map(store => store.id)).toEqual([
+      aldi.id,
+      shadyside.id,
+    ]);
+    expect(list.reasks[0]?.fired).toHaveLength(0);
+    list.close();
+  });
+
   it('keeps showing a write the queue holds, and its late read never replaces it', async () => {
     const list = await openWithRefreshInFlight({
       pin: { updateUsualStore: null },
@@ -309,6 +380,20 @@ describe('localWritePrecedenceLink', () => {
     // Not caught: its answer is delivered as usual.
     expect(list.delivered.at(-1)).toBe(false);
     list.close();
+  });
+
+  it('sends nothing more for a write with no read loading', async () => {
+    const list = open({
+      watchNow: false,
+      rereads: [[pinnedMarket, banksville]],
+    });
+    await act(async () => {
+      await list.pin();
+      await tick();
+    });
+
+    expect(pinnedIn(list.cached())).toBe(true);
+    expect(list.forwarded.map(op => op.name)).toEqual(['UpdateUsualStore']);
   });
 
   it('holds a read the cache cannot answer, and sends it again after the write', async () => {
@@ -399,14 +484,6 @@ describe('localWritePrecedenceLink', () => {
 
   it('passes a deferred read through untouched', async () => {
     const answer = { data: { me: { __typename: 'User', id: 'u1' } } };
-    const forwarded: string[] = [];
-    const terminal = new ApolloLink(operation => {
-      forwarded.push(operation.operationName ?? '');
-      return new Observable(observer => {
-        observer.next(answer);
-        observer.complete();
-      });
-    });
     const deferred = gql`
       query DeferredMe {
         me {
@@ -417,26 +494,55 @@ describe('localWritePrecedenceLink', () => {
         }
       }
     `;
-    const results: unknown[] = [];
-    await new Promise<void>((resolve, reject) => {
-      ApolloLink.execute(
-        ApolloLink.from([createLocalWritePrecedenceLink(), terminal]),
-        { query: deferred },
-        {
-          client: new ApolloClient({
-            cache: makeCache(),
-            link: terminal,
-            defaultOptions: APOLLO_DEFAULT_OPTIONS,
-          }),
-        },
-      ).subscribe({
-        next: value => results.push(value),
-        error: reject,
-        complete: resolve,
-      });
-    });
+
+    const { forwarded, results } = await passThrough(deferred, answer);
 
     expect(forwarded).toEqual(['DeferredMe']);
     expect(results).toEqual([answer]);
   });
+
+  it('passes a subscription through untouched', async () => {
+    const answer = { data: { ping: 'pong' } };
+    const ping = gql`
+      subscription Ping {
+        ping
+      }
+    `;
+
+    const { forwarded, results } = await passThrough(ping, answer);
+
+    expect(forwarded).toEqual(['Ping']);
+    expect(results).toEqual([answer]);
+  });
 });
+
+/** Runs one operation through the link alone, answered once by `answer`. */
+async function passThrough(query: DocumentNode, answer: ApolloLink.Result) {
+  const forwarded: string[] = [];
+  const terminal = new ApolloLink(operation => {
+    forwarded.push(operation.operationName ?? '');
+    return new Observable(observer => {
+      observer.next(answer);
+      observer.complete();
+    });
+  });
+  const results: unknown[] = [];
+  await new Promise<void>((resolve, reject) => {
+    ApolloLink.execute(
+      ApolloLink.from([createLocalWritePrecedenceLink(), terminal]),
+      { query },
+      {
+        client: new ApolloClient({
+          cache: makeCache(),
+          link: terminal,
+          defaultOptions: APOLLO_DEFAULT_OPTIONS,
+        }),
+      },
+    ).subscribe({
+      next: value => results.push(value),
+      error: reject,
+      complete: resolve,
+    });
+  });
+  return { forwarded, results };
+}

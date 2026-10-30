@@ -589,12 +589,19 @@ drain reads the parent reference off the input, so no per-feature special-casing
   window, not a bug (it mirrors the `pantryEvents` active-container-only maintenance).
 - **A read already in flight when a local-first write is sent** — it would answer with the state from
   before the write, and Apollo shows its watcher nothing newer until it does. `localWritePrecedenceLink`
-  (`src/apollo/links/`) answers each such read from the cache as the write passes, so the change shows at
-  once, and asks it again once the write settles only if the server's late answer disagrees. A read the
-  cache can't answer completely is held and re-sent instead. One gap is left: a hook that orders its
-  writes (`useUsualStoreWrites`' `writeOrder`) sends a write when the one before it settles, so a read
-  started between that write landing in the cache and its send is not caught. Verified:
-  `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
+  (`src/apollo/links/`) answers each such read whose data the write changed from the cache as the write
+  passes, so the change shows at once, and asks it again (with the caller's context) once the write
+  settles only if the server's late answer disagrees. A read the cache can't answer completely is held
+  and re-sent instead. A read whose data the write left as it was goes on untouched, so a caller that
+  acts on the server's answer (`useVerifyEmail`, an event's read-back) still gets it. Two gaps are left:
+  - A read sent after the change reached the cache but before the server had it is not caught: one
+    started while the mutation is on the wire, or while a hook that orders its writes
+    (`useUsualStoreWrites`' `writeOrder`) waits to send it. If the server answers it first, its older
+    state shows until the mutation's answer lands.
+  - A `fetchMore` page caught by a write that changed its list is answered with the list already shown
+    (the page's variables read the merged connection), so its rows arrive with the re-ask.
+
+  Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
 
 ## 13. Divergences from the original plan (for the record)
 

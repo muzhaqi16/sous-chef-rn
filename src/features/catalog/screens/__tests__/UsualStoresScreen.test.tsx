@@ -128,7 +128,7 @@ describe('UsualStoresScreen', () => {
     ]);
   });
 
-  it('keeps a pin made while the list is refreshing', async () => {
+  it('keeps a pin made while the list is refreshing, and one more tap unpins it', async () => {
     const refresh = recordMock(UsualStoresDocument, {
       data: { usualStores: [banksville, marketDistrict] },
       held: true,
@@ -136,15 +136,19 @@ describe('UsualStoresScreen', () => {
     });
     // Asked again after the pin, so the server's answer holds it.
     const reread = answering([{ ...marketDistrict, pinned: true }, banksville]);
-    const pin = recordMock(UpdateUsualStoreDocument, {
-      data: {
-        updateUsualStore: {
-          __typename: 'UpdateUsualStorePayload',
-          usualStores: [{ ...marketDistrict, pinned: true }, banksville],
+    const pinTo = (pinned: boolean) =>
+      recordMock(UpdateUsualStoreDocument, {
+        match: vars => (vars.input as { pinned?: boolean }).pinned === pinned,
+        data: {
+          updateUsualStore: {
+            __typename: 'UpdateUsualStorePayload',
+            usualStores: [{ ...marketDistrict, pinned }, banksville],
+          },
         },
-      },
-    });
-    renderScreen([refresh.mock, reread.mock, pin.mock]);
+      });
+    const pin = pinTo(true);
+    const unpin = pinTo(false);
+    renderScreen([refresh.mock, reread.mock, pin.mock, unpin.mock]);
     await screen.findByText('Giant Eagle Market District');
     await waitFor(() => expect(refresh.fired).toHaveLength(1));
 
@@ -158,6 +162,15 @@ describe('UsualStoresScreen', () => {
     });
     await waitFor(() => expect(reread.fired).toHaveLength(1));
     expect(screen.getByText('Pinned')).toBeTruthy();
+
+    fireEvent.press(
+      screen.getByTestId(catalogTestIDs.usualStorePin('store:s2')),
+    );
+    await waitFor(() => expect(screen.queryByText('Pinned')).toBeNull());
+    expect(pin.fired).toHaveLength(1);
+    expect(unpin.fired).toEqual([
+      { input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: false } },
+    ]);
   });
 
   it('removes a store, and Undo brings it back', async () => {

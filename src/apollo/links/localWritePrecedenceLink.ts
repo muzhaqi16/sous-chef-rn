@@ -13,9 +13,13 @@ type Write = object;
 /** A read this link forwarded that has not answered the network yet. */
 interface Read {
   operation: ApolloLink.Operation;
+  /** The caller's context, before the links after this one add to it. */
+  context: ApolloLink.OperationContext;
   forward: ApolloLink.ForwardFunction;
   observer: Subscriber<ApolloLink.Result>;
   network?: Subscription;
+  /** What the cache held for it when it was sent. */
+  sent: unknown;
   /** Answered from the cache; its network answer is only compared. */
   answered: boolean;
   /** Its cache read was incomplete; its network answer is dropped and the read re-sent. */
@@ -48,23 +52,25 @@ const isIncremental = (query: DocumentNode): boolean => {
   return found;
 };
 
-const cacheRead = (
-  operation: ApolloLink.Operation,
-  returnPartialData: boolean,
-) =>
+const cacheRead = (operation: ApolloLink.Operation) =>
   operation.client.cache.diff<Record<string, unknown>>({
     query: operation.query,
     variables: operation.variables,
-    returnPartialData,
+    returnPartialData: true,
     optimistic: false,
   });
+
+// A write to a field with no keyArgs gives every argument's read a new
+// identity, so an equal copy counts as the same data.
+const sameData = (a: unknown, b: unknown) =>
+  a === b || canonicalStringify(a) === canonicalStringify(b);
 
 /**
  * A read already in flight when a local-first write is sent would answer with
  * the state from before the write, and Apollo shows a watcher nothing newer
- * until it does. So the write answers each such read from the cache at once,
- * and the read is asked again once the write settles if the server's late
- * answer disagrees. Verified:
+ * until it does. So the write answers each such read at once from the cache
+ * when it touched the read's data, and the read is asked again once the write
+ * settles if the server's late answer disagrees. Verified:
  * `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
  */
 export function createLocalWritePrecedenceLink(): ApolloLink {
@@ -76,7 +82,12 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
     if (read.answered && read.stale) {
       const { client, query, variables } = read.operation;
       void client
-        .query({ query, variables, fetchPolicy: 'network-only' })
+        .query({
+          query,
+          variables,
+          context: read.context,
+          fetchPolicy: 'network-only',
+        })
         .catch(() => undefined);
     } else if (read.held && !read.observer.closed) {
       // Sent again through this link, so a later write catches it as well.
@@ -94,12 +105,14 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
       read.landed = true;
       finish(read);
     };
+    read.sent = cacheRead(operation).result;
     read.network = read.forward(operation).subscribe({
       next: value => {
         if (read.answered) {
-          read.stale ||=
-            canonicalStringify(value.data ?? null) !==
-            canonicalStringify(cacheRead(operation, true).result ?? null);
+          read.stale ||= !sameData(
+            value.data ?? null,
+            cacheRead(operation).result ?? null,
+          );
           return;
         }
         if (!read.held) observer.next(value);
@@ -124,9 +137,14 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
   };
 
   const catchRead = (read: Read, write: Write) => {
+    if (read.answered || read.held) {
+      read.writes.add(write);
+      return;
+    }
+    const { result, complete } = cacheRead(read.operation);
+    // The write left its data as it was sent, so its answer cannot undo it.
+    if (complete && sameData(result, read.sent)) return;
     read.writes.add(write);
-    if (read.answered || read.held) return;
-    const { result, complete } = cacheRead(read.operation, false);
     if (!complete) {
       read.held = true;
       return;
@@ -145,8 +163,10 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
     new Observable<ApolloLink.Result>(observer => {
       const read: Read = {
         operation,
+        context: operation.getContext(),
         forward,
         observer,
+        sent: undefined,
         answered: false,
         held: false,
         landed: false,
