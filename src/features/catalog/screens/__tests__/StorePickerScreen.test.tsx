@@ -1,5 +1,6 @@
 import React from 'react';
 import { TextInput } from 'react-native';
+import { GraphQLError } from 'graphql';
 import {
   act,
   fireEvent,
@@ -18,9 +19,11 @@ import {
   recordMock,
   renderWithApollo,
   type MockDataFor,
+  type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateOutcome,
+  ErrorCode,
   UsualStoreSource,
 } from '#/graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
@@ -195,6 +198,59 @@ describe('StorePickerScreen', () => {
     expect(
       screen.getByPlaceholderText('Search by store name or address').props,
     ).toMatchObject({ autoCorrect: false });
+  });
+
+  describe('the zip code', () => {
+    const typeZip = (zip: string) => {
+      fireEvent.changeText(
+        screen.getByTestId(catalogTestIDs.storePickerZip),
+        zip,
+      );
+    };
+
+    it('is remembered once stores near it are listed', async () => {
+      const near = recordMock(NearbyStoresDocument, {
+        data: { nearbyStores: [] },
+      });
+      renderPicker([near.mock]);
+
+      typeZip('15220');
+
+      await waitFor(() =>
+        expect(useStorePickerStore.getState().lastZip).toBe('15220'),
+      );
+    });
+
+    it('is refused on its field alone, and never remembered', async () => {
+      const refused: MockFor<typeof NearbyStoresDocument> = {
+        request: { query: NearbyStoresDocument, variables: () => true },
+        result: {
+          errors: [
+            new GraphQLError('That is not a US zip code on file', {
+              extensions: {
+                code: ErrorCode.ValidationFailed,
+                field: 'near.zip',
+              },
+            }),
+          ],
+        },
+      };
+      renderPicker([refused]);
+
+      typeZip('00000');
+
+      expect(
+        await screen.findByText(
+          "That zip code isn't one we know yet. Try another, or search by name.",
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(
+          'Search by name, or enter a zip code to see the stores near it.',
+        ),
+      ).toBeNull();
+      expect(useStorePickerStore.getState().lastZip).toBeNull();
+    });
   });
 
   describe('the prices mark', () => {

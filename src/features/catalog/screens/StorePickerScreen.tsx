@@ -71,6 +71,11 @@ export const StorePickerScreen: React.FC<
     listBeforeTyping: false,
     maxResults: 20,
   });
+  // Remembered once stores near it have been listed: a refused zip is not.
+  const zipListed = US_ZIP.test(zip) && search.answered && !search.zipRefused;
+  useEffect(() => {
+    if (zipListed) setLastZip(zip);
+  }, [zipListed, zip, setLastZip]);
   const writes = useUsualStoreWrites(homeId);
   const { createStore } = useCreateStore();
 
@@ -88,17 +93,19 @@ export const StorePickerScreen: React.FC<
   };
 
   const term = search.term.trim();
-  const empty = !search.isOnline ? null : search.loading ? (
-    <Loading size="small" />
-  ) : (
-    <Text role="body" tone="secondary" style={styles.note}>
-      {!search.answered
-        ? t('storePicker.hint')
-        : term
-        ? t('storePicker.nothingNamed', { term })
-        : t('storePicker.nothingNear')}
-    </Text>
-  );
+  // A refused zip says why on its field, with nothing under it.
+  const empty =
+    !search.isOnline || search.zipRefused ? null : search.loading ? (
+      <Loading size="small" />
+    ) : (
+      <Text role="body" tone="secondary" style={styles.note}>
+        {!search.answered
+          ? t('storePicker.hint')
+          : term
+          ? t('storePicker.nothingNamed', { term })
+          : t('storePicker.nothingNear')}
+      </Text>
+    );
   const unlisted = search.isOnline ? search.unlistedName : null;
 
   return (
@@ -117,8 +124,6 @@ export const StorePickerScreen: React.FC<
                   value={search.term}
                   onChangeText={search.setTerm}
                   placeholder={t('storePicker.searchPlaceholder')}
-                  // A store's name is no dictionary word: iOS turns "aldi" into "Adi".
-                  autoCorrect={false}
                   isLoading={search.loading}
                   testID={catalogTestIDs.storePickerSearch}
                 />
@@ -127,9 +132,7 @@ export const StorePickerScreen: React.FC<
                   label={t('storePicker.zipLabel')}
                   value={zip}
                   onChangeText={text => {
-                    const digits = text.replace(/\D/g, '').slice(0, 5);
-                    setTypedZip(digits);
-                    if (US_ZIP.test(digits)) setLastZip(digits);
+                    setTypedZip(text.replace(/\D/g, '').slice(0, 5));
                   }}
                   keyboardType="number-pad"
                   textContentType="postalCode"
