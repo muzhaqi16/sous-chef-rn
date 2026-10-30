@@ -62,21 +62,25 @@ const fieldsFor = (
   return out;
 };
 
+const FRAGMENT_NAME = 'AnswerOrdering';
+
 const fragmentOn = (
   typename: string,
   selections: readonly FieldNode[],
+  fragments: Fragments = new Map(),
 ): DocumentNode => ({
   kind: Kind.DOCUMENT,
   definitions: [
     {
       kind: Kind.FRAGMENT_DEFINITION,
-      name: { kind: Kind.NAME, value: 'AnswerOrdering' },
+      name: { kind: Kind.NAME, value: FRAGMENT_NAME },
       typeCondition: {
         kind: Kind.NAMED_TYPE,
         name: { kind: Kind.NAME, value: typename },
       },
       selectionSet: { kind: Kind.SELECTION_SET, selections },
     },
+    ...fragments.values(),
   ],
 });
 
@@ -105,6 +109,50 @@ const heldVersion = (
   return typeof held?.version === 'number' ? held.version : undefined;
 };
 
+const keyOf = (field: FieldNode): string => (field.alias ?? field.name).value;
+
+const isRow = (value: unknown): boolean =>
+  isRecord(value) && value.id !== undefined;
+
+/** No number orders a list's membership, so its rows land as answered. */
+const landsAsAnswered = (value: unknown): boolean =>
+  Array.isArray(value)
+    ? value.some(isRow)
+    : isRecord(value) &&
+      typeof value.__typename === 'string' &&
+      value.__typename.endsWith('Connection');
+
+/**
+ * The device's value of an older row's field over the answer's. A row the field
+ * still points at was judged on its own, and an embedded object is laid over key
+ * by key, so a key the device lacks keeps the answer's value. A value replacing
+ * the answer's whole must be complete, or Apollo stores a partial row.
+ */
+const newest = (
+  answered: unknown,
+  held: unknown,
+  complete: boolean,
+): unknown => {
+  if (
+    held === undefined ||
+    landsAsAnswered(answered) ||
+    landsAsAnswered(held)
+  ) {
+    return answered;
+  }
+  if (!isRecord(held)) return held;
+  if (isRecord(answered) && !Array.isArray(answered) && !Array.isArray(held)) {
+    if (!isRow(answered) && !isRow(held)) {
+      for (const [key, value] of Object.entries(held)) {
+        answered[key] = newest(answered[key], value, complete);
+      }
+      return answered;
+    }
+    if (answered.id === held.id) return answered;
+  }
+  return complete ? held : answered;
+};
+
 /**
  * Lays the device's copy over each row in `value` that the server numbered
  * older than the one the device holds. Nested rows are judged on their own.
@@ -131,7 +179,7 @@ const order = (
   const fields = fieldsFor(selectionSet, typename, fragments);
   for (const field of fields) {
     if (!field.selectionSet) continue;
-    const child = value[(field.alias ?? field.name).value];
+    const child = value[keyOf(field)];
     order(cache, child, field.selectionSet, fragments, variables);
   }
   if (
@@ -145,19 +193,26 @@ const order = (
   if (!cacheId) return;
   const held = heldVersion(cache, cacheId, typename);
   if (held === undefined || value.version >= held) return;
-  const device = cache.readFragment<Record<string, unknown>>({
-    id: cacheId,
-    fragment: fragmentOn(
-      typename,
-      fields.filter(field => !field.selectionSet),
-    ),
-    variables,
-    optimistic: false,
-    returnPartialData: true,
-  });
-  if (!device) return;
-  for (const [key, newer] of Object.entries(device)) {
-    if (newer !== undefined) value[key] = newer;
+  const selectionsByKey = new Map<string, FieldNode[]>();
+  for (const field of fields) {
+    const key = keyOf(field);
+    selectionsByKey.set(key, [...(selectionsByKey.get(key) ?? []), field]);
+  }
+  for (const [key, selections] of selectionsByKey) {
+    if (landsAsAnswered(value[key])) continue;
+    const read = (returnPartialData: boolean) =>
+      cache.readFragment<Record<string, unknown>>({
+        id: cacheId,
+        fragment: fragmentOn(typename, selections, fragments),
+        fragmentName: FRAGMENT_NAME,
+        variables,
+        optimistic: false,
+        returnPartialData,
+      });
+    const device = read(true);
+    if (device) {
+      value[key] = newest(value[key], device[key], read(false) !== null);
+    }
   }
 };
 

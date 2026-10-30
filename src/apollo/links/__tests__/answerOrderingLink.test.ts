@@ -47,6 +47,32 @@ const SPREAD = gql`
   }
 `;
 
+const SHOPPING_LINE = gql`
+  query ProbeLine {
+    probeLine {
+      id
+      version
+      itemName
+      purchaseInfo {
+        isPurchased
+        purchasedPrice
+      }
+      unit {
+        id
+        symbol
+      }
+      item {
+        id
+        version
+        name
+      }
+      tags {
+        label
+      }
+    }
+  }
+`;
+
 const UNVERSIONED = gql`
   query ProbeUnit {
     probeUnit {
@@ -69,6 +95,25 @@ const line = (id: string, version: number, itemName: string) => ({
   id,
   version,
   itemName,
+});
+
+const shoppingLine = (
+  version: number,
+  overrides: Record<string, unknown> = {},
+) => ({
+  __typename: 'ShoppingListItem',
+  id: 'line-1',
+  version,
+  itemName: 'Milk',
+  purchaseInfo: {
+    __typename: 'ShoppingListItemPurchaseInfo',
+    isPurchased: true,
+    purchasedPrice: 2,
+  },
+  unit: { __typename: 'Unit', id: 'unit-l', symbol: 'l' },
+  item: { __typename: 'Item', id: 'item-1', version: 1, name: 'Milk' },
+  tags: [{ __typename: 'Tag', label: 'dairy' }],
+  ...overrides,
 });
 
 /** A client whose network answers each read with the next queued answer. */
@@ -255,6 +300,193 @@ describe('answerOrderingLink', () => {
 
     expect(cache.readQuery({ query: ITEM })).toEqual({
       probeItem: item(1, 'Milk'),
+    });
+  });
+
+  describe('the object fields of a row the answer has an older copy of', () => {
+    const afterAnswer = async (
+      held: Record<string, unknown>,
+      answer: Record<string, unknown>,
+    ) => {
+      const { cache, read } = client([{ probeLine: answer }]);
+      seedQuery(cache, { query: SHOPPING_LINE, data: { probeLine: held } });
+      await read(SHOPPING_LINE);
+      return cache.readQuery<{ probeLine: unknown }>({ query: SHOPPING_LINE })
+        ?.probeLine;
+    };
+
+    it('keeps a confirmed tick, which an embedded object carries', async () => {
+      const held = shoppingLine(2);
+      const answer = shoppingLine(1, {
+        purchaseInfo: {
+          __typename: 'ShoppingListItemPurchaseInfo',
+          isPurchased: false,
+          purchasedPrice: null,
+        },
+      });
+
+      expect(await afterAnswer(held, answer)).toEqual(held);
+    });
+
+    it('keeps the answer’s value for a key the device’s embedded object lacks', async () => {
+      const { cache, read } = client([
+        {
+          probeLine: shoppingLine(1, {
+            purchaseInfo: {
+              __typename: 'ShoppingListItemPurchaseInfo',
+              isPurchased: false,
+              purchasedPrice: 3,
+            },
+          }),
+        },
+      ]);
+      seedFragment(cache, {
+        fragment: gql`
+          fragment ProbeTick on ShoppingListItem {
+            id
+            version
+            purchaseInfo {
+              isPurchased
+            }
+          }
+        `,
+        data: {
+          __typename: 'ShoppingListItem',
+          id: 'line-1',
+          version: 2,
+          purchaseInfo: {
+            __typename: 'ShoppingListItemPurchaseInfo',
+            isPurchased: true,
+          },
+        },
+      });
+
+      const answered = await read(SHOPPING_LINE);
+
+      expect(answered.data).toMatchObject({
+        probeLine: { purchaseInfo: { isPurchased: true, purchasedPrice: 3 } },
+      });
+    });
+
+    it('keeps the row a newer copy points at', async () => {
+      const liters = { __typename: 'Unit', id: 'unit-l', symbol: 'l' };
+      const cups = { __typename: 'Unit', id: 'unit-c', symbol: 'cup' };
+      const held = shoppingLine(2, { unit: liters });
+
+      expect(await afterAnswer(held, shoppingLine(1, { unit: cups }))).toEqual(
+        held,
+      );
+    });
+
+    it('keeps a pointer a newer copy cleared', async () => {
+      const held = shoppingLine(2, { unit: null });
+
+      expect(await afterAnswer(held, shoppingLine(1))).toEqual(held);
+    });
+
+    it('keeps an embedded list, which has no membership of its own', async () => {
+      const held = shoppingLine(2, {
+        tags: [{ __typename: 'Tag', label: 'organic' }],
+      });
+
+      expect(await afterAnswer(held, shoppingLine(1))).toEqual(held);
+    });
+
+    it('judges a row the field still points at on its own', async () => {
+      const newerItem = {
+        __typename: 'Item',
+        id: 'item-1',
+        version: 9,
+        name: 'Oat milk',
+      };
+      const held = shoppingLine(2);
+
+      expect(
+        await afterAnswer(held, shoppingLine(1, { item: newerItem })),
+      ).toEqual({ ...held, item: newerItem });
+    });
+
+    it('keeps the answer’s pointer over a row the device holds in part', async () => {
+      const cups = { __typename: 'Unit', id: 'unit-c', symbol: 'cup' };
+      const { cache, read } = client([{ probeLine: shoppingLine(1) }]);
+      seedFragment(cache, {
+        fragment: gql`
+          fragment ProbePointer on ShoppingListItem {
+            id
+            version
+            unit {
+              id
+            }
+          }
+        `,
+        data: {
+          __typename: 'ShoppingListItem',
+          id: 'line-1',
+          version: 2,
+          unit: { __typename: 'Unit', id: cups.id },
+        },
+      });
+
+      const answered = await read(SHOPPING_LINE);
+
+      expect(answered.data).toMatchObject({
+        probeLine: { unit: { id: 'unit-l', symbol: 'l' } },
+      });
+    });
+
+    it('lands a connection as answered', async () => {
+      const CONNECTION = gql`
+        query ProbeRows {
+          probeList {
+            id
+            version
+            itemsConnection(first: 5) {
+              totalCount
+              edges {
+                node {
+                  id
+                  version
+                  itemName
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        }
+      `;
+      const list = (version: number, rows: ReturnType<typeof line>[]) => ({
+        __typename: 'ShoppingList',
+        id: 'list-1',
+        version,
+        itemsConnection: {
+          __typename: 'ShoppingListItemConnection',
+          totalCount: rows.length,
+          edges: rows.map(node => ({
+            __typename: 'ShoppingListItemEdge',
+            node,
+          })),
+          pageInfo: {
+            __typename: 'PageInfo',
+            hasNextPage: false,
+            endCursor: null,
+          },
+        },
+      });
+      const answer = list(1, [line('l2', 1, 'Bread')]);
+      const { cache, read } = client([{ probeList: answer }]);
+      seedQuery(cache, {
+        query: CONNECTION,
+        data: { probeList: list(2, [line('l1', 1, 'Eggs')]) },
+      });
+
+      await read(CONNECTION);
+
+      expect(cache.readQuery({ query: CONNECTION })).toEqual({
+        probeList: { ...answer, version: 2 },
+      });
     });
   });
 

@@ -680,10 +680,13 @@ For the server to support version conflicts, mutations must:
 - **`answerOrderingLink` keeps a newer row** (`src/apollo/links/`, under
   `localWritePrecedenceLink`). When an answer's copy of a row has a lower
   `version` than the one the server last gave the device, the link lays the
-  device's copy over the answer before Apollo stores it. The answer's other
-  rows still land. It reads the root, never an optimistic layer. A local write
-  keeps its row's version, so the link never keeps a pending write over an
-  answer at that version; that is the precedence link's job.
+  device's copy over the answer before Apollo stores it: scalars, embedded
+  objects (a tick is `purchaseInfo`) and the rows it points at. The answer's
+  other rows still land, and rows in a list or connection land as answered,
+  since nothing numbers membership. It reads the root, never an optimistic
+  layer. A local write keeps its row's version, so the link never keeps a
+  pending write over an answer at that version; that is the precedence link's
+  job.
 - **Why a link, not a type policy:** nothing in the cache sees a normalized
   row's old and new copies together. Verified:
   `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.

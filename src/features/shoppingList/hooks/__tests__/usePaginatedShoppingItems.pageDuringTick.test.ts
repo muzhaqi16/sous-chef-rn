@@ -1,3 +1,4 @@
+import { gql } from '@apollo/client';
 import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { createAnswerOrderingLink } from '#/apollo/links/answerOrderingLink';
@@ -96,7 +97,11 @@ function setup() {
         listId: 'list-1',
         refetch: paged.actions.refetch,
       });
-      return { purchased: paged.state.purchased, toggleItem };
+      return {
+        purchased: paged.state.purchased,
+        refetch: paged.actions.refetch,
+        toggleItem,
+      };
     },
     {
       cache,
@@ -111,8 +116,41 @@ function setup() {
   );
 
   const shownIds = () => result.current.purchased.items.map(item => item.id);
-  return { result, nextPage, shownIds };
+  return { result, cache, nextPage, shownIds };
 }
+
+const ROW = gql`
+  fragment ProbeRow on ShoppingListItem {
+    version
+    purchaseInfo {
+      isPurchased
+    }
+  }
+`;
+
+describe('an answer from before a confirmed tick', () => {
+  it('leaves the tick, through the query the list reads', async () => {
+    const { result, cache, shownIds } = setup();
+    await waitFor(() => expect(shownIds()).toEqual(['p1', 'p2']));
+    await act(async () => {
+      await result.current.toggleItem('p1');
+      await settle();
+    });
+
+    // The mocks still answer as the server did before the tick.
+    await act(async () => {
+      await result.current.refetch();
+      await settle();
+    });
+
+    expect(
+      cache.readFragment({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: 'p1' }),
+        fragment: ROW,
+      }),
+    ).toMatchObject({ version: 2, purchaseInfo: { isPurchased: false } });
+  });
+});
 
 describe('a tick while the next page loads', () => {
   beforeEach(() => {
