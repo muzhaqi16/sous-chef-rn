@@ -1,13 +1,9 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ReceiptLineSheet } from '../ReceiptLineSheet';
 import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#components/templates/Sheet', () => {
   const { View } = require('react-native');
@@ -133,6 +129,14 @@ const renderSheet = (line: typeof MILK & { discount?: number } = MILK) => {
 const typeTotal = (text: string) =>
   fireEvent.changeText(screen.getByTestId('field-Total paid'), text);
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('the total paid on a receipt line', () => {
   it.each(['-3', '4,99x'])(
     'refuses %p on the field and does not save',
@@ -142,9 +146,10 @@ describe('the total paid on a receipt line', () => {
       typeTotal(typed);
       fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-      expect(
-        await screen.findByTestId('field-Total paid-error'),
-      ).toHaveTextContent(TOTAL_NEEDED);
+      await drainTimers();
+      expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+        TOTAL_NEEDED,
+      );
       expect(onSave).not.toHaveBeenCalled();
     },
   );
@@ -155,10 +160,9 @@ describe('the total paid on a receipt line', () => {
     typeTotal('3.49');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ price: 3.49 }),
-      ),
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 3.49 }),
     );
     expect(onClose).toHaveBeenCalled();
   });
@@ -171,9 +175,10 @@ describe('the total paid on a receipt line', () => {
       typeTotal(typed);
       fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-      expect(
-        await screen.findByTestId('field-Total paid-error'),
-      ).toHaveTextContent(TOTAL_NEEDED);
+      await drainTimers();
+      expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+        TOTAL_NEEDED,
+      );
       expect(onSave).not.toHaveBeenCalled();
     },
   );
@@ -184,11 +189,8 @@ describe('the total paid on a receipt line', () => {
     typeTotal('0');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ price: 0 }),
-      ),
-    );
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ price: 0 }));
   });
 });
 
@@ -199,10 +201,9 @@ describe('the unit of a receipt line', () => {
     fireEvent.changeText(screen.getByTestId('field-unit'), 'lb');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ unitId: 'unit-lb', unitText: 'lb' }),
-      ),
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'unit-lb', unitText: 'lb' }),
     );
   });
 
@@ -212,7 +213,8 @@ describe('the unit of a receipt line', () => {
     fireEvent.changeText(screen.getByTestId('field-unit'), 'tin');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    expect(await screen.findByTestId('field-unit-error')).toHaveTextContent(
+    await drainTimers();
+    expect(screen.getByTestId('field-unit-error')).toHaveTextContent(
       '"tin" isn\'t a unit we recognise. Pick one from the list.',
     );
     expect(onSave).not.toHaveBeenCalled();
@@ -230,10 +232,9 @@ describe('a receipt line not for the pantry', () => {
     );
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ notStocked: true }),
-      ),
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ notStocked: true }),
     );
   });
 });

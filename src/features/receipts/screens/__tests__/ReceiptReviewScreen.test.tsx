@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { userEvent, waitFor } from '@testing-library/react-native';
+import { act, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { makeCache } from '#/apollo/cache';
@@ -11,6 +11,11 @@ import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
 import { ReceiptReviewScreen } from '../ReceiptReviewScreen';
 import { ReceiptFlowExitsProvider } from '../receiptFlowExits';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 const mockToPantryMain = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
@@ -79,6 +84,14 @@ const row = (overrides: Partial<ReceiptReviewRow>): ReceiptReviewRow => ({
   candidates: [],
   onList: false,
   ...overrides,
+});
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('ReceiptReviewScreen rows', () => {
@@ -228,13 +241,13 @@ describe('ReceiptReviewScreen Add', () => {
     expect(toastService.success).toHaveBeenCalledWith(
       'Added 2 items to Kitchen Pantry',
     );
-    await waitFor(() =>
-      expect(toastService.info).toHaveBeenCalledWith(
-        'ALDI Wilkinsburg is now one of your stores',
-        expect.objectContaining({
-          action: expect.objectContaining({ label: 'Undo' }),
-        }),
-      ),
+    // Stops short of the mounted list's repeating diagnostics timer.
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(toastService.info).toHaveBeenCalledWith(
+      'ALDI Wilkinsburg is now one of your stores',
+      expect.objectContaining({
+        action: expect.objectContaining({ label: 'Undo' }),
+      }),
     );
     (
       toastService.info as jest.Mock<

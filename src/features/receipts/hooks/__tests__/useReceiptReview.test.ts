@@ -1,6 +1,6 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -15,6 +15,7 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetPantryDocument,
   type GetPantryQuery,
@@ -61,6 +62,11 @@ import {
   UseHeldStores_ListFragmentDoc,
   UseHeldStores_StoreFragmentDoc,
 } from '../useHeldStores.generated';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 jest.mock('#/services/errorService');
 interface CurrentPantry {
@@ -301,19 +307,15 @@ async function setup({
       ],
     },
   );
-  await waitFor(() =>
-    expect(rendered.result.current.pantry.hasLoaded).toBe(true),
-  );
+  await drainTimers();
+  expect(rendered.result.current.pantry.hasLoaded).toBe(true);
   // Adds the chosen lines, and waits for the API to answer the check-in.
   const addChosen = async () => {
     let outcome: unknown;
-    await act(async () => {
-      outcome = await rendered.result.current.review.addChosen();
-    });
-    await waitFor(() =>
-      expect(useReceiptDraftStore.getState().draft?.checkIn?.state).not.toBe(
-        'sending',
-      ),
+    outcome = await drained(() => rendered.result.current.review.addChosen());
+    await drainTimers();
+    expect(useReceiptDraftStore.getState().draft?.checkIn?.state).not.toBe(
+      'sending',
     );
     return outcome;
   };
@@ -325,12 +327,11 @@ async function setup({
     await act(async () => {
       rendered.result.current.review.chooseLine(index, choice);
     });
-    await waitFor(() =>
-      expect(
-        rendered.result.current.review.rows.find(row => row.index === index)
-          ?.onList,
-      ).toBe(true),
-    );
+    await drainTimers();
+    expect(
+      rendered.result.current.review.rows.find(row => row.index === index)
+        ?.onList,
+    ).toBe(true);
     await addChosen();
   };
   return {
@@ -342,6 +343,14 @@ async function setup({
     chooseOnListAndAdd,
   };
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -428,14 +437,13 @@ describe('useReceiptReview', () => {
 
     let shownBefore: string[] = [];
     let outcome: unknown;
-    await act(async () => {
+    await drained(async () => {
       outcome = await result.current.review.addChosen();
       shownBefore = pantryItemNames(cache);
     });
     // Both show in the pantry before the API is asked.
     expect(outcome).toMatchObject({ sent: 2, held: 0 });
     expect(shownBefore.sort()).toEqual(['Bananas', 'Whole milk']);
-    await addChosen();
 
     const ids = useReceiptDraftStore.getState().draft?.checkIn;
     const [milkIds, bananaIds] = [ids?.lines[1], ids?.lines[3]];
@@ -659,9 +667,8 @@ describe('useReceiptReview', () => {
     it('asks once for the item lines, with the header and the pantry', async () => {
       const resolve = resolved();
       const { result } = await setup({ resolve });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(resolve.fired).toEqual([
         {
@@ -690,18 +697,17 @@ describe('useReceiptReview', () => {
           key.includes('"itemIds"'),
         );
       const first = await setup({ resolve, cache });
-      await waitFor(() =>
-        expect(first.result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(first.result.current.review.matchState).toBe('done');
       first.unmount();
 
       const second = await setup({ resolve, cache });
-      await waitFor(() =>
-        expect(second.result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(second.result.current.review.matchState).toBe('done');
       expect(resolve.fired).toHaveLength(1);
 
-      await waitFor(() => expect(askedByItem()).toBe(true));
+      await drainTimers();
+      expect(askedByItem()).toBe(true);
 
       act(() => {
         second.result.current.review.finish();
@@ -725,9 +731,8 @@ describe('useReceiptReview', () => {
 
       mockCurrentPantry.mockReturnValue(KITCHEN);
       rerender({});
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(resolve.fired).toEqual([
         { input: expect.objectContaining({ pantryId: 'p1' }) },
       ]);
@@ -742,9 +747,8 @@ describe('useReceiptReview', () => {
       }
       const resolve = resolved();
       const { result } = await setup({ resolve });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(resolve.fired[0]).toEqual({
         input: expect.objectContaining({ parsedBy: ReceiptParser.Server }),
@@ -759,9 +763,8 @@ describe('useReceiptReview', () => {
         }),
         resolveAgain: resolved(),
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('failed');
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'pending',
         'pending',
@@ -771,9 +774,8 @@ describe('useReceiptReview', () => {
         result.current.review.retryMatching();
       });
 
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'add',
         'guess',
@@ -783,9 +785,8 @@ describe('useReceiptReview', () => {
     it('adds the item it is sure of, and the one it guesses unless the user picks another', async () => {
       const { result } = await setup({ resolve: resolved() });
 
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
       const [milk, bananas] = result.current.review.rows;
       expect(milk?.choice).toEqual(MILK);
       expect(milk?.status).toBe('add');
@@ -856,9 +857,8 @@ describe('useReceiptReview', () => {
       });
       const { result } = await setup({ resolve });
 
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(
         result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
           itemId,
@@ -903,9 +903,8 @@ describe('useReceiptReview', () => {
       });
       const { result } = await setup({ resolve });
 
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(
         result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
           itemId,
@@ -916,9 +915,8 @@ describe('useReceiptReview', () => {
 
     it('keeps a line the user left out, out, whatever the API proposes', async () => {
       const { result } = await setup({ resolve: resolved() });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
 
       await act(async () => {
         result.current.review.chooseLine(1, null);
@@ -941,9 +939,8 @@ describe('useReceiptReview', () => {
       const { result, checkIn, addChosen } = await setup({
         resolve: resolved(),
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
       // The guess was wrong: the user picks the second candidate.
       await act(async () => {
         result.current.review.chooseLine(3, {
@@ -1011,9 +1008,8 @@ describe('useReceiptReview', () => {
         }),
         resolveAgain,
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(result.current.review.storeUnrecognized).toBe(true);
 
       await act(async () => {
@@ -1022,19 +1018,18 @@ describe('useReceiptReview', () => {
           name: 'Kroger #87',
         });
       });
-      await waitFor(() => expect(resolveAgain.fired).toHaveLength(1));
+      await drainTimers();
+      expect(resolveAgain.fired).toHaveLength(1);
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'add',
         'guess',
       ]);
 
-      await act(async () => resolveAgain.release());
-      await waitFor(() =>
-        expect(result.current.review.rows.map(row => row.status)).toEqual([
-          'add',
-          'add',
-        ]),
-      );
+      await drained(() => resolveAgain.release());
+      expect(result.current.review.rows.map(row => row.status)).toEqual([
+        'add',
+        'add',
+      ]);
       // The pick stays open to change.
       expect(result.current.review.storeUnrecognized).toBe(true);
       expect(result.current.review.store).toEqual({
@@ -1084,12 +1079,11 @@ describe('useReceiptReview', () => {
         },
       });
       const { result } = await setup({ resolve, cache });
-      await waitFor(() =>
-        expect(result.current.review.storeLocation).toEqual({
-          address: '100 Main St',
-          storeNumber: '412',
-        }),
-      );
+      await drainTimers();
+      expect(result.current.review.storeLocation).toEqual({
+        address: '100 Main St',
+        storeNumber: '412',
+      });
 
       await act(async () => {
         result.current.review.chooseStore({
@@ -1107,12 +1101,11 @@ describe('useReceiptReview', () => {
     it('shows the store the header names, and adds at the one the user picks', async () => {
       const resolve = resolved();
       const { result, checkIn, addChosen } = await setup({ resolve });
-      await waitFor(() =>
-        expect(result.current.review.store).toEqual({
-          id: 'store-27',
-          name: 'Kroger #412',
-        }),
-      );
+      await drainTimers();
+      expect(result.current.review.store).toEqual({
+        id: 'store-27',
+        name: 'Kroger #412',
+      });
 
       await act(async () => {
         result.current.review.chooseStore({
@@ -1126,14 +1119,12 @@ describe('useReceiptReview', () => {
         name: 'Kroger #87',
       });
       // The matcher is asked again, at the store the user named.
-      await waitFor(() =>
-        expect(resolve.fired).toContainEqual({
-          input: expect.objectContaining({ storeId: 'store-99' }),
-        }),
-      );
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(resolve.fired).toContainEqual({
+        input: expect.objectContaining({ storeId: 'store-99' }),
+      });
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
 
       await addChosen();
 
@@ -1168,9 +1159,8 @@ describe('useReceiptReview', () => {
         resolve,
         storeCreate,
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(resolve.fired[0]).toEqual({
         input: expect.objectContaining({
           merchant: {
@@ -1216,14 +1206,11 @@ describe('useReceiptReview', () => {
         resolve,
         storeCreate,
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       const confirm = async () => {
         let outcome: unknown;
-        await act(async () => {
-          outcome = await result.current.review.addChosen();
-        });
+        outcome = await drained(() => result.current.review.addChosen());
         return outcome;
       };
 
@@ -1236,8 +1223,8 @@ describe('useReceiptReview', () => {
       // A second tap sends nothing, and adds no second store.
       expect(await confirm()).toMatchObject({ sent: 0, held: 0 });
 
-      await act(async () => storeCreate.release());
-      await waitFor(() => expect(checkIn.fired).toHaveLength(1));
+      await drained(() => storeCreate.release());
+      expect(checkIn.fired).toHaveLength(1);
       expect(storeCreate.fired).toHaveLength(1);
     });
   });
@@ -1249,12 +1236,11 @@ describe('useReceiptReview', () => {
     });
     const { result } = await setup({ resolve });
 
-    await waitFor(() =>
-      expect(result.current.review.storeLocation).toEqual({
-        address: '7516 Meade Street',
-        storeNumber: null,
-      }),
-    );
+    await drainTimers();
+    expect(result.current.review.storeLocation).toEqual({
+      address: '7516 Meade Street',
+      storeNumber: null,
+    });
   });
 
   describe('offering a store the receipt would locate', () => {
@@ -1300,9 +1286,8 @@ describe('useReceiptReview', () => {
       const { result, checkIn, addChosen } = await setup({
         resolve: offline(),
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('failed');
 
       expect(result.current.review.storeOffer).toEqual(OFFER);
       // Offered, never placed.
@@ -1346,9 +1331,8 @@ describe('useReceiptReview', () => {
         },
       });
       const known = await setup({ resolve: offline(), cache });
-      await waitFor(() =>
-        expect(known.result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(known.result.current.review.matchState).toBe('failed');
       // Its name alone: an address the cache never held is not none.
       expect(known.result.current.review.storeOffer).toBeNull();
       known.unmount();
@@ -1360,9 +1344,8 @@ describe('useReceiptReview', () => {
         data: { __typename: 'Store', ...KROGER_LABEL },
       });
       const { result } = await setup({ resolve: offline(), cache });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('failed');
 
       expect(result.current.review.storeOffer).toEqual(OFFER);
     });
@@ -1370,9 +1353,8 @@ describe('useReceiptReview', () => {
     it("offers the API's unlocated store when the device holds none, and never places it", async () => {
       readByServer();
       const { result } = await setup({ resolve: unplaced(OFFER) });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(result.current.review.storeOffer).toEqual(OFFER);
       expect(result.current.review.store).toBeNull();
@@ -1399,9 +1381,8 @@ describe('useReceiptReview', () => {
         },
       });
       const { result } = await setup({ resolve: unplaced(OFFER), cache });
-      await waitFor(() =>
-        expect(result.current.review.storeOffer).toEqual(OFFER),
-      );
+      await drainTimers();
+      expect(result.current.review.storeOffer).toEqual(OFFER);
       expect(result.current.review.storeLocation).toEqual({
         address: '412 Main St',
         storeNumber: null,
@@ -1422,9 +1403,8 @@ describe('useReceiptReview', () => {
       readByServer({ parsedBy: 'device' });
       useStore.getState().setCachedStores([KROGER_LABEL]);
       const { result } = await setup({ resolve: unplaced(OFFER) });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(result.current.review.storeOffer).toBeNull();
     });
@@ -1439,9 +1419,8 @@ describe('useReceiptReview', () => {
       const { result, checkIn, addChosen } = await setup({
         resolve: unplaced(OFFER),
       });
-      await waitFor(() =>
-        expect(result.current.review.storeOffer).toEqual(OFFER),
-      );
+      await drainTimers();
+      expect(result.current.review.storeOffer).toEqual(OFFER);
 
       await act(async () => {
         result.current.review.chooseStore(OFFER);
@@ -1466,15 +1445,14 @@ describe('useReceiptReview', () => {
         result.current.review.pickItem('cat-milk');
       });
 
-      await waitFor(() =>
-        expect(
-          result.current.review.listItemNameFor(1, {
-            itemId: 'cat-milk',
-            unitId: null,
-            unitText: '',
-          }),
-        ).toBe('Milk'),
-      );
+      await drainTimers();
+      expect(
+        result.current.review.listItemNameFor(1, {
+          itemId: 'cat-milk',
+          unitId: null,
+          unitText: '',
+        }),
+      ).toBe('Milk');
       expect(
         result.current.review.listItemNameFor(1, {
           itemId: 'cat-milk',
@@ -1501,16 +1479,15 @@ describe('useReceiptReview', () => {
           itemId: 'cat-bananas',
         });
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
       expect(result.current.review.rows[1]?.onList).toBe(false);
       // The milk's list line is taken, so no other line is offered it.
       expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk');
       expect(result.current.review.listItemNameFor(3, MILK)).toBeUndefined();
 
       let movedBefore: unknown;
-      await act(async () => {
+      await drained(async () => {
         await result.current.review.addChosen();
         movedBefore = cache.extract()['ShoppingListItem:sli-milk'];
       });
@@ -1542,11 +1519,10 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, MILK);
       });
 
-      await waitFor(() => expect(result.current.review.listLoading).toBe(true));
-      await act(async () => list.release());
-      await waitFor(() =>
-        expect(result.current.review.listLoading).toBe(false),
-      );
+      await drainTimers();
+      expect(result.current.review.listLoading).toBe(true);
+      await drained(() => list.release());
+      expect(result.current.review.listLoading).toBe(false);
     });
 
     it('matches against the list the user still has when the selected one is gone', async () => {
@@ -1556,9 +1532,8 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, MILK);
       });
 
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
     });
 
     it('says when the list is longer than the review can see', async () => {
@@ -1576,10 +1551,8 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, MILK);
       });
 
-      await waitFor(
-        () => expect(result.current.review.listIncomplete).toBe(true),
-        { timeout: 5000 },
-      );
+      await drainTimers();
+      expect(result.current.review.listIncomplete).toBe(true);
       expect(result.current.review.listLoading).toBe(false);
     });
 
@@ -1617,9 +1590,8 @@ describe('useReceiptReview', () => {
           itemId: 'cat-bananas',
         });
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
 
       await addChosen();
 
@@ -1671,15 +1643,12 @@ describe('useReceiptReview', () => {
       await act(async () => {
         result.current.review.chooseLine(1, { ...MILK, notStocked: true });
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
       const toBuy =
         'itemsConnection:{"filters":{"isPurchased":false,"itemIds":["cat-milk"]}}';
 
-      await act(async () => {
-        await result.current.review.addChosen();
-      });
+      await drained(() => result.current.review.addChosen());
 
       expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
         expect.not.objectContaining({ pantryItemId: expect.anything() }),
@@ -1692,12 +1661,10 @@ describe('useReceiptReview', () => {
         [toBuy]: { totalCount: 0, edges: [] },
       });
 
-      await act(async () => checkIn.release());
-      await waitFor(() =>
-        expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
-          purchaseInfo: { isPurchased: false },
-        }),
-      );
+      await drained(() => checkIn.release());
+      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+        purchaseInfo: { isPurchased: false },
+      });
       expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
         [toBuy]: {
           totalCount: 1,
@@ -1712,9 +1679,8 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, { ...MILK, offList: true });
       });
       // Still offered, so the line can be put back on the list.
-      await waitFor(() =>
-        expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk'),
-      );
+      await drainTimers();
+      expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk');
       expect(result.current.review.rows[0]?.onList).toBe(false);
 
       await addChosen();
@@ -1766,16 +1732,13 @@ describe('useReceiptReview', () => {
     }> => {
       const cache = options?.cache ?? makeCache();
       const { result, addChosen } = await setup({ ...options, cache });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       const outcome = (await addChosen()) as {
         learned: Promise<LearnedStore | null>;
       };
       let learned: LearnedStore | null = null;
-      await act(async () => {
-        learned = await outcome.learned;
-      });
+      learned = await drained(() => outcome.learned);
       return { learned, cache };
     };
 
@@ -1813,9 +1776,7 @@ describe('useReceiptReview', () => {
       const added = pantryItemNames(cache);
       expect(added).toContain('Whole milk');
 
-      await act(async () => {
-        await learned?.undo();
-      });
+      await drained(() => learned?.undo());
 
       expect(storeRemove.fired.map(vars => inputOf(vars))).toEqual([
         { homeId: 'home-1', target: { storeId: 'store-27' } },
