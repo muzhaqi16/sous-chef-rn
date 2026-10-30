@@ -210,6 +210,9 @@ export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
           onClear={handleClear}
           // Every search field shows it, so every one reads as the same field.
           leftIcon={<Icon name="search" size={16} tone="textTertiary" />}
+          // A search names stores, brands and dishes no dictionary knows: iOS
+          // turned "aldi" into "Adi". A caller may turn it back on.
+          autoCorrect={false}
           {...textInputProps}
         />
 

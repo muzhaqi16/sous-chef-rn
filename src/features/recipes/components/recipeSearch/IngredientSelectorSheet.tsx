@@ -99,7 +99,6 @@ export const IngredientSelectorSheet: React.FC<
             onChangeText={screen.setIngredientSearchQuery}
             debounceMs={250}
             autoCapitalize="none"
-            autoCorrect={false}
             returnKeyType="search"
           />
         )}

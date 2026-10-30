@@ -103,7 +103,6 @@ export const RelinkItemSheet: React.FC<RelinkItemSheetProps> = ({
           onChangeText={handleSearchTermChange}
           debounceMs={250}
           autoCapitalize="words"
-          autoCorrect={false}
           returnKeyType="search"
           isLoading={!!autocomplete.isLoading}
           containerStyle={styles.search}

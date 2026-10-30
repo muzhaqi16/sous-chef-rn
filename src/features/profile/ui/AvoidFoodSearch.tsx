@@ -47,7 +47,6 @@ export const AvoidFoodSearch: React.FC<AvoidFoodSearchProps> = ({
         onChangeText={search.onSearchTermChange}
         debounceMs={SEARCH_QUIET_MS}
         autoCapitalize="words"
-        autoCorrect={false}
         returnKeyType="search"
         isLoading={search.searching}
         containerStyle={styles.spaced}
