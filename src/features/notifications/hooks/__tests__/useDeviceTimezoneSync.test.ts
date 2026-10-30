@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
@@ -96,6 +96,14 @@ const heldSettingsZone = (cache: ReturnType<typeof makeCache>) =>
   cache.readQuery({ query: GetUserSettingsDocument })?.me?.settings?.timezone;
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockGetDeviceTimezone.mockReturnValue('America/New_York');
 });
@@ -132,11 +140,10 @@ describe('useDeviceTimezoneSync', () => {
       ],
     });
 
-    await waitFor(() =>
-      expect(update.fired).toContainEqual({
-        input: { quietHours: { quietHoursTimezone: 'America/New_York' } },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired).toContainEqual({
+      input: { quietHours: { quietHoursTimezone: 'America/New_York' } },
+    });
   });
 
   it.each<[string, StoredPreferences, string | null]>([
@@ -160,7 +167,8 @@ describe('useDeviceTimezoneSync', () => {
       ],
     });
 
-    await waitFor(() => expect(update.fired).toEqual([]));
+    await drainTimers();
+    expect(update.fired).toEqual([]);
   });
 
   /**
@@ -177,7 +185,8 @@ describe('useDeviceTimezoneSync', () => {
       operationMocks: [prefsQueryMock(), settingsQueryMock(), update.mock],
     });
 
-    await waitFor(() => expect(update.fired).toHaveLength(1));
+    await drainTimers();
+    expect(update.fired).toHaveLength(1);
     rerender({});
     rerender({});
     expect(update.fired).toHaveLength(1);
@@ -189,7 +198,6 @@ describe('useDeviceTimezoneSync', () => {
    * on failure retries forever. The retry belongs on the next launch instead.
    */
   it('does not retry a refused write within the same mount', async () => {
-    jest.useFakeTimers();
     const update = recordMock(UpdateNotificationPreferencesDocument, {
       data: {
         updateNotificationPreferences: {
@@ -227,11 +235,10 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
       operationMocks: [matchingPrefs(), settingsQueryMock('UTC'), update.mock],
     });
 
-    await waitFor(() =>
-      expect(update.fired).toEqual([
-        { input: { regional: { timezone: 'America/New_York' } } },
-      ]),
-    );
+    await drainTimers();
+    expect(update.fired).toEqual([
+      { input: { regional: { timezone: 'America/New_York' } } },
+    ]);
     expect(heldSettingsZone(cache)).toBe('America/New_York');
   });
 
@@ -243,7 +250,6 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
     ],
     ['creates no settings for an account that has none', null],
   ])('%s', async (_name, held) => {
-    jest.useFakeTimers();
     const cache = makeCache();
     const update = settingsUpdate('America/New_York');
 
@@ -260,7 +266,6 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
   });
 
   it('does not retry a refused settings write within the same mount', async () => {
-    jest.useFakeTimers();
     const cache = makeCache();
     const update = recordMock(UpdateUserPreferencesDocument, {
       data: {
@@ -300,25 +305,22 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
         preferences.mock,
       ],
     });
-    await waitFor(() =>
-      expect(heldSettingsZone(cache)).toBe('America/New_York'),
-    );
+    await drainTimers();
+    expect(heldSettingsZone(cache)).toBe('America/New_York');
     expect(settings.fired).toEqual([]);
 
     act(() => memoryLifecycle().moveTo('background'));
     mockGetDeviceTimezone.mockReturnValue('Europe/Rome');
     act(() => memoryLifecycle().moveTo('active'));
 
-    await waitFor(() =>
-      expect(settings.fired).toEqual([
-        { input: { regional: { timezone: 'Europe/Rome' } } },
-      ]),
-    );
-    await waitFor(() =>
-      expect(preferences.fired).toEqual([
-        { input: { quietHours: { quietHoursTimezone: 'Europe/Rome' } } },
-      ]),
-    );
+    await drainTimers();
+    expect(settings.fired).toEqual([
+      { input: { regional: { timezone: 'Europe/Rome' } } },
+    ]);
+    await drainTimers();
+    expect(preferences.fired).toEqual([
+      { input: { quietHours: { quietHoursTimezone: 'Europe/Rome' } } },
+    ]);
     expect(heldSettingsZone(cache)).toBe('Europe/Rome');
   });
 });

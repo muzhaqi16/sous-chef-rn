@@ -2,7 +2,7 @@ import React, { type ReactNode } from 'react';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
@@ -64,6 +64,14 @@ function setup() {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockFireDeferred = null;
   useStore.setState({ user: USER, apiReachable: true, isOnline: true });
@@ -82,7 +90,6 @@ const pastTheResyncWindow = () =>
 
 describe('useNotificationsOnLaunch', () => {
   it('waits for the deferred start before loading unread notifications', async () => {
-    jest.useFakeTimers();
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(USER.id), { wrapper });
 
@@ -96,17 +103,15 @@ describe('useNotificationsOnLaunch', () => {
   });
 
   it('reaches the network again when the app returns to the foreground', async () => {
-    jest.useFakeTimers();
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(USER.id), { wrapper });
     act(() => mockFireDeferred?.());
     // Landed, not just sent: a refetch while the first request is in flight
     // joins it rather than reaching the network.
-    await waitFor(() =>
-      expect(
-        client.readQuery({ query: GetUnreadNotificationsDocument }),
-      ).not.toBeNull(),
-    );
+    await drainTimers();
+    expect(
+      client.readQuery({ query: GetUnreadNotificationsDocument }),
+    ).not.toBeNull();
     expect(requests).toEqual(['GetUnreadNotifications']);
 
     act(() => {
@@ -115,17 +120,15 @@ describe('useNotificationsOnLaunch', () => {
     });
     await pastTheResyncWindow();
 
-    await waitFor(() =>
-      expect(requests).toEqual([
-        'GetUnreadNotifications',
-        'GetUnreadNotifications',
-      ]),
-    );
+    await drainTimers();
+    expect(requests).toEqual([
+      'GetUnreadNotifications',
+      'GetUnreadNotifications',
+    ]);
     client.stop();
   });
 
   it('loads nothing while signed out', async () => {
-    jest.useFakeTimers();
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(undefined), { wrapper });
 

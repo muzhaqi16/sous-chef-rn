@@ -1,12 +1,20 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { NotificationStatus } from '#/graphql/generated/schemaTypes';
 import { useNotificationHistory } from '../useNotificationHistory';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useNotificationHistory', () => {
   // Marking one read edits only that notification, so the feed query's result
@@ -32,14 +40,13 @@ describe('useNotificationHistory', () => {
       () => useNotificationHistory(null, true),
       { operationMocks: [get.mock], cache },
     );
-    await waitFor(() =>
-      expect(result.current.notifications.map(n => n.isRead)).toEqual([
-        false,
-        false,
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.notifications.map(n => n.isRead)).toEqual([
+      false,
+      false,
+    ]);
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({ __typename: 'Notification', id: 'n2' }),
         fields: {
@@ -49,12 +56,9 @@ describe('useNotificationHistory', () => {
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(result.current.notifications.map(n => n.isRead)).toEqual([
-        false,
-        true,
-      ]),
-    );
+    expect(result.current.notifications.map(n => n.isRead)).toEqual([
+      false,
+      true,
+    ]);
   });
 });

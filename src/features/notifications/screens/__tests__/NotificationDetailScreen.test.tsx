@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { GraphQLError } from 'graphql';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { t } from '#/i18n';
 import {
@@ -10,6 +10,7 @@ import {
   type MockedResponse,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   NotificationCategory,
   NotificationStatus,
@@ -26,6 +27,11 @@ import {
 } from '#features/notifications/utils/toDisplayNotification';
 import { RecommendedRecipeDocument } from '#features/recipes/ui/useRecommendedRecipes.generated';
 import { NotificationDetailScreen } from '../NotificationDetailScreen';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 const mockToRecipeDetail = jest.fn();
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
@@ -109,6 +115,14 @@ const milkExpiring: ServerRow['data'] = {
   batchOpenedAt: null,
   batchAddedAt: null,
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('NotificationDetailScreen', () => {
   it('shows error when notification is missing', () => {
@@ -245,7 +259,8 @@ describe('NotificationDetailScreen', () => {
         write(reminder(null));
       });
 
-      await waitFor(() => expect(screen.queryByText(takeAction)).toBeNull());
+      await drainTimers();
+      expect(screen.queryByText(takeAction)).toBeNull();
       expect(screen.getByText('Milk: Expires tomorrow')).toBeTruthy();
     });
   });
@@ -320,10 +335,12 @@ describe('NotificationDetailScreen', () => {
         recipeAnswer('r-2', null),
       ]);
 
-      expect(await screen.findByText('Turkey Chili')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Turkey Chili')).toBeTruthy();
       expect(screen.getByText(/45 min • 4 servings/)).toBeTruthy();
       expect(screen.getByText('80%')).toBeTruthy();
-      await waitFor(() => expect(screen.queryByText('Tacos')).toBeNull());
+      await drainTimers();
+      expect(screen.queryByText('Tacos')).toBeNull();
       expect(screen.queryByText(server.message)).toBeNull();
 
       await userEvent.setup().press(screen.getByText('Turkey Chili'));
@@ -344,7 +361,8 @@ describe('NotificationDetailScreen', () => {
       ]);
 
       // The reads land in order: once the second shows, the first has failed.
-      expect(await screen.findByText('Fish Tacos')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Fish Tacos')).toBeTruthy();
       expect(screen.getByText('Chili')).toBeTruthy();
       expect(screen.getByText('80%')).toBeTruthy();
     });
@@ -366,7 +384,8 @@ describe('NotificationDetailScreen', () => {
         recipeAnswer('r-2', { ...turkeyChili, name: 'Fish Tacos' }),
       ]);
 
-      expect(await screen.findByText('Fish Tacos')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Fish Tacos')).toBeTruthy();
       expect(screen.getByText('Chili')).toBeTruthy();
       expect(screen.getByText('80%')).toBeTruthy();
     });
@@ -377,7 +396,8 @@ describe('NotificationDetailScreen', () => {
         recipeAnswer('r-2', null),
       ]);
 
-      expect(await screen.findByText(server.message)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(server.message)).toBeTruthy();
       expect(screen.queryByText('Chili')).toBeNull();
       expect(screen.queryByText('Tacos')).toBeNull();
     });

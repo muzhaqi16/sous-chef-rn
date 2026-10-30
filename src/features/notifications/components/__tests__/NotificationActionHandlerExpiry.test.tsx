@@ -1,6 +1,6 @@
 'use no memo';
 import React, { useEffect } from 'react';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import {
@@ -9,6 +9,7 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkExpirationActionDocument } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { MarkNotificationAsReadDocument } from '#features/notifications/graphql/notificationMutations.generated';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
@@ -138,6 +139,14 @@ const actionAnswer = () =>
   });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockOnActionSelected = undefined;
   sentMutations = () => [];
@@ -178,7 +187,8 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
 
     // The notification reads at once, on the local write.
     expect(readNotificationStatus(cache, 'n1')).toBe(NotificationStatus.Read);
-    await waitFor(() => expect(readBadge(cache)).toBe(7));
+    await drainTimers();
+    expect(readBadge(cache)).toBe(7);
 
     expect(action.fired).toEqual([
       {
@@ -216,7 +226,8 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
       ),
     );
 
-    await waitFor(() => expect(action.fired).toHaveLength(1));
+    await drainTimers();
+    expect(action.fired).toHaveLength(1);
     expect(sentMutations()).toEqual([
       operationNameOf(MarkExpirationActionDocument),
     ]);
