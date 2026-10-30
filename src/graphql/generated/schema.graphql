@@ -712,6 +712,11 @@ input BatchAddShoppingListItemInput {
 type BatchAddShoppingListItemResult {
   """Client ID if provided in input"""
   clientId: String
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the entry failed; set exactly when success is false"""
   failure: BatchElementFailure
   """Index in the input array"""
@@ -2277,6 +2282,11 @@ input CreateHomeInput {
 }
 
 type CreateHomePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home!
 }
 
@@ -2640,6 +2650,11 @@ input CreatePantryItemInput {
 }
 
 type CreatePantryItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """MERGED when a forced add joined a stack the pantry already held"""
   outcome: CreateOutcome!
   pantry: Pantry
@@ -2725,6 +2740,11 @@ Always include a __typename so the variant can be discriminated.
 union CreatePantryItemUsageResult = ConflictError | CreatePantryItemUsagePayload | ForbiddenError | InsufficientQuantityError | NotFoundError | UnitEligibilityError | ValidationError
 
 type CreatePantryPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   pantry: Pantry!
 }
@@ -3064,7 +3084,8 @@ input CreateShoppingListInput {
   """
   Lines for the new list, added in the same request as addItemsToShoppingList
   adds them: at most 50, each on its own, each reporting its own result on
-  CreateShoppingListPayload.itemResults. A replayed create adds none.
+  CreateShoppingListPayload.itemResults. A replayed create adds those its
+  first send missed that carry their own id or idempotencyKey.
   """
   items: [BatchAddShoppingListItemInput!]
   """
@@ -3079,8 +3100,14 @@ input CreateShoppingListInput {
 
 type CreateShoppingListPayload {
   """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
+  """
   One result per CreateShoppingListInput.items entry, in input order, as
-  addItemsToShoppingList reports them; empty when none were sent.
+  addItemsToShoppingList reports them; empty when none were sent. On a replay,
+  one per entry carrying its own id or idempotencyKey.
   """
   itemResults: [BatchAddShoppingListItemResult!]!
   shoppingList: ShoppingList!
@@ -3128,6 +3155,11 @@ input CreateStorageLocationInput {
 }
 
 type CreateStorageLocationPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   storageLocation: StorageLocation!
 }
@@ -15079,9 +15111,14 @@ type ReceiptCheckInLineResult {
   """
   True when the line's purchase already existed and this call wrote nothing for it
   """
-  alreadyRecorded: Boolean!
+  alreadyRecorded: Boolean! @deprecated(reason: "Use converged, which states the same fact.")
   """The line's clientId, as sent"""
   clientId: String!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the line failed; set exactly when success is false"""
   failure: BatchElementFailure
   """The line's position in the input"""
