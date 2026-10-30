@@ -587,6 +587,14 @@ drain reads the parent reference off the input, so no per-feature special-casing
   they self-correct via `cache-and-network` on the next visit. With the persisted MMKV cache this means a
   non-active list can show a briefly stale collaborator set until it is reopened — an expected, accepted
   window, not a bug (it mirrors the `pantryEvents` active-container-only maintenance).
+- **A read already in flight when a local-first write is sent** — it would answer with the state from
+  before the write, and Apollo shows its watcher nothing newer until it does. `localWritePrecedenceLink`
+  (`src/apollo/links/`) answers each such read from the cache as the write passes, so the change shows at
+  once, and asks it again once the write settles only if the server's late answer disagrees. A read the
+  cache can't answer completely is held and re-sent instead. One gap is left: a hook that orders its
+  writes (`useUsualStoreWrites`' `writeOrder`) sends a write when the one before it settles, so a read
+  started between that write landing in the cache and its send is not caught. Verified:
+  `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
 
 ## 13. Divergences from the original plan (for the record)
 

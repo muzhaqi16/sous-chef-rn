@@ -211,6 +211,9 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   `#apollo-skiptoken-keeps-serving-the-last-runs-data`.
 - **`returnPartialData: false`: `!data` means the read was INCOMPLETE**, so every
   writer writes the full shape its reader selects (`userProfileCompleteness.test.ts`). Verified: `#apollo-reports-loading-true-on-every-mount-warm-cache-or-not`.
+- **A read in flight never undoes a local-first write** (`localWritePrecedenceLink`):
+  the write answers it from the cache and asks it again once settled, so no hook
+  refetches for this. Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
 - **Resync is `RefetchEventManager`** (`src/apollo/refetchEvents.ts`): app
   foreground, API reachable, socket reconnect, after the queue drains. Never add
   a refetch listener; a search, preview or analytics query sets `refetchOn: false`
