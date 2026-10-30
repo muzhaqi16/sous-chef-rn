@@ -15,9 +15,6 @@ import { queueStore } from './offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
 import { isRecord } from '#/utils/isRecord';
 
-// Apollo's `readField` accessor, extracted from the field-policy options bag.
-type ReadField = FieldFunctionOptions['readField'];
-
 // Minimal shape of a Relay-style connection as it lives in the normalized
 // cache: edges wrap normalized node references, plus pagination metadata.
 export interface CachedEdge {
@@ -40,17 +37,15 @@ export interface CachedConnection {
 const MAX_WINDOW_EDGES = 100;
 
 /**
- * Reads the `node.id` from a connection edge via Apollo's `readField` helper.
- * Returns undefined when the edge or its node is missing — callers should skip
- * those edges rather than treat them as deduplication keys.
+ * The id of the row an edge holds, from its cache reference. Never
+ * `readField('id', node)`: Apollo stores a write's entities in the order it met
+ * them, and a row selecting its parent list is met after that list, so a page's
+ * new rows are not in the store yet when the list's merge runs. Verified:
+ * `#apollo-a-merge-cannot-read-a-row-that-selects-its-parent`.
  */
-function readEdgeNodeId(
-  edge: CachedEdge | undefined,
-  readField: ReadField,
-): string | undefined {
-  const node = edge?.node;
-  if (!node) return undefined;
-  return readField<string>('id', node);
+function readEdgeNodeId(edge: CachedEdge | undefined): string | undefined {
+  const ref = edge?.node?.__ref;
+  return ref?.slice(ref.indexOf(':') + 1);
 }
 
 /**
@@ -60,17 +55,16 @@ function readEdgeNodeId(
 function preservePendingEdges(
   existing: CachedConnection,
   incoming: CachedConnection,
-  readField: ReadField,
 ): CachedConnection {
   const pendingIds = queueStore.getUnconfirmedCreateIds();
   if (pendingIds.size === 0) return incoming;
   const incomingIds = new Set<string>();
   for (const edge of incoming.edges ?? []) {
-    const id = readEdgeNodeId(edge, readField);
+    const id = readEdgeNodeId(edge);
     if (id) incomingIds.add(id);
   }
   const preservedEdges = (existing.edges ?? []).filter(edge => {
-    const id = readEdgeNodeId(edge, readField);
+    const id = readEdgeNodeId(edge);
     return id != null && pendingIds.has(id) && !incomingIds.has(id);
   });
   if (preservedEdges.length === 0) return incoming;
@@ -95,22 +89,21 @@ function edgesPastFirstPage(
   existingEdges: CachedEdge[],
   incomingEdges: CachedEdge[],
   incomingIds: Set<string>,
-  readField: ReadField,
 ): CachedEdge[] {
   const existingIndex = new Map<string, number>();
   existingEdges.forEach((edge, index) => {
-    const id = readEdgeNodeId(edge, readField);
+    const id = readEdgeNodeId(edge);
     if (id) existingIndex.set(id, index);
   });
   let cachedPosition = -1;
   for (const edge of incomingEdges) {
-    const id = readEdgeNodeId(edge, readField);
+    const id = readEdgeNodeId(edge);
     const position = id == null ? undefined : existingIndex.get(id);
     if (position !== undefined) cachedPosition = position;
   }
   if (cachedPosition < 0) return [];
   return existingEdges.slice(cachedPosition + 1).filter(edge => {
-    const id = readEdgeNodeId(edge, readField);
+    const id = readEdgeNodeId(edge);
     return id != null && !incomingIds.has(id);
   });
 }
@@ -123,7 +116,6 @@ function edgesPastFirstPage(
 function mergeAuthoritativeFirstPage(
   existing: CachedConnection,
   incoming: CachedConnection,
-  readField: ReadField,
 ): CachedConnection {
   const incomingEdges = incoming.edges ?? [];
   const existingEdges = existing.edges ?? [];
@@ -144,14 +136,14 @@ function mergeAuthoritativeFirstPage(
 
   const incomingIds = new Set<string>();
   for (const edge of incomingEdges) {
-    const id = readEdgeNodeId(edge, readField);
+    const id = readEdgeNodeId(edge);
     if (id) incomingIds.add(id);
   }
 
   const coversWholeList = !incoming.pageInfo?.hasNextPage;
   const tail = coversWholeList
     ? []
-    : edgesPastFirstPage(existingEdges, incomingEdges, incomingIds, readField);
+    : edgesPastFirstPage(existingEdges, incomingEdges, incomingIds);
 
   const merged: CachedConnection = {
     ...incoming,
@@ -163,7 +155,7 @@ function mergeAuthoritativeFirstPage(
       : {}),
   };
 
-  return preservePendingEdges(existing, merged, readField);
+  return preservePendingEdges(existing, merged);
 }
 
 /** A by-id field the server answered `null` while the device held the record. */
@@ -251,7 +243,7 @@ export function mergeConnectionByNodeId(
     merge(
       existing: CachedConnection | undefined,
       incoming: CachedConnection | undefined,
-      { args, readField }: FieldFunctionOptions<{ after?: string | null }>,
+      { args }: FieldFunctionOptions<{ after?: string | null }>,
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
@@ -259,18 +251,18 @@ export function mergeConnectionByNodeId(
         // No cursor means a refresh, not a page: it replaces the window it
         // covers. Gating on `!hasNextPage` would hide every removal and reorder
         // in a list long enough to paginate.
-        return mergeAuthoritativeFirstPage(existing, incoming, readField);
+        return mergeAuthoritativeFirstPage(existing, incoming);
       }
 
       const edgeMap = new Map<string, CachedEdge>();
       const existingEdges = existing.edges ?? [];
       existingEdges.forEach((edge: CachedEdge) => {
-        const id = readEdgeNodeId(edge, readField);
+        const id = readEdgeNodeId(edge);
         if (id) edgeMap.set(id, edge);
       });
       const existingCount = edgeMap.size;
       (incoming.edges ?? []).forEach((edge: CachedEdge) => {
-        const id = readEdgeNodeId(edge, readField);
+        const id = readEdgeNodeId(edge);
         if (id) edgeMap.set(id, edge);
       });
 
@@ -331,25 +323,25 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
     merge(
       existing: CachedConnection | undefined,
       incoming: CachedConnection | undefined,
-      { args, readField }: FieldFunctionOptions<{ after?: string | null }>,
+      { args }: FieldFunctionOptions<{ after?: string | null }>,
     ) {
       if (!incoming) return existing;
       if (!existing) return incoming;
       if (!args?.after) {
         // No cursor means a refresh: gating on `!hasNextPage` too would hide
         // every removal and reorder in a list long enough to paginate.
-        return mergeAuthoritativeFirstPage(existing, incoming, readField);
+        return mergeAuthoritativeFirstPage(existing, incoming);
       }
 
       // Append-only: keep existing edges in place, add only new incoming edges
       const existingIds = new Set<string>();
       for (const edge of existing.edges ?? []) {
-        const id = readEdgeNodeId(edge, readField);
+        const id = readEdgeNodeId(edge);
         if (id) existingIds.add(id);
       }
 
       const newEdges = (incoming.edges ?? []).filter((edge: CachedEdge) => {
-        const id = readEdgeNodeId(edge, readField);
+        const id = readEdgeNodeId(edge);
         return id && !existingIds.has(id);
       });
 

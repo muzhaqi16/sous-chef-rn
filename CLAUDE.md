@@ -214,6 +214,9 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
 - **A read in flight never undoes a local-first write** (`localWritePrecedenceLink`):
   the write answers it from the cache and asks it again once settled, so no hook
   refetches for this. Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
+- **A field `merge` identifies a row by its reference** (`readEdgeNodeId`,
+  `fieldPolicyReadsRowId`): a row selecting its parent is not stored yet when the
+  parent's merge runs. Verified: `#apollo-a-merge-cannot-read-a-row-that-selects-its-parent`.
 - **Every network read of a versioned row selects `version`** (`sous-chef/network-read-selects-version`;
   a removal's key is no read),
   and an answer's older copy never replaces a newer row (`answerOrderingLink`). Never invent or

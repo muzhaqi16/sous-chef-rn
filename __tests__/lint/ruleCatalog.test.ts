@@ -20,6 +20,7 @@ const syntax = require('../../eslint/restrictedSyntax.js') as {
   PRODUCTION_SYNTAX: Array<{ id: string }>;
   FEATURE_HOOK_SYNTAX: Array<{ id: string }>;
   ACTION_CALLER_SYNTAX: Array<{ id: string }>;
+  FIELD_POLICY_SYNTAX: Array<{ id: string }>;
   TEST_SYNTAX: Array<{ id: string }>;
 };
 
@@ -87,6 +88,7 @@ describe('sous-chef rule catalog', () => {
       ...syntax.PRODUCTION_SYNTAX,
       ...syntax.FEATURE_HOOK_SYNTAX,
       ...syntax.ACTION_CALLER_SYNTAX,
+      ...syntax.FIELD_POLICY_SYNTAX,
       ...syntax.TEST_SYNTAX,
     ].map(entry => entry.id);
 

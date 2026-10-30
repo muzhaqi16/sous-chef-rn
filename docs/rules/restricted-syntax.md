@@ -83,6 +83,17 @@ production set plus these.
 | ---------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
 | `actionHapticAtCaller` | `HapticService.selection()` / `.warning()`; the action fires it. A control's press feedback (`HapticService.light()`) is allowed. |
 
+## Field-policy entries
+
+Scoped by the override in `eslint/project.js` to `src/apollo/cacheFieldPolicies.ts`
+and every feature's `cache/typePolicies.ts`. A `cache.modify` modifier reads
+stored rows, so it may read an id. `restrictedSyntaxForFieldPolicies()` is the
+production set plus these.
+
+| Id                      | Bans                                                                                                                                                                                                                |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `fieldPolicyReadsRowId` | `readField('id', …)`; a row that selects its parent is not stored yet when the merge runs, so the read is `undefined`. Use `readEdgeNodeId`. Verified: `#apollo-a-merge-cannot-read-a-row-that-selects-its-parent`. |
+
 ## Test-only entries
 
 | Id                  | Bans                                                                  |

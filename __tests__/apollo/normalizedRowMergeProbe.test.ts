@@ -1,4 +1,9 @@
-import { InMemoryCache, gql, isReference } from '@apollo/client';
+import {
+  InMemoryCache,
+  gql,
+  isReference,
+  type Reference,
+} from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 
 /**
@@ -96,3 +101,75 @@ describe.each(Object.entries(caches))(
     });
   },
 );
+
+describe('a field merge on a list, for a row the same write brings', () => {
+  const WITH_PARENT = gql`
+    query ProbeWithParent {
+      probeList {
+        id
+        rows {
+          id
+          list {
+            id
+          }
+        }
+      }
+    }
+  `;
+  const WITHOUT_PARENT = gql`
+    query ProbeWithoutParent {
+      probeList {
+        id
+        rows {
+          id
+        }
+      }
+    }
+  `;
+  const listOf = (withParent: boolean) => ({
+    probeList: {
+      __typename: 'ProbeList',
+      id: 'list-1',
+      rows: [
+        {
+          __typename: 'ProbeRow',
+          id: 'row-1',
+          ...(withParent && {
+            list: { __typename: 'ProbeList', id: 'list-1' },
+          }),
+        },
+      ],
+    },
+  });
+
+  const idsTheMergeReads = (withParent: boolean) => {
+    const seen: unknown[] = [];
+    const cache = new InMemoryCache({
+      typePolicies: {
+        ProbeList: {
+          fields: {
+            rows: {
+              merge(_existing: unknown, incoming: readonly Reference[], opts) {
+                incoming.forEach(ref => seen.push(opts.readField('id', ref)));
+                return incoming;
+              },
+            },
+          },
+        },
+      },
+    });
+    cache.writeQuery({
+      query: withParent ? WITH_PARENT : WITHOUT_PARENT,
+      data: listOf(withParent),
+    });
+    return seen;
+  };
+
+  it('reads the row when the row is stored first', () => {
+    expect(idsTheMergeReads(false)).toEqual(['row-1']);
+  });
+
+  it('reads nothing when the row selects the list, which is stored first', () => {
+    expect(idsTheMergeReads(true)).toEqual([undefined]);
+  });
+});

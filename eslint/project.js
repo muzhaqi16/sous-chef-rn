@@ -14,6 +14,7 @@ const {
   restrictedSyntaxForTests,
   restrictedSyntaxForFeatureHooks,
   restrictedSyntaxForActionCallers,
+  restrictedSyntaxForFieldPolicies,
 } = require('./restrictedSyntax');
 const {
   BOUNDARY_ZONES,
@@ -239,6 +240,15 @@ const overrides = [
     files: ['src/features/shoppingList/{components,screens}/**/*.tsx'],
     ignores: TEST_FILES,
     rules: { 'no-restricted-syntax': restrictedSyntaxForActionCallers() },
+  },
+  {
+    // A field policy's `merge` runs before the answer's rows are stored.
+    files: [
+      'src/apollo/cacheFieldPolicies.ts',
+      'src/features/*/cache/typePolicies.ts',
+    ],
+    ignores: TEST_FILES,
+    rules: { 'no-restricted-syntax': restrictedSyntaxForFieldPolicies() },
   },
   {
     // The queue BUILDS and replays these writes; it is not one of their

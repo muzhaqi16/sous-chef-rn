@@ -253,6 +253,16 @@ const ACTION_CALLER_SYNTAX = [
   },
 ];
 
+const FIELD_POLICY_SYNTAX = [
+  {
+    id: 'fieldPolicyReadsRowId',
+    selector:
+      "CallExpression:matches([callee.name='readField'], [callee.property.name='readField'])[arguments.0.value='id']",
+    message:
+      "A field policy's `merge` runs before the rows of the same answer are stored, so `readField('id', row)` is undefined for a row that selects its parent, and the row is dropped. Read the id from the reference: `readEdgeNodeId` in src/apollo/cacheFieldPolicies.ts. See docs/verified-library-behaviour.md.",
+  },
+];
+
 // Test-suite hygiene. A separate list because the production entries are off
 // for tests, and one rule id cannot carry both sets.
 const TEST_SYNTAX = [
@@ -299,6 +309,10 @@ const restrictedSyntaxForFeatureHooks = ({ allow = [], add = [] } = {}) =>
 const restrictedSyntaxForActionCallers = ({ allow = [], add = [] } = {}) =>
   entries([...PRODUCTION_SYNTAX, ...ACTION_CALLER_SYNTAX], allow, add);
 
+/** The production set plus the bans that hold in a cache field policy. */
+const restrictedSyntaxForFieldPolicies = ({ allow = [], add = [] } = {}) =>
+  entries([...PRODUCTION_SYNTAX, ...FIELD_POLICY_SYNTAX], allow, add);
+
 /** The test-only set; production entries do not apply to test files. */
 const restrictedSyntaxForTests = ({ allow = [], add = [] } = {}) =>
   entries(TEST_SYNTAX, allow, add);
@@ -308,8 +322,10 @@ module.exports = {
   restrictedSyntaxForTests,
   restrictedSyntaxForFeatureHooks,
   restrictedSyntaxForActionCallers,
+  restrictedSyntaxForFieldPolicies,
   PRODUCTION_SYNTAX,
   FEATURE_HOOK_SYNTAX,
   ACTION_CALLER_SYNTAX,
+  FIELD_POLICY_SYNTAX,
   TEST_SYNTAX,
 };

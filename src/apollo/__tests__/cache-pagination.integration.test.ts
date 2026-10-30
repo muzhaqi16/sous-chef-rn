@@ -1922,4 +1922,138 @@ describe('cache pagination integration', () => {
       expect(ids).toEqual(['b-1', 'b-2', 'b-3']);
     });
   });
+
+  // =========================================================================
+  // A page of rows that select their parent, which Apollo stores before them
+  // =========================================================================
+
+  describe('a page of rows the device has never held, each selecting its parent', () => {
+    const pageInfo = (hasNextPage: boolean, endCursor: string) => ({
+      __typename: 'PageInfo',
+      hasNextPage,
+      endCursor,
+    });
+
+    it('appends them on a list (itemsConnectionFieldPolicy)', () => {
+      const QUERY = gql`
+        query ListRows($after: String) {
+          shoppingList(id: "list-1") {
+            id
+            itemsConnection(first: 2, after: $after) {
+              totalCount
+              edges {
+                cursor
+                node {
+                  id
+                  shoppingList {
+                    id
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        }
+      `;
+      const list = { __typename: 'ShoppingList', id: 'list-1' };
+      const answer = (ids: string[], hasNextPage: boolean) => ({
+        shoppingList: {
+          ...list,
+          itemsConnection: {
+            __typename: 'ShoppingListItemConnection',
+            totalCount: 4,
+            edges: ids.map(id => ({
+              __typename: 'ShoppingListItemEdge',
+              cursor: `c-${id}`,
+              node: {
+                __typename: 'ShoppingListItem',
+                id,
+                shoppingList: list,
+              },
+            })),
+            pageInfo: pageInfo(hasNextPage, `c-${ids.at(-1)}`),
+          },
+        },
+      });
+      const cache = makeCache();
+
+      cache.writeQuery({ query: QUERY, data: answer(['a', 'b'], true) });
+      cache.writeQuery({
+        query: QUERY,
+        variables: { after: 'c-b' },
+        data: answer(['c', 'd'], false),
+      });
+
+      const read = cache.readQuery<ShoppingListItemsResult>({ query: QUERY });
+      const connection = read?.shoppingList?.itemsConnection;
+      expect(connection?.edges.map(e => e.node.id)).toEqual([
+        'a',
+        'b',
+        'c',
+        'd',
+      ]);
+      expect(connection?.pageInfo.hasNextPage).toBe(false);
+    });
+
+    it('appends them on a home (mergeConnectionByNodeId)', () => {
+      const QUERY = gql`
+        query HomeRows($after: String) {
+          home(id: "home-1") {
+            id
+            membersConnection(first: 2, after: $after) {
+              totalCount
+              edges {
+                cursor
+                node {
+                  id
+                  home {
+                    id
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        }
+      `;
+      const home = { __typename: 'Home', id: 'home-1' };
+      const answer = (ids: string[], hasNextPage: boolean) => ({
+        home: {
+          ...home,
+          membersConnection: {
+            __typename: 'MembershipConnection',
+            totalCount: 4,
+            edges: ids.map(id => ({
+              __typename: 'MembershipEdge',
+              cursor: `c-${id}`,
+              node: { __typename: 'Membership', id, home },
+            })),
+            pageInfo: pageInfo(hasNextPage, `c-${ids.at(-1)}`),
+          },
+        },
+      });
+      const cache = makeCache();
+
+      cache.writeQuery({ query: QUERY, data: answer(['a', 'b'], true) });
+      cache.writeQuery({
+        query: QUERY,
+        variables: { after: 'c-b' },
+        data: answer(['c', 'd'], false),
+      });
+
+      const read = cache.readQuery<HomeMembersResult>({ query: QUERY });
+      expect(read?.home?.membersConnection?.edges.map(e => e.node.id)).toEqual([
+        'a',
+        'b',
+        'c',
+        'd',
+      ]);
+    });
+  });
 });
