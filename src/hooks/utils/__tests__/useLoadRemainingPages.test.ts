@@ -1,4 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useLoadRemainingPages } from '../useLoadRemainingPages';
 
 /**
@@ -23,22 +24,24 @@ const page = (
   ...overrides,
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('loading the rest of a collection', () => {
   it('stops when a page settles without adding anything', async () => {
+    jest.useFakeTimers();
     const state = page({});
     const { result } = renderHook(
       () =>
         useLoadRemainingPages(true, false, state, '').isLoadingRemainingPages,
     );
 
-    await waitFor(() => expect(result.current).toBe(false), { timeout: 3000 });
-    const calls = state.loadMore.mock.calls.length;
+    await drainTimers();
 
-    // Nothing re-fires once it has stalled.
-    await new Promise(resolve => setTimeout(resolve, 100));
-    expect(state.loadMore.mock.calls.length).toBe(calls);
+    expect(result.current).toBe(false);
     // Bounded: a few tries tolerate a swallowed call, then it stops.
-    expect(calls).toBeLessThanOrEqual(4);
+    expect(state.loadMore.mock.calls.length).toBeLessThanOrEqual(4);
   });
 
   it('keeps going while pages add rows', async () => {
@@ -130,15 +133,16 @@ describe('a load-all that stops on a failed page', () => {
   });
 
   it('stops again when the retried page fails too', async () => {
+    jest.useFakeTimers();
     const state = page({ loadMoreError: true });
     const { result } = renderHook(() =>
       useLoadRemainingPages(true, false, state, 'term'),
     );
 
     act(() => result.current.retry());
-    await waitFor(() => expect(result.current.incomplete).toBe(true));
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await drainTimers();
 
+    expect(result.current.incomplete).toBe(true);
     expect(state.loadMore).toHaveBeenCalledTimes(1);
   });
 });

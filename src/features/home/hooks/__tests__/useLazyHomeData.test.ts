@@ -3,6 +3,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { useLazyHomeData } from '../useLazyHomeData';
 
@@ -22,13 +23,18 @@ const homesMock = () =>
   });
 
 describe('useLazyHomeData', () => {
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('asks for nothing until the homes are requested', async () => {
+    jest.useFakeTimers();
     const homes = homesMock();
     const { result } = renderHookWithApollo(() => useLazyHomeData(), {
       operationMocks: [homes.mock],
     });
 
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(homes.fired).toHaveLength(0);
     expect(result.current.isLoaded).toBe(false);
   });

@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
 import {
   GetCategoriesDocument,
@@ -25,6 +26,9 @@ beforeAll(() => {
 });
 afterAll(() => {
   globalThis.requestIdleCallback = originalRequestIdleCallback;
+});
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 let mockIsOnline = true;
@@ -120,25 +124,26 @@ describe('useDataPreloading', () => {
   });
 
   it('does not warm when offline', async () => {
+    jest.useFakeTimers();
     mockIsOnline = false;
     renderHookWithApollo(() => useDataPreloading(), {
       operationMocks: referenceMocks(),
     });
 
-    // Give any (incorrectly-scheduled) idle work a chance to run.
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(mockSetters.setCachedCategories).not.toHaveBeenCalled();
     expect(mockSetters.setCachedUnits).not.toHaveBeenCalled();
   });
 
   it('does not warm before core data is loaded', async () => {
+    jest.useFakeTimers();
     mockState.hasInitializedHomeData = false;
     mockState.isPantryQueryComplete = false;
     renderHookWithApollo(() => useDataPreloading(), {
       operationMocks: referenceMocks(),
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(mockSetters.setCachedCategories).not.toHaveBeenCalled();
   });
 
@@ -211,6 +216,7 @@ describe('useDataPreloading', () => {
   });
 
   it('does not stamp a refresh the network was withheld from', async () => {
+    jest.useFakeTimers();
     mockNetwork.apiReachable = false;
     const units = recordMock(GetCommonUnitsDocument, {
       data: { units: [{ id: 'u-fresh' }] },
@@ -220,7 +226,7 @@ describe('useDataPreloading', () => {
       operationMocks: [units.mock],
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(units.fired).toHaveLength(0);
     expect(mockSetters.setLastUnitsFetchedAt).not.toHaveBeenCalled();
   });
