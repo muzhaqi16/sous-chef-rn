@@ -4,8 +4,9 @@ import { memoryIntents } from '#/test-utils/memoryPlatform';
 import React from 'react';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { TextInputProps } from 'react-native';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { InfoRowProps } from '#components/atoms/InfoRow';
 import { ListSettings } from '../ListSettings';
 import { t } from '#/i18n';
@@ -210,6 +211,14 @@ jest.mock('#/styles/commonStyles', () => ({
     settingsRowDescription: {},
   },
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('ListSettings', () => {
   const editRoute = { params: { listId: 'sl1' } };
@@ -630,12 +639,11 @@ describe('ListSettings', () => {
       fireEvent.press(screen.getByText('option:Party Supplies'));
       fireEvent.press(screen.getByText('Create'));
 
-      await waitFor(() =>
-        expect(mockCreateFromTemplate).toHaveBeenCalledWith(
-          'tpl2',
-          'Party Supplies',
-          undefined,
-        ),
+      await drainTimers();
+      expect(mockCreateFromTemplate).toHaveBeenCalledWith(
+        'tpl2',
+        'Party Supplies',
+        undefined,
       );
       expect(goBack).toHaveBeenCalled();
     });
@@ -645,9 +653,8 @@ describe('ListSettings', () => {
       fireEvent.changeText(screen.getByDisplayValue(''), 'Groceries');
       fireEvent.press(screen.getByText('Create'));
 
-      await waitFor(() =>
-        expect(mockCreateFromTemplate).not.toHaveBeenCalled(),
-      );
+      await drainTimers();
+      expect(mockCreateFromTemplate).not.toHaveBeenCalled();
     });
 
     it('offers the picker while offline — the copy is derived, not requested', () => {

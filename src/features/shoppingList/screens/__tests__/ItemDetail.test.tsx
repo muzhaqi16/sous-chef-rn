@@ -1,13 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
@@ -16,6 +10,7 @@ import {
   recordMock,
   renderWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
@@ -180,6 +175,14 @@ function buildItemMock(
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('ShoppingListItemDetail', () => {
   const route = { params: { listId: 'sl1', itemId: 'si1' } };
 
@@ -193,28 +196,31 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    await drainTimers();
+    expect(screen.getAllByText('Bread')[0]).toBeTruthy();
   });
 
-  it('renders the detail template title', async () => {
+  it('renders the detail template title while the item loads', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('Item Details')).toBeTruthy());
+    expect(screen.getByText('Item Details')).toBeTruthy();
   });
 
   it('shows category', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('Bakery')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Bakery')).toBeTruthy();
   });
 
   it('shows priority as a label, not the raw integer', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('High')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('High')).toBeTruthy();
     expect(screen.queryByText('2')).toBeNull();
   });
 
@@ -236,7 +242,8 @@ describe('ShoppingListItemDetail', () => {
         ),
       ],
     });
-    await waitFor(() => expect(screen.getByText('Oatly')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Oatly')).toBeTruthy();
     expect(screen.getByText('500 g')).toBeTruthy();
   });
 
@@ -244,7 +251,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('$4.59')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('$4.59')).toBeTruthy();
   });
 
   it('shows no estimate or amount paid with prices turned off', async () => {
@@ -268,7 +276,8 @@ describe('ShoppingListItemDetail', () => {
       ],
     });
 
-    await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Costco')).toBeTruthy();
     expect(screen.queryByText('$4.59')).toBeNull();
     expect(screen.queryByText('Total paid')).toBeNull();
     expect(screen.queryByText('$7.00')).toBeNull();
@@ -325,7 +334,8 @@ describe('ShoppingListItemDetail', () => {
         operationMocks: [lineWithItem(), shelf.mock],
       });
 
-      expect(await screen.findByText(t('storeShelfPrices.title'))).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(t('storeShelfPrices.title'))).toBeTruthy();
       expect(
         screen.getByTestId(catalogTestIDs.storeShelfPrice('s-aldi')),
       ).toBeTruthy();
@@ -357,9 +367,8 @@ describe('ShoppingListItemDetail', () => {
         operationMocks: [lineWithItem(), shelf.mock],
       });
 
-      expect(
-        await screen.findByText(t('storeShelfPrices.similarTitle')),
-      ).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(t('storeShelfPrices.similarTitle'))).toBeTruthy();
       expect(screen.getByText('Kroger Whole Milk')).toBeTruthy();
       expect(
         screen.getByTestId(catalogTestIDs.storeShelfSimilarPrice('s-kroger')),
@@ -373,7 +382,8 @@ describe('ShoppingListItemDetail', () => {
         operationMocks: [lineWithItem(), shelf.mock],
       });
 
-      await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+      await drainTimers();
+      expect(screen.getByText('Costco')).toBeTruthy();
       expect(screen.queryByText(t('storeShelfPrices.title'))).toBeNull();
       expect(shelf.fired).toEqual([]);
     });
@@ -384,8 +394,10 @@ describe('ShoppingListItemDetail', () => {
         operationMocks: [lineWithItem(), shelf.mock],
       });
 
-      await waitFor(() => expect(shelf.fired).toHaveLength(1));
-      await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+      await drainTimers();
+      expect(shelf.fired).toHaveLength(1);
+      await drainTimers();
+      expect(screen.getByText('Costco')).toBeTruthy();
       expect(screen.queryByText(t('storeShelfPrices.title'))).toBeNull();
     });
   });
@@ -394,7 +406,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('Costco')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Costco')).toBeTruthy();
   });
 
   it('names who purchased the item from their profile', async () => {
@@ -427,7 +440,8 @@ describe('ShoppingListItemDetail', () => {
       ],
     });
 
-    await waitFor(() => expect(screen.getByText('Purchased By')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Purchased By')).toBeTruthy();
     expect(screen.getByText('Sam')).toBeTruthy();
   });
 
@@ -458,7 +472,8 @@ describe('ShoppingListItemDetail', () => {
       ],
     });
 
-    await waitFor(() => expect(screen.getByText('Purchased By')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Purchased By')).toBeTruthy();
     expect(screen.getByText('John')).toBeTruthy();
     expect(screen.queryByText('Someone')).toBeNull();
   });
@@ -483,7 +498,8 @@ describe('ShoppingListItemDetail', () => {
       ],
     });
 
-    await waitFor(() => expect(screen.getByText('Total paid')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Total paid')).toBeTruthy();
     // The API stores 3.50 PER UNIT; the shopper paid 7.00 for the two.
     expect(screen.getByText('$7.00')).toBeTruthy();
     expect(screen.getByText('$3.50 per loaves')).toBeTruthy();
@@ -511,7 +527,8 @@ describe('ShoppingListItemDetail', () => {
       ],
     });
 
-    await waitFor(() => expect(screen.getByText('Total paid')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Total paid')).toBeTruthy();
     expect(screen.getByText('$3.50')).toBeTruthy();
     expect(screen.queryByText('$3.50 per loaves')).toBeNull();
   });
@@ -521,7 +538,8 @@ describe('ShoppingListItemDetail', () => {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
 
-    await waitFor(() => expect(screen.getByText('Item Details')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getAllByText('Bread')[0]).toBeTruthy();
     expect(screen.queryByText('Purchased By')).toBeNull();
   });
 
@@ -529,18 +547,16 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() =>
-      expect(screen.getByText('Get whole wheat')).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByText('Get whole wheat')).toBeTruthy();
   });
 
   it('shows purchase history panel', async () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() =>
-      expect(screen.getByText('Purchase History')).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByText('Purchase History')).toBeTruthy();
   });
 
   it("dates the most recent purchase by a receipt's printed day", async () => {
@@ -559,7 +575,8 @@ describe('ShoppingListItemDetail', () => {
         ),
       ],
     });
-    expect(await screen.findByText('Oct 17, 2026')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Oct 17, 2026')).toBeTruthy();
   });
 
   it('shows the loading state while nothing is cached or answered', () => {
@@ -573,7 +590,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getByText('Added By')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('Added By')).toBeTruthy();
     expect(screen.getByText('Test User')).toBeTruthy();
   });
 
@@ -594,7 +612,8 @@ describe('ShoppingListItemDetail', () => {
       ],
     });
 
-    expect(await screen.findByText('Last Edited By')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Last Edited By')).toBeTruthy();
     expect(screen.getByText('Sam')).toBeTruthy();
   });
 
@@ -621,21 +640,24 @@ describe('ShoppingListItemDetail', () => {
     it('names a low-stock line', async () => {
       renderWithSource(AddedContext.LowStock);
 
-      await waitFor(() => expect(screen.getByText('Added From')).toBeTruthy());
+      await drainTimers();
+      expect(screen.getByText('Added From')).toBeTruthy();
       expect(screen.getByText('A low-stock item')).toBeTruthy();
     });
 
     it('names a line added from a recipe', async () => {
       renderWithSource(AddedContext.FromRecipe);
 
-      await waitFor(() => expect(screen.getByText('Added From')).toBeTruthy());
+      await drainTimers();
+      expect(screen.getByText('Added From')).toBeTruthy();
       expect(screen.getByText('A recipe')).toBeTruthy();
     });
 
     it('says nothing for a line someone typed in', async () => {
       renderWithSource(AddedContext.Manual);
 
-      await waitFor(() => expect(screen.getByText('Added By')).toBeTruthy());
+      await drainTimers();
+      expect(screen.getByText('Added By')).toBeTruthy();
       expect(screen.queryByText('Added From')).toBeNull();
       expect(screen.queryByText('From Meal Plan')).toBeNull();
     });
@@ -645,9 +667,8 @@ describe('ShoppingListItemDetail', () => {
     it('leaves a meal-plan line to its own row', async () => {
       renderWithSource(AddedContext.FromMealPlan, true);
 
-      await waitFor(() =>
-        expect(screen.getByText('From Meal Plan')).toBeTruthy(),
-      );
+      await drainTimers();
+      expect(screen.getByText('From Meal Plan')).toBeTruthy();
       expect(screen.queryByText('Added From')).toBeNull();
     });
   });
@@ -657,9 +678,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() =>
-      expect(screen.getByTestId('shopping-item-hero-image')).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('shopping-item-hero-image')).toBeTruthy();
   });
 
   // The household overrides the item photo on its own entries.
@@ -679,10 +699,9 @@ describe('ShoppingListItemDetail', () => {
         ),
       ],
     });
-    await waitFor(() =>
-      expect(screen.getByTestId('carousel-lead').props.accessibilityLabel).toBe(
-        'https://signed.example.com/our-bread.jpg',
-      ),
+    await drainTimers();
+    expect(screen.getByTestId('carousel-lead').props.accessibilityLabel).toBe(
+      'https://signed.example.com/our-bread.jpg',
     );
   });
 
@@ -692,7 +711,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    await drainTimers();
+    expect(screen.getAllByText('Bread')[0]).toBeTruthy();
     expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull();
   });
 
@@ -701,7 +721,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    await drainTimers();
+    expect(screen.getAllByText('Bread')[0]).toBeTruthy();
     expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull();
   });
 
@@ -710,12 +731,12 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    await drainTimers();
+    expect(screen.getAllByText('Bread')[0]).toBeTruthy();
     // The mocked CachedImage fires onError for the 'BROKEN' uri, which should
     // drop the hero rather than leaving a broken-image placeholder.
-    await waitFor(() =>
-      expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByTestId('shopping-item-hero-image')).toBeNull();
   });
 
   it("offers to report a public catalog item's photo", async () => {
@@ -735,8 +756,9 @@ describe('ShoppingListItemDetail', () => {
         ),
       ],
     });
+    await drainTimers();
     expect(
-      await screen.findByTestId('shopping-item-report-photo-button'),
+      screen.getByTestId('shopping-item-report-photo-button'),
     ).toBeTruthy();
   });
 
@@ -767,9 +789,8 @@ describe('ShoppingListItemDetail', () => {
         ),
       ],
     });
-    const flag = await screen.findByLabelText(
-      t('itemPhotos.pendingReviewAction'),
-    );
+    await drainTimers();
+    const flag = screen.getByLabelText(t('itemPhotos.pendingReviewAction'));
 
     fireEvent.press(flag);
 
@@ -783,7 +804,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    await waitFor(() => expect(screen.getAllByText('Bread')[0]).toBeTruthy());
+    await drainTimers();
+    expect(screen.getAllByText('Bread')[0]).toBeTruthy();
     expect(
       screen.queryByTestId('shopping-item-report-photo-button'),
     ).toBeNull();
@@ -793,7 +815,8 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', null)],
     });
-    expect(await screen.findByText('Item not found')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Item not found')).toBeTruthy();
   });
 
   // The list's row caches a subset of what the detail selects, so the detail's
@@ -878,10 +901,12 @@ describe('ShoppingListItemDetail', () => {
         defaultOptions: APOLLO_DEFAULT_OPTIONS,
       });
       if (listCached) {
-        await client.query({
-          query: GetShoppingListItemsFilteredDocument,
-          variables: LIST_VARIABLES,
-        });
+        await drained(() =>
+          client.query({
+            query: GetShoppingListItemsFilteredDocument,
+            variables: LIST_VARIABLES,
+          }),
+        );
       }
       if (network === 'offline') {
         act(() => {
@@ -900,7 +925,8 @@ describe('ShoppingListItemDetail', () => {
       async network => {
         await renderDetail({ listCached: true, network });
 
-        expect(await screen.findByText('Bakery')).toBeTruthy();
+        await drainTimers();
+        expect(screen.getByText('Bakery')).toBeTruthy();
         expect(screen.getAllByText('Bread')[0]).toBeTruthy();
         expect(screen.getByText('Get whole wheat')).toBeTruthy();
         expect(screen.queryByTestId(kitTestIDs.stateLoading)).toBeNull();
@@ -911,7 +937,8 @@ describe('ShoppingListItemDetail', () => {
     it('claims nothing the row does not hold', async () => {
       await renderDetail({ listCached: true, network: 'offline' });
 
-      await screen.findByText('Bakery');
+      await drainTimers();
+      expect(screen.getByText('Bakery')).toBeTruthy();
       // Never fetched, so neither "no history" nor "added: never" is known.
       expect(screen.queryByText('No purchase history available')).toBeNull();
       expect(screen.queryByText('Additional Details')).toBeNull();
@@ -930,7 +957,8 @@ describe('ShoppingListItemDetail', () => {
         detail: noSuchLine.mock,
       });
 
-      expect(await screen.findByText('Bakery')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Bakery')).toBeTruthy();
       expect(screen.queryByText('Item not found')).toBeNull();
       expect(noSuchLine.fired).toHaveLength(0);
     });
@@ -938,33 +966,38 @@ describe('ShoppingListItemDetail', () => {
     it('fills in the detail-only fields when the network answers', async () => {
       await renderDetail({ listCached: true, network: 'online' });
 
-      expect(await screen.findByText('Costco')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Costco')).toBeTruthy();
       expect(screen.getByText('Bakery')).toBeTruthy();
     });
 
     it('reports an offline cache miss as offline', async () => {
       await renderDetail({ listCached: false, network: 'offline' });
 
-      expect(await screen.findByTestId(kitTestIDs.stateOffline)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
       expect(screen.queryByText('Item not found')).toBeNull();
     });
 
     it('loads the detail on retry once the connection is back', async () => {
       await renderDetail({ listCached: false, network: 'offline' });
-      await screen.findByTestId(kitTestIDs.stateOffline);
+      await drainTimers();
+      expect(screen.getByTestId(kitTestIDs.stateOffline)).toBeTruthy();
 
       act(() => {
         useStore.setState({ isOnline: true, apiReachable: true });
       });
       fireEvent.press(screen.getByText('Try again'));
 
-      expect(await screen.findByText('Costco')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Costco')).toBeTruthy();
     });
 
     it('reports a failed fetch with nothing cached, not a spinner', async () => {
       await renderDetail({ listCached: false, network: 'failing' });
 
-      expect(await screen.findByTestId(kitTestIDs.stateError)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByTestId(kitTestIDs.stateError)).toBeTruthy();
       expect(screen.queryByTestId(kitTestIDs.stateLoading)).toBeNull();
     });
   });

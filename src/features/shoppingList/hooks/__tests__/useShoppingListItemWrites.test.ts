@@ -1,4 +1,3 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
   recordMock,
@@ -6,6 +5,7 @@ import {
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
   AddItemToShoppingListDocument,
@@ -92,6 +92,14 @@ function setup(outcome: 'applied' | 'refused') {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
 });
@@ -100,10 +108,11 @@ describe('useShoppingListItemWrites.updateItem', () => {
   it('shows the edit before the server answers, for a restart', async () => {
     const { result, readItem } = setup('applied');
     // Loaded, not only sent: a refetch of a query still in flight is deduplicated.
-    await waitFor(() => expect(result.current.itemData).not.toBeNull());
+    await drainTimers();
+    expect(result.current.itemData).not.toBeNull();
 
     let written: Item | null = null;
-    await act(async () => {
+    await drained(async () => {
       const pending = result.current.updateItem(
         { id: 'item-1', version: 3, quantity: '1 1/2', ...EDIT },
         jest.fn(),
@@ -123,10 +132,11 @@ describe('useShoppingListItemWrites.updateItem', () => {
   it('reads the API text it sends as API text on a comma device', async () => {
     jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
     const { result, readItem } = setup('applied');
-    await waitFor(() => expect(result.current.itemData).not.toBeNull());
+    await drainTimers();
+    expect(result.current.itemData).not.toBeNull();
 
     let written: Item | null = null;
-    await act(async () => {
+    await drained(async () => {
       const pending = result.current.updateItem(
         { id: 'item-1', version: 3, quantity: '1.250' },
         jest.fn(),
@@ -140,16 +150,17 @@ describe('useShoppingListItemWrites.updateItem', () => {
 
   it('shows the item as it was when the server refuses the edit', async () => {
     const { result, readItem } = setup('refused');
-    await waitFor(() => expect(result.current.itemData).not.toBeNull());
+    await drainTimers();
+    expect(result.current.itemData).not.toBeNull();
     const before = readItem() ?? {};
 
     let updated: boolean | undefined;
-    await act(async () => {
-      updated = await result.current.updateItem(
+    updated = await drained(() =>
+      result.current.updateItem(
         { id: 'item-1', version: 3, ...EDIT },
         jest.fn(),
-      );
-    });
+      ),
+    );
 
     expect(updated).toBe(false);
     expect(readItem()).toMatchObject(before);
@@ -191,16 +202,16 @@ describe('useShoppingListItemWrites.createItem', () => {
   it('says so when an add leaves the line it joined with no package size', async () => {
     const { result } = addWith(true);
 
-    await act(async () => {
-      await result.current.createItem(
+    await drained(() =>
+      result.current.createItem(
         { itemName: 'Pasta sauce', quantity: 1 },
         {
           item: { inline: { id: 'item-sauce', name: 'Pasta sauce' } },
           quantity: '1',
           netWeight: { netWeight: 22, netWeightUnitId: 'u-oz' },
         },
-      );
-    });
+      ),
+    );
 
     expect(toastService.info).toHaveBeenCalledWith(
       'This item was already on the list with a different package size, so the line no longer records one.',
@@ -210,15 +221,15 @@ describe('useShoppingListItemWrites.createItem', () => {
   it('says nothing when the line keeps its size', async () => {
     const { result } = addWith(false);
 
-    await act(async () => {
-      await result.current.createItem(
+    await drained(() =>
+      result.current.createItem(
         { itemName: 'Pasta sauce', quantity: 1 },
         {
           item: { inline: { id: 'item-sauce', name: 'Pasta sauce' } },
           quantity: '1',
         },
-      );
-    });
+      ),
+    );
 
     expect(toastService.info).not.toHaveBeenCalled();
   });
@@ -271,7 +282,7 @@ describe('useShoppingListItemWrites.createItem, for a typed name', () => {
     const { cache, add, result } = answeredWith('item-held');
 
     let namedBefore: unknown;
-    await act(async () => {
+    await drained(async () => {
       const adding = result.current.createItem(
         { itemName: 'Cubanelle pepper', quantity: 1 },
         { item: typed, quantity: '1' },
@@ -295,12 +306,12 @@ describe('useShoppingListItemWrites.createItem, for a typed name', () => {
   it('keeps the item the API created under the minted id', async () => {
     const { cache, result } = answeredWith('item-minted');
 
-    await act(async () => {
-      await result.current.createItem(
+    await drained(() =>
+      result.current.createItem(
         { itemName: 'Cubanelle pepper', quantity: 1 },
         { item: typed, quantity: '1' },
-      );
-    });
+      ),
+    );
 
     expect(lineOf(cache)?.item).toEqual({ __ref: 'Item:item-minted' });
     expect(cache.extract()['Item:item-minted']).toBeDefined();

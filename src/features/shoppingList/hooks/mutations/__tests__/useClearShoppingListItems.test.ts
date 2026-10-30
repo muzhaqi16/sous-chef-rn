@@ -1,12 +1,21 @@
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { RemoveItemsFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertService } from '#/services/alertService';
 import { useClearShoppingListItems } from '../useClearShoppingListItems';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -64,9 +73,7 @@ describe('useClearShoppingListItems', () => {
       { operationMocks: [clear.mock] },
     );
 
-    await act(async () => {
-      await result.current.clearItems(true);
-    });
+    await drained(() => result.current.clearItems(true));
 
     expect(clear.fired).toEqual([]);
   });
@@ -85,9 +92,7 @@ describe('useClearShoppingListItems', () => {
       { operationMocks: [clear.mock] },
     );
 
-    await act(async () => {
-      await result.current.clearItems(true);
-    });
+    await drained(() => result.current.clearItems(true));
 
     expect(clear.fired).toEqual([]);
   });
@@ -109,9 +114,7 @@ describe('useClearShoppingListItems', () => {
       { operationMocks: [clear.mock] },
     );
 
-    await act(async () => {
-      await result.current.clearItems(true);
-    });
+    await drained(() => result.current.clearItems(true));
 
     // P2-16: the mutation replays the exact captured ids (matching the
     // optimistically-cleared set), not a re-evaluated `purchased` filter.
@@ -140,9 +143,7 @@ describe('useClearShoppingListItems', () => {
       { operationMocks: [clear.mock] },
     );
 
-    await act(async () => {
-      await result.current.clearItems(false);
-    });
+    await drained(() => result.current.clearItems(false));
 
     // P2-16: id-based replay, matching the optimistically-cleared set.
     expect(clear.fired).toContainEqual({
@@ -173,12 +174,11 @@ describe('useClearShoppingListItems', () => {
     await act(async () => {
       first = result.current.clearItems(true);
     });
-    await waitFor(() => expect(clear.fired).toHaveLength(1));
+    await drainTimers();
+    expect(clear.fired).toHaveLength(1);
 
-    await act(async () => {
-      await result.current.clearItems(true);
-    });
-    await act(async () => {
+    await drained(() => result.current.clearItems(true));
+    await drained(async () => {
       clear.release();
       await first;
     });
@@ -199,9 +199,7 @@ describe('useClearShoppingListItems', () => {
       { operationMocks: [refusedClear()] },
     );
 
-    await act(async () => {
-      await result.current.clearItems(true);
-    });
+    await drained(() => result.current.clearItems(true));
 
     // A server refusal surfaces one alert, not a silent revert.
     expect(alertService.alert).toHaveBeenCalledTimes(1);

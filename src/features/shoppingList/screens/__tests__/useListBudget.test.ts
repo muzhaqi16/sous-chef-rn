@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import {
   completeMockedResponse,
@@ -7,6 +7,7 @@ import {
   seedCache,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   CollaboratorRole,
@@ -99,6 +100,14 @@ const collaborator = (canEdit: boolean) => ({
       },
     ],
   },
+});
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('useListBudget', () => {
@@ -211,25 +220,23 @@ describe('useListBudget', () => {
     act(() => {
       expect(result.current.saveBudget('75')).toBe('saved');
     });
-    await waitFor(() =>
-      expect(update.fired[0]).toMatchObject({
-        input: {
-          id: 'list-1',
-          planning: { budgetAmount: 75, currency: 'USD' },
-        },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[0]).toMatchObject({
+      input: {
+        id: 'list-1',
+        planning: { budgetAmount: 75, currency: 'USD' },
+      },
+    });
     // Written before the answer, so it shows at once and offline.
     expect(result.current.list?.budgetAmount).toBe(75);
 
     act(() => {
       expect(result.current.saveBudget('')).toBe('saved');
     });
-    await waitFor(() =>
-      expect(update.fired[1]).toMatchObject({
-        input: { planning: { budgetAmount: null } },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[1]).toMatchObject({
+      input: { planning: { budgetAmount: null } },
+    });
     expect(result.current.list?.budgetAmount).toBeNull();
   });
 
@@ -243,11 +250,10 @@ describe('useListBudget', () => {
       result.current.setPriceTracking(false);
     });
 
-    await waitFor(() =>
-      expect(update.fired[0]).toMatchObject({
-        input: { id: 'list-1', settings: { priceTracking: false } },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[0]).toMatchObject({
+      input: { id: 'list-1', settings: { priceTracking: false } },
+    });
     expect(result.current.list?.priceTracking).toBe(false);
   });
 
@@ -261,11 +267,10 @@ describe('useListBudget', () => {
       result.current.pickStore({ id: 'store-1', name: 'Giant Eagle' });
     });
 
-    await waitFor(() =>
-      expect(update.fired[0]).toMatchObject({
-        input: { planning: { targetStoreId: 'store-1' } },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[0]).toMatchObject({
+      input: { planning: { targetStoreId: 'store-1' } },
+    });
     expect(result.current.list?.targetStore?.name).toBe('Giant Eagle');
   });
 });

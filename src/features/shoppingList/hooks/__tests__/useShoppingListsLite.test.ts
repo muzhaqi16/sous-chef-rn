@@ -1,4 +1,3 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor, MockPart } from '#/test-utils/apolloMockProvider';
@@ -6,6 +5,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetShoppingListsLiteDocument,
   type GetShoppingListsLiteQuery,
@@ -67,6 +67,14 @@ function serverMock() {
   });
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useShoppingListsLite', () => {
   it('reads the collection the overview holds, whatever its page size', async () => {
     const cache = makeCache();
@@ -75,7 +83,8 @@ describe('useShoppingListsLite', () => {
       cache,
       operationMocks: [overview.mock],
     });
-    await waitFor(() => expect(main.result.current.lists).toHaveLength(2));
+    await drainTimers();
+    expect(main.result.current.lists).toHaveLength(2);
     expect(overview.fired).toEqual([{ first: 50 }]);
     main.unmount();
 
@@ -109,9 +118,8 @@ describe('useShoppingListsLite', () => {
       cache,
       operationMocks: [serverMock().mock],
     });
-    await waitFor(() =>
-      expect(overview.result.current.lists).toHaveLength(ALL_LISTS),
-    );
+    await drainTimers();
+    expect(overview.result.current.lists).toHaveLength(ALL_LISTS);
 
     const shortPage = recordMock(GetShoppingListsLiteDocument, {
       data: {
@@ -133,8 +141,10 @@ describe('useShoppingListsLite', () => {
       cache,
       operationMocks: [shortPage.mock],
     });
-    await waitFor(() => expect(shortPage.fired).toHaveLength(1));
-    await waitFor(() => expect(picker.result.current.loading).toBe(false));
+    await drainTimers();
+    expect(shortPage.fired).toHaveLength(1);
+    await drainTimers();
+    expect(picker.result.current.loading).toBe(false);
 
     expect(overview.result.current.lists).toHaveLength(ALL_LISTS);
     const held = cache.readQuery({
@@ -157,7 +167,8 @@ describe('useShoppingListsLite', () => {
       cache,
       operationMocks: [serverMock().mock],
     });
-    await waitFor(() => expect(picker.result.current.loading).toBe(false));
+    await drainTimers();
+    expect(picker.result.current.loading).toBe(false);
     picker.unmount();
 
     // The network never answers: what shows is the cache's.
@@ -182,13 +193,14 @@ describe('useShoppingListsLite', () => {
         operationMocks: [{ ...answered.mock, maxUsageCount: 1 }, failed.mock],
       },
     );
-    await waitFor(() => expect(result.current.lite.lists).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.lite.lists).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.client
+    await drained(() =>
+      result.current.client
         .refetchQueries({ include: 'active' })
-        .catch(() => undefined);
-    });
+        .catch(() => undefined),
+    );
 
     expect(failed.fired).toHaveLength(1);
     expect(result.current.lite.lists.map(list => list.name)).toEqual([

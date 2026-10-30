@@ -7,6 +7,7 @@ import {
   renderWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   ALDI,
   GIANT_EAGLE,
@@ -23,6 +24,23 @@ import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { ListSavingsDocument } from '#features/shoppingList/hooks/useListSavings.generated';
 import { StoreSavingsItems } from '../StoreSavingsItems';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
+
+// Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
+jest.mock('#hooks/performance/useFlashListPerformance', () => {
+  const actual = jest.requireActual(
+    '#hooks/performance/useFlashListPerformance',
+  );
+  return {
+    ...actual,
+    useFlashListPerformance: (list: unknown, options: object) =>
+      actual.useFlashListPerformance(list, { ...options, reportInterval: 0 }),
+  };
+});
 
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
@@ -107,6 +125,14 @@ const renderScreen = () => {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
   jest.mocked(useReadingSystem).mockReturnValue(UnitSystem.Imperial);
@@ -116,7 +142,8 @@ describe('StoreSavingsItems', () => {
   it("prices ALDI's lines against Giant Eagle's, each as the server judged it", async () => {
     renderScreen();
 
-    expect(await screen.findByText('ALDI Banksville')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('ALDI Banksville')).toBeTruthy();
     expect(
       screen.getByText('Prices from ALDI Wilkinsburg, 4 mi away'),
     ).toBeTruthy();
@@ -145,14 +172,16 @@ describe('StoreSavingsItems', () => {
   it('opens from the stored answer, asking nothing', async () => {
     const asked = renderScreen();
 
-    expect(await screen.findByText('Milk')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Milk')).toBeTruthy();
     expect(asked.fired).toHaveLength(0);
   });
 
   it("opens a line's detail", async () => {
     renderScreen();
 
-    fireEvent.press(await screen.findByText('Milk'));
+    await drainTimers();
+    fireEvent.press(screen.getByText('Milk'));
     expect(useAppNavigation().toShoppingListItemDetail).toHaveBeenCalledWith({
       listId: 'list-1',
       itemId: 'l-milk',
