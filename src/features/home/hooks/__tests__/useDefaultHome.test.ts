@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -204,6 +203,14 @@ beforeEach(() => {
 });
 
 describe('useDefaultHome', () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
   it('selects the account default when nothing is selected', async () => {
     renderHookWithApollo(() => useDefaultHome(), {
       operationMocks: [
@@ -211,9 +218,8 @@ describe('useDefaultHome', () => {
       ],
     });
 
-    await waitFor(() =>
-      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith('home-1'),
-    );
+    await drainTimers();
+    expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith('home-1');
   });
 
   it('refetches once when a home is selected but the list came back empty', async () => {
@@ -237,11 +243,8 @@ describe('useDefaultHome', () => {
     });
 
     // Only the refetched list names the home's pantry.
-    await waitFor(() =>
-      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-        'pantry-1',
-      ),
-    );
+    await drainTimers();
+    expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith('pantry-1');
   });
 
   it('does not keep refetching when the account genuinely has no homes', async () => {
@@ -268,10 +271,9 @@ describe('useDefaultHome', () => {
 
     // Initial fetch plus exactly one self-heal attempt — the empty result
     // must not feed back into another refetch.
-    await waitFor(() => expect(fired).toHaveLength(2));
-    await waitFor(() =>
-      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true),
-    );
+    await drainTimers();
+    expect(fired).toHaveLength(2);
+    expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
     expect(fired).toHaveLength(2);
   });
 
@@ -284,9 +286,8 @@ describe('useDefaultHome', () => {
       operationMocks: [buildGetHomesMock([])],
     });
 
-    await waitFor(() => {
-      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
-    });
+    await drainTimers();
+    expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
   });
 
   it('does not set early ready when already ready', () => {
@@ -322,11 +323,8 @@ describe('useDefaultHome', () => {
         operationMocks: [buildGetHomesMock([])],
       });
 
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
-          true,
-        ),
-      );
+      await drainTimers();
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
     });
 
     it('sets ready when valid home is selected', async () => {
@@ -337,11 +335,8 @@ describe('useDefaultHome', () => {
         ],
       });
 
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
-          true,
-        ),
-      );
+      await drainTimers();
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
     });
 
     it('does not repoint a pantry merely missing from a TRUNCATED page', async () => {
@@ -366,11 +361,8 @@ describe('useDefaultHome', () => {
         ],
       });
 
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(
-          true,
-        ),
-      );
+      await drainTimers();
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalledWith(true);
 
       expect(mockStoreState.setSelectedPantryId).not.toHaveBeenCalledWith(
         'pantry-1',
@@ -401,10 +393,9 @@ describe('useDefaultHome', () => {
       });
 
       // Repointed at the selected home's OWN default, not merely nulled.
-      await waitFor(() =>
-        expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-          'pantry-2',
-        ),
+      await drainTimers();
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-2',
       );
 
       // Repointed, never evicted: that pantry is usually a live pantry of
@@ -453,10 +444,9 @@ describe('useDefaultHome', () => {
         ],
       });
 
-      await waitFor(() =>
-        expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-          'pantry-2',
-        ),
+      await drainTimers();
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-2',
       );
     });
 
@@ -473,10 +463,9 @@ describe('useDefaultHome', () => {
         ],
       });
 
-      await waitFor(() =>
-        expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-          'pantry-1',
-        ),
+      await drainTimers();
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'pantry-1',
       );
     });
   });
@@ -503,17 +492,15 @@ describe('useDefaultHome', () => {
         ],
       });
 
-      await waitFor(() => {
-        expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(
-          'default-home',
-        );
-      });
+      await drainTimers();
+      expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(
+        'default-home',
+      );
       // Pantry sync happens in the same effect tick as the home sync
-      await waitFor(() => {
-        expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
-          'default-pantry',
-        );
-      });
+      await drainTimers();
+      expect(mockStoreState.setSelectedPantryId).toHaveBeenCalledWith(
+        'default-pantry',
+      );
     });
 
     it('does not restore when selectedHomeId matches remoteDefaultHomeId (explicit default)', async () => {
@@ -533,9 +520,8 @@ describe('useDefaultHome', () => {
       });
 
       // Allow effects to settle
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalled(),
-      );
+      await drainTimers();
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalled();
 
       expect(mockStoreState.setSelectedHomeId).not.toHaveBeenCalled();
       expect(mockStoreState.setSelectedPantryId).not.toHaveBeenCalled();
@@ -557,9 +543,8 @@ describe('useDefaultHome', () => {
       });
 
       // Allow effects to settle by waiting for ready state
-      await waitFor(() =>
-        expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalled(),
-      );
+      await drainTimers();
+      expect(mockStoreState.setIsHomeSelectionReady).toHaveBeenCalled();
 
       // No remote default → no restore via the first sync effect
       expect(mockStoreState.setSelectedHomeId).not.toHaveBeenCalled();
@@ -579,14 +564,6 @@ describe('useDefaultHome', () => {
           },
         },
       });
-
-    beforeEach(() => {
-      jest.useFakeTimers();
-    });
-
-    afterEach(() => {
-      jest.useRealTimers();
-    });
 
     it('is selected locally and never sent to MarkHomeAsDefault', async () => {
       const markDefault = recordMarkDefault();
