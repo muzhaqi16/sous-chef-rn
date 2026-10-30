@@ -56,7 +56,7 @@ const answer = (ids: string[], isPurchased: boolean, hasNextPage: boolean) => ({
 
 const settle = () => new Promise(resolve => setTimeout(resolve, 30));
 
-function setup() {
+function setup({ holdTick = false } = {}) {
   const cache = makeCache();
   const unpurchased = recordMock(GetShoppingListItemsFilteredDocument, {
     data: answer(['u1'], false, false) as never,
@@ -74,6 +74,7 @@ function setup() {
     maxUsageCount: 1,
   });
   const untick = recordMock(UpdateShoppingListItemDocument, {
+    held: holdTick,
     data: {
       updateShoppingListItem: {
         __typename: 'UpdateShoppingListItemPayload',
@@ -105,18 +106,34 @@ function setup() {
     },
     {
       cache,
-      operationMocks: [
-        unpurchased.mock,
-        firstPage.mock,
-        nextPage.mock,
-        untick.mock,
-      ],
+      // Which answer lands first is what these tests prove, so `held` sets it,
+      // never MockLink's default random 20-50 ms.
+      operationMocks: [unpurchased, firstPage, nextPage, untick].map(
+        ({ mock }) => ({ ...mock, delay: 0 }),
+      ),
       links: [createLocalWritePrecedenceLink(), createAnswerOrderingLink()],
     },
   );
 
   const shownIds = () => result.current.purchased.items.map(item => item.id);
-  return { result, cache, nextPage, shownIds };
+  // `loadMore` returns without asking when a guard trips.
+  const expectPageAsked = () =>
+    waitFor(() => expect(nextPage.fired).toHaveLength(1));
+  /** Stays past the list first showing `ids`: a re-ask comes after that. */
+  const expectListSettlesOn = async (ids: string[]) => {
+    await waitFor(() => expect(shownIds()).toEqual(ids));
+    await act(settle);
+    expect(shownIds()).toEqual(ids);
+  };
+  return {
+    result,
+    cache,
+    nextPage,
+    untick,
+    shownIds,
+    expectPageAsked,
+    expectListSettlesOn,
+  };
 }
 
 const ROW = gql`
@@ -153,70 +170,79 @@ describe('an answer from before a confirmed tick', () => {
 });
 
 describe('a tick while the next page loads', () => {
-  beforeEach(() => {
-    jest.spyOn(globalThis, 'requestIdleCallback').mockImplementation(run => {
-      run({ didTimeout: false, timeRemaining: () => 0 });
-      return 1;
-    });
-  });
-
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
   it('with no tick, a page of rows the device never held lands', async () => {
-    const { result, nextPage, shownIds } = setup();
+    const { result, nextPage, shownIds, expectPageAsked, expectListSettlesOn } =
+      setup();
     await waitFor(() => expect(shownIds()).toEqual(['p1', 'p2']));
 
-    await act(async () => {
+    act(() => {
       void result.current.purchased.loadMore();
-      await settle();
     });
-    await waitFor(() => expect(nextPage.fired).toHaveLength(1));
-    await act(async () => {
-      nextPage.release();
-      await settle();
-    });
+    await expectPageAsked();
+    nextPage.release();
 
-    expect(shownIds()).toEqual(['p1', 'p2', 'p3', 'p4']);
+    await expectListSettlesOn(['p1', 'p2', 'p3', 'p4']);
     expect(nextPage.fired).toHaveLength(1);
   });
 
   it('keeps the tick and the page when the tick comes second', async () => {
-    const { result, nextPage, shownIds } = setup();
+    const { result, nextPage, shownIds, expectPageAsked, expectListSettlesOn } =
+      setup();
     await waitFor(() => expect(shownIds()).toEqual(['p1', 'p2']));
 
-    await act(async () => {
+    act(() => {
       void result.current.purchased.loadMore();
-      await settle();
     });
-    await waitFor(() => expect(nextPage.fired).toHaveLength(1));
+    await expectPageAsked();
     await act(async () => {
       await result.current.toggleItem('p1');
-      await settle();
     });
-    await act(async () => {
-      nextPage.release();
-      await settle();
-    });
+    nextPage.release();
 
-    expect(shownIds()).toEqual(['p2', 'p3', 'p4']);
+    await expectListSettlesOn(['p2', 'p3', 'p4']);
   });
 
   it('keeps the tick and the page when the tick comes first', async () => {
-    const { result, nextPage, shownIds } = setup();
+    const { result, nextPage, shownIds, expectPageAsked, expectListSettlesOn } =
+      setup();
     await waitFor(() => expect(shownIds()).toEqual(['p1', 'p2']));
 
     await act(async () => {
-      void result.current.toggleItem('p1');
+      const ticked = result.current.toggleItem('p1');
       void result.current.purchased.loadMore();
-      await settle();
+      await ticked;
     });
+    await expectPageAsked();
+    nextPage.release();
+
+    await expectListSettlesOn(['p2', 'p3', 'p4']);
+  });
+
+  it('keeps the tick and the page when the page lands before the tick is answered', async () => {
+    const {
+      result,
+      nextPage,
+      untick,
+      shownIds,
+      expectPageAsked,
+      expectListSettlesOn,
+    } = setup({ holdTick: true });
+    await waitFor(() => expect(shownIds()).toEqual(['p1', 'p2']));
+
+    let ticked: Promise<unknown> = Promise.resolve();
+    act(() => {
+      ticked = result.current.toggleItem('p1');
+      void result.current.purchased.loadMore();
+    });
+    await expectPageAsked();
+    nextPage.release();
+    await expectListSettlesOn(['p2', 'p3', 'p4']);
+
     await act(async () => {
-      nextPage.release();
-      await settle();
+      untick.release();
+      await ticked;
     });
 
-    expect(shownIds()).toEqual(['p2', 'p3', 'p4']);
+    await expectListSettlesOn(['p2', 'p3', 'p4']);
   });
 });

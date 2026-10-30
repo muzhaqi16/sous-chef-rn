@@ -372,13 +372,10 @@ describe('localWritePrecedenceLink', () => {
     list.watch();
     await waitFor(() => expect(list.refresh.fired).toHaveLength(1));
 
-    await act(async () => {
-      list.refresh.release();
-      await tick();
-    });
+    list.refresh.release();
 
     // Not caught: its answer is delivered as usual.
-    expect(list.delivered.at(-1)).toBe(false);
+    await waitFor(() => expect(list.delivered.at(-1)).toBe(false));
     list.close();
   });
 
