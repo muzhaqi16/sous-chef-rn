@@ -214,6 +214,9 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
 - **A read in flight never undoes a local-first write** (`localWritePrecedenceLink`):
   the write answers it from the cache and asks it again once settled, so no hook
   refetches for this. Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
+- **Every network read of a versioned row selects `version`** (`sous-chef/network-read-selects-version`),
+  and an answer's older copy never replaces a newer row (`answerOrderingLink`). Never invent or
+  default a version: a write sends it as the lock. Verified: `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
 - **Resync is `RefetchEventManager`** (`src/apollo/refetchEvents.ts`): app
   foreground, API reachable, socket reconnect, after the queue drains. Never add
   a refetch listener; a search, preview or analytics query sets `refetchOn: false`

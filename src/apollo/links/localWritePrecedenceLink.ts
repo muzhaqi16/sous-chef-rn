@@ -4,8 +4,8 @@ import {
   isMutationOperation,
   isQueryOperation,
 } from '@apollo/client/utilities';
-import { BREAK, visit, type DocumentNode } from 'graphql';
 import type { Subscriber, Subscription } from 'rxjs';
+import { isIncremental } from '#/apollo/utils/isIncremental';
 
 /** A local-first write sent while reads were in flight. */
 type Write = object;
@@ -31,26 +31,6 @@ interface Read {
   /** The local-first writes that caught it and have not settled. */
   writes: Set<Write>;
 }
-
-// Every query passes this link, so each document is walked once.
-const incremental = new WeakMap<DocumentNode, boolean>();
-
-const isIncremental = (query: DocumentNode): boolean => {
-  const known = incremental.get(query);
-  if (known !== undefined) return known;
-  let found = false;
-  visit(query, {
-    Directive(node) {
-      if (node.name.value === 'defer' || node.name.value === 'stream') {
-        found = true;
-        return BREAK;
-      }
-      return undefined;
-    },
-  });
-  incremental.set(query, found);
-  return found;
-};
 
 const cacheRead = (operation: ApolloLink.Operation) =>
   operation.client.cache.diff<Record<string, unknown>>({

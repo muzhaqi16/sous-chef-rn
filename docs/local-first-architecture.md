@@ -642,6 +642,14 @@ replay only after their parent has landed — the drain reads the parent referen
 
   Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
 
+- **An answer older than the row the device holds** — answers can arrive out of order, so a read that
+  left before another member's change (or before the person's own confirmed change) can land after it.
+  `answerOrderingLink` keeps the device's copy of any row whose answer carries a lower `version` than the
+  server last gave the device, and lets the rest of the answer land. Every network read selects
+  `version`, so every row it judges carries one. A local write keeps its row's version, so the link never
+  keeps a pending write over an answer at that version; that stays the precedence link's job. Verified:
+  `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
+
 ## 13. Divergences from the original plan (for the record)
 
 - **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by per-site Pattern 5 + the shared

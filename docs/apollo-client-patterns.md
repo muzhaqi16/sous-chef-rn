@@ -666,6 +666,28 @@ For the server to support version conflicts, mutations must:
 3. Return version conflict error if mismatch
 4. Increment version on successful update
 
+### Every read carries `version`, and answers are ordered by it
+
+- **Every network read of a versioned row selects `version`.** That covers
+  operations and every fragment an operation spreads
+  (`sous-chef/network-read-selects-version`). A fragment no operation spreads
+  only feeds `readFragment` / `writeFragment` and is exempt.
+- **A version is never invented, because a write sends it as the lock.** A
+  hand-built row states the version it knows from an answer, else the one
+  the cache holds, else 0, and 0 only for a row the server hasn't created.
+  Persisted rows from before every read selected it were purged with
+  `shape-7`.
+- **`answerOrderingLink` keeps a newer row** (`src/apollo/links/`, under
+  `localWritePrecedenceLink`). When an answer's copy of a row has a lower
+  `version` than the one the server last gave the device, the link lays the
+  device's copy over the answer before Apollo stores it. The answer's other
+  rows still land. It reads the root, never an optimistic layer. A local write
+  keeps its row's version, so the link never keeps a pending write over an
+  answer at that version; that is the precedence link's job.
+- **Why a link, not a type policy:** nothing in the cache sees a normalized
+  row's old and new copies together. Verified:
+  `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
+
 ---
 
 ## Decision Trees

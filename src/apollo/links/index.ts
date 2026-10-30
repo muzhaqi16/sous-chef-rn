@@ -5,6 +5,7 @@ import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
 import { createOfflineModeLink } from './offlineModeLink';
 import { createLocalWritePrecedenceLink } from './localWritePrecedenceLink';
+import { createAnswerOrderingLink } from './answerOrderingLink';
 import { createNetworkStatusLink } from './networkStatusLink';
 import { createClientReleaseLink } from './clientReleaseLink';
 import { errorLink } from './errorLink';
@@ -52,6 +53,8 @@ export function createLink() {
     // Sees every read that may reach the network, and a re-sent read still
     // passes retry, error, auth and transport.
     createLocalWritePrecedenceLink(), // A read in flight never undoes a local-first write
+    // Under the precedence link, so it and Apollo only see ordered answers.
+    createAnswerOrderingLink(), // An answer's older copy of a row never replaces a newer one
     networkStatusLink, // Feed the API-reachability circuit breaker (one outcome/op)
     clientReleaseLink, // Surface the server's "newer build available" extension
     telemetryLink, // Track operations for monitoring

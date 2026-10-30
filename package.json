@@ -33,7 +33,7 @@
     "reset:cache": "npx react-native start --reset-cache",
     "npm:clean": "rm -rf node_modules/ && npm cache clean --force",
     "codegen:schema": "graphql-codegen --config codegen.schema.ts",
-    "codegen": "npm run codegen:schema && npm run codegen:readers && graphql-codegen --config codegen.ts && npm run codegen:fillers && npm run codegen:manifest",
+    "codegen": "npm run codegen:schema && npm run codegen:readers && graphql-codegen --config codegen.ts && npm run codegen:fillers && npm run codegen:manifest && npm run codegen:versioned",
     "codegen:manifest": "node scripts/generate-pq-manifest.mjs",
     "codegen:readers": "node scripts/generate-readers-fragments.mjs",
     "check:echo": "node scripts/check-subscription-echo.mjs",
@@ -79,6 +79,7 @@
     "prepare": "husky",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"./*.{json,js}\"",
     "codegen:fillers": "node scripts/generate-optimistic-fillers.mjs",
+    "codegen:versioned": "node scripts/generate-versioned-types.mjs",
     "check:fillers": "node scripts/generate-optimistic-fillers.mjs --check",
     "check:audit": "npm audit --omit=dev --audit-level=high"
   },
