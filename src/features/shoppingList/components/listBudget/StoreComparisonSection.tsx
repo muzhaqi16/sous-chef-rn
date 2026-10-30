@@ -137,7 +137,7 @@ const CandidateRow: React.FC<{
         style={styles.total}
       >
         {total == null
-          ? t('shoppingListScreens.storeComparison.notEnoughPrices')
+          ? t('listSavings.notEnoughPrices')
           : formatCurrency(
               total,
               comparison.currencyCode,

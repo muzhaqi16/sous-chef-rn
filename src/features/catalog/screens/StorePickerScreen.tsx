@@ -96,113 +96,113 @@ export const StorePickerScreen: React.FC<
       gutter="none"
       testID={catalogTestIDs.storePickerScreen}
     >
-      <View style={styles.fields}>
-        {search.isOnline ? (
+      <StoreList
+        header={
           <>
-            <SearchBar
-              value={search.term}
-              onChangeText={search.setTerm}
-              placeholder={t('storePicker.searchPlaceholder')}
-              isLoading={search.loading}
-              testID={catalogTestIDs.storePickerSearch}
-            />
-            <FormInput
-              label={t('storePicker.zipLabel')}
-              value={zip}
-              onChangeText={text => {
-                const digits = text.replace(/\D/g, '').slice(0, 5);
-                setTypedZip(digits);
-                if (US_ZIP.test(digits)) setLastZip(digits);
-              }}
-              keyboardType="number-pad"
-              textContentType="postalCode"
-              autoComplete="postal-code"
-              maxLength={5}
-              error={
-                search.zipRefused ? t('storePicker.zipRefused') : undefined
-              }
-              testID={catalogTestIDs.storePickerZip}
-            />
-            {nearMe.state === 'blocked' ? (
+            {search.isOnline ? (
               <>
-                <Text role="caption" tone="secondary">
-                  {t('storePicker.locationOff')}
-                </Text>
-                <Button
-                  variant="ghost"
-                  size="small"
-                  title={t('labels.openSettings')}
-                  onPress={nearMe.openSettings}
+                <SearchBar
+                  value={search.term}
+                  onChangeText={search.setTerm}
+                  placeholder={t('storePicker.searchPlaceholder')}
+                  isLoading={search.loading}
+                  testID={catalogTestIDs.storePickerSearch}
                 />
-              </>
-            ) : nearMe.state === 'declined' ? null : (
-              <>
-                {nearMe.state === 'failed' ? (
-                  <Text role="caption" tone="secondary">
-                    {t('storePicker.locationFailed')}
-                  </Text>
-                ) : null}
-                <Button
-                  variant="outline"
-                  size="small"
-                  icon="navigate-outline"
-                  title={t('storePicker.nearMe')}
-                  loading={nearMe.state === 'locating'}
-                  onPress={() => {
-                    setTypedZip('');
-                    void nearMe.ask();
+                <FormInput
+                  label={t('storePicker.zipLabel')}
+                  value={zip}
+                  onChangeText={text => {
+                    const digits = text.replace(/\D/g, '').slice(0, 5);
+                    setTypedZip(digits);
+                    if (US_ZIP.test(digits)) setLastZip(digits);
                   }}
-                  testID={catalogTestIDs.storePickerNearMe}
+                  keyboardType="number-pad"
+                  textContentType="postalCode"
+                  autoComplete="postal-code"
+                  maxLength={5}
+                  error={
+                    search.zipRefused ? t('storePicker.zipRefused') : undefined
+                  }
+                  testID={catalogTestIDs.storePickerZip}
                 />
+                {nearMe.state === 'blocked' ? (
+                  <>
+                    <Text role="caption" tone="secondary">
+                      {t('storePicker.locationOff')}
+                    </Text>
+                    <Button
+                      variant="ghost"
+                      size="small"
+                      title={t('labels.openSettings')}
+                      onPress={nearMe.openSettings}
+                    />
+                  </>
+                ) : nearMe.state === 'declined' ? null : (
+                  <>
+                    {nearMe.state === 'failed' ? (
+                      <Text role="caption" tone="secondary">
+                        {t('storePicker.locationFailed')}
+                      </Text>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="small"
+                      icon="navigate-outline"
+                      title={t('storePicker.nearMe')}
+                      loading={nearMe.state === 'locating'}
+                      onPress={() => {
+                        setTypedZip('');
+                        void nearMe.ask();
+                      }}
+                      testID={catalogTestIDs.storePickerNearMe}
+                    />
+                  </>
+                )}
               </>
+            ) : (
+              <View style={styles.offline}>
+                <Text role="bodyStrong">
+                  {t('storePicker.needsConnectionTitle')}
+                </Text>
+                <Text role="body" tone="secondary">
+                  {t('storePicker.needsConnectionBody')}
+                </Text>
+              </View>
             )}
           </>
-        ) : (
-          <View style={styles.offline}>
-            <Text role="bodyStrong">
-              {t('storePicker.needsConnectionTitle')}
-            </Text>
-            <Text role="body" tone="secondary">
-              {t('storePicker.needsConnectionBody')}
-            </Text>
-          </View>
+        }
+        data={search.options}
+        ListEmptyComponent={empty}
+        ListFooterComponent={
+          unlisted ? (
+            <RowCard>
+              <ListItem
+                leftIcon="add-circle-outline"
+                title={t('storePicker.notListed', { name: unlisted })}
+                accessibilityHint=""
+                onPress={() => {
+                  void addUnlisted(unlisted);
+                }}
+              />
+            </RowCard>
+          ) : null
+        }
+        renderItem={({ item }) => (
+          <StoreRow
+            option={item}
+            readingSystem={readingSystem}
+            markAdded
+            onPress={
+              item.added
+                ? undefined
+                : () => {
+                    void add(item.choice);
+                  }
+            }
+            testID={catalogTestIDs.storePickerRow(item.key)}
+          />
         )}
-      </View>
-      <View style={styles.listHost}>
-        <StoreList
-          data={search.options}
-          ListEmptyComponent={empty}
-          ListFooterComponent={
-            unlisted ? (
-              <RowCard>
-                <ListItem
-                  leftIcon="add-circle-outline"
-                  title={t('storePicker.notListed', { name: unlisted })}
-                  accessibilityHint=""
-                  onPress={() => {
-                    void addUnlisted(unlisted);
-                  }}
-                />
-              </RowCard>
-            ) : null
-          }
-          renderItem={({ item }) => (
-            <StoreRow
-              option={item}
-              readingSystem={readingSystem}
-              markAdded
-              onPress={
-                item.added
-                  ? undefined
-                  : () => {
-                      void add(item.choice);
-                    }
-              }
-              testID={catalogTestIDs.storePickerRow(item.key)}
-            />
-          )}
-        />
-      </View>
+      />
       <Dialog
         visible={nearMe.state === 'explaining'}
         onRequestClose={nearMe.decline}
@@ -233,16 +233,8 @@ export const StorePickerScreen: React.FC<
 };
 
 const styles = StyleSheet.create(theme => ({
-  fields: {
-    paddingHorizontal: theme.layout.pageGutter,
-    paddingTop: theme.spacing.md,
-    gap: theme.spacing.sm,
-  },
   offline: {
     gap: theme.spacing.xs,
-  },
-  listHost: {
-    flex: 1,
   },
   note: {
     paddingVertical: theme.spacing.md,

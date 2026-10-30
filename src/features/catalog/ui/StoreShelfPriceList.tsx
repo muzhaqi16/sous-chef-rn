@@ -138,12 +138,10 @@ function FirstFew<T extends { storeId: string }>({
   );
 }
 
+/** `useStoreShelfPrices`' answer, spread. */
 interface StoreShelfPriceListProps {
-  /** `useStoreShelfPrices`' answer. */
-  prices: {
-    rows: readonly StoreShelfPriceRow[];
-    similarRows: readonly SimilarShelfPriceRow[];
-  };
+  rows: readonly StoreShelfPriceRow[];
+  similarRows: readonly SimilarShelfPriceRow[];
 }
 
 /**
@@ -152,21 +150,22 @@ interface StoreShelfPriceListProps {
  * request. Its host gives it a heading and a container.
  */
 export const StoreShelfPriceList: React.FC<StoreShelfPriceListProps> = ({
-  prices,
+  rows,
+  similarRows,
 }) => {
   const { t } = useTranslation();
   return (
     <View style={styles.list}>
       <FirstFew
-        items={prices.rows}
+        items={rows}
         render={row => <PriceRow row={row} />}
         showMoreTestID={catalogTestIDs.storeShelfPricesShowMore}
       />
-      {prices.similarRows.length > 0 && (
+      {similarRows.length > 0 && (
         <>
           <Text role="bodyStrong">{t('storeShelfPrices.similarTitle')}</Text>
           <FirstFew
-            items={prices.similarRows}
+            items={similarRows}
             render={row => <SimilarRow row={row} />}
             showMoreTestID={catalogTestIDs.storeShelfSimilarShowMore}
           />

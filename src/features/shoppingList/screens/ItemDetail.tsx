@@ -384,7 +384,7 @@ export const ShoppingListItemDetail: React.FC<
 
         {hasShelfPrices(shelfPrices) && (
           <DetailSection title={t('storeShelfPrices.title')}>
-            <StoreShelfPriceList prices={shelfPrices} />
+            <StoreShelfPriceList {...shelfPrices} />
           </DetailSection>
         )}
 

@@ -86,7 +86,6 @@
     "storeComparison": {
       "title": "Dónde sale más barato",
       "yourStore": "Tu tienda",
-      "notEnoughPrices": "Aún no hay suficientes precios",
       "pricedHere_one": "{{count}} con precio aquí",
       "pricedHere_other": "{{count}} con precio aquí",
       "typical_one": "{{count}} a precio habitual",

@@ -23,7 +23,7 @@ export const StoreShelfPriceSection: React.FC<{
   return (
     <Card style={styles.card} testID={barcodeTestIDs.storeShelfPrices}>
       <Text role="bodyStrong">{t('storeShelfPrices.title')}</Text>
-      <StoreShelfPriceList prices={prices} />
+      <StoreShelfPriceList {...prices} />
     </Card>
   );
 };

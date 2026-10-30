@@ -136,20 +136,21 @@ installed, `installEvaluatesEagerly.test.ts` evaluates the native install the
 way an eager bundler does, and `platformInstallOrder.test.ts` loads what
 `index.js` imports before the install.
 
-| Service         | What it is                                                 | Mobile adapter                                     |
-| --------------- | ---------------------------------------------------------- | -------------------------------------------------- |
-| `environment`   | Build-time configuration (`Env`)                           | `env.generated.ts`, via `native/generatedEnv`      |
-| `keyValueStore` | Synchronous storage, its readiness and recovery state      | MMKV (`native/storage/keyValueStore`)              |
-| `secureStore`   | Session tokens, the durable device id, pending revocations | Keychain (`native/storage/secureStore`)            |
-| `platformInfo`  | OS, installed version, emulator                            | `Platform`, react-native-device-info               |
-| `appLifecycle`  | Foreground state and its changes                           | `AppState`                                         |
-| `connectivity`  | Whether the network is up and reachable, and its changes   | NetInfo's `addEventListener`                       |
-| `appearance`    | Applies a theme and appearance settings                    | The Unistyles runtime                              |
-| `imagePrefetch` | Warms the image cache                                      | `CachedImage`'s `preloadImages`                    |
-| `haptics`       | The feedback an action gives when it runs                  | `HapticService` (react-native-haptic-feedback)     |
-| `reviewPrompt`  | Asks the OS for its rating prompt                          | `ReviewPromptModule` (StoreKit, Play In-App Review) |
-| `fileParts`     | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk          |
-| `screen`        | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks |
+| Service               | What it is                                                 | Mobile adapter                                                               |
+| --------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------- |
+| `environment`         | Build-time configuration (`Env`)                           | `env.generated.ts`, via `native/generatedEnv`                                |
+| `keyValueStore`       | Synchronous storage, its readiness and recovery state      | MMKV (`native/storage/keyValueStore`)                                        |
+| `secureStore`         | Session tokens, the durable device id, pending revocations | Keychain (`native/storage/secureStore`)                                      |
+| `platformInfo`        | OS, installed version, emulator                            | `Platform`, react-native-device-info                                         |
+| `appLifecycle`        | Foreground state and its changes                           | `AppState`                                                                   |
+| `connectivity`        | Whether the network is up and reachable, and its changes   | NetInfo's `addEventListener`                                                 |
+| `approximateLocation` | The device's approximate place, asked for on request       | `ApproximateLocationModule` (Core Location reduced accuracy, Android coarse) |
+| `appearance`          | Applies a theme and appearance settings                    | The Unistyles runtime                                                        |
+| `imagePrefetch`       | Warms the image cache                                      | `CachedImage`'s `preloadImages`                                              |
+| `haptics`             | The feedback an action gives when it runs                  | `HapticService` (react-native-haptic-feedback)                               |
+| `reviewPrompt`        | Asks the OS for its rating prompt                          | `ReviewPromptModule` (StoreKit, Play In-App Review)                          |
+| `fileParts`           | Appends a picked file to a multipart body                  | `{ uri, type, name }`, streamed from disk                                    |
+| `screen`              | Navigation intents and focus, as hooks run in a screen     | `useAppNavigation`, React Navigation's focus hooks                           |
 
 `src/app/installNativePlatform.ts` assembles the mobile adapters, and `index.js`
 imports it right after the startup clock, the startup profiler and the crypto

@@ -86,7 +86,6 @@
     "storeComparison": {
       "title": "Where it's cheapest",
       "yourStore": "Your store",
-      "notEnoughPrices": "Not enough prices yet",
       "pricedHere_one": "{{count}} priced here",
       "pricedHere_other": "{{count}} priced here",
       "typical_one": "{{count}} at a typical price",

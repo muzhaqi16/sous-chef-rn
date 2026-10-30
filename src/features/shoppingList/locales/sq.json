@@ -86,7 +86,6 @@
     "storeComparison": {
       "title": "Ku kushton më pak",
       "yourStore": "Dyqani yt",
-      "notEnoughPrices": "Ende jo mjaft çmime",
       "pricedHere_one": "{{count}} me çmim këtu",
       "pricedHere_other": "{{count}} me çmim këtu",
       "typical_one": "{{count}} me çmim të zakonshëm",
