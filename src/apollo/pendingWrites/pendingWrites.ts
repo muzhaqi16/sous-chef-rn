@@ -1,5 +1,6 @@
 import type { ApolloCache, OperationVariables } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
+import { orderAnswer } from '#/apollo/links/answerOrderingLink';
 import {
   dependencyIdsOf,
   queuedSubject,
@@ -11,6 +12,7 @@ import { errorService } from '#/services/errorService';
 import { generateId } from '#/utils/generateId';
 import { isRecord } from '#/utils/isRecord';
 import { LOCAL_WRITES } from './localWriteRegistry';
+import { readFenceOf } from './readFence';
 import type { LocalWriteTable, PendingWrite } from './types';
 
 /** What `send` hands the mutation: a replay reads the same context off its entry. */
@@ -74,6 +76,7 @@ export class PendingWrites {
     const write: PendingWrite = {
       id: generateId(),
       operationName,
+      document,
       variables,
       inputs: local.capture?.(this.cache, variables) ?? {},
     };
@@ -163,19 +166,21 @@ export class PendingWrites {
 
   /**
    * The server has it. `data` is its answer, or undefined when it answered with
-   * no row, so the write's own change is all the root can take.
+   * no row, so the write's own change is all the root can take. It commits once
+   * the reads in flight now have landed: one may hold state from before it.
    */
   confirm(id: string, data?: unknown): void {
     const write = this.get(id);
     if (!write) return;
-    this.cache.batch({
-      optimistic: false,
-      update: root => {
-        this.settleInto(root, write, data);
-      },
+    this.queued.delete(id);
+    const fence = readFenceOf(this.cache);
+    if (fence.isClear) {
+      this.commit(write, data, false);
+      return;
+    }
+    void fence.passed().then(() => {
+      if (this.get(id)) this.commit(write, data, true);
     });
-    this.remove(id);
-    this.rebuild();
   }
 
   /** Drops the queued writes a later write superseded, which the queue has let go. */
@@ -253,21 +258,57 @@ export class PendingWrites {
     this.applying = false;
   }
 
-  private settleInto(
-    root: ApolloCache,
+  private commit(
     write: PendingWrite,
     data: unknown,
+    readsLanded: boolean,
   ): void {
     const local = this.table[write.operationName];
-    try {
-      if (data === undefined) local?.apply(root, write);
-      else local?.commit?.(root, write, data);
-    } catch (error) {
-      errorService.reportError(error, {
-        operation: `Commit ${write.operationName}`,
-      });
-    }
+    this.cache.batch({
+      optimistic: false,
+      update: root => {
+        try {
+          if (data === undefined) {
+            local?.apply(root, write);
+            return;
+          }
+          if (readsLanded) writeAnswerAgain(root, write, data);
+          local?.commit?.(root, write, data);
+        } catch (error) {
+          errorService.reportError(error, {
+            operation: `Commit ${write.operationName}`,
+          });
+        }
+      },
+    });
+    this.remove(write.id);
+    this.rebuild();
   }
+}
+
+/**
+ * A read that landed while the write waited may have put a row back as it was
+ * before the write. Written again, the answer restores it; ordered, it leaves a
+ * row a later change has moved past.
+ */
+function writeAnswerAgain(
+  root: ApolloCache,
+  write: PendingWrite,
+  data: unknown,
+): void {
+  const answer: unknown = JSON.parse(JSON.stringify(data));
+  if (!isRecord(answer)) return;
+  orderAnswer(root, write.document, write.variables, answer);
+  root.writeQuery({
+    id: 'ROOT_MUTATION',
+    query: write.document,
+    variables: write.variables,
+    data: answer,
+  });
+  root.modify({
+    id: 'ROOT_MUTATION',
+    fields: (_value, { DELETE }) => DELETE,
+  });
 }
 
 /** Variables moved onto the version an earlier write to the subject returned. */

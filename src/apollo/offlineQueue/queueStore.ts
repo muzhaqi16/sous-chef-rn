@@ -455,8 +455,10 @@ export class QueueStore {
     return this.getMutationsForUser(userId)
       .filter(({ status }) => UNDELIVERED.includes(status))
       .sort((a, b) => a.createdAt - b.createdAt)
-      .flatMap(({ pendingWrite, operationName, variables }) =>
-        pendingWrite ? [{ ...pendingWrite, operationName, variables }] : [],
+      .flatMap(({ pendingWrite, operationName, mutation, variables }) =>
+        pendingWrite
+          ? [{ ...pendingWrite, operationName, document: mutation, variables }]
+          : [],
       );
   }
 

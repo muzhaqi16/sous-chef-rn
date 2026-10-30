@@ -457,6 +457,7 @@ export class QueueManager {
       context: {
         ...mutation.context,
         skipQueueLink: true,
+        pendingWriteId: mutation.pendingWrite?.id,
       },
       update: (_cache, { data }) => {
         unmaskedData = data;

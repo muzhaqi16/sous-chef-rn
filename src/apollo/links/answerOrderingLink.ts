@@ -1,4 +1,9 @@
-import { ApolloLink, Observable, type ApolloCache } from '@apollo/client';
+import {
+  ApolloLink,
+  Observable,
+  type ApolloCache,
+  type OperationVariables,
+} from '@apollo/client';
 import {
   Kind,
   OperationTypeNode,
@@ -222,32 +227,51 @@ const order = (
  * lays the device's copy over the answer before Apollo stores it. Verified:
  * `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
  */
+const operationOf = (document: DocumentNode) => {
+  const definition = document.definitions.find(
+    node => node.kind === Kind.OPERATION_DEFINITION,
+  );
+  return definition?.kind === Kind.OPERATION_DEFINITION ? definition : null;
+};
+
+/** Lays the cache's newer rows over `data`, in place. */
+export function orderAnswer(
+  cache: ApolloCache,
+  document: DocumentNode,
+  variables: OperationVariables,
+  data: Record<string, unknown>,
+): void {
+  const definition = operationOf(document);
+  if (!definition) return;
+  order(
+    cache,
+    data,
+    definition.selectionSet,
+    fragmentsOf(document),
+    variables,
+    definition.operation === OperationTypeNode.MUTATION ? 'Mutation' : 'Query',
+  );
+}
+
 export function createAnswerOrderingLink(): ApolloLink {
   return new ApolloLink((operation, forward) => {
-    const definition = operation.query.definitions.find(
-      node => node.kind === Kind.OPERATION_DEFINITION,
-    );
     if (
-      definition?.kind !== Kind.OPERATION_DEFINITION ||
-      definition.operation === OperationTypeNode.SUBSCRIPTION ||
+      !operationOf(operation.query) ||
+      operationOf(operation.query)?.operation ===
+        OperationTypeNode.SUBSCRIPTION ||
       isIncremental(operation.query)
     ) {
       return forward(operation);
     }
-    const fragments = fragmentsOf(operation.query);
     return new Observable<ApolloLink.Result>(observer =>
       forward(operation).subscribe({
         next: result => {
           if (isRecord(result.data)) {
-            order(
+            orderAnswer(
               operation.client.cache,
-              result.data,
-              definition.selectionSet,
-              fragments,
+              operation.query,
               operation.variables,
-              definition.operation === OperationTypeNode.MUTATION
-                ? 'Mutation'
-                : 'Query',
+              result.data,
             );
           }
           observer.next(result);

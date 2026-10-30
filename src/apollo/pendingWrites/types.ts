@@ -1,4 +1,5 @@
 import type { ApolloCache, OperationVariables } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 
 /** What a write read outside its variables when made. Queued with it, so JSON. */
 export type LocalInputs = Readonly<Record<string, unknown>>;
@@ -7,6 +8,7 @@ export type LocalInputs = Readonly<Record<string, unknown>>;
 export interface PendingWrite {
   id: string;
   operationName: string;
+  document: DocumentNode;
   variables: OperationVariables;
   inputs: LocalInputs;
 }

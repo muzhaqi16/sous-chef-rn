@@ -402,6 +402,7 @@ const overrides = [
       '__tests__/helpers/apolloMockProvider.tsx',
       '__tests__/apollo/normalizedRowMergeProbe.test.ts',
       '__tests__/apollo/pendingLayerProbe.test.ts',
+      '__tests__/apollo/pendingWriteAndReadsInFlight.test.ts',
       '__tests__/apollo/pendingWriteOverServerAnswer.test.ts',
       '__tests__/apollo/pendingWritesAcrossSessions.test.ts',
       '__tests__/core-portability/**/*.ts',

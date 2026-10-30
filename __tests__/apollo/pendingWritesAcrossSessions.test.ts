@@ -59,6 +59,7 @@ describe('a pending write across sessions', () => {
       {
         id: 'write-1',
         operationName: 'AddSessionRow',
+        document: ROWS,
         variables: { input: { id: 'row-1' } },
         inputs: { name: 'Stored' },
       },

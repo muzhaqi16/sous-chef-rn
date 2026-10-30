@@ -281,6 +281,7 @@ describe('PendingWrites', () => {
       {
         id: 'write-1',
         operationName: 'AddRow',
+        document: ADD_ROW,
         variables: { input: { id: 'row-2' } },
         inputs: { name: 'Stored' },
       },

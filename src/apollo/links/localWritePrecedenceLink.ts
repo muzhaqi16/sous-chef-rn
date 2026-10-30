@@ -5,10 +5,14 @@ import {
   isQueryOperation,
 } from '@apollo/client/utilities';
 import type { Subscriber, Subscription } from 'rxjs';
+import { readFenceOf } from '#/apollo/pendingWrites/readFence';
 import { isIncremental } from '#/apollo/utils/isIncremental';
 
 /** A local-first write sent while reads were in flight. */
-type Write = object;
+interface Write {
+  /** Held as a layer, so the root stays the server's and a late answer may land. */
+  layered: boolean;
+}
 
 /** A read this link forwarded that has not answered the network yet. */
 interface Read {
@@ -28,16 +32,20 @@ interface Read {
   landed: boolean;
   /** Its network answer disagreed with the cache. */
   stale: boolean;
+  /** A write that isn't a layer caught it, so its late answer can't land under one. */
+  asksAgain: boolean;
+  /** Tells the fence it has landed. */
+  land: () => void;
   /** The local-first writes that caught it and have not settled. */
   writes: Set<Write>;
 }
 
-const cacheRead = (operation: ApolloLink.Operation) =>
+const cacheRead = (operation: ApolloLink.Operation, optimistic: boolean) =>
   operation.client.cache.diff<Record<string, unknown>>({
     query: operation.query,
     variables: operation.variables,
     returnPartialData: true,
-    optimistic: false,
+    optimistic,
   });
 
 // A write to a field with no keyArgs gives every argument's read a new
@@ -85,19 +93,27 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
       read.landed = true;
       finish(read);
     };
-    read.sent = cacheRead(operation).result;
+    read.land = readFenceOf(operation.client.cache).begin();
+    read.sent = cacheRead(operation, true).result;
     read.network = read.forward(operation).subscribe({
       next: value => {
-        if (read.answered) {
-          read.stale ||= !sameData(
-            value.data ?? null,
-            cacheRead(operation).result ?? null,
-          );
+        if (!read.answered) {
+          if (!read.held) observer.next(value);
           return;
         }
-        if (!read.held) observer.next(value);
+        if (read.asksAgain) {
+          read.stale ||= !sameData(
+            value.data ?? null,
+            cacheRead(operation, true).result ?? null,
+          );
+        } else if (value.data && !value.errors) {
+          // Under the write's layer, so the rest of the answer shows beside it.
+          const { client, query, variables } = operation;
+          client.cache.writeQuery({ query, variables, data: value.data });
+        }
       },
       error: (error: unknown) => {
+        read.land();
         if (read.answered || read.held) {
           land();
           return;
@@ -106,6 +122,7 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
         observer.error(error);
       },
       complete: () => {
+        read.land();
         if (read.answered || read.held) {
           land();
           return;
@@ -117,14 +134,18 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
   };
 
   const catchRead = (read: Read, write: Write) => {
+    read.asksAgain ||= !write.layered;
     if (read.answered || read.held) {
       read.writes.add(write);
       return;
     }
-    const { result, complete } = cacheRead(read.operation);
+    const shown = cacheRead(read.operation, true);
     // The write left its data as it was sent, so its answer cannot undo it.
-    if (complete && sameData(result, read.sent)) return;
+    if (shown.complete && sameData(shown.result, read.sent)) return;
     read.writes.add(write);
+    // Apollo stores what a link answers, so the answer is the server's data:
+    // it only releases the watcher, which then reads the layer over it.
+    const { result, complete } = cacheRead(read.operation, false);
     if (!complete) {
       read.held = true;
       return;
@@ -151,14 +172,43 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
         held: false,
         landed: false,
         stale: false,
+        asksAgain: false,
+        land: () => undefined,
         writes: new Set(),
       };
       inFlight.add(read);
       send(read);
       return () => {
         if (read.answered) return;
+        read.land();
         inFlight.delete(read);
         read.network?.unsubscribe();
+      };
+    });
+
+  // Apollo stores a page a tick after its request ends, and the fence must
+  // still hold then, or a page from before a removal puts the row back.
+  const pageThrough = (
+    operation: ApolloLink.Operation,
+    forward: ApolloLink.ForwardFunction,
+  ) =>
+    new Observable<ApolloLink.Result>(observer => {
+      const land = readFenceOf(operation.client.cache).begin();
+      const landAfterStored = () => setTimeout(land, 0);
+      const page = forward(operation).subscribe({
+        next: value => observer.next(value),
+        error: (error: unknown) => {
+          observer.error(error);
+          landAfterStored();
+        },
+        complete: () => {
+          observer.complete();
+          landAfterStored();
+        },
+      });
+      return () => {
+        page.unsubscribe();
+        landAfterStored();
       };
     });
 
@@ -166,7 +216,9 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
     operation: ApolloLink.Operation,
     forward: ApolloLink.ForwardFunction,
   ) => {
-    const write: Write = {};
+    const write: Write = {
+      layered: typeof operation.getContext().pendingWriteId === 'string',
+    };
     const caught = [...inFlight];
     caught.forEach(read => catchRead(read, write));
     return new Observable<ApolloLink.Result>(observer => {
@@ -201,12 +253,13 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
     // A `fetchMore` page (`context.page`) is its own `no-cache` request: it never
     // holds the list's watcher back, and the cache can only answer it with the
     // list already shown, so it passes untouched.
-    if (
-      isQueryOperation(operation.query) &&
-      !isIncremental(operation.query) &&
-      operation.getContext().page !== true
-    ) {
-      return readThrough(operation, forward);
+    if (isQueryOperation(operation.query)) {
+      if (operation.getContext().page === true) {
+        return pageThrough(operation, forward);
+      }
+      if (!isIncremental(operation.query)) {
+        return readThrough(operation, forward);
+      }
     }
     if (
       isMutationOperation(operation.query) &&
