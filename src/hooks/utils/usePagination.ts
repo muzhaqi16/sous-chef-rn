@@ -6,12 +6,13 @@ import { logger } from '#/utils/environment';
 import type { PaginationState } from '#hooks/utils/types';
 
 /**
- * Apollo `fetchMore` shape this hook invokes as `fetchMore({ variables })`.
+ * Apollo `fetchMore` shape this hook invokes as `fetchMore({ variables, context })`.
  * The resolved value is never read — only whether the call settled — so it is
  * left as `unknown`.
  */
 export type FetchMoreFn = (options: {
   variables?: OperationVariables;
+  context?: { page: true };
 }) => Promise<unknown>;
 
 /**
@@ -121,7 +122,8 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     let result;
     let deadCursor = false;
     try {
-      result = await fetchMore({ variables });
+      // A page is never answered from the list the cache already merged.
+      result = await fetchMore({ variables, context: { page: true } });
     } catch (error) {
       deadCursor = isDeadCursorError(error, endCursor);
       errorService.reportError(error, { operation: 'Pagination.loadMore' });

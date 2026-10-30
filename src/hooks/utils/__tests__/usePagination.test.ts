@@ -60,6 +60,7 @@ describe('usePagination', () => {
         id: 'list-1',
         cursor: 'cursor-abc',
       },
+      context: { page: true },
     });
   });
 
@@ -82,6 +83,7 @@ describe('usePagination', () => {
       variables: {
         itemsCursor: 'cursor-xyz',
       },
+      context: { page: true },
     });
   });
 
@@ -401,6 +403,7 @@ describe('usePagination', () => {
       expect(mockFetchMore).toHaveBeenCalledTimes(2);
       expect(mockFetchMore).toHaveBeenLastCalledWith({
         variables: { cursor: 'cursor-50' },
+        context: { page: true },
       });
     } finally {
       raf.mockRestore();

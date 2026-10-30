@@ -3,7 +3,10 @@ import { errorService } from '#/services/errorService';
 import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
 
 interface LoadPageArgs {
-  fetchMore: (options: { variables: OperationVariables }) => Promise<unknown>;
+  fetchMore: (options: {
+    variables: OperationVariables;
+    context: { page: true };
+  }) => Promise<unknown>;
   /** Re-reads the collection from its first page. */
   refetch: () => Promise<unknown>;
   variables: OperationVariables;
@@ -28,7 +31,8 @@ export async function loadPageWithCursorRecovery({
 }: LoadPageArgs): Promise<void> {
   let deadCursor = false;
   try {
-    await fetchMore({ variables });
+    // A page is never answered from the list the cache already merged.
+    await fetchMore({ variables, context: { page: true } });
     return;
   } catch (error) {
     deadCursor = isDeadCursorError(error, variables[cursorVariableName]);

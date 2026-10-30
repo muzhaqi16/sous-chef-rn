@@ -482,6 +482,59 @@ describe('localWritePrecedenceLink', () => {
     subscription.unsubscribe();
   });
 
+  it('lets a page loading during a write land as the server sends it', async () => {
+    const page = recordMock(UsualStoresDocument, {
+      data: { usualStores: [aldi] },
+      held: true,
+      maxUsageCount: 1,
+    });
+    const pinMock = recordMock(UpdateUsualStoreDocument, {
+      data: pinAnswer([pinnedMarket, banksville]),
+    });
+    const cache = makeCache();
+    writeUsualStores(cache, 'home-1', [banksville, market]);
+    const client = new ApolloClient({
+      cache,
+      link: ApolloLink.from([
+        createLocalWritePrecedenceLink(),
+        testMockLink([page.mock, pinMock.mock]),
+      ]),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    });
+    let rows: string[] | undefined;
+    // As `fetchMore` sends a page: its own no-cache request, marked.
+    const loading = client
+      .query({
+        query: UsualStoresDocument,
+        variables: { homeId: 'home-1' },
+        fetchPolicy: 'no-cache',
+        context: { page: true },
+      })
+      .then(({ data }) => {
+        rows = data?.usualStores.map(store => store.id);
+      });
+    await waitFor(() => expect(page.fired).toHaveLength(1));
+
+    await act(async () => {
+      writeUsualStores(cache, 'home-1', [banksville, pinnedMarket]);
+      await client.mutate({
+        mutation: UpdateUsualStoreDocument,
+        variables: {
+          input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true },
+        },
+        context: { localFirst: true },
+      });
+    });
+    await act(async () => {
+      page.release();
+      await loading;
+    });
+
+    // The server's page, not the list the cache had merged.
+    expect(rows).toEqual([aldi.id]);
+    expect(pinnedIn(readUsualStores(cache, 'home-1'))).toBe(true);
+  });
+
   it('passes a deferred read through untouched', async () => {
     const answer = { data: { me: { __typename: 'User', id: 'u1' } } };
     const deferred = gql`

@@ -129,7 +129,10 @@ describe('loadPageWithCursorRecovery', () => {
       operation: 'test',
     });
 
-    expect(fetchMore).toHaveBeenCalledWith({ variables });
+    expect(fetchMore).toHaveBeenCalledWith({
+      variables,
+      context: { page: true },
+    });
     expect(refetch).not.toHaveBeenCalled();
   });
 

@@ -198,7 +198,14 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
   };
 
   return new ApolloLink((operation, forward) => {
-    if (isQueryOperation(operation.query) && !isIncremental(operation.query)) {
+    // A `fetchMore` page (`context.page`) is its own `no-cache` request: it never
+    // holds the list's watcher back, and the cache can only answer it with the
+    // list already shown, so it passes untouched.
+    if (
+      isQueryOperation(operation.query) &&
+      !isIncremental(operation.query) &&
+      operation.getContext().page !== true
+    ) {
       return readThrough(operation, forward);
     }
     if (

@@ -631,14 +631,14 @@ replay only after their parent has landed — the drain reads the parent referen
   passes, so the change shows at once, and asks it again (with the caller's context) once the write
   settles only if the server's late answer disagrees. A read the cache can't answer completely is held
   and re-sent instead. A read whose data the write left as it was goes on untouched, so a caller that
-  acts on the server's answer (`useVerifyEmail`, an event's read-back) still gets it. Two gaps are left:
+  acts on the server's answer (`useVerifyEmail`, an event's read-back) still gets it. A `fetchMore` page
+  (`context: { page: true }`, sent only by `src/hooks/utils/`, held by `fetchMoreMarksItsPage.test.ts`)
+  passes untouched: the cache could only answer it with the list already shown. One gap is left:
 
   - A read sent after the change reached the cache but before the server had it is not caught: one
     started while the mutation is on the wire, or while a hook that orders its writes
     (`useUsualStoreWrites`' `writeOrder`) waits to send it. If the server answers it first, its older
-    state shows until the mutation's answer lands.
-  - A `fetchMore` page caught by a write that changed its list is answered with the list already shown
-    (the page's variables read the merged connection), so its rows arrive with the re-ask.
+    state shows until the mutation's answer lands. It is an open gap.
 
   Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
 
