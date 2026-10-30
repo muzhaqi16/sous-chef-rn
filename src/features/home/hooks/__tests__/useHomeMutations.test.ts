@@ -1,9 +1,10 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained } from '#/test-utils/drainTimers';
 import {
   CreateHomeDocument,
   DeleteHomeDocument,
@@ -64,6 +65,14 @@ const createOptions = () => ({
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockStoreState.selectedHomeId = 'home-1';
   mockHasUnverifiedEmail = false;
@@ -118,9 +127,7 @@ describe('useHomeMutations', () => {
         { operationMocks: [m.mock] },
       );
 
-      await act(async () => {
-        await result.current.createHome('My Home');
-      });
+      await drained(() => result.current.createHome('My Home'));
 
       // The id is minted here, and the default pantry is asked for OFF — a
       // server-minted pantry id is one no offline pantry write could name.
@@ -141,12 +148,12 @@ describe('useHomeMutations', () => {
         { operationMocks: [m.mock] },
       );
 
-      await act(async () => {
-        await result.current.createHome({
+      await drained(() =>
+        result.current.createHome({
           name: 'Test',
           allowJoinCode: false,
-        });
-      });
+        }),
+      );
 
       expect(m.fired[0]).toMatchObject({
         input: { name: 'Test', allowJoinCode: false },
@@ -163,9 +170,7 @@ describe('useHomeMutations', () => {
         { operationMocks: [home.mock, pantry.mock] },
       );
 
-      await act(async () => {
-        await result.current.createHome('My Home');
-      });
+      await drained(() => result.current.createHome('My Home'));
 
       expect(pantry.fired[0]).toMatchObject({
         input: { name: 'Kitchen Pantry', isDefault: true },
@@ -191,24 +196,19 @@ describe('useHomeMutations', () => {
       );
 
       let settled = false;
-      await act(async () => {
+      await drained(async () => {
         void result.current.createHome('My Home').then(() => {
           settled = true;
         });
         await Promise.resolve();
       });
-      await waitFor(() => expect(pantry.fired).toHaveLength(1));
+      expect(pantry.fired).toHaveLength(1);
       expect(settled).toBe(false);
       expect(result.current.creating).toBe(true);
 
-      await act(async () => pantry.release());
-
-      // `settled` flips in a microtask; `result.current` only after React's
-      // re-render and passive effect, so the flag is awaited, not read after.
-      await waitFor(() => {
-        expect(settled).toBe(true);
-        expect(result.current.creating).toBe(false);
-      });
+      await drained(() => pantry.release());
+      expect(settled).toBe(true);
+      expect(result.current.creating).toBe(false);
     });
 
     it('reports a refused default pantry and keeps the home', async () => {
@@ -230,9 +230,7 @@ describe('useHomeMutations', () => {
       );
 
       let created: boolean | undefined;
-      await act(async () => {
-        created = await result.current.createHome('My Home');
-      });
+      created = await drained(() => result.current.createHome('My Home'));
 
       expect(created).toBe(true);
       expect(refused.fired).toHaveLength(1);
@@ -253,9 +251,7 @@ describe('useHomeMutations', () => {
         { operationMocks: [m.mock] },
       );
 
-      await act(async () => {
-        await result.current.createHome('My Home');
-      });
+      await drained(() => result.current.createHome('My Home'));
 
       expect(m.fired[0]).toMatchObject({
         input: { name: 'My Home', allowJoinCode: false },
@@ -298,9 +294,9 @@ describe('useHomeMutations', () => {
       const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
         | Array<{ style?: string; onPress?: () => unknown }>
         | undefined;
-      await act(async () => {
-        await confirm?.find(b => b.style === 'destructive')?.onPress?.();
-      });
+      await drained(() =>
+        confirm?.find(b => b.style === 'destructive')?.onPress?.(),
+      );
 
       await expect(deleted).resolves.toBe(false);
       // The confirmation, then exactly one failure.
@@ -325,9 +321,9 @@ describe('useHomeMutations', () => {
       const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
         | Array<{ style?: string; onPress?: () => unknown }>
         | undefined;
-      await act(async () => {
-        await confirm?.find(b => b.style === 'destructive')?.onPress?.();
-      });
+      await drained(() =>
+        confirm?.find(b => b.style === 'destructive')?.onPress?.(),
+      );
 
       await expect(deleted).resolves.toBeTruthy();
       expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
@@ -367,16 +363,13 @@ describe('useHomeMutations', () => {
       const confirm = (alertService.alert as jest.Mock).mock.lastCall?.[2] as
         | Array<{ style?: string; onPress?: () => unknown }>
         | undefined;
-      await act(async () => {
-        await confirm?.find(b => b.style === 'destructive')?.onPress?.();
-      });
-
-      await waitFor(() =>
-        expect(removeFromHomesCache).toHaveBeenCalledWith(
-          expect.anything(),
-          'home-1',
-          { evictItem: true },
-        ),
+      await drained(() =>
+        confirm?.find(b => b.style === 'destructive')?.onPress?.(),
+      );
+      expect(removeFromHomesCache).toHaveBeenCalledWith(
+        expect.anything(),
+        'home-1',
+        { evictItem: true },
       );
       expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(null);
       // The confirmation only: a converged removal says nothing more.

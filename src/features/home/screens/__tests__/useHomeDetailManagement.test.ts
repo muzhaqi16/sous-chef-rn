@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { ErrorCode, MembershipRole } from '#/graphql/generated/schemaTypes';
@@ -9,6 +9,7 @@ import {
   type MockDataFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   UpdateHomeDocument,
   EnableHomeJoinLinkDocument,
@@ -102,7 +103,7 @@ const DEFAULT_HOME_DATA: HomeData = {
 
 function getHomeMock(
   data: HomeData = DEFAULT_HOME_DATA,
-  options: { held?: boolean } = {},
+  options: { held?: boolean; maxUsageCount?: number } = {},
 ): MockedResponse {
   return recordMock(GetHomeDocument, { data, ...options }).mock;
 }
@@ -111,12 +112,14 @@ function getHomeMock(
 const renderLoaded = async (
   mocks: MockedResponse[] = [],
   cache = makeCache(),
+  home = getHomeMock(),
 ) => {
   const rendered = renderHookWithApollo(
     () => useHomeDetailManagement('home-1'),
-    { operationMocks: [getHomeMock(), ...mocks], cache },
+    { operationMocks: [home, ...mocks], cache },
   );
-  await waitFor(() => expect(rendered.result.current.home).toBeTruthy());
+  await drainTimers();
+  expect(rendered.result.current.home).toBeTruthy();
   return { ...rendered, cache };
 };
 
@@ -129,6 +132,14 @@ const updateHomeMock = () =>
       },
     },
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -159,7 +170,8 @@ describe('useHomeDetailManagement', () => {
       { operationMocks: [getHomeMock({ home: null })] },
     );
 
-    await waitFor(() => expect(result.current.homeState).toBe('empty'));
+    await drainTimers();
+    expect(result.current.homeState).toBe('empty');
     expect(result.current.home).toBeNull();
   });
 
@@ -168,9 +180,7 @@ describe('useHomeDetailManagement', () => {
       const update = updateHomeMock();
       const { result } = await renderLoaded([update.mock]);
 
-      await act(async () => {
-        await result.current.saveName('New Name');
-      });
+      await drained(() => result.current.saveName('New Name'));
 
       expect(update.fired).toContainEqual({
         input: { id: 'home-1', name: 'New Name', version: 1 },
@@ -181,9 +191,7 @@ describe('useHomeDetailManagement', () => {
       const update = updateHomeMock();
       const { result } = await renderLoaded([update.mock]);
 
-      await act(async () => {
-        await result.current.saveName('  Shtëpia \t e  Re ');
-      });
+      await drained(() => result.current.saveName('  Shtëpia \t e  Re '));
 
       expect(update.fired).toContainEqual({
         input: { id: 'home-1', name: 'Shtëpia e Re', version: 1 },
@@ -205,16 +213,15 @@ describe('useHomeDetailManagement', () => {
       });
       const { result } = await renderLoaded([refused.mock]);
 
-      await act(async () => {
-        await result.current.saveName('New Name');
-      });
+      await drained(() => result.current.saveName('New Name'));
 
       expect(alertService.alert).toHaveBeenCalledTimes(1);
       expect(alertService.alert).not.toHaveBeenCalledWith(
         expect.anything(),
         'SERVER PROSE',
       );
-      await waitFor(() => expect(result.current.home?.name).toBe('Test Home'));
+      await drainTimers();
+      expect(result.current.home?.name).toBe('Test Home');
     });
   });
 
@@ -230,9 +237,7 @@ describe('useHomeDetailManagement', () => {
       });
       const { result } = await renderLoaded([enable.mock]);
 
-      await act(async () => {
-        await result.current.toggleJoinCode(true);
-      });
+      await drained(() => result.current.toggleJoinCode(true));
 
       expect(enable.fired).toContainEqual({ input: { id: 'home-1' } });
     });
@@ -241,9 +246,7 @@ describe('useHomeDetailManagement', () => {
       const update = updateHomeMock();
       const { result } = await renderLoaded([update.mock]);
 
-      await act(async () => {
-        await result.current.toggleJoinCode(false);
-      });
+      await drained(() => result.current.toggleJoinCode(false));
 
       expect(update.fired).toContainEqual({
         input: { id: 'home-1', allowJoinCode: false, version: 1 },
@@ -264,9 +267,7 @@ describe('useHomeDetailManagement', () => {
       const { result } = await renderLoaded([rotate.mock]);
 
       let ok: boolean | undefined;
-      await act(async () => {
-        ok = await result.current.rotateJoinCode();
-      });
+      ok = await drained(() => result.current.rotateJoinCode());
 
       expect(ok).toBe(true);
       expect(rotate.fired).toContainEqual({ input: { id: 'home-1' } });
@@ -290,9 +291,7 @@ describe('useHomeDetailManagement', () => {
       const { result } = await renderLoaded([transfer.mock]);
 
       let ok: boolean | undefined;
-      await act(async () => {
-        ok = await result.current.transferOwnership('user-2');
-      });
+      ok = await drained(() => result.current.transferOwnership('user-2'));
 
       expect(ok).toBe(false);
       expect(transfer.fired).toContainEqual({
@@ -307,7 +306,7 @@ describe('useHomeDetailManagement', () => {
 
       let first: Promise<boolean> | undefined;
       let second: boolean | undefined;
-      await act(async () => {
+      await drained(async () => {
         first = result.current.transferOwnership('user-2');
         second = await result.current.transferOwnership('user-3');
       });
@@ -315,7 +314,7 @@ describe('useHomeDetailManagement', () => {
       expect(second).toBe(false);
       expect(result.current.transferringOwnership).toBe(true);
 
-      await act(async () => {
+      await drained(async () => {
         transfer.release();
         await first;
       });
@@ -385,13 +384,9 @@ describe('useHomeDetailManagement', () => {
         });
 
         let updated: unknown = 'unset';
-        await act(async () => {
-          updated = await result.current.updateMemberPermission(
-            'm-1',
-            'canAddItems',
-            false,
-          );
-        });
+        updated = await drained(() =>
+          result.current.updateMemberPermission('m-1', 'canAddItems', false),
+        );
 
         expect(updated).toBe(true);
         expect(update.fired).toEqual([
@@ -410,13 +405,9 @@ describe('useHomeDetailManagement', () => {
         const { result, cache } = await renderLoaded([update.mock]);
 
         let updated: unknown = 'unset';
-        await act(async () => {
-          updated = await result.current.updateMemberPermission(
-            'm-1',
-            'canAddItems',
-            false,
-          );
-        });
+        updated = await drained(() =>
+          result.current.updateMemberPermission('m-1', 'canAddItems', false),
+        );
 
         expect(updated).toBe(false);
         expect(update.fired).toEqual([
@@ -435,9 +426,9 @@ describe('useHomeDetailManagement', () => {
         const update = appliedMock();
         const { result, cache } = await renderLoaded([update.mock]);
 
-        await act(async () => {
-          await result.current.changeRole('m-1', MembershipRole.Admin);
-        });
+        await drained(() =>
+          result.current.changeRole('m-1', MembershipRole.Admin),
+        );
 
         expect(update.fired).toEqual([
           { input: { id: 'm-1', role: MembershipRole.Admin, version: 3 } },
@@ -483,9 +474,7 @@ describe('useHomeDetailManagement', () => {
       act(() => {
         removed = result.current.removeMember('m-1', 'Alice');
       });
-      await act(async () => {
-        await confirmLastAlert();
-      });
+      await drained(() => confirmLastAlert());
 
       await expect(removed).resolves.toBe(true);
       expect(remove.fired).toEqual([{ input: { membershipId: 'm-1' } }]);
@@ -549,15 +538,18 @@ describe('useHomeDetailManagement', () => {
         const leave = recordMock(LeaveHomeDocument, {
           data: { leaveHome: answer },
         });
-        const { result, cache } = await renderLoaded([leave.mock]);
+        // The eviction re-reads the home, and the server answers that it is gone.
+        const { result, cache } = await renderLoaded(
+          [leave.mock, getHomeMock({ home: null })],
+          undefined,
+          getHomeMock(DEFAULT_HOME_DATA, { maxUsageCount: 1 }),
+        );
 
         let leaving: Promise<boolean> | undefined;
         act(() => {
           leaving = result.current.leaveHome('Test Home');
         });
-        await act(async () => {
-          await confirmLastAlert();
-        });
+        await drained(() => confirmLastAlert());
         const left = await leaving;
         return { left, fired: leave.fired, cache };
       };
@@ -667,7 +659,8 @@ describe('useHomeDetailManagement', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.home).toBeTruthy());
+      await drainTimers();
+      expect(result.current.home).toBeTruthy();
       expect(result.current.home).toEqual(
         expect.objectContaining({
           id: 'home-1',

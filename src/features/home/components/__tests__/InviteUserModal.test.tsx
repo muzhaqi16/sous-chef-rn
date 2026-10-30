@@ -8,10 +8,19 @@ import {
 } from '@testing-library/react-native';
 import { InviteUserModal } from '#features/home/components/InviteUserModal';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/settings/useOfflineMode', () => ({
   useIsEffectivelyOffline: jest.fn(() => false),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('InviteUserModal', () => {
   const defaultProps = {
@@ -107,7 +116,8 @@ describe('InviteUserModal', () => {
     const user = userEvent.setup();
     render(<InviteUserModal {...defaultProps} />);
     await user.press(screen.getByText('Send Invite'));
-    expect(await screen.findByText('Email is required')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Email is required')).toBeTruthy();
   });
 
   it('shows error for invalid email format', async () => {

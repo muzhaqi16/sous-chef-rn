@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   Diet,
   Intolerance,
@@ -34,6 +34,14 @@ const needsMock = (
   recordMock(HomeDietaryNeedsDocument, {
     data: { home: { id: 'home-1', dietaryNeeds } },
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useHomeDietaryNeeds', () => {
   it("groups each sharing member's needs strictest first, an avoided item by its name", async () => {
@@ -81,7 +89,8 @@ describe('useHomeDietaryNeeds', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
     expect(result.current.members).toEqual([
       {
         membershipId: 'm-ana',
@@ -130,7 +139,8 @@ describe('useHomeDietaryNeeds', () => {
       { operationMocks: [needsMock([]).mock] },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('empty'));
+    await drainTimers();
+    expect(result.current.state).toBe('empty');
     expect(result.current.members).toEqual([]);
   });
 });

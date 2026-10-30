@@ -1,7 +1,7 @@
 'use no memo';
 
 import { captureOnData } from '#/test-utils/subscriptionCapture';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
@@ -10,6 +10,7 @@ import {
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
@@ -72,6 +73,14 @@ function deliverMembershipEvent(
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockRegister.mockReturnValue({});
   useStore.setState({ selectedHomeId: 'home-1' });
@@ -130,22 +139,6 @@ describe('useHomeSubscriptions', () => {
 });
 
 describe('useHomeSubscriptions: an invite a co-admin sent', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  // MockLink answers on a timer; the read-back then resolves a microtask later.
-  const settle = async () => {
-    for (let i = 0; i < 3; i++) {
-      await act(async () => {
-        jest.advanceTimersByTime(50);
-      });
-    }
-  };
-
   it("appears in the home's invite list without a refresh", async () => {
     const home = recordMock(GetHomeDocument, {
       data: {
@@ -191,8 +184,8 @@ describe('useHomeSubscriptions: an invite a co-admin sent', () => {
       },
       { operationMocks: [home.mock, readBack.mock, pending.mock] },
     );
-    await settle();
-    await waitFor(() => expect(result.current.data?.home?.id).toBe('home-1'));
+    await drainTimers();
+    expect(result.current.data?.home?.id).toBe('home-1');
 
     await act(async () => {
       getOnData()(
@@ -205,7 +198,7 @@ describe('useHomeSubscriptions: an invite a co-admin sent', () => {
         result.current.client,
       );
     });
-    await settle();
+    await drainTimers();
 
     expect(readBack.fired).toEqual([{ id: 'home-1' }]);
     const detail = result.current.client.cache.readFragment({
