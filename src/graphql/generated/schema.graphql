@@ -14568,8 +14568,17 @@ type Query {
   
   A recipe tagged with an intolerance the caller's dietary profile holds as
   an allergy or an intolerance is left out, and so is one not tagged with a
-  diet held that way. The check reads recipe tags only: an untagged recipe
-  is not screened by its ingredients.
+  diet held that way. That check reads recipe tags only; with
+  excludeDietaryConflicts, ingredients are screened too.
+  
+  With excludeDietaryConflicts, a recipe is also left out when any of its
+  ingredients raises a dietary alert, of any severity, CONTAINS or
+  MAY_CONTAIN, as RecipeIngredient.dietaryAlerts judges it. The
+  restrictions are the caller's own and those shared in homeId's home, or,
+  without homeId, in every home whose pantries are read; a caller in no home
+  is screened on their own. Up to four times as many candidates as asked
+  for, at most 200, are judged; the page holds fewer than first only when
+  fewer of those pass. No alert means no evidence, never safe.
   
   Forward only, via first. The ranking depends on the caller's pantry and
   day, so after, before and last are not offered.
@@ -14578,6 +14587,10 @@ type Query {
   is off for the caller.
   """
   recipeSuggestions(
+    """
+    Leave out recipes with an ingredient that raises any dietary alert for the restrictions in scope; false when omitted
+    """
+    excludeDietaryConflicts: Boolean = false
     """How many suggestions: 20 when omitted, at most 100"""
     first: Int
     """
