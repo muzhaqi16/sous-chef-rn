@@ -1,6 +1,7 @@
 /**
  * The project's own lint rules, registered as `sous-chef/*`. Each rule has a
- * page in docs/rules/ and a RuleTester spec in __tests__/lint/rules/;
+ * page in docs/rules/ and a RuleTester spec in __tests__/lint/rules/, or in
+ * __tests__/lint/typedRules/ if it reads types;
  * `__tests__/lint/ruleCatalog.test.ts` holds that.
  */
 module.exports = {
