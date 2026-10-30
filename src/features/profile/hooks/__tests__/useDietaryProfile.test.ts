@@ -436,6 +436,34 @@ describe('useDietaryProfile', () => {
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
+  // Offline the queue answers the local-first add with a null payload, and the
+  // onboarding dietary step's Continue still moves on.
+  it('addDietaryRestriction counts a queued add as saved', async () => {
+    const queued = recordMock(AddDietaryRestrictionDocument, {
+      data: { addRestriction: null },
+      partial: true,
+    });
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), queued.mock],
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    let success = false;
+    await act(async () => {
+      success = await result.current.addDietaryRestriction(
+        { intolerance: Intolerance.Peanut },
+        RestrictionSeverity.Allergy,
+      );
+    });
+
+    expect(queued.fired).toHaveLength(1);
+    expect(success).toBe(true);
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
   // The API takes what a restriction restricts as a one-key `kind`.
   it('addDietaryRestriction sends the restriction as its kind', async () => {
     const add = buildAddRestrictionMock();

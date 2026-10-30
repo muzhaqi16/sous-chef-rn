@@ -1,6 +1,7 @@
 import React from 'react';
 import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
+import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
@@ -59,6 +60,8 @@ const renderScreen = (
   return renderWithApollo(<UsualStoresScreen route={route} />, {
     cache,
     operationMocks: mocks,
+    // As in production: a read in flight never undoes the screen's writes.
+    links: [createLocalWritePrecedenceLink()],
   });
 };
 
@@ -123,6 +126,38 @@ describe('UsualStoresScreen', () => {
     expect(pin.fired).toEqual([
       { input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true } },
     ]);
+  });
+
+  it('keeps a pin made while the list is refreshing', async () => {
+    const refresh = recordMock(UsualStoresDocument, {
+      data: { usualStores: [banksville, marketDistrict] },
+      held: true,
+      maxUsageCount: 1,
+    });
+    // Asked again after the pin, so the server's answer holds it.
+    const reread = answering([{ ...marketDistrict, pinned: true }, banksville]);
+    const pin = recordMock(UpdateUsualStoreDocument, {
+      data: {
+        updateUsualStore: {
+          __typename: 'UpdateUsualStorePayload',
+          usualStores: [{ ...marketDistrict, pinned: true }, banksville],
+        },
+      },
+    });
+    renderScreen([refresh.mock, reread.mock, pin.mock]);
+    await screen.findByText('Giant Eagle Market District');
+    await waitFor(() => expect(refresh.fired).toHaveLength(1));
+
+    fireEvent.press(
+      screen.getByTestId(catalogTestIDs.usualStorePin('store:s2')),
+    );
+    expect(await screen.findByText('Pinned')).toBeTruthy();
+
+    await act(async () => {
+      refresh.release();
+    });
+    await waitFor(() => expect(reread.fired).toHaveLength(1));
+    expect(screen.getByText('Pinned')).toBeTruthy();
   });
 
   it('removes a store, and Undo brings it back', async () => {

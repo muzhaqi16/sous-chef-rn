@@ -215,7 +215,7 @@ describe('OnboardingCompleteScreen', () => {
       expect(screen.queryByTestId(onboardingTestIDs.payoff)).toBeNull();
     });
 
-    it('shows the pantry recipes to a user with no restriction', () => {
+    it('shows the pantry recipes', () => {
       mockPayoff = [
         {
           source: 'suggestion',

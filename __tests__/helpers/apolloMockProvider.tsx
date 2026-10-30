@@ -181,6 +181,8 @@ interface SharedApolloTestOptions {
 /** Per-operation request/response pairs, matched on `{ query, variables }`. */
 interface OperationMockOptions extends SharedApolloTestOptions {
   operationMocks: ReadonlyArray<MockedResponse>;
+  /** Links of the production chain to run ahead of the mocks. */
+  links?: ReadonlyArray<ApolloLink>;
   mocks?: never;
   resolvers?: never;
 }
@@ -201,6 +203,7 @@ interface SchemaMockOptions extends SharedApolloTestOptions {
    */
   resolvers?: (store: IMockStore) => Partial<IResolvers>;
   operationMocks?: never;
+  links?: never;
 }
 
 /**
@@ -215,6 +218,7 @@ export type ApolloTestOptions = OperationMockOptions | SchemaMockOptions;
 /** The same options after the union has been narrowed away for destructuring. */
 interface ResolvedApolloTestOptions extends SharedApolloTestOptions {
   operationMocks?: ReadonlyArray<MockedResponse>;
+  links?: ReadonlyArray<ApolloLink>;
   mocks?: IMocks;
   resolvers?: (store: IMockStore) => Partial<IResolvers>;
 }
@@ -571,6 +575,7 @@ export function completeMockedResponse(mock: MockedResponse): MockedResponse {
 export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
   const {
     operationMocks,
+    links = [],
     mocks,
     resolvers,
     cache: providedCache,
@@ -623,9 +628,12 @@ export function createApolloTestWrapper(options: ApolloTestOptions = {}) {
     for (const mock of operationMocks) {
       assertDocumentMatchesSchema(mock.request.query);
     }
-    const link = testMockLink(operationMocks.map(completeMockedResponse), {
-      showWarnings: false,
-    });
+    const link = ApolloLink.from([
+      ...links,
+      testMockLink(operationMocks.map(completeMockedResponse), {
+        showWarnings: false,
+      }),
+    ]);
     return function Wrapper({ children }: { children: ReactNode }) {
       return (
         <MockedProvider
@@ -667,7 +675,7 @@ export function renderHookWithApollo<TResult, TProps>(
   callback: (props: TProps) => TResult,
   options: ApolloTestOptions & Omit<RenderHookOptions<TProps>, 'wrapper'> = {},
 ) {
-  const { mocks, resolvers, operationMocks, cache, ...rest } =
+  const { mocks, resolvers, operationMocks, links, cache, ...rest } =
     options as ResolvedApolloTestOptions &
       Omit<RenderHookOptions<TProps>, 'wrapper'>;
   return renderHook(callback, {
@@ -675,6 +683,7 @@ export function renderHookWithApollo<TResult, TProps>(
       mocks,
       resolvers,
       operationMocks,
+      links,
       cache,
     } as ApolloTestOptions),
     ...rest,
@@ -688,13 +697,14 @@ export function renderWithApollo(
   ui: React.ReactElement,
   options: ApolloTestOptions & Omit<RenderOptions, 'wrapper'> = {},
 ) {
-  const { mocks, resolvers, operationMocks, cache, ...rest } =
+  const { mocks, resolvers, operationMocks, links, cache, ...rest } =
     options as ResolvedApolloTestOptions & Omit<RenderOptions, 'wrapper'>;
   return render(ui, {
     wrapper: createApolloTestWrapper({
       mocks,
       resolvers,
       operationMocks,
+      links,
       cache,
     } as ApolloTestOptions),
     ...rest,
