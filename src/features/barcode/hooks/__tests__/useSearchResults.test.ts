@@ -375,7 +375,7 @@ describe('useSearchResults', () => {
     it('asks for the shelf price at each store in store mode only', async () => {
       const inStore = lookupMock('upc', []);
       const { unmount } = renderHookWithApollo(
-        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        () => useSearchResults('1234567890', 'ean-13', undefined, 'list-1'),
         { operationMocks: [inStore.mock] },
       );
       await waitFor(() =>
@@ -401,7 +401,7 @@ describe('useSearchResults', () => {
       const upc = lookupMock('upc', []);
 
       renderHookWithApollo(
-        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        () => useSearchResults('1234567890', 'ean-13', undefined, 'list-1'),
         { operationMocks: [upc.mock] },
       );
 
@@ -412,19 +412,24 @@ describe('useSearchResults', () => {
       );
     });
 
-    // Store mode's price lines ride it too, and nowhere else are they read.
+    // Store mode's price lines ride it too, with the list whose store they are
+    // compared at, and nowhere else are they read.
     it('asks for what the household paid in store mode', async () => {
       useStore.setState({ selectedHomeId: 'home-1' });
       const upc = lookupMock('upc', []);
 
       renderHookWithApollo(
-        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        () => useSearchResults('1234567890', 'ean-13', undefined, 'list-1'),
         { operationMocks: [upc.mock] },
       );
 
       await waitFor(() =>
         expect(upc.fired).toContainEqual(
-          expect.objectContaining({ homeId: 'home-1', withPrices: true }),
+          expect.objectContaining({
+            homeId: 'home-1',
+            listId: 'list-1',
+            withPrices: true,
+          }),
         ),
       );
     });

@@ -10,10 +10,10 @@ import { formatCurrency } from '#/utils/formatters/number';
 import { formatMonthDay } from '#/utils/formatters/date';
 import { useSelectedHomeId } from '#store/useAppStore';
 import {
-  HouseholdPricePaidDocument,
   HouseholdUsualUnitPriceDocument,
-  StorePriceComparisonDocument,
+  StorePriceMemoryDocument,
   UseStorePriceMemory_ItemFragmentDoc,
+  UseStorePriceMemory_ListFragmentDoc,
 } from './useStorePriceMemory.generated';
 import { unitLabel } from '#/utils/formatQuantity';
 
@@ -52,20 +52,25 @@ export function useStorePriceMemory(
 ) {
   const { t } = useTranslation();
   const homeId = useSelectedHomeId();
-  const shown = listId && homeId ? homeId : null;
-  // The scan's lookup stores these with the item in store mode, so this asks
-  // only for an item that came another way.
+  const shown = listId && homeId ? { listId, homeId } : null;
+  // The scan's lookup stores these with the item and the list in store mode,
+  // so this asks only for an item that came another way.
   useQuery(
-    HouseholdPricePaidDocument,
+    StorePriceMemoryDocument,
     shown
-      ? { variables: { itemId, homeId: shown }, fetchPolicy: 'cache-first' }
+      ? { variables: { itemId, ...shown }, fetchPolicy: 'cache-first' }
       : skipToken,
   );
   const paid = useFragment({
     fragment: UseStorePriceMemory_ItemFragmentDoc,
     fragmentName: 'useStorePriceMemory_item',
     from: shown ? { __typename: 'Item', id: itemId } : null,
-    variables: { homeId: shown ?? '' },
+    variables: { homeId: shown?.homeId ?? '' },
+  });
+  const shopped = useFragment({
+    fragment: UseStorePriceMemory_ListFragmentDoc,
+    fragmentName: 'useStorePriceMemory_list',
+    from: shown ? { __typename: 'ShoppingList', id: shown.listId } : null,
   });
   const summary = paid.complete ? paid.data.householdPriceSummary : undefined;
   // A list line counting in a unit of its own: the usual per one of that.
@@ -77,15 +82,9 @@ export function useStorePriceMemory(
     HouseholdUsualUnitPriceDocument,
     shown && ownUnit
       ? {
-          variables: { itemId, homeId: shown, unitId: ownUnit.id },
+          variables: { itemId, homeId: shown.homeId, unitId: ownUnit.id },
           fetchPolicy: 'cache-first',
         }
-      : skipToken,
-  );
-  const here = useQuery(
-    StorePriceComparisonDocument,
-    listId
-      ? { variables: { itemId, listId }, fetchPolicy: 'cache-first' }
       : skipToken,
   );
   const money = (
@@ -114,10 +113,8 @@ export function useStorePriceMemory(
     };
   }
 
-  // `skipToken` keeps the last answer, so prices switched off would show it.
-  const answered = listId ? here.data : undefined;
-  const comparison = answered?.itemPriceComparison;
-  const store = answered?.shoppingList?.targetStore;
+  const comparison = paid.complete ? paid.data.priceComparison : undefined;
+  const store = shopped.complete ? shopped.data.targetStore : undefined;
   const rows = (comparison?.rows ?? []).filter(
     row => row.meetsMinimumSample && (basis === null || row.basis === basis),
   );
@@ -139,7 +136,7 @@ export function useStorePriceMemory(
   // `skipToken` keeps the last run's answer, which may be another unit's.
   const asked = ownUnitPrice.variables;
   const ownUsual =
-    ownUnit && asked.unitId === ownUnit.id && asked.homeId === shown
+    ownUnit && asked.unitId === ownUnit.id && asked.homeId === shown?.homeId
       ? ownUnitPrice.data?.item?.householdPriceSummary.usual?.unitPrice
       : undefined;
   const usualPerUnit = (ownUnit ? ownUsual : usual?.unitPrice) ?? null;

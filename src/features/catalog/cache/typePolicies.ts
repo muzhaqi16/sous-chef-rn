@@ -34,6 +34,7 @@ export const catalogTypePolicies: TypePolicies = {
       // merging two would mix two rankings.
       storePricesConnection: { merge: false },
       similarStorePrices: { merge: false },
+      priceComparison: { merge: false },
     },
   },
   // No id: a query asking for the usual in a second unit joins the summary
