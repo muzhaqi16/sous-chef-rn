@@ -1,6 +1,6 @@
 # Local-First Architecture
 
-**Status:** Implemented (item creates/removes across pantry & shopping). Last validated 2026-09-29
+**Status:** Implemented for every write `queueLink` can replay (§10). Last validated 2026-10-30
 against the codebase.
 
 **Goal.** A user can add, remove, and adjust items on their own data **instantly, with no network
@@ -17,26 +17,33 @@ Everything below that is "on disk" — the persisted cache, the offline queue,
 the store's persisted slices — is written through `storage` and `zustandStorage`
 from `src/store/deviceStorage.ts`, the platform's key-value store. On mobile
 that is the encrypted MMKV instance (`src/native/storage/mmkv.ts`, adapted in
-`keyValueStore.ts` beside it), so "MMKV" below means device storage there.
+`keyValueStore.ts` beside it), so "MMKV" below means device storage there. When
+storage falls back to the unencrypted recovery instance, neither the cache nor
+the queue is written: the queue then lives in memory for the session.
 
 ## 1. Read path — local-first
 
-- Apollo `InMemoryCache` is persisted to MMKV as-is (`ApolloCachePersistence.ts`): `cache.extract()` /
-  `cache.restore()` with no transformation, so connection wrappers (`edges`, `pageInfo`) survive across
-  launches. `cache.write/modify/evict/gc` are wrapped in `client.ts` to re-persist (debounced ~3s). Cold
-  start paints from disk. On app **background**, `useAppStateLifecycle` calls `flushCachePersistence()`
-  (`ApolloCachePersistence.flushPending`) to write the pending debounced snapshot immediately — so the
-  last few seconds of writes (including optimistic creates) survive a fast app-kill; no-op when nothing is
-  pending (see §6). `queueLink` calls the same `flushPending()` right after it queues a write, so the
-  queue entry and the cache change it replays against reach disk in one synchronous step and a kill
-  with no background transition (force-stop, crash) cannot leave a queued create with no row.
+- Apollo `InMemoryCache` is persisted to MMKV as one blob (`ApolloCachePersistence.ts`):
+  `cache.extract()` / `cache.restore()`, so connection wrappers (`edges`, `pageInfo`) survive across
+  launches. The only changes on the way are pruning `__META.extraRootIds` whose entity is gone, and
+  skipping a save when no entity changed. The blob is stored with its shape (`apollo-cache-version`,
+  `shape-6`; a mismatch wipes it) and the language it was answered in (`apollo-cache-language`, which
+  the `languageChanged` resync reads). `cache.write/modify/evict/gc` are wrapped in `client.ts` to
+  re-persist (debounced 3 s, then saved when idle). Cold start paints from disk. On app **background**,
+  `useAppStateLifecycle` calls `flushCachePersistence()` (`ApolloCachePersistence.flushPending`) to write
+  the owed snapshot immediately; a no-op when nothing is owed (see §6). `queueLink` calls the same
+  `flushPending()` right after it queues a write, so a kill with no background transition (force-stop,
+  crash) cannot leave a queued create with no row. A burst of writes queued in one macrotask (a bulk
+  add) persists on the first; the rest ride one trailing save when the task ends.
 - Default fetch policy `cache-and-network` → instant cache read + background refresh; after the first
   fetch a watcher settles on `cache-first`. What the device may have missed while backgrounded, offline
   or with the socket down is re-requested by the resync (`src/apollo/refetchEvents.ts`, Apollo 4.2's
-  `RefetchEventManager`): on a return to the app with the live channel closed (or after 30 s away),
-  API reachable again and WebSocket reconnect, it waits for the queue to drain, then refetches the
-  active queries on screen that have not opted out with `refetchOn: false`; a hidden home tab catches
-  up when it is shown (`docs/apollo-client-patterns.md` § Resync).
+  `RefetchEventManager`). Its sources (`connectResyncSources`) are a return to the app with the live
+  channel closed (or after 30 s away), the API reachable again, a WebSocket reconnect, a language
+  change, leaving a household, and a screen shown again. Triggers settle together (1.5 s, at most
+  5 s); the resync waits for the queue to drain, then refetches the active queries on screen that have
+  not opted out with `refetchOn: false` and have not answered since the trigger. A hidden home tab
+  catches up when it is shown (`docs/apollo-client-patterns.md` § Resync).
 - A transient API failure does not wipe cached lists: `usePreservedConnection` /
   `usePreservedQueryData` keep the last good value for the subject it was loaded for (each takes the
   subject's key, so a pantry or list switch never shows the previous one's rows), and the `itemsConnection.merge` guard only honors an
@@ -53,12 +60,13 @@ that is the encrypted MMKV instance (`src/native/storage/mmkv.ts`, adapted in
 Local-first mutations **write the change to the cache permanently _before_ firing the mutation, and
 leave it there.** They do **not** use Apollo's `optimisticResponse`.
 
-Why not `optimisticResponse`: Apollo applies the optimistic response at the cache layer but does not put
-it in the link `context`. So when the offline queue intercepts the request and completes it with a
-`null` result, Apollo tears the optimistic layer down — the change flashes and vanishes. A permanent
-cache write (`cache.modify` / `writeFragment` / a connection updater) goes through the persist wrapper to
-MMKV and is what the queue later reads to replay. This is the house pattern documented in CLAUDE.md
-("cache.modify before mutation + revert on error").
+Why not `optimisticResponse`: Apollo ties the optimistic layer to the mutation's observable. When the
+offline queue intercepts the request and completes it with a `null` result, Apollo tears the layer
+down — the change flashes and vanishes. A permanent cache write (`writeLocalEntity`, `writeFragment`, a
+connection updater) goes through the persist wrapper to MMKV, so the row shows from disk after a
+restart; the queue replays from its own persisted variables, never from the cache. This is Pattern 5 in
+`docs/apollo-client-patterns.md` ("local write before firing, revert on refusal"); §13 records what it
+costs.
 
 Lifecycle of a local-first mutation:
 
@@ -79,9 +87,9 @@ Lifecycle of a local-first mutation:
 call. Apollo 4.2 merges execute-time options over the hook's, and a per-call `context` object REPLACES
 the hook's context rather than merging into it (`src/apollo/__tests__/hookMutationContext.test.ts`), so a
 call that needs another context key passes the callback form, `context: hook => ({ ...hook, key })`.
-`sous-chef/queueable-write-is-local-first` enforces all three: a queueable write carries the marker, a
-per-call `localFirst` on a hook that already sets it is redundant, and a per-call context object on such
-a hook drops it. A helper that fires whatever mutate function its caller passes
+`sous-chef/queueable-write-is-local-first` enforces it: a queueable write carries the marker, a per-call
+`localFirst` on a hook that already sets it is redundant, a per-call context object on such a hook
+drops it, and a local-first write takes no `optimisticResponse`. A helper that fires whatever mutate function its caller passes
 (`createShoppingListRow`) and `client.mutate` callers pass it per call.
 
 Every add site — **including the primary `useAddShoppingItem`** —
@@ -95,8 +103,9 @@ sites settle the write with `settleMutation` and evict on a failure.
 each hook applies this lifecycle directly, sharing only the helpers where the logic is genuinely
 identical: the cache-write helpers (§3, §5) and `settleMutation` / `settledStatus(result) → 'applied' |
 'queued' | 'failed'` (`apollo/utils/settleMutation.ts`), which centralizes the "queued write is not a
-failure / refusal member is a failure" decision so it can't drift between sites. It takes the result and
-nothing else — the payload field and the success member are derived structurally via
+failure / refusal member is a failure" decision so it can't drift between sites. It takes the result
+(and `removal`, under which "not found" means applied) — the payload field and the success member are
+derived structurally via
 `utils/errors/mutationPayload.ts`, shared with `classifyReplayResult` (§ replay) so the foreground and
 replay paths apply one rule. What stays per-site — input construction and success UX (navigate / close / toast /
 restock) — is irreducibly site-specific, so a single primitive would be the wrong abstraction over it.
@@ -104,12 +113,14 @@ restock) — is irreducibly site-specific, so a single primitive would be the wr
 **One shape did earn a primitive: settings.** `updateEntityFieldsLocalFirst`
 (`apollo/utils/localFirstFields.ts`) runs the whole lifecycle for a _settings-shaped_ mutation — a
 normalized entity whose GraphQL field names are the flat setting names (`UserSettings`,
-`NotificationPreferences`), updated a field or two at a time. It writes the fields with `cache.modify`,
-fires local-first, and reverts from the caller's `previous` snapshot only when
-`settledStatus` says `'failed'`. It qualifies where the create sites don't because there is no
-per-site input construction (the change _is_ the fields) and no success UX (the control already moved).
-It returns the outcome rather than reporting it — the two call sites surface a refusal differently, and
-deciding that centrally is what produces double alerts. See §10 for what uses it.
+`NotificationPreferences`, `Home`, …), updated a field or two at a time. It writes the fields with
+`cache.writeFragment` (never `cache.modify`, which skips a field's write-time invariant), fires
+local-first, and reverts from the caller's `previous` snapshot only when the settle says `'failed'`. It
+qualifies where the create sites don't because there is no per-site input construction (the change _is_
+the fields) and no success UX (the control already moved). It returns the outcome rather than reporting
+it — its callers (`useUpdateSettings`, `useNotificationSettings`, `useUpdateHomeFields`,
+`useMealTemplateEditor`, `useDeviceTimezoneSync`, `useCompleteOnboarding`) surface a refusal
+differently, and deciding that centrally is what produces double alerts.
 
 ## 3. Identity — client-generated permanent ids
 
@@ -127,7 +138,7 @@ Consequences (this dissolves the entire temp-id problem class):
   rows, no edge re-keying.
 - **Cross-entity offline refs** resolve immediately because the real id exists from creation.
 
-The same cuid rides the create input as `input.id` and, on queue replay, becomes the sync `clientId`.
+The same cuid rides the create input as `input.id`, and its replay sends the same input.
 
 ## 4. Optimistic-offline appearance
 
@@ -140,7 +151,8 @@ the item into the cache before firing. Two shared writers keep this DRY:
   cache holds, else the SDL neutral. A related `unit` / `item` is named by reference only when the cache
   holds it, so a create never overwrites a held `Unit`'s name or an `Item`'s images. The writer also adds
   the connection edge and recomputes list stats. A feature's `cache/` is outside the closed internals
-  (`context/`, `hooks/mutations/`, `utils/`, `components/`, `offline/`), so add surfaces in other features
+  (`context/`, `hooks/mutations/`, `utils/`, `components/`, `offline/`, `graphql/`), so add surfaces in
+  other features
   (barcode, pantry-detail, filtered-pantry) build the same entity from it.
 - **`writeLocalPantryItem(cache, id, row)`** (`src/features/pantry/cache/writeLocalPantryItem.ts`) —
   writes the row complete for every query reading a pantry item (list and detail), through
@@ -194,14 +206,26 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
 ## 5. Offline queue
 
 - **`queueLink`** (in the link chain, after `errorLink`/`authLink`, before transport) queues a mutation
-  when: (a) `isOnline === false` **and** the mutation is on the replay allowlist — `context:
-{ localFirst: true }` opt-ins or the operations registered for replay (`REPLAY_PREPARATIONS`,
-  `hasReplayPreparation`); or (b) online but the
-  request fails with a network error **and** the mutation opted in via `context: { localFirst: true }`.
-  Offline mutations NOT on the allowlist fail fast with a network-shaped error — an honest immediate
-  failure instead of the old "failure toast + ghost replay on reconnect" behavior. On success it calls
-  `queueManager.requestDrain()` (covers API-recovery where `isOnline` never flipped). GraphQL/validation
-  errors pass through to the hook. `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport.
+  on the replay allowlist — `localFirst` opt-ins or the operations registered for replay
+  (`REPLAY_PREPARATIONS`, `hasReplayPreparation`) — when:
+
+  - (a) the device is offline (`shouldTreatAsOffline`: NetInfo says offline and nothing has proven the
+    API reachable);
+  - (b) the reachability breaker is open (`apiReachable === false`);
+  - (c) it names a row an undelivered queued write changes (`getUndeliveredIds`: pending, replaying or
+    parked for re-auth), as its subject or a parent (`dependencyIdsOf`). Sent at once it would overtake
+    that write: an edit before the create it names, or a second write at the same base version. It
+    queues behind it (`queuedReason: 'behind-queued'`) and `drainAfterPass` sends it next;
+  - (d) a `localFirst` write sent online fails with a network error before any result.
+
+  Offline, a mutation NOT on the allowlist fails fast with `OfflineRejectedError`, an honest immediate
+  failure instead of a ghost replay on reconnect; with only the breaker open it is forwarded and
+  surfaces its own error. On success it calls `queueManager.requestDrain()` (covers API-recovery where
+  `isOnline` never flipped). GraphQL/validation errors pass through to the hook.
+  `NEVER_QUEUE_OPERATIONS` (auth) forward straight to transport. A queue at `MAX_QUEUE_SIZE` (100) with
+  nothing terminal to evict refuses the enqueue, and `withdrawUnqueueableWrite` withdraws the local
+  write.
+
 - **`queueStore`** persists the queue to MMKV, user-scoped: each entry's operation name and variables,
   never its document. Survives restart. A reloaded entry is sent as this build's document for its
   operation (`MUTATION_DOCUMENTS`, which codegen writes from every `.graphql` mutation); an entry whose
@@ -228,13 +252,20 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   from the same base `version` are replayed in turn: once one lands, the next is moved onto the
   version the server returned instead of conflicting with its sibling. A create the server merged into
   a row it already held (`outcome: MERGED`) moves every write still queued against the minted id to
-  the surviving row, at its version; the server refuses the minted id from then on. Both moves are
+  the surviving row, at its version; the server refuses the minted id from then on. Two kinds are not
+  moved: a queued removal of the minted row is dropped, since removing the surviving row would remove
+  stock the person never saw (they are told, `queuedRemovalKept`), and a write that overwrites the
+  quantity or unit the merge combined (`MERGED_QUANTITY_OVERWRITES`) is withdrawn as a conflict. Both moves are
   written to the queue itself, so a restart mid-drain keeps them. Retries use exponential
   backoff + jitter;
-  an auth error forces ONE token refresh and then retries through the same bounded counter (a
-  failed refresh → AUTH_ERROR + failure handler — never an unbounded auth-retry loop). Triggers:
-  `useOnlineQueueSync` (offline→online), `useAppStateLifecycle` (background→active), `onUserChange`,
-  and the drain-on-recovery above. A network/server error that exhausts in-run retries stays
+  an auth error forces ONE token refresh and then retries through the same bounded counter. A failed
+  refresh PARKS the entry (`AUTH_ERROR`) until a new session token revives it (`onSessionToken`); a
+  parked entry the 24 h terminal cleanup ages out is withdrawn through the failure handler. A rate
+  limit holds every drain until its `retryAfterMs` (`drainNotBefore`). Triggers: `useOnlineQueueSync`
+  (offline→online), `useAppStateLifecycle` (every return to `active`), `onUserChange`,
+  `onSessionToken`, the resync's `whenIdle`, `drainAfterPass` (a write queued while a pass runs) and
+  the drain-on-recovery above. At drain start, an entry a killed process left PROCESSING goes back to
+  PENDING; a replay times out after 30 s. A network/server error that exhausts in-run retries stays
   **PENDING** (never silently FAILED); only a real (validation) error → FAILED.
 - **Failed-mutation entity identity is derived from the cache, not maintained.** The failure
   handler needs the entity's `__typename` to evict it; `extractEntityInfo` reads it off the
@@ -258,7 +289,7 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while reverting that
   row would discard a write the server never refused.
 - **A replay refused because its row is gone can settle silently.** An operation listed in
-  `GONE_REPLAYS` (`replayRegistry.ts`: notification mark-read and delete) treats a replayed
+  `GONE_REPLAYS` (`replayRegistry.ts`: notification mark-read and delete, meal-plan item delete) treats a replayed
   `NotFoundError` as settled: its reconciler removes the row locally and the entry dequeues with no
   failure toast, since the user's intent (read or gone) already holds.
 - **Replay reconcilers read the UNMASKED result.** Data masking applies only to the value
@@ -291,21 +322,25 @@ What a replay restates is only what the device knows better by then. `prepareRep
 (`preparationRegistry.ts`), which also names the writes `queueLink` takes offline without the caller's
 `localFirst` opt-in:
 
-- **Units** (`withCurrentUnits`, `replayPreparation.ts`): a `UnitRefInput` naming its unit by id is sent
-  by symbol where one is known — captured when queued (`replayInputs['unit:<id>']`), else read from the
-  cache — since an id the vocabulary repair retired cannot be re-resolved and a symbol can. A flat
-  `unitId` takes no symbol, so after a refusal names it retired the retry looks up the unit's current
-  id by symbol (`unitBySymbol`).
+- **Units** (`withCurrentUnits`, `replayPreparation.ts`): the unit's symbol is captured when the write
+  is queued (`replayInputs['unit:<id>']`, else read from the cache), since an id the vocabulary repair
+  retired cannot be re-resolved and a symbol can. A batch line always sends its unit by symbol. A single
+  row whose symbol was captured keeps its id until a refusal names it retired, since the service creates
+  a counting unit for a symbol it does not know. A flat `unitId` takes no
+  symbol, so after such a refusal the retry looks up the unit's current id by symbol (`unitBySymbol`).
 - **A pantry create** (`preparePantryItemCreate`, `features/pantry/offline/`) replays with
   `forceAdd: true`, so a stack for the same item and unit another member added meanwhile absorbs it
   (`outcome: MERGED`) instead of refusing it (§ 7).
 - **The day** (`$today`) is always the replay's: it only dates the totals the response reads back.
 
-`offline/` is public to the queue and closed to other features (an `import/no-restricted-paths` zone).
+`offline/` is public to the queue and closed to other features (the `feature-queue` element in
+`eslint/boundaries.js`).
 Shopping quantity rides the `FlexibleQuantity` scalar (`string | number`, e.g. `"1/3"` or `2`); pantry
 quantity is a plain `Float`.
 
-## 6. Persistence — two mechanisms
+## 6. Persistence
+
+Three stores hold a local write until the server has it, plus the reference data offline reads use:
 
 1. **Raw cache persistence** (`ApolloCachePersistence` + the `client.ts` write wrapper). The permanent
    cache writes from §2 are re-persisted to MMKV (debounced ~3s, and flushed immediately on app
@@ -316,15 +351,26 @@ quantity is a plain `Float`.
    next launch. The replay's response normalizes into the cache, and a replay reconciler
    (`REPLAY_RECONCILERS`, § 7) redoes the connection work the foreground `update` would have done. The cache flush optimizes cold-start UX (item visible
    immediately); the queue guarantees the change isn't lost.
-2. **`OptimisticDataPersistence`** (`apollo/offline/OptimisticDataPersistence.ts`,
-   `apollo-optimistic-data-v1`). Field-level tracking with a microtask flush (beats the cache debounce on
-   a fast app-kill), restored on launch by `useOptimisticDataRestoration`. When a queued write lands, only
-   the fields that write saved are cleared (`clearEntitySavedBetween`), so another write still queued on
-   the same entity keeps its persisted value. Used by the **numeric / toggle**
+2. **The offline queue** (`queueStore`, `apollo-mutation-queue`, user-scoped by
+   `apollo-queue-current-user`). Written synchronously on every enqueue and change: the durable record
+   of what the server has not taken (§5).
+3. **`OptimisticDataPersistence`** (`apollo/offline/OptimisticDataPersistence.ts`,
+   `apollo-optimistic-data-v1`). Field-level tracking for `MealPlanItem`, `PantryItem`, `PantryItemBatch`
+   and `ShoppingListItem`, with a microtask flush (beats the cache debounce on a fast app-kill), restored
+   on launch by `useOptimisticDataRestorationMultiple` (from `useTabScreenLifecycle`), which applies each
+   saved value as it stands, through `fieldWriters.ts` for an invariant field. When a queued write lands,
+   only the fields that write saved are cleared (`clearEntitySavedBetween`), so another write still
+   queued on the same entity keeps its persisted value. Used by the **numeric / toggle**
    mutations whose optimistic value must be exact across a kill: `useToggleShoppingItem`,
    `useAdjustPantryItemQuantity`, `useOpenPantryItemBatch`, `useWastePantryItemBatch`,
    `useConvertExpiredToWaste`, `useCorrectPackageSize`, `useItemReordering`, `useQuantityEditModal`,
-   `useShoppingListItemWrites` and `useMealPlanItemActions`.
+   `useMoveToAisleModal`, `useShoppingListItemWrites` and `useMealPlanItemActions`.
+
+Offline reads also rely on persisted Zustand state: the root store's reference caches
+(`cachedUnits`, `cachedCategories`, `cachedBrands`, `cachedStores`, `cachedItemSuggestions` and their
+fetch stamps), the offline-mode flag (`user_offline_mode`), the catalog freshness stamps
+(`sous-chef-catalog-fetch-times`), the receipt draft (`sous-chef-receipt-draft`, so a scan made offline
+survives a restart) and recipe captures (`sous-chef-recipe-captures`).
 
 ## 7. Reconciliation & idempotency
 
@@ -379,29 +425,40 @@ quantity is a plain `Float`.
 
 ## 8. Connectivity — two failure modes, one signal
 
-`NetInfo → networkSlice.isOnline` detects _device internet_, not "our API is reachable." The two
-"can't reach the server" cases are unified behind one predicate
-`isApiUnavailable(state) = !isOnline || apiReachable === false`:
+`NetInfo → networkSlice.isOnline` detects _device internet_, not "our API is reachable." The
+predicates in `networkSlice.ts` combine it with the API's own reachability, `apiReachable`, which is
+tri-state: `true`/`false` once proven, `null` untried since the link dropped.
 
-- **Device offline (`isOnline === false`):** `NetInfo` drives `isOnline`. (`isOnline` errs toward
-  "online" — only false when NetInfo is confident — so a transient unknown doesn't wrongly block.)
-- **API down while online (timeout / captive portal / 5xx):** the **`apiReachabilityBreaker`** circuit
-  breaker drives `apiReachable`. `networkStatusLink` (above `retryLink`, so one outcome per operation)
-  feeds it: a real response → success; a network error or a queued-mutation result (`extensions.queued`)
-  → failure. After **3 consecutive failures** it opens (`apiReachable = false`); after ~20s it half-opens
-  (`apiReachable = true`) so normal traffic re-probes — one success closes it (and drains the queue), one
-  failure re-opens. `useOnlineQueueSync` resets it on every connectivity transition.
+- `shouldTreatAsOffline = !isOnline && apiReachable !== true`: NetInfo says offline and nothing has
+  proven the API reachable. A `/health` success while NetInfo says offline proves NetInfo wrong.
+- `isApiUnavailable = apiReachable === false || shouldTreatAsOffline`: the server cannot be reached.
+- `blocksCacheMissQueries = offlineModeEnabled || shouldTreatAsOffline`: deliberately narrower (below).
+- `isNetworkWithheld = offlineModeEnabled || isApiUnavailable`.
 
-Both cases behave identically because `isApiUnavailable` is read by everything:
+**API down while online (timeout / captive portal / 5xx):** the **`apiReachabilityBreaker`** circuit
+breaker (`closed | open`) drives `apiReachable`. `networkStatusLink` (above `retryLink`, so one outcome
+per operation) feeds it: a real response → success; a network error, or a write queued after one
+(`queuedReason: 'network-error'`) → failure. A write queued without touching the wire and an
+`OfflineRejectedError` count as nothing. The first failure while closed fires one `/health` probe at
+once: a success forgives the blip, a failure opens the circuit (3 consecutive failures open it anyway,
+for an environment with no `/health`). While open, a `/health` probe loop (20 s, backing off to 120 s,
+jittered) closes it on the first success, which drains the queue. `useOnlineQueueSync` resets it when the
+device comes online; going offline calls `onDeviceOffline()`, which leaves `apiReachable` `null` and
+starts probing.
 
-- **`offlineModeLink`** (first in chain) short-circuits queries → serves the cache Apollo already read; no
-  spinner, no error, and blocked queries never reach `retryLink`/`errorLink` (no doomed requests, no retry
-  storm).
-- **`queueLink`** queues replay-allowlisted mutations (`localFirst` opt-ins or registered for replay) immediately
-  instead of firing doomed requests, matching the offline path's allowlist (mutations outside the allowlist
-  still fire and surface their error — they aren't safe to auto-replay).
-- **`queueManager.processQueue`** skips replay (a replay to a down API would just fail and re-trip the breaker);
-  recovery (`requestDrain` on breaker close) re-drains.
+Who reads what:
+
+- **`offlineModeLink`** (first in chain) answers a query from the cache itself (`readQuery`) while
+  `isNetworkWithheld`, so blocked queries never reach `retryLink`/`errorLink`. On a cache miss it
+  answers an `offline.noCachedData` error when `blocksCacheMissQueries`; with only the breaker open it
+  forwards the miss as an organic probe, so a failure there is a real network error. `RefreshToken` and
+  `GetUserSettings` pass the user's offline mode while the server is reachable (`ALWAYS_ALLOW`), so
+  tokens rotate and offline mode can be switched off.
+- **`queueLink`** queues replay-allowlisted mutations when offline or the breaker is open (§5). The two
+  differ for the rest: offline they fail fast; with only the breaker open they are forwarded and
+  surface their own error.
+- **`queueManager.processQueue`** skips replay while `isApiUnavailable` (a replay to a down API would just
+  fail and re-trip the breaker); recovery (`requestDrain` on breaker close) re-drains.
 
 The user-toggled **offline mode** (`offlineModeEnabled`) is a third input to `offlineModeLink`'s
 query-blocking, orthogonal to connectivity.
@@ -419,8 +476,8 @@ query-blocking, orthogonal to connectivity.
   `queueStore.subscribe`). The cause is the store's debounced `offlineBannerCause`, so a message does
   not rewrite itself mid-display.
 - **Permanent failure.** `registerQueueFailureHandler` (`apollo/offlineQueue/queueFailureHandler.ts`)
-  is the one registration, made from `useStartupInit`. `handleQueueFailure` withdraws the count or
-  unlink its operation registered, evicts the entity the write created or changed — its subject, read
+  is the one registration, made from `useCoreStartup` (`src/bootstrap/`). `handleQueueFailure` withdraws the count or
+  unlink its operation registered (`COUNT_WITHDRAWALS` / `UNLINK_WITHDRAWALS`, `withdrawalRegistry.ts`), evicts the entity the write created or changed — its subject, read
   from the operation's input type (`queuedSubject.ts`), never a parent or source it merely names —
   clears that entity's persisted optimistic fields, toasts the user in the app's own copy and **removes
   the entry from the queue**. Once the drain pass settles it re-reads the active queries, so a refused
@@ -449,94 +506,65 @@ query-blocking, orthogonal to connectivity.
 
 ## 10. Scope
 
-**Local-first today (opted in by `context: { localFirst: true }` on the `useMutation` options, with a
-permanent cache write):**
+**What is local-first is decided in code, not here.** A write is local-first when its `useMutation`
+sets `localFirst` (or a helper passes it per call); `sous-chef/queueable-write-is-local-first` holds
+every queueable write to it, and `queueLink` queues only those and the registered replays (§5).
+Everything else is online-only and fails fast offline. On 2026-10-30, 92 of the 147 authored mutations
+were queueable; about 97 write sites change the cache before firing. Areas, with what is worth knowing
+beyond the pattern:
 
-- **Pantry:** create (every add surface — `usePantryItemSubmission`, `AddToPantrySheet`,
-  `SelectPantryItems` (onboarding's staples), barcode), delete.
-- **Shopping:** add (every add surface — `useAddShoppingItem`, `AddToShoppingListSheet`, `AddEditItem`,
-  barcode, filtered-pantry, pantry-item-detail, recipe single + batch), remove, toggle-purchased, update,
-  quantity ±, reorder/move.
-- **Suggestions:** dismiss and undo a dismissal (`useSuggestionDismissal`: `MarkSuggestionDismissed`,
-  `MarkSuggestionActive`). The add sheet takes the suggestion out of its cached sections first and puts
-  back exactly that entry on a refusal or Undo, never a refetch. Both writes are idempotent on the API,
-  and Undo is sent only after the dismissal settles, so a queued pair replays in order.
-- **Shopping list create** (`useCreateShoppingList`) — the list itself. Plain-create tier: the queue
-  replays the original `CreateShoppingList` keyed by the client-minted `input.id`; a duplicate replay
-  returns `ConflictError(code: IDEMPOTENT_REPLAY)`, which the queue converges — the first attempt's row
-  stands.
-  The optimistic write also seeds both empty `itemsConnection` variants and the `Query.shoppingList`
-  cache redirect serves by-id reads, so a list created offline is immediately usable (items can be
-  added to it offline; the FIFO queue replays the list create before its items). Known limits:
-  `isDefault: true` doesn't clear the flag on other cached lists until the post-replay refetch, and the
-  list-settings screen for a fresh offline list still needs the network for collaborator/share fields.
-
-- **Pantry update** (`useUpdatePantryItem` / `useUpdatePantryItemQuantity`) — permanent write + revert
-  snapshot; replays as itself at the version it holds (§ 5).
-- **Pantry create** (`PantrySettings` + `src/features/pantry/cache/pantry.ts`) — the pantry
-  container itself. Client-minted id; the optimistic write materializes the entity, zeroed `stats`,
-  empty `itemsConnection` (no-args variant — matches the screen's undefined filters/orderBy) and
-  `storageLocationsConnection(first: PAGE_SIZE.COMPACT)` variants, plus the home's `pantries` /
-  `pantriesConnection` membership, and the `Query.pantry` cache redirect serves by-id reads — so a
-  pantry created offline is immediately usable and items added to it queue behind its create
-  (the drain holds an item behind the create of the pantry it names).
-- **Shopping list update / delete / clear** (`useUpdateShoppingList`, `useDeleteShoppingList`,
-  `useClearShoppingListItems`) — update merges over a snapshot; delete removes edge + entity up front
-  and restores the snapshot on rejection; clear keeps its eager cache eviction and refetches on a
-  rejection.
-- **Meal plans** (`useMealPlanActions`, `useMealPlanItemActions`) — plan create (client-minted id,
-  `MealPlanDisplay` materialized from cache, FIFO parent-create guard) + update/delete; item create
-  (client-minted id; a replay collision on the (mealPlanId, date, mealType, recipeId) unique key
-  returns the existing row), update, toggle-completed (keeps `optimisticDataPersistence` until the
-  replay confirms), delete.
-- **Recipes** — create (`RecipeForm`; client-minted id, list-visible offline via the MyRecipes edge
-  upsert; the detail view needs the post-replay sync), delete (`MyRecipes`; eager removal, refetch on
-  rejection), update + ingredients (`RecipeForm` edit; queue-only — both ops queue atomically and
-  replay FIFO against the same recipe id, but the local display catches up only when the replay syncs).
-
-- **Storage location create** (`useCreateStorageLocation`) — permanent write before firing +
-  `localFirst`; plain-create tier keyed by the client-minted id.
-- **App settings + notification preferences** (`useAppSettings`, `useNotificationSettings`) — both go
-  through `updateEntityFieldsLocalFirst` (§2): `cache.modify` the changed fields on `UserSettings` /
-  `NotificationPreferences`, fire, revert from the caller's snapshot only on a rejection. No
-  `optimisticResponse` anywhere here — an optimistic layer is torn down the moment the mutation
-  completes, and offline that completion is `queueLink`'s null result, which is what snapped every
-  toggle back while the change sat queued. Replay is the plain-create tier: settings writes are
-  naturally idempotent (last write wins on the same fields), so a duplicate replay converges.
-  **Offline mode is the one exception to "the cache is the source of truth"** — the switch renders from
-  the Zustand store, because that is what `offlineModeLink` reads and what is mirrored to MMKV; the
-  server copy is a cross-device mirror. `useAppSettings` syncs the store back off the query, so a
-  server rejection reverts the store too.
+- **Shopping:** every add surface goes through `createShoppingListRow` (§4); remove, toggle and record
+  purchased, update, quantity, aisle, reorder (`MoveShoppingListItem`, coalesced to the latest per
+  item), clear, complete/reactivate, budget, reminder, template, recurring, copy, set default, move to
+  pantry (single; the batch move writes nothing before it lands).
+- **Shopping list create** (`useCreateShoppingList`) seeds both empty `itemsConnection` variants, and
+  the `Query.shoppingList` cache redirect serves by-id reads, so a list created offline takes items at
+  once (the drain holds them behind its create). Known limits: `isDefault: true` doesn't clear the flag
+  on other cached lists until the post-replay refetch, and the list-settings screen for a fresh offline
+  list still needs the network for collaborator/share fields.
+- **Suggestions:** dismiss and undo (`useSuggestionDismissal`). The add sheet takes the suggestion out
+  of its cached sections first and puts back exactly that entry on a refusal or Undo, never a
+  refetch. Undo is sent only after the dismissal settles, so a queued pair replays in order.
+- **Pantry:** item create (every add surface through `usePantryIntake`), update, quantity, the
+  granular deltas, delete, restock and usage; pantry create, update and delete. A pantry created
+  offline materializes zeroed `stats`, the empty `itemsConnection` and `storageLocationsConnection`
+  variants and the home's membership, and `Query.pantry` serves by-id reads.
 - **Pantry granular deltas** (`AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage`,
-  `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`)
-  — replay as the **original canonical mutation**, made at-most-once by a client-minted
-  `input.idempotencyKey` the server records in the same transaction as the delta (deltas are relative, so
-  entity-id idempotency can't dedupe them; the key can). A replay returns
-  `ConflictError(code: IDEMPOTENT_REPLAY)`, which the queue converges. The key rides in the persisted
-  variables, so it survives an app kill between enqueue and replay.
+  `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`) are relative, so entity-id
+  idempotency can't dedupe them: each carries a client-minted `input.idempotencyKey` the server records
+  in the delta's transaction, and a replay answers `IDEMPOTENT_REPLAY`.
+- **Catalog:** storage locations (create, update, delete, default), stores, usual stores (ordered by
+  `useUsualStoreWrites`' `writeOrder`).
+- **Home:** create (`writeLocalHome` with a placeholder owner membership, which the replay swaps for
+  the server's, `adoptServerMembership`), update (`useUpdateHomeFields`), mark default. Delete, leave,
+  transfer, invites and membership are online-only.
+- **Meal plans:** plan and item create, update, toggle completed, delete, duplicate; meal templates and
+  their items. An item create that collides on (mealPlanId, date, mealType, recipeId) returns the
+  existing row.
+- **Recipes:** create, fork, publish, delete, favorites (add, remove, saved metadata, folders),
+  `MarkRecipeAsCooked`, ingredient matching, add-to-list from a recipe (`AddItemsToShoppingListFromRecipe`,
+  rows written locally). `UpdateRecipe` from the form is queued but writes nothing local: the detail
+  catches up when the replay lands.
+- **Receipts:** check-in (`useReceiptCheckIn`), which stamps list lines, moves and intakes locally.
+- **Settings, profile, notifications:** settings-shaped writes through `updateEntityFieldsLocalFirst`
+  (§2), profile, dietary profile and sharing, brand lists, language, onboarding completion, notification
+  read/delete, the device time zone. **Offline mode is the one exception to "the cache is the source of
+  truth"**: the switch renders from the Zustand store, because that is what `offlineModeLink` reads and
+  what is mirrored to MMKV; the server copy is a cross-device mirror, and `useAppSettings` syncs the
+  store back off the query, so a refusal reverts the store too.
 
-**Online-only (degrade, not queued):** auth, invites/share-codes/collaboration/membership, image upload,
-barcode/smart-search lookup, recipe discovery/AI, recipe reviews, recipe favorite/saved-metadata/folders,
-`markRecipeAsCooked` + pantry deduction, server-aggregation (generate-list-from-meal-plan, add-low-stock,
-meal templates), and the recipe **fan-out** mutations `addRecipeToShoppingList` /
-`createShoppingListItemsFromRecipe` (they expand into N server-derived items with no per-item id slot —
-the offline path is the client expanding the recipe locally and using the now-id-capable batch
-`addItemsToShoppingList`).
-**Home create is local-first** (`useCreateHome`): the create writes the home with a placeholder owner
-membership through `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), and on replay
-`reconcileCreateHomeReplay` adopts the server's membership row (`adoptServerMembership`), the one thing
-the client cannot key. Home update and delete stay online-only.
-The online-only list is **enforced in code**, not just convention: `queueLink` only queues allowlisted mutations
-(`localFirst` opt-ins + registered ops) when the device is offline; everything else fails fast with
-a network error so the hook's normal error path shows a truthful failure and nothing ghost-replays.
+**Online-only:** auth, sessions and device credentials; account deletion; home and shopping-list
+membership (invites, join codes and share codes, collaborators, roles, transfer, leave, delete home);
+image uploads and item photos; catalog edits (`CreateItem`, item edit suggestions, `MarkItemForReview`,
+primary image); server-computed captures (`CreateReceiptParse`, `CreateRecipeCapture`); recipe reviews;
+user reports; `OpenCatalogRecipe`; relinking a pantry row to another item or unit
+(`ChangePantryItemItem`, `ChangePantryItemUnit`). Barcode lookup, smart search and recipe discovery are
+reads: they degrade to the cache.
 
-**Profile** is local-first too: `useUpdateProfile` and `useDietaryProfile` write through
-`localFirstFields` and send with `localFirst`, like the settings above.
-
-Replay is insertion-ordered and dependency-aware, so
-dependents queued behind a parent-entity create (items in a new list, meals in a new plan, meals
-referencing a new recipe, items in a new pantry) replay only after their parent has landed — the
-drain reads the parent reference off the input, so no per-feature special-casing.
+Replay is insertion-ordered and dependency-aware, so dependents queued behind a parent-entity create
+(items in a new list, meals in a new plan, meals referencing a new recipe, items in a new pantry)
+replay only after their parent has landed — the drain reads the parent reference off the input
+(`dependencyIdsOf`), so no per-feature special-casing, and an online write naming one queues behind it.
 
 ## 11. Server contract (verified)
 
@@ -547,11 +575,16 @@ drain reads the parent reference off the input, so no per-feature special-casing
   and 24-char hex); omitted → Prisma `@default(cuid(2))`. Note `createShoppingList`
   (like `createHome` & co.) answers a duplicate replay with `ConflictError(code: IDEMPOTENT_REPLAY)`;
   the queue treats that as already synced and drops the op.
-- **NOT id-capable by design:** `createNotification` (system/cross-user generated) and the recipe fan-out
-  mutations above.
+- **NOT id-capable by design:** `createNotification` (system/cross-user generated).
 - **Every canonical mutation is safe to re-send** (§ 5): creates by id, updates by version, deletes
   converge, deltas by `idempotencyKey`. A create that lands on a held row reports `outcome: MERGED`
   and returns the surviving row; later writes naming the minted id are refused.
+- **What the server does not give the client** (sous-chef-api, read 2026-10-30): no signal of which of
+  this device's writes an answer includes; no version on a list or pantry that moves when its rows are
+  added, removed or reordered (only row versions move); events delivered at most once, with no sequence
+  (`docs/api/subscriptions.md` § delivery); no changes-since read, and no tombstone for the types it
+  hard-deletes (meal plans and their items, template items, reviews, notifications). So the client
+  orders answers by timing (§12) and resyncs by refetching what is on screen (§1).
 
 ## 12. Edge cases handled
 
@@ -575,8 +608,10 @@ drain reads the parent reference off the input, so no per-feature special-casing
 - **First-page refetch of a multi-page list** — an entry an insert or reorder pushed past the refreshed
   page stays held until a page that covers it is refreshed (`mergeAuthoritativeFirstPage`,
   `src/apollo/cacheFieldPolicies.ts`), so `fetchMore` resumes without skipping it.
-- **Stale persisted optimistic value on restart** — version guards + `clearPersistence` for the
-  `OptimisticDataPersistence` consumers.
+- **Stale persisted optimistic value on restart** — a landed write clears the fields it saved
+  (`clearPersistedOptimisticFields` → `clearEntitySavedBetween`), and a refused one clears its entity's;
+  restoration then re-applies only what is still queued, as saved, with no comparison against the
+  server's value.
 - **App-kill within the cache persist debounce** — covered two ways: the background flush
   (`flushCachePersistence`, §1/§6) writes the raw cache snapshot before a kill, and `OptimisticDataPersistence`'s
   microtask flush covers the numeric/toggle ops; in the worst case the **queue replays** the change on next
@@ -594,6 +629,7 @@ drain reads the parent reference off the input, so no per-feature special-casing
   settles only if the server's late answer disagrees. A read the cache can't answer completely is held
   and re-sent instead. A read whose data the write left as it was goes on untouched, so a caller that
   acts on the server's answer (`useVerifyEmail`, an event's read-back) still gets it. Two gaps are left:
+
   - A read sent after the change reached the cache but before the server had it is not caught: one
     started while the mutation is on the wire, or while a hook that orders its writes
     (`useUsualStoreWrites`' `writeOrder`) waits to send it. If the server answers it first, its older
@@ -605,7 +641,7 @@ drain reads the parent reference off the input, so no per-feature special-casing
 
 ## 13. Divergences from the original plan (for the record)
 
-- **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by per-site Pattern B + the shared
+- **No `useLocalFirstMutation` primitive** (planned §3.1). Replaced by per-site Pattern 5 + the shared
   cache-writers (§2, §4) and `settleMutation`.
 - **Identity is client-generated cuid2** (planned §8), not temp-id + reconciliation. This removed the
   largest planned subsystem — the `idMapping` / `resolveIds` / temp-id machinery has been fully deleted
@@ -620,18 +656,19 @@ drain reads the parent reference off the input, so no per-feature special-casing
 | Area                                               | File                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Client id generator                                | `src/utils/generateEntityId.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| Queue intercept                                    | `src/apollo/offlineQueue/queueLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Queue intercept                                    | `src/apollo/offlineQueue/queueLink.ts`; a write's subject and parents: `queuedSubject.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Queue store (MMKV)                                 | `src/apollo/offlineQueue/queueStore.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | Replay                                             | `src/apollo/offlineQueue/queueManager.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | Replay preparation + registry                      | `src/apollo/offlineQueue/prepareReplay.ts`, `replayPreparation.ts`, `preparationRegistry.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | Feature replay preparers                           | `src/features/pantry/offline/replayPreparers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | Replay payload classification + retry error policy | `src/apollo/offlineQueue/queueErrorPolicy.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Pending-changes count (banner)                     | `src/hooks/offline/usePendingMutationCount.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
-| Queue triggers / failure toast                     | `src/hooks/app/useOnlineQueueSync.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
-| Field-level persistence                            | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| Queue triggers                                     | `src/hooks/app/useOnlineQueueSync.ts`, `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Permanent failure (withdraw + toast)               | `src/apollo/offlineQueue/queueFailureHandler.ts`, `withdrawalRegistry.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Field-level persistence                            | `src/apollo/offline/OptimisticDataPersistence.ts`, `src/hooks/offline/useOptimisticDataRestoration.ts` (`useOptimisticDataRestorationMultiple`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Cache persistence (debounce + `flushPending`)      | `src/apollo/offline/ApolloCachePersistence.ts`, `src/apollo/client.ts` (`flushCachePersistence`), `src/apollo/offlineQueue/queueLink.ts` (flush on enqueue)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| Pending-aware connection merge                     | `src/apollo/cacheFieldPolicies.ts` (`itemsConnectionFieldPolicy`, `mergeAuthoritativeFirstPage`) + `queueStore.getUnconfirmedCreateIds()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| Pending-aware connection merge                     | `src/apollo/cacheFieldPolicies.ts` (`itemsConnectionFieldPolicy`, `mergeConnectionByNodeId`) + `queueStore.getUnconfirmedCreateIds()`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Shared shopping writers/reconcilers                | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`, `revertOptimisticShoppingListItem`), `createShoppingListRow.ts`, `withdraw.ts` (`withdrawShoppingListItems`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | Replay reconcilers                                 | `src/apollo/offlineQueue/queueReplayReconcilers.ts` (`REPLAY_RECONCILERS`), each feature's `offline/replayReconcilers.ts`; coverage: `__tests__/apollo/replayReconcilerCoverage.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Resync after foreground / reconnect                | `src/apollo/refetchEvents.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
@@ -643,4 +680,4 @@ drain reads the parent reference off the input, so no per-feature special-casing
 | Query short-circuit when offline                   | `src/apollo/links/offlineModeLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | API-reachability circuit breaker                   | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Unified `isApiUnavailable` predicate               | `src/store/slices/networkSlice.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/components/modals/AddToPantrySheet/AddToPantrySheet.tsx`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/hooks/mutations/useAddToPantry.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
