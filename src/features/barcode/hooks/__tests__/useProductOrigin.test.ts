@@ -1,10 +1,10 @@
-import { waitFor } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import {
   recordMock,
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import { formatCountryName } from '#/utils/formatters/region';
 import { makeCache } from '#/apollo/cache';
@@ -40,6 +40,14 @@ const render = (
     operationMocks: [mock.mock],
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useProductOrigin', () => {
   // What a scan's barcode lookup leaves in the cache: the item with its origin.
   it('reads what the lookup stored without asking again', async () => {
@@ -69,7 +77,8 @@ describe('useProductOrigin', () => {
       { cache, operationMocks: [mock.mock] },
     );
 
-    await waitFor(() => expect(result.current.lines).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.lines).toHaveLength(1);
     expect(mock.fired).toEqual([]);
   });
 
@@ -92,7 +101,8 @@ describe('useProductOrigin', () => {
       'Smucker Holdings',
     );
 
-    await waitFor(() => expect(result.current.lines).toHaveLength(3));
+    await drainTimers();
+    expect(result.current.lines).toHaveLength(3);
     expect(result.current.lines).toEqual([
       {
         key: 'barcode.origin.madeIn',
@@ -121,7 +131,8 @@ describe('useProductOrigin', () => {
     const mock = originMock({ origin: null, brandOwner: null });
     const { result } = render(mock);
 
-    await waitFor(() => expect(mock.fired).toHaveLength(1));
+    await drainTimers();
+    expect(mock.fired).toHaveLength(1);
     expect(mock.fired[0]).toEqual({ itemId: 'item-1' });
     expect(result.current.lines).toEqual([]);
   });
@@ -134,29 +145,27 @@ describe('useProductOrigin', () => {
       }),
       'General Mills',
     );
-    await waitFor(() =>
-      expect(sameName.result.current.lines).toEqual([
-        {
-          key: 'owner',
-          text: t('barcode.origin.ownedBy', { owner: 'General Mills' }),
-          source: t('labels.sources.usdaFoodDataCentral'),
-        },
-      ]),
-    );
+    await drainTimers();
+    expect(sameName.result.current.lines).toEqual([
+      {
+        key: 'owner',
+        text: t('barcode.origin.ownedBy', { owner: 'General Mills' }),
+        source: t('labels.sources.usdaFoodDataCentral'),
+      },
+    ]);
 
     const parentOnly = render(
       originMock({ origin: null, brandOwner: null }),
       'General Mills',
     );
-    await waitFor(() =>
-      expect(parentOnly.result.current.lines).toEqual([
-        {
-          key: 'owner',
-          text: t('barcode.origin.partOf', { parent: 'General Mills' }),
-          source: null,
-        },
-      ]),
-    );
+    await drainTimers();
+    expect(parentOnly.result.current.lines).toEqual([
+      {
+        key: 'owner',
+        text: t('barcode.origin.partOf', { parent: 'General Mills' }),
+        source: null,
+      },
+    ]);
   });
 
   // The wire can carry a source this build's enum lacks, which no mock can
@@ -185,14 +194,13 @@ describe('useProductOrigin', () => {
       { cache, operationMocks: [] },
     );
 
-    await waitFor(() =>
-      expect(result.current.lines).toEqual([
-        {
-          key: 'owner',
-          text: t('barcode.origin.ownedBy', { owner: 'Acme Foods' }),
-          source: null,
-        },
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.lines).toEqual([
+      {
+        key: 'owner',
+        text: t('barcode.origin.ownedBy', { owner: 'Acme Foods' }),
+        source: null,
+      },
+    ]);
   });
 });

@@ -6,7 +6,7 @@ import {
   NetWeightKind,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   UseHeldStacks_PantryFragmentDoc,
@@ -18,6 +18,7 @@ import {
   renderWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { recordMock } from '#/test-utils/apolloMockProvider';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
@@ -131,6 +132,14 @@ jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
 /** One package counted in a piece, sized by the record: what a scan adds. */
 const ONE_PACKAGE = { packages: { count: 1, unitId: 'unit-pc' } };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('SearchResults', () => {
   const mockItem = {
     id: 'item-1',
@@ -242,7 +251,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual(ONE_PACKAGE);
@@ -276,7 +286,8 @@ describe('SearchResults', () => {
     rerender(<SearchResults {...defaultProps} />);
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual(ONE_PACKAGE);
@@ -338,7 +349,8 @@ describe('SearchResults', () => {
     );
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual({
@@ -416,7 +428,8 @@ describe('SearchResults', () => {
     expect(screen.getByText('6 can · 250 ml each')).toBeTruthy();
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual({
@@ -452,9 +465,8 @@ describe('SearchResults', () => {
     );
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    expect(
-      await screen.findByText(t('barcode.amount.wholePackages')),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(t('barcode.amount.wholePackages'))).toBeTruthy();
     expect(rec.fired).toHaveLength(0);
   });
 
@@ -482,7 +494,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const [fired] = rec.fired;
     expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(fired?.input).toMatchObject({ today: fired?.today });
@@ -525,12 +538,14 @@ describe('SearchResults', () => {
       expect(screen.getByText('1 pc')).toBeTruthy();
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      await drainTimers();
+      expect(rec.fired.length).toBeGreaterThan(0);
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
       expect(firedInput.amount).toEqual(ONE_PACKAGE);
       expect(firedInput.item).toEqual({ variation: 'off-1' });
-      await waitFor(() => expect(onScanAnother).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(onScanAnother).toHaveBeenCalledTimes(1);
     });
 
     describe('a refused add', () => {
@@ -566,9 +581,8 @@ describe('SearchResults', () => {
 
         fireEvent.press(screen.getByTestId('primary-btn'));
 
-        expect(
-          await screen.findByText(t('errors.field.netWeight')),
-        ).toBeTruthy();
+        await drainTimers();
+        expect(screen.getByText(t('errors.field.netWeight'))).toBeTruthy();
         expect(screen.getByTestId(barcodeTestIDs.scanAmountSize)).toBeTruthy();
         const { alertService } = jest.requireMock('#/services/alertService');
         expect(alertService.alert).not.toHaveBeenCalled();
@@ -584,7 +598,8 @@ describe('SearchResults', () => {
         fireEvent.press(screen.getByTestId('primary-btn'));
 
         const { alertService } = jest.requireMock('#/services/alertService');
-        await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+        await drainTimers();
+        expect(alertService.alert).toHaveBeenCalled();
         expect(alertService.alert).toHaveBeenCalledTimes(1);
         expect(alertService.alert).toHaveBeenCalledWith(
           t('labels.error'),
@@ -611,7 +626,8 @@ describe('SearchResults', () => {
 
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      await drainTimers();
+      expect(rec.fired.length).toBeGreaterThan(0);
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
       expect(firedInput.amount).toEqual(ONE_PACKAGE);
@@ -638,7 +654,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     expect(
       (rec.fired[0] as { input: Record<string, unknown> }).input.item,
     ).toEqual({ id: 'item-1' });
@@ -675,7 +692,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const [line] = (
       rec.fired[0] as { input: { items: Record<string, unknown>[] } }
     ).input.items;
@@ -697,12 +715,11 @@ describe('SearchResults', () => {
     fireEvent.press(screen.getByTestId(barcodeTestIDs.addBrandToList));
     fireEvent.press(screen.getByText('Avoid'));
 
-    await waitFor(() =>
-      expect(mockAddBrand).toHaveBeenCalledWith(
-        'list-avoid',
-        { id: 'brand-pack', name: 'Pack Brand' },
-        null,
-      ),
+    await drainTimers();
+    expect(mockAddBrand).toHaveBeenCalledWith(
+      'list-avoid',
+      { id: 'brand-pack', name: 'Pack Brand' },
+      null,
     );
   });
 
@@ -800,9 +817,8 @@ describe('SearchResults', () => {
       });
     });
 
-    await waitFor(() =>
-      expect(screen.queryByText(t('labels.usedIn'))).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByText(t('labels.usedIn'))).toBeNull();
     expect(
       screen.getByTestId(barcodeTestIDs.scanAmountQuantity).props.value,
     ).toBe('3');
@@ -835,12 +851,11 @@ describe('SearchResults', () => {
       });
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() =>
-        expect(addPantryItemLocally).toHaveBeenCalledWith(
-          expect.anything(),
-          defaultProps.pantryId,
-          expect.objectContaining({ __typename: 'PantryItem' }),
-        ),
+      await drainTimers();
+      expect(addPantryItemLocally).toHaveBeenCalledWith(
+        expect.anything(),
+        defaultProps.pantryId,
+        expect.objectContaining({ __typename: 'PantryItem' }),
       );
     });
 
@@ -861,12 +876,11 @@ describe('SearchResults', () => {
       });
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() =>
-        expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
-          expect.anything(),
-          defaultProps.pantryId,
-          expect.any(String),
-        ),
+      await drainTimers();
+      expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
+        expect.anything(),
+        defaultProps.pantryId,
+        expect.any(String),
       );
 
       // And the refusal names the input it refused. Under a bare cache this
@@ -876,11 +890,10 @@ describe('SearchResults', () => {
       // fell back to the generic retry line — which a test could assert
       // successfully while a real user never saw it.
       const { alertService } = jest.requireMock('#/services/alertService');
-      await waitFor(() =>
-        expect(alertService.alert).toHaveBeenCalledWith(
-          expect.anything(),
-          "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
-        ),
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenCalledWith(
+        expect.anything(),
+        "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
       );
     });
   });

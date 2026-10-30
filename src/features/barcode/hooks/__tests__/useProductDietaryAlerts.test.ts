@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { t } from '#/i18n';
 import {
   Diet,
@@ -96,6 +96,14 @@ const noAlertsMock = () =>
   });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   mockHomeId = 'home-1';
   mockOffline = false;
   mockRestrictionsInPlay = true;
@@ -108,7 +116,8 @@ describe('useProductDietaryAlerts', () => {
       { operationMocks: [alertsMock().mock] },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
     expect(result.current.alerts).toEqual([
       {
         id: 'r-peanut',
@@ -142,7 +151,8 @@ describe('useProductDietaryAlerts', () => {
       () => useProductDietaryAlerts('granola'),
       { operationMocks: [alertsMock().mock] },
     );
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
 
     mockOffline = true;
     rerender({});
@@ -174,7 +184,8 @@ describe('useProductDietaryAlerts', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('failed'));
+    await drainTimers();
+    expect(result.current.check).toBe('failed');
     expect(result.current.alerts).toEqual([]);
   });
 
@@ -198,7 +209,8 @@ describe('useProductDietaryAlerts', () => {
         () => useProductDietaryAlerts('granola'),
         { operationMocks: [mock.mock] },
       );
-      await waitFor(() => expect(rendered.result.current.check).toBe('checked'));
+      await drainTimers();
+      expect(rendered.result.current.check).toBe('checked');
       return rendered.result.current;
     };
 
@@ -239,7 +251,8 @@ describe('useProductDietaryAlerts', () => {
       );
       expect(failing.result.current.check).toBe('loading');
       expect(failing.result.current.caveat).toBe(false);
-      await waitFor(() => expect(failing.result.current.check).toBe('failed'));
+      await drainTimers();
+      expect(failing.result.current.check).toBe('failed');
       expect(failing.result.current.caveat).toBe(false);
     });
   });

@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { t } from '#/i18n';
 import {
@@ -104,11 +103,15 @@ const render = (mocks: ReturnType<typeof recordMock>[]) =>
     },
   );
 
-describe('useStorePriceMemory', () => {
-  afterEach(() => {
-    jest.useRealTimers();
-  });
+beforeEach(() => {
+  jest.useFakeTimers();
+});
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+describe('useStorePriceMemory', () => {
   // Store mode mounts the card per scan: the same product scanned again reads
   // what it already holds. A second ask would be answered, and counted.
   it('asks once for a product scanned twice', async () => {
@@ -124,7 +127,6 @@ describe('useStorePriceMemory', () => {
         { cache, operationMocks: [memory.mock] },
       );
 
-    jest.useFakeTimers();
     const first = mount();
     await drainTimers();
     expect(first.result.current.typical).not.toBeNull();
@@ -142,7 +144,8 @@ describe('useStorePriceMemory', () => {
     ]);
     const { result } = render([memory]);
 
-    await waitFor(() => expect(memory.fired).toHaveLength(1));
+    await drainTimers();
+    expect(memory.fired).toHaveLength(1);
     expect(result.current).toMatchObject({
       lastPaid: null,
       usual: null,
@@ -164,7 +167,8 @@ describe('useStorePriceMemory', () => {
       }),
     ]);
 
-    await waitFor(() => expect(result.current.lastPaid).not.toBeNull());
+    await drainTimers();
+    expect(result.current.lastPaid).not.toBeNull();
     expect(result.current.lastPaid).toEqual({
       price: t('labels.pricePer.kg', { price: usd(14.3) }),
       storeName: 'Giant Eagle',
@@ -231,7 +235,8 @@ describe('useStorePriceMemory', () => {
       { cache, operationMocks: [] },
     );
 
-    await waitFor(() => expect(result.current.lastPaid).not.toBeNull());
+    await drainTimers();
+    expect(result.current.lastPaid).not.toBeNull();
     expect(result.current.lastPaid?.price).toBe(usd(6.5));
   });
 
@@ -252,7 +257,8 @@ describe('useStorePriceMemory', () => {
       ),
     ]);
 
-    await waitFor(() => expect(result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(result.current.usual).not.toBeNull();
     expect(result.current.usual).toBe(
       t('labels.pricePer.kg', { price: usd(7.69) }),
     );
@@ -270,12 +276,11 @@ describe('useStorePriceMemory', () => {
         row(PriceComparisonScope.Store, 'store-2', 6),
       ]),
     ]);
-    await waitFor(() =>
-      expect(chainOnly.result.current.typical).toEqual({
-        price: t('labels.pricePer.kg', { price: usd(8.1) }),
-        chainName: 'Giant Eagle',
-      }),
-    );
+    await drainTimers();
+    expect(chainOnly.result.current.typical).toEqual({
+      price: t('labels.pricePer.kg', { price: usd(8.1) }),
+      chainName: 'Giant Eagle',
+    });
 
     const atStore = render([
       memoryMock({}, [
@@ -283,12 +288,11 @@ describe('useStorePriceMemory', () => {
         row(PriceComparisonScope.Store, 'store-1', 9.5),
       ]),
     ]);
-    await waitFor(() =>
-      expect(atStore.result.current.typical).toEqual({
-        price: t('labels.pricePer.kg', { price: usd(9.5) }),
-        chainName: null,
-      }),
-    );
+    await drainTimers();
+    expect(atStore.result.current.typical).toEqual({
+      price: t('labels.pricePer.kg', { price: usd(9.5) }),
+      chainName: null,
+    });
   });
 
   // The card stays open while Budget & prices is switched off: store mode
@@ -306,7 +310,8 @@ describe('useStorePriceMemory', () => {
         initialProps: shopping,
       },
     );
-    await waitFor(() => expect(result.current.typical).not.toBeNull());
+    await drainTimers();
+    expect(result.current.typical).not.toBeNull();
 
     rerender({ listId: undefined });
 
@@ -329,7 +334,8 @@ describe('useStorePriceMemory', () => {
       usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: 3.49 },
     });
     const { result } = render([memory]);
-    await waitFor(() => expect(result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(result.current.usual).not.toBeNull();
     // The jar is the unit the usual comes in: nothing more is asked.
     expect(memory.fired).toEqual([
       { itemId: 'pb', homeId: 'home-1', listId: 'list-1' },
@@ -379,12 +385,11 @@ describe('useStorePriceMemory', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.compareToUsual(5.99)).toBe(
-        t('barcode.price.sameAsUsual', {
-          usual: t('labels.pricePer.unit', { price: usd(5.99), unit: 'lb' }),
-        }),
-      ),
+    await drainTimers();
+    expect(result.current.compareToUsual(5.99)).toBe(
+      t('barcode.price.sameAsUsual', {
+        usual: t('labels.pricePer.unit', { price: usd(5.99), unit: 'lb' }),
+      }),
     );
     expect(perLb.fired).toEqual([
       { itemId: 'pb', homeId: 'home-1', unitId: 'u-lb' },
@@ -405,7 +410,8 @@ describe('useStorePriceMemory', () => {
       () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'EUR'),
       { operationMocks: [memory.mock] },
     );
-    await waitFor(() => expect(inEuros.result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(inEuros.result.current.usual).not.toBeNull();
 
     expect(inEuros.result.current.compareToUsual(2)).toBeNull();
 
@@ -414,7 +420,8 @@ describe('useStorePriceMemory', () => {
       () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, null),
       { operationMocks: [memory.mock] },
     );
-    await waitFor(() => expect(unknown.result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(unknown.result.current.usual).not.toBeNull();
     expect(unknown.result.current.compareToUsual(2)).toBeNull();
   });
 
@@ -424,7 +431,8 @@ describe('useStorePriceMemory', () => {
         usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: null },
       }),
     ]);
-    await waitFor(() => expect(offBasis.result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(offBasis.result.current.usual).not.toBeNull();
     expect(offBasis.result.current.compareToUsual(4.29)).toBeNull();
 
     const none = render([memoryMock({})]);
