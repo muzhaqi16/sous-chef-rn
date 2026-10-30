@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
@@ -81,6 +80,14 @@ const render = (...mocks: ReturnType<typeof recordMock>[]) =>
     operationMocks: mocks.map(m => m.mock),
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 afterEach(() => {
   jest.useRealTimers();
 });
@@ -88,26 +95,29 @@ afterEach(() => {
 describe('useRestrictionsInPlay', () => {
   it('is in play with the user’s own restriction', async () => {
     const { result } = render(ownProfile([peanutAllergy]), homeNeeds([]));
-    await waitFor(() => expect(result.current).toBe(true));
+    await drainTimers();
+    expect(result.current).toBe(true);
   });
 
   it('is in play with only a member’s shared restriction', async () => {
     const { result } = render(ownProfile(null), homeNeeds([peanutAllergy]));
-    await waitFor(() => expect(result.current).toBe(true));
+    await drainTimers();
+    expect(result.current).toBe(true);
   });
 
   it('is not in play when the only restriction is a health goal', async () => {
     const { result } = render(ownProfile([lowCarbGoal]), homeNeeds([]));
-    await waitFor(() => expect(result.current).toBe(false));
+    await drainTimers();
+    expect(result.current).toBe(false);
   });
 
   it('is not in play with no restriction anywhere', async () => {
     const { result } = render(ownProfile(null), homeNeeds([]));
-    await waitFor(() => expect(result.current).toBe(false));
+    await drainTimers();
+    expect(result.current).toBe(false);
   });
 
   it('is unknown while a read has not answered', async () => {
-    jest.useFakeTimers();
     const failedNeeds = recordMock(HomeDietaryNeedsDocument, {
       error: new Error('Network request failed'),
     });

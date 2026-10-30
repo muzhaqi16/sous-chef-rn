@@ -1,13 +1,9 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { AddToBrandListSheet } from '../AddToBrandListSheet';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const BRAND = { id: 'b-jif', name: 'Jif' };
 const LISTS = [
@@ -19,6 +15,14 @@ const LISTS = [
   },
   { id: 'l-avoid', name: 'Avoid', enabled: true, brands: [] },
 ];
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('AddToBrandListSheet', () => {
   it('puts the brand on the list picked, with the note typed, then closes', async () => {
@@ -41,7 +45,8 @@ describe('AddToBrandListSheet', () => {
     );
     fireEvent.press(screen.getByText('Avoid'));
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
     expect(onPick).toHaveBeenCalledWith('l-avoid', 'too sweet');
   });
 

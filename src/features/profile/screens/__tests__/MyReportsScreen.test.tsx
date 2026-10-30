@@ -6,6 +6,7 @@ import {
   renderWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   ModerationContentType,
   ReportType,
@@ -15,6 +16,18 @@ import { formatShortDate } from '#/utils/formatters/date';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { MyReviewSubmissionsDocument } from '../useMyReports.generated';
 import { MyReportsScreen } from '../MyReportsScreen';
+
+// Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
+jest.mock('#hooks/performance/useFlashListPerformance', () => {
+  const actual = jest.requireActual(
+    '#hooks/performance/useFlashListPerformance',
+  );
+  return {
+    ...actual,
+    useFlashListPerformance: (list: unknown, options: object) =>
+      actual.useFlashListPerformance(list, { ...options, reportInterval: 0 }),
+  };
+});
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -88,6 +101,14 @@ const SUBMISSIONS: Submission[] = [
 const row = (id: string) =>
   within(screen.getByTestId(profileTestIDs.reportRow(id)));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('MyReportsScreen', () => {
   it('shows each thing sent for review: what, why, when, and where it stands', async () => {
     renderWithApollo(<MyReportsScreen />, {
@@ -97,7 +118,10 @@ describe('MyReportsScreen', () => {
       ],
     });
 
-    await screen.findByTestId(profileTestIDs.reportRow('recipe-report'));
+    await drainTimers();
+    expect(
+      screen.getByTestId(profileTestIDs.reportRow('recipe-report')),
+    ).toBeTruthy();
     const sent = `Sent ${formatShortDate(new Date(SENT_AT))}`;
     const expected: Array<[string, ...string[]]> = [
       [
@@ -132,7 +156,8 @@ describe('MyReportsScreen', () => {
       ],
     });
 
-    expect(await screen.findByText('Nothing sent for review yet')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Nothing sent for review yet')).toBeTruthy();
   });
 
   it('loads the next page when the list reaches its end', async () => {
@@ -144,7 +169,10 @@ describe('MyReportsScreen', () => {
           : page(newer ? [newer] : [], 'cursor-1'),
     });
     renderWithApollo(<MyReportsScreen />, { operationMocks: [mock.mock] });
-    await screen.findByTestId(profileTestIDs.reportRow('recipe-report'));
+    await drainTimers();
+    expect(
+      screen.getByTestId(profileTestIDs.reportRow('recipe-report')),
+    ).toBeTruthy();
     expect(
       screen.queryByTestId(profileTestIDs.reportRow('item-report')),
     ).toBeNull();
@@ -153,8 +181,9 @@ describe('MyReportsScreen', () => {
       screen.UNSAFE_getByType(FlashList).props.onEndReached();
     });
 
+    await drainTimers();
     expect(
-      await screen.findByTestId(profileTestIDs.reportRow('item-report')),
+      screen.getByTestId(profileTestIDs.reportRow('item-report')),
     ).toBeTruthy();
     expect(mock.fired).toContainEqual({ first: 20, after: 'cursor-1' });
   });

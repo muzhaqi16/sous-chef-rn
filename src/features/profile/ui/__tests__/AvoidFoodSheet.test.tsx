@@ -1,8 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { t } from '#/i18n';
 import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -21,9 +22,6 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
-
-// The field reports once typing pauses, so a row arrives after that wait.
-const ARRIVES = { timeout: 3000 };
 
 const searchMock = () =>
   recordMock(SearchAvoidableFoodsDocument, {
@@ -51,7 +49,8 @@ const searchFor = async (term: string) => {
     screen.getByTestId(profileTestIDs.avoidSearchInput),
     term,
   );
-  await screen.findByText('Bacon', {}, ARRIVES);
+  await drainTimers();
+  expect(screen.getByText('Bacon')).toBeTruthy();
 };
 
 const renderSheet = async (added: boolean) => {
@@ -64,13 +63,22 @@ const renderSheet = async (added: boolean) => {
   return { onDismiss, onPick };
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AvoidFoodSheet', () => {
   it('avoids the picked food by default, then closes', async () => {
     const { onDismiss, onPick } = await renderSheet(true);
 
     fireEvent.press(screen.getByText('Bacon'));
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
     expect(onPick).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'bacon', name: 'Bacon' }),
       RestrictionSeverity.Preference,
@@ -85,11 +93,10 @@ describe('AvoidFoodSheet', () => {
     );
     fireEvent.press(screen.getByText('Turkey Bacon'));
 
-    await waitFor(() =>
-      expect(onPick).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'turkey-bacon' }),
-        RestrictionSeverity.Allergy,
-      ),
+    await drainTimers();
+    expect(onPick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'turkey-bacon' }),
+      RestrictionSeverity.Allergy,
     );
   });
 
@@ -107,11 +114,10 @@ describe('AvoidFoodSheet', () => {
     await searchFor('bacon');
     fireEvent.press(screen.getByText('Bacon'));
 
-    await waitFor(() =>
-      expect(onPick).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'bacon' }),
-        RestrictionSeverity.Preference,
-      ),
+    await drainTimers();
+    expect(onPick).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'bacon' }),
+      RestrictionSeverity.Preference,
     );
   });
 
@@ -120,7 +126,8 @@ describe('AvoidFoodSheet', () => {
 
     fireEvent.press(screen.getByText('Bacon'));
 
-    await waitFor(() => expect(onPick).toHaveBeenCalled());
+    await drainTimers();
+    expect(onPick).toHaveBeenCalled();
     expect(onDismiss).not.toHaveBeenCalled();
   });
 });

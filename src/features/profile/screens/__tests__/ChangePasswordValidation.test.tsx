@@ -1,7 +1,8 @@
 'use no memo';
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { PasswordInputProps } from '#components/molecules/PasswordInput';
 import { ChangePasswordScreen } from '../ChangePasswordScreen';
 
@@ -51,6 +52,14 @@ const confirmError = () =>
 const newError = () =>
   screen.getByTestId(NEW).props.accessibilityHint as string | undefined;
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('ChangePasswordScreen — cross-field rules', () => {
   it('shows nothing under fields the user has not reached', async () => {
     // The sibling rules re-run on every keystroke; a "required" under a field
@@ -59,9 +68,8 @@ describe('ChangePasswordScreen — cross-field rules', () => {
     renderWithApollo(<ChangePasswordScreen />, { operationMocks: [] });
 
     await user.type(screen.getByTestId(CURRENT), 'O');
-    await waitFor(() =>
-      expect(screen.getByTestId(CURRENT).props.value).toBe('O'),
-    );
+    await drainTimers();
+    expect(screen.getByTestId(CURRENT).props.value).toBe('O');
 
     expect(newError()).toBeUndefined();
     expect(confirmError()).toBeUndefined();
@@ -75,14 +83,16 @@ describe('ChangePasswordScreen — cross-field rules', () => {
     await user.type(screen.getByTestId(NEW), 'NewPass123');
     await user.type(screen.getByTestId(CONFIRM), 'NewPass1234');
 
-    await waitFor(() => expect(confirmError()).toBe('Passwords must match'));
+    await drainTimers();
+    expect(confirmError()).toBe('Passwords must match');
 
     // The fix belongs to the OTHER field: the rule reports on the confirmation
     // while reading the new password.
     await user.clear(screen.getByTestId(NEW));
     await user.type(screen.getByTestId(NEW), 'NewPass1234');
 
-    await waitFor(() => expect(confirmError()).toBeUndefined());
+    await drainTimers();
+    expect(confirmError()).toBeUndefined();
   });
 
   it('raises the mismatch when the new password is edited away from it', async () => {
@@ -92,10 +102,12 @@ describe('ChangePasswordScreen — cross-field rules', () => {
     await user.type(screen.getByTestId(CURRENT), 'OldPass123');
     await user.type(screen.getByTestId(NEW), 'NewPass123');
     await user.type(screen.getByTestId(CONFIRM), 'NewPass123');
-    await waitFor(() => expect(confirmError()).toBeUndefined());
+    await drainTimers();
+    expect(confirmError()).toBeUndefined();
 
     await user.type(screen.getByTestId(NEW), '4');
 
-    await waitFor(() => expect(confirmError()).toBe('Passwords must match'));
+    await drainTimers();
+    expect(confirmError()).toBe('Passwords must match');
   });
 });

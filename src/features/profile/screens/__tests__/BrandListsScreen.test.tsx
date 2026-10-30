@@ -1,15 +1,11 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { profileTestIDs } from '#features/profile/testIDs';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
 import { BrandListsScreen } from '../BrandListsScreen';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#components/templates/SubScreen', () => {
@@ -83,6 +79,14 @@ const BOYCOTT: BrandListView = {
   ],
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('BrandListsScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -121,10 +125,9 @@ describe('BrandListsScreen', () => {
     fireEvent.press(screen.getByTestId('name-sheet'));
 
     expect(mockCreateList).toHaveBeenCalledWith('Snacks');
-    await waitFor(() =>
-      expect(jest.mocked(useAppNavigation)().toBrandList).toHaveBeenCalledWith({
-        listId: 'l-new',
-      }),
-    );
+    await drainTimers();
+    expect(jest.mocked(useAppNavigation)().toBrandList).toHaveBeenCalledWith({
+      listId: 'l-new',
+    });
   });
 });

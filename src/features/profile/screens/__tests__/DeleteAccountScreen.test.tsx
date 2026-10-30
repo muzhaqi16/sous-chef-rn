@@ -6,6 +6,7 @@ import {
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { CanDeleteAccountDocument } from '#operations/auth/user.generated';
 import { DeletionBlockerType } from '#/graphql/generated/schemaTypes';
 import { DeleteAccountScreen } from '../DeleteAccountScreen';
@@ -114,6 +115,14 @@ function canDeleteError(): MockedResponse {
   }).mock;
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('DeleteAccountScreen - delete form', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -123,7 +132,8 @@ describe('DeleteAccountScreen - delete form', () => {
     const utils = renderWithApollo(<DeleteAccountScreen />, {
       operationMocks: [canDeleteOk()],
     });
-    await screen.findByText('Warning: This is permanent!');
+    await drainTimers();
+    expect(screen.getByText('Warning: This is permanent!')).toBeTruthy();
     return utils;
   }
 
@@ -209,7 +219,8 @@ describe('DeleteAccountScreen - error state', () => {
     renderWithApollo(<DeleteAccountScreen />, {
       operationMocks: [canDeleteError()],
     });
-    await screen.findByText('Unable to check account status');
+    await drainTimers();
+    expect(screen.getByText('Unable to check account status')).toBeTruthy();
     expect(screen.queryByText('Network error')).toBeNull();
     expect(errorCopy).toHaveBeenCalledWith(
       expect.anything(),
@@ -223,7 +234,8 @@ describe('DeleteAccountScreen - error state', () => {
     renderWithApollo(<DeleteAccountScreen />, {
       operationMocks: [canDeleteError()],
     });
-    await screen.findByText('Retry');
+    await drainTimers();
+    expect(screen.getByText('Retry')).toBeTruthy();
   });
 });
 
@@ -236,7 +248,8 @@ describe('DeleteAccountScreen - blocked state', () => {
     renderWithApollo(<DeleteAccountScreen />, {
       operationMocks: [canDeleteBlocked()],
     });
-    await screen.findByText('Cannot Delete Account');
+    await drainTimers();
+    expect(screen.getByText('Cannot Delete Account')).toBeTruthy();
     expect(screen.getByText('My Home')).toBeTruthy();
     expect(
       screen.getByText(
@@ -260,7 +273,8 @@ describe('DeleteAccountScreen - blocked state', () => {
     renderWithApollo(<DeleteAccountScreen />, {
       operationMocks: [canDeleteBlocked()],
     });
-    await screen.findByText('Cannot Delete Account');
+    await drainTimers();
+    expect(screen.getByText('Cannot Delete Account')).toBeTruthy();
     expect(screen.queryByText(HOME_SERVER_MESSAGE)).toBeNull();
     expect(screen.queryByText(LIST_SERVER_MESSAGE)).toBeNull();
     expect(screen.queryByText(/only owner|\(s\)/)).toBeNull();
@@ -287,7 +301,8 @@ describe('DeleteAccountScreen - blocked state', () => {
       },
     }).mock;
     renderWithApollo(<DeleteAccountScreen />, { operationMocks: [mock] });
-    await screen.findByText('Cannot Delete Account');
+    await drainTimers();
+    expect(screen.getByText('Cannot Delete Account')).toBeTruthy();
     expect(
       screen.getByText(
         'Nobody else owns "My Home", and it still has other members.',
@@ -315,7 +330,8 @@ describe('DeleteAccountScreen - blocked state', () => {
       },
     }).mock;
     renderWithApollo(<DeleteAccountScreen />, { operationMocks: [mock] });
-    await screen.findByText('Cannot Delete Account');
+    await drainTimers();
+    expect(screen.getByText('Cannot Delete Account')).toBeTruthy();
     expect(
       screen.getByText(
         '"Thing" has to be resolved before your account can be deleted.',
@@ -329,6 +345,7 @@ describe('DeleteAccountScreen - blocked state', () => {
     renderWithApollo(<DeleteAccountScreen />, {
       operationMocks: [canDeleteBlocked()],
     });
-    await screen.findByText('Go Back');
+    await drainTimers();
+    expect(screen.getByText('Go Back')).toBeTruthy();
   });
 });

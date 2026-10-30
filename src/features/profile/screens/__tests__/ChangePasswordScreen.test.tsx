@@ -2,11 +2,12 @@
 import { toastService } from '#/services/toastService';
 import { authService } from '#/services/authService';
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import {
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ChangePasswordDocument } from '#operations/auth/auth.generated';
 import {
   ErrorCode,
@@ -147,6 +148,14 @@ const submitChange = async (operationMocks: MockedResponse[]) => {
   await user.press(screen.getByRole('button', { name: 'Change Password' }));
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('ChangePasswordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -260,13 +269,12 @@ describe('ChangePasswordScreen', () => {
     await user.press(screen.getByRole('button', { name: 'Change Password' }));
 
     // The mocked PasswordInput surfaces its errorMessage as the a11y hint.
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('password-input-Enter your new password').props
-          .accessibilityHint,
-      ).toBe(
-        'That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.',
-      ),
+    await drainTimers();
+    expect(
+      screen.getByTestId('password-input-Enter your new password').props
+        .accessibilityHint,
+    ).toBe(
+      'That password doesn’t meet the rules: 8–72 characters, with an uppercase letter, a lowercase letter and a number.',
     );
 
     expect(mockToastError).not.toHaveBeenCalledWith(SERVER_PROSE);
@@ -317,10 +325,9 @@ describe('ChangePasswordScreen', () => {
     );
     await user.press(screen.getByRole('button', { name: 'Change Password' }));
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Password changed. Your other devices have been signed out.',
-      ),
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Password changed. Your other devices have been signed out.',
     );
   });
 
@@ -372,10 +379,9 @@ describe('ChangePasswordScreen', () => {
     );
     await user.press(screen.getByRole('button', { name: 'Change Password' }));
 
-    await waitFor(() =>
-      expect(mockToastWarning).toHaveBeenCalledWith(
-        'Password changed. Your other devices have been signed out, and biometric sign-in is now off. Turn it back on in Settings.',
-      ),
+    await drainTimers();
+    expect(mockToastWarning).toHaveBeenCalledWith(
+      'Password changed. Your other devices have been signed out, and biometric sign-in is now off. Turn it back on in Settings.',
     );
   });
 
@@ -385,10 +391,9 @@ describe('ChangePasswordScreen', () => {
       changeAnswering(() => useStore.setState({ refreshToken: 'rotated' })),
     );
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Password changed. Your other devices have been signed out.',
-      ),
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Password changed. Your other devices have been signed out.',
     );
     expect(useStore.getState().accessToken).toBe('new-access');
     expect(useStore.getState().refreshToken).toBe('new-refresh');
@@ -405,10 +410,9 @@ describe('ChangePasswordScreen', () => {
       ),
     );
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Password changed successfully!',
-      ),
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Password changed successfully!',
     );
     expect(useStore.getState().accessToken).toBeNull();
     expect(useStore.getState().refreshToken).toBeNull();
