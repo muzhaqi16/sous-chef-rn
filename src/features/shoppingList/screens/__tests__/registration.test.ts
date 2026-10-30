@@ -23,6 +23,7 @@ describe('shoppingListDetailScreens', () => {
       'PurchaseHistory',
       'ShareList',
       'StoreMode',
+      'StoreSavingsItems',
     ]);
   });
 
