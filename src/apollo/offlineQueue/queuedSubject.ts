@@ -168,3 +168,59 @@ export function queuedSubject({
 
   return { subjectIds, sourceIds, mintedIds };
 }
+
+/**
+ * Input keys that name the PARENT a queued write attaches to. A deferred
+ * parent holds these children back; the keys stay out of a write's
+ * `subjectIds`, so a refused child never evicts its parent.
+ */
+export const PARENT_REFERENCE_KEYS: readonly string[] = [
+  'homeId',
+  'pantryId',
+  'shoppingListId',
+  'shoppingListItemId',
+  'afterItemId',
+  'beforeItemId',
+  'storageLocationId',
+  'parentLocationId',
+  'mealPlanId',
+  'mealPlanItemId',
+  'templateId',
+  'recipeIngredientId',
+  'cookingLogId',
+  'targetBatchId',
+  'purchaseId',
+  'recipeId',
+  // A store a queued createStore may have minted.
+  'storeId',
+  'targetStoreId',
+  'preferredStoreId',
+  // A brand list a queued createBrandList may have minted.
+  'brandListId',
+];
+
+/**
+ * What a write waits on: the parents it attaches to at any depth (a batch
+ * row, `meal.recipeId`, a purchase's `receipt.storeId`), and the entity it is
+ * derived from (a fork's source recipe).
+ */
+export function dependencyIdsOf(write: {
+  mutation: DocumentNode;
+  variables?: QueuedMutation['variables'];
+}): string[] {
+  const ids = new Set<string>(queuedSubject(write).sourceIds);
+  const collect = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(collect);
+      return;
+    }
+    if (!isRecord(value)) return;
+    for (const key of PARENT_REFERENCE_KEYS) {
+      const id = value[key];
+      if (typeof id === 'string' && id) ids.add(id);
+    }
+    Object.values(value).forEach(collect);
+  };
+  collect(write.variables?.input);
+  return [...ids];
+}

@@ -25,6 +25,7 @@ import {
 } from './queueReplayReconcilers';
 import {
   deletesItsSubject,
+  dependencyIdsOf,
   queuedSubject,
   subjectTypeOf,
 } from './queuedSubject';
@@ -70,36 +71,6 @@ const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
   REPLAY_NOT_PREPARED_CODE,
   BATCH_ROW_TRANSIENT_CODE,
 ]);
-
-/**
- * Input keys that name the PARENT a queued write attaches to. A deferred
- * parent holds these children back; the keys stay out of
- * {@link QueueManager.getAllEntityIds} so a refused child never evicts its parent.
- */
-export const PARENT_REFERENCE_KEYS: readonly string[] = [
-  'homeId',
-  'pantryId',
-  'shoppingListId',
-  'shoppingListItemId',
-  'afterItemId',
-  'beforeItemId',
-  'storageLocationId',
-  'parentLocationId',
-  'mealPlanId',
-  'mealPlanItemId',
-  'templateId',
-  'recipeIngredientId',
-  'cookingLogId',
-  'targetBatchId',
-  'purchaseId',
-  'recipeId',
-  // A store a queued createStore may have minted.
-  'storeId',
-  'targetStoreId',
-  'preferredStoreId',
-  // A brand list a queued createBrandList may have minted.
-  'brandListId',
-];
 
 /** `value` with every occurrence of the id `from` replaced by `to`. */
 function replaceId(value: unknown, from: string, to: string): unknown {
@@ -177,7 +148,7 @@ export class QueueManager {
   private drainNotBefore = 0;
   /** Whether this drain has already re-fetched the unit vocabulary. */
   private hasRefreshedUnits = false;
-  /** A new session revived parked writes while a pass was running. */
+  /** Writes became replayable while a pass that did not list them ran. */
   private rerunAfterPass = false;
   /** Entries that have already spent their one re-resolution attempt. */
   private staleReferenceRetried = new Set<string>();
@@ -367,7 +338,7 @@ export class QueueManager {
       }
 
       const entityIds = this.getAllEntityIds(mutation);
-      const dependencyIds = this.getDependencyIds(mutation);
+      const dependencyIds = dependencyIdsOf(mutation);
       if ([...entityIds, ...dependencyIds].some(id => blockedIds.has(id))) {
         // Depends on an entry that has not landed; blocked itself, so anything
         // downstream of IT waits too.
@@ -927,29 +898,6 @@ export class QueueManager {
   }
 
   /**
-   * What a write waits on: the parents it attaches to at any depth (a batch
-   * row, `meal.recipeId`, a purchase's `receipt.storeId`), and the entity it is
-   * derived from (a fork's source recipe).
-   */
-  private getDependencyIds(mutation: QueuedMutation): string[] {
-    const ids = new Set<string>(queuedSubject(mutation).sourceIds);
-    const collect = (value: unknown): void => {
-      if (Array.isArray(value)) {
-        value.forEach(collect);
-        return;
-      }
-      if (!isRecord(value)) return;
-      for (const key of PARENT_REFERENCE_KEYS) {
-        const id = value[key];
-        if (typeof id === 'string' && id) ids.add(id);
-      }
-      Object.values(value).forEach(collect);
-    };
-    collect(mutation.variables.input);
-    return [...ids];
-  }
-
-  /**
    * Drops the persisted optimistic fields a landed mutation owns on each
    * entity: those saved after the latest earlier write still queued for it, up
    * to this one's enqueue.
@@ -1110,6 +1058,14 @@ export class QueueManager {
    */
   onSessionToken(userId: string): void {
     if (queueStore.revivePendingAuthErrors(userId) === 0) return;
+    this.drainAfterPass();
+  }
+
+  /**
+   * Drains writes added while a pass may be running, which took its list
+   * before them: a write queued behind undelivered ones, or revived ones.
+   */
+  drainAfterPass(): void {
     if (this.isProcessing) this.rerunAfterPass = true;
     this.requestDrain();
   }

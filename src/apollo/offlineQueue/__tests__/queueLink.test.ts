@@ -8,6 +8,7 @@ import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
 import { queueStore } from '../queueStore';
+import { queueManager } from '../queueManager';
 import {
   isOfflineRejectedError,
   OfflineRejectedError,
@@ -45,6 +46,7 @@ jest.mock('#store', () => ({
 jest.mock('../queueStore', () => ({
   queueStore: {
     addMutation: jest.fn(),
+    getUndeliveredIds: jest.fn(() => new Set<string>()),
   },
 }));
 
@@ -53,6 +55,7 @@ jest.mock('../queueStore', () => ({
 jest.mock('../queueManager', () => ({
   queueManager: {
     requestDrain: jest.fn(),
+    drainAfterPass: jest.fn(),
     withdrawUnqueueableWrite: jest.fn(),
   },
 }));
@@ -347,6 +350,70 @@ describe('createQueueLink', () => {
   // -------------------------------------------------------------------------
   // Offline interception
   // -------------------------------------------------------------------------
+  describe('an online write behind an undelivered one', () => {
+    const undelivered = queueStore.getUndeliveredIds as jest.Mock;
+    const online = () =>
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+    const send = (input: Record<string, unknown>) =>
+      makeOperation({
+        query: UpdateShoppingListItemDocument,
+        operationName: operationNameOf(UpdateShoppingListItemDocument),
+        variables: { input },
+        context: { localFirst: true },
+      });
+
+    it('queues behind a write the server has not taken for its row', () => {
+      online();
+      undelivered.mockReturnValueOnce(new Set(['item-1']));
+      const forward = makeForward();
+      const results: ApolloLink.Result[] = [];
+
+      link
+        .request(send({ id: 'item-1', name: 'Oat milk' }), forward)
+        .subscribe(result => results.push(result));
+
+      expect(results.map(result => result.extensions)).toEqual([
+        { queued: true, queuedReason: 'behind-queued' },
+      ]);
+      expect(forward).not.toHaveBeenCalled();
+      expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+      expect(queueManager.drainAfterPass).toHaveBeenCalledTimes(1);
+    });
+
+    it('queues behind a write that mints the parent it names', done => {
+      online();
+      undelivered.mockReturnValueOnce(new Set(['list-1']));
+      const forward = makeForward();
+
+      link
+        .request(send({ id: 'item-1', shoppingListId: 'list-1' }), forward)
+        .subscribe({
+          complete() {
+            expect(forward).not.toHaveBeenCalled();
+            expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+            done();
+          },
+        });
+    });
+
+    it('sends a write that names no undelivered row', done => {
+      online();
+      undelivered.mockReturnValueOnce(new Set(['item-2']));
+      const forward = makeForward();
+
+      link.request(send({ id: 'item-1' }), forward).subscribe({
+        complete() {
+          expect(forward).toHaveBeenCalledTimes(1);
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+  });
+
   describe('offline interception', () => {
     // The queue is durable at enqueue, so the cache row it replays against must
     // be too: a kill before a deferred save relaunched with no row.
@@ -733,7 +800,6 @@ describe('createQueueLink', () => {
     // no queue entry and no drain that will ever carry it — the one way this
     // system could diverge from the server silently and permanently.
     const { QueueCapacityError } = require('../types');
-    const { queueManager } = require('../queueManager');
 
     beforeEach(() => {
       jest.clearAllMocks();
