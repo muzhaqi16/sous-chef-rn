@@ -1,13 +1,9 @@
 'use no memo';
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ShoppingListDetailsStep } from '../ShoppingListDetailsStep';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => true),
@@ -57,6 +53,14 @@ const renderStep = (
     />,
   );
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('ShoppingListDetailsStep', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -81,7 +85,8 @@ describe('ShoppingListDetailsStep', () => {
     );
     fireEvent.press(screen.getByTestId('add-shopping-item-submit-button'));
 
-    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSuccess).toHaveBeenCalled();
     expect(mockAddItem).toHaveBeenCalledWith(
       expect.objectContaining({ estimatedPrice: undefined }),
     );
@@ -124,7 +129,8 @@ describe('ShoppingListDetailsStep', () => {
     );
     fireEvent.press(screen.getByTestId('add-shopping-item-submit-button'));
 
-    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSuccess).toHaveBeenCalled();
     expect(mockAddItem).toHaveBeenCalledWith(
       expect.objectContaining({ itemName: 'Bananas', quantityInput: '2' }),
     );
@@ -138,7 +144,8 @@ describe('ShoppingListDetailsStep', () => {
 
     fireEvent.press(screen.getByTestId('add-shopping-item-submit-button'));
 
-    await waitFor(() => expect(mockAddItem).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockAddItem).toHaveBeenCalled();
     expect(onSuccess).not.toHaveBeenCalled();
     expect(screen.getByTestId('add-shopping-item-name-input').props.value).toBe(
       'Bananas',

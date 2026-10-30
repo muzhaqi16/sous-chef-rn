@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { useApolloClient } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
@@ -9,6 +9,7 @@ import {
   type QueryDataFor,
   type RecordedMock,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CollaboratorRole,
   CollaboratorStatus,
@@ -113,13 +114,13 @@ async function withPendingInvites(
       operationMocks: [pending.mock, refetched.mock, lists.mock, write.mock],
     },
   );
-  await act(async () => {
-    await result.current.client.query({
+  await drained(() =>
+    result.current.client.query({
       query: GetShoppingListsLiteDocument,
       variables: LISTS,
-    });
-  });
-  await waitFor(() => expect(result.current.pending.invites).toHaveLength(2));
+    }),
+  );
+  expect(result.current.pending.invites).toHaveLength(2);
   return { cache, result, onAccepted, refetched };
 }
 
@@ -145,6 +146,14 @@ const confirmDecline = async () => {
     buttons?.find(button => button.style === 'destructive')?.onPress?.();
   });
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -210,7 +219,8 @@ describe('usePendingListInvites', () => {
     if (!groceries) throw new Error('no invite listed');
 
     act(() => result.current.pending.accept(groceries));
-    await waitFor(() => expect(onAccepted).toHaveBeenCalledWith('list-1'));
+    await drainTimers();
+    expect(onAccepted).toHaveBeenCalledWith('list-1');
 
     expect(accept.fired).toEqual([{ input: { inviteId: 'inv-1' } }]);
     expect(pendingIds(cache)).toEqual(['inv-2']);
@@ -242,7 +252,8 @@ describe('usePendingListInvites', () => {
     act(() => result.current.pending.decline(groceries));
     expect(decline.fired).toEqual([]);
     await confirmDecline();
-    await waitFor(() => expect(toastService.success).toHaveBeenCalled());
+    await drainTimers();
+    expect(toastService.success).toHaveBeenCalled();
 
     expect(decline.fired).toEqual([{ input: { inviteId: 'inv-1' } }]);
     expect(toastService.success).toHaveBeenCalledWith(
@@ -262,7 +273,8 @@ describe('usePendingListInvites', () => {
     if (!groceries) throw new Error('no invite listed');
 
     act(() => result.current.pending.accept(groceries));
-    await waitFor(() => expect(refetched.fired).toHaveLength(1));
+    await drainTimers();
+    expect(refetched.fired).toHaveLength(1);
 
     expect(toastService.error).toHaveBeenCalledWith(
       'This invitation is no longer available. It may have been used, declined, or expired.',
@@ -283,10 +295,9 @@ describe('usePendingListInvites', () => {
     if (!groceries) throw new Error('no invite listed');
 
     act(() => result.current.pending.accept(groceries));
-    await waitFor(() =>
-      expect(toastService.error).toHaveBeenCalledWith(
-        'This invitation has expired',
-      ),
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'This invitation has expired',
     );
 
     // Dropped by the answer itself: nothing was re-read.
@@ -307,7 +318,8 @@ describe('usePendingListInvites', () => {
     if (!groceries) throw new Error('no invite listed');
 
     act(() => result.current.pending.accept(groceries));
-    await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalled();
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Signed in as a different account',
@@ -327,7 +339,8 @@ describe('usePendingListInvites', () => {
     if (!groceries) throw new Error('no invite listed');
 
     act(() => result.current.pending.accept(groceries));
-    await waitFor(() => expect(toastService.error).toHaveBeenCalled());
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalled();
 
     expect(pendingIds(cache)).toEqual(['inv-1', 'inv-2']);
     expect(listIds(cache)).toEqual(['list-own']);

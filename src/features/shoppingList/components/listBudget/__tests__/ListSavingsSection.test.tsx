@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
@@ -8,6 +8,7 @@ import {
   renderWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   ALDI,
   GIANT_EAGLE,
@@ -82,6 +83,14 @@ const renderSection = (
   });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
   jest.mocked(useReadingSystem).mockReturnValue(UnitSystem.Imperial);
@@ -91,7 +100,8 @@ describe('ListSavingsSection', () => {
   it("shows each store's total and saving, with the list's store marked", async () => {
     renderSection([answering(answer).mock]);
 
-    expect(await screen.findByText('Save about $8 on 7 items')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Save about $8 on 7 items')).toBeTruthy();
     expect(screen.getByText("Your list's store")).toBeTruthy();
     expect(screen.getByText('About the same on 9 items')).toBeTruthy();
     expect(screen.getByText('$52.00')).toBeTruthy();
@@ -101,15 +111,17 @@ describe('ListSavingsSection', () => {
   it('names where a store’s prices come from', async () => {
     renderSection([answering(answer).mock]);
 
+    await drainTimers();
     expect(
-      await screen.findByText('Prices from ALDI Wilkinsburg, 4 mi away'),
+      screen.getByText('Prices from ALDI Wilkinsburg, 4 mi away'),
     ).toBeTruthy();
   });
 
   it('shows the last answer when the request fails, and when it was given', async () => {
     renderSection([failing().mock], cached(answer));
 
-    expect(await screen.findByText(/^Prices as of /)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(/^Prices as of /)).toBeTruthy();
     expect(screen.getByText('Save about $8 on 7 items')).toBeTruthy();
   });
 
@@ -117,7 +129,8 @@ describe('ListSavingsSection', () => {
     useStore.setState({ isOnline: false, apiReachable: null });
     renderSection([], cached(answer));
 
-    expect(await screen.findByText(/^Prices as of /)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(/^Prices as of /)).toBeTruthy();
     expect(screen.getByText('Save about $8 on 7 items')).toBeTruthy();
     useStore.setState({ isOnline: true });
   });
@@ -125,18 +138,18 @@ describe('ListSavingsSection', () => {
   it('says comparing stores needs a connection when there is no answer', async () => {
     renderSection([failing().mock]);
 
+    await drainTimers();
     expect(
-      await screen.findByText('Comparing stores needs a connection'),
+      screen.getByText('Comparing stores needs a connection'),
     ).toBeTruthy();
   });
 
   it('asks for stores when the household has none to compare', async () => {
     renderSection([answering(savingsAnswer([])).mock]);
 
+    await drainTimers();
     expect(
-      await screen.findByText(
-        'No stores to compare yet. Add the stores you shop at.',
-      ),
+      screen.getByText('No stores to compare yet. Add the stores you shop at.'),
     ).toBeTruthy();
   });
 
@@ -145,9 +158,8 @@ describe('ListSavingsSection', () => {
     const asked = answering(answer);
     renderSection([asked.mock]);
 
-    await waitFor(() =>
-      expect(screen.queryByText('Could you save?')).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByText('Could you save?')).toBeNull();
     expect(
       screen.queryByText('Comparing stores needs a connection'),
     ).toBeNull();
@@ -157,7 +169,8 @@ describe('ListSavingsSection', () => {
   it("opens a store's items, and the household's stores", async () => {
     renderSection([answering(answer).mock]);
 
-    fireEvent.press(await screen.findByText('ALDI Banksville'));
+    await drainTimers();
+    fireEvent.press(screen.getByText('ALDI Banksville'));
     expect(useAppNavigation().toStoreSavingsItems).toHaveBeenCalledWith({
       listId: 'list-1',
       storeKey: 'store:s-aldi',

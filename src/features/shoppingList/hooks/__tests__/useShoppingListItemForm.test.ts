@@ -1,7 +1,8 @@
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import { useShoppingListItemForm } from '../useShoppingListItemForm';
 import type { UseShoppingListItemForm_ItemFragment } from '../useShoppingListItemForm.generated';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 // Mock parseFractionalInput
 jest.mock('#/utils/fractionUtils', () => ({
@@ -14,6 +15,14 @@ jest.mock('#/utils/fractionUtils', () => ({
     return isNaN(result) ? null : result;
   }),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useShoppingListItemForm', () => {
   describe('initial state', () => {
@@ -627,11 +636,10 @@ describe('useShoppingListItemForm', () => {
         result.current.setFieldValue('netWeight', '250');
       });
 
-      await waitFor(() => {
-        expect(result.current.errors.netWeightUnit?.message).toBe(
-          'Please select a unit for the net weight.',
-        );
-      });
+      await drainTimers();
+      expect(result.current.errors.netWeightUnit?.message).toBe(
+        'Please select a unit for the net weight.',
+      );
       expect(result.current.parseNetWeightInput()).toBe(250);
     });
 
@@ -640,17 +648,15 @@ describe('useShoppingListItemForm', () => {
       act(() => {
         result.current.setFieldValue('netWeight', '250');
       });
-      await waitFor(() => {
-        expect(result.current.errors.netWeightUnit).toBeDefined();
-      });
+      await drainTimers();
+      expect(result.current.errors.netWeightUnit).toBeDefined();
 
       act(() => {
         result.current.setFieldValue('netWeightUnitId', 'unit-g');
       });
 
-      await waitFor(() => {
-        expect(result.current.errors.netWeightUnit).toBeUndefined();
-      });
+      await drainTimers();
+      expect(result.current.errors.netWeightUnit).toBeUndefined();
     });
   });
 

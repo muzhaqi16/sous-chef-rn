@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { StoreLineMatch, UnitSystem } from '#/graphql/generated/schemaTypes';
 import {
@@ -6,6 +5,7 @@ import {
   renderHookWithApollo,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   ALDI,
   ANSWERED_AT,
@@ -108,6 +108,14 @@ const storeAt = (
 ) => result.current.savings?.stores.find(s => s.option.key === key);
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
   jest.mocked(useReadingSystem).mockReturnValue(UnitSystem.Imperial);
 });
@@ -116,7 +124,8 @@ describe('useListSavings', () => {
   it('compares three stores, with the list’s store marked', async () => {
     const { result } = renderSavings([answering(threeStores).mock]);
 
-    await waitFor(() => expect(result.current.savings?.stores).toHaveLength(3));
+    await drainTimers();
+    expect(result.current.savings?.stores).toHaveLength(3);
     expect(
       result.current.savings?.stores.map(s => [s.option.key, s.isTarget]),
     ).toEqual([
@@ -131,7 +140,8 @@ describe('useListSavings', () => {
     const asked = answering(threeStores);
     const { result } = renderSavings([asked.mock]);
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(asked.fired).toHaveLength(0);
     expect(result.current.savings).toBeNull();
   });
@@ -139,7 +149,8 @@ describe('useListSavings', () => {
   it('reads "milk" as Same, and Appleton Farms bacon as Similar at $5.99, 12 oz', async () => {
     const { result } = renderSavings([answering(threeStores).mock]);
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     const [aldiMilk, aldiBacon] = storeAt(result, 'store:s-aldi')?.lines ?? [];
     expect(aldiMilk).toMatchObject({
       kind: 'same',
@@ -156,7 +167,8 @@ describe('useListSavings', () => {
   it('reads Estimated with its price, and No price with none', async () => {
     const { result } = renderSavings([answering(threeStores).mock]);
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     expect(storeAt(result, 'store:s-aldi')?.lines[2]).toMatchObject({
       kind: 'estimated',
       price: '$8.49',
@@ -174,7 +186,8 @@ describe('useListSavings', () => {
       ).mock,
     ]);
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     expect(result.current.savings?.stores[0]).toMatchObject({
       total: null,
       saving: null,
@@ -184,7 +197,8 @@ describe('useListSavings', () => {
   it('states the lines the saving covers, and an Estimated line moves no difference', async () => {
     const { result } = renderSavings([answering(threeStores).mock]);
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     const aldi = storeAt(result, 'store:s-aldi');
     expect(aldi?.saving).toEqual({
       kind: 'save',
@@ -205,7 +219,8 @@ describe('useListSavings', () => {
   it('takes the server’s "About the same" for $1.20 on $60', async () => {
     const { result } = renderSavings([answering(threeStores).mock]);
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     expect(storeAt(result, 'store:s-kroger')?.saving).toEqual({
       kind: 'aboutTheSame',
       coveredLines: 9,
@@ -228,7 +243,8 @@ describe('useListSavings', () => {
       ).mock,
     ]);
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     expect(result.current.savings?.stores[0]?.lines[0]?.lastSeen).toBe(
       `Last seen ${formatMonthDay(new Date('2026-10-18T12:00:00.000Z'))}`,
     );
@@ -262,7 +278,8 @@ describe('useListSavings', () => {
       ).mock,
     ]);
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     expect(result.current.savings?.stores.map(s => s.standIn)).toEqual([
       'Prices from ALDI Wilkinsburg, 4 mi away',
       null,
@@ -275,7 +292,8 @@ describe('useListSavings', () => {
     });
     const { result } = renderSavings([failing.mock], cached(threeStores));
 
-    await waitFor(() => expect(result.current.failed).toBe(true));
+    await drainTimers();
+    expect(result.current.failed).toBe(true);
     expect(result.current.savings?.answeredAt).toBe(ANSWERED_AT);
     expect(result.current.savings?.stores).toHaveLength(3);
   });
@@ -286,7 +304,8 @@ describe('useListSavings', () => {
     });
     const { result } = renderSavings([failing.mock]);
 
-    await waitFor(() => expect(result.current.failed).toBe(true));
+    await drainTimers();
+    expect(result.current.failed).toBe(true);
     expect(result.current).toMatchObject({ savings: null, loading: false });
   });
 
@@ -301,7 +320,8 @@ describe('useListSavings', () => {
       { cache: cached(future), operationMocks: [] },
     );
 
-    await waitFor(() => expect(result.current.savings).not.toBeNull());
+    await drainTimers();
+    expect(result.current.savings).not.toBeNull();
     expect(result.current.savings?.stores[0]?.lines[0]).toMatchObject({
       kind: 'none',
       price: null,
@@ -317,7 +337,8 @@ describe('useStoreSavingsLines', () => {
       { cache: cached(threeStores), operationMocks: [asked.mock] },
     );
 
-    await waitFor(() => expect(result.current.store).not.toBeNull());
+    await drainTimers();
+    expect(result.current.store).not.toBeNull();
     expect(result.current.store?.option.key).toBe('store:s-aldi');
     expect(asked.fired).toHaveLength(0);
   });

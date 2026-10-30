@@ -1,7 +1,7 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetShoppingListDetailsDocument,
   type GetShoppingListDetailsQuery,
@@ -136,6 +136,14 @@ function buildDetailsErrorMock(
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useShoppingListDetails', () => {
   it('returns shopping list data', async () => {
     const { result } = renderHookWithApollo(
@@ -155,7 +163,8 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.shoppingList).not.toBeNull();
     expect(result.current.name).toBe('Groceries');
     expect(result.current.collaborators).toHaveLength(1);
@@ -172,7 +181,8 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.name).toBe('');
     expect(result.current.collaborators).toEqual([]);
@@ -190,7 +200,8 @@ describe('useShoppingListDetails', () => {
 
     // Hook uses errorPolicy: 'ignore', so error is swallowed and shoppingList
     // falls back to null (default). Wait for the network cycle to complete.
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.hasResult).toBe(false);
   });
@@ -203,7 +214,8 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(typeof result.current.refetch).toBe('function');
   });
 
@@ -225,7 +237,8 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.isShared).toBe(false);
   });
 
@@ -247,13 +260,10 @@ describe('useShoppingListDetails', () => {
         ],
       },
     );
-    await waitFor(() =>
-      expect(result.current.collaborators[0]?.role).toBe(
-        CollaboratorRole.Editor,
-      ),
-    );
+    await drainTimers();
+    expect(result.current.collaborators[0]?.role).toBe(CollaboratorRole.Editor);
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({
           __typename: 'ShoppingListCollaborator',
@@ -263,12 +273,7 @@ describe('useShoppingListDetails', () => {
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(result.current.collaborators[0]?.role).toBe(
-        CollaboratorRole.Viewer,
-      ),
-    );
+    expect(result.current.collaborators[0]?.role).toBe(CollaboratorRole.Viewer);
     expect(result.current.isShared).toBe(true);
   });
 });

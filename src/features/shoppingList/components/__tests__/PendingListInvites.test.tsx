@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
@@ -24,6 +24,14 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
     throw new Error("Couldn't find a navigation object.");
   },
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 afterEach(() => {
   jest.useRealTimers();
@@ -101,7 +109,8 @@ describe('PendingListInvites', () => {
       },
     );
 
-    expect(await screen.findByText('Pending Invitations')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Pending Invitations')).toBeTruthy();
     expect(screen.getByText('Weekly groceries')).toBeTruthy();
     expect(screen.getByText('Alice invited you · Editor')).toBeTruthy();
     // No name to show: the sender is left out rather than guessed.
@@ -147,15 +156,13 @@ describe('PendingListInvites', () => {
       },
     );
 
-    await act(async () => {
-      await user.press(
-        await screen.findByTestId(
-          shoppingListTestIDs.pendingInviteAccept('inv-1'),
-        ),
-      );
-    });
+    await drainTimers();
+    await user.press(
+      screen.getByTestId(shoppingListTestIDs.pendingInviteAccept('inv-1')),
+    );
 
-    await waitFor(() => expect(onAccepted).toHaveBeenCalledWith('list-1'));
+    await drainTimers();
+    expect(onAccepted).toHaveBeenCalledWith('list-1');
     expect(accept.fired).toEqual([{ input: { inviteId: 'inv-1' } }]);
   });
 
@@ -171,13 +178,10 @@ describe('PendingListInvites', () => {
       },
     );
 
-    await act(async () => {
-      await user.press(
-        await screen.findByTestId(
-          shoppingListTestIDs.pendingInviteDecline('inv-2'),
-        ),
-      );
-    });
+    await drainTimers();
+    await user.press(
+      screen.getByTestId(shoppingListTestIDs.pendingInviteDecline('inv-2')),
+    );
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
@@ -187,7 +191,6 @@ describe('PendingListInvites', () => {
   });
 
   it('renders nothing while no invite is pending', async () => {
-    jest.useFakeTimers();
     const none = pending([]);
     renderWithApollo(
       <PendingListInvites

@@ -1,10 +1,10 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
 import { useListCurrency } from '../useListCurrency';
 import {
@@ -35,6 +35,14 @@ function renderFor(listCurrency: string | null) {
   return { ...rendered, asked };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useListCurrency', () => {
   beforeEach(() => {
     useStore.setState({ preferredCurrency: 'ALL' });
@@ -62,7 +70,8 @@ describe('useListCurrency', () => {
     });
 
     expect(result.current).toBeNull();
-    await waitFor(() => expect(result.current).toBe('USD'));
+    await drainTimers();
+    expect(result.current).toBe('USD');
     expect(asked.fired).toEqual([{ id: 'list-1' }]);
   });
 
