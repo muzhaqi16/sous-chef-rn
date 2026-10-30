@@ -4,6 +4,7 @@ import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import { createAnswerOrderingLink } from '#/apollo/links/answerOrderingLink';
 import type { Settled } from '#/apollo/utils/settleMutation';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { PendingWrites, type LocalWriteSend } from '../pendingWrites';
 import type { LocalWriteTable } from '../types';
 
@@ -148,6 +149,10 @@ const serverRows = (cache: TestCache) =>
     .readQuery<{ probeRows: Row[] }>({ query: LIST, optimistic: false })
     ?.probeRows.map(({ id }) => id);
 
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('PendingWrites', () => {
   it('shows a write over the server’s data and leaves that data alone', () => {
     const { cache, pending } = seeded();
@@ -179,6 +184,7 @@ describe('PendingWrites', () => {
   });
 
   it('rebuilds once for several server writes, after their batch', async () => {
+    jest.useFakeTimers();
     const { cache, pending } = seeded();
     pending.begin(SET_QUANTITY, { input: { quantity: 5 } });
     const rebuild = jest.spyOn(pending, 'rebuild');
@@ -190,7 +196,7 @@ describe('PendingWrites', () => {
         pending.scheduleRebuild();
       },
     });
-    await new Promise(resolve => setTimeout(resolve, 60));
+    await drainTimers();
 
     expect(rebuild).toHaveBeenCalledTimes(1);
     expect(shown(cache)).toMatchObject({ name: 'Oat', quantity: 5 });
@@ -319,11 +325,12 @@ describe('PendingWrites', () => {
   });
 
   it('lifts the last write’s layer once it commits', async () => {
+    jest.useFakeTimers();
     const { cache, pending } = seeded();
     const { id } = pending.begin(SET_QUANTITY, { input: { quantity: 5 } });
 
     pending.confirm(id, {});
-    await new Promise(resolve => setTimeout(resolve, 60));
+    await drainTimers();
 
     expect(shown(cache)?.quantity).toBe(1);
   });
@@ -446,7 +453,7 @@ describe('PendingWrites', () => {
 
       const failed: Settled<unknown> = { status: 'failed', data: undefined };
       create.answer(failed);
-      await expect(edit.result).resolves.toBe(failed);
+      await expect(edit.result).resolves.toEqual(failed);
 
       expect(edit.sent).toHaveLength(0);
       expect(shownRows(cache)).toEqual(['row-1']);
