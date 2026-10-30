@@ -1,11 +1,11 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { drainTimers } from '#/test-utils/drainTimers';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { usePreferredCurrency } from '#/domain/money';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
@@ -19,6 +19,14 @@ const ACCOUNT = {
   onBoarded: true,
   preferredCurrency: 'USD',
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   useStore.setState({ user: ACCOUNT, preferredCurrency: 'USD' });
@@ -57,9 +65,7 @@ function useSyncedCurrency() {
 
 /** What `RefetchEventManager` runs on foreground, reconnect or a drained queue. */
 const resync = (client: ReturnType<typeof useApolloClient>) =>
-  act(async () => {
-    await client.refetchQueries({ include: 'active' });
-  });
+  drained(() => client.refetchQueries({ include: 'active' }));
 
 describe('useAccountCurrencySync', () => {
   it('shows a currency changed on another device once the resync re-reads it', async () => {
@@ -68,11 +74,13 @@ describe('useAccountCurrencySync', () => {
     const { result } = renderHookWithApollo(useSyncedCurrency, {
       operationMocks: [before.mock, after.mock],
     });
-    await waitFor(() => expect(result.current.currency).toBe('GBP'));
+    await drainTimers();
+    expect(result.current.currency).toBe('GBP');
 
     await resync(result.current.client);
 
-    await waitFor(() => expect(result.current.currency).toBe('EUR'));
+    await drainTimers();
+    expect(result.current.currency).toBe('EUR');
     // The persisted record follows, so the next launch opens in it too.
     expect(useStore.getState().user?.preferredCurrency).toBe('EUR');
   });
@@ -83,13 +91,13 @@ describe('useAccountCurrencySync', () => {
       operationMocks: [read.mock],
     });
 
-    await waitFor(() => expect(result.current.currency).toBe('GBP'));
+    await drainTimers();
+    expect(result.current.currency).toBe('GBP');
     expect(useStore.getState().user?.preferredCurrency).toBe('GBP');
   });
 
   // The region default may still apply to it; nothing here states a currency.
   it('leaves an account with no settings as it is', async () => {
-    jest.useFakeTimers();
     const read = settingsRead(null);
     const { result } = renderHookWithApollo(useSyncedCurrency, {
       operationMocks: [read.mock],
@@ -107,7 +115,8 @@ describe('useAccountCurrencySync', () => {
     const { result } = renderHookWithApollo(useSyncedCurrency, {
       operationMocks: [read.mock],
     });
-    await waitFor(() => expect(result.current.currency).toBe('GBP'));
+    await drainTimers();
+    expect(result.current.currency).toBe('GBP');
 
     // `useCurrencyPreference` moves the mirror ahead of its write.
     act(() => useStore.getState().setPreferredCurrency('EUR'));

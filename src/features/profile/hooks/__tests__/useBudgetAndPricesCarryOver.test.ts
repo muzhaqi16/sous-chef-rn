@@ -1,9 +1,9 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
@@ -56,11 +56,18 @@ const run = async ({
     operationMocks: [read.mock, write.mock],
   });
   // The answer has landed, so the hook has seen it.
-  await waitFor(() =>
-    expect(cache.readQuery({ query: GetUserSettingsDocument })).not.toBeNull(),
-  );
+  await drainTimers();
+  expect(cache.readQuery({ query: GetUserSettingsDocument })).not.toBeNull();
   return write;
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useBudgetAndPricesCarryOver', () => {
   afterEach(() => {
@@ -70,11 +77,10 @@ describe('useBudgetAndPricesCarryOver', () => {
   it("carries the device's on to an account with no answer, once", async () => {
     const write = await run({ server: null, device: true });
 
-    await waitFor(() =>
-      expect(write.fired).toEqual([
-        { input: { shopping: { budgetAndPrices: true } } },
-      ]),
-    );
+    await drainTimers();
+    expect(write.fired).toEqual([
+      { input: { shopping: { budgetAndPrices: true } } },
+    ]);
   });
 
   // The device wrote `false` as a default on any preference change.

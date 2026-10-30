@@ -1,8 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { toastService } from '#/services/toastService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
@@ -56,9 +57,18 @@ async function renderSharing(
   const rendered = renderHookWithApollo(() => useDietarySharing(), {
     operationMocks: [homesMock().mock, update.mock, ...more.map(m => m.mock)],
   });
-  await waitFor(() => expect(rendered.result.current.homes).toHaveLength(2));
+  await drainTimers();
+  expect(rendered.result.current.homes).toHaveLength(2);
   return rendered;
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useDietarySharing', () => {
   it('lists each home with the caller’s own switch', async () => {
@@ -89,9 +99,8 @@ describe('useDietarySharing', () => {
       settled = result.current.setShared('home-1', true);
     });
 
-    await waitFor(() =>
-      expect(sharedOf(result.current.homes, 'home-1')).toBe(true),
-    );
+    await drainTimers();
+    expect(sharedOf(result.current.homes, 'home-1')).toBe(true);
     expect(update.fired).toEqual([
       {
         input: {
@@ -102,9 +111,7 @@ describe('useDietarySharing', () => {
       },
     ]);
     update.release();
-    await act(async () => {
-      await settled;
-    });
+    await drained(() => settled);
     expect(sharedOf(result.current.homes, 'home-1')).toBe(true);
   });
 
@@ -115,9 +122,7 @@ describe('useDietarySharing', () => {
     });
     const { result } = await renderSharing(update);
 
-    await act(async () => {
-      await result.current.setShared('home-2', false);
-    });
+    await drained(() => result.current.setShared('home-2', false));
 
     expect(sharedOf(result.current.homes, 'home-2')).toBe(false);
   });
@@ -136,13 +141,8 @@ describe('useDietarySharing', () => {
     const reread = homesMock();
     const { result } = await renderSharing(update, reread);
 
-    await act(async () => {
-      await result.current.setShared('home-1', true);
-    });
-
-    await waitFor(() =>
-      expect(sharedOf(result.current.homes, 'home-1')).toBe(false),
-    );
+    await drained(() => result.current.setShared('home-1', true));
+    expect(sharedOf(result.current.homes, 'home-1')).toBe(false);
     expect(reread.fired).toHaveLength(1);
     expect(toast).toHaveBeenCalledTimes(1);
   });
@@ -182,21 +182,14 @@ describe('useDietarySharing', () => {
     act(() => {
       first = result.current.setShared('home-2', false);
     });
-    await waitFor(() => expect(refusedLate.fired).toHaveLength(1));
-    await act(async () => {
-      await result.current.setShared('home-2', true);
-    });
-    await act(async () => {
-      await result.current.setShared('home-2', false);
-    });
+    await drainTimers();
+    expect(refusedLate.fired).toHaveLength(1);
+    await drained(() => result.current.setShared('home-2', true));
+    await drained(() => result.current.setShared('home-2', false));
     refusedLate.release();
-    await act(async () => {
-      await first;
-    });
-
-    await waitFor(() => expect(reread.fired).toHaveLength(1));
-    await waitFor(() =>
-      expect(sharedOf(result.current.homes, 'home-2')).toBe(false),
-    );
+    await drained(() => first);
+    expect(reread.fired).toHaveLength(1);
+    await drainTimers();
+    expect(sharedOf(result.current.homes, 'home-2')).toBe(false);
   });
 });
