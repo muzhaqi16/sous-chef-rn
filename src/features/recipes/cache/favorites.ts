@@ -65,7 +65,8 @@ const removeFromSavedRecipes = createRemoveFromParentConnectionUpdater(
 
 /** The signed-in user's id, once anything has cached `me`. */
 export const readViewerId = (cache: ApolloCache): string | null =>
-  cache.readQuery({ query: FavoritesViewerDocument })?.me?.id ?? null;
+  cache.readQuery({ query: FavoritesViewerDocument, optimistic: true })?.me
+    ?.id ?? null;
 
 /** The `SavedRecipe` a save's response names, read off the written row. */
 export interface SavedFavorite {
@@ -162,6 +163,7 @@ export const writeLocalFavorite = (
     ? cache.readFragment({
         id: recipeCacheId,
         fragment: Favorites_SavedDetailsFragmentDoc,
+        optimistic: true,
       })?.savedDetails ?? null
     : null;
   if (recipeCacheId) {

@@ -47,6 +47,7 @@ export function readUnitSymbol(
   const unit = cache.readFragment({
     id: cache.identify({ __typename: 'Unit', id: unitId }),
     fragment: ReplayPreparation_UnitFragmentDoc,
+    optimistic: false,
   });
   return firstNonBlank(unit?.symbol);
 }

@@ -38,6 +38,7 @@ export function useOpenPantryItemBatch({
       id: batchCacheId,
       fragment: UseOpenPantryItemBatch_StateFragmentDoc,
       fragmentName: 'useOpenPantryItemBatch_state',
+      optimistic: true,
     });
 
     const writeOpened = (isOpened: boolean, openedAt: string | null) =>

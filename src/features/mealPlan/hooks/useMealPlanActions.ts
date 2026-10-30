@@ -117,6 +117,7 @@ export function useMealPlanActions() {
           id: cacheId,
           fragment: MealPlanDisplayFragmentDoc,
           fragmentName: 'MealPlanDisplay',
+          optimistic: true,
         })
       : null;
   };

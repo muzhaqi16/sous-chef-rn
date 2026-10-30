@@ -196,6 +196,7 @@ export function usePantryItemActions({
     const data = client.cache.readFragment<{ id: string }>({
       id: cacheId,
       fragment: UsePantryItemActions_IdFragmentDoc,
+      optimistic: true,
     });
     return !!data?.id;
   };

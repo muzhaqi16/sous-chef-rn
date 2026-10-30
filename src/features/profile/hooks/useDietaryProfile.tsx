@@ -139,8 +139,10 @@ export const useDietaryProfile = ({
       const payload = appliedPayload(data);
       // Read from the cache, not the render: the add can follow the profile's
       // creation within one handler.
-      const profileId = cache.readQuery({ query: GetDietaryProfileDocument })
-        ?.me?.dietaryProfile?.id;
+      const profileId = cache.readQuery({
+        query: GetDietaryProfileDocument,
+        optimistic: true,
+      })?.me?.dietaryProfile?.id;
       if (!payload || !profileId) return;
 
       const newRestriction = payload.dietaryRestriction;

@@ -69,6 +69,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
       fragmentName: 'MealPlanItemActions_optimisticFullItem',
       from: { __typename: 'MealPlanItem', id },
+      optimistic: true,
     });
 
   /** `true` once the meal landed or is queued; `false` when it reverted. */
@@ -79,6 +80,7 @@ export function useMealPlanItemActions(mealPlanId: string | null) {
       fragment: MealPlanItemActions_PlanBoundsFragmentDoc,
       fragmentName: 'MealPlanItemActions_planBounds',
       from: { __typename: 'MealPlan', id: input.mealPlanId },
+      optimistic: true,
     });
     // Local-first: mint the permanent cuid (the row's real PK) and write the
     // meal into the cache before firing, so adding works fully offline.

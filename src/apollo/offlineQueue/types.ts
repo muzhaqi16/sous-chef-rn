@@ -4,6 +4,7 @@ import type {
   DefaultContext,
   OperationVariables,
 } from '@apollo/client';
+import type { LocalInputs } from '#/apollo/pendingWrites/types';
 
 export enum QueueStatus {
   PENDING = 'pending',
@@ -64,6 +65,8 @@ export interface QueuedMutation {
    * leaves the cache stays replayable. Absent on entries queued before it.
    */
   replayInputs?: ReplayInputs;
+  /** The pending write it carries, for an operation with a local write. */
+  pendingWrite?: { id: string; inputs: LocalInputs };
 
   status: QueueStatus;
   /** When this entry was queued. The drain replays in this order. */
@@ -128,6 +131,8 @@ export interface FailedMutationInfo {
    * something needs its own withdrawal, which needs to know which row.
    */
   variables: OperationVariables;
+  /** Dropping it undoes the write; nothing else is withdrawn. */
+  pendingWriteId?: string;
   error: QueueError;
 }
 

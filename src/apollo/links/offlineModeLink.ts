@@ -57,6 +57,7 @@ export const createOfflineModeLink = () => {
       cached = operation.client.cache.readQuery<Record<string, unknown>>({
         query: operation.query,
         variables: operation.variables,
+        optimistic: false,
       });
     } catch {
       cached = null;

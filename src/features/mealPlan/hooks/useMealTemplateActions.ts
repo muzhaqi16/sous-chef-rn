@@ -254,6 +254,7 @@ export function useMealTemplateActions() {
           id: cacheId,
           fragment: MealTemplateDisplayFragmentDoc,
           fragmentName: 'MealTemplateDisplay',
+          optimistic: true,
         })
       : null;
 

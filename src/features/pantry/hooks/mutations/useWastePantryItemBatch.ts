@@ -44,6 +44,7 @@ export function useWastePantryItemBatch({
       id: batchCacheId,
       fragment: UseWastePantryItemBatch_StateFragmentDoc,
       fragmentName: 'useWastePantryItemBatch_state',
+      optimistic: true,
     });
 
     // Wasting empties the batch, so the server returns it at zero with a

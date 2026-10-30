@@ -31,8 +31,11 @@ export function readUsualStores(
   homeId: string | null,
 ): UsualStoreEntry[] | null {
   return (
-    cache.readQuery({ query: UsualStoresDocument, variables: { homeId } })
-      ?.usualStores ?? null
+    cache.readQuery({
+      query: UsualStoresDocument,
+      variables: { homeId },
+      optimistic: true,
+    })?.usualStores ?? null
   );
 }
 
@@ -137,6 +140,7 @@ export function localUsualStore(
     id: cache.identify({ __typename: 'UsualStore', id }),
     fragment: UsualStores_RowFragmentDoc,
     fragmentName: 'usualStores_row',
+    optimistic: true,
   });
   if (!entry) return null;
   return { ...entry, chain: entry.chain ?? entry.store?.chain ?? null };

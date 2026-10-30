@@ -220,6 +220,7 @@ function heldItemDepartment(
     id: cache.identify({ __typename: 'Item', id: itemId }),
     fragment: Items_ItemDepartmentFragmentDoc,
     fragmentName: 'items_itemDepartment',
+    optimistic: true,
   })?.storeDepartment;
 }
 

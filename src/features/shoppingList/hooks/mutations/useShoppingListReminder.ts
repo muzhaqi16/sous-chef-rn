@@ -42,6 +42,7 @@ export function useShoppingListReminder() {
         fragment: UseShoppingListReminder_ListFragmentDoc,
         fragmentName: 'useShoppingListReminder_list',
         returnPartialData: true,
+        optimistic: true,
       });
     const previous = snapshotFields(held, patch);
     writeEntityFields(client.cache, entity, patch);

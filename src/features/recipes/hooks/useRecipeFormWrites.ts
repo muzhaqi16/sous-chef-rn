@@ -91,6 +91,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
           fragment: UseRecipeFormWrites_RecipeFragmentDoc,
           fragmentName: 'useRecipeFormWrites_recipe',
           from: recipeRef,
+          optimistic: true,
         })
       : null;
 

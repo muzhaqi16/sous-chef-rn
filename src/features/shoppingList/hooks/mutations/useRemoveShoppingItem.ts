@@ -114,6 +114,7 @@ export function useRemoveShoppingItem({
         id: itemId,
       }),
       fragment: UseRemoveShoppingItem_PurchaseFragmentDoc,
+      optimistic: true,
     });
 
     // Resolved before the try: value blocks inside one bail the React Compiler.

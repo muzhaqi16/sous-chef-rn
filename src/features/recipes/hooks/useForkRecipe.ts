@@ -47,6 +47,7 @@ export function useForkRecipe() {
         id: client.cache.identify({ __typename: 'Recipe', id: recipeId }),
         fragment: UseRecipeFormWrites_RecipeFragmentDoc,
         fragmentName: 'useRecipeFormWrites_recipe',
+        optimistic: true,
       });
     if (!source) {
       toastService.error(t('recipes.forkSourceNotLoaded'));

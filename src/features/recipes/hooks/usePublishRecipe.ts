@@ -37,6 +37,7 @@ export function usePublishRecipe() {
       id: client.cache.identify(entity),
       fragment: RecipeReadersFragmentDoc,
       returnPartialData: true,
+      optimistic: true,
     });
     const patch = {
       status: submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft,

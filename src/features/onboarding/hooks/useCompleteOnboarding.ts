@@ -36,6 +36,7 @@ export function useCompleteOnboarding(userId: string | undefined) {
             client.cache.readFragment({
               id: client.cache.identify(entity),
               fragment: UseCompleteOnboarding_UserFragmentDoc,
+              optimistic: true,
             }),
           updates,
         ),

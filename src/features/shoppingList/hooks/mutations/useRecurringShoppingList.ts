@@ -52,6 +52,7 @@ export function useRecurringShoppingList() {
         fragment: UseRecurringShoppingList_ListFragmentDoc,
         fragmentName: 'useRecurringShoppingList_list',
         returnPartialData: true,
+        optimistic: true,
       });
     const previous = snapshotFields(held, patch);
     writeEntityFields(client.cache, entity, patch);
@@ -111,6 +112,7 @@ export function useRecurringShoppingList() {
       id: client.cache.identify({ __typename: 'ShoppingList', id }),
       fragment: UseRecurringShoppingList_ListFragmentDoc,
       fragmentName: 'useRecurringShoppingList_list',
+      optimistic: true,
     });
 
   /** The next occurrence's list id, or null when it could not be rolled. */

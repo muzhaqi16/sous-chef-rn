@@ -75,6 +75,7 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
         id: client.cache.identify({ __typename: 'PantryItem', id: itemId }),
         fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
         fragmentName: 'useUpdatePantryItem_pantryItem',
+        optimistic: true,
       });
 
     if (!currentItem) {

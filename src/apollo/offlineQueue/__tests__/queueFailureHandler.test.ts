@@ -68,6 +68,10 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     clearEntityById: jest.fn(),
   },
 }));
+const mockDrop = jest.fn();
+jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
+  pendingWritesOf: () => ({ drop: mockDrop }),
+}));
 jest.mock('../queueStore', () => ({
   queueStore: {
     removeMutation: jest.fn(),
@@ -147,6 +151,30 @@ describe('queue failure handler', () => {
         2,
         t('errors.queuedRemovalKept'),
       );
+    });
+  });
+
+  describe('a write with a local write', () => {
+    const withLocalWrite = () =>
+      failure({
+        operationName: operationNameOf(CreatePantryItemDocument),
+        pendingWriteId: 'write-1',
+      });
+
+    it('drops its layer, and evicts nothing', () => {
+      handleQueueFailure(withLocalWrite());
+
+      expect(mockDrop).toHaveBeenCalledWith('write-1');
+      expect(safeEvict).not.toHaveBeenCalled();
+      expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
+      expect(removePantryItemLocally).not.toHaveBeenCalled();
+    });
+
+    it('still tells the person and leaves the queue', () => {
+      handleQueueFailure(withLocalWrite());
+
+      expect(toastService.error).toHaveBeenCalledTimes(1);
+      expect(queueStore.removeMutation).toHaveBeenCalledWith('q1');
     });
   });
 

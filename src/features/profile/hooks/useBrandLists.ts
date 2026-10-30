@@ -62,6 +62,7 @@ function readRow(cache: ApolloCache, id: string): ListRow | null {
         id: cacheId,
         fragment: UseBrandLists_RowFragmentDoc,
         fragmentName: 'useBrandLists_row',
+        optimistic: true,
       })
     : null;
 }
@@ -74,6 +75,7 @@ function heldBrandVersion(cache: ApolloCache, brandId: string): number {
         id: cacheId,
         fragment: UseBrandLists_HeldBrandFragmentDoc,
         fragmentName: 'useBrandLists_heldBrand',
+        optimistic: true,
       })
     : null;
   return held?.version ?? 0;

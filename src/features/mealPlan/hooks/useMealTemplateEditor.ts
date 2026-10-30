@@ -202,6 +202,7 @@ export function useMealTemplateEditor() {
           id: cacheId,
           fragment: UseMealTemplateEditor_TemplateFragmentDoc,
           fragmentName: 'useMealTemplateEditor_template',
+          optimistic: true,
         })
       : null;
 

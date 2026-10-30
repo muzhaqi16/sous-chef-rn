@@ -124,6 +124,7 @@ export function captureNotification(
       fragmentName: 'useNotificationsOnLaunch_notification',
       from: { __typename: 'Notification', id },
       returnPartialData: true,
+      optimistic: true,
     });
   if (!data?.id) return null;
   return { data, wasUnread: isUnreadStatus(data.status) };

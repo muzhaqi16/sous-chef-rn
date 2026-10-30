@@ -33,8 +33,10 @@ export function useUpdateSettings() {
     updates: Partial<SettingValues>,
     failureMessage: string = t('settings.updateFailed'),
   ): Promise<boolean> => {
-    const settings = client.cache.readQuery({ query: GetUserSettingsDocument })
-      ?.me?.settings;
+    const settings = client.cache.readQuery({
+      query: GetUserSettingsDocument,
+      optimistic: true,
+    })?.me?.settings;
     const previous = snapshotFields<SettingValues>(
       settings ?? mirroredFrom(useStore.getState()),
       updates,

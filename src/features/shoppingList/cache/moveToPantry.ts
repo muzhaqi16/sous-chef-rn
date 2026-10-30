@@ -127,6 +127,7 @@ export function restoreItemToShoppingListAfterMoveToPantry(
     const row = cache.readFragment({
       id: itemCacheId,
       fragment: MoveToPantry_RestoreTargetFragmentDoc,
+      optimistic: true,
     });
 
     const listId = row?.shoppingList.id;

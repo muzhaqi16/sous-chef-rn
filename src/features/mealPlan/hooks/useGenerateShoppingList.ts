@@ -152,6 +152,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
         id: cacheId,
         fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
         fragmentName: 'useGenerateShoppingList_mealPlan',
+        optimistic: true,
       }) ?? cached
     );
   };

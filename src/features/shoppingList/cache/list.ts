@@ -194,6 +194,7 @@ export function readShoppingListSnapshot(
     fragment: List_RowFragmentDoc,
     fragmentName: 'list_row',
     returnPartialData: true,
+    optimistic: true,
   });
   if (!isRecord(row)) return null;
   const homeId = typeof row.homeId === 'string' ? row.homeId : null;

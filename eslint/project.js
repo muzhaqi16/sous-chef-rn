@@ -257,6 +257,16 @@ const overrides = [
     rules: { 'sous-chef/queueable-write-is-local-first': 'off' },
   },
   {
+    // A feature's local writes re-run on every rebuild and after a restart.
+    files: ['src/features/*/offline/localWrites.ts'],
+    rules: { 'sous-chef/local-write-is-deterministic': 'error' },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: TEST_FILES,
+    rules: { 'sous-chef/cache-read-states-optimism': 'error' },
+  },
+  {
     // This module IS the parseFloat replacement.
     files: ['src/utils/parseDecimalInput.ts'],
     rules: {
@@ -393,6 +403,7 @@ const overrides = [
       '__tests__/apollo/normalizedRowMergeProbe.test.ts',
       '__tests__/apollo/pendingLayerProbe.test.ts',
       '__tests__/apollo/pendingWriteOverServerAnswer.test.ts',
+      '__tests__/apollo/pendingWritesAcrossSessions.test.ts',
       '__tests__/core-portability/**/*.ts',
       'src/apollo/__tests__/refetchEvents.test.ts',
       'src/apollo/links/__tests__/answerOrderingLink.test.ts',

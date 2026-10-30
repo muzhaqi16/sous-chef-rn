@@ -240,6 +240,7 @@ export function useItemReordering<T extends ShoppingListItem>(
           fragment: UseItemReordering_ServerItemFragmentDoc,
           fragmentName: 'useItemReordering_serverItem',
           from: serverItemRef,
+          optimistic: true,
         })
       : null;
     const serverVersion = serverItem?.version;

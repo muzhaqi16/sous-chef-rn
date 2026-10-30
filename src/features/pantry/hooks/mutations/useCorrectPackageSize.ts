@@ -60,6 +60,7 @@ export function useCorrectPackageSize() {
         }),
         fragment: UseCorrectPackageSize_StackFragmentDoc,
         fragmentName: 'useCorrectPackageSize_stack',
+        optimistic: true,
       },
     );
     if (!item) {
@@ -79,6 +80,7 @@ export function useCorrectPackageSize() {
         id: batchCacheId,
         fragment: UseCorrectPackageSize_BatchFragmentDoc,
         fragmentName: 'useCorrectPackageSize_batch',
+        optimistic: true,
       });
     const writeBatch = (data: UseCorrectPackageSize_BatchFragment) =>
       client.cache.writeFragment({

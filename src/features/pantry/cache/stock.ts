@@ -32,6 +32,7 @@ function shownAmount(
     id,
     fragment: WriteHeldStock_ShownInFragmentDoc,
     fragmentName: 'writeHeldStock_shownIn',
+    optimistic: true,
   })?.displayUnit;
   const amount = shownStock(heldQuantity, unit, shownIn);
   const notation = cache.readFragment<WriteHeldStock_NotationFragment>({
@@ -39,6 +40,7 @@ function shownAmount(
     fragment: WriteHeldStock_NotationFragmentDoc,
     fragmentName: 'writeHeldStock_notation',
     returnPartialData: true,
+    optimistic: true,
   });
   const shownInUnit = [notation?.unit, notation?.displayUnit].find(
     candidate => candidate?.id === amount.unit.id,
@@ -74,6 +76,7 @@ export function writeHeldStock(
     fragment: WriteHeldStock_PantryItemFragmentDoc,
     fragmentName: 'writeHeldStock_pantryItem',
     returnPartialData: true,
+    optimistic: true,
   });
   const held = cached?.heldQuantity ?? 0;
   const heldQuantity = typeof next === 'number' ? next : next(held);
@@ -118,6 +121,7 @@ export function inTrackingUnit(
     ? cache.readFragment<InTrackingUnit_PantryItemFragment>({
         id: stackId,
         fragment: InTrackingUnit_PantryItemFragmentDoc,
+        optimistic: true,
       })?.unit.id
     : undefined;
   if (!unitId || unitId === trackingUnitId) return amount;
@@ -126,6 +130,7 @@ export function inTrackingUnit(
     ? cache.readFragment<InTrackingUnit_EnteredUnitFragment>({
         id: unitCacheId,
         fragment: InTrackingUnit_EnteredUnitFragmentDoc,
+        optimistic: true,
       })
     : null;
   const factor = entered ? countFactorOver(entered, trackingUnitId) : null;

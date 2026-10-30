@@ -44,6 +44,7 @@ export function useDietarySharing() {
           id: cacheId,
           fragment: UseDietarySharing_MembershipFragmentDoc,
           fragmentName: 'useDietarySharing_membership',
+          optimistic: true,
         })
       : null;
     client.cache.writeFragment({

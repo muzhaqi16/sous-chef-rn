@@ -44,6 +44,7 @@ export function readListCounters(
     id: listCacheId,
     fragment: Connections_ListCountersFragmentDoc,
     returnPartialData: true,
+    optimistic: true,
   });
   return {
     totalItems: counters?.totalItems,

@@ -38,6 +38,7 @@ export function useShoppingListBudget() {
       fragment: UseShoppingListBudget_ListFragmentDoc,
       fragmentName: 'useShoppingListBudget_list',
       returnPartialData: true,
+      optimistic: true,
     });
     const previous = snapshotFields(held, patch);
     writeEntityFields(client.cache, entity, patch);
@@ -57,6 +58,7 @@ export function useShoppingListBudget() {
         id: client.cache.identify({ __typename: 'ShoppingList', id }),
         fragment: UseShoppingListBudget_ListFragmentDoc,
         fragmentName: 'useShoppingListBudget_list',
+        optimistic: true,
       });
     if (!current) {
       toastService.error(failureMessage);

@@ -131,6 +131,7 @@ export function adoptServerMembership(
     id: cache.identify({ __typename: 'Membership', id: placeholderId }),
     fragment: Home_MembershipRowFragmentDoc,
     fragmentName: 'home_membershipRow',
+    optimistic: true,
   });
   if (!placeholder) return;
 

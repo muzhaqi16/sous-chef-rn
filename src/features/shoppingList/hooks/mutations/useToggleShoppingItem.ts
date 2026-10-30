@@ -82,6 +82,7 @@ export function useToggleShoppingItem({
         id: cacheId,
         fragment: UseToggleShoppingItem_ItemFragmentDoc,
         fragmentName: 'useToggleShoppingItem_item',
+        optimistic: true,
       });
     if (!snapshot) return unsent();
 
@@ -184,6 +185,7 @@ export function useToggleShoppingItem({
             first: PAGINATION.ITEMS_PAGE_SIZE,
             isPurchased: previousIsPurchased,
           },
+          optimistic: true,
         });
         const conn = sourceQuery?.shoppingList?.itemsConnection;
         if (conn && conn.edges.length === 0 && (conn.totalCount ?? 0) > 0) {
@@ -249,6 +251,7 @@ export function useToggleShoppingItem({
         id: cacheId,
         fragment: UseToggleShoppingItem_ItemFragmentDoc,
         fragmentName: 'useToggleShoppingItem_item',
+        optimistic: true,
       });
     if (!snapshot) return unsent();
 

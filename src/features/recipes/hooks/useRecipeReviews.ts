@@ -193,6 +193,7 @@ export function useRecipeReviews({
       fragment: RecipeReviewFragmentDoc,
       fragmentName: 'RecipeReviewFragment',
       from: { __typename: 'RecipeReview', id },
+      optimistic: true,
     });
     removeReviewFromRecipe(apolloClient.cache, recipeId, id);
 

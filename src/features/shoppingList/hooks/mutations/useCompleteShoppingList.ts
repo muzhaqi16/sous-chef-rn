@@ -45,6 +45,7 @@ export function useCompleteShoppingList() {
         fragment: UseCompleteShoppingList_ListFragmentDoc,
         fragmentName: 'useCompleteShoppingList_list',
         returnPartialData: true,
+        optimistic: true,
       });
     const previous = snapshotFields(held, patch);
     writeEntityFields(client.cache, entity, patch);

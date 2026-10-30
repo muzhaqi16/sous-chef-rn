@@ -19,6 +19,7 @@ export function useHouseholdInvite(homeId: string) {
       fragment: UseHouseholdInvite_HomeFragmentDoc,
       fragmentName: 'useHouseholdInvite_home',
       id: client.cache.identify({ __typename: 'Home', id: homeId }),
+      optimistic: true,
     });
     if (!home?.joinCode) return null;
     return home.joinLink?.universal ?? buildJoinHomeUrl(home.joinCode);

@@ -48,7 +48,7 @@ export function useCatalogReadOptions<
   const key = variables === null ? null : JSON.stringify(variables);
   const policyOf = (): CatalogFetchPolicy => {
     if (variables === null) return 'cache-first';
-    const held = client.readQuery({ query, variables });
+    const held = client.readQuery({ query, variables, optimistic: true });
     // Nothing held: `cache-first` asks the API anyway.
     if (!held) return 'cache-first';
     if (!pageOf(held).catalogAvailable) return 'network-only';

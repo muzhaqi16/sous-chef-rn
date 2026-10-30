@@ -2,6 +2,7 @@ import { requireApolloClient } from '#/apollo/clientRegistry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { COUNT_WITHDRAWALS, UNLINK_WITHDRAWALS } from './withdrawalRegistry';
 import { toastService } from '#/services/toastService';
@@ -32,6 +33,27 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     `Queue: withdrawing locally-applied ${operationName} after permanent failure`,
     { entityType, entityId, code: error.code, type: error.type },
   );
+
+  if (info.pendingWriteId) {
+    pendingWritesOf(requireApolloClient().cache).drop(info.pendingWriteId);
+  } else {
+    withdrawLocalChange(info);
+  }
+
+  // The app's own words: `error.message` is written for developers and can
+  // carry operation names and identifiers. A conflict gets its own sentence.
+  toastService.error(withdrawalMessage(error.type, entityType ?? subjectType));
+
+  // Withdrawn, so it records nothing; left in place it would pad every drain
+  // scan and persisted write until `cleanupTerminal` ages it out 24h later.
+  queueStore.removeMutation(mutationId);
+
+  scheduleReread();
+}
+
+/** A write with no local write registered changed the cache itself. */
+function withdrawLocalChange(info: FailedMutationInfo): void {
+  const { entityType, entityId, operationName } = info;
 
   const withdrawCount = COUNT_WITHDRAWALS[operationName];
   if (withdrawCount) {
@@ -65,16 +87,6 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
       });
     }
   }
-
-  // The app's own words: `error.message` is written for developers and can
-  // carry operation names and identifiers. A conflict gets its own sentence.
-  toastService.error(withdrawalMessage(error.type, entityType ?? subjectType));
-
-  // Withdrawn, so it records nothing; left in place it would pad every drain
-  // scan and persisted write until `cleanupTerminal` ages it out 24h later.
-  queueStore.removeMutation(mutationId);
-
-  scheduleReread();
 }
 
 let rereadScheduled = false;

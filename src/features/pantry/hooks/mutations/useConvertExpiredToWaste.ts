@@ -73,6 +73,7 @@ export function useConvertExpiredToWaste({
       id: itemCacheId,
       fragment: UseConvertExpiredToWaste_StateFragmentDoc,
       fragmentName: 'useConvertExpiredToWaste_state',
+      optimistic: true,
     });
 
     const writeState = (

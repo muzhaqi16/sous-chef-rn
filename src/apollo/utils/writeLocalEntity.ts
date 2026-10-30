@@ -183,6 +183,7 @@ function readField(
     fragment: doc,
     fragmentName,
     variables,
+    optimistic: true,
   });
   return read && key in read ? read[key] : undefined;
 }
@@ -219,5 +220,8 @@ export function isHeld(
     };
     idOnlyDocs.set(ref.__typename, doc);
   }
-  return cache.readFragment({ id: cacheId, fragment: doc }) !== null;
+  return (
+    cache.readFragment({ id: cacheId, fragment: doc, optimistic: true }) !==
+    null
+  );
 }

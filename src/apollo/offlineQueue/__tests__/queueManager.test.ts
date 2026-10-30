@@ -96,10 +96,20 @@ jest.mock('#/apollo/clientRegistry', () => ({
   clearApolloClient: jest.fn(),
 }));
 
+const mockPendingWrites = {
+  confirm: jest.fn(),
+  drop: jest.fn(),
+  restore: jest.fn(),
+};
+jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
+  pendingWritesOf: () => mockPendingWrites,
+}));
+
 // Mock queueStore
 jest.mock('../queueStore', () => ({
   queueStore: {
     getPendingMutationsForUser: jest.fn(() => []),
+    getPendingWrites: jest.fn(() => []),
     resetProcessingToPending: jest.fn(() => 0),
     expireStalePending: jest.fn(() => []),
     updateMutation: jest.fn(() => true),
@@ -1755,6 +1765,69 @@ describe('QueueManager', () => {
           'proc-converged',
           { status: QueueStatus.SUCCESS, processedAt: expect.any(Number) },
         );
+      });
+
+      describe('a write with a local write', () => {
+        const queued = (id: string) =>
+          makeMutation({
+            id,
+            ...queuedMutationFor(CreateShoppingListDocument),
+            variables: { input: { id: 'list-1' } },
+            pendingWrite: { id: 'write-1', inputs: {} },
+          });
+
+        it('confirms it with the server’s answer', async () => {
+          const data = {
+            createShoppingList: {
+              __typename: 'CreateShoppingListPayload',
+              shoppingList: { id: 'list-1' },
+            },
+          };
+          mockClient.mutate.mockResolvedValue({ data });
+
+          jest.useRealTimers();
+          await processMutation(queued('pending-applied'));
+          jest.useFakeTimers();
+
+          expect(mockPendingWrites.confirm).toHaveBeenCalledWith(
+            'write-1',
+            data,
+          );
+        });
+
+        it('confirms it with no answer when the server already had it', async () => {
+          mockClient.mutate.mockResolvedValue({
+            data: {
+              createShoppingList: {
+                __typename: 'ConflictError',
+                code: 'IDEMPOTENT_REPLAY',
+                message: 'A shopping list with this id already exists',
+              },
+            },
+          });
+
+          jest.useRealTimers();
+          await processMutation(queued('pending-converged'));
+          jest.useFakeTimers();
+
+          expect(mockPendingWrites.confirm).toHaveBeenCalledWith('write-1');
+        });
+
+        it('leaves a write with none to the old path', async () => {
+          mockClient.mutate.mockResolvedValue({ data: {} });
+
+          jest.useRealTimers();
+          await processMutation(
+            makeMutation({
+              id: 'unmigrated',
+              ...queuedMutationFor(CreateShoppingListDocument),
+              variables: { input: { id: 'list-1' } },
+            }),
+          );
+          jest.useFakeTimers();
+
+          expect(mockPendingWrites.confirm).not.toHaveBeenCalled();
+        });
       });
 
       it('routes a ValidationError payload to the permanent-failure pipeline', async () => {

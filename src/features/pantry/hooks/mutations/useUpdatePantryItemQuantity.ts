@@ -71,6 +71,7 @@ export function useUpdatePantryItemQuantity({
           id: cacheId,
           fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
+          optimistic: true,
         },
       );
 

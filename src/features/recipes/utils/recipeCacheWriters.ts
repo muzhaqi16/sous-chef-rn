@@ -174,6 +174,7 @@ export function writeLocalRecipe(
     id: cache.identify({ __typename: 'Recipe', id }),
     fragment: RecipeCacheWriters_RowFragmentDoc,
     fragmentName: 'recipeCacheWriters_row',
+    optimistic: true,
   });
   if (row) upsertMyRecipesEdge(cache, row);
 }

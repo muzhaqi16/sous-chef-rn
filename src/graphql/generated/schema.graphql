@@ -237,6 +237,11 @@ type AddBrandToListPayload {
   brandList: BrandList!
   """The entry: the one already there when the brand was listed before"""
   brandListEntry: BrandListEntry!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -339,10 +344,9 @@ input AddTemplateItemInput {
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   Persisted as the template item's primary key; when omitted the server
-  generates one. Replaying an add with the same id returns a ConflictError
-  carrying code IDEMPOTENT_REPLAY (treat it as already-applied). A different
-  meal sent to an already-filled dayOffset/mealType slot is a genuine
-  CONFLICT.
+  generates one. Replaying an add with the same id answers the item with
+  converged true. A different meal sent to an already-filled dayOffset/mealType
+  slot is a genuine CONFLICT.
   """
   id: ID
   """
@@ -364,6 +368,11 @@ input AddTemplateItemInput {
 }
 
 type AddTemplateItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   mealTemplate: MealTemplate
   mealTemplateItem: MealTemplateItem!
 }
@@ -392,6 +401,11 @@ input AddUserAddressInput {
 }
 
 type AddUserAddressPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   userAddress: UserAddress!
 }
 
@@ -493,6 +507,11 @@ input AdjustPantryItemQuantityInput {
 }
 
 type AdjustPantryItemQuantityPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -676,9 +695,9 @@ input BatchAddShoppingListItemInput {
   """
   id: ID
   """
-  Optional client-minted CUID2 that makes the add idempotent: a replay is
-  refused with IDEMPOTENT_REPLAY instead of adding to the line's quantity
-  twice. Without it the id field above is the key; send one when a batch adds
+  Optional client-minted CUID2 that makes the add idempotent: a replay answers
+  the line with converged true instead of adding to its quantity twice.
+  Without it the id field above is the key; send one when a batch adds
   the same item more than once.
   """
   idempotencyKey: ID
@@ -990,6 +1009,11 @@ union BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | Forbidden
 
 """One entry's outcome in bulkCreatePurchases, in input order."""
 type BulkCreatePurchaseResult {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the entry failed; set exactly when success is false"""
   failure: BatchElementFailure
   """The entry's position in the input list"""
@@ -1511,13 +1535,18 @@ input ChangePantryItemItemInput {
 }
 
 type ChangePantryItemItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   """
   True when the receipt lines the stock was checked in from now read as the
   new item for the household. False for stock added by hand or checked in
   before line text was kept, and for a member who may not add items to the
-  household.
+  household, and on a replay, which records none.
   """
   receiptCorrectionRecorded: Boolean!
   storageLocation: StorageLocation
@@ -1569,6 +1598,11 @@ type ChangePantryItemUnitPayload {
     """Only batches in this status"""
     status: BatchStatus
   ): PantryItemBatchConnection!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """True when the route was exact"""
   exact: Boolean!
   method: PantryUnitChangeMethod!
@@ -1996,6 +2030,11 @@ type ConvertExpiredToWastePayload {
     """Only batches in this status"""
     status: BatchStatus
   ): PantryItemBatchConnection!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -2159,6 +2198,11 @@ input CorrectPantryItemPackageSizeInput {
 
 type CorrectPantryItemPackageSizePayload {
   batch: PantryItemBatch!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -2184,7 +2228,7 @@ input CreateBrandListInput {
   """Whether the list is matched from the start; true when omitted"""
   enabled: Boolean
   """
-  Optional client-minted CUID2: a replayed create answers IDEMPOTENT_REPLAY instead of duplicating
+  Optional client-minted CUID2: a replayed create answers the list with converged true, not a duplicate
   """
   id: ID
   """1 to 100 characters"""
@@ -2193,6 +2237,11 @@ input CreateBrandListInput {
 
 type CreateBrandListPayload {
   brandList: BrandList!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -2359,6 +2408,11 @@ input CreateItemInput {
 }
 
 type CreateItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The item created, or the existing item the create matched"""
   item: Item!
   """Which key matched the existing item; null when outcome is CREATED"""
@@ -2498,6 +2552,11 @@ Always include a __typename so the variant can be discriminated.
 union CreateMealPlanItemResult = ConflictError | CreateMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError
 
 type CreateMealPlanPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   mealPlan: MealPlan!
 }
@@ -2545,6 +2604,11 @@ input CreateMealTemplateInput {
 }
 
 type CreateMealTemplatePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   mealTemplate: MealTemplate!
 }
@@ -2681,7 +2745,7 @@ input CreatePantryItemUsageInput {
   """
   cookingLogId: ID
   """
-  A client-minted CUID2 for this write: a replay with the same key is refused as already applied, so the use is recorded at most once
+  A client-minted CUID2 for this write: a replay with the same key answers the use it recorded with converged true, so the use is recorded at most once
   """
   idempotencyKey: ID
   """
@@ -2726,6 +2790,11 @@ input CreatePantryItemUsageInput {
 }
 
 type CreatePantryItemUsagePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
@@ -2807,6 +2876,11 @@ input CreatePurchaseInput {
 }
 
 type CreatePurchasePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   purchase: Purchase!
   store: Store
 }
@@ -2940,6 +3014,11 @@ input CreateReceiptParseInput {
 }
 
 type CreateReceiptParsePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   receiptParse: ReceiptParse!
 }
 
@@ -2981,6 +3060,11 @@ input CreateRecipeCaptureInput {
 
 type CreateRecipeCapturePayload {
   capture: RecipeCapture!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -3016,6 +3100,11 @@ input CreateRecipeInput {
 }
 
 type CreateRecipePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   recipe: Recipe!
 }
 
@@ -3031,8 +3120,8 @@ input CreateRecipeReviewInput {
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   Supplying it lets the server tell a replay of your own queued review
-  (IDEMPOTENT_REPLAY — safe, already applied) apart from a genuine attempt to
-  review the same recipe twice (CONFLICT — a real refusal).
+  (answered with converged true) apart from a genuine attempt to review the
+  same recipe twice (CONFLICT — a real refusal).
   """
   id: ID
   rating: Int!
@@ -3040,6 +3129,11 @@ input CreateRecipeReviewInput {
 }
 
 type CreateRecipeReviewPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   recipe: Recipe
   recipeReview: RecipeReview!
 }
@@ -3197,6 +3291,11 @@ input CreateStoreInput {
 }
 
 type CreateStorePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """CREATED for a new store; MERGED when the shop was already on file"""
   outcome: CreateOutcome!
   """The store added, or the one already on file it merged into"""
@@ -5052,7 +5151,7 @@ enum ErrorCode {
   """
   HOME_MEMBER_LIMIT_REACHED
   """
-  An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure.
+  A replayed write already applied, whose row is gone or out of reach; a replay with a row to answer returns its payload with converged true. Clients should treat this as success, not a hard failure.
   """
   IDEMPOTENT_REPLAY
   """
@@ -5488,6 +5587,11 @@ input ForkRecipeInput {
 }
 
 type ForkRecipePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   recipe: Recipe!
 }
 
@@ -8668,6 +8772,11 @@ input MarkSuggestionActiveInput {
 }
 
 type MarkSuggestionActivePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Always false — the item can be suggested again on this surface."""
   dismissed: Boolean!
   """The item the dismissal was removed for."""
@@ -8698,6 +8807,11 @@ input MarkSuggestionDismissedInput {
 }
 
 type MarkSuggestionDismissedPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Always true — the item is now dismissed on this surface."""
   dismissed: Boolean!
   """The item the dismissal applies to."""
@@ -9778,6 +9892,11 @@ type MovePurchasedLineResult {
   True when an earlier move had already placed this line and this call wrote nothing
   """
   alreadyInPantry: Boolean!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the line failed; set exactly when success is false"""
   failure: BatchElementFailure
   itemName: String!
@@ -9827,8 +9946,8 @@ input MoveShoppingItemToPantryInput {
   Honoured only when the move CREATES a pantry entry. When the target pantry
   already holds an active stack of the same catalog item, the move restocks
   that stack instead and the payload returns that existing row's id — compare
-  pantryItem.id against the id you sent to tell the two apart. Replaying an id
-  that already exists returns IDEMPOTENT_REPLAY.
+  pantryItem.id against the id you sent to tell the two apart. An id another
+  move already used returns IDEMPOTENT_REPLAY.
   """
   pantryItemId: ID
   """Where actualPrice came from: PURCHASE (default) or RECEIPT_SCAN."""
@@ -9871,6 +9990,11 @@ type MoveShoppingItemToPantryPayload {
   did anything.
   """
   alreadyInPantry: Boolean!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """MERGED when the purchase restocked a stack the pantry already held"""
   outcome: CreateOutcome!
   pantry: Pantry
@@ -9997,7 +10121,7 @@ type Mutation {
   """
   Add a new address to the current user's account. With isDefault true it
   becomes the one default, and the previous default is unset. Sending an id
-  the caller already used is a ConflictError with code IDEMPOTENT_REPLAY.
+  the caller already used answers that address with converged true.
   """
   addUserAddress(input: AddUserAddressInput!): AddUserAddressResult!
   """
@@ -11684,6 +11808,11 @@ input OpenPantryItemBatchInput {
 }
 
 type OpenPantryItemBatchPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -16449,9 +16578,8 @@ input RecordPantryStockCheckInput {
   """1 to 50 answers, each about a different stack"""
   entries: [PantryStockCheckEntryInput!]!
   """
-  A client-minted CUID2 for this check: a replay with the same key is refused
-  as already applied (ConflictError, IDEMPOTENT_REPLAY), so the check is
-  recorded at most once
+  A client-minted CUID2 for this check: a replay with the same key writes
+  nothing and answers with converged true, so the check is recorded at most once
   """
   idempotencyKey: ID
   """
@@ -16461,6 +16589,11 @@ input RecordPantryStockCheckInput {
 }
 
 type RecordPantryStockCheckPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The pantry the stacks belong to"""
   pantry: Pantry!
   """One result per entry, in request order"""
@@ -16527,8 +16660,8 @@ input RecordReceiptMatchesInput {
   """The household the corrections are remembered for"""
   homeId: ID!
   """
-  Client-minted CUID2 for this receipt's confirmation. A replay is refused
-  with IDEMPOTENT_REPLAY and changes nothing.
+  Client-minted CUID2 for this receipt's confirmation. A replay changes
+  nothing and answers with converged true.
   """
   idempotencyKey: ID!
   """The confirmed lines, at most 100"""
@@ -16550,6 +16683,11 @@ type RecordReceiptMatchesPayload {
   The chain they were remembered under; null for a store with no chain, or no known store
   """
   chain: StoreChain
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The household the corrections were remembered for"""
   home: Home!
   """Lines remembered"""
@@ -17147,6 +17285,11 @@ input RestockPantryItemInput {
 }
 
 type RestockPantryItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
@@ -20465,6 +20608,11 @@ input UpdateDietarySharingInput {
 }
 
 type UpdateDietarySharingPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   membership: Membership!
 }
@@ -22574,6 +22722,11 @@ input WastePantryItemBatchInput {
 }
 
 type WastePantryItemBatchPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation

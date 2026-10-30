@@ -147,6 +147,7 @@ function unmaskAuthPayload<
     fragment: LoginUserFragmentDoc,
     fragmentName: 'LoginUser',
     from: payload.user,
+    optimistic: true,
   });
   if (!user) return null;
   return {

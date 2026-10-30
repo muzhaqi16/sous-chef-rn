@@ -98,6 +98,7 @@ export function useRecipeCapture() {
     const capture = client.cache.readFragment<RecipeCaptureReadersFragment>({
       id: client.cache.identify({ __typename: 'RecipeCapture', id: input.id }),
       fragment: RecipeCaptureReadersFragmentDoc,
+      optimistic: true,
     });
     return classifyCaptureCreate({
       accepted: !!appliedPayload(settled.data),

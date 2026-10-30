@@ -24,6 +24,8 @@ module.exports = {
     'no-string-keyed-lookup': require('./rules/no-string-keyed-lookup'),
     'no-number-noun-concat': require('./rules/no-number-noun-concat'),
     'queueable-write-is-local-first': require('./rules/queueable-write-is-local-first'),
+    'cache-read-states-optimism': require('./rules/cache-read-states-optimism'),
+    'local-write-is-deterministic': require('./rules/local-write-is-deterministic'),
     'recycling-list-host-is-bounded': require('./rules/recycling-list-host-is-bounded'),
     'hook-returns-no-library-type': require('./rules/hook-returns-no-library-type'),
     'flashlist-declares-scroll-component': require('./rules/flashlist-declares-scroll-component'),

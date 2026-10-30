@@ -295,6 +295,7 @@ export const useNotificationListener = (config: NotificationConfig = {}) => {
         fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
         fragmentName: 'useNotificationsOnLaunch_notification',
         from: { __typename: 'Notification', id },
+        optimistic: true,
       });
     if (!row) return;
     processNotification(

@@ -1,4 +1,4 @@
-import { requireApolloClient } from '#/apollo/clientRegistry';
+import { getApolloClient, requireApolloClient } from '#/apollo/clientRegistry';
 import type { OperationVariables, TypedDocumentNode } from '@apollo/client';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -57,6 +57,8 @@ import { Telemetry } from '#/services/telemetry';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { isRecord } from '#/utils/isRecord';
+import { returnedVersionOf, versionOf } from '#/apollo/utils/returnedVersion';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 
 const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
@@ -96,32 +98,6 @@ const mentionsId = (value: unknown, id: string): boolean =>
       Object.values(value).some(field => mentionsId(field, id)));
 
 /** The `version` a record carries, if it is a number. */
-const versionOf = (record: unknown): number | undefined =>
-  isRecord(record) && typeof record.version === 'number'
-    ? record.version
-    : undefined;
-
-/** The version the server returned for `entityId`, wherever the payload holds it. */
-const returnedVersionOf = (
-  payload: unknown,
-  entityId: string,
-): number | undefined => {
-  if (isRecord(payload) && payload.id === entityId) {
-    const own = versionOf(payload);
-    if (own !== undefined) return own;
-  }
-  const children: unknown[] = Array.isArray(payload)
-    ? payload
-    : isRecord(payload)
-    ? Object.values(payload)
-    : [];
-  for (const child of children) {
-    const found = returnedVersionOf(child, entityId);
-    if (found !== undefined) return found;
-  }
-  return undefined;
-};
-
 /** The fields a replay reads off whichever union member the server returned. */
 interface ReplayPayload {
   __typename?: string;
@@ -512,12 +488,15 @@ export class QueueManager {
     if (outcome.status !== 'rejected') {
       this.rebasePending(mutation, rebaseKey, capturedVersion, payload);
     }
+    const pendingWriteId = mutation.pendingWrite?.id;
+    const pendingWrites = pendingWritesOf(client.cache);
     if (outcome.status === 'converged') {
       // IDEMPOTENT_REPLAY: an earlier attempt already committed this op, so the
       // change is on the server. Dequeue as success.
       logger.info(
         `✅ Queue: ${mutation.operationName} already committed by an earlier attempt — dropping replay`,
       );
+      if (pendingWriteId) pendingWrites.confirm(pendingWriteId);
       return result.data;
     }
     if (
@@ -528,6 +507,7 @@ export class QueueManager {
       logger.info(
         `✅ Queue: ${mutation.operationName}'s subject is gone — settled locally`,
       );
+      if (pendingWriteId) pendingWrites.drop(pendingWriteId);
       return result.data;
     }
     if (outcome.status === 'rejected') {
@@ -546,6 +526,7 @@ export class QueueManager {
     reconcileReplaySuccess(mutation.operationName, variables, data, adoption =>
       this.adoptSurvivingRow(mutation, adoption),
     );
+    if (pendingWriteId) pendingWrites.confirm(pendingWriteId, data);
 
     return result.data;
   }
@@ -1011,6 +992,7 @@ export class QueueManager {
       entityId,
       subjectType: subjectTypeOf(mutation),
       variables: mutation.variables,
+      pendingWriteId: mutation.pendingWrite?.id,
       error,
     };
 
@@ -1123,6 +1105,12 @@ export class QueueManager {
       // A sign-in is what makes an auth-parked write replayable again, and both
       // a fresh login and a same-user re-login funnel through here.
       queueStore.revivePendingAuthErrors(newUserId);
+
+      // A session end cleared the layers; a same-user sign-in keeps its queue.
+      const client = getApolloClient();
+      if (client) {
+        pendingWritesOf(client.cache).restore(queueStore.getPendingWrites());
+      }
 
       const state = useStore.getState();
       if (state.isOnline) {

@@ -63,6 +63,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
           id: cacheId,
           fragment: UseUpdateShoppingList_ListFragmentDoc,
           fragmentName: 'useUpdateShoppingList_list',
+          optimistic: true,
         })
       : null;
 

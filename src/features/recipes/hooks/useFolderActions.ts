@@ -20,6 +20,7 @@ function readFolders(cache: ApolloCache): string[] | undefined {
   return (
     cache.readQuery<SavedRecipeFoldersQuery>({
       query: SavedRecipeFoldersDocument,
+      optimistic: true,
     })?.savedRecipeFolders ?? undefined
   );
 }

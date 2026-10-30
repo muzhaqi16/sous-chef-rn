@@ -40,7 +40,12 @@ function readWhole<TParent, TMeal>(
     edges: ReadonlyArray<{ node: TMeal }>;
   },
 ): { parent: Unmasked<TParent>; meals: TMeal[] } | null {
-  const parent = cache.readFragment({ from, fragment, fragmentName });
+  const parent = cache.readFragment({
+    from,
+    fragment,
+    fragmentName,
+    optimistic: true,
+  });
   if (!parent) return null;
   const { pageInfo, edges } = mealsOf(parent);
   if (pageInfo.hasNextPage) return null;

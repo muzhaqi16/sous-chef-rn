@@ -14,6 +14,7 @@ const cachedVersion = (
   cache.readFragment<{ version?: number | null }>({
     id,
     fragment: localFirstFragment(typename, 'version'),
+    optimistic: true,
   })?.version ?? undefined;
 
 /**

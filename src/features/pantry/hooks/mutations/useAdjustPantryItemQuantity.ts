@@ -53,6 +53,7 @@ export function useAdjustPantryItemQuantity({
           id: cacheId,
           fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
+          optimistic: true,
         },
       );
     const currentItem = readItem();

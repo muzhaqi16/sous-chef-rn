@@ -53,6 +53,7 @@ const readIsDefault = (cache: ApolloCache, cacheId: string) =>
   cache.readFragment({
     id: cacheId,
     fragment: DefaultHomeCacheWrites_IsDefaultFragmentDoc,
+    optimistic: true,
   })?.isDefault;
 
 /**
@@ -74,6 +75,7 @@ export const applyDefaultHome = (
     cache.readFragment({
       id: targetCacheId,
       fragment: DefaultHomeCacheWrites_IdentityFragmentDoc,
+      optimistic: true,
     }) !== null;
 
   if (!targetIsCached) {

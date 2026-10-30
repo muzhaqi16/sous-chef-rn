@@ -13,6 +13,7 @@ import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.genera
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { isOwnKey } from '#/utils/isOwnKey';
 import { isRecord } from '#/utils/isRecord';
+import type { PendingWrite } from '#/apollo/pendingWrites/types';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -49,6 +50,13 @@ function isTerminal(status: QueueStatus): boolean {
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 type StoredEntry = Omit<QueuedMutation, 'mutation'>;
+
+/** What the server has not taken: pending, replaying, or parked for re-auth. */
+const UNDELIVERED: readonly QueueStatus[] = [
+  QueueStatus.PENDING,
+  QueueStatus.PROCESSING,
+  QueueStatus.AUTH_ERROR,
+];
 
 /** The memoized id sets the queue derives; any queue change drops them all. */
 type IdSet = 'pending' | 'unconfirmed' | 'undelivered';
@@ -440,17 +448,34 @@ export class QueueStore {
     );
   }
 
+  /** The pending writes the server has not taken, in the order they replay. */
+  getPendingWrites(): PendingWrite[] {
+    const userId = this.getCurrentUserId();
+    if (!userId) return [];
+    return this.getMutationsForUser(userId)
+      .filter(({ status }) => UNDELIVERED.includes(status))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .flatMap(({ pendingWrite, operationName, variables }) =>
+        pendingWrite ? [{ ...pendingWrite, operationName, variables }] : [],
+      );
+  }
+
+  /** The ids of the pending writes the queue carries, whatever their status. */
+  getQueuedWriteIds(): Set<string> {
+    return new Set(
+      this.loadQueue().flatMap(({ pendingWrite }) =>
+        pendingWrite ? [pendingWrite.id] : [],
+      ),
+    );
+  }
+
   /**
    * Rows a write the server has not taken yet changes: pending, replaying, or
    * parked for re-auth. A later write naming one waits behind it, as the
    * drain holds a dependent.
    */
   getUndeliveredIds(): Set<string> {
-    return this.idsOf(
-      'undelivered',
-      [QueueStatus.PENDING, QueueStatus.PROCESSING, QueueStatus.AUTH_ERROR],
-      s => s.subjectIds,
-    );
+    return this.idsOf('undelivered', UNDELIVERED, s => s.subjectIds);
   }
 
   private idsOf(

@@ -42,6 +42,7 @@ function readSavedDetails(
     cache.readFragment({
       id: cacheId,
       fragment: UseRecipeSavedMetadata_RecipeFragmentDoc,
+      optimistic: true,
     })?.savedDetails ?? undefined
   );
 }

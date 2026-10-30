@@ -18,6 +18,8 @@ import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { registerApolloResetBridge } from '#store/apolloResetBridge';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
+import { queueStore } from './offlineQueue/queueStore';
+import { pendingWritesOf } from './pendingWrites/pendingWrites';
 import { storage } from '#/store/deviceStorage';
 import { CLIENT_NAME, clientVersion } from './clientIdentity';
 import { APOLLO_DEFAULT_OPTIONS } from './defaultOptions';
@@ -77,6 +79,8 @@ export function restorePersistedCache(): void {
     );
     cacheInstance.restore(persistedCache);
   }
+  // From the queue, not the cache: losing the cache costs a refetch, never a change.
+  pendingWritesOf(cacheInstance).restore(queueStore.getPendingWrites());
 
   // Reported on BOTH paths, carrying the outcome. `logger` is console-only and
   // console is stripped in release, so this histogram is the only evidence on a
@@ -169,10 +173,20 @@ function setupCachePersistence(
     );
   };
 
+  const pendingWrites = pendingWritesOf(cache);
+  // A layer never reaches `extract()`, so only the server's data persists, and
+  // pending writes are re-laid over it whenever it changes.
+  const afterRootWrite = () => {
+    if (pendingWrites.isApplying) return;
+    schedulePersistence();
+    pendingWrites.scheduleRebuild();
+  };
+
   // Listen for cache resets (e.g., logout, clearStore)
   client.onResetStore(() => {
     logger.info('🔄 Apollo: Cache reset, persisting...');
     schedulePersistence();
+    pendingWrites.scheduleRebuild();
     return Promise.resolve();
   });
 
@@ -201,13 +215,13 @@ function setupCachePersistence(
     writeOptions: Cache.WriteOptions<TData, TVariables>,
   ): Reference | undefined {
     const result = originalWrite(writeOptions);
-    schedulePersistence();
+    afterRootWrite();
     return result;
   };
 
   cache.evict = function (...args: Parameters<typeof originalEvict>) {
     const result = originalEvict(...args);
-    schedulePersistence();
+    afterRootWrite();
     return result;
   };
 
@@ -215,7 +229,7 @@ function setupCachePersistence(
     Entity extends Record<string, unknown> = Record<string, unknown>,
   >(options: Cache.ModifyOptions<Entity>): boolean {
     const result = originalModify(options);
-    schedulePersistence();
+    afterRootWrite();
     return result;
   };
 
@@ -223,7 +237,7 @@ function setupCachePersistence(
   // the entity. Verified: #apollo-gc-needs-no-result-cache-reset-to-drop-evicted-entities
   cache.gc = function (gcOptions?: { resetResultCache?: boolean }) {
     const result = originalGc(gcOptions);
-    schedulePersistence();
+    afterRootWrite();
     return result;
   };
 

@@ -46,6 +46,7 @@ export function useShoppingListTemplate() {
         fragment: UseShoppingListTemplate_ListFragmentDoc,
         fragmentName: 'useShoppingListTemplate_list',
         returnPartialData: true,
+        optimistic: true,
       });
     const previous = snapshotFields(held, patch);
     writeEntityFields(client.cache, entity, patch);

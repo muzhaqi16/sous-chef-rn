@@ -44,6 +44,7 @@ function readHeldPurchaseInfo(cache: ApolloCache, itemId: string) {
     from: { __typename: 'ShoppingListItem', id: itemId },
     fragment: Purchase_WriteFragmentDoc,
     returnPartialData: true,
+    optimistic: true,
   });
   return held?.purchaseInfo;
 }

@@ -48,6 +48,7 @@ export function readRecipeRef(
   const recipe = cache.readFragment({
     id: cacheId,
     fragment: MealTemplateItem_RecipeRefFragmentDoc,
+    optimistic: true,
   });
   // A recipe the cache has never seen still has to render as SOMETHING, or the
   // whole items read goes incomplete and the builder blanks. Neutral defaults
@@ -151,5 +152,6 @@ export function readTemplateItem(
     fragment: MealTemplateItemFragmentDoc,
     fragmentName: 'MealTemplateItemFragment',
     returnPartialData: true,
+    optimistic: true,
   });
 }

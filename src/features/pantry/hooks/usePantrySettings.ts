@@ -154,6 +154,7 @@ export function usePantrySettings({ pantryId, homeId }: UsePantrySettingsArgs) {
       id: client.cache.identify(entity),
       fragment: localFirstFragment('Pantry', Object.keys(updates).join(' ')),
       returnPartialData: true,
+      optimistic: true,
     });
     const previous = snapshotFields(held, updates);
     writeEntityFields(client.cache, entity, updates);

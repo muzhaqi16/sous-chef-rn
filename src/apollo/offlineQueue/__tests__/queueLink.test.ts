@@ -7,6 +7,8 @@ import type {
 import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { generateId } from '#/utils/generateId';
 import { queueStore } from '../queueStore';
 import { queueManager } from '../queueManager';
 import {
@@ -49,7 +51,12 @@ jest.mock('../queueStore', () => ({
   queueStore: {
     addMutation: jest.fn(),
     getUndeliveredIds: jest.fn(() => new Set<string>()),
+    getQueuedWriteIds: jest.fn(() => new Set<string>()),
   },
+}));
+
+jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
+  LOCAL_WRITES: { AddItem: { apply: jest.fn() } },
 }));
 
 // Mock queueManager (queueLink calls requestDrain on a successful local-first
@@ -413,6 +420,64 @@ describe('createQueueLink', () => {
           done();
         },
       });
+    });
+  });
+
+  describe('a write with a local write', () => {
+    const offline = () =>
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+    const send = (
+      cache: ReturnType<typeof makeCache>,
+      pendingWriteId: string,
+    ) =>
+      makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AddItem',
+        variables: { input: { name: 'Apple' } },
+        context: { localFirst: true, pendingWriteId },
+        cache,
+      });
+
+    it('queues the write with its id and captured inputs', () => {
+      offline();
+      const cache = makeCache();
+      const write = pendingWritesOf(cache).begin(MOCK_MUTATION, {
+        input: { name: 'Apple' },
+      });
+
+      link.request(send(cache, write.id), makeForward()).subscribe();
+
+      expect(queueStore.addMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pendingWrite: { id: write.id, inputs: {} },
+        }),
+      );
+    });
+
+    it('drops the layer of a write the enqueue superseded', () => {
+      offline();
+      const cache = makeCache();
+      const pending = pendingWritesOf(cache);
+      (generateId as jest.Mock)
+        .mockReturnValueOnce('first')
+        .mockReturnValueOnce('second');
+      const first = pending.begin(MOCK_MUTATION, { input: { name: 'Apple' } });
+      const second = pending.begin(MOCK_MUTATION, { input: { name: 'Pear' } });
+      (queueStore.getQueuedWriteIds as jest.Mock).mockReturnValue(
+        new Set([first.id]),
+      );
+      link.request(send(cache, first.id), makeForward()).subscribe();
+
+      (queueStore.getQueuedWriteIds as jest.Mock).mockReturnValue(
+        new Set([second.id]),
+      );
+      link.request(send(cache, second.id), makeForward()).subscribe();
+
+      expect(pending.get(first.id)).toBeUndefined();
+      expect(pending.get(second.id)).toBeDefined();
     });
   });
 

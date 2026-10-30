@@ -968,6 +968,51 @@ describe('QueueStore', () => {
   // -------------------------------------------------------------------------
   // getPendingClientIds
   // -------------------------------------------------------------------------
+  describe('the pending writes it carries', () => {
+    const carrying = (id: string, overrides: Partial<QueuedMutation> = {}) =>
+      makeMutation({
+        id: `entry-${id}`,
+        variables: { input: { id } },
+        pendingWrite: { id, inputs: { name: id } },
+        ...overrides,
+      });
+
+    beforeEach(() => store.setCurrentUserId('user-1'));
+
+    it('lists them in replay order, with what a rebuild needs', () => {
+      store.addMutation(carrying('later', { createdAt: 2 }));
+      store.addMutation(carrying('earlier', { createdAt: 1 }));
+
+      expect(store.getPendingWrites()).toEqual([
+        expect.objectContaining({
+          id: 'earlier',
+          inputs: { name: 'earlier' },
+          variables: { input: { id: 'earlier' } },
+        }),
+        expect.objectContaining({ id: 'later' }),
+      ]);
+    });
+
+    it('keeps a write parked for re-auth and leaves out a settled one', () => {
+      store.addMutation(carrying('parked', { status: QueueStatus.AUTH_ERROR }));
+      store.addMutation(carrying('done', { status: QueueStatus.SUCCESS }));
+
+      expect(store.getPendingWrites().map(({ id }) => id)).toEqual(['parked']);
+    });
+
+    it('leaves out an entry with no local write', () => {
+      store.addMutation(makeMutation({ id: 'plain' }));
+
+      expect(store.getPendingWrites()).toEqual([]);
+    });
+
+    it('names every write the queue holds', () => {
+      store.addMutation(carrying('kept'));
+
+      expect(store.getQueuedWriteIds()).toEqual(new Set(['kept']));
+    });
+  });
+
   describe('getPendingClientIds', () => {
     it('collects the subject each pending write names, per its input type', () => {
       store.setCurrentUserId('user-1');

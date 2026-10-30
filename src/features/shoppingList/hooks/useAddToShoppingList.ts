@@ -67,6 +67,7 @@ export function useAddToShoppingList({
     const data = client.cache.readQuery<GetShoppingListSuggestionsQuery>({
       query: GetShoppingListSuggestionsDocument,
       variables,
+      optimistic: true,
     });
     return { data, variables };
   };
