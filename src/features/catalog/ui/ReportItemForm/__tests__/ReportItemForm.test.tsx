@@ -1,11 +1,12 @@
 import React from 'react';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo as render,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { ReportItemForm } from '../ReportItemForm';
 
@@ -27,6 +28,14 @@ const renderForm = (
   );
   return { onClose };
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -72,7 +81,8 @@ describe('ReportItemForm', () => {
     );
     await userEvent.press(screen.getByTestId('report-item-submit-button'));
 
-    await waitFor(() => expect(onClose).toHaveBeenCalled());
+    await drainTimers();
+    expect(onClose).toHaveBeenCalled();
     expect(fired).toContainEqual({
       input: { itemId: 'item-1', reason: REASON },
     });

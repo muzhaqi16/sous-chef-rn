@@ -1,8 +1,9 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { EntryPhotoSheet } from '../EntryPhotoSheet';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
@@ -54,6 +55,14 @@ const renderSheet = (
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockTakePhoto.mockResolvedValue([PHOTO]);
   mockPickPhoto.mockResolvedValue([PHOTO]);
@@ -74,8 +83,10 @@ describe('EntryPhotoSheet', () => {
 
     fireEvent.press(screen.getByTestId(catalogTestIDs.entryPhotoTake));
 
-    await waitFor(() => expect(photo.setOwnPhoto).toHaveBeenCalledWith(PHOTO));
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(photo.setOwnPhoto).toHaveBeenCalledWith(PHOTO);
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
   });
 
   it('sets a photo chosen from the library', async () => {
@@ -83,7 +94,8 @@ describe('EntryPhotoSheet', () => {
 
     fireEvent.press(screen.getByTestId(catalogTestIDs.entryPhotoChoose));
 
-    await waitFor(() => expect(photo.setOwnPhoto).toHaveBeenCalledWith(PHOTO));
+    await drainTimers();
+    expect(photo.setOwnPhoto).toHaveBeenCalledWith(PHOTO);
   });
 
   it('stays open when the photo did not land', async () => {
@@ -95,7 +107,8 @@ describe('EntryPhotoSheet', () => {
 
     fireEvent.press(screen.getByTestId(catalogTestIDs.entryPhotoTake));
 
-    await waitFor(() => expect(photo.setOwnPhoto).toHaveBeenCalled());
+    await drainTimers();
+    expect(photo.setOwnPhoto).toHaveBeenCalled();
     expect(onDismiss).not.toHaveBeenCalled();
   });
 
@@ -105,7 +118,8 @@ describe('EntryPhotoSheet', () => {
 
     fireEvent.press(screen.getByTestId(catalogTestIDs.entryPhotoTake));
 
-    await waitFor(() => expect(mockTakePhoto).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockTakePhoto).toHaveBeenCalled();
     expect(photo.setOwnPhoto).not.toHaveBeenCalled();
   });
 
@@ -130,7 +144,8 @@ describe('EntryPhotoSheet', () => {
 
     fireEvent.press(screen.getByTestId(catalogTestIDs.entryPhotoUseCatalog));
 
-    await waitFor(() => expect(photo.revertToCatalogPhoto).toHaveBeenCalled());
+    await drainTimers();
+    expect(photo.revertToCatalogPhoto).toHaveBeenCalled();
   });
 
   it('does not offer the catalog photo while it is already shown', () => {

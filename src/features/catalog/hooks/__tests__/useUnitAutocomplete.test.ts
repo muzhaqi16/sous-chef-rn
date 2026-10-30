@@ -1,8 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { SearchUnitsDocument } from '#operations/item/unit.generated';
 import type { RootState } from '#store/index';
 import type { UnitItem } from '#features/catalog/hooks/useUnitAutocomplete';
@@ -115,9 +116,8 @@ describe('useUnitAutocomplete', () => {
       jest.advanceTimersByTime(500);
     });
 
-    await waitFor(() =>
-      expect(result.current.displayItems.map(i => i.symbol)).toEqual(['stick']),
-    );
+    await drainTimers();
+    expect(result.current.displayItems.map(i => i.symbol)).toEqual(['stick']);
     expect(m.fired).toEqual([{ query: 'sticks', limit: 10 }]);
   });
 

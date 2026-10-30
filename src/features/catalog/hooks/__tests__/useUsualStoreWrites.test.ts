@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
@@ -13,6 +13,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
   readUsualStores,
@@ -75,6 +76,14 @@ const names = (rows: UsualStoreRow[] | null) =>
   rows?.map(row => storeChoiceName(row.choice, t));
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -101,15 +110,12 @@ describe('useUsualStoreWrites', () => {
       );
     });
 
-    await waitFor(() =>
-      expect(result.current.read.stores?.[0]).toMatchObject({
-        key: 'store:s1',
-        pinned: true,
-      }),
-    );
-    await act(async () => {
-      await expect(saved).resolves.toBe(true);
+    await drainTimers();
+    expect(result.current.read.stores?.[0]).toMatchObject({
+      key: 'store:s1',
+      pinned: true,
     });
+    await drained(() => expect(saved).resolves.toBe(true));
     expect(pin.fired).toEqual([
       { input: { homeId: 'home-1', target: { storeId: 's1' }, pinned: true } },
     ]);
@@ -136,15 +142,11 @@ describe('useUsualStoreWrites', () => {
     });
     const banks = { store: { id: 's1', name: 'Giant Eagle Banksville' } };
 
-    await act(async () => {
-      await result.current.writes.setPinned(banks, true);
-    });
+    await drained(() => result.current.writes.setPinned(banks, true));
     expect(refetchQueries).toHaveBeenCalledTimes(1);
     expect(refetchQueries).toHaveBeenCalledWith({ include: ['ListSavings'] });
 
-    await act(async () => {
-      await result.current.writes.setPinned(banks, false);
-    });
+    await drained(() => result.current.writes.setPinned(banks, false));
     expect(refetchQueries).toHaveBeenCalledTimes(1);
     refetchQueries.mockRestore();
   });
@@ -174,22 +176,18 @@ describe('useUsualStoreWrites', () => {
       });
     });
 
-    await waitFor(() =>
-      expect(names(result.current.read.stores)).toContain('ALDI Wilkinsburg'),
-    );
-    await act(async () => {
-      await saved;
-    });
+    await drainTimers();
+    expect(names(result.current.read.stores)).toContain('ALDI Wilkinsburg');
+    await drained(() => saved);
     expect(add.fired).toEqual([
       { input: { homeId: 'home-1', target: { storeId: 's3' } } },
     ]);
-    await waitFor(() =>
-      expect(names(result.current.read.stores)).toEqual([
-        'ALDI Wilkinsburg',
-        'Giant Eagle Banksville',
-        'Giant Eagle Market District',
-      ]),
-    );
+    await drainTimers();
+    expect(names(result.current.read.stores)).toEqual([
+      'ALDI Wilkinsburg',
+      'Giant Eagle Banksville',
+      'Giant Eagle Market District',
+    ]);
   });
 
   it('adds a whole chain by its id', async () => {
@@ -201,11 +199,11 @@ describe('useUsualStoreWrites', () => {
       operationMocks: [add.mock],
     });
 
-    await act(async () => {
-      await result.current.writes.add({
+    await drained(() =>
+      result.current.writes.add({
         chain: { id: 'chain-aldi', name: 'ALDI' },
-      });
-    });
+      }),
+    );
 
     expect(add.fired).toEqual([
       { input: { homeId: 'home-1', target: { chainId: 'chain-aldi' } } },
@@ -243,23 +241,20 @@ describe('useUsualStoreWrites', () => {
         store: { id: 's2', name: 'Giant Eagle Market District' },
       });
     });
-    await waitFor(() =>
-      expect(names(result.current.read.stores)).toEqual([
-        'Giant Eagle Banksville',
-      ]),
-    );
+    await drainTimers();
+    expect(names(result.current.read.stores)).toEqual([
+      'Giant Eagle Banksville',
+    ]);
 
-    await act(async () => {
-      await result.current.writes.add({
+    await drained(() =>
+      result.current.writes.add({
         store: { id: 's2', name: 'Giant Eagle Market District' },
-      });
-    });
-    await waitFor(() =>
-      expect(names(result.current.read.stores)).toEqual([
-        'Giant Eagle Banksville',
-        'Giant Eagle Market District',
-      ]),
+      }),
     );
+    expect(names(result.current.read.stores)).toEqual([
+      'Giant Eagle Banksville',
+      'Giant Eagle Market District',
+    ]);
     expect(remove.fired).toHaveLength(1);
     expect(add.fired).toHaveLength(1);
   });
@@ -285,16 +280,11 @@ describe('useUsualStoreWrites', () => {
         store: { id: 's2', name: 'Giant Eagle Market District' },
       });
     });
-    await act(async () => {
-      await expect(saved).resolves.toBe(false);
-    });
-
-    await waitFor(() =>
-      expect(names(result.current.read.stores)).toEqual([
-        'Giant Eagle Banksville',
-        'Giant Eagle Market District',
-      ]),
-    );
+    await drained(() => expect(saved).resolves.toBe(false));
+    expect(names(result.current.read.stores)).toEqual([
+      'Giant Eagle Banksville',
+      'Giant Eagle Market District',
+    ]);
     expect(alertService.alert).toHaveBeenCalled();
   });
 
@@ -314,22 +304,21 @@ describe('useUsualStoreWrites', () => {
       operationMocks: [pin.mock],
     });
 
-    await act(async () => {
-      await result.current.writes.setPinned(
+    await drained(() =>
+      result.current.writes.setPinned(
         { store: { id: 's2', name: 'Giant Eagle Market District' } },
         true,
-      );
-    });
+      ),
+    );
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Too many stores',
       'You can keep up to 20 stores. Remove or unpin one, then try again.',
     );
-    await waitFor(() =>
-      expect(
-        result.current.read.stores?.find(row => row.key === 'store:s2'),
-      ).toMatchObject({ pinned: false }),
-    );
+    await drainTimers();
+    expect(
+      result.current.read.stores?.find(row => row.key === 'store:s2'),
+    ).toMatchObject({ pinned: false });
   });
 
   // Pinning counts toward the 20 as well, so the pin behind a refused add is
@@ -360,7 +349,7 @@ describe('useUsualStoreWrites', () => {
       added = result.current.writes.add(aldi);
       pinned = result.current.writes.setPinned(aldi, true);
     });
-    await act(async () => {
+    await drained(async () => {
       await expect(added).resolves.toBe(false);
       await expect(pinned).resolves.toBe(false);
     });
@@ -377,7 +366,7 @@ describe('useUsualStoreWrites', () => {
 describe('a store learned from a receipt', () => {
   const aldi = { store: { id: 's3', name: 'ALDI Wilkinsburg' } };
 
-  it('shows at once, as from a receipt, and sends nothing of its own', () => {
+  it('shows at once, as from a receipt, and sends nothing of its own', async () => {
     const { result } = renderHookWithApollo(useBoth, {
       cache: seeded(),
       operationMocks: [],
@@ -387,11 +376,10 @@ describe('a store learned from a receipt', () => {
       result.current.writes.learn(aldi, Promise.resolve(true));
     });
 
-    return waitFor(() =>
-      expect(
-        result.current.read.stores?.find(row => row.key === 'store:s3'),
-      ).toMatchObject({ addedVia: UsualStoreSource.Receipt }),
-    );
+    await drainTimers();
+    expect(
+      result.current.read.stores?.find(row => row.key === 'store:s3'),
+    ).toMatchObject({ addedVia: UsualStoreSource.Receipt });
   });
 
   it('undoes at once, and removes it once the check-in is recorded', async () => {
@@ -414,9 +402,7 @@ describe('a store learned from a receipt', () => {
 
     // The review has left by the time Undo is pressed.
     unmount();
-    await act(async () => {
-      await undo?.();
-    });
+    await drained(() => undo?.());
 
     expect(remove.fired).toEqual([
       { input: { homeId: 'home-1', target: { storeId: 's3' } } },
@@ -436,17 +422,14 @@ describe('a store learned from a receipt', () => {
       undo = result.current.writes.learn(aldi, Promise.resolve(false));
     });
 
-    await act(async () => {
-      await undo?.();
-    });
+    await drained(() => undo?.());
 
     expect(remove.fired).toEqual([]);
-    await waitFor(() =>
-      expect(names(result.current.read.stores)).toEqual([
-        'Giant Eagle Banksville',
-        'Giant Eagle Market District',
-      ]),
-    );
+    await drainTimers();
+    expect(names(result.current.read.stores)).toEqual([
+      'Giant Eagle Banksville',
+      'Giant Eagle Market District',
+    ]);
   });
 });
 
@@ -478,7 +461,7 @@ describe('useUsualStoreWrites while offline', () => {
       createElement(ApolloProvider, { client, children });
     const { result } = renderHook(useBoth, { wrapper });
 
-    await act(async () => {
+    await drained(async () => {
       await result.current.writes.setPinned(
         { store: { id: 's2', name: 'Giant Eagle Market District' } },
         true,
@@ -490,22 +473,21 @@ describe('useUsualStoreWrites while offline', () => {
     });
 
     const target = { storeId: 's2' };
-    await waitFor(() =>
-      expect(
-        queueStore
-          .getMutationsForUser(USER.id)
-          .map(m => [m.operationName, m.variables]),
-      ).toEqual([
-        [
-          'UpdateUsualStore',
-          { input: { homeId: 'home-1', target, pinned: true } },
-        ],
-        [
-          'UpdateUsualStore',
-          { input: { homeId: 'home-1', target, pinned: false } },
-        ],
-      ]),
-    );
+    await drainTimers();
+    expect(
+      queueStore
+        .getMutationsForUser(USER.id)
+        .map(m => [m.operationName, m.variables]),
+    ).toEqual([
+      [
+        'UpdateUsualStore',
+        { input: { homeId: 'home-1', target, pinned: true } },
+      ],
+      [
+        'UpdateUsualStore',
+        { input: { homeId: 'home-1', target, pinned: false } },
+      ],
+    ]);
     expect(
       result.current.read.stores?.find(row => row.key === 'store:s2'),
     ).toMatchObject({ pinned: false });
@@ -531,9 +513,7 @@ describe('useUsualStoreWrites while offline', () => {
       );
     });
 
-    await act(async () => {
-      await undo?.();
-    });
+    await drained(() => undo?.());
 
     expect(
       queueStore

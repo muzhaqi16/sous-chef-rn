@@ -1,13 +1,7 @@
 import React from 'react';
 import { TextInput } from 'react-native';
 import { GraphQLError } from 'graphql';
-import {
-  act,
-  fireEvent,
-  screen,
-  waitFor,
-  within,
-} from '@testing-library/react-native';
+import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import { toastService } from '#/services/toastService';
@@ -21,6 +15,7 @@ import {
   type MockDataFor,
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateOutcome,
   ErrorCode,
@@ -126,11 +121,11 @@ describe('StorePickerScreen', () => {
     renderPicker([searching([]).mock, create.mock, add.mock]);
 
     type("Pete's Corner Market");
-    fireEvent.press(
-      await screen.findByText("Not listed? Add “Pete's Corner Market”"),
-    );
+    await drainTimers();
+    fireEvent.press(screen.getByText("Not listed? Add “Pete's Corner Market”"));
 
-    await waitFor(() => expect(add.fired).toHaveLength(1));
+    await drainTimers();
+    expect(add.fired).toHaveLength(1);
     expect(inputOf(create.fired[0] ?? {})).toMatchObject({
       name: "Pete's Corner Market",
       homeId: 'home-1',
@@ -157,16 +152,15 @@ describe('StorePickerScreen', () => {
     ]);
 
     type('aldi');
-    fireEvent.press(await screen.findByText('ALDI (any store)'));
+    await drainTimers();
+    fireEvent.press(screen.getByText('ALDI (any store)'));
 
-    await waitFor(() =>
-      expect(add.fired).toEqual([
-        { input: { homeId: 'home-1', target: { chainId: 'chain-aldi' } } },
-      ]),
-    );
-    await waitFor(() =>
-      expect(toastService.success).toHaveBeenCalledWith('Added to your stores'),
-    );
+    await drainTimers();
+    expect(add.fired).toEqual([
+      { input: { homeId: 'home-1', target: { chainId: 'chain-aldi' } } },
+    ]);
+    await drainTimers();
+    expect(toastService.success).toHaveBeenCalledWith('Added to your stores');
     expect(useAppNavigation().goBack).toHaveBeenCalled();
   });
 
@@ -175,7 +169,8 @@ describe('StorePickerScreen', () => {
     renderPicker([searching([banksville]).mock, add.mock]);
 
     type('giant');
-    fireEvent.press(await screen.findByText('Giant Eagle Banksville'));
+    await drainTimers();
+    fireEvent.press(screen.getByText('Giant Eagle Banksville'));
 
     expect(screen.getByText('Added')).toBeTruthy();
     expect(add.fired).toEqual([]);
@@ -216,9 +211,8 @@ describe('StorePickerScreen', () => {
 
       typeZip('15220');
 
-      await waitFor(() =>
-        expect(useStorePickerStore.getState().lastZip).toBe('15220'),
-      );
+      await drainTimers();
+      expect(useStorePickerStore.getState().lastZip).toBe('15220');
     });
 
     it('is refused on its field alone, and never remembered', async () => {
@@ -239,8 +233,9 @@ describe('StorePickerScreen', () => {
 
       typeZip('00000');
 
+      await drainTimers();
       expect(
-        await screen.findByText(
+        screen.getByText(
           "That zip code isn't one we know yet. Try another, or search by name.",
         ),
       ).toBeTruthy();
@@ -298,7 +293,8 @@ describe('StorePickerScreen', () => {
         screen.getByTestId(catalogTestIDs.storePickerZip),
         '15220',
       );
-      await screen.findByText('Kroger Banksville');
+      await drainTimers();
+      expect(screen.getByText('Kroger Banksville')).toBeTruthy();
     };
     const markOn = (storeId: string) =>
       within(
@@ -356,12 +352,14 @@ describe('StorePickerScreen', () => {
       renderPicker([]);
 
       fireEvent.press(screen.getByText('Stores near me'));
-      expect(await screen.findByText('Find stores near you')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Find stores near you')).toBeTruthy();
       expect(requestAccess).not.toHaveBeenCalled();
 
       fireEvent.press(screen.getByText('Not now'));
 
-      await waitFor(() => expect(focus.mock.contexts).toContainEqual(zipField));
+      await drainTimers();
+      expect(focus.mock.contexts).toContainEqual(zipField);
       expect(screen.queryByText('Stores near me')).toBeNull();
       expect(requestAccess).not.toHaveBeenCalled();
     });
@@ -375,11 +373,13 @@ describe('StorePickerScreen', () => {
       renderPicker([]);
 
       fireEvent.press(screen.getByText('Stores near me'));
+      await drainTimers();
       fireEvent.press(
-        await screen.findByTestId(catalogTestIDs.storePickerNearMeContinue),
+        screen.getByTestId(catalogTestIDs.storePickerNearMeContinue),
       );
 
-      await waitFor(() => expect(focus.mock.contexts).toContainEqual(zipField));
+      await drainTimers();
+      expect(focus.mock.contexts).toContainEqual(zipField);
       expect(screen.queryByText('Stores near me')).toBeNull();
       expect(requestAccess).toHaveBeenCalledTimes(1);
     });

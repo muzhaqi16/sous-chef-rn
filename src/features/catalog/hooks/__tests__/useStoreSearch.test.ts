@@ -1,5 +1,5 @@
 import { GraphQLError } from 'graphql';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import {
@@ -7,6 +7,7 @@ import {
   renderHookWithApollo,
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { writeUsualStores } from '#features/catalog/cache/usualStores';
@@ -99,7 +100,8 @@ describe('useStoreSearch', () => {
     });
     const { result } = render({ zip: '15220' }, [nearby.mock]);
 
-    await waitFor(() => expect(result.current.options).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.options).toHaveLength(2);
     expect(nearby.fired).toEqual([
       { input: { near: { zip: '15220' } }, withPrices: false },
     ]);
@@ -123,7 +125,8 @@ describe('useStoreSearch', () => {
     const { result } = render(null, [search.mock]);
     type(result, 'aldi');
 
-    await waitFor(() => expect(result.current.options).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.options).toHaveLength(2);
     // Only the picker marks priced stores.
     expect(search.fired).toEqual([
       { search: 'aldi', limit: 20, withPrices: false },
@@ -155,12 +158,11 @@ describe('useStoreSearch', () => {
     ]);
     type(result, 'aldi');
 
-    await waitFor(() =>
-      expect(nearby.fired).toContainEqual({
-        input: { near: { point: { lat: 40.44, lng: -79.99 } }, search: 'aldi' },
-        withPrices: false,
-      }),
-    );
+    await drainTimers();
+    expect(nearby.fired).toContainEqual({
+      input: { near: { point: { lat: 40.44, lng: -79.99 } }, search: 'aldi' },
+      withPrices: false,
+    });
     expect(search.fired).toEqual([]);
   });
 
@@ -222,7 +224,8 @@ describe('useStoreSearch', () => {
     };
     const { result } = render({ zip: '00000' }, [refused]);
 
-    await waitFor(() => expect(result.current.zipRefused).toBe(true));
+    await drainTimers();
+    expect(result.current.zipRefused).toBe(true);
     expect(result.current.options).toEqual([]);
   });
 });

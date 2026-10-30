@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
@@ -69,6 +69,14 @@ const pressUndo = () => {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -90,22 +98,20 @@ describe('useSuggestionDismissal', () => {
     });
 
     expect(writes.remove).toHaveBeenCalledWith('item-1');
-    await waitFor(() =>
-      expect(fired).toContainEqual({
-        input: {
-          itemId: 'item-1',
-          surface: SuggestionSurface.Shopping,
-          idempotencyKey: expect.any(String),
-        },
-      }),
-    );
+    await drainTimers();
+    expect(fired).toContainEqual({
+      input: {
+        itemId: 'item-1',
+        surface: SuggestionSurface.Shopping,
+        idempotencyKey: expect.any(String),
+      },
+    });
     expect(mockSuccess.mock.calls[0][1].action.label).toBeTruthy();
     expect(mockError).not.toHaveBeenCalled();
     expect(writes.restore).not.toHaveBeenCalled();
   });
 
   it('sends one dismissal for a double tap', async () => {
-    jest.useFakeTimers();
     const taken = new Set<string>();
     const writes = {
       remove: jest.fn((itemId: string) => {
@@ -151,14 +157,12 @@ describe('useSuggestionDismissal', () => {
       result.current.dismissSuggestion({ itemId: 'bad', name: 'Ghost' });
     });
 
-    await waitFor(() =>
-      expect(writes.restore).toHaveBeenCalledWith({ itemId: 'bad' }),
-    );
+    await drainTimers();
+    expect(writes.restore).toHaveBeenCalledWith({ itemId: 'bad' });
     expect(mockError).toHaveBeenCalledTimes(1);
   });
 
   it('leaves a queued dismissal hidden, with nothing restored or reported', async () => {
-    jest.useFakeTimers();
     // The offline queue resolves a queued write with its payload field null.
     const writes = cacheWrites();
     const { fired, mock } = recordMock(MarkSuggestionDismissedDocument, {
@@ -201,10 +205,9 @@ describe('useSuggestionDismissal', () => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
 
-    await waitFor(() =>
-      expect(mockError).toHaveBeenCalledWith(
-        'Too many requests. Please try again in 10 minutes.',
-      ),
+    await drainTimers();
+    expect(mockError).toHaveBeenCalledWith(
+      'Too many requests. Please try again in 10 minutes.',
     );
     expect(writes.restore).toHaveBeenCalledTimes(1);
   });
@@ -221,20 +224,20 @@ describe('useSuggestionDismissal', () => {
     act(() => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
-    await waitFor(() => expect(dismiss.fired).toHaveLength(1));
+    await drainTimers();
+    expect(dismiss.fired).toHaveLength(1);
 
     pressUndo();
 
     expect(writes.restore).toHaveBeenCalledWith({ itemId: 'item-1' });
-    await waitFor(() =>
-      expect(undismiss.fired).toContainEqual({
-        input: {
-          itemId: 'item-1',
-          surface: SuggestionSurface.Pantry,
-          idempotencyKey: expect.any(String),
-        },
-      }),
-    );
+    await drainTimers();
+    expect(undismiss.fired).toContainEqual({
+      input: {
+        itemId: 'item-1',
+        surface: SuggestionSurface.Pantry,
+        idempotencyKey: expect.any(String),
+      },
+    });
     expect(writes.remove).toHaveBeenCalledTimes(1);
   });
 
@@ -262,13 +265,16 @@ describe('useSuggestionDismissal', () => {
     act(() => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
-    await waitFor(() => expect(first.fired).toHaveLength(1));
+    await drainTimers();
+    expect(first.fired).toHaveLength(1);
     pressUndo();
-    await waitFor(() => expect(undismiss.fired).toHaveLength(1));
+    await drainTimers();
+    expect(undismiss.fired).toHaveLength(1);
     act(() => {
       result.current.dismissSuggestion({ itemId: 'item-2', name: 'Eggs' });
     });
-    await waitFor(() => expect(first.fired).toHaveLength(2));
+    await drainTimers();
+    expect(first.fired).toHaveLength(2);
 
     const keyOf = (variables: unknown) =>
       (variables as { input: { idempotencyKey: string } }).input.idempotencyKey;
@@ -282,7 +288,6 @@ describe('useSuggestionDismissal', () => {
 
   // Two requests in flight could land in either order; the undo must land last.
   it('Undo waits for the dismissal to settle before undismissing', async () => {
-    jest.useFakeTimers();
     const writes = cacheWrites();
     const dismiss = recordMock(MarkSuggestionDismissedDocument, {
       held: true,
@@ -317,7 +322,6 @@ describe('useSuggestionDismissal', () => {
   });
 
   it('Undo of a refused dismissal sends nothing', async () => {
-    jest.useFakeTimers();
     const writes = cacheWrites();
     const { mock } = recordMock(MarkSuggestionDismissedDocument, {
       data: {
@@ -366,16 +370,16 @@ describe('useSuggestionDismissal', () => {
     act(() => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
-    await waitFor(() => expect(dismiss.fired).toHaveLength(1));
+    await drainTimers();
+    expect(dismiss.fired).toHaveLength(1);
 
     pressUndo();
 
     // A refusal resolves as data: it surfaces in its code's copy, never the
     // server's text, and the item stays dismissed.
-    await waitFor(() =>
-      expect(mockError).toHaveBeenCalledWith(
-        'The requested item could not be found. It may have been deleted.',
-      ),
+    await drainTimers();
+    expect(mockError).toHaveBeenCalledWith(
+      'The requested item could not be found. It may have been deleted.',
     );
     expect(mockError).not.toHaveBeenCalledWith('Suggestion not found');
     expect(writes.remove).toHaveBeenCalledTimes(2);
@@ -395,13 +399,13 @@ describe('useSuggestionDismissal', () => {
     act(() => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
     });
-    await waitFor(() => expect(dismiss.fired).toHaveLength(1));
+    await drainTimers();
+    expect(dismiss.fired).toHaveLength(1);
 
     pressUndo();
 
-    await waitFor(() =>
-      expect(mockError).toHaveBeenCalledWith("Couldn't undo"),
-    );
+    await drainTimers();
+    expect(mockError).toHaveBeenCalledWith("Couldn't undo");
     expect(writes.remove).toHaveBeenCalledTimes(2);
   });
 });
@@ -449,16 +453,15 @@ describe('useSuggestionDismissal while offline', () => {
       surface: SuggestionSurface.Pantry,
       idempotencyKey: expect.any(String),
     };
-    await waitFor(() =>
-      expect(
-        queueStore
-          .getMutationsForUser(USER.id)
-          .map(m => [m.operationName, m.variables]),
-      ).toEqual([
-        ['MarkSuggestionDismissed', { input }],
-        ['MarkSuggestionActive', { input }],
-      ]),
-    );
+    await drainTimers();
+    expect(
+      queueStore
+        .getMutationsForUser(USER.id)
+        .map(m => [m.operationName, m.variables]),
+    ).toEqual([
+      ['MarkSuggestionDismissed', { input }],
+      ['MarkSuggestionActive', { input }],
+    ]);
     const [dismissal, undo] = queueStore
       .getMutationsForUser(USER.id)
       .map(m => (m.variables as { input: { idempotencyKey: string } }).input);

@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { PriceBasis } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
@@ -7,6 +6,7 @@ import {
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -174,7 +174,8 @@ const rowsFrom = async (
     () => useStoreShelfPrices('item-1', 'list-1'),
     { cache: cacheWith(nodes, targetStoreId) },
   );
-  await waitFor(() => expect(result.current.rows).toHaveLength(nodes.length));
+  await drainTimers();
+  expect(result.current.rows).toHaveLength(nodes.length);
   return result.current.rows;
 };
 
@@ -183,6 +184,14 @@ const firstRow = async (overrides: Partial<StorePrice>) => {
   if (!row) throw new Error('no row');
   return row;
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.mocked(useFeatureFlag).mockReturnValue(true);
@@ -201,7 +210,8 @@ describe('useStoreShelfPrices', () => {
       { operationMocks: [answer.mock] },
     );
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(3));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(3);
     expect(result.current.rows.map(row => row.storeName)).toEqual([
       'ALDI',
       'Giant Eagle',
@@ -217,7 +227,8 @@ describe('useStoreShelfPrices', () => {
       { cache: cacheWith([priceAt(KROGER)]), operationMocks: [answer.mock] },
     );
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
     expect(answer.fired).toEqual([]);
   });
 
@@ -227,7 +238,8 @@ describe('useStoreShelfPrices', () => {
       () => useStoreShelfPrices('item-1', 'list-1'),
       { cache },
     );
-    await waitFor(() => expect(result.current.rows).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(2);
 
     seedFragment(cache, {
       id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
@@ -242,11 +254,10 @@ describe('useStoreShelfPrices', () => {
       },
     });
 
-    await waitFor(() =>
-      expect(result.current.rows.map(row => row.storeName)).toEqual([
-        'Giant Eagle',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.rows.map(row => row.storeName)).toEqual([
+      'Giant Eagle',
+    ]);
   });
 
   describe('the price', () => {
@@ -418,7 +429,8 @@ describe('useStoreShelfPrices', () => {
         },
       );
       // Rendering settles before any request could be sent.
-      await waitFor(() => expect(result.current.rows).toEqual([]));
+      await drainTimers();
+      expect(result.current.rows).toEqual([]);
       expect(result.current.similarRows).toEqual([]);
       expect(answer.fired).toEqual([]);
     };
@@ -460,7 +472,8 @@ describe('useStoreShelfPrices', () => {
         () => useStoreShelfPrices('item-1', 'list-1'),
         { cache: cacheWith(oscarMayer, null, similar) },
       );
-      await waitFor(() => expect(result.current.rows).toHaveLength(2));
+      await drainTimers();
+      expect(result.current.rows).toHaveLength(2);
       return result.current;
     };
 
@@ -523,7 +536,8 @@ describe('useStoreShelfPrices', () => {
       () => useStoreShelfPrices('item-1', 'list-1'),
       { operationMocks: [failed.mock] },
     );
-    await waitFor(() => expect(failed.fired).toHaveLength(1));
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
     expect(result.current.rows).toEqual([]);
   });
 });
