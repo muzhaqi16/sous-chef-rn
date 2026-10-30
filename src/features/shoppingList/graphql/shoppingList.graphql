@@ -37,13 +37,12 @@ query GetShoppingListDetails($id: ID!) {
     reminderDate
     budgetAmount
     totalCost
-    estimatedTotal
-    # The lines `estimatedTotal` leaves out, stated beside it.
-    unpricedItems
     currency
     priceTracking
     ...useListAsksPrice_list
     ...useListCurrency_list
+    ...useListCostToGo_list
+    ...usePricePrompt_list
     # The store this trip is shopped at: a ticked line's price is recorded there.
     targetStore {
       id
@@ -384,12 +383,11 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
   }
 }
 
-# A change of store restates the comparison the settings screen shows, in
-# ListStoreComparison's selection, which `useUpdateShoppingList` writes over it.
+# A change of store restates the savings the settings screen shows, in
+# ListStoreSavings' selection, which `useUpdateShoppingList` writes over it.
 mutation UpdateShoppingList(
   $input: UpdateShoppingListInput!
-  $withComparison: Boolean = false
-  $comparisonScope: PriceComparisonScope
+  $withSavings: Boolean = false
 ) {
   updateShoppingList(input: $input) {
     __typename
@@ -398,10 +396,9 @@ mutation UpdateShoppingList(
         id
         ...ShoppingListReaders
       }
-      # Its stores, currency and unpriced lines are entities: each with the
-      # fields the queries read on it, as every write returning one carries.
-      storeComparison(scope: $comparisonScope) @include(if: $withComparison) {
-        scope
+      # Its stores and currency are entities: each with the fields the queries
+      # read on it, as every write returning one carries.
+      storeSavings @include(if: $withSavings) {
         currency {
           id
           code
@@ -412,12 +409,7 @@ mutation UpdateShoppingList(
         comparableLines
         leftOutLines
         truncated
-        unpricedLines {
-          id
-          ...ShoppingListItemReaders
-        }
         candidates {
-          scope
           store {
             id
             ...StoreReaders
@@ -428,13 +420,11 @@ mutation UpdateShoppingList(
             id
             name
           }
-          estimatedTotal
-          pricedLines
-          chainFilledLines
-          anyStoreFilledLines
-          ranked
+          total
+          sameLines
+          similarLines
+          estimatedLines
           isTarget
-          newestObservedAt
         }
       }
     }

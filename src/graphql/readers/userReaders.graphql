@@ -76,6 +76,7 @@ fragment UserReaders on User {
   settings {
     id
     autoSync
+    budgetAndPrices
     compactMode
     createdAt
     deviceUnitSystem
@@ -87,6 +88,7 @@ fragment UserReaders on User {
     shareUsageData
     shareWithPartners
     showTutorials
+    storeMode
     theme
     timezone
     updatedAt

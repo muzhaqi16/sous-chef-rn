@@ -1,0 +1,10 @@
+# What the list's lines not yet bought will cost, as the server sums them.
+fragment useListCostToGo_list on ShoppingList {
+  id
+  costToGo {
+    amount
+    currency
+    pricedLines
+    lines
+  }
+}

@@ -1,5 +1,6 @@
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
+import { mirroredFrom, type MirroredSettings } from '#/domain/serverSettings';
 import {
   cancelProactiveRefresh,
   refreshTokenNow,
@@ -82,11 +83,12 @@ export type AuthUserInput = User & {
     firstName?: string | null;
     lastName?: string | null;
   } | null;
-  settings?: {
-    showTutorials?: boolean | null;
-    /** The account's currency lives on its settings; absent until a first write. */
-    preferredCurrency?: string | null;
-  } | null;
+  settings?:
+    | (Partial<MirroredSettings> & {
+        /** The account's currency lives on its settings; absent until a first write. */
+        preferredCurrency?: string | null;
+      })
+    | null;
 };
 
 /**
@@ -233,11 +235,9 @@ export const createAuthSlice: StateCreator<
         if (currency) {
           state.preferredCurrency = currency;
         }
-        // Seeded here, not from `useAppSettings`, which mounts only on the App
-        // Settings screen while a session end resets this to `true`.
-        if (typeof user.settings?.showTutorials === 'boolean') {
-          state.showTutorials = user.settings.showTutorials;
-        }
+        // The account's mirrored settings, before any screen paints; a session
+        // end puts back the signed-out values.
+        Object.assign(state, mirroredFrom(user.settings));
       });
 
       persistSessionTokens(accessToken, refreshToken);

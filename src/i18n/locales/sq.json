@@ -580,7 +580,8 @@
     "purchased": "Blerë",
     "vegan": "Vegane",
     "sulfite": "Sulfite",
-    "budgetAndPrices": "Buxheti dhe çmimet"
+    "budgetAndPrices": "Buxheti dhe çmimet",
+    "shopping": "Blerjet"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -650,7 +651,7 @@
     "shoppingListImagesDesc": "Shfaq imazhet e produkteve në lista",
     "storeMode": "Mënyra e dyqanit",
     "storeModeDesc": "Bëni pazarin e një liste korridor pas korridori nga ikona e dyqanit te lista e blerjeve",
-    "budgetAndPricesDesc": "Çmimet, vlerësimet dhe buxhetet në listat dhe në qilarin tuaj, me buxhetin e çdo liste te ikona e portofolit. Joaktiv, asgjë nuk ju pyet sa paguat.",
+    "budgetAndPricesDesc": "Çmimet, vlerësimet dhe buxhetet në listat dhe në qilarin tuaj, me buxhetin e çdo liste te ikona e portofolit. Joaktiv, çmimet fshihen; një shtypje e gjatë mbi një artikull të listës regjistron prapë sa paguat.",
     "shareUsageData": "Ndaj të dhënat e përdorimit",
     "shareUsageDataDesc": "Ndihmo të përmirësojmë {{appName}} duke ndarë statistika anonime",
     "resetSection": "Rivendos",

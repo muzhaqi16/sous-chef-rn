@@ -202,7 +202,6 @@
       }
     },
     "categoryRecipe": "Ricette",
-    "categoryShopping": "Spesa",
     "markAllRead": "Segna tutte come lette",
     "actionRequiredTitle": "Azione richiesta",
     "actionRequiredBody": "Questa notifica richiede un'azione: {{action}}",

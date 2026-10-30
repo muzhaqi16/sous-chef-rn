@@ -24,6 +24,10 @@ export const shoppingListTestIDs = {
   listBudgetStore: 'list-budget-store',
   budgetInput: 'list-budget-input',
   budgetRemaining: 'list-budget-remaining',
+  /** Budget & prices: the answer first, and its cost-to-go figure. */
+  costSummary: 'list-budget-cost-summary',
+  costToGo: 'list-budget-cost-to-go',
+  listPriceSettings: 'list-budget-settings',
   priceTrackingSwitch: 'list-budget-price-tracking',
   budgetAndPricesButton: 'shopping-list-budget-and-prices',
   storeComparisonCandidate: (id: string) => `list-store-comparison-${id}`,

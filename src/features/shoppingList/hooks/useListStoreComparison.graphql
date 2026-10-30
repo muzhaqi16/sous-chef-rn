@@ -1,8 +1,7 @@
-# Where the list is cheapest, from recorded prices (30 calls a minute). A
+# Where the list costs less, at the household's compared usual stores. A
 # change of store restates it in UpdateShoppingList, in this selection.
-query ListStoreComparison($input: ShoppingListStoreComparisonInput!) {
-  shoppingListStoreComparison(input: $input) {
-    scope
+query ListStoreSavings($input: ShoppingListStoreSavingsInput!) {
+  shoppingListStoreSavings(input: $input) {
     currency {
       id
       code
@@ -11,11 +10,7 @@ query ListStoreComparison($input: ShoppingListStoreComparisonInput!) {
     comparableLines
     leftOutLines
     truncated
-    unpricedLines {
-      id
-    }
     candidates {
-      scope
       store {
         id
         name
@@ -25,13 +20,11 @@ query ListStoreComparison($input: ShoppingListStoreComparisonInput!) {
         id
         name
       }
-      estimatedTotal
-      pricedLines
-      chainFilledLines
-      anyStoreFilledLines
-      ranked
+      total
+      sameLines
+      similarLines
+      estimatedLines
       isTarget
-      newestObservedAt
     }
   }
 }

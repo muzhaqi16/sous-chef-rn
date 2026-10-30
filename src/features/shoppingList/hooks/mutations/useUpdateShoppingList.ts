@@ -9,7 +9,7 @@ import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
+import { ListStoreSavingsDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
 import {
   UseUpdateShoppingList_ListFragmentDoc,
   type UseUpdateShoppingList_ListFragment,
@@ -19,7 +19,6 @@ import { GraphQLNetworkError } from '#/utils/errors/graphqlErrors';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import type {
   ListStatus,
-  PriceComparisonScope,
   ShoppingListPlanningInput,
 } from '#/graphql/generated/schemaTypes';
 import { errorService } from '#/services/errorService';
@@ -42,29 +41,24 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
   const [mutate] = useMutation(UpdateShoppingListDocument, {
     context: { localFirst: true },
     update(cache, { data }, { variables }) {
-      const comparison = appliedPayload(data)?.storeComparison;
-      if (!comparison || !variables?.comparisonScope) return;
+      const savings = appliedPayload(data)?.storeSavings;
+      if (!savings || !variables) return;
       cache.writeQuery({
-        query: ListStoreComparisonDocument,
-        variables: {
-          input: {
-            listId: variables.input.id,
-            scope: variables.comparisonScope,
-          },
-        },
-        data: { __typename: 'Query', shoppingListStoreComparison: comparison },
+        query: ListStoreSavingsDocument,
+        variables: { input: { listId: variables.input.id } },
+        data: { __typename: 'Query', shoppingListStoreSavings: savings },
       });
     },
   });
 
   /**
-   * `comparisonShown` is the comparison on screen, which a change of store
-   * restates in the same answer.
+   * `restateSavings`: the savings are on screen, and a change of store
+   * restates them in the same answer.
    */
   const updateShoppingList = async (
     id: string,
     updates: ShoppingListSettingsUpdate,
-    comparisonShown?: PriceComparisonScope,
+    { restateSavings = false }: { restateSavings?: boolean } = {},
   ) => {
     const { targetStore, ...fields } = updates;
     const planning =
@@ -140,8 +134,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
       throw new GraphQLNetworkError(fallbackErrorMessage);
     }
 
-    const withComparison =
-      targetStore !== undefined && comparisonShown !== undefined;
+    const withSavings = targetStore !== undefined && restateSavings;
     const settled = await settleMutation(
       () =>
         mutate({
@@ -152,10 +145,7 @@ export function useUpdateShoppingList(fallbackErrorMessage: string) {
               ...(planning !== undefined && { planning }),
               version: snapshot.version,
             },
-            ...(withComparison && {
-              withComparison,
-              comparisonScope: comparisonShown,
-            }),
+            ...(withSavings && { withSavings }),
           },
         }),
       {

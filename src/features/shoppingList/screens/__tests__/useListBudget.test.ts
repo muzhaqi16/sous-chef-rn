@@ -11,7 +11,6 @@ import {
   CollaboratorRole,
   CollaboratorStatus,
   MembershipRole,
-  PriceComparisonScope,
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { useListBudget } from '../useListBudget';
@@ -39,8 +38,6 @@ const LIST = {
   budgetAmount: 60,
   currency: 'USD',
   totalCost: 18.4,
-  estimatedTotal: 42.1,
-  unpricedItems: 3,
   priceTracking: true,
   targetStore: null,
   version: 1,
@@ -118,10 +115,31 @@ describe('useListBudget', () => {
     expect(result.current.list).toMatchObject({
       budgetAmount: 60,
       totalCost: 18.4,
-      estimatedTotal: 42.1,
-      unpricedItems: 3,
     });
     expect(result.current.state).toBe('ready');
+  });
+
+  // The server's sum over the unbought lines, as store mode reads it.
+  it("reads the list's cost to go, offline", () => {
+    const { result } = render(
+      { operationMocks: [] },
+      {
+        costToGo: {
+          __typename: 'ShoppingListCostToGo',
+          amount: 7.5,
+          currency: 'USD',
+          pricedLines: 2,
+          lines: 3,
+        },
+      },
+    );
+
+    expect(result.current.costToGo).toMatchObject({
+      amount: 7.5,
+      currency: 'USD',
+      pricedLines: 2,
+      lines: 3,
+    });
   });
 
   it("offers its controls to the list's owner", () => {
@@ -232,7 +250,7 @@ describe('useListBudget', () => {
     expect(result.current.list?.priceTracking).toBe(false);
   });
 
-  it('sends a picked store with the comparison on screen', async () => {
+  it('sends a picked store with the savings on screen', async () => {
     const update = recordMock(UpdateShoppingListDocument, {
       data: { updateShoppingList: null },
     });
@@ -245,8 +263,7 @@ describe('useListBudget', () => {
     await waitFor(() =>
       expect(update.fired[0]).toMatchObject({
         input: { planning: { targetStoreId: 'store-1' } },
-        withComparison: true,
-        comparisonScope: PriceComparisonScope.Store,
+        withSavings: true,
       }),
     );
     expect(result.current.list?.targetStore?.name).toBe('Giant Eagle');

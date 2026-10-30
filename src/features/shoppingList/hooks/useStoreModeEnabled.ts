@@ -1,9 +1,9 @@
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { useUserPreference } from '#hooks/settings/useUserPreferences';
+import { useMirroredSetting } from '#store/useAppStore';
 
-/** The build offers store mode and this user turned it on in Settings. */
+/** The build offers store mode and the account has it on (the default). */
 export function useStoreModeEnabled(): boolean {
   const offered = useFeatureFlag('storeMode');
-  const [enabled] = useUserPreference('storeMode');
+  const enabled = useMirroredSetting('storeMode');
   return offered && enabled;
 }

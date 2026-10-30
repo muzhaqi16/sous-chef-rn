@@ -67,6 +67,33 @@ describe('authSlice', () => {
       expect(store.getState().user?.email).toBe('test@example.com');
     });
 
+    describe('the shopping switches', () => {
+      it('start at the account defaults', () => {
+        const state = createTestStore().getState();
+
+        expect(state.storeMode).toBe(true);
+        expect(state.budgetAndPrices).toBeNull();
+      });
+
+      // A new device shows the account's values before any settings read.
+      it('seed from the login payload, overriding the mirror', () => {
+        const store = createTestStore();
+        store.getState().mirrorSettings({ budgetAndPrices: true });
+
+        store.getState().setAuth(
+          {
+            ...testUser,
+            settings: { storeMode: false, budgetAndPrices: null },
+          },
+          'a',
+          'r',
+        );
+
+        expect(store.getState().storeMode).toBe(false);
+        expect(store.getState().budgetAndPrices).toBeNull();
+      });
+    });
+
     describe('the tutorials setting', () => {
       // A session end resets it to `true` so a shared device does not inherit
       // the previous account's answer, and `useAppSettings` — the only other
@@ -75,7 +102,7 @@ describe('authSlice', () => {
       // someone who turned tutorials off and is then marked seen.
       it('seeds a disabled setting from the login payload', () => {
         const store = createTestStore();
-        store.getState().setShowTutorials(true);
+        store.getState().mirrorSettings({ showTutorials: true });
 
         store
           .getState()
@@ -90,7 +117,7 @@ describe('authSlice', () => {
 
       it('seeds an enabled setting too', () => {
         const store = createTestStore();
-        store.getState().setShowTutorials(false);
+        store.getState().mirrorSettings({ showTutorials: false });
 
         store
           .getState()
@@ -105,7 +132,7 @@ describe('authSlice', () => {
 
       it('leaves the current value alone when the payload carries none', () => {
         const store = createTestStore();
-        store.getState().setShowTutorials(false);
+        store.getState().mirrorSettings({ showTutorials: false });
 
         store.getState().setAuth(testUser, 'a', 'r');
 

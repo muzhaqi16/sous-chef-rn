@@ -3,7 +3,7 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
-import { useListAsksPrice } from '../useListAsksPrice';
+import { useListAsksPrice, useListTracksPrices } from '../useListAsksPrice';
 
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => true),
@@ -43,5 +43,26 @@ describe('useListAsksPrice', () => {
   it('asks for a list it has not read yet, or no list', () => {
     expect(asks('list-2')).toBe(true);
     expect(asks(undefined)).toBe(true);
+  });
+});
+
+describe('useListTracksPrices', () => {
+  const tracks = (listId: string | undefined, cached = [list(true)]) =>
+    renderHookWithApollo(() => useListTracksPrices(listId), {
+      cache: seedCache(cached),
+      operationMocks: [],
+    }).result.current;
+
+  // The long-press sheet gathers prices before Budget & prices is on.
+  it('follows the list alone, with prices turned off', () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+
+    expect(tracks('list-1')).toBe(true);
+    expect(tracks('list-1', [list(false)])).toBe(false);
+  });
+
+  it('tracks on a list it has not read yet, or no list', () => {
+    expect(tracks('list-2')).toBe(true);
+    expect(tracks(undefined)).toBe(true);
   });
 });

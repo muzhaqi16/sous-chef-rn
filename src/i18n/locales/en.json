@@ -580,7 +580,8 @@
     "purchased": "Purchased",
     "vegan": "Vegan",
     "sulfite": "Sulfite",
-    "budgetAndPrices": "Budget & prices"
+    "budgetAndPrices": "Budget & prices",
+    "shopping": "Shopping"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -650,7 +651,7 @@
     "shoppingListImagesDesc": "Show product images in shopping lists",
     "storeMode": "Store mode",
     "storeModeDesc": "Shop a list aisle by aisle from the store icon on the shopping list",
-    "budgetAndPricesDesc": "Prices, estimates and budgets on your lists and in your pantry, with each list's budget behind the wallet icon. Off, nothing asks what you paid.",
+    "budgetAndPricesDesc": "Prices, estimates and budgets on your lists and in your pantry, with each list's budget behind the wallet icon. Off, prices stay hidden; a long-press on a list item still records what you paid.",
     "shareUsageData": "Share Usage Data",
     "shareUsageDataDesc": "Help improve {{appName}} by sharing anonymous usage statistics",
     "resetSection": "Reset",

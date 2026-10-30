@@ -10,14 +10,11 @@ import {
   UpdateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseUpdateShoppingList_ListFragmentDoc } from '../useUpdateShoppingList.generated';
-import {
-  ErrorCode,
-  PriceComparisonScope,
-} from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '../useUpdateShoppingList';
 import { useShoppingListBudget } from '../useShoppingListBudget';
 import { ApolloClient } from '@apollo/client';
-import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
+import { ListStoreSavingsDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -200,7 +197,7 @@ describe('useUpdateShoppingList', () => {
           planning: { budgetAmount: 150, currency: 'USD' },
           version: 1,
         },
-        withComparison: false,
+        withSavings: false,
       },
     ]);
   });
@@ -246,7 +243,7 @@ describe('useUpdateShoppingList', () => {
           planning: { targetStoreId: 'store-1' },
           version: 1,
         },
-        withComparison: false,
+        withSavings: false,
       },
       {
         input: {
@@ -255,18 +252,18 @@ describe('useUpdateShoppingList', () => {
           planning: { targetStoreId: null },
           version: 1,
         },
-        withComparison: false,
+        withSavings: false,
       },
     ]);
   });
 
-  // The list's store prices every line's suggestion and marks the comparison's
-  // target. The answer restates the comparison on screen, not the lines.
+  // The list's store prices every line's suggestion and marks the savings'
+  // target. The answer restates the savings on screen, not the lines.
   describe('what the store prices', () => {
     const toCostco = { id: 'store-1', name: 'Costco' };
     const saveStore = async (
       result: MockDataFor<typeof UpdateShoppingListDocument>,
-      comparisonShown?: PriceComparisonScope,
+      restateSavings?: boolean,
     ) => {
       const refetchQueries = jest.spyOn(
         ApolloClient.prototype,
@@ -282,7 +279,7 @@ describe('useUpdateShoppingList', () => {
         await hook.result.current.updateShoppingList(
           'list-1',
           { name: 'Groceries', targetStore: toCostco },
-          comparisonShown,
+          { restateSavings },
         );
       });
       return { refetchQueries, cache, update };
@@ -290,40 +287,32 @@ describe('useUpdateShoppingList', () => {
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('re-reads the lines, and the comparison on screen comes with the answer', async () => {
+    it('re-reads the lines, and the savings on screen come with the answer', async () => {
       const { refetchQueries, cache, update } = await saveStore(
         {
           updateShoppingList: {
             __typename: 'UpdateShoppingListPayload',
             shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
-            storeComparison: {
-              scope: PriceComparisonScope.Store,
-              comparableLines: 7,
-            },
+            storeSavings: { comparableLines: 7 },
           },
         },
-        PriceComparisonScope.Store,
+        true,
       );
 
-      expect(update.fired[0]).toMatchObject({
-        withComparison: true,
-        comparisonScope: PriceComparisonScope.Store,
-      });
+      expect(update.fired[0]).toMatchObject({ withSavings: true });
       expect(
         cache.readQuery({
-          query: ListStoreComparisonDocument,
-          variables: {
-            input: { listId: 'list-1', scope: PriceComparisonScope.Store },
-          },
-        })?.shoppingListStoreComparison.comparableLines,
+          query: ListStoreSavingsDocument,
+          variables: { input: { listId: 'list-1' } },
+        })?.shoppingListStoreSavings.comparableLines,
       ).toBe(7);
       expect(refetchQueries).toHaveBeenCalledWith({
         include: [GetShoppingListItemsFilteredDocument],
       });
     });
 
-    // Store mode changes the store with no comparison on screen.
-    it('asks for no comparison when none is shown', async () => {
+    // Store mode changes the store with no savings on screen.
+    it('asks for no savings when none are shown', async () => {
       const { update } = await saveStore({
         updateShoppingList: {
           __typename: 'UpdateShoppingListPayload',
@@ -331,13 +320,13 @@ describe('useUpdateShoppingList', () => {
         },
       });
 
-      expect(update.fired[0]).not.toMatchObject({ withComparison: true });
+      expect(update.fired[0]).not.toMatchObject({ withSavings: true });
     });
 
     it('is not asked while the change waits in the queue', async () => {
       const { refetchQueries } = await saveStore(
         { updateShoppingList: null },
-        PriceComparisonScope.Store,
+        true,
       );
 
       expect(refetchQueries).not.toHaveBeenCalled();

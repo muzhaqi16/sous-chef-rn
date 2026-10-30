@@ -202,7 +202,6 @@
       }
     },
     "categoryRecipe": "Recipe",
-    "categoryShopping": "Shopping",
     "markAllRead": "Mark all read",
     "actionRequiredTitle": "Action Required",
     "actionRequiredBody": "This notification requires action: {{action}}",

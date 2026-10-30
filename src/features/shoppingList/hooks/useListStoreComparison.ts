@@ -1,89 +1,75 @@
 import { skipToken, useQuery } from '@apollo/client/react';
-import { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
 import {
-  ListStoreComparisonDocument,
-  type ListStoreComparisonQuery,
+  ListStoreSavingsDocument,
+  type ListStoreSavingsQuery,
 } from './useListStoreComparison.generated';
 
-type Comparison = ListStoreComparisonQuery['shoppingListStoreComparison'];
-type Candidate = Comparison['candidates'][number];
+type Savings = ListStoreSavingsQuery['shoppingListStoreSavings'];
+type Candidate = Savings['candidates'][number];
 
 /** A candidate as the section shows it: a branch. */
-export type StoreComparisonCandidate = Pick<
-  Candidate,
-  | 'estimatedTotal'
-  | 'pricedLines'
-  | 'chainFilledLines'
-  | 'anyStoreFilledLines'
-  | 'ranked'
-  | 'isTarget'
-  | 'newestObservedAt'
-> & {
+export type StoreComparisonCandidate = Pick<Candidate, 'total' | 'isTarget'> & {
   key: string;
   name: string;
   address: string | null;
-  /** The chain the branch fills its gaps from. */
-  chainName: string | null;
+  /** Lines its shelf prices, the same product or a similar one. */
+  pricedLines: number;
+  /** Lines at a typical price, with no shelf price there. */
+  estimatedLines: number;
 };
 
 export type StoreComparison = Pick<
-  Comparison,
+  Savings,
   'comparableLines' | 'leftOutLines' | 'truncated'
 > & {
   currencyCode: string;
   decimalPlaces: number;
-  unpricedLines: number;
   candidates: StoreComparisonCandidate[];
 };
 
-function toCandidate({
-  scope,
-  store,
-  chain,
-  ...asAnswered
-}: Candidate): StoreComparisonCandidate | null {
+function toCandidate(candidate: Candidate): StoreComparisonCandidate | null {
+  const { store } = candidate;
   if (!store) return null;
   return {
-    ...asAnswered,
     key: store.id,
     name: store.name,
     address: store.address ?? null,
-    chainName: chain?.name ?? null,
+    total: candidate.total,
+    isTarget: candidate.isTarget,
+    pricedLines: candidate.sameLines + candidate.similarLines,
+    estimatedLines: candidate.estimatedLines,
   };
 }
 
-function toComparison(comparison: Comparison): StoreComparison {
+function toComparison(savings: Savings): StoreComparison {
   return {
-    currencyCode: comparison.currency.code,
-    decimalPlaces: comparison.currency.decimalPlaces,
-    comparableLines: comparison.comparableLines,
-    leftOutLines: comparison.leftOutLines,
-    unpricedLines: comparison.unpricedLines.length,
-    truncated: comparison.truncated,
-    candidates: comparison.candidates.flatMap(candidate => {
+    currencyCode: savings.currency.code,
+    decimalPlaces: savings.currency.decimalPlaces,
+    comparableLines: savings.comparableLines,
+    leftOutLines: savings.leftOutLines,
+    truncated: savings.truncated,
+    candidates: savings.candidates.flatMap(candidate => {
       const view = toCandidate(candidate);
       return view ? [view] : [];
     }),
   };
 }
 
-/** Where a list is cheapest, by branch; null until answered. */
+/** Where a list costs less, at the household's usual stores; null until answered. */
 export function useListStoreComparison(listId: string | undefined) {
   const { data, loading, error } = useQuery(
-    ListStoreComparisonDocument,
+    ListStoreSavingsDocument,
     listId
       ? {
-          variables: {
-            input: { listId, scope: PriceComparisonScope.Store },
-          },
+          variables: { input: { listId } },
           // Prices move as items are ticked: each open asks again.
           fetchPolicy: 'cache-and-network',
-          // A preview: the resync would spend the 30-a-minute budget.
+          // A preview: the resync would spend the per-minute budget.
           refetchOn: false,
         }
       : skipToken,
   );
-  const answer = data?.shoppingListStoreComparison;
+  const answer = data?.shoppingListStoreSavings;
   return {
     comparison: answer ? toComparison(answer) : null,
     loading: loading && !answer,

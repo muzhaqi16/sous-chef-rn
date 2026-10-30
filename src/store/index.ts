@@ -16,6 +16,7 @@ import {
 enableMapSet();
 import type { AuthState } from './slices/authSlice';
 import { createAuthSlice } from './slices/authSlice';
+import { MIRRORED_SETTING_KEYS } from '#/domain/serverSettings';
 import type { PreferencesState } from './slices/preferencesSlice';
 import { createPreferencesSlice } from './slices/preferencesSlice';
 import type { AppState } from './slices/appSlice';
@@ -228,7 +229,7 @@ const PERSISTED_KEYS = classifyKeys(
   'highContrast',
   'hapticFeedbackEnabled',
   'showNavigationLabels',
-  'showTutorials',
+  ...MIRRORED_SETTING_KEYS,
   'pantrySortOption',
   'pantrySortDirection',
   'userPreferences',

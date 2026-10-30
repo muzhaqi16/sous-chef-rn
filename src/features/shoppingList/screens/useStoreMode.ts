@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { toastService } from '#/services/toastService';
 import { useUser } from '#store/useAppStore';
-import { formatCurrency } from '#/utils/formatters/number';
 import {
   isAisleHeader,
   type ShoppingListEntry,
@@ -10,8 +9,11 @@ import {
 } from '#features/shoppingList/components/SortableShoppingList/types';
 import { aisleAfter, type AisleTab } from '#features/shoppingList/utils/aisles';
 import { linesInAisle } from '#features/shoppingList/components/SortableShoppingList/aisleRows';
-import { lineTotal } from '#features/shoppingList/utils/purchasePrice';
-import type { ShoppingListItemNode } from '../hooks/usePaginatedShoppingItems';
+import {
+  formatCostToGo,
+  useListCostToGo,
+  type ListCostToGo,
+} from '../hooks/useListCostToGo';
 import { useShoppingListManagement } from '../hooks/useShoppingListManagement';
 import { useShoppingListTransformMulti } from './useShoppingListTransform';
 import { useShoppingListPermissions } from '../hooks/useShoppingListPermissions';
@@ -30,34 +32,12 @@ export interface StoreModeEstimate {
   lines: number;
 }
 
-// As the API's suggestedTotal: a line's typed estimate, else its suggestion,
-// both in the list's currency; no one total when suggestions disagree on it.
-function estimateLeft(
-  lines: readonly ShoppingListItemNode[],
-  listCurrency: string | null,
-): StoreModeEstimate | null {
-  let total = 0;
-  let priced = 0;
-  let currency: { code: string; decimalPlaces: number | null } | null =
-    listCurrency ? { code: listCurrency, decimalPlaces: null } : null;
-  for (const line of lines) {
-    const typed = line.priceEstimate.estimated;
-    const suggestion = typed == null ? line.suggestedPrice : null;
-    const unitPrice = typed ?? suggestion?.amount;
-    if (unitPrice == null) continue;
-    if (suggestion) {
-      if (currency && currency.code !== suggestion.currency.code) return null;
-      currency = suggestion.currency;
-    }
-    total += lineTotal(unitPrice, line.quantity ?? 0);
-    priced += 1;
-  }
-  if (priced === 0) return null;
-  return {
-    price: formatCurrency(total, currency?.code, currency?.decimalPlaces),
-    priced,
-    lines: lines.length,
-  };
+/** Store mode's line of what is left to buy, from the list's cost to go. */
+function estimateOf(cost: ListCostToGo | null): StoreModeEstimate | null {
+  const price = cost && formatCostToGo(cost);
+  return cost && price
+    ? { price, priced: cost.pricedLines, lines: cost.lines }
+    : null;
 }
 
 function rowsFor(
@@ -92,6 +72,7 @@ export function useStoreMode(listId: string) {
     refetch,
   } = useShoppingListManagement(listId, { loadEveryUnpurchasedPage: true });
 
+  const costToGo = useListCostToGo(listId);
   const { unpurchasedItems: lines, purchasedItems: cart } =
     useShoppingListTransformMulti({ rawUnpurchasedItems, rawPurchasedItems });
   const { aisleEntries, routeNote } = useAisleView(
@@ -145,10 +126,7 @@ export function useStoreMode(listId: string) {
       lineCount: lines.length,
       cartCount: totalCountPurchased,
       totalCount: totalCountUnpurchased + totalCountPurchased,
-      estimate: estimateLeft(
-        rawUnpurchasedItems,
-        shoppingList?.currency ?? null,
-      ),
+      estimate: estimateOf(costToGo),
       routeNote,
       permissions,
       /** Every loaded line, for the sheets the rows open. */

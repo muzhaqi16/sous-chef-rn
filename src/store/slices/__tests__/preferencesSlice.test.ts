@@ -125,7 +125,6 @@ describe('preferencesSlice', () => {
         .setUserPreference('user-1', { showShoppingListImages: false });
       expect(store.getState().getUserPreferences('user-1')).toEqual({
         showShoppingListImages: false,
-        storeMode: false,
         budgetAndPrices: false,
       });
     });

@@ -129,7 +129,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
     ? t(
         suggested?.substitute
           ? 'shoppingListScreens.suggestedLinePriceSimilar'
-          : 'shoppingListScreens.suggestedLinePrice',
+          : 'shoppingListScreens.approxPrice',
         { price: suggestedCost },
       )
     : null;

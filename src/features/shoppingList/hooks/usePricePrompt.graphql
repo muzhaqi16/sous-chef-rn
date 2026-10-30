@@ -1,0 +1,7 @@
+# Whether the list's household has price data enough to offer prices.
+fragment usePricePrompt_list on ShoppingList {
+  id
+  priceReadiness {
+    enough
+  }
+}

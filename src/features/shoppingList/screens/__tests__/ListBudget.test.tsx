@@ -35,8 +35,13 @@ const LIST = {
   budgetAmount: 60,
   currency: 'USD',
   totalCost: 18.4,
-  estimatedTotal: 22,
-  unpricedItems: 3,
+  costToGo: {
+    __typename: 'ShoppingListCostToGo',
+    amount: 4,
+    currency: 'USD',
+    pricedLines: 1,
+    lines: 2,
+  },
   priceTracking: true,
   targetStore: { __typename: 'Store', id: 'store-1', name: 'Giant Eagle' },
   version: 1,
@@ -86,12 +91,33 @@ describe('ListBudget', () => {
   it("shows the list's money as text, offline", () => {
     renderScreen();
 
-    expect(screen.getByText(formatCurrency(22, 'USD'))).toBeTruthy();
-    expect(screen.getByText('3 items without a price')).toBeTruthy();
+    expect(
+      screen.getByTestId(shoppingListTestIDs.costToGo).props.children,
+    ).toBe(`≈ ${formatCurrency(4, 'USD')}`);
+    expect(screen.getByText('Priced 1 of 2 items')).toBeTruthy();
     expect(screen.getByText(formatCurrency(18.4, 'USD'))).toBeTruthy();
+    // 60 budget − 18.40 spent − 4.00 to go.
     expect(
       screen.getByTestId(shoppingListTestIDs.budgetRemaining).props.children,
-    ).toBe(`${formatCurrency(41.6, 'USD')} left`);
+    ).toBe(
+      `${formatCurrency(37.6, 'USD')} left of ${formatCurrency(60, 'USD')}`,
+    );
+  });
+
+  it("answers first: the cost, then where it's cheaper, then the settings", () => {
+    renderScreen();
+
+    const order = screen
+      .getAllByTestId(/^list-(budget|store-comparison)/)
+      .map(node => node.props.testID as string);
+    const at = (testID: string) => order.indexOf(testID);
+    expect(at(shoppingListTestIDs.costSummary)).toBeGreaterThan(-1);
+    expect(at(shoppingListTestIDs.costSummary)).toBeLessThan(
+      at(shoppingListTestIDs.storeComparison),
+    );
+    expect(at(shoppingListTestIDs.storeComparison)).toBeLessThan(
+      at(shoppingListTestIDs.listPriceSettings),
+    );
   });
 
   it('offers the owner the budget, store and tracking controls', () => {
@@ -106,7 +132,7 @@ describe('ListBudget', () => {
     ).toBeTruthy();
   });
 
-  it('shows a member who cannot edit the list the figures and store only', () => {
+  it('shows a member who cannot edit the list every value, with no control', () => {
     useStore.setState({ user: { ...OWNER, id: 'user-2' } });
     renderScreen();
 

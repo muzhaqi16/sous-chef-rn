@@ -1,3 +1,8 @@
+import {
+  MIRRORED_SETTINGS,
+  mirroredFrom,
+  type MirroredSettings,
+} from '#/domain/serverSettings';
 import type { RootState } from '#store/index';
 
 /**
@@ -39,6 +44,13 @@ export function mockAppStore(state: Partial<RootState>) {
     useSelectedShoppingListId: jest.fn(() => state.selectedShoppingListId),
     useIsHydrated: jest.fn(() => state.isHydrated),
     useIsOnline: jest.fn(() => state.isOnline),
+    useMirroredSetting: jest.fn(
+      (key: keyof MirroredSettings) =>
+        ({ ...MIRRORED_SETTINGS, ...state }[key]),
+    ),
+    useMirroredSettings: jest.fn(() =>
+      mirroredFrom({ ...MIRRORED_SETTINGS, ...state }),
+    ),
     useCanAccessDevTools: jest.fn(() => state.user?.canAccessDevTools === true),
     useIsHomeSelectionReady: jest.fn(() => state.isHomeSelectionReady),
     useSetIsHomeSelectionReady: jest.fn(() => state.setIsHomeSelectionReady),

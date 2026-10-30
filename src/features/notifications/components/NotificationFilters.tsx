@@ -24,7 +24,7 @@ const CATEGORY_LABEL_KEYS: Record<NotificationCategory, TranslationKey> = {
   [NotificationCategory.Home]: 'labels.home',
   [NotificationCategory.Pantry]: 'labels.pantry',
   [NotificationCategory.Recipe]: 'notifications.categoryRecipe',
-  [NotificationCategory.Shopping]: 'notifications.categoryShopping',
+  [NotificationCategory.Shopping]: 'labels.shopping',
   [NotificationCategory.System]: 'labels.system',
 };
 

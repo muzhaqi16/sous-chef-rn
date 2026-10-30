@@ -1,136 +1,45 @@
 import { useEffect } from 'react';
-import { useUser } from '#store/useAppStore';
+import { useMirroredSettings, useUser } from '#store/useAppStore';
 import { useStore } from '#store';
-import {
-  skipToken,
-  useApolloClient,
-  useMutation,
-  useQuery,
-} from '@apollo/client/react';
-import {
-  GetUserSettingsDocument,
-  UpdateUserPreferencesDocument,
-} from '#operations/auth/user.generated';
-import {
-  AppTheme,
-  UnitSystem,
-  type UpdateSettingsInput,
-} from '#/graphql/generated/schemaTypes';
-import {
-  snapshotFields,
-  updateEntityFieldsLocalFirst,
-} from '#/apollo/utils/localFirstFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
+import { skipToken, useQuery } from '@apollo/client/react';
+import { GetUserSettingsDocument } from '#operations/auth/user.generated';
+import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
+import { MIRRORED_SETTINGS, type SettingValues } from '#/domain/serverSettings';
+import { useUpdateSettings } from '#hooks/settings/useUpdateSettings';
 import { useTranslation } from '#/i18n';
 
-export interface AppSettings {
-  theme: AppTheme;
-  compactMode: boolean;
-  showTutorials: boolean;
-  autoSync: boolean;
-  offlineMode: boolean;
-  preferredUnitSystem: UnitSystem;
-}
+export type AppSettings = SettingValues;
+
+/** What a user with no settings row reads: the server's defaults. */
+const DEFAULT_SETTINGS: AppSettings = {
+  theme: AppTheme.System,
+  compactMode: false,
+  autoSync: true,
+  offlineMode: false,
+  preferredUnitSystem: UnitSystem.System,
+  ...MIRRORED_SETTINGS,
+};
 
 export const useAppSettings = () => {
   const { t } = useTranslation();
   const user = useUser();
-  const client = useApolloClient();
   const { data, loading, error, refetch } = useQuery(
     GetUserSettingsDocument,
     user?.id ? {} : skipToken,
   );
-  const [updateSettings] = useMutation(UpdateUserPreferencesDocument, {
-    // An unreachable API queues the change, so a flipped setting isn't lost.
-    context: { localFirst: true },
-  });
+  const { updateSettings } = useUpdateSettings();
 
   const settings = data?.me?.settings;
+  const mirrored = useMirroredSettings();
 
-  const getAppSettings = (): AppSettings => {
-    return {
-      theme: settings?.theme ?? AppTheme.System,
-      compactMode: settings?.compactMode ?? false,
-      showTutorials: settings?.showTutorials ?? true,
-      autoSync: settings?.autoSync ?? true,
-      offlineMode: settings?.offlineMode ?? false,
-      // The server's default, and what a user with no settings row reads.
-      preferredUnitSystem: settings?.preferredUnitSystem ?? UnitSystem.System,
-    };
-  };
+  // The server's answer once read; before it, the store's mirror of it.
+  const current: AppSettings = settings ?? { ...DEFAULT_SETTINGS, ...mirrored };
 
-  // Resolved once per render — also the snapshot the mutators revert to when the
-  // server rejects an optimistic change.
-  const memoizedSettings = getAppSettings();
-
-  const toSettingsInput = (
-    updates: Partial<AppSettings>,
-  ): UpdateSettingsInput => {
-    const input: UpdateSettingsInput = {};
-    if (
-      'theme' in updates ||
-      'compactMode' in updates ||
-      'showTutorials' in updates
-    ) {
-      input.ui = {};
-      if ('theme' in updates) input.ui.theme = updates.theme;
-      if ('compactMode' in updates) input.ui.compactMode = updates.compactMode;
-      if ('showTutorials' in updates)
-        input.ui.showTutorials = updates.showTutorials;
-    }
-    if ('autoSync' in updates || 'offlineMode' in updates) {
-      input.sync = {};
-      if ('autoSync' in updates) input.sync.autoSync = updates.autoSync;
-      if ('offlineMode' in updates)
-        input.sync.offlineMode = updates.offlineMode;
-    }
-    if ('preferredUnitSystem' in updates) {
-      input.regional = { preferredUnitSystem: updates.preferredUnitSystem };
-    }
-    return input;
-  };
-
-  /** The cached entity carrying the settings fields, once the query has loaded. */
-  const settingsEntity = settings?.id
-    ? { __typename: 'UserSettings', id: settings.id }
-    : undefined;
-
-  const updateMultipleSettings = async (
-    updates: Partial<AppSettings>,
-    failureMessage: string = t('settings.updateFailed'),
-  ) => {
-    const previous = snapshotFields<AppSettings>(memoizedSettings, updates);
-
-    return updateEntityFieldsLocalFirst<AppSettings>({
-      cache: client.cache,
-      entity: settingsEntity,
-      updates,
-      previous,
-      // The settle is the ONLY alerter for this failure, so callers must not
-      // add their own.
-      settle: async () => {
-        const settled = await settleMutation(
-          () =>
-            updateSettings({
-              variables: { input: toSettingsInput(updates) },
-            }),
-          { document: UpdateUserPreferencesDocument, fallback: failureMessage },
-        );
-        // A queued change drops them when it replays (`reconcileSettingsReplay`).
-        if (settled.status === 'applied' && 'preferredUnitSystem' in updates) {
-          dropUnitSystemAnswers(client.cache);
-        }
-        return settled;
-      },
-    });
-  };
-
-  /** Single-key convenience over {@link updateMultipleSettings}. */
+  /** Single-key convenience over {@link useUpdateSettings}. */
   const updateAppSetting = async <K extends keyof AppSettings>(
     key: K,
     value: AppSettings[K],
-  ) => updateMultipleSettings({ [key]: value });
+  ) => updateSettings({ [key]: value });
 
   const resetToDefaults = async () => {
     const defaultSettings: Partial<AppSettings> = {
@@ -142,28 +51,21 @@ export const useAppSettings = () => {
       preferredUnitSystem: UnitSystem.System,
     };
 
-    return updateMultipleSettings(
-      defaultSettings,
-      t('errors.resetSettingsFailed'),
-    );
+    return updateSettings(defaultSettings, t('errors.resetSettingsFailed'));
   };
 
-  // Mirror the server's settings into the store so startup-path hooks read them
-  // without waiting on `GetUserSettings`. The store's own subscribers see a
-  // change immediately, so nothing has to be nudged into re-reading.
+  // Offline mode renders from the store; the server copy follows the device's
+  // last choice to the account's other devices.
   useEffect(() => {
-    if (settings?.showTutorials !== undefined) {
-      useStore.getState().setShowTutorials(settings.showTutorials);
-    }
     if (settings?.offlineMode !== undefined) {
       useStore.getState().setOfflineModeEnabled(settings.offlineMode);
     }
-  }, [settings?.showTutorials, settings?.offlineMode]);
+  }, [settings?.offlineMode]);
 
   return {
-    settings: memoizedSettings,
+    settings: current,
     loading,
-    // `settings` is never empty (`getAppSettings()` fills every field), so it
+    // `settings` is never empty (defaults fill every field), so it
     // cannot say whether the server replied; gating on `loading` blanks the
     // screen on every mount, since Apollo reports it true on each one.
     hasLoadedSettings: !!settings,

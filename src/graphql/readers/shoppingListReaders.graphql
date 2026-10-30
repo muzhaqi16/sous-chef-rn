@@ -10,9 +10,14 @@ fragment ShoppingListReaders on ShoppingList {
   completedItems
   completedShopDate
   completionRate
+  costToGo {
+    amount
+    currency
+    lines
+    pricedLines
+  }
   currency
   description
-  estimatedTotal
   home {
     id
     myMembership {
@@ -66,7 +71,6 @@ fragment ShoppingListReaders on ShoppingList {
   templateName
   totalCost
   totalItems
-  unpricedItems
   updatedAt
   version
 }

@@ -202,7 +202,6 @@
       }
     },
     "categoryRecipe": "Recetat",
-    "categoryShopping": "Blerjet",
     "markAllRead": "Shëno si të lexuara",
     "actionRequiredTitle": "Kërkohet veprim",
     "actionRequiredBody": "Ky njoftim kërkon një veprim: {{action}}",

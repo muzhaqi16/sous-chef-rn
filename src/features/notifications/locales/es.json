@@ -202,7 +202,6 @@
       }
     },
     "categoryRecipe": "Recetas",
-    "categoryShopping": "Compras",
     "markAllRead": "Marcar leídas",
     "actionRequiredTitle": "Acción requerida",
     "actionRequiredBody": "Esta notificación requiere una acción: {{action}}",

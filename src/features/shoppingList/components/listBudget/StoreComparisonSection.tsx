@@ -7,7 +7,6 @@ import { useTranslation } from '#/i18n';
 import { commonStyles } from '#/styles/commonStyles';
 import { useIsOnline } from '#store/useAppStore';
 import { formatCurrency } from '#/utils/formatters/number';
-import { formatRelativeToNow } from '#/utils/formatters/date';
 import {
   useListStoreComparison,
   type StoreComparison,
@@ -15,7 +14,7 @@ import {
 } from '#features/shoppingList/hooks/useListStoreComparison';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
-/** Where the list's unbought items cost least, from recorded prices. */
+/** Where the list's unbought items cost least, at the household's usual stores. */
 export const StoreComparisonSection: React.FC<{ listId: string }> = ({
   listId,
 }) => {
@@ -55,10 +54,6 @@ const ComparisonBody: React.FC<{ comparison: StoreComparison }> = ({
 }) => {
   const { t } = useTranslation();
   const notes = [
-    comparison.unpricedLines > 0 &&
-      t('shoppingListScreens.storeComparison.unpriced', {
-        count: comparison.unpricedLines,
-      }),
     comparison.leftOutLines > 0 &&
       t('shoppingListScreens.storeComparison.leftOut', {
         count: comparison.leftOutLines,
@@ -100,22 +95,16 @@ const CandidateRow: React.FC<{
   comparison: StoreComparison;
 }> = ({ candidate, comparison }) => {
   const { t } = useTranslation();
-  // Only a candidate pricing enough lines itself shows a total that compares.
-  const total = candidate.ranked ? candidate.estimatedTotal : null;
-  // How much of the total rests on this candidate's own prices.
+  // Null unless its shelf prices cover half the lines: no total that compares.
+  const { total } = candidate;
+  // How much of the total rests on this store's own shelf prices.
   const breakdown = [
     t('shoppingListScreens.storeComparison.pricedHere', {
       count: candidate.pricedLines,
     }),
-    candidate.chainFilledLines > 0 &&
-      candidate.chainName &&
-      t('shoppingListScreens.storeComparison.fromChain', {
-        count: candidate.chainFilledLines,
-        chain: candidate.chainName,
-      }),
-    candidate.anyStoreFilledLines > 0 &&
+    candidate.estimatedLines > 0 &&
       t('shoppingListScreens.storeComparison.typical', {
-        count: candidate.anyStoreFilledLines,
+        count: candidate.estimatedLines,
       }),
   ]
     .filter(part => typeof part === 'string')
@@ -141,15 +130,7 @@ const CandidateRow: React.FC<{
         <Text role="caption" style={commonStyles.settingsRowDescription}>
           {breakdown}
         </Text>
-        {candidate.newestObservedAt ? (
-          <Text role="caption" tone="tertiary">
-            {t('shoppingListScreens.storeComparison.newestPrice', {
-              age: formatRelativeToNow(new Date(candidate.newestObservedAt)),
-            })}
-          </Text>
-        ) : null}
       </View>
-      {/* An unranked total rests mostly on other stores' prices. */}
       <Text
         role={total == null ? 'caption' : 'bodyStrong'}
         tone={total == null ? 'secondary' : 'primary'}
