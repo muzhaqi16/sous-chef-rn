@@ -287,6 +287,13 @@ const TEST_SYNTAX = [
       'Seed with seedQuery / seedFragment from __tests__/helpers/apolloMockProvider: they complete `data` from the SDL as a mock is, so a seed states only what the test asserts on and a field a query gains breaks no test. A raw write takes every selected field by hand.',
   },
   {
+    id: 'fixedSleep',
+    selector:
+      "NewExpression[callee.name='Promise'] CallExpression[callee.name='setTimeout']",
+    message:
+      'A promise a timer resolves makes the result depend on how fast the worker is. Await the thing itself (the mutation, `loadMore`, `whenIdle()`), or run the clock the test drives with `jest.useFakeTimers()` and `drainTimers` from __tests__/helpers/drainTimers; a held mock sets the order of answers.',
+  },
+  {
     id: 'bareInMemoryCache',
     selector:
       'Program:has(ImportDeclaration[source.value=/apolloMockProvider$/]) NewExpression[callee.name="InMemoryCache"]',

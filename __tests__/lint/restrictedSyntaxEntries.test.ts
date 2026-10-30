@@ -262,6 +262,19 @@ const TEST_FIXTURES: Fixture[] = [
     ],
   },
   {
+    id: 'fixedSleep',
+    invalid: [
+      'await new Promise(resolve => setTimeout(resolve, 50));',
+      'const wait = () => new Promise(r => { setTimeout(r, 10); });',
+      'new Promise(resolve => { timer = setTimeout(() => resolve(1), 500); });',
+    ],
+    valid: [
+      'await drainTimers();',
+      'setTimeout(() => socket.open(), 1);',
+      'new Promise(resolve => { finish = resolve; });',
+    ],
+  },
+  {
     id: 'apolloReactMock',
     invalid: ['jest.mock("@apollo/client/react");'],
     valid: ['jest.mock("#/services/haptic");'],
