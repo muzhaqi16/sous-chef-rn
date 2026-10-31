@@ -5,10 +5,6 @@ import {
 import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import {
-  restoreReceiptCheckInListLines,
-  withdrawReceiptCheckIn,
-} from '#features/receipts/offline/receiptCheckIn';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { queueStore } from '../queueStore';
@@ -19,7 +15,6 @@ import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ApolloClient } from '@apollo/client';
 import { registerApolloClient } from '#/apollo/clientRegistry';
-import { errorService } from '#/services/errorService';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
@@ -53,9 +48,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
-jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
-  restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
-}));
 jest.mock('#features/shoppingList/cache/purchase', () => ({
   writePurchaseInfo: jest.fn(),
 }));
@@ -65,9 +57,9 @@ jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
     clearEntityById: jest.fn(),
   },
 }));
-const mockDrop = jest.fn();
+const mockRefuse = jest.fn();
 jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
-  pendingWritesOf: () => ({ drop: mockDrop }),
+  pendingWritesOf: () => ({ refuse: mockRefuse }),
 }));
 jest.mock('../queueStore', () => ({
   queueStore: {
@@ -161,10 +153,9 @@ describe('queue failure handler', () => {
     it('drops its layer, and evicts nothing', () => {
       handleQueueFailure(withLocalWrite());
 
-      expect(mockDrop).toHaveBeenCalledWith('write-1');
+      expect(mockRefuse).toHaveBeenCalledWith('write-1');
       expect(safeEvict).not.toHaveBeenCalled();
       expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
-      expect(withdrawReceiptCheckIn).not.toHaveBeenCalled();
     });
 
     it('still tells the person and leaves the queue', () => {
@@ -192,43 +183,6 @@ describe('queue failure handler', () => {
       'PantryItem',
       'item-1',
     );
-  });
-
-  describe('withdrawing an unlink', () => {
-    const checkIn = failure({
-      operationName: operationNameOf(CreateReceiptCheckInDocument),
-      variables: { input: { lines: [] } },
-    });
-
-    it('puts the list lines back when a check-in is permanently refused', () => {
-      handleQueueFailure(checkIn);
-
-      expect(restoreReceiptCheckInListLines).toHaveBeenCalledWith(
-        expect.anything(),
-        checkIn.variables,
-      );
-    });
-
-    it('has no unlink to withdraw for an ordinary write', () => {
-      handleQueueFailure(failure());
-      expect(restoreReceiptCheckInListLines).not.toHaveBeenCalled();
-    });
-
-    it('still tells the person when the withdrawal throws', () => {
-      (restoreReceiptCheckInListLines as jest.Mock).mockImplementationOnce(
-        () => {
-          throw new Error('cache gone');
-        },
-      );
-
-      expect(() => handleQueueFailure(checkIn)).not.toThrow();
-      expect(toastService.error).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('tells the person', () => {
-    handleQueueFailure(failure());
-    expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 
   it('shows the app’s own words, never the server’s', () => {
@@ -441,25 +395,5 @@ describe('queue failure handler — a withdrawn row is read back', () => {
     await settle();
 
     expect(client.refetchQueries).toHaveBeenCalledTimes(1);
-  });
-
-  it('reports a withdrawal step that throws', () => {
-    (withdrawReceiptCheckIn as jest.Mock).mockImplementationOnce(() => {
-      throw new Error('cache gone');
-    });
-
-    handleQueueFailure(
-      failure({
-        operationName: operationNameOf(CreateReceiptCheckInDocument),
-        variables: { input: { pantryId: 'pantry-1' } },
-      }),
-    );
-
-    expect(errorService.reportError).toHaveBeenCalledWith(
-      expect.any(Error),
-      expect.objectContaining({
-        operation: expect.stringContaining('CreateReceiptCheckIn'),
-      }),
-    );
   });
 });

@@ -1,5 +1,4 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ApolloCache } from '@apollo/client';
 import {
   AcquisitionMethod,
   ErrorCode,
@@ -7,15 +6,11 @@ import {
   type ReceiptCheckInLineInput,
 } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
-import {
-  localIntakeRow,
-  writeLocalIntake,
-} from '#features/pantry/cache/localIntake';
-import { writeLocalMove } from '#features/shoppingList/cache/localMove';
-import { stampItemBoughtOnList } from '#features/shoppingList/cache/moveToPantry';
-import { readIsPurchased } from '#features/shoppingList/cache/purchase';
+import { localIntakeRow } from '#features/pantry/cache/localIntake';
+import { localMoveRow } from '#features/shoppingList/cache/localMove';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { settleMutation, type Settled } from '#/apollo/utils/settleMutation';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { todayKey } from '#/utils/dateUtils';
@@ -24,14 +19,16 @@ import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { useTranslation } from '#/i18n';
 import { useReceiptDraftActions } from '../store/receiptDraftStore';
+import type { CheckInInputs, LocalCheckInLine } from '../offline/localWrites';
 import {
-  applyReceiptCheckIn,
   receiptLineOutcomes,
   settleReceiptCheckIn,
   type CheckInLineResult,
-  type WrittenLine,
 } from '../offline/receiptCheckIn';
-import { CreateReceiptCheckInDocument } from './useReceiptCheckIn.generated';
+import {
+  CreateReceiptCheckInDocument,
+  type CreateReceiptCheckInMutation,
+} from './useReceiptCheckIn.generated';
 import { cappedNames } from '#/utils/cappedNames';
 
 /** The API's cap on one check-in: a longer receipt goes as several. */
@@ -75,9 +72,10 @@ export interface ReceiptToCheckIn
   storeId?: string | Promise<string | undefined>;
 }
 
-type PlacedReceipt = Omit<ReceiptToCheckIn, 'checkInIds' | 'storeId'> & {
-  storeId?: string;
-};
+type ReceiptFields = Omit<ReceiptToCheckIn, 'checkInIds' | 'storeId'>;
+
+/** What a check-in learns once its store exists. */
+type PlacedStore = { storeId?: string };
 
 export type ReceiptCheckInOutcome =
   /** Every send was answered; `failed` names the lines the API refused. */
@@ -95,76 +93,37 @@ const chunked = <T>(rows: readonly T[], size: number): T[][] =>
     rows.slice(at * size, at * size + size),
   );
 
-// Every line's rows, written before its check-in fires: the pantry row under
-// its minted id and a listed line's list line stamped as moved, keyed by its
-// place in the send as its result is. A line kept out of the pantry only ticks
-// its list line.
-const writeLines = (
-  cache: ApolloCache,
+// What each line shows, by its place in the send as its result is: the pantry
+// row under its minted id and a listed line's list line stamped as moved. A
+// line kept out of the pantry only ticks its list line.
+const localLines = (
   pantryId: string,
-  listId: string | undefined,
   lines: readonly CheckInLineToSend[],
-): Map<number, WrittenLine> => {
-  const written = new Map<number, WrittenLine>();
-  for (const [at, { input, itemName, listLine }] of lines.entries()) {
+): LocalCheckInLine[] =>
+  lines.map(({ input, itemName, listLine }) => {
+    const listLineId = listLine?.id;
     const { pantryItemId } = input;
-    if (!pantryItemId) {
-      if (listLine && listId) {
-        written.set(at, {
-          kind: 'tick',
-          written: stampItemBoughtOnList(
-            cache,
-            listId,
-            listLine.id,
-            readIsPurchased(cache, listLine.id),
-          ),
-        });
-      }
-      continue;
-    }
-    unconfirmedCreates.mark(pantryItemId);
-    if (listLine) {
-      written.set(at, {
-        kind: 'move',
-        written: writeLocalMove(cache, {
+    if (!pantryItemId) return { listLineId };
+    const row = listLine
+      ? localMoveRow({
           item: listLine,
           pantryId,
-          pantryItemId,
           amount: input.amount,
           totalCost: input.totalPaid,
-          removeFromList: false,
-          currentListId: listId,
-        }),
-      });
-      continue;
-    }
-    writeLocalIntake(
-      cache,
-      pantryItemId,
-      localIntakeRow(pantryId, itemName, {
-        item: input.item,
-        amount: input.amount,
-        purchase: { acquisitionMethod: AcquisitionMethod.Purchased },
-      }),
-    );
-    written.set(at, { kind: 'intake' });
-  }
-  return written;
-};
+        })
+      : localIntakeRow(pantryId, itemName, {
+          item: input.item,
+          amount: input.amount,
+          purchase: { acquisitionMethod: AcquisitionMethod.Purchased },
+        });
+    return { stack: { id: pantryItemId, row }, listLineId };
+  });
 
-// Takes back every row a chunk showed: refused whole, or never sent.
-const withdrawChunk = (
-  cache: ApolloCache,
-  receipt: PlacedReceipt,
-  lines: readonly CheckInLineToSend[],
-  written: ReadonlyMap<number, WrittenLine>,
-) =>
-  applyReceiptCheckIn(
-    cache,
-    { ...receipt, lines: lines.map(line => line.input) },
-    lines.map((_line, at) => ({ index: at, success: false })),
-    written,
-  );
+const markLines = (lines: readonly CheckInLineToSend[]) => {
+  for (const { input } of lines) {
+    if (input.pantryItemId) unconfirmedCreates.mark(input.pantryItemId);
+  }
+};
 
 const releaseLines = (lines: readonly CheckInLineToSend[]) => {
   for (const { input } of lines) {
@@ -174,8 +133,9 @@ const releaseLines = (lines: readonly CheckInLineToSend[]) => {
 
 /**
  * Records a confirmed receipt in one call per 100 lines. Each line shows in the
- * pantry and list before its call fires and while it is queued; a refused line
- * is withdrawn alone. The draft mints its ids once, so nothing records twice.
+ * pantry and list before its call fires and while it is queued, as a pending
+ * layer per call; the answer keeps the lines the server took. The draft mints
+ * its ids once, so nothing records twice.
  */
 export function useReceiptCheckIn(listId: string | undefined) {
   const { t } = useTranslation();
@@ -185,15 +145,6 @@ export function useReceiptCheckIn(listId: string | undefined) {
   const [createCheckIn] = useMutation(CreateReceiptCheckInDocument, {
     context: { localFirst: true },
   });
-
-  // Counters a withdrawal could not restore exactly are read again.
-  const reread = () => {
-    client.refetchQueries({ include: 'active' }).catch(error => {
-      errorService.reportError(error, {
-        operation: 'Re-read after a refused receipt line',
-      });
-    });
-  };
 
   // Names the refused lines and, when one code accounts for all of them, its
   // cause in the reader's language; never the server's text.
@@ -246,11 +197,15 @@ export function useReceiptCheckIn(listId: string | undefined) {
     });
   };
 
-  const send = async (
-    receipt: PlacedReceipt,
+  /**
+   * Shows a chunk's lines now and sends them on `turn`, with the store only
+   * then known; a turn of null takes them back unsent.
+   */
+  const send = (
+    receipt: ReceiptFields,
     checkInId: string,
     lines: readonly CheckInLineToSend[],
-    written: ReadonlyMap<number, WrittenLine>,
+    turn: Promise<PlacedStore | null>,
   ) => {
     const today = todayKey();
     const input = {
@@ -259,39 +214,38 @@ export function useReceiptCheckIn(listId: string | undefined) {
       today,
       lines: lines.map(line => line.input),
     };
-    const settled = await settleMutation(
-      () => createCheckIn({ variables: { input, today } }),
-      {
-        document: CreateReceiptCheckInDocument,
-        fallback: t('errors.addItemFailedRetry'),
-        // A whole refusal withdraws every line it showed.
-        onFailed: () => withdrawChunk(client.cache, receipt, lines, written),
-        present: 'none',
+    const inputs: CheckInInputs = {
+      pantryId: receipt.pantryId,
+      listId,
+      lines: localLines(receipt.pantryId, lines),
+      now: new Date().toISOString(),
+    };
+    markLines(lines);
+    const settled = pendingWritesOf(client.cache).send<
+      CreateReceiptCheckInMutation,
+      { input: typeof input; today: string }
+    >(
+      CreateReceiptCheckInDocument,
+      { input, today },
+      async (write): Promise<Settled<CreateReceiptCheckInMutation>> => {
+        const placed = await turn;
+        if (!placed) return { status: 'failed', data: undefined };
+        return settleMutation(
+          () =>
+            createCheckIn({
+              ...write,
+              variables: { ...write.variables, input: { ...input, ...placed } },
+            }),
+          {
+            document: CreateReceiptCheckInDocument,
+            fallback: t('errors.addItemFailedRetry'),
+            present: 'none',
+          },
+        );
       },
+      inputs,
     );
     return { input, settled };
-  };
-
-  // Sends a chunk whose rows are written; an id another user holds is
-  // replaced once, its lines' purchase ids still naming them.
-  const sendChunk = async (
-    receipt: PlacedReceipt,
-    checkInId: string,
-    chunk: readonly CheckInLineToSend[],
-    written: Map<number, WrittenLine>,
-  ) => {
-    let sent = await send(receipt, checkInId, chunk, written);
-    let sentWritten = written;
-    if (
-      sent.settled.status === 'failed' &&
-      sent.settled.failure?.code === ErrorCode.Conflict
-    ) {
-      const reminted = remintCheckInId(checkInId);
-      sentWritten = writeLines(client.cache, receipt.pantryId, listId, chunk);
-      sent = await send(receipt, reminted, chunk, sentWritten);
-    }
-    releaseLines(chunk);
-    return { ...sent, written: sentWritten };
   };
 
   /**
@@ -303,31 +257,51 @@ export function useReceiptCheckIn(listId: string | undefined) {
     lines: readonly CheckInLineToSend[],
   ): Promise<ReceiptCheckInOutcome> => {
     setCheckInState('sending');
-    const chunks = chunked(lines, LINES_PER_CHECK_IN).map(chunk => ({
-      chunk,
-      written: writeLines(client.cache, receipt.pantryId, listId, chunk),
-    }));
+    const { checkInIds, storeId: placing, ...fields } = receipt;
+    const chunks = chunked(lines, LINES_PER_CHECK_IN).flatMap((chunk, at) => {
+      const checkInId = checkInIds[at];
+      if (!checkInId) return [];
+      let open: (placed: PlacedStore | null) => void = () => undefined;
+      const turn = new Promise<PlacedStore | null>(resolve => {
+        open = resolve;
+      });
+      return [
+        {
+          chunk,
+          checkInId,
+          open,
+          sent: send(fields, checkInId, chunk, turn),
+        },
+      ];
+    });
     // Shown, so added: a second Add must not send them again.
     markAdded(lines.map(line => line.index));
-    const { checkInIds, storeId: placing, ...fields } = receipt;
     const storeId = await placing;
-    const placed: PlacedReceipt = {
-      ...fields,
-      ...(storeId ? { storeId } : {}),
-    };
+    const placed: PlacedStore = storeId ? { storeId } : {};
     const added: number[] = [];
     const failed: number[] = [];
     let queued = false;
     for (const [at, prepared] of chunks.entries()) {
-      const checkInId = checkInIds[at];
-      if (!checkInId) continue;
-      const { chunk } = prepared;
-      const { input, settled, written } = await sendChunk(
-        placed,
-        checkInId,
-        chunk,
-        prepared.written,
-      );
+      const { chunk, checkInId, open, sent } = prepared;
+      open(placed);
+      let { input } = sent;
+      let settled = await sent.settled;
+      // An id another user holds is replaced once, its lines' purchase ids
+      // still naming them.
+      if (
+        settled.status === 'failed' &&
+        settled.failure?.code === ErrorCode.Conflict
+      ) {
+        const retried = send(
+          fields,
+          remintCheckInId(checkInId),
+          chunk,
+          Promise.resolve(placed),
+        );
+        input = retried.input;
+        settled = await retried.settled;
+      }
+      releaseLines(chunk);
       if (settled.status === 'queued') {
         queued = true;
         continue;
@@ -346,14 +320,11 @@ export function useReceiptCheckIn(listId: string | undefined) {
           })),
         );
         const unsent = chunks.slice(at + 1);
-        let exact = true;
         for (const later of unsent) {
-          exact =
-            withdrawChunk(client.cache, placed, later.chunk, later.written)
-              .exact && exact;
+          later.open(null);
+          await later.sent.settled;
           releaseLines(later.chunk);
         }
-        if (!exact) reread();
         markUnsent(
           unsent.flatMap(later => later.chunk.map(line => line.index)),
         );
@@ -364,19 +335,6 @@ export function useReceiptCheckIn(listId: string | undefined) {
       // Results index the send; the draft and the message name receipt lines.
       const sentResults: readonly CheckInLineResult[] =
         appliedPayload(settled.data)?.results ?? [];
-      try {
-        const { exact } = applyReceiptCheckIn(
-          client.cache,
-          input,
-          sentResults,
-          written,
-        );
-        if (!exact) reread();
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Settle receipt check-in',
-        });
-      }
       const results = receiptLineOutcomes(input, sentResults);
       settleReceiptCheckIn(client.cache, input.id, results);
       reportFailed(chunk, results);

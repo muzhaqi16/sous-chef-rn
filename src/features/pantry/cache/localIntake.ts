@@ -1,12 +1,6 @@
-import type { ApolloCache } from '@apollo/client';
 import type { CreatePantryItemInput } from '#/graphql/generated/schemaTypes';
 import { localQuantity } from '#domain/stockAmount';
-import { errorService } from '#/services/errorService';
-import { addPantryItemLocally } from './items';
-import {
-  writeLocalPantryItem,
-  type LocalPantryItem,
-} from './writeLocalPantryItem';
+import type { LocalPantryItem } from './writeLocalPantryItem';
 
 /** What an add states, as the row it shows before the server answers reads it. */
 export type IntakeStatement = Pick<
@@ -40,24 +34,4 @@ export function localIntakeRow(
     acquisitionMethod: input.purchase?.acquisitionMethod,
     ...local,
   };
-}
-
-/**
- * An add's local side, before it fires: the row is written, published AND
- * counted, so offline the header cannot fall behind the list. The caller claims
- * the minted id (`unconfirmedCreates.mark`) first.
- */
-export function writeLocalIntake(
-  cache: ApolloCache,
-  id: string,
-  row: LocalPantryItem,
-): void {
-  try {
-    writeLocalPantryItem(cache, id, row, new Date().toISOString());
-    addPantryItemLocally(cache, row.pantryId, { __typename: 'PantryItem', id });
-  } catch (cacheError) {
-    errorService.reportError(cacheError, {
-      operation: 'Add Pantry Item (optimistic)',
-    });
-  }
 }

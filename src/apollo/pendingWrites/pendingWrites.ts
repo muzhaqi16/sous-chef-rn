@@ -181,6 +181,20 @@ export class PendingWrites {
     this.rebuild();
   }
 
+  /** The server refused a queued write for good. */
+  refuse(id: string): void {
+    const write = this.get(id);
+    if (!write) return;
+    try {
+      this.table[write.operationName]?.refused?.(this.cache, write);
+    } catch (error) {
+      errorService.reportError(error, {
+        operation: `Refuse ${write.operationName}`,
+      });
+    }
+    this.drop(id);
+  }
+
   /**
    * The server has it. `data` is its answer, or undefined when it answered with
    * no row, so the write's own change is all the root can take. It commits once

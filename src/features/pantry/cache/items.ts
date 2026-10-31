@@ -11,7 +11,6 @@ import {
 import { isRecord } from '#/utils/isRecord';
 import { hideEntity, isHeld } from '#/apollo/utils/writeLocalEntity';
 import {
-  evictLocalPantryItemSeeds,
   writeLocalPantryItem,
   type LocalPantryItem,
 } from './writeLocalPantryItem';
@@ -35,28 +34,6 @@ export const removeFromPantryItemsCache =
     'itemsConnection',
     'PantryItem',
   );
-
-/**
- * Reconciles a local-first create with its answer: the server's row takes the
- * counted edge. A create resolved onto a held row (a restock) answers with that
- * row's id; the minted row goes with its edge and seeds, not the count.
- */
-export function reconcileCreatedPantryItem(
-  cache: ApolloCache,
-  pantryId: string,
-  pantryItem: PantryItemRef,
-  clientId: string | null | undefined,
-): void {
-  if (clientId && clientId !== pantryItem.id) {
-    // The held row is never added: the write reaches every cached variant, so
-    // it would land in, and count toward, the filtered ones it is not in.
-    removeFromPantryItemsCache(cache, pantryId, clientId, { evictItem: true });
-    evictLocalPantryItemSeeds(cache, clientId);
-    return;
-  }
-  // NOT the counting helper: the eager write already counted this row.
-  addToPantryItemsCache(cache, pantryId, pantryItem);
-}
 
 /**
  * Moves `Pantry.stats.totalItems` by `delta`: responses carry no parent
@@ -203,19 +180,4 @@ export function dropPantryItem(
 ): void {
   removePantryItemLocally(cache, pantryId, itemId, options);
   safeEvict(cache, 'PantryItem', itemId);
-}
-
-/**
- * Withdraw a refused optimistic row: edge first, so `cache.modify` still sees it
- * and takes both counters with it. Evicting alone strands `stats.totalItems`.
- */
-export function revertOptimisticPantryItem(
-  cache: ApolloCache,
-  pantryId: string,
-  itemId: string,
-  options: CountOptions = {},
-): void {
-  removePantryItemLocally(cache, pantryId, itemId, options);
-  safeEvict(cache, 'PantryItem', itemId);
-  evictLocalPantryItemSeeds(cache, itemId);
 }

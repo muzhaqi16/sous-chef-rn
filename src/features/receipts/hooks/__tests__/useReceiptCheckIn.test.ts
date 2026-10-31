@@ -12,6 +12,7 @@ import { errorService } from '#/services/errorService';
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import {
   checkInAnswer,
@@ -60,7 +61,9 @@ const answering = (options?: Parameters<typeof checkInAnswer>[0]) =>
   });
 
 const pantryRows = (cache: ReturnType<typeof makeCache>) =>
-  Object.keys(cache.extract()).filter(key => key.startsWith('PantryItem:pi-'));
+  Object.keys(cache.extract(true)).filter(key =>
+    key.startsWith('PantryItem:pi-'),
+  );
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -130,6 +133,7 @@ describe('useReceiptCheckIn', () => {
       ]);
     });
 
+    pendingWritesOf(cache).rebuild();
     expect(pantryRows(cache)).toEqual(['PantryItem:pi-0']);
     expect(useReceiptDraftStore.getState().draft?.failed).toEqual({
       1: ErrorCode.ValidationFailed,
@@ -262,7 +266,7 @@ describe('useReceiptCheckIn', () => {
       ),
     );
     expect(pantryRows(cache)).toHaveLength(100);
-    expect(cache.extract()['PantryItem:pi-249']).toBeUndefined();
+    expect(cache.extract(true)['PantryItem:pi-249']).toBeUndefined();
     expect(unconfirmedCreates.has('pi-249')).toBe(false);
     expect(toastService.error).toHaveBeenCalledTimes(1);
   });
@@ -301,15 +305,16 @@ describe('useReceiptCheckIn', () => {
     let namedBefore: unknown;
     await act(async () => {
       const sending = result.current.checkIn(receipt(checkInIds()), [typed]);
-      namedBefore = cache.extract()['PantryItem:pi-0']?.item;
+      namedBefore = cache.extract(true)['PantryItem:pi-0']?.item;
       await sending;
     });
 
     expect(namedBefore).toEqual({ __ref: 'Item:item-minted' });
-    expect(cache.extract()['PantryItem:pi-0']?.item).toEqual({
+    pendingWritesOf(cache).rebuild();
+    expect(cache.extract(true)['PantryItem:pi-0']?.item).toEqual({
       __ref: 'Item:item-held',
     });
-    expect(cache.extract()['Item:item-minted']).toBeUndefined();
+    expect(cache.extract(true)['Item:item-minted']).toBeUndefined();
   });
 
   it('sends a long receipt as consecutive check-ins of at most 100 lines', async () => {

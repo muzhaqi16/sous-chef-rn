@@ -143,6 +143,7 @@ const readPantry = (cache: ReturnType<typeof makeCache>) =>
   cache.readQuery<Unmasked<GetPantryQuery>>({
     query: GetPantryDocument,
     variables: PANTRY_VARS,
+    optimistic: true,
   })?.pantry;
 
 function pantryItemNames(cache: ReturnType<typeof makeCache>) {
@@ -693,8 +694,8 @@ describe('useReceiptReview', () => {
       });
       const cache = makeCache();
       const askedByItem = () =>
-        Object.keys(cache.extract()['ShoppingList:list-1'] ?? {}).some(key =>
-          key.includes('"itemIds"'),
+        Object.keys(cache.extract(true)['ShoppingList:list-1'] ?? {}).some(
+          key => key.includes('"itemIds"'),
         );
       const first = await setup({ resolve, cache });
       await drainTimers();
@@ -1489,7 +1490,7 @@ describe('useReceiptReview', () => {
       let movedBefore: unknown;
       await drained(async () => {
         await result.current.review.addChosen();
-        movedBefore = cache.extract()['ShoppingListItem:sli-milk'];
+        movedBefore = cache.extract(true)['ShoppingListItem:sli-milk'];
       });
       // Stamped moved on the device before the API answers.
       expect(movedBefore).toMatchObject({
@@ -1596,7 +1597,7 @@ describe('useReceiptReview', () => {
       await addChosen();
 
       expect(pantryItemNames(cache)).toEqual(['Bananas']);
-      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
         purchaseInfo: { movedToPantryAt: null },
       });
       expect(result.current.review.rows.map(row => row.status)).toEqual([
@@ -1629,7 +1630,7 @@ describe('useReceiptReview', () => {
       const { cache, chooseOnListAndAdd } = await setup({ checkIn });
       await chooseOnListAndAdd(1, MILK);
 
-      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
         version: 7,
       });
     });
@@ -1670,18 +1671,18 @@ describe('useReceiptReview', () => {
         expect.not.objectContaining({ pantryItemId: expect.anything() }),
       ]);
       // Bought, and not stamped as moved to the pantry.
-      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
         purchaseInfo: { isPurchased: true, movedToPantryAt: null },
       });
-      expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+      expect(cache.extract(true)['ShoppingList:list-1']).toMatchObject({
         [toBuy]: { totalCount: 0, edges: [] },
       });
 
       await drained(() => checkIn.release());
-      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
         purchaseInfo: { isPurchased: false },
       });
-      expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+      expect(cache.extract(true)['ShoppingList:list-1']).toMatchObject({
         [toBuy]: {
           totalCount: 1,
           edges: [{ node: { __ref: 'ShoppingListItem:sli-milk' } }],

@@ -86,17 +86,7 @@ const OPTIMISTIC_PUBLISHERS = [
 
 /** The shared writers, and the publisher and reconciler each must call. */
 const SHARED_LOCAL_WRITES = [
-  {
-    file: 'src/features/shoppingList/cache/localMove.ts',
-    publishes: 'addPantryItemLocally(',
-    reconciles: null,
-  },
-  {
-    file: 'src/features/pantry/cache/localIntake.ts',
-    publishes: 'addPantryItemLocally(',
-    reconciles: null,
-  },
-  // An add and a move: the answer's commit lists only the row it kept.
+  // An add, a move and a check-in: the answer's commit lists only the row it kept.
   {
     file: 'src/features/pantry/offline/localWrites.ts',
     publishes: 'showLocalPantryItem(',
@@ -107,11 +97,10 @@ const SHARED_LOCAL_WRITES = [
     publishes: 'showLocalPantryItem(',
     reconciles: 'listAnsweredPantryItem(',
   },
-  // A check-in publishes through the two writers above.
   {
-    file: 'src/features/receipts/offline/receiptCheckIn.ts',
-    publishes: null,
-    reconciles: 'reconcileCreatedPantryItem(',
+    file: 'src/features/receipts/offline/localWrites.ts',
+    publishes: 'showLocalPantryItem(',
+    reconciles: 'listAnsweredPantryItem(',
   },
 ];
 
@@ -169,13 +158,7 @@ describe('unconfirmed-create wiring (pantry items)', () => {
         readFileSync(join(process.cwd(), file), 'utf8'),
       );
       const adopts = code.includes('adoptServerEntityId(');
-      const withdraws =
-        (code.includes('removeFromPantryItemsCache(') &&
-          code.includes('evictLocalPantryItemSeeds(')) ||
-        code.includes('reconcileCreatedPantryItem(') ||
-        code.includes('pendingWritesOf(') ||
-        // Delegated: the shared writers' own reconcile is checked below.
-        code.includes('applyReceiptCheckIn(');
+      const withdraws = code.includes('pendingWritesOf(');
 
       expect(adopts || withdraws).toBe(true);
     },

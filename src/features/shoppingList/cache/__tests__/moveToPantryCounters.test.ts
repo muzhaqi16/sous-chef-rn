@@ -14,10 +14,7 @@
  */
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import {
-  removeItemFromShoppingListForMoveToPantry,
-  restoreItemToShoppingListAfterMoveToPantry,
-} from '../moveToPantry';
+import { removeItemFromShoppingListForMoveToPantry } from '../moveToPantry';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const LIST_COUNTS = gql`
@@ -118,19 +115,17 @@ const edgeCount = (cache: ReturnType<typeof makeCache>) => {
 };
 
 describe('removeItemFromShoppingListForMoveToPantry counters', () => {
-  it('applies one removal when an online move calls it twice', () => {
+  it('applies one removal when a layer and its commit both run it', () => {
     const cache = seed();
 
-    // The eager, pre-fire unlink (keeps the entity for a possible withdrawal).
+    // The layer's unlink, which keeps the entity.
     removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true, {
       evictEntity: false,
     });
-    // The mutation's update callback, once the server confirms.
+    // The commit, once the server confirms.
     removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true);
 
-    // The edge was removed once, so the counters must reflect one removal. The
-    // call site's comment claims idempotence, which held for `edges.filter` and
-    // for nothing beside it.
+    // The edge was removed once, so the counters must reflect one removal.
     expect(counts(cache)).toMatchObject({ totalItems: 4, completedItems: 1 });
     expect(edgeCount(cache)).toEqual({ edges: 0, totalCount: 0 });
   });
@@ -196,94 +191,5 @@ describe('removeItemFromShoppingListForMoveToPantry counters', () => {
     );
 
     expect(counts(cache)).toMatchObject({ totalItems: 5, completedItems: 2 });
-  });
-});
-
-describe('restoreItemToShoppingListAfterMoveToPantry counters', () => {
-  it('applies one restore when the withdrawal follows the call site’s revert', () => {
-    const cache = seed();
-
-    // Eager unlink, then the write is permanently refused.
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true, {
-      evictEntity: false,
-    });
-    expect(counts(cache)).toMatchObject({ totalItems: 4, completedItems: 1 });
-
-    // The queue's withdrawal AND the call site's own revert both run.
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-
-    // Back where it started — the module's own contract: "Keep every entry
-    // IDEMPOTENT: a withdrawal can run after a revert the call site already
-    // performed."
-    expect(counts(cache)).toMatchObject({ totalItems: 5, completedItems: 2 });
-    expect(edgeCount(cache)).toEqual({ edges: 1, totalCount: 1 });
-  });
-
-  it('restores once for a single call', () => {
-    const cache = seed();
-
-    removeItemFromShoppingListForMoveToPantry(cache, 'sl-1', 'sli-1', true, {
-      evictEntity: false,
-    });
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-
-    expect(counts(cache)).toMatchObject({ totalItems: 5, completedItems: 2 });
-    expect(edgeCount(cache)).toEqual({ edges: 1, totalCount: 1 });
-  });
-
-  it('leaves the counters alone for a row already in the list', () => {
-    const cache = seed();
-
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-
-    expect(counts(cache)).toMatchObject({ totalItems: 5, completedItems: 2 });
-  });
-
-  it('puts back a completedItems the removal could not lower', () => {
-    // A purchased row under `completedItems: 0`: the removal clamps at 0, so a
-    // `+1` restore would overshoot to 1.
-    const cache = seed({ completedItems: 0 });
-
-    const change = removeItemFromShoppingListForMoveToPantry(
-      cache,
-      'sl-1',
-      'sli-1',
-      true,
-      { evictEntity: false },
-    );
-    const exact = restoreItemToShoppingListAfterMoveToPantry(
-      cache,
-      'sli-1',
-      change,
-    );
-
-    expect(exact).toBe(true);
-    expect(counts(cache)).toMatchObject({ totalItems: 5, completedItems: 0 });
-  });
-
-  it('reports a counter another write moved in between', () => {
-    const cache = seed();
-
-    const change = removeItemFromShoppingListForMoveToPantry(
-      cache,
-      'sl-1',
-      'sli-1',
-      true,
-      { evictEntity: false },
-    );
-    cache.modify({
-      id: 'ShoppingList:sl-1',
-      fields: { totalItems: (existing: number) => existing + 4 },
-    });
-    const exact = restoreItemToShoppingListAfterMoveToPantry(
-      cache,
-      'sli-1',
-      change,
-    );
-
-    // The newer value stands and is restored relatively; the caller re-reads.
-    expect(exact).toBe(false);
-    expect(counts(cache)).toMatchObject({ totalItems: 9, completedItems: 2 });
   });
 });

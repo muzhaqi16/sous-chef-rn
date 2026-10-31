@@ -37,6 +37,11 @@ export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
     write: PendingWrite<TInputs>,
     data: unknown,
   ): void;
+  /**
+   * The server refused a queued write for good: what it left outside the cache,
+   * which dropping its layer cannot reach.
+   */
+  refused?(cache: ApolloCache, write: PendingWrite<TInputs>): void;
 }
 
 export type LocalWriteTable = Record<string, LocalWrite>;

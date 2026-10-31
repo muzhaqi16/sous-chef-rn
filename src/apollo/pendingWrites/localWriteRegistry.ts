@@ -141,6 +141,8 @@ import {
   removeBrandList,
   removeRestriction,
 } from '#features/profile/offline/localWrites';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
+import { checkIn } from '#features/receipts/offline/localWrites';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   addFavorite,
@@ -273,4 +275,5 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [DeleteMultipleNotificationsDocument, removeNotifications],
   [MarkSuggestionDismissedDocument, dismissSuggestion],
   [MarkSuggestionActiveDocument, undoDismissal],
+  [CreateReceiptCheckInDocument, checkIn],
 ]);

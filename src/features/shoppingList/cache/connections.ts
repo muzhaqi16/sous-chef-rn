@@ -30,13 +30,6 @@ const LIST_COUNTERS = [
   'completionRate',
 ] satisfies ListCounter[];
 
-/** A list's counters before and after one local write. */
-export interface ListCounterChange {
-  listId: string;
-  before: ListCounters;
-  after: ListCounters;
-}
-
 export function readListCounters(
   cache: ApolloCache,
   listCacheId: string,
@@ -54,46 +47,6 @@ export function readListCounters(
     remainingItems: counters?.remainingItems,
     completionRate: counters?.completionRate,
   };
-}
-
-/** Runs `write`, recording the list counters it moves so a revert can restore them exactly. */
-export function recordListCounters(
-  cache: ApolloCache,
-  listId: string,
-  write: () => void,
-): ListCounterChange {
-  const id = cache.identify({ __typename: 'ShoppingList', id: listId });
-  const before = id ? readListCounters(cache, id) : {};
-  write();
-  return { listId, before, after: id ? readListCounters(cache, id) : {} };
-}
-
-/**
- * Runs `undo`, then restores the counters `change` recorded — a `±1` undo is
- * wrong wherever the write clamped at 0. False when another write moved them
- * in between: the relative undo stands and the caller re-reads.
- */
-export function undoListCounters(
-  cache: ApolloCache,
-  change: ListCounterChange,
-  undo: () => void,
-): boolean {
-  const id = cache.identify({ __typename: 'ShoppingList', id: change.listId });
-  const current = id ? readListCounters(cache, id) : {};
-  undo();
-  if (!id) return true;
-  if (LIST_COUNTERS.some(field => current[field] !== change.after[field])) {
-    return false;
-  }
-  const restored: Partial<Record<ListCounter, () => number>> = {};
-  for (const field of LIST_COUNTERS) {
-    const value = change.before[field];
-    if (value !== undefined) restored[field] = () => value;
-  }
-  if (Object.keys(restored).length > 0) {
-    cache.modify({ id, fields: restored });
-  }
-  return true;
 }
 
 export function matchesFilter(

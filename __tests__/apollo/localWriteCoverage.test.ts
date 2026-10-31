@@ -4,16 +4,11 @@ import {
   localFirstOperationNames,
 } from '#/test-utils/queueableOperations';
 
-/**
- * Sent local-first with no local write of their own, each with its reason. An
- * entry here is either still to move or truly writes nothing on the device.
- */
-const STILL_TO_MOVE = 'writes the cache itself until its feature moves';
+/** Sent local-first with no local write of their own, each with its reason. */
 
 const NO_LOCAL_WRITE: Record<string, string> = {
   AddDietaryRestriction:
     'shows on the answer: its input takes no id, so a row shown sooner could not be removed while queued',
-  CreateReceiptCheckIn: STILL_TO_MOVE,
   MarkExpirationAction:
     'writes the notification store, not the cache: its answer states neither the row nor the badge',
   MarkRecipeAsCooked:
