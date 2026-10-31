@@ -1,5 +1,5 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
   AddedContext,
@@ -17,6 +17,7 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateShoppingListDocument,
   GetShoppingListsLiteDocument,
@@ -46,6 +47,14 @@ jest.mock('#/utils/generateEntityId', () => ({
     return `gen-id-${mockMinted}`;
   }),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -149,16 +158,14 @@ async function renderShopping({
   );
   // Read off the cache, not the hook: no lists yet and no lists at all both
   // read as an empty array.
-  await waitFor(() =>
-    expect(
-      Object.keys(cache.extract().ROOT_QUERY ?? {}).some(key =>
-        key.startsWith('shoppingLists'),
-      ),
-    ).toBe(true),
-  );
-  await waitFor(() =>
-    expect(rendered.result.current.shoppingLists).toHaveLength(listIds.length),
-  );
+  await drainTimers();
+  expect(
+    Object.keys(cache.extract().ROOT_QUERY ?? {}).some(key =>
+      key.startsWith('shoppingLists'),
+    ),
+  ).toBe(true);
+  await drainTimers();
+  expect(rendered.result.current.shoppingLists).toHaveLength(listIds.length);
   return rendered;
 }
 
@@ -283,9 +290,9 @@ const addOne = (
   result: { current: ReturnType<typeof useRecipeShoppingList> },
   overrides: Partial<DisplayIngredient> = {},
 ) =>
-  act(async () => {
-    await result.current.handleAddSingleIngredient(ingredient(overrides));
-  });
+  drained(() =>
+    result.current.handleAddSingleIngredient(ingredient(overrides)),
+  );
 
 // --- one ingredient ---------------------------------------------------------
 
@@ -510,7 +517,8 @@ async function addAllTo(result: {
   });
   // The add runs unawaited and marks its rows outside `act`, just before its
   // toast; it is over, with every update committed, once it stops adding.
-  await waitFor(() => expect(result.current.addingToList).toBe(false));
+  await drainTimers();
+  expect(result.current.addingToList).toBe(false);
 }
 
 const LINES = gql`
@@ -601,7 +609,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(addAll.fired).toEqual([
       {
         input: {
@@ -634,7 +643,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(mockToastSuccess).toHaveBeenCalledWith(
       'Added 2 items to "My List", updated 1',
     );
@@ -668,7 +678,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     // The two merged rows never came to exist under their minted ids.
     expect(cachedRow(cache, rowId(1))).toBeDefined();
     expect(cachedRow(cache, rowId(2))).toBeUndefined();
@@ -700,11 +711,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Added 2 items to "My List"',
-      ),
-    );
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith('Added 2 items to "My List"');
     expect(cachedTotal(cache)).toBe(2);
   });
 
@@ -726,7 +734,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(cachedTotal(cache)).toBe(7);
   });
 
@@ -745,7 +754,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     // No response to count: every row sent replays on reconnect.
     expect(mockToastSuccess).toHaveBeenCalledWith('Added 3 items to "My List"');
     expect(mockToastError).not.toHaveBeenCalled();
@@ -790,7 +800,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(addAll.fired.map(vars => itemsOf(vars).length)).toEqual([50, 1]);
     expect(itemsOf(addAll.fired[0]!)[0]!.id).toBe(rowId(1));
     expect(itemsOf(addAll.fired[0]!)[49]!.id).toBe(rowId(50));
@@ -923,7 +934,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     // The 50 that landed are on the list and marked; the refused one is neither.
@@ -949,11 +961,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Added 1 items to "My List"',
-      ),
-    );
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith('Added 1 items to "My List"');
     expect(cachedRow(cache, rowId(1))).toBeDefined();
     expect(cachedRow(cache, rowId(2))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(1);
@@ -974,7 +983,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
@@ -998,7 +1008,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(
       'No ingredients available to add.',
     );
@@ -1080,9 +1091,8 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
       result.current.handleCreateListAndAddIngredients('Dinner');
     });
 
-    await waitFor(() =>
-      expect(readIds(cache, { homeId: 'home-a' })).toEqual(['gen-id-1']),
-    );
+    await drainTimers();
+    expect(readIds(cache, { homeId: 'home-a' })).toEqual(['gen-id-1']);
     expect(readIds(cache, { homeId: null })).toEqual(['gen-id-1']);
     expect(readIds(cache, { homeId: 'home-b' })).toEqual([]);
     expect(readIds(cache, { filters: { isTemplate: true } })).toEqual([]);

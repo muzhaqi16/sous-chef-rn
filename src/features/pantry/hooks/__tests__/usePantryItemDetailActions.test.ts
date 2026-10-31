@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { ApolloClient } from '@apollo/client';
@@ -7,6 +7,7 @@ import {
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
@@ -84,6 +85,14 @@ jest.mock('#features/pantry/hooks/mutations/useCorrectPackageSize', () => ({
     correctPackageSize: mockCorrectPackageSize,
   }),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -178,13 +187,13 @@ describe('usePantryItemDetailActions', () => {
         deleteButton.onPress();
       });
 
-      await waitFor(() =>
-        expect(deleteMock.fired).toContainEqual({
-          input: { id: 'item-1' },
-          today: expect.any(String),
-        }),
-      );
-      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+      await drainTimers();
+      expect(deleteMock.fired).toContainEqual({
+        input: { id: 'item-1' },
+        today: expect.any(String),
+      });
+      await drainTimers();
+      expect(mockGoBack).toHaveBeenCalled();
     });
 
     it('withdraws the row even when the delete is only queued', async () => {
@@ -204,12 +213,11 @@ describe('usePantryItemDetailActions', () => {
         deleteButton.onPress();
       });
 
-      await waitFor(() =>
-        expect(removePantryItemLocally).toHaveBeenCalledWith(
-          expect.anything(),
-          'pantry-1',
-          'item-1',
-        ),
+      await drainTimers();
+      expect(removePantryItemLocally).toHaveBeenCalledWith(
+        expect.anything(),
+        'pantry-1',
+        'item-1',
       );
     });
 
@@ -242,12 +250,11 @@ describe('usePantryItemDetailActions', () => {
         alertCalls[alertCalls.length - 1][2][1].onPress();
       });
 
-      await waitFor(() =>
-        expect(removePantryItemLocally).toHaveBeenCalledWith(
-          expect.anything(),
-          'pantry-OWNING',
-          'item-1',
-        ),
+      await drainTimers();
+      expect(removePantryItemLocally).toHaveBeenCalledWith(
+        expect.anything(),
+        'pantry-OWNING',
+        'item-1',
       );
       expect(removePantryItemLocally).not.toHaveBeenCalledWith(
         expect.anything(),
@@ -278,7 +285,8 @@ describe('usePantryItemDetailActions', () => {
         alertCalls[alertCalls.length - 1][2][1].onPress();
       });
 
-      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockGoBack).toHaveBeenCalled();
       expect(restore).not.toHaveBeenCalled();
       restore.mockRestore();
     });
@@ -309,13 +317,13 @@ describe('usePantryItemDetailActions', () => {
         alertCalls[alertCalls.length - 1][2][1].onPress();
       });
 
-      await waitFor(() =>
-        expect(deleteMock.fired).toContainEqual({
-          input: { id: 'item-1' },
-          today: expect.any(String),
-        }),
-      );
-      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+      await drainTimers();
+      expect(deleteMock.fired).toContainEqual({
+        input: { id: 'item-1' },
+        today: expect.any(String),
+      });
+      await drainTimers();
+      expect(mockGoBack).toHaveBeenCalled();
     });
 
     it('does not pretend to delete when no pantry can be resolved at all', async () => {
@@ -338,11 +346,10 @@ describe('usePantryItemDetailActions', () => {
       // Nothing was deleted, so the screen must not behave as though it was.
       expect(deleteMock.fired).toEqual([]);
       expect(mockGoBack).not.toHaveBeenCalled();
-      await waitFor(() =>
-        expect(alertService.alert).toHaveBeenLastCalledWith(
-          'Error',
-          expect.any(String),
-        ),
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenLastCalledWith(
+        'Error',
+        expect.any(String),
       );
     });
 
@@ -377,7 +384,8 @@ describe('usePantryItemDetailActions', () => {
         alertCalls[alertCalls.length - 1][2][1].onPress();
       });
 
-      await waitFor(() => expect(restore).toHaveBeenCalled());
+      await drainTimers();
+      expect(restore).toHaveBeenCalled();
       restore.mockRestore();
     });
 
@@ -405,11 +413,10 @@ describe('usePantryItemDetailActions', () => {
         alertCalls[alertCalls.length - 1][2][1].onPress();
       });
 
-      await waitFor(() =>
-        expect(alertService.alert).toHaveBeenLastCalledWith(
-          'Error',
-          expect.any(String),
-        ),
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenLastCalledWith(
+        'Error',
+        expect.any(String),
       );
       expect(mockGoBack).not.toHaveBeenCalled();
       restore.mockRestore();
@@ -433,16 +440,16 @@ describe('usePantryItemDetailActions', () => {
         alertCalls[alertCalls.length - 1][2][1].onPress();
       });
 
-      await waitFor(() =>
-        expect(removePantryItemLocally).toHaveBeenCalledWith(
-          expect.anything(),
-          'pantry-1',
-          'item-1',
-        ),
+      await drainTimers();
+      expect(removePantryItemLocally).toHaveBeenCalledWith(
+        expect.anything(),
+        'pantry-1',
+        'item-1',
       );
       // Leaving the screen is the settled outcome; asserting before it passes
       // whether or not the refusal path restores.
-      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockGoBack).toHaveBeenCalled();
       expect(restore).not.toHaveBeenCalled();
       restore.mockRestore();
     });
@@ -452,9 +459,7 @@ describe('usePantryItemDetailActions', () => {
     it('invokes onAddToShoppingListNeedsList when no list is selected', async () => {
       const { result } = setup({ selectedShoppingListId: null });
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await drained(() => result.current.handleAddToShoppingList());
 
       expect(mockOnAddToShoppingListNeedsList).toHaveBeenCalled();
     });
@@ -479,9 +484,7 @@ describe('usePantryItemDetailActions', () => {
 
       const { result } = setup({}, { operationMocks: [addMock.mock] });
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await drained(() => result.current.handleAddToShoppingList());
 
       expect(addMock.fired).toContainEqual({
         input: {
@@ -511,9 +514,7 @@ describe('usePantryItemDetailActions', () => {
         { operationMocks: [addMock.mock] },
       );
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await drained(() => result.current.handleAddToShoppingList());
 
       const [fired] = addMock.fired;
       const [line] = (
@@ -551,9 +552,7 @@ describe('usePantryItemDetailActions', () => {
         { operationMocks: [addMock.mock] },
       );
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await drained(() => result.current.handleAddToShoppingList());
 
       expect(addMock.fired).toContainEqual(
         expect.objectContaining({
@@ -587,9 +586,7 @@ describe('usePantryItemDetailActions', () => {
         { operationMocks: [addMock.mock] },
       );
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await drained(() => result.current.handleAddToShoppingList());
 
       expect(addMock.fired).toContainEqual(
         expect.objectContaining({
@@ -600,6 +597,16 @@ describe('usePantryItemDetailActions', () => {
       );
     });
 
+    /** Stops at the answer: a drain runs the status on to idle. */
+    const addThenStop = async (add: () => Promise<unknown>) => {
+      let adding: Promise<unknown> | undefined;
+      act(() => {
+        adding = add();
+      });
+      await act(() => jest.advanceTimersByTimeAsync(0));
+      await adding;
+    };
+
     it('tells the user and discards the row when the server refuses the add', async () => {
       const refused = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         data: {
@@ -609,11 +616,12 @@ describe('usePantryItemDetailActions', () => {
           },
         },
       });
-      const { result } = setup({}, { operationMocks: [refused.mock] });
+      const { result } = setup(
+        {},
+        { operationMocks: [{ ...refused.mock, delay: 0 }] },
+      );
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await addThenStop(() => result.current.handleAddToShoppingList());
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -626,11 +634,12 @@ describe('usePantryItemDetailActions', () => {
       const failed = recordMock(AddItemToShoppingListFromPantryItemDocument, {
         error: new Error('boom'),
       });
-      const { result } = setup({}, { operationMocks: [failed.mock] });
+      const { result } = setup(
+        {},
+        { operationMocks: [{ ...failed.mock, delay: 0 }] },
+      );
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await addThenStop(() => result.current.handleAddToShoppingList());
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -644,11 +653,12 @@ describe('usePantryItemDetailActions', () => {
         data: { addItemsToShoppingList: null },
         partial: true,
       });
-      const { result } = setup({}, { operationMocks: [queued.mock] });
+      const { result } = setup(
+        {},
+        { operationMocks: [{ ...queued.mock, delay: 0 }] },
+      );
 
-      await act(async () => {
-        await result.current.handleAddToShoppingList();
-      });
+      await addThenStop(() => result.current.handleAddToShoppingList());
 
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(result.current.addToListStatus).toBe('success');
@@ -728,7 +738,7 @@ describe('usePantryItemDetailActions', () => {
 
       const discardButton = (alertService.alert as jest.Mock).mock
         .calls[0][2][1];
-      await act(async () => discardButton.onPress());
+      await drained(() => discardButton.onPress());
 
       expect(mockConvertExpiredToWaste).toHaveBeenCalledTimes(1);
       expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
@@ -748,7 +758,7 @@ describe('usePantryItemDetailActions', () => {
 
       const discardButton = (alertService.alert as jest.Mock).mock
         .calls[0][2][1];
-      await act(async () => discardButton.onPress());
+      await drained(() => discardButton.onPress());
 
       expect(mockConvertExpiredToWaste).toHaveBeenCalledTimes(1);
       expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
@@ -773,7 +783,7 @@ describe('usePantryItemDetailActions', () => {
 
         const discardButton = (alertService.alert as jest.Mock).mock
           .calls[0][2][1];
-        await act(async () => discardButton.onPress());
+        await drained(() => discardButton.onPress());
 
         expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
           hasBatches,
@@ -849,9 +859,9 @@ describe('usePantryItemDetailActions', () => {
       act(() => result.current.setCorrectingBatchId('batch-1'));
 
       let corrected: boolean | undefined;
-      await act(async () => {
-        corrected = await result.current.handleCorrectPackageSize(correction);
-      });
+      corrected = await drained(() =>
+        result.current.handleCorrectPackageSize(correction),
+      );
 
       expect(corrected).toBe(true);
       expect(mockCorrectPackageSize).toHaveBeenCalledWith({
@@ -865,9 +875,9 @@ describe('usePantryItemDetailActions', () => {
       const { result } = setup();
 
       let corrected: boolean | undefined;
-      await act(async () => {
-        corrected = await result.current.handleCorrectPackageSize(correction);
-      });
+      corrected = await drained(() =>
+        result.current.handleCorrectPackageSize(correction),
+      );
 
       expect(corrected).toBe(false);
       expect(mockCorrectPackageSize).not.toHaveBeenCalled();
