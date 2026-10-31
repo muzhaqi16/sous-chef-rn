@@ -294,6 +294,13 @@ const TEST_SYNTAX = [
       'A promise a timer resolves makes the result depend on how fast the worker is. Await the thing itself (the mutation, `loadMore`, `whenIdle()`), or run the clock the test drives with `jest.useFakeTimers()` and `drainTimers` from __tests__/helpers/drainTimers; a held mock sets the order of answers.',
   },
   {
+    id: 'realTimeWait',
+    selector:
+      "ImportDeclaration[source.value='@testing-library/react-native'] ImportSpecifier[imported.name=/^waitFor/], CallExpression[callee.property.name=/^find(All)?By[A-Z]/], CallExpression[callee.name=/^find(All)?By[A-Z]/]",
+    message:
+      "`waitFor` and `findBy*` wait on real time, so the worker can still decide the result. Await the thing itself, or under `jest.useFakeTimers()` use `drainTimers` or `drained` from __tests__/helpers/drainTimers, then a plain query. A drain runs past a state before the end, a countdown and the read fence's `MOST_WAITED_MS`: for the window while a write waits on a read, stop short of it with `advanceTimersByTimeAsync`.",
+  },
+  {
     id: 'bareInMemoryCache',
     selector:
       'Program:has(ImportDeclaration[source.value=/apolloMockProvider$/]) NewExpression[callee.name="InMemoryCache"]',

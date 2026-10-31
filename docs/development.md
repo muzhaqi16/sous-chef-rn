@@ -337,13 +337,21 @@ code relies on.
   only makes the window likely, and a loaded CI runner closes it. A hand-built
   mock (top-level `errors`) is held with `holdMock(mock)`; a test that builds
   its own client takes `testMockLink(responses)`.
-- **A wait ends on its signal, never on elapsed time** (`fixedSleep`). Await the
-  thing itself: the write's promise, `loadMore`, `whenIdle()`. Where nothing can
-  be awaited, or an absence is the claim, `jest.useFakeTimers()` and
-  `drainTimers()` (`__tests__/helpers/drainTimers.ts`) run the clock until no
-  timer is pending, at any answer delay. A mounted `useToday` re-arms for ever,
-  so mock it; a drain passes the read fence's 30 s cap, so none runs while a
-  confirmed write waits on a read. `waitFor` still owes a real timeout.
+- **A wait ends on its signal, never on elapsed time** (`fixedSleep`,
+  `realTimeWait`). Await the thing itself: the write's promise, `loadMore`,
+  `whenIdle()`. Where nothing can be awaited, or an absence is the claim,
+  `jest.useFakeTimers()` and `drainTimers()` (`__tests__/helpers/drainTimers.ts`)
+  run the clock until no timer is pending, at any answer delay, and a plain query
+  reads the result. `drained(start)` starts work whose answer needs the clock:
+  `await act(async () => { await work(); })` hangs there. `waitFor` and `findBy*`
+  are refused, as they owe a real timeout.
+- **A drain runs past what comes before the end.** A claim about a countdown, a
+  status that resets or a state before an answer holds the answer, or stops there
+  with `advanceTimersByTimeAsync`. So does a test about the window while a write
+  waits on a read: a drain passes the read fence's `MOST_WAITED_MS` (30 s), which
+  commits the write and skips the window, so the test passes without reaching it.
+- **A timer that re-arms never drains.** Mock `useToday`, give a mounted list
+  `reportInterval: 0`, and step a live poll to each answer.
 - **`seedCache(entries)`** — pre-writes entities into a fresh PRODUCTION cache
   (`makeCache()`, not a bare `InMemoryCache`) so hooks that call
   `useApolloClient().cache.readFragment(…)` find them, and find them through the

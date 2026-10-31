@@ -275,6 +275,22 @@ const TEST_FIXTURES: Fixture[] = [
     ],
   },
   {
+    id: 'realTimeWait',
+    invalid: [
+      "import { waitFor } from '@testing-library/react-native';",
+      "import { act, waitForElementToBeRemoved } from '@testing-library/react-native';",
+      'await screen.findByText("Milk");',
+      'await screen.findAllByRole("button");',
+      'await findByTestId("row");',
+    ],
+    valid: [
+      "import { act, screen } from '@testing-library/react-native';",
+      'await drainTimers();',
+      'await drained(() => client.query({ query }));',
+      'screen.getByText("Milk");',
+    ],
+  },
+  {
     id: 'apolloReactMock',
     invalid: ['jest.mock("@apollo/client/react");'],
     valid: ['jest.mock("#/services/haptic");'],
