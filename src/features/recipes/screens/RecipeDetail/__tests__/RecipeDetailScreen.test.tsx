@@ -494,6 +494,26 @@ describe('RecipeDetail', () => {
     expect(tree.getByText('View Original Recipe')).toBeTruthy();
   });
 
+  it('credits the author once, in the attribution at the foot', () => {
+    const tree = renderDetail({
+      displayData: {
+        dataAttributions: [],
+        details: 'complete',
+        title: 'Test',
+        image: null,
+        servings: null,
+        readyInMinutes: null,
+        healthScore: null,
+        ingredients: [],
+        instructions: [],
+        originalAuthor: 'Jen West',
+        sourceName: 'Pink When',
+      },
+    });
+    expect(tree.getAllByText('By Jen West')).toHaveLength(1);
+    expect(tree.getByText('Recipe from Pink When')).toBeTruthy();
+  });
+
   it('renders "Recipe not found" when no recipeId and no error', () => {
     const tree = renderDetail();
     expect(tree.getByText('Recipe not found')).toBeTruthy();

@@ -74,15 +74,12 @@ export function useRecipeDietaryAlerts(recipeId: string | undefined) {
     failed: !!error,
     loading,
   });
-  const summary = summarize([...byIngredient.values()]);
-  const answered = check === 'checked' || check === 'stale';
 
   return {
     check,
-    summary,
-    /** The label caveat: an answered check, unless no restriction can alert. */
-    caveat:
-      answered && (summary.length > 0 || restrictionsInPlay !== false),
+    summary: summarize([...byIngredient.values()]),
+    /** Unsure counts as yes: only a known absence of restrictions is no. */
+    restrictionsApply: restrictionsInPlay !== false,
     /** One ingredient row's alerts; none for a row nothing flags. */
     alertsFor: (ingredientId: string) =>
       byIngredient.get(ingredientId) ?? NO_ALERTS,

@@ -349,6 +349,45 @@ describe('useRecipeData', () => {
     });
   });
 
+  describe('the author beside the source line', () => {
+    const openedWith = async (
+      originalAuthor: string,
+      source: string | null,
+    ) => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          catalogRecipe(ExternalSyncStatus.Synced, { originalAuthor, source }),
+        ),
+      ]);
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
+      return result.current.displayData;
+    };
+
+    it.each([
+      ['Foodista.com – The Cooking Encyclopedia Everyone Can Edit', 'Foodista'],
+      ['Saveur', 'Saveur'],
+      ['foodista', 'Foodista.com'],
+      ['foodnetwork.com', 'Food Network'],
+    ])(
+      'leaves out "%s", which "%s" already credits',
+      async (author, source) => {
+        const displayData = await openedWith(author, source);
+
+        expect(displayData?.originalAuthor).toBeUndefined();
+        expect(displayData?.sourceName).toBe(source);
+      },
+    );
+
+    it.each([
+      ['Jen West', 'Pink When'],
+      ['Nonna', null],
+      ['Nonna', '—'],
+    ])('keeps "%s" beside a source of %s', async (author, source) => {
+      expect((await openedWith(author, source))?.originalAuthor).toBe(author);
+    });
+  });
+
   describe('a catalog recipe still being opened', () => {
     it('shows the row’s name and image while its id is on the way', () => {
       const { result } = renderData({ hint: HINT });

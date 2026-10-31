@@ -94,6 +94,24 @@ export interface UseRecipeDataResult {
   refetch: () => Promise<unknown>;
 }
 
+const nameKey = (name: string) =>
+  name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+/**
+ * The author, unless it only names the recipe's source: a catalog recipe's
+ * credit is usually its publisher, which the source line credits with a link.
+ */
+function authorBesidesSource(author: string | null, source: string | null) {
+  if (!author) return undefined;
+  const authorKey = nameKey(author);
+  const sourceKey = nameKey(source ?? '');
+  const repeatsSource =
+    !!authorKey &&
+    !!sourceKey &&
+    (authorKey.includes(sourceKey) || sourceKey.includes(authorKey));
+  return repeatsSource ? undefined : author;
+}
+
 function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
   const syncStatus = recipe.sourceMapping?.syncStatus;
   return {
@@ -124,7 +142,7 @@ function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
     publishedAt: recipe.publishedAt ?? undefined,
     forkedFromId: recipe.forkedFromId ?? undefined,
     forkedFromName: recipe.forkedFrom?.name ?? undefined,
-    originalAuthor: recipe.originalAuthor ?? undefined,
+    originalAuthor: authorBesidesSource(recipe.originalAuthor, recipe.source),
     tips: recipe.tips ?? undefined,
     videoUrl: recipe.videoUrl ?? undefined,
     tags: recipe.tags,
