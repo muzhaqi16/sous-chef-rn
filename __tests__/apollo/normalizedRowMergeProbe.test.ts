@@ -173,3 +173,49 @@ describe('a field merge on a list, for a row the same write brings', () => {
     expect(idsTheMergeReads(true)).toEqual([undefined]);
   });
 });
+
+const TWO_COPIES = gql`
+  query ProbeResults {
+    probeResults {
+      row {
+        id
+        version
+        name
+      }
+    }
+  }
+`;
+
+describe.each(Object.entries(caches))(
+  'one answer holding two copies of a row (%s)',
+  (_name, create) => {
+    it('stores the first copy and drops the later, newer one', () => {
+      const cache = create();
+      cache.writeQuery({
+        query: TWO_COPIES,
+        data: {
+          probeResults: [
+            { __typename: 'ProbeResult', row: row(2, 'first') },
+            { __typename: 'ProbeResult', row: row(3, 'second') },
+          ],
+        },
+      });
+
+      expect(cache.extract()['ShoppingListItem:sli-1']).toMatchObject({
+        version: 2,
+        name: 'first',
+      });
+    });
+
+    it('takes each copy when the two arrive in separate answers', () => {
+      const cache = create();
+      cache.writeQuery({ query: ROW, data: { probeRow: row(2, 'first') } });
+      cache.writeQuery({ query: ROW, data: { probeRow: row(3, 'second') } });
+
+      expect(cache.extract()['ShoppingListItem:sli-1']).toMatchObject({
+        version: 3,
+        name: 'second',
+      });
+    });
+  },
+);

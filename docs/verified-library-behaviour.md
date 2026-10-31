@@ -831,6 +831,24 @@ twice lands the second time.
 **What depends on it:** `readEdgeNodeId` in `src/apollo/cacheFieldPolicies.ts`
 reads a row's id from its reference, never through the store.
 
+### Apollo: one answer stores a row once, its first copy
+
+Verified 2026-10-31 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** when one answer holds two copies of a row under the same selection
+set, the store keeps the first. `processSelectionSet` in `writeToStore.js` tracks
+`context.written[dataId]` and returns early on a selection set it has seen, so a
+later copy is never read, whatever its `version`. Two copies in separate answers
+land as usual. `data` handed to an `update` or a `commit` is then re-read from the
+cache, so both positions show the first copy, and a capture of `data` looks like
+the server sent it twice. Only the raw response body shows what was sent.
+
+**What depends on it:** a payload with one result per line, like
+`createReceiptCheckIn`, states a row as committed in every result, never as it
+stood after that line. The check-in's two lines of one product showed 1 pc until
+the API did this.
+
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 
 Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind

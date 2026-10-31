@@ -510,6 +510,8 @@ describe('useReceiptReview', () => {
         return {
           createReceiptCheckIn: {
             __typename: 'CreateReceiptCheckInPayload',
+            // Every result states the row as committed: Apollo stores a row once
+            // per answer, the first copy, so a running total would show its first.
             results: sent.map((line, index) => ({
               index,
               clientId: line.clientId,
@@ -521,6 +523,7 @@ describe('useReceiptReview', () => {
                 itemName: 'Whole milk',
                 item: { id: 'cat-milk' },
                 quantity: 2,
+                version: 3,
               },
               shoppingListItem: null,
             })),
