@@ -503,6 +503,46 @@ describe('useReceiptReview', () => {
     expect(sentLinesOf(retry ?? {})).toEqual([sentLinesOf(first ?? {})[1]]);
   });
 
+  it('shows two lines of one product as one row, at the total the answer states', async () => {
+    const checkIn = recordMock(CreateReceiptCheckInDocument, {
+      dataFor: (vars): MockDataFor<typeof CreateReceiptCheckInDocument> => {
+        const sent = sentLinesOf(vars);
+        return {
+          createReceiptCheckIn: {
+            __typename: 'CreateReceiptCheckInPayload',
+            results: sent.map((line, index) => ({
+              index,
+              clientId: line.clientId,
+              success: true,
+              failure: null,
+              item: { id: 'cat-milk' },
+              pantryItem: {
+                id: sent[0]?.pantryItemId ?? '',
+                itemName: 'Whole milk',
+                item: { id: 'cat-milk' },
+                quantity: 2,
+              },
+              shoppingListItem: null,
+            })),
+          },
+        };
+      },
+    });
+    const { result, cache, addChosen } = await setup({ checkIn });
+    await act(async () => {
+      result.current.review.chooseLine(1, MILK);
+      result.current.review.chooseLine(3, MILK);
+    });
+
+    expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
+
+    const edges = readPantry(cache)?.itemsConnection.edges ?? [];
+    expect(pantryItemNames(cache)).toEqual(['Whole milk']);
+    expect(
+      cache.extract(true)[`PantryItem:${edges[0]?.node.id}`],
+    ).toMatchObject({ quantity: 2 });
+  });
+
   it('counts a check-in queued offline as added and shows it at once', async () => {
     // The offline queue completes a queued write with null data.
     const data: MockDataFor<typeof CreateReceiptCheckInDocument> = {
