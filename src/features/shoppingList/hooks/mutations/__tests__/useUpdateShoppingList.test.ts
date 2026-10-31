@@ -1,10 +1,10 @@
-import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListDocument,
@@ -41,6 +41,14 @@ const readName = (cache: ReturnType<typeof seedCache>) =>
     optimistic: true,
   })?.name;
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useUpdateShoppingList', () => {
   it('writes the rename PERMANENTLY before the mutation settles; a queued (null) result keeps it and resolves null', async () => {
     const cache = seedList();
@@ -62,7 +70,7 @@ describe('useUpdateShoppingList', () => {
     );
 
     let resolved: unknown = 'unset';
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.updateShoppingList('list-1', {
         name: 'Weekly Run',
       });
@@ -103,20 +111,19 @@ describe('useUpdateShoppingList', () => {
     );
 
     let thrown: unknown;
-    await act(async () => {
-      await result.current
+    await drained(() =>
+      result.current
         .updateShoppingList('list-1', { name: 'x'.repeat(500) })
         .catch((error: unknown) => {
           thrown = error;
-        });
-    });
+        }),
+    );
     // The caller's copy, never the server's English message.
     expect(thrown).toBeInstanceOf(Error);
     expect((thrown as Error).message).toBe('Failed to save');
 
-    await waitFor(() => {
-      expect(readName(cache)).toBe('Groceries');
-    });
+    await drainTimers();
+    expect(readName(cache)).toBe('Groceries');
   });
 
   it('returns the server entity on online success', async () => {
@@ -155,12 +162,12 @@ describe('useUpdateShoppingList', () => {
     let updated:
       | Awaited<ReturnType<typeof result.current.updateShoppingList>>
       | undefined;
-    await act(async () => {
-      updated = await result.current.updateShoppingList('list-1', {
+    updated = await drained(() =>
+      result.current.updateShoppingList('list-1', {
         name: 'Weekly Run',
         isDefault: true,
-      });
-    });
+      }),
+    );
 
     expect(updated).toMatchObject({ id: 'list-1', name: 'Weekly Run' });
   });
@@ -175,7 +182,7 @@ describe('useUpdateShoppingList', () => {
       { cache, operationMocks: [update.mock] },
     );
 
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.updateShoppingList('list-1', {
         name: 'Groceries',
         planning: { budgetAmount: 150, currency: 'USD' },
@@ -221,7 +228,7 @@ describe('useUpdateShoppingList', () => {
         optimistic: true,
       })?.targetStore;
 
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.updateShoppingList('list-1', {
         name: 'Groceries',
         targetStore: { id: 'store-1', name: 'Costco' },
@@ -229,12 +236,12 @@ describe('useUpdateShoppingList', () => {
       expect(readStore()).toMatchObject({ id: 'store-1', name: 'Costco' });
       await promise;
     });
-    await act(async () => {
-      await result.current.updateShoppingList('list-1', {
+    await drained(() =>
+      result.current.updateShoppingList('list-1', {
         name: 'Groceries',
         targetStore: null,
-      });
-    });
+      }),
+    );
 
     expect(readStore()).toBeNull();
     expect(update.fired).toEqual([
@@ -273,12 +280,12 @@ describe('useUpdateShoppingList', () => {
         () => useUpdateShoppingList('Failed to save'),
         { cache: seedList(), operationMocks: [update.mock] },
       );
-      await act(async () => {
-        await hook.result.current.updateShoppingList('list-1', {
+      await drained(() =>
+        hook.result.current.updateShoppingList('list-1', {
           name: 'Groceries',
           targetStore: toCostco,
-        });
-      });
+        }),
+      );
       return refetchQueries;
     };
 
@@ -325,7 +332,7 @@ describe('useUpdateShoppingList', () => {
       { cache, operationMocks: [update.mock] },
     );
 
-    await act(async () => {
+    await drained(async () => {
       await result.current.updateShoppingList('list-1', { name: 'Weekly Run' });
       await result.current.setPriceTracking('list-1', true);
     });

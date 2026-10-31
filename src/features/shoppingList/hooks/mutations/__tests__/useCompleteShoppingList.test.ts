@@ -1,9 +1,9 @@
 import { gql } from '@apollo/client';
-import { act, waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
@@ -43,6 +43,14 @@ const readState = (cache: ReturnType<typeof seedCache>) =>
     optimistic: true,
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useCompleteShoppingList', () => {
   it('writes COMPLETED optimistically before settle; a queued (null) result keeps it and returns true', async () => {
     const cache = seedCache([LIST]);
@@ -61,7 +69,7 @@ describe('useCompleteShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.completeList('list-1');
       // Synchronous permanent write — visible before the mutation settles.
       expect(readState(cache)?.status).toBe('COMPLETED');
@@ -98,15 +106,12 @@ describe('useCompleteShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.completeList('list-1');
-    });
+    resolved = await drained(() => result.current.completeList('list-1'));
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readState(cache)?.status).toBe('ACTIVE');
-      expect(readState(cache)?.isCompleted).toBe(false);
-    });
+    await drainTimers();
+    expect(readState(cache)?.status).toBe('ACTIVE');
+    expect(readState(cache)?.isCompleted).toBe(false);
   });
 
   it('reactivate writes ACTIVE optimistically and returns true on success', async () => {
@@ -146,7 +151,7 @@ describe('useCompleteShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.reactivateList('list-1');
       expect(readState(cache)?.status).toBe('ACTIVE');
       expect(readState(cache)?.isCompleted).toBe(false);

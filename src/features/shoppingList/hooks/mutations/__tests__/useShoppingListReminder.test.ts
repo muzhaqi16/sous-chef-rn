@@ -1,9 +1,9 @@
 import { gql } from '@apollo/client';
-import { act, waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   UpdateShoppingListReminderDocument,
   DeleteShoppingListReminderDocument,
@@ -39,6 +39,14 @@ const readReminder = (cache: ReturnType<typeof seedCache>) =>
     },
   );
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useShoppingListReminder', () => {
   it('setReminder writes the date optimistically; a queued (null) result keeps it and returns true', async () => {
     const cache = seedCache([LIST]);
@@ -56,7 +64,7 @@ describe('useShoppingListReminder', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.setReminder(
         'list-1',
         '2026-02-01T09:00:00.000Z',
@@ -90,9 +98,9 @@ describe('useShoppingListReminder', () => {
       ],
     });
 
-    await act(async () => {
-      await result.current.setReminder('list-1', '2026-02-01T09:00:00.000Z');
-    });
+    await drained(() =>
+      result.current.setReminder('list-1', '2026-02-01T09:00:00.000Z'),
+    );
 
     expect(readReminder(cache)).toMatchObject({
       reminderEnabled: true,
@@ -135,7 +143,7 @@ describe('useShoppingListReminder', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.clearReminder('list-1');
       expect(readReminder(cache)?.reminderEnabled).toBe(false);
       expect(readReminder(cache)?.reminderDate).toBeNull();
@@ -170,17 +178,13 @@ describe('useShoppingListReminder', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.setReminder(
-        'list-1',
-        '2026-02-01T09:00:00.000Z',
-      );
-    });
+    resolved = await drained(() =>
+      result.current.setReminder('list-1', '2026-02-01T09:00:00.000Z'),
+    );
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readReminder(cache)?.reminderEnabled).toBe(false);
-      expect(readReminder(cache)?.reminderDate).toBeNull();
-    });
+    await drainTimers();
+    expect(readReminder(cache)?.reminderEnabled).toBe(false);
+    expect(readReminder(cache)?.reminderDate).toBeNull();
   });
 });

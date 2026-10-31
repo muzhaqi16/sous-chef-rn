@@ -1,10 +1,10 @@
 import { gql } from '@apollo/client';
-import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
@@ -41,6 +41,14 @@ const readTemplate = (cache: ReturnType<typeof seedCache>) =>
     optimistic: true,
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useShoppingListTemplate', () => {
   it('markAsTemplate writes the flags optimistically; a queued (null) result keeps them and returns true', async () => {
     const cache = seedCache([LIST]);
@@ -55,7 +63,7 @@ describe('useShoppingListTemplate', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.markAsTemplate('list-1', 'Weekly Staples');
       expect(readTemplate(cache)?.isTemplate).toBe(true);
       expect(readTemplate(cache)?.templateName).toBe('Weekly Staples');
@@ -88,14 +96,11 @@ describe('useShoppingListTemplate', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.markAsTemplate('list-1', '');
-    });
+    resolved = await drained(() => result.current.markAsTemplate('list-1', ''));
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readTemplate(cache)?.isTemplate).toBe(false);
-    });
+    await drainTimers();
+    expect(readTemplate(cache)?.isTemplate).toBe(false);
   });
 
   describe('createFromTemplate copies the template on the device', () => {
@@ -210,12 +215,9 @@ describe('useShoppingListTemplate', () => {
       });
 
       let newId: string | null = null;
-      await act(async () => {
-        newId = await result.current.createFromTemplate(
-          'template-1',
-          'Groceries',
-        );
-      });
+      newId = await drained(() =>
+        result.current.createFromTemplate('template-1', 'Groceries'),
+      );
 
       expect(newId).toBeTruthy();
       expect(create.fired).toHaveLength(1);
@@ -265,9 +267,9 @@ describe('useShoppingListTemplate', () => {
         operationMocks: [create.mock, add.mock],
       });
 
-      await act(async () => {
-        await result.current.createFromTemplate('template-1', 'G', 'home-2');
-      });
+      await drained(() =>
+        result.current.createFromTemplate('template-1', 'G', 'home-2'),
+      );
 
       expect(create.fired[0]).toMatchObject({ input: { homeId: 'home-2' } });
     });
@@ -280,9 +282,9 @@ describe('useShoppingListTemplate', () => {
       });
 
       let newId: string | null = 'unset';
-      await act(async () => {
-        newId = await result.current.createFromTemplate('template-1');
-      });
+      newId = await drained(() =>
+        result.current.createFromTemplate('template-1'),
+      );
 
       expect(newId).toBeNull();
       expect(create.fired).toHaveLength(0);
@@ -297,9 +299,7 @@ describe('useShoppingListTemplate', () => {
         operationMocks: [create.mock, add.mock],
       });
 
-      await act(async () => {
-        await result.current.createFromTemplate('template-1');
-      });
+      await drained(() => result.current.createFromTemplate('template-1'));
 
       expect(create.fired[0]).toMatchObject({
         input: { name: 'Weekly Staples (Copy)' },

@@ -1,4 +1,3 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
@@ -6,6 +5,7 @@ import {
   renderHookWithApollo,
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained } from '#/test-utils/drainTimers';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { DeleteShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { List_EmptyItemsVariantFragmentDoc } from '#features/shoppingList/cache/list.generated';
@@ -77,6 +77,14 @@ function cacheWithList() {
   return cache;
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useDeleteShoppingList', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -94,9 +102,8 @@ describe('useDeleteShoppingList', () => {
       operationMocks: [failure],
     });
 
-    await result.current.deleteShoppingList('list-1');
-
-    await waitFor(() => expect(toastService.error).toHaveBeenCalled());
+    await drained(() => result.current.deleteShoppingList('list-1'));
+    expect(toastService.error).toHaveBeenCalled();
     expect(toastService.error).not.toHaveBeenCalledWith(
       'An unexpected database error occurred',
     );
@@ -121,9 +128,7 @@ describe('useDeleteShoppingList', () => {
     });
 
     let kept: boolean | undefined;
-    await act(async () => {
-      kept = await result.current.deleteShoppingList(LIST_ID);
-    });
+    kept = await drained(() => result.current.deleteShoppingList(LIST_ID));
 
     const id = cache.identify({ __typename: 'ShoppingList', id: LIST_ID });
     expect(kept).toBe(false);

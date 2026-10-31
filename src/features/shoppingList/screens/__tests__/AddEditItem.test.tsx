@@ -2,12 +2,7 @@
 
 import React from 'react';
 import type { TextInputProps } from 'react-native';
-import {
-  fireEvent,
-  screen,
-  userEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
@@ -513,6 +508,14 @@ function forceExecuteWithLoadingStateOnError(error: unknown) {
   );
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AddEditItem', () => {
   const addRoute = { params: { listId: 'sl1' } };
   const editRoute = { params: { listId: 'sl1', itemId: 'item1' } };
@@ -527,7 +530,6 @@ describe('AddEditItem', () => {
   // form into every test after it — which is how a case expecting an empty
   // form got one pre-filled with another test's values.
   afterEach(() => {
-    jest.useRealTimers();
     jest.restoreAllMocks();
     jest.mocked(getDeviceDecimalSeparator).mockReturnValue('.');
     mockRealCounter.current = false;
@@ -611,7 +613,8 @@ describe('AddEditItem', () => {
     expect(screen.queryByText('Estimated Price')).toBeNull();
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(added.fired).toHaveLength(1));
+    await drainTimers();
+    expect(added.fired).toHaveLength(1);
     expect(added.fired[0]).toEqual({
       input: expect.objectContaining({
         items: [expect.not.objectContaining({ pricing: expect.anything() })],
@@ -680,8 +683,9 @@ describe('AddEditItem', () => {
 
     // On the FIELD now, not in a modal: the message names the unit picker the
     // user has to fill in, and the alert is gone entirely.
+    await drainTimers();
     expect(
-      await screen.findByText('Please select a unit for the net weight.'),
+      screen.getByText('Please select a unit for the net weight.'),
     ).toBeTruthy();
     expect(alertService.alert).not.toHaveBeenCalled();
     formSpy.mockRestore();
@@ -743,7 +747,8 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />);
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(await screen.findByText('Please enter an item name')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Please enter an item name')).toBeTruthy();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -763,7 +768,8 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={addRoute} />);
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    expect(await screen.findByText('Please enter a quantity')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Please enter a quantity')).toBeTruthy();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -784,6 +790,7 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildItemForEditMock('item1')],
     });
+    await drainTimers();
     await user.press(screen.getByTestId('edit-item-submit-button'));
     expect(mockNav.goBack).toHaveBeenCalled();
   });
@@ -814,7 +821,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('calls updateItem mutation for edit mode with dirty fields', async () => {
@@ -843,9 +851,11 @@ describe('AddEditItem', () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildItemForEditMock('item1'), buildUpdateItemMock()],
     });
+    await drainTimers();
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
-    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('navigates back when the edit is queued offline (null payload, no error)', async () => {
@@ -872,9 +882,11 @@ describe('AddEditItem', () => {
         buildUpdateItemQueuedMock(),
       ],
     });
+    await drainTimers();
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
-    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockNav.goBack).toHaveBeenCalled();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -899,7 +911,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockNav.goBack).toHaveBeenCalled();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -921,11 +934,10 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Server error'),
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      expect.stringContaining('Server error'),
     );
     expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(mockNav.goBack).not.toHaveBeenCalled();
@@ -952,9 +964,11 @@ describe('AddEditItem', () => {
         buildUpdateItemConflictMock(),
       ],
     });
+    await drainTimers();
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
-    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(mockNav.goBack).not.toHaveBeenCalled();
 
     const buttons = (alertService.alert as jest.Mock).mock
@@ -981,11 +995,10 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Server error'),
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      expect.stringContaining('Server error'),
     );
     expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(mockNav.goBack).not.toHaveBeenCalled();
@@ -1010,11 +1023,10 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Failed to add item'),
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      expect.stringContaining('Failed to add item'),
     );
   });
 
@@ -1042,7 +1054,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('populates form from existing item data in edit mode', async () => {
@@ -1064,10 +1077,9 @@ describe('AddEditItem', () => {
       operationMocks: [buildItemForEditMock('item1')],
     });
 
-    await waitFor(() =>
-      expect(mockSetFromItem).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'item1' }),
-      ),
+    await drainTimers();
+    expect(mockSetFromItem).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'item1' }),
     );
   });
 
@@ -1092,13 +1104,13 @@ describe('AddEditItem', () => {
         buildUpdateItemRefusedMock(),
       ],
     });
+    await drainTimers();
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        expect.stringContaining('Server error'),
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      expect.stringContaining('Server error'),
     );
     expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(mockNav.goBack).not.toHaveBeenCalled();
@@ -1129,7 +1141,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(added.fired).toHaveLength(1));
+    await drainTimers();
+    expect(added.fired).toHaveLength(1);
     expect(added.fired[0]).toEqual({
       input: expect.objectContaining({
         items: [expect.objectContaining({ quantity: '2.2' })],
@@ -1165,7 +1178,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(added.fired).toHaveLength(1));
+    await drainTimers();
+    expect(added.fired).toHaveLength(1);
     const [line] = (
       added.fired[0]?.input as {
         items: { item: { inline?: { id: string } } }[];
@@ -1210,7 +1224,8 @@ describe('AddEditItem', () => {
     );
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(added.fired).toHaveLength(1));
+    await drainTimers();
+    expect(added.fired).toHaveLength(1);
     expect(added.fired[0]).toEqual({
       input: expect.objectContaining({
         items: [expect.objectContaining({ quantity: '3.2' })],
@@ -1219,7 +1234,6 @@ describe('AddEditItem', () => {
   });
 
   it('keeps what the user typed when the edit is refused', async () => {
-    jest.useFakeTimers();
     const user = userEvent.setup();
     const stored = recordMock(ShoppingListItemForEditDocument, {
       data: { shoppingListItem: buildItemForEdit('item1') },
@@ -1292,16 +1306,16 @@ describe('AddEditItem', () => {
         },
       ],
     });
+    await drainTimers();
     await user.press(screen.getByTestId('edit-item-submit-button'));
 
     // The update carries brand, netWeight, unit and storage in one call, so the
     // generic "couldn't update" does not say which was refused — `field` does.
     // Localized copy for that field, never the server's English message.
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Enter both a package size and its unit, or leave both empty.',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Enter both a package size and its unit, or leave both empty.',
     );
   });
 
@@ -1323,7 +1337,8 @@ describe('AddEditItem', () => {
     });
     await user.press(screen.getByTestId('add-item-submit-button'));
 
-    await waitFor(() => expect(mockNav.goBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockNav.goBack).toHaveBeenCalled();
   });
 
   it('does not prepopulate item name when in edit mode even with initialItemName', () => {
