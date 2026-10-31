@@ -56,7 +56,7 @@ const callSites = collect(SRC)
 
 describe('local-first revert snapshots', () => {
   it('finds the call sites, so the check below is not vacuous', () => {
-    expect(callSites.length).toBeGreaterThanOrEqual(5);
+    expect(callSites.length).toBeGreaterThanOrEqual(4);
   });
 
   it.each(callSites)('%s builds its snapshot with snapshotFields', file => {

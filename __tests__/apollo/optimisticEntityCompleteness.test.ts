@@ -1584,6 +1584,7 @@ describe('optimistic entity completeness', () => {
         'client-home-1',
         { ...HOME_INPUT, id: 'client-home-1' },
         CREATOR,
+        NOW,
       );
 
       const diff = cache.diff({
@@ -1605,6 +1606,7 @@ describe('optimistic entity completeness', () => {
         'client-home-detail',
         { ...HOME_INPUT, id: 'client-home-detail' },
         CREATOR,
+        NOW,
       );
 
       const diff = cache.diff({
@@ -1626,6 +1628,7 @@ describe('optimistic entity completeness', () => {
         'client-home-2',
         { ...HOME_INPUT, id: 'client-home-2' },
         CREATOR,
+        NOW,
       );
       const home = cache.readFragment({
         id: 'Home:client-home-2',

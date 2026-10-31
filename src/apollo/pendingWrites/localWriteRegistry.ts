@@ -1,4 +1,9 @@
 import { byOperation } from '#/apollo/utils/documentOperation';
+import {
+  CreateHomeDocument,
+  UpdateHomeDocument,
+} from '#operations/home/home.generated';
+import { MarkHomeAsDefaultDocument } from '#operations/home/userSettings.generated';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import {
   CreateStorageLocationDocument,
@@ -7,6 +12,10 @@ import {
   UpdateStorageLocationDocument,
 } from '#features/catalog/graphql/storageLocation.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import {
+  createHome,
+  markDefaultHome,
+} from '#features/home/offline/localWrites';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,
@@ -198,4 +207,7 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [RemoveRecipeFromFavoritesDocument, removeFavorite],
   [UpdateFavoriteRecipeDocument, savedFields],
   [DeleteRecipeFolderDocument, moveFolder],
+  [CreateHomeDocument, createHome],
+  [UpdateHomeDocument, entityFields],
+  [MarkHomeAsDefaultDocument, markDefaultHome],
 ]);

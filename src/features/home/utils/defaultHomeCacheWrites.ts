@@ -4,24 +4,10 @@
  */
 
 import type { ApolloCache, Reference } from '@apollo/client';
-import {
-  DefaultHomeCacheWrites_IdentityFragmentDoc,
-  DefaultHomeCacheWrites_IsDefaultFragmentDoc,
-} from './defaultHomeCacheWrites.generated';
+import { DefaultHomeCacheWrites_IdentityFragmentDoc } from './defaultHomeCacheWrites.generated';
 
 /** Cached `homes` edge: normalized `{ node: Reference }`, or a bare ref. */
 type HomeEdge = { node?: Reference } | Reference;
-
-/**
- * Pre-write `isDefault` per cache id. `undefined` means the record carried no
- * such field, so restoring it removes the field rather than writing `false`.
- */
-type DefaultHomeSnapshot = ReadonlyMap<string, boolean | undefined>;
-
-interface ApplyDefaultHomeResult {
-  applied: boolean;
-  snapshot: DefaultHomeSnapshot;
-}
 
 const cachedHomes = (cache: ApolloCache) => {
   const found: Array<{ cacheId: string; homeId: unknown }> = [];
@@ -49,13 +35,6 @@ const cachedHomes = (cache: ApolloCache) => {
   return found;
 };
 
-const readIsDefault = (cache: ApolloCache, cacheId: string) =>
-  cache.readFragment({
-    id: cacheId,
-    fragment: DefaultHomeCacheWrites_IsDefaultFragmentDoc,
-    optimistic: true,
-  })?.isDefault;
-
 /**
  * Make `defaultHomeId` the only cached home carrying `isDefault: true`.
  *
@@ -65,7 +44,7 @@ const readIsDefault = (cache: ApolloCache, cacheId: string) =>
 export const applyDefaultHome = (
   cache: ApolloCache,
   defaultHomeId: string,
-): ApplyDefaultHomeResult => {
+): void => {
   const targetCacheId = cache.identify({
     __typename: 'Home',
     id: defaultHomeId,
@@ -78,18 +57,9 @@ export const applyDefaultHome = (
       optimistic: true,
     }) !== null;
 
-  if (!targetIsCached) {
-    return { applied: false, snapshot: new Map() };
-  }
+  if (!targetIsCached) return;
 
-  const homes = cachedHomes(cache);
-  const snapshot = new Map<string, boolean | undefined>();
-
-  homes.forEach(({ cacheId }) => {
-    snapshot.set(cacheId, readIsDefault(cache, cacheId));
-  });
-
-  homes.forEach(({ cacheId, homeId }) => {
+  cachedHomes(cache).forEach(({ cacheId, homeId }) => {
     cache.modify({
       id: cacheId,
       fields: { isDefault: () => homeId === defaultHomeId },
@@ -98,25 +68,5 @@ export const applyDefaultHome = (
 
   // A home created or joined this session is cached before it reaches the
   // connection, so the flag has to be written to it directly.
-  if (targetCacheId && !snapshot.has(targetCacheId)) {
-    snapshot.set(targetCacheId, readIsDefault(cache, targetCacheId));
-    cache.modify({ id: targetCacheId, fields: { isDefault: () => true } });
-  }
-
-  return { applied: true, snapshot };
-};
-
-/** Restore what `applyDefaultHome` found — it cannot be re-derived after. */
-export const restoreDefaultHome = (
-  cache: ApolloCache,
-  snapshot: DefaultHomeSnapshot,
-) => {
-  snapshot.forEach((wasDefault, cacheId) => {
-    cache.modify({
-      id: cacheId,
-      fields: {
-        isDefault: (_existing, { DELETE }) => wasDefault ?? DELETE,
-      },
-    });
-  });
+  cache.modify({ id: targetCacheId, fields: { isDefault: () => true } });
 };

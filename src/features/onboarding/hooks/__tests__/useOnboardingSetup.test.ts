@@ -161,6 +161,7 @@ describe('useOnboardingSetup, offline', () => {
         id: rendered.cache.identify({ __typename: 'Home', id: homeId }),
         fragment: Home_RowFragmentDoc,
         fragmentName: 'home_row',
+        optimistic: true,
       })?.name,
     ).toBe("Maya's home");
   });

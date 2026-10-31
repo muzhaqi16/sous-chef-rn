@@ -13,10 +13,8 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
-import {
-  applyDefaultHome,
-  restoreDefaultHome,
-} from '#features/home/utils/defaultHomeCacheWrites';
+import type { MarkDefaultHomeInputs } from '#features/home/offline/localWrites';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { useDefaultHomeSyncStore } from '#features/home/store/useDefaultHomeSyncStore';
 import { todayKey } from '#/utils/dateUtils';
 
@@ -24,8 +22,6 @@ interface MarkHomeAsDefaultResult {
   /** `refused`: the server ruled against it. `failed`: it never ruled. */
   status: 'confirmed' | 'queued' | 'refused' | 'failed';
   serverPantry: { id: string } | null;
-  /** False when the target was not cached, so no local write was applied. */
-  applied: boolean;
   /** The localized copy for a refused or failed write; the caller presents it. */
   failure?: SettledFailure;
 }
@@ -37,8 +33,6 @@ export const useMarkHomeAsDefault = () => {
   const markConfirmed = useDefaultHomeSyncStore(state => state.markConfirmed);
   const clearPending = useDefaultHomeSyncStore(state => state.clearPending);
 
-  // Local-first rules out an `optimisticResponse`: offline, the queue's null
-  // result counts as completion and tears the optimistic layer down.
   const [mutate] = useMutation(MarkHomeAsDefaultDocument, {
     context: { localFirst: true },
   });
@@ -46,22 +40,22 @@ export const useMarkHomeAsDefault = () => {
   const markAsDefault = async (
     homeId: string,
   ): Promise<MarkHomeAsDefaultResult> => {
-    const { applied, snapshot } = applyDefaultHome(client.cache, homeId);
-
-    // Recorded even when unapplied, so a retry is not skipped as already done.
+    // Recorded even when the target is not cached, so a retry is not skipped
+    // as already done.
     markPending(homeId);
 
-    const settled = await settleMutation(
-      () => mutate({ variables: { input: { homeId }, today: todayKey() } }),
-      {
-        document: MarkHomeAsDefaultDocument,
-        fallback: t('errors.setDefaultHomeFailed'),
-        present: 'none',
-        onFailed: () => {
-          restoreDefaultHome(client.cache, snapshot);
-          clearPending();
-        },
-      },
+    const inputs: MarkDefaultHomeInputs = { homeId };
+    const settled = await pendingWritesOf(client.cache).send(
+      MarkHomeAsDefaultDocument,
+      { input: { homeId }, today: todayKey() },
+      write =>
+        settleMutation(() => mutate(write), {
+          document: MarkHomeAsDefaultDocument,
+          fallback: t('errors.setDefaultHomeFailed'),
+          present: 'none',
+          onFailed: clearPending,
+        }),
+      inputs,
     );
 
     if (settled.failure) {
@@ -77,31 +71,21 @@ export const useMarkHomeAsDefault = () => {
       return {
         status: refused ? 'refused' : 'failed',
         serverPantry: null,
-        applied,
         failure: settled.failure,
       };
     }
 
-    // Queued: local write and pending marker both stand until replay.
+    // Queued: the local write and the pending marker both stand until replay.
     if (settled.status === 'queued') {
-      return {
-        status: 'queued',
-        serverPantry: null,
-        applied: applied || applyDefaultHome(client.cache, homeId).applied,
-      };
+      return { status: 'queued', serverPantry: null };
     }
 
     markConfirmed(homeId);
 
-    // The target may have reached the cache while the mutation was in flight
-    // (a create's `update`, a join's refetch), so a write that could not land
-    // before is retried here rather than waiting for the next full refetch.
-    const landed = applied || applyDefaultHome(client.cache, homeId).applied;
-
     const payload = appliedPayload(settled.data);
     const serverPantry = payload ? payload.defaultPantry ?? null : null;
 
-    return { status: 'confirmed', serverPantry, applied: landed };
+    return { status: 'confirmed', serverPantry };
   };
 
   return { markAsDefault };

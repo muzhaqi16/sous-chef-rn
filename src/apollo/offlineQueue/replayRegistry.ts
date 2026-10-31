@@ -4,7 +4,6 @@
  * here rather than a manifest field.
  */
 import { byOperation } from '#/apollo/utils/documentOperation';
-import { reconcileCreateHomeReplay } from '#features/home/offline/replayReconcilers';
 import {
   reconcileConvertExpiredReplay,
   reconcileCreatePantryItemReplay,
@@ -22,7 +21,6 @@ import {
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { ChangePantryItemUnitDocument } from '#features/pantry/hooks/usePantryUnitChange.generated';
-import { CreateHomeDocument } from '#operations/home/home.generated';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { reconcileSettingsReplay } from '#/apollo/utils/unitSystemAnswers';
 import {
@@ -70,7 +68,6 @@ export const forEachBatchAdd = <T>(value: T): Array<[DocumentNode, T]> =>
   ].map((document): [DocumentNode, T] => [document, value]);
 
 export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
-  [CreateHomeDocument, reconcileCreateHomeReplay],
   [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],

@@ -3,11 +3,10 @@
  * plus the creator's Owner membership, plus its place in the homes connection.
  */
 
-import type { ApolloCache, Reference } from '@apollo/client';
+import type { ApolloCache } from '@apollo/client';
 import {
   Home_MembershipRowFragmentDoc,
   Home_RowFragmentDoc,
-  type Home_MembershipRowFragment,
 } from './home.generated';
 import {
   NEUTRAL_LOCAL_HOME,
@@ -21,34 +20,28 @@ import {
   MembershipStatus,
   type CreateHomeInput,
 } from '#/graphql/generated/schemaTypes';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import type { Unmasked } from '@apollo/client/masking';
 
 /** The signed-in user, as the membership and its `user` record name them. */
-export interface HomeCreator {
+export type HomeCreator = {
   id: string;
   email?: string | null;
   displayName?: string | null;
-}
+};
 
-/** The id a placeholder membership carries, derived so it can be found again. */
+/** The id a placeholder membership carries: the server mints the real one. */
 export const placeholderMembershipId = (homeId: string) => `${homeId}:owner`;
 
-/**
- * Writes the home and its creator's membership, then links it into the homes
- * connection. False when `Query.homes` is not cached (`cache.modify` reports
- * rather than throws), so the caller can refetch; the entity stands either way.
- */
+/** Writes the home and its creator's membership, and lists it in `homes`. */
 export function writeLocalHome(
   cache: ApolloCache,
   id: string,
   input: CreateHomeInput,
   creator: HomeCreator,
-): boolean {
-  // The server mints the real membership, so this one is a PLACEHOLDER keyed
-  // off the home, for the replay reconciler to find. Every capability is
-  // granted because that is what the server grants a home's owner.
+  now: string,
+): void {
+  // Every capability is granted because that is what the server grants a
+  // home's owner.
   const membership = {
     __typename: 'Membership',
     id: placeholderMembershipId(id),
@@ -80,7 +73,6 @@ export function writeLocalHome(
     },
   });
 
-  const now = new Date().toISOString();
   writeLocalEntity(cache, {
     fragment: Home_RowFragmentDoc,
     fragmentName: 'home_row',
@@ -107,102 +99,5 @@ export function writeLocalHome(
       },
     },
   });
-  return addToHomesCache(
-    cache,
-    { __typename: 'Home', id },
-    { position: 'end' },
-  );
-}
-
-/**
- * The client cannot key the membership row, so the server's REPLACES the
- * placeholder (fields carried over, edge repointed, placeholder evicted). Runs
- * from the create's `update` and the replay reconciler; idempotent on re-drain.
- */
-export function adoptServerMembership(
-  cache: ApolloCache,
-  homeId: string,
-  serverMembershipId: string,
-): void {
-  const placeholderId = placeholderMembershipId(homeId);
-  if (!serverMembershipId || serverMembershipId === placeholderId) return;
-
-  const placeholder = cache.readFragment<Unmasked<Home_MembershipRowFragment>>({
-    id: cache.identify({ __typename: 'Membership', id: placeholderId }),
-    fragment: Home_MembershipRowFragmentDoc,
-    fragmentName: 'home_membershipRow',
-    optimistic: true,
-  });
-  if (!placeholder) return;
-
-  // The server's own selection carries the role and the capability flags but
-  // not `status`, `displayName` or the `user` record, so the placeholder's are
-  // carried across rather than left missing.
-  cache.writeFragment({
-    id: cache.identify({
-      __typename: 'Membership',
-      id: serverMembershipId,
-    }),
-    fragment: Home_MembershipRowFragmentDoc,
-    fragmentName: 'home_membershipRow',
-    data: { ...placeholder, id: serverMembershipId },
-  });
-
-  repointMemberEdge(cache, homeId, placeholderId, serverMembershipId);
-  safeEvict(cache, 'Membership', placeholderId);
-}
-
-function repointMemberEdge(
-  cache: ApolloCache,
-  homeId: string,
-  placeholderId: string,
-  serverMembershipId: string,
-): void {
-  const homeCacheId = cache.identify({ __typename: 'Home', id: homeId });
-  if (!homeCacheId) return;
-
-  cache.modify({
-    id: homeCacheId,
-    fields: {
-      membersConnection(existing, { readField, toReference }) {
-        const connection = existing as
-          | { edges?: Array<{ node?: Reference }> }
-          | undefined;
-        if (!connection?.edges) return connection;
-        const node = toReference({
-          __typename: 'Membership',
-          id: serverMembershipId,
-        });
-        if (!node) return connection;
-        return {
-          ...connection,
-          edges: connection.edges.map(edge =>
-            readField('id', edge.node) === placeholderId
-              ? { ...edge, node }
-              : edge,
-          ),
-        };
-      },
-      myMembership(
-        existing: Reference | undefined,
-        { readField, toReference },
-      ) {
-        if (!existing || readField('id', existing) !== placeholderId) {
-          return existing;
-        }
-        return (
-          toReference({
-            __typename: 'Membership',
-            id: serverMembershipId,
-          }) ?? existing
-        );
-      },
-    },
-  });
-}
-
-/** Drop a rejected create: the edge goes with the entity. */
-export function revertOptimisticHome(cache: ApolloCache, id: string): void {
-  safeEvict(cache, 'Home', id);
-  cache.gc();
+  addToHomesCache(cache, { __typename: 'Home', id }, { position: 'end' });
 }

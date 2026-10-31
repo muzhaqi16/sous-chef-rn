@@ -54,6 +54,7 @@ jest.mock('#/utils/connectionUtils', () => ({
 }));
 
 jest.mock('../homeCacheUpdaters', () => ({
+  ...jest.requireActual('../homeCacheUpdaters'),
   addToHomesCache: jest.fn(),
   removeFromHomesCache: jest.fn(),
 }));
