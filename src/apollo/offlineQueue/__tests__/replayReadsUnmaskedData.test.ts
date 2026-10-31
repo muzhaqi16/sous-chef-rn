@@ -12,6 +12,7 @@ import {
 } from '#/test-utils/queuedMutation';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 
@@ -165,17 +166,18 @@ describe('a replayed batch add the server merged into an existing row', () => {
     });
     queueStore.setCurrentUserId(entry.userId);
     queueStore.addMutation(entry);
-    const pending = pendingWritesOf(mockClient.cache);
+    const { cache } = mockClient;
+    const pending = pendingWritesOf(cache);
     pending.restore(queueStore.getPendingWrites());
     const shown = () =>
-      mockClient?.cache.extract(true)['ShoppingListItem:row-minted'];
-    expect(shown()).toBeDefined();
+      isHeld(cache, { __typename: 'ShoppingListItem', id: 'row-minted' });
+    expect(shown()).toBe(true);
 
     await new QueueManager()['executeMutation'](entry);
     pending.rebuild();
     queueStore.removeMutation(entry.id);
 
-    expect(shown()).toBeUndefined();
+    expect(shown()).toBe(false);
     expect(totalItemsOf(mockClient)).toBe(4);
   });
 });
