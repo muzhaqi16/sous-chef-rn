@@ -345,6 +345,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 0.4,
   },
   listToggle: {
+    paddingHorizontal: 0,
     marginBottom: theme.spacing.lg,
     borderBottomWidth: theme.borderWidth.none,
     borderRadius: theme.radii.md,
