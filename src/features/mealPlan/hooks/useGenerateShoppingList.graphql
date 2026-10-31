@@ -64,8 +64,7 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
 }
 
 # The derived lines, added in one batch. Mirrors the pantry screen's add so both
-# reconcile through `buildAddItemsReconcileUpdate`, which pairs a result back to
-# the client-minted id by its index into `input.items`.
+# settle through `addRows`.
 mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename

@@ -54,7 +54,6 @@ import { TimeoutError } from '#/utils/errors/timeoutError';
 import { withinMs } from '#/utils/withinMs';
 import { sleep } from '#/utils/backoff';
 import { Telemetry } from '#/services/telemetry';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { isRecord } from '#/utils/isRecord';
 import { returnedVersionOf, versionOf } from '#/apollo/utils/returnedVersion';
@@ -384,11 +383,6 @@ export class QueueManager {
         status: QueueStatus.SUCCESS,
         processedAt: Date.now(),
       });
-
-      // The change is on the server now, so drop the persisted optimistic
-      // fields it owns — otherwise restoration re-applies stale values over
-      // fresher server state on a later mount. Another queued write's stay.
-      this.clearPersistedOptimisticFields(mutation);
 
       // Remove after short delay (allows for reconciliation)
       setTimeout(() => queueStore.removeMutation(mutationId), 5000);
@@ -782,9 +776,6 @@ export class QueueManager {
     pendingWritesOf(requireApolloClient().cache).followQueue(
       queueStore.getPendingWrites(),
     );
-    // Nothing under the minted id is replayed onto the survivor at launch:
-    // the carried writes' own responses state the survivor's values.
-    optimisticDataPersistence.clearEntityById(mintedId);
     logger.info(`🔀 Queue: writes for ${mintedId} now target ${survivingId}`);
   }
 
@@ -884,45 +875,6 @@ export class QueueManager {
   /** Every entity a queued write creates or changes — one per row of a batch. */
   private getAllEntityIds(mutation: QueuedMutation): string[] {
     return queuedSubject(mutation).subjectIds;
-  }
-
-  /**
-   * Drops the persisted optimistic fields a landed mutation owns on each
-   * entity: those saved after the latest earlier write still queued for it, up
-   * to this one's enqueue.
-   */
-  private clearPersistedOptimisticFields(mutation: QueuedMutation): void {
-    const entityIds = this.getAllEntityIds(mutation);
-    if (entityIds.length === 0) return;
-    // One index for the whole batch rather than a keyspace scan per id.
-    const typenames = this.typenamesById();
-    const earlierUnlanded = queueStore
-      .getMutationsForUser(mutation.userId)
-      .filter(
-        queued =>
-          queued.id !== mutation.id &&
-          queued.createdAt < mutation.createdAt &&
-          queued.status !== QueueStatus.SUCCESS &&
-          queued.status !== QueueStatus.FAILED,
-      )
-      .map(queued => ({
-        createdAt: queued.createdAt,
-        entityIds: new Set(this.getAllEntityIds(queued)),
-      }));
-    for (const entityId of entityIds) {
-      const entityType = typenames.get(entityId);
-      if (!entityType) continue;
-      const after = Math.max(
-        Number.NEGATIVE_INFINITY,
-        ...earlierUnlanded
-          .filter(queued => queued.entityIds.has(entityId))
-          .map(queued => queued.createdAt),
-      );
-      optimisticDataPersistence.clearEntitySavedBetween(entityType, entityId, {
-        after,
-        until: mutation.createdAt,
-      });
-    }
   }
 
   /**

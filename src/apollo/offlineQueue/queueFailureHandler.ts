@@ -1,7 +1,6 @@
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
@@ -51,16 +50,12 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
 }
 
 /** A write with no local write registered changed the cache itself. */
-function withdrawLocalChange(info: FailedMutationInfo): void {
-  const { entityType, entityId } = info;
-
+function withdrawLocalChange({
+  entityType,
+  entityId,
+}: FailedMutationInfo): void {
   if (entityType && entityId) {
     safeEvict(requireApolloClient().cache, entityType, entityId);
-    // Otherwise the optimistic value is replayed over the server's on the next
-    // restoration pass and the change comes back from the dead.
-    optimisticDataPersistence.clearEntity(entityType, entityId);
-  } else if (entityId) {
-    optimisticDataPersistence.clearEntityById(entityId);
   }
 }
 

@@ -17,7 +17,6 @@ import {
 } from '../OfflineRejectedError';
 import { useStore } from '#store';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { gql } from '@apollo/client';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
@@ -72,10 +71,6 @@ jest.mock('../queueManager', () => ({
 // Mock generateId
 jest.mock('#/utils/generateId', () => ({
   generateId: jest.fn(() => 'test-uuid'),
-}));
-
-jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
-  apolloCachePersistence: { flushPending: jest.fn() },
 }));
 
 // Mock the logger
@@ -498,13 +493,6 @@ describe('createQueueLink', () => {
       link.request(operation, makeForward()).subscribe({
         complete() {
           expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
-          expect(apolloCachePersistence.flushPending).toHaveBeenCalledTimes(1);
-          expect(
-            jest.mocked(apolloCachePersistence.flushPending).mock
-              .invocationCallOrder[0],
-          ).toBeGreaterThan(
-            jest.mocked(queueStore.addMutation).mock.invocationCallOrder[0]!,
-          );
           done();
         },
       });
@@ -901,8 +889,6 @@ describe('createQueueLink', () => {
             expect.objectContaining({ operationName: 'AddItem' }),
             expect.objectContaining({ retryable: false }),
           );
-          // Nothing was queued, so no save is owed to a queued write.
-          expect(apolloCachePersistence.flushPending).not.toHaveBeenCalled();
           done();
         },
       });

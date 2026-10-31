@@ -151,16 +151,14 @@ fragment ShoppingListItemPurchaseInfoFragment on ShoppingListItemPurchaseInfo {
 # useRecipeShoppingList.graphql (useRecipeShoppingList_addedItem).
 #
 # The Feature API Boundary Convention stops those features importing the
-# shopping-list feature's operations, so each kept a hand-maintained copy of
-# this selection — and they drifted. The two pantry copies had lost the parent
-# list's counters, which matters because `reconcileShoppingItemCreateUpdate`
-# passes `bumpTotalItems: false` on the deliberate assumption that the response
-# carries them; without them a list's counts go stale after an add. Now they
-# are one selection.
+# shopping-list feature's operations, so each has its own copy of the mutation
+# spreading this one selection. `addRows.commit` adds no count on the
+# assumption that the answer states the parent list's counters, so a copy that
+# drops them leaves a list's counts stale after an add.
 #
 # Scoped to the ITEM rather than the whole payload on purpose: `results` stays
-# unmasked so `buildAddItemsReconcileUpdate` and `useAddShoppingItem` keep
-# reading it directly, and only the item fields ride behind the spread.
+# unmasked so `addRows.commit` and `createShoppingListRow` read it directly, and
+# only the item fields ride behind the spread.
 #
 # `<feature>Fragments.generated.ts` is public surface per the boundary
 # convention, so spreading this across features is allowed.

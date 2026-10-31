@@ -24,12 +24,6 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
   },
 }));
 
-jest.mock('../offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    clearAll: jest.fn(),
-  },
-}));
-
 // wsLink is a static import here. This stub keeps the assertion at the seam —
 // that cleanup asks the socket to go away — while what disposal DOES with the
 // client (drop it, so the next sign-in is not handed one that has latched
@@ -52,7 +46,6 @@ import { whileSessionEnds } from '#store/sessionEnding';
 import { LogoutCleanup } from '../logoutCleanup';
 import { cancelTokenRefresh } from '../links/tokenScheduler';
 import { apolloCachePersistence } from '../offline/ApolloCachePersistence';
-import { optimisticDataPersistence } from '../offline/OptimisticDataPersistence';
 import { storage } from '#/store/deviceStorage';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { RefreshTokenDocument } from '#operations/auth/auth.generated';
@@ -106,7 +99,6 @@ describe('LogoutCleanup', () => {
         resetResultCache: true,
       });
       expect(apolloCachePersistence.clear).toHaveBeenCalled();
-      expect(optimisticDataPersistence.clearAll).toHaveBeenCalled();
     });
 
     it('forgets which queries were answered since a language switch', async () => {

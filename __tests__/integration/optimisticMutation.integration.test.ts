@@ -63,11 +63,6 @@ import { useToggleShoppingItem } from '#features/shoppingList/hooks/mutations/us
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    track: jest.fn(() => jest.fn()),
-  },
-}));
 
 const LIST_ID = 'list-1';
 const ITEM_ID = 'item-1';

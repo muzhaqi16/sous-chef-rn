@@ -28,7 +28,6 @@ import {
   DeleteMealPlanItemDocument,
   UpdateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
@@ -652,24 +651,6 @@ describe("a merged create's queued writes", () => {
     ]);
     expect(failed).not.toHaveBeenCalled();
     expect(kept).not.toHaveBeenCalled();
-  });
-
-  it('leave nothing persisted under the created entry', async () => {
-    optimisticDataPersistence.save('PantryItem', 'minted-1', 'quantity', 4);
-    optimisticDataPersistence.flush();
-    queuePantryCreate();
-    queueAfterCreate('rename', UpdatePantryItemDocument, {
-      id: 'minted-1',
-      itemName: 'Oat milk',
-      version: 1,
-    });
-    mockClient.mutate.mockResolvedValueOnce(pantryMerge).mockResolvedValueOnce({
-      data: { updatePantryItem: pantryItemPayload('surviving-1', 6) },
-    });
-
-    await new QueueManager().processQueue();
-
-    expect(optimisticDataPersistence.get('PantryItem', 'minted-1')).toEqual({});
   });
 
   it('follow a meal the service merged into one already planned', async () => {

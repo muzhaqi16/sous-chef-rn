@@ -146,10 +146,6 @@ jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
   };
 });
 
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { clearType: jest.fn() },
-}));
-
 jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
   getShoppingListPermissionsWithOwner: jest.fn(() => ({
     canAddItems: true,

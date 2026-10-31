@@ -221,20 +221,19 @@ warning and disables Add.
 ### Completing a meal
 
 Checking a recipe meal opens `MarkCookedModal` (servings, deduct from pantry, notes);
-checking a custom meal or unchecking toggles directly. `toggleCompleted` writes
-`isCompleted` / `completedAt` to the cache, records the flag in
-`optimisticDataPersistence` until the server confirms, then sends
-`UpdateMealPlanItem` (with `deductFromPantry`, `servings` and `notes` only when
+checking a custom meal or unchecking toggles directly. `toggleCompleted` sends
+`UpdateMealPlanItem` as a pending write, which shows `isCompleted` / `completedAt`
+until the server answers (with `deductFromPantry`, `servings` and `notes` only when
 completing). The success toast says pantry items were deducted when a recipe meal was
 completed with deduction. A completed meal with `usedPantryItems` shows a "pantry
 updated" badge.
 
 ### Deleting a meal
 
-Swipe-to-delete on `MealPlanItemCard`. The row's edge is removed from the plan's
-`mealPlanItemsConnection` and the row evicted before the mutation, registered as a
-pending delete so a subscription echo cannot re-add it, and restored if the server
-refuses. A replayed delete answers `converged`, which settles as applied.
+Swipe-to-delete on `MealPlanItemCard`. The write's layer hides the row and its edge
+in the plan's `mealPlanItemsConnection`, it is registered as a pending delete so a
+subscription echo cannot re-add it, and a refusal drops the layer. A replayed delete
+answers `converged`, which settles as applied.
 
 ### Generating a shopping list
 
@@ -321,7 +320,7 @@ client-side (name search, active only, weekly/monthly) without changing the acti
 | `src/features/mealPlan/components/AddMealSheet.tsx`                          | Saved recipes, custom meal, recipe search                |
 | `src/features/mealPlan/components/AddToMealPlanSheet/AddToMealPlanSheet.tsx` | Add a given recipe to a plan, date and meal type         |
 | `src/features/mealPlan/components/DayMealList.tsx`                           | Day view grouped by meal type                            |
-| `src/features/mealPlan/components/MealPlanItemCard.tsx`                      | Meal row: completion, delete, nutrition and pantry badge |
+| `src/features/mealPlan/ui/MealPlanItemCard.tsx`                              | Meal row: completion, delete, nutrition and pantry badge |
 | `src/features/mealPlan/hooks/useMealPlanItemActions.ts`                      | Local-first meal writes                                  |
 | `src/features/mealPlan/hooks/useMealPlanActions.ts`                          | Local-first plan writes                                  |
 | `src/features/mealPlan/screens/useActiveMealPlan.ts`                         | Active plan resolution                                   |
@@ -331,6 +330,6 @@ client-side (name search, active only, weekly/monthly) without changing the acti
 | `src/features/mealPlan/graphql/mealPlan.graphql`                             | Plan and meal operations, subscription                   |
 | `src/features/mealPlan/graphql/mealTemplate.graphql`                         | Template operations                                      |
 | `src/features/mealPlan/graphql/mealPlanFragments.graphql`                    | Shared plan and template fragments                       |
-| `src/features/recipes/hooks/useSavedRecipes.ts`                              | Saved recipes (paginated), read by `AddMealSheet`        |
+| `src/features/recipes/screens/useSavedRecipes.ts`                            | Saved recipes (paginated), read by `AddMealSheet`        |
 | `src/features/recipes/screens/RecipeMain.tsx`                                | Recipe discovery and search                              |
 | `src/features/recipes/screens/RecipeDetail/index.tsx`                        | Recipe detail, incl. "Add to meal plan"                  |

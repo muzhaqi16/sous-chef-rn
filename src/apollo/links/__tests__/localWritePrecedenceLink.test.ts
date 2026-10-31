@@ -16,6 +16,9 @@ import {
 } from '#features/catalog/cache/usualStores';
 import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
 import { UpdateUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
+import type { PinUsualStoreInputs } from '#features/catalog/offline/localWrites';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { settleMutation } from '#/apollo/utils/settleMutation';
 import { createLocalWritePrecedenceLink } from '../localWritePrecedenceLink';
 
 const entry = (
@@ -73,7 +76,6 @@ function open({
   rereads = [] as UsualStoreEntry[][],
   homeId = 'home-1',
   watchNow = true,
-  context = {},
 } = {}) {
   const refresh = recordMock(UsualStoresDocument, {
     data: { usualStores: refreshed },
@@ -93,19 +95,13 @@ function open({
   const cache = makeCache();
   writeUsualStores(cache, 'home-1', [banksville, market]);
   /** Each operation the link passes on, as the rest of the chain sees it. */
-  const forwarded: Array<{
-    name: string | undefined;
-    context: Record<string, unknown>;
-  }> = [];
+  const forwarded: Array<{ name: string | undefined }> = [];
   const client = new ApolloClient({
     cache,
     link: ApolloLink.from([
       createLocalWritePrecedenceLink(),
       new ApolloLink((operation, forward) => {
-        forwarded.push({
-          name: operation.operationName,
-          context: operation.getContext(),
-        });
+        forwarded.push({ name: operation.operationName });
         return forward(operation);
       }),
       testMockLink([refresh.mock, ...reasks.map(r => r.mock), pinMock.mock]),
@@ -120,7 +116,6 @@ function open({
         query: UsualStoresDocument,
         variables: { homeId },
         fetchPolicy: 'cache-and-network',
-        context,
       })
       .subscribe(result => {
         delivered.push(pinnedIn(result.data?.usualStores));
@@ -136,16 +131,31 @@ function open({
     forwarded,
     delivered,
     cached: (home = 'home-1') => readUsualStores(cache, home) ?? undefined,
-    /** The pin as a hook sends it: written first, then sent local-first. */
+    /** The pin as `useUsualStoreWrites` sends it. */
     pin: () => {
-      writeUsualStores(cache, 'home-1', [banksville, pinnedMarket]);
-      return client.mutate({
-        mutation: UpdateUsualStoreDocument,
-        variables: {
+      const inputs: PinUsualStoreInputs = {
+        homeId: 'home-1',
+        choice: { store: { id: 's2', name: 'Giant Eagle Market District' } },
+        pinned: true,
+        now: '2026-10-30T10:00:00.000Z',
+      };
+      return pendingWritesOf(cache).send(
+        UpdateUsualStoreDocument,
+        {
           input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true },
         },
-        context: { localFirst: true },
-      });
+        write =>
+          settleMutation(
+            () =>
+              client.mutate({ mutation: UpdateUsualStoreDocument, ...write }),
+            {
+              document: UpdateUsualStoreDocument,
+              fallback: 'Refused',
+              present: 'none',
+            },
+          ),
+        inputs,
+      );
     },
     close: () => subscription?.unsubscribe(),
   };
@@ -183,10 +193,14 @@ describe('localWritePrecedenceLink', () => {
 
   it('keeps the pin when the refresh answers after the pin’s answer', async () => {
     const list = await openWithRefreshInFlight();
-    await settled(list.pin());
+    const sent = list.pin();
+    // Stops short of a drain, which would outrun the read fence: the refresh
+    // is still in flight when the pin is answered.
+    await jest.advanceTimersByTimeAsync(1000);
+    expect(list.pinMock.fired).toHaveLength(1);
 
     list.refresh.release();
-    await drainTimers();
+    await settled(sent);
 
     expect(pinnedIn(list.cached())).toBe(true);
     expect(list.delivered.at(-1)).toBe(true);
@@ -221,9 +235,6 @@ describe('localWritePrecedenceLink', () => {
       },
     });
     await settled(list.pin());
-    // The hook's refusal path puts the list back.
-    writeUsualStores(list.cache, 'home-1', [banksville, market]);
-    await drainTimers();
 
     list.refresh.release();
     await drainTimers();
@@ -233,52 +244,12 @@ describe('localWritePrecedenceLink', () => {
     list.close();
   });
 
-  it('asks again once when the late answer brings another member’s change', async () => {
-    const list = await openWithRefreshInFlight({
-      refreshed: [banksville, market, aldi],
-      rereads: [[pinnedMarket, banksville, aldi]],
-    });
-    await settled(list.pin());
-
-    list.refresh.release();
-    await drainTimers();
-
-    expect(list.reasks[0]?.fired).toHaveLength(1);
-    expect(list.cached()?.map(store => store.id)).toEqual([
-      market.id,
-      banksville.id,
-      aldi.id,
-    ]);
-    expect(pinnedIn(list.cached())).toBe(true);
-    expect(list.delivered.at(-1)).toBe(true);
-    list.close();
-  });
-
-  it('asks again with the context the read was sent with', async () => {
-    const list = await openWithRefreshInFlight({
-      refreshed: [banksville, market, aldi],
-      rereads: [[pinnedMarket, banksville, aldi]],
-      context: { allowDuringLogout: true },
-    });
-    await settled(list.pin());
-
-    list.refresh.release();
-    await drainTimers();
-
-    expect(list.reasks[0]?.fired).toHaveLength(1);
-    const reads = list.forwarded.filter(op => op.name === 'UsualStores');
-    expect(reads).toHaveLength(2);
-    expect(reads[1]?.context.allowDuringLogout).toBe(true);
-    list.close();
-  });
-
   it('leaves a read alone when the write did not change its data', async () => {
     const shadyside = entry('s4', 'Giant Eagle Shadyside');
     const list = open({
       homeId: 'home-2',
       watchNow: false,
       refreshed: [aldi, shadyside],
-      rereads: [[aldi, shadyside]],
     });
     writeUsualStores(list.cache, 'home-2', [aldi]);
     list.watch();
@@ -294,7 +265,6 @@ describe('localWritePrecedenceLink', () => {
       aldi.id,
       shadyside.id,
     ]);
-    expect(list.reasks[0]?.fired).toHaveLength(0);
     list.close();
   });
 
@@ -309,20 +279,6 @@ describe('localWritePrecedenceLink', () => {
 
     expect(pinnedIn(list.cached())).toBe(true);
     expect(list.delivered.at(-1)).toBe(true);
-    list.close();
-  });
-
-  it('does not ask again when the late answer agrees with the device', async () => {
-    const list = await openWithRefreshInFlight({
-      refreshed: [banksville, pinnedMarket],
-      rereads: [[banksville, pinnedMarket]],
-    });
-    await settled(list.pin());
-
-    list.refresh.release();
-    await drainTimers();
-
-    expect(list.reasks[0]?.fired).toHaveLength(0);
     list.close();
   });
 

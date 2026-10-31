@@ -53,6 +53,7 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   brandId: 'catalog rows are created online only',
   chainId: 'store chains are server-owned reference data',
   dietaryProfileId: 'one per user, minted by the server at sign-up',
+  appliesToHomeId: 'deprecated, and no caller sends it',
   notificationId: 'minted by the server, never by a queued write',
   externalSourceId: 'an external catalogue id',
   spoonacularIngredientId: 'an external catalogue id',

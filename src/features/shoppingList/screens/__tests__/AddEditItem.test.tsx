@@ -69,7 +69,6 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 }));
 
 jest.mock('#features/shoppingList/cache/items', () => ({
-  buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
   addLocalShoppingListItem: jest.fn(),
   createLocalShoppingListItem: jest.fn((id: string) => ({ id })),
 }));

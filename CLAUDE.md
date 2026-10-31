@@ -171,6 +171,12 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   the key; connections stay with their edge writers.
 - **A response that states a count settles it**: no handler adjusts on top
   (`carriesListTotals`, `carriesPantryCount`).
+- **A local-first write is one `LocalWrite`** in `LOCAL_WRITES`, held as an optimistic
+  layer by `pendingWritesOf(cache).send` (`localWriteCoverage.test.ts`): the root holds
+  only what the server said, and a refusal just drops the layer. `apply` re-runs, so it
+  is deterministic (`sous-chef/local-write-is-deterministic`). **`commit` writes what
+  the answer does NOT state**, so read the mutation's selection first; no gate catches
+  a `commit` that misses one — `docs/local-first-architecture.md` § 2.
 - **A local-first create writes its row with `writeLocalEntity`** over a row
   fragment spreading the entity's readers: known, else held, else the SDL
   neutral (`generate-optimistic-fillers`). A shared `*Fragments.graphql` has a consumer-list header, 2+ operations
@@ -195,8 +201,7 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   default, `refetchQueries` last); build optimistic responses from
   `cache.readFragment` + spread, never hand-rolled shapes.
 - **A field with a write-time invariant goes through its ONE writer** —
-  `cache.writeFragment` (`writePurchaseInfo`), never `cache.modify`; the
-  restoration pass uses `src/apollo/utils/fieldWriters.ts`.
+  `cache.writeFragment` (`writePurchaseInfo`), never `cache.modify`.
 - **An optimistic entity is COMPLETE for every query reading it**: a new read
   field reaches every connection writer (builder, create and its replay,
   move/restock, subscription read-back) — `optimisticEntityCompleteness.test.ts`.
@@ -212,8 +217,8 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
 - **`returnPartialData: false`: `!data` means the read was INCOMPLETE**, so every
   writer writes the full shape its reader selects (`userProfileCompleteness.test.ts`). Verified: `#apollo-reports-loading-true-on-every-mount-warm-cache-or-not`.
 - **A read in flight never undoes a local-first write** (`localWritePrecedenceLink`):
-  the write answers it from the cache and asks it again once settled, so no hook
-  refetches for this. Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
+  the write answers it from the cache and its late answer lands under the write's
+  layer, so no hook refetches for this. Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
 - **A field `merge` identifies a row by its reference** (`readEdgeNodeId`,
   `fieldPolicyReadsRowId`): a row selecting its parent is not stored yet when the
   parent's merge runs. Verified: `#apollo-a-merge-cannot-read-a-row-that-selects-its-parent`.

@@ -50,20 +50,14 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#features/shoppingList/cache/items', () => {
-  const { buildAddItemsReconcileUpdate } = jest.requireActual(
-    '#features/shoppingList/cache/items',
-  );
-  return {
-    buildAddItemsReconcileUpdate,
-    addLocalShoppingListItem: jest.fn(),
-    createLocalShoppingListItem: jest.fn((id: string) => ({
-      __typename: 'ShoppingListItem',
-      version: 1,
-      id,
-    })),
-  };
-});
+jest.mock('#features/shoppingList/cache/items', () => ({
+  addLocalShoppingListItem: jest.fn(),
+  createLocalShoppingListItem: jest.fn((id: string) => ({
+    __typename: 'ShoppingListItem',
+    version: 1,
+    id,
+  })),
+}));
 
 // The counting units the device holds: a scan is counted in a piece.
 const mockCachedUnits = [

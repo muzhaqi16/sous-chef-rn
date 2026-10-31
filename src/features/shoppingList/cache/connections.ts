@@ -515,10 +515,3 @@ export function addNewItemToShoppingListCache(
   }
   return listedActive;
 }
-
-/**
- * Reconcile a local-first create from the mutation's `update`: adopt the server id
- * and re-wire the edge WITHOUT re-counting — the optimistic add already bumped
- * `totalItems`. `clientId` comes from the mutation's own `variables`, never a
- * shared ref, so overlapping adds stay correct.
- */

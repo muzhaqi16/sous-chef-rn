@@ -8,10 +8,6 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 import { gql, InMemoryCache } from '@apollo/client';
 import { parse } from 'graphql';
 import { makeCache } from '../cache';
-import { queueStore } from '../offlineQueue/queueStore';
-import { QueueStatus } from '../offlineQueue/types';
-import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { queuedMutationFor } from '#/test-utils/queuedMutation';
 import { typedConnectionOf } from '#/test-utils/fixtures/connectionOf';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
@@ -98,11 +94,6 @@ const pageOf = <Type extends string>(
   );
 
 // The ids the offline queue still holds a create for; restored after each test.
-const queueHoldsCreatesFor = (...ids: string[]) =>
-  jest
-    .spyOn(queueStore, 'getUnconfirmedCreateIds')
-    .mockReturnValue(new Set(ids));
-
 describe('cache', () => {
   afterEach(() => {
     jest.restoreAllMocks();
@@ -243,37 +234,6 @@ describe('cache', () => {
     });
   });
 
-  describe('mergeConnectionByNodeId - preserves un-replayed local creates', () => {
-    // shoppingListsConnection exercises the same mergeConnectionByNodeId policy
-    // that backs savedRecipesConnection (favorites) and mealTemplatesConnection.
-    it('preserves an offline-created edge over an authoritative first-page refetch', () => {
-      queueHoldsCreatesFor('cuid-pending');
-      const cache = makeCache();
-
-      // A server node + an offline-created (still-queued) node.
-      writeHomePage(cache, ['server-1', 'cuid-pending']);
-      // First-page refetch that doesn't yet include the un-replayed node.
-      writeHomePage(cache, ['server-1']);
-
-      expect(readHomeIds(cache)).toEqual(
-        expect.arrayContaining(['server-1', 'cuid-pending']),
-      );
-      expect(readHomeIds(cache)).toHaveLength(2);
-    });
-
-    it('does not force-preserve a non-pending edge (server-removed node is dropped)', () => {
-      queueHoldsCreatesFor();
-      const cache = makeCache();
-
-      writeHomePage(cache, ['server-1', 'gone-1']);
-      // First-page refetch omits gone-1; with no pending op for it, the incoming
-      // page stays authoritative → it is dropped.
-      writeHomePage(cache, ['server-1']);
-
-      expect(readHomeIds(cache)).toEqual(['server-1']);
-    });
-  });
-
   describe('itemsConnectionFieldPolicy (via ShoppingList.itemsConnection)', () => {
     const SINGLE_PAGE_QUERY = gql`
       query GetList($id: ID!) {
@@ -331,24 +291,7 @@ describe('cache', () => {
       expect(readIds(cache)).toHaveLength(1);
     });
 
-    it('preserves an un-replayed local edge over an authoritative single-page refetch', () => {
-      queueHoldsCreatesFor('cuid-pending');
-      const cache = makeCache();
-
-      // Initial: a server item + an offline-created (still-queued) item.
-      writeSinglePage(cache, ['server-1', 'cuid-pending']);
-      // Authoritative refetch that doesn't yet include the un-replayed item.
-      writeSinglePage(cache, ['server-1']);
-
-      // The pending local item is kept (its create is still queued).
-      expect(readIds(cache)).toEqual(
-        expect.arrayContaining(['server-1', 'cuid-pending']),
-      );
-      expect(readIds(cache)).toHaveLength(2);
-    });
-
     it('drops a server-removed edge that has no pending mutation', () => {
-      queueHoldsCreatesFor();
       const cache = makeCache();
 
       writeSinglePage(cache, ['server-1', 'gone-1']);
@@ -357,44 +300,6 @@ describe('cache', () => {
       writeSinglePage(cache, ['server-1']);
 
       expect(readIds(cache)).toEqual(['server-1']);
-    });
-    it('preserves an offline batch-add edge through a REAL queue entry (no spy)', () => {
-      // Cross-seam: the merge guard's real getPendingClientIds() must extract
-      // the client id from the batch AddItemsToShoppingListInput shape every
-      // shopping-list add enqueues — a drift in that id-shape contract passes
-      // the spy-based tests above and the queueStore unit tests while still
-      // dropping offline adds in production.
-      queueStore.setCurrentUserId('cross-seam-user');
-      queueStore.addMutation({
-        id: 'cross-seam-batch-add',
-        userId: 'cross-seam-user',
-        ...queuedMutationFor(AddItemToShoppingListDocument),
-        variables: {
-          input: {
-            shoppingListId: 'list-1',
-            items: [{ id: 'cuid-batch-pending', name: 'Milk' }],
-          },
-        },
-        status: QueueStatus.PENDING,
-        createdAt: Date.now(),
-        updatedAt: Date.now(),
-        retryCount: 0,
-        maxRetries: 3,
-        requiresAuth: true,
-      });
-
-      const cache = makeCache();
-      writeSinglePage(cache, ['server-1', 'cuid-batch-pending']);
-      // Authoritative refetch lands before the queue drains the create.
-      writeSinglePage(cache, ['server-1']);
-
-      expect(readIds(cache)).toEqual(
-        expect.arrayContaining(['server-1', 'cuid-batch-pending']),
-      );
-      expect(readIds(cache)).toHaveLength(2);
-
-      queueStore.clearAllQueues();
-      queueStore.clearCurrentUserId();
     });
   });
 

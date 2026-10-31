@@ -28,15 +28,6 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
   moveShoppingListItemToUnpurchased: jest.fn(),
 }));
 
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    // track() returns the clearPersistence callback recordPurchase invokes.
-    track: jest.fn(() => jest.fn()),
-  },
-}));
-
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));

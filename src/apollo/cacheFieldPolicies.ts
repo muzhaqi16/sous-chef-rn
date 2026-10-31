@@ -11,7 +11,6 @@ import type {
   FieldPolicy,
   Reference,
 } from '@apollo/client';
-import { queueStore } from './offlineQueue/queueStore';
 import { logger } from '#/utils/environment';
 import { isRecord } from '#/utils/isRecord';
 
@@ -46,38 +45,6 @@ const MAX_WINDOW_EDGES = 100;
 function readEdgeNodeId(edge: CachedEdge | undefined): string | undefined {
   const ref = edge?.node?.__ref;
   return ref?.slice(ref.indexOf(':') + 1);
-}
-
-/**
- * Keeps un-replayed local creates through an authoritative first page: the
- * edges whose `node.id` still has a PENDING queue mutation and the page omits.
- */
-function preservePendingEdges(
-  existing: CachedConnection,
-  incoming: CachedConnection,
-): CachedConnection {
-  const pendingIds = queueStore.getUnconfirmedCreateIds();
-  if (pendingIds.size === 0) return incoming;
-  const incomingIds = new Set<string>();
-  for (const edge of incoming.edges ?? []) {
-    const id = readEdgeNodeId(edge);
-    if (id) incomingIds.add(id);
-  }
-  const preservedEdges = (existing.edges ?? []).filter(edge => {
-    const id = readEdgeNodeId(edge);
-    return id != null && pendingIds.has(id) && !incomingIds.has(id);
-  });
-  if (preservedEdges.length === 0) return incoming;
-  if (__DEV__) {
-    logger.debug(
-      `🛡️ [Cache] preserved ${preservedEdges.length} un-replayed local edge(s) over the authoritative page`,
-    );
-  }
-  return {
-    ...incoming,
-    edges: [...preservedEdges, ...(incoming.edges ?? [])],
-    totalCount: (incoming.totalCount ?? 0) + preservedEdges.length,
-  };
 }
 
 /**
@@ -145,7 +112,7 @@ function mergeAuthoritativeFirstPage(
     ? []
     : edgesPastFirstPage(existingEdges, incomingEdges, incomingIds);
 
-  const merged: CachedConnection = {
+  return {
     ...incoming,
     edges: tail.length > 0 ? [...incomingEdges, ...tail] : incomingEdges,
     // A surviving tail means the loaded window still extends past this page, so
@@ -154,8 +121,6 @@ function mergeAuthoritativeFirstPage(
       ? { pageInfo: existing.pageInfo }
       : {}),
   };
-
-  return preservePendingEdges(existing, merged);
 }
 
 /** A by-id field the server answered `null` while the device held the record. */

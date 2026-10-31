@@ -3,7 +3,6 @@ import {
   registerQueueFailureHandler,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
@@ -50,12 +49,6 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
 }));
 jest.mock('#features/shoppingList/cache/purchase', () => ({
   writePurchaseInfo: jest.fn(),
-}));
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    clearEntity: jest.fn(),
-    clearEntityById: jest.fn(),
-  },
 }));
 const mockRefuse = jest.fn();
 jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
@@ -155,7 +148,6 @@ describe('queue failure handler', () => {
 
       expect(mockRefuse).toHaveBeenCalledWith('write-1');
       expect(safeEvict).not.toHaveBeenCalled();
-      expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
     });
 
     it('still tells the person and leaves the queue', () => {
@@ -170,16 +162,6 @@ describe('queue failure handler', () => {
     handleQueueFailure(failure());
     expect(safeEvict).toHaveBeenCalledWith(
       expect.anything(),
-      'PantryItem',
-      'item-1',
-    );
-  });
-
-  it('clears the persisted optimistic value so it cannot come back', () => {
-    // Restoration replays persisted optimistic fields on the next launch; a
-    // withdrawn change left behind there would reappear over server data.
-    handleQueueFailure(failure());
-    expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
       'PantryItem',
       'item-1',
     );
@@ -300,24 +282,12 @@ describe('queue failure handler', () => {
     expect(message).toBe(t('errors.queuedChangeOverwritten'));
   });
 
-  it('clears what the withdrawn write persisted even with no typename', () => {
-    // The cache was purged, so the typename cannot be read back — but the id
-    // came off the queue entry. Left behind, the optimistic value is re-applied
-    // over the server's on the next restoration pass.
-    handleQueueFailure(failure({ entityType: null, entityId: 'item-7' }));
-
-    expect(optimisticDataPersistence.clearEntityById).toHaveBeenCalledWith(
-      'item-7',
-    );
-  });
-
   it('still tells the person when the entity cannot be identified', () => {
     // An operation with no single entity, or one already evicted. Nothing to
     // withdraw, but silence would leave them believing the change stuck.
     handleQueueFailure(failure({ entityType: null, entityId: null }));
 
     expect(safeEvict).not.toHaveBeenCalled();
-    expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
     expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 });

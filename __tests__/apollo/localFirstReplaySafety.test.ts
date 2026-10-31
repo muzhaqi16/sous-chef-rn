@@ -58,7 +58,6 @@ const REPLAY_SAFETY_BASELINE: Record<
   string,
   'absolute-update' | 'bulk-create'
 > = {
-  AddDietaryRestriction: 'absolute-update',
   // Takes NO input at all: it sets one boolean on the CALLER's own user row.
   // A replay writes the value already there, and there is no id for
   // `hasIdempotentInput` to find because the operation names no row.

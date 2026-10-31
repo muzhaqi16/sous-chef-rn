@@ -46,7 +46,6 @@ import {
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useStoreModeEnabled } from '#features/shoppingList/hooks/useStoreModeEnabled';
-import { discardOptimisticShoppingItems } from '#features/shoppingList/utils/optimisticItemCache';
 import { Telemetry } from '#/services/telemetry';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { errorService } from '#/services/errorService';
@@ -258,7 +257,6 @@ export const ShoppingListMainContent: React.FC<
 
   // Handle refresh
   const handleRefresh = () => {
-    discardOptimisticShoppingItems();
     return executeRefreshWithFinally(() => refetchItems(), setRefreshing);
   };
 

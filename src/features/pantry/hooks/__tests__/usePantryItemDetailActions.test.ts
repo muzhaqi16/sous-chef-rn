@@ -41,7 +41,6 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
 
 jest.mock('#features/shoppingList/cache/items', () => ({
   addLocalShoppingListItem: jest.fn(),
-  buildAddItemsReconcileUpdate: jest.fn(() => jest.fn()),
   createLocalShoppingListItem: jest.fn((id: string) => ({
     __typename: 'ShoppingListItem',
     id,

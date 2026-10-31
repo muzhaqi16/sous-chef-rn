@@ -15,7 +15,6 @@ import { QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
 import { QueueStatus } from './types';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import {
   pendingWritesOf,
   type PendingWrites,
@@ -222,10 +221,6 @@ function enqueueAndComplete(
       observer.error(error);
       return;
     }
-    // The write is durable now, so the cache change it replays against must be
-    // in the same step: a kill before any deferred save relaunches with the
-    // create queued and its row gone.
-    apolloCachePersistence.flushPending();
     if (write) pendingWrites.markQueued(write.id);
     // The enqueue may have superseded earlier writes: their layers go with them.
     pendingWrites.keepQueued(() => queueStore.getQueuedWriteIds());

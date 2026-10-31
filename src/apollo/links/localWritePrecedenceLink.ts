@@ -8,36 +8,24 @@ import type { Subscriber, Subscription } from 'rxjs';
 import { readFenceOf } from '#/apollo/pendingWrites/readFence';
 import { isIncremental } from '#/apollo/utils/isIncremental';
 
-/** A local-first write sent while reads were in flight. */
-interface Write {
-  /** Held as a layer, so the root stays the server's and a late answer may land. */
-  layered: boolean;
-}
-
 /** A read this link forwarded that has not answered the network yet. */
 interface Read {
   operation: ApolloLink.Operation;
-  /** The caller's context, before the links after this one add to it. */
-  context: ApolloLink.OperationContext;
   forward: ApolloLink.ForwardFunction;
   observer: Subscriber<ApolloLink.Result>;
   network?: Subscription;
   /** What the cache held for it when it was sent. */
   sent: unknown;
-  /** Answered from the cache; its network answer is only compared. */
+  /** Answered from the cache; its network answer lands under the write's layer. */
   answered: boolean;
   /** Its cache read was incomplete; its network answer is dropped and the read re-sent. */
   held: boolean;
   /** Its network answer has arrived, or failed. */
   landed: boolean;
-  /** Its network answer disagreed with the cache. */
-  stale: boolean;
-  /** A write that isn't a layer caught it, so its late answer can't land under one. */
-  asksAgain: boolean;
   /** Tells the fence it has landed. */
   land: () => void;
   /** The local-first writes that caught it and have not settled. */
-  writes: Set<Write>;
+  writes: Set<symbol>;
 }
 
 const cacheRead = (operation: ApolloLink.Operation, optimistic: boolean) =>
@@ -57,8 +45,8 @@ const sameData = (a: unknown, b: unknown) =>
  * A read already in flight when a local-first write is sent would answer with
  * the state from before the write, and Apollo shows a watcher nothing newer
  * until it does. So the write answers each such read at once from the cache
- * when it touched the read's data, and the read is asked again once the write
- * settles if the server's late answer disagrees. Verified:
+ * when it touched the read's data, and the read's late answer lands under the
+ * write's layer, where the fence holds the commit until it has. Verified:
  * `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
  */
 export function createLocalWritePrecedenceLink(): ApolloLink {
@@ -67,17 +55,7 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
   const finish = (read: Read) => {
     if (read.writes.size > 0 || !read.landed) return;
     inFlight.delete(read);
-    if (read.answered && read.stale) {
-      const { client, query, variables } = read.operation;
-      void client
-        .query({
-          query,
-          variables,
-          context: read.context,
-          fetchPolicy: 'network-only',
-        })
-        .catch(() => undefined);
-    } else if (read.held && !read.observer.closed) {
+    if (read.held && !read.observer.closed) {
       // Sent again through this link, so a later write catches it as well.
       read.held = false;
       read.landed = false;
@@ -101,12 +79,7 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
           if (!read.held) observer.next(value);
           return;
         }
-        if (read.asksAgain) {
-          read.stale ||= !sameData(
-            value.data ?? null,
-            cacheRead(operation, true).result ?? null,
-          );
-        } else if (value.data && !value.errors) {
+        if (value.data && !value.errors) {
           // Under the write's layer, so the rest of the answer shows beside it.
           const { client, query, variables } = operation;
           client.cache.writeQuery({ query, variables, data: value.data });
@@ -133,8 +106,7 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
     });
   };
 
-  const catchRead = (read: Read, write: Write) => {
-    read.asksAgain ||= !write.layered;
+  const catchRead = (read: Read, write: symbol) => {
     if (read.answered || read.held) {
       read.writes.add(write);
       return;
@@ -164,15 +136,12 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
     new Observable<ApolloLink.Result>(observer => {
       const read: Read = {
         operation,
-        context: operation.getContext(),
         forward,
         observer,
         sent: undefined,
         answered: false,
         held: false,
         landed: false,
-        stale: false,
-        asksAgain: false,
         land: () => undefined,
         writes: new Set(),
       };
@@ -216,9 +185,7 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
     operation: ApolloLink.Operation,
     forward: ApolloLink.ForwardFunction,
   ) => {
-    const write: Write = {
-      layered: typeof operation.getContext().pendingWriteId === 'string',
-    };
+    const write = Symbol('write');
     const caught = [...inFlight];
     caught.forEach(read => catchRead(read, write));
     return new Observable<ApolloLink.Result>(observer => {
