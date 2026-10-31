@@ -288,7 +288,11 @@ describe('AddToPantrySheet', () => {
           stats: { totalItems: number };
           itemsConnection: { totalCount: number };
         };
-      }>({ query: SEED_PANTRY, variables: { id: 'pantry-1' } });
+      }>({
+        optimistic: true,
+        query: SEED_PANTRY,
+        variables: { id: 'pantry-1' },
+      });
       return {
         totalItems: read?.pantry?.stats?.totalItems,
         totalCount: read?.pantry?.itemsConnection?.totalCount,
@@ -467,6 +471,7 @@ describe('AddToPantrySheet', () => {
 
     const readQuantity = (cache: ReturnType<typeof makeCache>) =>
       cache.readFragment<{ quantity: number }>({
+        optimistic: true,
         id: 'PantryItem:pi-1',
         fragment: QUANTITY,
       })?.quantity;
@@ -595,6 +600,7 @@ describe('AddToPantrySheet', () => {
       const read = cache.readQuery<{
         pantry: { stats: { totalItems: number } };
       }>({
+        optimistic: true,
         query: STOCKED_PANTRY,
         variables: {
           id: 'pantry-1',
@@ -892,6 +898,7 @@ describe('AddToPantrySheet', () => {
 
     const shown = (cache: ReturnType<typeof makeCache>) => {
       const sections = cache.readQuery({
+        optimistic: true,
         query: GetPantryItemSuggestionsDocument,
         variables: VARIABLES,
       })?.pantry?.suggestions;

@@ -94,6 +94,7 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
 
 const cachedItem = (cache: ReturnType<typeof seedPantryItems>, id = 'item-1') =>
   cache.readFragment<{ quantity: number }>({
+    optimistic: true,
     id: cache.identify({ __typename: 'PantryItem', id }),
     fragment: STOCK,
   });
@@ -595,6 +596,7 @@ describe('usePantryItemActions', () => {
         },
       });
       const before = cache.readQuery({
+        optimistic: true,
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: 'item-1' },
       });
@@ -621,6 +623,7 @@ describe('usePantryItemActions', () => {
 
       expect(
         cache.readQuery({
+          optimistic: true,
           query: GetPantryItemBatchesDocument,
           variables: { pantryItemId: 'item-1' },
         }),

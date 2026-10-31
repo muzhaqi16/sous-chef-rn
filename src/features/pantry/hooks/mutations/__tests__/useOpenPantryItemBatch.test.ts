@@ -31,6 +31,7 @@ const seedBatch = () =>
 
 const readIsOpened = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ isOpened: boolean }>({
+    optimistic: true,
     id: 'PantryItemBatch:batch-1',
     fragment: READ_BATCH,
   })?.isOpened;

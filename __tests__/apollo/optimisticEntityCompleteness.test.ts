@@ -153,7 +153,10 @@ import {
 } from '#features/shoppingList/cache/items';
 import { writeLocalShoppingList } from '#features/shoppingList/cache/list';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { todayKey } from '#/utils/dateUtils';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
+
+const NOW = '2026-10-30T10:00:00.000Z';
 
 const mockedSchema = addMocksToSchema({
   schema: makeExecutableSchema({
@@ -260,7 +263,7 @@ function addLocalRow(
   id: string,
   row: LocalPantryItem,
 ): void {
-  writeLocalPantryItem(cache, id, row);
+  writeLocalPantryItem(cache, id, row, NOW);
   addToPantryItemsCache(cache, row.pantryId, { __typename: 'PantryItem', id });
 }
 
@@ -508,11 +511,16 @@ describe('optimistic entity completeness', () => {
     // nothing at all, which shows as an empty pantry the user cannot add to.
     it('an optimistic-only pantry reads complete for GetPantry', () => {
       const cache = makeCache();
-      writeLocalPantry(cache, 'pantry-1', {
-        homeId: 'home-1',
-        name: 'Kitchen Pantry',
-        isDefault: true,
-      });
+      writeLocalPantry(
+        cache,
+        'pantry-1',
+        {
+          homeId: 'home-1',
+          name: 'Kitchen Pantry',
+          isDefault: true,
+        },
+        todayKey(),
+      );
 
       const diff = readPantry(cache);
       expect(describeMissing(diff.missing)).toBe('none');
@@ -752,11 +760,12 @@ describe('optimistic entity completeness', () => {
         // absent is not null to `cache.diff`, and one missing field makes the
         // whole detail read incomplete, which blanks the screen offline.
         const cache = makeCache();
-        writeLocalPantryItem(cache, 'client-cuid-profile', {
-          pantryId: 'pantry-1',
-          itemName: 'Offline Garlic',
-          quantity: 1,
-        });
+        writeLocalPantryItem(
+          cache,
+          'client-cuid-profile',
+          { pantryId: 'pantry-1', itemName: 'Offline Garlic', quantity: 1 },
+          NOW,
+        );
         const row = cache.extract()['PantryItem:client-cuid-profile'];
 
         expect(row).toHaveProperty('portionUnitId', null);
@@ -1659,9 +1668,7 @@ describe('optimistic entity completeness', () => {
         'covered: the pantry event read-back case, and the fragment comparison below',
       'src/features/notifications/utils/notificationCacheWrites.ts':
         'covered: the notification event read-back case above',
-      'src/features/catalog/hooks/useCreateStorageLocation.ts':
-        'covered: the GetStorageLocations reader is compared below',
-      'src/features/catalog/hooks/useStorageLocationManagement.ts':
+      'src/features/catalog/cache/storageLocations.ts':
         'covered: the GetStorageLocations reader is compared below',
       'src/features/home/hooks/useHomeInvitations.ts':
         'covered: InviteToHome is compared below',

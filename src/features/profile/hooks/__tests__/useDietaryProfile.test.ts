@@ -43,15 +43,6 @@ jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
     data ?? fallback,
 }));
 
-jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn(
-    (obj: Record<string, unknown>, updates: Record<string, unknown>) => ({
-      ...obj,
-      ...updates,
-    }),
-  ),
-}));
-
 /** The profile the query itself selects, so the fixture is checked against it. */
 type DietaryProfile = NonNullable<
   NonNullable<GetDietaryProfileQuery['me']>['dietaryProfile']

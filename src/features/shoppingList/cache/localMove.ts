@@ -8,11 +8,12 @@ import { localQuantity } from '#domain/stockAmount';
 import { errorService } from '#/services/errorService';
 import {
   addPantryItemLocally,
-  reconcileCreatedPantryItem,
   revertOptimisticPantryItem,
-  type PantryItemRef,
 } from '#features/pantry/cache/items';
-import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
+import {
+  writeLocalPantryItem,
+  type LocalPantryItem,
+} from '#features/pantry/cache/writeLocalPantryItem';
 import { unitPriceFromTotal } from '../utils/purchasePrice';
 import type { ShoppingListItemDisplayFragment } from '../graphql/shoppingListFragments.generated';
 import type { ListCounterChange } from './connections';
@@ -44,27 +45,20 @@ export interface LocalMove {
   keptStamp?: KeptOnListStamp;
 }
 
-/**
- * A move-to-pantry's local side, written eagerly (offline nothing answers, and a
- * replay runs no `update`): the pantry row under a minted id the caller claimed
- * (`unconfirmedCreates.mark`); the list line UNLINKED, not evicted, for a re-link.
- */
-export function writeLocalMove(
-  cache: ApolloCache,
-  {
-    item,
-    pantryId,
-    pantryItemId,
-    amount,
-    storageState,
-    expiresOn,
-    totalCost,
-    removeFromList,
-    currentListId,
-  }: LocalMoveArgs,
-): LocalMove {
+/** The pantry row a move shows until the server answers. */
+export function localMoveRow({
+  item,
+  pantryId,
+  amount,
+  storageState,
+  expiresOn,
+  totalCost,
+}: Pick<
+  LocalMoveArgs,
+  'item' | 'pantryId' | 'amount' | 'storageState' | 'expiresOn' | 'totalCost'
+>): LocalPantryItem {
   const { measured, packages } = amount;
-  const localRow = {
+  return {
     pantryId,
     itemName: item.itemName ?? '',
     quantity: localQuantity(amount, item),
@@ -78,12 +72,25 @@ export function writeLocalMove(
       ? unitPriceFromTotal(totalCost ?? null, measured.quantity)
       : null,
   };
+}
+
+/**
+ * A move-to-pantry's local side, written eagerly (offline nothing answers, and a
+ * replay runs no `update`): the pantry row under a minted id the caller claimed
+ * (`unconfirmedCreates.mark`); the list line UNLINKED, not evicted, for a re-link.
+ */
+export function writeLocalMove(
+  cache: ApolloCache,
+  args: LocalMoveArgs,
+): LocalMove {
+  const { item, pantryId, pantryItemId, removeFromList, currentListId } = args;
+  const now = new Date().toISOString();
   // The eager removal and the response's update must agree on the variant, or
   // the removal lands on the wrong tab and decrements the wrong `totalCount`.
   const wasPurchased = readIsPurchased(cache, item.id);
   const written: LocalMove = {};
   try {
-    writeLocalPantryItem(cache, pantryItemId, localRow);
+    writeLocalPantryItem(cache, pantryItemId, localMoveRow(args), now);
     // Publishes the row AND counts it: offline no response corrects the count.
     addPantryItemLocally(cache, pantryId, {
       __typename: 'PantryItem',
@@ -104,6 +111,7 @@ export function writeLocalMove(
         currentListId,
         item.id,
         wasPurchased,
+        now,
       );
     }
   } catch (cacheError) {
@@ -148,62 +156,4 @@ export function revertLocalMove(
     exact = unstampItemKeptOnListAfterMoveToPantry(cache, written.keptStamp);
   }
   return exact;
-}
-
-/**
- * A recorded move's cache side: reconcile the returned `PantryItem` with the
- * row written under the minted id, then drop the list line or bump the one
- * kept on the list.
- */
-export function applyMoveToPantryCacheUpdate(
-  cache: ApolloCache,
-  args: {
-    pantryId: string;
-    shoppingListItemId: string;
-    removeFromList: boolean | null | undefined;
-    currentListId: string | undefined;
-    pantryItem: PantryItemRef;
-    /** The id the move minted for the row it wrote. */
-    clientId: string | null | undefined;
-  },
-): void {
-  const { pantryId, shoppingListItemId, removeFromList, currentListId } = args;
-
-  // A restock answers with the EXISTING row's id: the row written under the
-  // minted id goes, and the restocked fields normalize onto the existing one.
-  reconcileCreatedPantryItem(cache, pantryId, args.pantryItem, args.clientId);
-
-  if (!currentListId) return;
-
-  if (removeFromList) {
-    // Idempotent with the eager unlink: filtering an edge that is already gone
-    // leaves the connection untouched. The evict is the part only the confirmed
-    // path may do — offline the entity has to survive for the withdrawal.
-    removeItemFromShoppingListForMoveToPantry(
-      cache,
-      currentListId,
-      shoppingListItemId,
-      readIsPurchased(cache, shoppingListItemId),
-    );
-    return;
-  }
-  // Kept on the list: the purchase stamp was written before the move fired;
-  // this is the server's own bump of the line.
-  const cacheId = cache.identify({
-    __typename: 'ShoppingListItem',
-    id: shoppingListItemId,
-  });
-  if (cacheId) {
-    cache.modify<ShoppingListItemDisplayFragment>({
-      id: cacheId,
-      fields: {
-        version(existingVersion = 0) {
-          return existingVersion + 1;
-        },
-        updatedAt() {
-          return new Date().toISOString();
-        },
-      },
-    });
-  }
 }

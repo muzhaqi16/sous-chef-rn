@@ -1,22 +1,14 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  reconcileCreatedPantryItem,
-  revertOptimisticPantryItem,
-} from '#features/pantry/cache/items';
 import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
-import {
-  localIntakeRow,
-  writeLocalIntake,
-} from '#features/pantry/cache/localIntake';
+import { localIntakeRow } from '#features/pantry/cache/localIntake';
+import type { CreateItemInputs } from '#features/pantry/offline/localWrites';
 import { readHeldStackUnit } from '#features/pantry/utils/pantryCacheReaders';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { adoptServerEntityId } from '#/apollo/utils/cacheUpdaters';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import type {
   CreatePantryItemInput,
@@ -55,9 +47,8 @@ interface AddItemOptions {
 }
 
 /**
- * The pantry's one local-first create: the row is written before the mutation
- * fires, withdrawn on a refusal, and kept when the create is queued. Every add
- * is forced: the server joins a stack of the product it holds where the amount
+ * The pantry's one local-first create: the row shows until the server answers,
+ * and through the queue when it cannot be sent. Every add is forced: the server joins a stack of the product it holds where the amount
  * converts on facts (`MERGED`), else opens one of its own (`CREATED`).
  */
 export function usePantryIntake(pantryId: string | undefined) {
@@ -66,35 +57,10 @@ export function usePantryIntake(pantryId: string | undefined) {
 
   const [createPantryItem, { loading: adding }] = useMutation(
     CreatePantryItemDocument,
-    {
-      context: { localFirst: true },
-      update: (cache, { data }, { variables }) => {
-        const payload = appliedPayload(data);
-        if (!payload || !pantryId) return;
-        const pantryItem = payload.pantryItem;
-        // Read outside the try: `?.` is a value block, and one inside a try
-        // body bails the React Compiler out of the whole function.
-        const clientId = variables?.input.id;
-        const mintedItemId = variables?.input.item.inline?.id;
-
-        try {
-          reconcileCreatedPantryItem(cache, pantryId, pantryItem, clientId);
-          // A typed item the API matched: the row names the one it holds.
-          adoptServerEntityId(cache, 'Item', pantryItem.item.id, mintedItemId);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Cache update failed for createPantryItem:',
-          });
-        }
-      },
-    },
+    { context: { localFirst: true } },
   );
 
-  /**
-   * Write the row, fire the create, and report what became of it. The row is
-   * written PERMANENTLY before firing so it survives being queued offline; a
-   * refusal withdraws it, count included.
-   */
+  /** Show the row, send the create, and report what became of it. */
   const addItem = async (
     itemName: string,
     input: Omit<CreatePantryItemInput, 'id' | 'pantryId' | 'today'>,
@@ -118,34 +84,22 @@ export function usePantryIntake(pantryId: string | undefined) {
     // and its detail/edit screens query by it. Hold those off until the server
     // has the row — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
-    writeLocalIntake(
-      client.cache,
-      id,
-      localIntakeRow(pantryId, itemName, sent, local),
-    );
-
-    let result;
-    let thrown: unknown;
     const today = todayKey();
-    try {
-      result = await createPantryItem({
-        variables: { input: { ...sent, id, pantryId, today }, today },
-      });
-    } catch (error) {
-      thrown = error;
-    }
-
-    // Keeps the row for a queued create and for IDEMPOTENT_REPLAY. A refusal
-    // naming a field reads as its localized `errors.field.*` copy.
-    const answered = result;
-    const settled = await settleMutation(
-      () => (answered ? Promise.resolve(answered) : Promise.reject(thrown)),
-      {
-        document: CreatePantryItemDocument,
-        fallback,
-        onFailed: () => revertOptimisticPantryItem(client.cache, pantryId, id),
-        present,
-      },
+    const inputs: CreateItemInputs = {
+      row: localIntakeRow(pantryId, itemName, sent, local),
+      now: new Date().toISOString(),
+    };
+    // A refusal naming a field reads as its localized `errors.field.*` copy.
+    const settled = await pendingWritesOf(client.cache).send(
+      CreatePantryItemDocument,
+      { input: { ...sent, id, pantryId, today }, today },
+      write =>
+        settleMutation(() => createPantryItem(write), {
+          document: CreatePantryItemDocument,
+          fallback,
+          present,
+        }),
+      inputs,
     );
     let outcome: AddPantryItemOutcome = { status: 'added' };
     if (settled.status === 'failed') {

@@ -1,136 +1,54 @@
-import type { ApolloCache } from '@apollo/client';
-import { useState } from 'react';
+import type { OperationVariables } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
+import type { DocumentNode } from 'graphql';
 import { useTranslation } from '#/i18n';
+import {
+  pendingWritesOf,
+  type LocalWriteSend,
+} from '#/apollo/pendingWrites/pendingWrites';
 import {
   settleMutation,
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import {
-  UsualStoreSource,
-  type UsualStoreTargetInput,
-} from '#/graphql/generated/schemaTypes';
+import type { LocalInputs } from '#/apollo/pendingWrites/types';
+import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
   storeChoiceKey,
   storeChoiceTarget,
   type StoreChoice,
 } from '#domain/stores';
 import {
-  keepUsualStores,
   localUsualStore,
   replaceUsualStore,
-  writeUsualStores,
-  type UsualStoreEntry,
 } from '#features/catalog/cache/usualStores';
+import type {
+  PinUsualStoreInputs,
+  UsualStoreInputs,
+} from '#features/catalog/offline/localWrites';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,
   UpdateUsualStoreDocument,
 } from './useUsualStoreWrites.generated';
 
-type Change = (held: UsualStoreEntry | undefined) => UsualStoreEntry | null;
-
 /**
- * One screen's writes in the order they were made: each is sent once the one
- * before has answered, so two taps never land out of order, and an answer is
- * shown only when no later tap waits, whose own answer holds both.
- */
-function writeOrder() {
-  let last: Promise<unknown> = Promise.resolve();
-  let unsettled = 0;
-  return {
-    after<T>(write: () => Promise<T>): Promise<T> {
-      unsettled += 1;
-      const next = last.then(write, write);
-      last = next.then(
-        () => {
-          unsettled -= 1;
-        },
-        () => {
-          unsettled -= 1;
-        },
-      );
-      return next;
-    },
-    isLatest: () => unsettled <= 1,
-  };
-}
-
-/** What a store's entry goes back to if its write fails. */
-interface Rollback {
-  before: UsualStoreEntry | undefined;
-}
-
-/**
- * Each store's unsettled writes, oldest first. A write made behind another
- * holds that one's change as its `before`, so when the first fails, the next
- * takes the first's `before` and never puts the failed change back.
- */
-function rollbacks() {
-  const held = new Map<string, Rollback[]>();
-  return {
-    hold(key: string, before: UsualStoreEntry | undefined): Rollback {
-      const rollback = { before };
-      held.set(key, [...(held.get(key) ?? []), rollback]);
-      return rollback;
-    },
-    failed(key: string, rollback: Rollback) {
-      const waiting = held.get(key) ?? [];
-      const at = waiting.indexOf(rollback);
-      const next = at === -1 ? undefined : waiting[at + 1];
-      if (next) next.before = rollback.before;
-    },
-    settled(key: string, rollback: Rollback) {
-      const waiting = (held.get(key) ?? []).filter(r => r !== rollback);
-      if (waiting.length > 0) held.set(key, waiting);
-      else held.delete(key);
-    },
-  };
-}
-
-/**
- * A household's usual-store writes (`homeId` null: the caller's own), each
- * shown at once and sent local-first. Each answers the whole list, which
- * replaces the cached one; a failure puts back the one entry it changed.
- * Each resolves false only when the write failed, which settle has reported.
+ * A household's usual-store writes (\`homeId\` null: the caller's own), each
+ * shown at once and sent local-first, in the order they were made. Each answers
+ * the whole list, which replaces the cached one. Each resolves false only when
+ * the write failed, which settle has reported.
  */
 export function useUsualStoreWrites(homeId: string | null) {
   const { t } = useTranslation();
   const client = useApolloClient();
   const { cache } = client;
-  // Made once, for this hook's life: a screen that leaves takes it along.
-  const [order] = useState(writeOrder);
-  const [undo] = useState(rollbacks);
-  const answer = (
-    into: ApolloCache,
-    usualStores: readonly UsualStoreEntry[] | undefined,
-  ) => {
-    if (usualStores && order.isLatest()) {
-      writeUsualStores(into, homeId, usualStores);
-    }
-  };
   const [addStore] = useMutation(AddUsualStoreDocument, {
     context: { localFirst: true },
-    update: (into, { data }) => answer(into, appliedPayload(data)?.usualStores),
   });
   const [updateStore] = useMutation(UpdateUsualStoreDocument, {
     context: { localFirst: true },
-    update: (into, { data }) => answer(into, appliedPayload(data)?.usualStores),
   });
-  // A removal's answer names the list by its keys only.
   const [removeStore] = useMutation(RemoveUsualStoreDocument, {
     context: { localFirst: true },
-    update: (into, { data }) => {
-      const kept = appliedPayload(data)?.usualStores;
-      if (kept && order.isLatest()) {
-        keepUsualStores(
-          into,
-          homeId,
-          kept.map(entry => entry.id),
-        );
-      }
-    },
   });
 
   // A household keeps at most 20 it added or pinned.
@@ -141,76 +59,73 @@ export function useUsualStoreWrites(homeId: string | null) {
     },
   };
 
-  const write = (
-    choice: StoreChoice,
-    change: Change,
-    send: (
-      target: UsualStoreTargetInput,
+  const write = async <TVariables extends OperationVariables>(
+    document: DocumentNode,
+    variables: TVariables,
+    mutate: (
+      send: LocalWriteSend<TVariables>,
     ) => Promise<{ data?: unknown; error?: unknown }>,
-    options: Pick<SettleOptions, 'document' | 'copy' | 'removal'>,
+    inputs: LocalInputs,
+    options: Pick<SettleOptions, 'copy' | 'removal'>,
   ) => {
-    const key = storeChoiceKey(choice);
-    const rollback = undo.hold(
-      key,
-      replaceUsualStore(cache, homeId, key, change),
-    );
-    return order
-      .after(() =>
-        settleMutation(() => send(storeChoiceTarget(choice)), {
+    const settled = await pendingWritesOf(cache).send(
+      document,
+      variables,
+      send =>
+        settleMutation(() => mutate(send), {
           ...options,
+          document,
           fallback: t('usualStores.saveFailed'),
-          onFailed: () => {
-            undo.failed(key, rollback);
-            replaceUsualStore(
-              cache,
-              homeId,
-              key,
-              () => rollback.before ?? null,
-            );
-          },
         }),
-      )
-      .then(settled => {
-        undo.settled(key, rollback);
-        // "Could you save?" compares the list at these stores. It is another
-        // feature's query, so it is named rather than imported.
-        if (settled.status === 'applied') {
-          void client.refetchQueries({ include: ['ListSavings'] });
-        }
-        return settled.status !== 'failed';
-      });
+      inputs,
+    );
+    // "Could you save?" compares the list at these stores. It is another
+    // feature's query, so it is named rather than imported.
+    if (settled.status === 'applied') {
+      void client.refetchQueries({ include: ['ListSavings'] });
+    }
+    return settled.status !== 'failed';
   };
+
+  const inputsOf = (choice: StoreChoice): UsualStoreInputs => ({
+    homeId,
+    choice,
+    now: new Date().toISOString(),
+  });
 
   const remove = (choice: StoreChoice) =>
     write(
-      choice,
-      () => null,
-      target => removeStore({ variables: { input: { homeId, target } } }),
-      { document: RemoveUsualStoreDocument, removal: true },
+      RemoveUsualStoreDocument,
+      { input: { homeId, target: storeChoiceTarget(choice) } },
+      removeStore,
+      inputsOf(choice),
+      { removal: true },
     );
 
   return {
     add: (choice: StoreChoice) =>
       write(
-        choice,
-        held => held ?? localUsualStore(cache, choice, UsualStoreSource.Picked),
-        target => addStore({ variables: { input: { homeId, target } } }),
-        { document: AddUsualStoreDocument, copy: overTheLimit },
+        AddUsualStoreDocument,
+        { input: { homeId, target: storeChoiceTarget(choice) } },
+        addStore,
+        inputsOf(choice),
+        { copy: overTheLimit },
       ),
-    setPinned: (choice: StoreChoice, pinned: boolean) =>
-      write(
-        choice,
-        held =>
-          held ? { ...held, pinned, compared: pinned || held.compared } : null,
-        target =>
-          updateStore({ variables: { input: { homeId, target, pinned } } }),
-        { document: UpdateUsualStoreDocument, copy: overTheLimit },
-      ),
+    setPinned: (choice: StoreChoice, pinned: boolean) => {
+      const inputs: PinUsualStoreInputs = { ...inputsOf(choice), pinned };
+      return write(
+        UpdateUsualStoreDocument,
+        { input: { homeId, target: storeChoiceTarget(choice), pinned } },
+        updateStore,
+        inputs,
+        { copy: overTheLimit },
+      );
+    },
     remove: (choice: StoreChoice) => remove(choice),
     /**
      * A store the household's activity adds on the server, a receipt's, shown
      * at once with no write of its own. Its undo puts the list back, and once
-     * `recorded` settles true (answered, or queued ahead) removes it there.
+     * \`recorded\` settles true (answered, or queued ahead) removes it there.
      */
     learn: (choice: StoreChoice, recorded: Promise<boolean>) => {
       const key = storeChoiceKey(choice);
@@ -219,7 +134,13 @@ export function useUsualStoreWrites(homeId: string | null) {
         homeId,
         key,
         held =>
-          held ?? localUsualStore(cache, choice, UsualStoreSource.Receipt),
+          held ??
+          localUsualStore(
+            cache,
+            choice,
+            UsualStoreSource.Receipt,
+            new Date().toISOString(),
+          ),
       );
       return async () => {
         replaceUsualStore(cache, homeId, key, () => before ?? null);

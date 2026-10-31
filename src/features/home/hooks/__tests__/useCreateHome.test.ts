@@ -42,6 +42,7 @@ const readHome = (cache: ReturnType<typeof seedCache>, id: string) =>
     myMembership: { role: string; canEditPantry: boolean } | null;
     pantriesConnection: { edges: Array<{ node: { id: string } }> };
   }>({
+    optimistic: true,
     id: cache.identify({ __typename: 'Home', id }),
     fragment: Home_RowFragmentDoc,
     fragmentName: 'home_row',
@@ -156,7 +157,7 @@ describe('creating a home with the API unreachable', () => {
 
     // No membership can be materialized for nobody, so no home is written
     // either — rather than one whose permission checks answer for no user.
-    expect(cache.extract()[`Home:${id}`]).toBeUndefined();
+    expect(cache.extract(true)[`Home:${id}`]).toBeUndefined();
   });
 });
 

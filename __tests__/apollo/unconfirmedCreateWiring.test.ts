@@ -80,6 +80,8 @@ const OPTIMISTIC_PUBLISHERS = [
   // publishes through `addPantryItemLocally(`.
   'writeLocalMove(',
   'writeLocalIntake(',
+  // A pending write, whose registered local write the test below checks.
+  'pendingWritesOf(',
 ];
 
 /** The shared writers, and the publisher and reconciler each must call. */
@@ -87,13 +89,23 @@ const SHARED_LOCAL_WRITES = [
   {
     file: 'src/features/shoppingList/cache/localMove.ts',
     publishes: 'addPantryItemLocally(',
-    reconciles: 'reconcileCreatedPantryItem(',
+    reconciles: null,
   },
-  // An add's door reconciles in its own `update`, checked above.
   {
     file: 'src/features/pantry/cache/localIntake.ts',
     publishes: 'addPantryItemLocally(',
     reconciles: null,
+  },
+  // An add and a move: the answer's commit lists only the row it kept.
+  {
+    file: 'src/features/pantry/offline/localWrites.ts',
+    publishes: 'showLocalPantryItem(',
+    reconciles: 'listAnsweredPantryItem(',
+  },
+  {
+    file: 'src/features/shoppingList/offline/localWrites.ts',
+    publishes: 'showLocalPantryItem(',
+    reconciles: 'listAnsweredPantryItem(',
   },
   // A check-in publishes through the two writers above.
   {
@@ -149,9 +161,9 @@ describe('unconfirmed-create wiring (pantry items)', () => {
     // of the session.
     //
     // Two valid reconciliations: adopt the server's id, or withdraw the local
-    // row and let `update` add the server's. The move path must take the
-    // second — its divergence names a row that already exists. The pantry's
-    // create paths withdraw through `reconcileCreatedPantryItem`.
+    // row and let the answer add the server's. The move path must take the
+    // second — its divergence names a row that already exists. A pending write
+    // withdraws by lifting its layer.
     file => {
       const code = stripComments(
         readFileSync(join(process.cwd(), file), 'utf8'),
@@ -161,8 +173,8 @@ describe('unconfirmed-create wiring (pantry items)', () => {
         (code.includes('removeFromPantryItemsCache(') &&
           code.includes('evictLocalPantryItemSeeds(')) ||
         code.includes('reconcileCreatedPantryItem(') ||
+        code.includes('pendingWritesOf(') ||
         // Delegated: the shared writers' own reconcile is checked below.
-        code.includes('applyMoveToPantryCacheUpdate(') ||
         code.includes('applyReceiptCheckIn(');
 
       expect(adopts || withdraws).toBe(true);
@@ -204,8 +216,7 @@ describe('unconfirmed-create wiring (homes and pantries)', () => {
         /useMutation\(\s*(CreateHomeDocument|CreatePantryDocument)\b/.test(
           code,
         ) &&
-        (code.includes('writeLocalHome(') ||
-          code.includes('writeLocalPantry(')),
+        (code.includes('writeLocalHome(') || code.includes('pendingWritesOf(')),
     )
     .map(({ path }) => path)
     .sort();

@@ -4,10 +4,7 @@ import {
   removePantryItemLocally,
   revertOptimisticPantryItem,
 } from '#features/pantry/cache/items';
-import {
-  applyMoveToPantryCacheUpdate,
-  revertLocalMove,
-} from '#features/shoppingList/cache/localMove';
+import { revertLocalMove } from '#features/shoppingList/cache/localMove';
 import { unstampItemKeptOnListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
 import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
@@ -85,7 +82,6 @@ describe('applyReceiptCheckIn', () => {
       { __typename: 'PantryItem', id: 'pi-1' },
       'pi-1',
     );
-    expect(applyMoveToPantryCacheUpdate).not.toHaveBeenCalled();
   });
 
   it('unticks the list line of a refused line kept out of the pantry, exactly', () => {
@@ -171,7 +167,6 @@ describe('applyReceiptCheckIn', () => {
     applyReceiptCheckIn(cache, INPUT, [{ index: 3, success: true }]);
 
     expect(reconcileCreatedPantryItem).not.toHaveBeenCalled();
-    expect(applyMoveToPantryCacheUpdate).not.toHaveBeenCalled();
   });
 });
 

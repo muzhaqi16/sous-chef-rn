@@ -55,6 +55,10 @@ export function writeUsualStores(
   });
 }
 
+/** An answer's list, which a commit reads as `unknown`. */
+export const isUsualStoreList = (list: unknown): list is UsualStoreEntry[] =>
+  Array.isArray(list);
+
 const LOCAL_ID_PREFIX = 'local-';
 
 /**
@@ -116,6 +120,7 @@ export function localUsualStore(
   cache: ApolloCache,
   choice: StoreChoice,
   addedVia: UsualStoreSource,
+  now: string,
 ): UsualStoreEntry | null {
   const id = `${LOCAL_ID_PREFIX}${storeChoiceKey(choice)}`;
   writeLocalEntity(cache, {
@@ -129,7 +134,7 @@ export function localUsualStore(
       addedVia,
       pinned: false,
       compared: true,
-      lastUsedAt: new Date().toISOString(),
+      lastUsedAt: now,
       store: choice.store ? { __typename: 'Store', ...choice.store } : null,
       chain: choice.chain
         ? { __typename: 'StoreChain', ...choice.chain }

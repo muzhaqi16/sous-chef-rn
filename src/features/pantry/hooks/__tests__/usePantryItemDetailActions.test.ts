@@ -8,7 +8,7 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { removePantryItemLocally } from '#features/pantry/cache/items';
+import { hidePantryItem } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import { alertService } from '#/services/alertService';
@@ -32,7 +32,7 @@ jest.mock('#/services/errorService');
 
 jest.mock('#features/pantry/cache/items', () => ({
   removeFromPantryItemsCache: jest.fn(),
-  removePantryItemLocally: jest.fn(),
+  hidePantryItem: jest.fn(),
 }));
 
 jest.mock('#features/shoppingList/cache/connections', () => ({
@@ -197,10 +197,7 @@ describe('usePantryItemDetailActions', () => {
     });
 
     it('withdraws the row even when the delete is only queued', async () => {
-      // A DeletePantryItem whose only cache work is an `update:` callback
-      // cannot hold here: that callback never runs when the delete is queued
-      // offline, so the screen navigates back with the row still in the list.
-      // The shared `removeItem` withdraws it before firing, which is why this
+      // Queued, no answer runs: the layer takes the row out, which is why this
       // holds with a queued (no data, no error) result.
       const queuedDelete = recordMock(DeletePantryItemDocument, {});
 
@@ -214,7 +211,7 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await drainTimers();
-      expect(removePantryItemLocally).toHaveBeenCalledWith(
+      expect(hidePantryItem).toHaveBeenCalledWith(
         expect.anything(),
         'pantry-1',
         'item-1',
@@ -251,12 +248,12 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await drainTimers();
-      expect(removePantryItemLocally).toHaveBeenCalledWith(
+      expect(hidePantryItem).toHaveBeenCalledWith(
         expect.anything(),
         'pantry-OWNING',
         'item-1',
       );
-      expect(removePantryItemLocally).not.toHaveBeenCalledWith(
+      expect(hidePantryItem).not.toHaveBeenCalledWith(
         expect.anything(),
         'pantry-OTHER',
         expect.anything(),
@@ -353,45 +350,8 @@ describe('usePantryItemDetailActions', () => {
       );
     });
 
-    it('restores the row when the server refuses the delete', async () => {
-      // `removeItem` evicts the row and drops the count BEFORE firing, so a
-      // refusal has to put both back — that is what `refetch` is for. A no-op
-      // `refetch: () => {}` leaves a refused delete gone locally and still
-      // present on the server, with nothing to bring it back.
-      //
-      // A REFUSAL, not a transport failure: `errorPolicy: 'all'` resolves it as
-      // DATA — a non-success union member — so it never reaches `onError`, and
-      // the check sits on the resolved result. A transport failure is the
-      // opposite case and must NOT restore, because the delete is queued for
-      // replay (covered below).
-      const refused = recordMock(DeletePantryItemDocument, {
-        data: {
-          deletePantryItem: {
-            // Not a NotFoundError: a delete answered "not found" is already done.
-            __typename: 'ConflictError',
-            code: ErrorCode.Conflict,
-            message: 'Item is referenced by an active meal plan',
-          },
-        },
-      });
-
-      const restore = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
-      const { result } = setup({}, { operationMocks: [refused.mock] });
-
-      act(() => result.current.handleDelete());
-      const alertCalls = (alertService.alert as jest.Mock).mock.calls;
-      await act(async () => {
-        alertCalls[alertCalls.length - 1][2][1].onPress();
-      });
-
-      await drainTimers();
-      expect(restore).toHaveBeenCalled();
-      restore.mockRestore();
-    });
-
     it('tells the user and stays put when the server refuses the delete', async () => {
-      // Restoring the row silently is its own version of the bug this screen
-      // keeps hitting: `removeItem` returns normally on a refusal (it is DATA,
+      // `removeItem` returns normally on a refusal (it is DATA,
       // not an error), so the catch never fires — the screen dismissed as
       // though the delete worked and the row simply reappeared in the list.
       const refused = recordMock(DeletePantryItemDocument, {
@@ -441,7 +401,7 @@ describe('usePantryItemDetailActions', () => {
       });
 
       await drainTimers();
-      expect(removePantryItemLocally).toHaveBeenCalledWith(
+      expect(hidePantryItem).toHaveBeenCalledWith(
         expect.anything(),
         'pantry-1',
         'item-1',

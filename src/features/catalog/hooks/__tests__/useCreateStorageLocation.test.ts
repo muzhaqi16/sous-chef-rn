@@ -169,6 +169,7 @@ describe('useCreateStorageLocation', () => {
         .readQuery({
           query: GetStorageLocationsDocument,
           variables: { homeId: HOME_ID },
+          optimistic: true,
         })
         ?.storageLocations.edges.map(edge => edge.node.name),
     ).toEqual(['Spice Rack']);

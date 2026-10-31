@@ -1,8 +1,56 @@
 import { byOperation } from '#/apollo/utils/documentOperation';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
+import {
+  CreateStorageLocationDocument,
+  DeleteStorageLocationDocument,
+  MarkStorageLocationAsDefaultDocument,
+  UpdateStorageLocationDocument,
+} from '#features/catalog/graphql/storageLocation.generated';
+import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import {
+  AddUsualStoreDocument,
+  RemoveUsualStoreDocument,
+  UpdateUsualStoreDocument,
+} from '#features/catalog/hooks/useUsualStoreWrites.generated';
+import {
+  addUsualStore,
+  createLocation,
+  createStore,
+  locationFields,
+  pinUsualStore,
+  removeLocation,
+  removeUsualStore,
+} from '#features/catalog/offline/localWrites';
+import {
+  AdjustPantryItemQuantityDocument,
+  ConvertExpiredToWasteDocument,
+  CorrectPantryItemPackageSizeDocument,
+  CreatePantryDocument,
+  CreatePantryItemDocument,
+  CreatePantryItemUsageDocument,
+  DeletePantryDocument,
+  DeletePantryItemDocument,
+  MarkPantryAsDefaultDocument,
+  OpenPantryItemBatchDocument,
+  RestockPantryItemDocument,
+  UpdatePantryDocument,
+  UpdatePantryItemDocument,
+  UpdatePantryItemQuantityDocument,
+  WastePantryItemBatchDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
+import {
+  addStock,
+  createItem,
+  createPantry,
+  discardExpired,
+  drawStock,
+  removeItem,
+  removePantry,
+  setStock,
+} from '#features/pantry/offline/localWrites';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   AddItemToShoppingListDocument,
@@ -15,6 +63,7 @@ import {
   MarkAsTemplateDocument,
   MarkShoppingListActiveDocument,
   MarkShoppingListAsDefaultDocument,
+  MoveShoppingItemToPantryDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   RemoveItemsFromShoppingListDocument,
@@ -25,6 +74,7 @@ import {
 import {
   addRows,
   createList,
+  moveToPantry,
   removeList,
   removeRows,
   reorderRow,
@@ -60,4 +110,28 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [CancelRecurringDocument, entityFields],
   [UpdateShoppingListReminderDocument, entityFields],
   [DeleteShoppingListReminderDocument, entityFields],
+  [MoveShoppingItemToPantryDocument, moveToPantry],
+  [CreatePantryItemDocument, createItem],
+  [UpdatePantryItemDocument, entityFields],
+  [UpdatePantryItemQuantityDocument, setStock],
+  [AdjustPantryItemQuantityDocument, setStock],
+  [DeletePantryItemDocument, removeItem],
+  [CreatePantryItemUsageDocument, drawStock],
+  [RestockPantryItemDocument, addStock],
+  [ConvertExpiredToWasteDocument, discardExpired],
+  [OpenPantryItemBatchDocument, entityFields],
+  [WastePantryItemBatchDocument, entityFields],
+  [CorrectPantryItemPackageSizeDocument, entityFields],
+  [CreatePantryDocument, createPantry],
+  [UpdatePantryDocument, entityFields],
+  [DeletePantryDocument, removePantry],
+  [MarkPantryAsDefaultDocument, entityFields],
+  [CreateStorageLocationDocument, createLocation],
+  [UpdateStorageLocationDocument, locationFields],
+  [MarkStorageLocationAsDefaultDocument, locationFields],
+  [DeleteStorageLocationDocument, removeLocation],
+  [CreateStoreDocument, createStore],
+  [AddUsualStoreDocument, addUsualStore],
+  [UpdateUsualStoreDocument, pinUsualStore],
+  [RemoveUsualStoreDocument, removeUsualStore],
 ]);

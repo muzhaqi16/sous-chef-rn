@@ -1,19 +1,15 @@
 /**
- * Local-first: the cached batch's `status` is set WASTED PERMANENTLY before
- * firing, so it survives an offline/queued waste. The server writes a waste
- * ledger row, so `input.idempotencyKey` is what keeps a queued replay from
- * double-counting; a real rejection restores the pre-waste status.
+ * Local-first: the batch shows as wasted until the server answers. The server
+ * writes a waste ledger row, so `input.idempotencyKey` is what keeps a queued
+ * replay from double-counting.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { WastePantryItemBatchDocument } from '#features/pantry/graphql/pantry.generated';
-import { UseWastePantryItemBatch_StateFragmentDoc } from './useWastePantryItemBatch.generated';
 import { BatchStatus, type WasteReason } from '#/graphql/generated/schemaTypes';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
 import { todayKey } from '#/utils/dateUtils';
 
 interface UseWastePantryItemBatchOptions {
@@ -36,92 +32,33 @@ export function useWastePantryItemBatch({
     isRecycled?: boolean,
     notes?: string,
   ): Promise<boolean> => {
-    const batchCacheId = client.cache.identify({
-      __typename: 'PantryItemBatch',
-      id: batchId,
-    });
-    const snapshot = client.cache.readFragment({
-      id: batchCacheId,
-      fragment: UseWastePantryItemBatch_StateFragmentDoc,
-      fragmentName: 'useWastePantryItemBatch_state',
-      optimistic: true,
-    });
-
-    // Wasting empties the batch, so the server returns it at zero with a
-    // `depletedAt`; writing `status` alone leaves the row showing its old amount.
-    const writeState = (
-      status: BatchStatus,
-      quantity: number | null,
-      depletedAt: string | null,
-    ) =>
-      client.cache.modify({
-        id: batchCacheId,
-        fields: {
-          status: () => status,
-          quantity: () => quantity,
-          depletedAt: () => depletedAt,
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'PantryItemBatch', id: batchId },
+      // Wasting empties the batch, so the server returns it at zero with a
+      // `depletedAt`; `status` alone leaves the row showing its old amount.
+      fields: {
+        status: BatchStatus.Wasted,
+        quantity: 0,
+        depletedAt: new Date().toISOString(),
+      },
+      variables: {
+        today: todayKey(),
+        input: {
+          batchId,
+          wasteReason,
+          isComposted,
+          isRecycled,
+          notes,
+          idempotencyKey: generateEntityId(),
         },
-      });
-
-    // Permanent optimistic write before firing — survives an offline/queued waste.
-    const clearPersistence = optimisticDataPersistence.track(
-      'PantryItemBatch',
-      batchId,
-      'status',
-      BatchStatus.Wasted,
-    );
-    try {
-      writeState(BatchStatus.Wasted, 0, new Date().toISOString());
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Waste Pantry Item Batch (optimistic)',
-      });
-    }
-
-    const revert = () => {
-      // Resolved before the try — a `??` inside a try body makes the React
-      // Compiler bail out of this hook.
-      const revertedStatus = snapshot?.status ?? BatchStatus.Active;
-      const revertedQuantity = snapshot?.quantity ?? null;
-      const revertedDepletedAt = snapshot?.depletedAt ?? null;
-      try {
-        writeState(revertedStatus, revertedQuantity, revertedDepletedAt);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected batch waste',
-        });
-      }
-      clearPersistence();
-    };
-
-    const settled = await settleMutation(
-      () =>
-        wasteMutation({
-          variables: {
-            today: todayKey(),
-            input: {
-              batchId,
-              wasteReason,
-              isComposted,
-              isRecycled,
-              notes,
-              idempotencyKey: generateEntityId(),
-            },
-          },
-        }),
-      {
+      },
+      mutate: wasteMutation,
+      settle: {
         document: WastePantryItemBatchDocument,
         fallback: t('errors.wasteBatchFailed'),
-        onFailed: revert,
       },
-    );
+    });
     if (settled.status === 'failed') return false;
-
-    // Applied: the response normalized the authoritative batches. Queued: the
-    // persisted value stands until the replay lands.
-    if (settled.status === 'applied') {
-      clearPersistence();
-    }
     onSuccess?.();
     return true;
   };

@@ -255,12 +255,11 @@ export function stampItemKeptOnListAfterMoveToPantry(
   listId: string,
   itemId: string,
   wasPurchased: boolean,
+  now: string,
 ): KeptOnListStamp {
   const stamp = stampItemBoughtOnList(cache, listId, itemId, wasPurchased);
   // A second write: the writer clears the stamp on the flip itself.
-  writePurchaseInfo(cache, itemId, {
-    movedToPantryAt: new Date().toISOString(),
-  });
+  writePurchaseInfo(cache, itemId, { movedToPantryAt: now });
   return stamp;
 }
 

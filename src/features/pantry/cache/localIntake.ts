@@ -53,7 +53,7 @@ export function writeLocalIntake(
   row: LocalPantryItem,
 ): void {
   try {
-    writeLocalPantryItem(cache, id, row);
+    writeLocalPantryItem(cache, id, row, new Date().toISOString());
     addPantryItemLocally(cache, row.pantryId, { __typename: 'PantryItem', id });
   } catch (cacheError) {
     errorService.reportError(cacheError, {

@@ -16,10 +16,7 @@ import {
   DeletePantryDocument,
   GetPantryDocument,
 } from '#features/pantry/graphql/pantry.generated';
-import {
-  removeOptimisticPantry,
-  restorePantryToHomeCache,
-} from '#features/pantry/cache/pantry';
+import { removeOptimisticPantry } from '#features/pantry/cache/pantry';
 import {
   pantryData,
   type PantryFixture,
@@ -66,7 +63,6 @@ jest.mock('#features/pantry/hooks/usePantryPermissions');
 jest.mock('#features/pantry/cache/pantry', () => ({
   ...jest.requireActual('#features/pantry/cache/pantry'),
   removeOptimisticPantry: jest.fn(),
-  restorePantryToHomeCache: jest.fn(),
 }));
 
 jest.mock('#components/templates/Screen', () => ({
@@ -317,10 +313,7 @@ describe('PantrySettings', () => {
     }
 
     it('removes the pantry from the home before the mutation resolves', async () => {
-      // `buildDeletePantryUpdater` runs only for a real DeletePantryPayload,
-      // and offline there is none — the queue completes with a null result and
-      // the replay carries no `update`. Without a pre-fire write the user was
-      // returned to a home still listing the pantry they had just deleted.
+      // Offline no payload arrives, so the layer is what takes it off the home.
       const remove = recordMock(DeletePantryDocument, {
         data: {
           deletePantry: {
@@ -341,30 +334,7 @@ describe('PantrySettings', () => {
         expect.anything(),
         'h1',
         'p1',
-        // Unlinked, not evicted: a refusal has to be able to put it back.
         { evictEntity: false },
-      );
-    });
-
-    it('puts the pantry back when the delete is refused', async () => {
-      // A failing mutation RESOLVES under errorPolicy 'all'; the operation
-      // mock carries the error rather than a helper being stubbed to throw.
-      const refused = recordMock(DeletePantryDocument, {
-        error: new Error('refused'),
-      });
-
-      renderWithApollo(<PantrySettings route={editRoute} />, {
-        cache: cacheWithPantry(defaultPantry),
-        operationMocks: [refused.mock],
-      });
-
-      await confirmDelete();
-
-      await drainTimers();
-      expect(restorePantryToHomeCache).toHaveBeenCalledWith(
-        expect.anything(),
-        'h1',
-        'p1',
       );
     });
   });

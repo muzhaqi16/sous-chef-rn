@@ -1,7 +1,7 @@
 /**
  * Corrects a misread batch package size; the same fraction remains, so the
- * remaining weight scales. Written PERMANENTLY before firing;
- * `input.idempotencyKey` keeps a replay from writing the history twice.
+ * remaining weight scales. `input.idempotencyKey` keeps a replay from writing
+ * the history twice.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -13,8 +13,7 @@ import {
   type UseCorrectPackageSize_StackFragment,
 } from './useCorrectPackageSize.generated';
 import { alertService } from '#/services/alertService';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
@@ -44,7 +43,7 @@ export function useCorrectPackageSize() {
     context: { localFirst: true },
   });
 
-  /** Resolves false on a refusal, which has been alerted and reverted. */
+  /** Resolves false on a refusal, which has been alerted. */
   const correctPackageSize = async ({
     pantryItemId,
     batchId,
@@ -71,23 +70,15 @@ export function useCorrectPackageSize() {
       return false;
     }
 
-    const batchCacheId = client.cache.identify({
-      __typename: 'PantryItemBatch',
-      id: batchId,
-    });
     const batch =
       client.cache.readFragment<UseCorrectPackageSize_BatchFragment>({
-        id: batchCacheId,
+        id: client.cache.identify({
+          __typename: 'PantryItemBatch',
+          id: batchId,
+        }),
         fragment: UseCorrectPackageSize_BatchFragmentDoc,
         fragmentName: 'useCorrectPackageSize_batch',
         optimistic: true,
-      });
-    const writeBatch = (data: UseCorrectPackageSize_BatchFragment) =>
-      client.cache.writeFragment({
-        id: batchCacheId,
-        fragment: UseCorrectPackageSize_BatchFragmentDoc,
-        fragmentName: 'useCorrectPackageSize_batch',
-        data,
       });
 
     // A batch's size is recorded in the stack's net-weight unit; a size stated
@@ -97,59 +88,27 @@ export function useCorrectPackageSize() {
       batch && sameUnit
         ? { netWeight, remainingNetWeight: scaledRemaining(batch, netWeight) }
         : {};
-    if (batch && sameUnit) {
-      try {
-        writeBatch({ ...batch, ...corrected });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Correct package size (optimistic)',
-        });
-      }
-    }
-    const clearPersisted = optimisticDataPersistence.trackFields(
-      'PantryItemBatch',
-      batchId,
-      corrected,
-    );
 
-    const revert = () => {
-      if (batch && sameUnit) {
-        try {
-          writeBatch(batch);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert refused package size correction',
-          });
-        }
-      }
-      clearPersisted();
-    };
-
-    const settled = await settleMutation(
-      () =>
-        correctMutation({
-          variables: {
-            today: todayKey(),
-            input: {
-              batchId,
-              correction: { packageSize: { netWeight, netWeightUnitId } },
-              reason,
-              version: item.version,
-              idempotencyKey: generateEntityId(),
-            },
-          },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'PantryItemBatch', id: batchId },
+      fields: corrected,
+      variables: {
+        today: todayKey(),
+        input: {
+          batchId,
+          correction: { packageSize: { netWeight, netWeightUnitId } },
+          reason,
+          version: item.version,
+          idempotencyKey: generateEntityId(),
+        },
+      },
+      mutate: correctMutation,
+      settle: {
         document: CorrectPantryItemPackageSizeDocument,
         fallback: t('errors.correctWeightFailed'),
-        onFailed: revert,
       },
-    );
+    });
     if (settled.status === 'failed') return false;
-
-    // Applied: the response normalized the server's figures. Queued: the
-    // persisted ones stand until the replay lands.
-    if (settled.status === 'applied') clearPersisted();
     return true;
   };
 

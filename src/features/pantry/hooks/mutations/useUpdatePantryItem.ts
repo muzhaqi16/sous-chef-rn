@@ -1,20 +1,17 @@
 /**
- * Updates the non-quantity fields the form dirtied. Local-first: the entity is
- * written to the cache PERMANENTLY before firing (an `optimisticResponse` rolls
- * back on the offline queue's null result), so a queued update stays visible and
- * replays as itself at the version it holds.
+ * Updates the non-quantity fields the form dirtied. Local-first: they show until
+ * the server answers, and a queued update replays as itself at the version it
+ * holds.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { errorService } from '#/services/errorService';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItem_PantryItemFragmentDoc,
   type UseUpdatePantryItem_PantryItemFragment,
 } from './useUpdatePantryItem.generated';
 import type { StorageType } from '#/graphql/generated/schemaTypes';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { useTranslation } from '#/i18n';
 import { buildDirtyUpdateInput } from './utils';
 import type { DirtyFieldFlags, FormDataInput } from './types';
@@ -84,8 +81,9 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
     }
 
     // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
-    const optimisticUpdate: Partial<UseUpdatePantryItem_PantryItemFragment> =
-      {};
+    const optimisticUpdate: Partial<UseUpdatePantryItem_PantryItemFragment> = {
+      updatedAt: new Date().toISOString(),
+    };
     if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
     if (dirtyFields.storageState)
       optimisticUpdate.storageState = input.storageState;
@@ -133,59 +131,22 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
       }
     }
 
-    const optimisticPantryItem = enhanceWithVersion(
-      currentItem,
-      optimisticUpdate,
-    );
-
-    // Permanent write BEFORE firing: survives an offline/API-down queue
-    // (where no response ever arrives to materialize the change).
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: itemId,
-    });
-    const writeItem = (data: UseUpdatePantryItem_PantryItemFragment) =>
-      client.cache.writeFragment({
-        id: cacheId,
-        fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
-        fragmentName: 'useUpdatePantryItem_pantryItem',
-        data,
-      });
-    try {
-      writeItem(optimisticPantryItem);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Update Pantry Item (optimistic)',
-      });
-    }
-
-    const revert = () => {
-      try {
-        writeItem(currentItem);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Pantry Item update',
-        });
-      }
-    };
-
     // A refusal naming `field: "unit"` (a unit change while the item has
     // batches) reads as the localized `errors.field.unit` copy.
-    const settled = await settleMutation(
-      () =>
-        updateMutation({
-          variables: {
-            input: { ...updateInput, id: itemId, version: currentItem.version },
-            today: todayKey(),
-          },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'PantryItem', id: itemId },
+      fields: optimisticUpdate,
+      variables: {
+        input: { ...updateInput, id: itemId, version: currentItem.version },
+        today: todayKey(),
+      },
+      mutate: updateMutation,
+      settle: {
         document: UpdatePantryItemDocument,
         fallback: t('errors.updateItemFailed'),
-        onFailed: revert,
         onConflictRefresh: refetch,
       },
-    );
+    });
 
     return settled.status !== 'failed';
   };

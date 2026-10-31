@@ -1,6 +1,7 @@
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   recordMock,
   renderHookWithApollo,
@@ -64,6 +65,7 @@ function cacheWithRow(held = 3) {
 
 const readRow = (cache: ReturnType<typeof makeCache>) =>
   cache.readFragment<Row>({
+    optimistic: true,
     id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
     fragment: ROW,
   });
@@ -165,9 +167,11 @@ describe('usePantryRestock', () => {
         present: 'none',
       });
     });
+    pendingWritesOf(cache).rebuild();
 
     expect(
       cache.readFragment({
+        optimistic: true,
         id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
         fragment: gql`
           fragment _PantryRestockAnswer on PantryItem {
@@ -401,6 +405,7 @@ describe('usePantryRestock', () => {
     };
     const readBatches = (cache: ReturnType<typeof makeCache>) =>
       cache.readQuery({
+        optimistic: true,
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: ROW_ID },
       });

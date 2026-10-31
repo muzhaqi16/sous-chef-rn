@@ -1,24 +1,22 @@
 /**
- * Local-first: the updated quantity is written to the cache PERMANENTLY
- * before firing (an `optimisticResponse` would roll back on the offline queue's
- * null result), so a queued update stays visible and replays as itself at the
- * version it holds; a real rejection restores the pre-edit snapshot.
+ * Local-first: the updated quantity shows until the server answers, and a queued
+ * update replays as itself at the version it holds.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { errorService } from '#/services/errorService';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
   type UseUpdatePantryItemQuantity_PantryItemFragment,
 } from './useUpdatePantryItemQuantity.generated';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
-import { writeHeldStock } from '#features/pantry/cache/stock';
+import type { writeHeldStock } from '#features/pantry/cache/stock';
+import type { SetStockInputs } from '#features/pantry/offline/localWrites';
 import { todayKey } from '#/utils/dateUtils';
 import { statedAmount } from '#/utils/formatQuantity';
 
@@ -95,70 +93,39 @@ export function useUpdatePantryItemQuantity({
     const held = statedIn
       ? newQuantity * statedIn.conversionFactor
       : newQuantity;
-    const optimisticPantryItem = enhanceWithVersion(currentItem, {
-      quantity: held,
-      heldQuantity: held,
-    });
-
-    // Permanent write BEFORE firing: survives an offline/API-down queue
-    // (where no response ever arrives to materialize the change).
-    const writeItem = (data: UseUpdatePantryItemQuantity_PantryItemFragment) =>
-      client.cache.writeFragment({
-        id: cacheId,
-        fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
-        fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
-        data,
-      });
-    // Shown as typed ("2 doz"); a conditional inside the `try` would bail the
-    // React Compiler out of this hook.
-    const shownAs: Parameters<typeof writeHeldStock>[3] = statedIn
-      ? {
+    const inputs: SetStockInputs = {
+      held,
+      now: new Date().toISOString(),
+      // Shown as typed ("2 doz").
+      ...(statedIn && {
+        shown: {
           __typename: 'DisplayAmount',
           quantity: newQuantity,
           ...statedAmount(newQuantity, statedIn, statedIn.displayAsFraction),
           unit: statedIn,
-        }
-      : undefined;
-    try {
-      writeItem(optimisticPantryItem);
-      writeHeldStock(client.cache, itemId, held, shownAs);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Update Pantry Item Quantity (optimistic)',
-      });
-    }
-
-    const revert = () => {
-      try {
-        writeItem(currentItem);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Pantry Item quantity update',
-        });
-      }
+        },
+      }),
     };
-
-    const settled = await settleMutation(
-      () =>
-        updateQuantityMutation({
-          variables: {
-            today: todayKey(),
-            input: {
-              pantryItemId: itemId,
-              // Separators normalized, fraction preserved: the server parses
-              // this string itself and rejects a comma decimal outright.
-              quantity: normalizeNumericTextForApi(quantityText),
-              ...(statedIn && { unitId: statedIn.id }),
-              version: currentItem.version,
-            },
-          },
-        }),
+    const settled = await pendingWritesOf(client.cache).send(
+      UpdatePantryItemQuantityDocument,
       {
-        document: UpdatePantryItemQuantityDocument,
-        fallback: t('errors.updateItemFailed'),
-        onFailed: revert,
-        onConflictRefresh: refetch,
+        today: todayKey(),
+        input: {
+          pantryItemId: itemId,
+          // Separators normalized, fraction preserved: the server parses
+          // this string itself and rejects a comma decimal outright.
+          quantity: normalizeNumericTextForApi(quantityText),
+          ...(statedIn && { unitId: statedIn.id }),
+          version: currentItem.version,
+        },
       },
+      write =>
+        settleMutation(() => updateQuantityMutation(write), {
+          document: UpdatePantryItemQuantityDocument,
+          fallback: t('errors.updateItemFailed'),
+          onConflictRefresh: refetch,
+        }),
+      inputs,
     );
 
     return settled.status !== 'failed';

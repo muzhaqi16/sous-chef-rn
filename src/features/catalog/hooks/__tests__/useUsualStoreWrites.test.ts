@@ -122,6 +122,47 @@ describe('useUsualStoreWrites', () => {
   });
 
   // "Could you save?" compares the list at these stores.
+  it('sends a second tap only once the first has answered, so they land in order', async () => {
+    const store = { store: { id: 's1', name: 'Giant Eagle Banksville' } };
+    const pinned = (value: boolean) =>
+      recordMock(UpdateUsualStoreDocument, {
+        match: vars => (vars.input as { pinned?: boolean }).pinned === value,
+        held: value,
+        data: {
+          updateUsualStore: {
+            __typename: 'UpdateUsualStorePayload',
+            usualStores: [{ ...banksville, pinned: value }, marketDistrict],
+          },
+        },
+      });
+    const pin = pinned(true);
+    const unpin = pinned(false);
+    const { result } = renderHookWithApollo(useBoth, {
+      cache: seeded(),
+      operationMocks: [pin.mock, unpin.mock],
+    });
+
+    let tapped: Promise<boolean[]> | undefined;
+    act(() => {
+      tapped = Promise.all([
+        result.current.writes.setPinned(store, true),
+        result.current.writes.setPinned(store, false),
+      ]);
+    });
+    await act(() => jest.advanceTimersByTimeAsync(1000));
+
+    expect(pin.fired).toHaveLength(1);
+    expect(unpin.fired).toHaveLength(0);
+
+    pin.release();
+    await drainTimers();
+    await act(async () => {
+      await tapped;
+    });
+
+    expect(unpin.fired).toHaveLength(1);
+  });
+
   it('re-reads the list savings once a write is applied, not while it is queued', async () => {
     const refetchQueries = jest.spyOn(ApolloClient.prototype, 'refetchQueries');
     const pinned = recordMock(UpdateUsualStoreDocument, {

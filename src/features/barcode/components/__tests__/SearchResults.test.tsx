@@ -42,8 +42,7 @@ jest.mock('#features/pantry/cache/items', () => {
   // and it is proven against a real cache in `pantryItemLocalWrites.test.ts`.
   return {
     ...actual,
-    addPantryItemLocally: jest.fn(actual.addPantryItemLocally),
-    revertOptimisticPantryItem: jest.fn(actual.revertOptimisticPantryItem),
+    showLocalPantryItem: jest.fn(actual.showLocalPantryItem),
   };
 });
 
@@ -825,12 +824,11 @@ describe('SearchResults', () => {
   });
 
   describe('the pantry item count', () => {
-    // The connection write moves the LIST; the header's "N items" reads
-    // `Pantry.stats.totalItems`, which the mutation's `update:` callback never
-    // touches when the create is queued offline. Publishing and withdrawing
-    // both go through the counting helpers so the two cannot drift.
-    const { addPantryItemLocally, revertOptimisticPantryItem } =
-      jest.requireMock('#features/pantry/cache/items');
+    // Publishing goes through the counting helper, so a queued create moves the
+    // header's "N items" with the list; a refusal lifts the layer holding both.
+    const { showLocalPantryItem } = jest.requireMock(
+      '#features/pantry/cache/items',
+    );
 
     it('moves with the optimistic row, before the server answers', async () => {
       const rec = recordMock(CreatePantryItemDocument, {
@@ -852,14 +850,15 @@ describe('SearchResults', () => {
       fireEvent.press(screen.getByTestId('primary-btn'));
 
       await drainTimers();
-      expect(addPantryItemLocally).toHaveBeenCalledWith(
+      expect(showLocalPantryItem).toHaveBeenCalledWith(
         expect.anything(),
-        defaultProps.pantryId,
         expect.objectContaining({ __typename: 'PantryItem' }),
+        expect.objectContaining({ pantryId: defaultProps.pantryId }),
+        expect.any(String),
       );
     });
 
-    it('is taken back when the server refuses the create', async () => {
+    it('names the input the server refused', async () => {
       const rec = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
@@ -876,14 +875,7 @@ describe('SearchResults', () => {
       });
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await drainTimers();
-      expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
-        expect.anything(),
-        defaultProps.pantryId,
-        expect.any(String),
-      );
-
-      // And the refusal names the input it refused. Under a bare cache this
+      // The refusal names the input it refused. Under a bare cache this
       // could not be asserted: without `possibleTypes` the
       // `... on ValidationError` inline fragment did not match, `field` was
       // dropped before anything read it, and every refusal of this mutation

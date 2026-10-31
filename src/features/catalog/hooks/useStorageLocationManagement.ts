@@ -1,4 +1,3 @@
-import type { ApolloCache } from '@apollo/client';
 import { toastService } from '#/services/toastService';
 import {
   skipToken,
@@ -13,24 +12,18 @@ import {
   MarkStorageLocationAsDefaultDocument,
   type GetStorageLocationsQuery,
 } from '#features/catalog/graphql/storageLocation.generated';
+import type {
+  LocationFieldsInputs,
+  RemoveLocationInputs,
+} from '#features/catalog/offline/localWrites';
 import type { UpdateStorageLocationInput } from '#/graphql/generated/schemaTypes';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
-import {
-  createAddToQueryConnectionUpdater,
-  skipUnmatchedArgVariants,
-  createAddToParentConnectionUpdater,
-  createRemoveFromQueryConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-} from '#/apollo/utils/cacheUpdaters';
-import {
-  writeEntityFields,
-  snapshotFields,
-} from '#/apollo/utils/localFirstFields';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
 import { useBlocksCacheMissQueries } from '#features/catalog/hooks/useBlocksCacheMissQueries';
 import { useTranslation } from '#/i18n';
-import { errorCopy, errorService } from '#/services/errorService';
+import { errorCopy } from '#/services/errorService';
 
 /** Flat storage-location node as returned by `GetStorageLocations`. */
 type FlatStorageLocation =
@@ -40,58 +33,6 @@ type FlatStorageLocation =
 type StorageLocationTreeNode = FlatStorageLocation & {
   childLocations: StorageLocationTreeNode[];
 };
-
-/**
- * The two connections a storage location lives in. Both writers are
- * module-level so each caller's try body stays a single plain call — a value
- * block inside a try bails the whole hook out of the React Compiler.
- */
-const removeFromStorageLocationsQuery = createRemoveFromQueryConnectionUpdater(
-  'storageLocations',
-  'StorageLocation',
-);
-const removeFromPantryLocations = createRemoveFromParentConnectionUpdater(
-  'Pantry',
-  'storageLocationsConnection',
-  'StorageLocation',
-);
-const addToStorageLocationsQuery =
-  createAddToQueryConnectionUpdater<FlatStorageLocation>(
-    'storageLocations',
-    'StorageLocation',
-  );
-const addToPantryLocations =
-  createAddToParentConnectionUpdater<FlatStorageLocation>(
-    'Pantry',
-    'storageLocationsConnection',
-    'StorageLocation',
-  );
-
-function removeLocationFromCaches(
-  cache: ApolloCache,
-  id: string,
-  pantryId: string | undefined,
-): void {
-  if (pantryId) removeFromPantryLocations(cache, pantryId, id);
-  removeFromStorageLocationsQuery(cache, id, { evictItem: true });
-}
-
-function restoreLocationToCaches(
-  cache: ApolloCache,
-  location: FlatStorageLocation,
-  pantryId: string | undefined,
-  homeId: string | undefined,
-): void {
-  // `cache.modify` runs for EVERY cached `storageLocations(homeId:…)` variant,
-  // so this keeps a refused delete's row in its own home's list. The field is
-  // keyed on a plain argument, not a `filters` object, hence the arg matcher.
-  addToStorageLocationsQuery(cache, location, {
-    position: 'end',
-    skipStoreField: homeId ? skipUnmatchedArgVariants({ homeId }) : undefined,
-  });
-  if (pantryId)
-    addToPantryLocations(cache, pantryId, location, { position: 'end' });
-}
 
 /**
  * Build a tree structure from a flat list of locations using parentLocation references
@@ -195,9 +136,6 @@ export function useStorageLocationManagement(
     { context: { localFirst: true } },
   );
 
-  // No `update` callback: the removal happens eagerly in `deleteLocation` so it
-  // is visible offline too, and running it again on the response would just
-  // re-evict an already-evicted entity.
   const [deleteMutation] = useMutation(DeleteStorageLocationDocument, {
     context: { localFirst: true },
   });
@@ -212,8 +150,6 @@ export function useStorageLocationManagement(
     id: string,
     input: Omit<UpdateStorageLocationInput, 'id'>,
   ) => {
-    const current = locations.find(location => location.id === id);
-
     // Input names ARE the StorageLocation field names except `parentLocationId`:
     // the tree builder and delete guard read the nested `parentLocation`, so
     // writing the flat field alone moves nothing.
@@ -226,114 +162,58 @@ export function useStorageLocationManagement(
     // Identity only: `writeEntityFields` normalizes `__typename`+`id` into a
     // reference, so the child points AT the parent (a copy would strand its
     // sub-label on a rename) and cannot clobber the parent's record.
-    const locationRef = (locationId: string) => ({
-      __typename: 'StorageLocation',
-      id: locationId,
-    });
-
-    const updates = {
+    const fields = {
       ...directFields,
-      ...(nextParent === undefined
-        ? {}
-        : { parentLocation: nextParent ? locationRef(nextParent.id) : null }),
-    };
-
-    // A key the read did not CARRY is left out, so a refusal leaves it alone;
-    // one carried as null is restored as empty. An undefined `current` is fine:
-    // `writeEntityFields` is a no-op without an entity, on write and revert.
-    const previous = {
-      ...snapshotFields(current, updates),
-      // `current` is a query READ, so its `parentLocation` is denormalized.
-      // Snapshotting it verbatim would make a refusal restore the very copy
-      // this write exists to avoid.
-      ...(nextParent === undefined
-        ? {}
-        : {
-            parentLocation: current?.parentLocation?.id
-              ? locationRef(current.parentLocation.id)
-              : null,
-          }),
+      ...(nextParent !== undefined && {
+        parentLocation: nextParent
+          ? { __typename: 'StorageLocation', id: nextParent.id }
+          : null,
+      }),
     };
 
     // `isDefault` is exclusive. `setDefaultLocation` clears the previous holder
     // for exactly this reason; ticking Default in the EDIT sheet has to as well,
     // or two rows read as default until the next fetch.
-    const displacedDefault =
+    const displaced =
       input.isDefault === true
         ? locations.find(location => location.isDefault && location.id !== id)
         : undefined;
 
-    const entity = current ? locationRef(id) : undefined;
-    writeEntityFields(client.cache, entity, updates);
-    if (displacedDefault) {
-      writeEntityFields(client.cache, locationRef(displacedDefault.id), {
-        isDefault: false,
-      });
-    }
-
-    const settled = await settleMutation(
-      () =>
-        updateMutation({
-          variables: { input: { ...input, id } },
+    const inputs: LocationFieldsInputs = {
+      id,
+      fields,
+      displacedId: displaced?.id,
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      UpdateStorageLocationDocument,
+      { input: { ...input, id } },
+      write =>
+        settleMutation(() => updateMutation(write), {
+          document: UpdateStorageLocationDocument,
+          fallback: t('errors.codes.genericRetry'),
+          present: 'toast',
         }),
-      {
-        document: UpdateStorageLocationDocument,
-        fallback: t('errors.codes.genericRetry'),
-        present: 'toast',
-        onFailed: () => {
-          writeEntityFields(client.cache, entity, previous);
-          if (displacedDefault) {
-            writeEntityFields(client.cache, locationRef(displacedDefault.id), {
-              isDefault: true,
-            });
-          }
-        },
-      },
+      inputs,
     );
-    if (settled.failure) return false;
-
     // Covers BOTH outcomes that keep the edit: the server confirmed it, or the
     // queue took it. The only consumer reads truthiness.
-    return true;
+    return !settled.failure;
   };
 
   const deleteLocation = async (id: string) => {
-    // Snapshot before removing: a refusal has to put the row back, and an
-    // evicted entity is one the cache cannot describe.
-    const removed = locations.find(location => location.id === id);
-
-    try {
-      removeLocationFromCaches(client.cache, id, pantryId);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Storage Location (optimistic)',
-      });
-    }
-
-    const restore = () => {
-      if (!removed) return;
-      try {
-        restoreLocationToCaches(client.cache, removed, pantryId, homeId);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected storage-location delete',
-        });
-      }
-    };
-
+    const inputs: RemoveLocationInputs = { pantryId };
     // A delete converges: a row already gone is the outcome asked for.
-    const settled = await settleMutation(
-      () =>
-        deleteMutation({
-          variables: { input: { id } },
+    const settled = await pendingWritesOf(client.cache).send(
+      DeleteStorageLocationDocument,
+      { input: { id } },
+      write =>
+        settleMutation(() => deleteMutation(write), {
+          document: DeleteStorageLocationDocument,
+          fallback: t('errors.codes.genericRetry'),
+          removal: true,
+          present: 'toast',
         }),
-      {
-        document: DeleteStorageLocationDocument,
-        fallback: t('errors.codes.genericRetry'),
-        removal: true,
-        present: 'toast',
-        onFailed: restore,
-      },
+      inputs,
     );
     if (settled.failure) return false;
 
@@ -342,45 +222,28 @@ export function useStorageLocationManagement(
   };
 
   const setDefaultLocation = async (id: string) => {
-    // Default is exclusive: the server clears the previous holder, so the cache
-    // has to as well or two rows read as default until the next fetch.
-    const previousDefault = locations.find(
+    // Default is exclusive: the server clears the previous holder, so the row
+    // shows that too, or two rows read as default until the next fetch.
+    const displaced = locations.find(
       location => location.isDefault && location.id !== id,
     );
-
-    const entity = { __typename: 'StorageLocation', id };
-    writeEntityFields(client.cache, entity, { isDefault: true });
-    if (previousDefault) {
-      writeEntityFields(
-        client.cache,
-        { __typename: 'StorageLocation', id: previousDefault.id },
-        { isDefault: false },
-      );
-    }
-
-    const settled = await settleMutation(
-      () =>
-        setDefaultMutation({
-          variables: { input: { id } },
+    const inputs: LocationFieldsInputs = {
+      id,
+      fields: { isDefault: true },
+      displacedId: displaced?.id,
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      MarkStorageLocationAsDefaultDocument,
+      { input: { id } },
+      write =>
+        settleMutation(() => setDefaultMutation(write), {
+          document: MarkStorageLocationAsDefaultDocument,
+          fallback: t('errors.codes.genericRetry'),
+          present: 'toast',
         }),
-      {
-        document: MarkStorageLocationAsDefaultDocument,
-        fallback: t('errors.codes.genericRetry'),
-        present: 'toast',
-        onFailed: () => {
-          writeEntityFields(client.cache, entity, { isDefault: false });
-          if (previousDefault) {
-            writeEntityFields(
-              client.cache,
-              { __typename: 'StorageLocation', id: previousDefault.id },
-              { isDefault: true },
-            );
-          }
-        },
-      },
+      inputs,
     );
-    if (settled.failure) return false;
-    return true;
+    return !settled.failure;
   };
 
   // Preserve data even when query fails to prevent cascade failures

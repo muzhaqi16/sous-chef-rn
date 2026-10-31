@@ -145,8 +145,6 @@ describe('UsualStoresScreen', () => {
       held: true,
       maxUsageCount: 1,
     });
-    // Asked again after the pin, so the server's answer holds it.
-    const reread = answering([{ ...marketDistrict, pinned: true }, banksville]);
     const pinTo = (pinned: boolean) =>
       recordMock(UpdateUsualStoreDocument, {
         match: vars => (vars.input as { pinned?: boolean }).pinned === pinned,
@@ -159,7 +157,7 @@ describe('UsualStoresScreen', () => {
       });
     const pin = pinTo(true);
     const unpin = pinTo(false);
-    renderScreen([refresh.mock, reread.mock, pin.mock, unpin.mock]);
+    renderScreen([refresh.mock, pin.mock, unpin.mock]);
     await drainTimers();
     expect(screen.getByText('Giant Eagle Market District')).toBeTruthy();
     await drainTimers();
@@ -168,14 +166,16 @@ describe('UsualStoresScreen', () => {
     fireEvent.press(
       screen.getByTestId(catalogTestIDs.usualStorePin('store:s2')),
     );
-    await drainTimers();
+    // Short of the fence's limit, which a drain runs past and so commits.
+    await act(() => jest.advanceTimersByTimeAsync(1000));
     expect(screen.getByText('Pinned')).toBeTruthy();
 
     await act(async () => {
       refresh.release();
     });
     await drainTimers();
-    expect(reread.fired).toHaveLength(1);
+    // It lands under the pin, so nothing is asked again.
+    expect(refresh.fired).toHaveLength(1);
     expect(screen.getByText('Pinned')).toBeTruthy();
 
     fireEvent.press(

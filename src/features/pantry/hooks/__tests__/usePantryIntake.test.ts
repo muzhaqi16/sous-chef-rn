@@ -1,6 +1,7 @@
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   recordMock,
   renderHookWithApollo,
@@ -151,11 +152,11 @@ describe('usePantryIntake', () => {
         },
       );
       // Read before the answer lands: the row is written before the create fires.
-      const [published] = Object.keys(cache.extract()).filter(key =>
+      const [published] = Object.keys(cache.extract(true)).filter(key =>
         key.startsWith('PantryItem:'),
       );
       row = published
-        ? cache.readFragment({ id: published, fragment: ROW })
+        ? cache.readFragment({ optimistic: true, id: published, fragment: ROW })
         : undefined;
       await added;
     });
@@ -181,10 +182,10 @@ describe('usePantryIntake', () => {
         item: { inline: { name: 'Cubanelle pepper', brand: 'Farm' } },
         quantity: 1,
       });
-      const [published] = Object.keys(cache.extract()).filter(key =>
+      const [published] = Object.keys(cache.extract(true)).filter(key =>
         key.startsWith('PantryItem:'),
       );
-      named = published ? cache.extract()[published]?.item : undefined;
+      named = published ? cache.extract(true)[published]?.item : undefined;
       await added;
     });
 
@@ -244,14 +245,18 @@ describe('usePantryIntake', () => {
       });
     });
 
+    pendingWritesOf(cache).rebuild();
+
     const input = create.fired[0]?.input as {
       id: string;
       item: { inline: { id: string } };
     };
-    expect(cache.extract()[`PantryItem:${input.id}`]?.item).toEqual({
+    expect(cache.extract(true)[`PantryItem:${input.id}`]?.item).toEqual({
       __ref: 'Item:item-held',
     });
-    expect(cache.extract()).not.toHaveProperty(`Item:${input.item.inline.id}`);
+    expect(cache.extract(true)).not.toHaveProperty(
+      `Item:${input.item.inline.id}`,
+    );
   });
 
   it('drops the minted row when the server answers with the stack it holds', async () => {
@@ -269,9 +274,11 @@ describe('usePantryIntake', () => {
       });
     });
 
+    pendingWritesOf(cache).rebuild();
+
     const [fired] = create.fired;
     const minted = (fired?.input as { id: string }).id;
-    const snapshot = cache.extract();
+    const snapshot = cache.extract(true);
     expect(snapshot).not.toHaveProperty(`PantryItem:${minted}`);
     expect(snapshot).not.toHaveProperty(`Item:local-item-${minted}`);
     expect(JSON.stringify(snapshot[`Pantry:${PANTRY_ID}`])).not.toContain(
@@ -315,9 +322,9 @@ describe('usePantryIntake', () => {
 
     const minted = (create.fired[0]?.input as { id: string }).id;
     expect(outcome).toEqual({ status: 'added' });
-    expect(JSON.stringify(cache.extract()[`Pantry:${PANTRY_ID}`])).toContain(
-      minted,
-    );
+    expect(
+      JSON.stringify(cache.extract(true)[`Pantry:${PANTRY_ID}`]),
+    ).toContain(minted);
   });
 
   it('tells the user about a refusal only when asked to', async () => {

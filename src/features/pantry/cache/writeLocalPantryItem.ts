@@ -53,8 +53,8 @@ export function writeLocalPantryItem(
   cache: ApolloCache,
   id: string,
   row: LocalPantryItem,
+  now: string,
 ): void {
-  const now = new Date().toISOString();
   const quantity = row.quantity ?? 1;
   const unit = row.unitId
     ? { __typename: 'Unit', id: row.unitId }

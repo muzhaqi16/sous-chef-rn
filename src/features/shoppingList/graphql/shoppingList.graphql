@@ -881,6 +881,10 @@ mutation MoveShoppingItemToPantry(
         id
         ...ShoppingListReaders
       }
+      shoppingListItem {
+        id
+        ...ShoppingListItemReaders
+      }
       pantryItem {
         id
         ...PantryItemReaders

@@ -74,6 +74,7 @@ beforeEach(() => {
 
 function readPantry(cache: ReturnType<typeof makeCache>) {
   const pantry = cache.readQuery<Unmasked<GetPantryQuery>>({
+    optimistic: true,
     query: GetPantryDocument,
     variables: PANTRY_VARS,
   })?.pantry;
@@ -222,7 +223,7 @@ describe('usePantryItemSelection.removeItem', () => {
     expect(readPantry(cache).totalItems).toBe(0);
   });
 
-  it('restores the row through a refetch when the server refuses the delete', async () => {
+  it('shows the row again when the server refuses the delete', async () => {
     const cache = makeCache();
     const data: MockDataFor<typeof DeletePantryItemDocument> = {
       deletePantryItem: {
@@ -233,11 +234,10 @@ describe('usePantryItemSelection.removeItem', () => {
     const refused = recordMock(DeletePantryItemDocument, {
       data,
     });
-    const { result, getPantry } = await setup(cache, refused);
+    const { result } = await setup(cache, refused);
 
     await drained(() => result.current.removeItem('pi-1'));
-    expect(getPantry.fired).toHaveLength(2);
-    await drainTimers();
+
     expect(rowIds(cache)).toContain('pi-1');
     expect(readPantry(cache).totalItems).toBe(1);
   });
@@ -259,7 +259,7 @@ describe('usePantryItemSelection index', () => {
 
     // The new catalog item carries every field the pantry query reads, so the
     // relink leaves that query complete rather than sending it to the network.
-    const { 'Item:cat-eggs': eggs, ...rest } = cache.extract();
+    const { 'Item:cat-eggs': eggs, ...rest } = cache.extract(true);
     cache.restore({
       ...rest,
       'Item:cat-eggs': eggs,

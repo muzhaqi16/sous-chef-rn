@@ -120,13 +120,11 @@ function buildLocationNode(
  * describes a response neither operation can return.
  */
 function buildUpdatedLocationNode(overrides: Record<string, unknown> = {}) {
-  const node: Record<string, unknown> = {
+  return {
     ...buildLocationNode(overrides),
     parentLocationId: null,
     ...overrides,
   };
-  delete node.parentLocation;
-  return node;
 }
 
 function buildGetLocationsMock(
@@ -171,9 +169,9 @@ function buildGetLocationsMock(
   };
 }
 
-function buildUpdateLocationMock(): MockFor<
-  typeof UpdateStorageLocationDocument
-> {
+function buildUpdateLocationMock(
+  location: Record<string, unknown> = { id: 'loc-1', name: 'Updated Fridge' },
+): MockFor<typeof UpdateStorageLocationDocument> {
   return {
     request: {
       query: UpdateStorageLocationDocument,
@@ -183,10 +181,7 @@ function buildUpdateLocationMock(): MockFor<
       data: {
         updateStorageLocation: {
           __typename: 'UpdateStorageLocationPayload',
-          storageLocation: buildUpdatedLocationNode({
-            id: 'loc-1',
-            name: 'Updated Fridge',
-          }),
+          storageLocation: buildUpdatedLocationNode(location),
         },
       },
     },
@@ -566,6 +561,20 @@ describe('useStorageLocationManagement', () => {
 });
 
 describe('updateLocation writes what consumers read', () => {
+  // The answer restates the row with its new parent.
+  const reparented = () =>
+    buildUpdateLocationMock({
+      id: 'loc-2',
+      name: 'Pantry',
+      sortOrder: 2,
+      parentLocationId: 'loc-1',
+      parentLocation: {
+        __typename: 'StorageLocation',
+        id: 'loc-1',
+        name: 'Fridge',
+      },
+    });
+
   /**
    * The edit sheet is seeded with the FLAT `parentLocationId` (read off
    * `location.parentLocation?.id`), but `GetStorageLocations` selects only the
@@ -577,7 +586,7 @@ describe('updateLocation writes what consumers read', () => {
   it('re-parents the node, not just the flat id', async () => {
     const { result } = renderHookWithApollo(
       () => useStorageLocationManagement('home-1'),
-      { operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()] },
+      { operationMocks: [buildGetLocationsMock(), reparented()] },
     );
 
     await drainTimers();
@@ -610,7 +619,7 @@ describe('updateLocation writes what consumers read', () => {
       () => useStorageLocationManagement('home-1'),
       {
         cache,
-        operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()],
+        operationMocks: [buildGetLocationsMock(), reparented()],
       },
     );
 
@@ -743,11 +752,7 @@ describe('updateLocation writes what consumers read', () => {
       () => useStorageLocationManagement('home-1'),
       {
         cache,
-        operationMocks: [
-          buildGetLocationsMock(),
-          buildUpdateLocationMock(),
-          refusal,
-        ],
+        operationMocks: [buildGetLocationsMock(), reparented(), refusal],
       },
     );
 

@@ -799,41 +799,4 @@ describe('a delta queued against a stack merged since', () => {
       }),
     );
   });
-
-  it('takes the merged row off the pantry and links the survivor', async () => {
-    mockClient.cache.restore({
-      ROOT_QUERY: {
-        __typename: 'Query',
-        'pantry:{"id":"pantry-1"}': { __ref: 'Pantry:pantry-1' },
-      },
-      'Pantry:pantry-1': {
-        __typename: 'Pantry',
-        id: 'pantry-1',
-        'itemsConnection:{"filters":{},"orderBy":{}}': {
-          __typename: 'PantryItemConnection',
-          totalCount: 2,
-          edges: [
-            {
-              __typename: 'PantryItemEdge',
-              node: { __ref: 'PantryItem:merged-1' },
-            },
-            {
-              __typename: 'PantryItemEdge',
-              node: { __ref: 'PantryItem:survivor-1' },
-            },
-          ],
-        },
-      },
-      'PantryItem:merged-1': { __typename: 'PantryItem', id: 'merged-1' },
-      'PantryItem:survivor-1': { __typename: 'PantryItem', id: 'survivor-1' },
-    });
-    queueUse();
-    mockClient.mutate.mockResolvedValueOnce(useOnMerged);
-
-    await new QueueManager().processQueue();
-
-    const held = mockClient.cache.extract();
-    expect(held['PantryItem:merged-1']).toBeUndefined();
-    expect(held['PantryItem:survivor-1']).toBeDefined();
-  });
 });

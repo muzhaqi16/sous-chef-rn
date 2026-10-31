@@ -9,13 +9,18 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import { isRecord } from '#/utils/isRecord';
-import { evictLocalPantryItemSeeds } from './writeLocalPantryItem';
+import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import {
+  evictLocalPantryItemSeeds,
+  writeLocalPantryItem,
+  type LocalPantryItem,
+} from './writeLocalPantryItem';
 
 /** The row's reference; the connection write identifies it by `__typename`. */
-export interface PantryItemRef {
+export type PantryItemRef = {
   __typename: 'PantryItem';
   id: string;
-}
+};
 
 export const addToPantryItemsCache =
   createAddToParentConnectionUpdater<PantryItemRef>(
@@ -136,6 +141,72 @@ export function removePantryItemLocally(
   const removed = removeFromPantryItemsCache(cache, pantryId, itemId, options);
   if (removed && !countsSettled) adjustPantryItemCount(cache, pantryId, -1);
   return removed;
+}
+
+/** A create as a layer shows it: the row, listed and counted. */
+export function showLocalPantryItem(
+  cache: ApolloCache,
+  stack: PantryItemRef,
+  row: LocalPantryItem,
+  now: string,
+): void {
+  if (!isHeld(cache, stack)) writeLocalPantryItem(cache, stack.id, row, now);
+  addPantryItemLocally(cache, row.pantryId, stack);
+}
+
+/**
+ * Lists the row a create's answer kept. An answer naming a held stack joined
+ * that stack, so the minted row never reached the server's data. The held row
+ * is not added: the write reaches every cached variant, and it would land in,
+ * and count toward, the filtered ones it is not in.
+ */
+export function listAnsweredPantryItem(
+  cache: ApolloCache,
+  pantryId: string,
+  mintedId: string,
+  payload: unknown,
+): void {
+  if (!isRecord(payload) || !isRecord(payload.pantryItem)) return;
+  if (payload.pantryItem.id !== mintedId) return;
+  addPantryItemLocally(
+    cache,
+    pantryId,
+    { __typename: 'PantryItem', id: mintedId },
+    { countsSettled: carriesPantryCount(payload.pantry, pantryId) },
+  );
+}
+
+/**
+ * Takes a row out from a layer, where `evict` leaves what the server holds:
+ * deleting its fields hides it, and a row already hidden counts nothing.
+ */
+export function hidePantryItem(
+  cache: ApolloCache,
+  pantryId: string,
+  itemId: string,
+): void {
+  const row = { __typename: 'PantryItem', id: itemId };
+  if (!isHeld(cache, row)) return;
+  removePantryItemLocally(cache, pantryId, itemId);
+  cache.modify({
+    id: cache.identify(row),
+    fields: (_value, { DELETE }) => DELETE,
+  });
+}
+
+/**
+ * An answered row leaves the server's data. Edge first: an evict always reports
+ * a removal, so only the edge can tell whether a realtime event took the row,
+ * and its count, before this.
+ */
+export function dropPantryItem(
+  cache: ApolloCache,
+  pantryId: string,
+  itemId: string,
+  options: CountOptions = {},
+): void {
+  removePantryItemLocally(cache, pantryId, itemId, options);
+  safeEvict(cache, 'PantryItem', itemId);
 }
 
 /**

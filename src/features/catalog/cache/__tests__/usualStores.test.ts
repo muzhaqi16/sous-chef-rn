@@ -8,6 +8,8 @@ import {
   type UsualStoreEntry,
 } from '../usualStores';
 
+const NOW = '2026-10-30T10:00:00.000Z';
+
 const entry = (
   id: string,
   store: { id: string; name: string; address?: string | null },
@@ -67,6 +69,7 @@ describe('writeUsualStores', () => {
       cache,
       { store: { id: 's2', name: 'ALDI Wilkinsburg' } },
       UsualStoreSource.Picked,
+      NOW,
     );
     if (!picked) throw new Error('no local entry');
     const local = readUsualStores(cache, 'home-1') ?? [];
@@ -108,6 +111,7 @@ describe('keepUsualStores', () => {
       cache,
       { store: { id: 's3', name: 'ALDI Wilkinsburg' } },
       UsualStoreSource.Picked,
+      NOW,
     );
     if (!picked) throw new Error('no local entry');
     writeUsualStores(cache, 'home-1', [
@@ -136,6 +140,7 @@ describe('localUsualStore', () => {
       cache,
       { store: { id: 's1', name: 'Giant Eagle Banksville' } },
       UsualStoreSource.Receipt,
+      NOW,
     );
 
     expect(learned).toMatchObject({
@@ -152,6 +157,7 @@ describe('localUsualStore', () => {
       makeCache(),
       { chain: { id: 'chain-aldi', name: 'ALDI' } },
       UsualStoreSource.Picked,
+      NOW,
     );
 
     expect(learned).toMatchObject({ store: null, chain: { name: 'ALDI' } });

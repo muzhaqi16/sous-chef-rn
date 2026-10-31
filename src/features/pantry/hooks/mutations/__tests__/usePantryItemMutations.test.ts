@@ -115,6 +115,7 @@ function seededCache(itemIds: string[]) {
 
 function readPantry(cache: ReturnType<typeof makeCache>) {
   return cache.readQuery<SeededPantry>({
+    optimistic: true,
     query: PANTRY,
     variables: { id: 'pantry-1' },
   })?.pantry;

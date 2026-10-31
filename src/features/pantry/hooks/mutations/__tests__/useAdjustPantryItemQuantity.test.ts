@@ -295,6 +295,7 @@ describe('useAdjustPantryItemQuantity', () => {
       });
     const readStack = (cache: ReturnType<typeof seedCache>) =>
       cache.readFragment({
+        optimistic: true,
         id: 'PantryItem:item-1',
         fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
         fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
@@ -424,6 +425,7 @@ describe('useAdjustPantryItemQuantity', () => {
       );
       expect(
         cache.readFragment({
+          optimistic: true,
           id: 'PantryItem:item-1',
           fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
@@ -436,6 +438,7 @@ describe('useAdjustPantryItemQuantity', () => {
       });
       expect(
         cache.readFragment({
+          optimistic: true,
           id: 'PantryItem:item-1',
           fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useAdjustPantryItemQuantity_pantryItem',

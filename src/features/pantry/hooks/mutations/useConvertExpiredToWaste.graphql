@@ -26,11 +26,3 @@ fragment useConvertExpiredToWaste_pantryItem on PantryItem {
   activeBatchCount
   earliestBatchExpiresOn
 }
-
-# The pre-convert values a refused convert restores.
-fragment useConvertExpiredToWaste_state on PantryItem {
-  id
-  quantity
-  heldQuantity
-  condition
-}

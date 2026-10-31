@@ -14,6 +14,7 @@ import {
   CreateShoppingListDocument,
   DeleteShoppingListDocument,
   GetShoppingListItemsFilteredDocument,
+  MoveShoppingItemToPantryDocument,
   MoveShoppingListItemDocument,
   RemoveItemFromShoppingListDocument,
   RemoveItemsFromShoppingListDocument,
@@ -23,12 +24,14 @@ import { Items_RowFragmentDoc } from '#features/shoppingList/cache/items.generat
 import {
   addRows,
   createList,
+  moveToPantry,
   removeList,
   removeRows,
   reorderRow,
   updateRow,
   type AddRowsInputs,
   type CreateListInputs,
+  type MoveToPantryInputs,
   type RemoveRowsInputs,
   type ReorderRowInputs,
   type UpdateRowInputs,
@@ -788,6 +791,181 @@ describe('with a list of both kinds of row', () => {
 
       expect(shownIds(list, false)).toEqual(['later', 'held']);
     });
+  });
+});
+
+describe('moving a line to the pantry', () => {
+  const STACKS = gql`
+    query LocalWritesStacks {
+      pantry(id: "pantry-1") {
+        id
+        stats {
+          totalItems
+        }
+        itemsConnection(filters: {}, orderBy: {}) {
+          totalCount
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    }
+  `;
+  const PURCHASE = gql`
+    fragment LocalWritesPurchase on ShoppingListItem {
+      purchaseInfo {
+        isPurchased
+        movedToPantryAt
+      }
+    }
+  `;
+
+  function withPantry() {
+    const list = setup();
+    seedQuery(list.cache, {
+      query: STACKS,
+      data: {
+        pantry: {
+          __typename: 'Pantry',
+          id: 'pantry-1',
+          stats: { __typename: 'PantryStats', totalItems: 1 },
+          itemsConnection: {
+            __typename: 'PantryItemConnection',
+            totalCount: 1,
+            edges: [
+              {
+                __typename: 'PantryItemEdge',
+                node: { __typename: 'PantryItem', id: 'stack' },
+              },
+            ],
+          },
+        },
+      },
+    });
+    return {
+      cache: list.cache,
+      writes: new PendingWrites(list.cache, {
+        MoveShoppingItemToPantry: moveToPantry,
+      }),
+    };
+  }
+
+  type Moved = ReturnType<typeof withPantry>;
+
+  const move = ({ writes }: Moved, removeFromList: boolean) => {
+    const inputs: MoveToPantryInputs = {
+      row: { pantryId: 'pantry-1', itemName: 'Milk', quantity: 1 },
+      listId: 'list-1',
+      now: NOW,
+    };
+    return writes.begin(
+      MoveShoppingItemToPantryDocument,
+      {
+        input: {
+          pantryId: 'pantry-1',
+          pantryItemId: 'minted',
+          shoppingListItemId: 'held',
+          removeFromList,
+        },
+      },
+      inputs,
+    );
+  };
+
+  const stacks = ({ cache }: Moved, optimistic = true) => {
+    const { pantry } =
+      cache.readQuery<{
+        pantry: {
+          stats: { totalItems: number };
+          itemsConnection: { edges: { node: { id: string } }[] };
+        };
+      }>({ query: STACKS, optimistic }) ?? {};
+    return {
+      ids: pantry?.itemsConnection.edges.map(({ node }) => node.id),
+      total: pantry?.stats.totalItems,
+    };
+  };
+
+  const purchase = ({ cache }: Moved) =>
+    cache.readFragment<{
+      purchaseInfo: { isPurchased: boolean; movedToPantryAt: string | null };
+    }>({
+      id: 'ShoppingListItem:held',
+      fragment: PURCHASE,
+      optimistic: true,
+    })?.purchaseInfo;
+
+  it('shows the stack and takes the line off the list, however often it is rebuilt', () => {
+    const moved = withPantry();
+
+    move(moved, true);
+    moved.writes.rebuild();
+
+    expect(stacks(moved)).toEqual({ ids: ['minted', 'stack'], total: 2 });
+    expect(shownIds(moved)).toEqual([]);
+    expect(stacks(moved, false)).toEqual({ ids: ['stack'], total: 1 });
+    expect(shownIds(moved, false)).toEqual(['held']);
+  });
+
+  it('leaves both sides as they were when refused', () => {
+    const moved = withPantry();
+
+    moved.writes.drop(move(moved, true).id);
+
+    expect(stacks(moved)).toEqual({ ids: ['stack'], total: 1 });
+    expect(shownIds(moved)).toEqual(['held']);
+  });
+
+  it('keeps a line on the list as bought and stamped', () => {
+    const moved = withPantry();
+
+    move(moved, false);
+
+    expect(shownIds(moved)).toEqual([]);
+    expect(purchase(moved)).toMatchObject({
+      isPurchased: true,
+      movedToPantryAt: NOW,
+    });
+  });
+
+  it('leaves the held stack alone when the server restocked it', () => {
+    const moved = withPantry();
+    const { id } = move(moved, true);
+
+    moved.writes.confirm(id, {
+      moveShoppingItemToPantry: {
+        __typename: 'MoveShoppingItemToPantryPayload',
+        pantryItem: { __typename: 'PantryItem', id: 'stack' },
+      },
+    });
+    moved.writes.rebuild();
+
+    expect(stacks(moved).ids).toEqual(['stack']);
+    expect(moved.cache.extract(true)).not.toHaveProperty(['PantryItem:minted']);
+  });
+
+  it('stays moved while a read holds the answer', () => {
+    const moved = withPantry();
+    answeredWithReadInFlight(moved, move(moved, true), {
+      moveShoppingItemToPantry: {
+        __typename: 'MoveShoppingItemToPantryPayload',
+        pantryItem: { __typename: 'PantryItem', id: 'minted' },
+        pantry: { id: 'pantry-1', stats: { totalItems: 2 } },
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          totalItems: 0,
+          remainingItems: 0,
+        },
+        shoppingListItem: null,
+      },
+    });
+
+    expect(stacks(moved)).toEqual({ ids: ['minted', 'stack'], total: 2 });
+    expect(shownIds(moved)).toEqual([]);
+    expect(counts(moved)).toMatchObject({ totalItems: 0, remainingItems: 0 });
   });
 });
 

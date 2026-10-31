@@ -121,8 +121,10 @@ export class PendingWrites {
       mutation: document,
       variables,
     });
+    const orderedBy = this.table[write.operationName]?.orderedBy?.(write);
+    const sentAs = orderedBy ? [...subjectIds, orderedBy] : subjectIds;
     const named = new Set([
-      ...subjectIds,
+      ...sentAs,
       ...dependencyIdsOf({ mutation: document, variables }),
     ]);
     const earlier = [...this.sending.values()].filter(({ subjectIds: ids }) =>
@@ -133,7 +135,7 @@ export class PendingWrites {
     const answered = new Promise<Answered>(resolve => {
       answer = resolve;
     });
-    this.sending.set(write.id, { subjectIds, mintedIds, answered });
+    this.sending.set(write.id, { subjectIds: sentAs, mintedIds, answered });
 
     const landed = await Promise.all(
       earlier.map(async entry => ({ ...entry, ...(await entry.answered) })),

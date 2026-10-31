@@ -2,12 +2,17 @@
  * What each shopping-list write changes on the device, as a pending layer. The
  * server's answer writes its own rows; `commit` adds what it cannot state.
  */
-import type { OperationVariables } from '@apollo/client';
+import type { ApolloCache, OperationVariables } from '@apollo/client';
 import type { LocalWrite } from '#/apollo/pendingWrites/types';
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
+import {
+  listAnsweredPantryItem,
+  showLocalPantryItem,
+} from '#features/pantry/cache/items';
+import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import {
   addNewItemToShoppingListCache,
   dropShoppingListRows,
@@ -28,6 +33,10 @@ import {
   removeShoppingListFromCache,
   writeLocalShoppingList,
 } from '#features/shoppingList/cache/list';
+import {
+  removeItemFromShoppingListForMoveToPantry,
+  stampItemKeptOnListAfterMoveToPantry,
+} from '#features/shoppingList/cache/moveToPantry';
 import {
   readIsPurchased,
   writePurchaseInfo,
@@ -127,20 +136,30 @@ export const updateRow: LocalWrite<UpdateRowInputs> = {
   },
 };
 
+/**
+ * Answered rows leave the server's data. An answer that found a row already
+ * gone states no totals, so they move here.
+ */
+function settleRemovedRows(
+  cache: ApolloCache,
+  listId: string,
+  ids: readonly string[],
+  payload: unknown,
+): void {
+  const list = isRecord(payload) ? payload.shoppingList : undefined;
+  if (!carriesListTotals(list, listId)) {
+    hideShoppingListRows(cache, listId, ids);
+  }
+  dropShoppingListRows(cache, listId, ids);
+}
+
 export const removeRows: LocalWrite<RemoveRowsInputs> = {
   apply(cache, { variables, inputs: { listId } }) {
     hideShoppingListRows(cache, listId, rowIdsOf(variables));
   },
-  // The answer names each row, which puts it back in the server's data. One
-  // that found the row already gone states no totals, so they move here.
+  // The answer names each row, which puts it back in the server's data.
   commit(cache, { variables, inputs: { listId } }, data) {
-    const ids = rowIdsOf(variables);
-    const payload: unknown = appliedPayload(data);
-    const list = isRecord(payload) ? payload.shoppingList : undefined;
-    if (!carriesListTotals(list, listId)) {
-      hideShoppingListRows(cache, listId, ids);
-    }
-    dropShoppingListRows(cache, listId, ids);
+    settleRemovedRows(cache, listId, rowIdsOf(variables), appliedPayload(data));
   },
 };
 
@@ -197,6 +216,70 @@ export const createList: LocalWrite<CreateListInputs> = {
     keptRows(data).forEach(row =>
       addNewItemToShoppingListCache(cache, list.id, row, false),
     );
+  },
+};
+
+export type MoveToPantryInputs = {
+  row: LocalPantryItem;
+  /** The list on screen; the line stays as it is without one. */
+  listId?: string;
+  now: string;
+};
+
+function movedLineOf(variables: OperationVariables) {
+  const input: unknown = variables.input;
+  if (!isRecord(input)) return null;
+  const { pantryItemId, shoppingListItemId, removeFromList } = input;
+  return typeof pantryItemId === 'string' &&
+    typeof shoppingListItemId === 'string'
+    ? { pantryItemId, lineId: shoppingListItemId, removeFromList }
+    : null;
+}
+
+export const moveToPantry: LocalWrite<MoveToPantryInputs> = {
+  apply(cache, { variables, inputs: { row, listId, now } }) {
+    const moved = movedLineOf(variables);
+    if (!moved) return;
+    const { pantryItemId, lineId, removeFromList } = moved;
+    showLocalPantryItem(
+      cache,
+      { __typename: 'PantryItem', id: pantryItemId },
+      row,
+      now,
+    );
+    if (!listId) return;
+    // The removal and the stamp take the variant the line is in.
+    const wasPurchased = readIsPurchased(cache, lineId);
+    if (removeFromList) {
+      removeItemFromShoppingListForMoveToPantry(
+        cache,
+        listId,
+        lineId,
+        wasPurchased,
+        { evictEntity: false },
+      );
+    } else {
+      stampItemKeptOnListAfterMoveToPantry(
+        cache,
+        listId,
+        lineId,
+        wasPurchased,
+        now,
+      );
+    }
+  },
+  commit(cache, { variables, inputs: { row, listId } }, data) {
+    const moved = movedLineOf(variables);
+    if (!moved) return;
+    const { pantryItemId, lineId, removeFromList } = moved;
+    const payload: unknown = appliedPayload(data);
+    listAnsweredPantryItem(cache, row.pantryId, pantryItemId, payload);
+    if (!listId) return;
+    if (removeFromList) {
+      settleRemovedRows(cache, listId, [lineId], payload);
+    } else {
+      moveAnsweredShoppingListItem(cache, listId, lineId, true);
+    }
   },
 };
 

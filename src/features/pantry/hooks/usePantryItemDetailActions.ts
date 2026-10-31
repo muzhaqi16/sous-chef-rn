@@ -5,7 +5,6 @@ import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { typedItemRef } from '#/utils/refInput';
 import { AddItemToShoppingListFromPantryItemDocument } from './usePantryItemDetailActions.generated';
-import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { useConvertExpiredToWaste } from '#features/pantry/hooks/mutations/useConvertExpiredToWaste';
 import { useAdjustPantryItemQuantity } from '#features/pantry/hooks/mutations/useAdjustPantryItemQuantity';
@@ -109,19 +108,11 @@ export function usePantryItemDetailActions({
     };
   }, []);
 
-  // The shared `removeItem` evicts before firing (no `update:` runs on a queued
-  // delete) and registers the pending delete that stops an echo resurrecting
-  // the row. The item's OWN pantry drives it; '' makes it return early.
+  // The item's OWN pantry drives the removal; '' makes it return early.
   const resolvedPantryId = item?.pantryId ?? selectedPantryId ?? null;
 
   const { removeItem } = usePantryItemMutations({
     pantryId: resolvedPantryId ?? '',
-    // `removeItem` drops the row and count before firing and calls this to
-    // restore them on a refusal (DATA under `errorPolicy: 'all'`). A transport
-    // failure must NOT restore: the delete is queued.
-    refetch: () => {
-      void client.refetchQueries({ include: [GetPantryDocument] });
-    },
   });
 
   const [addToShoppingList] = useMutation(
@@ -152,7 +143,7 @@ export function usePantryItemDetailActions({
     }
     try {
       // Leaves only once the item is gone: a refusal resolves as DATA, and
-      // `removeItem` has already told the user and restored the row.
+      // `removeItem` has already told the user.
       if (await removeItem(itemId)) {
         goBack();
       }

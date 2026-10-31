@@ -13,16 +13,6 @@ import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/services/errorService');
 
-jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
-  buildOptimisticMutationResponse: jest.fn(
-    (opName, payloadTypename, fields) => ({
-      __typename: 'Mutation',
-      [opName]: { __typename: payloadTypename, ...fields },
-    }),
-  ),
-}));
-
 jest.mock('../utils', () => ({
   buildDirtyUpdateInput: jest.fn(
     (data: FormDataInput, dirtyFields: DirtyFieldFlags) => {
@@ -213,6 +203,7 @@ describe('useUpdatePantryItem — a package size typed in another unit', () => {
   };
   const readNetWeight = (cache: ReturnType<typeof seedCache>) =>
     cache.readFragment<{ netWeight: number | null }>({
+      optimistic: true,
       id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
       fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
       fragmentName: 'useUpdatePantryItem_pantryItem',
@@ -260,6 +251,7 @@ describe('useUpdatePantryItem — a package size typed in another unit', () => {
 describe('useUpdatePantryItem — local-first cache behavior', () => {
   const readItemName = (cache: ReturnType<typeof seedCache>) =>
     cache.readFragment<{ itemName: string }>({
+      optimistic: true,
       id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
       fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
       fragmentName: 'useUpdatePantryItem_pantryItem',

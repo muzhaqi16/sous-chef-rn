@@ -21,6 +21,8 @@ import {
 } from '#features/pantry/cache/items';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
+const NOW = '2026-10-30T10:00:00.000Z';
+
 const PANTRY = gql`
   query SeedPantry($id: ID!) {
     pantry(id: $id) {
@@ -204,12 +206,17 @@ describe('revertOptimisticPantryItem', () => {
     const cache = seed();
     const before = JSON.stringify(cache.extract());
 
-    writeLocalPantryItem(cache, 'pi-3', {
-      pantryId: 'p-1',
-      itemName: 'Anchovies',
-      acquisitionMethod: AcquisitionMethod.ShoppingList,
-      quantity: 1,
-    });
+    writeLocalPantryItem(
+      cache,
+      'pi-3',
+      {
+        pantryId: 'p-1',
+        itemName: 'Anchovies',
+        acquisitionMethod: AcquisitionMethod.ShoppingList,
+        quantity: 1,
+      },
+      NOW,
+    );
     addPantryItemLocally(cache, 'p-1', row('pi-3'));
 
     revertOptimisticPantryItem(cache, 'p-1', 'pi-3');

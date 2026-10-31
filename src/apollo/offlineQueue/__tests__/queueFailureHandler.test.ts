@@ -5,8 +5,10 @@ import {
 import { queueManager } from '../queueManager';
 import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { restoreItemToShoppingListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
-import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
+import {
+  restoreReceiptCheckInListLines,
+  withdrawReceiptCheckIn,
+} from '#features/receipts/offline/receiptCheckIn';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { queueStore } from '../queueStore';
@@ -18,16 +20,10 @@ import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ApolloClient } from '@apollo/client';
 import { registerApolloClient } from '#/apollo/clientRegistry';
 import { errorService } from '#/services/errorService';
-import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import {
-  CreatePantryItemDocument,
-  UpdatePantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import {
-  MoveShoppingItemToPantryDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 
 const client = {
@@ -38,9 +34,10 @@ registerApolloClient(client);
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
-jest.mock('#features/pantry/cache/items', () => ({
-  ...jest.requireActual('#features/pantry/cache/items'),
-  removePantryItemLocally: jest.fn(),
+jest.mock('#features/receipts/offline/receiptCheckIn', () => ({
+  ...jest.requireActual('#features/receipts/offline/receiptCheckIn'),
+  restoreReceiptCheckInListLines: jest.fn(),
+  withdrawReceiptCheckIn: jest.fn(),
 }));
 // These factories are called at MODULE scope by the pantry and home cache
 // updaters, which `queueManager` reaches through `queueReplayReconcilers`. A
@@ -157,7 +154,7 @@ describe('queue failure handler', () => {
   describe('a write with a local write', () => {
     const withLocalWrite = () =>
       failure({
-        operationName: operationNameOf(CreatePantryItemDocument),
+        operationName: operationNameOf(CreateReceiptCheckInDocument),
         pendingWriteId: 'write-1',
       });
 
@@ -167,7 +164,7 @@ describe('queue failure handler', () => {
       expect(mockDrop).toHaveBeenCalledWith('write-1');
       expect(safeEvict).not.toHaveBeenCalled();
       expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
-      expect(removePantryItemLocally).not.toHaveBeenCalled();
+      expect(withdrawReceiptCheckIn).not.toHaveBeenCalled();
     });
 
     it('still tells the person and leaves the queue', () => {
@@ -198,59 +195,33 @@ describe('queue failure handler', () => {
   });
 
   describe('withdrawing an unlink', () => {
-    const movedItem = failure({
-      operationName: operationNameOf(MoveShoppingItemToPantryDocument),
-      entityType: 'PantryItem',
-      entityId: 'pantry-1',
-      variables: {
-        input: { shoppingListItemId: 'sli-1', removeFromList: true },
-      },
+    const checkIn = failure({
+      operationName: operationNameOf(CreateReceiptCheckInDocument),
+      variables: { input: { lines: [] } },
     });
 
-    it('puts the shopping row back when a move is permanently refused', () => {
-      // The evict withdraws the pantry row the move CREATED. Nothing else can
-      // restore the shopping row it UNLINKED, and without this the item is in
-      // neither list — observed on device on a move that timed out, retried and
-      // came back NotFound.
-      handleQueueFailure(movedItem);
+    it('puts the list lines back when a check-in is permanently refused', () => {
+      handleQueueFailure(checkIn);
 
-      expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
+      expect(restoreReceiptCheckInListLines).toHaveBeenCalledWith(
         expect.anything(),
-        'sli-1',
+        checkIn.variables,
       );
     });
 
-    it('only un-stamps the row when the move kept it on the list', () => {
-      handleQueueFailure(
-        failure({
-          operationName: operationNameOf(MoveShoppingItemToPantryDocument),
-          variables: {
-            input: { shoppingListItemId: 'sli-1', removeFromList: false },
-          },
-        }),
-      );
-
-      expect(restoreItemToShoppingListAfterMoveToPantry).not.toHaveBeenCalled();
-      expect(writePurchaseInfo).toHaveBeenCalledWith(
-        expect.anything(),
-        'sli-1',
-        { movedToPantryAt: null },
-      );
-    });
-
-    it('has no unlink to withdraw for an ordinary create', () => {
+    it('has no unlink to withdraw for an ordinary write', () => {
       handleQueueFailure(failure());
-      expect(restoreItemToShoppingListAfterMoveToPantry).not.toHaveBeenCalled();
+      expect(restoreReceiptCheckInListLines).not.toHaveBeenCalled();
     });
 
     it('still tells the person when the withdrawal throws', () => {
-      (
-        restoreItemToShoppingListAfterMoveToPantry as jest.Mock
-      ).mockImplementationOnce(() => {
-        throw new Error('cache gone');
-      });
+      (restoreReceiptCheckInListLines as jest.Mock).mockImplementationOnce(
+        () => {
+          throw new Error('cache gone');
+        },
+      );
 
-      expect(() => handleQueueFailure(movedItem)).not.toThrow();
+      expect(() => handleQueueFailure(checkIn)).not.toThrow();
       expect(toastService.error).toHaveBeenCalledTimes(1);
     });
   });
@@ -473,13 +444,13 @@ describe('queue failure handler — a withdrawn row is read back', () => {
   });
 
   it('reports a withdrawal step that throws', () => {
-    (removePantryItemLocally as jest.Mock).mockImplementationOnce(() => {
+    (withdrawReceiptCheckIn as jest.Mock).mockImplementationOnce(() => {
       throw new Error('cache gone');
     });
 
     handleQueueFailure(
       failure({
-        operationName: operationNameOf(CreatePantryItemDocument),
+        operationName: operationNameOf(CreateReceiptCheckInDocument),
         variables: { input: { pantryId: 'pantry-1' } },
       }),
     );
@@ -487,7 +458,7 @@ describe('queue failure handler — a withdrawn row is read back', () => {
     expect(errorService.reportError).toHaveBeenCalledWith(
       expect.any(Error),
       expect.objectContaining({
-        operation: expect.stringContaining('CreatePantryItem'),
+        operation: expect.stringContaining('CreateReceiptCheckIn'),
       }),
     );
   });

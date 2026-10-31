@@ -69,6 +69,7 @@ it('writes and sends nothing for a quantity no parser can read', async () => {
 
   expect(
     cache.readFragment<{ quantity: number }>({
+      optimistic: true,
       id: cache.identify({ __typename: 'PantryItem', id: 'pi-1' }),
       fragment: QUANTITY,
     })?.quantity,
@@ -117,6 +118,7 @@ it('sets an amount stated in dozens as the pieces it stands for', async () => {
 
   const readStock = () =>
     cache.readFragment({
+      optimistic: true,
       id: cache.identify({ __typename: 'PantryItem', id: 'pi-1' }),
       fragment: STOCK,
     });
