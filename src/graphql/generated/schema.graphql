@@ -19698,6 +19698,8 @@ type Subscription {
   Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
   LOW_STOCK_ALERT, EXPIRATION_ALERT, WASTE_ALERT,
   EXPIRATION_NOTIFICATION_CREATED, EXPIRATION_ACTION_TAKEN.
+  An event whose node is an ExpirationNotification reaches only that
+  reminder's owner; every other event reaches everyone who can view the pantry.
   """
   pantryEvents(
     """The pantry to watch"""
