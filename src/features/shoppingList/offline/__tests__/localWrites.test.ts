@@ -1,7 +1,14 @@
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
-import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
+import { readFenceOf } from '#/apollo/pendingWrites/readFence';
+import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import {
+  completeSeed,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
@@ -115,6 +122,28 @@ const answer = (...items: ({ id: string } | null)[]) => ({
   },
 });
 
+/**
+ * The server answers with a read still in flight: Apollo writes the answer to
+ * the root, then the write waits. The result lets the read land.
+ */
+function answeredWithReadInFlight(
+  { cache, writes }: { cache: Setup['cache']; writes: PendingWrites },
+  { id, document, variables }: PendingWrite,
+  data: Record<string, unknown>,
+): () => void {
+  const land = readFenceOf(cache).begin();
+  const stated = completeSeed(document, variables, data);
+  seedQuery(cache, {
+    id: 'ROOT_MUTATION',
+    query: document,
+    variables,
+    data: stated,
+  });
+  writes.confirm(id, stated);
+  writes.rebuild();
+  return land;
+}
+
 const shownIds = ({ cache }: Setup, optimistic = true) =>
   cache
     .readQuery({
@@ -224,6 +253,27 @@ describe('an answered add', () => {
     list.writes.rebuild();
 
     expect(shownIds(list)).toEqual(['held']);
+  });
+
+  it('shows only the row it folded into while a read holds the answer', () => {
+    const list = setup();
+    const write = add(list, 'minted');
+
+    answeredWithReadInFlight(list, write, {
+      addItemsToShoppingList: {
+        __typename: 'AddItemsToShoppingListPayload',
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'list-1',
+          totalItems: 1,
+          remainingItems: 1,
+        },
+        results: [{ success: true, item: { id: 'held', version: 6 } }],
+      },
+    });
+
+    expect(shownIds(list)).toEqual(['held']);
+    expect(counts(list)).toMatchObject({ totalItems: 1, remainingItems: 1 });
   });
 
   it('keeps a second add when the first is answered', () => {
@@ -389,6 +439,105 @@ describe('with a list of both kinds of row', () => {
       });
     });
 
+    describe('answered with a read in flight', () => {
+      const ticked = {
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            totalItems: 2,
+            completedItems: 2,
+            remainingItems: 0,
+          },
+          shoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: 'held',
+            version: 6,
+            purchaseInfo: { isPurchased: true },
+          },
+        },
+      };
+      const answered = { totalItems: 2, completedItems: 2, remainingItems: 0 };
+
+      it('stays moved, and takes its counts from the answer', () => {
+        const list = bothKinds();
+
+        answeredWithReadInFlight(list, tick(list, 'held', true), ticked);
+
+        expect(shownIds(list)).toEqual([]);
+        expect(boughtIds(list)).toEqual(['held', 'bought']);
+        expect(allCounts(list)).toMatchObject(answered);
+      });
+
+      it('stays moved over a read that lands with the row as it was', () => {
+        const list = bothKinds();
+        const write = tick(list, 'held', true);
+        answeredWithReadInFlight(list, write, ticked);
+
+        seedFragment(list.cache, {
+          fragment: Items_RowFragmentDoc,
+          fragmentName: 'items_row',
+          data: {
+            __typename: 'ShoppingListItem',
+            id: 'held',
+            version: 5,
+            purchaseInfo: { isPurchased: false },
+          },
+        });
+        list.writes.rebuild();
+
+        expect(shownIds(list)).toEqual([]);
+        expect(boughtIds(list)).toEqual(['held', 'bought']);
+      });
+
+      it('reaches the server’s data once the read lands', async () => {
+        jest.useFakeTimers();
+        const list = bothKinds();
+        const land = answeredWithReadInFlight(
+          list,
+          tick(list, 'held', true),
+          ticked,
+        );
+        expect(boughtIds(list, false)).toEqual(['bought']);
+
+        land();
+        await drainTimers();
+        jest.useRealTimers();
+
+        expect(shownIds(list, false)).toEqual([]);
+        expect(boughtIds(list, false)).toEqual(['held', 'bought']);
+      });
+
+      it('lets a later untick move it back', () => {
+        const list = bothKinds();
+        answeredWithReadInFlight(list, tick(list, 'held', true), ticked);
+
+        tick(list, 'held', false);
+
+        expect(shownIds(list)).toEqual(['held']);
+        expect(boughtIds(list)).toEqual(['bought']);
+        expect(allCounts(list)).toMatchObject(seeded);
+      });
+
+      it('commits nothing after the session ends', async () => {
+        jest.useFakeTimers();
+        const list = bothKinds();
+        const land = answeredWithReadInFlight(
+          list,
+          tick(list, 'held', true),
+          ticked,
+        );
+
+        list.writes.clear();
+        land();
+        await drainTimers();
+        jest.useRealTimers();
+
+        expect(boughtIds(list, false)).toEqual(['bought']);
+      });
+    });
+
     it('writes nothing for a row the cache does not hold', () => {
       const list = bothKinds();
 
@@ -498,6 +647,31 @@ describe('with a list of both kinds of row', () => {
       expect(list.cache.extract(true)).not.toHaveProperty([
         'ShoppingListItem:held',
       ]);
+    });
+
+    it('counts a row out once while a read holds the answer', () => {
+      const list = bothKinds();
+
+      answeredWithReadInFlight(list, remove(list, 'held'), {
+        removeItemFromShoppingList: {
+          __typename: 'RemoveItemFromShoppingListPayload',
+          shoppingListItem: { __typename: 'ShoppingListItem', id: 'held' },
+          shoppingList: {
+            __typename: 'ShoppingList',
+            id: 'list-1',
+            totalItems: 1,
+            completedItems: 1,
+            remainingItems: 0,
+          },
+        },
+      });
+
+      expect(shownIds(list)).toEqual([]);
+      expect(allCounts(list)).toMatchObject({
+        totalItems: 1,
+        completedItems: 1,
+        remainingItems: 0,
+      });
     });
 
     it('clears a batch, each row counted by its own state', () => {
@@ -722,6 +896,23 @@ describe('a list', () => {
     expect(listIds(list)).toEqual(['held-list']);
   });
 
+  it('stays listed while a read holds the answer', () => {
+    const list = overview();
+
+    answeredWithReadInFlight(list, create(list), {
+      createShoppingList: {
+        __typename: 'CreateShoppingListPayload',
+        shoppingList: {
+          __typename: 'ShoppingList',
+          id: 'minted-list',
+          homeId: 'home-a',
+        },
+      },
+    });
+
+    expect(listIds(list)).toEqual(['minted-list', 'held-list']);
+  });
+
   it('keeps a variant of its lines a read brought before the answer', () => {
     const list = overview();
     const { id } = create(list);
@@ -788,6 +979,19 @@ describe('a list', () => {
     list.writes.drop(remove(list).id);
 
     expect(listIds(list)).toEqual(['held-list']);
+  });
+
+  it('stays hidden while a read holds the delete’s answer', () => {
+    const list = overview();
+
+    answeredWithReadInFlight(list, remove(list), {
+      deleteShoppingList: {
+        __typename: 'DeleteShoppingListPayload',
+        shoppingList: { __typename: 'ShoppingList', id: 'held-list' },
+      },
+    });
+
+    expect(listIds(list)).toEqual([]);
   });
 
   it('leaves nothing of a list its delete answered for', () => {

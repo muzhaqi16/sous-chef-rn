@@ -248,6 +248,29 @@ describe('a tick while the next page loads', () => {
     await act(() => ticked);
   });
 
+  it('keeps a tick the server answered until the page lands', async () => {
+    const { result, nextPage, loadMore, tick, expectPageAsked } = setup();
+    await drainTimers();
+
+    const paged = loadMore();
+    await expectPageAsked();
+    const ticked = tick('p1');
+    // Short of the fence's limit, which a drain runs past and so commits.
+    await act(() => jest.advanceTimersByTimeAsync(1000));
+
+    expect(result.current.purchased.items.map(({ id }) => id)).toEqual(['p2']);
+
+    nextPage.release();
+    await drainTimers();
+    expect(result.current.purchased.items.map(({ id }) => id)).toEqual([
+      'p2',
+      'p3',
+      'p4',
+    ]);
+    await act(() => paged);
+    await act(() => ticked);
+  });
+
   it('keeps the tick and the page when the page lands before the tick is answered', async () => {
     const {
       nextPage,

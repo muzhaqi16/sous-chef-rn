@@ -50,6 +50,8 @@ interface Answered {
 export class PendingWrites {
   private writes: PendingWrite[] = [];
   private queued = new Set<string>();
+  /** Answered writes waiting on the reads in flight, with their answers. */
+  private awaitingReads = new Map<string, unknown>();
   private generation = 0;
   private applying = false;
   private rebuildOwed = false;
@@ -180,7 +182,8 @@ export class PendingWrites {
   /**
    * The server has it. `data` is its answer, or undefined when it answered with
    * no row, so the write's own change is all the root can take. It commits once
-   * the reads in flight now have landed: one may hold state from before it.
+   * the reads in flight now have landed: one may hold state from before it. Its
+   * layer shows the answer meanwhile, as `apply` expects a root without it.
    */
   confirm(id: string, data?: unknown): void {
     const write = this.get(id);
@@ -191,6 +194,8 @@ export class PendingWrites {
       this.commit(write, data, false);
       return;
     }
+    this.awaitingReads.set(id, data);
+    this.scheduleRebuild();
     void fence.passed().then(() => {
       if (this.get(id)) this.commit(write, data, true);
     });
@@ -231,6 +236,7 @@ export class PendingWrites {
   clear(): void {
     this.writes = [];
     this.queued.clear();
+    this.awaitingReads.clear();
     this.answeredVersions.clear();
     this.rebuild();
   }
@@ -312,6 +318,7 @@ export class PendingWrites {
 
   private remove(id: string): boolean {
     this.queued.delete(id);
+    this.awaitingReads.delete(id);
     const kept = this.writes.filter(write => write.id !== id);
     const removed = kept.length < this.writes.length;
     this.writes = kept;
@@ -322,7 +329,16 @@ export class PendingWrites {
     this.applying = true;
     for (const write of writes) {
       try {
-        this.table[write.operationName]?.apply(layer, write);
+        if (this.awaitingReads.has(write.id)) {
+          this.writeAnswered(
+            layer,
+            write,
+            this.awaitingReads.get(write.id),
+            true,
+          );
+        } else {
+          this.table[write.operationName]?.apply(layer, write);
+        }
       } catch (error) {
         errorService.reportError(error, {
           operation: `Apply ${write.operationName}`,
@@ -332,22 +348,32 @@ export class PendingWrites {
     this.applying = false;
   }
 
-  private commit(
+  /** What an answered write leaves, in the root or in a layer over it. */
+  private writeAnswered(
+    cache: ApolloCache,
     write: PendingWrite,
     data: unknown,
     readsLanded: boolean,
   ): void {
     const local = this.table[write.operationName];
+    if (data === undefined) {
+      local?.apply(cache, write);
+      return;
+    }
+    if (readsLanded) writeAnswerAgain(cache, write, data);
+    local?.commit?.(cache, write, data);
+  }
+
+  private commit(
+    write: PendingWrite,
+    data: unknown,
+    readsLanded: boolean,
+  ): void {
     this.cache.batch({
       optimistic: false,
       update: root => {
         try {
-          if (data === undefined) {
-            local?.apply(root, write);
-            return;
-          }
-          if (readsLanded) writeAnswerAgain(root, write, data);
-          local?.commit?.(root, write, data);
+          this.writeAnswered(root, write, data, readsLanded);
         } catch (error) {
           errorService.reportError(error, {
             operation: `Commit ${write.operationName}`,
@@ -366,20 +392,20 @@ export class PendingWrites {
  * row a later change has moved past.
  */
 function writeAnswerAgain(
-  root: ApolloCache,
+  cache: ApolloCache,
   write: PendingWrite,
   data: unknown,
 ): void {
   const answer: unknown = JSON.parse(JSON.stringify(data));
   if (!isRecord(answer)) return;
-  orderAnswer(root, write.document, write.variables, answer);
-  root.writeQuery({
+  orderAnswer(cache, write.document, write.variables, answer);
+  cache.writeQuery({
     id: 'ROOT_MUTATION',
     query: write.document,
     variables: write.variables,
     data: answer,
   });
-  root.modify({
+  cache.modify({
     id: 'ROOT_MUTATION',
     fields: (_value, { DELETE }) => DELETE,
   });

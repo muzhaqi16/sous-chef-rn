@@ -22,7 +22,11 @@ export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
   /** Runs once, when the write is made, for what its caller did not pass. */
   capture?(cache: ApolloCache, variables: OperationVariables): TInputs;
   apply(cache: ApolloCache, write: PendingWrite<TInputs>): void;
-  /** What the server's answer does not write itself, such as a new row's edge. */
+  /**
+   * What the server's answer does not write itself, such as a new row's edge.
+   * Also runs in a layer while reads in flight hold the write, where `evict`
+   * leaves what the server holds.
+   */
   commit?(
     cache: ApolloCache,
     write: PendingWrite<TInputs>,

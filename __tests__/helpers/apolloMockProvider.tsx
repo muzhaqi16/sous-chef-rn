@@ -1578,7 +1578,8 @@ export function inputOf(
 
 type SeedVariables = OperationVariables | undefined;
 
-const completeSeed = (
+/** `data` as the server would state it, completed from the SDL. */
+export const completeSeed = (
   document: DocumentNode,
   variables: SeedVariables,
   data: unknown,
