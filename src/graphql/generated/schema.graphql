@@ -105,7 +105,7 @@ directive @requireFeature(
   A field of the operation's input: this occurrence applies only when it is sent and not null
   """
   whenInput: String
-) on FIELD_DEFINITION
+) repeatable on FIELD_DEFINITION
 
 """
 Require that the caller's email address is verified.
@@ -309,6 +309,14 @@ union AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError |
 
 """A dietary restriction to add to the caller's profile."""
 input AddRestrictionInput {
+  """
+  A home to label the restriction with; the caller must be an active member of it. The label decides nothing
+  """
+  appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  """
+  id: ID
   """What the restriction restricts"""
   kind: RestrictionKindInput!
   """Free text, at most 1000 characters after trimming"""
@@ -320,6 +328,11 @@ input AddRestrictionInput {
 }
 
 type AddRestrictionPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   dietaryProfile: DietaryProfile
   dietaryRestriction: DietaryRestriction!
 }
