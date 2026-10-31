@@ -164,7 +164,10 @@ export const ReceiptScanScreen: React.FC = () => {
 
   if (status === 'saved' && draft) {
     const lines = draft.parsed ? receiptReviewLines(draft.parsed) : [];
-    const itemCount = lines.length;
+    // What is left to review, once some of it went in.
+    const added = new Set(draft.added);
+    const left = lines.filter(line => !added.has(line.index)).length;
+    const itemCount = left > 0 ? left : lines.length;
     // Named as the user chose them, else as printed.
     const failedNames = lines.flatMap(line =>
       draft.failed?.[line.index] !== undefined

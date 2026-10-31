@@ -158,6 +158,26 @@ describe('ReceiptScanScreen', () => {
     },
   );
 
+  it('offers only the lines left, once some went in', () => {
+    mockScan = {
+      status: 'saved',
+      draft: {
+        pages: ['MILK 3.48'],
+        scannedAt: SCANNED_AT,
+        parsed: {
+          lines: [
+            { index: 0, rawText: 'MILK 3.48', kind: 'item', product: 'MILK' },
+            { index: 1, rawText: 'EYES 4.48', kind: 'item', product: 'EYES' },
+          ],
+        },
+        added: [0],
+      },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(screen.getByText('Review 1 item')).toBeTruthy();
+  });
+
   it('says a check-in waiting for a connection lands once the phone is back online', () => {
     mockScan = {
       status: 'saved',

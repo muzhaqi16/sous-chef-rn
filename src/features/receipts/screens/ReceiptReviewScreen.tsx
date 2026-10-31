@@ -38,7 +38,14 @@ import {
 } from '../hooks/useReceiptReview';
 import { receiptsTestIDs } from '../testIDs';
 
-type ReviewSection = 'toAdd' | 'pending' | 'toCheck' | 'notAdded' | 'added';
+type ReviewSection =
+  | 'toAdd'
+  | 'toRecord'
+  | 'pending'
+  | 'toCheck'
+  | 'notAdded'
+  | 'added'
+  | 'recorded';
 
 // While the line keeps its printed unit, the known unit it names; else what
 // the user typed, as typed.
@@ -50,14 +57,16 @@ const shownUnitOf = (
     ? row.measureUnit
     : { symbol: choice.unitText };
 
-// Lines that will be added first, then those waiting for a match, those with
-// no product to add yet, those left out, and those already in.
+// Lines that will be added first, then those only recorded, those waiting for
+// a match, those with no product to add yet, those left out, and those already in.
 const SECTION_ORDER: readonly ReviewSection[] = [
   'toAdd',
+  'toRecord',
   'pending',
   'toCheck',
   'notAdded',
   'added',
+  'recorded',
 ];
 
 interface StatusLook {
@@ -132,6 +141,7 @@ export const ReceiptReviewScreen: React.FC = () => {
     retryMatching,
     pantryName,
     pendingCount,
+    recordedCount,
     applying,
     listLoading,
     listIncomplete,
@@ -216,6 +226,8 @@ export const ReceiptReviewScreen: React.FC = () => {
     switch (section) {
       case 'toAdd':
         return t('receipts.review.sectionToAdd', { count });
+      case 'toRecord':
+        return t('receipts.review.sectionToRecord', { count });
       case 'pending':
         return matchState === 'failed'
           ? t('receipts.review.sectionNotMatchedYet', { count })
@@ -226,21 +238,32 @@ export const ReceiptReviewScreen: React.FC = () => {
         return t('receipts.review.sectionNotAdded', { count });
       case 'added':
         return t('receipts.review.sectionAdded', { count });
+      case 'recorded':
+        return t('receipts.review.sectionRecorded', { count });
     }
   };
 
+  const sectionOf = (row: ReceiptReviewRow): ReviewSection => {
+    const { section } = STATUS_LOOK[row.status];
+    if (!row.choice?.notStocked) return section;
+    if (section === 'toAdd') return 'toRecord';
+    return section === 'added' ? 'recorded' : section;
+  };
+
   const items = SECTION_ORDER.flatMap(section => {
-    const inSection = rows.filter(
-      row => STATUS_LOOK[row.status].section === section,
-    );
+    const inSection = rows.filter(row => sectionOf(row) === section);
     return inSection.map((row, at) => {
       const price = row.choice ? row.choice.price : row.price;
       const { icon, tone, badge } = STATUS_LOOK[row.status];
       const title = row.choice?.itemName ?? row.printed;
       const subtitle = subtitleOf(row);
       // A line to add is badged only when it ticks a list line off.
+      const badgeLabel =
+        section === 'recorded' ? 'receipts.review.recordedBadge' : badge?.text;
       const badgeText =
-        badge && (row.status !== 'add' || row.onList) ? t(badge.text) : null;
+        badgeLabel && (row.status !== 'add' || row.onList)
+          ? t(badgeLabel)
+          : null;
       const priceText =
         price === undefined || price === null
           ? null
@@ -289,16 +312,37 @@ export const ReceiptReviewScreen: React.FC = () => {
     });
   });
 
+  const addedMessage = (count: number, recorded: number) => {
+    if (count === 0) {
+      return t('receipts.review.recordedOnly', { count: recorded });
+    }
+    if (recorded === 0) {
+      return pantryName
+        ? t('receipts.review.addedTo', { count, pantry: pantryName })
+        : t('receipts.review.addedCount', { count });
+    }
+    return pantryName
+      ? t('receipts.review.addedToMixed', {
+          count,
+          pantry: pantryName,
+          recorded,
+        })
+      : t('receipts.review.addedCountMixed', { count, recorded });
+  };
+
+  const leaveReview = () => {
+    applied.current = true;
+    if (exits) exits.finished();
+    else toPantryMain();
+  };
+
   // The check-in runs on without the review: its lines are in the pantry now.
   const handleAdd = async () => {
-    const { sent, held, learned } = await addChosen();
+    const { sent, recorded, held, learned } = await addChosen();
     if (sent > 0) {
-      exits?.added(sent);
-      toastService.success(
-        pantryName
-          ? t('receipts.review.addedTo', { count: sent, pantry: pantryName })
-          : t('receipts.review.addedCount', { count: sent }),
-      );
+      const stocked = sent - recorded;
+      if (stocked > 0) exits?.added(stocked);
+      toastService.success(addedMessage(stocked, recorded));
     }
     // An info toast queues behind the items' success toast; its Undo outlives
     // this screen, which the review leaves at once.
@@ -317,11 +361,13 @@ export const ReceiptReviewScreen: React.FC = () => {
       );
     });
     // A line that still lacks something keeps the review, saying which; so do
-    // lines still waiting for a match, to add once matched.
-    if (held > 0 || rows.some(row => row.status === 'pending')) return;
-    applied.current = true;
-    if (exits) exits.finished();
-    else toPantryMain();
+    // lines still waiting for a match, to add once matched, and lines with no
+    // product, which only the user may let go.
+    const open = rows.some(
+      row => row.status === 'pending' || row.status === 'unmatched',
+    );
+    if (held > 0 || open) return;
+    leaveReview();
   };
 
   // A day read from the receipt shows as text that opens the calendar.
@@ -339,8 +385,36 @@ export const ReceiptReviewScreen: React.FC = () => {
     />
   );
 
+  const addLabel = () => {
+    if (pendingCount === 0) return t('receipts.review.addNone');
+    if (recordedCount === 0) {
+      return t('receipts.review.add', { count: pendingCount });
+    }
+    return recordedCount === pendingCount
+      ? t('receipts.review.recordOnly', { count: recordedCount })
+      : t('receipts.review.addMixed', {
+          count: pendingCount - recordedCount,
+          recorded: recordedCount,
+        });
+  };
+
+  // Offered once something went in: before that, nothing would be finished.
+  const openCount = rows.filter(row => row.status === 'unmatched').length;
+  const canFinish =
+    pendingCount === 0 &&
+    openCount > 0 &&
+    rows.some(row => row.status === 'added');
+
   const footer =
-    rows.length > 0 ? (
+    rows.length === 0 ? undefined : canFinish ? (
+      <Button
+        onPress={leaveReview}
+        icon="checkmark-circle-outline"
+        testID={receiptsTestIDs.reviewFinish}
+      >
+        {t('receipts.review.finishOpen', { count: openCount })}
+      </Button>
+    ) : (
       <Button
         onPress={() => {
           void handleAdd();
@@ -350,11 +424,9 @@ export const ReceiptReviewScreen: React.FC = () => {
         icon="add-circle-outline"
         testID={receiptsTestIDs.reviewAdd}
       >
-        {pendingCount > 0
-          ? t('receipts.review.add', { count: pendingCount })
-          : t('receipts.review.addNone')}
+        {addLabel()}
       </Button>
-    ) : undefined;
+    );
 
   return (
     <SubScreen

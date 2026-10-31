@@ -68,7 +68,7 @@ function cachedSort<T extends SortableItem>(
         comparison = a.quantity - b.quantity;
         break;
       case PantrySortOption.RECENT:
-        comparison = (createdMap.get(b.id) ?? 0) - (createdMap.get(a.id) ?? 0);
+        comparison = (createdMap.get(a.id) ?? 0) - (createdMap.get(b.id) ?? 0);
         break;
     }
     return direction === PantrySortDirection.ASC ? comparison : -comparison;
@@ -132,7 +132,10 @@ export function usePantrySorting<T extends SortableItem>(
       setSortDirection(newDirection);
     } else {
       newOption = option;
-      newDirection = PantrySortDirection.ASC;
+      newDirection =
+        option === PantrySortOption.RECENT
+          ? PantrySortDirection.DESC
+          : PantrySortDirection.ASC;
       setSortOption(newOption);
       setSortDirection(newDirection);
     }

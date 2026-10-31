@@ -126,6 +126,25 @@ const renderSheet = (line: typeof MILK & { discount?: number } = MILK) => {
   return { onSave, onClose };
 };
 
+const renderUnchosenSheet = () => {
+  const onSave = jest.fn();
+  render(
+    <ReceiptLineSheet
+      visible
+      line={MILK}
+      choice={undefined}
+      candidates={[]}
+      listItemNameFor={() => undefined}
+      onPickItem={jest.fn()}
+      opening={1}
+      onClose={jest.fn()}
+      onSave={onSave}
+      onRemove={jest.fn()}
+    />,
+  );
+  return { onSave };
+};
+
 const typeTotal = (text: string) =>
   fireEvent.changeText(screen.getByTestId('field-Total paid'), text);
 
@@ -234,7 +253,27 @@ describe('a receipt line not for the pantry', () => {
 
     await drainTimers();
     expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining({ notStocked: true }),
+      expect.objectContaining({ notStocked: true, itemName: 'Whole milk' }),
+    );
+  });
+
+  it('takes the printed name when nothing is chosen, so nothing need be typed', async () => {
+    const { onSave } = renderUnchosenSheet();
+
+    fireEvent(
+      screen.getByTestId(receiptsTestIDs.lineNotStocked),
+      'valueChange',
+      true,
+    );
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notStocked: true,
+        itemId: null,
+        itemName: 'MILK 2%',
+      }),
     );
   });
 });

@@ -1634,6 +1634,22 @@ describe('useReceiptReview', () => {
       });
     });
 
+    it('counts a line kept out of the pantry as recorded, apart from the rest', async () => {
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        dataFor: checkInAnswer(),
+      });
+      const { result } = await setup({ checkIn });
+      await act(async () => {
+        result.current.review.chooseLine(1, { ...MILK, notStocked: true });
+      });
+      await drainTimers();
+      expect(result.current.review.recordedCount).toBe(1);
+
+      expect(
+        await drained(() => result.current.review.addChosen()),
+      ).toMatchObject({ sent: 1, recorded: 1, held: 0 });
+    });
+
     it('ticks the list line of a line kept out of the pantry at once, and puts it back when refused', async () => {
       const checkIn = recordMock(CreateReceiptCheckInDocument, {
         dataFor: checkInAnswer({ refuses: () => true }),

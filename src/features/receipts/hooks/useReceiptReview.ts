@@ -352,16 +352,19 @@ export function useReceiptReview() {
   /**
    * Records the chosen lines in one check-in, without waiting on the API: every
    * line shows in the pantry before this returns. A line that still lacks its
-   * product, unit or price stays, saying which. `learned` is the receipt's
-   * store, once known, when it is new to the household.
+   * product, unit or price stays, saying which. `recorded` is how many of the
+   * sent lines stock nothing; `learned` is the receipt's store, once known,
+   * when it is new to the household.
    */
   const addChosen = async (): Promise<{
     sent: number;
+    recorded: number;
     held: number;
     learned: Promise<LearnedStore | null>;
   }> => {
     const none = Promise.resolve(null);
-    if (!pantryId) return { sent: 0, held: pending.length, learned: none };
+    const nothingSent = { sent: 0, recorded: 0, held: pending.length };
+    if (!pantryId) return { ...nothingSent, learned: none };
     setPreparing(true);
     // A typed unit goes as the unit it names, from the device's units first.
     const resolved = await Promise.all(
@@ -382,7 +385,7 @@ export function useReceiptReview() {
       Math.max(1, Math.ceil(resolved.length / LINES_PER_CHECK_IN)),
     );
     const minted = useReceiptDraftStore.getState().draft?.checkIn;
-    if (!minted) return { sent: 0, held: pending.length, learned: none };
+    if (!minted) return { ...nothingSent, learned: none };
 
     const toSend: CheckInLineToSend[] = [];
     const lacking: Partial<Record<number, CheckInLineNeed>> = {};
@@ -445,6 +448,7 @@ export function useReceiptReview() {
     }
     return {
       sent: toSend.length,
+      recorded: toSend.filter(({ input }) => input.stock === false).length,
       held: Object.keys(lacking).length,
       learned,
     };
@@ -484,6 +488,8 @@ export function useReceiptReview() {
     retryMatching,
     pantryName: pantry?.name ?? null,
     pendingCount: pending.length,
+    /** How many of the pending lines record a purchase and stock nothing. */
+    recordedCount: pending.filter(({ choice }) => choice.notStocked).length,
     /** Resolving the lines' units before they are sent. */
     applying: preparing,
     /** Later list pages are still loading: adding now could miss a list line. */

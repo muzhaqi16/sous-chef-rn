@@ -35,14 +35,16 @@ const mockChooseStore = jest.fn();
 const mockAddChosen = jest.fn<
   Promise<{
     sent: number;
+    recorded: number;
     held: number;
     learned: Promise<{ name: string; undo: () => Promise<void> } | null>;
   }>,
   []
 >();
 // A receipt from a store the household already has: nothing learned.
-const added = (sent: number, held: number) => ({
+const added = (sent: number, held: number, recorded = 0) => ({
   sent,
+  recorded,
   held,
   learned: Promise.resolve(null),
 });
@@ -64,7 +66,12 @@ jest.mock('../../hooks/useReceiptReview', () => ({
     matchState: 'done',
     retryMatching: jest.fn(),
     pantryName: 'Kitchen Pantry',
-    pendingCount: mockRows.length,
+    pendingCount: mockRows.filter(
+      ({ choice, status }) => choice && status !== 'added',
+    ).length,
+    recordedCount: mockRows.filter(
+      ({ choice, status }) => choice?.notStocked && status !== 'added',
+    ).length,
     applying: false,
     listLoading: false,
     listIncomplete: false,
@@ -229,6 +236,7 @@ describe('ReceiptReviewScreen Add', () => {
     const undo = jest.fn(() => Promise.resolve());
     mockAddChosen.mockResolvedValue({
       sent: 2,
+      recorded: 0,
       held: 0,
       learned: Promise.resolve({ name: 'ALDI Wilkinsburg', undo }),
     });
@@ -307,6 +315,153 @@ describe('ReceiptReviewScreen Add', () => {
 
     expect(toastService.success).toHaveBeenCalledTimes(1);
     expect(mockToPantryMain).not.toHaveBeenCalled();
+  });
+
+  it('stays on the review while a line has no product, keeping it for later', async () => {
+    mockRows = [
+      row({ printed: 'MILK', choice: lineChoice({ price: 2.79 }) }),
+      row({ index: 1, printed: 'GV EYES', status: 'unmatched', price: 4.48 }),
+    ];
+    mockAddChosen.mockResolvedValue(added(1, 0));
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(screen.getByText('GV EYES')).toBeTruthy();
+    expect(mockToPantryMain).not.toHaveBeenCalled();
+    screen.unmount();
+    expect(mockFinish).not.toHaveBeenCalled();
+  });
+
+  it('says apart what went to the pantry and what was only recorded', async () => {
+    mockRows = [
+      row({ printed: 'MILK', choice: lineChoice({ price: 2.79 }) }),
+      row({
+        index: 1,
+        printed: 'TABLECLOTH',
+        choice: lineChoice({ price: 4.96, notStocked: true }),
+      }),
+    ];
+    mockAddChosen.mockResolvedValue(added(2, 0, 1));
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('Add 1 item, record 1')).toBeTruthy();
+    expect(screen.getByText('1 item will be added')).toBeTruthy();
+    expect(screen.getByText('1 line will be recorded, not added')).toBeTruthy();
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(toastService.success).toHaveBeenCalledWith(
+      'Added 1 item to Kitchen Pantry, recorded 1',
+    );
+  });
+
+  it('never calls a recorded line added, once it has gone in', () => {
+    mockRows = [
+      row({
+        printed: 'MILK',
+        status: 'added',
+        choice: lineChoice({ price: 2.79 }),
+      }),
+      row({
+        index: 1,
+        printed: 'TABLECLOTH',
+        status: 'added',
+        choice: lineChoice({ price: 4.96, notStocked: true }),
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('1 item already added')).toBeTruthy();
+    expect(screen.getByText('1 line already recorded')).toBeTruthy();
+    expect(screen.getByText('Recorded')).toBeTruthy();
+  });
+
+  it('reports only what reached the pantry to a borrowing flow', async () => {
+    mockAddChosen.mockResolvedValue(added(2, 0, 1));
+    const exits = {
+      toReview: jest.fn(),
+      close: jest.fn(),
+      added: jest.fn(),
+      finished: jest.fn(),
+    };
+    const screen = renderWithApollo(
+      <ReceiptFlowExitsProvider actions={exits}>
+        <ReceiptReviewScreen />
+      </ReceiptFlowExitsProvider>,
+    );
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(exits.added).toHaveBeenCalledWith(1);
+  });
+
+  it('leaves once every other line was left out by the user', async () => {
+    mockRows = [
+      row({ printed: 'MILK', choice: lineChoice({ price: 2.79 }) }),
+      row({ index: 1, printed: 'GV EYES', status: 'skipped', price: 4.48 }),
+    ];
+    mockAddChosen.mockResolvedValue(added(1, 0));
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(mockToPantryMain).toHaveBeenCalledTimes(1);
+  });
+
+  it('finishes with the open lines left behind, once nothing is left to add', async () => {
+    mockRows = [
+      row({
+        printed: 'MILK',
+        status: 'added',
+        choice: lineChoice({ price: 2.79 }),
+      }),
+      row({ index: 1, printed: 'GV EYES', status: 'unmatched', price: 4.48 }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('Finish without 1 line')).toBeTruthy();
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewFinish));
+
+    expect(mockAddChosen).not.toHaveBeenCalled();
+    expect(mockToPantryMain).toHaveBeenCalledTimes(1);
+    screen.unmount();
+    expect(mockFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers no finish before anything went in', () => {
+    mockRows = [row({ printed: 'GV EYES', status: 'unmatched', price: 4.48 })];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.queryByTestId(receiptsTestIDs.reviewFinish)).toBeNull();
+    expect(screen.getByText('Choose the items to add')).toBeTruthy();
+  });
+
+  it('never says a line went to the pantry when none did', async () => {
+    mockRows = [
+      row({
+        printed: 'TABLECLOTH',
+        choice: lineChoice({ price: 4.96, notStocked: true }),
+      }),
+    ];
+    mockAddChosen.mockResolvedValue(added(1, 0, 1));
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('Record 1 line')).toBeTruthy();
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(toastService.success).toHaveBeenCalledWith('Recorded 1 line');
   });
 });
 
