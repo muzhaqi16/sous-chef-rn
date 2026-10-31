@@ -1,7 +1,7 @@
 /**
  * Local-first: the list is held under the minted `input.id` until the server
- * answers; the caller's own replay answers IDEMPOTENT_REPLAY (applied), and an
- * id another account holds answers CONFLICT, which drops it and reports it.
+ * answers; the caller's own replay converges on it, and an id another account
+ * holds answers CONFLICT, which drops it and reports it.
  * The first 50 lines it is made with ride the create and show with it.
  */
 

@@ -253,7 +253,9 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   and a delete supersedes the pending or parked non-create writes whose only subject is the deleted
   row (a create minted on the device goes with it, and neither is sent). Writes to one entity queued
   from the same base `version` are replayed in turn: once one lands, the next is moved onto the
-  version the server returned instead of conflicting with its sibling. A create the server merged into
+  version the server returned instead of conflicting with its sibling. A converged answer is the row
+  as it stands, so past one step it carries another device's change: the writes behind it keep their
+  version and meet that as a conflict. A create the server merged into
   a row it already held (`outcome: MERGED`) moves every write still queued against the minted id to
   the surviving row, at its version; the server refuses the minted id from then on. Two kinds are not
   moved: a queued removal of the minted row is dropped, since removing the surviving row would remove
@@ -281,13 +283,12 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
   server refusal RESOLVES as an error union member (`ValidationError` / `ConflictError` / …) rather than
   throwing; without classification a rejected replay would be marked SUCCESS and dequeued while the
   optimistic cache write lingers. A rejected payload routes through the permanent-failure pipeline
-  (revert + toast + dequeue, via `ReplayRejectedError` → the registered failure handler). A
-  `ConflictError` whose `code` is `IDEMPOTENT_REPLAY` is **converged** — the API-wide signal that this
-  exact op already committed once (a client-PK create keyed by the row id, or an idempotency-keyed
-  cumulative delta keyed by `input.idempotencyKey`); dequeue as success. Matched on the **code**, never
-  the message; a generic `ConflictError` is a real version/uniqueness conflict → rejected. A converged
-  SUCCESS payload (`converged: true` on favorites, cooking logs, and the canonical deletes) never
-  reaches the converged branch here — it doesn't end in `Error`, so it's already treated as applied.
+  (revert + toast + dequeue, via `ReplayRejectedError` → the registered failure handler). A write
+  that already committed answers its success payload with `converged: true` and the row as it stands,
+  so it is treated as applied. A `ConflictError` whose `code` is `IDEMPOTENT_REPLAY` is **converged**
+  too: this exact op committed once, but its row is gone or the caller can no longer read it, so there
+  is no row to commit; dequeue as success. Matched on the **code**, never the message; a generic
+  `ConflictError` is a real version/uniqueness conflict → rejected.
   A batch that applies with a row refused as `INTERNAL_SERVER_ERROR` or `DEADLOCK` is deferred whole
   (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while reverting that
   row would discard a write the server never refused.
@@ -312,13 +313,13 @@ payload** (e.g. `ConflictError` / `ValidationError`) is a rejection: revert the 
 A queued write replays as the canonical mutation it was queued as — the API's contract (sous-chef-api
 `docs/api/offline-sync.md` § Replaying through the canonical mutations) makes each one safe to send again:
 
-| Queued write                                                            | Why a re-send is safe                                                                                                       |
-| ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Create with a client-minted id (`CreatePantryItem`, the batch adds, …)  | the id is the row's PK: a re-sent `createPantryItem` answers `IDEMPOTENT_REPLAY`, a batch add converges and returns the row |
-| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | version-checked: a stale version applies nothing (`VERSION_CONFLICT`, § 5)                                                  |
-| Delete (`DeletePantryItem`, `RemoveItemFromShoppingList`)               | converges: `converged: true`, the entity `null`                                                                             |
-| Reorder (`MoveShoppingListItem`)                                        | repeats to the same order; a line removed since is `NotFoundError`                                                          |
-| Cumulative change (the pantry deltas)                                   | at-most-once by `input.idempotencyKey` (`IDEMPOTENT_REPLAY`)                                                                |
+| Queued write                                                            | Why a re-send is safe                                                                                         |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Create with a client-minted id (`CreatePantryItem`, the batch adds, …)  | the id is the row's PK: a re-send converges and returns the row, or answers `IDEMPOTENT_REPLAY` if it is gone |
+| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | version-checked: a stale version applies nothing (`VERSION_CONFLICT`, § 5)                                    |
+| Delete (`DeletePantryItem`, `RemoveItemFromShoppingList`)               | converges: `converged: true`, the entity `null`                                                               |
+| Reorder (`MoveShoppingListItem`)                                        | repeats to the same order; a line removed since is `NotFoundError`                                            |
+| Cumulative change (the pantry deltas)                                   | at-most-once by `input.idempotencyKey`: a re-send converges and returns the row                               |
 
 What a replay restates is only what the device knows better by then. `prepareReplay`
 (`src/apollo/offlineQueue/prepareReplay.ts`) looks the operation up in `REPLAY_PREPARATIONS`
@@ -535,7 +536,7 @@ beyond the pattern:
 - **Pantry granular deltas** (`AdjustPantryItemQuantity`, `RestockPantryItem`, `CreatePantryItemUsage`,
   `OpenPantryItemBatch`, `WastePantryItemBatch`, `ConvertExpiredToWaste`) are relative, so entity-id
   idempotency can't dedupe them: each carries a client-minted `input.idempotencyKey` the server records
-  in the delta's transaction, and a replay answers `IDEMPOTENT_REPLAY`.
+  in the delta's transaction, and a replay answers the row with `converged: true`.
 - **Catalog:** storage locations (create, update, delete, default), stores, usual stores (ordered by
   `useUsualStoreWrites`' `writeOrder`).
 - **Home:** create (`writeLocalHome` with a placeholder owner membership, which the replay swaps for
@@ -576,8 +577,8 @@ replay only after their parent has landed — the drain reads the parent referen
   `createStorageLocation` / `createMealPlan(Item)` / `createMealTemplate` / `createRecipe` (top-level).
   Format: cuid2 (validator `/^(?:[a-z][0-9a-z]{23,31}|[0-9a-fA-F]{24})$/` also accepts legacy cuid v1
   and 24-char hex); omitted → Prisma `@default(cuid(2))`. Note `createShoppingList`
-  (like `createHome` & co.) answers a duplicate replay with `ConflictError(code: IDEMPOTENT_REPLAY)`;
-  the queue treats that as already synced and drops the op.
+  (like `createHome` & co.) answers a duplicate replay with its row and `converged: true`, and adds
+  only the lines its first send missed that carry their own id or key.
 - **NOT id-capable by design:** `createNotification` (system/cross-user generated).
 - **Every canonical mutation is safe to re-send** (§ 5): creates by id, updates by version, deletes
   converge, deltas by `idempotencyKey`. A create that lands on a held row reports `outcome: MERGED`

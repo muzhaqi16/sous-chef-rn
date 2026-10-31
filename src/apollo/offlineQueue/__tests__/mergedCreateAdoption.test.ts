@@ -11,6 +11,7 @@ import {
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import {
+  AdjustPantryItemQuantityDocument,
   CreatePantryItemDocument,
   CreatePantryItemUsageDocument,
   DeletePantryItemDocument,
@@ -104,6 +105,35 @@ const queueQuantitySetAtV5 = () =>
     }),
   );
 
+const queueAdjustAtV5 = () =>
+  queueStore.addMutation(
+    makeQueuedMutation({
+      id: 'adjust',
+      ...queuedMutationFor(AdjustPantryItemQuantityDocument),
+      variables: {
+        input: {
+          id: 'row-1',
+          newQuantity: 3,
+          reason: 'recount',
+          idempotencyKey: 'key-1',
+          version: 5,
+        },
+      },
+      createdAt: NOW,
+    }),
+  );
+
+/** A replay of a write the server already applied: the row as it stands. */
+const convergedAdjustAt = (version: number) => ({
+  data: {
+    adjustPantryItemQuantity: {
+      __typename: 'AdjustPantryItemQuantityPayload',
+      converged: true,
+      pantryItem: stackAt(version),
+    },
+  },
+});
+
 const sentInputs = () =>
   mockClient.mutate.mock.calls.map(
     ([options]: [{ variables: { input: unknown } }]) => options.variables.input,
@@ -162,6 +192,30 @@ describe('writes queued behind a replay', () => {
       expect.objectContaining({ itemName: 'Oat milk', version: 2 }),
       expect.objectContaining({ storageNotes: 'Top', version: 3 }),
     ]);
+  });
+
+  it('are sent past a converged replay that moved the row one step', async () => {
+    queueAdjustAtV5();
+    queueQuantitySetAtV5();
+    mockClient.mutate
+      .mockResolvedValueOnce(convergedAdjustAt(6))
+      .mockImplementationOnce(quantitySetAgainst(6));
+
+    await new QueueManager().processQueue();
+
+    expect(sentInputs()[1]).toMatchObject({ quantity: '4', version: 6 });
+  });
+
+  it('meet another device’s change behind a converged replay', async () => {
+    queueAdjustAtV5();
+    queueQuantitySetAtV5();
+    mockClient.mutate
+      .mockResolvedValueOnce(convergedAdjustAt(7))
+      .mockImplementationOnce(quantitySetAgainst(7));
+
+    await new QueueManager().processQueue();
+
+    expect(sentInputs()[1]).toMatchObject({ quantity: '4', version: 5 });
   });
 
   it('are sent past a versionless change the device made first', async () => {

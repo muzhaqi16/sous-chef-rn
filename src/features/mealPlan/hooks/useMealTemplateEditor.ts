@@ -75,8 +75,8 @@ export function useMealTemplateEditor() {
     return settled.status !== 'failed';
   };
 
-  // `AddTemplateItemInput.id` takes a minted id, so a replayed add resolves to
-  // the same row (`IDEMPOTENT_REPLAY`) and a replayed remove converges.
+  // `AddTemplateItemInput.id` takes a minted id, so a replayed add answers the
+  // same row and a replayed remove converges.
   const addItem = async (input: AddTemplateItemInput): Promise<boolean> => {
     const item = { ...input, id: generateEntityId() };
     const inputs: AddTemplateItemInputs = { item };

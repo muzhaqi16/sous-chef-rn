@@ -120,6 +120,7 @@ mutation ChangePantryItemUnit(
   changePantryItemUnit(input: $input) {
     __typename
     ... on ChangePantryItemUnitPayload {
+      converged
       storageLocation {
         id
         ...StorageLocationReaders

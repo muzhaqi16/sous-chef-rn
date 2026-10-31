@@ -45,7 +45,7 @@ function isTerminal(status: QueueStatus): boolean {
 }
 
 // The server prunes its idempotency-dedup records after 90 days, so a replay
-// past that horizon double-applies instead of classifying as IDEMPOTENT_REPLAY.
+// past that horizon double-applies instead of converging.
 // PENDING entries older than this are marked FAILED rather than replayed.
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 

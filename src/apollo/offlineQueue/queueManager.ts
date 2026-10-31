@@ -257,7 +257,7 @@ export class QueueManager {
 
     // Never replay past the server's 90-day idempotency-dedup horizon — the
     // dedup record is pruned by then, so a replay would double-apply instead
-    // of classifying as IDEMPOTENT_REPLAY. An expired entry is withdrawn.
+    // of converging. An expired entry is withdrawn.
     for (const expired of queueStore.expireStalePending(userId)) {
       this.invokeFailureHandler(expired, expired.lastError);
     }
@@ -705,6 +705,10 @@ export class QueueManager {
     // the writes built before it must still meet it as a conflict.
     const base = capturedVersion ?? returned - 1;
     if (returned === base) return;
+    // A converged answer is the row as it stands, not as this write left it, so
+    // past one step the same goes for a write that sent its version.
+    const converged = isRecord(payload) && payload.converged === true;
+    if (converged && returned !== base + 1) return;
     this.rewritePending(
       replayed,
       pending => queuedSubject(pending).subjectIds.includes(entityId),

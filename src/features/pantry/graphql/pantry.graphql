@@ -853,6 +853,7 @@ mutation AdjustPantryItemQuantity(
   adjustPantryItemQuantity(input: $input) {
     __typename
     ... on AdjustPantryItemQuantityPayload {
+      converged
       storageLocation {
         id
         ...StorageLocationReaders
@@ -893,6 +894,7 @@ mutation CorrectPantryItemPackageSize(
   correctPantryItemPackageSize(input: $input) {
     __typename
     ... on CorrectPantryItemPackageSizePayload {
+      converged
       storageLocation {
         id
         ...StorageLocationReaders
@@ -1144,8 +1146,8 @@ mutation WastePantryItemBatch(
 # waste / convert-expired) no longer have `sync*` twins. They are made
 # replay-safe by passing a client-minted `idempotencyKey` on the CANONICAL
 # mutation's input — the server records the key in the same transaction as the
-# delta, so a queued replay applies it at most once and returns a
-# `ConflictError(code: IDEMPOTENT_REPLAY)`. See docs/api/offline-sync.md.
+# delta, so a queued replay applies it at most once and answers the row with
+# `converged: true`. See docs/api/offline-sync.md.
 
 # ============================================
 # SUBSCRIPTIONS
