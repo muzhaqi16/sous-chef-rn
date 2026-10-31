@@ -1,8 +1,16 @@
-import { waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { SavedRecipeFoldersDocument } from '#features/recipes/graphql/recipe.generated';
 import { useRecipeFolders } from '../useRecipeFolders';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -23,9 +31,8 @@ describe('useRecipeFolders', () => {
       withFolders(['Weeknight', 'Holiday', 'Quick']),
     );
 
-    await waitFor(() =>
-      expect(result.current.folders).toEqual(['Weeknight', 'Holiday', 'Quick']),
-    );
+    await drainTimers();
+    expect(result.current.folders).toEqual(['Weeknight', 'Holiday', 'Quick']);
   });
 
   it('returns empty array when data is empty', async () => {
@@ -34,13 +41,12 @@ describe('useRecipeFolders', () => {
       withFolders([]),
     );
 
-    await waitFor(() =>
-      expect(
-        result.current.client.cache.readQuery({
-          query: SavedRecipeFoldersDocument,
-        }),
-      ).not.toBeNull(),
-    );
+    await drainTimers();
+    expect(
+      result.current.client.cache.readQuery({
+        query: SavedRecipeFoldersDocument,
+      }),
+    ).not.toBeNull();
     expect(result.current.folders).toEqual([]);
   });
 

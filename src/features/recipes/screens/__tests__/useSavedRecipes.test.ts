@@ -1,7 +1,7 @@
-import { waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   MySavedRecipesDocument,
   type MySavedRecipesQuery,
@@ -113,6 +113,14 @@ const standardEdges = [
 ];
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -210,7 +218,8 @@ describe('useSavedRecipes', () => {
       ],
     });
 
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.recipes).toHaveLength(2);
     expect(result.current.state.recipes[0]!.id).toBe('sr-1');
     expect(result.current.state.recipes[0]!.folder).toBe('Weeknight');
     expect(result.current.state.recipes[0]!.tags).toEqual(['Quick']);
@@ -228,7 +237,8 @@ describe('useSavedRecipes', () => {
       ],
     });
 
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.recipes).toHaveLength(2);
     expect(result.current.state.recipes[1]!.tags).toEqual([]);
   });
 
@@ -243,7 +253,8 @@ describe('useSavedRecipes', () => {
       ],
     });
 
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.state.recipes).toHaveLength(2);
     expect(result.current.state.hasMore).toBe(true);
   });
 
@@ -254,7 +265,8 @@ describe('useSavedRecipes', () => {
         { operationMocks: [firstPage, secondPage, thirdPage] },
       );
 
-      await waitFor(() => expect(result.current.state.recipes).toHaveLength(3));
+      await drainTimers();
+      expect(result.current.state.recipes).toHaveLength(3);
       expect(searchByName(result.current.state.recipes).map(r => r.id)).toEqual(
         ['sr-3'],
       );
@@ -272,7 +284,8 @@ describe('useSavedRecipes', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
+      await drainTimers();
+      expect(result.current.state.recipes).toHaveLength(1);
       expect(result.current.state.hasMore).toBe(true);
       expect(result.current.state.isLoadingRemainingPages).toBe(false);
       expect(searchByName(result.current.state.recipes)).toEqual([]);
@@ -280,7 +293,8 @@ describe('useSavedRecipes', () => {
       rerender({ loadAllPages: true });
       expect(result.current.state.isLoadingRemainingPages).toBe(true);
 
-      await waitFor(() => expect(result.current.state.recipes).toHaveLength(3));
+      await drainTimers();
+      expect(result.current.state.recipes).toHaveLength(3);
       expect(searchByName(result.current.state.recipes)).toHaveLength(1);
     });
 
@@ -307,10 +321,10 @@ describe('useSavedRecipes', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
-      await waitFor(() =>
-        expect(result.current.state.isLoadingRemainingPages).toBe(false),
-      );
+      await drainTimers();
+      expect(result.current.state.recipes).toHaveLength(1);
+      await drainTimers();
+      expect(result.current.state.isLoadingRemainingPages).toBe(false);
       expect(loadingRemaining).toContain(true);
       expect(result.current.state.hasMore).toBe(true);
       expect(result.current.state.recipes.map(r => r.id)).toEqual(['sr-1']);

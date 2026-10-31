@@ -1,11 +1,12 @@
 'use no memo';
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { PersonalInformationScreen } from '../PersonalInformationScreen';
 import type { SettingsSectionProps } from '#components/organisms/SettingsSection';
 import { UpdateUserProfileDocument } from '#operations/auth/user.generated';
@@ -170,6 +171,14 @@ jest.mock('#components/organisms/SettingsSection', () => {
   };
 });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('PersonalInformationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -295,7 +304,8 @@ describe('PersonalInformationScreen', () => {
         screen.getByTestId('option-profileVisibility-FRIENDS'),
       );
 
-      await waitFor(() => expect(fired).toHaveLength(1));
+      await drainTimers();
+      expect(fired).toHaveLength(1);
       const sent = fired[0]!.input as { profileVisibility: string };
       expect(Object.values(ProfileVisibility)).toContain(
         sent.profileVisibility,
@@ -321,7 +331,8 @@ describe('PersonalInformationScreen', () => {
         screen.getByTestId('option-profileVisibility-PRIVATE'),
       );
 
-      await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenCalled();
     });
   });
 });

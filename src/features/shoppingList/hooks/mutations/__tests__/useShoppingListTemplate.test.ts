@@ -1,18 +1,28 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   AddItemToShoppingListDocument,
   CreateShoppingListDocument,
   MarkAsTemplateDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CopyableShoppingListFragmentDoc } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { UseShoppingListTemplate_ListFragmentDoc } from '../useShoppingListTemplate.generated';
 import { useShoppingListTemplate } from '../useShoppingListTemplate';
 import { useStore } from '#store';
+
+const LIST_FRAGMENT = gql`
+  fragment useShoppingListTemplate_list on ShoppingList {
+    id
+    isTemplate
+    templateName
+    version
+    updatedAt
+  }
+`;
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -26,9 +36,18 @@ const LIST = {
 const readTemplate = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ isTemplate: boolean; templateName: string | null }>({
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
-    fragment: UseShoppingListTemplate_ListFragmentDoc,
+    fragment: LIST_FRAGMENT,
     fragmentName: 'useShoppingListTemplate_list',
+    optimistic: true,
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useShoppingListTemplate', () => {
   it('markAsTemplate writes the flags optimistically; a queued (null) result keeps them and returns true', async () => {
@@ -44,7 +63,7 @@ describe('useShoppingListTemplate', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.markAsTemplate('list-1', 'Weekly Staples');
       expect(readTemplate(cache)?.isTemplate).toBe(true);
       expect(readTemplate(cache)?.templateName).toBe('Weekly Staples');
@@ -77,14 +96,11 @@ describe('useShoppingListTemplate', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.markAsTemplate('list-1', '');
-    });
+    resolved = await drained(() => result.current.markAsTemplate('list-1', ''));
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readTemplate(cache)?.isTemplate).toBe(false);
-    });
+    await drainTimers();
+    expect(readTemplate(cache)?.isTemplate).toBe(false);
   });
 
   describe('createFromTemplate copies the template on the device', () => {
@@ -98,6 +114,7 @@ describe('useShoppingListTemplate', () => {
     const TEMPLATE = {
       __typename: 'ShoppingList',
       id: 'template-1',
+      version: 1,
       name: 'Weekly Staples',
       description: 'Every week',
       budgetAmount: 40,
@@ -116,6 +133,7 @@ describe('useShoppingListTemplate', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-1',
+              version: 1,
               itemName: 'Tomatoes',
               quantity: 2,
               quantityInput: '2',
@@ -123,7 +141,7 @@ describe('useShoppingListTemplate', () => {
               notes: null,
               unitName: 'pc',
               sortOrder: 'a0',
-              item: { __typename: 'Item', id: 'item-1' },
+              item: { __typename: 'Item', id: 'item-1', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-1' },
             },
           },
@@ -142,6 +160,7 @@ describe('useShoppingListTemplate', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-2',
+              version: 1,
               itemName: 'Milk',
               quantity: 1,
               quantityInput: '1',
@@ -149,7 +168,7 @@ describe('useShoppingListTemplate', () => {
               notes: null,
               unitName: 'l',
               sortOrder: 'a1',
-              item: { __typename: 'Item', id: 'item-2' },
+              item: { __typename: 'Item', id: 'item-2', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-2' },
             },
           },
@@ -196,12 +215,9 @@ describe('useShoppingListTemplate', () => {
       });
 
       let newId: string | null = null;
-      await act(async () => {
-        newId = await result.current.createFromTemplate(
-          'template-1',
-          'Groceries',
-        );
-      });
+      newId = await drained(() =>
+        result.current.createFromTemplate('template-1', 'Groceries'),
+      );
 
       expect(newId).toBeTruthy();
       expect(create.fired).toHaveLength(1);
@@ -231,14 +247,15 @@ describe('useShoppingListTemplate', () => {
       // The copy is in the cache, under the minted id, before any server answer.
       const copied = cache.readFragment<{ name: string }>({
         id: cache.identify({ __typename: 'ShoppingList', id: newId! }),
-        fragment: UseShoppingListTemplate_ListFragmentDoc,
+        fragment: LIST_FRAGMENT,
         fragmentName: 'useShoppingListTemplate_list',
+        optimistic: true,
       });
       expect(copied).not.toBeNull();
       const lineIds = fired.input?.items?.map(i => i.id) ?? [];
       expect(lineIds).toHaveLength(2);
       for (const lineId of lineIds) {
-        expect(cache.extract()[`ShoppingListItem:${lineId}`]).toBeDefined();
+        expect(cache.extract(true)[`ShoppingListItem:${lineId}`]).toBeDefined();
       }
     });
 
@@ -250,9 +267,9 @@ describe('useShoppingListTemplate', () => {
         operationMocks: [create.mock, add.mock],
       });
 
-      await act(async () => {
-        await result.current.createFromTemplate('template-1', 'G', 'home-2');
-      });
+      await drained(() =>
+        result.current.createFromTemplate('template-1', 'G', 'home-2'),
+      );
 
       expect(create.fired[0]).toMatchObject({ input: { homeId: 'home-2' } });
     });
@@ -265,9 +282,9 @@ describe('useShoppingListTemplate', () => {
       });
 
       let newId: string | null = 'unset';
-      await act(async () => {
-        newId = await result.current.createFromTemplate('template-1');
-      });
+      newId = await drained(() =>
+        result.current.createFromTemplate('template-1'),
+      );
 
       expect(newId).toBeNull();
       expect(create.fired).toHaveLength(0);
@@ -282,9 +299,7 @@ describe('useShoppingListTemplate', () => {
         operationMocks: [create.mock, add.mock],
       });
 
-      await act(async () => {
-        await result.current.createFromTemplate('template-1');
-      });
+      await drained(() => result.current.createFromTemplate('template-1'));
 
       expect(create.fired[0]).toMatchObject({
         input: { name: 'Weekly Staples (Copy)' },

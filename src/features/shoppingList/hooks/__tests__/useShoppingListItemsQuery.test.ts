@@ -1,9 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   type RecordedMock,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useShoppingListItemsQuery } from '../useShoppingListItemsQuery';
 
@@ -57,49 +57,54 @@ const renderSwitch = (listTwo: RecordedMock) =>
     },
   );
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useShoppingListItemsQuery — switching lists', () => {
   it('shows none of the old list while an unheld list loads', async () => {
     const listTwo = listMock('list-2', { name: 'New list' }, { held: true });
     const { result, rerender } = renderSwitch(listTwo);
-    await waitFor(() =>
-      expect(result.current.shoppingList?.name).toBe('Old list'),
-    );
+    await drainTimers();
+    expect(result.current.shoppingList?.name).toBe('Old list');
 
     rerender({ listId: 'list-2' });
 
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.notFound).toBe(false);
 
-    await act(async () => listTwo.release());
-    await waitFor(() =>
-      expect(result.current.shoppingList?.name).toBe('New list'),
-    );
+    await drained(() => listTwo.release());
+    expect(result.current.shoppingList?.name).toBe('New list');
   });
 
   it('offline, reports the failure without the old list details', async () => {
     const { result, rerender } = renderSwitch(
       listMock('list-2', { error: new Error('Network request failed') }),
     );
-    await waitFor(() =>
-      expect(result.current.shoppingList?.name).toBe('Old list'),
-    );
+    await drainTimers();
+    expect(result.current.shoppingList?.name).toBe('Old list');
 
     rerender({ listId: 'list-2' });
 
-    await waitFor(() => expect(result.current.error).toBeDefined());
+    await drainTimers();
+    expect(result.current.error).toBeDefined();
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.notFound).toBe(false);
   });
 
   it('flags a list the server no longer returns as not found', async () => {
     const { result, rerender } = renderSwitch(listMock('list-2', null));
-    await waitFor(() =>
-      expect(result.current.shoppingList?.name).toBe('Old list'),
-    );
+    await drainTimers();
+    expect(result.current.shoppingList?.name).toBe('Old list');
 
     rerender({ listId: 'list-2' });
 
-    await waitFor(() => expect(result.current.notFound).toBe(true));
+    await drainTimers();
+    expect(result.current.notFound).toBe(true);
     expect(result.current.shoppingList).toBeNull();
   });
 
@@ -113,9 +118,8 @@ describe('useShoppingListItemsQuery — switching lists', () => {
         initialProps,
       },
     );
-    await waitFor(() =>
-      expect(result.current.shoppingList?.name).toBe('Old list'),
-    );
+    await drainTimers();
+    expect(result.current.shoppingList?.name).toBe('Old list');
 
     rerender({ listId: undefined });
 

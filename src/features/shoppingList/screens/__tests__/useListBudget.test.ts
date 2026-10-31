@@ -1,17 +1,18 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import {
   completeMockedResponse,
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   CollaboratorRole,
   CollaboratorStatus,
   MembershipRole,
-  PriceComparisonScope,
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { useListBudget } from '../useListBudget';
@@ -39,8 +40,6 @@ const LIST = {
   budgetAmount: 60,
   currency: 'USD',
   totalCost: 18.4,
-  estimatedTotal: 42.1,
-  unpricedItems: 3,
   priceTracking: true,
   targetStore: null,
   version: 1,
@@ -68,7 +67,7 @@ function cacheWith(list: ListSeed = {}) {
   }).result as (vars: typeof variables) => {
     data: Unmasked<ListBudgetQuery>;
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: ListBudgetDocument,
     variables,
     data: completed(variables).data,
@@ -103,6 +102,14 @@ const collaborator = (canEdit: boolean) => ({
   },
 });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useListBudget', () => {
   beforeEach(() => {
     useStore.setState({ user: OWNER, isOnline: false, apiReachable: false });
@@ -118,10 +125,31 @@ describe('useListBudget', () => {
     expect(result.current.list).toMatchObject({
       budgetAmount: 60,
       totalCost: 18.4,
-      estimatedTotal: 42.1,
-      unpricedItems: 3,
     });
     expect(result.current.state).toBe('ready');
+  });
+
+  // The server's sum over the unbought lines, as store mode reads it.
+  it("reads the list's cost to go, offline", () => {
+    const { result } = render(
+      { operationMocks: [] },
+      {
+        costToGo: {
+          __typename: 'ShoppingListCostToGo',
+          amount: 7.5,
+          currency: 'USD',
+          pricedLines: 2,
+          lines: 3,
+        },
+      },
+    );
+
+    expect(result.current.costToGo).toMatchObject({
+      amount: 7.5,
+      currency: 'USD',
+      pricedLines: 2,
+      lines: 3,
+    });
   });
 
   it("offers its controls to the list's owner", () => {
@@ -192,25 +220,23 @@ describe('useListBudget', () => {
     act(() => {
       expect(result.current.saveBudget('75')).toBe('saved');
     });
-    await waitFor(() =>
-      expect(update.fired[0]).toMatchObject({
-        input: {
-          id: 'list-1',
-          planning: { budgetAmount: 75, currency: 'USD' },
-        },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[0]).toMatchObject({
+      input: {
+        id: 'list-1',
+        planning: { budgetAmount: 75, currency: 'USD' },
+      },
+    });
     // Written before the answer, so it shows at once and offline.
     expect(result.current.list?.budgetAmount).toBe(75);
 
     act(() => {
       expect(result.current.saveBudget('')).toBe('saved');
     });
-    await waitFor(() =>
-      expect(update.fired[1]).toMatchObject({
-        input: { planning: { budgetAmount: null } },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[1]).toMatchObject({
+      input: { planning: { budgetAmount: null } },
+    });
     expect(result.current.list?.budgetAmount).toBeNull();
   });
 
@@ -224,34 +250,27 @@ describe('useListBudget', () => {
       result.current.setPriceTracking(false);
     });
 
-    await waitFor(() =>
-      expect(update.fired[0]).toMatchObject({
-        input: { id: 'list-1', settings: { priceTracking: false } },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[0]).toMatchObject({
+      input: { id: 'list-1', settings: { priceTracking: false } },
+    });
     expect(result.current.list?.priceTracking).toBe(false);
   });
 
-  it('sends a picked store with the comparison on screen', async () => {
+  it('sends a picked store with the savings on screen', async () => {
     const update = recordMock(UpdateShoppingListDocument, {
       data: { updateShoppingList: null },
     });
     const { result } = render({ operationMocks: [update.mock] });
 
     act(() => {
-      result.current.pickStore(
-        { id: 'store-1', name: 'Giant Eagle' },
-        PriceComparisonScope.Chain,
-      );
+      result.current.pickStore({ id: 'store-1', name: 'Giant Eagle' });
     });
 
-    await waitFor(() =>
-      expect(update.fired[0]).toMatchObject({
-        input: { planning: { targetStoreId: 'store-1' } },
-        withComparison: true,
-        comparisonScope: PriceComparisonScope.Chain,
-      }),
-    );
+    await drainTimers();
+    expect(update.fired[0]).toMatchObject({
+      input: { planning: { targetStoreId: 'store-1' } },
+    });
     expect(result.current.list?.targetStore?.name).toBe('Giant Eagle');
   });
 });

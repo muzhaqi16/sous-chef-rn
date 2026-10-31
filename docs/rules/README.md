@@ -28,6 +28,8 @@ exemption is a file-scoped override in `eslint/project.js`, where review sees it
 | [`sous-chef/no-string-keyed-lookup`](no-string-keyed-lookup.md)                           | A closed lookup table is keyed by the real key type, never by string.                           |
 | [`sous-chef/no-number-noun-concat`](no-number-noun-concat.md)                             | A count and its noun are one translated sentence, never a number joined to a string.            |
 | [`sous-chef/queueable-write-is-local-first`](queueable-write-is-local-first.md)           | A write the offline queue can take writes the cache first and says so.                          |
+| [`sous-chef/cache-read-states-optimism`](cache-read-states-optimism.md)                   | A direct cache read states whether it sees pending writes.                                      |
+| [`sous-chef/local-write-is-deterministic`](local-write-is-deterministic.md)               | A local write reads only its write and the cache, and hides a row without `evict`.              |
 | [`sous-chef/recycling-list-host-is-bounded`](recycling-list-host-is-bounded.md)           | A recycling list is bounded by the view that hosts it.                                          |
 | [`sous-chef/hook-returns-no-library-type`](hook-returns-no-library-type.md)               | A feature hook hands a screen no library type.                                                  |
 | [`sous-chef/flashlist-declares-scroll-component`](flashlist-declares-scroll-component.md) | Every FlashList declares which scroll component it renders through.                             |
@@ -36,6 +38,7 @@ exemption is a file-scoped override in `eslint/project.js`, where review sees it
 | [`sous-chef/on-fill-text-uses-its-token`](on-fill-text-uses-its-token.md)                 | Text on a fill reads that fill's own `on*` token.                                               |
 | [`sous-chef/animated-node-takes-no-themed-style`](animated-node-takes-no-themed-style.md) | A node Reanimated animates takes no Unistyles style that reads the theme.                       |
 | [`sous-chef/selects-key-field-directly`](selects-key-field-directly.md)                   | A selection that spreads a fragment on a type with an `id` selects `id` itself.                 |
+| [`sous-chef/network-read-selects-version`](network-read-selects-version.md)               | A selection on a type with a server `version` that reaches the network selects `version`.       |
 
 A ban that is one esquery selector and nothing else is an entry of the stock
 `no-restricted-syntax` rule instead of a rule of its own — the catalog of those

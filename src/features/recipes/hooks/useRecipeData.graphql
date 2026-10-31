@@ -3,6 +3,7 @@
 # directly. `GetRecipe` also spreads the form fragment, so the same query
 # populates the edit screen's cache.
 fragment useRecipeData_recipe on Recipe {
+  version
   id
   name
   description
@@ -26,15 +27,18 @@ fragment useRecipeData_recipe on Recipe {
   # The author's edit to a PUBLISHED recipe, held for review while the recipe
   # stays live; both are null for anyone but the author.
   pendingRevision {
+    version
     id
   }
   latestRevision {
+    version
     id
     status
     reviewNote
   }
   forkedFromId
   forkedFrom {
+    version
     id
     name
   }
@@ -96,6 +100,7 @@ fragment useRecipeData_recipe on Recipe {
         originalText
         estimatedPrice
         item {
+          version
           id
           name
           imageUrl

@@ -1,9 +1,10 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { toastService } from '#/services/toastService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
@@ -57,12 +58,21 @@ async function renderLists(...writes: ReturnType<typeof recordMock>[]) {
   const rendered = renderHookWithApollo(() => useBrandLists(), {
     operationMocks: [listsMock().mock, ...writes.map(write => write.mock)],
   });
-  await waitFor(() => expect(rendered.result.current.lists).toHaveLength(2));
+  await drainTimers();
+  expect(rendered.result.current.lists).toHaveLength(2);
   return rendered;
 }
 
 const listOf = (lists: ReturnType<typeof useBrandLists>['lists'], id: string) =>
   lists.find(list => list.id === id);
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.spyOn(toastService, 'error').mockImplementation();
@@ -116,21 +126,18 @@ describe('useBrandLists', () => {
       made = result.current.createList('Snacks');
     });
 
-    await waitFor(() =>
-      expect(listOf(result.current.lists, 'minted-1')).toEqual({
-        id: 'minted-1',
-        name: 'Snacks',
-        enabled: true,
-        brands: [],
-      }),
-    );
+    await drainTimers();
+    expect(listOf(result.current.lists, 'minted-1')).toEqual({
+      id: 'minted-1',
+      name: 'Snacks',
+      enabled: true,
+      brands: [],
+    });
     expect(create.fired).toEqual([
       { input: { id: 'minted-1', name: 'Snacks', enabled: true } },
     ]);
     create.release();
-    await act(async () => {
-      await expect(made).resolves.toBe('minted-1');
-    });
+    await drained(() => expect(made).resolves.toBe('minted-1'));
   });
 
   it('takes a refused list back out', async () => {
@@ -139,14 +146,11 @@ describe('useBrandLists', () => {
     );
 
     let made: string | null = 'unset';
-    await act(async () => {
-      made = await result.current.createList('Snacks');
-    });
+    made = await drained(() => result.current.createList('Snacks'));
 
     expect(made).toBeNull();
-    await waitFor(() =>
-      expect(listOf(result.current.lists, 'minted-1')).toBeUndefined(),
-    );
+    await drainTimers();
+    expect(listOf(result.current.lists, 'minted-1')).toBeUndefined();
   });
 
   it('switches a list with no version, so offline toggles replay in order', async () => {
@@ -156,9 +160,7 @@ describe('useBrandLists', () => {
     });
     const { result } = await renderLists(update);
 
-    await act(async () => {
-      await result.current.setEnabled('list-avoid', true);
-    });
+    await drained(() => result.current.setEnabled('list-avoid', true));
 
     expect(listOf(result.current.lists, 'list-avoid')?.enabled).toBe(true);
     expect(update.fired).toEqual([
@@ -171,13 +173,8 @@ describe('useBrandLists', () => {
       recordMock(UpdateBrandListDocument, { data: refused('updateBrandList') }),
     );
 
-    await act(async () => {
-      await result.current.setEnabled('list-boycott', false);
-    });
-
-    await waitFor(() =>
-      expect(listOf(result.current.lists, 'list-boycott')?.enabled).toBe(true),
-    );
+    await drained(() => result.current.setEnabled('list-boycott', false));
+    expect(listOf(result.current.lists, 'list-boycott')?.enabled).toBe(true);
   });
 
   it('adds a brand at once under a minted entry id, and only once', async () => {
@@ -187,13 +184,13 @@ describe('useBrandLists', () => {
     });
     const { result } = await renderLists(add);
 
-    await act(async () => {
-      await result.current.addBrand(
+    await drained(() =>
+      result.current.addBrand(
         'list-avoid',
         { id: 'brand-chips', name: 'ChipCo' },
         'too salty',
-      );
-    });
+      ),
+    );
 
     expect(listOf(result.current.lists, 'list-avoid')?.brands).toEqual([
       {
@@ -215,15 +212,15 @@ describe('useBrandLists', () => {
     ]);
 
     // A brand the list already holds sends nothing.
-    await act(async () => {
-      await expect(
+    await drained(() =>
+      expect(
         result.current.addBrand(
           'list-boycott',
           { id: 'brand-soda', name: 'SodaCo' },
           null,
         ),
-      ).resolves.toBe(true);
-    });
+      ).resolves.toBe(true),
+    );
     expect(add.fired).toHaveLength(1);
   });
 
@@ -234,9 +231,9 @@ describe('useBrandLists', () => {
     });
     const { result } = await renderLists(remove);
 
-    await act(async () => {
-      await result.current.removeBrand('list-boycott', 'entry-soda');
-    });
+    await drained(() =>
+      result.current.removeBrand('list-boycott', 'entry-soda'),
+    );
 
     expect(listOf(result.current.lists, 'list-boycott')?.brands).toEqual([]);
     expect(remove.fired).toEqual([{ input: { id: 'entry-soda' } }]);
@@ -247,16 +244,11 @@ describe('useBrandLists', () => {
       recordMock(DeleteBrandListDocument, { data: refused('deleteBrandList') }),
     );
 
-    await act(async () => {
-      await result.current.deleteList('list-boycott');
-    });
-
-    await waitFor(() =>
-      expect(result.current.lists.map(list => list.id)).toEqual([
-        'list-boycott',
-        'list-avoid',
-      ]),
-    );
+    await drained(() => result.current.deleteList('list-boycott'));
+    expect(result.current.lists.map(list => list.id)).toEqual([
+      'list-boycott',
+      'list-avoid',
+    ]);
   });
 
   // The scan card mounts per scan: one read of the lists serves the next.
@@ -270,7 +262,8 @@ describe('useBrandLists', () => {
       );
 
     const first = mount();
-    await waitFor(() => expect(first.result.current.lists).toHaveLength(2));
+    await drainTimers();
+    expect(first.result.current.lists).toHaveLength(2);
     first.unmount();
     const second = mount();
 

@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useScreenFocusEffect } from '#platform/screen';
-import type { ApolloCache } from '@apollo/client';
 import {
   useApolloClient,
   useFragment,
@@ -17,12 +16,8 @@ import {
   type PlannedMeal,
   type PantryStock,
 } from '#features/mealPlan/utils/deriveShoppingListFromMealPlan';
-import {
-  addItemsInSlices,
-  addLocalShoppingListItem,
-  buildAddItemsReconcileUpdate,
-  createLocalShoppingListItem,
-} from '#features/shoppingList/cache/items';
+import { addItemsInSlices } from '#features/shoppingList/cache/createShoppingListRow';
+import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
 import {
   useCreateShoppingList,
   type StartingLines,
@@ -36,7 +31,6 @@ import { useAppStore, useSelectedPantryId } from '#store/useAppStore';
 import { isApiUnavailable } from '#store/slices/networkSlice';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import { errorService } from '#/services/errorService';
 import { t as tGlobal, useTranslation } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
@@ -110,10 +104,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
 
   const [addItems, { loading: adding }] = useMutation(
     AddDerivedItemsToShoppingListDocument,
-    {
-      context: { localFirst: true },
-      update: buildAddItemsReconcileUpdate({}),
-    },
+    { context: { localFirst: true } },
   );
 
   const apiUnavailable = useAppStore(isApiUnavailable);
@@ -152,6 +143,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
         id: cacheId,
         fragment: UseGenerateShoppingList_MealPlanFragmentDoc,
         fragmentName: 'useGenerateShoppingList_mealPlan',
+        optimistic: true,
       }) ?? cached
     );
   };
@@ -228,15 +220,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       { name: listName, homeId: source.homeId, mealPlanId },
       {
         items: inputs,
-        // One batch: watchers re-read once for the whole list, not once per line.
-        write: listId =>
-          client.cache.batch({
-            update: cache => {
-              for (const line of inputs) {
-                writeLineToCache(cache, listId, line, displayNames);
-              }
-            },
-          }),
+        rowOf: (line, listId) => rowOf(line, listId, displayNames),
       },
     );
     if (!target) return null;
@@ -246,10 +230,8 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
       client.cache,
       listId,
       target.unsent,
-      slice =>
-        addItems({
-          variables: { input: { shoppingListId: listId, items: slice } },
-        }),
+      line => rowOf(line, listId, displayNames),
+      addItems,
       {
         document: AddDerivedItemsToShoppingListDocument,
         fallback: t('generateShoppingList.generateFailed'),
@@ -288,10 +270,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     create: CreateShoppingListInput,
     lines: StartingLines<BatchAddShoppingListItemInput>,
   ) {
-    if (existingId) {
-      lines.write(existingId);
-      return { listId: existingId, unsent: lines.items };
-    }
+    if (existingId) return { listId: existingId, unsent: lines.items };
     const created = await createShoppingList(create, lines);
     if (created.status === 'created') {
       return { listId: created.shoppingList.id, unsent: created.unsent };
@@ -300,27 +279,17 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     return null;
   }
 
-  function writeLineToCache(
-    cache: ApolloCache,
-    listId: string,
+  function rowOf(
     line: { id?: string | null; item: { itemId?: string | null } },
+    listId: string,
     names: Map<string, string>,
   ) {
-    if (!line.id) return;
-    // Built before the try: a value block inside one bails the whole function
-    // out of the React Compiler.
-    const row = createLocalShoppingListItem(line.id, {
+    if (!line.id) return null;
+    return createLocalShoppingListItem(line.id, {
       shoppingListId: listId,
       itemName: names.get(line.id) ?? t('labels.item'),
       itemId: line.item.itemId,
     });
-    try {
-      addLocalShoppingListItem(cache, listId, row);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Generate shopping list (optimistic)',
-      });
-    }
   }
 
   return {

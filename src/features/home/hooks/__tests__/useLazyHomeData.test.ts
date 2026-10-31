@@ -1,8 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { useLazyHomeData } from '../useLazyHomeData';
 
@@ -21,6 +22,14 @@ const homesMock = () =>
     },
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useLazyHomeData', () => {
   it('asks for nothing until the homes are requested', async () => {
     const homes = homesMock();
@@ -28,7 +37,7 @@ describe('useLazyHomeData', () => {
       operationMocks: [homes.mock],
     });
 
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(homes.fired).toHaveLength(0);
     expect(result.current.isLoaded).toBe(false);
   });
@@ -41,7 +50,8 @@ describe('useLazyHomeData', () => {
 
     act(() => result.current.fetchHomeData());
 
-    await waitFor(() => expect(result.current.isLoaded).toBe(true));
+    await drainTimers();
+    expect(result.current.isLoaded).toBe(true);
     expect(result.current.homes.map(home => home.id)).toEqual(['home-1']);
     expect(homes.fired).toHaveLength(1);
   });

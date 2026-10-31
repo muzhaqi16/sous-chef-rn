@@ -2,7 +2,7 @@ import React, { type ReactNode } from 'react';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
@@ -15,6 +15,7 @@ import {
   completeMockedResponse,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetUnreadNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
 import { useNotificationsOnLaunch } from '../useNotificationsOnLaunch';
 
@@ -63,6 +64,14 @@ function setup() {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockFireDeferred = null;
   useStore.setState({ user: USER, apiReachable: true, isOnline: true });
@@ -84,26 +93,25 @@ describe('useNotificationsOnLaunch', () => {
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(USER.id), { wrapper });
 
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(requests).toEqual([]);
 
     act(() => mockFireDeferred?.());
-    await waitFor(() => expect(requests).toEqual(['GetUnreadNotifications']));
+    await drainTimers();
+    expect(requests).toEqual(['GetUnreadNotifications']);
     client.stop();
   });
 
   it('reaches the network again when the app returns to the foreground', async () => {
-    jest.useFakeTimers();
     const { requests, wrapper, client } = setup();
     renderHook(() => useNotificationsOnLaunch(USER.id), { wrapper });
     act(() => mockFireDeferred?.());
     // Landed, not just sent: a refetch while the first request is in flight
     // joins it rather than reaching the network.
-    await waitFor(() =>
-      expect(
-        client.readQuery({ query: GetUnreadNotificationsDocument }),
-      ).not.toBeNull(),
-    );
+    await drainTimers();
+    expect(
+      client.readQuery({ query: GetUnreadNotificationsDocument }),
+    ).not.toBeNull();
     expect(requests).toEqual(['GetUnreadNotifications']);
 
     act(() => {
@@ -112,12 +120,11 @@ describe('useNotificationsOnLaunch', () => {
     });
     await pastTheResyncWindow();
 
-    await waitFor(() =>
-      expect(requests).toEqual([
-        'GetUnreadNotifications',
-        'GetUnreadNotifications',
-      ]),
-    );
+    await drainTimers();
+    expect(requests).toEqual([
+      'GetUnreadNotifications',
+      'GetUnreadNotifications',
+    ]);
     client.stop();
   });
 
@@ -126,7 +133,7 @@ describe('useNotificationsOnLaunch', () => {
     renderHook(() => useNotificationsOnLaunch(undefined), { wrapper });
 
     expect(mockFireDeferred).toBeNull();
-    await act(() => new Promise(resolve => setTimeout(resolve, 0)));
+    await drainTimers();
     expect(requests).toEqual([]);
     client.stop();
   });

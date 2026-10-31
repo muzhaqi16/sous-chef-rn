@@ -11,19 +11,14 @@ import {
   UseRecipeFormWrites_RecipeFragmentDoc,
   type UseRecipeFormWrites_RecipeFragment,
 } from './useRecipeFormWrites.generated';
-import {
-  revertOptimisticRecipe,
-  upsertMyRecipesEdge,
-  writeLocalRecipe,
-  type RecipeCreatedBy,
-} from '#features/recipes/utils/recipeCacheWriters';
+import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
+import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
 import { forkRecipe as buildFork } from '#features/recipes/utils/forkRecipe';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import { toastService } from '#/services/toastService';
-import { errorService } from '#/services/errorService';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 
 export function useForkRecipe() {
@@ -32,12 +27,6 @@ export function useForkRecipe() {
   const user = useUser();
   const [forkMutation, { loading: forking }] = useMutation(ForkRecipeDocument, {
     context: { localFirst: true },
-    update: (cache, { data }) => {
-      const payload = appliedPayload(data);
-      // Upsert: the pre-fire write already inserted the edge under this same
-      // id, so the server row upgrades it in place.
-      if (payload) upsertMyRecipesEdge(cache, payload.recipe);
-    },
   });
 
   // Returns the forked recipe's id (for navigation) or null on failure.
@@ -47,6 +36,7 @@ export function useForkRecipe() {
         id: client.cache.identify({ __typename: 'Recipe', id: recipeId }),
         fragment: UseRecipeFormWrites_RecipeFragmentDoc,
         fragmentName: 'useRecipeFormWrites_recipe',
+        optimistic: true,
       });
     if (!source) {
       toastService.error(t('recipes.forkSourceNotLoaded'));
@@ -63,8 +53,6 @@ export function useForkRecipe() {
     }
 
     const id = generateEntityId();
-    // Built before the try: a value block inside one bails the whole function
-    // out of the React Compiler.
     const copy = buildFork(
       {
         ...source,
@@ -80,34 +68,22 @@ export function useForkRecipe() {
           displayName: user.displayName ?? null,
         }
       : null;
-    try {
-      writeLocalRecipe(client.cache, id, copy, createdBy);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Fork Recipe (optimistic)',
-      });
-    }
-
-    const revertCopy = () => {
-      try {
-        revertOptimisticRecipe(client.cache, id);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Recipe fork',
-        });
-      }
+    const inputs: CreateRecipeInputs = {
+      id,
+      recipe: copy,
+      createdBy,
+      ingredientIds: copy.ingredients.map(() => generateEntityId()),
     };
 
-    const settled = await settleMutation(
-      () =>
-        forkMutation({
-          variables: { input: { id: recipeId, newRecipeId: id } },
+    const settled = await pendingWritesOf(client.cache).send(
+      ForkRecipeDocument,
+      { input: { id: recipeId, newRecipeId: id } },
+      write =>
+        settleMutation(() => forkMutation(write), {
+          document: ForkRecipeDocument,
+          fallback: t('recipes.forkFailed'),
         }),
-      {
-        document: ForkRecipeDocument,
-        fallback: t('recipes.forkFailed'),
-        onFailed: revertCopy,
-      },
+      inputs,
     );
 
     // Online success or queued offline — the fork is in My Recipes either way.

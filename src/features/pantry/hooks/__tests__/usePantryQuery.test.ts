@@ -1,10 +1,10 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import {
@@ -13,6 +13,11 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { RootState } from '#store/index';
 import { usePantryQuery } from '../usePantryQuery';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 type MockEdge = { node?: { id?: string } | null } | null;
 type MockConnection = {
@@ -78,6 +83,14 @@ global.requestIdleCallback = jest.fn((cb: IdleRequestCallback) => {
 global.cancelIdleCallback = jest.fn();
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -110,7 +123,8 @@ describe('usePantryQuery', () => {
       },
     });
 
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
     // Once the query resolves, extractNodes returns an array.
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
@@ -131,7 +145,8 @@ describe('usePantryQuery', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });
 
@@ -160,9 +175,8 @@ describe('usePantryQuery', () => {
       },
     });
 
-    await waitFor(() => {
-      expect(result.current.state.pantryItems.length).toBeGreaterThan(0);
-    });
+    await drainTimers();
+    expect(result.current.state.pantryItems.length).toBeGreaterThan(0);
     expect(result.current.state.pantryItems[0]).toMatchObject({
       itemName: 'Milk',
     });
@@ -174,12 +188,11 @@ describe('usePantryQuery', () => {
       mocks: { Query: () => ({ pantry: { id: 'pantry-1' } }) },
     });
 
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
 
     expect(typeof result.current.actions.refetch).toBe('function');
-    await act(async () => {
-      await result.current.actions.refetch();
-    });
+    await drained(() => result.current.actions.refetch());
   });
 
   it('signals pantry query complete when not loading and valid pantryId', async () => {
@@ -187,9 +200,8 @@ describe('usePantryQuery', () => {
       mocks: { Query: () => ({ pantry: { id: 'pantry-1' } }) },
     });
 
-    await waitFor(() => {
-      expect(mockSetIsPantryQueryComplete).toHaveBeenCalledWith(true);
-    });
+    await drainTimers();
+    expect(mockSetIsPantryQueryComplete).toHaveBeenCalledWith(true);
   });
 
   it('resets pantry query complete when pantryId becomes invalid', () => {
@@ -242,13 +254,12 @@ describe('usePantryQuery: consumer options', () => {
       },
     );
 
-    await act(async () => {
-      await result.current.actions.refetch();
-    });
+    await drained(() => result.current.actions.refetch());
     expect(pantry.fired).toHaveLength(0);
 
     rerender({ pantryId: 'pantry-1' });
-    await waitFor(() => expect(pantry.fired).toHaveLength(1));
+    await drainTimers();
+    expect(pantry.fired).toHaveLength(1);
     expect(pantry.fired[0]).toMatchObject({
       id: 'pantry-1',
       itemsFirst: PAGE_SIZE.MAX,
@@ -272,7 +283,8 @@ describe('usePantryQuery: consumer options', () => {
     expect(result.current.state.skipped).toBe(true);
 
     rerender({ skip: false });
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
     expect(result.current.state.skipped).toBe(false);
     expect(Array.isArray(result.current.state.pantryItems)).toBe(true);
   });

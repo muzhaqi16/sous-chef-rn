@@ -12,14 +12,11 @@ import {
   createAddToParentConnectionUpdater,
   skipUnmatchedFilterVariants,
 } from '#/apollo/utils/cacheUpdaters';
+import { hideEntity } from '#/apollo/utils/writeLocalEntity';
 import {
   adjustUnreadNotificationCount,
   clearUnreadNotificationCount,
 } from './notificationBadgeCacheUpdaters';
-import {
-  UseNotificationsOnLaunch_NotificationFragmentDoc,
-  type UseNotificationsOnLaunch_NotificationFragment,
-} from '#features/notifications/hooks/useNotificationsOnLaunch.generated';
 import { isRecord } from '#/utils/isRecord';
 
 /** A notification is awaiting the user only while PENDING or SENT. */
@@ -41,6 +38,7 @@ export function readNotificationStatus(
   let status: NotificationStatus | undefined;
   cache.modify({
     id: cacheId,
+    optimistic: true,
     fields: {
       status: (existing: NotificationStatus) => {
         status = existing;
@@ -73,18 +71,6 @@ export function applyNotificationRead(cache: ApolloCache, id: string): boolean {
   return true;
 }
 
-/** Mark unread, moving the badge only if it was actually read. */
-export function applyNotificationUnread(
-  cache: ApolloCache,
-  id: string,
-): boolean {
-  const status = readNotificationStatus(cache, id);
-  if (status === undefined || isUnreadStatus(status)) return false;
-  writeNotificationStatus(cache, id, NotificationStatus.Sent);
-  adjustUnreadNotificationCount(cache, 1);
-  return true;
-}
-
 /**
  * Evicting leaves a dangling edge in every connection that held it, which the
  * connection's `read` policy filters and counts down on the next read — cheaper
@@ -103,51 +89,24 @@ export function evictNotification(
   return true;
 }
 
-/** A notification's fields plus whether it counted toward the badge. */
-export interface CapturedNotification {
-  data: UseNotificationsOnLaunch_NotificationFragment;
-  wasUnread: boolean;
+/**
+ * Takes a row out from a layer, badge included. The connection's `read` filters
+ * the edge left behind, as it does an evicted row's.
+ */
+export function hideNotification(cache: ApolloCache, id: string): void {
+  const status = readNotificationStatus(cache, id);
+  if (status === undefined) return;
+  if (isUnreadStatus(status)) adjustUnreadNotificationCount(cache, -1);
+  hideEntity(cache, { __typename: 'Notification', id });
 }
 
-/**
- * Reads a notification out before eviction, in the shape the feed selects.
- * `returnPartialData` on purpose: a row that never loaded every field still has
- * to be restorable if the delete is refused, and a strict read returns null.
- */
-export function captureNotification(
+/** Evicts rows a response has settled the badge for, with one gc pass. */
+export function dropNotifications(
   cache: ApolloCache,
-  id: string,
-): CapturedNotification | null {
-  const data =
-    cache.readFragment<UseNotificationsOnLaunch_NotificationFragment>({
-      fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
-      fragmentName: 'useNotificationsOnLaunch_notification',
-      from: { __typename: 'Notification', id },
-      returnPartialData: true,
-    });
-  if (!data?.id) return null;
-  return { data, wasUnread: isUnreadStatus(data.status) };
-}
-
-/**
- * Put captured notifications back, badge included. Only the entity is written:
- * `mergeConnectionByNodeId`'s `read` filters dangling edges without altering
- * what is stored, so the edges revive with the record.
- */
-export function restoreNotifications(
-  cache: ApolloCache,
-  captured: CapturedNotification[],
+  ids: readonly string[],
 ): void {
-  let unreadRestored = 0;
-  captured.forEach(({ data, wasUnread }) => {
-    cache.writeFragment({
-      fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
-      fragmentName: 'useNotificationsOnLaunch_notification',
-      data,
-    });
-    if (wasUnread) unreadRestored += 1;
-  });
-  adjustUnreadNotificationCount(cache, unreadRestored);
+  ids.forEach(id => evictNotification(cache, id, false));
+  cache.gc();
 }
 
 export function applyNotificationRemoved(
@@ -160,9 +119,11 @@ export function applyNotificationRemoved(
   return true;
 }
 
-const addToNotificationsConnection = createAddToParentConnectionUpdater<{
-  id: string;
-}>('User', 'notificationsConnection', 'Notification');
+const addToNotificationsConnection = createAddToParentConnectionUpdater(
+  'User',
+  'notificationsConnection',
+  'Notification',
+);
 
 /**
  * Adds the edge for an already-normalized notification. `cache.modify` runs for
@@ -180,7 +141,7 @@ export function addNotificationToFeed(
   addToNotificationsConnection(
     cache,
     userId,
-    { id },
+    { __typename: 'Notification', id },
     {
       position: 'start',
       skipStoreField: skipUnmatchedFilterVariants({
@@ -197,7 +158,7 @@ export function addNotificationToFeed(
  * mutation returns a summary count and no ids, so the rows must be found here.
  */
 export function cachedUnreadNotificationIds(cache: ApolloCache): string[] {
-  const extracted = cache.extract();
+  const extracted = cache.extract(true);
   if (!isRecord(extracted)) return [];
   return Object.entries(extracted).flatMap(([key, value]) =>
     key.startsWith('Notification:') &&
@@ -212,13 +173,11 @@ export function cachedUnreadNotificationIds(cache: ApolloCache): string[] {
 
 /**
  * Mark every cached notification read and zero the badge.
- * @returns the ids that changed, so a refusal can put exactly those back.
  */
-export function applyAllNotificationsRead(cache: ApolloCache): string[] {
+export function applyAllNotificationsRead(cache: ApolloCache): void {
   const ids = cachedUnreadNotificationIds(cache);
   ids.forEach(id =>
     writeNotificationStatus(cache, id, NotificationStatus.Read),
   );
   if (ids.length > 0) clearUnreadNotificationCount(cache);
-  return ids;
 }

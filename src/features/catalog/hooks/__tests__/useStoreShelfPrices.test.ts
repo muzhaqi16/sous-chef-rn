@@ -1,11 +1,12 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { PriceBasis } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { formatMonthDay } from '#/utils/formatters/date';
@@ -28,6 +29,8 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 
 type Connection = UseStoreShelfPrices_ItemFragment['storePricesConnection'];
 type StorePrice = Connection['edges'][number]['node'];
+type SimilarPrice =
+  UseStoreShelfPrices_ItemFragment['similarStorePrices'][number];
 
 const USD: StorePrice['currency'] = {
   __typename: 'Currency',
@@ -45,6 +48,11 @@ const PIECE: StorePrice['unit'] = asAbbreviation({
   __typename: 'Unit',
   id: 'u-pc',
   symbol: 'pc',
+});
+const OZ: SimilarPrice['unit'] = asAbbreviation({
+  __typename: 'Unit',
+  id: 'u-oz',
+  symbol: 'oz',
 });
 const SEEN = '2026-10-16T18:11:52.922Z';
 
@@ -86,10 +94,37 @@ const connectionOf = (nodes: StorePrice[]): Connection => ({
   edges: nodes.map(node => ({ __typename: 'ItemStorePriceEdge', node })),
 });
 
+/** Appleton Farms bacon, 12 oz, at $4.49: $13.20 a kilogram. */
+const similarAt = (
+  at: SimilarPrice['store'],
+  overrides: Partial<SimilarPrice> = {},
+): SimilarPrice => ({
+  __typename: 'SimilarStorePrice',
+  store: at,
+  product: {
+    __typename: 'Item',
+    version: 1,
+    id: 'item-appleton',
+    name: 'Appleton Farms Bacon',
+  },
+  price: 4.49,
+  unit: PIECE,
+  packageNetWeight: 12,
+  packageNetWeightUnit: OZ,
+  normalizedPrice: 13.2,
+  basis: PriceBasis.PerKg,
+  currency: USD,
+  ...overrides,
+});
+
 const pricesMock = (nodes: StorePrice[]) =>
   recordMock(StoreShelfPricesDocument, {
     data: {
-      item: { id: 'item-1', storePricesConnection: connectionOf(nodes) },
+      item: {
+        id: 'item-1',
+        storePricesConnection: connectionOf(nodes),
+        similarStorePrices: [],
+      },
     },
   });
 
@@ -97,21 +132,28 @@ const pricesMock = (nodes: StorePrice[]) =>
 const cacheWith = (
   nodes: StorePrice[],
   targetStoreId: string | null = null,
+  similar: SimilarPrice[] = [],
 ) => {
   const cache = makeCache();
-  cache.writeFragment({
-    id: cache.identify({ __typename: 'Item', id: 'item-1' }),
+  seedFragment(cache, {
+    id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
     fragment: UseStoreShelfPrices_ItemFragmentDoc,
     fragmentName: 'useStoreShelfPrices_item',
     data: {
       __typename: 'Item',
+      version: 1,
       id: 'item-1',
       storePricesConnection: connectionOf(nodes),
+      similarStorePrices: similar,
     },
   });
   if (targetStoreId) {
-    cache.writeFragment({
-      id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
+    seedFragment(cache, {
+      id: cache.identify({
+        __typename: 'ShoppingList',
+        version: 1,
+        id: 'list-1',
+      }),
       fragment: UseStoreShelfPrices_ListFragmentDoc,
       fragmentName: 'useStoreShelfPrices_list',
       data: {
@@ -132,7 +174,8 @@ const rowsFrom = async (
     () => useStoreShelfPrices('item-1', 'list-1'),
     { cache: cacheWith(nodes, targetStoreId) },
   );
-  await waitFor(() => expect(result.current.rows).toHaveLength(nodes.length));
+  await drainTimers();
+  expect(result.current.rows).toHaveLength(nodes.length);
   return result.current.rows;
 };
 
@@ -141,6 +184,14 @@ const firstRow = async (overrides: Partial<StorePrice>) => {
   if (!row) throw new Error('no row');
   return row;
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.mocked(useFeatureFlag).mockReturnValue(true);
@@ -159,7 +210,8 @@ describe('useStoreShelfPrices', () => {
       { operationMocks: [answer.mock] },
     );
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(3));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(3);
     expect(result.current.rows.map(row => row.storeName)).toEqual([
       'ALDI',
       'Giant Eagle',
@@ -175,7 +227,8 @@ describe('useStoreShelfPrices', () => {
       { cache: cacheWith([priceAt(KROGER)]), operationMocks: [answer.mock] },
     );
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
     expect(answer.fired).toEqual([]);
   });
 
@@ -185,24 +238,26 @@ describe('useStoreShelfPrices', () => {
       () => useStoreShelfPrices('item-1', 'list-1'),
       { cache },
     );
-    await waitFor(() => expect(result.current.rows).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(2);
 
-    cache.writeFragment({
-      id: cache.identify({ __typename: 'Item', id: 'item-1' }),
+    seedFragment(cache, {
+      id: cache.identify({ __typename: 'Item', version: 1, id: 'item-1' }),
       fragment: UseStoreShelfPrices_ItemFragmentDoc,
       fragmentName: 'useStoreShelfPrices_item',
       data: {
         __typename: 'Item',
+        version: 1,
         id: 'item-1',
         storePricesConnection: connectionOf([priceAt(GIANT_EAGLE)]),
+        similarStorePrices: [],
       },
     });
 
-    await waitFor(() =>
-      expect(result.current.rows.map(row => row.storeName)).toEqual([
-        'Giant Eagle',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.rows.map(row => row.storeName)).toEqual([
+      'Giant Eagle',
+    ]);
   });
 
   describe('the price', () => {
@@ -368,10 +423,15 @@ describe('useStoreShelfPrices', () => {
       const answer = pricesMock([priceAt(KROGER)]);
       const { result } = renderHookWithApollo(
         () => useStoreShelfPrices('item-1', listId),
-        { cache: cacheWith([priceAt(KROGER)]), operationMocks: [answer.mock] },
+        {
+          cache: cacheWith([priceAt(KROGER)], null, [similarAt(ALDI)]),
+          operationMocks: [answer.mock],
+        },
       );
       // Rendering settles before any request could be sent.
-      await waitFor(() => expect(result.current.rows).toEqual([]));
+      await drainTimers();
+      expect(result.current.rows).toEqual([]);
+      expect(result.current.similarRows).toEqual([]);
       expect(answer.fired).toEqual([]);
     };
 
@@ -393,6 +453,81 @@ describe('useStoreShelfPrices', () => {
     });
   });
 
+  // Oscar Mayer bacon 16 oz at Giant Eagle ($15.41/kg) and Kroger ($16.51/kg).
+  describe('similar products', () => {
+    const oscarMayer = [
+      priceAt(GIANT_EAGLE, {
+        price: 6.99,
+        normalizedPrice: 15.41,
+        normalizedBasis: PriceBasis.PerKg,
+      }),
+      priceAt(KROGER, {
+        price: 7.49,
+        normalizedPrice: 16.51,
+        normalizedBasis: PriceBasis.PerKg,
+      }),
+    ];
+    const similarFrom = async (similar: SimilarPrice[]) => {
+      const { result } = renderHookWithApollo(
+        () => useStoreShelfPrices('item-1', 'list-1'),
+        { cache: cacheWith(oscarMayer, null, similar) },
+      );
+      await drainTimers();
+      expect(result.current.rows).toHaveLength(2);
+      return result.current;
+    };
+
+    it("follow the item's own stores, naming the product, its size and its price per kg", async () => {
+      const { rows, similarRows } = await similarFrom([similarAt(ALDI)]);
+
+      expect(rows.map(row => [row.storeName, row.isCheapest])).toEqual([
+        ['Giant Eagle', true],
+        ['Kroger - Weirton', false],
+      ]);
+      expect(similarRows).toEqual([
+        {
+          storeId: 's-aldi',
+          storeName: 'ALDI',
+          product: 'Appleton Farms Bacon · 12\u00a0oz', // a size never splits
+          price: t('labels.pricePer.unit', { price: usd(4.49), unit: 'pc' }),
+          perBasis: t('labels.pricePer.kg', { price: usd(13.2) }),
+          mightBeCheaper: true,
+        },
+      ]);
+    });
+
+    it('show none for a line naming only a food', async () => {
+      expect((await similarFrom([])).similarRows).toEqual([]);
+    });
+
+    it('leave out a product dearer per kg than the item at the same store', async () => {
+      const { similarRows } = await similarFrom([
+        similarAt(GIANT_EAGLE, { normalizedPrice: 18 }),
+      ]);
+
+      expect(similarRows).toEqual([]);
+    });
+
+    it('never read "might be cheaper" against another basis', async () => {
+      const { similarRows } = await similarFrom([
+        similarAt(ALDI, { basis: PriceBasis.Each, normalizedPrice: 4.49 }),
+      ]);
+
+      expect(similarRows[0]?.mightBeCheaper).toBe(false);
+    });
+
+    it('word a piece at its own per-piece price once, as the store rows do', async () => {
+      const { similarRows } = await similarFrom([
+        similarAt(ALDI, { basis: PriceBasis.Each, normalizedPrice: 4.49 }),
+      ]);
+
+      expect(similarRows[0]).toMatchObject({
+        price: t('labels.pricePer.each', { price: usd(4.49) }),
+        perBasis: null,
+      });
+    });
+  });
+
   it('shows no rows when the request fails', async () => {
     const failed = recordMock(StoreShelfPricesDocument, {
       error: new Error('Network request failed'),
@@ -401,7 +536,8 @@ describe('useStoreShelfPrices', () => {
       () => useStoreShelfPrices('item-1', 'list-1'),
       { operationMocks: [failed.mock] },
     );
-    await waitFor(() => expect(failed.fired).toHaveLength(1));
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
     expect(result.current.rows).toEqual([]);
   });
 });

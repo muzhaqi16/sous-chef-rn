@@ -28,7 +28,13 @@ const BACON: HouseholdAlert = {
 
 describe('HouseholdRecipeSummary', () => {
   it('names each member and what the recipe meets, then says to check the label', () => {
-    render(<HouseholdRecipeSummary check="checked" alerts={[PEANUT, BACON]} />);
+    render(
+      <HouseholdRecipeSummary
+        check="checked"
+        alerts={[PEANUT, BACON]}
+        restrictionsApply
+      />,
+    );
 
     expect(screen.getByText('Tani')).toBeTruthy();
     expect(
@@ -43,7 +49,13 @@ describe('HouseholdRecipeSummary', () => {
   });
 
   it('shows the alerts it last received offline, marked as possibly out of date', () => {
-    render(<HouseholdRecipeSummary check="stale" alerts={[PEANUT]} />);
+    render(
+      <HouseholdRecipeSummary
+        check="stale"
+        alerts={[PEANUT]}
+        restrictionsApply
+      />,
+    );
 
     expect(screen.getByText('Tani')).toBeTruthy();
     expect(
@@ -54,34 +66,75 @@ describe('HouseholdRecipeSummary', () => {
   });
 
   it('says a never-checked recipe needs a connection, never showing nothing', () => {
-    render(<HouseholdRecipeSummary check="unchecked" alerts={[]} />);
+    render(
+      <HouseholdRecipeSummary
+        check="unchecked"
+        alerts={[]}
+        restrictionsApply
+      />,
+    );
 
     expect(screen.getByTestId(recipesTestIDs.householdUnchecked)).toBeTruthy();
     expect(screen.getByText(t('dietaryAlerts.needsConnection'))).toBeTruthy();
   });
 
   it('says the check failed, not that it needs a connection, when online', () => {
-    render(<HouseholdRecipeSummary check="failed" alerts={[]} />);
+    render(
+      <HouseholdRecipeSummary check="failed" alerts={[]} restrictionsApply />,
+    );
 
     expect(screen.getByTestId(recipesTestIDs.householdUnchecked)).toBeTruthy();
     expect(screen.getByText(t('dietaryAlerts.checkFailed'))).toBeTruthy();
     expect(screen.queryByText(t('dietaryAlerts.needsConnection'))).toBeNull();
   });
 
-  it('shows nothing when nothing was found, never calling the recipe safe', () => {
-    render(<HouseholdRecipeSummary check="checked" alerts={[]} />);
+  it('shows no card when nothing was flagged, never calling the recipe safe', () => {
+    render(
+      <HouseholdRecipeSummary check="checked" alerts={[]} restrictionsApply />,
+    );
 
     expect(screen.queryByTestId(recipesTestIDs.householdSummary)).toBeNull();
+    expect(screen.queryByTestId(recipesTestIDs.householdStale)).toBeNull();
     expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
+    expect(screen.queryByText(/safe|-free|no allergens/i)).toBeNull();
+  });
+
+  it('notes an earlier answer that flagged nothing, without the label caveat', () => {
+    render(
+      <HouseholdRecipeSummary check="stale" alerts={[]} restrictionsApply />,
+    );
+
+    expect(screen.getByTestId(recipesTestIDs.householdStale)).toBeTruthy();
+    expect(screen.getByText(t('dietaryAlerts.stale'))).toBeTruthy();
+    expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
+  });
+
+  it('shows nothing on an earlier answer when no restriction can alert', () => {
+    render(
+      <HouseholdRecipeSummary
+        check="stale"
+        alerts={[]}
+        restrictionsApply={false}
+      />,
+    );
+
+    expect(screen.queryByTestId(recipesTestIDs.householdSummary)).toBeNull();
+    expect(screen.queryByTestId(recipesTestIDs.householdStale)).toBeNull();
   });
 
   it('shows nothing while the check is out, or with no home to check against', () => {
     const { rerender } = render(
-      <HouseholdRecipeSummary check="loading" alerts={[PEANUT]} />,
+      <HouseholdRecipeSummary
+        check="loading"
+        alerts={[PEANUT]}
+        restrictionsApply
+      />,
     );
     expect(screen.queryByTestId(recipesTestIDs.householdSummary)).toBeNull();
 
-    rerender(<HouseholdRecipeSummary check="none" alerts={[]} />);
+    rerender(
+      <HouseholdRecipeSummary check="none" alerts={[]} restrictionsApply />,
+    );
     expect(screen.queryByTestId(recipesTestIDs.householdSummary)).toBeNull();
     expect(screen.queryByTestId(recipesTestIDs.householdUnchecked)).toBeNull();
   });

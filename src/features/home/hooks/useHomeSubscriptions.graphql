@@ -3,10 +3,12 @@
 # join it.
 query HomeInvitesForEvent($id: ID!) {
   home(id: $id) {
+    version
     id
     invitesConnection(first: 20) {
       edges {
         node {
+          version
           id
           ...HomeInviteReaders
         }

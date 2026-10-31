@@ -9,6 +9,7 @@ export const readDefaultPantryId = (cache: ApolloCache, homeId: string) => {
   const home = cache.readFragment({
     id: cacheId,
     fragment: HomePantries_HomeFragmentDoc,
+    optimistic: true,
   });
   return defaultPantryOf(home)?.id ?? null;
 };

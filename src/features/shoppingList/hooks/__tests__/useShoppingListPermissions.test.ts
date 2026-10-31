@@ -5,11 +5,11 @@
 // — so a default of all-allowed hands a viewer the add bar, swipe-to-delete and
 // reorder, and offline those writes are queued and refused later.
 
-import { act, waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained } from '#/test-utils/drainTimers';
 import {
   CollaboratorRole,
   CollaboratorStatus,
@@ -27,6 +27,14 @@ const renderPermissions = (
   renderHookWithApollo(() => useShoppingListPermissions(listDetails, userId), {
     operationMocks: [],
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useShoppingListPermissions', () => {
   it.each([
@@ -103,7 +111,7 @@ describe('useShoppingListPermissions', () => {
     );
     expect(result.current.canAddItems).toBe(false);
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({
           __typename: 'ShoppingListCollaborator',
@@ -113,7 +121,6 @@ describe('useShoppingListPermissions', () => {
       });
       await Promise.resolve();
     });
-
-    await waitFor(() => expect(result.current.canAddItems).toBe(true));
+    expect(result.current.canAddItems).toBe(true);
   });
 });

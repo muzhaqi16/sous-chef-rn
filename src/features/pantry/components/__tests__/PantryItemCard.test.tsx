@@ -2,7 +2,11 @@
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { act, screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { PantryItemCard } from '../PantryItemCard';
 import { StatusLine } from '#components/atoms/StatusLine';
@@ -23,6 +27,11 @@ import {
   asAbbreviation,
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 jest.mock('react-native-worklets', () => ({
   createWorkletRuntime: jest.fn(),
@@ -292,7 +301,7 @@ function buildItem(
 
 function buildCache(item: PantryItemCard_PantryItemFragment) {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id:
       cache.identify({ __typename: item.__typename, id: item.id }) ??
       `PantryItem:${item.id}`,
@@ -320,6 +329,14 @@ function renderCard(
     { cache },
   );
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('PantryItemCard', () => {
   beforeEach(() => {
@@ -423,9 +440,9 @@ describe('PantryItemCard', () => {
     renderCard({ expiresOn: toDateKey(expires) });
     expect(screen.getByText('Expires in 3 days')).toBeTruthy();
 
-    await act(() => changeLanguage('es'));
+    await drained(() => changeLanguage('es'));
     const inSpanish = screen.queryByText('Caduca en 3 días');
-    await act(() => changeLanguage('en'));
+    await drained(() => changeLanguage('en'));
 
     expect(inSpanish).toBeTruthy();
   });
@@ -592,7 +609,8 @@ describe('PantryItemCard', () => {
         });
       });
 
-      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('1.36 kg')).toBeTruthy();
     });
 
     it('shows it as stored once a local use has moved it', () => {

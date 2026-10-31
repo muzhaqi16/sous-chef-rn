@@ -23,7 +23,10 @@ export const setupBadgeSync = (): (() => void) => {
   const readAndApply = (): void => {
     // A miss reads as null rather than 0; that distinction is what removes the
     // need for a hydration gate.
-    const data = client.cache.readQuery({ query: NotificationSummaryDocument });
+    const data = client.cache.readQuery({
+      query: NotificationSummaryDocument,
+      optimistic: true,
+    });
 
     const count = data?.notificationSummary.unreadCount;
     // A miss before anything is applied means "not loaded yet"; a miss AFTER is

@@ -1,9 +1,11 @@
-import { InMemoryCache, gql } from '@apollo/client';
+import { type InMemoryCache, gql } from '@apollo/client';
 import {
   UnreadVersionError,
   chainEntityWrite,
   chainVersionedWrite,
 } from '../entityWriteChain';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 
 const PlanVersion = gql`
   fragment EntityWriteChainVersion on MealPlan {
@@ -15,13 +17,13 @@ const PlanVersion = gql`
 const plan = { __typename: 'MealPlan', id: 'plan-1' };
 
 const cacheAt = (version: number) => {
-  const cache = new InMemoryCache();
+  const cache = makeCache();
   writeVersion(cache, version);
   return cache;
 };
 
 const writeVersion = (cache: InMemoryCache, version: number) =>
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: PlanVersion,
     data: { ...plan, version },
   });
@@ -139,7 +141,7 @@ describe('chainVersionedWrite', () => {
   it('rejects with UnreadVersionError and never sends for a row the cache does not hold', async () => {
     const send = jest.fn(() => Promise.resolve('sent'));
 
-    const write = chainVersionedWrite(new InMemoryCache(), plan, send);
+    const write = chainVersionedWrite(makeCache(), plan, send);
 
     await expect(write).rejects.toBeInstanceOf(UnreadVersionError);
     await expect(write).rejects.toMatchObject({
@@ -150,8 +152,8 @@ describe('chainVersionedWrite', () => {
   });
 
   it('rejects and never sends for a row cached without its version', async () => {
-    const cache = new InMemoryCache();
-    cache.writeFragment({
+    const cache = makeCache();
+    seedFragment(cache, {
       fragment: PlanName,
       data: { ...plan, name: 'Week 1' },
     });
@@ -164,8 +166,8 @@ describe('chainVersionedWrite', () => {
   });
 
   it('rejects and never sends for a row whose cached version is null', async () => {
-    const cache = new InMemoryCache();
-    cache.writeFragment({
+    const cache = makeCache();
+    seedFragment(cache, {
       fragment: PlanVersion,
       data: { ...plan, version: null },
     });
@@ -178,7 +180,7 @@ describe('chainVersionedWrite', () => {
   });
 
   it('sends the next write once the version is read, after one it refused', async () => {
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     const send = jest.fn((version: number) => Promise.resolve(version));
 
     const unread = chainVersionedWrite(cache, plan, send);

@@ -17,6 +17,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   brand {
     id
     name
+    version
   }
   category
   createdAt
@@ -53,6 +54,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
       ...ShownNutritionReaders
     }
     storeDepartment
+    version
   }
   itemName
   lastEditedBy {
@@ -104,6 +106,7 @@ fragment ShoppingListItemReaders on ShoppingListItem {
   quantityInput
   shoppingList {
     id
+    version
   }
   sortOrder
   source {

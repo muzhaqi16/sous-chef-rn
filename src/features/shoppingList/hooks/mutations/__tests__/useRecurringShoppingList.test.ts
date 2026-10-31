@@ -36,6 +36,7 @@ const readRecurring = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: UseRecurringShoppingList_ListFragmentDoc,
     fragmentName: 'useRecurringShoppingList_list',
+    optimistic: true,
   });
 
 describe('useRecurringShoppingList', () => {
@@ -137,6 +138,7 @@ describe('useRecurringShoppingList', () => {
     const COPYABLE = {
       __typename: 'ShoppingList',
       id: 'list-1',
+      version: 1,
       name: 'Weekly Shop',
       description: null,
       budgetAmount: null,
@@ -155,6 +157,7 @@ describe('useRecurringShoppingList', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-1',
+              version: 1,
               itemName: 'Tomatoes',
               quantity: 2,
               quantityInput: '2',
@@ -162,7 +165,7 @@ describe('useRecurringShoppingList', () => {
               notes: null,
               unitName: 'pc',
               sortOrder: 'a0',
-              item: { __typename: 'Item', id: 'item-1' },
+              item: { __typename: 'Item', id: 'item-1', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-1' },
             },
           },
@@ -181,6 +184,7 @@ describe('useRecurringShoppingList', () => {
             node: {
               __typename: 'ShoppingListItem',
               id: 'src-2',
+              version: 1,
               itemName: 'Milk',
               quantity: 1,
               quantityInput: '1',
@@ -188,7 +192,7 @@ describe('useRecurringShoppingList', () => {
               notes: null,
               unitName: 'l',
               sortOrder: 'a1',
-              item: { __typename: 'Item', id: 'item-2' },
+              item: { __typename: 'Item', id: 'item-2', version: 1 },
               unit: { __typename: 'Unit', id: 'unit-2' },
             },
           },
@@ -293,7 +297,7 @@ describe('useRecurringShoppingList', () => {
 
       // The pointer moved in the cache too, before any server answer.
       expect(readRecurring(cache)?.recurringPattern).toBe('WEEKLY');
-      const copied = cache.extract()[`ShoppingList:${newId!}`];
+      const copied = cache.extract(true)[`ShoppingList:${newId!}`];
       expect(copied).toBeDefined();
     });
 
@@ -371,6 +375,7 @@ describe('useRecurringShoppingList', () => {
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
         fragment: UseRecurringShoppingList_ListFragmentDoc,
         fragmentName: 'useRecurringShoppingList_list',
+        optimistic: true,
       })?.nextRecurringDate;
       expect(pointer).toBe(RECURRING.nextRecurringDate);
     });
@@ -400,6 +405,7 @@ describe('useRecurringShoppingList', () => {
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
         fragment: UseRecurringShoppingList_ListFragmentDoc,
         fragmentName: 'useRecurringShoppingList_list',
+        optimistic: true,
       })?.nextRecurringDate;
       expect(pointer).not.toBe(RECURRING.nextRecurringDate);
     });

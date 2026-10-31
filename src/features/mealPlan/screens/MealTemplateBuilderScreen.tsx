@@ -19,6 +19,7 @@ import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';
 import { useMealTemplateForEdit } from '#features/mealPlan/hooks/useMealTemplateForEdit';
+import { useCooksFor } from '#features/profile/hooks/useCooksFor';
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { generateId } from '#/utils/generateId';
 import { SectionHeader } from '#components/atoms/SectionHeader';
@@ -89,9 +90,10 @@ export const MealTemplateBuilderScreen: React.FC<
 
   // Two forms on one screen: the template's own metadata, and the sub-form that
   // adds one meal to it.
+  const cooksFor = useCooksFor();
   const templateForm = useForm<TemplateFormValues>({
     resolver: yupResolver(templateSchema),
-    defaultValues: templateDefaults(TemplateCategory.Weekly),
+    defaultValues: templateDefaults(TemplateCategory.Weekly, cooksFor),
     mode: 'onTouched',
   });
 
@@ -100,10 +102,25 @@ export const MealTemplateBuilderScreen: React.FC<
 
   const itemForm = useForm<TemplateItemFormValues>({
     resolver: yupResolver(templateItemSchema),
-    defaultValues: templateItemDefaults(MealType.Breakfast),
+    defaultValues: templateItemDefaults(MealType.Breakfast, cooksFor),
     mode: 'onTouched',
   });
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  // The profile can answer after the forms mounted: it fills the servings a
+  // new template and a new meal start with, only while the user has not
+  // changed them and no saved meal is loaded.
+  useEffect(() => {
+    if (cooksFor === null) return;
+    if (!isEdit && !templateForm.getFieldState('defaultServings').isDirty) {
+      templateForm.setValue('defaultServings', String(cooksFor));
+    }
+    if (
+      editingKey === null &&
+      !itemForm.getFieldState('itemServings').isDirty
+    ) {
+      itemForm.setValue('itemServings', String(cooksFor));
+    }
+  }, [cooksFor, isEdit, editingKey, templateForm, itemForm]);
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
   const [recipePickerVisible, setRecipePickerVisible] = useState(false);
   const [itemRecipeId, itemRecipeName, itemMealType] = useWatch({
@@ -141,7 +158,7 @@ export const MealTemplateBuilderScreen: React.FC<
     : draftItems;
 
   const resetItemForm = () => {
-    itemForm.reset(templateItemDefaults(MealType.Breakfast));
+    itemForm.reset(templateItemDefaults(MealType.Breakfast, cooksFor));
     setEditingKey(null);
     setEditingServerId(null);
   };

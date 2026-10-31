@@ -1,10 +1,10 @@
 import {
   adoptServerEntityId,
   createAddToParentConnectionUpdater,
-  createRemoveFromParentConnectionUpdater,
-  safeEvict,
+  type ConnectionData,
 } from '#/apollo/utils/cacheUpdaters';
 import type { ApolloCache, Reference } from '@apollo/client';
+import type { ModifierDetails } from '@apollo/client/cache';
 import {
   SavedRecipeFoldersDocument,
   type SavedRecipeFoldersQuery,
@@ -57,15 +57,30 @@ const addToSavedRecipes = createAddToParentConnectionUpdater<{
   __typename: 'SavedRecipe';
   id: string;
 }>('User', 'savedRecipesConnection', 'SavedRecipe');
-const removeFromSavedRecipes = createRemoveFromParentConnectionUpdater(
-  'User',
-  'savedRecipesConnection',
-  'SavedRecipe',
-);
+
+/** The saved list as the cache stores it: `null` where the server said so. */
+type StoredList = ConnectionData | null | undefined;
 
 /** The signed-in user's id, once anything has cached `me`. */
 export const readViewerId = (cache: ApolloCache): string | null =>
-  cache.readQuery({ query: FavoritesViewerDocument })?.me?.id ?? null;
+  cache.readQuery({ query: FavoritesViewerDocument, optimistic: true })?.me
+    ?.id ?? null;
+
+/** Offers a folder a saved recipe now sits in. */
+export const offerSavedFolder = (cache: ApolloCache, folder: string): void => {
+  cache.updateQuery<SavedRecipeFoldersQuery>(
+    { query: SavedRecipeFoldersDocument },
+    existing => {
+      if (!existing || existing.savedRecipeFolders.includes(folder)) {
+        return existing;
+      }
+      return {
+        ...existing,
+        savedRecipeFolders: [...existing.savedRecipeFolders, folder],
+      };
+    },
+  );
+};
 
 /** The `SavedRecipe` a save's response names, read off the written row. */
 export interface SavedFavorite {
@@ -75,9 +90,9 @@ export interface SavedFavorite {
 }
 
 /**
- * Settles a save the server answered, in the foreground or on replay: the
- * saved row is listed, its folder offered, and a save the server converged on
- * an existing row moves off the minted one. Running it twice equals once.
+ * Settles a save the server answered: the saved row is listed, its folder
+ * offered, and a save the server converged on an existing row moves off the
+ * minted one.
  */
 export const linkSavedFavorite = (
   cache: ApolloCache,
@@ -86,29 +101,13 @@ export const linkSavedFavorite = (
 ): void => {
   const viewerId = readViewerId(cache);
   if (viewerId) {
-    addToSavedRecipes(
-      cache,
-      viewerId,
-      { __typename: 'SavedRecipe', id: saved.id },
-      { position: 'end' },
-    );
+    addToSavedRecipes(cache, viewerId, {
+      __typename: 'SavedRecipe',
+      id: saved.id,
+    });
   }
 
-  const { folder } = saved;
-  if (folder) {
-    cache.updateQuery<SavedRecipeFoldersQuery>(
-      { query: SavedRecipeFoldersDocument },
-      existing => {
-        if (!existing || existing.savedRecipeFolders.includes(folder)) {
-          return existing;
-        }
-        return {
-          ...existing,
-          savedRecipeFolders: [...existing.savedRecipeFolders, folder],
-        };
-      },
-    );
-  }
+  if (saved.folder) offerSavedFolder(cache, saved.folder);
 
   // After the server row is listed, so gc does not collect it.
   if (clientId && saved.id !== clientId) {
@@ -117,27 +116,23 @@ export const linkSavedFavorite = (
 };
 
 /**
- * Writes the optimistic favorite and returns its undo. Three writes reverted
- * together: the `SavedRecipe` entity under the client-minted id,
- * `Recipe.savedDetails` pointed at it (the heart), and its `MySavedRecipes`
- * edge (the saved list).
+ * Writes a local favorite: the `SavedRecipe` under its minted id, whole so the
+ * edge and `savedDetails` resolve fully offline, `Recipe.savedDetails` pointed
+ * at it (the heart), and its `MySavedRecipes` edge (the saved list). The recipe
+ * is the cached one; an uncached one gets neutral fields until a refetch.
  */
 export const writeLocalFavorite = (
   cache: ApolloCache,
   savedRecipeId: string,
   recipeId: string,
   saveOptions: SaveToFavoritesOptions | undefined,
-): (() => void) => {
+  now: string,
+): void => {
   const recipeCacheId = cache.identify({
     __typename: 'Recipe',
     id: recipeId,
   });
-  const now = new Date().toISOString();
 
-  // (a) The whole row, so the edge and savedDetails resolve even fully
-  //     offline, where no response ever arrives to materialize it. The recipe
-  //     is the cached one; an uncached one gets neutral fields until the
-  //     post-replay refetch.
   writeLocalEntity(cache, {
     fragment: Favorites_RowFragmentDoc,
     fragmentName: 'favorites_row',
@@ -156,14 +151,6 @@ export const writeLocalFavorite = (
     },
   });
 
-  // (b) Point Recipe.savedDetails at the new SavedRecipe, snapshotting the
-  //     previous one for revert. The read yields data, not a reference.
-  const savedDetailsSnapshot = recipeCacheId
-    ? cache.readFragment({
-        id: recipeCacheId,
-        fragment: Favorites_SavedDetailsFragmentDoc,
-      })?.savedDetails ?? null
-    : null;
   if (recipeCacheId) {
     cache.writeFragment({
       id: recipeCacheId,
@@ -176,8 +163,6 @@ export const writeLocalFavorite = (
     });
   }
 
-  // (c) List the row first in the saved list; the id is minted here, so the
-  //     undo removes exactly the edge this added.
   const viewerId = readViewerId(cache);
   if (viewerId) {
     addToSavedRecipes(cache, viewerId, {
@@ -185,20 +170,47 @@ export const writeLocalFavorite = (
       id: savedRecipeId,
     });
   }
+};
 
-  return () => {
-    if (viewerId) removeFromSavedRecipes(cache, viewerId, savedRecipeId);
-    if (recipeCacheId) {
-      // `modify` stores what it is given as is: a plain object stays embedded.
-      cache.modify<{ savedDetails: Reference | null }>({
-        id: recipeCacheId,
-        fields: {
-          savedDetails: (_, { toReference }) =>
-            savedDetailsSnapshot && (toReference(savedDetailsSnapshot) ?? null),
+/**
+ * Drops a recipe's saved edge from every cached variant of the list and clears
+ * `Recipe.savedDetails`. A held total falls by one whether or not the edge is
+ * in a loaded page: the server's count does. One never held stays absent, or
+ * the next query selecting it would read a made-up count as a cache hit.
+ */
+export const dropFavorite = (cache: ApolloCache, recipeId: string): void => {
+  const viewerId = readViewerId(cache);
+  const viewerCacheId = viewerId
+    ? cache.identify({ __typename: 'User', id: viewerId })
+    : undefined;
+  if (viewerCacheId) {
+    cache.modify({
+      id: viewerCacheId,
+      fields: {
+        savedRecipesConnection: (
+          existing: StoredList,
+          { readField }: ModifierDetails,
+        ) => {
+          if (!existing) return existing;
+          const { totalCount } = existing;
+          return {
+            ...existing,
+            edges: (existing.edges ?? []).filter(
+              edge => readField('recipeId', edge.node) !== recipeId,
+            ),
+            ...(typeof totalCount === 'number' && {
+              totalCount: Math.max(0, totalCount - 1),
+            }),
+          };
         },
-      });
-    }
-    // Releases the retain `writeLocalEntity` took, which a bare evict keeps.
-    safeEvict(cache, 'SavedRecipe', savedRecipeId);
-  };
+      },
+    });
+  }
+  const recipeCacheId = cache.identify({ __typename: 'Recipe', id: recipeId });
+  if (recipeCacheId) {
+    cache.modify<{ savedDetails: Reference | null }>({
+      id: recipeCacheId,
+      fields: { savedDetails: () => null },
+    });
+  }
 };

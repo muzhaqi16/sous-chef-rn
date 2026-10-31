@@ -253,6 +253,16 @@ const ACTION_CALLER_SYNTAX = [
   },
 ];
 
+const FIELD_POLICY_SYNTAX = [
+  {
+    id: 'fieldPolicyReadsRowId',
+    selector:
+      "CallExpression:matches([callee.name='readField'], [callee.property.name='readField'])[arguments.0.value='id']",
+    message:
+      "A field policy's `merge` runs before the rows of the same answer are stored, so `readField('id', row)` is undefined for a row that selects its parent, and the row is dropped. Read the id from the reference: `readEdgeNodeId` in src/apollo/cacheFieldPolicies.ts. See docs/verified-library-behaviour.md.",
+  },
+];
+
 // Test-suite hygiene. A separate list because the production entries are off
 // for tests, and one rule id cannot carry both sets.
 const TEST_SYNTAX = [
@@ -269,6 +279,26 @@ const TEST_SYNTAX = [
       'CallExpression[callee.object.name="jest"][callee.property.name="mock"][arguments.0.value="@apollo/client/react"]',
     message:
       'Use renderHookWithApollo / renderWithApollo from __tests__/helpers/apolloMockProvider.tsx instead. Direct jest.mock of @apollo/client/react couples tests to operation names, bypasses the real cache, and breaks under refactors.',
+  },
+  {
+    id: 'rawCacheSeed',
+    selector: 'CallExpression[callee.property.name=/^write(Query|Fragment)$/]',
+    message:
+      'Seed with seedQuery / seedFragment from __tests__/helpers/apolloMockProvider: they complete `data` from the SDL as a mock is, so a seed states only what the test asserts on and a field a query gains breaks no test. A raw write takes every selected field by hand.',
+  },
+  {
+    id: 'fixedSleep',
+    selector:
+      "NewExpression[callee.name='Promise'] CallExpression[callee.name='setTimeout']",
+    message:
+      'A promise a timer resolves makes the result depend on how fast the worker is. Await the thing itself (the mutation, `loadMore`, `whenIdle()`), or run the clock the test drives with `jest.useFakeTimers()` and `drainTimers` from __tests__/helpers/drainTimers; a held mock sets the order of answers.',
+  },
+  {
+    id: 'realTimeWait',
+    selector:
+      "ImportDeclaration[source.value='@testing-library/react-native'] ImportSpecifier[imported.name=/^waitFor/], CallExpression[callee.property.name=/^find(All)?By[A-Z]/], CallExpression[callee.name=/^find(All)?By[A-Z]/]",
+    message:
+      "`waitFor` and `findBy*` wait on real time, so the worker can still decide the result. Await the thing itself, or under `jest.useFakeTimers()` use `drainTimers` or `drained` from __tests__/helpers/drainTimers, then a plain query. A drain runs past a state before the end, a countdown and the read fence's `MOST_WAITED_MS`: for the window while a write waits on a read, stop short of it with `advanceTimersByTimeAsync`.",
   },
   {
     id: 'bareInMemoryCache',
@@ -299,6 +329,10 @@ const restrictedSyntaxForFeatureHooks = ({ allow = [], add = [] } = {}) =>
 const restrictedSyntaxForActionCallers = ({ allow = [], add = [] } = {}) =>
   entries([...PRODUCTION_SYNTAX, ...ACTION_CALLER_SYNTAX], allow, add);
 
+/** The production set plus the bans that hold in a cache field policy. */
+const restrictedSyntaxForFieldPolicies = ({ allow = [], add = [] } = {}) =>
+  entries([...PRODUCTION_SYNTAX, ...FIELD_POLICY_SYNTAX], allow, add);
+
 /** The test-only set; production entries do not apply to test files. */
 const restrictedSyntaxForTests = ({ allow = [], add = [] } = {}) =>
   entries(TEST_SYNTAX, allow, add);
@@ -308,8 +342,10 @@ module.exports = {
   restrictedSyntaxForTests,
   restrictedSyntaxForFeatureHooks,
   restrictedSyntaxForActionCallers,
+  restrictedSyntaxForFieldPolicies,
   PRODUCTION_SYNTAX,
   FEATURE_HOOK_SYNTAX,
   ACTION_CALLER_SYNTAX,
+  FIELD_POLICY_SYNTAX,
   TEST_SYNTAX,
 };

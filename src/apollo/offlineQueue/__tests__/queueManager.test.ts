@@ -96,10 +96,20 @@ jest.mock('#/apollo/clientRegistry', () => ({
   clearApolloClient: jest.fn(),
 }));
 
+const mockPendingWrites = {
+  confirm: jest.fn(),
+  drop: jest.fn(),
+  restore: jest.fn(),
+};
+jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
+  pendingWritesOf: () => mockPendingWrites,
+}));
+
 // Mock queueStore
 jest.mock('../queueStore', () => ({
   queueStore: {
     getPendingMutationsForUser: jest.fn(() => []),
+    getPendingWrites: jest.fn(() => []),
     resetProcessingToPending: jest.fn(() => 0),
     expireStalePending: jest.fn(() => []),
     updateMutation: jest.fn(() => true),
@@ -143,15 +153,6 @@ const { refreshUnitVocabulary } = jest.requireMock('../refreshUnitVocabulary');
 
 // Mock persisted optimistic-field storage — replay success/convergence must
 // clear entries so restoration can't re-apply stale values.
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    clearEntity: jest.fn(),
-    clearEntitySavedBetween: jest.fn(),
-  },
-}));
-const { optimisticDataPersistence } = jest.requireMock(
-  '#/apollo/offline/OptimisticDataPersistence',
-);
 
 // Mock the logger
 const mockedGetState = useStore.getState as jest.Mock;
@@ -1545,189 +1546,6 @@ describe('QueueManager', () => {
       expect(result.success).toBe(false);
     });
 
-    describe('persisted optimistic-field clearing', () => {
-      it('clears the entity entries it owns on replay success', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear',
-          variables: { input: { id: 'cuid-item-1' } },
-        });
-        mockClient.mutate.mockResolvedValue({
-          data: { syncPantryItem: { item: {}, converged: false } },
-        });
-        mockClient.cache.extract.mockReturnValue(
-          normalizedFixture([{ __typename: 'PantryItem', id: 'cuid-item-1' }]),
-        );
-
-        jest.useRealTimers();
-        await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(
-          optimisticDataPersistence.clearEntitySavedBetween,
-        ).toHaveBeenCalledWith('PantryItem', 'cuid-item-1', expect.anything());
-      });
-
-      it('clears every item entry of a batch-shaped create', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear-batch',
-          ...queuedMutationFor(AddItemToShoppingListDocument),
-          variables: {
-            input: {
-              shoppingListId: 'list-1',
-              items: [
-                { id: 'cuid-a', item: { itemName: 'Milk' } },
-                { id: 'cuid-b', item: { itemName: 'Bread' } },
-              ],
-            },
-          },
-        });
-        mockClient.mutate.mockResolvedValue({
-          data: {
-            addItemsToShoppingList: {
-              __typename: 'AddItemsToShoppingListPayload',
-              results: [],
-            },
-          },
-        });
-        mockClient.cache.extract.mockReturnValue(
-          normalizedFixture([
-            { __typename: 'ShoppingListItem', id: 'cuid-a' },
-            { __typename: 'ShoppingListItem', id: 'cuid-b' },
-          ]),
-        );
-
-        jest.useRealTimers();
-        await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(
-          optimisticDataPersistence.clearEntitySavedBetween,
-        ).toHaveBeenCalledWith('ShoppingListItem', 'cuid-a', expect.anything());
-        expect(
-          optimisticDataPersistence.clearEntitySavedBetween,
-        ).toHaveBeenCalledWith('ShoppingListItem', 'cuid-b', expect.anything());
-        // One snapshot for the whole batch, not one per entity id.
-        expect(mockClient.cache.extract).toHaveBeenCalledTimes(1);
-      });
-
-      it('clears on idempotent convergence too', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear-converged',
-          ...queuedMutationFor(CreateShoppingListDocument),
-          variables: { input: { id: 'cuid-list-1' } },
-        });
-        mockClient.mutate.mockResolvedValue({
-          data: {
-            createShoppingList: {
-              __typename: 'ConflictError',
-              code: 'IDEMPOTENT_REPLAY',
-              message: 'already exists',
-            },
-          },
-        });
-        mockClient.cache.extract.mockReturnValue(
-          normalizedFixture([
-            { __typename: 'ShoppingList', id: 'cuid-list-1' },
-          ]),
-        );
-
-        jest.useRealTimers();
-        const result = await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(result.success).toBe(true);
-        expect(
-          optimisticDataPersistence.clearEntitySavedBetween,
-        ).toHaveBeenCalledWith(
-          'ShoppingList',
-          'cuid-list-1',
-          expect.anything(),
-        );
-      });
-
-      it('keeps the fields an earlier write still queued for the entity owns', async () => {
-        const earlier = makeMutation({
-          id: 'proc-earlier',
-          createdAt: 1_000,
-          variables: { input: { id: 'cuid-item-1' } },
-        });
-        const landed = makeMutation({
-          id: 'proc-landed',
-          createdAt: 2_000,
-          variables: { input: { id: 'cuid-item-1' } },
-        });
-        (queueStore.getMutationsForUser as jest.Mock).mockReturnValue([
-          earlier,
-          landed,
-          makeMutation({
-            id: 'proc-later',
-            createdAt: 3_000,
-            variables: { input: { id: 'cuid-item-1' } },
-          }),
-        ]);
-        mockClient.mutate.mockResolvedValue({
-          data: { syncPantryItem: { item: {}, converged: false } },
-        });
-        mockClient.cache.extract.mockReturnValue(
-          normalizedFixture([{ __typename: 'PantryItem', id: 'cuid-item-1' }]),
-        );
-
-        jest.useRealTimers();
-        await processMutation(landed);
-        jest.useFakeTimers();
-        (queueStore.getMutationsForUser as jest.Mock).mockReturnValue([]);
-
-        expect(
-          optimisticDataPersistence.clearEntitySavedBetween,
-        ).toHaveBeenCalledWith('PantryItem', 'cuid-item-1', {
-          after: 1_000,
-          until: 2_000,
-        });
-        expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
-      });
-
-      it('does not clear when the replay fails', async () => {
-        const mutation = makeMutation({
-          id: 'proc-no-clear',
-          retryCount: 3,
-          maxRetries: 3,
-          variables: { input: { id: 'cuid-item-1' } },
-        });
-        mockClient.mutate.mockRejectedValue(new Error('Server error'));
-
-        jest.useRealTimers();
-        await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(
-          optimisticDataPersistence.clearEntitySavedBetween,
-        ).not.toHaveBeenCalled();
-      });
-
-      it('skips entities absent from the cache without throwing', async () => {
-        const mutation = makeMutation({
-          id: 'proc-clear-uncached',
-          variables: { input: { id: 'cuid-gone' } },
-        });
-        mockClient.mutate.mockResolvedValue({
-          data: { syncPantryItem: { item: {}, converged: false } },
-        });
-        mockClient.cache.extract.mockReturnValue({});
-
-        jest.useRealTimers();
-        const result = await processMutation(mutation);
-        jest.useFakeTimers();
-
-        expect(result.success).toBe(true);
-        expect(
-          optimisticDataPersistence.clearEntitySavedBetween,
-        ).not.toHaveBeenCalled();
-      });
-    });
-
-    // Under errorPolicy 'all' a server refusal resolves as an error union
-    // member instead of throwing — the replay path must classify resolved
-    // payloads the same way the foreground path does (settledStatus).
     describe('resolved error payloads on replay', () => {
       it('treats a ConflictError(code: IDEMPOTENT_REPLAY) as converged (success)', async () => {
         const mutation = makeMutation({
@@ -1755,6 +1573,69 @@ describe('QueueManager', () => {
           'proc-converged',
           { status: QueueStatus.SUCCESS, processedAt: expect.any(Number) },
         );
+      });
+
+      describe('a write with a local write', () => {
+        const queued = (id: string) =>
+          makeMutation({
+            id,
+            ...queuedMutationFor(CreateShoppingListDocument),
+            variables: { input: { id: 'list-1' } },
+            pendingWrite: { id: 'write-1', inputs: {} },
+          });
+
+        it('confirms it with the server’s answer', async () => {
+          const data = {
+            createShoppingList: {
+              __typename: 'CreateShoppingListPayload',
+              shoppingList: { id: 'list-1' },
+            },
+          };
+          mockClient.mutate.mockResolvedValue({ data });
+
+          jest.useRealTimers();
+          await processMutation(queued('pending-applied'));
+          jest.useFakeTimers();
+
+          expect(mockPendingWrites.confirm).toHaveBeenCalledWith(
+            'write-1',
+            data,
+          );
+        });
+
+        it('confirms it with no answer when the server already had it', async () => {
+          mockClient.mutate.mockResolvedValue({
+            data: {
+              createShoppingList: {
+                __typename: 'ConflictError',
+                code: 'IDEMPOTENT_REPLAY',
+                message: 'A shopping list with this id already exists',
+              },
+            },
+          });
+
+          jest.useRealTimers();
+          await processMutation(queued('pending-converged'));
+          jest.useFakeTimers();
+
+          expect(mockPendingWrites.confirm).toHaveBeenCalledWith('write-1');
+        });
+
+        it('leaves a write with none to the old path', async () => {
+          mockClient.mutate.mockResolvedValue({ data: {} });
+
+          jest.useRealTimers();
+          await processMutation(
+            makeMutation({
+              id: 'unmigrated',
+              ...queuedMutationFor(CreateShoppingListDocument),
+              variables: { input: { id: 'list-1' } },
+            }),
+          );
+          jest.useFakeTimers();
+
+          expect(mockPendingWrites.confirm).not.toHaveBeenCalled();
+        });
       });
 
       it('routes a ValidationError payload to the permanent-failure pipeline', async () => {

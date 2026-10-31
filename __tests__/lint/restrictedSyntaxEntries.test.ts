@@ -11,10 +11,12 @@ const {
   PRODUCTION_SYNTAX,
   FEATURE_HOOK_SYNTAX,
   ACTION_CALLER_SYNTAX,
+  FIELD_POLICY_SYNTAX,
   TEST_SYNTAX,
   restrictedSyntax,
   restrictedSyntaxForFeatureHooks,
   restrictedSyntaxForActionCallers,
+  restrictedSyntaxForFieldPolicies,
   restrictedSyntaxForTests,
 } = require('../../eslint/restrictedSyntax.js') as {
   PRODUCTION_SYNTAX: Array<{ id: string; selector: string; message: string }>;
@@ -24,10 +26,12 @@ const {
     selector: string;
     message: string;
   }>;
+  FIELD_POLICY_SYNTAX: Array<{ id: string; selector: string; message: string }>;
   TEST_SYNTAX: Array<{ id: string; selector: string; message: string }>;
   restrictedSyntax: (o?: { allow?: string[] }) => unknown[];
   restrictedSyntaxForFeatureHooks: () => unknown[];
   restrictedSyntaxForActionCallers: () => unknown[];
+  restrictedSyntaxForFieldPolicies: () => unknown[];
   restrictedSyntaxForTests: () => unknown[];
 };
 
@@ -247,6 +251,46 @@ const PRODUCTION_FIXTURES: Fixture[] = [
 
 const TEST_FIXTURES: Fixture[] = [
   {
+    id: 'rawCacheSeed',
+    invalid: [
+      'cache.writeQuery({ query: Q, data });',
+      'client.cache.writeFragment({ id, fragment: F, data });',
+    ],
+    valid: [
+      'seedQuery(cache, { query: Q, data });',
+      'seedFragment(cache, { id, fragment: F, data });',
+    ],
+  },
+  {
+    id: 'fixedSleep',
+    invalid: [
+      'await new Promise(resolve => setTimeout(resolve, 50));',
+      'const wait = () => new Promise(r => { setTimeout(r, 10); });',
+      'new Promise(resolve => { timer = setTimeout(() => resolve(1), 500); });',
+    ],
+    valid: [
+      'await drainTimers();',
+      'setTimeout(() => socket.open(), 1);',
+      'new Promise(resolve => { finish = resolve; });',
+    ],
+  },
+  {
+    id: 'realTimeWait',
+    invalid: [
+      "import { waitFor } from '@testing-library/react-native';",
+      "import { act, waitForElementToBeRemoved } from '@testing-library/react-native';",
+      'await screen.findByText("Milk");',
+      'await screen.findAllByRole("button");',
+      'await findByTestId("row");',
+    ],
+    valid: [
+      "import { act, screen } from '@testing-library/react-native';",
+      'await drainTimers();',
+      'await drained(() => client.query({ query }));',
+      'screen.getByText("Milk");',
+    ],
+  },
+  {
     id: 'apolloReactMock',
     invalid: ['jest.mock("@apollo/client/react");'],
     valid: ['jest.mock("#/services/haptic");'],
@@ -307,6 +351,21 @@ const ACTION_CALLER_FIXTURES: Fixture[] = [
   },
 ];
 
+const FIELD_POLICY_FIXTURES: Fixture[] = [
+  {
+    id: 'fieldPolicyReadsRowId',
+    invalid: [
+      "const seen = edges.filter(e => readField('id', e.node) === id);",
+      "const id = readField<string>('id', edge.node);",
+      "const id = options.readField('id', edge.node);",
+    ],
+    valid: [
+      "const version = readField('version', ref);",
+      'const id = readEdgeNodeId(edge);',
+    ],
+  },
+];
+
 const suites = [
   {
     label: 'production',
@@ -325,6 +384,12 @@ const suites = [
     list: ACTION_CALLER_SYNTAX,
     fixtures: ACTION_CALLER_FIXTURES,
     entries: restrictedSyntaxForActionCallers(),
+  },
+  {
+    label: 'field-policy',
+    list: FIELD_POLICY_SYNTAX,
+    fixtures: FIELD_POLICY_FIXTURES,
+    entries: restrictedSyntaxForFieldPolicies(),
   },
   {
     label: 'test-only',

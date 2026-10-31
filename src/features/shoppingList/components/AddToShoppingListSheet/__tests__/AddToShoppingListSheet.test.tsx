@@ -1,6 +1,10 @@
 import React from 'react';
-import { act, waitFor } from '@testing-library/react-native';
-import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
+import { act } from '@testing-library/react-native';
+import {
+  renderWithApollo,
+  recordMock,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 import {
   AddItemToShoppingListDocument,
@@ -61,13 +65,14 @@ const row = (itemId: string): Sections['popular'][number] => ({
 
 const seedSuggestions = (popular: string[]) => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetShoppingListSuggestionsDocument,
     variables: VARIABLES,
     data: {
       __typename: 'Query',
       shoppingList: {
         __typename: 'ShoppingList',
+        version: 1,
         id: 'list-1',
         suggestions: {
           __typename: 'ShoppingListSuggestions',
@@ -98,7 +103,9 @@ const tile = (itemId: string) => ({
 });
 
 const quickAdd = (item: unknown) =>
-  (sheetProps.current.onQuickAddSuggestion as (row: unknown) => void)(item);
+  (sheetProps.current.onQuickAddSuggestion as (row: unknown) => Promise<void>)(
+    item,
+  );
 
 const names = (itemId: string) => (variables: unknown) =>
   JSON.stringify(variables).includes(`"${itemId}"`);
@@ -141,11 +148,12 @@ describe('AddToShoppingListSheet quick add under fast taps', () => {
     const bread = added('bread');
     renderSheet(cache, [apples.mock, bread.mock]);
 
-    quickAdd(tile('apples'));
-    quickAdd(tile('bread'));
+    void quickAdd(tile('apples'));
+    const breadAdded = quickAdd(tile('bread'));
 
     expect(shown(cache)).toEqual(['cheese']);
-    await waitFor(() => expect(bread.fired).toHaveLength(1));
+    await act(() => breadAdded);
+    expect(bread.fired).toHaveLength(1);
     expect(apples.fired).toHaveLength(1);
 
     act(() => {
@@ -158,11 +166,11 @@ describe('AddToShoppingListSheet quick add under fast taps', () => {
     const apples = added('apples');
     renderSheet(cache, [apples.mock]);
 
-    quickAdd(tile('apples'));
-    quickAdd(tile('apples'));
+    // Each tap settles only with its own add, so a second send is in by then.
+    await act(() =>
+      Promise.all([quickAdd(tile('apples')), quickAdd(tile('apples'))]),
+    );
 
-    await waitFor(() => expect(apples.fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
     expect(apples.fired).toHaveLength(1);
   });
 
@@ -178,10 +186,11 @@ describe('AddToShoppingListSheet quick add under fast taps', () => {
     });
     renderSheet(cache, [refused.mock]);
 
-    quickAdd(tile('apples'));
+    const refusal = quickAdd(tile('apples'));
 
     expect(shown(cache)).toEqual(['bread']);
-    await waitFor(() => expect(shown(cache)).toEqual(['apples', 'bread']));
+    await act(() => refusal);
+    expect(shown(cache)).toEqual(['apples', 'bread']);
     expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 });

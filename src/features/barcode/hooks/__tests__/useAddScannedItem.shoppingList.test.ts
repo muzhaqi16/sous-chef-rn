@@ -5,6 +5,7 @@ import {
   renderHookWithApollo,
   type MockDataFor,
   type MockFor,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
@@ -42,7 +43,7 @@ const SCANNED: ScannedItem = {
 
 function cacheWithList() {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: COUNTS,
     data: { __typename: 'ShoppingList', id: LIST_ID, ...STATED },
   });

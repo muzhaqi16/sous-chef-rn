@@ -6,6 +6,7 @@ fragment useMoveToAisleModal_item on ShoppingListItem {
   storeDepartment
   storeDepartmentOverride
   item {
+    version
     id
     storeDepartment
   }

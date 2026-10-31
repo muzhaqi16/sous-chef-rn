@@ -4,6 +4,7 @@ import type {
   DefaultContext,
   OperationVariables,
 } from '@apollo/client';
+import type { LocalInputs } from '#/apollo/pendingWrites/types';
 
 export enum QueueStatus {
   PENDING = 'pending',
@@ -64,6 +65,8 @@ export interface QueuedMutation {
    * leaves the cache stays replayable. Absent on entries queued before it.
    */
   replayInputs?: ReplayInputs;
+  /** The pending write it carries, for an operation with a local write. */
+  pendingWrite?: { id: string; inputs: LocalInputs };
 
   status: QueueStatus;
   /** When this entry was queued. The drain replays in this order. */
@@ -128,31 +131,12 @@ export interface FailedMutationInfo {
    * something needs its own withdrawal, which needs to know which row.
    */
   variables: OperationVariables;
+  /** Dropping it undoes the write; nothing else is withdrawn. */
+  pendingWriteId?: string;
   error: QueueError;
 }
 
 export type FailureHandler = (info: FailedMutationInfo) => void;
-
-/**
- * Withdraws the aggregate a queued write moved that an evict does not put back
- * — a count the mutation's own `update` callback never ran to adjust. Runs
- * BEFORE the evict, so it can still see the edge it is uncounting.
- */
-export type CountWithdrawal = (
-  cache: ApolloCache,
-  variables: OperationVariables,
-  entityId: string | null,
-) => void;
-
-/**
- * Puts back what a queued write UNLINKED. `safeEvict` withdraws what a write
- * created; an operation that also unlinked an existing entity leaves that half
- * standing, and no evict restores it. Runs AFTER the evict.
- */
-export type UnlinkWithdrawal = (
-  cache: ApolloCache,
-  variables: OperationVariables,
-) => void;
 
 /**
  * Told when a queued removal is dropped because the entry it named merged into
@@ -183,8 +167,5 @@ export type ReplayReconciler = (
   adopt?: (adoption: RowAdoption) => void,
 ) => void;
 
-/** Every table here is keyed by operation name, and every entry IDEMPOTENT: a
- * drain can re-run one already settled. */
-export type CountWithdrawalTable = Record<string, CountWithdrawal>;
-export type UnlinkWithdrawalTable = Record<string, UnlinkWithdrawal>;
+/** Keyed by operation name, every entry IDEMPOTENT: a drain can re-run one settled. */
 export type ReplayReconcilerTable = Record<string, ReplayReconciler>;

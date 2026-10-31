@@ -88,13 +88,6 @@ async function shouldShowPostLoginBiometricPrompt(
   const store = useStore.getState();
   const navState = store.getUserNavigationState(targetUser.id);
 
-  if (navState?.isNewUser && !navState.hasCompletedOnboarding) {
-    return {
-      shouldShow: false,
-      reason: 'New user - biometric setup handled during onboarding',
-    };
-  }
-
   try {
     const biometricInfo = await getBiometricCapability();
     if (!biometricInfo.isAvailable) {

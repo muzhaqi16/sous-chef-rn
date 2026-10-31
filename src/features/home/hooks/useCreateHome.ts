@@ -1,21 +1,16 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreateHomeDocument } from '#operations/home/home.generated';
-import {
-  adoptServerMembership,
-  revertOptimisticHome,
-  writeLocalHome,
-} from '#features/home/cache/optimisticHome';
-import { addToHomesCache } from '#features/home/hooks/homeCacheUpdaters';
+import { holdsHomesList } from '#features/home/hooks/homeCacheUpdaters';
+import type { CreateHomeInputs } from '#features/home/offline/localWrites';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   settleMutation,
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { useUser } from '#store/useAppStore';
 import type { CreateHomeInput } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 
 /** A create's verdict, plus the id it minted — the home's id, queued or not. */
@@ -36,28 +31,7 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
   const user = useUser();
   const [createHomeMutation, { loading: creating }] = useMutation(
     CreateHomeDocument,
-    {
-      context: { localFirst: true },
-      update: (cache, { data }) => {
-        // The queue answers a queued create with a null payload, which the
-        // schema's non-null result type does not admit.
-        const payload = appliedPayload(data);
-        if (!payload) return;
-        // Idempotent by home id: the pre-fire write already inserted this one,
-        // so the server row confirms it rather than duplicating it.
-        addToHomesCache(cache, payload.home, { position: 'end' });
-        // The membership is the one row the client could not key, so the
-        // server's replaces the placeholder. Offline this same step runs from
-        // the queue's replay reconciler instead.
-        if (payload.home.myMembership) {
-          adoptServerMembership(
-            cache,
-            payload.home.id,
-            payload.home.myMembership.id,
-          );
-        }
-      },
-    },
+    { context: { localFirst: true } },
   );
 
   /** `fallback` is the copy for a failure its code does not describe. */
@@ -71,47 +45,28 @@ export function useCreateHome(onHomesCacheMiss?: () => void) {
     // until the create lands — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
 
-    // Without an auth identity there is no membership to materialize, so the
-    // create falls back to online-only rather than writing a home nobody owns.
-    // Assigned in the try and read outside it: an optional call is a value
-    // block, which bails the whole hook out of the React Compiler.
-    let linked = true;
-    if (user) {
-      try {
-        linked = writeLocalHome(client.cache, id, input, user);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Create Home (optimistic)',
-        });
-      }
-    }
     // `useDefaultHome` fires the app's only GetHomes fetch once per session,
     // and during onboarding that happens when the account has zero homes — so a
     // miss here leaves the new home out of an otherwise authoritative empty list.
-    if (!linked) onHomesCacheMiss?.();
+    if (user && !holdsHomesList(client.cache)) onHomesCacheMiss?.();
 
-    const revert = () => {
-      if (!user) return;
-      try {
-        revertOptimisticHome(client.cache, id);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Home create',
-        });
-      }
+    const inputs: CreateHomeInputs = {
+      home: input,
+      creator: user
+        ? { id: user.id, email: user.email, displayName: user.displayName }
+        : undefined,
+      now: new Date().toISOString(),
     };
-
-    const settled = await settleMutation(
-      () =>
-        createHomeMutation({
-          variables: { input },
+    const settled = await pendingWritesOf(client.cache).send(
+      CreateHomeDocument,
+      { input },
+      write =>
+        settleMutation(() => createHomeMutation(write), {
+          document: CreateHomeDocument,
+          fallback,
+          present: 'none',
         }),
-      {
-        document: CreateHomeDocument,
-        fallback,
-        onFailed: revert,
-        present: 'none',
-      },
+      inputs,
     );
     // Released on every outcome; a queued create is tracked by the offline
     // queue's pending set from here on.

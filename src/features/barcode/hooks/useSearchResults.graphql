@@ -6,20 +6,28 @@
 # An add names `matchedVariation.id` to store exactly those facts.
 # A scan asks once: the product's origin, brand-list matches and the
 # household's dietary alerts come with it, read by their hooks' fragments, and
-# in store mode what the household paid and the shelf price at each store.
+# in store mode what the household paid, what the product typically costs at
+# the list's store and the shelf price at each store.
 # Without a home there are no alerts to read; `$homeId` is then never sent on.
 query ItemByLookup(
   $lookup: ItemLookupInput!
   $pantry: ID
   $homeId: ID = ""
+  $listId: ID = ""
   $withHome: Boolean = false
   $withPrices: Boolean = false
   $withShelfPrices: Boolean = false
 ) {
+  shoppingList(id: $listId) @include(if: $withPrices) {
+    version
+    id
+    ...useStorePriceMemory_list
+  }
   items(filters: { lookup: $lookup }, first: 1) {
     edges {
       cursor
       node {
+        version
         id
         ...useProductOrigin_item
         ...useProductBrandListings_item
@@ -29,6 +37,7 @@ query ItemByLookup(
         # The concepts above the product, nearest first: store mode ticks the
         # list line that names the product or one of them.
         ancestors {
+          version
           id
         }
         imageUrl
@@ -157,6 +166,7 @@ query ItemByLookup(
             servingUnit
           }
           typicalOf {
+            version
             id
             name
           }
@@ -187,22 +197,26 @@ query ItemByLookup(
           id
           isPrimary
           category {
+            version
             id
             name
             type
           }
         }
         units {
+          version
           id
           isDefault
           unitId
         }
         variationBrand {
+          version
           id
           name
           # The company the brand is part of, as the catalog names it: the
           # card's owner line.
           parent {
+            version
             id
             name
           }

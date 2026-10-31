@@ -16,12 +16,14 @@ fragment LoginUser on User {
   createdAt
   defaultHomeId
   defaultHome {
+    version
     id
     name
     isDefault
     pantriesConnection {
       edges {
         node {
+          version
           id
           isDefault
         }
@@ -63,6 +65,10 @@ fragment LoginUser on User {
     # here because it is also what an undenominated figure is displayed in, and a
     # display that disagreed with intake would misreport what the money is.
     preferredCurrency
+    # Seeded into the store at sign-in, so a new device shows the account's
+    # shopping switches before any settings read.
+    storeMode
+    budgetAndPrices
   }
 }
 

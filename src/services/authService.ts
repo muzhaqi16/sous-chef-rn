@@ -68,13 +68,6 @@ function bootstrapUserStore(user: LoginUserFragment): void {
       storeState.setIsHomeSelectionReady(true);
     }
   }
-
-  // Seeded before any screen's tutorial hooks mount, so a user who disabled
-  // tutorials sees no flash of coach marks on a new device. Only this master
-  // switch syncs; per-screen completion (feature_hint_shown_*) stays local.
-  if (user.settings) {
-    useStore.getState().setShowTutorials(user.settings.showTutorials);
-  }
 }
 
 /**
@@ -154,6 +147,7 @@ function unmaskAuthPayload<
     fragment: LoginUserFragmentDoc,
     fragmentName: 'LoginUser',
     from: payload.user,
+    optimistic: true,
   });
   if (!user) return null;
   return {

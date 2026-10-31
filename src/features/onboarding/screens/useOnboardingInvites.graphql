@@ -1,0 +1,17 @@
+# The invitations a new account was sent before signing up, offered before it
+# creates a home of its own. Redeemed only by their link.
+query GetMyPendingInvites {
+  me {
+    id
+    pendingHomeInvitesConnection {
+      edges {
+        node {
+          version
+          id
+          role
+          ...InviteCard_invite
+        }
+      }
+    }
+  }
+}

@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+} from '@testing-library/react-native';
 import { AppSettingsScreen } from '../AppSettingsScreen';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -20,6 +25,8 @@ const mockAppSettings = jest.fn(() => ({
     autoSync: true,
     offlineMode: false,
     showTutorials: true,
+    storeMode: false,
+    budgetAndPrices: null,
   },
   loading: false,
   hasLoadedSettings: true,
@@ -195,6 +202,8 @@ describe('AppSettingsScreen', () => {
         autoSync: true,
         offlineMode: false,
         showTutorials: true,
+        storeMode: false,
+        budgetAndPrices: null,
       },
       loading: false,
       hasLoadedSettings: false,
@@ -213,8 +222,8 @@ describe('AppSettingsScreen', () => {
     expect(screen.getByTestId('settings-screen')).toBeTruthy();
   });
 
-  // Opt-in, and saved per user on the device.
-  it('turns store mode on for this user', () => {
+  // Kept with the account, so every device shows the same switch.
+  it('turns store mode on for the account', () => {
     render(<AppSettingsScreen />);
 
     expect(
@@ -222,7 +231,7 @@ describe('AppSettingsScreen', () => {
     ).toBeTruthy();
     fireEvent.press(screen.getByTestId('toggle-Store mode'));
 
-    expect(mockUpdatePreference).toHaveBeenCalledWith({ storeMode: true });
+    expect(mockUpdateAppSetting).toHaveBeenCalledWith('storeMode', true);
   });
 
   it('offers no store mode switch where the build leaves it out', () => {
@@ -235,8 +244,8 @@ describe('AppSettingsScreen', () => {
     jest.mocked(useFeatureFlag).mockReturnValue(true);
   });
 
-  // A plain list by default; a person who budgets turns the money on.
-  it('turns budget and prices on for this user', () => {
+  // Off until answered; turning it on by hand shows prices at once.
+  it('turns budget and prices on for the account', () => {
     render(<AppSettingsScreen />);
 
     expect(
@@ -244,9 +253,7 @@ describe('AppSettingsScreen', () => {
     ).toBeTruthy();
     fireEvent.press(screen.getByTestId('toggle-Budget & prices'));
 
-    expect(mockUpdatePreference).toHaveBeenCalledWith({
-      budgetAndPrices: true,
-    });
+    expect(mockUpdateAppSetting).toHaveBeenCalledWith('budgetAndPrices', true);
   });
 
   it('offers no budget and prices switch where the build leaves it out', () => {
@@ -277,6 +284,37 @@ describe('AppSettingsScreen', () => {
   it('renders Features section', () => {
     render(<AppSettingsScreen />);
     expect(screen.getByText('Features')).toBeTruthy();
+  });
+
+  it('keeps store mode and budget and prices together under Shopping', () => {
+    render(<AppSettingsScreen />);
+
+    const shopping = within(screen.getByTestId('section-Shopping'));
+    expect(
+      shopping.getByTestId(profileTestIDs.settingsStoreModeSwitch),
+    ).toBeTruthy();
+    expect(
+      shopping.getByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
+    ).toBeTruthy();
+
+    const experience = within(screen.getByTestId('section-Experience'));
+    expect(
+      experience.getByTestId(profileTestIDs.settingsHapticFeedbackSwitch),
+    ).toBeTruthy();
+    expect(
+      experience.queryByTestId(profileTestIDs.settingsStoreModeSwitch),
+    ).toBeNull();
+    expect(
+      experience.queryByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
+    ).toBeNull();
+  });
+
+  it('shows no Shopping section where the build offers neither switch', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(false);
+    render(<AppSettingsScreen />);
+
+    expect(screen.queryByTestId('section-Shopping')).toBeNull();
+    jest.mocked(useFeatureFlag).mockReturnValue(true);
   });
 
   it('renders Experience section with haptic feedback toggle', () => {
@@ -355,6 +393,8 @@ describe('AppSettingsScreen - loading state', () => {
           autoSync: true,
           offlineMode: false,
           showTutorials: true,
+          storeMode: false,
+          budgetAndPrices: null,
         },
         loading: true,
         hasLoadedSettings: false,
@@ -390,6 +430,8 @@ describe('AppSettingsScreen - loading state', () => {
           autoSync: true,
           offlineMode: false,
           showTutorials: true,
+          storeMode: false,
+          budgetAndPrices: null,
         },
         loading: true,
         hasLoadedSettings: true,

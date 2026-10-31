@@ -8,6 +8,7 @@
 import { gql, type Cache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { writePurchaseInfo } from '../purchase';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 const ROW = gql`
   fragment PurchaseRow on ShoppingListItem {
@@ -38,7 +39,7 @@ const seed = (
   overrides: Partial<Row['purchaseInfo']> = {},
 ): ReturnType<typeof makeCache> => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: 'ShoppingListItem:sli-1',
     fragment: ROW,
     data: {
@@ -81,7 +82,7 @@ describe('writePurchaseInfo', () => {
 
   it('does not invent a value for a field the cache does not hold', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:sli-1',
       fragment: gql`
         fragment SparseRow on ShoppingListItem {
@@ -185,7 +186,7 @@ describe('writePurchaseInfo', () => {
         }
       }
     `;
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:sli-1',
       fragment: WITH_BUYER,
       data: {
@@ -254,7 +255,7 @@ describe('the purchaseInfo merge and `extensions.local`', () => {
       },
       extensions,
     };
-    cache.writeFragment(write);
+    seedFragment(cache, write);
   };
 
   it('clears the previous purchase on a server write that flips the flag', () => {
@@ -293,7 +294,7 @@ describe('writePurchaseInfo — the stamp it leaves', () => {
 
   function seedRecord(overrides: Record<string, unknown> = {}) {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:i1',
       fragment: RECORD,
       data: {

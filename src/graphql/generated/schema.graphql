@@ -105,7 +105,7 @@ directive @requireFeature(
   A field of the operation's input: this occurrence applies only when it is sent and not null
   """
   whenInput: String
-) on FIELD_DEFINITION
+) repeatable on FIELD_DEFINITION
 
 """
 Require that the caller's email address is verified.
@@ -237,6 +237,11 @@ type AddBrandToListPayload {
   brandList: BrandList!
   """The entry: the one already there when the brand was listed before"""
   brandListEntry: BrandListEntry!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -304,6 +309,14 @@ union AddRecipeToFavoritesResult = AddRecipeToFavoritesPayload | ConflictError |
 
 """A dietary restriction to add to the caller's profile."""
 input AddRestrictionInput {
+  """
+  A home to label the restriction with; the caller must be an active member of it. The label decides nothing
+  """
+  appliesToHomeId: ID @deprecated(reason: "A restriction is shared per home through Membership.sharesDietaryNeeds (updateDietarySharing); read a home's through Home.dietaryNeeds. This label is stored and decides nothing.")
+  """
+  Optional client-generated permanent ID (CUID2) for offline-first idempotency.
+  """
+  id: ID
   """What the restriction restricts"""
   kind: RestrictionKindInput!
   """Free text, at most 1000 characters after trimming"""
@@ -315,6 +328,11 @@ input AddRestrictionInput {
 }
 
 type AddRestrictionPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   dietaryProfile: DietaryProfile
   dietaryRestriction: DietaryRestriction!
 }
@@ -339,10 +357,9 @@ input AddTemplateItemInput {
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   Persisted as the template item's primary key; when omitted the server
-  generates one. Replaying an add with the same id returns a ConflictError
-  carrying code IDEMPOTENT_REPLAY (treat it as already-applied). A different
-  meal sent to an already-filled dayOffset/mealType slot is a genuine
-  CONFLICT.
+  generates one. Replaying an add with the same id answers the item with
+  converged true. A different meal sent to an already-filled dayOffset/mealType
+  slot is a genuine CONFLICT.
   """
   id: ID
   """
@@ -364,6 +381,11 @@ input AddTemplateItemInput {
 }
 
 type AddTemplateItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   mealTemplate: MealTemplate
   mealTemplateItem: MealTemplateItem!
 }
@@ -392,6 +414,11 @@ input AddUserAddressInput {
 }
 
 type AddUserAddressPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   userAddress: UserAddress!
 }
 
@@ -401,6 +428,25 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union AddUserAddressResult = AddUserAddressPayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
+
+input AddUsualStoreInput {
+  """
+  The household; the caller's only household when omitted, else the caller alone
+  """
+  homeId: ID
+  target: UsualStoreTargetInput!
+}
+
+type AddUsualStorePayload {
+  usualStores: [UsualStore!]!
+}
+
+"""
+Result of AddUsualStore. Select on AddUsualStorePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union AddUsualStoreResult = AddUsualStorePayload | ConflictError | ForbiddenError | NotFoundError | ValidationError
 
 enum AddedContext {
   EXPIRING
@@ -474,6 +520,11 @@ input AdjustPantryItemQuantityInput {
 }
 
 type AdjustPantryItemQuantityPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -657,9 +708,9 @@ input BatchAddShoppingListItemInput {
   """
   id: ID
   """
-  Optional client-minted CUID2 that makes the add idempotent: a replay is
-  refused with IDEMPOTENT_REPLAY instead of adding to the line's quantity
-  twice. Without it the id field above is the key; send one when a batch adds
+  Optional client-minted CUID2 that makes the add idempotent: a replay answers
+  the line with converged true instead of adding to its quantity twice.
+  Without it the id field above is the key; send one when a batch adds
   the same item more than once.
   """
   idempotencyKey: ID
@@ -693,6 +744,11 @@ input BatchAddShoppingListItemInput {
 type BatchAddShoppingListItemResult {
   """Client ID if provided in input"""
   clientId: String
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the entry failed; set exactly when success is false"""
   failure: BatchElementFailure
   """Index in the input array"""
@@ -966,6 +1022,11 @@ union BulkCreateItemsResult = BulkCreateItemsPayload | ConflictError | Forbidden
 
 """One entry's outcome in bulkCreatePurchases, in input order."""
 type BulkCreatePurchaseResult {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the entry failed; set exactly when success is false"""
   failure: BatchElementFailure
   """The entry's position in the input list"""
@@ -1487,13 +1548,18 @@ input ChangePantryItemItemInput {
 }
 
 type ChangePantryItemItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   """
   True when the receipt lines the stock was checked in from now read as the
   new item for the household. False for stock added by hand or checked in
   before line text was kept, and for a member who may not add items to the
-  household.
+  household, and on a replay, which records none.
   """
   receiptCorrectionRecorded: Boolean!
   storageLocation: StorageLocation
@@ -1545,6 +1611,11 @@ type ChangePantryItemUnitPayload {
     """Only batches in this status"""
     status: BatchStatus
   ): PantryItemBatchConnection!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """True when the route was exact"""
   exact: Boolean!
   method: PantryUnitChangeMethod!
@@ -1972,6 +2043,11 @@ type ConvertExpiredToWastePayload {
     """Only batches in this status"""
     status: BatchStatus
   ): PantryItemBatchConnection!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -2135,6 +2211,11 @@ input CorrectPantryItemPackageSizeInput {
 
 type CorrectPantryItemPackageSizePayload {
   batch: PantryItemBatch!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -2160,7 +2241,7 @@ input CreateBrandListInput {
   """Whether the list is matched from the start; true when omitted"""
   enabled: Boolean
   """
-  Optional client-minted CUID2: a replayed create answers IDEMPOTENT_REPLAY instead of duplicating
+  Optional client-minted CUID2: a replayed create answers the list with converged true, not a duplicate
   """
   id: ID
   """1 to 100 characters"""
@@ -2169,6 +2250,11 @@ input CreateBrandListInput {
 
 type CreateBrandListPayload {
   brandList: BrandList!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -2258,6 +2344,11 @@ input CreateHomeInput {
 }
 
 type CreateHomePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home!
 }
 
@@ -2330,6 +2421,11 @@ input CreateItemInput {
 }
 
 type CreateItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The item created, or the existing item the create matched"""
   item: Item!
   """Which key matched the existing item; null when outcome is CREATED"""
@@ -2469,6 +2565,11 @@ Always include a __typename so the variant can be discriminated.
 union CreateMealPlanItemResult = ConflictError | CreateMealPlanItemPayload | ForbiddenError | NotFoundError | ValidationError
 
 type CreateMealPlanPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   mealPlan: MealPlan!
 }
@@ -2516,6 +2617,11 @@ input CreateMealTemplateInput {
 }
 
 type CreateMealTemplatePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   mealTemplate: MealTemplate!
 }
@@ -2621,6 +2727,11 @@ input CreatePantryItemInput {
 }
 
 type CreatePantryItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """MERGED when a forced add joined a stack the pantry already held"""
   outcome: CreateOutcome!
   pantry: Pantry
@@ -2647,7 +2758,7 @@ input CreatePantryItemUsageInput {
   """
   cookingLogId: ID
   """
-  A client-minted CUID2 for this write: a replay with the same key is refused as already applied, so the use is recorded at most once
+  A client-minted CUID2 for this write: a replay with the same key answers the use it recorded with converged true, so the use is recorded at most once
   """
   idempotencyKey: ID
   """
@@ -2692,6 +2803,11 @@ input CreatePantryItemUsageInput {
 }
 
 type CreatePantryItemUsagePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
@@ -2706,6 +2822,11 @@ Always include a __typename so the variant can be discriminated.
 union CreatePantryItemUsageResult = ConflictError | CreatePantryItemUsagePayload | ForbiddenError | InsufficientQuantityError | NotFoundError | UnitEligibilityError | ValidationError
 
 type CreatePantryPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   pantry: Pantry!
 }
@@ -2768,6 +2889,11 @@ input CreatePurchaseInput {
 }
 
 type CreatePurchasePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   purchase: Purchase!
   store: Store
 }
@@ -2794,6 +2920,14 @@ input CreateReceiptCheckInInput {
   The receipt's locale, e.g. en-US; lines are remembered per language, the user's own when omitted
   """
   locale: String
+  """
+  The merchant the device read, for a receipt read on the device. With no
+  receiptParseId, when the store is the household's own label, the branch it
+  names (its address, or its store number under the label's chain) is found
+  or created and the household's rows move onto it. A receiptParseId wins
+  over it; a shared store is never changed.
+  """
+  merchant: ReceiptMerchantInput
   """
   The receipt's merchant header, when no store is given; it places the chain the lines are remembered under
   """
@@ -2893,6 +3027,11 @@ input CreateReceiptParseInput {
 }
 
 type CreateReceiptParsePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   receiptParse: ReceiptParse!
 }
 
@@ -2934,6 +3073,11 @@ input CreateRecipeCaptureInput {
 
 type CreateRecipeCapturePayload {
   capture: RecipeCapture!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -2969,6 +3113,11 @@ input CreateRecipeInput {
 }
 
 type CreateRecipePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   recipe: Recipe!
 }
 
@@ -2984,8 +3133,8 @@ input CreateRecipeReviewInput {
   """
   Optional client-generated permanent ID (CUID2) for offline-first idempotency.
   Supplying it lets the server tell a replay of your own queued review
-  (IDEMPOTENT_REPLAY — safe, already applied) apart from a genuine attempt to
-  review the same recipe twice (CONFLICT — a real refusal).
+  (answered with converged true) apart from a genuine attempt to review the
+  same recipe twice (CONFLICT — a real refusal).
   """
   id: ID
   rating: Int!
@@ -2993,6 +3142,11 @@ input CreateRecipeReviewInput {
 }
 
 type CreateRecipeReviewPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   recipe: Recipe
   recipeReview: RecipeReview!
 }
@@ -3037,7 +3191,8 @@ input CreateShoppingListInput {
   """
   Lines for the new list, added in the same request as addItemsToShoppingList
   adds them: at most 50, each on its own, each reporting its own result on
-  CreateShoppingListPayload.itemResults. A replayed create adds none.
+  CreateShoppingListPayload.itemResults. A replayed create adds those its
+  first send missed that carry their own id or idempotencyKey.
   """
   items: [BatchAddShoppingListItemInput!]
   """
@@ -3052,8 +3207,14 @@ input CreateShoppingListInput {
 
 type CreateShoppingListPayload {
   """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
+  """
   One result per CreateShoppingListInput.items entry, in input order, as
-  addItemsToShoppingList reports them; empty when none were sent.
+  addItemsToShoppingList reports them; empty when none were sent. On a replay,
+  one per entry carrying its own id or idempotencyKey.
   """
   itemResults: [BatchAddShoppingListItemResult!]!
   shoppingList: ShoppingList!
@@ -3101,6 +3262,11 @@ input CreateStorageLocationInput {
 }
 
 type CreateStorageLocationPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   storageLocation: StorageLocation!
 }
@@ -3138,6 +3304,11 @@ input CreateStoreInput {
 }
 
 type CreateStorePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """CREATED for a new store; MERGED when the shop was already on file"""
   outcome: CreateOutcome!
   """The store added, or the one already on file it merged into"""
@@ -3242,6 +3413,9 @@ input CurationFilterInput {
   isPopular: Boolean
   isRecent: Boolean
   isTrending: Boolean
+  """
+  The onboarding staples: applies types (FOOD when omitted) and level, nothing else
+  """
   showInOnboarding: Boolean
 }
 
@@ -4665,6 +4839,10 @@ type DietaryProfile {
   carbsTarget: Int
   """How much cooking experience the user claims; null when not stated"""
   cookingSkillLevel: CookingSkillLevel
+  """
+  How many people the user cooks for, 1 to 20: the servings a recipe starts from. Null when not answered, and a recipe starts at its own servings
+  """
+  cooksFor: Int
   """When the profile was created"""
   createdAt: DateTime!
   """
@@ -4986,7 +5164,7 @@ enum ErrorCode {
   """
   HOME_MEMBER_LIMIT_REACHED
   """
-  An idempotency-keyed operation was already applied (a safe replay). Clients should treat this as success, not a hard failure.
+  A replayed write already applied, whose row is gone or out of reach; a replay with a row to answer returns its payload with converged true. Clients should treat this as success, not a hard failure.
   """
   IDEMPOTENT_REPLAY
   """
@@ -5422,6 +5600,11 @@ input ForkRecipeInput {
 }
 
 type ForkRecipePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   recipe: Recipe!
 }
 
@@ -5431,6 +5614,14 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union ForkRecipeResult = ConflictError | ForbiddenError | ForkRecipePayload | NotFoundError | ValidationError
+
+"""A point on Earth, in degrees."""
+input GeoPointInput {
+  """-90 to 90"""
+  lat: Float!
+  """-180 to 180"""
+  lng: Float!
+}
 
 """Progress toward a single nutrition goal"""
 type GoalProgress {
@@ -6822,6 +7013,19 @@ type Item {
   preferredTrackingUnit: Unit
   """ID of preferredTrackingUnit, or null when not configured."""
   preferredTrackingUnitId: ID
+  """
+  Where this item is cheaper, by store and by chain: what itemPriceComparison
+  answers for it, by the same rules, defaults and bounds, so a barcode lookup
+  carries it. The items of one request are compared in one read.
+  """
+  priceComparison(
+    """The currency compared; the caller's own when omitted"""
+    currency: CurrencyCode
+    """One barcode of the item; all of them when omitted"""
+    gtin: String
+    """How far back observations count: default 90 days, at most 365"""
+    windowDays: Int
+  ): ItemPriceComparison!
   """Price observations recorded for this item, newest first by default."""
   priceHistoryConnection(
     """Resume after this cursor: a previous page's endCursor"""
@@ -6880,6 +7084,21 @@ type Item {
   product's own concept is read. Null when neither has facts.
   """
   shownNutrition: ShownNutrition
+  """
+  At each of the household's stores (its compared usual stores, at most 20,
+  a whole chain at its nearby branch), the cheapest current shelf price of
+  another product of this product's concept, cheapest first: what a product
+  line could buy instead. In the caller's currency. Empty for a concept or an
+  unplaced product.
+  """
+  similarStorePrices(
+    """How many stores: 20 when omitted, at most 50"""
+    first: Int
+    """
+    The household whose stores are read; the caller's only household when omitted, else their own
+    """
+    homeId: ID
+  ): [SimilarStorePrice!]!
   """
   Lifecycle state of the catalog entry. Barcode lookups and curated lists return
   only ACTIVE items; a deleted or rejected item is ARCHIVED.
@@ -8566,6 +8785,11 @@ input MarkSuggestionActiveInput {
 }
 
 type MarkSuggestionActivePayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Always false — the item can be suggested again on this surface."""
   dismissed: Boolean!
   """The item the dismissal was removed for."""
@@ -8596,6 +8820,11 @@ input MarkSuggestionDismissedInput {
 }
 
 type MarkSuggestionDismissedPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Always true — the item is now dismissed on this surface."""
   dismissed: Boolean!
   """The item the dismissal applies to."""
@@ -9676,6 +9905,11 @@ type MovePurchasedLineResult {
   True when an earlier move had already placed this line and this call wrote nothing
   """
   alreadyInPantry: Boolean!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the line failed; set exactly when success is false"""
   failure: BatchElementFailure
   itemName: String!
@@ -9725,8 +9959,8 @@ input MoveShoppingItemToPantryInput {
   Honoured only when the move CREATES a pantry entry. When the target pantry
   already holds an active stack of the same catalog item, the move restocks
   that stack instead and the payload returns that existing row's id — compare
-  pantryItem.id against the id you sent to tell the two apart. Replaying an id
-  that already exists returns IDEMPOTENT_REPLAY.
+  pantryItem.id against the id you sent to tell the two apart. An id another
+  move already used returns IDEMPOTENT_REPLAY.
   """
   pantryItemId: ID
   """Where actualPrice came from: PURCHASE (default) or RECEIPT_SCAN."""
@@ -9769,6 +10003,11 @@ type MoveShoppingItemToPantryPayload {
   did anything.
   """
   alreadyInPantry: Boolean!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """MERGED when the purchase restocked a stack the pantry already held"""
   outcome: CreateOutcome!
   pantry: Pantry
@@ -9895,9 +10134,16 @@ type Mutation {
   """
   Add a new address to the current user's account. With isDefault true it
   becomes the one default, and the previous default is unset. Sending an id
-  the caller already used is a ConflictError with code IDEMPOTENT_REPLAY.
+  the caller already used answers that address with converged true.
   """
   addUserAddress(input: AddUserAddressInput!): AddUserAddressResult!
+  """
+  Add a store or a whole chain to a household's usual stores, bringing back
+  one a member removed. A household keeps at most 20 it added or pinned; past
+  that, a ValidationError on target until one is removed or unpinned. Safe to
+  repeat. Answers the usual stores after it.
+  """
+  addUsualStore(input: AddUsualStoreInput!): AddUsualStoreResult!
   """
   Adjust pantry item quantity to match a physical count. Creates an ADJUSTMENT
   usage record with a mandatory reason for the audit trail; the delta
@@ -10482,6 +10728,12 @@ type Mutation {
   removeShoppingListCollaborator(input: RemoveShoppingListCollaboratorInput!): RemoveShoppingListCollaboratorResult!
   """Remove an item from a template"""
   removeTemplateItem(input: RemoveTemplateItemInput!): RemoveTemplateItemResult!
+  """
+  Remove a usual store, also undoing one the household's activity added. It
+  stays removed until a newer receipt from it is checked in or a member adds
+  it again. Safe to repeat. Answers the usual stores after it.
+  """
+  removeUsualStore(input: RemoveUsualStoreInput!): RemoveUsualStoreResult!
   """Request a password reset email"""
   requestPasswordReset(input: RequestPasswordResetInput!): RequestPasswordResetResult!
   """Resend the email verification message to a user."""
@@ -10665,6 +10917,12 @@ type Mutation {
   """
   updateUserAppeal(input: UpdateUserAppealInput!): UpdateUserAppealResult!
   """
+  Pin or unpin a usual store: a pinned one is always compared. Pinning counts
+  toward the 20 a household adds or pins, as addUsualStore states. Safe to
+  repeat. Answers the usual stores after it.
+  """
+  updateUsualStore(input: UpdateUsualStoreInput!): UpdateUsualStoreResult!
+  """
   Get the API's copy of a catalog recipe, named by provider and provider id.
   The API fetches the content from the provider itself: a SYNCED recipe is
   returned as is, and any other is fetched now when the daily provider
@@ -10798,6 +11056,27 @@ type MyUserReportEdge implements Edge {
   cursor: String!
   """The MyUserReport this edge wraps."""
   node: MyUserReport!
+}
+
+"""A store, and how far it is from where the search started."""
+type NearbyStore {
+  """In kilometres, to one decimal"""
+  distanceKm: Float!
+  store: Store!
+}
+
+input NearbyStoresInput {
+  """Only this chain's stores"""
+  chainId: ID
+  """How many: 20 when omitted, at most 50"""
+  first: Int
+  near: StoreNearInput!
+  """How far to reach, in kilometres: 15 when omitted, at most 100"""
+  radiusKm: Float
+  """
+  Only stores whose name or address holds this text, at least 2 characters
+  """
+  search: String
 }
 
 """Reusable sub-input for net weight with unit"""
@@ -11542,6 +11821,11 @@ input OpenPantryItemBatchInput {
 }
 
 type OpenPantryItemBatchPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation
@@ -12754,10 +13038,16 @@ type PantryStockCheckResult {
   answer: StockCheckAnswer!
   """Why the entry failed; set exactly when success is false"""
   failure: BatchElementFailure
-  """The stack as it stands after the check; null when the entry failed"""
+  """
+  The stack as it stands after the check; null when the entry failed, or on
+  a replay when the stack has been deleted since
+  """
   pantryItem: PantryItem
   """The entry's stack, as sent"""
   pantryItemId: ID!
+  """
+  Whether the check applied to the stack; a replay answers what the first send did
+  """
   success: Boolean!
 }
 
@@ -13236,6 +13526,35 @@ type PriceEstimate {
   estimated: Float
 }
 
+"""
+Whether a household has price data enough for the app to offer prices, read
+over the last 90 days. Enough is either: receiptDays at least 3 or
+recordedPrices at least 10, with knownStores at least 1; or pricedLines at
+least half of comparableLines.
+"""
+type PriceReadiness {
+  """
+  The list's lines not yet bought that a price can be compared for, as ShoppingListStoreComparison.comparableLines (at most 200)
+  """
+  comparableLines: Int!
+  """Whether price data is enough, by the rule above"""
+  enough: Boolean!
+  """
+  The household's compared usual stores (see usualStores), and the list's own store
+  """
+  knownStores: Int!
+  """
+  Of comparableLines, those priced by the household, or collected at a store among knownStores; a similar product's price counts, other households' prices never do
+  """
+  pricedLines: Int!
+  """Days with a receipt the household checked in"""
+  receiptDays: Int!
+  """
+  Prices the household recorded: paid, scanned or typed. Estimates and collected prices do not count
+  """
+  recordedPrices: Int!
+}
+
 """Where a price came from."""
 enum PriceSource {
   """From other users"""
@@ -13256,6 +13575,15 @@ enum PriceSource {
   STORE_API
   """From web scraping"""
   WEB_SCRAPING
+}
+
+"""
+A nearby branch of the same chain whose collected prices stand in for a store with none of its own.
+"""
+type PriceStandIn {
+  """How far it is, in kilometres, to one decimal"""
+  distanceKm: Float!
+  store: Store!
 }
 
 """A price suggested for a shopping line from recorded observations."""
@@ -14254,6 +14582,12 @@ type Query {
     """Page size, reading backward: default 20, at most 100"""
     last: Int
   ): MyUserReportConnection!
+  """
+  The stores near a zip or a point, nearest first: every store the caller
+  may see, including ones nobody has shopped at. A store without
+  coordinates is never listed.
+  """
+  nearbyStores(input: NearbyStoresInput!): [NearbyStore!]!
   """Fetch a single notification by its ID."""
   notification(
     """The id of the Notification to read"""
@@ -14435,8 +14769,17 @@ type Query {
   
   A recipe tagged with an intolerance the caller's dietary profile holds as
   an allergy or an intolerance is left out, and so is one not tagged with a
-  diet held that way. The check reads recipe tags only: an untagged recipe
-  is not screened by its ingredients.
+  diet held that way. That check reads recipe tags only; with
+  excludeDietaryConflicts, ingredients are screened too.
+  
+  With excludeDietaryConflicts, a recipe is also left out when any of its
+  ingredients raises a dietary alert, of any severity, CONTAINS or
+  MAY_CONTAIN, as RecipeIngredient.dietaryAlerts judges it. The
+  restrictions are the caller's own and those shared in homeId's home, or,
+  without homeId, in every home whose pantries are read; a caller in no home
+  is screened on their own. Up to 4 × (first + 1) candidates, at most 200,
+  are judged; the page holds fewer than first only when fewer of those
+  pass. No alert means no evidence, never safe.
   
   Forward only, via first. The ranking depends on the caller's pantry and
   day, so after, before and last are not offered.
@@ -14445,6 +14788,10 @@ type Query {
   is off for the caller.
   """
   recipeSuggestions(
+    """
+    Leave out recipes with an ingredient that raises any dietary alert for the restrictions in scope; false when omitted
+    """
+    excludeDietaryConflicts: Boolean = false
     """How many suggestions: 20 when omitted, at most 100"""
     first: Int
     """
@@ -14662,7 +15009,12 @@ type Query {
   Where a shopping list is cheapest, by branch or by chain. Refused as a read
   of the list is to a caller who cannot read it.
   """
-  shoppingListStoreComparison(input: ShoppingListStoreComparisonInput!): ShoppingListStoreComparison!
+  shoppingListStoreComparison(input: ShoppingListStoreComparisonInput!): ShoppingListStoreComparison! @deprecated(reason: "Use shoppingListStoreSavings: each line priced at the household's usual stores, shelf prices first.")
+  """
+  Where a shopping list costs less, line by line. Refused as a read of the
+  list is to a caller who cannot read it.
+  """
+  shoppingListStoreSavings(input: ShoppingListStoreSavingsInput!): ShoppingListStoreSavings!
   """
   Get shopping lists accessible to the current user (owned, collaborated, or home-based).
   The default list is `filters: { isDefault: true }`; a list's collaborators
@@ -14771,6 +15123,12 @@ type Query {
     """The id of the User to read"""
     id: ID!
   ): User
+  """
+  The stores a household shops at, at most 20: pinned first, then those
+  compared, then the most recently used. The caller must be an ACTIVE member
+  of the home named; with no homeId, their only household, else their own.
+  """
+  usualStores(homeId: ID): [UsualStore!]!
   """
   Validate item data integrity (read-only check). Errors are always
   reported; the data-quality warnings (ItemValidationWarningCode) only when
@@ -14901,9 +15259,14 @@ type ReceiptCheckInLineResult {
   """
   True when the line's purchase already existed and this call wrote nothing for it
   """
-  alreadyRecorded: Boolean!
+  alreadyRecorded: Boolean! @deprecated(reason: "Use converged, which states the same fact.")
   """The line's clientId, as sent"""
   clientId: String!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """Why the line failed; set exactly when success is false"""
   failure: BatchElementFailure
   """The line's position in the input"""
@@ -16234,9 +16597,8 @@ input RecordPantryStockCheckInput {
   """1 to 50 answers, each about a different stack"""
   entries: [PantryStockCheckEntryInput!]!
   """
-  A client-minted CUID2 for this check: a replay with the same key is refused
-  as already applied (ConflictError, IDEMPOTENT_REPLAY), so the check is
-  recorded at most once
+  A client-minted CUID2 for this check: a replay with the same key writes
+  nothing and answers with converged true, so the check is recorded at most once
   """
   idempotencyKey: ID
   """
@@ -16246,6 +16608,11 @@ input RecordPantryStockCheckInput {
 }
 
 type RecordPantryStockCheckPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The pantry the stacks belong to"""
   pantry: Pantry!
   """One result per entry, in request order"""
@@ -16312,8 +16679,8 @@ input RecordReceiptMatchesInput {
   """The household the corrections are remembered for"""
   homeId: ID!
   """
-  Client-minted CUID2 for this receipt's confirmation. A replay is refused
-  with IDEMPOTENT_REPLAY and changes nothing.
+  Client-minted CUID2 for this receipt's confirmation. A replay changes
+  nothing and answers with converged true.
   """
   idempotencyKey: ID!
   """The confirmed lines, at most 100"""
@@ -16335,6 +16702,11 @@ type RecordReceiptMatchesPayload {
   The chain they were remembered under; null for a store with no chain, or no known store
   """
   chain: StoreChain
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   """The household the corrections were remembered for"""
   home: Home!
   """Lines remembered"""
@@ -16715,6 +17087,25 @@ Always include a __typename so the variant can be discriminated.
 """
 union RemoveTemplateItemResult = ConflictError | ForbiddenError | NotFoundError | RemoveTemplateItemPayload | ValidationError
 
+input RemoveUsualStoreInput {
+  """
+  The household; the caller's only household when omitted, else the caller alone
+  """
+  homeId: ID
+  target: UsualStoreTargetInput!
+}
+
+type RemoveUsualStorePayload {
+  usualStores: [UsualStore!]!
+}
+
+"""
+Result of RemoveUsualStore. Select on RemoveUsualStorePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union RemoveUsualStoreResult = ConflictError | ForbiddenError | NotFoundError | RemoveUsualStorePayload | ValidationError
+
 """
 Where a report stands. Its reporter sees this and nothing else of the outcome.
 """
@@ -16913,6 +17304,11 @@ input RestockPantryItemInput {
 }
 
 type RestockPantryItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem
   pantryItemUsage: PantryItemUsage!
@@ -17308,6 +17704,8 @@ type ShoppingList {
   Percentage of the list's items marked purchased, from 0 to 100; 0 for an empty list
   """
   completionRate: Float!
+  """What the lines not yet bought will cost"""
+  costToGo: ShoppingListCostToGo!
   """When the list was created"""
   createdAt: DateTime!
   """
@@ -17423,6 +17821,13 @@ type ShoppingList {
   ownerships: [ShoppingListOwnership!]!
   """When the user plans to go shopping; null when not set"""
   plannedShopDate: DateTime
+  """
+  Whether the list's household has price data enough for the app to offer
+  prices, whatever the caller's budgetAndPrices. Computed on read: select it
+  on one list, not across a page of lists. Null when the caller is not a
+  member of the list, as through a share code.
+  """
+  priceReadiness: PriceReadiness
   """
   Whether the list's estimated prices and purchases are recorded in each
   item's price history; true by default. Off, the list's totals and purchase
@@ -17650,6 +18055,26 @@ type ShoppingListConnection implements Connection {
   Total rows matching the query across all pages. Computed only when selected; null when not available.
   """
   totalCount: Int
+}
+
+"""
+What a list's lines not yet bought will cost: each line's estimated price,
+else its suggested price, times its quantity (1 when unset). Bought lines
+are left out.
+"""
+type ShoppingListCostToGo {
+  """
+  The sum, rounded to the currency's decimal places; null when no line counted is priced, so an unknown cost never reads 0
+  """
+  amount: Float
+  """The currency amount is in: the list's, else the caller's preferred"""
+  currency: CurrencyCode!
+  """Every line not yet bought, free text included"""
+  lines: Int!
+  """
+  The lines not yet bought with an estimate or a suggestion: the lines amount sums
+  """
+  pricedLines: Int!
 }
 
 """
@@ -18096,6 +18521,37 @@ input ShoppingListStoreComparisonInput {
 }
 
 """
+Where a list's lines cost less, line by line: each comparable line
+(unpurchased, a catalog item, a unit that converts without an assumption)
+priced at the list's store and the household's compared usual stores, at
+most 20 in all, current shelf prices first. Prices are counted as
+itemPriceComparison counts them; no household's prices are revealed.
+"""
+type ShoppingListStoreSavings {
+  """When the server answered: the prices are as of then"""
+  answeredAt: DateTime!
+  """Those with a total, cheapest first; then the rest"""
+  candidates: [StoreSavingsCandidate!]!
+  comparableLines: Int!
+  currency: Currency!
+  """
+  Unpurchased lines that cannot be compared: no catalog item, or a unit that does not convert
+  """
+  leftOutLines: Int!
+  shoppingList: ShoppingList!
+  """True when the list held more than the 200 lines a comparison considers"""
+  truncated: Boolean!
+}
+
+input ShoppingListStoreSavingsInput {
+  listId: ID!
+  """
+  Up to 10 stores to compare instead of the household's compared usual stores; another household's own store is refused as one that does not exist
+  """
+  storeIds: [ID!]
+}
+
+"""
 Subtype discriminator for shopping list domain events.
 Values match the client-side changeType contract.
 """
@@ -18204,6 +18660,18 @@ type ShoppingListUsageStats {
   lastActivityAt: DateTime
 }
 
+"""Sub-input for shopping settings"""
+input ShoppingSettingsInput {
+  """
+  Whether the app shows prices, estimates and savings. Answering the price prompt either way sets it; null returns it to never set
+  """
+  budgetAndPrices: Boolean
+  """
+  Whether the shopping list offers Store mode; on by default, null is refused
+  """
+  storeMode: Boolean
+}
+
 """Nutrition to show for an item, and whose it is."""
 type ShownNutrition {
   facts: NutritionFacts!
@@ -18212,6 +18680,29 @@ type ShownNutrition {
   own (Typical for chipotle peppers in adobo sauce). Null for the item's own.
   """
   typicalOf: Item
+}
+
+"""
+The cheapest current product of an item's kind at one store, per kilogram, litre or piece.
+"""
+type SimilarStorePrice {
+  """
+  The basis every price in the list is compared at: the one most of them are sold by
+  """
+  basis: PriceBasis!
+  """When the store last listed it, within the last 8 days"""
+  confirmedAt: DateTime!
+  currency: Currency!
+  normalizedPrice: Float!
+  """The net quantity one unit holds, in packageNetWeightUnit"""
+  packageNetWeight: Float
+  packageNetWeightUnit: Unit
+  """What a shopper pays now, per one of unit"""
+  price: Float!
+  """The product priced: another of the item's concept"""
+  product: Item!
+  store: Store!
+  unit: Unit!
 }
 
 """
@@ -18693,7 +19184,16 @@ type Store {
   """
   chain: StoreChain
   createdAt: DateTime!
+  """
+  Whether this store has a shelf price of its own collected in the last 8
+  days, the window priceStandIn reads. A household's recorded prices do not
+  count. False for a store priced only through its priceStandIn.
+  """
+  hasCollectedPrices: Boolean!
   id: ID!
+  """
+  When a store import last wrote the store's price details. Whether prices are collected here is hasCollectedPrices.
+  """
   lastPriceUpdate: DateTime
   name: String!
   """Pantry items sourced from this store that you can see."""
@@ -18726,6 +19226,14 @@ type Store {
     """
     orderBy: ItemPriceHistoryOrderBy
   ): ItemPriceHistoryConnection!
+  """
+  The nearest branch of this store's chain, within 24 km, with a shelf price
+  collected in the last 8 days, when this store has none of its own. Null
+  otherwise, and for a store with no coordinates or no chain. Most chains
+  price alike across nearby branches, but not all do: name it where its
+  prices are shown.
+  """
+  priceStandIn: PriceStandIn
   qualityRating: Float
   stats: StoreStats
   storeInfo: StoreInfo
@@ -18743,6 +19251,9 @@ type Store {
     """Sort order; newest first when omitted"""
     orderBy: ItemStoreSkuOrderBy
   ): ItemStoreSkuConnection!
+  """
+  An admin's or a store import's mark that the store's chain offers a price API. Whether prices are collected here is hasCollectedPrices.
+  """
   supportsPriceAPI: Boolean!
   updatedAt: DateTime!
 }
@@ -18916,6 +19427,29 @@ type StoreInfo {
   website: URL
 }
 
+"""How a line is priced at a store, best first."""
+enum StoreLineMatch {
+  """The 90-day median there, its chain's, or any store's"""
+  ESTIMATED
+  """No price"""
+  NONE
+  """
+  Its product's current shelf price there; a concept line's cheapest product
+  """
+  SAME
+  """
+  The cheapest current product of its kind there, its own having no price
+  """
+  SIMILAR
+}
+
+"""Where a near search starts: exactly one of a US zip or a point."""
+input StoreNearInput @oneOf {
+  point: GeoPointInput
+  """A US zip code, placed at its Census centre; one not on file is refused"""
+  zip: String
+}
+
 """
 Sort options for the stores list. Object-map convention: set a field to
 ASC or DESC. `popularity` is the quality rating, unrated stores last in
@@ -18966,6 +19500,82 @@ enum StoreRouteSource {
   HOUSEHOLD
   """Every household's trips at this store"""
   STORE
+}
+
+"""
+What a store saves against the list's store, over the lines both price on the shelf.
+"""
+type StoreSaving {
+  """Whether the difference is under 5% of targetAmount"""
+  aboutTheSame: Boolean!
+  """
+  The list's store's amount less this store's: positive when this one is cheaper
+  """
+  amount: Float!
+  """The lines SAME or SIMILAR at both stores"""
+  coveredLines: Int!
+  """The list's store's amount over those lines"""
+  targetAmount: Float!
+}
+
+"""One store, or a whole chain, the list's lines are priced at."""
+type StoreSavingsCandidate {
+  """The store's chain, or the chain compared"""
+  chain: StoreChain
+  estimatedLines: Int!
+  """The list's store"""
+  isTarget: Boolean!
+  """Every comparable line, in the list's order"""
+  lines: [StoreSavingsLine!]!
+  sameLines: Int!
+  """
+  Null for the list's store, with no list store, or with no line on the shelf at both
+  """
+  savingVsTarget: StoreSaving
+  similarLines: Int!
+  """
+  Where its shelf prices come from: a store's stand-in when it has none of its own; a whole chain's collected branch nearest the household's stores. Null for a chain with none within 24 km, which then has no shelf prices
+  """
+  standIn: PriceStandIn
+  """The store; null for a whole chain"""
+  store: Store
+  """
+  The SAME, SIMILAR and ESTIMATED amounts summed; null unless SAME and SIMILAR lines cover at least half the comparable lines
+  """
+  total: Float
+  unpricedLines: Int!
+}
+
+"""One line at one store."""
+type StoreSavingsLine {
+  """
+  What the line's quantity costs at this price, in the list's currency; null for NONE
+  """
+  amount: Float
+  basis: PriceBasis
+  """Observed within the last 8 days"""
+  isCurrent: Boolean!
+  kind: StoreLineMatch!
+  line: ShoppingListItem!
+  """The price per kilogram, litre or piece"""
+  normalizedPrice: Float
+  """When the price was observed; null for NONE"""
+  observedAt: DateTime
+  """The net quantity one unit holds, in packageNetWeightUnit"""
+  packageNetWeight: Float
+  packageNetWeightUnit: Unit
+  """The price as sold, per one of unit; null for NONE"""
+  price: Float
+  """
+  The product priced: the line's own, a concept line's cheapest, or one of its kind for SIMILAR; null for NONE
+  """
+  product: Item
+  """
+  The unit the price is per: the product's as sold, the line's for ESTIMATED
+  """
+  unit: Unit
+  """Priced at the store's stand-in"""
+  viaStandIn: Boolean!
 }
 
 input StoreSkuInput {
@@ -19088,6 +19698,8 @@ type Subscription {
   Discriminate by subtype: PANTRY_UPDATED, ITEM_CHANGED, USAGE_CHANGED,
   LOW_STOCK_ALERT, EXPIRATION_ALERT, WASTE_ALERT,
   EXPIRATION_NOTIFICATION_CREATED, EXPIRATION_ACTION_TAKEN.
+  An event whose node is an ExpirationNotification reaches only that
+  reminder's owner; every other event reaches everyone who can view the pantry.
   """
   pantryEvents(
     """The pantry to watch"""
@@ -19952,6 +20564,8 @@ input UpdateDietaryProfileInput {
   carbsTarget: Int
   """How much cooking experience the user claims; null clears it"""
   cookingSkillLevel: CookingSkillLevel
+  """How many people the user cooks for, 1 to 20; null clears it"""
+  cooksFor: Int
   """
   Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused. Nothing screens against it: an avoided item (RestrictionKindInput.item) is what alerts read
   """
@@ -20015,6 +20629,11 @@ input UpdateDietarySharingInput {
 }
 
 type UpdateDietarySharingPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   home: Home
   membership: Membership!
 }
@@ -20712,6 +21331,8 @@ input UpdateSettingsInput {
   quantityDisplay: QuantityDisplayInput
   """Language, time zone, currency and unit system"""
   regional: RegionalSettingsInput
+  """Store mode and Budget & prices"""
+  shopping: ShoppingSettingsInput
   """Sync behaviour"""
   sync: SyncSettingsInput
   """App appearance"""
@@ -20844,7 +21465,17 @@ type UpdateShoppingListPayload {
     storeIds: [ID!]
     """How far back observations count: default 90 days, at most 365"""
     windowDays: Int
-  ): ShoppingListStoreComparison!
+  ): ShoppingListStoreComparison! @deprecated(reason: "Use storeSavings, as shoppingListStoreSavings reads them.")
+  """
+  The list's savings after this write, as shoppingListStoreSavings reads
+  them: a change of store changes them. Computed only when selected.
+  """
+  storeSavings(
+    """
+    Up to 10 stores to compare instead of the household's compared usual stores
+    """
+    storeIds: [ID!]
+  ): ShoppingListStoreSavings!
 }
 
 input UpdateShoppingListReminderInput {
@@ -21003,6 +21634,29 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union UpdateUserAppealResult = ConflictError | ForbiddenError | NotFoundError | UpdateUserAppealPayload | ValidationError
+
+input UpdateUsualStoreInput {
+  """
+  The household; the caller's only household when omitted, else the caller alone
+  """
+  homeId: ID
+  """
+  Whether comparisons always use it; pinning a removed store adds it back
+  """
+  pinned: Boolean!
+  target: UsualStoreTargetInput!
+}
+
+type UpdateUsualStorePayload {
+  usualStores: [UsualStore!]!
+}
+
+"""
+Result of UpdateUsualStore. Select on UpdateUsualStorePayload for the
+success case; every other member is a business error carrying a message.
+Always include a __typename so the variant can be discriminated.
+"""
+union UpdateUsualStoreResult = ConflictError | ForbiddenError | NotFoundError | UpdateUsualStorePayload | ValidationError
 
 type UploadFormField {
   name: String!
@@ -21776,6 +22430,12 @@ type UserSettings {
   Names the user wrote about themselves; empty when none. The server never reads them and they unlock nothing: a feature's availability is myFeatureFlags
   """
   betaFeatures: [String!]!
+  """
+  Whether the app shows prices, estimates and savings. Null until the user
+  sets it, by hand or by answering the price prompt: the app shows no prices
+  while it is null, and asks once when ShoppingList.priceReadiness is enough.
+  """
+  budgetAndPrices: Boolean
   """Whether the app uses its compact layout"""
   compactMode: Boolean!
   """When the settings row was created"""
@@ -21829,6 +22489,10 @@ type UserSettings {
   shareWithPartners: Boolean!
   """Whether the app shows its tutorials"""
   showTutorials: Boolean!
+  """
+  Whether the shopping list offers Store mode; on until the user turns it off
+  """
+  storeMode: Boolean!
   """The app's color theme; SYSTEM follows the device"""
   theme: AppTheme!
   """
@@ -21866,6 +22530,51 @@ enum UserSubtype {
   UNBANNED
   UNSUSPENDED
   WARNED
+}
+
+"""
+A store, or a whole chain, a household (or a lone user) shops at: one its
+purchases, receipts or lists name, or one a member added; less those a
+member removed. A removed store returns when a newer receipt is checked in
+from it, or a member adds it again.
+"""
+type UsualStore {
+  addedVia: UsualStoreSource!
+  """The chain: the store's, or the one added; null for a store in none"""
+  chain: StoreChain
+  """Whether comparisons use it: pinned, or used within the last 90 days"""
+  compared: Boolean!
+  """Stable for the household and the store or chain"""
+  id: ID!
+  """
+  The newest purchase, receipt or pick, or now while a live list is for it; null for a chain never picked
+  """
+  lastUsedAt: DateTime
+  pinned: Boolean!
+  """The store; null for a whole chain"""
+  store: Store
+}
+
+"""How a usual store came to be one: the first that holds."""
+enum UsualStoreSource {
+  """One of the household's live lists is for it"""
+  LIST_STORE
+  """A member added it"""
+  PICKED
+  """The household bought something there"""
+  PURCHASE
+  """The household checked in a receipt from it"""
+  RECEIPT
+}
+
+"""A usual store's target: exactly one store or one chain."""
+input UsualStoreTargetInput @oneOf {
+  """A whole chain, as 'any ALDI'"""
+  chainId: ID
+  """
+  A store the caller may see; a merged store's old id names the store it became
+  """
+  storeId: ID
 }
 
 input ValidatePasswordResetTokenInput {
@@ -22034,6 +22743,11 @@ input WastePantryItemBatchInput {
 }
 
 type WastePantryItemBatchPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   storageLocation: StorageLocation

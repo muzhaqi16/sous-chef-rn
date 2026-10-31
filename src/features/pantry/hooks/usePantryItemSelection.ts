@@ -52,7 +52,7 @@ function buildIndex(rows: readonly PantryRow[]): ExistingPantryIndex {
  */
 export function usePantryItemSelection(pantryId: string | null | undefined) {
   const today = useToday();
-  const { data, loading, refetch } = useQuery(
+  const { data, loading } = useQuery(
     GetPantryDocument,
     pantryId
       ? {
@@ -67,9 +67,6 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
 
   const { removeItem } = usePantryItemMutations({
     pantryId: pantryId ?? undefined,
-    refetch: () => {
-      void refetch();
-    },
   });
 
   const { addItem } = usePantryIntake(pantryId ?? undefined);

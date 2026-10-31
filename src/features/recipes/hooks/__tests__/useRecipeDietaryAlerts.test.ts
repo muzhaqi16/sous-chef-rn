@@ -1,11 +1,12 @@
-import { waitFor } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import {
   completeMockedResponse,
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetRecipeDocument,
   type GetRecipeQuery,
@@ -27,6 +28,10 @@ jest.mock('#store/useAppStore', () => ({
 }));
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: () => false,
+}));
+let mockRestrictionsInPlay: boolean | null = true;
+jest.mock('#features/profile/hooks/useRestrictionsInPlay', () => ({
+  useRestrictionsInPlay: () => mockRestrictionsInPlay,
 }));
 
 const TANI = {
@@ -97,15 +102,38 @@ const alertsMock = () =>
             ]),
             row('rice-row', []),
           ],
-          pageInfo: { hasNextPage: false, endCursor: 'c-4' },
+          pageInfo: {},
           totalCount: 4,
         },
       },
     },
   });
 
+const cleanRecipeMock = () =>
+  recordMock(RecipeDietaryAlertsDocument, {
+    data: {
+      recipe: {
+        id: 'recipe-1',
+        ingredientsConnection: {
+          edges: [row('rice-row', [])],
+          pageInfo: {},
+          totalCount: 1,
+        },
+      },
+    },
+  });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => {
   mockHomeId = 'home-1';
+  mockRestrictionsInPlay = true;
 });
 
 describe('useRecipeDietaryAlerts', () => {
@@ -115,7 +143,8 @@ describe('useRecipeDietaryAlerts', () => {
       { operationMocks: [alertsMock().mock] },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
     expect(
       result.current.summary.map(alert => [alert.id, alert.state]),
     ).toEqual([
@@ -147,7 +176,8 @@ describe('useRecipeDietaryAlerts', () => {
       { operationMocks: [withErrors] },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('stale'));
+    await drainTimers();
+    expect(result.current.check).toBe('stale');
     expect(result.current.summary).toHaveLength(2);
   });
 
@@ -187,8 +217,6 @@ describe('useRecipeDietaryAlerts', () => {
               ),
               pageInfo: {
                 __typename: 'PageInfo',
-                hasNextPage: false,
-                endCursor: 'c-4',
               },
               totalCount: 4,
             },
@@ -199,7 +227,7 @@ describe('useRecipeDietaryAlerts', () => {
       data: Unmasked<GetRecipeQuery>;
     };
     const cache = seedCache([]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetRecipeDocument,
       variables: recipeVars,
       data: completed(recipeVars).data,
@@ -209,7 +237,8 @@ describe('useRecipeDietaryAlerts', () => {
       () => useRecipeDietaryAlerts('recipe-1'),
       { cache, operationMocks: [alertsMock().mock] },
     );
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
 
     const recipe = cache.readQuery({
       query: GetRecipeDocument,
@@ -218,5 +247,30 @@ describe('useRecipeDietaryAlerts', () => {
     expect(recipe?.recipe?.id).toBe('recipe-1');
     expect(recipe?.recipe?.ingredientsConnection.totalCount).toBe(4);
     expect(recipe?.recipe?.ingredientsConnection.edges).toHaveLength(4);
+  });
+
+  describe('whether restrictions apply', () => {
+    const answeredWith = async (inPlay: boolean | null) => {
+      mockRestrictionsInPlay = inPlay;
+      const { result } = renderHookWithApollo(
+        () => useRecipeDietaryAlerts('recipe-1'),
+        { operationMocks: [cleanRecipeMock().mock] },
+      );
+      await drainTimers();
+      expect(result.current.check).toBe('checked');
+      return result.current;
+    };
+
+    it('is true while a restriction is in play', async () => {
+      expect((await answeredWith(true)).restrictionsApply).toBe(true);
+    });
+
+    it('is true while it is not yet known whether one is', async () => {
+      expect((await answeredWith(null)).restrictionsApply).toBe(true);
+    });
+
+    it('is false when no restriction anywhere can alert', async () => {
+      expect((await answeredWith(false)).restrictionsApply).toBe(false);
+    });
   });
 });

@@ -1,9 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useSetDefaultShoppingList } from '../useSetDefaultShoppingList';
 
@@ -18,10 +18,19 @@ const readDefault = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ isDefault: boolean }>({
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: IS_DEFAULT,
+    optimistic: true,
   })?.isDefault;
 
 const seedList = () =>
   seedCache([{ __typename: 'ShoppingList', id: 'list-1', isDefault: false }]);
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useSetDefaultShoppingList', () => {
   it('flips isDefault optimistically before settle; a queued (null) result keeps it and returns true', async () => {
@@ -40,7 +49,7 @@ describe('useSetDefaultShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.setAsDefault('list-1');
       expect(readDefault(cache)).toBe(true);
       resolved = await promise;
@@ -76,13 +85,10 @@ describe('useSetDefaultShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.setAsDefault('list-1');
-    });
+    resolved = await drained(() => result.current.setAsDefault('list-1'));
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readDefault(cache)).toBe(false);
-    });
+    await drainTimers();
+    expect(readDefault(cache)).toBe(false);
   });
 });

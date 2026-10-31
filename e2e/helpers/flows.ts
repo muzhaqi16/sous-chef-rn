@@ -5,10 +5,10 @@ import { launchAppWithFabricWorkaround } from '../init';
 import { LandingAuthScreen } from '../screens/LandingAuthScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import {
-  BiometricSetupScreen,
-  CreateHomeScreen,
-  CreateShoppingListScreen,
-  SelectPantryItemsScreen,
+  DietaryStepScreen,
+  HouseholdStepScreen,
+  OnboardingSetupScreen,
+  ReceiptStepScreen,
 } from '../screens/OnboardingScreens';
 import { PantryScreen } from '../screens/PantryScreen';
 import { dismissBiometricPromptIfPresent, isLoggedIn } from './auth';
@@ -18,35 +18,36 @@ import { getAuthTokens } from './tokenProvider';
 const landingScreen = new LandingAuthScreen();
 const loginScreen = new LoginScreen();
 const pantryScreen = new PantryScreen();
-const createHomeScreen = new CreateHomeScreen();
-const createShoppingListScreen = new CreateShoppingListScreen();
-const selectPantryItemsScreen = new SelectPantryItemsScreen();
-const biometricSetupScreen = new BiometricSetupScreen();
+const onboardingSetupScreen = new OnboardingSetupScreen();
+const householdStepScreen = new HouseholdStepScreen();
+const dietaryStepScreen = new DietaryStepScreen();
+const receiptStepScreen = new ReceiptStepScreen();
 
 async function skipOptionalOnboardingScreens() {
   await dismissBiometricPromptIfPresent();
 
+  // Setup creates the home, pantry and list itself; it waits only when an
+  // invitation is pending.
   try {
-    await createHomeScreen.waitForScreen(2000);
-    await createHomeScreen.tapSkip();
+    await onboardingSetupScreen.waitForScreen(2000);
+    await onboardingSetupScreen.tapSkipHome();
   } catch {
-    console.log('CreateHome screen not present, skipping...');
+    console.log('No pending invitation at setup, continuing...');
   }
 
   try {
-    await createShoppingListScreen.waitForScreen(2000);
-    await createShoppingListScreen.tapSkip();
+    await householdStepScreen.waitForScreen(2000);
+    await householdStepScreen.tapSkip();
   } catch {}
 
   try {
-    await selectPantryItemsScreen.waitForScreen(2000);
-    await selectPantryItemsScreen.tapSkip();
+    await dietaryStepScreen.waitForScreen(2000);
+    await dietaryStepScreen.tapSkip();
   } catch {}
 
-  // Only appears on devices with biometric support.
   try {
-    await biometricSetupScreen.waitForScreen(3000);
-    await biometricSetupScreen.tapSkip();
+    await receiptStepScreen.waitForScreen(2000);
+    await receiptStepScreen.tapSkip();
   } catch {}
 }
 

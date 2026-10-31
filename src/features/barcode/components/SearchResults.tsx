@@ -390,7 +390,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         />
 
         <StorePriceSection {...prices} />
-        <StoreShelfPriceSection rows={shelfPrices.rows} />
+        <StoreShelfPriceSection prices={shelfPrices} />
       </View>
 
       {!!scannedBrand && (

@@ -47,6 +47,7 @@ const readHome = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'Home', id: HOME_ID }),
     fragment: HOME_FIELDS,
     fragmentName: '_TestHomeFields',
+    optimistic: true,
   });
 
 describe('updating a home field', () => {

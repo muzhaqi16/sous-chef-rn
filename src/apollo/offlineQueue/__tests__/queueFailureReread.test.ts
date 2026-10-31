@@ -3,7 +3,6 @@
  * exists on the server, so after the drain it has to be readable again in its
  * list, with the server's value rather than the refused local one.
  */
-import { waitFor } from '@testing-library/react-native';
 import type { ApolloClient } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import {
@@ -22,6 +21,7 @@ import {
 import { queueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { makeQueuedMutation } from '#/test-utils/queuedMutation';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockClientHolder: { client: ApolloClient | null } = { client: null };
 // The handler reads the client at call time, so each test's holds.
@@ -52,9 +52,11 @@ describe('withdrawing a refused queued update', () => {
   let whenIdle: jest.SpyInstance;
 
   beforeEach(() => {
+    jest.useFakeTimers();
     whenIdle = jest.spyOn(queueManager, 'whenIdle').mockResolvedValue();
   });
   afterEach(() => {
+    jest.useRealTimers();
     whenIdle.mockRestore();
     mockClientHolder.client = null;
   });
@@ -70,7 +72,8 @@ describe('withdrawing a refused queued update', () => {
       }),
       { operationMocks: [list.mock] },
     );
-    await waitFor(() => expect(result.current.query.data).toBeDefined());
+    await drainTimers();
+    expect(result.current.query.data).toBeDefined();
     const { client } = result.current;
     mockClientHolder.client = client;
 
@@ -101,8 +104,9 @@ describe('withdrawing a refused queued update', () => {
       },
     });
 
-    await waitFor(() => expect(list.fired.length).toBeGreaterThan(readsBefore));
-    await waitFor(() => expect(rowNames(client)).toEqual(['Milk']));
+    await drainTimers();
+    expect(list.fired.length).toBeGreaterThan(readsBefore);
+    expect(rowNames(client)).toEqual(['Milk']);
   });
 
   // The reread is network-only for every active query. Run while another write
@@ -142,7 +146,8 @@ describe('withdrawing a refused queued update', () => {
         }),
         { operationMocks: [list.mock, list.mock] },
       );
-      await waitFor(() => expect(result.current.query.data).toBeDefined());
+      await drainTimers();
+      expect(result.current.query.data).toBeDefined();
       mockClientHolder.client = result.current.client;
       registerQueueFailureHandler();
 
@@ -153,15 +158,14 @@ describe('withdrawing a refused queued update', () => {
       const readsBefore = list.fired.length;
 
       refusal();
-      await new Promise(resolve => setTimeout(resolve, 50));
+      await drainTimers();
       expect(list.fired.length).toBe(readsBefore);
 
       queueStore.removeMutation('still-queued');
       queueManager['drainedHandler']?.('user-1');
 
-      await waitFor(() =>
-        expect(list.fired.length).toBeGreaterThan(readsBefore),
-      );
+      await drainTimers();
+      expect(list.fired.length).toBeGreaterThan(readsBefore);
     });
   });
 });

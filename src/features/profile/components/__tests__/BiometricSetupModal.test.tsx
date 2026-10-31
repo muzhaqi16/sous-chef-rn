@@ -3,16 +3,15 @@ import React from 'react';
 import { Platform, TextInput } from 'react-native';
 import { Modal } from '#components/atoms/themedComponents';
 import {
-  act,
   fireEvent,
   render,
   screen,
   userEvent,
-  waitFor,
 } from '@testing-library/react-native';
 import { BiometricSetupModal } from '#features/profile/components/BiometricSetupModal';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
@@ -48,6 +47,14 @@ const defaultProps: {
   mode: 'onboarding',
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('BiometricSetupModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -67,47 +74,42 @@ describe('BiometricSetupModal', () => {
 
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
-    });
+    await drainTimers();
+    expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
   });
 
   it('renders the title with Face ID when biometryType is Face ID', async () => {
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Enable Face ID Login')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Enable Face ID Login')).toBeTruthy();
   });
 
   it('renders the description for Face ID', async () => {
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(
-          /Use Face ID to securely and quickly log into your account/,
-        ),
-      ).toBeTruthy();
-    });
+    await drainTimers();
+    expect(
+      screen.getByText(
+        /Use Face ID to securely and quickly log into your account/,
+      ),
+    ).toBeTruthy();
   });
 
   it('renders Enable Now and Set up later buttons', async () => {
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Enable Now')).toBeTruthy();
-      expect(screen.getByText('Set up later')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Enable Now')).toBeTruthy();
+    expect(screen.getByText('Set up later')).toBeTruthy();
   });
 
   it('calls onComplete(false) when Set up later is pressed', async () => {
     const user = userEvent.setup();
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Set up later')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Set up later')).toBeTruthy();
 
     await user.press(screen.getByText('Set up later'));
     expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
@@ -117,18 +119,14 @@ describe('BiometricSetupModal', () => {
     const user = userEvent.setup();
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Enable Now')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Enable Now')).toBeTruthy();
 
     await user.press(screen.getByText('Enable Now'));
 
-    await waitFor(() => {
-      // The live session authorises the enrolment, so the email is the whole
-      // input and no password is read on this path.
-      expect(mockEnrol).toHaveBeenCalledWith('test@example.com');
-      expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
-    });
+    await drainTimers();
+    expect(mockEnrol).toHaveBeenCalledWith('test@example.com');
+    expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
   });
 
   describe('in settings, with a sign-in already stored', () => {
@@ -136,9 +134,8 @@ describe('BiometricSetupModal', () => {
       mockCheckStoredCredentials.mockResolvedValue(true);
       const user = userEvent.setup();
       render(<BiometricSetupModal {...defaultProps} mode="settings" />);
-      await waitFor(() => {
-        expect(screen.getByText('Enable Now')).toBeTruthy();
-      });
+      await drainTimers();
+      expect(screen.getByText('Enable Now')).toBeTruthy();
       await user.press(screen.getByText('Enable Now'));
     };
 
@@ -150,9 +147,8 @@ describe('BiometricSetupModal', () => {
       });
       await enableWithSlot();
 
-      await waitFor(() => {
-        expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
-      });
+      await drainTimers();
+      expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
       expect(mockEnrol).not.toHaveBeenCalled();
     });
 
@@ -161,9 +157,8 @@ describe('BiometricSetupModal', () => {
       mockLoadStoredCredentials.mockResolvedValue({ status: 'cancelled' });
       await enableWithSlot();
 
-      await waitFor(() => {
-        expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
-      });
+      await drainTimers();
+      expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 
@@ -171,9 +166,8 @@ describe('BiometricSetupModal', () => {
       mockLoadStoredCredentials.mockResolvedValue({ status: 'unavailable' });
       await enableWithSlot();
 
-      await waitFor(() => {
-        expect(alertService.alert).toHaveBeenCalled();
-      });
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenCalled();
       expect(defaultProps.onComplete).not.toHaveBeenCalled();
     });
   });
@@ -190,11 +184,12 @@ describe('BiometricSetupModal', () => {
     const user = userEvent.setup();
     render(<BiometricSetupModal {...defaultProps} mode="settings" />);
 
-    await user.press(await screen.findByText('Enable Now'));
+    await drainTimers();
+    await user.press(screen.getByText('Enable Now'));
     fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
     expect(defaultProps.onComplete).not.toHaveBeenCalled();
 
-    await act(async () => finishEnrolment('enrolled'));
+    await drained(() => finishEnrolment('enrolled'));
     expect(defaultProps.onComplete).toHaveBeenCalledTimes(1);
     expect(defaultProps.onComplete).toHaveBeenCalledWith(true);
   });
@@ -202,7 +197,8 @@ describe('BiometricSetupModal', () => {
   it('takes Android back as a skip once nothing is running', async () => {
     render(<BiometricSetupModal {...defaultProps} mode="settings" />);
 
-    await screen.findByText('Enable Now');
+    await drainTimers();
+    expect(screen.getByText('Enable Now')).toBeTruthy();
     fireEvent(screen.UNSAFE_getByType(Modal), 'requestClose');
 
     expect(defaultProps.onComplete).toHaveBeenCalledWith(false);
@@ -214,9 +210,11 @@ describe('BiometricSetupModal', () => {
     const user = userEvent.setup();
     render(<BiometricSetupModal {...defaultProps} mode="settings" />);
 
-    await user.press(await screen.findByText('Enable Now'));
+    await drainTimers();
+    await user.press(screen.getByText('Enable Now'));
 
-    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
     expect(toastService.error).not.toHaveBeenCalled();
   });
 
@@ -229,9 +227,8 @@ describe('BiometricSetupModal', () => {
       mockCheckStoredCredentials.mockResolvedValue(false);
       render(<BiometricSetupModal {...defaultProps} mode={mode} />);
 
-      await waitFor(() => {
-        expect(screen.getByText('Enable Now')).toBeTruthy();
-      });
+      await drainTimers();
+      expect(screen.getByText('Enable Now')).toBeTruthy();
       expect(screen.UNSAFE_queryAllByType(TextInput)).toHaveLength(0);
     },
   );
@@ -244,9 +241,8 @@ describe('BiometricSetupModal', () => {
 
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Enable Touch ID Login')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Enable Touch ID Login')).toBeTruthy();
   });
 
   // Android's `getSupportedBiometryType` answers with the first SENSOR it finds,
@@ -261,9 +257,8 @@ describe('BiometricSetupModal', () => {
 
     render(<BiometricSetupModal {...defaultProps} />);
 
-    await waitFor(() => {
-      expect(screen.getByText('Enable Biometric Login')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Enable Biometric Login')).toBeTruthy();
     expect(screen.queryByText('Enable Fingerprint Login')).toBeNull();
   });
 });

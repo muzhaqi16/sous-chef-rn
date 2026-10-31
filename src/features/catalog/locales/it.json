@@ -78,7 +78,6 @@
     "allAdded": "Tutto aggiunto",
     "dismiss": "Ignora suggerimento",
     "dismissed": "{{name}} rimosso",
-    "undo": "Annulla",
     "dismissFailed": "Impossibile rimuovere il suggerimento",
     "undoFailed": "Impossibile annullare",
     "sections": {
@@ -91,7 +90,7 @@
     "noListTitle": "Nessuna lista selezionata",
     "noListBody": "Seleziona o crea prima una lista della spesa.",
     "createList": "Crea lista",
-    "searchPlaceholder": "Cerca o scansiona un articolo...",
+    "searchPlaceholder": "Cerca un articolo...",
     "added": "{{name}} aggiunto",
     "emptyTitle": "Ancora nessun suggerimento",
     "emptyPantrySubtext": "Aggiungi articoli alla tua dispensa per ricevere suggerimenti personalizzati",
@@ -451,9 +450,6 @@
     "selectedCount_one": "{{count}} elemento selezionato",
     "selectedCount_other": "{{count}} elementi selezionati"
   },
-  "storeBranch": {
-    "number": "Punto vendita n. {{number}}"
-  },
   "storeShelfPrices": {
     "title": "Prezzi nei negozi",
     "cheapest": "Il più economico",
@@ -467,6 +463,46 @@
     "lowestIn_other": "Prezzo più basso in {{count}} giorni",
     "lastSeen": "Visto l’ultima volta il {{date}}",
     "showMore_one": "Mostra {{count}} altro",
-    "showMore_other": "Mostra altri {{count}}"
+    "showMore_other": "Mostra altri {{count}}",
+    "similarTitle": "Prodotti simili",
+    "mightBeCheaper": "Potrebbe costare meno"
+  },
+  "usualStores": {
+    "title": "I tuoi negozi",
+    "addStore": "Aggiungi un negozio",
+    "pinned": "Fissato",
+    "pin": "Fissa",
+    "unpin": "Non fissare",
+    "addedViaReceipt": "Da uno scontrino",
+    "addedViaPurchase": "Da un acquisto",
+    "addedViaListStore": "Negozio di una lista",
+    "addedViaPicked": "Aggiunto dalla tua casa",
+    "lastUsed": "Ultimo uso: {{date}}",
+    "notCompared": "Non confrontato: inutilizzato da 90 giorni",
+    "removed": "Rimosso: {{name}}",
+    "emptyTitle": "Ancora nessun negozio",
+    "emptyBody": "I negozi compaiono qui quando scansioni uno scontrino, fai la spesa in modalità negozio o scegli il negozio di una lista.",
+    "limitTitle": "Troppi negozi",
+    "limitBody": "Puoi tenere fino a 20 negozi. Rimuovine uno o smetti di fissarlo, poi riprova.",
+    "saveFailed": "Impossibile salvare i tuoi negozi"
+  },
+  "storePicker": {
+    "searchPlaceholder": "Cerca per nome o indirizzo del negozio",
+    "zipLabel": "CAP",
+    "zipRefused": "Non conosciamo ancora questo CAP. Provane un altro o cerca per nome.",
+    "notListed": "Non c'è? Aggiungi «{{name}}»",
+    "addedToStores": "Aggiunto ai tuoi negozi",
+    "needsConnectionTitle": "Per trovare negozi serve una connessione",
+    "needsConnectionBody": "Questi sono i negozi dove fai la spesa. Connettiti per trovarne altri.",
+    "nothingNear": "Nessun negozio trovato qui vicino.",
+    "nothingNamed": "Nessun negozio corrisponde a «{{term}}».",
+    "hint": "Cerca per nome o inserisci un CAP per vedere i negozi vicini.",
+    "nearMe": "Negozi vicino a me",
+    "nearMeTitle": "Trova negozi vicino a te",
+    "nearMeBody": "{{appName}} usa la tua posizione approssimativa per mostrarti i negozi della zona. Non serve la posizione esatta, e va bene anche un CAP.",
+    "locating": "Ricerca dei negozi vicini…",
+    "locationOff": "La posizione è disattivata per {{appName}}. Attivala in Impostazioni o inserisci un CAP.",
+    "locationFailed": "Impossibile capire dove ti trovi. Inserisci un CAP.",
+    "hasPrices": "Prezzi disponibili"
   }
 }

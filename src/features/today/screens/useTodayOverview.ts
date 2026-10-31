@@ -42,7 +42,7 @@ export function useTodayOverview() {
   };
   const today = useToday();
 
-  const { pantry, pantries, currentHome, selectedHomeId, isReady } =
+  const { pantry, pantries, currentHome, selectedHomeId, homeCount, isReady } =
     useCurrentPantry();
   const unreadCount = useUnreadNotificationCount();
   // Only once the home itself has loaded: before that, no pantries means
@@ -162,6 +162,8 @@ export function useTodayOverview() {
   return {
     householdName: currentHome?.name ?? null,
     selectedHomeId,
+    /** How many homes the user is in; null until the homes have loaded. */
+    homeCount: isReady ? homeCount : null,
     unreadCount,
     counts: stats
       ? {

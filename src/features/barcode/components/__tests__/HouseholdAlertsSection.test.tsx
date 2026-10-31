@@ -30,6 +30,7 @@ describe('HouseholdAlertsSection', () => {
   it('names each member and what the product meets, then says to check the label', () => {
     render(
       <HouseholdAlertsSection
+        caveat
         check="checked"
         alerts={[PEANUT, VEGAN]}
         alternatives={[]}
@@ -48,18 +49,54 @@ describe('HouseholdAlertsSection', () => {
     expect(screen.queryByText(t('dietaryAlerts.stale'))).toBeNull();
   });
 
-  it('shows nothing when nothing was found, never calling the product safe', () => {
+  it('shows only the label caveat when nothing matched, never calling the product safe', () => {
     render(
-      <HouseholdAlertsSection check="checked" alerts={[]} alternatives={[]} />,
+      <HouseholdAlertsSection
+        check="checked"
+        alerts={[]}
+        caveat
+        alternatives={[]}
+      />,
+    );
+
+    expect(screen.getByTestId(barcodeTestIDs.householdCaveat)).toBeTruthy();
+    expect(screen.getByText(t('dietaryAlerts.checkLabel'))).toBeTruthy();
+    expect(screen.queryByText(t('dietaryAlerts.title'))).toBeNull();
+    expect(screen.queryByText(/safe|-free|no allergens/i)).toBeNull();
+  });
+
+  it('shows nothing when nothing matched and no restriction can alert', () => {
+    render(
+      <HouseholdAlertsSection
+        check="checked"
+        alerts={[]}
+        caveat={false}
+        alternatives={[]}
+      />,
     );
 
     expect(screen.queryByTestId(barcodeTestIDs.householdAlerts)).toBeNull();
-    expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
+    expect(screen.queryByTestId(barcodeTestIDs.householdCaveat)).toBeNull();
+  });
+
+  it('marks a caveat-only answer from earlier as possibly out of date', () => {
+    render(
+      <HouseholdAlertsSection
+        check="stale"
+        alerts={[]}
+        caveat
+        alternatives={[]}
+      />,
+    );
+
+    expect(screen.getByText(t('dietaryAlerts.stale'))).toBeTruthy();
+    expect(screen.getByText(t('dietaryAlerts.checkLabel'))).toBeTruthy();
   });
 
   it('marks an earlier answer offline as possibly out of date', () => {
     render(
       <HouseholdAlertsSection
+        caveat
         check="stale"
         alerts={[PEANUT]}
         alternatives={[]}
@@ -72,6 +109,7 @@ describe('HouseholdAlertsSection', () => {
   it('says a never-checked product needs a connection', () => {
     render(
       <HouseholdAlertsSection
+        caveat
         check="unchecked"
         alerts={[]}
         alternatives={[]}
@@ -83,7 +121,12 @@ describe('HouseholdAlertsSection', () => {
 
   it('says the check failed, not that it needs a connection, when online', () => {
     render(
-      <HouseholdAlertsSection check="failed" alerts={[]} alternatives={[]} />,
+      <HouseholdAlertsSection
+        check="failed"
+        alerts={[]}
+        caveat={false}
+        alternatives={[]}
+      />,
     );
 
     expect(screen.getByText(t('dietaryAlerts.checkFailed'))).toBeTruthy();
@@ -94,6 +137,7 @@ describe('HouseholdAlertsSection', () => {
     const onOpen = jest.fn();
     render(
       <HouseholdAlertsSection
+        caveat
         check="checked"
         alerts={[PEANUT]}
         alternatives={[

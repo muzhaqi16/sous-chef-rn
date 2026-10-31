@@ -14,7 +14,6 @@ import {
   RecipeStatus,
   type CreateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
-import { generateEntityId } from '#/utils/generateEntityId';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import {
   createAddToQueryConnectionUpdater,
@@ -46,13 +45,14 @@ function totalTime(prep: number | null, cook: number | null): number | null {
 
 /**
  * Write the recipe a create makes: ratings zeroed, no reviews, not saved, and
- * client-minted ingredient ids; the rest what the create states or neutral.
+ * the ingredient ids minted with it; the rest what the create states or neutral.
  */
 function writeRecipeRow(
   cache: ApolloCache,
   id: string,
   input: CreateRecipeInput,
   createdBy: RecipeCreatedBy,
+  ingredientIds: readonly string[],
 ): void {
   const prep = input.timing?.prepTimeMinutes ?? null;
   const cook = input.timing?.cookTimeMinutes ?? null;
@@ -100,22 +100,28 @@ function writeRecipeRow(
       createdBy,
       ingredientsConnection: {
         __typename: 'RecipeIngredientConnection',
-        edges: input.ingredients.map((ing, index) => ({
-          __typename: 'RecipeIngredientEdge',
-          node: {
-            __typename: 'RecipeIngredient',
-            id: generateEntityId(),
-            name: ing.name,
-            quantity: ing.quantity ?? null,
-            originalText: ing.originalText ?? null,
-            estimatedPrice: ing.estimatedPrice ?? null,
-            isOptional: ing.isOptional ?? false,
-            notes: ing.notes ?? null,
-            preparation: ing.preparation ?? null,
-            sortOrder: ing.sortOrder ?? index,
-            section: ing.section ?? null,
-          },
-        })),
+        edges: input.ingredients.flatMap((ing, index) => {
+          const ingredientId = ingredientIds[index];
+          if (!ingredientId) return [];
+          return [
+            {
+              __typename: 'RecipeIngredientEdge',
+              node: {
+                __typename: 'RecipeIngredient',
+                id: ingredientId,
+                name: ing.name,
+                quantity: ing.quantity ?? null,
+                originalText: ing.originalText ?? null,
+                estimatedPrice: ing.estimatedPrice ?? null,
+                isOptional: ing.isOptional ?? false,
+                notes: ing.notes ?? null,
+                preparation: ing.preparation ?? null,
+                sortOrder: ing.sortOrder ?? index,
+                section: ing.section ?? null,
+              },
+            },
+          ];
+        }),
         // A create states every ingredient: no page is left to read.
         pageInfo: {
           __typename: 'PageInfo',
@@ -134,9 +140,8 @@ function writeRecipeRow(
 }
 
 /**
- * Lists a recipe in the user's recipes, once: the pre-fire write inserts it,
- * and the server row, under the same minted id, updates the entity in place.
- * Only the unfiltered list: a filtered one's membership is the server's.
+ * Lists a recipe in the user's recipes, once. Only the unfiltered list: a
+ * filtered one's membership is the server's.
  */
 export function upsertMyRecipesEdge(
   cache: ApolloCache,
@@ -168,19 +173,8 @@ export function writeLocalRecipe(
   id: string,
   input: CreateRecipeInput,
   createdBy: RecipeCreatedBy,
+  ingredientIds: readonly string[],
 ): void {
-  writeRecipeRow(cache, id, input, createdBy);
-  const row = cache.readFragment({
-    id: cache.identify({ __typename: 'Recipe', id }),
-    fragment: RecipeCacheWriters_RowFragmentDoc,
-    fragmentName: 'recipeCacheWriters_row',
-  });
-  if (row) upsertMyRecipesEdge(cache, row);
-}
-
-/** Revert a rejected create: drop the edge and evict the entity. */
-export function revertOptimisticRecipe(cache: ApolloCache, id: string): void {
-  removeMyRecipesEdge(cache, id);
-  cache.evict({ id: cache.identify({ __typename: 'Recipe', id }) });
-  cache.gc();
+  writeRecipeRow(cache, id, input, createdBy, ingredientIds);
+  upsertMyRecipesEdge(cache, { __typename: 'Recipe', id });
 }

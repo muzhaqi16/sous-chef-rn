@@ -1,5 +1,5 @@
 import { gql } from '@apollo/client';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
@@ -7,7 +7,9 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { usePantrySettings } from '#features/pantry/hooks/usePantrySettings';
 import {
   MarkPantryAsDefaultDocument,
@@ -16,6 +18,19 @@ import {
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { todayKey } from '#/utils/dateUtils';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -47,13 +62,15 @@ describe('usePantrySettings.setDefault', () => {
       markDefault({
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
-        message: 'not allowed',
         field: 'id',
       }),
     ]);
 
-    await waitFor(() => expect(result.current.setDefault).toBeDefined());
-    await expect(result.current.setDefault('pantry-1')).resolves.toBe(false);
+    await drainTimers();
+    expect(result.current.setDefault).toBeDefined();
+    await expect(
+      drained(() => result.current.setDefault('pantry-1')),
+    ).resolves.toBe(false);
   });
 
   it('reports a NotFoundError as failure', async () => {
@@ -61,14 +78,14 @@ describe('usePantrySettings.setDefault', () => {
       markDefault({
         __typename: 'NotFoundError',
         code: ErrorCode.NotFound,
-        message: 'gone',
-        resource: 'Pantry',
-        resourceId: 'pantry-1',
       }),
     ]);
 
-    await waitFor(() => expect(result.current.setDefault).toBeDefined());
-    await expect(result.current.setDefault('pantry-1')).resolves.toBe(false);
+    await drainTimers();
+    expect(result.current.setDefault).toBeDefined();
+    await expect(
+      drained(() => result.current.setDefault('pantry-1')),
+    ).resolves.toBe(false);
   });
 
   it('keeps the switch on for a write the offline queue took', async () => {
@@ -81,8 +98,11 @@ describe('usePantrySettings.setDefault', () => {
       }).mock,
     ]);
 
-    await waitFor(() => expect(result.current.setDefault).toBeDefined());
-    await expect(result.current.setDefault('pantry-1')).resolves.toBe(true);
+    await drainTimers();
+    expect(result.current.setDefault).toBeDefined();
+    await expect(
+      drained(() => result.current.setDefault('pantry-1')),
+    ).resolves.toBe(true);
   });
 
   it('reports the success payload as success', async () => {
@@ -93,14 +113,16 @@ describe('usePantrySettings.setDefault', () => {
           __typename: 'Pantry',
           id: 'pantry-1',
           name: 'Kitchen',
-          isDefault: true,
           homeId: 'home-1',
         },
       }),
     ]);
 
-    await waitFor(() => expect(result.current.setDefault).toBeDefined());
-    await expect(result.current.setDefault('pantry-1')).resolves.toBe(true);
+    await drainTimers();
+    expect(result.current.setDefault).toBeDefined();
+    await expect(
+      drained(() => result.current.setDefault('pantry-1')),
+    ).resolves.toBe(true);
   });
 });
 
@@ -109,7 +131,7 @@ describe('usePantrySettings, a toggle and a save inside one round trip', () => {
   // sent alongside it at the old one was refused as changed elsewhere.
   it('sends the save at the version the toggle answered with', async () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment SeedPantryVersion on Pantry {
           id
@@ -158,7 +180,7 @@ describe('usePantrySettings, a toggle and a save inside one round trip', () => {
     expect(markDefaultMock.fired).toHaveLength(1);
     expect(save.fired).toEqual([]);
 
-    await act(async () => {
+    await drained(async () => {
       markDefaultMock.release();
       await both;
     });
@@ -187,7 +209,7 @@ describe('usePantrySettings.savePantryFields', () => {
   `;
   const seedRow = (version?: number) => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: PANTRY_ROW,
       data: {
         __typename: 'Pantry',
@@ -197,7 +219,7 @@ describe('usePantrySettings.savePantryFields', () => {
       },
     });
     if (version !== undefined) {
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: PANTRY_VERSION,
         data: { __typename: 'Pantry', id: 'pantry-1', version },
       });
@@ -234,12 +256,12 @@ describe('usePantrySettings.savePantryFields', () => {
     );
 
     let saved: unknown = 'unset';
-    await act(async () => {
-      saved = await result.current.savePantryFields('pantry-1', {
+    saved = await drained(() =>
+      result.current.savePantryFields('pantry-1', {
         name: 'Kitchen',
         description: '',
-      });
-    });
+      }),
+    );
 
     expect(saved).toBe(true);
     expect(save.fired).toEqual([
@@ -261,12 +283,12 @@ describe('usePantrySettings.savePantryFields', () => {
       { operationMocks: [saveMock().mock], cache },
     );
 
-    await act(async () => {
-      await result.current.savePantryFields('pantry-1', {
+    await drained(() =>
+      result.current.savePantryFields('pantry-1', {
         name: 'Kitchen',
         description: '',
-      });
-    });
+      }),
+    );
 
     expect(readRow(cache)).toMatchObject({
       name: 'Larder',

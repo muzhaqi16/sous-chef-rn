@@ -6,7 +6,6 @@ import {
 import type { RootStackParamList } from '#navigation/RootNavigator';
 import type { BarcodeStackParams } from '#navigation/stacks/BarcodeStack';
 import type { NotificationStackParams } from '#navigation/stacks/NotificationStack';
-import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
 
 /** Root routes whose params are an object or absent: what `replace` can carry. */
 type ReplaceableRoute = {
@@ -99,12 +98,6 @@ export function useAppNavigation() {
     replaceWithJoinByShareCode: (shareCode: string) =>
       navigation.dispatch(replaceAction('JoinByShareCode', { shareCode })),
 
-    // ─── Onboarding sub-screens (nested) ──────────────────────────────────
-    // Onboarding's own copy of ImageCrop, so cropping during onboarding stays
-    // inside that flow rather than pushing the root-level `ImageCrop` below.
-    toOnboardingImageCrop: (params: OnboardingStackParams['ImageCrop']) =>
-      navigation.navigate('Onboarding', { screen: 'ImageCrop', params }),
-
     // `pop`: from a modal or a pushed screen, back down to the tabs. Without
     // it the root stack only reuses a route above the current one, so it
     // pushes a second `Home` over the screen.
@@ -132,6 +125,10 @@ export function useAppNavigation() {
       navigation.navigate('HomeDietaryNeeds', params),
     toStorageLocations: (params: RootStackParamList['StorageLocations']) =>
       navigation.navigate('StorageLocations', params),
+    toUsualStores: (params: RootStackParamList['UsualStores']) =>
+      navigation.navigate('UsualStores', params),
+    toStorePicker: (params: RootStackParamList['StorePicker']) =>
+      navigation.navigate('StorePicker', params),
     toImageCrop: (params: RootStackParamList['ImageCrop']) =>
       navigation.navigate('ImageCrop', params),
     toProfilePhotoUpload: () => navigation.navigate('ProfilePhotoUpload'),
@@ -193,6 +190,8 @@ export function useAppNavigation() {
       navigation.navigate('PurchaseHistory', params),
     toStoreMode: (params: RootStackParamList['StoreMode']) =>
       navigation.navigate('StoreMode', params),
+    toStoreSavingsItems: (params: RootStackParamList['StoreSavingsItems']) =>
+      navigation.navigate('StoreSavingsItems', params),
 
     // One RecipeDetail serves every tab that opens it, so its own fork and edit
     // actions stay wherever the user opened it from.

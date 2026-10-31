@@ -46,7 +46,10 @@ import { HorizontalRail } from '#components/molecules/HorizontalRail';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
 import { HouseholdRecipeSummary } from '#features/recipes/components/recipeDetail/HouseholdRecipeSummary';
+import { RecipeCredit } from '#features/recipes/components/recipeDetail/RecipeCredit';
 import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
+import { useCooksFor } from '#features/profile/hooks/useCooksFor';
+import { startingServings } from '#domain/servings';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
 import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
@@ -64,7 +67,6 @@ import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   ReportContentSheet,
   type ReportTarget,
@@ -269,6 +271,7 @@ const RecipeDetailScreen: React.FC = () => {
   const [showReportSheet, setShowReportSheet] = useState(false);
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
+  const cooksFor = useCooksFor();
   // Swaps are offered where the household flags an ingredient.
   const substitutes = useRecipeSubstitutes(
     recipeId,
@@ -557,7 +560,6 @@ const RecipeDetailScreen: React.FC = () => {
           tips={displayData.tips}
           videoUrl={displayData.videoUrl}
           forkedFromName={displayData.forkedFromName}
-          originalAuthor={displayData.originalAuthor}
           tags={displayData.tags}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
@@ -620,6 +622,7 @@ const RecipeDetailScreen: React.FC = () => {
         <HouseholdRecipeSummary
           check={household.check}
           alerts={household.summary}
+          restrictionsApply={household.restrictionsApply}
         />
 
         {/* Description */}
@@ -706,33 +709,12 @@ const RecipeDetailScreen: React.FC = () => {
           <ReviewSection {...reviewState} {...reviewActions} />
         )}
 
-        {/* Source Attribution */}
-        {!!firstNonBlank(displayData.sourceName, displayData.sourceUrl) && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.attribution,
-              displayData.sourceUrl && pressed && { opacity: 0.7 },
-            ]}
-            onPress={handleOpenSource}
-            disabled={!displayData.sourceUrl}
-          >
-            <Text role="caption" style={styles.attributionText}>
-              {t('recipes.recipeFrom', {
-                source:
-                  firstNonBlank(displayData.sourceName) ??
-                  t('recipes.externalSource'),
-              })}
-            </Text>
-            {!!displayData.sourceUrl && (
-              <View style={styles.viewOriginalLink}>
-                <Text role="label" style={styles.viewOriginalText}>
-                  {t('recipes.viewOriginalRecipe')}
-                </Text>
-                <Icon name="open-outline" size={14} tone="primary" />
-              </View>
-            )}
-          </Pressable>
-        )}
+        <RecipeCredit
+          author={displayData.originalAuthor}
+          sourceName={displayData.sourceName}
+          sourceUrl={displayData.sourceUrl}
+          onOpenSource={handleOpenSource}
+        />
 
         {displayData.dataAttributions.length > 0 && (
           <View style={styles.dataAttributions}>
@@ -758,9 +740,10 @@ const RecipeDetailScreen: React.FC = () => {
       <MarkCookedModal
         visible={cookedModalVisible}
         recipeName={displayData.title}
-        defaultServings={
-          displayData.servings === 0 ? 1 : displayData.servings ?? 1
-        }
+        defaultServings={startingServings(
+          cooksFor,
+          displayData.servings === 0 ? 1 : displayData.servings ?? 1,
+        )}
         onClose={() => setCookedModalVisible(false)}
         onConfirm={handleMarkAsCooked}
         hasPantry={ingredientMatching.hasPantry}
@@ -900,29 +883,8 @@ const styles = StyleSheet.create(theme => ({
   description: {
     color: theme.colors.textSecondary,
   },
-  attribution: {
-    paddingTop: theme.spacing.md,
-    borderTopWidth: theme.borderWidth.hairline,
-    borderTopColor: theme.colors.border,
-    marginTop: theme.spacing.xl,
-  },
   dataAttributions: {
     marginTop: theme.spacing.md,
-  },
-  attributionText: {
-    color: theme.colors.textSecondary,
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  viewOriginalLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
-  },
-  viewOriginalText: {
-    color: theme.colors.primary,
   },
   sectionTitleSpacing: {
     marginBottom: theme.spacing.sm,

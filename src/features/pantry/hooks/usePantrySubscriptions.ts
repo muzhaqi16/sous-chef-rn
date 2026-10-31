@@ -72,6 +72,7 @@ function readCachedItem(
     fragment: UsePantrySubscriptions_PantryItemFragmentDoc,
     fragmentName: 'usePantrySubscriptions_pantryItem',
     from: { __typename: 'PantryItem', id: itemId },
+    optimistic: true,
   });
 }
 
@@ -89,6 +90,7 @@ function isItemListed(
       fragment: PantryItem_ListedFragmentDoc,
       fragmentName: 'pantryItem_listed',
       from: { __typename: 'PantryItem', id: itemId },
+      optimistic: true,
     }) !== null
   );
 }
@@ -232,6 +234,7 @@ export function usePantrySubscriptions(userId?: string) {
           fragment: UsePantrySubscriptions_ExpirationNotificationFragmentDoc,
           fragmentName: 'usePantrySubscriptions_expirationNotification',
           from: { __typename: 'ExpirationNotification', id: notificationId },
+          optimistic: true,
         },
       );
     if (!notification?.genericNotificationId) return;

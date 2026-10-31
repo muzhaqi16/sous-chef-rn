@@ -32,6 +32,7 @@ function shownAmount(
     id,
     fragment: WriteHeldStock_ShownInFragmentDoc,
     fragmentName: 'writeHeldStock_shownIn',
+    optimistic: true,
   })?.displayUnit;
   const amount = shownStock(heldQuantity, unit, shownIn);
   const notation = cache.readFragment<WriteHeldStock_NotationFragment>({
@@ -39,6 +40,7 @@ function shownAmount(
     fragment: WriteHeldStock_NotationFragmentDoc,
     fragmentName: 'writeHeldStock_notation',
     returnPartialData: true,
+    optimistic: true,
   });
   const shownInUnit = [notation?.unit, notation?.displayUnit].find(
     candidate => candidate?.id === amount.unit.id,
@@ -59,21 +61,22 @@ function shownAmount(
 /**
  * The ONE pre-answer writer of a stack's `heldQuantity`, with `displayAmount`
  * by the server's rule (`shownStock`): "1 doz" never shows over 11 pc. `shown`
- * restores the server's display with its amount. Returns the undo.
+ * states the display itself, for an amount given in a unit the stack shows in.
  */
 export function writeHeldStock(
   cache: ApolloCache,
   pantryItemId: string,
   next: number | ((held: number) => number),
   shown?: ShownAmount,
-): () => void {
+): void {
   const id = cache.identify({ __typename: 'PantryItem', id: pantryItemId });
-  if (!id) return () => {};
+  if (!id) return;
   const cached = cache.readFragment<WriteHeldStock_PantryItemFragment>({
     id,
     fragment: WriteHeldStock_PantryItemFragmentDoc,
     fragmentName: 'writeHeldStock_pantryItem',
     returnPartialData: true,
+    optimistic: true,
   });
   const held = cached?.heldQuantity ?? 0;
   const heldQuantity = typeof next === 'number' ? next : next(held);
@@ -81,7 +84,7 @@ export function writeHeldStock(
   if (!unit) {
     // No unit to show it in: the amount still moves.
     cache.modify({ id, fields: { heldQuantity: () => heldQuantity } });
-    return () => cache.modify({ id, fields: { heldQuantity: () => held } });
+    return;
   }
   cache.writeFragment({
     id,
@@ -95,8 +98,6 @@ export function writeHeldStock(
       displayAmount: shown ?? shownAmount(cache, id, heldQuantity, unit),
     },
   });
-  const before = cached.displayAmount;
-  return () => writeHeldStock(cache, pantryItemId, held, before);
 }
 
 /**
@@ -118,6 +119,7 @@ export function inTrackingUnit(
     ? cache.readFragment<InTrackingUnit_PantryItemFragment>({
         id: stackId,
         fragment: InTrackingUnit_PantryItemFragmentDoc,
+        optimistic: true,
       })?.unit.id
     : undefined;
   if (!unitId || unitId === trackingUnitId) return amount;
@@ -126,6 +128,7 @@ export function inTrackingUnit(
     ? cache.readFragment<InTrackingUnit_EnteredUnitFragment>({
         id: unitCacheId,
         fragment: InTrackingUnit_EnteredUnitFragmentDoc,
+        optimistic: true,
       })
     : null;
   const factor = entered ? countFactorOver(entered, trackingUnitId) : null;
@@ -133,38 +136,34 @@ export function inTrackingUnit(
 }
 
 /**
- * Moves the cached stock by `delta` tracking units for instant feedback.
- * `heldQuantity` is what the screens show; `quantity` is settled by the
- * response. Returns the undo, for a refusal.
+ * Moves the cached stock by `delta` tracking units. `heldQuantity` is what the
+ * screens show; `quantity` is settled by the response.
  */
 export function bumpStock(
   cache: ApolloCache,
   pantryItemId: string,
   delta: number,
-): () => void {
+  now: string,
+): void {
   const id = cache.identify({ __typename: 'PantryItem', id: pantryItemId });
-  if (!id) return () => {};
-  const now = new Date().toISOString();
-  let before: number | undefined;
+  if (!id) return;
   cache.modify({
     id,
     fields: {
-      quantity: (existing: number) => {
-        before = existing;
-        return Math.max(0, existing + delta);
-      },
+      quantity: (existing: number) => Math.max(0, existing + delta),
       updatedAt: () => now,
       lastUsedAt: () => now,
     },
   });
-  const undoHeld = writeHeldStock(cache, pantryItemId, held =>
-    Math.max(0, held + delta),
-  );
-  return () => {
-    if (before !== undefined) {
-      const quantity = before;
-      cache.modify({ id, fields: { quantity: () => quantity } });
-    }
-    undoHeld();
-  };
+  writeHeldStock(cache, pantryItemId, held => Math.max(0, held + delta));
+}
+
+/** Every restock is a batch of its own. */
+export function countNewBatch(cache: ApolloCache, pantryItemId: string): void {
+  cache.modify({
+    id: cache.identify({ __typename: 'PantryItem', id: pantryItemId }),
+    fields: {
+      activeBatchCount: (existing: number = 0) => existing + 1,
+    },
+  });
 }

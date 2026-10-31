@@ -32,7 +32,7 @@
 
 'use no memo';
 
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import type { ReactNode } from 'react';
 import React from 'react';
@@ -46,7 +46,9 @@ import {
   testMockLink,
   type MockDataFor,
   type MockedResponse,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { DisplayFormat } from '#/graphql/generated/schemaTypes';
 import {
@@ -60,11 +62,6 @@ import { useToggleShoppingItem } from '#features/shoppingList/hooks/mutations/us
 // the optimistic + cache-update behavior.
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
-}));
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    track: jest.fn(() => jest.fn()),
-  },
 }));
 
 const LIST_ID = 'list-1';
@@ -98,7 +95,7 @@ function seedItem(cache: InMemoryCache, isPurchased: boolean) {
     sortOrder: 'a0',
     item: null,
   };
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'ShoppingListItem', id: ITEM_ID })!,
     fragment: ShoppingListItemDisplayFragmentDoc,
     fragmentName: 'ShoppingListItemDisplayFragment',
@@ -111,6 +108,7 @@ function readPurchaseStatus(cache: InMemoryCache): boolean | undefined {
     id: cache.identify({ __typename: 'ShoppingListItem', id: ITEM_ID })!,
     fragment: ShoppingListItemDisplayFragmentDoc,
     fragmentName: 'ShoppingListItemDisplayFragment',
+    optimistic: true,
   });
   return item?.purchaseInfo?.isPurchased;
 }
@@ -181,6 +179,14 @@ function wrap(client: ApolloClient) {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -208,13 +214,12 @@ describe('integration: optimistic toggle + cache update', () => {
     // Optimistic phase: the cache flips while the server's answer is held.
     // Apollo applies optimistic responses synchronously during the mutate()
     // call, so the cache value is visible on the next microtask.
-    await waitFor(() => {
-      expect(readPurchaseStatus(cache)).toBe(true);
-    });
+    await drainTimers();
+    expect(readPurchaseStatus(cache)).toBe(true);
 
     // Settle phase: let the network response arrive and the mutation
     // promise resolve. The cache stays at the (confirmed) value.
-    await act(async () => {
+    await drained(async () => {
       release();
       await togglePromise;
     });
@@ -234,9 +239,7 @@ describe('integration: optimistic toggle + cache update', () => {
       { wrapper: wrap(client) },
     );
 
-    await act(async () => {
-      await result.current.toggleItem(ITEM_ID);
-    });
+    await drained(() => result.current.toggleItem(ITEM_ID));
 
     expect(readPurchaseStatus(cache)).toBe(true);
   });
@@ -255,9 +258,7 @@ describe('integration: optimistic toggle + cache update', () => {
       { wrapper: wrap(client) },
     );
 
-    await act(async () => {
-      await result.current.toggleItem(ITEM_ID);
-    });
+    await drained(() => result.current.toggleItem(ITEM_ID));
 
     expect(readPurchaseStatus(cache)).toBe(false);
   });

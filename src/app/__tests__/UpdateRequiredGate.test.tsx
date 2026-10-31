@@ -10,6 +10,7 @@ import { Text } from '#components/atoms/Text';
 import { Modal } from '#components/atoms/themedComponents';
 import { appConfig } from '#/config/appConfig';
 import { UpdateRequiredGate } from '../UpdateRequiredGate';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 let mockRequired = false;
 const mockOpenWebUrl = jest.fn<Promise<boolean>, [string]>();
@@ -31,6 +32,14 @@ const renderGate = () =>
       <Text>Pantry</Text>
     </UpdateRequiredGate>,
   );
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('UpdateRequiredGate', () => {
   beforeEach(() => {
@@ -124,7 +133,8 @@ describe('UpdateRequiredGate', () => {
 
     await user.press(screen.getByText('Update'));
 
-    expect(await screen.findByText(/The store didn't open/)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(/The store didn't open/)).toBeTruthy();
   });
 
   // `openWebUrl` refuses anything but http(s), so an `itms-apps:` or `market:`

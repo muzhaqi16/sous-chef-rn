@@ -200,8 +200,11 @@ export function skipUnmatchedFilterVariants(
  * nested entities inline, cut off from their records. Only an entity the cache
  * lacks is written from the object.
  */
+/** What an edge is built from: without `__typename` there is no reference. */
+type ConnectionItem = { __typename: string; id: string };
+
 function entityRef(
-  newItem: { id: string },
+  newItem: ConnectionItem,
   { toReference, canRead }: ModifierDetails,
 ) {
   const ref = toReference(newItem);
@@ -213,7 +216,7 @@ function entityRef(
  * silently. `totalCount` moves only where the record already holds one, so an
  * add never introduces a count a query then reads as a cache hit.
  */
-function addEdgeModifier<T extends { id: string }>(
+function addEdgeModifier<T extends ConnectionItem>(
   newItem: T,
   itemTypename: string,
   { position = 'start', skipStoreField }: AddToConnectionOptions,
@@ -267,7 +270,7 @@ function removeEdgeModifier(itemId: string, onRemoved: () => void) {
  * cached `keyArgs` variant, so an item whose membership depends on filters or
  * orderBy needs `skipStoreField` or a refetch.
  */
-export function createAddToQueryConnectionUpdater<T extends { id: string }>(
+export function createAddToQueryConnectionUpdater<T extends ConnectionItem>(
   fieldName: string,
   itemTypename: string,
 ) {
@@ -321,7 +324,7 @@ export function createRemoveFromQueryConnectionUpdater(
  * `cache.modify` runs for EVERY cached variant and `position` ignores each
  * one's `orderBy`: scope it with `skipStoreField`.
  */
-export function createAddToParentConnectionUpdater<T extends { id: string }>(
+export function createAddToParentConnectionUpdater<T extends ConnectionItem>(
   parentTypename: string,
   connectionField: string,
   itemTypename: string,

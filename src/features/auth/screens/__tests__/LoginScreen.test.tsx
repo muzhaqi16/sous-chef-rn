@@ -1,15 +1,11 @@
 import React from 'react';
-import {
-  render,
-  screen,
-  userEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { biometricService } from '#/services/biometric/deviceCredential';
 import { toastService } from '#/services/toastService';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { LoginScreen } from '../LoginScreen';
 import { useStore } from '#store';
 
@@ -139,6 +135,14 @@ jest.mock('#/utils/validation/auth', () => {
   };
 });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('LoginScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -160,8 +164,9 @@ describe('LoginScreen', () => {
     useStore.getState().setHasStoredCredentials(true);
 
     render(<LoginScreen />);
-    const button = await waitFor(() =>
-      screen.getByLabelText(/fingerprint|biometric|touch id|face id/i),
+    await drainTimers();
+    const button = screen.getByLabelText(
+      /fingerprint|biometric|touch id|face id/i,
     );
     expect(button).toBeTruthy();
 
@@ -170,11 +175,10 @@ describe('LoginScreen', () => {
     // half that decides whether the affordance is still offered.
     useStore.getState().setHasStoredCredentials(false);
 
-    await waitFor(() =>
-      expect(
-        screen.queryByLabelText(/fingerprint|biometric|touch id|face id/i),
-      ).toBeNull(),
-    );
+    await drainTimers();
+    expect(
+      screen.queryByLabelText(/fingerprint|biometric|touch id|face id/i),
+    ).toBeNull();
   });
 
   it('renders the login screen container', () => {
@@ -239,9 +243,8 @@ describe('LoginScreen', () => {
 
     await user.press(screen.getByTestId('login-submit-button'));
 
-    await waitFor(() => {
-      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
     // Not a sign-out: nothing cleared the stored credentials on the way here.
     expect(loginSpy).toHaveBeenCalledTimes(1);
     loginSpy.mockRestore();
@@ -261,16 +264,14 @@ describe('LoginScreen', () => {
     renderWithApollo(<LoginScreen />);
 
     await user.press(screen.getByTestId('login-submit-button'));
-    await waitFor(() => {
-      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
 
     // The footer sign-in link is this context's documented way out.
     await user.press(screen.getByTestId('code-verification-sign-in'));
 
-    await waitFor(() => {
-      expect(screen.getByTestId('login-screen')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByTestId('login-screen')).toBeTruthy();
     expect(screen.queryByTestId('code-verification-screen')).toBeNull();
     loginSpy.mockRestore();
   });
@@ -287,7 +288,8 @@ describe('LoginScreen', () => {
 
     await user.press(screen.getByTestId('login-submit-button'));
 
-    await waitFor(() => expect(loginSpy).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(loginSpy).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('code-verification-screen')).toBeNull();
     expect(screen.getByTestId('login-screen')).toBeTruthy();
     loginSpy.mockRestore();
@@ -312,15 +314,15 @@ describe('LoginScreen remembering the sign-in', () => {
     useStore.getState().setPostLoginCredentials({ email: 'chef@example.com' });
 
     render(<LoginScreen />);
-    await waitFor(() => expect(alert).toHaveBeenCalled());
+    await drainTimers();
+    expect(alert).toHaveBeenCalled();
     // Button 1 is "Remember".
     const [, , buttons] = alert.mock.calls[0] ?? [];
     buttons?.[1]?.onPress?.();
 
-    await waitFor(() =>
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to save login information',
-      ),
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Failed to save login information',
     );
     expect(useStore.getState().navigationState).toBe('main_app');
   });
@@ -341,7 +343,8 @@ describe('LoginScreen remember-login prompt', () => {
     rerender(<LoginScreen />);
     rerender(<LoginScreen />);
 
-    await waitFor(() => expect(mockShowRememberMePrompt).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockShowRememberMePrompt).toHaveBeenCalled();
     expect(mockShowRememberMePrompt).toHaveBeenCalledTimes(1);
   });
 });

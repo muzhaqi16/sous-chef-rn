@@ -1,12 +1,8 @@
 'use no memo';
 import React from 'react';
-import {
-  render,
-  screen,
-  userEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import AddItemForm from '../AddItemForm';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 /**
  * `createItemSchema` runs for real here — the sibling suite mocks it away. The
@@ -104,6 +100,14 @@ const openInventory = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.press(screen.getByText('Inventory'));
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AddItemForm — net weight rows', () => {
   it('refuses a weight with no unit instead of dropping it', async () => {
     const user = userEvent.setup();
@@ -111,7 +115,8 @@ describe('AddItemForm — net weight rows', () => {
 
     await user.press(screen.getByTestId('add-unitless-row'));
 
-    expect(await screen.findByText('Unit is required')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Unit is required')).toBeTruthy();
   });
 
   it('clears the message once the row is complete', async () => {
@@ -119,13 +124,13 @@ describe('AddItemForm — net weight rows', () => {
     await openInventory(user);
 
     await user.press(screen.getByTestId('add-unitless-row'));
-    await screen.findByText('Unit is required');
+    await drainTimers();
+    expect(screen.getByText('Unit is required')).toBeTruthy();
 
     await user.press(screen.getByTestId('complete-row'));
 
-    await waitFor(() =>
-      expect(screen.queryByText('Unit is required')).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByText('Unit is required')).toBeNull();
   });
 
   it('says nothing about the blank row "Add" just created', async () => {
@@ -162,10 +167,12 @@ describe('AddItemForm — an edit that leaves the net weight alone', () => {
     );
 
     const save = screen.getByText('Save Changes');
-    await waitFor(() => expect(save).not.toBeDisabled());
+    await drainTimers();
+    expect(save).not.toBeDisabled();
     await user.press(save);
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSubmit).toHaveBeenCalled();
     expect(onSubmit.mock.calls[0]?.[0]?.netWeights).toEqual([
       { value: 1.816, unitName: 'kg', unitId: 'unit-kg' },
     ]);
@@ -188,7 +195,8 @@ describe('AddItemForm — an edit that leaves the net weight alone', () => {
 
     await user.press(screen.getByText('Save Changes'));
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSubmit).toHaveBeenCalled();
     expect(onSubmit.mock.calls[0]?.[0]?.netWeights).toEqual([
       { value: 500, unitName: 'g', unitId: 'unit-g' },
     ]);
@@ -217,7 +225,8 @@ describe('AddItemForm — a prefilled field the rules refuse', () => {
     expect(save).not.toBeDisabled();
     await user.press(save);
 
-    expect(await screen.findByText('Unit is required')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Unit is required')).toBeTruthy();
     expect(screen.getByTestId('net-weight-entry-list')).toBeTruthy();
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -236,7 +245,8 @@ describe('AddItemForm — a prefilled field the rules refuse', () => {
 
     await user.press(screen.getByText('Save Changes'));
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSubmit).toHaveBeenCalled();
     expect(onSubmit.mock.calls[0]?.[0]?.name).toBe('Cashew Splits R/s');
   });
 });
@@ -259,10 +269,12 @@ describe('AddItemForm — a barcode the server refuses', () => {
     expect(screen.queryByText('UPC/Barcode')).toBeNull();
 
     const add = screen.getByText('Add Item');
-    await waitFor(() => expect(add).not.toBeDisabled());
+    await drainTimers();
+    expect(add).not.toBeDisabled();
     await user.press(add);
 
-    expect(await screen.findByText('That barcode isn’t valid.')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('That barcode isn’t valid.')).toBeTruthy();
     expect(screen.getByText('UPC/Barcode')).toBeTruthy();
   });
 });

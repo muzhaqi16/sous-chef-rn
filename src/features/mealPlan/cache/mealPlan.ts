@@ -1,11 +1,22 @@
 import type { ApolloCache } from '@apollo/client';
 import type { CreateMealPlanInput } from '#/graphql/generated/schemaTypes';
-import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
+import {
+  hideEntity,
+  isHeld,
+  writeLocalEntity,
+} from '#/apollo/utils/writeLocalEntity';
 import { MealPlan_RowFragmentDoc } from './mealPlan.generated';
 import {
   NEUTRAL_LOCAL_MEAL_PLAN,
   NEUTRAL_LOCAL_MEAL_PLAN_BY_TYPE,
 } from './mealPlanRowNeutral.generated';
+import { removeFromMealPlans } from './removals';
+
+export const addToMealPlans = createAddToQueryConnectionUpdater(
+  'mealPlans',
+  'MealPlan',
+);
 
 /**
  * Writes a local-first plan complete for every query reading one, the list card
@@ -17,10 +28,10 @@ export function writeLocalMealPlan(
   id: string,
   input: CreateMealPlanInput,
   creatorId: string,
+  now: string,
 ): { __typename: 'MealPlan'; id: string } {
   const creator = { __typename: 'User', id: creatorId };
   const home = input.homeId ? { __typename: 'Home', id: input.homeId } : null;
-  const now = new Date().toISOString();
   writeLocalEntity(cache, {
     fragment: MealPlan_RowFragmentDoc,
     fragmentName: 'mealPlan_row',
@@ -46,4 +57,12 @@ export function writeLocalMealPlan(
     },
   });
   return { __typename: 'MealPlan', id };
+}
+
+/** Takes a plan out from a layer; a plan already hidden changes nothing. */
+export function hideMealPlan(cache: ApolloCache, planId: string): void {
+  const plan = { __typename: 'MealPlan', id: planId };
+  if (!isHeld(cache, plan)) return;
+  removeFromMealPlans(cache, planId);
+  hideEntity(cache, plan);
 }

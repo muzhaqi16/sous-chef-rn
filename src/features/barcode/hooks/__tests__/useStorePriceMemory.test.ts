@@ -1,10 +1,11 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { t } from '#/i18n';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   PriceBasis,
   PriceComparisonScope,
@@ -12,10 +13,10 @@ import {
 import { formatCurrency } from '#/utils/formatters/number';
 import { formatMonthDay } from '#/utils/formatters/date';
 import {
-  HouseholdPricePaidDocument,
   HouseholdUsualUnitPriceDocument,
-  StorePriceComparisonDocument,
+  StorePriceMemoryDocument,
   UseStorePriceMemory_ItemFragmentDoc,
+  UseStorePriceMemory_ListFragmentDoc,
 } from '../useStorePriceMemory.generated';
 import { useStorePriceMemory } from '../useStorePriceMemory';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
@@ -27,38 +28,6 @@ jest.mock('#store/useAppStore', () => ({
 const USD = { id: 'usd', code: 'USD', decimalPlaces: 2 };
 const usd = (amount: number) => formatCurrency(amount, 'USD', 2);
 const PAID_AT = '2026-10-02T15:00:00.000Z';
-
-const paidMock = (summary: {
-  lastPaid?: {
-    unitPrice: number;
-    unit: { id: string; name: string; symbol: string };
-    normalizedPrice: number | null;
-    basis: PriceBasis | null;
-    store: { id: string; name: string } | null;
-    onSale?: boolean;
-  } | null;
-  usual?: {
-    basis: PriceBasis;
-    medianPrice: number;
-    unitPrice?: number | null;
-  } | null;
-}) =>
-  recordMock(HouseholdPricePaidDocument, {
-    data: {
-      item: {
-        id: 'pb',
-        // The unit the usual is priced in when asked for none: the jar.
-        usualUnit: { id: 'u-jar' },
-        householdPriceSummary: {
-          currency: USD,
-          lastPaid: summary.lastPaid
-            ? { paidAt: PAID_AT, onSale: false, ...summary.lastPaid }
-            : null,
-          usual: summary.usual ? { unitPrice: null, ...summary.usual } : null,
-        },
-      },
-    },
-  });
 
 const row = (
   scope: PriceComparisonScope,
@@ -74,18 +43,52 @@ const row = (
   chain: scope === PriceComparisonScope.Chain ? { id: at } : null,
 });
 
-const comparisonMock = (rows: ReturnType<typeof row>[]) =>
-  recordMock(StorePriceComparisonDocument, {
+// The list is shopped at store-1, of the chain chain-1.
+const LIST = {
+  id: 'list-1',
+  targetStore: {
+    id: 'store-1',
+    chain: { id: 'chain-1', name: 'Giant Eagle' },
+  },
+};
+
+const memoryMock = (
+  summary: {
+    lastPaid?: {
+      unitPrice: number;
+      unit: { id: string; name: string; symbol: string };
+      normalizedPrice: number | null;
+      basis: PriceBasis | null;
+      store: { id: string; name: string } | null;
+      onSale?: boolean;
+    } | null;
+    usual?: {
+      basis: PriceBasis;
+      medianPrice: number;
+      unitPrice?: number | null;
+    } | null;
+  },
+  rows: ReturnType<typeof row>[] = [],
+  maxUsageCount?: number,
+) =>
+  recordMock(StorePriceMemoryDocument, {
     data: {
-      shoppingList: {
-        id: 'list-1',
-        targetStore: {
-          id: 'store-1',
-          chain: { id: 'chain-1', name: 'Giant Eagle' },
+      item: {
+        id: 'pb',
+        // The unit the usual is priced in when asked for none: the jar.
+        usualUnit: { id: 'u-jar' },
+        householdPriceSummary: {
+          currency: USD,
+          lastPaid: summary.lastPaid
+            ? { paidAt: PAID_AT, onSale: false, ...summary.lastPaid }
+            : null,
+          usual: summary.usual ? { unitPrice: null, ...summary.usual } : null,
         },
+        priceComparison: { currency: USD, rows },
       },
-      itemPriceComparison: { currency: USD, rows },
+      shoppingList: LIST,
     },
+    ...(maxUsageCount ? { maxUsageCount } : {}),
   });
 
 const JAR = { id: 'u-jar', name: 'jar', symbol: 'jar' };
@@ -100,44 +103,49 @@ const render = (mocks: ReturnType<typeof recordMock>[]) =>
     },
   );
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useStorePriceMemory', () => {
   // Store mode mounts the card per scan: the same product scanned again reads
-  // the comparison it already holds.
+  // what it already holds. A second ask would be answered, and counted.
   it('asks once for a product scanned twice', async () => {
     const cache = makeCache();
-    const paid = paidMock({});
-    const here = comparisonMock([
-      row(PriceComparisonScope.Store, 'store-1', 12, false),
-    ]);
+    const memory = memoryMock(
+      {},
+      [row(PriceComparisonScope.Store, 'store-1', 9.5)],
+      2,
+    );
     const mount = () =>
       renderHookWithApollo(
         () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'USD'),
-        { cache, operationMocks: [paid.mock, here.mock] },
+        { cache, operationMocks: [memory.mock] },
       );
 
     const first = mount();
-    await waitFor(() => expect(here.fired).toHaveLength(1));
-    await waitFor(() =>
-      expect(cache.extract().ROOT_QUERY).toHaveProperty([
-        'itemPriceComparison({"input":{"itemId":"pb"}})',
-      ]),
-    );
+    await drainTimers();
+    expect(first.result.current.typical).not.toBeNull();
     first.unmount();
-    mount();
+    const second = mount();
 
-    await waitFor(() => expect(paid.fired).toHaveLength(1));
-    expect(here.fired).toHaveLength(1);
+    expect(second.result.current.typical).not.toBeNull();
+    await drainTimers();
+    expect(memory.fired).toHaveLength(1);
   });
 
   it('shows nothing for a product the household never bought, with thin data here', async () => {
-    const paid = paidMock({});
-    const here = comparisonMock([
+    const memory = memoryMock({}, [
       row(PriceComparisonScope.Store, 'store-1', 12, false),
     ]);
-    const { result } = render([paid, here]);
+    const { result } = render([memory]);
 
-    await waitFor(() => expect(here.fired).toHaveLength(1));
-    await waitFor(() => expect(paid.fired).toHaveLength(1));
+    await drainTimers();
+    expect(memory.fired).toHaveLength(1);
     expect(result.current).toMatchObject({
       lastPaid: null,
       usual: null,
@@ -147,7 +155,7 @@ describe('useStorePriceMemory', () => {
 
   it('shows one purchase per kg, with no usual below the minimum', async () => {
     const { result } = render([
-      paidMock({
+      memoryMock({
         lastPaid: {
           unitPrice: 6.49,
           unit: JAR,
@@ -157,10 +165,10 @@ describe('useStorePriceMemory', () => {
           onSale: true,
         },
       }),
-      comparisonMock([]),
     ]);
 
-    await waitFor(() => expect(result.current.lastPaid).not.toBeNull());
+    await drainTimers();
+    expect(result.current.lastPaid).not.toBeNull();
     expect(result.current.lastPaid).toEqual({
       price: t('labels.pricePer.kg', { price: usd(14.3) }),
       storeName: 'Giant Eagle',
@@ -174,13 +182,14 @@ describe('useStorePriceMemory', () => {
   // state: the cache holds what an older build parsed. The price shows alone.
   it('shows the bare price on a basis this build predates', async () => {
     const cache = makeCache();
-    cache.writeFragment({
-      id: cache.identify({ __typename: 'Item', id: 'pb' }),
+    seedFragment(cache, {
+      id: cache.identify({ __typename: 'Item', version: 1, id: 'pb' }),
       fragment: UseStorePriceMemory_ItemFragmentDoc,
       fragmentName: 'useStorePriceMemory_item',
       variables: { homeId: 'home-1' },
       data: {
         __typename: 'Item',
+        version: 1,
         id: 'pb',
         usualUnit: { __typename: 'Unit', id: 'u-jar' },
         householdPriceSummary: {
@@ -198,34 +207,58 @@ describe('useStorePriceMemory', () => {
           },
           usual: null,
         },
+        priceComparison: {
+          __typename: 'ItemPriceComparison',
+          currency: { __typename: 'Currency', ...USD },
+          rows: [],
+        },
+      },
+    });
+    seedFragment(cache, {
+      id: cache.identify({
+        __typename: 'ShoppingList',
+        version: 1,
+        id: 'list-1',
+      }),
+      fragment: UseStorePriceMemory_ListFragmentDoc,
+      fragmentName: 'useStorePriceMemory_list',
+      data: {
+        __typename: 'ShoppingList',
+        version: 1,
+        id: 'list-1',
+        targetStore: null,
       },
     });
 
     const { result } = renderHookWithApollo(
       () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'USD'),
-      { cache, operationMocks: [comparisonMock([]).mock] },
+      { cache, operationMocks: [] },
     );
 
-    await waitFor(() => expect(result.current.lastPaid).not.toBeNull());
+    await drainTimers();
+    expect(result.current.lastPaid).not.toBeNull();
     expect(result.current.lastPaid?.price).toBe(usd(6.5));
   });
 
   it('reads every line on the usual basis, and a last price off it per its own unit', async () => {
     const { result } = render([
-      paidMock({
-        lastPaid: {
-          unitPrice: 3.49,
-          unit: JAR,
-          normalizedPrice: 3.49,
-          basis: PriceBasis.Each,
-          store: null,
+      memoryMock(
+        {
+          lastPaid: {
+            unitPrice: 3.49,
+            unit: JAR,
+            normalizedPrice: 3.49,
+            basis: PriceBasis.Each,
+            store: null,
+          },
+          usual: { basis: PriceBasis.PerKg, medianPrice: 7.69 },
         },
-        usual: { basis: PriceBasis.PerKg, medianPrice: 7.69 },
-      }),
-      comparisonMock([row(PriceComparisonScope.Chain, 'chain-1', 8.1)]),
+        [row(PriceComparisonScope.Chain, 'chain-1', 8.1)],
+      ),
     ]);
 
-    await waitFor(() => expect(result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(result.current.usual).not.toBeNull();
     expect(result.current.usual).toBe(
       t('labels.pricePer.kg', { price: usd(7.69) }),
     );
@@ -237,37 +270,33 @@ describe('useStorePriceMemory', () => {
 
   it("takes this store's typical price over its chain's, each only on enough data", async () => {
     const chainOnly = render([
-      paidMock({}),
-      comparisonMock([
+      memoryMock({}, [
         row(PriceComparisonScope.Store, 'store-1', 9.5, false),
         row(PriceComparisonScope.Chain, 'chain-1', 8.1),
         row(PriceComparisonScope.Store, 'store-2', 6),
       ]),
     ]);
-    await waitFor(() =>
-      expect(chainOnly.result.current.typical).toEqual({
-        price: t('labels.pricePer.kg', { price: usd(8.1) }),
-        chainName: 'Giant Eagle',
-      }),
-    );
+    await drainTimers();
+    expect(chainOnly.result.current.typical).toEqual({
+      price: t('labels.pricePer.kg', { price: usd(8.1) }),
+      chainName: 'Giant Eagle',
+    });
 
     const atStore = render([
-      paidMock({}),
-      comparisonMock([
+      memoryMock({}, [
         row(PriceComparisonScope.Chain, 'chain-1', 8.1),
         row(PriceComparisonScope.Store, 'store-1', 9.5),
       ]),
     ]);
-    await waitFor(() =>
-      expect(atStore.result.current.typical).toEqual({
-        price: t('labels.pricePer.kg', { price: usd(9.5) }),
-        chainName: null,
-      }),
-    );
+    await drainTimers();
+    expect(atStore.result.current.typical).toEqual({
+      price: t('labels.pricePer.kg', { price: usd(9.5) }),
+      chainName: null,
+    });
   });
 
   // The card stays open while Budget & prices is switched off: store mode
-  // then shows no money, though the skipped query keeps its last answer.
+  // then shows no money, though the cache still holds the comparison.
   it('drops the typical price once prices are switched off', async () => {
     const shopping: { listId: string | undefined } = { listId: 'list-1' };
     const { result, rerender } = renderHookWithApollo(
@@ -275,14 +304,14 @@ describe('useStorePriceMemory', () => {
         useStorePriceMemory('pb', listId, JAR_UNIT, 'USD'),
       {
         operationMocks: [
-          paidMock({}).mock,
-          comparisonMock([row(PriceComparisonScope.Store, 'store-1', 9.5)])
+          memoryMock({}, [row(PriceComparisonScope.Store, 'store-1', 9.5)])
             .mock,
         ],
         initialProps: shopping,
       },
     );
-    await waitFor(() => expect(result.current.typical).not.toBeNull());
+    await drainTimers();
+    expect(result.current.typical).not.toBeNull();
 
     rerender({ listId: undefined });
 
@@ -290,26 +319,27 @@ describe('useStorePriceMemory', () => {
   });
 
   it('reads nothing outside store mode', () => {
-    const paid = paidMock({});
-    const here = comparisonMock([]);
+    const memory = memoryMock({});
     const { result } = renderHookWithApollo(
       () => useStorePriceMemory('pb', undefined, JAR_UNIT, 'USD'),
-      { operationMocks: [paid.mock, here.mock] },
+      { operationMocks: [memory.mock] },
     );
 
-    expect(paid.fired).toHaveLength(0);
-    expect(here.fired).toHaveLength(0);
+    expect(memory.fired).toHaveLength(0);
     expect(result.current.typical).toBeNull();
   });
 
   it('says how a shelf price per jar compares with the usual per jar, to the cent', async () => {
-    const paid = paidMock({
+    const memory = memoryMock({
       usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: 3.49 },
     });
-    const { result } = render([paid, comparisonMock([])]);
-    await waitFor(() => expect(result.current.usual).not.toBeNull());
+    const { result } = render([memory]);
+    await drainTimers();
+    expect(result.current.usual).not.toBeNull();
     // The jar is the unit the usual comes in: nothing more is asked.
-    expect(paid.fired).toEqual([{ itemId: 'pb', homeId: 'home-1' }]);
+    expect(memory.fired).toEqual([
+      { itemId: 'pb', homeId: 'home-1', listId: 'list-1' },
+    ]);
 
     const usual = t('labels.pricePer.unit', { price: usd(3.49), unit: 'jar' });
     expect(result.current.compareToUsual(4.29)).toBe(
@@ -343,7 +373,7 @@ describe('useStorePriceMemory', () => {
         ),
       {
         operationMocks: [
-          paidMock({
+          memoryMock({
             usual: {
               basis: PriceBasis.PerKg,
               medianPrice: 13.2,
@@ -351,17 +381,15 @@ describe('useStorePriceMemory', () => {
             },
           }).mock,
           perLb.mock,
-          comparisonMock([]).mock,
         ],
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.compareToUsual(5.99)).toBe(
-        t('barcode.price.sameAsUsual', {
-          usual: t('labels.pricePer.unit', { price: usd(5.99), unit: 'lb' }),
-        }),
-      ),
+    await drainTimers();
+    expect(result.current.compareToUsual(5.99)).toBe(
+      t('barcode.price.sameAsUsual', {
+        usual: t('labels.pricePer.unit', { price: usd(5.99), unit: 'lb' }),
+      }),
     );
     expect(perLb.fired).toEqual([
       { itemId: 'pb', homeId: 'home-1', unitId: 'u-lb' },
@@ -375,37 +403,39 @@ describe('useStorePriceMemory', () => {
   // The typed price is in the list's currency; the household's usual in the
   // caller's. Compared as bare numbers they would read "€0.50 below $2.50".
   it('compares nothing with a usual in another currency', async () => {
-    const paid = paidMock({
+    const memory = memoryMock({
       usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: 2.5 },
     });
     const inEuros = renderHookWithApollo(
       () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, 'EUR'),
-      { operationMocks: [paid.mock, comparisonMock([]).mock] },
+      { operationMocks: [memory.mock] },
     );
-    await waitFor(() => expect(inEuros.result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(inEuros.result.current.usual).not.toBeNull();
 
     expect(inEuros.result.current.compareToUsual(2)).toBeNull();
 
     // Nor while the list's currency is not yet known.
     const unknown = renderHookWithApollo(
       () => useStorePriceMemory('pb', 'list-1', JAR_UNIT, null),
-      { operationMocks: [paid.mock, comparisonMock([]).mock] },
+      { operationMocks: [memory.mock] },
     );
-    await waitFor(() => expect(unknown.result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(unknown.result.current.usual).not.toBeNull();
     expect(unknown.result.current.compareToUsual(2)).toBeNull();
   });
 
   it('compares nothing when the usual cannot be put on the unit, or there is none', async () => {
     const offBasis = render([
-      paidMock({
+      memoryMock({
         usual: { basis: PriceBasis.PerKg, medianPrice: 7.69, unitPrice: null },
       }),
-      comparisonMock([]),
     ]);
-    await waitFor(() => expect(offBasis.result.current.usual).not.toBeNull());
+    await drainTimers();
+    expect(offBasis.result.current.usual).not.toBeNull();
     expect(offBasis.result.current.compareToUsual(4.29)).toBeNull();
 
-    const none = render([paidMock({}), comparisonMock([])]);
+    const none = render([memoryMock({})]);
     expect(none.result.current.compareToUsual(4.29)).toBeNull();
   });
 });

@@ -1,8 +1,12 @@
 import { boolean, date, mixed, object, string, type ObjectSchema } from 'yup';
 import { lazyMessage } from '#/utils/validation/common';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
+import { startingServings } from '#domain/servings';
 
 export const PERSONAL_VALUE = '__personal__';
+
+/** A plan's servings when nobody said how many they cook for. */
+export const DEFAULT_PLAN_SERVINGS = 2;
 
 export interface CreateMealPlanFormValues {
   name: string;
@@ -33,12 +37,13 @@ export const createMealPlanSchema: ObjectSchema<CreateMealPlanFormValues> =
 
 export const createMealPlanDefaults = (
   selectedHomeId: string | null | undefined,
+  cooksFor: number | null = null,
 ): CreateMealPlanFormValues => ({
   name: '',
   description: '',
   planType: MealPlanType.Weekly,
   startDate: new Date(),
-  servings: '2',
+  servings: String(startingServings(cooksFor, DEFAULT_PLAN_SERVINGS)),
   budget: '',
   trackNutrition: false,
   homeSelection: selectedHomeId ?? PERSONAL_VALUE,

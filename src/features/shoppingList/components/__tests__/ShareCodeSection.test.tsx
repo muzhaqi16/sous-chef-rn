@@ -1,6 +1,7 @@
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ShareShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertService } from '#/services/alertService';
 import { ShareCodeSection } from '../ShareCodeSection';
@@ -22,6 +23,14 @@ const rateLimited = () =>
     ],
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('ShareCodeSection', () => {
@@ -37,11 +46,10 @@ describe('ShareCodeSection', () => {
 
     await user.press(screen.getByText('Public sharing disabled'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Too many requests. Please try again in 10 minutes.',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Too many requests. Please try again in 10 minutes.',
     );
     expect(fired).toEqual([{ input: { id: 'list-1', isPublic: true } }]);
   });
@@ -58,11 +66,10 @@ describe('ShareCodeSection', () => {
 
     await user.press(screen.getByText('Public sharing disabled'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Failed to update share settings',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to update share settings',
     );
   });
 
@@ -87,7 +94,8 @@ describe('ShareCodeSection', () => {
 
     await user.press(screen.getByText('Public sharing disabled'));
 
-    await waitFor(() => expect(fired).toHaveLength(1));
+    await drainTimers();
+    expect(fired).toHaveLength(1);
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 });

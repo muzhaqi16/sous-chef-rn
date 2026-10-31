@@ -14,7 +14,17 @@ const cachedVersion = (
   cache.readFragment<{ version?: number | null }>({
     id,
     fragment: localFirstFragment(typename, 'version'),
+    optimistic: true,
   })?.version ?? undefined;
+
+/** The `version` the cache holds for a row, layers included. */
+export function readVersion(
+  cache: ApolloCache,
+  entity: FieldsEntityRef,
+): number | undefined {
+  const id = cache.identify(entity);
+  return id ? cachedVersion(cache, id, entity.__typename) : undefined;
+}
 
 /**
  * Sends once every earlier write through here settles, at the `version` the

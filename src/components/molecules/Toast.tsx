@@ -21,7 +21,7 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { _setToastDispatch } from '#/services/toastService';
+import { _setToastDispatch, _setToastsShowing } from '#/services/toastService';
 import { HapticService } from '#services/haptic/HapticService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
@@ -302,6 +302,11 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
   useEffect(() => {
     _setToastDispatch(showToast);
   });
+
+  const showing = current !== null || queue.length > 0;
+  useEffect(() => {
+    _setToastsShowing(showing);
+  }, [showing]);
 
   // Re-running on an in-place replace resets the auto-dismiss timer, which
   // coalesces spam. translateY rests at 0 under a layout offset (`insets.top`),

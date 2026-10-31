@@ -1,26 +1,13 @@
-import type { ApolloCache } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import {
-  CreateMealTemplateDocument,
-  DeleteMealTemplateDocument,
-} from '#features/mealPlan/graphql/mealTemplate.generated';
-import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { DeleteMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { planFromTemplate } from '#features/mealPlan/utils/planFromTemplate';
 import { templateFromPlan } from '#features/mealPlan/utils/templateFromPlan';
 import { duplicateTemplate as deriveTemplateCopy } from '#features/mealPlan/utils/duplicateTemplate';
-import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
+import { useCreateMealPlanItem } from '#features/mealPlan/hooks/useCreateMealPlanItem';
+import { useCreateMealTemplate } from '#features/mealPlan/hooks/useCreateMealTemplate';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
-import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
-import { useUser } from '#store/useAppStore';
-import { generateEntityId } from '#/utils/generateEntityId';
-import {
-  MealTemplateDisplayFragmentDoc,
-  type MealTemplateDisplayFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import {
   MealPlanType,
-  type CreateMealTemplateInput,
-  type MealTemplate,
   type TemplateCategory,
 } from '#/graphql/generated/schemaTypes';
 import {
@@ -28,40 +15,13 @@ import {
   readTemplateSource,
 } from '#features/mealPlan/cache/derivationSources';
 import { toastService } from '#/services/toastService';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { Telemetry } from '#/services/telemetry';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   settleMutation,
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
-import {
-  createAddToQueryConnectionUpdater,
-  skipUnmatchedFilterVariants,
-} from '#/apollo/utils/cacheUpdaters';
 import { useTranslation } from '#/i18n';
-import { errorService } from '#/services/errorService';
-import { removeFromMealTemplates } from '#features/mealPlan/cache/removals';
-import { settleMealTemplateDelete } from '#features/mealPlan/offline/replayReconcilers';
-
-const addTemplateEdge = createAddToQueryConnectionUpdater(
-  'mealTemplates',
-  'MealTemplate',
-);
-
-/**
- * First in each cached `mealTemplates` variant the template belongs to: the
- * browser sheet caches one per category or search, and a modify fans out to all.
- */
-const addToMealTemplates = (
-  cache: ApolloCache,
-  template: Pick<MealTemplate, 'id' | 'category'>,
-) =>
-  addTemplateEdge(cache, template, {
-    position: 'start',
-    skipStoreField: skipUnmatchedFilterVariants({
-      category: template.category,
-    }),
-  });
 
 /** What a plan made from a template states; its meals come from the cache. */
 export interface PlanFromTemplateInput {
@@ -86,87 +46,18 @@ export interface TemplateFromPlanInput {
 export function useMealTemplateActions() {
   const client = useApolloClient();
   const { t } = useTranslation();
-  const user = useUser();
   const { createMealPlan, creating: creatingPlan } = useMealPlanActions();
+  const { createTemplate, creating: creatingTemplate } =
+    useCreateMealTemplate();
+  const { sendItem, creating: addingMeals } = useCreateMealPlanItem();
 
-  const [createTemplateMutation, { loading: creatingTemplate }] = useMutation(
-    CreateMealTemplateDocument,
-    {
-      context: { localFirst: true },
-      update: (cache, { data }) => {
-        const payload = appliedPayload(data);
-        if (payload) addToMealTemplates(cache, payload.mealTemplate);
-      },
-    },
-  );
-
-  const [createPlanItem, { loading: addingMeals }] = useMutation(
-    CreateMealPlanItemDocument,
-    { context: { localFirst: true } },
-  );
-
-  // The optimistic remove + revert live in deleteTemplate (local-first).
   const [deleteTemplateMutation] = useMutation(DeleteMealTemplateDocument, {
     context: { localFirst: true },
-    update: (cache, { data }, { variables }) => {
-      if (variables && appliedPayload(data))
-        settleMealTemplateDelete(cache, variables, data);
-    },
   });
 
   const reportSkipped = (count: number) => {
     if (count === 0) return;
     toastService.info(t('duplicatePlan.someSkipped', { count }));
-  };
-
-  /** `true` once the template landed or is queued; `false` when it reverted. */
-  const createTemplate = async (
-    input: CreateMealTemplateInput,
-  ): Promise<boolean> => {
-    // The minted id is the row's PK, so the replay converges on this row.
-    const id = input.id ?? generateEntityId();
-    const ownerId = user?.id;
-    if (ownerId) {
-      try {
-        const template = writeLocalMealTemplate(
-          client.cache,
-          id,
-          input,
-          ownerId,
-        );
-        addToMealTemplates(client.cache, template);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Create Meal Template (optimistic)',
-        });
-      }
-    }
-
-    const revertCreate = () => {
-      if (!ownerId) return;
-      try {
-        removeFromMealTemplates(client.cache, id, {
-          evictItem: true,
-        });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Meal Template create',
-        });
-      }
-    };
-
-    const settled = await settleMutation(
-      () =>
-        createTemplateMutation({
-          variables: { input: { ...input, id } },
-        }),
-      {
-        document: CreateMealTemplateDocument,
-        fallback: t('mealTemplateBuilder.failedToCreate'),
-        onFailed: revertCreate,
-      },
-    );
-    return settled.status !== 'failed';
   };
 
   const createPlanFromTemplate = async (input: PlanFromTemplateInput) => {
@@ -190,20 +81,7 @@ export function useMealTemplateActions() {
 
     let failedMeal: SettledFailure | undefined;
     for (const meal of derived.items) {
-      // Offline the new plan shows its meals only from this write.
-      const revert = writeLocalMealPlanItem(client.cache, meal);
-      const settled = await settleMutation(
-        () =>
-          createPlanItem({
-            variables: { input: meal },
-          }),
-        {
-          document: CreateMealPlanItemDocument,
-          fallback: t('mealTemplateBuilder.failedToAddItem'),
-          present: 'none',
-          onFailed: revert,
-        },
-      );
+      const settled = await sendItem(meal, 'none');
       failedMeal = failedMeal ?? settled.failure;
     }
 
@@ -247,59 +125,18 @@ export function useMealTemplateActions() {
   };
 
   const deleteTemplate = async (id: string) => {
-    // Snapshot first so a server rejection can restore the template card.
-    const cacheId = client.cache.identify({ __typename: 'MealTemplate', id });
-    const snapshot = cacheId
-      ? client.cache.readFragment<MealTemplateDisplayFragment>({
-          id: cacheId,
-          fragment: MealTemplateDisplayFragmentDoc,
-          fragmentName: 'MealTemplateDisplay',
-        })
-      : null;
-
-    // Removed from the cache BEFORE firing, so the delete survives an offline
-    // queue. A replay against an already-deleted template is idempotent, and a
-    // NotFound counts as deleted.
-    try {
-      removeFromMealTemplates(client.cache, id, { evictItem: true });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Template (optimistic)',
-      });
-    }
-
-    const restoreTemplate = () => {
-      if (!snapshot || !cacheId) return;
-      try {
-        client.cache.writeFragment({
-          id: cacheId,
-          fragment: MealTemplateDisplayFragmentDoc,
-          fragmentName: 'MealTemplateDisplay',
-          data: snapshot,
-        });
-        addToMealTemplates(client.cache, snapshot);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Restore refused Template delete',
-        });
-      }
-    };
-
-    const settled = await settleMutation(
-      () =>
-        deleteTemplateMutation({
-          variables: { input: { id } },
+    const settled = await pendingWritesOf(client.cache).send(
+      DeleteMealTemplateDocument,
+      { input: { id } },
+      write =>
+        settleMutation(() => deleteTemplateMutation(write), {
+          document: DeleteMealTemplateDocument,
+          fallback: t('mealTemplateActions.deleteFailed'),
+          removal: true,
         }),
-      {
-        document: DeleteMealTemplateDocument,
-        fallback: t('mealTemplateActions.deleteFailed'),
-        removal: true,
-        onFailed: restoreTemplate,
-      },
     );
     if (settled.status === 'failed') return false;
 
-    // Applied (online) or queued (offline) — both keep the optimistic remove.
     toastService.success(t('mealTemplateActions.templateDeleted'));
     return true;
   };

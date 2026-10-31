@@ -1,10 +1,11 @@
-import { act, waitFor } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import {
   renderHookWithApollo,
   seedCache,
   toFragmentRef,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained } from '#/test-utils/drainTimers';
 import { useDailyMeals, type DailyMealsItem } from '../useDailyMeals';
 import {
   DailyMeals_ItemFragmentDoc,
@@ -30,6 +31,7 @@ const makeItem = (
   const name = recipe?.name ?? 'Omelette';
   return {
     __typename: 'MealPlanItem',
+    version: 1,
     id: 'item-1',
     date: todayKey,
     mealType: MealType.Breakfast,
@@ -39,6 +41,7 @@ const makeItem = (
         ? null
         : {
             __typename: 'Recipe',
+            version: 1,
             // One recipe entity per name: the cache normalizes by id.
             id: `recipe-${name}`,
             name,
@@ -61,6 +64,7 @@ const refsOf = (items: DailyMeals_ItemFragment[]): DailyMealsItem[] =>
   items.map(({ id }) => ({
     ...toFragmentRef<typeof DailyMeals_ItemFragmentDoc>({
       __typename: 'MealPlanItem',
+      version: 1,
       id,
     }),
     id,
@@ -74,6 +78,14 @@ const renderDailyMeals = (
   renderHookWithApollo(() => useDailyMeals(refsOf(items), selectedDate), {
     cache,
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useDailyMeals', () => {
   it('returns empty state when no items match the date', () => {
@@ -247,22 +259,19 @@ describe('useDailyMeals', () => {
     const cache = seed(items);
     const { result } = renderDailyMeals(items, cache);
 
-    await act(async () => {
-      cache.writeFragment({
+    await drained(async () => {
+      seedFragment(cache, {
         fragment: DailyMeals_ItemFragmentDoc,
         fragmentName: 'DailyMeals_item',
         data: makeItem({ id: 'i1', mealType: MealType.Dinner }),
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(
-        result.current.dailyMeals
-          .find(g => g.mealType === 'DINNER')
-          ?.items.map(i => i.id),
-      ).toEqual(['i1']),
-    );
+    expect(
+      result.current.dailyMeals
+        .find(g => g.mealType === 'DINNER')
+        ?.items.map(i => i.id),
+    ).toEqual(['i1']);
     expect(
       result.current.dailyMeals.find(g => g.mealType === 'BREAKFAST')?.items,
     ).toHaveLength(0);
@@ -290,18 +299,15 @@ describe('useDailyMeals', () => {
 
     expect([...result.current.daysWithMeals]).toEqual([todayKey]);
 
-    await act(async () => {
-      cache.writeFragment({
+    await drained(async () => {
+      seedFragment(cache, {
         fragment: DailyMeals_ItemFragmentDoc,
         fragmentName: 'DailyMeals_item',
         data: makeItem({ id: 'i1', date: otherDayKey }),
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect([...result.current.daysWithMeals]).toEqual([otherDayKey]),
-    );
+    expect([...result.current.daysWithMeals]).toEqual([otherDayKey]);
     expect(result.current.isEmpty).toBe(true);
   });
 });

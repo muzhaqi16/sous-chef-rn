@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   checkReading as rulesCheckReading,
   dateOrderOf,
@@ -6,6 +6,7 @@ import {
   type RulesReading,
 } from '@muzhaqi16/receipt-rules';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import DocumentScanner, {
   ScanDocumentResponseStatus,
 } from 'react-native-document-scanner-plugin';
@@ -103,6 +104,14 @@ const renderScan = (serverParsing = true, deviceReading = false) => {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   useReceiptDraftStore.getState().clearDraft();
   availability.mockResolvedValue('unavailable');
@@ -146,7 +155,7 @@ describe('useReceiptScan', () => {
     recognizeAndDelete.mockResolvedValue(RECEIPT);
     const { result } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     expect(recognizeAndDelete).toHaveBeenCalledWith([
       'file:///page-1.jpg',
@@ -182,7 +191,7 @@ describe('useReceiptScan', () => {
     ]);
     const { result } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     const draft = useReceiptDraftStore.getState().draft;
     expect(draft?.purchasedOn).toBe(toDateKey(today));
@@ -220,7 +229,7 @@ describe('useReceiptScan', () => {
     ]);
     const { result } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     expect(useReceiptDraftStore.getState().draft?.purchaseTime).toBe(kept);
   });
@@ -243,7 +252,7 @@ describe('useReceiptScan', () => {
     ]);
     const { result } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     expect(useReceiptDraftStore.getState().draft?.purchasedOn).toBe(
       toDateKey(today),
@@ -258,7 +267,7 @@ describe('useReceiptScan', () => {
     });
     const { result, onCancel } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     expect(onCancel).toHaveBeenCalled();
     expect(recognizeAndDelete).not.toHaveBeenCalled();
@@ -274,7 +283,7 @@ describe('useReceiptScan', () => {
     });
     const { result, onCancel } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     expect(onCancel).not.toHaveBeenCalled();
     expect(result.current.status).toBe('saved');
@@ -287,7 +296,7 @@ describe('useReceiptScan', () => {
     scannedOnePage();
     const { result } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     expect(scanDocument).toHaveBeenCalledWith(
       expect.objectContaining({ maxNumDocuments: 4 }),
@@ -306,7 +315,7 @@ describe('useReceiptScan', () => {
     );
     const { result } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     const pages = useReceiptDraftStore.getState().draft?.pages;
     expect(pages).toHaveLength(10);
@@ -322,7 +331,7 @@ describe('useReceiptScan', () => {
     recognizeAndDelete.mockResolvedValue([{ lines: [line('WALMART', 0.05)] }]);
     const { result } = renderScan();
 
-    await act(() => result.current.scan());
+    await drained(() => result.current.scan());
 
     expect(result.current.status).toBe('unreadable');
     expect(useReceiptDraftStore.getState().draft).toBeNull();
@@ -341,7 +350,7 @@ describe('useReceiptScan', () => {
         scannedImages: pages,
       });
       recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
-      await act(() => view.result.current.scan());
+      await drained(() => view.result.current.scan());
       return view;
     };
 
@@ -387,7 +396,7 @@ describe('useReceiptScan', () => {
         file.uri.replace('file:///prepared', 'receipt-photos/u1/p'),
       );
 
-      await act(() => result.current.sendPhotos());
+      await drained(() => result.current.sendPhotos());
 
       expect(preparePhotos).toHaveBeenCalledWith(PAGES);
       expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(4);
@@ -429,7 +438,7 @@ describe('useReceiptScan', () => {
         file.uri.replace('file:///prepared', 'receipt-photos/u1/p'),
       );
 
-      await act(async () => {
+      await drained(async () => {
         const { sendPhotos } = result.current;
         await Promise.all([sendPhotos(), sendPhotos()]);
       });
@@ -448,7 +457,7 @@ describe('useReceiptScan', () => {
         new Error('Upload failed: 400'),
       );
 
-      await act(() => result.current.sendPhotos());
+      await drained(() => result.current.sendPhotos());
 
       expect(deletePhotos).toHaveBeenCalledWith(['file:///prepared-0.jpg']);
       expect(useReceiptDraftStore.getState().draft).toBeNull();
@@ -471,7 +480,7 @@ describe('useReceiptScan', () => {
       const { result } = await failedRead();
 
       expect(result.current.canSendPhotos).toBe(false);
-      await act(() => result.current.sendPhotos());
+      await drained(() => result.current.sendPhotos());
 
       expect(preparePhotos).not.toHaveBeenCalled();
       expect(result.current.status).toBe('readFailed');
@@ -502,7 +511,7 @@ describe('useReceiptScan', () => {
       const later = { pages: ['LATER'], scannedAt: '2026-10-02T09:00:00Z' };
       useReceiptDraftStore.getState().saveDraft(later);
       upload('receipt-photos/u1/p-0.jpg');
-      await act(() => sending);
+      await drained(() => sending);
 
       expect(deletePhotos).toHaveBeenCalledWith([
         'file:///prepared-0.jpg',
@@ -561,7 +570,7 @@ describe('useReceiptScan', () => {
       scannedOnePage();
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
       const dialog = consentAsked();
       expect(dialog.title).toBe(
         "Send photos of receipts your phone can't read?",
@@ -580,9 +589,10 @@ describe('useReceiptScan', () => {
       });
       expect(useReceiptPhotoConsentStore.getState().consent).toBe('declined');
       expect(scanDocument).toHaveBeenCalledTimes(1);
-      await waitFor(() => expect(result.current.status).toBe('saved'));
+      await drainTimers();
+      expect(result.current.status).toBe('saved');
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
       expect(scanDocument).toHaveBeenCalledTimes(2);
       expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
@@ -592,7 +602,7 @@ describe('useReceiptScan', () => {
       useReceiptPhotoConsentStore.setState({ consent: null });
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       const cancel = consentAsked().buttons.find(
         button => button.style === 'cancel',
@@ -605,7 +615,7 @@ describe('useReceiptScan', () => {
       scannedOnePage();
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
       await act(async () => {
         consentAsked().press('Send photos');
       });
@@ -619,15 +629,16 @@ describe('useReceiptScan', () => {
       scannedOnePage();
       const { result } = renderScan();
 
-      await act(async () => {
-        await Promise.all([result.current.scan(), result.current.scan()]);
-      });
+      await drained(() =>
+        Promise.all([result.current.scan(), result.current.scan()]),
+      );
       expect(alertService.alert).toHaveBeenCalledTimes(1);
 
       await act(async () => {
         consentAsked().press('Use text only');
       });
-      await waitFor(() => expect(result.current.status).toBe('saved'));
+      await drainTimers();
+      expect(result.current.status).toBe('saved');
       expect(scanDocument).toHaveBeenCalledTimes(1);
     });
 
@@ -636,7 +647,7 @@ describe('useReceiptScan', () => {
       useReceiptPhotoConsentStore.setState({ consent: null });
       const { result, unmount } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
       const dialog = consentAsked();
       unmount();
       dialog.press('Use text only');
@@ -650,7 +661,7 @@ describe('useReceiptScan', () => {
       canMaskPhotos.mockReturnValue(false);
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(consentAsked().message).toMatch(/The whole receipt is sent/);
       expect(consentAsked().message).not.toMatch(/Card numbers/);
@@ -672,7 +683,7 @@ describe('useReceiptScan', () => {
       scannedOnePage();
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(rehydrate).toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalled();
@@ -687,7 +698,7 @@ describe('useReceiptScan', () => {
       scannedOnePage();
       const { result } = renderScan(false);
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(scanDocument).toHaveBeenCalledTimes(1);
       expect(preparePhotos).not.toHaveBeenCalled();
@@ -701,7 +712,7 @@ describe('useReceiptScan', () => {
       scannedOnePage();
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(scanDocument).toHaveBeenCalledTimes(1);
       expect(recognizeAndDelete).toHaveBeenCalled();
@@ -717,7 +728,7 @@ describe('useReceiptScan', () => {
       uploadsAll();
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       const pages = ['file:///page-0.jpg', 'file:///page-1.jpg'];
       // Prepared first, keeping the pages: the native side runs calls in order.
@@ -752,7 +763,7 @@ describe('useReceiptScan', () => {
       recognizeAndDelete.mockResolvedValue(RECEIPT);
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(preparePhotos).not.toHaveBeenCalled();
       expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
@@ -767,7 +778,7 @@ describe('useReceiptScan', () => {
       mockUploadUnconfirmed.mockRejectedValueOnce(new Error('Upload failed'));
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(deletePhotos).toHaveBeenCalledWith(['file:///prepared-0.jpg']);
       const draft = useReceiptDraftStore.getState().draft;
@@ -788,7 +799,7 @@ describe('useReceiptScan', () => {
       uploadsAll();
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       // A failed read keeps its pages; their photos are already prepared.
       expect(deletePhotos).toHaveBeenCalledWith(['file:///page-0.jpg']);
@@ -806,7 +817,7 @@ describe('useReceiptScan', () => {
       recognizeAndDelete.mockRejectedValueOnce(new Error('vision failed'));
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(preparePhotos).not.toHaveBeenCalled();
       expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
@@ -833,7 +844,7 @@ describe('useReceiptScan', () => {
       });
       unmount();
       upload('receipt-photos/u1/p-0.jpg');
-      await act(() => scanning);
+      await drained(() => scanning);
 
       expect(deletePhotos).toHaveBeenCalledWith([
         'file:///prepared-0.jpg',
@@ -854,7 +865,7 @@ describe('useReceiptScan', () => {
         .mockImplementationOnce(untilStopped);
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(2);
       // Only the failure is reported, not the photo it stopped.
@@ -867,7 +878,6 @@ describe('useReceiptScan', () => {
     });
 
     it('gives way to the text when the photos take too long to go up', async () => {
-      jest.useFakeTimers();
       scannedPages(1);
       preparePhotos.mockResolvedValue(prepared(1));
       recognizeAndDelete.mockResolvedValue(RECEIPT);
@@ -888,7 +898,6 @@ describe('useReceiptScan', () => {
       expect(draft?.photoKeys).toBeUndefined();
       expect(draft?.pages[0]).toContain('GV WHOLE MILK');
       expect(result.current.status).toBe('saved');
-      jest.useRealTimers();
     });
 
     it('fails when the pages can be neither read nor prepared', async () => {
@@ -897,7 +906,7 @@ describe('useReceiptScan', () => {
       recognizeAndDelete.mockRejectedValueOnce(new Error('unreadable'));
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(result.current.status).toBe('failed');
       expect(deletePhotos).toHaveBeenCalledWith(['file:///page-0.jpg']);
@@ -911,7 +920,7 @@ describe('useReceiptScan', () => {
       recognizeAndDelete.mockResolvedValue(RECEIPT);
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
       const draft = useReceiptDraftStore.getState().draft;
@@ -942,7 +951,7 @@ describe('useReceiptScan', () => {
       expect(result.current.status).toBe('reading');
 
       read(RECEIPT);
-      await act(() => scanning);
+      await drained(() => scanning);
 
       expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
       const draft = useReceiptDraftStore.getState().draft;
@@ -966,7 +975,7 @@ describe('useReceiptScan', () => {
         uploadsAll();
         const { result } = renderScan();
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(maskPhotos).toHaveBeenCalledWith([
           {
@@ -999,7 +1008,7 @@ describe('useReceiptScan', () => {
         uploadsAll();
         const { result } = renderScan();
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         const draft = useReceiptDraftStore.getState().draft;
         expect(draft?.photoKeys).toEqual(['receipt-photos/u1/p-0.jpg']);
@@ -1015,7 +1024,7 @@ describe('useReceiptScan', () => {
         uploadsAll();
         const { result } = renderScan();
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(reportError).toHaveBeenCalledWith(expect.any(Error), {
           operation: 'Mask receipt photos',
@@ -1038,7 +1047,7 @@ describe('useReceiptScan', () => {
         uploadsAll();
         const { result } = renderScan();
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(maskPhotos).not.toHaveBeenCalled();
         expect(
@@ -1054,7 +1063,7 @@ describe('useReceiptScan', () => {
         uploadsAll();
         const { result } = renderScan();
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(maskPhotos).not.toHaveBeenCalled();
         const draft = useReceiptDraftStore.getState().draft;
@@ -1144,7 +1153,7 @@ describe('useReceiptScan', () => {
       readReceipt.mockReturnValue(addsUp);
       const { result } = renderScan(true, true);
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       // The redacted pages, the text the rules' corpus holds.
       expect(readReceipt).toHaveBeenCalledWith(
@@ -1183,7 +1192,7 @@ describe('useReceiptScan', () => {
       readReceipt.mockReturnValue(missesItsTotal);
       const { result } = renderScan(true, true);
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(result.current.status).toBe('saved');
       const draft = useReceiptDraftStore.getState().draft;
@@ -1198,7 +1207,7 @@ describe('useReceiptScan', () => {
       readReceipt.mockReturnValue(missesItsTotal);
       const { result } = renderScan(false, true);
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(useReceiptDraftStore.getState().draft).toMatchObject({
         parsedBy: 'device',
@@ -1212,7 +1221,7 @@ describe('useReceiptScan', () => {
       readReceipt.mockReturnValue(addsUp);
       const { result } = renderScan(true, false);
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(readReceipt).not.toHaveBeenCalled();
       expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
@@ -1240,7 +1249,7 @@ describe('useReceiptScan', () => {
         labelLines.mockReturnValue(new Promise(() => {}));
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(availability).toHaveBeenCalled();
         expect(result.current.status).toBe('saved');
@@ -1255,7 +1264,7 @@ describe('useReceiptScan', () => {
         checkReading.mockReturnValue(addsUp);
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(labelLines).toHaveBeenCalledWith([
           'WALMART',
@@ -1284,7 +1293,7 @@ describe('useReceiptScan', () => {
       it('leaves the receipt to the server when neither reading adds up', async () => {
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(checkReading).toHaveBeenCalled();
         expect(result.current.status).toBe('saved');
@@ -1298,7 +1307,7 @@ describe('useReceiptScan', () => {
         const reportError = jest.spyOn(errorService, 'reportError');
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(result.current.status).toBe('saved');
         expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
@@ -1309,7 +1318,6 @@ describe('useReceiptScan', () => {
       });
 
       it('stops waiting for a model that does not answer', async () => {
-        jest.useFakeTimers();
         labelLines.mockReturnValue(new Promise(() => {}));
         const { result } = renderScan(true, true);
 
@@ -1321,14 +1329,13 @@ describe('useReceiptScan', () => {
 
         expect(result.current.status).toBe('saved');
         expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
-        jest.useRealTimers();
       });
 
       it('reads by the rules alone with `deviceReceiptModel` off', async () => {
         modelFlag.mockReturnValue(false);
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(readReceipt).toHaveBeenCalled();
         expect(availability).not.toHaveBeenCalled();
@@ -1340,7 +1347,7 @@ describe('useReceiptScan', () => {
         availability.mockResolvedValue('unavailable');
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(readReceipt).toHaveBeenCalled();
         expect(labelLines).not.toHaveBeenCalled();
@@ -1350,7 +1357,7 @@ describe('useReceiptScan', () => {
       it('asks neither reader with reading on the phone off', async () => {
         const { result } = renderScan(true, false);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(readReceipt).not.toHaveBeenCalled();
         expect(availability).not.toHaveBeenCalled();
@@ -1373,7 +1380,7 @@ describe('useReceiptScan', () => {
         readReceipt.mockReturnValue(addsUp);
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
         expect(maskPhotos).not.toHaveBeenCalled();
@@ -1388,7 +1395,7 @@ describe('useReceiptScan', () => {
         readReceipt.mockReturnValue(missesItsTotal);
         const { result } = renderScan(true, true);
 
-        await act(() => result.current.scan());
+        await drained(() => result.current.scan());
 
         expect(mockUploadUnconfirmed).toHaveBeenCalledTimes(1);
         const draft = useReceiptDraftStore.getState().draft;
@@ -1399,7 +1406,6 @@ describe('useReceiptScan', () => {
       });
 
       it('still gives way to the text when the photos take too long to go up', async () => {
-        jest.useFakeTimers();
         readReceipt.mockReturnValue(missesItsTotal);
         mockUploadUnconfirmed.mockImplementationOnce(untilStopped);
         const { result } = renderScan(true, true);
@@ -1417,7 +1423,6 @@ describe('useReceiptScan', () => {
           useReceiptDraftStore.getState().draft?.photoKeys,
         ).toBeUndefined();
         expect(result.current.status).toBe('saved');
-        jest.useRealTimers();
       });
     });
   });
@@ -1432,7 +1437,7 @@ describe('useReceiptScan', () => {
     it('offers a photo instead of failing', async () => {
       const { result } = renderScan();
 
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
       expect(result.current.status).toBe('scannerUnavailable');
       expect(recognizeAndDelete).not.toHaveBeenCalled();
@@ -1442,9 +1447,9 @@ describe('useReceiptScan', () => {
       mockTakePhoto.mockResolvedValue([{ uri: 'file:///cache/photo.jpg' }]);
       recognizeAndDelete.mockResolvedValue(RECEIPT);
       const { result } = renderScan();
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
-      await act(() => result.current.takePhoto());
+      await drained(() => result.current.takePhoto());
 
       expect(recognizeAndDelete).toHaveBeenCalledWith([
         'file:///cache/photo.jpg',
@@ -1458,9 +1463,9 @@ describe('useReceiptScan', () => {
     it('reads a chosen photo too, and stays put when none is chosen', async () => {
       mockPickPhoto.mockResolvedValueOnce([]);
       const { result } = renderScan();
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
-      await act(() => result.current.pickPhoto());
+      await drained(() => result.current.pickPhoto());
       expect(result.current.status).toBe('scannerUnavailable');
       expect(recognizeAndDelete).not.toHaveBeenCalled();
 
@@ -1468,7 +1473,7 @@ describe('useReceiptScan', () => {
         { uri: 'file:///cache/chosen.jpg' },
       ]);
       recognizeAndDelete.mockResolvedValue(RECEIPT);
-      await act(() => result.current.pickPhoto());
+      await drained(() => result.current.pickPhoto());
 
       expect(recognizeAndDelete).toHaveBeenCalledWith([
         'file:///cache/chosen.jpg',
@@ -1482,9 +1487,9 @@ describe('useReceiptScan', () => {
       mockTakePhoto.mockResolvedValueOnce([{ uri: 'file:///cache/taken.jpg' }]);
       recognizeAndDelete.mockResolvedValue(RECEIPT);
       const { result } = renderScan();
-      await act(() => result.current.scan());
+      await drained(() => result.current.scan());
 
-      await act(() => result.current.takePhoto());
+      await drained(() => result.current.takePhoto());
 
       expect(result.current.status).toBe('saved');
       expect(result.current.pickedFromLibrary).toBe(false);

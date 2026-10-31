@@ -2,12 +2,13 @@
 
 jest.mock('#/services/errorService');
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { CreateHomeDocument } from '#operations/home/home.generated';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { Home_RowFragmentDoc } from '#features/home/cache/home.generated';
@@ -41,10 +42,19 @@ const readHome = (cache: ReturnType<typeof seedCache>, id: string) =>
     myMembership: { role: string; canEditPantry: boolean } | null;
     pantriesConnection: { edges: Array<{ node: { id: string } }> };
   }>({
+    optimistic: true,
     id: cache.identify({ __typename: 'Home', id }),
     fragment: Home_RowFragmentDoc,
     fragmentName: 'home_row',
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('creating a home with the API unreachable', () => {
   beforeEach(() => {
@@ -63,9 +73,9 @@ describe('creating a home with the API unreachable', () => {
     });
 
     let outcome;
-    await act(async () => {
-      outcome = await result.current.createHome({ name: 'Offline Home' });
-    });
+    outcome = await drained(() =>
+      result.current.createHome({ name: 'Offline Home' }),
+    );
 
     expect(outcome).toMatchObject({ status: 'ok' });
     expect(home.fired).toHaveLength(1);
@@ -88,7 +98,7 @@ describe('creating a home with the API unreachable', () => {
     });
 
     let id = '';
-    await act(async () => {
+    await drained(async () => {
       id = (await result.current.createHome({ name: 'Offline Home' })).id;
     });
 
@@ -111,7 +121,7 @@ describe('creating a home with the API unreachable', () => {
 
     let homeId = '';
     let pantryId = '';
-    await act(async () => {
+    await drained(async () => {
       homeId = (await result.current.createHome({ name: 'Offline Home' })).id;
       pantryId = (
         await result.current.createPantry({ homeId, name: 'Kitchen' })
@@ -141,13 +151,13 @@ describe('creating a home with the API unreachable', () => {
     });
 
     let id = '';
-    await act(async () => {
+    await drained(async () => {
       id = (await result.current.createHome({ name: 'Offline Home' })).id;
     });
 
     // No membership can be materialized for nobody, so no home is written
     // either — rather than one whose permission checks answer for no user.
-    expect(cache.extract()[`Home:${id}`]).toBeUndefined();
+    expect(cache.extract(true)[`Home:${id}`]).toBeUndefined();
   });
 });
 
@@ -179,11 +189,12 @@ describe('a minted id while its create is in flight', () => {
     act(() => {
       settled = result.current.createHome({ name: 'New Home' });
     });
-    await waitFor(() => expect(home.fired).toHaveLength(1));
+    await drainTimers();
+    expect(home.fired).toHaveLength(1);
     const id = (home.fired[0] as { input: { id: string } }).input.id;
 
     expect(unconfirmedCreates.has(id)).toBe(true);
-    await act(async () => {
+    await drained(async () => {
       home.release();
       await settled;
     });
@@ -206,11 +217,12 @@ describe('a minted id while its create is in flight', () => {
         name: 'Kitchen',
       });
     });
-    await waitFor(() => expect(pantry.fired).toHaveLength(1));
+    await drainTimers();
+    expect(pantry.fired).toHaveLength(1);
     const id = (pantry.fired[0] as { input: { id: string } }).input.id;
 
     expect(unconfirmedCreates.has(id)).toBe(true);
-    await act(async () => {
+    await drained(async () => {
       pantry.release();
       await settled;
     });

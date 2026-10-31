@@ -1,20 +1,21 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetMealTemplatesDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { useMealTemplates } from '../useMealTemplates';
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useMealTemplates search', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('sends one request for a burst of keystrokes, with the settled term', async () => {
     const templates = recordMock(GetMealTemplatesDocument, {
       data: {
@@ -28,7 +29,8 @@ describe('useMealTemplates search', () => {
     const { result } = renderHookWithApollo(() => useMealTemplates(), {
       operationMocks: [templates.mock],
     });
-    await waitFor(() => expect(result.current.state.hasResult).toBe(true));
+    await drainTimers();
+    expect(result.current.state.hasResult).toBe(true);
     const beforeTyping = templates.fired.length;
 
     for (const term of ['p', 'pa', 'pas', 'past', 'pasta']) {
@@ -41,7 +43,8 @@ describe('useMealTemplates search', () => {
       jest.advanceTimersByTime(300);
     });
 
-    await waitFor(() => expect(templates.fired.length).toBe(beforeTyping + 1));
+    await drainTimers();
+    expect(templates.fired.length).toBe(beforeTyping + 1);
     expect(templates.fired.at(-1)).toMatchObject({
       filters: { search: 'pasta' },
     });

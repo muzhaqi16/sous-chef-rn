@@ -5,16 +5,19 @@
 # scan asks once.
 query ProductDietaryAlerts($itemId: ID!, $homeId: ID!) {
   item(id: $itemId) {
+    version
     id
     ...useProductDietaryAlerts_item
   }
 }
 
 fragment useProductDietaryAlerts_item on Item {
+  version
   id
   dietaryAlerts(homeId: $homeId) {
     state
     membership {
+      version
       id
       userId
       role
@@ -26,6 +29,7 @@ fragment useProductDietaryAlerts_item on Item {
       intolerance
       healthGoal
       item {
+        version
         id
         name
       }
@@ -33,6 +37,7 @@ fragment useProductDietaryAlerts_item on Item {
     }
   }
   dietaryAlternatives(homeId: $homeId, first: 5) {
+    version
     id
     name
     imageUrl

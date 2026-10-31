@@ -6,7 +6,6 @@ import {
   type StorageState,
 } from '#/graphql/generated/schemaTypes';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { WriteLocalPantryItem_RowFragmentDoc } from './writeLocalPantryItem.generated';
@@ -53,8 +52,8 @@ export function writeLocalPantryItem(
   cache: ApolloCache,
   id: string,
   row: LocalPantryItem,
+  now: string,
 ): void {
-  const now = new Date().toISOString();
   const quantity = row.quantity ?? 1;
   const unit = row.unitId
     ? { __typename: 'Unit', id: row.unitId }
@@ -129,18 +128,5 @@ export function writeLocalPantryItem(
         edges: [],
       },
     },
-  });
-}
-
-/** Undo what {@link writeLocalPantryItem} writes beside the row itself. */
-export function evictLocalPantryItemSeeds(
-  cache: ApolloCache,
-  pantryItemId: string,
-): void {
-  safeEvict(cache, 'Item', localItemIdFor(pantryItemId));
-  cache.evict({
-    id: 'ROOT_QUERY',
-    fieldName: 'pantryItemBatchesConnection',
-    args: { pantryItemId },
   });
 }

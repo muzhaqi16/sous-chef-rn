@@ -1,6 +1,6 @@
-import { waitFor } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetShoppingListTemplatesDocument,
   type GetShoppingListTemplatesQuery,
@@ -55,13 +55,22 @@ const templatesMock: MockFor<typeof GetShoppingListTemplatesDocument> = {
   },
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useShoppingListTemplates', () => {
   it('returns each template with its saved name, falling back to the list name', async () => {
     const { result } = renderHookWithApollo(() => useShoppingListTemplates(), {
       operationMocks: [templatesMock],
     });
 
-    await waitFor(() => expect(result.current.templates).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.templates).toHaveLength(2);
 
     expect(result.current.templates).toEqual([
       { id: 'tpl-1', displayName: 'Weekly Staples', totalItems: 12 },

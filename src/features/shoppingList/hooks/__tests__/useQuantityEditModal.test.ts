@@ -6,7 +6,6 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -52,13 +51,7 @@ jest.mock('#utils/imageUtils', () => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
-  optimisticDataPersistence.clearAll();
 });
-
-const readPersisted = () => {
-  optimisticDataPersistence.flush();
-  return optimisticDataPersistence.get('ShoppingListItem', 'item-1');
-};
 
 function createItem(
   overrides: Partial<ShoppingListItemDisplayFragment> = {},
@@ -382,23 +375,32 @@ describe('useQuantityEditModal', () => {
     });
     const items = [createItem()];
 
+    const cache = seedCache([
+      {
+        __typename: 'ShoppingListItem',
+        id: 'item-1',
+        version: 3,
+        quantity: 1,
+        quantityInput: '1',
+      },
+    ]);
     const { result } = renderHookWithApollo(
       () => useQuantityEditModal({ items }),
-      { operationMocks: [m.mock] },
+      { operationMocks: [m.mock], cache },
     );
 
     act(() => {
       result.current.openForItem('item-1');
     });
 
-    let persisted: Record<string, unknown> = {};
+    let shown: unknown;
     await act(async () => {
       const pending = result.current.save('1,125', 'gal', 'unit-1');
-      persisted = readPersisted();
+      shown = cache.extract(true)['ShoppingListItem:item-1']?.quantity;
       await pending;
     });
 
-    expect(persisted.quantity).toBeCloseTo(1.125, 3);
+    expect(shown).toBeCloseTo(1.125, 3);
     expect(m.fired[0]).toEqual({
       input: {
         id: 'item-1',
@@ -561,13 +563,14 @@ describe('useQuantityEditModal', () => {
         cache.readFragment<{ quantity: number; quantityInput: string }>({
           id: cache.identify({ __typename: 'ShoppingListItem', id: 'item-1' }),
           fragment: QUANTITY,
+          optimistic: true,
         });
       return { ...rendered, readQuantity };
     }
 
-    // Offline the write is queued: the list must show the new quantity, and
-    // keep showing it after a restart, until the replay lands.
-    it('shows a queued quantity at once and records it for a restart', async () => {
+    // Offline the write is queued: the list must show the new quantity until
+    // the replay lands.
+    it('shows a queued quantity at once', async () => {
       const { result, readQuantity } = setup(null);
       act(() => {
         result.current.openForItem('item-1');
@@ -581,13 +584,9 @@ describe('useQuantityEditModal', () => {
         quantity: 1.5,
         quantityInput: '1 1/2',
       });
-      expect(readPersisted()).toEqual({
-        quantity: 1.5,
-        quantityInput: '1 1/2',
-      });
     });
 
-    it('puts the previous quantity back and drops the record when the server refuses', async () => {
+    it('puts the previous quantity back when the server refuses', async () => {
       const { result, readQuantity } = setup({
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
@@ -603,7 +602,6 @@ describe('useQuantityEditModal', () => {
       });
 
       expect(readQuantity()).toMatchObject({ quantity: 2, quantityInput: '2' });
-      expect(readPersisted()).toEqual({});
     });
   });
 
@@ -744,6 +742,7 @@ describe('useQuantityEditModal — the amount as the row reads it', () => {
       cache.readFragment<{ quantity: number }>({
         id: 'ShoppingListItem:item-1',
         fragment: QUANTITY,
+        optimistic: true,
       })?.quantity;
     return { result, m, readQuantity };
   };

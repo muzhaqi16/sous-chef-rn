@@ -1,7 +1,6 @@
-import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
-import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
+import { usePagination } from '#hooks/utils/usePagination';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import {
   PantryItemBatchFragmentDoc,
@@ -30,7 +29,7 @@ const byActiveThenExpiry = (
 
 /** A pantry item's batch ledger, each batch read live from the cache. */
 export function usePantryBatchHistory(pantryItemId: string) {
-  const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     GetPantryItemBatchHistoryDocument,
     {
       variables: { pantryItemId, first: PAGE_SIZE },
@@ -66,19 +65,18 @@ export function usePantryBatchHistory(pantryItemId: string) {
   const activeCount = allPagesLoaded
     ? batches.filter(b => b.status === BatchStatus.Active).length
     : null;
-  const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo.endCursor ?? null;
-  const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
-
-  const loadMore = () => {
-    if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
-    void loadPageWithCursorRecovery({
-      fetchMore,
-      refetch,
-      variables: { pantryItemId, first: PAGE_SIZE, after: endCursor },
-      operation: 'PantryBatchHistory.loadMore',
-    });
-  };
+  const {
+    hasMore: hasNextPage,
+    isLoadingMore: isFetchingMore,
+    loadMore,
+  } = usePagination({
+    pageInfo: connection?.pageInfo,
+    loading,
+    itemCount: batches.length,
+    observable,
+    cursorVariableName: 'after',
+    restart: refetch,
+  });
 
   const state = useDataState({
     loading,

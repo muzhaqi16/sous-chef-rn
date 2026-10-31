@@ -21,7 +21,10 @@ import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { useStoreShelfPrices } from '#features/catalog/hooks/useStoreShelfPrices';
+import {
+  hasShelfPrices,
+  useStoreShelfPrices,
+} from '#features/catalog/hooks/useStoreShelfPrices';
 import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
@@ -379,9 +382,9 @@ export const ShoppingListItemDetail: React.FC<
           )}
         </DetailSection>
 
-        {shelfPrices.rows.length > 0 && (
+        {hasShelfPrices(shelfPrices) && (
           <DetailSection title={t('storeShelfPrices.title')}>
-            <StoreShelfPriceList rows={shelfPrices.rows} />
+            <StoreShelfPriceList {...shelfPrices} />
           </DetailSection>
         )}
 

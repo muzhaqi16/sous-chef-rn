@@ -1,19 +1,21 @@
 'use no memo';
 
 import { captureOnData } from '#/test-utils/subscriptionCapture';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { HomeSubtype } from '#/graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
-import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
+import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/useOnboardingInvites.generated';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import { HomeInvitesForEventDocument } from '../useHomeSubscriptions.generated';
 import { useStore } from '#store/index';
@@ -29,7 +31,7 @@ jest.mock('#/services/subscriptions/SubscriptionService', () => ({
 // The viewer's row in `home-1`, as the home list caches it.
 const cacheWithViewerMembership = (membershipId: string) => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'Home', id: 'home-1' }),
     fragment: gql`
       fragment TestViewerMembership on Home {
@@ -63,13 +65,20 @@ function deliverMembershipEvent(
       __typename: 'HomeEvent',
       subtype,
       homeId: 'home-1',
-      actorUserId: 'owner-1',
       node: { __typename: 'Membership', id: membershipId },
     },
     client,
   );
   return refetchQueries;
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -130,22 +139,6 @@ describe('useHomeSubscriptions', () => {
 });
 
 describe('useHomeSubscriptions: an invite a co-admin sent', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-  });
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
-  // MockLink answers on a timer; the read-back then resolves a microtask later.
-  const settle = async () => {
-    for (let i = 0; i < 3; i++) {
-      await act(async () => {
-        jest.advanceTimersByTime(50);
-      });
-    }
-  };
-
   it("appears in the home's invite list without a refresh", async () => {
     const home = recordMock(GetHomeDocument, {
       data: {
@@ -155,7 +148,6 @@ describe('useHomeSubscriptions: an invite a co-admin sent', () => {
           invitesConnection: {
             __typename: 'HomeInviteConnection',
             edges: [],
-            totalCount: 0,
           },
         },
       },
@@ -173,11 +165,9 @@ describe('useHomeSubscriptions: an invite a co-admin sent', () => {
                 node: {
                   __typename: 'HomeInvite',
                   id: 'invite-1',
-                  email: 'guest@example.com',
                 },
               },
             ],
-            totalCount: 1,
           },
         },
       },
@@ -194,8 +184,8 @@ describe('useHomeSubscriptions: an invite a co-admin sent', () => {
       },
       { operationMocks: [home.mock, readBack.mock, pending.mock] },
     );
-    await settle();
-    await waitFor(() => expect(result.current.data?.home?.id).toBe('home-1'));
+    await drainTimers();
+    expect(result.current.data?.home?.id).toBe('home-1');
 
     await act(async () => {
       getOnData()(
@@ -203,13 +193,12 @@ describe('useHomeSubscriptions: an invite a co-admin sent', () => {
           __typename: 'HomeEvent',
           subtype: HomeSubtype.InviteCreated,
           homeId: 'home-1',
-          actorUserId: 'admin-1',
           node: { __typename: 'HomeInvite', id: 'invite-1' },
         },
         result.current.client,
       );
     });
-    await settle();
+    await drainTimers();
 
     expect(readBack.fired).toEqual([{ id: 'home-1' }]);
     const detail = result.current.client.cache.readFragment({

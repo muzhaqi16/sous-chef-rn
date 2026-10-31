@@ -2,7 +2,7 @@ import { getApolloClient } from '#/apollo/clientRegistry';
 import type { InMemoryCache } from '@apollo/client';
 import { storage } from '#/store/deviceStorage';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
-import { optimisticDataPersistence } from './offline/OptimisticDataPersistence';
+import { pendingWritesOf } from './pendingWrites/pendingWrites';
 import { cancelTokenRefresh } from './links/tokenScheduler';
 import { disposeWebSocket } from './links/wsLink';
 import { clearRefreshState } from './links/refreshToken';
@@ -92,6 +92,7 @@ export class LogoutCleanup {
       const client = getApolloClient();
       if (!client) return;
       await client.clearStore();
+      pendingWritesOf(client.cache).clear();
 
       // Run garbage collection with result cache reset
       // Per Apollo docs: "call gc() after evict() operations"
@@ -104,13 +105,12 @@ export class LogoutCleanup {
       // Clear new cache persistence
       apolloCachePersistence.clear();
 
-      // Clear optimistic data persistence
-      optimisticDataPersistence.clearAll();
-
       // The offline queue is NOT cleared here. A server-ended session is not the
       // user choosing to discard unsynced work, so only `queueManager.onLogout()`
       // — which fires on a deliberate sign-out — may delete queued entries.
       storage.remove('apollo-cache');
+      // Written by builds before pending layers: nothing reads it now.
+      storage.remove('apollo-optimistic-data-v1');
       storage.remove('navigation_state');
       storage.remove('apollo-client-cache');
       storage.remove('persisted-queries');

@@ -1,7 +1,7 @@
 # Narrow fragment for OpenPantryItemBatch mutation response.
 # Server returns the parent PantryItem with an updated activeBatchCount. The
-# opened batch's own state is written by the hook's permanent cache.modify
-# (isOpened/openedAt) before firing; batches otherwise live in the separate
+# opened batch's own state shows from its pending layer until the server
+# answers (isOpened/openedAt); batches otherwise live in the separate
 # Query.pantryItemBatchesConnection, refreshed by its own cache-and-network
 # query on the detail screen.
 #
@@ -15,11 +15,4 @@ fragment useOpenPantryItemBatch_pantryItem on PantryItem {
   version
   activeBatchCount
   lastUsedAt
-}
-
-# The pre-open values a refused open restores.
-fragment useOpenPantryItemBatch_state on PantryItemBatch {
-  id
-  isOpened
-  openedAt
 }

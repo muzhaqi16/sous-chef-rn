@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.8.6",
+  "version": "4.9.0",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
@@ -33,11 +33,10 @@
     "reset:cache": "npx react-native start --reset-cache",
     "npm:clean": "rm -rf node_modules/ && npm cache clean --force",
     "codegen:schema": "graphql-codegen --config codegen.schema.ts",
-    "codegen": "npm run codegen:schema && npm run codegen:readers && graphql-codegen --config codegen.ts && npm run codegen:fillers && npm run codegen:manifest",
+    "codegen": "npm run codegen:schema && npm run codegen:readers && graphql-codegen --config codegen.ts && npm run codegen:fillers && npm run codegen:manifest && npm run codegen:versioned",
     "codegen:manifest": "node scripts/generate-pq-manifest.mjs",
     "codegen:readers": "node scripts/generate-readers-fragments.mjs",
     "check:echo": "node scripts/check-subscription-echo.mjs",
-    "check:codegen-orphans": "node scripts/check-codegen-orphans.mjs",
     "check:version-sync": "node scripts/check-version-sync.mjs",
     "check:startup-origin": "node scripts/check-startup-origin.mjs",
     "check:launch-arg-auth": "node scripts/check-launch-arg-auth.mjs",
@@ -80,6 +79,7 @@
     "prepare": "husky",
     "format": "prettier --write \"src/**/*.{ts,tsx}\" \"./*.{json,js}\"",
     "codegen:fillers": "node scripts/generate-optimistic-fillers.mjs",
+    "codegen:versioned": "node scripts/generate-versioned-types.mjs",
     "check:fillers": "node scripts/generate-optimistic-fillers.mjs --check",
     "check:audit": "npm audit --omit=dev --audit-level=high"
   },
@@ -89,7 +89,7 @@
     "@callstack/liquid-glass": "^0.8.1",
     "@gorhom/bottom-sheet": "^5.2.14",
     "@hookform/resolvers": "^5.2.2",
-    "@muzhaqi16/receipt-rules": "1.4.0",
+    "@muzhaqi16/receipt-rules": "1.5.0",
     "@notifee/react-native": "^9.1.8",
     "@paralleldrive/cuid2": "^3.3.0",
     "@react-native-clipboard/clipboard": "^1.16.3",

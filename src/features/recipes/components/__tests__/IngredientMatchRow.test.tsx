@@ -144,6 +144,7 @@ describe('IngredientMatchRow', () => {
   type Stack = NonNullable<EditableMatch['selectedStack']>;
   const stack = (id: string, itemName: string, amount: number): Stack => ({
     __typename: 'PantryItem',
+    version: 1,
     id,
     itemName,
     unit: asAbbreviation({
@@ -364,6 +365,7 @@ describe('IngredientMatchRow', () => {
     const matched = makeMatch('Sugar', {
       matchedPantryItem: {
         __typename: 'PantryItem',
+        version: 1,
         id: 'p1',
         itemName: 'White Sugar',
         unit: asAbbreviation({
@@ -383,6 +385,7 @@ describe('IngredientMatchRow', () => {
     const matched = makeMatch('Sugar', {
       matchedPantryItem: {
         __typename: 'PantryItem',
+        version: 1,
         id: 'p1',
         itemName: 'White Sugar',
         unit: asAbbreviation({
@@ -402,6 +405,7 @@ describe('IngredientMatchRow', () => {
     const matched = makeMatch('Milk', {
       matchedPantryItem: {
         __typename: 'PantryItem',
+        version: 1,
         id: 'p1',
         itemName: 'Milk',
         unit: asAbbreviation({
@@ -421,6 +425,7 @@ describe('IngredientMatchRow', () => {
     const matched = makeMatch('Eggs', {
       matchedPantryItem: {
         __typename: 'PantryItem',
+        version: 1,
         id: 'p1',
         itemName: 'Eggs',
         unit: asAbbreviation({

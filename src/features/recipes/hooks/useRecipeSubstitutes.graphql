@@ -15,6 +15,7 @@ query RecipeSubstitutes(
   $ingredientsFirst: Int!
 ) {
   recipe(id: $recipeId) {
+    version
     id
     servings
     ingredientsConnection(first: $ingredientsFirst) {
@@ -23,6 +24,7 @@ query RecipeSubstitutes(
           id
           substitutes(homeId: $homeId, pantryId: $pantryId, limit: 5) {
             substitute {
+              version
               id
               note
               forQuantity
@@ -48,10 +50,12 @@ query RecipeSubstitutes(
               }
               inPantry
               item {
+                version
                 id
                 name
               }
               pantryItem {
+                version
                 id
                 itemName
                 unit {
@@ -77,6 +81,7 @@ query RecipeSubstitutes(
             alerts {
               state
               membership {
+                version
                 id
                 userId
                 role
@@ -88,6 +93,7 @@ query RecipeSubstitutes(
                 intolerance
                 healthGoal
                 item {
+                  version
                   id
                   name
                 }

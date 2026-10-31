@@ -44,7 +44,8 @@ const keyExtractor = (item: Item) => item.id;
 interface Item {
   id: string;
   title: string;
-  subtitle: string;
+  /** One line, or stacked lines that come with their `accessibilityLabel`. */
+  subtitle: string | React.ReactNode;
   badge?: BadgeContent;
   rightElement?: React.ReactNode;
   /** The row's spoken label, when `rightElement` shows text. */

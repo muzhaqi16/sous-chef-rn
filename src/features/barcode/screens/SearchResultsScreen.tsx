@@ -92,8 +92,8 @@ export const SearchResultsScreen: React.FC<
       barcode,
       format,
       pantryId,
-      // What the household paid rides the lookup only where it shows.
-      source === 'storeMode' && showPrices,
+      // Store mode's prices ride the lookup only where they show.
+      source === 'storeMode' && showPrices ? shoppingListId : undefined,
     );
 
   // Pop SearchResults and return to the scanner beneath it.

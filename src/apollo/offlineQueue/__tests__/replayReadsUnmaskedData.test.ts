@@ -2,13 +2,19 @@ import { ApolloClient, gql } from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import {
   makeQueuedMutation,
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import { QueueManager } from '../queueManager';
+import { queueStore } from '../queueStore';
 
 /**
  * The replay's reconcilers read fields that sit inside fragment spreads, and a
@@ -38,7 +44,7 @@ const replayClient = (
   results: Array<Record<string, unknown>>,
 ): ApolloClient => {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: LIST_TOTALS,
     data: {
@@ -132,23 +138,6 @@ describe('a replayed batch add the server merged into an existing row', () => {
         },
       },
     ]);
-    mockClient.cache.writeFragment({
-      id: mockClient.cache.identify({
-        __typename: 'ShoppingListItem',
-        id: 'row-minted',
-      }),
-      fragment: gql`
-        fragment ReplayMintedRow on ShoppingListItem {
-          id
-          itemName
-        }
-      `,
-      data: {
-        __typename: 'ShoppingListItem',
-        id: 'row-minted',
-        itemName: 'Milk',
-      },
-    });
     const entry = makeQueuedMutation({
       ...queuedMutationFor(AddItemToShoppingListDocument),
       variables: {
@@ -160,16 +149,35 @@ describe('a replayed batch add the server merged into an existing row', () => {
           ],
         },
       },
+      pendingWrite: {
+        id: 'held-add',
+        inputs: {
+          listId: 'list-1',
+          rows: [
+            {
+              id: 'row-minted',
+              shoppingListId: 'list-1',
+              itemName: 'Milk',
+            },
+          ],
+          now: '2026-10-30T10:00:00.000Z',
+        },
+      },
     });
+    queueStore.setCurrentUserId(entry.userId);
+    queueStore.addMutation(entry);
+    const { cache } = mockClient;
+    const pending = pendingWritesOf(cache);
+    pending.restore(queueStore.getPendingWrites());
+    const shown = () =>
+      isHeld(cache, { __typename: 'ShoppingListItem', id: 'row-minted' });
+    expect(shown()).toBe(true);
 
     await new QueueManager()['executeMutation'](entry);
+    pending.rebuild();
+    queueStore.removeMutation(entry.id);
 
-    const mintedKey = mockClient.cache.identify({
-      __typename: 'ShoppingListItem',
-      id: 'row-minted',
-    });
-    expect(mintedKey).toBeDefined();
+    expect(shown()).toBe(false);
     expect(totalItemsOf(mockClient)).toBe(4);
-    expect(mockClient.cache.extract()).not.toHaveProperty([mintedKey]);
   });
 });

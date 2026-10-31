@@ -19,6 +19,7 @@ import {
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import type { QueueStore } from '../queueStore';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 /**
  * A replay the device could not BUILD is not a refusal. The server never saw
@@ -114,7 +115,7 @@ const toggleEntry = () =>
 
 /** The cache knows the retired unit only by the symbol it had. */
 const cacheRetiredUnit = () =>
-  mockClient.cache.writeFragment({
+  seedFragment(mockClient.cache, {
     fragment: gql`
       fragment RetiredUnit on Unit {
         id

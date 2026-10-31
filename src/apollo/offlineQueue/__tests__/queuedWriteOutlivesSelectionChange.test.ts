@@ -9,6 +9,7 @@ import {
   completeMockedResponse,
   recordMock,
   type RecordedMock,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   makeQueuedMutation,
@@ -68,7 +69,7 @@ let update: RecordedMock;
 beforeEach(() => {
   storage.clearAll();
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify({ __typename: 'Home', id: 'home-1' }),
     fragment: HOME_NAME,
     data: { __typename: 'Home', id: 'home-1', name: 'Before' },

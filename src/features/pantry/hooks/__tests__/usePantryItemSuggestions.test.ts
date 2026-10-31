@@ -1,7 +1,11 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { requirePlatform } from '#platform/install';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderHookWithApollo,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
 import {
@@ -12,6 +16,11 @@ import { PantrySuggestionSource } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSuggestions } from '../usePantryItemSuggestions';
 import { todayKey } from '#/utils/dateUtils';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 jest.mock('#utils/imageUtils', () => ({
   resolveImageUrl: (item: { imageUrl?: string | null } | null | undefined) =>
@@ -72,6 +81,7 @@ function buildData(suggestions: Suggestion[]): GetPantryItemSuggestionsQuery {
     __typename: 'Query',
     pantry: {
       __typename: 'Pantry',
+      version: 1,
       id: 'pantry-1',
       suggestions: {
         __typename: 'PantrySuggestions',
@@ -112,6 +122,14 @@ const failedMock = (): MockFor<typeof GetPantryItemSuggestionsDocument> => ({
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   useStore.setState({ isOnline: true, apiReachable: true });
 });
@@ -133,7 +151,8 @@ describe('usePantryItemSuggestions', () => {
       { operationMocks: [buildMock([makeSuggestion()])] },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
     expect(result.current.grouped.lowStock?.[0]?.imageUrl).toBe(
       'https://cdn.test/milk.jpg',
     );
@@ -145,7 +164,8 @@ describe('usePantryItemSuggestions', () => {
       { operationMocks: [buildMock([makeSuggestion({ imageUrl: null })])] },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
     expect(result.current.grouped.lowStock?.[0]?.imageUrl).toBeNull();
   });
 
@@ -181,7 +201,8 @@ describe('usePantryItemSuggestions', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
     expect(result.current.grouped.lowStock).toHaveLength(2);
     expect(result.current.grouped.expiringSoon).toHaveLength(1);
     expect(result.current.grouped.popular).toHaveLength(1);
@@ -204,7 +225,8 @@ describe('usePantryItemSuggestions', () => {
         () => usePantryItemSuggestions({ pantryId: 'pantry-1' }),
         { operationMocks: [buildMock([suggestion])] },
       );
-      await waitFor(() => expect(result.current.state).toBe('ready'));
+      await drainTimers();
+      expect(result.current.state).toBe('ready');
       return result.current.grouped;
     };
 
@@ -251,7 +273,8 @@ describe('usePantryItemSuggestions', () => {
       { operationMocks: [buildMock([])] },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('empty'));
+    await drainTimers();
+    expect(result.current.state).toBe('empty');
   });
 
   describe('a read that produced nothing', () => {
@@ -261,7 +284,8 @@ describe('usePantryItemSuggestions', () => {
         { operationMocks: [failedMock()] },
       );
 
-      await waitFor(() => expect(result.current.state).toBe('error'));
+      await drainTimers();
+      expect(result.current.state).toBe('error');
     });
 
     it('is offline when the server is unreachable and nothing was cached', async () => {
@@ -271,7 +295,8 @@ describe('usePantryItemSuggestions', () => {
         { operationMocks: [failedMock()] },
       );
 
-      await waitFor(() => expect(result.current.state).toBe('offline'));
+      await drainTimers();
+      expect(result.current.state).toBe('offline');
     });
 
     it('retries the read', async () => {
@@ -279,20 +304,22 @@ describe('usePantryItemSuggestions', () => {
         () => usePantryItemSuggestions({ pantryId: 'pantry-1' }),
         { operationMocks: [failedMock(), buildMock([makeSuggestion()])] },
       );
-      await waitFor(() => expect(result.current.state).toBe('error'));
+      await drainTimers();
+      expect(result.current.state).toBe('error');
 
       act(() => {
         result.current.refetch();
       });
 
-      await waitFor(() => expect(result.current.state).toBe('ready'));
+      await drainTimers();
+      expect(result.current.state).toBe('ready');
     });
   });
 
   it('shows cached suggestions while offline', async () => {
     useStore.setState({ isOnline: false, apiReachable: null });
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetPantryItemSuggestionsDocument,
       variables: VARIABLES,
       data: buildData([makeSuggestion()]),
@@ -305,7 +332,8 @@ describe('usePantryItemSuggestions', () => {
       { cache, operationMocks: [buildMock([makeSuggestion()])] },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
     expect(result.current.grouped.lowStock).toHaveLength(1);
   });
 
@@ -324,7 +352,8 @@ describe('usePantryItemSuggestions', () => {
         },
       );
 
-      await waitFor(() => expect(result.current.state).toBe('ready'));
+      await drainTimers();
+      expect(result.current.state).toBe('ready');
       expect(mockPreloadImages).toHaveBeenCalledWith([
         'https://cdn.test/img1.jpg',
         'https://cdn.test/img2.jpg',
@@ -337,7 +366,8 @@ describe('usePantryItemSuggestions', () => {
         { operationMocks: [buildMock([])] },
       );
 
-      await waitFor(() => expect(result.current.state).toBe('empty'));
+      await drainTimers();
+      expect(result.current.state).toBe('empty');
       expect(mockPreloadImages).not.toHaveBeenCalled();
     });
   });
@@ -376,7 +406,8 @@ describe('usePantryItemSuggestions', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
     expect(result.current.grouped.lowStock).toHaveLength(1);
   });
 });

@@ -28,6 +28,7 @@ export function usePantryImagePreload(nodes: readonly PantryListNode[]) {
             fragment: PantryContent_PantryItemFragmentDoc,
             fragmentName: 'PantryContent_pantryItem',
             from: node,
+            optimistic: true,
           });
         if (!item) continue;
         const url = resolveImageUrl(item);

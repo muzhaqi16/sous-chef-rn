@@ -1,10 +1,12 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   HeldStacksDocument,
   UseHeldStacks_PantryFragmentDoc,
@@ -43,9 +45,10 @@ const stack = (
   itemId = OATS,
 ): HeldStack => ({
   __typename: 'PantryItem',
+  version: 1,
   id,
   createdAt,
-  item: { __typename: 'Item', id: itemId },
+  item: { __typename: 'Item', version: 1, id: itemId },
   unit: { __typename: 'Unit', ...unit, displayAsFraction: false },
   displayAmount: {
     __typename: 'DisplayAmount',
@@ -67,7 +70,7 @@ const BAG = { id: 'u-bag', type: UnitType.Count };
 const GRAMS = { id: 'u-g', type: UnitType.Weight };
 
 function writeStack(cache: ReturnType<typeof makeCache>, row: HeldStack) {
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: UseHeldStacks_PantryItemFragmentDoc,
     fragmentName: 'useHeldStacks_pantryItem',
     data: row,
@@ -79,7 +82,7 @@ function writeRows(
   cache: ReturnType<typeof makeCache>,
   rows: { id: string; itemId: string }[],
 ) {
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: UseHeldStacks_PantryFragmentDoc,
     fragmentName: 'useHeldStacks_pantry',
     variables: {
@@ -113,6 +116,14 @@ function writeRows(
   });
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useHeldStacks', () => {
   it('follows the pantry as a stack of the item is written', async () => {
     const cache = makeCache();
@@ -136,12 +147,11 @@ describe('useHeldStacks', () => {
       ]);
     });
 
-    await waitFor(() =>
-      expect(result.current.seedUnit).toEqual({
-        id: 'u-bag',
-        type: UnitType.Count,
-      }),
-    );
+    await drainTimers();
+    expect(result.current.seedUnit).toEqual({
+      id: 'u-bag',
+      type: UnitType.Count,
+    });
     expect(result.current.joinedIn('u-bag')?.id).toBe('oats-bag');
   });
 
@@ -165,7 +175,8 @@ describe('useHeldStacks', () => {
     });
 
     expect(result.current.seedUnit).toBeNull();
-    await waitFor(() => expect(result.current.seedUnit).not.toBeNull());
+    await drainTimers();
+    expect(result.current.seedUnit).not.toBeNull();
     expect(asked.fired).toEqual([
       { pantryId: PANTRY, itemId: OATS, stacksFirst: 20 },
     ]);

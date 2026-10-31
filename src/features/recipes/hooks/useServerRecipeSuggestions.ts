@@ -17,11 +17,17 @@ const SUGGESTION_COUNT = 20;
 /**
  * The server's suggestions from what the selected home holds (every pantry the
  * user may view when none is selected), screened by its dietary profile, in its
- * order. Not `enabled`, it asks for nothing.
+ * order. Not `enabled`, it asks for nothing. `excludeDietaryConflicts` also
+ * leaves out every recipe whose page would show a dietary alert.
  */
 export function useServerRecipeSuggestions(
   enabled: boolean,
-  { fetchPolicy }: Pick<StandDownOptions, 'fetchPolicy'> = {},
+  {
+    fetchPolicy,
+    excludeDietaryConflicts,
+  }: Pick<StandDownOptions, 'fetchPolicy'> & {
+    excludeDietaryConflicts?: true;
+  } = {},
 ) {
   const today = useToday();
   const homeId = useSelectedHomeId() ?? undefined;
@@ -29,7 +35,12 @@ export function useServerRecipeSuggestions(
     RecipeSuggestionsDocument,
     enabled
       ? {
-          variables: { first: SUGGESTION_COUNT, today, homeId },
+          variables: {
+            first: SUGGESTION_COUNT,
+            today,
+            homeId,
+            excludeDietaryConflicts,
+          },
           ...heldFetchPolicy(fetchPolicy),
         }
       : skipToken,

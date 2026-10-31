@@ -1,5 +1,5 @@
 import { createElement, type ReactNode } from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
@@ -11,6 +11,7 @@ import {
   type MockedResponse,
   type MockPart,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { CreateItemDocument } from '#operations/item/item.generated';
 import {
@@ -68,6 +69,14 @@ jest.mock('#hooks/settings/useFeatureFlag', () => {
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockShelfPricesOffered.mockReturnValue(true);
   useStore.setState({ selectedHomeId: null });
@@ -99,6 +108,10 @@ const SAMPLE_UPC_ITEM = {
   variationBrand: null,
   matchedVariation: null,
 } satisfies LookupNode;
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useSearchResults', () => {
   describe('before the lookups answer', () => {
@@ -141,10 +154,9 @@ describe('useSearchResults', () => {
         { operationMocks: [lookupMock('upc', [SAMPLE_UPC_ITEM]).mock] },
       );
 
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({ id: 'item-1', name: 'Test Product' }),
-        ),
+      await drainTimers();
+      expect(result.current.item).toEqual(
+        expect.objectContaining({ id: 'item-1', name: 'Test Product' }),
       );
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
@@ -168,17 +180,15 @@ describe('useSearchResults', () => {
           { operationMocks: [upc.mock] },
         );
 
-        await waitFor(() =>
-          expect(upc.fired).toContainEqual(
-            expect.objectContaining({
-              lookup: { upc: { code, format: upcFormat } },
-            }),
-          ),
+        await drainTimers();
+        expect(upc.fired).toContainEqual(
+          expect.objectContaining({
+            lookup: { upc: { code, format: upcFormat } },
+          }),
         );
-        await waitFor(() =>
-          expect(result.current.item).toEqual(
-            expect.objectContaining({ id: 'item-1' }),
-          ),
+        await drainTimers();
+        expect(result.current.item).toEqual(
+          expect.objectContaining({ id: 'item-1' }),
         );
       },
     );
@@ -307,9 +317,8 @@ describe('useSearchResults', () => {
         },
       );
 
-      await waitFor(() =>
-        expect(result.current.item).toEqual(expect.objectContaining(expected)),
-      );
+      await drainTimers();
+      expect(result.current.item).toEqual(expect.objectContaining(expected));
     });
 
     it('falls back to SKU query when UPC finds nothing', async () => {
@@ -323,10 +332,9 @@ describe('useSearchResults', () => {
         },
       );
 
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({ id: 'item-sku', name: 'SKU Product' }),
-        ),
+      await drainTimers();
+      expect(result.current.item).toEqual(
+        expect.objectContaining({ id: 'item-sku', name: 'SKU Product' }),
       );
       expect(result.current.loading).toBe(false);
       expect(mockShowBottomSheet).not.toHaveBeenCalled();
@@ -340,13 +348,12 @@ describe('useSearchResults', () => {
         { operationMocks: [upc.mock] },
       );
 
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual(
-          expect.objectContaining({
-            lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
-            pantry: 'pantry-7',
-          }),
-        ),
+      await drainTimers();
+      expect(upc.fired).toContainEqual(
+        expect.objectContaining({
+          lookup: { upc: { code: '1234567890', format: 'EAN_13' } },
+          pantry: 'pantry-7',
+        }),
       );
     });
 
@@ -359,14 +366,13 @@ describe('useSearchResults', () => {
         operationMocks: [upc.mock],
       });
 
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual(
-          expect.objectContaining({
-            homeId: 'home-1',
-            withHome: true,
-            withPrices: false,
-          }),
-        ),
+      await drainTimers();
+      expect(upc.fired).toContainEqual(
+        expect.objectContaining({
+          homeId: 'home-1',
+          withHome: true,
+          withPrices: false,
+        }),
       );
     });
 
@@ -375,13 +381,12 @@ describe('useSearchResults', () => {
     it('asks for the shelf price at each store in store mode only', async () => {
       const inStore = lookupMock('upc', []);
       const { unmount } = renderHookWithApollo(
-        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        () => useSearchResults('1234567890', 'ean-13', undefined, 'list-1'),
         { operationMocks: [inStore.mock] },
       );
-      await waitFor(() =>
-        expect(inStore.fired).toContainEqual(
-          expect.objectContaining({ withHome: false, withShelfPrices: true }),
-        ),
+      await drainTimers();
+      expect(inStore.fired).toContainEqual(
+        expect.objectContaining({ withHome: false, withShelfPrices: true }),
       );
       unmount();
 
@@ -389,10 +394,9 @@ describe('useSearchResults', () => {
       renderHookWithApollo(() => useSearchResults('1234567890', 'ean-13'), {
         operationMocks: [fromPantry.mock],
       });
-      await waitFor(() =>
-        expect(fromPantry.fired).toContainEqual(
-          expect.objectContaining({ withShelfPrices: false }),
-        ),
+      await drainTimers();
+      expect(fromPantry.fired).toContainEqual(
+        expect.objectContaining({ withShelfPrices: false }),
       );
     });
 
@@ -401,31 +405,34 @@ describe('useSearchResults', () => {
       const upc = lookupMock('upc', []);
 
       renderHookWithApollo(
-        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        () => useSearchResults('1234567890', 'ean-13', undefined, 'list-1'),
         { operationMocks: [upc.mock] },
       );
 
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual(
-          expect.objectContaining({ withShelfPrices: false }),
-        ),
+      await drainTimers();
+      expect(upc.fired).toContainEqual(
+        expect.objectContaining({ withShelfPrices: false }),
       );
     });
 
-    // Store mode's price lines ride it too, and nowhere else are they read.
+    // Store mode's price lines ride it too, with the list whose store they are
+    // compared at, and nowhere else are they read.
     it('asks for what the household paid in store mode', async () => {
       useStore.setState({ selectedHomeId: 'home-1' });
       const upc = lookupMock('upc', []);
 
       renderHookWithApollo(
-        () => useSearchResults('1234567890', 'ean-13', undefined, true),
+        () => useSearchResults('1234567890', 'ean-13', undefined, 'list-1'),
         { operationMocks: [upc.mock] },
       );
 
-      await waitFor(() =>
-        expect(upc.fired).toContainEqual(
-          expect.objectContaining({ homeId: 'home-1', withPrices: true }),
-        ),
+      await drainTimers();
+      expect(upc.fired).toContainEqual(
+        expect.objectContaining({
+          homeId: 'home-1',
+          listId: 'list-1',
+          withPrices: true,
+        }),
       );
     });
 
@@ -440,7 +447,8 @@ describe('useSearchResults', () => {
         },
       );
 
-      await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockShowBottomSheet).toHaveBeenCalled();
       expect(result.current.item).toBeNull();
       expect(result.current.loading).toBe(false);
       expect(result.current.error).toBeNull();
@@ -455,12 +463,13 @@ describe('useSearchResults', () => {
         { operationMocks: [lookupMock('upc', []).mock, sku.mock] },
       );
 
-      await waitFor(() => expect(sku.fired).toHaveLength(1));
+      await drainTimers();
+      expect(sku.fired).toHaveLength(1);
       expect(result.current.loading).toBe(true);
       expect(mockShowBottomSheet).not.toHaveBeenCalled();
 
-      await act(async () => sku.release());
-      await waitFor(() => expect(result.current.loading).toBe(false));
+      await drained(() => sku.release());
+      expect(result.current.loading).toBe(false);
       expect(mockShowBottomSheet).toHaveBeenCalled();
     });
   });
@@ -488,7 +497,8 @@ describe('useSearchResults', () => {
         { operationMocks: [lookupMock('upc', error).mock] },
       );
 
-      await waitFor(() => expect(result.current.error).toBe(t(copy)));
+      await drainTimers();
+      expect(result.current.error).toBe(t(copy));
       expect(result.current.loading).toBe(false);
       expect(result.current.item).toBeNull();
     });
@@ -507,12 +517,8 @@ describe('useSearchResults', () => {
         },
       );
 
-      await waitFor(() =>
-        expect(result.current.error).toBe(t('errors.networkError')),
-      );
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 50));
-      });
+      await drainTimers();
+      expect(result.current.error).toBe(t('errors.networkError'));
       // Offline is not "unknown": the product may exist, so nothing offers
       // to create it.
       expect(sku.fired).toEqual([]);
@@ -555,18 +561,16 @@ describe('useSearchResults', () => {
       it('shows the connection copy, not a miss, and asks nobody', async () => {
         const { network, result } = renderOffline();
 
-        await waitFor(() =>
-          expect(result.current.error).toBe(t('errors.networkError')),
-        );
+        await drainTimers();
+        expect(result.current.error).toBe(t('errors.networkError'));
         expect(network).not.toHaveBeenCalled();
         expect(mockShowBottomSheet).not.toHaveBeenCalled();
       });
 
       it('keeps the connection copy when the connection comes back', async () => {
         const { result, rerender } = renderOffline();
-        await waitFor(() =>
-          expect(result.current.error).toBe(t('errors.networkError')),
-        );
+        await drainTimers();
+        expect(result.current.error).toBe(t('errors.networkError'));
 
         act(() => {
           useStore.setState({ isOnline: true, apiReachable: true });
@@ -591,18 +595,16 @@ describe('useSearchResults', () => {
         },
       );
 
-      await waitFor(() =>
-        expect(result.current.error).toBe(t('errors.codes.genericRetry')),
-      );
+      await drainTimers();
+      expect(result.current.error).toBe(t('errors.codes.genericRetry'));
 
       act(() => {
         result.current.handleRetry();
       });
 
-      await waitFor(() =>
-        expect(result.current.item).toEqual(
-          expect.objectContaining({ id: 'item-1' }),
-        ),
+      await drainTimers();
+      expect(result.current.item).toEqual(
+        expect.objectContaining({ id: 'item-1' }),
       );
       expect(result.current.error).toBeNull();
     });
@@ -647,9 +649,9 @@ describe('useSearchResults', () => {
         { operationMocks: [createItemMock()] },
       );
 
-      await act(async () => {
-        await result.current.handleAddItem({ name: 'New Item', ...images });
-      });
+      await drained(() =>
+        result.current.handleAddItem({ name: 'New Item', ...images }),
+      );
 
       expect(mockUploadItemImages).toHaveBeenCalledWith(
         uploaded,
@@ -668,15 +670,16 @@ describe('useSearchResults', () => {
           ],
         },
       );
-      await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockShowBottomSheet).toHaveBeenCalled();
       mockHideBottomSheet.mockClear();
 
-      await act(async () => {
-        await result.current.handleAddItem({
+      await drained(() =>
+        result.current.handleAddItem({
           name: 'New Item',
           brandName: 'Home Brand',
-        });
-      });
+        }),
+      );
 
       expect(result.current.item).toEqual(
         expect.objectContaining({
@@ -703,10 +706,9 @@ describe('useSearchResults', () => {
           ],
         },
       );
-      await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalled());
-      await act(async () => {
-        await result.current.handleAddItem({ name: 'New Item' });
-      });
+      await drainTimers();
+      expect(mockShowBottomSheet).toHaveBeenCalled();
+      await drained(() => result.current.handleAddItem({ name: 'New Item' }));
       expect(result.current.item?.name).toBe('New Item');
 
       act(() => {
@@ -716,9 +718,8 @@ describe('useSearchResults', () => {
         });
       });
 
-      await waitFor(() =>
-        expect(result.current.item?.name).toBe('Renamed Item'),
-      );
+      await drainTimers();
+      expect(result.current.item?.name).toBe('Renamed Item');
     });
 
     it('shows the photo uploaded for the created item', async () => {
@@ -734,19 +735,17 @@ describe('useSearchResults', () => {
           ],
         },
       );
-      await waitFor(() => expect(mockShowBottomSheet).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockShowBottomSheet).toHaveBeenCalled();
 
-      await act(async () => {
-        await result.current.handleAddItem({
+      await drained(() =>
+        result.current.handleAddItem({
           name: 'New Item',
           selectedImages: [{ uri: 'file://image.jpg' }],
-        });
-      });
-
-      await waitFor(() =>
-        expect(result.current.item?.imageUrl).toBe(
-          'https://cdn.test/new-item.jpg',
-        ),
+        }),
+      );
+      expect(result.current.item?.imageUrl).toBe(
+        'https://cdn.test/new-item.jpg',
       );
     });
 
@@ -767,12 +766,12 @@ describe('useSearchResults', () => {
       );
 
       let refusal: unknown;
-      await act(async () => {
-        refusal = await result.current.handleAddItem({
+      refusal = await drained(() =>
+        result.current.handleAddItem({
           name: 'New Item',
           upc: '012345678901',
-        });
-      });
+        }),
+      );
 
       expect(refusal).toEqual({
         field: 'upc',
@@ -799,12 +798,12 @@ describe('useSearchResults', () => {
       );
 
       let refusal: unknown = 'unset';
-      await act(async () => {
-        refusal = await result.current.handleAddItem({
+      refusal = await drained(() =>
+        result.current.handleAddItem({
           name: 'New Item',
           selectedImages: [{ uri: 'file://image.jpg' }],
-        });
-      });
+        }),
+      );
 
       expect(refusal).toBeUndefined();
       expect(alertService.alert).toHaveBeenCalledTimes(1);

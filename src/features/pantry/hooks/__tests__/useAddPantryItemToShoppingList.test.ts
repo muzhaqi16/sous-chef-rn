@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { useAddPantryItemToShoppingList } from '#features/pantry/hooks/useAddPantryItemToShoppingList';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 
@@ -15,6 +15,14 @@ import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantr
  */
 const LIST_ID = 'list-1';
 const CATALOG_ITEM_ID = '694b605f8d1b03f97d92dd42';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useAddPantryItemToShoppingList', () => {
   it('sends the id it is given as a catalog item reference', async () => {
@@ -30,13 +38,15 @@ describe('useAddPantryItemToShoppingList', () => {
       () => useAddPantryItemToShoppingList(),
       { operationMocks: [add.mock] },
     );
-    await waitFor(() => expect(result.current.addToList).toBeDefined());
+    await drainTimers();
+    expect(result.current.addToList).toBeDefined();
 
-    await result.current.addToList(LIST_ID, CATALOG_ITEM_ID, {
-      itemName: 'tomatoes',
-    });
-
-    await waitFor(() => expect(add.fired.length).toBe(1));
+    await drained(() =>
+      result.current.addToList(LIST_ID, CATALOG_ITEM_ID, {
+        itemName: 'tomatoes',
+      }),
+    );
+    expect(add.fired.length).toBe(1);
     const input = add.fired[0]?.input as {
       shoppingListId: string;
       items: { id: string; item: { itemId: string } }[];

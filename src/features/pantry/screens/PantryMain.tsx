@@ -112,7 +112,6 @@ const PantryMainInner: React.FC = () => {
 
   useTabScreenLifecycle({
     screenName: 'PantryMain',
-    optimisticTypes: ['PantryItem', 'PantryItemBatch'],
     telemetryProperties: () => ({
       home_id: screen.selectedHomeId,
       pantry_id: screen.pantry?.id,

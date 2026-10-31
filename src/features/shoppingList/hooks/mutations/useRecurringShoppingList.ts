@@ -19,11 +19,7 @@ import { readCopyableList } from '#features/shoppingList/cache/copySource';
 import { nextRecurringList } from '#features/shoppingList/utils/nextRecurringList';
 import { useCopyShoppingList } from './useCopyShoppingList';
 import type { RecurringPattern } from '#/graphql/generated/schemaTypes';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  snapshotFields,
-  writeEntityFields,
-} from '#/apollo/utils/localFirstFields';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import { toastService } from '#/services/toastService';
 
@@ -40,69 +36,41 @@ export function useRecurringShoppingList() {
     t('shoppingListScreens.failedToGenerateNext'),
   );
 
-  /** Writes `patch` over the list and returns what restores the held values. */
-  const applyOptimistic = (
-    id: string,
-    patch: Partial<UseRecurringShoppingList_ListFragment>,
-  ): (() => void) => {
-    const entity = { __typename: 'ShoppingList', id };
-    const held =
-      client.cache.readFragment<UseRecurringShoppingList_ListFragment>({
-        id: client.cache.identify(entity),
-        fragment: UseRecurringShoppingList_ListFragmentDoc,
-        fragmentName: 'useRecurringShoppingList_list',
-        returnPartialData: true,
-      });
-    const previous = snapshotFields(held, patch);
-    writeEntityFields(client.cache, entity, patch);
-    return () => writeEntityFields(client.cache, entity, previous);
-  };
-
   const setRecurring = async (
     id: string,
     pattern: RecurringPattern,
     interval: number,
   ): Promise<boolean> => {
-    const revert = applyOptimistic(id, {
-      isRecurring: true,
-      recurringPattern: pattern,
-      recurringInterval: interval,
-    });
-
-    const settled = await settleMutation(
-      () =>
-        setupMutation({
-          variables: {
-            input: {
-              id,
-              recurringPattern: pattern,
-              recurringInterval: interval,
-            },
-          },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: {
+        isRecurring: true,
+        recurringPattern: pattern,
+        recurringInterval: interval,
+      },
+      variables: {
+        input: { id, recurringPattern: pattern, recurringInterval: interval },
+      },
+      mutate: setupMutation,
+      settle: {
         document: CreateRecurringShoppingListDocument,
         fallback: t('shoppingListScreens.failedToSetRecurring'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 
   const cancelRecurring = async (id: string): Promise<boolean> => {
-    const revert = applyOptimistic(id, { isRecurring: false });
-
-    const settled = await settleMutation(
-      () =>
-        cancelMutation({
-          variables: { input: { id } },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: { isRecurring: false },
+      variables: { input: { id } },
+      mutate: cancelMutation,
+      settle: {
         document: CancelRecurringDocument,
         fallback: t('shoppingListScreens.failedToCancelRecurring'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 
@@ -111,6 +79,7 @@ export function useRecurringShoppingList() {
       id: client.cache.identify({ __typename: 'ShoppingList', id }),
       fragment: UseRecurringShoppingList_ListFragmentDoc,
       fragmentName: 'useRecurringShoppingList_list',
+      optimistic: true,
     });
 
   /** The next occurrence's list id, or null when it could not be rolled. */
@@ -171,25 +140,18 @@ export function useRecurringShoppingList() {
     const { recurringPattern, recurringInterval } = recurrence;
     if (recurringPattern == null || recurringInterval == null) return;
 
-    const revert = applyOptimistic(id, { nextRecurringDate });
-    await settleMutation(
-      () =>
-        setupMutation({
-          variables: {
-            input: {
-              id,
-              recurringPattern,
-              recurringInterval,
-              nextRecurringDate,
-            },
-          },
-        }),
-      {
+    await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: { nextRecurringDate },
+      variables: {
+        input: { id, recurringPattern, recurringInterval, nextRecurringDate },
+      },
+      mutate: setupMutation,
+      settle: {
         document: CreateRecurringShoppingListDocument,
         fallback: t('shoppingListScreens.failedToSetRecurring'),
-        onFailed: revert,
       },
-    );
+    });
   }
 
   return {

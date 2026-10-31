@@ -23,6 +23,8 @@ export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
   'sous-chef-receipt-draft',
   // features/receipts/store/receiptPhotoConsentStore.ts: this user's consent.
   'sous-chef-receipt-photo-consent',
+  // features/catalog/store/storePickerStore.ts: the zip stores were found near.
+  'sous-chef-store-picker',
 ];
 
 /** Last write wins, so a hot reload replaces rather than duplicates. */

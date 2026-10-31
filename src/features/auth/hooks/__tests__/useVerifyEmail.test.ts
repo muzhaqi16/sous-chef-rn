@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   recordMock,
 } from '#/test-utils/apolloMockProvider';
+import { drained } from '#/test-utils/drainTimers';
 import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
@@ -30,6 +30,14 @@ const resendMock = () =>
     },
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useVerifyEmail', () => {
   it('sends the address alongside a 6-digit code', async () => {
     // The server matches a code against ONE account's pending verification,
@@ -39,13 +47,12 @@ describe('useVerifyEmail', () => {
       operationMocks: [verify.mock, resendMock().mock],
     });
 
-    await result.current.verifyEmail('123456', 'ada@example.com');
-
-    await waitFor(() =>
-      expect(verify.fired).toContainEqual({
-        input: { code: '123456', email: 'ada@example.com' },
-      }),
+    await drained(() =>
+      result.current.verifyEmail('123456', 'ada@example.com'),
     );
+    expect(verify.fired).toContainEqual({
+      input: { code: '123456', email: 'ada@example.com' },
+    });
   });
 
   it('sends a link token without one', async () => {
@@ -55,13 +62,10 @@ describe('useVerifyEmail', () => {
       operationMocks: [verify.mock, resendMock().mock],
     });
 
-    await result.current.verifyEmail('a-long-opaque-link-token');
-
-    await waitFor(() =>
-      expect(verify.fired).toContainEqual({
-        input: { code: 'a-long-opaque-link-token', email: undefined },
-      }),
-    );
+    await drained(() => result.current.verifyEmail('a-long-opaque-link-token'));
+    expect(verify.fired).toContainEqual({
+      input: { code: 'a-long-opaque-link-token', email: undefined },
+    });
   });
 
   it('names the account the code verified', async () => {
@@ -78,7 +82,9 @@ describe('useVerifyEmail', () => {
       operationMocks: [verify.mock, resendMock().mock],
     });
 
-    const outcome = await result.current.verifyEmail('link-token');
+    const outcome = await drained(() =>
+      result.current.verifyEmail('link-token'),
+    );
 
     expect(outcome).toEqual({ status: 'verified', userId: 'account-b' });
   });
@@ -97,7 +103,9 @@ describe('useVerifyEmail', () => {
       operationMocks: [verify.mock, resendMock().mock],
     });
 
-    const outcome = await result.current.verifyEmail('link-token');
+    const outcome = await drained(() =>
+      result.current.verifyEmail('link-token'),
+    );
 
     expect(outcome).toEqual({ status: 'verified', userId: null });
   });

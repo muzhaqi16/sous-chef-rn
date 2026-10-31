@@ -52,6 +52,7 @@ import {
   LoginDocument,
   type LoginMutation,
 } from '#operations/auth/auth.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const PROFILE_ID = 'profile-1';
 
@@ -237,7 +238,7 @@ describe('current user profile cache completeness', () => {
       LoginDocument,
       { input: { email: 'a@b.co', password: 'pw' } },
     );
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LoginDocument,
       variables: { input: { email: 'a@b.co', password: 'pw' } },
       data,
@@ -249,7 +250,7 @@ describe('current user profile cache completeness', () => {
     if (data.login.__typename !== 'AuthPayload') {
       throw new Error('mocked login did not resolve to AuthPayload');
     }
-    cache.writeQuery<{ me: { __typename: 'User'; id: string } }>({
+    seedQuery<{ me: { __typename: 'User'; id: string } }>(cache, {
       query: LinkMeDocument,
       data: { me: { __typename: 'User', id: data.login.user.id } },
     });

@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow';
 import type { RootState } from './index';
 import { storeApi } from './index';
 import { isSignedIn } from './slices/authSlice';
+import { mirroredFrom, type MirroredSettings } from '#/domain/serverSettings';
 
 /** Core store hook. Prefer the named hooks below; use this for one-offs. */
 export function useAppStore<T>(
@@ -107,7 +108,6 @@ const selectPreferences = (state: RootState) => ({
 const selectNavigationUtils = (state: RootState) => ({
   getUserNavigationState: state.getUserNavigationState,
   setUserNavigationState: state.setUserNavigationState,
-  setOnBoardingStep: state.setOnBoardingStep,
   setOnboarded: state.setOnboarded,
 });
 
@@ -165,6 +165,12 @@ export const useTheme = () => useAppStore(selectTheme);
 export const useShowNavigationLabels = () =>
   useAppStore(selectShowNavigationLabels);
 export const useShowTutorials = () => useAppStore(selectShowTutorials);
+/** A setting the account keeps, as the store mirrors it (`MIRRORED_SETTINGS`). */
+export const useMirroredSetting = <K extends keyof MirroredSettings>(key: K) =>
+  useAppStore(state => state[key]);
+/** Every mirrored setting, re-rendering only when one of them changes. */
+export const useMirroredSettings = () =>
+  useAppStore(useShallow((state: RootState) => mirroredFrom(state)));
 
 export const usePostLoginState = () =>
   useAppStore(useShallow(selectPostLoginState));

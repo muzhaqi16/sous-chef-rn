@@ -1,5 +1,5 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
   AddedContext,
@@ -14,12 +14,16 @@ import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
-  AddItemsToShoppingListFromRecipeDocument,
-  CreateShoppingListForRecipeDocument,
-} from '../useRecipeShoppingList.generated';
+  CreateShoppingListDocument,
+  GetShoppingListsLiteDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { AddItemsToShoppingListFromRecipeDocument } from '../useRecipeShoppingList.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
 import { useRecipeShoppingList } from '../useRecipeShoppingList';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
@@ -28,6 +32,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: unknown) => unknown) =>
     selector({ setSelectedShoppingListId: jest.fn() }),
   useSelectedShoppingListId: jest.fn(() => undefined),
+  useUser: jest.fn(() => ({ id: 'user-1', email: 'cook@example.com' })),
 }));
 
 const mockToastSuccess = jest.mocked(toastService.success);
@@ -42,6 +47,14 @@ jest.mock('#/utils/generateEntityId', () => ({
     return `gen-id-${mockMinted}`;
   }),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -145,16 +158,14 @@ async function renderShopping({
   );
   // Read off the cache, not the hook: no lists yet and no lists at all both
   // read as an empty array.
-  await waitFor(() =>
-    expect(
-      Object.keys(cache.extract().ROOT_QUERY ?? {}).some(key =>
-        key.startsWith('shoppingLists'),
-      ),
-    ).toBe(true),
-  );
-  await waitFor(() =>
-    expect(rendered.result.current.shoppingLists).toHaveLength(listIds.length),
-  );
+  await drainTimers();
+  expect(
+    Object.keys(cache.extract().ROOT_QUERY ?? {}).some(key =>
+      key.startsWith('shoppingLists'),
+    ),
+  ).toBe(true);
+  await drainTimers();
+  expect(rendered.result.current.shoppingLists).toHaveLength(listIds.length);
   return rendered;
 }
 
@@ -209,13 +220,33 @@ const refusedEntry = (index: number): AddResult => ({
   failure: { code: ErrorCode.ValidationFailed },
 });
 
-const appliedAdd = (results: AddResult[], list?: AddPayload['shoppingList']) =>
+/** The list as the server states it, holding `count` rows to buy. */
+const listHolding = (count: number): AddPayload['shoppingList'] => ({
+  id: 'sl-1',
+  totalItems: count,
+  completedItems: 0,
+  remainingItems: count,
+  completionRate: 0,
+});
+
+/** The list after a batch on an empty one. */
+const listAfter = (results: AddResult[]) =>
+  listHolding(
+    results.filter(
+      result => result.success && result.outcome !== CreateOutcome.Merged,
+    ).length,
+  );
+
+const appliedAdd = (
+  results: AddResult[],
+  list: AddPayload['shoppingList'] = listAfter(results),
+) =>
   recordMock(AddItemsToShoppingListFromRecipeDocument, {
     data: {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
         results,
-        ...(list && { shoppingList: list }),
+        shoppingList: list,
       },
     },
   });
@@ -242,20 +273,26 @@ const refusedAdd = () =>
 const QUANTITY_COPY =
   "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.";
 
+/** What the list shows once the writes answered have left their layers. */
+const shown = (cache: InMemoryCache) => {
+  pendingWritesOf(cache).rebuild();
+  return cache.extract(true);
+};
+
 const cachedRow = (cache: InMemoryCache, id: string) =>
-  cache.extract()[`ShoppingListItem:${id}`];
+  shown(cache)[`ShoppingListItem:${id}`];
 
 const cachedTotal = (cache: InMemoryCache) =>
-  (cache.extract()['ShoppingList:sl-1'] as { totalItems: number }).totalItems;
+  (shown(cache)['ShoppingList:sl-1'] as { totalItems: number }).totalItems;
 
 /** Adds one ingredient on its own, as its row's add button does. */
 const addOne = (
   result: { current: ReturnType<typeof useRecipeShoppingList> },
   overrides: Partial<DisplayIngredient> = {},
 ) =>
-  act(async () => {
-    await result.current.handleAddSingleIngredient(ingredient(overrides));
-  });
+  drained(() =>
+    result.current.handleAddSingleIngredient(ingredient(overrides)),
+  );
 
 // --- one ingredient ---------------------------------------------------------
 
@@ -288,6 +325,7 @@ describe('useRecipeShoppingList — handleAddSingleIngredient', () => {
       unit: null,
       item: {
         __typename: 'Item',
+        version: 1,
         id: 'item-salt',
         name: 'Salt',
         imageUrl: null,
@@ -479,7 +517,8 @@ async function addAllTo(result: {
   });
   // The add runs unawaited and marks its rows outside `act`, just before its
   // toast; it is over, with every update committed, once it stops adding.
-  await waitFor(() => expect(result.current.addingToList).toBe(false));
+  await drainTimers();
+  expect(result.current.addingToList).toBe(false);
 }
 
 const LINES = gql`
@@ -522,6 +561,7 @@ function seedListedLines(cache: InMemoryCache) {
       cursor: id,
       node: {
         __typename: 'ShoppingListItem',
+        version: 1,
         id,
         purchaseInfo: {
           __typename: 'ShoppingListItemPurchaseInfo',
@@ -530,11 +570,12 @@ function seedListedLines(cache: InMemoryCache) {
       },
     })),
   });
-  cache.writeFragment({
+  seedFragment(cache, {
     id: 'ShoppingList:sl-1',
     fragment: LINES,
     data: {
       __typename: 'ShoppingList',
+      version: 1,
       id: 'sl-1',
       active: lines(['sli-live'], false),
       bought: lines(['sli-bought'], true),
@@ -543,10 +584,11 @@ function seedListedLines(cache: InMemoryCache) {
 }
 
 const listedIds = (cache: InMemoryCache) => {
+  pendingWritesOf(cache).rebuild();
   const held = cache.readFragment<{
     active: { edges: { node: { id: string } }[] };
     bought: { edges: { node: { id: string } }[] };
-  }>({ id: 'ShoppingList:sl-1', fragment: LINES });
+  }>({ id: 'ShoppingList:sl-1', fragment: LINES, optimistic: true });
   return {
     active: held?.active.edges.map(edge => edge.node.id).sort(),
     bought: held?.bought.edges.map(edge => edge.node.id).sort(),
@@ -567,7 +609,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(addAll.fired).toEqual([
       {
         input: {
@@ -600,7 +643,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(mockToastSuccess).toHaveBeenCalledWith(
       'Added 2 items to "My List", updated 1',
     );
@@ -634,7 +678,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     // The two merged rows never came to exist under their minted ids.
     expect(cachedRow(cache, rowId(1))).toBeDefined();
     expect(cachedRow(cache, rowId(2))).toBeUndefined();
@@ -666,11 +711,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Added 2 items to "My List"',
-      ),
-    );
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith('Added 2 items to "My List"');
     expect(cachedTotal(cache)).toBe(2);
   });
 
@@ -692,7 +734,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(cachedTotal(cache)).toBe(7);
   });
 
@@ -711,7 +754,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     // No response to count: every row sent replays on reconnect.
     expect(mockToastSuccess).toHaveBeenCalledWith('Added 3 items to "My List"');
     expect(mockToastError).not.toHaveBeenCalled();
@@ -737,6 +781,7 @@ describe('useRecipeShoppingList — Add All', () => {
       addItemsToShoppingList: {
         __typename: 'AddItemsToShoppingListPayload',
         results: itemsOf(vars).map((row, index) => accepted(index, row.id)),
+        shoppingList: listHolding(addAll.fired.flatMap(itemsOf).length),
       },
     });
     const addAll = recordMock(AddItemsToShoppingListFromRecipeDocument, {
@@ -755,7 +800,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledTimes(1);
     expect(addAll.fired.map(vars => itemsOf(vars).length)).toEqual([50, 1]);
     expect(itemsOf(addAll.fired[0]!)[0]!.id).toBe(rowId(1));
     expect(itemsOf(addAll.fired[0]!)[49]!.id).toBe(rowId(50));
@@ -862,6 +908,7 @@ describe('useRecipeShoppingList — Add All', () => {
               results: itemsOf(vars).map((row, index) =>
                 accepted(index, row.id),
               ),
+              shoppingList: listHolding(50),
             },
           }
         : {
@@ -887,7 +934,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     // The 50 that landed are on the list and marked; the refused one is neither.
@@ -913,11 +961,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Added 1 items to "My List"',
-      ),
-    );
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith('Added 1 items to "My List"');
     expect(cachedRow(cache, rowId(1))).toBeDefined();
     expect(cachedRow(cache, rowId(2))).toBeUndefined();
     expect(cachedTotal(cache)).toBe(1);
@@ -938,7 +983,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(QUANTITY_COPY);
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(result.current.addedIngredients.size).toBe(0);
@@ -962,7 +1008,8 @@ describe('useRecipeShoppingList — Add All', () => {
 
     await addAllTo(result);
 
-    await waitFor(() => expect(mockToastError).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(
       'No ingredients available to add.',
     );
@@ -989,7 +1036,7 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
   `;
   type Variant = { homeId?: string | null; filters?: { isTemplate: boolean } };
   const seed = (cache: InMemoryCache, variables: Variant) =>
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LISTS_QUERY,
       variables,
       data: {
@@ -1007,23 +1054,23 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
       }>({ query: LISTS_QUERY, variables })
       ?.shoppingLists.edges.map(edge => edge.node.id);
 
-  const createListMock: MockFor<typeof CreateShoppingListForRecipeDocument> = {
+  const createListMock: MockFor<typeof CreateShoppingListDocument> = {
     request: {
-      query: CreateShoppingListForRecipeDocument,
+      query: CreateShoppingListDocument,
       variables: () => true,
     },
-    result: {
+    result: variables => ({
       data: {
         createShoppingList: {
           __typename: 'CreateShoppingListPayload',
           shoppingList: {
-            id: 'sl-new',
+            id: String(variables.input.id),
             homeId: 'home-a',
             home: { id: 'home-a' },
           },
         },
       },
-    },
+    }),
   };
 
   it("adds the new list to its own home's and the unscoped variants only", async () => {
@@ -1044,10 +1091,9 @@ describe('useRecipeShoppingList — handleCreateListAndAddIngredients', () => {
       result.current.handleCreateListAndAddIngredients('Dinner');
     });
 
-    await waitFor(() =>
-      expect(readIds(cache, { homeId: 'home-a' })).toEqual(['sl-new']),
-    );
-    expect(readIds(cache, { homeId: null })).toEqual(['sl-new']);
+    await drainTimers();
+    expect(readIds(cache, { homeId: 'home-a' })).toEqual(['gen-id-1']);
+    expect(readIds(cache, { homeId: null })).toEqual(['gen-id-1']);
     expect(readIds(cache, { homeId: 'home-b' })).toEqual([]);
     expect(readIds(cache, { filters: { isTemplate: true } })).toEqual([]);
   });

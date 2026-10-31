@@ -14,6 +14,7 @@ const {
   restrictedSyntaxForTests,
   restrictedSyntaxForFeatureHooks,
   restrictedSyntaxForActionCallers,
+  restrictedSyntaxForFieldPolicies,
 } = require('./restrictedSyntax');
 const {
   BOUNDARY_ZONES,
@@ -241,10 +242,29 @@ const overrides = [
     rules: { 'no-restricted-syntax': restrictedSyntaxForActionCallers() },
   },
   {
+    // A field policy's `merge` runs before the answer's rows are stored.
+    files: [
+      'src/apollo/cacheFieldPolicies.ts',
+      'src/features/*/cache/typePolicies.ts',
+    ],
+    ignores: TEST_FILES,
+    rules: { 'no-restricted-syntax': restrictedSyntaxForFieldPolicies() },
+  },
+  {
     // The queue BUILDS and replays these writes; it is not one of their
     // callers, so the marker does not apply to it.
     files: ['src/apollo/offlineQueue/**/*.{ts,tsx}'],
     rules: { 'sous-chef/queueable-write-is-local-first': 'off' },
+  },
+  {
+    // A feature's local writes re-run on every rebuild and after a restart.
+    files: ['src/features/*/offline/localWrites.ts'],
+    rules: { 'sous-chef/local-write-is-deterministic': 'error' },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
+    ignores: TEST_FILES,
+    rules: { 'sous-chef/cache-read-states-optimism': 'error' },
   },
   {
     // This module IS the parseFloat replacement.
@@ -315,6 +335,7 @@ const overrides = [
       // the root field's level); `documentLimits.test.ts` holds the exact rule.
       '@graphql-eslint/selection-set-depth': ['error', { maxDepth: 9 }],
       'sous-chef/selects-key-field-directly': 'error',
+      'sous-chef/network-read-selects-version': 'error',
       // JS/TS rules that traverse the AST do not understand GraphQL's.
       'no-barrel-files/no-barrel-files': 'off',
       'react-hooks/rules-of-hooks': 'off',
@@ -372,6 +393,27 @@ const overrides = [
       'no-restricted-syntax': restrictedSyntaxForTests(),
       // Bracket access is the only type-safe way to reach a private member.
       'dot-notation': 'off',
+    },
+  },
+  {
+    // The seed helper itself; probes of what a raw write or a layer's write
+    // does, on types the SDL lacks; and the project that cannot load the helper.
+    files: [
+      '__tests__/helpers/apolloMockProvider.tsx',
+      '__tests__/apollo/normalizedRowMergeProbe.test.ts',
+      '__tests__/apollo/pendingLayerProbe.test.ts',
+      '__tests__/apollo/pendingWriteAndReadsInFlight.test.ts',
+      '__tests__/apollo/pendingWriteOverServerAnswer.test.ts',
+      '__tests__/apollo/pendingWritesAcrossSessions.test.ts',
+      '__tests__/core-portability/**/*.ts',
+      'src/apollo/__tests__/refetchEvents.test.ts',
+      'src/apollo/links/__tests__/answerOrderingLink.test.ts',
+      'src/apollo/pendingWrites/__tests__/pendingWrites.test.ts',
+    ],
+    rules: {
+      'no-restricted-syntax': restrictedSyntaxForTests({
+        allow: ['rawCacheSeed'],
+      }),
     },
   },
   {

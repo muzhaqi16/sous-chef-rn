@@ -1,0 +1,23 @@
+# Stores near a zip or a point, nearest first, narrowed by a typed term; with
+# `withPrices`, whether each is priced from shelf prices, its own or a nearby
+# branch's. Consumer: useStoreSearch.
+query NearbyStores($input: NearbyStoresInput!, $withPrices: Boolean = false) {
+  nearbyStores(input: $input) {
+    distanceKm
+    store {
+      id
+      name
+      address
+      storeNumber
+      chain {
+        id
+        name
+      }
+      hasCollectedPrices @include(if: $withPrices)
+      # Only whether one exists: the mark is yes or no.
+      priceStandIn @include(if: $withPrices) {
+        __typename
+      }
+    }
+  }
+}

@@ -60,6 +60,7 @@ export function useAddToPantry({
     const data = client.cache.readQuery<GetPantryItemSuggestionsQuery>({
       query: GetPantryItemSuggestionsDocument,
       variables,
+      optimistic: true,
     });
     return { data, variables };
   };
@@ -157,6 +158,7 @@ export function useAddToPantry({
     const cached = client.readQuery<GetPantryQuery>({
       query: GetPantryDocument,
       variables: { id: pantryId ?? '' },
+      optimistic: true,
     });
     return extractNodes(cached?.pantry?.storageLocationsConnection);
   };

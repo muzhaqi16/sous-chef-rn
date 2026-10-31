@@ -58,7 +58,7 @@ export function useMealTemplates(
   // Each keystroke would otherwise be its own query and cache entry.
   const search = useDebouncedValue(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
 
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     GetMealTemplatesDocument,
     {
       variables: {
@@ -76,7 +76,7 @@ export function useMealTemplates(
     selector: d => d.mealTemplates,
     key: JSON.stringify([selectedCategory ?? null, search]),
     loading,
-    fetchMore,
+    observable,
     refetch,
   });
 

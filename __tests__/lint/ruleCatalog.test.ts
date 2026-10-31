@@ -20,6 +20,7 @@ const syntax = require('../../eslint/restrictedSyntax.js') as {
   PRODUCTION_SYNTAX: Array<{ id: string }>;
   FEATURE_HOOK_SYNTAX: Array<{ id: string }>;
   ACTION_CALLER_SYNTAX: Array<{ id: string }>;
+  FIELD_POLICY_SYNTAX: Array<{ id: string }>;
   TEST_SYNTAX: Array<{ id: string }>;
 };
 
@@ -35,6 +36,10 @@ const ruleSets = [
 ];
 const names = Object.keys(plugin.rules);
 
+const RULE_SPECS = path.join(ROOT, '__tests__/lint/rules');
+// A rule that reads types has its spec here, all of them run by one suite.
+const TYPED_RULE_SPECS = path.join(ROOT, '__tests__/lint/typedRules');
+
 // Pages in docs/rules/ that document a config mechanism rather than a rule.
 const CONFIG_PAGES = ['restricted-syntax'];
 
@@ -49,7 +54,8 @@ describe('sous-chef rule catalog', () => {
       true,
     );
     expect(
-      fs.existsSync(path.join(ROOT, '__tests__/lint/rules', `${name}.test.ts`)),
+      fs.existsSync(path.join(RULE_SPECS, `${name}.test.ts`)) ||
+        fs.existsSync(path.join(TYPED_RULE_SPECS, `${name}.ts`)),
     ).toBe(true);
     expect(ruleSets.some(rules => isError(rules[`sous-chef/${name}`]))).toBe(
       true,
@@ -68,9 +74,10 @@ describe('sous-chef rule catalog', () => {
       .filter(file => file !== 'README.md')
       .map(file => file.replace(/\.md$/, ''))
       .filter(page => !CONFIG_PAGES.includes(page));
-    const specs = fs
-      .readdirSync(path.join(ROOT, '__tests__/lint/rules'))
-      .map(file => file.replace(/\.test\.ts$/, ''));
+    const specs = [
+      ...fs.readdirSync(RULE_SPECS),
+      ...fs.readdirSync(TYPED_RULE_SPECS),
+    ].map(file => file.replace(/(\.test)?\.ts$/, ''));
     expect([...pages, ...specs].filter(n => !names.includes(n))).toEqual([]);
 
     expect(
@@ -87,6 +94,7 @@ describe('sous-chef rule catalog', () => {
       ...syntax.PRODUCTION_SYNTAX,
       ...syntax.FEATURE_HOOK_SYNTAX,
       ...syntax.ACTION_CALLER_SYNTAX,
+      ...syntax.FIELD_POLICY_SYNTAX,
       ...syntax.TEST_SYNTAX,
     ].map(entry => entry.id);
 

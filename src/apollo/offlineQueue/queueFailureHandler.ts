@@ -1,9 +1,8 @@
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { COUNT_WITHDRAWALS, UNLINK_WITHDRAWALS } from './withdrawalRegistry';
 import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { isTranslationKey, t } from '#/i18n';
@@ -33,37 +32,10 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     { entityType, entityId, code: error.code, type: error.type },
   );
 
-  const withdrawCount = COUNT_WITHDRAWALS[operationName];
-  if (withdrawCount) {
-    try {
-      withdrawCount(requireApolloClient().cache, info.variables, entityId);
-    } catch (countError) {
-      errorService.reportError(countError, {
-        operation: `Withdraw ${operationName}'s count`,
-      });
-    }
-  }
-
-  if (entityType && entityId) {
-    safeEvict(requireApolloClient().cache, entityType, entityId);
-    // Otherwise the optimistic value is replayed over the server's on the next
-    // restoration pass and the change comes back from the dead.
-    optimisticDataPersistence.clearEntity(entityType, entityId);
-  } else if (entityId) {
-    optimisticDataPersistence.clearEntityById(entityId);
-  }
-
-  // After the evict, so a move's pantry row is gone before its shopping row
-  // returns and the item is never visible in both places at once.
-  const withdrawUnlink = UNLINK_WITHDRAWALS[operationName];
-  if (withdrawUnlink) {
-    try {
-      withdrawUnlink(requireApolloClient().cache, info.variables);
-    } catch (withdrawError) {
-      errorService.reportError(withdrawError, {
-        operation: `Withdraw ${operationName}'s unlink`,
-      });
-    }
+  if (info.pendingWriteId) {
+    pendingWritesOf(requireApolloClient().cache).refuse(info.pendingWriteId);
+  } else {
+    withdrawLocalChange(info);
   }
 
   // The app's own words: `error.message` is written for developers and can
@@ -75,6 +47,16 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
   queueStore.removeMutation(mutationId);
 
   scheduleReread();
+}
+
+/** A write with no local write registered changed the cache itself. */
+function withdrawLocalChange({
+  entityType,
+  entityId,
+}: FailedMutationInfo): void {
+  if (entityType && entityId) {
+    safeEvict(requireApolloClient().cache, entityType, entityId);
+  }
 }
 
 let rereadScheduled = false;

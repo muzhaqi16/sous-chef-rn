@@ -3,6 +3,7 @@
 # fetches them and each cell reads its own fragment by id
 # (`listedFragmentsCoverCells.test.ts`).
 fragment pantryItem_listed on PantryItem {
+  version
   id
   itemName
   quantity
@@ -66,6 +67,7 @@ fragment pantryItem_listed on PantryItem {
     catalogImageId
   }
   item {
+    version
     id
     imageUrl
     images {

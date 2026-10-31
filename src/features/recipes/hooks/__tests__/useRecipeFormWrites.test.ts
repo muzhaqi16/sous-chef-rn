@@ -1,10 +1,10 @@
-import { waitFor } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { useRecipeFormWrites } from '#features/recipes/hooks/useRecipeFormWrites';
 import {
   GetRecipeDocument,
@@ -57,19 +57,30 @@ const REFUSED_FAILURE = {
   body: t('recipes.updateRecipeFailed'),
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useRecipeFormWrites.updateRecipe', () => {
   it('sends the fields and the ingredient list in one write', async () => {
     const update = appliedUpdate();
     const { result } = renderWrites([update.mock]);
-    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+    await drainTimers();
+    expect(result.current.updateRecipe).toBeDefined();
     const ingredients = [{ name: 'Flour', quantity: 2, sortOrder: 0 }];
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {
-      version: 3,
-      ingredientsUnread: false,
-      name: 'Bread',
-      ingredients,
-    });
+    const outcome = await drained(() =>
+      result.current.updateRecipe(RECIPE_ID, {
+        version: 3,
+        ingredientsUnread: false,
+        name: 'Bread',
+        ingredients,
+      }),
+    );
 
     expect(outcome).toEqual({ status: 'ok' });
     // The answer restates the recipe's ingredients at the largest page.
@@ -91,14 +102,17 @@ describe('useRecipeFormWrites.updateRecipe', () => {
   it('sends nothing for the form of a recipe over the ingredient limit, and says why', async () => {
     const update = appliedUpdate();
     const { result } = renderWrites([update.mock]);
-    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+    await drainTimers();
+    expect(result.current.updateRecipe).toBeDefined();
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {
-      version: 3,
-      ingredientsUnread: true,
-      name: 'Bread',
-      ingredients: [{ name: 'Flour', quantity: 2, sortOrder: 0 }],
-    });
+    const outcome = await drained(() =>
+      result.current.updateRecipe(RECIPE_ID, {
+        version: 3,
+        ingredientsUnread: true,
+        name: 'Bread',
+        ingredients: [{ name: 'Flour', quantity: 2, sortOrder: 0 }],
+      }),
+    );
 
     expect(outcome).toEqual({
       status: 'rejected',
@@ -114,12 +128,15 @@ describe('useRecipeFormWrites.updateRecipe', () => {
 
   it('reports the refusal the server gave', async () => {
     const { result } = renderWrites([updateMock(REFUSAL)]);
-    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+    await drainTimers();
+    expect(result.current.updateRecipe).toBeDefined();
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {
-      version: 3,
-      ingredientsUnread: false,
-    });
+    const outcome = await drained(() =>
+      result.current.updateRecipe(RECIPE_ID, {
+        version: 3,
+        ingredientsUnread: false,
+      }),
+    );
 
     expect(outcome).toEqual({
       status: 'rejected',
@@ -132,13 +149,16 @@ describe('useRecipeFormWrites.updateRecipe', () => {
   it('fails an edit whose version the form never read, without sending it', async () => {
     const update = appliedUpdate();
     const { result } = renderWrites([update.mock]);
-    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+    await drainTimers();
+    expect(result.current.updateRecipe).toBeDefined();
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {
-      version: null,
-      ingredientsUnread: false,
-      name: 'Bread',
-    });
+    const outcome = await drained(() =>
+      result.current.updateRecipe(RECIPE_ID, {
+        version: null,
+        ingredientsUnread: false,
+        name: 'Bread',
+      }),
+    );
 
     expect(outcome).toEqual({
       status: 'rejected',
@@ -158,12 +178,15 @@ describe('useRecipeFormWrites.updateRecipe', () => {
         message: 'stale',
       }),
     ]);
-    await waitFor(() => expect(result.current.updateRecipe).toBeDefined());
+    await drainTimers();
+    expect(result.current.updateRecipe).toBeDefined();
 
-    const outcome = await result.current.updateRecipe(RECIPE_ID, {
-      version: 3,
-      ingredientsUnread: false,
-    });
+    const outcome = await drained(() =>
+      result.current.updateRecipe(RECIPE_ID, {
+        version: 3,
+        ingredientsUnread: false,
+      }),
+    );
 
     expect(outcome).toEqual({
       status: 'rejected',
@@ -192,7 +215,8 @@ describe('useRecipeFormWrites.reloadRecipe', () => {
     const view = renderHookWithApollo(() => useRecipeFormWrites(RECIPE_ID), {
       operationMocks: [loaded, reread],
     });
-    await waitFor(() => expect(view.result.current.recipeRef).not.toBeNull());
+    await drainTimers();
+    expect(view.result.current.recipeRef).not.toBeNull();
     return view;
   };
 
@@ -207,7 +231,7 @@ describe('useRecipeFormWrites.reloadRecipe', () => {
       }),
     );
 
-    await expect(result.current.reloadRecipe()).resolves.toEqual(
+    await expect(drained(() => result.current.reloadRecipe())).resolves.toEqual(
       expect.objectContaining({ name: 'Stew' }),
     );
   });
@@ -220,6 +244,8 @@ describe('useRecipeFormWrites.reloadRecipe', () => {
     );
     expect(result.current.readRecipe()).not.toBeNull();
 
-    await expect(result.current.reloadRecipe()).resolves.toBeNull();
+    await expect(
+      drained(() => result.current.reloadRecipe()),
+    ).resolves.toBeNull();
   });
 });

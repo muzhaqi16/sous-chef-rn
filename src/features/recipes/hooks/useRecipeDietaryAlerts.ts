@@ -9,6 +9,7 @@ import {
 } from '#domain/dietary';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { useRestrictionsInPlay } from '#features/profile/hooks/useRestrictionsInPlay';
 import { useSelectedHomeId, useUser } from '#store/useAppStore';
 import { RecipeDietaryAlertsDocument } from './useRecipeDietaryAlerts.generated';
 
@@ -39,6 +40,7 @@ export function useRecipeDietaryAlerts(recipeId: string | undefined) {
   const homeId = useSelectedHomeId();
   const currentUserId = useUser()?.id;
   const offline = useIsApiUnavailable();
+  const restrictionsInPlay = useRestrictionsInPlay(homeId);
   const { data, loading, error } = useQuery(
     RecipeDietaryAlertsDocument,
     recipeId && homeId
@@ -65,15 +67,19 @@ export function useRecipeDietaryAlerts(recipeId: string | undefined) {
     );
   }
 
+  const check = householdCheckOf({
+    hasHome: !!homeId && !!recipeId,
+    answered: !!recipe,
+    offline,
+    failed: !!error,
+    loading,
+  });
+
   return {
-    check: householdCheckOf({
-      hasHome: !!homeId && !!recipeId,
-      answered: !!recipe,
-      offline,
-      failed: !!error,
-      loading,
-    }),
+    check,
     summary: summarize([...byIngredient.values()]),
+    /** Unsure counts as yes: only a known absence of restrictions is no. */
+    restrictionsApply: restrictionsInPlay !== false,
     /** One ingredient row's alerts; none for a row nothing flags. */
     alertsFor: (ingredientId: string) =>
       byIngredient.get(ingredientId) ?? NO_ALERTS,

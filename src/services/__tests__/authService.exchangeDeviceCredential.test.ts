@@ -18,7 +18,7 @@ const mockStore = {
   setUserNavigationState: jest.fn(),
   setNavigationState: jest.fn(),
   setPreferredCurrency: jest.fn(),
-  setShowTutorials: jest.fn(),
+  mirrorSettings: jest.fn(),
   updateUser: jest.fn(),
   getUserNavigationState: jest.fn(() => ({})),
   preferredCurrency: 'USD',

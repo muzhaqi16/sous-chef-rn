@@ -1,6 +1,6 @@
 import { toastService } from '#/services/toastService';
 import type { InMemoryCache } from '@apollo/client';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import type {
   MockDataFor,
@@ -11,7 +11,9 @@ import {
   inputOf,
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateMealPlanItemDocument,
   UpdateMealPlanItemDocument,
@@ -36,19 +38,20 @@ import {
   seedPlanSource,
 } from '#/test-utils/fixtures/mealPlanFixtures';
 import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
-import { useMealPlanItemActions } from '../useMealPlanItemActions';
 import {
-  MealPlanItemActions_OptimisticFullItemFragmentDoc,
-  type MealPlanItemActions_OptimisticFullItemFragment,
-} from '../useMealPlanItemActions.generated';
+  MealPlanItem_RowFragmentDoc,
+  type MealPlanItem_RowFragment,
+} from '#features/mealPlan/cache/mealPlanItem.generated';
+import { useMealPlanItemActions } from '../useMealPlanItemActions';
+import { MealPlanItemActions_ItemFragmentDoc } from '../useMealPlanItemActions.generated';
 import type { Unmasked } from '@apollo/client/masking';
 
 const PLAN_ID = 'plan-1';
 const WEEK = { startDate: '2026-09-21', endDate: '2026-09-27' };
 
-type FullItem = Unmasked<MealPlanItemActions_OptimisticFullItemFragment>;
+type FullItem = Unmasked<MealPlanItem_RowFragment>;
 
-/** A meal complete for the compound selection the actions read back. */
+/** A meal complete for what every query reads on one. */
 const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
   __typename: 'MealPlanItem',
   id: 'mpi-1',
@@ -64,6 +67,7 @@ const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
   date: '2026-09-22',
   recipe: {
     __typename: 'Recipe',
+    version: 1,
     id: 'r-1',
     name: 'Pasta',
     servings: 1,
@@ -73,19 +77,27 @@ const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
   ...overrides,
 });
 
-const writeItem = (cache: InMemoryCache, item: FullItem) =>
-  cache.writeFragment({
+const writeItem = (cache: InMemoryCache, item: FullItem) => {
+  seedFragment(cache, {
     id: cache.identify(item),
-    fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-    fragmentName: 'MealPlanItemActions_optimisticFullItem',
+    fragment: MealPlanItem_RowFragmentDoc,
+    fragmentName: 'mealPlanItem_row',
     data: item,
   });
+  seedFragment(cache, {
+    id: cache.identify(item),
+    fragment: MealPlanItemActions_ItemFragmentDoc,
+    fragmentName: 'MealPlanItemActions_item',
+    data: item,
+  });
+};
 
 const readItem = (cache: InMemoryCache, id: string = 'mpi-1') =>
   cache.readFragment({
-    id: cache.identify({ __typename: 'MealPlanItem', id }),
-    fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-    fragmentName: 'MealPlanItemActions_optimisticFullItem',
+    id: cache.identify({ __typename: 'MealPlanItem', version: 1, id }),
+    fragment: MealPlanItem_RowFragmentDoc,
+    fragmentName: 'mealPlanItem_row',
+    optimistic: true,
   });
 
 /** The plan's days, and its meals as edges of the list a loaded plan holds. */
@@ -167,6 +179,14 @@ const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -188,12 +208,12 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([create.mock], cache);
 
       let created!: Awaited<ReturnType<typeof result.current.createItem>>;
-      await act(async () => {
-        created = await result.current.createItem({
+      created = await drained(() =>
+        result.current.createItem({
           ...DINNER,
           date: '2026-09-23',
-        });
-      });
+        }),
+      );
 
       expect(created).toBe(true);
       expect(create.fired).toEqual([
@@ -221,9 +241,9 @@ describe('useMealPlanItemActions', () => {
         const create = createdAsSent();
         const { result } = renderActions([create.mock], seedPlan());
 
-        await act(async () => {
-          await result.current.createItem({ ...DINNER, date: day });
-        });
+        await drained(() =>
+          result.current.createItem({ ...DINNER, date: day }),
+        );
 
         expect(inputOf(create.fired[0]!).date).toBe(day);
       },
@@ -240,9 +260,9 @@ describe('useMealPlanItemActions', () => {
         const cache = seedPlan();
         const { result } = renderActions([create.mock], cache);
 
-        await act(async () => {
-          await result.current.createItem({ ...DINNER, date: picked });
-        });
+        await drained(() =>
+          result.current.createItem({ ...DINNER, date: picked }),
+        );
 
         expect(inputOf(create.fired[0]!).date).toBe(sent);
         // The row the user sees is on the day that was sent.
@@ -254,9 +274,9 @@ describe('useMealPlanItemActions', () => {
       const create = createdAsSent();
       const { result } = renderActions([create.mock]);
 
-      await act(async () => {
-        await result.current.createItem({ ...DINNER, date: '2026-09-30' });
-      });
+      await drained(() =>
+        result.current.createItem({ ...DINNER, date: '2026-09-30' }),
+      );
 
       expect(inputOf(create.fired[0]!).date).toBe('2026-09-30');
     });
@@ -270,15 +290,15 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([create.mock], cache);
 
       let created: boolean | undefined;
-      await act(async () => {
-        created = await result.current.createItem({
+      created = await drained(() =>
+        result.current.createItem({
           mealPlanId: PLAN_ID,
           meal: { customMealName: 'Leftovers' },
           mealType: MealType.Lunch,
           date: '2026-09-24',
           servings: 2,
-        });
-      });
+        }),
+      );
 
       expect(created).toBe(true);
       const mintedId = String(inputOf(create.fired[0]!).id);
@@ -316,12 +336,12 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([create.mock], cache);
 
       let created!: Awaited<ReturnType<typeof result.current.createItem>>;
-      await act(async () => {
-        created = await result.current.createItem({
+      created = await drained(() =>
+        result.current.createItem({
           ...DINNER,
           date: '2026-09-23',
-        });
-      });
+        }),
+      );
 
       expect(created).toBe(false);
       // The app's copy for the code, never the server's `message`.
@@ -354,9 +374,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([update.mock], cache);
 
       let toggled: boolean | undefined;
-      await act(async () => {
-        toggled = await result.current.toggleCompleted('mpi-1');
-      });
+      toggled = await drained(() => result.current.toggleCompleted('mpi-1'));
 
       expect(toggled).toBe(true);
       expect(update.fired).toEqual([
@@ -379,13 +397,13 @@ describe('useMealPlanItemActions', () => {
       const cache = seedPlan([fullItem({ version: 3 })]);
       const { result } = renderActions([update.mock], cache);
 
-      await act(async () => {
-        await result.current.toggleCompleted('mpi-1', {
+      await drained(() =>
+        result.current.toggleCompleted('mpi-1', {
           deductFromPantry: true,
           servings: 3,
           notes: 'extra garlic',
-        });
-      });
+        }),
+      );
 
       expect(update.fired).toEqual([
         {
@@ -407,11 +425,11 @@ describe('useMealPlanItemActions', () => {
       const cache = seedPlan([fullItem()]);
       const { result } = renderActions([update.mock], cache);
 
-      await act(async () => {
-        await result.current.toggleCompleted('mpi-1', {
+      await drained(() =>
+        result.current.toggleCompleted('mpi-1', {
           deductFromPantry: true,
-        });
-      });
+        }),
+      );
 
       expect(mockToastSuccess).toHaveBeenCalledWith(
         'Meal completed! Pantry items deducted.',
@@ -429,9 +447,7 @@ describe('useMealPlanItemActions', () => {
       ]);
       const { result } = renderActions([update.mock], cache);
 
-      await act(async () => {
-        await result.current.toggleCompleted('mpi-1');
-      });
+      await drained(() => result.current.toggleCompleted('mpi-1'));
 
       expect(update.fired).toEqual([
         {
@@ -453,6 +469,7 @@ describe('useMealPlanItemActions', () => {
     }): MockDataFor<typeof GetMealPlanDocument> => ({
       mealPlan: {
         __typename: 'MealPlan',
+        version: 1,
         id: PLAN_ID,
         mealPlanItemsConnection: {
           edges: [
@@ -522,13 +539,12 @@ describe('useMealPlanItemActions', () => {
           operationMocks: [screenRead.mock, reRead.mock, update.mock],
           cache,
         });
-        await waitFor(() => expect(readItem(cache)?.version).toBe(3));
+        await drainTimers();
+        expect(readItem(cache)?.version).toBe(3);
         expect(reRead.fired).toHaveLength(0);
 
         let toggled: boolean | undefined;
-        await act(async () => {
-          toggled = await result.current.toggleCompleted('mpi-1');
-        });
+        toggled = await drained(() => result.current.toggleCompleted('mpi-1'));
 
         expect(toggled).toBe(false);
         expect(update.fired).toEqual([
@@ -546,23 +562,21 @@ describe('useMealPlanItemActions', () => {
           t('errors.changedElsewhereLatestShown'),
         );
         expect(mockToastSuccess).not.toHaveBeenCalled();
-        await waitFor(() =>
-          expect(reRead.fired).toEqual([
-            {
-              id: PLAN_ID,
-              mealsFirst: MEALS_PAGE_SIZE,
-              ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
-            },
-          ]),
-        );
-        await waitFor(() =>
-          expect(readItem(cache)).toMatchObject({
-            isCompleted: false,
-            completedAt: null,
-            version: 4,
-            notes: 'moved to Thursday',
-          }),
-        );
+        await drainTimers();
+        expect(reRead.fired).toEqual([
+          {
+            id: PLAN_ID,
+            mealsFirst: MEALS_PAGE_SIZE,
+            ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+          },
+        ]);
+        await drainTimers();
+        expect(readItem(cache)).toMatchObject({
+          isCompleted: false,
+          completedAt: null,
+          version: 4,
+          notes: 'moved to Thursday',
+        });
       },
     );
 
@@ -584,12 +598,11 @@ describe('useMealPlanItemActions', () => {
         operationMocks: [get.mock, update.mock],
         cache,
       });
-      await waitFor(() => expect(readItem(cache)?.version).toBe(3));
+      await drainTimers();
+      expect(readItem(cache)?.version).toBe(3);
 
       let toggled: boolean | undefined;
-      await act(async () => {
-        toggled = await result.current.toggleCompleted('mpi-1');
-      });
+      toggled = await drained(() => result.current.toggleCompleted('mpi-1'));
 
       expect(toggled).toBe(false);
       expect(readItem(cache)).toMatchObject({ isCompleted: false, version: 3 });
@@ -624,9 +637,9 @@ describe('useMealPlanItemActions', () => {
         pending = result.current.deleteItem('mpi-1');
       });
 
-      await waitFor(() =>
-        expect(subscriptionService.isPendingDelete('mpi-1')).toBe(true),
-      );
+      // Stops here: a drain runs the claim past its expiry.
+      await act(() => jest.advanceTimersByTimeAsync(0));
+      expect(subscriptionService.isPendingDelete('mpi-1')).toBe(true);
       // Named by the plan field the meal's edge hangs off.
       expect(claim).toHaveBeenCalledWith(
         'mpi-1',
@@ -637,7 +650,7 @@ describe('useMealPlanItemActions', () => {
       );
       expect(MEAL_PLAN_ITEMS_FIELD).toBe('mealPlanItemsConnection');
 
-      await act(async () => {
+      await drained(async () => {
         del.release();
         await pending;
       });
@@ -659,7 +672,7 @@ describe('useMealPlanItemActions', () => {
       expect(planMeals(cache)).toEqual([['mpi-2', '2026-09-22']]);
 
       let removed: boolean | undefined;
-      await act(async () => {
+      await drained(async () => {
         del.release();
         removed = await pending;
       });
@@ -684,9 +697,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([del.mock], cache);
 
       let removed: boolean | undefined;
-      await act(async () => {
-        removed = await result.current.deleteItem('mpi-1');
-      });
+      removed = await drained(() => result.current.deleteItem('mpi-1'));
 
       expect(removed).toBe(true);
       expect(mockToastError).not.toHaveBeenCalled();
@@ -707,9 +718,7 @@ describe('useMealPlanItemActions', () => {
       const { result } = renderActions([del.mock], cache);
 
       let removed: boolean | undefined;
-      await act(async () => {
-        removed = await result.current.deleteItem('mpi-1');
-      });
+      removed = await drained(() => result.current.deleteItem('mpi-1'));
 
       expect(removed).toBe(false);
       expect(mockToastError).toHaveBeenCalledTimes(1);

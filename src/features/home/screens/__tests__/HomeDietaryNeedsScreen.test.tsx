@@ -61,24 +61,36 @@ describe('HomeDietaryNeedsScreen', () => {
         userId: 'u-ana',
         role: MembershipRole.Member,
         displayName: 'Ana',
-        restrictions: [
+        groups: [
           {
-            id: 'r-1',
-            label: t('recipes.intolerance.PEANUT'),
-            kind: 'avoid',
-            severity: RestrictionSeverity.Allergy,
+            group: 'allergicTo',
+            needs: [
+              {
+                id: 'r-1',
+                label: t('recipes.intolerance.PEANUT'),
+                severity: RestrictionSeverity.Allergy,
+              },
+            ],
           },
           {
-            id: 'r-2',
-            label: 'Bacon',
-            kind: 'avoid',
-            severity: RestrictionSeverity.Preference,
+            group: 'avoids',
+            needs: [
+              {
+                id: 'r-2',
+                label: 'Bacon',
+                severity: RestrictionSeverity.Preference,
+              },
+            ],
           },
           {
-            id: 'r-4',
-            label: t('recipes.diet.VEGAN'),
-            kind: 'diet',
-            severity: RestrictionSeverity.Preference,
+            group: 'follows',
+            needs: [
+              {
+                id: 'r-4',
+                label: t('recipes.diet.VEGAN'),
+                severity: RestrictionSeverity.Preference,
+              },
+            ],
           },
         ],
       },
@@ -87,12 +99,16 @@ describe('HomeDietaryNeedsScreen', () => {
         userId: 'u-me',
         role: MembershipRole.Owner,
         displayName: 'Tani',
-        restrictions: [
+        groups: [
           {
-            id: 'r-3',
-            label: t('recipes.healthGoal.LOW_CARB'),
-            kind: 'goal',
-            severity: RestrictionSeverity.Goal,
+            group: 'goals',
+            needs: [
+              {
+                id: 'r-3',
+                label: t('recipes.healthGoal.LOW_CARB'),
+                severity: RestrictionSeverity.Goal,
+              },
+            ],
           },
         ],
       },
@@ -109,7 +125,6 @@ describe('HomeDietaryNeedsScreen', () => {
       screen.getByText(t('homeDietaryNeeds.group.allergicTo')),
     ).toBeTruthy();
     expect(screen.getByText(t('recipes.intolerance.PEANUT'))).toBeTruthy();
-    // A food picked at preference is avoided; a diet beside it is followed.
     expect(screen.getByText(t('homeDietaryNeeds.group.avoids'))).toBeTruthy();
     expect(screen.getByText(t('homeDietaryNeeds.group.follows'))).toBeTruthy();
     expect(screen.getByText(t('homeDietaryNeeds.group.goals'))).toBeTruthy();

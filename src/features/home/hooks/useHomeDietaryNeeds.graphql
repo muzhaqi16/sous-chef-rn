@@ -2,9 +2,11 @@
 # restrictions, strictest first. The home's "Dietary needs" screen.
 query HomeDietaryNeeds($homeId: ID!) {
   home(id: $homeId) {
+    version
     id
     dietaryNeeds {
       membership {
+        version
         id
         userId
         role
@@ -16,6 +18,7 @@ query HomeDietaryNeeds($homeId: ID!) {
         intolerance
         healthGoal
         item {
+          version
           id
           name
         }

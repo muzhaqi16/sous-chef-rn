@@ -1,8 +1,9 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetCommonUnitsDocument } from '#operations/item/unit.generated';
 import {
   GetCategoriesDocument,
@@ -16,6 +17,14 @@ import type { AppState } from '#store/slices/appSlice';
 
 // Run idle-deferred work synchronously so the warming fires within the test.
 const originalRequestIdleCallback = globalThis.requestIdleCallback;
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeAll(() => {
   globalThis.requestIdleCallback = (cb: IdleRequestCallback) => {
     cb({ didTimeout: false, timeRemaining: () => 50 });
@@ -24,6 +33,9 @@ beforeAll(() => {
 });
 afterAll(() => {
   globalThis.requestIdleCallback = originalRequestIdleCallback;
+});
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 let mockIsOnline = true;
@@ -105,9 +117,8 @@ describe('useDataPreloading', () => {
       operationMocks: referenceMocks(),
     });
 
-    await waitFor(() => {
-      expect(mockSetters.setCachedCategories).toHaveBeenCalled();
-    });
+    await drainTimers();
+    expect(mockSetters.setCachedCategories).toHaveBeenCalled();
     expect(mockSetters.setCachedBrands).toHaveBeenCalled();
     expect(mockSetters.setCachedStores).toHaveBeenCalled();
     expect(mockSetters.setCachedUnits).toHaveBeenCalled();
@@ -124,8 +135,7 @@ describe('useDataPreloading', () => {
       operationMocks: referenceMocks(),
     });
 
-    // Give any (incorrectly-scheduled) idle work a chance to run.
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(mockSetters.setCachedCategories).not.toHaveBeenCalled();
     expect(mockSetters.setCachedUnits).not.toHaveBeenCalled();
   });
@@ -137,13 +147,13 @@ describe('useDataPreloading', () => {
       operationMocks: referenceMocks(),
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(mockSetters.setCachedCategories).not.toHaveBeenCalled();
   });
 
   it('refreshes an expired time-to-live from the server, not the cache', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetCommonUnitsDocument,
       data: {
         __typename: 'Query',
@@ -155,20 +165,11 @@ describe('useDataPreloading', () => {
             symbol: 'c',
             localizedSymbolForms: {
               __typename: 'PluralForms',
-              one: 'c',
-              other: 'c',
             },
             localizedNameForms: {
               __typename: 'PluralForms',
-              one: 'Cached',
-              other: 'Cached',
             },
             type: UnitType.Weight,
-            isMetric: true,
-            isCommon: true,
-            sortOrder: 0,
-            displayAsFraction: false,
-            minPrecision: 0,
           },
         ],
       },
@@ -188,9 +189,8 @@ describe('useDataPreloading', () => {
       cache,
     });
 
-    await waitFor(() =>
-      expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled(),
-    );
+    await drainTimers();
+    expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled();
     expect(units.fired).toHaveLength(1);
     expect(mockSetters.setCachedUnits).toHaveBeenCalledWith([
       expect.objectContaining({ id: 'u-fresh' }),
@@ -212,9 +212,8 @@ describe('useDataPreloading', () => {
       operationMocks: [units.mock],
     });
 
-    await waitFor(() =>
-      expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled(),
-    );
+    await drainTimers();
+    expect(mockSetters.setLastUnitsFetchedAt).toHaveBeenCalled();
     expect(units.fired).toHaveLength(1);
   });
 
@@ -228,7 +227,7 @@ describe('useDataPreloading', () => {
       operationMocks: [units.mock],
     });
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(units.fired).toHaveLength(0);
     expect(mockSetters.setLastUnitsFetchedAt).not.toHaveBeenCalled();
   });

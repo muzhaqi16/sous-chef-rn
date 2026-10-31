@@ -5,8 +5,9 @@
 // `useStoreModeCart.test.ts`).
 
 import React from 'react';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -129,10 +130,14 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
 // The shelf prices have their own tests; here, which list they are read for
 // and that the card shows what they give.
 const mockShelfListIds: (string | null | undefined)[] = [];
+// Another product of the item's kind, for the case that has one.
+let mockSimilarRows: object[] = [];
 jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
+  ...jest.requireActual('#features/catalog/hooks/useStoreShelfPrices'),
   useStoreShelfPrices: (_itemId: string, listId: string | null | undefined) => {
     mockShelfListIds.push(listId);
     return {
+      similarRows: listId ? mockSimilarRows : [],
       rows: listId
         ? [
             {
@@ -183,6 +188,14 @@ const LINE = {
   estimatedPrice: 3.49,
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('SearchResults from store mode', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -230,11 +243,36 @@ describe('SearchResults from store mode', () => {
     expect(screen.queryByTestId(barcodeTestIDs.storeShelfPrices)).toBeNull();
   });
 
+  it('shows similar products under the stores, from the same lookup', () => {
+    mockSimilarRows = [
+      {
+        storeId: 's-kroger',
+        storeName: 'Kroger',
+        product: 'Kroger Creamy Peanut Butter · 16 oz',
+        price: '$1.79/jar',
+        perBasis: '$3.95/kg',
+        mightBeCheaper: true,
+      },
+    ];
+    renderWithApollo(<SearchResults {...props} />);
+
+    expect(screen.getByText(t('storeShelfPrices.similarTitle'))).toBeTruthy();
+    expect(
+      screen.getByTestId(catalogTestIDs.storeShelfSimilarPrice('s-kroger')),
+    ).toBeTruthy();
+    mockSimilarRows = [];
+  });
+
   // The list's own setting: its prices still show, but nobody is asked for one.
   it('offers no add with price for a list that does not track prices', () => {
     renderWithApollo(<SearchResults {...props} />, {
       cache: seedCache([
-        { __typename: 'ShoppingList', id: 'list-1', priceTracking: false },
+        {
+          __typename: 'ShoppingList',
+          version: 1,
+          id: 'list-1',
+          priceTracking: false,
+        },
       ]),
     });
 
@@ -263,9 +301,8 @@ describe('SearchResults from store mode', () => {
 
       await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() =>
-        expect(mockTick).toHaveBeenCalledWith('line-pb', null),
-      );
+      await drainTimers();
+      expect(mockTick).toHaveBeenCalledWith('line-pb', null);
     });
   });
 
@@ -275,7 +312,8 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(mockTick).toHaveBeenCalledWith('line-pb', null));
+    await drainTimers();
+    expect(mockTick).toHaveBeenCalledWith('line-pb', null);
     expect(mockAddToShoppingList).not.toHaveBeenCalled();
     expect(onScanAnother).toHaveBeenCalled();
   });
@@ -289,7 +327,8 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(mockTick).toHaveBeenCalledWith('new-1', null));
+    await drainTimers();
+    expect(mockTick).toHaveBeenCalledWith('new-1', null);
     expect(mockAddToShoppingList).toHaveBeenCalledWith(props.item);
   });
 
@@ -303,11 +342,10 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() =>
-      expect(alert).toHaveBeenCalledWith(
-        t('labels.error'),
-        t('errors.addItemFailedRetry'),
-      ),
+    await drainTimers();
+    expect(alert).toHaveBeenCalledWith(
+      t('labels.error'),
+      t('errors.addItemFailedRetry'),
     );
     expect(mockTick).not.toHaveBeenCalled();
     expect(onScanAnother).not.toHaveBeenCalled();
@@ -328,9 +366,10 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(priceAction()).toEqual({ disabled: true }));
-    await act(async () => finish({ outcome: 'kept', rowId: 'new-1' }));
-    await waitFor(() => expect(mockTick).toHaveBeenCalledWith('new-1', null));
+    await drainTimers();
+    expect(priceAction()).toEqual({ disabled: true });
+    await drained(() => finish({ outcome: 'kept', rowId: 'new-1' }));
+    expect(mockTick).toHaveBeenCalledWith('new-1', null);
   });
 
   it('records what the shelf price sheet took', async () => {
@@ -343,12 +382,11 @@ describe('SearchResults from store mode', () => {
     expect(screen.getByText('Peanut butter hint 3.49')).toBeTruthy();
     await user.press(screen.getByTestId('price-sheet'));
 
-    await waitFor(() =>
-      expect(mockTick).toHaveBeenCalledWith('line-pb', {
-        quantity: 2,
-        totalPrice: 7,
-      }),
-    );
+    await drainTimers();
+    expect(mockTick).toHaveBeenCalledWith('line-pb', {
+      quantity: 2,
+      totalPrice: 7,
+    });
   });
 
   it('prices an unlisted product as one of its own unit, with no hint', async () => {
@@ -363,12 +401,11 @@ describe('SearchResults from store mode', () => {
     expect(screen.getByText('Jif Creamy hint none')).toBeTruthy();
     await user.press(screen.getByTestId('price-sheet'));
 
-    await waitFor(() =>
-      expect(mockTick).toHaveBeenCalledWith('new-1', {
-        quantity: 2,
-        totalPrice: 7,
-      }),
-    );
+    await drainTimers();
+    expect(mockTick).toHaveBeenCalledWith('new-1', {
+      quantity: 2,
+      totalPrice: 7,
+    });
   });
 
   it("compares a shelf price in the unit the sheet counts: the line's, else the product's", async () => {
@@ -422,7 +459,8 @@ describe('SearchResults from store mode', () => {
 
       await confirmPrice();
 
-      await waitFor(() => expect(mockTick).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockTick).toHaveBeenCalled();
       expect(screen.getByTestId('price-sheet')).toBeTruthy();
       expect(onScanAnother).not.toHaveBeenCalled();
     });
@@ -437,11 +475,10 @@ describe('SearchResults from store mode', () => {
 
       await confirmPrice();
 
-      await waitFor(() =>
-        expect(alert).toHaveBeenCalledWith(
-          t('labels.error'),
-          t('errors.addItemFailedRetry'),
-        ),
+      await drainTimers();
+      expect(alert).toHaveBeenCalledWith(
+        t('labels.error'),
+        t('errors.addItemFailedRetry'),
       );
       expect(screen.getByTestId('price-sheet')).toBeTruthy();
       expect(mockTick).not.toHaveBeenCalled();
@@ -453,7 +490,8 @@ describe('SearchResults from store mode', () => {
 
       await confirmPrice();
 
-      await waitFor(() => expect(onScanAnother).toHaveBeenCalled());
+      await drainTimers();
+      expect(onScanAnother).toHaveBeenCalled();
       expect(screen.queryByTestId('price-sheet')).toBeNull();
     });
   });
@@ -465,7 +503,8 @@ describe('SearchResults from store mode', () => {
 
     await userEvent.setup().press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(mockTick).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockTick).toHaveBeenCalled();
     expect(onScanAnother).not.toHaveBeenCalled();
     expect(screen.getByText(t('barcode.addToCart'))).toBeTruthy();
   });

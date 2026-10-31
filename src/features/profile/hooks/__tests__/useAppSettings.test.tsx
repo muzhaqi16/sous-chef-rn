@@ -1,16 +1,19 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { mockAppStore } from '#/test-utils/mockAppStore';
 import {
   GetUserSettingsDocument,
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
+import { writeUserSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { useAppSettings } from '../useAppSettings';
 
 jest.mock('#store/useAppStore', () =>
@@ -79,27 +82,94 @@ const renderSettings = (
     operationMocks: mocks.map(mock => mock.mock),
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useAppSettings', () => {
   it('reads Device default for an account with no settings row, as the server does', async () => {
     const { result } = renderSettings(makeCache(), [settingsMock(null)]);
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     expect(result.current.settings.preferredUnitSystem).toBe(UnitSystem.System);
+  });
+
+  // A refresh already in flight answers with the state from before the flip;
+  // as in production, the write answers it from the cache instead.
+  it('shows a switch flipped while the settings are refreshing, and keeps it', async () => {
+    const cache = makeCache();
+    writeUserSettings(cache, { budgetAndPrices: false });
+    const refresh = recordMock(GetUserSettingsDocument, {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'user-1',
+          settings: {
+            __typename: 'UserSettings',
+            id: 'settings-1',
+            budgetAndPrices: false,
+          },
+        },
+      },
+      held: true,
+      maxUsageCount: 1,
+    });
+    const flip = recordMock(UpdateUserPreferencesDocument, {
+      data: {
+        updateSettings: {
+          __typename: 'UpdateSettingsPayload',
+          userSettings: {
+            __typename: 'UserSettings',
+            id: 'settings-1',
+            budgetAndPrices: true,
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => useAppSettings(), {
+      cache,
+      operationMocks: [refresh.mock, flip.mock],
+      links: [createLocalWritePrecedenceLink()],
+    });
+    await drainTimers();
+    expect(refresh.fired).toHaveLength(1);
+    expect(result.current.settings.budgetAndPrices).toBe(false);
+
+    // Stops short of a drain, which would outrun the read fence: the read here
+    // is still in flight when the write is answered.
+    await act(async () => {
+      void result.current.updateAppSetting('budgetAndPrices', true);
+      await jest.advanceTimersByTimeAsync(1000);
+    });
+    expect(flip.fired).toHaveLength(1);
+    expect(result.current.settings.budgetAndPrices).toBe(true);
+
+    await act(async () => {
+      refresh.release();
+    });
+    await drainTimers();
+    expect(result.current.settings.budgetAndPrices).toBe(true);
   });
 
   describe('a unit-system change', () => {
     it('drops the pickers once the server applies it', async () => {
       const cache = cacheWithPicker();
       const { result } = renderSettings(cache, [settingsMock(), applied()]);
-      await waitFor(() => expect(result.current.hasLoadedSettings).toBe(true));
+      await drainTimers();
+      expect(result.current.hasLoadedSettings).toBe(true);
 
-      await act(async () => {
-        await result.current.updateAppSetting(
+      await drained(() =>
+        result.current.updateAppSetting(
           'preferredUnitSystem',
           UnitSystem.Imperial,
-        );
-      });
+        ),
+      );
 
       expect(holdsPicker(cache)).toBe(false);
     });
@@ -107,14 +177,15 @@ describe('useAppSettings', () => {
     it('keeps them while the change waits in the queue', async () => {
       const cache = cacheWithPicker();
       const { result } = renderSettings(cache, [settingsMock(), queued()]);
-      await waitFor(() => expect(result.current.hasLoadedSettings).toBe(true));
+      await drainTimers();
+      expect(result.current.hasLoadedSettings).toBe(true);
 
-      await act(async () => {
-        await result.current.updateAppSetting(
+      await drained(() =>
+        result.current.updateAppSetting(
           'preferredUnitSystem',
           UnitSystem.Imperial,
-        );
-      });
+        ),
+      );
 
       expect(holdsPicker(cache)).toBe(true);
     });
@@ -123,11 +194,10 @@ describe('useAppSettings', () => {
   it('keeps them for any other setting', async () => {
     const cache = cacheWithPicker();
     const { result } = renderSettings(cache, [settingsMock(), applied()]);
-    await waitFor(() => expect(result.current.hasLoadedSettings).toBe(true));
+    await drainTimers();
+    expect(result.current.hasLoadedSettings).toBe(true);
 
-    await act(async () => {
-      await result.current.updateAppSetting('autoSync', false);
-    });
+    await drained(() => result.current.updateAppSetting('autoSync', false));
 
     expect(holdsPicker(cache)).toBe(true);
   });
@@ -135,11 +205,10 @@ describe('useAppSettings', () => {
   it('resets the unit system to Device default', async () => {
     const reset = applied();
     const { result } = renderSettings(makeCache(), [settingsMock(), reset]);
-    await waitFor(() => expect(result.current.hasLoadedSettings).toBe(true));
+    await drainTimers();
+    expect(result.current.hasLoadedSettings).toBe(true);
 
-    await act(async () => {
-      await result.current.resetToDefaults();
-    });
+    await drained(() => result.current.resetToDefaults());
 
     expect(reset.fired[0]).toMatchObject({
       input: { regional: { preferredUnitSystem: UnitSystem.System } },

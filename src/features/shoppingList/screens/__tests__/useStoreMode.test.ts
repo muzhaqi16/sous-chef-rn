@@ -81,6 +81,20 @@ const list = {
   cart: [] as Line[],
 };
 
+// The server's sum of what is left; store mode only words it.
+let mockCostToGo: {
+  amount: number | null;
+  currency: string;
+  pricedLines: number;
+  lines: number;
+} | null = null;
+jest.mock('../../hooks/useListCostToGo', () => ({
+  ...jest.requireActual<typeof import('../../hooks/useListCostToGo')>(
+    '../../hooks/useListCostToGo',
+  ),
+  useListCostToGo: () => mockCostToGo,
+}));
+
 jest.mock('../../hooks/useShoppingListManagement', () => ({
   useShoppingListManagement: () => ({
     shoppingList: { id: 'list-1', name: 'Groceries', targetStore: null },
@@ -136,40 +150,27 @@ describe('useStoreMode', () => {
     expect(result.current.state.totalCount).toBe(4);
   });
 
-  it('adds up what is left at recorded prices, line by line', () => {
+  it("reads what is left from the list's cost to go", () => {
+    mockCostToGo = { amount: 6, currency: 'USD', pricedLines: 2, lines: 3 };
     const { result } = renderHook(() => useStoreMode('list-1'));
 
     expect(result.current.state.estimate).toEqual({
-      price: formatCurrency(6, 'USD', 2),
+      price: formatCurrency(6, 'USD'),
       priced: 2,
       lines: 3,
     });
   });
 
-  it('counts a typed estimate before the recorded price, as the API totals a list', () => {
-    list.lines = [
-      line('apples', StoreDepartment.Produce, { amount: 1.5 }, 2, 2),
-      milk,
-      line('peas', StoreDepartment.Frozen, null, 1, 2.5),
-    ];
-    const { result } = renderHook(() => useStoreMode('list-1'));
+  it('has no estimate while nothing left is priced, or the list is unread', () => {
+    mockCostToGo = { amount: null, currency: 'USD', pricedLines: 0, lines: 3 };
+    expect(
+      renderHook(() => useStoreMode('list-1')).result.current.state.estimate,
+    ).toBeNull();
 
-    // 2 × 2 typed, over the 1.50 recorded; 3 recorded; 2.50 typed.
-    expect(result.current.state.estimate).toEqual({
-      price: formatCurrency(9.5, 'USD', 2),
-      priced: 3,
-      lines: 3,
-    });
-  });
-
-  it('gives no one total across currencies', () => {
-    list.lines = [
-      apples,
-      line('cheese', StoreDepartment.Deli, { amount: 4, code: 'EUR' }),
-    ];
-    const { result } = renderHook(() => useStoreMode('list-1'));
-
-    expect(result.current.state.estimate).toBeNull();
+    mockCostToGo = null;
+    expect(
+      renderHook(() => useStoreMode('list-1')).result.current.state.estimate,
+    ).toBeNull();
   });
 
   it('walks the aisles in the route order', () => {

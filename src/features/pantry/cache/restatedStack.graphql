@@ -18,6 +18,7 @@ fragment writeRestatedBatches_page on PantryItemBatchConnection {
 # The detail's selection of the field (`PantryItemDetail.graphql`): a node
 # short a field it reads leaves the detail's read incomplete.
 fragment restatedStack_usage on PantryItem {
+  version
   id
   usageRecordsConnection(first: 5, orderBy: { usedAt: DESC }) {
     totalCount

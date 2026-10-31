@@ -1,12 +1,13 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   type RecordedMock,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetShoppingListItemsFilteredDocument,
   type GetShoppingListItemsFilteredQuery,
@@ -100,6 +101,14 @@ function emptyMock(
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -110,7 +119,8 @@ describe('usePaginatedShoppingItems', () => {
       { operationMocks: [emptyMock(false), emptyMock(true)] },
     );
 
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
     expect(result.current.state.unpurchased.items).toEqual([]);
     expect(result.current.state.purchased.items).toEqual([]);
   });
@@ -161,12 +171,10 @@ describe('usePaginatedShoppingItems', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.state.unpurchased.items).toHaveLength(2),
-    );
-    await waitFor(() =>
-      expect(result.current.state.purchased.items).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.state.unpurchased.items).toHaveLength(2);
+    await drainTimers();
+    expect(result.current.state.purchased.items).toHaveLength(2);
     expect(result.current.state.unpurchased.items[0]!.id).toBe('2');
     expect(result.current.state.unpurchased.items[1]!.id).toBe('1');
   });
@@ -189,9 +197,8 @@ describe('usePaginatedShoppingItems', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.state.unpurchased.totalCount).toBe(50),
-    );
+    await drainTimers();
+    expect(result.current.state.unpurchased.totalCount).toBe(50);
     expect(result.current.state.unpurchased.hasMore).toBe(true);
   });
 
@@ -223,10 +230,9 @@ describe('usePaginatedShoppingItems', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.state.unpurchased.items).toHaveLength(1),
-    );
-    await result.current.state.unpurchased.loadMore();
+    await drainTimers();
+    expect(result.current.state.unpurchased.items).toHaveLength(1);
+    await drained(() => result.current.state.unpurchased.loadMore());
     expect(mockLoadMore).toHaveBeenCalled();
   });
 
@@ -236,11 +242,10 @@ describe('usePaginatedShoppingItems', () => {
       { operationMocks: [emptyMock(false), emptyMock(true)] },
     );
 
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
 
-    await act(async () => {
-      await result.current.actions.refetch();
-    });
+    await drained(() => result.current.actions.refetch());
 
     expect(typeof result.current.actions.refetch).toBe('function');
   });
@@ -254,7 +259,8 @@ describe('usePaginatedShoppingItems', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.state.loading).toBe(false);
     expect(result.current.state.isTransitioning).toBe(false);
   });
 
@@ -308,9 +314,8 @@ describe('usePaginatedShoppingItems', () => {
       const unpurchased = listTwo(false, { held: true });
       const purchased = listTwo(true, { held: true });
       const { result, rerender } = renderSwitch([unpurchased, purchased]);
-      await waitFor(() =>
-        expect(result.current.state.purchased.items).toHaveLength(1),
-      );
+      await drainTimers();
+      expect(result.current.state.purchased.items).toHaveLength(1);
 
       rerender({ listId: 'list-2' });
 
@@ -322,11 +327,10 @@ describe('usePaginatedShoppingItems', () => {
         unpurchased.release();
         purchased.release();
       });
-      await waitFor(() =>
-        expect(result.current.state.unpurchased.items.map(i => i.id)).toEqual([
-          'n1',
-        ]),
-      );
+      await drainTimers();
+      expect(result.current.state.unpurchased.items.map(i => i.id)).toEqual([
+        'n1',
+      ]);
       expect(result.current.state.isTransitioning).toBe(false);
     });
 
@@ -336,13 +340,13 @@ describe('usePaginatedShoppingItems', () => {
         listTwo(false, { error: offline }),
         listTwo(true, { error: offline }),
       ]);
-      await waitFor(() =>
-        expect(result.current.state.purchased.items).toHaveLength(1),
-      );
+      await drainTimers();
+      expect(result.current.state.purchased.items).toHaveLength(1);
 
       rerender({ listId: 'list-2' });
 
-      await waitFor(() => expect(result.current.state.error).toBeDefined());
+      await drainTimers();
+      expect(result.current.state.error).toBeDefined();
       expect(result.current.state.unpurchased.items).toEqual([]);
       expect(result.current.state.purchased.items).toEqual([]);
     });
@@ -368,8 +372,7 @@ describe('usePaginatedShoppingItems', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.state.error?.message).toContain('Network error'),
-    );
+    await drainTimers();
+    expect(result.current.state.error?.message).toContain('Network error');
   });
 });

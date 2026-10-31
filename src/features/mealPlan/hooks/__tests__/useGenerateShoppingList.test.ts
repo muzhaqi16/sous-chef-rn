@@ -18,6 +18,7 @@ import {
   completeMockedResponse,
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetMealPlanDocument,
@@ -59,7 +60,12 @@ const ingredient = (id: string, itemId: string, quantity: number) => ({
     isOptional: false,
     // The id alone is cached: the derive keys on it and sends it back.
     unit: { __typename: 'Unit', id: 'unit-1' },
-    item: { __typename: 'Item', id: itemId, name: `Item ${itemId}` },
+    item: {
+      __typename: 'Item',
+      version: 1,
+      id: itemId,
+      name: `Item ${itemId}`,
+    },
   },
 });
 
@@ -90,10 +96,12 @@ const recipeMeal = (
   { overLimit = false }: { overLimit?: boolean } = {},
 ) => ({
   __typename: 'MealPlanItem',
+  version: 1,
   id: 'mpi-1',
   servings,
   recipe: {
     __typename: 'Recipe',
+    version: 1,
     id: 'recipe-1',
     name: RECIPE_NAME,
     servings: 2,
@@ -106,6 +114,7 @@ const PLAN_NAME = 'Week One';
 /** The plan as `GetMealPlan` caches it: each meal an edge of one list. */
 const planOf = (meals: unknown[], hasNextPage: boolean = false) => ({
   __typename: 'MealPlan',
+  version: 1,
   id: PLAN_ID,
   name: PLAN_NAME,
   homeId: 'home-1',
@@ -126,7 +135,13 @@ const twoMeals = [
     ingredient('ri-1', 'item-1', 3),
     ingredient('ri-2', 'item-2', 1),
   ]),
-  { __typename: 'MealPlanItem', id: 'mpi-2', servings: 2, recipe: null },
+  {
+    __typename: 'MealPlanItem',
+    version: 1,
+    id: 'mpi-2',
+    servings: 2,
+    recipe: null,
+  },
 ];
 
 const seedPlan = (plan: ReturnType<typeof planOf>) =>
@@ -143,7 +158,7 @@ function createMock() {
     data: {
       createShoppingList: {
         __typename: 'CreateShoppingListPayload',
-        shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
+        shoppingList: { __typename: 'ShoppingList', version: 1, id: 'list-1' },
       },
     },
     partial: true,
@@ -374,6 +389,7 @@ describe('generating a shopping list from a cached meal plan', () => {
         data: {
           mealPlan: {
             __typename: 'MealPlan',
+            version: 1,
             id: PLAN_ID,
             name: PLAN_NAME,
             homeId: 'home-1',
@@ -385,10 +401,12 @@ describe('generating a shopping list from a cached meal plan', () => {
                 {
                   node: {
                     __typename: 'MealPlanItem',
+                    version: 1,
                     id: 'mpi-1',
                     servings: 4,
                     recipe: {
                       __typename: 'Recipe',
+                      version: 1,
                       id: 'recipe-1',
                       name: RECIPE_NAME,
                       servings: 2,
@@ -411,6 +429,7 @@ describe('generating a shopping list from a cached meal plan', () => {
                               unit: { __typename: 'Unit', id: 'unit-1' },
                               item: {
                                 __typename: 'Item',
+                                version: 1,
                                 id: 'item-1',
                                 name: 'Item item-1',
                               },
@@ -427,6 +446,7 @@ describe('generating a shopping list from a cached meal plan', () => {
                               unit: { __typename: 'Unit', id: 'unit-1' },
                               item: {
                                 __typename: 'Item',
+                                version: 1,
                                 id: 'item-2',
                                 name: 'Item item-2',
                               },
@@ -490,7 +510,7 @@ describe('generating a shopping list from a cached meal plan', () => {
         data: Unmasked<GetMealPlanQuery>;
       };
       const cache = seedUnlinked();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetMealPlanDocument,
         variables,
         data: screenResult(variables).data,

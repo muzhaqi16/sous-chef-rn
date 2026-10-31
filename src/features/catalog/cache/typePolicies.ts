@@ -33,6 +33,8 @@ export const catalogTypePolicies: TypePolicies = {
       // A ranked list with no row ids: each answer replaces the last, since
       // merging two would mix two rankings.
       storePricesConnection: { merge: false },
+      similarStorePrices: { merge: false },
+      priceComparison: { merge: false },
     },
   },
   // No id: a query asking for the usual in a second unit joins the summary
@@ -47,6 +49,8 @@ export const catalogTypePolicies: TypePolicies = {
       },
       // A scan's lookup stores the item whole, so a by-id read off it asks nothing.
       item: readByIdFromCache('Item'),
+      // Each answer and each local write is the whole list (writeUsualStores).
+      usualStores: { merge: false },
     },
   },
 };

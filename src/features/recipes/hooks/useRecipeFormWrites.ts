@@ -17,20 +17,17 @@ import type {
   CreateRecipeInput,
   UpdateRecipeInput,
 } from '#/graphql/generated/schemaTypes';
-import {
-  upsertMyRecipesEdge,
-  writeLocalRecipe,
-  revertOptimisticRecipe,
-  type RecipeCreatedBy,
-} from '#features/recipes/utils/recipeCacheWriters';
+import type { CreateRecipeInputs } from '#features/recipes/offline/localWrites';
+import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import {
   settleMutation,
   type SettledFailure,
+  type SettleOptions,
 } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { UnreadVersionError } from '#/apollo/utils/entityWriteChain';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import {
   MAX_RECIPE_INGREDIENTS,
@@ -91,68 +88,43 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
           fragment: UseRecipeFormWrites_RecipeFragmentDoc,
           fragmentName: 'useRecipeFormWrites_recipe',
           from: recipeRef,
+          optimistic: true,
         })
       : null;
 
   const [createRecipeMutation, { loading: creating }] = useMutation(
     CreateRecipeDocument,
-    {
-      context: { localFirst: true },
-      update: (cache, { data }) => {
-        const payload = appliedPayload(data);
-        if (!payload) return;
-        // Upsert: the local-first pre-fire write already inserted the edge
-        // under the same client-minted id — the server row replaces it.
-        upsertMyRecipesEdge(cache, payload.recipe);
-      },
-    },
+    { context: { localFirst: true } },
   );
   const [updateRecipeMutation, { loading: updating }] = useMutation(
     UpdateRecipeDocument,
     { context: { localFirst: true } },
   );
 
-  /**
-   * Mint the permanent cuid (the row's real PK) and write the recipe into My
-   * Recipes plus the full detail entity before firing, so creating works fully
-   * offline — the queued create replays keyed by that same id.
-   */
+  /** The minted cuid is the row's real PK, so a queued create replays onto it. */
   const createRecipe = async (
     input: Omit<CreateRecipeInput, 'id'>,
     createdBy: RecipeCreatedBy,
   ): Promise<RecipeWriteOutcome> => {
-    const id = generateEntityId();
-    try {
-      writeLocalRecipe(client.cache, id, input, createdBy);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Create Recipe (optimistic)',
-      });
-    }
-
-    const revertRecipe = () => {
-      try {
-        revertOptimisticRecipe(client.cache, id);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Recipe create',
-        });
-      }
+    const recipe = { ...input, id: generateEntityId() };
+    const inputs: CreateRecipeInputs = {
+      id: recipe.id,
+      recipe,
+      createdBy,
+      ingredientIds: input.ingredients.map(() => generateEntityId()),
     };
 
-    // Online success or queued offline — the recipe is in My Recipes either way.
-    const settled = await settleMutation(
-      () =>
-        createRecipeMutation({
-          variables: { input: { ...input, id } },
+    const settled = await pendingWritesOf(client.cache).send(
+      CreateRecipeDocument,
+      { input: recipe },
+      write =>
+        settleMutation(() => createRecipeMutation(write), {
+          document: CreateRecipeDocument,
+          fallback: t('recipes.createRecipeFailed'),
+          // The form shows the failure, on its field where it names one.
+          present: 'none',
         }),
-      {
-        document: CreateRecipeDocument,
-        fallback: t('recipes.createRecipeFailed'),
-        onFailed: revertRecipe,
-        // The form shows the failure, on its field where it names one.
-        present: 'none',
-      },
+      inputs,
     );
     return outcomeOf(settled.failure);
   };
@@ -176,22 +148,28 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         }),
       });
     }
-    const settled = await settleMutation(
-      () =>
-        version === null
-          ? Promise.reject(new UnreadVersionError('Recipe'))
-          : updateRecipeMutation({
-              variables: {
-                input: { ...fields, id, version },
-                ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
-              },
-            }),
-      {
-        document: UpdateRecipeDocument,
-        fallback: t('recipes.updateRecipeFailed'),
-        present: 'none',
-      },
-    );
+    const settle: SettleOptions = {
+      document: UpdateRecipeDocument,
+      fallback: t('recipes.updateRecipeFailed'),
+      present: 'none',
+    };
+    const settled =
+      version === null
+        ? await settleMutation(
+            () => Promise.reject(new UnreadVersionError('Recipe')),
+            settle,
+          )
+        : await sendFields(client.cache, {
+            entity: { __typename: 'Recipe', id },
+            // The device shows the edit once the server has it.
+            fields: {},
+            variables: {
+              input: { ...fields, id, version },
+              ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+            },
+            mutate: updateRecipeMutation,
+            settle,
+          });
     return outcomeOf(settled.failure);
   };
 

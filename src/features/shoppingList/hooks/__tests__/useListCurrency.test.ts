@@ -1,9 +1,10 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
 import { useListCurrency } from '../useListCurrency';
 import {
@@ -18,9 +19,13 @@ const listAnswer = (currency: string | null) =>
 
 function renderFor(listCurrency: string | null) {
   const cache = seedCache([]);
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: UseListCurrency_ListFragmentDoc,
-    data: { __typename: 'ShoppingList', id: 'list-1', currency: listCurrency },
+    data: {
+      __typename: 'ShoppingList',
+      id: 'list-1',
+      currency: listCurrency,
+    },
   });
   const asked = listAnswer('USD');
   const rendered = renderHookWithApollo(() => useListCurrency('list-1'), {
@@ -29,6 +34,14 @@ function renderFor(listCurrency: string | null) {
   });
   return { ...rendered, asked };
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useListCurrency', () => {
   beforeEach(() => {
@@ -57,7 +70,8 @@ describe('useListCurrency', () => {
     });
 
     expect(result.current).toBeNull();
-    await waitFor(() => expect(result.current).toBe('USD'));
+    await drainTimers();
+    expect(result.current).toBe('USD');
     expect(asked.fired).toEqual([{ id: 'list-1' }]);
   });
 

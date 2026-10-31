@@ -63,6 +63,7 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   activeBatchCount
   earliestBatchExpiresOn
   item {
+    version
     id
     imageUrl
     images {

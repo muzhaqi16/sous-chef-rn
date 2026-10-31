@@ -162,10 +162,9 @@ const MealPlanMainInner: React.FC = () => {
     planIds: mealPlans.map(plan => plan.id),
   });
 
-  // Lifecycle: optimistic restoration, cache persistence, perf tracking
+  // Lifecycle: perf tracking
   useTabScreenLifecycle({
     screenName: 'MealPlanMain',
-    optimisticTypes: ['MealPlanItem'],
     telemetryProperties: () => ({
       plan_id: activePlanId,
       item_count: items.length,

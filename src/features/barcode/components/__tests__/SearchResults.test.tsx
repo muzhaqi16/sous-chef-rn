@@ -6,7 +6,7 @@ import {
   NetWeightKind,
   UnitType,
 } from '#/graphql/generated/schemaTypes';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   UseHeldStacks_PantryFragmentDoc,
@@ -14,7 +14,11 @@ import {
 } from '#features/pantry/hooks/useHeldStacks.generated';
 import type { HeldStack } from '#features/pantry/hooks/useHeldStacks';
 import { SearchResults, type SearchResultsProps } from '../SearchResults';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { recordMock } from '#/test-utils/apolloMockProvider';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
@@ -38,8 +42,7 @@ jest.mock('#features/pantry/cache/items', () => {
   // and it is proven against a real cache in `pantryItemLocalWrites.test.ts`.
   return {
     ...actual,
-    addPantryItemLocally: jest.fn(actual.addPantryItemLocally),
-    revertOptimisticPantryItem: jest.fn(actual.revertOptimisticPantryItem),
+    showLocalPantryItem: jest.fn(actual.showLocalPantryItem),
   };
 });
 
@@ -47,19 +50,14 @@ jest.mock('#features/shoppingList/cache/connections', () => ({
   addNewItemToShoppingListCache: jest.fn(),
 }));
 
-jest.mock('#features/shoppingList/cache/items', () => {
-  const { buildAddItemsReconcileUpdate } = jest.requireActual(
-    '#features/shoppingList/cache/items',
-  );
-  return {
-    buildAddItemsReconcileUpdate,
-    addLocalShoppingListItem: jest.fn(),
-    createLocalShoppingListItem: jest.fn((id: string) => ({
-      __typename: 'ShoppingListItem',
-      id,
-    })),
-  };
-});
+jest.mock('#features/shoppingList/cache/items', () => ({
+  addLocalShoppingListItem: jest.fn(),
+  createLocalShoppingListItem: jest.fn((id: string) => ({
+    __typename: 'ShoppingListItem',
+    version: 1,
+    id,
+  })),
+}));
 
 // The counting units the device holds: a scan is counted in a piece.
 const mockCachedUnits = [
@@ -117,14 +115,23 @@ jest.mock('#features/barcode/hooks/useStorePriceMemory', () => ({
 // Store mode's shelf prices have their own tests; here, which list they are read for.
 const mockShelfListIds: (string | null | undefined)[] = [];
 jest.mock('#features/catalog/hooks/useStoreShelfPrices', () => ({
+  ...jest.requireActual('#features/catalog/hooks/useStoreShelfPrices'),
   useStoreShelfPrices: (_itemId: string, listId: string | null | undefined) => {
     mockShelfListIds.push(listId);
-    return { rows: [] };
+    return { rows: [], similarRows: [] };
   },
 }));
 
 /** One package counted in a piece, sized by the record: what a scan adds. */
 const ONE_PACKAGE = { packages: { count: 1, unitId: 'unit-pc' } };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('SearchResults', () => {
   const mockItem = {
@@ -213,7 +220,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -233,7 +244,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual(ONE_PACKAGE);
@@ -251,7 +263,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -263,7 +279,8 @@ describe('SearchResults', () => {
     rerender(<SearchResults {...defaultProps} />);
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual(ONE_PACKAGE);
@@ -274,7 +291,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -321,7 +342,8 @@ describe('SearchResults', () => {
     );
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual({
@@ -340,7 +362,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -395,7 +421,8 @@ describe('SearchResults', () => {
     expect(screen.getByText('6 can · 250 ml each')).toBeTruthy();
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
       .input;
     expect(firedInput.amount).toEqual({
@@ -412,7 +439,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -427,9 +458,8 @@ describe('SearchResults', () => {
     );
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    expect(
-      await screen.findByText(t('barcode.amount.wholePackages')),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(t('barcode.amount.wholePackages'))).toBeTruthy();
     expect(rec.fired).toHaveLength(0);
   });
 
@@ -438,7 +468,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -453,7 +487,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const [fired] = rec.fired;
     expect(fired?.today).toMatch(/^\d{4}-\d{2}-\d{2}$/);
     expect(fired?.input).toMatchObject({ today: fired?.today });
@@ -465,7 +500,11 @@ describe('SearchResults', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+            pantryItem: {
+              __typename: 'PantryItem',
+              version: 1,
+              id: 'pantry-item-new',
+            },
           },
         },
       });
@@ -492,12 +531,14 @@ describe('SearchResults', () => {
       expect(screen.getByText('1 pc')).toBeTruthy();
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      await drainTimers();
+      expect(rec.fired.length).toBeGreaterThan(0);
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
       expect(firedInput.amount).toEqual(ONE_PACKAGE);
       expect(firedInput.item).toEqual({ variation: 'off-1' });
-      await waitFor(() => expect(onScanAnother).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(onScanAnother).toHaveBeenCalledTimes(1);
     });
 
     describe('a refused add', () => {
@@ -533,9 +574,8 @@ describe('SearchResults', () => {
 
         fireEvent.press(screen.getByTestId('primary-btn'));
 
-        expect(
-          await screen.findByText(t('errors.field.netWeight')),
-        ).toBeTruthy();
+        await drainTimers();
+        expect(screen.getByText(t('errors.field.netWeight'))).toBeTruthy();
         expect(screen.getByTestId(barcodeTestIDs.scanAmountSize)).toBeTruthy();
         const { alertService } = jest.requireMock('#/services/alertService');
         expect(alertService.alert).not.toHaveBeenCalled();
@@ -551,7 +591,8 @@ describe('SearchResults', () => {
         fireEvent.press(screen.getByTestId('primary-btn'));
 
         const { alertService } = jest.requireMock('#/services/alertService');
-        await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+        await drainTimers();
+        expect(alertService.alert).toHaveBeenCalled();
         expect(alertService.alert).toHaveBeenCalledTimes(1);
         expect(alertService.alert).toHaveBeenCalledWith(
           t('labels.error'),
@@ -578,7 +619,8 @@ describe('SearchResults', () => {
 
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+      await drainTimers();
+      expect(rec.fired.length).toBeGreaterThan(0);
       const firedInput = (rec.fired[0] as { input: Record<string, unknown> })
         .input;
       expect(firedInput.amount).toEqual(ONE_PACKAGE);
@@ -590,7 +632,11 @@ describe('SearchResults', () => {
       data: {
         createPantryItem: {
           __typename: 'CreatePantryItemPayload',
-          pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+          pantryItem: {
+            __typename: 'PantryItem',
+            version: 1,
+            id: 'pantry-item-new',
+          },
         },
       },
     });
@@ -601,7 +647,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     expect(
       (rec.fired[0] as { input: Record<string, unknown> }).input.item,
     ).toEqual({ id: 'item-1' });
@@ -638,7 +685,8 @@ describe('SearchResults', () => {
 
     fireEvent.press(screen.getByTestId('primary-btn'));
 
-    await waitFor(() => expect(rec.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(rec.fired.length).toBeGreaterThan(0);
     const [line] = (
       rec.fired[0] as { input: { items: Record<string, unknown>[] } }
     ).input.items;
@@ -660,12 +708,11 @@ describe('SearchResults', () => {
     fireEvent.press(screen.getByTestId(barcodeTestIDs.addBrandToList));
     fireEvent.press(screen.getByText('Avoid'));
 
-    await waitFor(() =>
-      expect(mockAddBrand).toHaveBeenCalledWith(
-        'list-avoid',
-        { id: 'brand-pack', name: 'Pack Brand' },
-        null,
-      ),
+    await drainTimers();
+    expect(mockAddBrand).toHaveBeenCalledWith(
+      'list-avoid',
+      { id: 'brand-pack', name: 'Pack Brand' },
+      null,
     );
   });
 
@@ -694,14 +741,15 @@ describe('SearchResults', () => {
       type: UnitType.Count,
     });
     act(() => {
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStacks_PantryItemFragmentDoc,
         fragmentName: 'useHeldStacks_pantryItem',
         data: {
           __typename: 'PantryItem',
+          version: 1,
           id: 'stack-milk',
           createdAt: '2026-01-01T00:00:00.000Z',
-          item: { __typename: 'Item', id: mockItem.id },
+          item: { __typename: 'Item', version: 1, id: mockItem.id },
           unit: {
             __typename: 'Unit',
             id: 'unit-pc',
@@ -728,7 +776,7 @@ describe('SearchResults', () => {
           },
         },
       });
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStacks_PantryFragmentDoc,
         fragmentName: 'useHeldStacks_pantry',
         variables: {
@@ -762,28 +810,30 @@ describe('SearchResults', () => {
       });
     });
 
-    await waitFor(() =>
-      expect(screen.queryByText(t('labels.usedIn'))).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByText(t('labels.usedIn'))).toBeNull();
     expect(
       screen.getByTestId(barcodeTestIDs.scanAmountQuantity).props.value,
     ).toBe('3');
   });
 
   describe('the pantry item count', () => {
-    // The connection write moves the LIST; the header's "N items" reads
-    // `Pantry.stats.totalItems`, which the mutation's `update:` callback never
-    // touches when the create is queued offline. Publishing and withdrawing
-    // both go through the counting helpers so the two cannot drift.
-    const { addPantryItemLocally, revertOptimisticPantryItem } =
-      jest.requireMock('#features/pantry/cache/items');
+    // Publishing goes through the counting helper, so a queued create moves the
+    // header's "N items" with the list; a refusal lifts the layer holding both.
+    const { showLocalPantryItem } = jest.requireMock(
+      '#features/pantry/cache/items',
+    );
 
     it('moves with the optimistic row, before the server answers', async () => {
       const rec = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pantry-item-new' },
+            pantryItem: {
+              __typename: 'PantryItem',
+              version: 1,
+              id: 'pantry-item-new',
+            },
           },
         },
       });
@@ -793,16 +843,16 @@ describe('SearchResults', () => {
       });
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() =>
-        expect(addPantryItemLocally).toHaveBeenCalledWith(
-          expect.anything(),
-          defaultProps.pantryId,
-          expect.objectContaining({ __typename: 'PantryItem' }),
-        ),
+      await drainTimers();
+      expect(showLocalPantryItem).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ __typename: 'PantryItem' }),
+        expect.objectContaining({ pantryId: defaultProps.pantryId }),
+        expect.any(String),
       );
     });
 
-    it('is taken back when the server refuses the create', async () => {
+    it('names the input the server refused', async () => {
       const rec = recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
@@ -819,26 +869,17 @@ describe('SearchResults', () => {
       });
       fireEvent.press(screen.getByTestId('primary-btn'));
 
-      await waitFor(() =>
-        expect(revertOptimisticPantryItem).toHaveBeenCalledWith(
-          expect.anything(),
-          defaultProps.pantryId,
-          expect.any(String),
-        ),
-      );
-
-      // And the refusal names the input it refused. Under a bare cache this
+      // The refusal names the input it refused. Under a bare cache this
       // could not be asserted: without `possibleTypes` the
       // `... on ValidationError` inline fragment did not match, `field` was
       // dropped before anything read it, and every refusal of this mutation
       // fell back to the generic retry line — which a test could assert
       // successfully while a real user never saw it.
       const { alertService } = jest.requireMock('#/services/alertService');
-      await waitFor(() =>
-        expect(alertService.alert).toHaveBeenCalledWith(
-          expect.anything(),
-          "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
-        ),
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenCalledWith(
+        expect.anything(),
+        "That quantity isn't valid. Try a number like 2, 0.5 or 1 1/2.",
       );
     });
   });

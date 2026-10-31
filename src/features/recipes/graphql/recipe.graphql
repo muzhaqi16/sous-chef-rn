@@ -15,6 +15,7 @@ query GetRecipe($id: ID!, $ingredientsFirst: Int!) {
 
 query GetRecipeReviews($id: ID!) {
   recipe(id: $id) {
+    version
     id
     reviewsConnection {
       edges {
@@ -306,6 +307,7 @@ query MatchRecipeIngredientsToPantry(
       }
     }
     matchedPantryItem {
+      version
       id
       itemName
       unit {
@@ -328,6 +330,7 @@ query MatchRecipeIngredientsToPantry(
       }
     }
     alternativeMatches {
+      version
       id
       itemName
       unit {
@@ -386,6 +389,7 @@ mutation MarkRecipeAsCooked(
         notes
         cookedAt
         recipe {
+          version
           id
           name
         }

@@ -1,9 +1,9 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useOpenListLinesFor } from '../useOpenListLinesFor';
 
@@ -31,6 +31,14 @@ const itemsOf = (count: number) =>
     (_, at) => `item-${String(at).padStart(3, '0')}`,
   );
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useOpenListLinesFor', () => {
   it('asks for every item of a receipt, each once', async () => {
     const asked = lookup();
@@ -39,9 +47,11 @@ describe('useOpenListLinesFor', () => {
       { operationMocks: [asked.mock] },
     );
 
-    await waitFor(() => expect(asked.fired).toHaveLength(1));
+    await drainTimers();
+    expect(asked.fired).toHaveLength(1);
     expect(asked.fired[0]?.itemIds).toEqual(['item-a', 'item-b']);
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.incomplete).toBe(false);
   });
 
@@ -52,7 +62,8 @@ describe('useOpenListLinesFor', () => {
       { operationMocks: [asked.mock] },
     );
 
-    await waitFor(() => expect(asked.fired).toHaveLength(1));
+    await drainTimers();
+    expect(asked.fired).toHaveLength(1);
     expect(asked.fired[0]?.itemIds).toHaveLength(100);
     expect(result.current.incomplete).toBe(true);
   });
@@ -67,10 +78,12 @@ describe('useOpenListLinesFor', () => {
       { operationMocks: [asked.mock] },
     );
 
-    await waitFor(() => expect(asked.fired).toHaveLength(1));
+    await drainTimers();
+    expect(asked.fired).toHaveLength(1);
     expect(asked.fired[0]?.itemIds).toHaveLength(100);
     expect(asked.fired[0]?.itemIds).toEqual(expect.arrayContaining(needed));
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.incomplete).toBe(false);
   });
 });

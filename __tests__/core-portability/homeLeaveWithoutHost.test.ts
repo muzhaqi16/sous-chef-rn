@@ -79,9 +79,14 @@ it('leaves a home and moves the selection on, with no device', async () => {
       },
     },
   });
+  let markedDefault = () => {};
+  const defaultMarked = new Promise<void>(resolve => {
+    markedDefault = resolve;
+  });
   const markDefault = recordMock(MarkHomeAsDefaultDocument, {
-    data: {
-      markHomeAsDefault: { __typename: 'MarkHomeAsDefaultPayload' },
+    dataFor: () => {
+      markedDefault();
+      return { markHomeAsDefault: { __typename: 'MarkHomeAsDefaultPayload' } };
     },
   });
   const cache = makeCache();
@@ -110,9 +115,7 @@ it('leaves a home and moves the selection on, with no device', async () => {
   expect('Home:home-1' in cache.extract()).toBe(false);
   expect(useStore.getState().selectedHomeId).toBe('home-2');
   // In the background, the home that remains becomes the account's default.
-  await act(async () => {
-    await new Promise(resolve => setTimeout(resolve, 0));
-  });
+  await act(() => defaultMarked);
   expect(markDefault.fired).toEqual([
     expect.objectContaining({
       input: expect.objectContaining({ homeId: 'home-2' }),

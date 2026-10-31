@@ -35,6 +35,7 @@ const readOnBoarded = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'User', id: USER_ID }),
     fragment: ONBOARDED,
     fragmentName: '_TestOnboarded',
+    optimistic: true,
   })?.onBoarded;
 
 describe('completing onboarding', () => {

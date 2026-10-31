@@ -1,18 +1,10 @@
 import { useRef, useEffect, useState } from 'react';
-import type { OperationVariables } from '@apollo/client';
+import { useApolloClient } from '@apollo/client/react';
 import { errorService } from '#/services/errorService';
 import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
 import { logger } from '#/utils/environment';
+import { fetchPage, type PagedQuery } from '#hooks/utils/fetchPage';
 import type { PaginationState } from '#hooks/utils/types';
-
-/**
- * Apollo `fetchMore` shape this hook invokes as `fetchMore({ variables })`.
- * The resolved value is never read — only whether the call settled — so it is
- * left as `unknown`.
- */
-export type FetchMoreFn = (options: {
-  variables?: OperationVariables;
-}) => Promise<unknown>;
 
 /**
  * Configuration for pagination from normalized data
@@ -27,9 +19,9 @@ export interface PaginationConfig {
   loading: boolean;
   /** Current number of items (to determine if loading more) */
   itemCount: number;
-  /** Apollo fetchMore function from query */
-  fetchMore: FetchMoreFn;
-  /** Additional variables to pass to fetchMore (e.g., id, filters) */
+  /** The list's query: `observable` from its `useQuery`. */
+  observable: PagedQuery;
+  /** Additional variables a page needs beyond the list's own. */
   fetchMoreVariables?: Record<string, unknown>;
   /** Name of the cursor variable (default: 'cursor') */
   cursorVariableName?: string;
@@ -52,12 +44,13 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const {
     pageInfo,
     loading,
-    fetchMore,
+    observable,
     fetchMoreVariables = {},
     cursorVariableName = 'cursor',
     restart,
   } = config;
 
+  const client = useApolloClient();
   const hasMore = pageInfo?.hasNextPage ?? false;
   const endCursor = pageInfo?.endCursor;
 
@@ -77,6 +70,9 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   // as false before React batches the state update.
   const isFetchingMoreRef = useRef(false);
   const [isFetchingMore, setIsFetchingMore] = useState(false);
+  // Counted, as a page that answers at once sets and clears `isFetchingMore` in
+  // one render, and an effect on it alone would never release the guard.
+  const [pagesSettled, setPagesSettled] = useState(0);
   const [loadMoreError, setLoadMoreError] = useState(false);
 
   // Released one frame AFTER the commit that appended the page. Clearing it in
@@ -90,7 +86,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
       isFetchingMoreRef.current = false;
     });
     return () => cancelAnimationFrame(handle);
-  }, [isFetchingMore]);
+  }, [isFetchingMore, pagesSettled]);
 
   const loadMore = async () => {
     // Don't load if:
@@ -121,7 +117,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     let result;
     let deadCursor = false;
     try {
-      result = await fetchMore({ variables });
+      result = await fetchPage(client, observable, variables);
     } catch (error) {
       deadCursor = isDeadCursorError(error, endCursor);
       errorService.reportError(error, { operation: 'Pagination.loadMore' });
@@ -141,6 +137,7 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     }
 
     setIsFetchingMore(false);
+    setPagesSettled(settled => settled + 1);
     if (!result) {
       setLoadMoreError(true);
     }

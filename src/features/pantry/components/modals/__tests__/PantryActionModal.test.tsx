@@ -145,6 +145,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
       data: {
         __typename: 'PantryItem',
         id: PANTRY_ITEM_ID,
+        version: 1,
         itemId: 'item-1',
         itemName: 'Flour',
         quantity: 5,

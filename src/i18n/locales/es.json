@@ -517,6 +517,13 @@
     "unknown": "Desconocido",
     "unknownHome": "Hogar desconocido",
     "unknownLoss": "Pérdida desconocida",
+    "undo": "Deshacer",
+    "anyStore": "{{chain}} (cualquier tienda)",
+    "storeNumber": "Tienda n.º {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Actualizar",
     "updated": "Actualizado",
     "usage": "Uso",
@@ -573,7 +580,8 @@
     "purchased": "Comprado",
     "vegan": "Vegana",
     "sulfite": "Sulfitos",
-    "budgetAndPrices": "Presupuesto y precios"
+    "budgetAndPrices": "Presupuesto y precios",
+    "shopping": "Compras"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -643,7 +651,7 @@
     "shoppingListImagesDesc": "Mostrar imágenes de productos en las listas",
     "storeMode": "Modo tienda",
     "storeModeDesc": "Recorre una lista pasillo a pasillo desde el icono de tienda de la lista de la compra",
-    "budgetAndPricesDesc": "Precios, estimaciones y presupuestos en tus listas y en tu despensa, con el presupuesto de cada lista tras el icono de la cartera. Desactivado, nada te pregunta cuánto pagaste.",
+    "budgetAndPricesDesc": "Precios, estimaciones y presupuestos en tus listas y en tu despensa, con el presupuesto de cada lista tras el icono de la cartera. Desactivado, los precios quedan ocultos; una pulsación larga en un artículo de la lista sigue registrando cuánto pagaste.",
     "shareUsageData": "Compartir datos de uso",
     "shareUsageDataDesc": "Ayuda a mejorar {{appName}} compartiendo estadísticas anónimas",
     "resetSection": "Restablecer",

@@ -5,9 +5,8 @@
  * `{ __typename, id }`, and marking one read changes only its own fields.
  */
 
-import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
+import { usePagination } from '#hooks/utils/usePagination';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
-import { NetworkStatus } from '@apollo/client';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
@@ -32,7 +31,7 @@ export function useNotificationHistory(
     state => state.pendingExpirationLinks,
   );
 
-  const { data, error, loading, fetchMore, networkStatus, refetch } = useQuery(
+  const { data, error, loading, observable, refetch } = useQuery(
     GetNotificationsDocument,
     enabled
       ? {
@@ -59,30 +58,22 @@ export function useNotificationHistory(
     )
     .map(n => toDisplayNotification(n, pendingExpirationLinks[n.id]));
 
-  const hasMore = connection?.pageInfo.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo.endCursor ?? null;
-
-  const loadMore = () => {
-    if (!hasMore || !endCursor || loading) return;
-    // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
-    // oldest, so paging past it fetched rows that could never become visible;
-    // the cache has no such ceiling and the connection merges by node id.
-    void loadPageWithCursorRecovery({
-      fetchMore,
-      refetch,
-      variables: {
-        filter: category ? { category } : undefined,
-        first: PAGE_SIZE,
-        after: endCursor,
-      },
-      operation: 'NotificationHistory.loadMore',
-    });
-  };
+  // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
+  // oldest, so paging past it fetched rows that could never become visible;
+  // the cache has no such ceiling and the connection merges by node id.
+  const { loadMore, isLoadingMore } = usePagination({
+    pageInfo: connection?.pageInfo,
+    loading,
+    itemCount: notifications.length,
+    observable,
+    cursorVariableName: 'after',
+    restart: refetch,
+  });
 
   return {
     notifications,
     loadMore,
-    loadingMore: networkStatus === NetworkStatus.fetchMore,
+    loadingMore: isLoadingMore,
     loading,
     error,
     // `data !== undefined` — a response arrived, empty or not. Separates "no

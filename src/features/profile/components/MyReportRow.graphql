@@ -16,12 +16,14 @@ fragment MyReportRow_submission on ReviewSubmission {
       displayName
     }
     recipe {
+      version
       id
       name
     }
   }
   ... on ItemReportSubmission {
     item {
+      version
       id
       name
     }
@@ -37,12 +39,14 @@ fragment MyReportRow_submission on ReviewSubmission {
   }
   ... on ItemSuggestionSubmission {
     item {
+      version
       id
       name
     }
   }
   ... on ItemPhotoSubmission {
     item {
+      version
       id
       name
     }

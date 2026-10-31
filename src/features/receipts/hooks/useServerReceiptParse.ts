@@ -176,6 +176,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       const parse = client.cache.readFragment<ReceiptParseReadersFragment>({
         id: client.cache.identify({ __typename: 'ReceiptParse', id }),
         fragment: ReceiptParseReadersFragmentDoc,
+        optimistic: true,
       });
       const result = classifyCreateResult({
         accepted: !!appliedPayload(settled.data),

@@ -60,7 +60,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const { t } = useTranslation();
   const money = useMoney();
   const { resolveUnitId } = useResolveUnit();
-  const { control, handleSubmit, setValue, setError } = useForm<
+  const { control, handleSubmit, getValues, setValue, setError } = useForm<
     ReceiptLineFormValues,
     ReceiptLineFormContext
   >({
@@ -205,7 +205,13 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               title={t('receipts.review.notStockedTitle')}
               description={t('receipts.review.notStockedBody')}
               value={field.value}
-              onValueChange={field.onChange}
+              onValueChange={on => {
+                field.onChange(on);
+                // A purchase still names what was bought: what the receipt prints.
+                if (on && !getValues('itemName').trim()) {
+                  setValue('itemName', line.printed, { shouldValidate: true });
+                }
+              }}
               testID={receiptsTestIDs.lineNotStocked}
               containerStyle={styles.listToggle}
             />
@@ -339,6 +345,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 0.4,
   },
   listToggle: {
+    paddingHorizontal: 0,
     marginBottom: theme.spacing.lg,
     borderBottomWidth: theme.borderWidth.none,
     borderRadius: theme.radii.md,

@@ -1,15 +1,11 @@
-import { useApolloClient, useMutation } from '@apollo/client/react';
-import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
+import { useApolloClient } from '@apollo/client/react';
 import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { duplicatePlan } from '#features/mealPlan/utils/duplicatePlan';
 import { useMealPlanActions } from '#features/mealPlan/hooks/useMealPlanActions';
-import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { useCreateMealPlanItem } from '#features/mealPlan/hooks/useCreateMealPlanItem';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
-import {
-  settleMutation,
-  type SettledFailure,
-} from '#/apollo/utils/settleMutation';
+import type { SettledFailure } from '#/apollo/utils/settleMutation';
 import { t } from '#/i18n';
 
 export interface DuplicateMealPlanOptions {
@@ -28,10 +24,7 @@ export interface DuplicateMealPlanOptions {
 export function useDuplicateMealPlan() {
   const client = useApolloClient();
   const { createMealPlan, creating } = useMealPlanActions();
-  const [createItem, { loading: addingItems }] = useMutation(
-    CreateMealPlanItemDocument,
-    { context: { localFirst: true } },
-  );
+  const { sendItem, creating: addingItems } = useCreateMealPlanItem();
 
   const duplicate = async (options: DuplicateMealPlanOptions) => {
     const source = readPlanSource(client.cache, options.mealPlanId);
@@ -47,26 +40,13 @@ export function useDuplicateMealPlan() {
     }
 
     const created = await createMealPlan(derived.plan);
-    // A failure has already been reported and the optimistic plan reverted; a
-    // queued create has no server row yet, which is why the minted id is used.
+    // A failure has already been reported; a queued create has no server row
+    // yet, which is why the minted id is used.
     if (created.status === 'failed') return null;
 
     const failures: SettledFailure[] = [];
     for (const item of derived.items) {
-      // Offline the new plan shows its meals only from this write.
-      const revert = writeLocalMealPlanItem(client.cache, item);
-      const settled = await settleMutation(
-        () =>
-          createItem({
-            variables: { input: item },
-          }),
-        {
-          document: CreateMealPlanItemDocument,
-          fallback: t('mealTemplateBuilder.failedToAddItem'),
-          present: 'none',
-          onFailed: revert,
-        },
-      );
+      const settled = await sendItem(item, 'none');
       if (settled.failure) failures.push(settled.failure);
     }
 

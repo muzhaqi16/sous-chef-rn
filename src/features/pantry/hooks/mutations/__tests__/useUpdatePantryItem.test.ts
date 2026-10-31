@@ -1,8 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryItem.generated';
@@ -11,16 +12,6 @@ import { useUpdatePantryItem } from '../useUpdatePantryItem';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#/services/errorService');
-
-jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn((item, updates) => ({ ...item, ...updates })),
-  buildOptimisticMutationResponse: jest.fn(
-    (opName, payloadTypename, fields) => ({
-      __typename: 'Mutation',
-      [opName]: { __typename: payloadTypename, ...fields },
-    }),
-  ),
-}));
 
 jest.mock('../utils', () => ({
   buildDirtyUpdateInput: jest.fn(
@@ -106,6 +97,14 @@ const createFormData = (
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -129,13 +128,15 @@ describe('useUpdatePantryItem', () => {
       ],
     });
 
-    const stands = await result.current.updatePantryItemFields({
-      itemId: 'item-1',
-      input: createFormData(),
-      dirtyFields: { itemName: true },
-      selectedLocationId: null,
-      selectedBrandId: null,
-    });
+    const stands = await drained(() =>
+      result.current.updatePantryItemFields({
+        itemId: 'item-1',
+        input: createFormData(),
+        dirtyFields: { itemName: true },
+        selectedLocationId: null,
+        selectedBrandId: null,
+      }),
+    );
 
     expect(stands).toBe(true);
   });
@@ -160,13 +161,15 @@ describe('useUpdatePantryItem', () => {
       ],
     });
 
-    const stands = await result.current.updatePantryItemFields({
-      itemId: 'item-1',
-      input: createFormData(),
-      dirtyFields: { itemName: true },
-      selectedLocationId: null,
-      selectedBrandId: null,
-    });
+    const stands = await drained(() =>
+      result.current.updatePantryItemFields({
+        itemId: 'item-1',
+        input: createFormData(),
+        dirtyFields: { itemName: true },
+        selectedLocationId: null,
+        selectedBrandId: null,
+      }),
+    );
 
     expect(stands).toBe(false);
   });
@@ -176,13 +179,15 @@ describe('useUpdatePantryItem', () => {
       cache: seedItem(),
     });
 
-    const stands = await result.current.updatePantryItemFields({
-      itemId: 'item-1',
-      input: createFormData(),
-      dirtyFields: {},
-      selectedLocationId: null,
-      selectedBrandId: null,
-    });
+    const stands = await drained(() =>
+      result.current.updatePantryItemFields({
+        itemId: 'item-1',
+        input: createFormData(),
+        dirtyFields: {},
+        selectedLocationId: null,
+        selectedBrandId: null,
+      }),
+    );
 
     expect(stands).toBe(true);
     // Early return — buildDirtyUpdateInput returns {} so the mutation never fires.
@@ -198,6 +203,7 @@ describe('useUpdatePantryItem — a package size typed in another unit', () => {
   };
   const readNetWeight = (cache: ReturnType<typeof seedCache>) =>
     cache.readFragment<{ netWeight: number | null }>({
+      optimistic: true,
       id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
       fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
       fragmentName: 'useUpdatePantryItem_pantryItem',
@@ -219,15 +225,15 @@ describe('useUpdatePantryItem — a package size typed in another unit', () => {
       cache,
       operationMocks: [queued],
     });
-    await act(async () => {
-      await result.current.updatePantryItemFields({
+    await drained(() =>
+      result.current.updatePantryItemFields({
         itemId: 'item-1',
         input: createFormData({ netWeight, netWeightUnitId }),
         dirtyFields: { netWeight: true },
         selectedLocationId: null,
         selectedBrandId: null,
-      });
-    });
+      }),
+    );
     return readNetWeight(cache);
   };
 
@@ -245,6 +251,7 @@ describe('useUpdatePantryItem — a package size typed in another unit', () => {
 describe('useUpdatePantryItem — local-first cache behavior', () => {
   const readItemName = (cache: ReturnType<typeof seedCache>) =>
     cache.readFragment<{ itemName: string }>({
+      optimistic: true,
       id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
       fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
       fragmentName: 'useUpdatePantryItem_pantryItem',
@@ -319,9 +326,8 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
       expect(readItemName(cache)).toBe('Bad Name');
     });
 
-    await waitFor(() => {
-      expect(readItemName(cache)).toBe('Milk');
-    });
+    await drainTimers();
+    expect(readItemName(cache)).toBe('Milk');
     // A refused union payload resolves as data, so the mutation's onError
     // never fires — the hook has to tell the user itself. The refusal names a
     // field, so its own sentence is what gets shown.
@@ -362,9 +368,8 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
       fireRename(result, 'Bad Name');
     });
 
-    await waitFor(() => {
-      expect(readItemName(cache)).toBe('Milk');
-    });
+    await drainTimers();
+    expect(readItemName(cache)).toBe('Milk');
     const { alertService } = require('#/services/alertService');
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
@@ -404,9 +409,8 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
       fireRename(result, 'Milk (cans)');
     });
 
-    await waitFor(() => {
-      expect(readItemName(cache)).toBe('Milk');
-    });
+    await drainTimers();
+    expect(readItemName(cache)).toBe('Milk');
     const { alertService } = require('#/services/alertService');
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',

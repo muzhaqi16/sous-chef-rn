@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { act, renderHook, waitFor } from '@testing-library/react-native';
+import { act, renderHook } from '@testing-library/react-native';
 import { ApolloClient, ApolloLink } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
@@ -11,6 +11,7 @@ import {
   recordMock,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -28,6 +29,14 @@ const ACCOUNT = {
   onBoarded: true,
   preferredCurrency: 'USD',
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -147,7 +156,8 @@ describe('useCurrencyPreference', () => {
   it('offers the active currencies and labels the one the account holds', async () => {
     const { result } = renderCurrency({ data: APPLIED });
 
-    await waitFor(() => expect(result.current.options).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.options).toHaveLength(2);
 
     expect(result.current.preferredCurrency).toBe('USD');
     expect(result.current.currentLabel).toBe('USD ($)');
@@ -188,7 +198,8 @@ describe('useCurrencyPreference', () => {
       expect(record()).toBe('USD');
     });
 
-    await waitFor(() => expect(record()).toBe('EUR'));
+    await drainTimers();
+    expect(record()).toBe('EUR');
 
     // The settings' own currency, sent as is: never `localFirst`, so it is
     // never queued behind money shown in a currency the account lacks.
@@ -215,7 +226,8 @@ describe('useCurrencyPreference', () => {
     act(() => confirmPick());
 
     // The refusal is reported: the prompt, then the failure.
-    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(2));
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledTimes(2);
 
     expect(sent).toHaveLength(1);
     expect(mirror()).toBe('USD');
@@ -232,7 +244,8 @@ describe('useCurrencyPreference', () => {
     act(() => result.current.selectCurrency('EUR'));
     act(() => confirmPick());
 
-    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(2));
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledTimes(2);
 
     expect(sent).toHaveLength(1);
     expect(mirror()).toBe('USD');

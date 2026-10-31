@@ -1,13 +1,9 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { kitTestIDs } from '#components/testIDs';
 import { CreateHomeForm } from '#features/home/components/CreateHomeForm';
 import { homeTestIDs } from '#features/home/testIDs';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const nameError = kitTestIDs.inputError(homeTestIDs.createHomeNameInput);
 
@@ -36,6 +32,14 @@ const typeName = (name: string) =>
 const pressCreate = () =>
   fireEvent.press(screen.getByTestId(homeTestIDs.createHomeSubmitButton));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('CreateHomeForm', () => {
   // The API refuses these names; the field says so and nothing is sent.
   it('reports a missing name on the field and creates nothing', async () => {
@@ -44,10 +48,9 @@ describe('CreateHomeForm', () => {
     typeName(' \t ');
     pressCreate();
 
-    await waitFor(() =>
-      expect(screen.getByTestId(nameError)).toHaveTextContent(
-        'Please enter a home name',
-      ),
+    await drainTimers();
+    expect(screen.getByTestId(nameError)).toHaveTextContent(
+      'Please enter a home name',
     );
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -58,10 +61,9 @@ describe('CreateHomeForm', () => {
     typeName('a'.repeat(101));
     pressCreate();
 
-    await waitFor(() =>
-      expect(screen.getByTestId(nameError)).toHaveTextContent(
-        'Keep the name to 100 characters',
-      ),
+    await drainTimers();
+    expect(screen.getByTestId(nameError)).toHaveTextContent(
+      'Keep the name to 100 characters',
     );
     expect(onSubmit).not.toHaveBeenCalled();
   });
@@ -72,7 +74,8 @@ describe('CreateHomeForm', () => {
     typeName('  Shtëpia \t e  Re ');
     pressCreate();
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSubmit).toHaveBeenCalled();
     expect(onSubmit.mock.calls[0]![0]).toEqual({
       name: 'Shtëpia e Re',
       allowJoinCode: true,
@@ -85,7 +88,8 @@ describe('CreateHomeForm', () => {
     typeName('a'.repeat(100));
     pressCreate();
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSubmit).toHaveBeenCalled();
     expect(screen.queryByTestId(nameError)).toBeNull();
   });
 
@@ -105,7 +109,8 @@ describe('CreateHomeForm', () => {
     fireEvent.press(screen.getByText('Allow others to join with a code'));
     pressCreate();
 
-    await waitFor(() => expect(onSubmit).toHaveBeenCalled());
+    await drainTimers();
+    expect(onSubmit).toHaveBeenCalled();
     expect(onSubmit.mock.calls[0]![0]).toEqual({
       name: 'Our Flat',
       allowJoinCode: false,

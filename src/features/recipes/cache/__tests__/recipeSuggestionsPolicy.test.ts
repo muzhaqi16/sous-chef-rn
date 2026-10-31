@@ -3,6 +3,7 @@ import {
   RecipeSuggestionsDocument,
   type RecipeSuggestionsQuery,
 } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const ranking = (...ids: string[]): RecipeSuggestionsQuery => ({
   __typename: 'Query',
@@ -14,6 +15,7 @@ const ranking = (...ids: string[]): RecipeSuggestionsQuery => ({
       expiringStacks: [],
       node: {
         __typename: 'Recipe',
+        version: 1,
         id,
         name: id,
         imageUrl: null,
@@ -32,12 +34,12 @@ describe('Query.recipeSuggestions', () => {
     const cache = makeCache();
     const variables = { first: 20, today: '2026-10-14' };
 
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables,
       data: ranking('a', 'b'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables,
       data: ranking('c'),
@@ -50,12 +52,12 @@ describe('Query.recipeSuggestions', () => {
 
   it('keeps a ranking per day', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-14' },
       data: ranking('today'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-15' },
       data: ranking('tomorrow'),
@@ -78,17 +80,17 @@ describe('Query.recipeSuggestions', () => {
       today: '2026-10-14',
       homeId,
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: forHome('home-a'),
       data: ranking('a'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: forHome('home-b'),
       data: ranking('b'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: forHome(),
       data: ranking('every'),
@@ -106,9 +108,42 @@ describe('Query.recipeSuggestions', () => {
     expect(read()).toEqual(['every']);
   });
 
+  it('keeps a screened ranking apart from the unscreened one for the same day and home', () => {
+    const cache = makeCache();
+    const unscreened = { first: 20, today: '2026-10-14', homeId: 'home-a' };
+    const screened = { ...unscreened, excludeDietaryConflicts: true };
+    seedQuery(cache, {
+      query: RecipeSuggestionsDocument,
+      variables: screened,
+      data: ranking('shakshuka'),
+    });
+
+    expect(
+      cache.readQuery({
+        query: RecipeSuggestionsDocument,
+        variables: unscreened,
+      }),
+    ).toBeNull();
+
+    seedQuery(cache, {
+      query: RecipeSuggestionsDocument,
+      variables: unscreened,
+      data: ranking('peanut-noodles', 'shakshuka'),
+    });
+
+    expect(
+      idsIn(
+        cache.readQuery({
+          query: RecipeSuggestionsDocument,
+          variables: screened,
+        }),
+      ),
+    ).toEqual(['shakshuka']);
+  });
+
   it("answers nothing for a home it has no ranking for, not another home's", () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-14', homeId: 'home-a' },
       data: ranking('a'),

@@ -4,10 +4,7 @@
  * `moveToPantryCounters.test.ts`, against the real cache.
  */
 
-import {
-  removeItemFromShoppingListForMoveToPantry,
-  restoreItemToShoppingListAfterMoveToPantry,
-} from '../moveToPantry';
+import { removeItemFromShoppingListForMoveToPantry } from '../moveToPantry';
 import {
   createFieldHelpers,
   createMockCache,
@@ -16,7 +13,7 @@ import {
 import type { MockRef } from './helpers/mockCache';
 import { logger } from '#/utils/environment';
 
-describe('move-to-pantry unlink and restore', () => {
+describe('move-to-pantry unlink', () => {
   beforeEach(jest.clearAllMocks);
 
   it('evicts the entity on the confirmed path', () => {
@@ -41,91 +38,7 @@ describe('move-to-pantry unlink and restore', () => {
     expect(cache.modify).toHaveBeenCalled();
     expect(cache.evict).not.toHaveBeenCalled();
   });
-
-  it('re-adds the edge and the counters on withdrawal', () => {
-    const cache = createMockCache();
-    cache.readFragment.mockReturnValue({
-      id: 'sli-1',
-      purchaseInfo: { isPurchased: false },
-      shoppingList: { id: 'sl-1' },
-    });
-
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'itemsConnection:{"isPurchased":false}',
-    });
-    helpers.readField.mockReturnValue('sli-9');
-    helpers.toReference.mockReturnValue({ __ref: 'ShoppingListItem:sli-1' });
-
-    const result = invokeFieldModifier(
-      cache,
-      'itemsConnection',
-      { edges: [{ node: { __ref: 'ShoppingListItem:sli-9' } }], totalCount: 1 },
-      helpers,
-    );
-
-    expect(result.edges).toHaveLength(2);
-    expect(result.totalCount).toBe(2);
-  });
-
-  it('restores into the variant the row actually belongs to', () => {
-    const cache = createMockCache();
-    cache.readFragment.mockReturnValue({
-      id: 'sli-1',
-      purchaseInfo: { isPurchased: true },
-      shoppingList: { id: 'sl-1' },
-    });
-
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'itemsConnection:{"isPurchased":false}',
-    });
-    const existing = { edges: [], totalCount: 0 };
-
-    expect(
-      invokeFieldModifier(cache, 'itemsConnection', existing, helpers),
-    ).toBe(existing);
-  });
-
-  it('is idempotent — a second withdrawal does not duplicate the row', () => {
-    const cache = createMockCache();
-    cache.readFragment.mockReturnValue({
-      id: 'sli-1',
-      purchaseInfo: { isPurchased: false },
-      shoppingList: { id: 'sl-1' },
-    });
-
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'itemsConnection:{"isPurchased":false}',
-    });
-    helpers.readField.mockReturnValue('sli-1');
-    const existing = {
-      edges: [{ node: { __ref: 'ShoppingListItem:sli-1' } }],
-      totalCount: 1,
-    };
-
-    expect(
-      invokeFieldModifier(cache, 'itemsConnection', existing, helpers),
-    ).toBe(existing);
-  });
-
-  it('does nothing when the entity is gone', () => {
-    const cache = createMockCache();
-    cache.readFragment.mockReturnValue(null);
-
-    restoreItemToShoppingListAfterMoveToPantry(cache, 'sli-1');
-
-    expect(cache.modify).not.toHaveBeenCalled();
-  });
 });
-
-// ---------------------------------------------------------------------------
-// removeItemFromShoppingListForMoveToPantry
-// ---------------------------------------------------------------------------
 
 describe('removeItemFromShoppingListForMoveToPantry', () => {
   beforeEach(() => {

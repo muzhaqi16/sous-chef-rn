@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
 import { alertService } from '#/services/alertService';
@@ -31,7 +31,19 @@ const press = (label: string) =>
     ?.onPress?.();
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('useReportWrongPhoto', () => {
@@ -60,7 +72,7 @@ describe('useReportWrongPhoto', () => {
     result.current.reportWrongPhoto('item-1');
     press('Cancel');
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(fired).toHaveLength(0);
   });
 
@@ -73,21 +85,19 @@ describe('useReportWrongPhoto', () => {
     result.current.reportWrongPhoto('item-1');
     press('Report');
 
-    await waitFor(() =>
-      expect(fired).toEqual([
-        {
-          input: {
-            itemId: 'item-1',
-            reason: 'The photo shows a different product.',
-          },
+    await drainTimers();
+    expect(fired).toEqual([
+      {
+        input: {
+          itemId: 'item-1',
+          reason: 'The photo shows a different product.',
         },
-      ]),
-    );
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Report sent',
-        expect.stringContaining('admin'),
-      ),
+      },
+    ]);
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Report sent',
+      expect.stringContaining('admin'),
     );
   });
 
@@ -104,16 +114,15 @@ describe('useReportWrongPhoto', () => {
       .find(button => button.style !== 'cancel')
       ?.onPress?.();
 
-    await waitFor(() =>
-      expect(fired).toEqual([
-        {
-          input: {
-            itemId: 'item-1',
-            reason: 'The photo shows a different product.',
-          },
+    await drainTimers();
+    expect(fired).toEqual([
+      {
+        input: {
+          itemId: 'item-1',
+          reason: 'The photo shows a different product.',
         },
-      ]),
-    );
+      },
+    ]);
     await changeLanguage('en');
   });
 
@@ -126,16 +135,15 @@ describe('useReportWrongPhoto', () => {
     result.current.reportWrongPhoto('item-1', 'photo-9');
     press('Report');
 
-    await waitFor(() =>
-      expect(fired).toEqual([
-        {
-          input: {
-            itemId: 'item-1',
-            reason: 'The photo shows a different product.',
-            imageId: 'photo-9',
-          },
+    await drainTimers();
+    expect(fired).toEqual([
+      {
+        input: {
+          itemId: 'item-1',
+          reason: 'The photo shows a different product.',
+          imageId: 'photo-9',
         },
-      ]),
-    );
+      },
+    ]);
   });
 });

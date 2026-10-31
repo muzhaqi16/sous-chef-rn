@@ -1,7 +1,7 @@
 'use no memo';
 import React from 'react';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
-import { screen, userEvent, act, waitFor } from '@testing-library/react-native';
+import { screen, userEvent, act } from '@testing-library/react-native';
 import { InvitationAcceptanceModal } from '../InvitationAcceptanceModal';
 import type { InvitationData } from '#features/notifications/types';
 import {
@@ -9,6 +9,7 @@ import {
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   AcceptHomeInviteDocument,
   DeclineHomeInviteDocument,
@@ -21,11 +22,17 @@ import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
 
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
+
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
@@ -140,14 +147,20 @@ const rejectAndConfirm = async (
     <InvitationAcceptanceModal {...defaultProps} invitation={invitation} />,
     { operationMocks: [mock] },
   );
-  await act(async () => {
-    await user.press(screen.getByText('Reject'));
-  });
+  await drained(() => user.press(screen.getByText('Reject')));
   const [, , buttons] = jest.mocked(alertService.alert).mock.calls[0] ?? [];
   await act(async () => {
     buttons?.find(button => button.text === 'Decline')?.onPress?.();
   });
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('InvitationAcceptanceModal', () => {
   beforeEach(() => {
@@ -240,9 +253,8 @@ describe('InvitationAcceptanceModal', () => {
 
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => {
-      expect(defaultProps.onAccept).toHaveBeenCalled();
-    });
+    await drainTimers();
+    expect(defaultProps.onAccept).toHaveBeenCalled();
     expect(acceptMock.fired).toContainEqual({ input: { token: 'abc123' } });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
@@ -263,9 +275,8 @@ describe('InvitationAcceptanceModal', () => {
 
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => {
-      expect(defaultProps.onAccept).toHaveBeenCalled();
-    });
+    await drainTimers();
+    expect(defaultProps.onAccept).toHaveBeenCalled();
     expect(acceptMock.fired).toContainEqual({ input: { token: 'def456' } });
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
@@ -315,12 +326,11 @@ describe('InvitationAcceptanceModal', () => {
 
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => {
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Signed in as a different account',
-        'This invitation was sent to someone else. Sign in with the invited account to accept it.',
-      );
-    });
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Signed in as a different account',
+      'This invitation was sent to someone else. Sign in with the invited account to accept it.',
+    );
     // The invite stays PENDING server-side, so nothing is accepted and no
     // generic failure is reported over the top of the explanation.
     expect(onAccept).not.toHaveBeenCalled();
@@ -356,12 +366,11 @@ describe('InvitationAcceptanceModal', () => {
 
       await user.press(screen.getByText('Accept'));
 
-      await waitFor(() => {
-        const told =
-          jest.mocked(toastService.error).mock.calls.length > 0 ||
-          jest.mocked(alertService.alert).mock.calls.length > 0;
-        expect(told).toBe(true);
-      });
+      await drainTimers();
+      const told =
+        jest.mocked(toastService.error).mock.calls.length > 0 ||
+        jest.mocked(alertService.alert).mock.calls.length > 0;
+      expect(told).toBe(true);
       expect(onAccept).not.toHaveBeenCalled();
     });
 
@@ -374,7 +383,8 @@ describe('InvitationAcceptanceModal', () => {
 
       await user.press(screen.getByText('Accept'));
 
-      await waitFor(() => expect(defaultProps.onClose).toHaveBeenCalled());
+      await drainTimers();
+      expect(defaultProps.onClose).toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalledWith(
         'Signed in as a different account',
         expect.anything(),
@@ -408,7 +418,8 @@ describe('InvitationAcceptanceModal', () => {
         confirm?.find(b => b.style === 'destructive')?.onPress?.();
       });
 
-      await waitFor(() => expect(toastService.error).toHaveBeenCalled());
+      await drainTimers();
+      expect(toastService.error).toHaveBeenCalled();
       expect(toastService.success).not.toHaveBeenCalled();
       expect(onReject).not.toHaveBeenCalled();
     });
@@ -424,11 +435,10 @@ describe('InvitationAcceptanceModal', () => {
 
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => {
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to accept invitation. Please try again.',
-      );
-    });
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Failed to accept invitation. Please try again.',
+    );
   });
 
   it("reports a shopping-list accept failure in the app's own words", async () => {
@@ -445,11 +455,10 @@ describe('InvitationAcceptanceModal', () => {
 
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => {
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to accept invitation. Please try again.',
-      );
-    });
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Failed to accept invitation. Please try again.',
+    );
     expect(toastService.error).not.toHaveBeenCalledWith('Server error');
   });
 
@@ -468,9 +477,7 @@ describe('InvitationAcceptanceModal', () => {
     const user = userEvent.setup();
     renderWithApollo(<InvitationAcceptanceModal {...defaultProps} />);
 
-    await act(async () => {
-      await user.press(screen.getByText('Reject'));
-    });
+    await drained(() => user.press(screen.getByText('Reject')));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
@@ -522,11 +529,10 @@ describe('InvitationAcceptanceModal', () => {
   ])('%s', async (_name, invitation, declineMock, serverMessage) => {
     await rejectAndConfirm(invitation, declineMock.mock);
 
-    await waitFor(() => {
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to decline invitation. Please try again.',
-      );
-    });
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Failed to decline invitation. Please try again.',
+    );
     expect(toastService.error).not.toHaveBeenCalledWith(serverMessage);
   });
 
@@ -561,9 +567,7 @@ describe('InvitationAcceptanceModal', () => {
       operationMocks: [acceptMock.mock],
     });
 
-    await act(async () => {
-      await user.press(screen.getByText('Accept'));
-    });
+    await drained(() => user.press(screen.getByText('Accept')));
 
     // Result is ConflictError (non-Success union member) → onAccept must NOT
     // be called. Production only invokes onAccept on `AcceptHomeInviteSuccess`.
@@ -584,9 +588,7 @@ describe('InvitationAcceptanceModal', () => {
       },
     );
 
-    await act(async () => {
-      await user.press(screen.getByText('Accept'));
-    });
+    await drained(() => user.press(screen.getByText('Accept')));
 
     expect(defaultProps.onAccept).not.toHaveBeenCalled();
   });
@@ -615,11 +617,10 @@ describe('InvitationAcceptanceModal', () => {
 
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => {
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to accept invitation. Please try again.',
-      );
-    });
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Failed to accept invitation. Please try again.',
+    );
     expect(toastService.error).not.toHaveBeenCalledWith('Invalid invite token');
     expect(defaultProps.onClose).toHaveBeenCalled();
   });
@@ -698,11 +699,10 @@ describe('InvitationAcceptanceModal', () => {
 
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => {
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Too many requests. Please try again in 10 minutes.',
-      );
-    });
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Too many requests. Please try again in 10 minutes.',
+    );
     expect(onAccept).not.toHaveBeenCalled();
     expect(defaultProps.onClose).toHaveBeenCalled();
   });

@@ -6,7 +6,7 @@
     "pushNotificationsDesc": "Receive push notifications on your device",
     "dismissA11y": "Dismiss notification",
     "emailNotifications": "Email Notifications",
-    "emailNotificationsDesc": "Expiry reminders and shopping list invites by email",
+    "emailNotificationsDesc": "Expiry reminders, your weekly digest and recipe ideas by email",
     "pantry": "Pantry Notifications",
     "expirationAlerts": "Expiration Alerts",
     "expirationAlertsDesc": "Get notified when items are about to expire",
@@ -202,7 +202,6 @@
       }
     },
     "categoryRecipe": "Recipe",
-    "categoryShopping": "Shopping",
     "markAllRead": "Mark all read",
     "actionRequiredTitle": "Action Required",
     "actionRequiredBody": "This notification requires action: {{action}}",

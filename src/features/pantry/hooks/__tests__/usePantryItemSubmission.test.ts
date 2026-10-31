@@ -7,6 +7,7 @@ import {
   inputOf,
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -25,6 +26,7 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
   safeEvict: jest.fn(),
@@ -77,32 +79,20 @@ function createMock(success = true) {
             __typename: 'PantryItem',
             id: 'new-1',
             pantryId: 'pantry-1',
-            itemId: null,
             itemName: 'Milk',
             quantity: 1,
-            version: 1,
-            updatedAt: '2026-01-01',
             storageState: StorageState.Ambient,
             expiresOn: null,
-            lowStockAlert: false,
-            isLowStock: false,
             minQuantity: null,
-            lastUsedAt: null,
             netWeight: null,
-            remainingNetWeight: null,
-            activeBatchCount: 0,
-            earliestBatchExpiresOn: null,
             item: null,
             unit: null,
-            netWeightUnit: null,
             storageLocation: null,
-            packageBreakdown: null,
-            quantityBreakdown: null,
           },
           pantry: {
             __typename: 'Pantry',
             id: 'pantry-1',
-            stats: { __typename: 'PantryStats', totalItems: 1 },
+            stats: { __typename: 'PantryStats' },
           },
         },
       },
@@ -113,7 +103,6 @@ function createMock(success = true) {
       createPantryItem: {
         __typename: 'ValidationError',
         code: ErrorCode.ValidationFailed,
-        message: 'Validation failed',
         field: 'itemName',
       },
     },
@@ -557,7 +546,7 @@ describe('usePantryItemSubmission', () => {
 
     const seedStocked = (itemName: string, unitId = 'unit-1') => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: STOCKED_PANTRY,
         variables: {
           id: 'pantry-1',

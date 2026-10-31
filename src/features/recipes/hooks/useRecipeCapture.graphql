@@ -8,6 +8,7 @@ query RecipeCapture($id: ID!) {
     alreadySaved
     failure
     recipe {
+      version
       id
       name
     }
@@ -46,11 +47,13 @@ query RecipeCapture($id: ID!) {
         section
         confidence
         item {
+          version
           id
         }
         candidates {
           score
           item {
+            version
             id
             name
           }

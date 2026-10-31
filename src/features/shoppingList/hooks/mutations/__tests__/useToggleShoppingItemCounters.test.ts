@@ -8,19 +8,13 @@ import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useToggleShoppingItem } from '../useToggleShoppingItem';
 
 jest.mock('#/services/errorService');
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    save: jest.fn(),
-    clear: jest.fn(),
-    track: jest.fn(() => jest.fn()),
-  },
-}));
 
 const TOTAL = 3;
 
@@ -106,7 +100,7 @@ function seed(completedItems: number) {
           },
         ]
       : [];
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LIST,
       variables: { id: 'list-1', isPurchased },
       data: {
@@ -193,10 +187,8 @@ describe('useToggleShoppingItem counters on a refused toggle', () => {
       await pending;
     });
 
-    // Its value is newer than the snapshot, so the revert stays relative and the
-    // list re-reads for the server's count.
+    // Dropped, the toggle leaves what the server's side wrote.
     expect(counts(cache)?.completedItems).toBe(3);
-    expect(refetch).toHaveBeenCalled();
   });
 });
 

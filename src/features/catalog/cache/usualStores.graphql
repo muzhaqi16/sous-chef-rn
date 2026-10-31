@@ -1,0 +1,6 @@
+# A usual store as every reader of the list selects it: the row a local write
+# completes before the server names it. Consumer: writeUsualStores.
+fragment usualStores_row on UsualStore {
+  id
+  ...UsualStoreReaders
+}

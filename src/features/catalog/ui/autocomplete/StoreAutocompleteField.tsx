@@ -1,15 +1,13 @@
 import { useTranslation } from '#/i18n';
 import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  useStoreAutocomplete,
-  type StoreItem,
-} from '#features/catalog/hooks/useStoreAutocomplete';
 import { Text } from '#components/atoms/Text';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
+import { describeStoreOption, type StoreOption } from '#domain/stores';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
-import { storeBranchLabel } from '#features/catalog/ui/storeBranchLabel';
+import { useStoreSearch } from '#features/catalog/hooks/useStoreSearch';
 
 interface StoreAutocompleteFieldProps {
   variant: 'inline' | 'modal';
@@ -45,20 +43,11 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
   onEndEditing,
 }) => {
   const { t } = useTranslation();
-  const store = useStoreAutocomplete();
+  const readingSystem = useReadingSystem();
+  const search = useStoreSearch();
   const { createStore } = useCreateStore();
-
-  // Any name can be a store: the typed one is offered once the search for it
-  // has answered, unless a store with no address has that name. A new one has
-  // no address, so a branch of the name is another shop (the API's matchKey).
-  const term = store.searchTerm.trim();
-  const offersNew =
-    term.length >= 2 &&
-    !store.searchPending &&
-    !store.displayItems.some(
-      item =>
-        !item.address && item.name.trim().toLowerCase() === term.toLowerCase(),
-    );
+  // Any name can be a store: the typed one is offered once its search answers.
+  const term = search.term.trim();
 
   const choose = (id: string, name: string) => {
     onChangeText(name);
@@ -67,7 +56,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
 
   return (
     <>
-      <GenericAutocompleteField<StoreItem>
+      <GenericAutocompleteField<StoreOption>
         variant={variant}
         label={label}
         value={value}
@@ -77,26 +66,23 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
         testID={testID}
         onChangeText={text => {
           onChangeText(text);
-          store.handleSearchTermChange(text);
+          search.setTerm(text);
           onStoreSelected?.(null, null);
         }}
-        items={store.displayItems}
-        loading={store.isLoading}
+        items={search.options}
+        loading={search.loading}
         renderItem={item => (
-          <AutocompleteRow
-            title={item.name}
-            subtitle={storeBranchLabel(item, t)}
-          />
+          <AutocompleteRow {...describeStoreOption(item, t, readingSystem)} />
         )}
-        keyExtractor={item => item.id}
-        onSelect={item => {
-          store.setSearchTerm('');
-          choose(item.id, item.name);
+        keyExtractor={item => item.key}
+        onSelect={({ choice }) => {
+          search.clearTerm();
+          if (choice.store) choose(choice.store.id, choice.store.name);
         }}
-        showAddNew={offersNew}
+        showAddNew={search.unlistedName !== null}
         addNewLabel={t('labels.addNamed', { name: term })}
         onAddNew={() => {
-          store.setSearchTerm('');
+          search.clearTerm();
           void createStore({ name: term }).then(created => {
             if (created) choose(created.id, created.name);
           });
@@ -111,7 +97,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
           term.length < 2 ? t('autocomplete.typeAtLeastTwo') : undefined
         }
         modalMinSearchLength={2}
-        onSearchChange={store.handleSearchTermChange}
+        onSearchChange={search.setTerm}
         onEndEditing={onEndEditing}
       />
       {helperText ? (

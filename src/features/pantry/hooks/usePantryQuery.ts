@@ -106,7 +106,7 @@ export function usePantryQuery(
     loading,
     error,
     refetch,
-    fetchMore,
+    observable,
   } = useQuery(
     GetPantryDocument,
     shouldSkip || !pantryId
@@ -149,7 +149,7 @@ export function usePantryQuery(
     pageInfo: items.pageInfo,
     loading,
     itemCount: pantryItems.length,
-    fetchMore,
+    observable,
     fetchMoreVariables: {
       id: pantryId,
       itemsOrderBy: itemsOrderBy ?? undefined,

@@ -6,6 +6,7 @@ import {
 } from '#/apollo/clientRegistry';
 import { refreshUnitVocabulary } from '#/apollo/offlineQueue/refreshUnitVocabulary';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#store', () => ({
   useStore: {
@@ -43,7 +44,7 @@ const UNITS_QUERY = gql`
 describe('refreshUnitVocabulary keeps what the retry needs', () => {
   const seed = () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: UNITS_QUERY,
       data: {
         units: [

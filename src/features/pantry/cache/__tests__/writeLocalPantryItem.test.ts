@@ -2,6 +2,9 @@ import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { GetPantryItemDocument } from '#features/pantry/screens/usePantryItemDetailData.generated';
 import { writeLocalPantryItem } from '../writeLocalPantryItem';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
+
+const NOW = '2026-10-30T10:00:00.000Z';
 
 /**
  * A local row fills in what the create cannot know and never what the device
@@ -62,7 +65,7 @@ const detail = (cache: Cache, id: string) =>
 describe('writeLocalPantryItem', () => {
   it('keeps the catalog fields a narrower query cached', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: SCANNED_ITEM,
       data: {
         __typename: 'Item',
@@ -74,11 +77,16 @@ describe('writeLocalPantryItem', () => {
       },
     });
 
-    writeLocalPantryItem(cache, 'row-1', {
-      pantryId: 'pantry-1',
-      itemName: 'Milk',
-      itemId: 'item-1',
-    });
+    writeLocalPantryItem(
+      cache,
+      'row-1',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Milk',
+        itemId: 'item-1',
+      },
+      NOW,
+    );
 
     const read = detail(cache, 'row-1');
     expect(read.complete).toBe(true);
@@ -93,7 +101,7 @@ describe('writeLocalPantryItem', () => {
 
   it('completes a nested value the cache holds only in part', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: CREATED_ITEM,
       data: {
         __typename: 'Item',
@@ -109,11 +117,16 @@ describe('writeLocalPantryItem', () => {
       },
     });
 
-    writeLocalPantryItem(cache, 'row-2', {
-      pantryId: 'pantry-1',
-      itemName: 'Milk',
-      itemId: 'item-2',
-    });
+    writeLocalPantryItem(
+      cache,
+      'row-2',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Milk',
+        itemId: 'item-2',
+      },
+      NOW,
+    );
 
     // Written back as held, the partial list would leave every read of the
     // entity incomplete; its complete sibling survives.
@@ -125,7 +138,7 @@ describe('writeLocalPantryItem', () => {
 
   it('keeps a null the server supplied', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: gql`
         fragment NullShelfLife on Item {
           id
@@ -141,11 +154,16 @@ describe('writeLocalPantryItem', () => {
       },
     });
 
-    writeLocalPantryItem(cache, 'row-3', {
-      pantryId: 'pantry-1',
-      itemName: 'Salt',
-      itemId: 'item-3',
-    });
+    writeLocalPantryItem(
+      cache,
+      'row-3',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Salt',
+        itemId: 'item-3',
+      },
+      NOW,
+    );
 
     expect(detail(cache, 'row-3').result?.pantryItem?.item).toMatchObject({
       shelfLifeDays: null,
@@ -156,10 +174,15 @@ describe('writeLocalPantryItem', () => {
   it('names a free-text row with what was typed', () => {
     const cache = makeCache();
 
-    writeLocalPantryItem(cache, 'row-4', {
-      pantryId: 'pantry-1',
-      itemName: 'Loose tea',
-    });
+    writeLocalPantryItem(
+      cache,
+      'row-4',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Loose tea',
+      },
+      NOW,
+    );
 
     const read = detail(cache, 'row-4');
     expect(read.complete).toBe(true);
@@ -173,17 +196,27 @@ describe('writeLocalPantryItem', () => {
   it('prices the row from the per-unit cost and the quantity', () => {
     const cache = makeCache();
 
-    writeLocalPantryItem(cache, 'row-5', {
-      pantryId: 'pantry-1',
-      itemName: 'Green onions',
-      costPerUnit: 0.59,
-      quantity: 5,
-    });
-    writeLocalPantryItem(cache, 'row-6', {
-      pantryId: 'pantry-1',
-      itemName: 'Green onions',
-      quantity: 5,
-    });
+    writeLocalPantryItem(
+      cache,
+      'row-5',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Green onions',
+        costPerUnit: 0.59,
+        quantity: 5,
+      },
+      NOW,
+    );
+    writeLocalPantryItem(
+      cache,
+      'row-6',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Green onions',
+        quantity: 5,
+      },
+      NOW,
+    );
 
     // Unrounded, as the server stores it.
     expect(detail(cache, 'row-5').result?.pantryItem?.totalCost).toBeCloseTo(
@@ -199,15 +232,25 @@ describe('writeLocalPantryItem', () => {
   it('counts in the stated unit and guesses none', () => {
     const cache = makeCache();
 
-    writeLocalPantryItem(cache, 'row-7', {
-      pantryId: 'pantry-1',
-      itemName: 'Flour',
-      unitId: 'unit-g',
-    });
-    writeLocalPantryItem(cache, 'row-8', {
-      pantryId: 'pantry-1',
-      itemName: 'Flour',
-    });
+    writeLocalPantryItem(
+      cache,
+      'row-7',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Flour',
+        unitId: 'unit-g',
+      },
+      NOW,
+    );
+    writeLocalPantryItem(
+      cache,
+      'row-8',
+      {
+        pantryId: 'pantry-1',
+        itemName: 'Flour',
+      },
+      NOW,
+    );
 
     expect(detail(cache, 'row-7').result?.pantryItem?.unit?.id).toBe('unit-g');
     // No stated unit: the neutral stand-in, never the catalog's display unit,

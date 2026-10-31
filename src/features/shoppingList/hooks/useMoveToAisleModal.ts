@@ -8,9 +8,8 @@ import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { knownDepartment } from '#features/shoppingList/utils/aisles';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
 import { useTranslation } from '#/i18n';
 import { UseMoveToAisleModal_ItemFragmentDoc } from './useMoveToAisleModal.generated';
 
@@ -48,47 +47,30 @@ export function useMoveToAisleModal() {
     if (!current) return;
     setLineId(null);
 
-    const entity = { __typename: 'ShoppingListItem', id: current.id };
-    const previous = {
-      storeDepartment: current.storeDepartment,
-      storeDepartmentOverride: current.storeDepartmentOverride,
+    const inputs: UpdateRowInputs = {
+      fields: {
+        storeDepartment:
+          department ?? current.item?.storeDepartment ?? StoreDepartment.Other,
+        storeDepartmentOverride: department,
+      },
     };
-    const next = {
-      storeDepartment:
-        department ?? current.item?.storeDepartment ?? StoreDepartment.Other,
-      storeDepartmentOverride: department,
-    };
-    writeEntityFields(client.cache, entity, next);
-    const clearPersisted = optimisticDataPersistence.trackFields(
-      'ShoppingListItem',
-      current.id,
-      next,
-    );
-
-    await settleMutation(
-      () =>
-        updateLine({
-          variables: {
-            input: {
-              id: current.id,
-              version: current.version,
-              storePrefs: { storeDepartmentOverride: department },
-            },
-          },
-          onCompleted: result => {
-            if (appliedPayload(result)) clearPersisted();
-          },
-        }),
+    await pendingWritesOf(client.cache).send(
+      UpdateShoppingListItemDocument,
       {
-        document: UpdateShoppingListItemDocument,
-        fallback: t('shoppingListScreens.serverNotUpdated', {
-          action: t('shoppingListScreens.updated'),
-        }),
-        onFailed: () => {
-          clearPersisted();
-          writeEntityFields(client.cache, entity, previous);
+        input: {
+          id: current.id,
+          version: current.version,
+          storePrefs: { storeDepartmentOverride: department },
         },
       },
+      write =>
+        settleMutation(() => updateLine(write), {
+          document: UpdateShoppingListItemDocument,
+          fallback: t('shoppingListScreens.serverNotUpdated', {
+            action: t('shoppingListScreens.updated'),
+          }),
+        }),
+      inputs,
     );
   };
 

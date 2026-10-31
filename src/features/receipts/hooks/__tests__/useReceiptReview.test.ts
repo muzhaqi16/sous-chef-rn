@@ -1,14 +1,21 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
+import {
+  readUsualStores,
+  writeUsualStores,
+} from '#features/catalog/cache/usualStores';
 import {
   inputOf,
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetPantryDocument,
   type GetPantryQuery,
@@ -21,11 +28,13 @@ import {
 import { useStore } from '#store';
 import {
   CreateOutcome,
+  ErrorCode,
   NetWeightKind,
   ReceiptMatchConfidence,
   ReceiptMatchMethod,
   ReceiptParser,
   UnitType,
+  UsualStoreSource,
 } from '#/graphql/generated/schemaTypes';
 import { toDateKey } from '#/utils/dateUtils';
 import { t } from '#/i18n';
@@ -42,9 +51,10 @@ import {
   sentLinesOf,
 } from '../../__tests__/helpers/receiptFixtures';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
-import { useReceiptReview } from '../useReceiptReview';
+import { useReceiptReview, type LearnedStore } from '../useReceiptReview';
 import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { ResolveReceiptLinesDocument } from '../useReceiptMatches.generated';
 import { CreateReceiptCheckInDocument } from '../useReceiptCheckIn.generated';
@@ -52,6 +62,11 @@ import {
   UseHeldStores_ListFragmentDoc,
   UseHeldStores_StoreFragmentDoc,
 } from '../useHeldStores.generated';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 jest.mock('#/services/errorService');
 interface CurrentPantry {
@@ -128,6 +143,7 @@ const readPantry = (cache: ReturnType<typeof makeCache>) =>
   cache.readQuery<Unmasked<GetPantryQuery>>({
     query: GetPantryDocument,
     variables: PANTRY_VARS,
+    optimistic: true,
   })?.pantry;
 
 function pantryItemNames(cache: ReturnType<typeof makeCache>) {
@@ -232,6 +248,7 @@ async function setup({
   resolve,
   resolveAgain,
   storeCreate,
+  storeRemove,
   held = PANTRY,
   listHeld = false,
   listFor = listItems,
@@ -252,6 +269,8 @@ async function setup({
   resolveAgain?: ReturnType<typeof recordMock>;
   /** The store a confirm adds when the receipt's shop is not on file. */
   storeCreate?: ReturnType<typeof recordMock>;
+  /** The removal an Undo of a learned store sends. */
+  storeRemove?: ReturnType<typeof recordMock>;
   /** What the pantry holds before the receipt is added. */
   held?: MockDataFor<typeof GetPantryDocument>;
 } = {}) {
@@ -285,22 +304,19 @@ async function setup({
         ...(resolve ? [resolve.mock] : []),
         ...(resolveAgain ? [resolveAgain.mock] : []),
         ...(storeCreate ? [storeCreate.mock] : []),
+        ...(storeRemove ? [storeRemove.mock] : []),
       ],
     },
   );
-  await waitFor(() =>
-    expect(rendered.result.current.pantry.hasLoaded).toBe(true),
-  );
+  await drainTimers();
+  expect(rendered.result.current.pantry.hasLoaded).toBe(true);
   // Adds the chosen lines, and waits for the API to answer the check-in.
   const addChosen = async () => {
     let outcome: unknown;
-    await act(async () => {
-      outcome = await rendered.result.current.review.addChosen();
-    });
-    await waitFor(() =>
-      expect(useReceiptDraftStore.getState().draft?.checkIn?.state).not.toBe(
-        'sending',
-      ),
+    outcome = await drained(() => rendered.result.current.review.addChosen());
+    await drainTimers();
+    expect(useReceiptDraftStore.getState().draft?.checkIn?.state).not.toBe(
+      'sending',
     );
     return outcome;
   };
@@ -312,12 +328,11 @@ async function setup({
     await act(async () => {
       rendered.result.current.review.chooseLine(index, choice);
     });
-    await waitFor(() =>
-      expect(
-        rendered.result.current.review.rows.find(row => row.index === index)
-          ?.onList,
-      ).toBe(true),
-    );
+    await drainTimers();
+    expect(
+      rendered.result.current.review.rows.find(row => row.index === index)
+        ?.onList,
+    ).toBe(true);
     await addChosen();
   };
   return {
@@ -329,6 +344,14 @@ async function setup({
     chooseOnListAndAdd,
   };
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -415,14 +438,13 @@ describe('useReceiptReview', () => {
 
     let shownBefore: string[] = [];
     let outcome: unknown;
-    await act(async () => {
+    await drained(async () => {
       outcome = await result.current.review.addChosen();
       shownBefore = pantryItemNames(cache);
     });
     // Both show in the pantry before the API is asked.
-    expect(outcome).toEqual({ sent: 2, held: 0 });
+    expect(outcome).toMatchObject({ sent: 2, held: 0 });
     expect(shownBefore.sort()).toEqual(['Bananas', 'Whole milk']);
-    await addChosen();
 
     const ids = useReceiptDraftStore.getState().draft?.checkIn;
     const [milkIds, bananaIds] = [ids?.lines[1], ids?.lines[3]];
@@ -481,6 +503,49 @@ describe('useReceiptReview', () => {
     expect(sentLinesOf(retry ?? {})).toEqual([sentLinesOf(first ?? {})[1]]);
   });
 
+  it('shows two lines of one product as one row, at the total the answer states', async () => {
+    const checkIn = recordMock(CreateReceiptCheckInDocument, {
+      dataFor: (vars): MockDataFor<typeof CreateReceiptCheckInDocument> => {
+        const sent = sentLinesOf(vars);
+        return {
+          createReceiptCheckIn: {
+            __typename: 'CreateReceiptCheckInPayload',
+            // Every result states the row as committed: Apollo stores a row once
+            // per answer, the first copy, so a running total would show its first.
+            results: sent.map((line, index) => ({
+              index,
+              clientId: line.clientId,
+              success: true,
+              failure: null,
+              item: { id: 'cat-milk' },
+              pantryItem: {
+                id: sent[0]?.pantryItemId ?? '',
+                itemName: 'Whole milk',
+                item: { id: 'cat-milk' },
+                quantity: 2,
+                version: 3,
+              },
+              shoppingListItem: null,
+            })),
+          },
+        };
+      },
+    });
+    const { result, cache, addChosen } = await setup({ checkIn });
+    await act(async () => {
+      result.current.review.chooseLine(1, MILK);
+      result.current.review.chooseLine(3, MILK);
+    });
+
+    expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
+
+    const edges = readPantry(cache)?.itemsConnection.edges ?? [];
+    expect(pantryItemNames(cache)).toEqual(['Whole milk']);
+    expect(
+      cache.extract(true)[`PantryItem:${edges[0]?.node.id}`],
+    ).toMatchObject({ quantity: 2 });
+  });
+
   it('counts a check-in queued offline as added and shows it at once', async () => {
     // The offline queue completes a queued write with null data.
     const data: MockDataFor<typeof CreateReceiptCheckInDocument> = {
@@ -500,7 +565,7 @@ describe('useReceiptReview', () => {
       });
     });
 
-    expect(await addChosen()).toEqual({ sent: 2, held: 0 });
+    expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
 
     expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
     expect(result.current.review.pendingCount).toBe(0);
@@ -537,7 +602,7 @@ describe('useReceiptReview', () => {
         });
       });
 
-      expect(await addChosen()).toEqual({ sent: 1, held: 1 });
+      expect(await addChosen()).toMatchObject({ sent: 1, held: 1 });
 
       expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
         expect.objectContaining({ clientId: '3' }),
@@ -646,9 +711,8 @@ describe('useReceiptReview', () => {
     it('asks once for the item lines, with the header and the pantry', async () => {
       const resolve = resolved();
       const { result } = await setup({ resolve });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(resolve.fired).toEqual([
         {
@@ -673,22 +737,21 @@ describe('useReceiptReview', () => {
       });
       const cache = makeCache();
       const askedByItem = () =>
-        Object.keys(cache.extract()['ShoppingList:list-1'] ?? {}).some(key =>
-          key.includes('"itemIds"'),
+        Object.keys(cache.extract(true)['ShoppingList:list-1'] ?? {}).some(
+          key => key.includes('"itemIds"'),
         );
       const first = await setup({ resolve, cache });
-      await waitFor(() =>
-        expect(first.result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(first.result.current.review.matchState).toBe('done');
       first.unmount();
 
       const second = await setup({ resolve, cache });
-      await waitFor(() =>
-        expect(second.result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(second.result.current.review.matchState).toBe('done');
       expect(resolve.fired).toHaveLength(1);
 
-      await waitFor(() => expect(askedByItem()).toBe(true));
+      await drainTimers();
+      expect(askedByItem()).toBe(true);
 
       act(() => {
         second.result.current.review.finish();
@@ -712,9 +775,8 @@ describe('useReceiptReview', () => {
 
       mockCurrentPantry.mockReturnValue(KITCHEN);
       rerender({});
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(resolve.fired).toEqual([
         { input: expect.objectContaining({ pantryId: 'p1' }) },
       ]);
@@ -729,9 +791,8 @@ describe('useReceiptReview', () => {
       }
       const resolve = resolved();
       const { result } = await setup({ resolve });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(resolve.fired[0]).toEqual({
         input: expect.objectContaining({ parsedBy: ReceiptParser.Server }),
@@ -746,9 +807,8 @@ describe('useReceiptReview', () => {
         }),
         resolveAgain: resolved(),
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('failed');
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'pending',
         'pending',
@@ -758,9 +818,8 @@ describe('useReceiptReview', () => {
         result.current.review.retryMatching();
       });
 
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'add',
         'guess',
@@ -770,9 +829,8 @@ describe('useReceiptReview', () => {
     it('adds the item it is sure of, and the one it guesses unless the user picks another', async () => {
       const { result } = await setup({ resolve: resolved() });
 
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
       const [milk, bananas] = result.current.review.rows;
       expect(milk?.choice).toEqual(MILK);
       expect(milk?.status).toBe('add');
@@ -843,9 +901,8 @@ describe('useReceiptReview', () => {
       });
       const { result } = await setup({ resolve });
 
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(
         result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
           itemId,
@@ -890,9 +947,8 @@ describe('useReceiptReview', () => {
       });
       const { result } = await setup({ resolve });
 
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(
         result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
           itemId,
@@ -903,9 +959,8 @@ describe('useReceiptReview', () => {
 
     it('keeps a line the user left out, out, whatever the API proposes', async () => {
       const { result } = await setup({ resolve: resolved() });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
 
       await act(async () => {
         result.current.review.chooseLine(1, null);
@@ -928,9 +983,8 @@ describe('useReceiptReview', () => {
       const { result, checkIn, addChosen } = await setup({
         resolve: resolved(),
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
       // The guess was wrong: the user picks the second candidate.
       await act(async () => {
         result.current.review.chooseLine(3, {
@@ -998,9 +1052,8 @@ describe('useReceiptReview', () => {
         }),
         resolveAgain,
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(result.current.review.storeUnrecognized).toBe(true);
 
       await act(async () => {
@@ -1009,19 +1062,18 @@ describe('useReceiptReview', () => {
           name: 'Kroger #87',
         });
       });
-      await waitFor(() => expect(resolveAgain.fired).toHaveLength(1));
+      await drainTimers();
+      expect(resolveAgain.fired).toHaveLength(1);
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'add',
         'guess',
       ]);
 
-      await act(async () => resolveAgain.release());
-      await waitFor(() =>
-        expect(result.current.review.rows.map(row => row.status)).toEqual([
-          'add',
-          'add',
-        ]),
-      );
+      await drained(() => resolveAgain.release());
+      expect(result.current.review.rows.map(row => row.status)).toEqual([
+        'add',
+        'add',
+      ]);
       // The pick stays open to change.
       expect(result.current.review.storeUnrecognized).toBe(true);
       expect(result.current.review.store).toEqual({
@@ -1046,7 +1098,7 @@ describe('useReceiptReview', () => {
       });
       const cache = makeCache();
       // A store the user picks was read with its address by the picker.
-      cache.writeQuery({
+      seedQuery(cache, {
         query: SearchStoresDocument,
         variables: { search: 'kroger', limit: 20 },
         data: {
@@ -1063,6 +1115,7 @@ describe('useReceiptReview', () => {
                   name: 'Kroger #87',
                   address: '200 Side St',
                   storeNumber: '87',
+                  chain: null,
                 },
               },
             ],
@@ -1070,12 +1123,11 @@ describe('useReceiptReview', () => {
         },
       });
       const { result } = await setup({ resolve, cache });
-      await waitFor(() =>
-        expect(result.current.review.storeLocation).toEqual({
-          address: '100 Main St',
-          storeNumber: '412',
-        }),
-      );
+      await drainTimers();
+      expect(result.current.review.storeLocation).toEqual({
+        address: '100 Main St',
+        storeNumber: '412',
+      });
 
       await act(async () => {
         result.current.review.chooseStore({
@@ -1093,12 +1145,11 @@ describe('useReceiptReview', () => {
     it('shows the store the header names, and adds at the one the user picks', async () => {
       const resolve = resolved();
       const { result, checkIn, addChosen } = await setup({ resolve });
-      await waitFor(() =>
-        expect(result.current.review.store).toEqual({
-          id: 'store-27',
-          name: 'Kroger #412',
-        }),
-      );
+      await drainTimers();
+      expect(result.current.review.store).toEqual({
+        id: 'store-27',
+        name: 'Kroger #412',
+      });
 
       await act(async () => {
         result.current.review.chooseStore({
@@ -1112,14 +1163,12 @@ describe('useReceiptReview', () => {
         name: 'Kroger #87',
       });
       // The matcher is asked again, at the store the user named.
-      await waitFor(() =>
-        expect(resolve.fired).toContainEqual({
-          input: expect.objectContaining({ storeId: 'store-99' }),
-        }),
-      );
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.status).toBe('add'),
-      );
+      await drainTimers();
+      expect(resolve.fired).toContainEqual({
+        input: expect.objectContaining({ storeId: 'store-99' }),
+      });
+      await drainTimers();
+      expect(result.current.review.rows[0]?.status).toBe('add');
 
       await addChosen();
 
@@ -1154,9 +1203,8 @@ describe('useReceiptReview', () => {
         resolve,
         storeCreate,
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       expect(resolve.fired[0]).toEqual({
         input: expect.objectContaining({
           merchant: {
@@ -1202,14 +1250,11 @@ describe('useReceiptReview', () => {
         resolve,
         storeCreate,
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
       const confirm = async () => {
         let outcome: unknown;
-        await act(async () => {
-          outcome = await result.current.review.addChosen();
-        });
+        outcome = await drained(() => result.current.review.addChosen());
         return outcome;
       };
 
@@ -1220,10 +1265,10 @@ describe('useReceiptReview', () => {
       expect(checkIn.fired).toHaveLength(0);
       expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
       // A second tap sends nothing, and adds no second store.
-      expect(await confirm()).toEqual({ sent: 0, held: 0 });
+      expect(await confirm()).toMatchObject({ sent: 0, held: 0 });
 
-      await act(async () => storeCreate.release());
-      await waitFor(() => expect(checkIn.fired).toHaveLength(1));
+      await drained(() => storeCreate.release());
+      expect(checkIn.fired).toHaveLength(1);
       expect(storeCreate.fired).toHaveLength(1);
     });
   });
@@ -1235,12 +1280,11 @@ describe('useReceiptReview', () => {
     });
     const { result } = await setup({ resolve });
 
-    await waitFor(() =>
-      expect(result.current.review.storeLocation).toEqual({
-        address: '7516 Meade Street',
-        storeNumber: null,
-      }),
-    );
+    await drainTimers();
+    expect(result.current.review.storeLocation).toEqual({
+      address: '7516 Meade Street',
+      storeNumber: null,
+    });
   });
 
   describe('offering a store the receipt would locate', () => {
@@ -1286,9 +1330,8 @@ describe('useReceiptReview', () => {
       const { result, checkIn, addChosen } = await setup({
         resolve: offline(),
       });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('failed');
 
       expect(result.current.review.storeOffer).toEqual(OFFER);
       // Offered, never placed.
@@ -1309,13 +1352,15 @@ describe('useReceiptReview', () => {
           receiptParseId: 'parse-1',
         }),
       ]);
+      // The server's parse locates it: the phone's reading stays home.
+      expect(fired(checkIn)[0]).not.toHaveProperty('merchant');
     });
 
     it("offers the active list's shop when the cache knows it has no address", async () => {
       readByServer();
       useStore.getState().setSelectedShoppingListId('list-1');
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStores_ListFragmentDoc,
         fragmentName: 'useHeldStores_list',
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
@@ -1330,23 +1375,21 @@ describe('useReceiptReview', () => {
         },
       });
       const known = await setup({ resolve: offline(), cache });
-      await waitFor(() =>
-        expect(known.result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(known.result.current.review.matchState).toBe('failed');
       // Its name alone: an address the cache never held is not none.
       expect(known.result.current.review.storeOffer).toBeNull();
       known.unmount();
 
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseHeldStores_StoreFragmentDoc,
         fragmentName: 'useHeldStores_store',
         id: cache.identify({ __typename: 'Store', id: 'store-label' }),
         data: { __typename: 'Store', ...KROGER_LABEL },
       });
       const { result } = await setup({ resolve: offline(), cache });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('failed'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('failed');
 
       expect(result.current.review.storeOffer).toEqual(OFFER);
     });
@@ -1354,9 +1397,8 @@ describe('useReceiptReview', () => {
     it("offers the API's unlocated store when the device holds none, and never places it", async () => {
       readByServer();
       const { result } = await setup({ resolve: unplaced(OFFER) });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(result.current.review.storeOffer).toEqual(OFFER);
       expect(result.current.review.store).toBeNull();
@@ -1371,7 +1413,7 @@ describe('useReceiptReview', () => {
         printedStore: { name: 'Kroger', address: '412 Main St' },
       });
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseReceiptReview_StoreFragmentDoc,
         fragmentName: 'useReceiptReview_store',
         id: cache.identify({ __typename: 'Store', id: 'store-label' }),
@@ -1383,9 +1425,8 @@ describe('useReceiptReview', () => {
         },
       });
       const { result } = await setup({ resolve: unplaced(OFFER), cache });
-      await waitFor(() =>
-        expect(result.current.review.storeOffer).toEqual(OFFER),
-      );
+      await drainTimers();
+      expect(result.current.review.storeOffer).toEqual(OFFER);
       expect(result.current.review.storeLocation).toEqual({
         address: '412 Main St',
         storeNumber: null,
@@ -1402,15 +1443,42 @@ describe('useReceiptReview', () => {
       });
     });
 
-    it('offers none for a receipt read on the phone: nothing would locate it', async () => {
+    it('offers none for a receipt read on the phone that names no place', async () => {
       readByServer({ parsedBy: 'device' });
       useStore.getState().setCachedStores([KROGER_LABEL]);
       const { result } = await setup({ resolve: unplaced(OFFER) });
-      await waitFor(() =>
-        expect(result.current.review.matchState).toBe('done'),
-      );
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
 
       expect(result.current.review.storeOffer).toBeNull();
+    });
+
+    // The API takes the merchant the phone read as read, so a check-in at the
+    // household's own store places it at that address.
+    it('offers it for a receipt read on the phone that names its address, and sends what the phone read', async () => {
+      readByServer({
+        parsedBy: 'device',
+        printedStore: { name: 'Kroger', address: '412 Main St' },
+      });
+      const { result, checkIn, addChosen } = await setup({
+        resolve: unplaced(OFFER),
+      });
+      await drainTimers();
+      expect(result.current.review.storeOffer).toEqual(OFFER);
+
+      await act(async () => {
+        result.current.review.chooseStore(OFFER);
+        result.current.review.chooseLine(1, MILK);
+      });
+      await addChosen();
+
+      expect(fired(checkIn)).toEqual([
+        expect.objectContaining({
+          storeId: 'store-label',
+          merchant: { name: 'Kroger', address: '412 Main St' },
+        }),
+      ]);
+      expect(fired(checkIn)[0]).not.toHaveProperty('receiptParseId');
     });
   });
 
@@ -1421,15 +1489,14 @@ describe('useReceiptReview', () => {
         result.current.review.pickItem('cat-milk');
       });
 
-      await waitFor(() =>
-        expect(
-          result.current.review.listItemNameFor(1, {
-            itemId: 'cat-milk',
-            unitId: null,
-            unitText: '',
-          }),
-        ).toBe('Milk'),
-      );
+      await drainTimers();
+      expect(
+        result.current.review.listItemNameFor(1, {
+          itemId: 'cat-milk',
+          unitId: null,
+          unitText: '',
+        }),
+      ).toBe('Milk');
       expect(
         result.current.review.listItemNameFor(1, {
           itemId: 'cat-milk',
@@ -1456,18 +1523,17 @@ describe('useReceiptReview', () => {
           itemId: 'cat-bananas',
         });
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
       expect(result.current.review.rows[1]?.onList).toBe(false);
       // The milk's list line is taken, so no other line is offered it.
       expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk');
       expect(result.current.review.listItemNameFor(3, MILK)).toBeUndefined();
 
       let movedBefore: unknown;
-      await act(async () => {
+      await drained(async () => {
         await result.current.review.addChosen();
-        movedBefore = cache.extract()['ShoppingListItem:sli-milk'];
+        movedBefore = cache.extract(true)['ShoppingListItem:sli-milk'];
       });
       // Stamped moved on the device before the API answers.
       expect(movedBefore).toMatchObject({
@@ -1497,11 +1563,10 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, MILK);
       });
 
-      await waitFor(() => expect(result.current.review.listLoading).toBe(true));
-      await act(async () => list.release());
-      await waitFor(() =>
-        expect(result.current.review.listLoading).toBe(false),
-      );
+      await drainTimers();
+      expect(result.current.review.listLoading).toBe(true);
+      await drained(() => list.release());
+      expect(result.current.review.listLoading).toBe(false);
     });
 
     it('matches against the list the user still has when the selected one is gone', async () => {
@@ -1511,9 +1576,8 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, MILK);
       });
 
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
     });
 
     it('says when the list is longer than the review can see', async () => {
@@ -1531,10 +1595,8 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, MILK);
       });
 
-      await waitFor(
-        () => expect(result.current.review.listIncomplete).toBe(true),
-        { timeout: 5000 },
-      );
+      await drainTimers();
+      expect(result.current.review.listIncomplete).toBe(true);
       expect(result.current.review.listLoading).toBe(false);
     });
 
@@ -1572,14 +1634,13 @@ describe('useReceiptReview', () => {
           itemId: 'cat-bananas',
         });
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
 
       await addChosen();
 
       expect(pantryItemNames(cache)).toEqual(['Bananas']);
-      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
         purchaseInfo: { movedToPantryAt: null },
       });
       expect(result.current.review.rows.map(row => row.status)).toEqual([
@@ -1612,9 +1673,25 @@ describe('useReceiptReview', () => {
       const { cache, chooseOnListAndAdd } = await setup({ checkIn });
       await chooseOnListAndAdd(1, MILK);
 
-      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
         version: 7,
       });
+    });
+
+    it('counts a line kept out of the pantry as recorded, apart from the rest', async () => {
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        dataFor: checkInAnswer(),
+      });
+      const { result } = await setup({ checkIn });
+      await act(async () => {
+        result.current.review.chooseLine(1, { ...MILK, notStocked: true });
+      });
+      await drainTimers();
+      expect(result.current.review.recordedCount).toBe(1);
+
+      expect(
+        await drained(() => result.current.review.addChosen()),
+      ).toMatchObject({ sent: 1, recorded: 1, held: 0 });
     });
 
     it('ticks the list line of a line kept out of the pantry at once, and puts it back when refused', async () => {
@@ -1626,34 +1703,29 @@ describe('useReceiptReview', () => {
       await act(async () => {
         result.current.review.chooseLine(1, { ...MILK, notStocked: true });
       });
-      await waitFor(() =>
-        expect(result.current.review.rows[0]?.onList).toBe(true),
-      );
+      await drainTimers();
+      expect(result.current.review.rows[0]?.onList).toBe(true);
       const toBuy =
         'itemsConnection:{"filters":{"isPurchased":false,"itemIds":["cat-milk"]}}';
 
-      await act(async () => {
-        await result.current.review.addChosen();
-      });
+      await drained(() => result.current.review.addChosen());
 
       expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
         expect.not.objectContaining({ pantryItemId: expect.anything() }),
       ]);
       // Bought, and not stamped as moved to the pantry.
-      expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
         purchaseInfo: { isPurchased: true, movedToPantryAt: null },
       });
-      expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+      expect(cache.extract(true)['ShoppingList:list-1']).toMatchObject({
         [toBuy]: { totalCount: 0, edges: [] },
       });
 
-      await act(async () => checkIn.release());
-      await waitFor(() =>
-        expect(cache.extract()['ShoppingListItem:sli-milk']).toMatchObject({
-          purchaseInfo: { isPurchased: false },
-        }),
-      );
-      expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+      await drained(() => checkIn.release());
+      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
+        purchaseInfo: { isPurchased: false },
+      });
+      expect(cache.extract(true)['ShoppingList:list-1']).toMatchObject({
         [toBuy]: {
           totalCount: 1,
           edges: [{ node: { __ref: 'ShoppingListItem:sli-milk' } }],
@@ -1667,9 +1739,8 @@ describe('useReceiptReview', () => {
         result.current.review.chooseLine(1, { ...MILK, offList: true });
       });
       // Still offered, so the line can be put back on the list.
-      await waitFor(() =>
-        expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk'),
-      );
+      await drainTimers();
+      expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk');
       expect(result.current.review.rows[0]?.onList).toBe(false);
 
       await addChosen();
@@ -1679,6 +1750,159 @@ describe('useReceiptReview', () => {
       expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
         expect.not.objectContaining({ shoppingListItemId: expect.anything() }),
       ]);
+    });
+  });
+
+  // The check-in adds a receipt's new store on the server; the device shows it.
+  describe('a store new to the household', () => {
+    const resolved = () =>
+      recordMock(ResolveReceiptLinesDocument, { data: RESOLVED });
+
+    // The household's stores, already read; Kroger #412 among them or not.
+    const knowing = (storeIds: string[]) => {
+      const cache = makeCache();
+      writeUsualStores(
+        cache,
+        'home-1',
+        storeIds.map(id => ({
+          __typename: 'UsualStore',
+          id: `home-1:${id}`,
+          addedVia: UsualStoreSource.Receipt,
+          pinned: false,
+          compared: true,
+          lastUsedAt: '2026-10-20T12:00:00.000Z',
+          store: {
+            __typename: 'Store',
+            id,
+            name: id,
+            address: null,
+            chain: null,
+          },
+          chain: null,
+        })),
+      );
+      return cache;
+    };
+
+    const confirmed = async (
+      options: Parameters<typeof setup>[0],
+    ): Promise<{
+      learned: LearnedStore | null;
+      cache: ReturnType<typeof makeCache>;
+    }> => {
+      const cache = options?.cache ?? makeCache();
+      const { result, addChosen } = await setup({ ...options, cache });
+      await drainTimers();
+      expect(result.current.review.matchState).toBe('done');
+      const outcome = (await addChosen()) as {
+        learned: Promise<LearnedStore | null>;
+      };
+      let learned: LearnedStore | null = null;
+      learned = await drained(() => outcome.learned);
+      return { learned, cache };
+    };
+
+    it("learns the receipt's store, and shows it among the household's", async () => {
+      const { learned, cache } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-ge']),
+      });
+
+      expect(learned).toEqual({
+        name: 'Kroger #412',
+        undo: expect.any(Function),
+      });
+      expect(
+        readUsualStores(cache, 'home-1')?.find(
+          entry => entry.store?.id === 'store-27',
+        ),
+      ).toMatchObject({ addedVia: UsualStoreSource.Receipt });
+    });
+
+    it("undoes the learned store, and the receipt's items stay in the pantry", async () => {
+      const storeRemove = recordMock(RemoveUsualStoreDocument, {
+        data: {
+          removeUsualStore: {
+            __typename: 'RemoveUsualStorePayload',
+            usualStores: [{ id: 'home-1:store-ge' }],
+          },
+        },
+      });
+      const { learned, cache } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-ge']),
+        storeRemove,
+      });
+      const added = pantryItemNames(cache);
+      expect(added).toContain('Whole milk');
+
+      await drained(() => learned?.undo());
+
+      expect(storeRemove.fired.map(vars => inputOf(vars))).toEqual([
+        { homeId: 'home-1', target: { storeId: 'store-27' } },
+      ]);
+      expect(
+        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
+      ).toEqual(['store-ge']);
+      expect(pantryItemNames(cache)).toEqual(added);
+    });
+
+    it('learns nothing when the check-in is refused whole', async () => {
+      const { learned, cache } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-ge']),
+        checkIn: recordMock(CreateReceiptCheckInDocument, {
+          data: {
+            createReceiptCheckIn: {
+              __typename: 'ValidationError',
+              code: ErrorCode.ValidationFailed,
+              message: 'Refused',
+              field: 'storeId',
+            },
+          },
+        }),
+      });
+
+      expect(learned).toBeNull();
+      expect(
+        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
+      ).toEqual(['store-ge']);
+    });
+
+    it('learns nothing of a store the household already has', async () => {
+      const { learned } = await confirmed({
+        resolve: resolved(),
+        cache: knowing(['store-27']),
+      });
+
+      expect(learned).toBeNull();
+    });
+
+    // An Undo then could remove a store the household already had.
+    it("learns nothing while the household's stores were never read", async () => {
+      const { learned, cache } = await confirmed({ resolve: resolved() });
+
+      expect(learned).toBeNull();
+      expect(readUsualStores(cache, 'home-1')).toBeNull();
+    });
+
+    it('learns a store the confirm adds, under the id it minted', async () => {
+      const coOp = {
+        name: 'East End Food Co-Op',
+        address: '7516 Meade Street',
+      };
+      const storeCreate = creating(coOp);
+      const { learned, cache } = await confirmed({
+        resolve: proposing(coOp),
+        storeCreate,
+        cache: knowing(['store-ge']),
+      });
+
+      const minted = String(inputOf(storeCreate.fired[0] ?? {}).id);
+      expect(learned).toMatchObject({ name: 'East End Food Co-Op' });
+      expect(
+        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
+      ).toContain(minted);
     });
   });
 });

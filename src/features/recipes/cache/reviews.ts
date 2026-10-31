@@ -16,6 +16,7 @@ const recomputeAverageRating = (cache: ApolloCache, recipeId: string): void => {
   const counts = cache.readFragment({
     id: cacheId,
     fragment: Reviews_RatingCountsFragmentDoc,
+    optimistic: true,
   });
   if (!counts) return;
   const buckets = [
@@ -159,6 +160,7 @@ const getReviewRating = (
   const review = cache.readFragment({
     id: cache.identify({ __typename: 'RecipeReview', id: reviewId }),
     fragment: Reviews_ReviewRatingFragmentDoc,
+    optimistic: true,
   });
   return review?.rating ?? null;
 };

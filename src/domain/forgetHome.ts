@@ -20,7 +20,7 @@ export function forgetHome(cache: ApolloCache, homeId: string): string | null {
 
   // The eviction may not have reached the connection's read yet.
   const [next] = extractNodes(
-    cache.readQuery({ query: GetHomesDocument })?.homes,
+    cache.readQuery({ query: GetHomesDocument, optimistic: true })?.homes,
   ).filter(home => home.id !== homeId);
   const nextHomeId = next?.id ?? null;
   store.setSelectedHomeId(nextHomeId);

@@ -77,6 +77,12 @@ optional:
 - **Trailing space.** `scroll | form | none` pad by the bottom inset plus
   `layout.pageBottom`; a `footer` takes the inset instead. A `list` child reads
   the same value from `useScreenListInset()`.
+- **A form's footer rides the keyboard.** In `scroll="form"` the footer sits in
+  a `KeyboardStickyView` (dropping the home-indicator inset while open, with a
+  `ThemeEpochSentinel` for its themed descendants), and the scroll view's
+  `bottomOffset` is the footer's measured height, so a focused field clears it.
+  A primary action that must stay reachable while typing belongs in the
+  footer, as `OnBoardingWrapper`'s does.
 - **Back or close.** A pushed screen shows back; one presented from the bottom
   (modal or `slide_from_bottom` card) shows close in the same slot.
 - **Presets.** `SubScreen` is a pushed screen whose back returns to the previous

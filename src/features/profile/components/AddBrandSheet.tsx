@@ -90,7 +90,6 @@ export const AddBrandSheet: React.FC<AddBrandSheetProps> = ({
           onChangeText={autocomplete.handleSearchTermChange}
           debounceMs={250}
           autoCapitalize="words"
-          autoCorrect={false}
           returnKeyType="search"
           isLoading={!!autocomplete.isLoading}
           containerStyle={styles.spaced}

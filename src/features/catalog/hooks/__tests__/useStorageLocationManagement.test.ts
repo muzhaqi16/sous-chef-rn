@@ -22,9 +22,10 @@ globalThis.cancelIdleCallback = (handle: number): void => {
 };
 
 import { makeCache } from '#/apollo/cache';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import type { GetStorageLocationsQuery } from '#features/catalog/graphql/storageLocation.generated';
 import {
   GetStorageLocationsDocument,
@@ -119,13 +120,11 @@ function buildLocationNode(
  * describes a response neither operation can return.
  */
 function buildUpdatedLocationNode(overrides: Record<string, unknown> = {}) {
-  const node: Record<string, unknown> = {
+  return {
     ...buildLocationNode(overrides),
     parentLocationId: null,
     ...overrides,
   };
-  delete node.parentLocation;
-  return node;
 }
 
 function buildGetLocationsMock(
@@ -170,9 +169,9 @@ function buildGetLocationsMock(
   };
 }
 
-function buildUpdateLocationMock(): MockFor<
-  typeof UpdateStorageLocationDocument
-> {
+function buildUpdateLocationMock(
+  location: Record<string, unknown> = { id: 'loc-1', name: 'Updated Fridge' },
+): MockFor<typeof UpdateStorageLocationDocument> {
   return {
     request: {
       query: UpdateStorageLocationDocument,
@@ -182,10 +181,7 @@ function buildUpdateLocationMock(): MockFor<
       data: {
         updateStorageLocation: {
           __typename: 'UpdateStorageLocationPayload',
-          storageLocation: buildUpdatedLocationNode({
-            id: 'loc-1',
-            name: 'Updated Fridge',
-          }),
+          storageLocation: buildUpdatedLocationNode(location),
         },
       },
     },
@@ -245,6 +241,14 @@ function buildSetDefaultMock(): MockFor<
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useStorageLocationManagement', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -256,7 +260,8 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
     expect(result.current.locations[0]!.name).toBe('Fridge');
     expect(result.current.locations[1]!.name).toBe('Pantry');
   });
@@ -285,7 +290,8 @@ describe('useStorageLocationManagement', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.errorMessage).not.toBeNull());
+    await drainTimers();
+    expect(result.current.errorMessage).not.toBeNull();
   });
 
   it('returns loading state', async () => {
@@ -295,7 +301,8 @@ describe('useStorageLocationManagement', () => {
     );
 
     expect(result.current.initialLoading).toBe(true);
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
     expect(result.current.initialLoading).toBe(false);
   });
 
@@ -315,7 +322,8 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
     expect(result.current.tree).toHaveLength(2);
   });
 
@@ -327,22 +335,22 @@ describe('useStorageLocationManagement', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
     let updated!: Awaited<ReturnType<ManagementApi['updateLocation']>>;
-    await act(async () => {
-      updated = await result.current.updateLocation('loc-1', {
+    updated = await drained(() =>
+      result.current.updateLocation('loc-1', {
         name: 'Updated Fridge',
-      });
-    });
+      }),
+    );
 
     // The hook returns whether the edit stuck (server-confirmed OR queued);
     // the new name is asserted on the cache, which is what the screen reads.
     expect(updated).not.toBe(false);
-    await waitFor(() =>
-      expect(result.current.locations.find(l => l.id === 'loc-1')?.name).toBe(
-        'Updated Fridge',
-      ),
+    await drainTimers();
+    expect(result.current.locations.find(l => l.id === 'loc-1')?.name).toBe(
+      'Updated Fridge',
     );
   });
 
@@ -357,12 +365,11 @@ describe('useStorageLocationManagement', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
     let deleted!: Awaited<ReturnType<ManagementApi['deleteLocation']>>;
-    await act(async () => {
-      deleted = await result.current.deleteLocation('loc-1');
-    });
+    deleted = await drained(() => result.current.deleteLocation('loc-1'));
 
     expect(deleted).toBe(true);
   });
@@ -375,12 +382,13 @@ describe('useStorageLocationManagement', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
     let setDefault!: Awaited<ReturnType<ManagementApi['setDefaultLocation']>>;
-    await act(async () => {
-      setDefault = await result.current.setDefaultLocation('loc-2');
-    });
+    setDefault = await drained(() =>
+      result.current.setDefaultLocation('loc-2'),
+    );
 
     expect(setDefault).not.toBe(false);
   });
@@ -396,11 +404,10 @@ describe('useStorageLocationManagement', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.deleteLocation('loc-1');
-    });
+    await drained(() => result.current.deleteLocation('loc-1'));
 
     expect(mockToastSuccess).toHaveBeenCalledWith(
       'Storage location deleted successfully',
@@ -418,11 +425,10 @@ describe('useStorageLocationManagement', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.deleteLocation('loc-1');
-    });
+    await drained(() => result.current.deleteLocation('loc-1'));
 
     // The app's own words, never the server's. `message` is English by
     // construction (no `Accept-Language` is sent and the token carries no
@@ -445,10 +451,9 @@ describe('useStorageLocationManagement', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
-    await act(async () => {
-      await result.current.deleteLocation('loc-1');
-    });
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
+    await drained(() => result.current.deleteLocation('loc-1'));
 
     const [shown] = mockToastError.mock.calls[0] as [string];
     expect(shown).not.toBe('Location has items');
@@ -487,16 +492,17 @@ describe('useStorageLocationManagement', () => {
           operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()],
         },
       );
-      await waitFor(() => expect(result.current.locations).toHaveLength(2));
+      await drainTimers();
+      expect(result.current.locations).toHaveLength(2);
 
       offline();
 
       let outcome: unknown;
-      await act(async () => {
-        outcome = await result.current.updateLocation('loc-1', {
+      outcome = await drained(() =>
+        result.current.updateLocation('loc-1', {
           name: 'Updated Fridge',
-        });
-      });
+        }),
+      );
 
       // Refusing offline would return false without touching the network.
       expect(outcome).not.toBe(false);
@@ -512,14 +518,13 @@ describe('useStorageLocationManagement', () => {
           ],
         },
       );
-      await waitFor(() => expect(result.current.locations).toHaveLength(2));
+      await drainTimers();
+      expect(result.current.locations).toHaveLength(2);
 
       offline();
 
       let outcome: unknown;
-      await act(async () => {
-        outcome = await result.current.deleteLocation('loc-1');
-      });
+      outcome = await drained(() => result.current.deleteLocation('loc-1'));
 
       // Refusing offline would return false and toast "Not available offline".
       expect(outcome).toBe(true);
@@ -531,19 +536,15 @@ describe('useStorageLocationManagement', () => {
         () => useStorageLocationManagement('home-1'),
         { operationMocks: [buildGetLocationsMock(), buildSetDefaultMock()] },
       );
-      await waitFor(() => expect(result.current.locations).toHaveLength(2));
+      await drainTimers();
+      expect(result.current.locations).toHaveLength(2);
 
       offline();
 
-      await act(async () => {
-        await result.current.setDefaultLocation('loc-2');
-      });
-
-      await waitFor(() =>
-        expect(
-          result.current.locations.find(l => l.id === 'loc-2')?.isDefault,
-        ).toBe(true),
-      );
+      await drained(() => result.current.setDefaultLocation('loc-2'));
+      expect(
+        result.current.locations.find(l => l.id === 'loc-2')?.isDefault,
+      ).toBe(true);
     });
   });
 
@@ -553,12 +554,27 @@ describe('useStorageLocationManagement', () => {
       { operationMocks: [buildGetLocationsMock()] },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
     expect(typeof result.current.refetch).toBe('function');
   });
 });
 
 describe('updateLocation writes what consumers read', () => {
+  // The answer restates the row with its new parent.
+  const reparented = () =>
+    buildUpdateLocationMock({
+      id: 'loc-2',
+      name: 'Pantry',
+      sortOrder: 2,
+      parentLocationId: 'loc-1',
+      parentLocation: {
+        __typename: 'StorageLocation',
+        id: 'loc-1',
+        name: 'Fridge',
+      },
+    });
+
   /**
    * The edit sheet is seeded with the FLAT `parentLocationId` (read off
    * `location.parentLocation?.id`), but `GetStorageLocations` selects only the
@@ -570,23 +586,20 @@ describe('updateLocation writes what consumers read', () => {
   it('re-parents the node, not just the flat id', async () => {
     const { result } = renderHookWithApollo(
       () => useStorageLocationManagement('home-1'),
-      { operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()] },
+      { operationMocks: [buildGetLocationsMock(), reparented()] },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.updateLocation('loc-2', {
+    await drained(() =>
+      result.current.updateLocation('loc-2', {
         parentLocationId: 'loc-1',
-      });
-    });
-
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
-          ?.id,
-      ).toBe('loc-1'),
+      }),
     );
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.parentLocation?.id,
+    ).toBe('loc-1');
 
     // And the tree the screen renders must actually move it.
     const roots = result.current.tree;
@@ -606,24 +619,21 @@ describe('updateLocation writes what consumers read', () => {
       () => useStorageLocationManagement('home-1'),
       {
         cache,
-        operationMocks: [buildGetLocationsMock(), buildUpdateLocationMock()],
+        operationMocks: [buildGetLocationsMock(), reparented()],
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.updateLocation('loc-2', {
+    await drained(() =>
+      result.current.updateLocation('loc-2', {
         parentLocationId: 'loc-1',
-      });
-    });
-
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
-          ?.id,
-      ).toBe('loc-1'),
+      }),
     );
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.parentLocation?.id,
+    ).toBe('loc-1');
 
     // The parent is an entity in its own right. Writing a COPY of its fields
     // onto the child forks it: renaming the parent updates one row and leaves
@@ -639,12 +649,11 @@ describe('updateLocation writes what consumers read', () => {
       });
     });
 
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
-          ?.name,
-      ).toBe('Cellar'),
-    );
+    await drainTimers();
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+        ?.name,
+    ).toBe('Cellar');
   });
 
   it('clears the previous default when the edit sets one', async () => {
@@ -673,21 +682,19 @@ describe('updateLocation writes what consumers read', () => {
       { operationMocks: [buildGetLocationsMock(), updatedLoc2] },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
     // loc-1 is the seeded default.
     expect(
       result.current.locations.find(l => l.id === 'loc-1')?.isDefault,
     ).toBe(true);
 
-    await act(async () => {
-      await result.current.updateLocation('loc-2', { isDefault: true });
-    });
-
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.isDefault,
-      ).toBe(true),
+    await drained(() =>
+      result.current.updateLocation('loc-2', { isDefault: true }),
     );
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.isDefault,
+    ).toBe(true);
     // Default is exclusive. Two rows badged Default is the visible symptom.
     expect(
       result.current.locations.find(l => l.id === 'loc-1')?.isDefault,
@@ -713,21 +720,17 @@ describe('updateLocation writes what consumers read', () => {
       { operationMocks: [buildGetLocationsMock(), refusal] },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
-    await act(async () => {
-      await result.current.updateLocation('loc-2', {
+    await drained(() =>
+      result.current.updateLocation('loc-2', {
         parentLocationId: 'loc-1',
-      });
-    });
-
-    // The pre-edit value was absent from the entity's own keys, so a snapshot
-    // filtered by `key in current` could not restore it.
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation,
-      ).toBeNull(),
+      }),
     );
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.parentLocation,
+    ).toBeNull();
   });
 
   it('restores a live parent link when the server refuses', async () => {
@@ -749,44 +752,35 @@ describe('updateLocation writes what consumers read', () => {
       () => useStorageLocationManagement('home-1'),
       {
         cache,
-        operationMocks: [
-          buildGetLocationsMock(),
-          buildUpdateLocationMock(),
-          refusal,
-        ],
+        operationMocks: [buildGetLocationsMock(), reparented(), refusal],
       },
     );
 
-    await waitFor(() => expect(result.current.locations).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.locations).toHaveLength(2);
 
     // Give loc-2 a parent, the way the accepted path does.
-    await act(async () => {
-      await result.current.updateLocation('loc-2', {
+    await drained(() =>
+      result.current.updateLocation('loc-2', {
         parentLocationId: 'loc-1',
-      });
-    });
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
-          ?.id,
-      ).toBe('loc-1'),
+      }),
     );
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.parentLocation?.id,
+    ).toBe('loc-1');
 
     // Now detach it and have the server say no. The snapshot the revert restores
     // is taken from a query READ, whose `parentLocation` is denormalized — so
     // restoring it verbatim re-introduces the copy the write path exists to
     // avoid, and only on the refusal path, where nothing looks at it again.
-    await act(async () => {
-      await result.current.updateLocation('loc-2', {
+    await drained(() =>
+      result.current.updateLocation('loc-2', {
         parentLocationId: null,
-      });
-    });
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
-          ?.id,
-      ).toBe('loc-1'),
+      }),
     );
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.parentLocation?.id,
+    ).toBe('loc-1');
 
     act(() => {
       cache.modify({
@@ -795,11 +789,10 @@ describe('updateLocation writes what consumers read', () => {
       });
     });
 
-    await waitFor(() =>
-      expect(
-        result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
-          ?.name,
-      ).toBe('Cellar'),
-    );
+    await drainTimers();
+    expect(
+      result.current.locations.find(l => l.id === 'loc-2')?.parentLocation
+        ?.name,
+    ).toBe('Cellar');
   });
 });

@@ -9,6 +9,7 @@ import {
   catalogFetchedAt,
   catalogFetchKey,
 } from '#features/recipes/store/catalogFetchTimes';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const page = (
   catalogAvailable: boolean,
@@ -50,7 +51,7 @@ const KEY = catalogFetchKey('randomCatalogRecipes', VARIABLES);
 describe('catalog page policy', () => {
   it('keeps a complete page over one answered without the catalog', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
       data: page(true, 'stew', 'curry'),
@@ -58,7 +59,7 @@ describe('catalog page policy', () => {
     const held = read(cache, VARIABLES);
     const recordedAt = catalogFetchedAt(KEY);
 
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
       data: page(false),
@@ -73,7 +74,7 @@ describe('catalog page policy', () => {
   it('holds a degraded page when nothing complete was held', () => {
     const cache = makeCache();
     const variables = { ...VARIABLES, first: 10 };
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables,
       data: page(false),
@@ -90,13 +91,13 @@ describe('catalog page policy', () => {
 
   it('replaces a page with the next complete one and records when it came', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
       data: page(true, 'stew'),
     });
     const before = Date.now();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
       data: page(true, 'curry'),
@@ -113,12 +114,12 @@ describe('catalog page policy', () => {
   it('keeps a page per set of arguments', () => {
     const cache = makeCache();
     const other = { ...VARIABLES, first: 5 };
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
       data: page(true, 'stew'),
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: other,
       data: page(false),

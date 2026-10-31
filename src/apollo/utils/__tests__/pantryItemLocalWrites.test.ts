@@ -11,14 +11,12 @@
  */
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
-import { writeLocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
-import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import {
   addPantryItemLocally,
   removePantryItemLocally,
-  revertOptimisticPantryItem,
   type PantryItemRef,
 } from '#features/pantry/cache/items';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const PANTRY = gql`
   query SeedPantry($id: ID!) {
@@ -47,7 +45,7 @@ const PANTRY = gql`
 
 function seed() {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: PANTRY,
     variables: { id: 'p-1' },
     data: {
@@ -85,7 +83,7 @@ function seed() {
 const row = (id: string): PantryItemRef => ({ __typename: 'PantryItem', id });
 
 const writeRow = (cache: ReturnType<typeof makeCache>, id: string) =>
-  cache.writeFragment({
+  seedFragment(cache, {
     id: `PantryItem:${id}`,
     fragment: gql`
       fragment SeedRow on PantryItem {
@@ -163,75 +161,6 @@ describe('removePantryItemLocally', () => {
     writeRow(cache, 'pi-3');
     addPantryItemLocally(cache, 'p-1', row('pi-3'));
     removePantryItemLocally(cache, 'p-1', 'pi-3');
-
-    expect(state(cache)).toEqual({ totalItems: 2, rows: 2 });
-  });
-});
-
-describe('revertOptimisticPantryItem', () => {
-  const entityExists = (cache: ReturnType<typeof makeCache>, id: string) =>
-    Object.prototype.hasOwnProperty.call(cache.extract(), `PantryItem:${id}`);
-
-  it('reverses both counters a refused optimistic add moved', () => {
-    const cache = seed();
-    writeRow(cache, 'pi-3');
-    addPantryItemLocally(cache, 'p-1', row('pi-3'));
-    expect(state(cache)).toEqual({ totalItems: 3, rows: 3 });
-
-    // What every add surface does with the server's DuplicatePantryItemError.
-    revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
-
-    expect(state(cache)).toEqual({ totalItems: 2, rows: 2 });
-  });
-
-  it('evicts the entity so no detail read can resolve it', () => {
-    const cache = seed();
-    writeRow(cache, 'pi-3');
-    addPantryItemLocally(cache, 'p-1', row('pi-3'));
-    expect(entityExists(cache, 'pi-3')).toBe(true);
-
-    revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
-
-    expect(entityExists(cache, 'pi-3')).toBe(false);
-  });
-
-  it('leaves nothing the create wrote behind', () => {
-    // The create writes beside the row: a stand-in `Item` and a RETAINED
-    // `ROOT_QUERY` connection field. Neither is reclaimed by `cache.gc()`, and
-    // both are persisted — so a revert that drops only the row leaves one pair
-    // behind per refused create, forever.
-    const cache = seed();
-    const before = JSON.stringify(cache.extract());
-
-    writeLocalPantryItem(cache, 'pi-3', {
-      pantryId: 'p-1',
-      itemName: 'Anchovies',
-      acquisitionMethod: AcquisitionMethod.ShoppingList,
-      quantity: 1,
-    });
-    addPantryItemLocally(cache, 'p-1', row('pi-3'));
-
-    revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
-    cache.gc();
-
-    expect(JSON.stringify(cache.extract())).toBe(before);
-  });
-
-  it('is idempotent — the force-add retry withdraws the same id twice', () => {
-    const cache = seed();
-    writeRow(cache, 'pi-3');
-    addPantryItemLocally(cache, 'p-1', row('pi-3'));
-
-    revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
-    revertOptimisticPantryItem(cache, 'p-1', 'pi-3');
-
-    expect(state(cache)).toEqual({ totalItems: 2, rows: 2 });
-  });
-
-  it('leaves the counters alone for a row that was never published', () => {
-    const cache = seed();
-
-    revertOptimisticPantryItem(cache, 'p-1', 'pi-absent');
 
     expect(state(cache)).toEqual({ totalItems: 2, rows: 2 });
   });

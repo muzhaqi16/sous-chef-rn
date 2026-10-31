@@ -9,8 +9,8 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { ProgressBar } from '#components/atoms/ProgressBar';
 import { useRoute } from '@react-navigation/native';
 import {
-  ONBOARDING_STEPS,
-  onboardingStepIndex,
+  onboardingProgress,
+  useOnboardingStepContext,
 } from '#features/onboarding/screens/useOnboardingNavigation';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
@@ -20,6 +20,8 @@ interface OnboardingWrapperProps {
   subtitle?: string;
   onBack?: () => void;
   onSkip?: () => void;
+  /** The step's main button: in the footer, so it stays above the keyboard. */
+  primaryAction?: ReactNode;
   testID?: string;
 }
 
@@ -29,6 +31,7 @@ export const OnBoardingWrapper = ({
   subtitle,
   onBack,
   onSkip,
+  primaryAction,
   testID,
 }: OnboardingWrapperProps) => {
   const { t } = useTranslation();
@@ -36,11 +39,13 @@ export const OnBoardingWrapper = ({
   // screen stating its own position is a second definition, and it is the one
   // that goes stale when a step is added or removed.
   const route = useRoute();
-  const stepIndex = onboardingStepIndex(route.name);
-  const step = stepIndex >= 0 ? stepIndex + 1 : null;
-  const totalSteps = ONBOARDING_STEPS.length;
+  const progress = onboardingProgress(route.name, useOnboardingStepContext());
+  const progressLabel = progress
+    ? t('onboarding.progress', { step: progress.step, total: progress.total })
+    : null;
 
-  const hasFooter = !!onSkip || step != null;
+  const hasNavigation = !!onSkip || progress != null;
+  const hasFooter = !!primaryAction || hasNavigation;
 
   return (
     <Screen
@@ -53,30 +58,44 @@ export const OnBoardingWrapper = ({
       }
       footer={
         hasFooter ? (
-          <View style={styles.bottomNavigation}>
-            {!!onSkip && (
-              <AppPressable
-                onPress={onSkip}
-                style={styles.skipButton}
-                testID={
-                  testID ? onboardingTestIDs.skipButton(testID) : undefined
-                }
-              >
-                <Text role="bodyStrong" style={styles.skipText}>
-                  {t('labels.skip')}
-                </Text>
-              </AppPressable>
-            )}
-            {step != null && (
-              <ProgressBar
-                value={step / totalSteps}
-                style={styles.progressBar}
-                accessibilityLabel={t('onboarding.progress', {
-                  step,
-                  total: totalSteps,
-                })}
-              />
-            )}
+          <View style={styles.footer} testID={onboardingTestIDs.footer}>
+            {primaryAction}
+            {hasNavigation ? (
+              <View style={styles.bottomNavigation}>
+                {progress && progressLabel ? (
+                  <>
+                    {/* The bar carries the same words for a screen reader. */}
+                    <Text
+                      role="caption"
+                      tone="secondary"
+                      importantForAccessibility="no-hide-descendants"
+                      accessibilityElementsHidden
+                      testID={onboardingTestIDs.stepNumber}
+                    >
+                      {progressLabel}
+                    </Text>
+                    <ProgressBar
+                      value={progress.step / progress.total}
+                      style={styles.progressBar}
+                      accessibilityLabel={progressLabel}
+                    />
+                  </>
+                ) : null}
+                {!!onSkip && (
+                  <AppPressable
+                    onPress={onSkip}
+                    style={styles.skipButton}
+                    testID={
+                      testID ? onboardingTestIDs.skipButton(testID) : undefined
+                    }
+                  >
+                    <Text role="bodyStrong" style={styles.skipText}>
+                      {t('labels.skip')}
+                    </Text>
+                  </AppPressable>
+                )}
+              </View>
+            ) : null}
           </View>
         ) : undefined
       }
@@ -102,6 +121,9 @@ const styles = StyleSheet.create(theme => ({
   progressBar: {
     flex: 1,
   },
+  footer: {
+    gap: theme.spacing.md,
+  },
   bottomNavigation: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -113,9 +135,10 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.xl,
     textAlign: 'center',
   },
+  // Top-aligned, so a step's choices sit under its question and stay put
+  // when a choice reveals more; a child that wants the centre takes `flex: 1`.
   content: {
     flexGrow: 1,
-    justifyContent: 'space-around',
     paddingTop: theme.spacing.md,
   },
 }));

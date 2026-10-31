@@ -21,6 +21,7 @@ import {
   readHeldStackUnit,
   readStackUnit,
 } from '../pantryCacheReaders';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const PANTRY = gql`
   query SeedPantry(
@@ -90,7 +91,7 @@ const edge = (
 
 function seedWith(edges: ReturnType<typeof edge>[], pantryId = 'p-1') {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: PANTRY,
     variables: { ...CLIENT_MODE_VARIABLES, id: pantryId },
     data: {
@@ -212,7 +213,7 @@ describe('findCachedPantryItemDuplicate', () => {
 
     it('answers the same from the store scan in server mode', () => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: PANTRY,
         variables: {
           itemsFirst: 100,
@@ -312,7 +313,7 @@ describe('server mode, where the field is keyed on the live filter and sort', ()
 
   const seedServerMode = (pantryId = 'p-1') => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PANTRY,
       variables: { ...SERVER_MODE_VARIABLES, id: pantryId },
       data: {
@@ -420,7 +421,7 @@ describe('the unit a stack is held in', () => {
     units: Record<string, UnitType>,
   ) => {
     for (const [id, type] of Object.entries(units)) {
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id }),
         fragment: gql`
           fragment SeedUnitType on Unit {

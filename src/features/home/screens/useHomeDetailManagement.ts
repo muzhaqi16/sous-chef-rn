@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
 import { useDataState } from '#hooks/data/useDataState';
 import { useFragment, useQuery } from '@apollo/client/react';
@@ -7,37 +6,10 @@ import { useHomeMembership } from '#features/home/hooks/useHomeMembership';
 import type { MembershipPermissionKey } from '#features/home/types';
 import { HomeDetailScreen_HomeFragmentDoc } from '#features/home/screens/HomeDetailScreen.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
-import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import { t, type TranslationKey } from '#/i18n';
+import type { MembershipRole } from '#/graphql/generated/schemaTypes';
+import { t } from '#/i18n';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { cleanName } from '#/utils/validation/common';
-
-export interface RolePickerState {
-  visible: boolean;
-  membershipId: string;
-  currentRole: MembershipRole | null;
-  memberName: string;
-}
-
-/**
- * Key paths, not labels — this array is module-level, so calling t() here would
- * bake in whatever language was active at import time.
- */
-export const ROLE_OPTIONS: {
-  labelKey: TranslationKey;
-  value: MembershipRole;
-}[] = [
-  { labelKey: 'labels.admin', value: MembershipRole.Admin },
-  { labelKey: 'labels.member', value: MembershipRole.Member },
-  { labelKey: 'labels.guest', value: MembershipRole.Guest },
-];
-
-const INITIAL_ROLE_PICKER_STATE: RolePickerState = {
-  visible: false,
-  membershipId: '',
-  currentRole: null,
-  memberName: '',
-};
 
 /**
  * Custom hook for HomeDetailScreen business logic
@@ -101,34 +73,8 @@ export function useHomeDetailManagement(homeId: string) {
     await updateHomeFields({ name }, home, t('errors.updateHomeNameFailed'));
   };
 
-  // Role picker state (drives ModalPicker in the screen)
-  const [rolePickerState, setRolePickerState] = useState<RolePickerState>(
-    INITIAL_ROLE_PICKER_STATE,
-  );
-
-  const openRolePicker = (
-    membershipId: string,
-    currentRole: MembershipRole,
-    memberName: string,
-  ) => {
-    setRolePickerState({
-      visible: true,
-      membershipId,
-      currentRole,
-      memberName,
-    });
-  };
-
-  const closeRolePicker = () => {
-    setRolePickerState(INITIAL_ROLE_PICKER_STATE);
-  };
-
-  const handleRoleSelect = async (value: MembershipRole) => {
-    const { membershipId, currentRole } = rolePickerState;
-    closeRolePicker();
-    if (value === currentRole) return;
-    await updateMembership(membershipId, { role: value });
-  };
+  const changeRole = (membershipId: string, role: MembershipRole) =>
+    updateMembership(membershipId, { role });
 
   // Toggle a single membership permission override. updateMembership returns the
   // updated member (HomeMemberCard_member), so Apollo normalizes it and the
@@ -164,14 +110,9 @@ export function useHomeDetailManagement(homeId: string) {
     leaving,
     refetch,
 
-    // Role picker
-    rolePickerState,
-    handleRoleSelect,
-    closeRolePicker,
-
     // Actions
     saveName,
-    changeRole: openRolePicker,
+    changeRole,
     removeMember,
     revokeInvite,
     leaveHome,

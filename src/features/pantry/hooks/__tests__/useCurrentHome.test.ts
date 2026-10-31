@@ -5,6 +5,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   GetHomesDocument,
@@ -31,7 +32,7 @@ function renderWithCachedHomes() {
   const completed = completeMockedResponse(homesAnswer).result as (
     vars: Record<string, never>,
   ) => { data: Unmasked<GetHomesQuery> };
-  cache.writeQuery({ query: GetHomesDocument, data: completed({}).data });
+  seedQuery(cache, { query: GetHomesDocument, data: completed({}).data });
   const homes = recordMock(GetHomesDocument, homesAnswer.result);
   const rendered = renderHookWithApollo(() => useCurrentHome(), {
     cache,

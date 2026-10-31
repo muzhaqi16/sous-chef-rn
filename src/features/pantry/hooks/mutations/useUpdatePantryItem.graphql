@@ -1,7 +1,5 @@
-# Narrow fragment for useUpdatePantryItem's optimistic-response shape.
-# Mirrors what the UpdatePantryItem mutation selects on `pantryItem` — keep
-# them in sync. The hook reads every one of these fields from cache to spread
-# into the optimistic response (via enhanceWithVersion).
+# What UpdatePantryItem answers on `pantryItem`, and what the hook reads the
+# row's version from.
 fragment useUpdatePantryItem_pantryItem on PantryItem {
   id
   pantryId
@@ -39,6 +37,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
   storageNotes
   tags
   item {
+    version
     id
     imageUrl
     images {
@@ -73,6 +72,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     type
   }
   brand {
+    version
     id
     name
   }

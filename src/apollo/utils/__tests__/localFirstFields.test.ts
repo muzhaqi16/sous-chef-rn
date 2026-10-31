@@ -1,13 +1,15 @@
-import { InMemoryCache, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
 import { snapshotFields, writeEntityFields } from '../localFirstFields';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 
 // Unique per seed shape: graphql-tag warns when one name is reused for
 // different content, which is the very thing the duplicate-name test below
 // asserts about the code under test.
 let seedCounter = 0;
 const seed = (data: Record<string, unknown>, fields: string) => {
-  const cache = new InMemoryCache();
-  cache.writeFragment({
+  const cache = makeCache();
+  seedFragment(cache, {
     id: `${data.__typename as string}:${data.id as string}`,
     fragment: gql`fragment Seed${(seedCounter += 1)} on ${
       data.__typename as string
@@ -56,7 +58,7 @@ describe('writeEntityFields', () => {
       { __typename: 'StorageLocation', id: 'loc-2', name: 'Shelf' },
       'id name',
     );
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'StorageLocation:loc-2',
       fragment: gql`
         fragment P on StorageLocation {
@@ -138,7 +140,7 @@ describe('writeEntityFields', () => {
   });
 
   it('is a no-op for an unidentifiable entity rather than writing ROOT_QUERY', () => {
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     writeEntityFields(cache, undefined, { name: 'x' });
     expect(cache.extract()).toEqual({});
   });

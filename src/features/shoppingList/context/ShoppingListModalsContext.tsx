@@ -15,7 +15,10 @@ import {
 import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPantryModal';
 import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisleModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
-import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
+import {
+  useListAsksPrice,
+  useListTracksPrices,
+} from '#features/shoppingList/hooks/useListAsksPrice';
 import { useListCurrency } from '#features/shoppingList/hooks/useListCurrency';
 
 /**
@@ -83,6 +86,8 @@ export function ShoppingListModalsProvider({
   });
 
   const asksPrice = useListAsksPrice(currentListId);
+  // Long-press takes a price with prices off, so prices can be gathered.
+  const tracksPrices = useListTracksPrices(currentListId);
   const listCurrency = useListCurrency(currentListId);
   const purchaseAmount = usePurchaseAmountModal({
     items,
@@ -161,7 +166,7 @@ export function ShoppingListModalsProvider({
           tutorial?.notifyLongPressPriceSeen();
         }}
         loading={purchaseAmount.isLoading}
-        askPrice={asksPrice}
+        askPrice={tracksPrices}
       />
 
       <AislePickerSheet

@@ -1,15 +1,20 @@
 import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import {
   dropUnitSystemAnswers,
-  reconcileSettingsReplay,
+  settingsFields,
   refreshDeviceUnitSystem,
 } from '#/apollo/utils/unitSystemAnswers';
-import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import {
   GetUserSettingsDocument,
+  UpdateUserPreferencesDocument,
   type GetUserSettingsQuery,
 } from '#operations/auth/user.generated';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
@@ -35,7 +40,7 @@ describe('dropUnitSystemAnswers', () => {
   });
 });
 
-describe('reconcileSettingsReplay', () => {
+describe('settingsFields', () => {
   const replay = (input: Record<string, unknown>) => {
     const cache = makeCache();
     cache.restore({
@@ -44,11 +49,21 @@ describe('reconcileSettingsReplay', () => {
         'consumptionUnitsForPantryItem({"pantryItemId":"p1"})': [],
       },
     });
-    reconcileSettingsReplay(cache, { input }, null);
+    settingsFields.commit?.(
+      cache,
+      {
+        id: 'write-1',
+        operationName: operationNameOf(UpdateUserPreferencesDocument),
+        document: UpdateUserPreferencesDocument,
+        variables: { input },
+        inputs: { fields: {} },
+      },
+      null,
+    );
     return rootFields(cache);
   };
 
-  it('drops the pickers when the replayed write set the unit system', () => {
+  it('drops the pickers when the answered write set the unit system', () => {
     expect(replay({ regional: { preferredUnitSystem: 'IMPERIAL' } })).toEqual([
       '__typename',
     ]);
@@ -108,7 +123,7 @@ describe('refreshDeviceUnitSystem', () => {
           }),
       ),
     });
-    client.cache.writeQuery({
+    seedQuery(client.cache, {
       query: GetUserSettingsDocument,
       data: settingsAnswer(UnitSystem.Imperial),
     });

@@ -30,6 +30,7 @@ query GetShoppingListDetails($id: ID!) {
     description
     tags
     basedOnTemplate {
+      version
       id
       name
     }
@@ -37,13 +38,12 @@ query GetShoppingListDetails($id: ID!) {
     reminderDate
     budgetAmount
     totalCost
-    estimatedTotal
-    # The lines `estimatedTotal` leaves out, stated beside it.
-    unpricedItems
     currency
     priceTracking
     ...useListAsksPrice_list
     ...useListCurrency_list
+    ...useListCostToGo_list
+    ...usePricePrompt_list
     # The store this trip is shopped at: a ticked line's price is recorded there.
     targetStore {
       id
@@ -61,9 +61,11 @@ query GetShoppingListDetails($id: ID!) {
       universal
     }
     home {
+      version
       id
       name
       myMembership {
+        version
         id
         role
       }
@@ -96,6 +98,7 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
     edges {
       cursor
       node {
+        version
         id
         name
         isDefault
@@ -103,10 +106,12 @@ query GetShoppingListsLite($homeId: ID, $first: Int, $after: String) {
         completedItems
         homeId
         home {
+          version
           id
           name
           # The selector's delete mode: a home's OWNER and ADMINs delete its lists.
           myMembership {
+            version
             id
             role
           }
@@ -147,6 +152,7 @@ query GetShoppingListTemplates(
     edges {
       cursor
       node {
+        version
         id
         name
         templateName
@@ -183,6 +189,7 @@ query GetShoppingListItemsFiltered(
   $itemIds: [ID!]
 ) {
   shoppingList(id: $id) {
+    version
     id
     itemsConnection(
       first: $first
@@ -198,6 +205,7 @@ query GetShoppingListItemsFiltered(
           # Parent list — see ShoppingListItemDisplayFragment for why every
           # writer of this entity has to carry it.
           shoppingList {
+            version
             id
           }
           itemName
@@ -243,6 +251,7 @@ query GetShoppingListItemsFiltered(
             }
           }
           item {
+            version
             id
             imageUrl
             images {
@@ -269,10 +278,12 @@ query GetShoppingListItemsFiltered(
 # purchaseHistory summary (count / last date), not the full purchase list.
 query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
   shoppingListItem(id: $itemId) {
+    version
     id
     purchasesConnection(first: $first, after: $after) {
       edges {
         node {
+          version
           id
           purchaseDate
           quantity
@@ -319,6 +330,7 @@ query GetItemPurchaseHistory($itemId: ID!, $first: Int, $after: String) {
 # from the hook's direct reads (the rows render plain props, not useFragment).
 query GetShoppingListSuggestions($id: ID!, $limit: Int = 20) {
   shoppingList(id: $id) {
+    version
     id
     suggestions(limit: $limit) {
       recentlyDeleted {
@@ -384,58 +396,13 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
   }
 }
 
-# A change of store restates the comparison the settings screen shows, in
-# ListStoreComparison's selection, which `useUpdateShoppingList` writes over it.
-mutation UpdateShoppingList(
-  $input: UpdateShoppingListInput!
-  $withComparison: Boolean = false
-  $comparisonScope: PriceComparisonScope
-) {
+mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
   updateShoppingList(input: $input) {
     __typename
     ... on UpdateShoppingListPayload {
       shoppingList {
         id
         ...ShoppingListReaders
-      }
-      # Its stores, currency and unpriced lines are entities: each with the
-      # fields the queries read on it, as every write returning one carries.
-      storeComparison(scope: $comparisonScope) @include(if: $withComparison) {
-        scope
-        currency {
-          id
-          code
-          decimalPlaces
-          name
-          symbol
-        }
-        comparableLines
-        leftOutLines
-        truncated
-        unpricedLines {
-          id
-          ...ShoppingListItemReaders
-        }
-        candidates {
-          scope
-          store {
-            id
-            ...StoreReaders
-            name
-            address
-          }
-          chain {
-            id
-            name
-          }
-          estimatedTotal
-          pricedLines
-          chainFilledLines
-          anyStoreFilledLines
-          ranked
-          isTarget
-          newestObservedAt
-        }
       }
     }
     ... on Error {
@@ -914,6 +881,10 @@ mutation MoveShoppingItemToPantry(
         id
         ...ShoppingListReaders
       }
+      shoppingListItem {
+        id
+        ...ShoppingListItemReaders
+      }
       pantryItem {
         id
         ...PantryItemReaders
@@ -1072,9 +1043,11 @@ subscription MyShoppingListsEvents {
     node {
       __typename
       ... on ShoppingListItem {
+        version
         id
       }
       ... on ShoppingList {
+        version
         id
       }
       ... on ShoppingListCollaborator {

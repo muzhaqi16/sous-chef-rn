@@ -1,9 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { FeatureFlagName } from '#/graphql/generated/schemaTypes';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
 import { useUser } from '#store/useAppStore';
@@ -16,6 +16,14 @@ jest.mock('#store/useAppStore', () => ({
 
 const flags = (myFeatureFlags: { flag: FeatureFlagName; enabled: boolean }[]) =>
   recordMock(MyFeatureFlagsDocument, { data: { myFeatureFlags } });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest
@@ -35,7 +43,8 @@ describe('useFeatureFlag', () => {
       },
     );
 
-    await waitFor(() => expect(result.current).toBe(true));
+    await drainTimers();
+    expect(result.current).toBe(true);
   });
 
   it('is off where the server turns it off', async () => {
@@ -47,7 +56,8 @@ describe('useFeatureFlag', () => {
       { operationMocks: [answer.mock] },
     );
 
-    await waitFor(() => expect(answer.fired).toHaveLength(1));
+    await drainTimers();
+    expect(answer.fired).toHaveLength(1);
     expect(result.current).toBe(false);
   });
 
@@ -66,7 +76,8 @@ describe('useFeatureFlag', () => {
       { operationMocks: [answer.mock] },
     );
 
-    await waitFor(() => expect(result.current.url).toBe(true));
+    await drainTimers();
+    expect(result.current.url).toBe(true);
     expect(result.current.photo).toBe(false);
   });
 
@@ -84,13 +95,14 @@ describe('useFeatureFlag', () => {
       }),
       { operationMocks: [{ ...answered.mock, maxUsageCount: 1 }, failed.mock] },
     );
-    await waitFor(() => expect(result.current.enabled).toBe(true));
+    await drainTimers();
+    expect(result.current.enabled).toBe(true);
 
-    await act(async () => {
-      await result.current.client
+    await drained(() =>
+      result.current.client
         .refetchQueries({ include: [MyFeatureFlagsDocument] })
-        .catch(() => undefined);
-    });
+        .catch(() => undefined),
+    );
 
     expect(failed.fired).toHaveLength(1);
     expect(result.current.enabled).toBe(true);

@@ -1,5 +1,5 @@
 import { PermissionService } from '../PermissionService';
-import { Linking } from 'react-native';
+import { Linking, Platform } from 'react-native';
 import { check, request, RESULTS } from 'react-native-permissions';
 import notifee, { AuthorizationStatus } from '@notifee/react-native';
 
@@ -80,6 +80,49 @@ describe('PermissionService', () => {
 
       expect(mockRequestPermission).toHaveBeenCalled();
       expect(result).toBe('granted');
+    });
+  });
+
+  describe('location', () => {
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('asks iOS for while-in-use location, which the Info.plist holds to approximate', async () => {
+      mockCheck.mockResolvedValue(RESULTS.DENIED);
+      mockRequest.mockResolvedValue(RESULTS.GRANTED);
+
+      const result = await PermissionService.request('location');
+
+      expect(mockRequest).toHaveBeenCalledWith(
+        'ios.permission.LOCATION_WHEN_IN_USE',
+      );
+      expect(result).toBe('granted');
+    });
+
+    it('asks Android for coarse location only', async () => {
+      jest.replaceProperty(Platform, 'OS', 'android');
+      // The jest preset's select answers for iOS whatever OS says.
+      jest
+        .spyOn(Platform, 'select')
+        .mockImplementation(specifics => specifics.android);
+      mockCheck.mockResolvedValue(RESULTS.DENIED);
+      mockRequest.mockResolvedValue(RESULTS.GRANTED);
+
+      await PermissionService.request('location');
+
+      expect(mockRequest).toHaveBeenCalledWith(
+        'android.permission.ACCESS_COARSE_LOCATION',
+      );
+    });
+
+    it('does not ask again once location is off for the app', async () => {
+      mockCheck.mockResolvedValue(RESULTS.BLOCKED);
+
+      const result = await PermissionService.request('location');
+
+      expect(result).toBe('blocked');
+      expect(mockRequest).not.toHaveBeenCalled();
     });
   });
 

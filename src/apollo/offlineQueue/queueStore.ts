@@ -3,12 +3,17 @@ import { storage } from '#/store/deviceStorage';
 import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
-import { deletesItsSubject, queuedSubject } from './queuedSubject';
+import {
+  deletesItsSubject,
+  queuedSubject,
+  type QueuedSubject,
+} from './queuedSubject';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { isOwnKey } from '#/utils/isOwnKey';
 import { isRecord } from '#/utils/isRecord';
+import type { PendingWrite } from '#/apollo/pendingWrites/types';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -40,11 +45,21 @@ function isTerminal(status: QueueStatus): boolean {
 }
 
 // The server prunes its idempotency-dedup records after 90 days, so a replay
-// past that horizon double-applies instead of classifying as IDEMPOTENT_REPLAY.
+// past that horizon double-applies instead of converging.
 // PENDING entries older than this are marked FAILED rather than replayed.
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
 type StoredEntry = Omit<QueuedMutation, 'mutation'>;
+
+/** What the server has not taken: pending, replaying, or parked for re-auth. */
+const UNDELIVERED: readonly QueueStatus[] = [
+  QueueStatus.PENDING,
+  QueueStatus.PROCESSING,
+  QueueStatus.AUTH_ERROR,
+];
+
+/** The memoized id sets the queue derives; any queue change drops them all. */
+type IdSet = 'pending' | 'unconfirmed' | 'undelivered';
 
 /** Entries without their documents: each is sent as this build's document. */
 interface QueueBlob {
@@ -73,11 +88,10 @@ export class QueueStore {
   private cache: QueuedMutation[] | null = null;
 
   // Mirror of CURRENT_USER_KEY (undefined = not yet read) plus the memoized
-  // pending-ids set. getPendingClientIds() runs on EVERY itemsConnection merge
-  // (cache.ts), so without these each write costs an MMKV read and a rebuild.
+  // id sets. The connection merge and the queue link read them on every
+  // write, so without these each costs an MMKV read and a rebuild.
   private currentUserId: string | null | undefined = undefined;
-  private pendingClientIds: Set<string> | null = null;
-  private unconfirmedCreateIds: Set<string> | null = null;
+  private idSets = new Map<IdSet, Set<string>>();
 
   // Lets UI read live queue state (the offline banner's pending count) through
   // useSyncExternalStore instead of polling MMKV.
@@ -146,8 +160,7 @@ export class QueueStore {
     } catch (error) {
       logger.error('Failed to save queue to storage:', error);
     }
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
     this.notifyListeners();
   }
 
@@ -163,8 +176,7 @@ export class QueueStore {
       storage.set(CURRENT_USER_KEY, userId);
     }
     this.currentUserId = userId;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
     // The pending count is user-scoped, so a user switch changes it even
     // though the queue contents didn't.
     this.notifyListeners();
@@ -173,8 +185,7 @@ export class QueueStore {
   clearCurrentUserId(): void {
     storage.remove(CURRENT_USER_KEY);
     this.currentUserId = null;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
     this.notifyListeners();
   }
 
@@ -421,17 +432,7 @@ export class QueueStore {
    * Client ids with a still-PENDING mutation; empty when no user is set.
    */
   getPendingClientIds(): Set<string> {
-    if (this.pendingClientIds) return this.pendingClientIds;
-
-    const ids = new Set<string>();
-    const userId = this.getCurrentUserId();
-    if (userId) {
-      for (const mutation of this.getPendingMutationsForUser(userId)) {
-        for (const id of queuedSubject(mutation).subjectIds) ids.add(id);
-      }
-    }
-    this.pendingClientIds = ids;
-    return ids;
+    return this.idsOf('pending', [QueueStatus.PENDING], s => s.subjectIds);
   }
 
   /**
@@ -440,20 +441,63 @@ export class QueueStore {
    * the server owns, and counting it pins it into lists it left.
    */
   getUnconfirmedCreateIds(): Set<string> {
-    if (this.unconfirmedCreateIds) return this.unconfirmedCreateIds;
+    return this.idsOf(
+      'unconfirmed',
+      [QueueStatus.PENDING, QueueStatus.PROCESSING],
+      s => s.mintedIds,
+    );
+  }
+
+  /** The pending writes the server has not taken, in the order they replay. */
+  getPendingWrites(): PendingWrite[] {
+    const userId = this.getCurrentUserId();
+    if (!userId) return [];
+    return this.getMutationsForUser(userId)
+      .filter(({ status }) => UNDELIVERED.includes(status))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .flatMap(({ pendingWrite, operationName, mutation, variables }) =>
+        pendingWrite
+          ? [{ ...pendingWrite, operationName, document: mutation, variables }]
+          : [],
+      );
+  }
+
+  /** The ids of the pending writes the queue carries, whatever their status. */
+  getQueuedWriteIds(): Set<string> {
+    return new Set(
+      this.loadQueue().flatMap(({ pendingWrite }) =>
+        pendingWrite ? [pendingWrite.id] : [],
+      ),
+    );
+  }
+
+  /**
+   * Rows a write the server has not taken yet changes: pending, replaying, or
+   * parked for re-auth. A later write naming one waits behind it, as the
+   * drain holds a dependent.
+   */
+  getUndeliveredIds(): Set<string> {
+    return this.idsOf('undelivered', UNDELIVERED, s => s.subjectIds);
+  }
+
+  private idsOf(
+    set: IdSet,
+    statuses: readonly QueueStatus[],
+    pick: (subject: QueuedSubject) => readonly string[],
+  ): Set<string> {
+    const known = this.idSets.get(set);
+    if (known) return known;
 
     const ids = new Set<string>();
     const userId = this.getCurrentUserId();
     if (userId) {
-      const unconfirmed = [
-        ...this.getMutationsForUser(userId, QueueStatus.PENDING),
-        ...this.getMutationsForUser(userId, QueueStatus.PROCESSING),
-      ];
-      for (const mutation of unconfirmed) {
-        for (const id of queuedSubject(mutation).mintedIds) ids.add(id);
+      for (const status of statuses) {
+        for (const mutation of this.getMutationsForUser(userId, status)) {
+          for (const id of pick(queuedSubject(mutation))) ids.add(id);
+        }
       }
     }
-    this.unconfirmedCreateIds = ids;
+    this.idSets.set(set, ids);
     return ids;
   }
 
@@ -483,8 +527,7 @@ export class QueueStore {
   clearAllQueues(): void {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
     logger.debug('🧹 Queue: Cleared all mutations');
     this.notifyListeners();
   }
@@ -598,8 +641,7 @@ export class QueueStore {
 
   invalidateCache(): void {
     this.cache = null;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
     this.currentUserId = undefined;
     // A pending-write badge reads through the cache; it must re-read now.
     this.notifyListeners();

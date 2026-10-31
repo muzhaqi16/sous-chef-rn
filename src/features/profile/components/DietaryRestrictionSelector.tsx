@@ -5,7 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { RestrictionSection } from '#features/profile/components/RestrictionSection/RestrictionSection';
 import { MultiSelectChipSheet } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
-import { AvoidFoodSheet } from '#features/profile/components/AvoidFoodSheet';
+import { AvoidFoodSheet } from '#features/profile/ui/AvoidFoodSheet';
 import type {
   Diet,
   Intolerance,
@@ -102,26 +102,33 @@ export const DietaryRestrictionSelector: React.FC<
     r.diet ? [{ id: r.id, label: t(restrictionLabelKey(r)) }] : [],
   );
 
+  // An allergen or avoided food says how strict it is: the profile is where
+  // the user checks what onboarding and the avoid sheet saved.
+  const withSeverity = (name: string, severity: RestrictionSeverity) =>
+    severity === RestrictionSeverity.Allergy
+      ? t('dietaryProfile.avoidAllergy', { name })
+      : severity === RestrictionSeverity.Intolerance
+      ? t('dietaryProfile.avoidIntolerance', { name })
+      : name;
+
   const existingIntoleranceItems = existingRestrictions.flatMap(r =>
-    r.intolerance ? [{ id: r.id, label: t(restrictionLabelKey(r)) }] : [],
+    r.intolerance
+      ? [
+          {
+            id: r.id,
+            label: withSeverity(t(restrictionLabelKey(r)), r.severity),
+          },
+        ]
+      : [],
   );
 
   const existingGoalItems = existingRestrictions.flatMap(r =>
     r.healthGoal ? [{ id: r.id, label: t(restrictionLabelKey(r)) }] : [],
   );
 
-  // An avoided food reads by its name; a stricter one says how strict.
-  const existingAvoidItems = existingRestrictions.flatMap(r => {
-    if (!r.item) return [];
-    const { name } = r.item;
-    const label =
-      r.severity === RestrictionSeverity.Allergy
-        ? t('dietaryProfile.avoidAllergy', { name })
-        : r.severity === RestrictionSeverity.Intolerance
-        ? t('dietaryProfile.avoidIntolerance', { name })
-        : name;
-    return [{ id: r.id, label }];
-  });
+  const existingAvoidItems = existingRestrictions.flatMap(r =>
+    r.item ? [{ id: r.id, label: withSeverity(r.item.name, r.severity) }] : [],
+  );
 
   // Prepare available items for sheets. Lifestyle shows all options (including
   // the current pick) so the user can switch; constraints/intolerances/goals
@@ -171,10 +178,10 @@ export const DietaryRestrictionSelector: React.FC<
   const [isAvoidSheetVisible, setAvoidSheetVisible] = useState(false);
 
   const handleAvoidFood = async (
-    itemId: string,
+    food: { id: string },
     severity: RestrictionSeverity,
   ) => {
-    const success = await onAdd([{ item: itemId }], severity);
+    const success = await onAdd([{ item: food.id }], severity);
     if (!success) {
       alertService.alert(t('labels.error'), t('dietaryProfile.addAvoidFailed'));
     }

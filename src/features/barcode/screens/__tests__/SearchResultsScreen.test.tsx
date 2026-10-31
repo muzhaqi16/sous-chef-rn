@@ -208,7 +208,7 @@ describe('SearchResultsScreen', () => {
       '123',
       'ean-13',
       undefined,
-      true,
+      'list-1',
     );
 
     mockShowPrices.mockReturnValue(false);
@@ -217,7 +217,7 @@ describe('SearchResultsScreen', () => {
       '123',
       'ean-13',
       undefined,
-      false,
+      undefined,
     );
   });
 });

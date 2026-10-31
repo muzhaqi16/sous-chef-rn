@@ -5,6 +5,9 @@ import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotif
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
+import { useBudgetAndPricesCarryOver } from '#features/profile/hooks/useBudgetAndPricesCarryOver';
+import { usePricePrompt } from '#features/shoppingList/hooks/usePricePrompt';
+import { useSettingsMirror } from './useSettingsMirror';
 
 interface CoreDataProviderProps {
   children: React.ReactNode;
@@ -34,6 +37,11 @@ export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   // Load all unread notifications on startup via notificationsConnection
   // Re-queries on foreground to catch missed events (reconnect proxy)
   useNotificationsOnLaunch(user?.id);
+
+  // The account's settings, mirrored for the first paint of the next launch.
+  useSettingsMirror();
+  useBudgetAndPricesCarryOver();
+  usePricePrompt();
 
   // Fetch profile on every app load to keep Zustand store in sync
   // (e.g., profilePicture is only set at login/register and goes stale).

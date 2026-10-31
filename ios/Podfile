@@ -26,6 +26,7 @@ setup_permissions([
   'PhotoLibraryAddOnly',
   'Notifications',
   'FaceID',
+  'LocationWhenInUse',
 ])
 
 target 'SousChef' do

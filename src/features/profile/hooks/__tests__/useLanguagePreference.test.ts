@@ -1,13 +1,22 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { useStore } from '#store';
 import { useLanguagePreference } from '../useLanguagePreference';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -33,11 +42,8 @@ describe('useLanguagePreference', () => {
     });
 
     expect(useStore.getState().language).toBe('fr');
-    await waitFor(() =>
-      expect(update.fired).toEqual([
-        { input: { regional: { language: 'fr' } } },
-      ]),
-    );
+    await drainTimers();
+    expect(update.fired).toEqual([{ input: { regional: { language: 'fr' } } }]);
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -59,6 +65,7 @@ describe('useLanguagePreference', () => {
       result.current.selectLanguage('fr');
     });
 
-    await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 });

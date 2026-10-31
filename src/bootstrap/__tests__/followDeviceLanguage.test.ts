@@ -1,7 +1,7 @@
-import { waitFor } from '@testing-library/react-native';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { useStore } from '#store';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { followDeviceLanguage } from '../followDeviceLanguage';
 
 const realNavigator = Object.getOwnPropertyDescriptor(globalThis, 'navigator');
@@ -19,6 +19,14 @@ function returnFromSettings() {
   memoryLifecycle().moveTo('background');
   memoryLifecycle().moveTo('active');
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('followDeviceLanguage', () => {
   let stop: () => void;
@@ -42,7 +50,8 @@ describe('followDeviceLanguage', () => {
     deviceSetTo('it-IT');
     returnFromSettings();
 
-    await waitFor(() => expect(getResolvedLanguage()).toBe('it'));
+    await drainTimers();
+    expect(getResolvedLanguage()).toBe('it');
   });
 
   it('keeps the language the user picked', async () => {
@@ -51,7 +60,7 @@ describe('followDeviceLanguage', () => {
     deviceSetTo('it-IT');
     returnFromSettings();
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(getResolvedLanguage()).toBe('sq');
   });
 
@@ -60,14 +69,15 @@ describe('followDeviceLanguage', () => {
     deviceSetTo('de-DE');
     returnFromSettings();
 
-    await waitFor(() => expect(getResolvedLanguage()).toBe('en'));
+    await drainTimers();
+    expect(getResolvedLanguage()).toBe('en');
   });
 
   it('changes nothing while the app is away', async () => {
     deviceSetTo('it-IT');
     memoryLifecycle().moveTo('background');
 
-    await new Promise(resolve => setTimeout(resolve, 0));
+    await drainTimers();
     expect(getResolvedLanguage()).toBe('en');
   });
 });

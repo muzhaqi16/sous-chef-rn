@@ -77,7 +77,6 @@ import { toastService } from '#/services/toastService';
 import { MOCK_DEVICE_ID } from '#/services/auth/__mocks__/deviceId';
 import { ensureDeviceId } from '#/services/auth/deviceId';
 import { RevokeDeviceCredentialDocument } from '#operations/auth/auth.generated';
-import { waitFor } from '@testing-library/react-native';
 
 jest.mock('#native/storage/keychain', () => ({
   clearCredentials: (...a: unknown[]) => mockClearCredentials(...a),
@@ -113,8 +112,11 @@ import { authService } from '#/services/authService';
 import {
   biometricService,
   renewStoredSignIn,
+  resolvePostSignInGate,
 } from '#/services/biometric/deviceCredential';
+import type { LoginUserFragment } from '#operations/auth/userFragments.generated';
 import { registerMobileSessionHost } from '#/app/mobileSessionHost';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 // A sign-out drops the slot through the step the app registers.
 registerMobileSessionHost();
@@ -137,6 +139,14 @@ const STORED_SLOT = {
 };
 const setHasStoredCredentials = () =>
   mockStoreState.setHasStoredCredentials as jest.Mock;
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('logout and biometric credentials', () => {
   beforeEach(() => {
@@ -611,10 +621,6 @@ describe('removing a stored sign-in', () => {
     mockQuery.mockResolvedValue({ data: { deviceCredentials: [] } });
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('takes the login button down once the slot is gone', async () => {
     await expect(
       biometricService.forgetStoredSignIn('chef@example.com'),
@@ -634,7 +640,6 @@ describe('removing a stored sign-in', () => {
   });
 
   it('removes the slot within its budget when the server never answers', async () => {
-    jest.useFakeTimers();
     mockQuery.mockReturnValue(new Promise(() => undefined));
 
     const removal = biometricService.forgetStoredSignIn('chef@example.com');
@@ -748,7 +753,8 @@ describe('a device credential the device could not store', () => {
 
     expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
 
-    await waitFor(() => expect(revokes()).toHaveLength(1));
+    await drainTimers();
+    expect(revokes()).toHaveLength(1);
     expect(revokes()[0]?.[0]).toMatchObject({
       variables: { input: { id: 'dc-new' } },
     });
@@ -762,7 +768,8 @@ describe('a device credential the device could not store', () => {
 
     expect(await renewStoredSignIn(EMAIL)).toBe('dropped');
 
-    await waitFor(() => expect(revokes()).toHaveLength(1));
+    await drainTimers();
+    expect(revokes()).toHaveLength(1);
   });
 
   it('is logged as possibly live when the revoke cannot reach the server', async () => {
@@ -778,10 +785,9 @@ describe('a device credential the device could not store', () => {
 
     expect(await biometricService.enrolDeviceCredential(EMAIL)).toBe('unsaved');
 
-    await waitFor(() =>
-      expect(warn).toHaveBeenCalledWith(
-        expect.stringContaining('could not store may still be live'),
-      ),
+    await drainTimers();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining('could not store may still be live'),
     );
     expect(revokes()).toHaveLength(0);
     warn.mockRestore();
@@ -794,5 +800,21 @@ describe('a device credential the device could not store', () => {
       'enrolled',
     );
     expect(revokes()).toHaveLength(0);
+  });
+});
+
+describe('the first sign-in after onboarding', () => {
+  // Onboarding has no biometric step, so nothing defers the offer to it.
+  it('offers enrolment to an account that has just finished onboarding', async () => {
+    mockHasCredentials.mockResolvedValueOnce(false);
+    const user = {
+      id: 'user-new',
+      email: 'chef@example.com',
+      onBoarded: true,
+    } as LoginUserFragment;
+
+    expect(
+      await resolvePostSignInGate(user, 'chef@example.com', false, 'token'),
+    ).toBe('biometricSetup');
   });
 });

@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
@@ -6,6 +6,7 @@ import {
   type MockFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
 import {
@@ -50,12 +51,19 @@ async function loadItem() {
     operationMocks: [item.mock, batches.mock],
     cache,
   });
-  await waitFor(() => {
-    expect(rendered.result.current.item?.itemName).toBe('Milk');
-    expect(rendered.result.current.batches).toHaveLength(2);
-  });
+  await drainTimers();
+  expect(rendered.result.current.item?.itemName).toBe('Milk');
+  expect(rendered.result.current.batches).toHaveLength(2);
   return { cache, ...rendered };
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('usePantryItemDetailData', () => {
   // Each edit below changes only the entity itself, so neither query's result
@@ -63,34 +71,30 @@ describe('usePantryItemDetailData', () => {
   it("follows a batch's own edit", async () => {
     const { cache, result } = await loadItem();
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({ __typename: 'PantryItemBatch', id: 'b1' }),
         fields: { status: () => BatchStatus.Wasted },
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(result.current.batches.map(b => b.status)).toEqual([
-        BatchStatus.Wasted,
-        BatchStatus.Active,
-      ]),
-    );
+    expect(result.current.batches.map(b => b.status)).toEqual([
+      BatchStatus.Wasted,
+      BatchStatus.Active,
+    ]);
   });
 
   it("follows the item's own edit", async () => {
     const { cache, result } = await loadItem();
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({ __typename: 'PantryItem', id: 'pi-1' }),
         fields: { itemName: () => 'Oat milk' },
       });
       await Promise.resolve();
     });
-
-    await waitFor(() => expect(result.current.item?.itemName).toBe('Oat milk'));
+    expect(result.current.item?.itemName).toBe('Oat milk');
   });
 });
 
@@ -128,7 +132,8 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
   it('reads an answered null as removed', async () => {
     const { result } = renderDetail(noSuchItem().mock);
 
-    await waitFor(() => expect(result.current.deletedOnServer).toBe(true));
+    await drainTimers();
+    expect(result.current.deletedOnServer).toBe(true);
     expect(result.current.item).toBeNull();
     expect(result.current.itemError).toBeUndefined();
   });
@@ -138,7 +143,8 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
       refusedWith(TopLevelErrorCode.ResourceNotFound),
     );
 
-    await waitFor(() => expect(result.current.deletedOnServer).toBe(true));
+    await drainTimers();
+    expect(result.current.deletedOnServer).toBe(true);
   });
 
   // A pantry the caller may not view refuses its stacks: the item is there,
@@ -146,7 +152,8 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
   it('reads a FORBIDDEN refusal as hidden, not removed', async () => {
     const { result } = renderDetail(refusedWith(ErrorCode.Forbidden));
 
-    await waitFor(() => expect(result.current.hiddenFromViewer).toBe(true));
+    await drainTimers();
+    expect(result.current.hiddenFromViewer).toBe(true);
     expect(result.current.deletedOnServer).toBe(false);
   });
 
@@ -157,8 +164,8 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
     expect(result.current.itemLoading).toBe(true);
     expect(result.current.deletedOnServer).toBe(false);
 
-    await act(async () => item.release());
-    await waitFor(() => expect(result.current.deletedOnServer).toBe(true));
+    await drained(() => item.release());
+    expect(result.current.deletedOnServer).toBe(true);
   });
 
   it.each<[string, MockedResponse]>([
@@ -171,7 +178,8 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
   ])('keeps the item when %s', async (_label, item) => {
     const { result } = renderDetail(item);
 
-    await waitFor(() => expect(result.current.itemError).toBeDefined());
+    await drainTimers();
+    expect(result.current.itemError).toBeDefined();
     expect(result.current.itemLoading).toBe(false);
     expect(result.current.deletedOnServer).toBe(false);
   });
@@ -190,21 +198,25 @@ describe('usePantryItemDetailData: an item the server holds nothing for', () => 
       unconfirmedCreates.confirm('pi-1');
     });
 
-    await waitFor(() => expect(item.fired).toEqual([{ id: 'pi-1' }]));
-    await waitFor(() => expect(result.current.deletedOnServer).toBe(true));
+    await drainTimers();
+    expect(item.fired).toEqual([{ id: 'pi-1' }]);
+    await drainTimers();
+    expect(result.current.deletedOnServer).toBe(true);
   });
 
   // A skipped query keeps serving its last answer, so the null is still held
   // when the id is claimed.
   it('does not read a held null as removed while the create is unconfirmed', async () => {
     const { result } = renderDetail(noSuchItem().mock);
-    await waitFor(() => expect(result.current.deletedOnServer).toBe(true));
+    await drainTimers();
+    expect(result.current.deletedOnServer).toBe(true);
 
     act(() => {
       unconfirmedCreates.mark('pi-1');
     });
 
-    await waitFor(() => expect(result.current.isUnconfirmed).toBe(true));
+    await drainTimers();
+    expect(result.current.isUnconfirmed).toBe(true);
     expect(result.current.deletedOnServer).toBe(false);
   });
 });

@@ -2,7 +2,7 @@
 
 import { memoryIntents } from '#/test-utils/memoryPlatform';
 import React from 'react';
-import { userEvent, waitFor } from '@testing-library/react-native';
+import { userEvent } from '@testing-library/react-native';
 import {
   MembershipRole,
   MembershipStatus,
@@ -10,6 +10,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetHomesDocument,
   JoinHomeByCodeDocument,
@@ -136,6 +137,14 @@ function buildJoinMock(
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('JoinHomeByCodeScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -147,7 +156,8 @@ describe('JoinHomeByCodeScreen', () => {
     renderWithApollo(<JoinHomeByCodeScreen route={makeRoute('ABC123')} />, {
       operationMocks: [],
     });
-    await waitFor(() => expect(mockToAuth).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockToAuth).toHaveBeenCalled();
     expect(mockSetPendingDeepLinkAction).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'join_home', code: 'ABC123' }),
     );
@@ -171,7 +181,8 @@ describe('JoinHomeByCodeScreen', () => {
         operationMocks: [buildPreviewMock('ABC123', { members: 2 })],
       },
     );
-    await waitFor(() => expect(tree.getByText('Family Home')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Family Home')).toBeTruthy();
     expect(tree.getByText('Join Home')).toBeTruthy();
     expect(tree.getByText('2 members')).toBeTruthy();
   });
@@ -188,11 +199,13 @@ describe('JoinHomeByCodeScreen', () => {
         ],
       },
     );
-    await waitFor(() => expect(tree.getByText('Family Home')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Family Home')).toBeTruthy();
 
     tree.rerender(<JoinHomeByCodeScreen route={makeRoute('XYZ789')} />);
 
-    await waitFor(() => expect(tree.getByText('Beach House')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Beach House')).toBeTruthy();
     expect(tree.queryByText('Family Home')).toBeNull();
   });
 
@@ -201,7 +214,8 @@ describe('JoinHomeByCodeScreen', () => {
       <JoinHomeByCodeScreen route={makeRoute('BADCODE')} />,
       { operationMocks: [buildPreviewMock('BADCODE', null)] },
     );
-    await waitFor(() => expect(tree.getByText('Home not found')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Home not found')).toBeTruthy();
   });
 
   it('joins the home and navigates to the pantry on confirm', async () => {
@@ -216,12 +230,12 @@ describe('JoinHomeByCodeScreen', () => {
         ],
       },
     );
-    await waitFor(() => expect(tree.getByText('Join Home')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Join Home')).toBeTruthy();
     await user.press(tree.getByText('Join Home'));
 
-    await waitFor(() =>
-      expect(mockSetSelectedHomeId).toHaveBeenCalledWith('home-1'),
-    );
+    await drainTimers();
+    expect(mockSetSelectedHomeId).toHaveBeenCalledWith('home-1');
     expect(mockToPantryMain).toHaveBeenCalled();
     expect(toastService.success).toHaveBeenCalledWith('Joined "Family Home"');
   });
@@ -268,12 +282,12 @@ describe('JoinHomeByCodeScreen', () => {
         ],
       },
     );
-    await waitFor(() => expect(tree.getByText('Join Home')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Join Home')).toBeTruthy();
     await user.press(tree.getByText('Join Home'));
 
-    await waitFor(() =>
-      expect(mockSetSelectedHomeId).toHaveBeenCalledWith('home-1'),
-    );
+    await drainTimers();
+    expect(mockSetSelectedHomeId).toHaveBeenCalledWith('home-1');
     expect(mockSetSelectedHomeId).toHaveBeenCalledTimes(1);
     expect(cachedHomeIdsAtSelection).toEqual(['home-1']);
   });
@@ -294,10 +308,12 @@ describe('JoinHomeByCodeScreen', () => {
         ],
       },
     );
-    await waitFor(() => expect(tree.getByText('Join Home')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Join Home')).toBeTruthy();
     await user.press(tree.getByText('Join Home'));
 
-    await waitFor(() => expect(mockToPantryMain).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockToPantryMain).toHaveBeenCalled();
     expect(mockSetSelectedHomeId).not.toHaveBeenCalled();
   });
 });

@@ -13,9 +13,8 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
@@ -154,52 +153,32 @@ export function useQuantityEditModal(
     // The RAW text: normalizing is not idempotent on a comma device, and a
     // second pass reads the period it just wrote as thousands grouping.
     const parsed = parseFractionalInput(quantity);
-    const row = items.find(i => i.id === itemId);
-    const previous = {
-      quantity: row?.quantity ?? selectedItemRaw.quantity,
-      quantityInput: row?.quantityInput ?? null,
-    };
 
-    // Local-first: the write can be queued, so the list shows the new quantity
-    // now and after a restart, not only once the replay lands. A figure in
-    // another unit waits for the server's line: written here it would read in
-    // the old unit, and the cache may hold too little of the new one to show.
+    // A figure in another unit waits for the server's line: shown here it would
+    // read in the old unit, and the cache may hold too little of the new one.
     const sameUnit = unitId === null || unitId === selectedItemRaw.unit?.id;
-    const next = sameUnit
-      ? { quantityInput, ...(parsed !== null && { quantity: parsed }) }
-      : {};
-    const entity = { __typename: 'ShoppingListItem', id: itemId };
-    if (sameUnit) writeEntityFields(client.cache, entity, next);
-    const clearPersisted = optimisticDataPersistence.trackFields(
-      'ShoppingListItem',
-      itemId,
-      next,
-    );
-
-    const settled = await settleMutation(
-      () =>
-        updateQuantity({
-          variables: {
-            input: {
-              id: itemId,
-              quantity: quantityInput,
-              // An omitted unit is left as it is; null would clear it.
-              ...(unitId !== null && { unit: { id: unitId } }),
-              version: selectedItemRaw.version,
-            },
-          },
-          onCompleted: result => {
-            if (appliedPayload(result)) clearPersisted();
-          },
-        }),
+    const inputs: UpdateRowInputs = {
+      fields: sameUnit
+        ? { quantityInput, ...(parsed !== null && { quantity: parsed }) }
+        : {},
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      UpdateShoppingListItemDocument,
       {
-        document: UpdateShoppingListItemDocument,
-        fallback: t('errors.adjustQuantityFailed'),
-        onFailed: () => {
-          clearPersisted();
-          writeEntityFields(client.cache, entity, previous);
+        input: {
+          id: itemId,
+          quantity: quantityInput,
+          // An omitted unit is left as it is; null would clear it.
+          ...(unitId !== null && { unit: { id: unitId } }),
+          version: selectedItemRaw.version,
         },
       },
+      write =>
+        settleMutation(() => updateQuantity(write), {
+          document: UpdateShoppingListItemDocument,
+          fallback: t('errors.adjustQuantityFailed'),
+        }),
+      inputs,
     );
 
     setIsLoading(false);

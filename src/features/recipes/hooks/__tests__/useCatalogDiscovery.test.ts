@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { memoryScreen } from '#/test-utils/memoryPlatform';
 import {
@@ -6,7 +6,9 @@ import {
   renderHookWithApollo,
   type MockDataFor,
   type MockedResponse,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   Diet,
   ExternalSource,
@@ -184,6 +186,14 @@ const cachedPantryPage = (
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   useCatalogFetchTimesStore.setState({ fetchedAt: {} });
   memoryScreen().setFocused(true);
   mockUseCurrentHome.mockReturnValue({
@@ -203,7 +213,8 @@ describe('useCatalogDiscovery', () => {
     const byIngredients = byIngredientsMock([]);
     const { result } = renderDiscovery([random.mock, byIngredients.mock]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(2);
 
     expect(random.fired).toEqual([
       { diets: [Diet.Vegan], intolerances: [Intolerance.Dairy], first: 25 },
@@ -231,7 +242,8 @@ describe('useCatalogDiscovery', () => {
     const random = randomMock([]);
     const { result } = renderDiscovery([byIngredients.mock, random.mock]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     expect(byIngredients.fired).toEqual([
       { ingredients: names.slice(0, 20).sort(), first: 25 },
@@ -257,7 +269,8 @@ describe('useCatalogDiscovery', () => {
     const byIngredients = byIngredientsMock([matchEdge(1)]);
     const { result } = renderDiscovery([byIngredients.mock]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     const [sent] = byIngredients.fired;
     const ingredients = (sent?.ingredients as string[] | undefined) ?? [];
@@ -273,7 +286,8 @@ describe('useCatalogDiscovery', () => {
     const byIngredients = byIngredientsMock([matchEdge(1)]);
     const { result } = renderDiscovery([byIngredients.mock]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     expect(byIngredients.fired).toEqual([
       { ingredients: ['eggs', 'milk'], first: 25 },
@@ -285,7 +299,8 @@ describe('useCatalogDiscovery', () => {
       randomMock(ids(25).map(randomEdge)).mock,
     ]);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(15));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(15);
     expect(result.current.discoveryHasMore).toBe(true);
 
     act(() => result.current.loadMoreDiscovery());
@@ -316,7 +331,8 @@ describe('useCatalogDiscovery', () => {
     expect(result.current.loading).toBe(true);
 
     random.release();
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.rows).toHaveLength(1);
   });
 
@@ -326,8 +342,10 @@ describe('useCatalogDiscovery', () => {
     });
     const { result } = renderDiscovery([random.mock]);
 
-    await waitFor(() => expect(random.fired).toHaveLength(1));
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(random.fired).toHaveLength(1);
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.rows).toEqual([]);
     expect(result.current.discoveryHasMore).toBe(false);
     expect(result.current.failed).toBe(true);
@@ -339,8 +357,10 @@ describe('useCatalogDiscovery', () => {
     });
     const { result } = renderDiscovery([random.mock]);
 
-    await waitFor(() => expect(random.fired).toHaveLength(1));
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(random.fired).toHaveLength(1);
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.failed).toBe(true);
   });
 
@@ -348,8 +368,10 @@ describe('useCatalogDiscovery', () => {
     const random = randomMock([]);
     const { result } = renderDiscovery([random.mock]);
 
-    await waitFor(() => expect(random.fired).toHaveLength(1));
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(random.fired).toHaveLength(1);
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.failed).toBe(false);
   });
 
@@ -357,7 +379,8 @@ describe('useCatalogDiscovery', () => {
     pantryHolding(['tomato']);
     const byIngredients = byIngredientsMock([matchEdge(1)]);
     const { result, rerender } = renderDiscovery([byIngredients.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     pantryHolding(['tomato'], { loading: true, hasResult: true });
     rerender({});
@@ -370,7 +393,7 @@ describe('useCatalogDiscovery', () => {
 
   it('shows the first screenful of a new list, even one as long as the last', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: RANDOM_VARIABLES,
       data: cachedRandomPage(25),
@@ -381,7 +404,8 @@ describe('useCatalogDiscovery', () => {
       undefined,
       cache,
     );
-    await waitFor(() => expect(result.current.rows).toHaveLength(15));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(15);
     act(() => result.current.loadMoreDiscovery());
     expect(result.current.rows).toHaveLength(25);
 
@@ -394,7 +418,7 @@ describe('useCatalogDiscovery', () => {
 
   it('asks again for a page the cache holds from when the catalog was down', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: CatalogRecipesByIngredientsDocument,
       variables: { ingredients: ['tomato'], first: 25 },
       data: cachedPantryPage(0, false),
@@ -403,14 +427,15 @@ describe('useCatalogDiscovery', () => {
     const byIngredients = byIngredientsMock([matchEdge(1), matchEdge(2)]);
     const { result } = renderDiscovery([byIngredients.mock], undefined, cache);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(2);
     expect(byIngredients.fired).toHaveLength(1);
     expect(result.current.failed).toBe(false);
   });
 
   it('answers from the cache when it holds a whole page', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: CatalogRecipesByIngredientsDocument,
       variables: { ingredients: ['tomato'], first: 25 },
       data: cachedPantryPage(3),
@@ -419,7 +444,8 @@ describe('useCatalogDiscovery', () => {
     const byIngredients = byIngredientsMock([matchEdge(1)]);
     const { result } = renderDiscovery([byIngredients.mock], undefined, cache);
 
-    await waitFor(() => expect(result.current.rows).toHaveLength(3));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(3);
     expect(byIngredients.fired).toEqual([]);
   });
 
@@ -427,11 +453,10 @@ describe('useCatalogDiscovery', () => {
     pantryHolding(['tomato']);
     const byIngredients = byIngredientsMock([matchEdge(1)]);
     const { result } = renderDiscovery([byIngredients.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await drained(() => result.current.refresh());
 
     expect(byIngredients.fired).toHaveLength(2);
   });
@@ -458,11 +483,10 @@ describe('useCatalogDiscovery', () => {
       undefined,
       cache,
     );
-    await waitFor(() => expect(result.current.rows).toHaveLength(3));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(3);
 
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await drained(() => result.current.refresh());
 
     expect(degraded.fired).toHaveLength(1);
     expect(result.current.rows).toHaveLength(3);
@@ -497,27 +521,28 @@ describe('useCatalogDiscovery', () => {
       held: true,
     });
     const { result } = renderDiscovery([found.mock, again.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
     expect(result.current.refreshing).toBe(false);
 
     let refreshed: Promise<void> = Promise.resolve();
     act(() => {
       refreshed = result.current.refresh();
     });
-    await waitFor(() => expect(result.current.refreshing).toBe(true));
+    await drainTimers();
+    expect(result.current.refreshing).toBe(true);
     expect(result.current.loading).toBe(false);
 
     again.release();
-    await act(async () => {
-      await refreshed;
-    });
-    await waitFor(() => expect(result.current.refreshing).toBe(false));
+    await drained(() => refreshed);
+    expect(result.current.refreshing).toBe(false);
   });
 
   it('reorders the random draw it holds on refresh, asking for nothing', async () => {
     const random = randomMock(ids(25).map(randomEdge));
     const { result } = renderDiscovery([random.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(15));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(15);
     act(() => result.current.loadMoreDiscovery());
     expect(result.current.rows).toHaveLength(25);
 
@@ -527,9 +552,7 @@ describe('useCatalogDiscovery', () => {
       rank -= 0.01;
       return rank;
     });
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await drained(() => result.current.refresh());
     spy.mockRestore();
 
     expect(random.fired).toHaveLength(1);
@@ -543,18 +566,17 @@ describe('useCatalogDiscovery', () => {
       data: { randomCatalogRecipes: { edges: [], catalogAvailable: false } },
     });
     const { result } = renderDiscovery([degraded.mock]);
-    await waitFor(() => expect(result.current.failed).toBe(true));
+    await drainTimers();
+    expect(result.current.failed).toBe(true);
 
-    await act(async () => {
-      await result.current.refresh();
-    });
+    await drained(() => result.current.refresh());
 
     expect(degraded.fired).toHaveLength(2);
   });
 
   it('shows a page fetched over a day ago while it asks for a fresh one', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: CatalogRecipesByIngredientsDocument,
       variables: PANTRY_VARIABLES,
       data: cachedPantryPage(3),
@@ -577,10 +599,12 @@ describe('useCatalogDiscovery', () => {
 
     expect(result.current.rows).toHaveLength(3);
     expect(result.current.loading).toBe(false);
-    await waitFor(() => expect(byIngredients.fired).toHaveLength(1));
+    await drainTimers();
+    expect(byIngredients.fired).toHaveLength(1);
 
     byIngredients.release();
-    await waitFor(() => expect(result.current.rows).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(2);
   });
 });
 
@@ -633,7 +657,8 @@ describe('useCatalogDiscovery: focus gate on the pantry watch', () => {
     pantryHolding(['tomato', 'pasta']);
     const byIngredients = byIngredientsMock([matchEdge(200)]);
     const { result } = renderDiscovery([byIngredients.mock]);
-    await waitFor(() => expect(result.current.rows).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.rows).toHaveLength(1);
 
     focus();
     blur();

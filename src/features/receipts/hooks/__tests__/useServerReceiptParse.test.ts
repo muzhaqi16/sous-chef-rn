@@ -1,6 +1,6 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
 import { ServerError } from '@apollo/client/errors';
 import {
@@ -121,7 +121,7 @@ function render(
   { enabled = true }: { enabled?: boolean } = {},
 ) {
   return renderHookWithApollo(() => useServerReceiptParse({ enabled }), {
-    operationMocks,
+    operationMocks: operationMocks.map(mock => ({ ...mock, delay: 0 })),
   });
 }
 
@@ -135,6 +135,9 @@ beforeEach(() => {
 afterEach(() => {
   jest.useRealTimers();
 });
+
+// Stops where an answer lands: a drain would run the poll for ever.
+const settle = () => act(() => jest.advanceTimersByTimeAsync(0));
 
 const pollOnce = () =>
   act(async () => {
@@ -158,7 +161,8 @@ describe('useServerReceiptParse', () => {
     });
     const { result } = render([create.mock, ...poll.mocks]);
 
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await settle();
+    expect(create.fired).toHaveLength(1);
     expect(create.fired[0]).toEqual({
       input: expect.objectContaining({ id: expect.any(String), pages: PAGES }),
     });
@@ -203,7 +207,8 @@ describe('useServerReceiptParse', () => {
       receipt: MILK_RECEIPT,
     });
     render([create.mock, ...poll.mocks]);
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await settle();
+    expect(create.fired).toHaveLength(1);
 
     await pollOnce();
     await pollOnce();
@@ -253,7 +258,8 @@ describe('useServerReceiptParse', () => {
       }),
     });
     render([create.mock, inFlight.mock, settled.mock]);
-    await waitFor(() => expect(inFlight.fired).toHaveLength(1));
+    await settle();
+    expect(inFlight.fired).toHaveLength(1);
 
     const [ask] = create.fired;
     if (!ask) throw new Error('the parse was never asked for');
@@ -300,7 +306,8 @@ describe('useServerReceiptParse', () => {
     });
     const { result } = render([create.mock, ...poll.mocks]);
 
-    await waitFor(() => expect(result.current.readingStatus).toBe('none'));
+    await settle();
+    expect(result.current.readingStatus).toBe('none');
     const draft = useReceiptDraftStore.getState().draft;
     expect(draft?.parsedBy).toBe('server');
     expect(draft?.parsed?.merchant).toBe('WALMART');
@@ -317,9 +324,8 @@ describe('useServerReceiptParse', () => {
     });
     const { result } = render([create.mock, ...poll.mocks]);
 
-    await waitFor(() =>
-      expect(result.current.readingStatus).toBe('unavailable'),
-    );
+    await settle();
+    expect(result.current.readingStatus).toBe('unavailable');
     await pollOnce();
     expect(poll.fired()).toEqual([]);
     expect(create.fired).toHaveLength(1);
@@ -347,7 +353,8 @@ describe('useServerReceiptParse', () => {
     const create = created(ReceiptParseStatus.Pending);
     render([create.mock]);
 
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await settle();
+    expect(create.fired).toHaveLength(1);
     expect(create.fired[0]).toEqual({
       input: {
         id: expect.any(String),
@@ -366,7 +373,8 @@ describe('useServerReceiptParse', () => {
     const create = created(ReceiptParseStatus.Pending);
     render([create.mock]);
 
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await settle();
+    expect(create.fired).toHaveLength(1);
     expect(create.fired[0]).toEqual({
       input: {
         id: expect.any(String),
@@ -387,7 +395,8 @@ describe('useServerReceiptParse', () => {
     });
     render([create.mock, ...poll.mocks]);
 
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await settle();
+    expect(create.fired).toHaveLength(1);
     await pollOnce();
     await pollOnce();
 
@@ -400,12 +409,11 @@ describe('useServerReceiptParse', () => {
   it('never asks again for photos the daily limit turned away: they are gone', async () => {
     seedMilkDraft({ pages: [], photoKeys: ['receipt-photos/u1/p1.jpg'] });
     const { result, unmount } = render([overTheLimit(3600)]);
-    await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
+    await settle();
+    expect(result.current.readingStatus).toBe('limited');
     unmount();
 
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(3_600_000);
-    });
+    await act(() => jest.advanceTimersByTimeAsync(3_600_000));
     const later = created(ReceiptParseStatus.Pending);
     const next = render([later.mock]);
     await pollOnce();
@@ -418,7 +426,8 @@ describe('useServerReceiptParse', () => {
     seedMilkDraft();
     const { result, unmount } = render([overTheLimit(3600)]);
 
-    await waitFor(() => expect(result.current.readingStatus).toBe('limited'));
+    await settle();
+    expect(result.current.readingStatus).toBe('limited');
     const asked = useReceiptDraftStore.getState().draft?.serverParse;
     expect(asked).toEqual({
       id: expect.any(String),
@@ -437,12 +446,11 @@ describe('useServerReceiptParse', () => {
     expect(second.result.current.readingStatus).toBe('limited');
     second.unmount();
 
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(3_600_000);
-    });
+    await act(() => jest.advanceTimersByTimeAsync(3_600_000));
     const later = created(ReceiptParseStatus.Pending);
     const third = render([later.mock]);
-    await waitFor(() => expect(later.fired).toHaveLength(1));
+    await settle();
+    expect(later.fired).toHaveLength(1);
     expect(later.fired[0]).toEqual({
       input: expect.objectContaining({ id: asked?.id }),
     });
@@ -477,7 +485,8 @@ describe('useServerReceiptParse', () => {
       const create = created(ReceiptParseStatus.Pending);
       render([create.mock]);
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await settle();
+      expect(create.fired).toHaveLength(1);
       expect(create.fired[0]).toEqual({
         input: {
           id: expect.any(String),
@@ -497,7 +506,8 @@ describe('useServerReceiptParse', () => {
       const create = photosThenText(ReceiptParseStatus.Failed);
       const { result } = render([create.mock]);
 
-      await waitFor(() => expect(create.fired).toHaveLength(2));
+      await settle();
+      expect(create.fired).toHaveLength(2);
       const [photos, text] = create.fired.map(inputOf);
       expect(photos).toEqual(expect.objectContaining({ photos: PHOTOS }));
       expect(text).toEqual(
@@ -515,7 +525,8 @@ describe('useServerReceiptParse', () => {
       const text = created(ReceiptParseStatus.Pending);
       const { result } = render([overTheLimit(3600), text.mock]);
 
-      await waitFor(() => expect(text.fired).toHaveLength(1));
+      await settle();
+      expect(text.fired).toHaveLength(1);
       const [input] = text.fired.map(inputOf);
       expect(input).toEqual(expect.objectContaining({ pages: PAGES }));
       expect(input).not.toHaveProperty('photos');
@@ -537,14 +548,14 @@ describe('useServerReceiptParse', () => {
         }),
       });
       const { result } = render([create.mock, stillReading.mock]);
-      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await settle();
+      expect(create.fired).toHaveLength(1);
       expect(result.current.slowPhotoRead).toBe(false);
 
-      await waitFor(() => expect(stillReading.fired).toHaveLength(1));
+      await settle();
+      expect(stillReading.fired).toHaveLength(1);
       for (let second = 0; second < 45; second += 1) {
-        await act(async () => {
-          await jest.advanceTimersByTimeAsync(1000);
-        });
+        await act(() => jest.advanceTimersByTimeAsync(1000));
       }
 
       expect(result.current.readingStatus).toBe('reading');
@@ -570,10 +581,9 @@ describe('useServerReceiptParse', () => {
       stuck.mock,
     ]);
 
-    await waitFor(() => expect(stuck.fired.length).toBeGreaterThan(0));
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(180_000);
-    });
+    await settle();
+    expect(stuck.fired.length).toBeGreaterThan(0);
+    await act(() => jest.advanceTimersByTimeAsync(180_000));
     expect(result.current.readingStatus).toBe('retryLater');
     const polls = stuck.fired.length;
     await pollOnce();
@@ -589,9 +599,8 @@ describe('useServerReceiptParse', () => {
     seedMilkDraft();
     const { result } = render([overTheLimit()]);
 
-    await waitFor(() =>
-      expect(result.current.readingStatus).toBe('unavailable'),
-    );
+    await settle();
+    expect(result.current.readingStatus).toBe('unavailable');
   });
 
   it('keeps a parse whose ask never got an answer, to send it again', async () => {
@@ -599,7 +608,8 @@ describe('useServerReceiptParse', () => {
     const dropped = created(new NetworkRequestError('Network request failed'));
     const { result } = render([dropped.mock]);
 
-    await waitFor(() => expect(dropped.fired).toHaveLength(1));
+    await settle();
+    expect(dropped.fired).toHaveLength(1);
     await pollOnce();
 
     expect(result.current.readingStatus).toBe('reading');
@@ -627,14 +637,16 @@ describe('useServerReceiptParse', () => {
     });
     const { result } = render([fault.mock, create.mock, ...poll.mocks]);
 
-    await waitFor(() => expect(fault.fired).toHaveLength(1));
+    await settle();
+    expect(fault.fired).toHaveLength(1);
     expect(useReceiptDraftStore.getState().draft?.serverParse?.state).toBe(
       'pending',
     );
     expect(result.current.readingStatus).toBe('reading');
 
     await pollOnce();
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await settle();
+    expect(create.fired).toHaveLength(1);
     expect(create.fired[0]).toEqual({
       input: expect.objectContaining({
         id: useReceiptDraftStore.getState().draft?.serverParse?.id,
@@ -642,9 +654,8 @@ describe('useServerReceiptParse', () => {
     });
     await pollOnce();
     await pollOnce();
-    await waitFor(() =>
-      expect(useReceiptDraftStore.getState().draft?.parsedBy).toBe('server'),
-    );
+    await settle();
+    expect(useReceiptDraftStore.getState().draft?.parsedBy).toBe('server');
   });
 
   it('stops asking for this visit after three resends, and says so', async () => {
@@ -652,7 +663,8 @@ describe('useServerReceiptParse', () => {
     const timedOut = created(new TimeoutError('createReceiptParse', 30_000));
     const { result } = render([timedOut.mock]);
 
-    await waitFor(() => expect(timedOut.fired).toHaveLength(1));
+    await settle();
+    expect(timedOut.fired).toHaveLength(1);
     // Each resend is timed from the answer before it.
     for (const [wait, count] of [
       [2500, 2],
@@ -660,18 +672,14 @@ describe('useServerReceiptParse', () => {
       [10_000, 4],
     ] as const) {
       expect(result.current.readingStatus).toBe('reading');
-      await act(async () => {
-        await jest.advanceTimersByTimeAsync(wait);
-      });
-      await waitFor(() => expect(timedOut.fired).toHaveLength(count));
+      await act(() => jest.advanceTimersByTimeAsync(wait));
+      await settle();
+      expect(timedOut.fired).toHaveLength(count);
     }
-    await waitFor(() =>
-      expect(result.current.readingStatus).toBe('retryLater'),
-    );
+    await settle();
+    expect(result.current.readingStatus).toBe('retryLater');
 
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(60_000);
-    });
+    await act(() => jest.advanceTimersByTimeAsync(60_000));
     expect(timedOut.fired).toHaveLength(4);
     expect(useReceiptDraftStore.getState().draft?.serverParse?.state).toBe(
       'pending',
@@ -685,32 +693,31 @@ describe('useServerReceiptParse', () => {
     const timedOut = created(new TimeoutError('createReceiptParse', 30_000));
     const { result } = render([timedOut.mock]);
 
-    await waitFor(() => expect(timedOut.fired).toHaveLength(1));
+    await settle();
+    expect(timedOut.fired).toHaveLength(1);
     for (const [wait, count] of [
       [2500, 2],
       [5000, 3],
       [10_000, 4],
     ] as const) {
-      await act(async () => {
-        await jest.advanceTimersByTimeAsync(wait);
-      });
-      await waitFor(() => expect(timedOut.fired).toHaveLength(count));
+      await act(() => jest.advanceTimersByTimeAsync(wait));
+      await settle();
+      expect(timedOut.fired).toHaveLength(count);
     }
-    await waitFor(() =>
-      expect(result.current.readingStatus).toBe('retryLater'),
-    );
+    await settle();
+    expect(result.current.readingStatus).toBe('retryLater');
 
     act(() => {
       seedMilkDraft({ scannedAt: '2026-10-01T10:05:00.000Z' });
     });
 
-    await waitFor(() => expect(timedOut.fired).toHaveLength(5));
+    await settle();
+    expect(timedOut.fired).toHaveLength(5);
     expect(result.current.readingStatus).toBe('reading');
     // Its first resend comes after the first wait again.
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(2500);
-    });
-    await waitFor(() => expect(timedOut.fired).toHaveLength(6));
+    await act(() => jest.advanceTimersByTimeAsync(2500));
+    await settle();
+    expect(timedOut.fired).toHaveLength(6);
   });
 
   it('takes a refusal on pages as final (tooLong), and never sends it again', async () => {
@@ -726,10 +733,9 @@ describe('useServerReceiptParse', () => {
     });
     const { result } = render([refused.mock]);
 
-    await waitFor(() => expect(result.current.readingStatus).toBe('tooLong'));
-    await act(async () => {
-      await jest.advanceTimersByTimeAsync(20_000);
-    });
+    await settle();
+    expect(result.current.readingStatus).toBe('tooLong');
+    await act(() => jest.advanceTimersByTimeAsync(20_000));
     expect(refused.fired).toHaveLength(1);
   });
 
@@ -752,7 +758,8 @@ describe('useServerReceiptParse', () => {
     const create = created(ReceiptParseStatus.Pending);
     render([create.mock]);
 
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await settle();
+    expect(create.fired).toHaveLength(1);
     expect(create.fired[0]).toEqual({
       input: expect.objectContaining({ id: 'parse-1' }),
     });

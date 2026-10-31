@@ -4,9 +4,10 @@ import {
   ErrorCode,
   PasswordActionStatus,
 } from '#/graphql/generated/schemaTypes';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { RequestPasswordResetDocument } from '#operations/auth/auth.generated';
 import { ForgotPasswordScreen } from '../ForgotPasswordScreen';
 
@@ -120,6 +121,14 @@ const sentPayload: MockDataFor<typeof RequestPasswordResetDocument> = {
 const submit = async (user: ReturnType<typeof userEvent.setup>) =>
   user.press(screen.getByTestId('forgot-password-submit-button'));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('ForgotPasswordScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -153,9 +162,8 @@ describe('ForgotPasswordScreen', () => {
 
     // The headline fix: the user gets confirmation and stays put, rather than
     // being bounced to sign-in with no feedback either way.
-    await waitFor(() => {
-      expect(screen.getByText('Check your email')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Check your email')).toBeTruthy();
     expect(screen.getByText(TEST_EMAIL)).toBeTruthy();
     expect(mockNavigateToLogin).not.toHaveBeenCalled();
   });
@@ -168,9 +176,8 @@ describe('ForgotPasswordScreen', () => {
     renderWithApollo(<ForgotPasswordScreen />, { operationMocks: [mock] });
 
     await submit(user);
-    await waitFor(() => {
-      expect(screen.getByText('Back to Sign In')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Back to Sign In')).toBeTruthy();
 
     await user.press(
       screen.getByTestId('forgot-password-back-to-login-button'),
@@ -197,11 +204,10 @@ describe('ForgotPasswordScreen', () => {
     // presence-only check reports it as a successful send. The toast carries
     // the LOCALIZED resolution of the payload, never its `message` — that
     // sentence is unlocalizable English by construction.
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalledWith(
-        'Something went wrong. Please try again.',
-      );
-    });
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Something went wrong. Please try again.',
+    );
     expect(mockToastError).not.toHaveBeenCalledWith('Email is invalid.');
     expect(screen.getByText('Forgot password')).toBeTruthy();
     expect(screen.queryByText('Check your email')).toBeNull();
@@ -214,12 +220,14 @@ describe('ForgotPasswordScreen', () => {
       data: sentPayload,
       maxUsageCount: 2,
     });
-    renderWithApollo(<ForgotPasswordScreen />, { operationMocks: [mock] });
-
-    await submit(user);
-    await waitFor(() => {
-      expect(screen.getByText('Resend link')).toBeTruthy();
+    renderWithApollo(<ForgotPasswordScreen />, {
+      operationMocks: [{ ...mock, delay: 0 }],
     });
+
+    // Stops at the answer: a drain runs the countdown out.
+    await submit(user);
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(screen.getByText('Resend link')).toBeTruthy();
 
     // First send opens the 30s window, so an immediate resend is refused.
     expect(screen.getByTestId('footer-link-disabled')).toHaveTextContent(
@@ -229,7 +237,6 @@ describe('ForgotPasswordScreen', () => {
   });
 
   it('resends to the same address the link was sent to', async () => {
-    jest.useFakeTimers();
     const user = userEvent.setup({ advanceTimers: jest.advanceTimersByTime });
     const { mock, fired } = recordMock(RequestPasswordResetDocument, {
       data: sentPayload,
@@ -238,27 +245,23 @@ describe('ForgotPasswordScreen', () => {
     renderWithApollo(<ForgotPasswordScreen />, { operationMocks: [mock] });
 
     await submit(user);
-    await waitFor(() => {
-      expect(screen.getByText('Resend link')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Resend link')).toBeTruthy();
 
     // Let the 30s cooldown elapse, then resend.
     jest.advanceTimersByTime(31000);
-    await waitFor(() => {
-      expect(screen.getByTestId('footer-link-disabled')).toHaveTextContent(
-        'false',
-      );
-    });
+    await drainTimers();
+    expect(screen.getByTestId('footer-link-disabled')).toHaveTextContent(
+      'false',
+    );
 
     await user.press(screen.getByTestId('forgot-password-resend-link'));
 
-    await waitFor(() => {
-      expect(fired).toHaveLength(2);
-    });
+    await drainTimers();
+    expect(fired).toHaveLength(2);
     // The resend targets the address the link already went to, rather than
     // re-reading a form that is off screen by this point.
     expect(fired[0]).toEqual({ input: { email: TEST_EMAIL } });
     expect(fired[1]).toEqual(fired[0]);
-    jest.useRealTimers();
   });
 });

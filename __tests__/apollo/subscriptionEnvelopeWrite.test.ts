@@ -40,7 +40,8 @@ import {
   type GetShoppingListItemsFilteredQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { removeFromShoppingListItemsCache } from '#features/shoppingList/hooks/mutations/utils';
+import { removeFromShoppingListItemsConnection } from '#features/shoppingList/cache/connections';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 const mockedSchema = addMocksToSchema({
   schema: makeExecutableSchema({
@@ -94,7 +95,7 @@ async function seedPantry() {
     PANTRY_VARS,
   );
   data.pantry!.id = 'pantry-1';
-  cache.writeQuery({ query: GetPantryDocument, variables: PANTRY_VARS, data });
+  seedQuery(cache, { query: GetPantryDocument, variables: PANTRY_VARS, data });
   const itemId = data.pantry!.itemsConnection.edges[0]!.node.id;
   return { cache, itemId };
 }
@@ -105,7 +106,7 @@ async function seedList() {
     Unmasked<GetShoppingListItemsFilteredQuery>
   >(GetShoppingListItemsFilteredDocument, LIST_VARS);
   data.shoppingList!.id = 'list-1';
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetShoppingListItemsFilteredDocument,
     variables: LIST_VARS,
     data,
@@ -157,7 +158,7 @@ describe('event envelope written to the cache after a local delete', () => {
           pantryId: 'pantry-1',
           timestamp: '2026-01-01T00:00:00.000Z',
           mergedIds: null,
-          node: { __typename: 'PantryItem', id: itemId },
+          node: { __typename: 'PantryItem', version: 1, id: itemId },
         },
       },
     });
@@ -165,6 +166,7 @@ describe('event envelope written to the cache after a local delete', () => {
     // The evicted row is back as a bare `{ id }` …
     expect(cache.extract()[`PantryItem:${itemId}`]).toEqual({
       __typename: 'PantryItem',
+      version: 1,
       id: itemId,
     });
     // … its edge is readable again, and the list query cannot be satisfied from
@@ -184,6 +186,7 @@ describe('event envelope written to the cache after a local delete', () => {
 
     expect(cache.extract()[`ShoppingListItem:${itemId}`]).toEqual({
       __typename: 'ShoppingListItem',
+      version: 1,
       id: itemId,
     });
     expect(diffList(cache).complete).toBe(false);
@@ -192,7 +195,7 @@ describe('event envelope written to the cache after a local delete', () => {
   it('an evicting removal drops the edge too, so the stub leaves the list complete', async () => {
     const { cache, itemId } = await seedList();
 
-    removeFromShoppingListItemsCache(cache, 'list-1', itemId, {
+    removeFromShoppingListItemsConnection(cache, 'list-1', itemId, {
       evictItem: true,
     });
     writeShoppingEvent(cache, itemId);
@@ -220,7 +223,7 @@ function writeShoppingEvent(
         timestamp: '2026-01-01T00:00:00.000Z',
         updatedFields: [],
         clearedItemIds: [],
-        node: { __typename: 'ShoppingListItem', id: itemId },
+        node: { __typename: 'ShoppingListItem', version: 1, id: itemId },
       },
     },
   });

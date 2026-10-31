@@ -1,6 +1,7 @@
 # The stack the edit form opens on, fetched into the entity the form watches.
 query PantryItemForEdit($id: ID!) {
   pantryItem(id: $id) {
+    version
     id
     ...PantryItemForm_pantryItem
   }

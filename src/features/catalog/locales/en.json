@@ -78,7 +78,6 @@
     "allAdded": "All added",
     "dismiss": "Dismiss suggestion",
     "dismissed": "Removed {{name}}",
-    "undo": "Undo",
     "dismissFailed": "Couldn't remove suggestion",
     "undoFailed": "Couldn't undo",
     "sections": {
@@ -91,7 +90,7 @@
     "noListTitle": "No List Selected",
     "noListBody": "Please select or create a shopping list first.",
     "createList": "Create List",
-    "searchPlaceholder": "Search or scan item...",
+    "searchPlaceholder": "Search for an item...",
     "added": "Added {{name}}",
     "emptyTitle": "No suggestions yet",
     "emptyPantrySubtext": "Add items to your pantry to get personalized suggestions",
@@ -451,9 +450,6 @@
     "selectedCount_one": "{{count}} item selected",
     "selectedCount_other": "{{count}} items selected"
   },
-  "storeBranch": {
-    "number": "Store #{{number}}"
-  },
   "storeShelfPrices": {
     "title": "Prices at stores",
     "cheapest": "Cheapest",
@@ -467,6 +463,46 @@
     "lowestIn_other": "Lowest in {{count}} days",
     "lastSeen": "Last seen {{date}}",
     "showMore_one": "Show {{count}} more",
-    "showMore_other": "Show {{count}} more"
+    "showMore_other": "Show {{count}} more",
+    "similarTitle": "Similar products",
+    "mightBeCheaper": "Might be cheaper"
+  },
+  "usualStores": {
+    "title": "Your stores",
+    "addStore": "Add a store",
+    "pinned": "Pinned",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "addedViaReceipt": "From a receipt",
+    "addedViaPurchase": "From a purchase",
+    "addedViaListStore": "A list's store",
+    "addedViaPicked": "Added by your household",
+    "lastUsed": "Last used {{date}}",
+    "notCompared": "Not compared: unused for 90 days",
+    "removed": "Removed {{name}}",
+    "emptyTitle": "No stores yet",
+    "emptyBody": "Stores show here once you scan a receipt, shop in store mode or set a list's store.",
+    "limitTitle": "Too many stores",
+    "limitBody": "You can keep up to 20 stores. Remove or unpin one, then try again.",
+    "saveFailed": "Couldn't save your stores"
+  },
+  "storePicker": {
+    "searchPlaceholder": "Search by store name or address",
+    "zipLabel": "Zip code",
+    "zipRefused": "That zip code isn't one we know yet. Try another, or search by name.",
+    "notListed": "Not listed? Add “{{name}}”",
+    "addedToStores": "Added to your stores",
+    "needsConnectionTitle": "Finding stores needs a connection",
+    "needsConnectionBody": "These are the stores you shop at. Connect to find others.",
+    "nothingNear": "No stores found near here.",
+    "nothingNamed": "No stores match “{{term}}”.",
+    "hint": "Search by name, or enter a zip code to see the stores near it.",
+    "nearMe": "Stores near me",
+    "nearMeTitle": "Find stores near you",
+    "nearMeBody": "{{appName}} uses your approximate location to list the stores around you. Precise location isn't needed, and a zip code works too.",
+    "locating": "Finding stores near you…",
+    "locationOff": "Location is off for {{appName}}. Turn it on in Settings, or enter a zip code.",
+    "locationFailed": "Couldn't tell where you are. Enter a zip code instead.",
+    "hasPrices": "Has prices"
   }
 }

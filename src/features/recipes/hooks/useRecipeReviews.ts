@@ -143,8 +143,8 @@ export function useRecipeReviews({
         createReviewMutation({
           variables: {
             // Client-minted id: a lost-response retry replays with the same id
-            // and surfaces as IDEMPOTENT_REPLAY (converged) instead of an
-            // indistinguishable "already reviewed" CONFLICT.
+            // and converges on the review instead of an indistinguishable
+            // "already reviewed" CONFLICT.
             input: {
               id: generateEntityId(),
               recipeId,
@@ -193,6 +193,7 @@ export function useRecipeReviews({
       fragment: RecipeReviewFragmentDoc,
       fragmentName: 'RecipeReviewFragment',
       from: { __typename: 'RecipeReview', id },
+      optimistic: true,
     });
     removeReviewFromRecipe(apolloClient.cache, recipeId, id);
 

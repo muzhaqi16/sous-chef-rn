@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import type { ViewProps } from 'react-native';
 import { MoveToPantryModal } from '#features/shoppingList/components/moveToPantry/MoveToPantryModal';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
@@ -8,7 +8,9 @@ import {
   seedCache,
   type MockFor,
   type QueryDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   MoveToPantryModal_ShoppingListItemFragmentDoc,
   MoveToPantryPurchaseInfoDocument,
@@ -243,6 +245,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
       fragment: MoveToPantryModal_ShoppingListItemFragmentDoc,
       data: {
         __typename: 'ShoppingListItem',
+        version: 1,
         id: ITEM_ID,
         itemName: 'Milk',
         quantity: 2,
@@ -312,6 +315,14 @@ function typeSize(size: string, unit?: 'kg' | 'box' | { typed: string }) {
   );
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('MoveToPantryModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -328,7 +339,8 @@ describe('MoveToPantryModal', () => {
       // so a bare confirm is refused on a field the user can fix.
       confirm();
 
-      expect(await screen.findByText('Please select a pantry')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Please select a pantry')).toBeTruthy();
       expect(defaultProps.onConfirm).not.toHaveBeenCalled();
     });
   });
@@ -342,7 +354,8 @@ describe('MoveToPantryModal', () => {
     fireEvent.press(screen.getByTestId('pick-unit'));
     fireEvent.press(screen.getByTestId('clear-unit'));
 
-    expect(await screen.findByTestId('unit-error')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByTestId('unit-error')).toBeTruthy();
   });
 
   it.each([
@@ -398,6 +411,7 @@ describe('MoveToPantryModal', () => {
       __typename: 'Query',
       shoppingListItem: {
         __typename: 'ShoppingListItem',
+        version: 1,
         id: ITEM_ID,
         purchasesConnection: {
           __typename: 'PurchaseConnection',
@@ -411,6 +425,7 @@ describe('MoveToPantryModal', () => {
               __typename: 'PurchaseEdge',
               node: {
                 __typename: 'Purchase',
+                version: 1,
                 id: 'pu1',
                 unitSymbol: unit.symbol,
                 unit: { __typename: 'Unit', id: 'u-purchase', type: unit.type },
@@ -470,7 +485,7 @@ describe('MoveToPantryModal', () => {
       const cache = makeCache(line);
       const variables = { id: ITEM_ID };
       if (warm) {
-        cache.writeQuery({
+        seedQuery(cache, {
           query: MoveToPantryPurchaseInfoDocument,
           variables,
           data: purchaseData(purchase),
@@ -486,7 +501,8 @@ describe('MoveToPantryModal', () => {
         { cache, operationMocks: [mock] },
       );
       rerender(<MoveToPantryModal {...props} />);
-      await screen.findByText(header);
+      await drainTimers();
+      expect(screen.getByText(header)).toBeTruthy();
       const reopen = () => {
         rerender(<MoveToPantryModal {...props} visible={false} />);
         rerender(<MoveToPantryModal {...props} />);
@@ -527,7 +543,8 @@ describe('MoveToPantryModal', () => {
 
       confirm();
 
-      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalled();
       const sent = onConfirm.mock.calls[0][0];
       expect(sent.amount).toEqual({ measured: { quantity: 5, unitId: 'u1' } });
       // The total as shown; the server derives the unit price, never the client.
@@ -544,7 +561,8 @@ describe('MoveToPantryModal', () => {
       ).toBeNull();
       confirm();
 
-      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalled();
       expect(onConfirm.mock.calls[0][0].totalCost).toBeUndefined();
     });
 
@@ -566,7 +584,8 @@ describe('MoveToPantryModal', () => {
           typeTotal(typed);
           confirm();
 
-          expect(await screen.findByText(INVALID_PAID)).toBeTruthy();
+          await drainTimers();
+          expect(screen.getByText(INVALID_PAID)).toBeTruthy();
           expect(onConfirm).not.toHaveBeenCalled();
         },
       );
@@ -575,18 +594,17 @@ describe('MoveToPantryModal', () => {
         const { onConfirm } = await openWithPurchase();
         typeTotal('4,99x');
         confirm();
-        expect(await screen.findByText(INVALID_PAID)).toBeTruthy();
+        await drainTimers();
+        expect(screen.getByText(INVALID_PAID)).toBeTruthy();
 
         typeTotal('3.49');
-        await waitFor(() =>
-          expect(screen.queryByText(INVALID_PAID)).toBeNull(),
-        );
+        await drainTimers();
+        expect(screen.queryByText(INVALID_PAID)).toBeNull();
         confirm();
 
-        await waitFor(() =>
-          expect(onConfirm).toHaveBeenCalledWith(
-            expect.objectContaining({ totalCost: 3.49 }),
-          ),
+        await drainTimers();
+        expect(onConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({ totalCost: 3.49 }),
         );
       });
     });
@@ -600,13 +618,12 @@ describe('MoveToPantryModal', () => {
       expect(totalPaid()).toBe('1.77');
 
       confirm();
-      await waitFor(() =>
-        expect(onConfirm).toHaveBeenCalledWith(
-          expect.objectContaining({
-            amount: { measured: { quantity: 3, unitId: 'u1' } },
-            totalCost: 1.77,
-          }),
-        ),
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: { measured: { quantity: 3, unitId: 'u1' } },
+          totalCost: 1.77,
+        }),
       );
     });
 
@@ -615,7 +632,8 @@ describe('MoveToPantryModal', () => {
 
       confirm();
 
-      await waitFor(() => expect(onClose).toHaveBeenCalled());
+      await drainTimers();
+      expect(onClose).toHaveBeenCalled();
     });
 
     it('stays open when the move is refused', async () => {
@@ -625,7 +643,8 @@ describe('MoveToPantryModal', () => {
 
       confirm();
 
-      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalled();
       expect(onClose).not.toHaveBeenCalled();
     });
 
@@ -639,18 +658,17 @@ describe('MoveToPantryModal', () => {
       typeSize('22', 'kg');
       confirm();
 
-      await waitFor(() =>
-        expect(onConfirm).toHaveBeenCalledWith(
-          expect.objectContaining({
-            amount: {
-              packages: {
-                count: 5,
-                size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
-                unitId: 'u-jar',
-              },
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: {
+            packages: {
+              count: 5,
+              size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+              unitId: 'u-jar',
             },
-          }),
-        ),
+          },
+        }),
       );
     });
 
@@ -662,7 +680,8 @@ describe('MoveToPantryModal', () => {
       typeSize('22', 'kg');
       confirm();
 
-      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(NEEDS_COUNT)).toBeTruthy();
       expect(onConfirm).not.toHaveBeenCalled();
     });
 
@@ -674,18 +693,17 @@ describe('MoveToPantryModal', () => {
       typeSize('1', 'box');
       confirm();
 
-      await waitFor(() =>
-        expect(onConfirm).toHaveBeenCalledWith(
-          expect.objectContaining({
-            amount: {
-              packages: {
-                count: 1,
-                size: { netWeight: 5, netWeightUnitId: 'u1' },
-                unitId: 'unit-box',
-              },
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: {
+            packages: {
+              count: 1,
+              size: { netWeight: 5, netWeightUnitId: 'u1' },
+              unitId: 'unit-box',
             },
-          }),
-        ),
+          },
+        }),
       );
       expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
     });
@@ -696,7 +714,8 @@ describe('MoveToPantryModal', () => {
 
       reopen();
 
-      await waitFor(() => expect(packageSize()).toBe(''));
+      await drainTimers();
+      expect(packageSize()).toBe('');
     });
 
     describe('with the units the device holds', () => {
@@ -726,19 +745,18 @@ describe('MoveToPantryModal', () => {
         expect(screen.queryByText(/isn't a unit we know/)).toBeNull();
         confirm();
 
-        await waitFor(() =>
-          expect(onConfirm).toHaveBeenCalledWith(
-            expect.objectContaining({
-              amount: {
-                packages: {
-                  count: 1,
-                  size: { netWeight: 5, netWeightUnitId: 'u1' },
-                  unitId: 'unit-carton',
-                },
+        await drainTimers();
+        expect(onConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            amount: {
+              packages: {
+                count: 1,
+                size: { netWeight: 5, netWeightUnitId: 'u1' },
+                unitId: 'unit-carton',
               },
-              totalCost: 2.95,
-            }),
-          ),
+            },
+            totalCost: 2.95,
+          }),
         );
         expect(screen.getByTestId(`${SIZE_UNIT}-unit-input`).props.value).toBe(
           'carton',
@@ -752,8 +770,9 @@ describe('MoveToPantryModal', () => {
         typeSize('1', { typed: 'flagon' });
         confirm();
 
+        await drainTimers();
         expect(
-          await screen.findByText(
+          screen.getByText(
             "That isn't a unit we know. Pick one from the list, like carton or jar.",
           ),
         ).toBeTruthy();
@@ -780,19 +799,18 @@ describe('MoveToPantryModal', () => {
       typeSize('5', 'kg');
       confirm();
 
-      await waitFor(() =>
-        expect(onConfirm).toHaveBeenCalledWith(
-          expect.objectContaining({
-            amount: {
-              packages: {
-                count: 2,
-                size: { netWeight: 5, netWeightUnitId: 'unit-kg' },
-                unitId: 'unit-box',
-              },
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: {
+            packages: {
+              count: 2,
+              size: { netWeight: 5, netWeightUnitId: 'unit-kg' },
+              unitId: 'unit-box',
             },
-            totalCost: 2.95,
-          }),
-        ),
+          },
+          totalCost: 2.95,
+        }),
       );
     });
 
@@ -802,7 +820,8 @@ describe('MoveToPantryModal', () => {
       typeSize('1.5', 'box');
       confirm();
 
-      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(NEEDS_COUNT)).toBeTruthy();
       expect(onConfirm).not.toHaveBeenCalled();
     });
 
@@ -814,11 +833,13 @@ describe('MoveToPantryModal', () => {
       typeQuantity('2.5');
       typeSize('22', 'kg');
       confirm();
-      expect(await screen.findByText(NEEDS_COUNT)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(NEEDS_COUNT)).toBeTruthy();
 
       typeQuantity('2');
 
-      await waitFor(() => expect(screen.queryByText(NEEDS_COUNT)).toBeNull());
+      await drainTimers();
+      expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
     });
 
     it('raises no size refusal while the count is still being typed', async () => {
@@ -830,7 +851,8 @@ describe('MoveToPantryModal', () => {
       typeSize('22', 'kg');
 
       typeQuantity('2.5');
-      await waitFor(() => expect(totalPaid()).toBe('2.5'));
+      await drainTimers();
+      expect(totalPaid()).toBe('2.5');
 
       expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
     });
@@ -851,18 +873,17 @@ describe('MoveToPantryModal', () => {
         typeSize('22', 'kg');
         confirm();
 
-        await waitFor(() =>
-          expect(onConfirm).toHaveBeenCalledWith(
-            expect.objectContaining({
-              amount: {
-                packages: {
-                  count: 5,
-                  size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
-                  unitId: 'u-purchase',
-                },
+        await drainTimers();
+        expect(onConfirm).toHaveBeenCalledWith(
+          expect.objectContaining({
+            amount: {
+              packages: {
+                count: 5,
+                size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
+                unitId: 'u-purchase',
               },
-            }),
-          ),
+            },
+          }),
         );
         expect(screen.queryByText(NEEDS_COUNT)).toBeNull();
       },
@@ -874,7 +895,8 @@ describe('MoveToPantryModal', () => {
       typeSize('22');
       confirm();
 
-      expect(await screen.findByTestId(`${SIZE_UNIT}-unit-error`)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByTestId(`${SIZE_UNIT}-unit-error`)).toBeTruthy();
       expect(onConfirm).not.toHaveBeenCalled();
     });
 
@@ -892,7 +914,8 @@ describe('MoveToPantryModal', () => {
 
       confirm();
 
-      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalled();
       expect(onConfirm.mock.calls[0][0].amount.measured.unitId).toBe(
         'u-purchase',
       );
@@ -908,7 +931,8 @@ describe('MoveToPantryModal', () => {
       const { onConfirm } = await openWithPurchase({ warm: true });
 
       confirm();
-      await waitFor(() => expect(onConfirm).toHaveBeenCalled());
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalled();
 
       // The line's unit, not `u-purchase`.
       expect(onConfirm.mock.calls[0][0].amount.measured.unitId).toBe('u1');

@@ -5,12 +5,14 @@
 # without a redundant fetch on every open.
 query GetPantryActionItem($id: ID!) {
   pantryItem(id: $id) {
+    version
     id
     ...PantryActionModal_pantryItem
   }
 }
 
 fragment PantryActionModal_pantryItem on PantryItem {
+  version
   id
   itemId
   itemName

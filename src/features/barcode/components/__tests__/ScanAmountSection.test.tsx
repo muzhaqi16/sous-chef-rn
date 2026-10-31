@@ -1,10 +1,5 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { UnitType } from '#/graphql/generated/schemaTypes';
@@ -15,6 +10,7 @@ import {
   scanAmountSchema,
   type ScanAmountFormValues,
 } from '../scanAmountFormConfig';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 // The unit list loads over the network; the section reads only what it shows.
 jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () =>
@@ -67,6 +63,14 @@ const Harness = ({
     />
   );
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('ScanAmountSection', () => {
   it('reads the add as text: the package, then what each one holds', () => {
@@ -154,11 +158,13 @@ describe('ScanAmountSection', () => {
     const packaged = screen.getByTestId(barcodeTestIDs.scanAmountPackaged);
     fireEvent(packaged, 'valueChange', false);
     fireEvent(packaged, 'valueChange', true);
-    expect(await screen.findByText(unitRequired)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(unitRequired)).toBeTruthy();
 
     fireEvent.changeText(screen.getByTestId(barcodeTestIDs.scanAmountSize), '');
 
-    await waitFor(() => expect(screen.queryByText(unitRequired)).toBeNull());
+    await drainTimers();
+    expect(screen.queryByText(unitRequired)).toBeNull();
   });
 
   describe('the unit it is used in', () => {

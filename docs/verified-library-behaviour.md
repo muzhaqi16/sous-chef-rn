@@ -707,6 +707,148 @@ and sends nothing.
 After a switch, every navigation refetches only the active queries not answered
 since it, because a refetch at the switch cannot reach a paused screen.
 
+### Apollo: a read in flight hides a newer write, then overwrites it
+
+Verified 2026-10-29 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/inflightReadVsLocalWrite.test.ts`.
+
+**Claim:** while a `cache-and-network` watcher's network read is in flight, the
+watcher delivers no cache change. That includes a local write and the
+mutation's answer to it. When the read answers, its data (from before the
+write) is written last, and that is what the watcher shows. In the source, the
+write reaches the watcher as `notify()` → `reobserveCacheFirst()`, and
+`_reobserve` keeps the in-flight link subscription, so the cache's answer waits
+behind it.
+
+Answering the in-flight read from the cache releases the watcher at once:
+
+- The link emits the cache's complete read while its subscriber is still open.
+- The network's late answer is then dropped.
+- Closing the network subscription first closes the subscriber, and the
+  watcher never hears the answer.
+
+**What depends on it:** `src/apollo/links/localWritePrecedenceLink.ts` and the
+`sync/local-write-precedence` spec. A local-first write answers every read in
+flight from the cache, so the person's change shows at once and an older
+answer cannot undo it.
+
+### Apollo: a type merge never sees a normalized row's fields
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** a type-level `merge` on a type with an `id` receives references,
+never the row's fields. That holds for a plain `InMemoryCache` and for
+`makeCache()`, for a row under a root field and in a list.
+- It runs for the parent field that holds the row (`getMergeFunction(parent,
+  field, childTypename)`).
+- The row's own fields are collected in `incomingById` and stored with
+  `store.merge(dataId, …)`, which no policy sees.
+- A field-level `merge` can't read the incoming row's other fields.
+
+So nothing in the cache can compare a row's old and new copies. With nothing
+guarding it, a copy with a lower `version` simply replaces a newer one.
+
+**What depends on it:** the `sync/answer-ordering` guard runs in the link
+chain, before Apollo stores an answer, and not as a type policy.
+
+### Apollo: a watcher hears no cache change while an operation is out
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check: `notify` in
+`core/ObservableQuery.js`, and
+`npx jest src/features/shoppingList/hooks/__tests__/usePaginatedShoppingItems.pageDuringTick.test.ts`.
+
+**Claim:** `notify` delivers a cache change only with `activeOperations` empty,
+unless the policy is `cache-only` or `cache-and-network`. A `fetchMore` is an
+operation, and a list settles on `cache-first` after its first read, so a write
+made while a page is out renders when the page lands. A root write and a layer
+are held back alike. `fetchPage` reads a page beside the watcher for this reason.
+
+A watcher hears of a write on a zero timer (`scheduleNotify`), so a `client.query`
+resolves before its list shows the page: the next turn is the first it has.
+
+### Apollo: a link must emit, and a result's `extensions` reach the write
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/offlineMissThroughLayer.test.ts`.
+
+**Claim:** a link chain that completes with no value fails the read ("The link
+chain completed without emitting a value"), so a link cannot simply decline to
+answer. `markQueryResult` passes `result.extensions` to `cache.writeQuery`, which
+passes them to `write`, and then reads the result back from an optimistic diff.
+So an answer `AppCache.write` declines still reaches the watcher, complete, from
+the layers, and stores nothing.
+
+### Apollo: an optimistic layer copies the whole entity
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/pendingLayerProbe.test.ts`.
+
+**Claim:** a layer's write merges with what it sees below and stores the whole
+entity, so it hides the root's later change to any field it copied, and to a
+whole list it touched, until it is removed and added again. A field it never
+copied falls through. Over the same root:
+
+- The layer's value survives a root write of the same field.
+- `extract()` holds the root only; `extract(true)` holds the layer too.
+- `gc()` keeps a row only a layer names.
+- Removing a layer replays the layers above it, in order. Every layer sharing
+  an id is removed together.
+
+**A layer can't be changed inside `cache.batch({ update })`.** `batch` restores
+`optimisticData` as `update` returns, so a layer added or removed there is
+silently undone. Apollo writes every answer inside a batch, so this holds
+inside `cache.write` too. The one way to change layers with one notification is
+`cache.batch({ optimistic: next, removeOptimistic: current, update })`: `update`
+runs over the old layers, then again over the root as they are removed, and a
+watcher hears once.
+
+**Removing a row inside a layer is not `evict`.** `evict` deletes only from a
+layer that owns the row and stops at the layer the transaction runs in, so a row
+in the root stays. `cache.modify` with `DELETE` hides it and leaves the root's
+copy, and a list filtered in a layer leaves the root's list whole.
+
+**What depends on it:** `src/apollo/pendingWrites/` and the
+`sync/pending-writes` spec: pending writes share one generation id, a rebuild
+swaps the generation, and it runs after the answer's batch, not inside it.
+
+### Apollo: a merge cannot read a row that selects its parent
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** in a field `merge`, `readField('id', ref)` on an incoming row returns
+`undefined` when the row selects the object that holds the field. Apollo stores
+nothing until it has walked the whole answer, then stores entities in the order
+it first met them. A row's own entry goes in after its children, so a row that
+selects its parent puts the parent ahead of itself, and the parent's `merge`
+runs while the row is not in the store.
+
+So a merge that filters rows by `readField` drops every row the device has never
+held. A later answer stores them fine, which hides it: the same page asked for
+twice lands the second time.
+
+**What depends on it:** `readEdgeNodeId` in `src/apollo/cacheFieldPolicies.ts`
+reads a row's id from its reference, never through the store.
+
+### Apollo: one answer stores a row once, its first copy
+
+Verified 2026-10-31 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** when one answer holds two copies of a row under the same selection
+set, the store keeps the first. `processSelectionSet` in `writeToStore.js` tracks
+`context.written[dataId]` and returns early on a selection set it has seen, so a
+later copy is never read, whatever its `version`. Two copies in separate answers
+land as usual. `data` handed to an `update` or a `commit` is then re-read from the
+cache, so both positions show the first copy, and a capture of `data` looks like
+the server sent it twice. Only the raw response body shows what was sent.
+
+**What depends on it:** a payload with one result per line, like
+`createReceiptCheckIn`, states a row as committed in every result, never as it
+stood after that line. The check-in's two lines of one product showed 1 pc until
+the API did this.
+
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 
 Verified 2026-09-30 against `MLKitTextRecognition` 7.0.0 (the pod behind

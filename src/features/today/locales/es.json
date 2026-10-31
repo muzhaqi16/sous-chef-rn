@@ -10,6 +10,8 @@
     "householdHint": "Cambia o gestiona tus hogares",
     "tutorialHouseholdTitle": "Toca para gestionar hogares",
     "tutorialHouseholdSubtitle": "Cambia entre hogares o gestiona la configuración del hogar",
+    "tutorialYourHomeTitle": "Tu hogar",
+    "tutorialYourHomeSubtitle": "Toca para cambiarle el nombre o invitar a las personas con las que compras",
     "householdFallback": "Tu hogar"
   }
 }

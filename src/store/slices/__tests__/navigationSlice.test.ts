@@ -1,12 +1,11 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import { OnBoardingSteps, type DeepLinkAction } from '../navigationSlice';
+import type { DeepLinkAction } from '../navigationSlice';
 
 describe('navigationSlice', () => {
   describe('initial state', () => {
     it('starts with null values', () => {
       const store = createTestStore();
       const state = store.getState();
-      expect(state.onBoardingStep).toBeNull();
       expect(state.selectedHomeId).toBeNull();
       expect(state.selectedPantryId).toBeNull();
       expect(state.selectedShoppingListId).toBeNull();
@@ -14,21 +13,6 @@ describe('navigationSlice', () => {
       expect(state.hasInitializedHomeData).toBe(false);
       expect(state.isHomeSelectionReady).toBe(false);
       expect(state.pendingDeepLinkAction).toBeNull();
-    });
-  });
-
-  describe('setOnBoardingStep', () => {
-    it('sets the onboarding step', () => {
-      const store = createTestStore();
-      store.getState().setOnBoardingStep(OnBoardingSteps.createHome);
-      expect(store.getState().onBoardingStep).toBe(OnBoardingSteps.createHome);
-    });
-
-    it('can be set to null', () => {
-      const store = createTestStore();
-      store.getState().setOnBoardingStep(OnBoardingSteps.complete);
-      store.getState().setOnBoardingStep(null);
-      expect(store.getState().onBoardingStep).toBeNull();
     });
   });
 
@@ -103,10 +87,12 @@ describe('navigationSlice', () => {
       store
         .getState()
         .setUserNavigationState('user-1', { verificationSkipped: true });
-      store.getState().setUserNavigationState('user-1', { isNewUser: true });
+      store
+        .getState()
+        .setUserNavigationState('user-1', { credentialPromptDeclined: true });
       expect(store.getState().getUserNavigationState('user-1')).toEqual({
         verificationSkipped: true,
-        isNewUser: true,
+        credentialPromptDeclined: true,
       });
     });
 

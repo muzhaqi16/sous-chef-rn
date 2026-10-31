@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { errorService } from '#/services/errorService';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import {
   ConsumptionUnitsForPantryItemDocument,
@@ -21,7 +22,8 @@ import { Telemetry } from '#services/telemetry';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { UsePantryItemActions_IdFragmentDoc } from './usePantryItemActions.generated';
 import { toDateKey, todayKey } from '#/utils/dateUtils';
-import { bumpStock, inTrackingUnit } from '#features/pantry/cache/stock';
+import { inTrackingUnit } from '#features/pantry/cache/stock';
+import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
 import { stockAmountOf } from '#domain/stockAmount';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 
@@ -94,31 +96,32 @@ export function usePantryItemActions({
     const itemId = activeModal.itemId;
     // A converted unit moves the stock when the server answers.
     const used = inTrackingUnit(client.cache, itemId, quantity, usageUnitId);
-    const revertOptimistic =
-      used === null ? undefined : bumpStock(client.cache, itemId, -used);
+    const inputs: DrawStockInputs = {
+      delta: used === null ? null : -used,
+      now: new Date().toISOString(),
+    };
 
-    const settled = await settleMutation(
-      () =>
-        createPantryItemUsage({
-          variables: {
-            today: todayKey(),
-            input: {
-              pantryItemId: itemId,
-              amount: { quantity },
-              usageUnitId,
-              ...usage,
-              today: todayKey(),
-              // idempotencyKey dedups the usage ledger row on replay.
-              idempotencyKey: generateEntityId(),
-            },
-          },
-        }),
+    const settled = await pendingWritesOf(client.cache).send(
+      CreatePantryItemUsageDocument,
       {
-        document: CreatePantryItemUsageDocument,
-        fallback,
-        onFailed: revertOptimistic,
-        on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
+        today: todayKey(),
+        input: {
+          pantryItemId: itemId,
+          amount: { quantity },
+          usageUnitId,
+          ...usage,
+          today: todayKey(),
+          // idempotencyKey dedups the usage ledger row on replay.
+          idempotencyKey: generateEntityId(),
+        },
       },
+      write =>
+        settleMutation(() => createPantryItemUsage(write), {
+          document: CreatePantryItemUsageDocument,
+          fallback,
+          on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
+        }),
+      inputs,
     );
     if (settled.status !== 'failed') closeModal();
   };
@@ -196,6 +199,7 @@ export function usePantryItemActions({
     const data = client.cache.readFragment<{ id: string }>({
       id: cacheId,
       fragment: UsePantryItemActions_IdFragmentDoc,
+      optimistic: true,
     });
     return !!data?.id;
   };

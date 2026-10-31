@@ -11,6 +11,7 @@ import {
   queuedMutationFor,
 } from '#/test-utils/queuedMutation';
 import {
+  AdjustPantryItemQuantityDocument,
   CreatePantryItemDocument,
   CreatePantryItemUsageDocument,
   DeletePantryItemDocument,
@@ -27,11 +28,11 @@ import {
   DeleteMealPlanItemDocument,
   UpdateMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { handleQueueFailure } from '../queueFailureHandler';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { QueueManager } from '../queueManager';
 import { queueStore } from '../queueStore';
 import { QueueStatus } from '../types';
@@ -103,6 +104,35 @@ const queueQuantitySetAtV5 = () =>
     }),
   );
 
+const queueAdjustAtV5 = () =>
+  queueStore.addMutation(
+    makeQueuedMutation({
+      id: 'adjust',
+      ...queuedMutationFor(AdjustPantryItemQuantityDocument),
+      variables: {
+        input: {
+          id: 'row-1',
+          newQuantity: 3,
+          reason: 'recount',
+          idempotencyKey: 'key-1',
+          version: 5,
+        },
+      },
+      createdAt: NOW,
+    }),
+  );
+
+/** A replay of a write the server already applied: the row as it stands. */
+const convergedAdjustAt = (version: number) => ({
+  data: {
+    adjustPantryItemQuantity: {
+      __typename: 'AdjustPantryItemQuantityPayload',
+      converged: true,
+      pantryItem: stackAt(version),
+    },
+  },
+});
+
 const sentInputs = () =>
   mockClient.mutate.mock.calls.map(
     ([options]: [{ variables: { input: unknown } }]) => options.variables.input,
@@ -161,6 +191,30 @@ describe('writes queued behind a replay', () => {
       expect.objectContaining({ itemName: 'Oat milk', version: 2 }),
       expect.objectContaining({ storageNotes: 'Top', version: 3 }),
     ]);
+  });
+
+  it('are sent past a converged replay that moved the row one step', async () => {
+    queueAdjustAtV5();
+    queueQuantitySetAtV5();
+    mockClient.mutate
+      .mockResolvedValueOnce(convergedAdjustAt(6))
+      .mockImplementationOnce(quantitySetAgainst(6));
+
+    await new QueueManager().processQueue();
+
+    expect(sentInputs()[1]).toMatchObject({ quantity: '4', version: 6 });
+  });
+
+  it('meet another device’s change behind a converged replay', async () => {
+    queueAdjustAtV5();
+    queueQuantitySetAtV5();
+    mockClient.mutate
+      .mockResolvedValueOnce(convergedAdjustAt(7))
+      .mockImplementationOnce(quantitySetAgainst(7));
+
+    await new QueueManager().processQueue();
+
+    expect(sentInputs()[1]).toMatchObject({ quantity: '4', version: 5 });
   });
 
   it('are sent past a versionless change the device made first', async () => {
@@ -527,6 +581,38 @@ describe("a merged create's queued writes", () => {
     );
   });
 
+  it('take their held change onto the merged entry', async () => {
+    queueShoppingAdd();
+    queueStore.addMutation(
+      makeQueuedMutation({
+        id: 'check',
+        ...queuedMutationFor(UpdateShoppingListItemDocument),
+        variables: {
+          input: {
+            id: 'minted-2',
+            version: 1,
+            purchaseTracking: { isPurchased: true },
+          },
+        },
+        pendingWrite: { id: 'held-tick', inputs: {} },
+        createdAt: NOW + 1,
+      }),
+    );
+    const pending = pendingWritesOf(mockClient.cache);
+    pending.restore(queueStore.getPendingWrites());
+    let heldWhenSent: unknown;
+    mockClient.mutate.mockResolvedValueOnce(shoppingMerge);
+    mockClient.mutate.mockImplementationOnce(() => {
+      heldWhenSent = pending.get('held-tick')?.variables.input;
+      return Promise.resolve({ data: {} });
+    });
+    const { manager } = managerWithHandlers();
+
+    await manager.processQueue();
+
+    expect(heldWhenSent).toMatchObject({ id: 'surviving-2', version: 3 });
+  });
+
   it('carry a consumption and a check-off onto the merged entries', async () => {
     queuePantryCreate();
     queueShoppingAdd();
@@ -565,24 +651,6 @@ describe("a merged create's queued writes", () => {
     ]);
     expect(failed).not.toHaveBeenCalled();
     expect(kept).not.toHaveBeenCalled();
-  });
-
-  it('leave nothing persisted under the created entry', async () => {
-    optimisticDataPersistence.save('PantryItem', 'minted-1', 'quantity', 4);
-    optimisticDataPersistence.flush();
-    queuePantryCreate();
-    queueAfterCreate('rename', UpdatePantryItemDocument, {
-      id: 'minted-1',
-      itemName: 'Oat milk',
-      version: 1,
-    });
-    mockClient.mutate.mockResolvedValueOnce(pantryMerge).mockResolvedValueOnce({
-      data: { updatePantryItem: pantryItemPayload('surviving-1', 6) },
-    });
-
-    await new QueueManager().processQueue();
-
-    expect(optimisticDataPersistence.get('PantryItem', 'minted-1')).toEqual({});
   });
 
   it('follow a meal the service merged into one already planned', async () => {
@@ -765,42 +833,5 @@ describe('a delta queued against a stack merged since', () => {
         error: expect.objectContaining({ type: 'conflict' }),
       }),
     );
-  });
-
-  it('takes the merged row off the pantry and links the survivor', async () => {
-    mockClient.cache.restore({
-      ROOT_QUERY: {
-        __typename: 'Query',
-        'pantry:{"id":"pantry-1"}': { __ref: 'Pantry:pantry-1' },
-      },
-      'Pantry:pantry-1': {
-        __typename: 'Pantry',
-        id: 'pantry-1',
-        'itemsConnection:{"filters":{},"orderBy":{}}': {
-          __typename: 'PantryItemConnection',
-          totalCount: 2,
-          edges: [
-            {
-              __typename: 'PantryItemEdge',
-              node: { __ref: 'PantryItem:merged-1' },
-            },
-            {
-              __typename: 'PantryItemEdge',
-              node: { __ref: 'PantryItem:survivor-1' },
-            },
-          ],
-        },
-      },
-      'PantryItem:merged-1': { __typename: 'PantryItem', id: 'merged-1' },
-      'PantryItem:survivor-1': { __typename: 'PantryItem', id: 'survivor-1' },
-    });
-    queueUse();
-    mockClient.mutate.mockResolvedValueOnce(useOnMerged);
-
-    await new QueueManager().processQueue();
-
-    const held = mockClient.cache.extract();
-    expect(held['PantryItem:merged-1']).toBeUndefined();
-    expect(held['PantryItem:survivor-1']).toBeDefined();
   });
 });

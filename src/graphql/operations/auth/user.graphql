@@ -20,6 +20,9 @@ query GetUserSettings {
       language
       timezone
       preferredCurrency
+      # Store mode and Budget & prices, mirrored for the first paint.
+      storeMode
+      budgetAndPrices
       createdAt
       updatedAt
     }

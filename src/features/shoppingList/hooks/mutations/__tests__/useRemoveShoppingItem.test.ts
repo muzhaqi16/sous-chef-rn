@@ -5,7 +5,6 @@ import {
   seedCache,
 } from '#/test-utils/apolloMockProvider';
 import { useRemoveShoppingItem } from '../useRemoveShoppingItem';
-import { removeFromShoppingListItemsCache } from '../utils';
 import { RemoveItemFromShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { alertService } from '#/services/alertService';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -29,82 +28,34 @@ const refusalMock = (member: {
 const goneMock = () =>
   refusalMock({ __typename: 'NotFoundError', code: ErrorCode.NotFound });
 
-jest.mock('../utils', () => ({
-  removeFromShoppingListItemsCache: jest.fn(),
-}));
-
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('useRemoveShoppingItem', () => {
-  const mockRefetch = jest.fn().mockResolvedValue(undefined);
+const UNPURCHASED_ROW = {
+  __typename: 'ShoppingListItem',
+  id: 'item-1',
+  purchaseInfo: {
+    __typename: 'ShoppingListItemPurchaseInfo',
+    isPurchased: false,
+  },
+};
 
+describe('useRemoveShoppingItem', () => {
   it('returns removeItem function', () => {
     const removed = removeMock();
     const { result } = renderHookWithApollo(
-      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useRemoveShoppingItem({ listId: 'list-1' }),
       { operationMocks: [removed.mock] },
     );
 
     expect(typeof result.current.removeItem).toBe('function');
   });
 
-  it('optimistically evicts the item BEFORE firing the mutation (Pattern B / local-first)', async () => {
-    const removed = removeMock();
-    const { result } = renderHookWithApollo(
-      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { operationMocks: [removed.mock] },
-    );
-
-    await act(async () => {
-      await result.current.removeItem('item-123');
-    });
-
-    expect(removeFromShoppingListItemsCache).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      'item-123',
-      { evictItem: true },
-    );
-    expect(removed.fired).toHaveLength(1);
-  });
-
-  it('evicts each item on successive calls', async () => {
-    const removed = removeMock();
-    const { result } = renderHookWithApollo(
-      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
-      { operationMocks: [removed.mock] },
-    );
-
-    await act(async () => {
-      await result.current.removeItem('item-1');
-    });
-    await act(async () => {
-      await result.current.removeItem('item-2');
-    });
-
-    // Asserted per item rather than by call index: each removal evicts twice —
-    // once optimistically before firing, once from the mutation's own `update`
-    // when the response lands.
-    expect(removeFromShoppingListItemsCache).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      'item-1',
-      { evictItem: true },
-    );
-    expect(removeFromShoppingListItemsCache).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      'item-2',
-      { evictItem: true },
-    );
-  });
-
   it('does nothing when listId is missing', async () => {
     const removed = removeMock();
     const { result } = renderHookWithApollo(
-      () => useRemoveShoppingItem({ listId: null, refetch: mockRefetch }),
+      () => useRemoveShoppingItem({ listId: null }),
       { operationMocks: [removed.mock] },
     );
 
@@ -112,7 +63,6 @@ describe('useRemoveShoppingItem', () => {
       await result.current.removeItem('item-1');
     });
 
-    expect(removeFromShoppingListItemsCache).not.toHaveBeenCalled();
     expect(removed.fired).toHaveLength(0);
   });
 
@@ -122,7 +72,7 @@ describe('useRemoveShoppingItem', () => {
     it('restores the row and says so once', async () => {
       const refused = refusalMock({ __typename: 'ForbiddenError' });
       const { result } = renderHookWithApollo(
-        () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+        () => useRemoveShoppingItem({ listId: 'list-1' }),
         { operationMocks: [refused.mock] },
       );
 
@@ -132,13 +82,9 @@ describe('useRemoveShoppingItem', () => {
       });
 
       expect(removed).toBe(false);
-      expect(mockRefetch).toHaveBeenCalledTimes(1);
       expect(alertService.alert).toHaveBeenCalledTimes(1);
     });
 
-    // The refetch threaded here is the items query, whose selection carries
-    // none of the list's counters — so without restoring them the header
-    // keeps reporting one row fewer than the list now shows.
     it('puts the counters back as they were', async () => {
       const cache = seedCache([
         {
@@ -147,10 +93,11 @@ describe('useRemoveShoppingItem', () => {
           totalItems: 3,
           completedItems: 1,
         },
+        UNPURCHASED_ROW,
       ]);
       const refused = refusalMock({ __typename: 'ForbiddenError' });
       const { result } = renderHookWithApollo(
-        () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+        () => useRemoveShoppingItem({ listId: 'list-1' }),
         { operationMocks: [refused.mock], cache },
       );
 
@@ -167,7 +114,7 @@ describe('useRemoveShoppingItem', () => {
     it('keeps the removal when the row is already gone', async () => {
       const gone = goneMock();
       const { result } = renderHookWithApollo(
-        () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+        () => useRemoveShoppingItem({ listId: 'list-1' }),
         { operationMocks: [gone.mock] },
       );
 
@@ -177,7 +124,6 @@ describe('useRemoveShoppingItem', () => {
       });
 
       expect(removed).toBe(true);
-      expect(mockRefetch).not.toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 
@@ -193,7 +139,7 @@ describe('useRemoveShoppingItem', () => {
         },
       });
       const { result } = renderHookWithApollo(
-        () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+        () => useRemoveShoppingItem({ listId: 'list-1' }),
         { operationMocks: [converged.mock] },
       );
 
@@ -203,14 +149,13 @@ describe('useRemoveShoppingItem', () => {
       });
 
       expect(removed).toBe(true);
-      expect(mockRefetch).not.toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalled();
     });
 
     it('reports a landed removal as done', async () => {
       const landed = removeMock();
       const { result } = renderHookWithApollo(
-        () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+        () => useRemoveShoppingItem({ listId: 'list-1' }),
         { operationMocks: [landed.mock] },
       );
 
@@ -234,11 +179,12 @@ describe('useRemoveShoppingItem', () => {
         totalItems: 3,
         completedItems: 1,
       },
+      UNPURCHASED_ROW,
     ]);
     // NotFound: the response writes no list of its own over the local one.
     const gone = goneMock();
     const { result } = renderHookWithApollo(
-      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useRemoveShoppingItem({ listId: 'list-1' }),
       { operationMocks: [gone.mock], cache },
     );
 
@@ -261,10 +207,11 @@ describe('useRemoveShoppingItem', () => {
         remainingItems: 2,
         completionRate: 1 / 3,
       },
+      UNPURCHASED_ROW,
     ]);
     const gone = goneMock();
     const { result } = renderHookWithApollo(
-      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useRemoveShoppingItem({ listId: 'list-1' }),
       { operationMocks: [gone.mock], cache },
     );
 
@@ -291,12 +238,13 @@ describe('useRemoveShoppingItem', () => {
         remainingItems: 2,
         completionRate: 1 / 3,
       },
+      UNPURCHASED_ROW,
     ]);
     const queued = recordMock(RemoveItemFromShoppingListDocument, {
       data: { removeItemFromShoppingList: null },
     });
     const { result } = renderHookWithApollo(
-      () => useRemoveShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useRemoveShoppingItem({ listId: 'list-1' }),
       { operationMocks: [queued.mock], cache },
     );
 
@@ -306,10 +254,9 @@ describe('useRemoveShoppingItem', () => {
     });
 
     expect(removed).toBe(true);
-    expect(removeFromShoppingListItemsCache).toHaveBeenCalledTimes(1);
-    expect(mockRefetch).not.toHaveBeenCalled();
     expect(alertService.alert).not.toHaveBeenCalled();
-    expect(cache.extract()['ShoppingList:list-1']).toMatchObject({
+    expect(cache.extract(true)['ShoppingListItem:item-1']).toBeUndefined();
+    expect(cache.extract(true)['ShoppingList:list-1']).toMatchObject({
       totalItems: 2,
       remainingItems: 1,
     });

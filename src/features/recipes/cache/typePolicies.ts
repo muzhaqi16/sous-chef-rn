@@ -47,9 +47,10 @@ export const recipesTypePolicies: TypePolicies = {
         keyArgs: ['filters'],
       },
       // A ranking for one day and home: a new answer replaces the last, never
-      // merges, and one home's never answers for another's.
+      // merges, and one home's never answers for another's. A screened ranking
+      // is its own entry: an unscreened one must never answer for it.
       recipeSuggestions: {
-        keyArgs: ['today', 'homeId'],
+        keyArgs: ['today', 'homeId', 'excludeDietaryConflicts'],
         merge: (_existing: unknown, incoming: unknown) => incoming,
       },
       catalogRecipesByIngredients: catalogPage('catalogRecipesByIngredients'),

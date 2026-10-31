@@ -1,0 +1,15 @@
+fragment AvoidFoodRow_item on Item {
+  version
+  id
+  name
+  imageUrl
+  categories {
+    id
+    isPrimary
+    category {
+      version
+      id
+      name
+    }
+  }
+}

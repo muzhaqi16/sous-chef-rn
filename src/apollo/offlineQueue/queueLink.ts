@@ -9,12 +9,16 @@ import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
 import { captureReplayInputs, hasReplayPreparation } from './prepareReplay';
+import { dependencyIdsOf, queuedSubject } from './queuedSubject';
 import { OfflineRejectedError } from './OfflineRejectedError';
 import { QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
 import { QueueStatus } from './types';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
+import {
+  pendingWritesOf,
+  type PendingWrites,
+} from '#/apollo/pendingWrites/pendingWrites';
 import {
   LoginDocument,
   RefreshTokenDocument,
@@ -27,7 +31,11 @@ import {
  * can tell a REAL network failure (`'network-error'`, evidence the API is
  * unreachable) from a preemptive queue decision, which never touched the wire.
  */
-export type QueuedReason = 'offline' | 'api-unreachable' | 'network-error';
+export type QueuedReason =
+  | 'offline'
+  | 'api-unreachable'
+  | 'network-error'
+  | 'behind-queued';
 
 /** Never queued, even offline. */
 const NEVER_QUEUE_OPERATIONS = [
@@ -96,6 +104,19 @@ export const createQueueLink = () => {
       );
       return new Observable(observer => {
         enqueueAndComplete(operation, observer, 'api-unreachable');
+      });
+    }
+
+    // Sent now, it would reach the server before the queued write it follows:
+    // an edit before the create it names, or a stale version beside an
+    // earlier one. So it queues behind them, as the drain holds a dependent.
+    if (replayable && waitsBehindQueuedWrite(operation)) {
+      logger.info(
+        `Queue Link: ${operation.operationName} follows an undelivered write, queuing behind it`,
+      );
+      return new Observable(observer => {
+        enqueueAndComplete(operation, observer, 'behind-queued');
+        queueManager.drainAfterPass();
       });
     }
 
@@ -178,6 +199,11 @@ function enqueueAndComplete(
       operation.client.cache,
     );
     if (replayInputs) queuedMutation.replayInputs = replayInputs;
+    const pendingWrites = pendingWritesOf(operation.client.cache);
+    const write = pendingWriteOf(operationContext, pendingWrites);
+    if (write) {
+      queuedMutation.pendingWrite = { id: write.id, inputs: write.inputs };
+    }
 
     try {
       queueStore.addMutation(queuedMutation);
@@ -195,10 +221,9 @@ function enqueueAndComplete(
       observer.error(error);
       return;
     }
-    // The write is durable now, so the cache change it replays against must be
-    // in the same step: a kill before any deferred save relaunches with the
-    // create queued and its row gone.
-    apolloCachePersistence.flushPending();
+    if (write) pendingWrites.markQueued(write.id);
+    // The enqueue may have superseded earlier writes: their layers go with them.
+    pendingWrites.keepQueued(() => queueStore.getQueuedWriteIds());
 
     // Apollo writes a mutation result against its selection set, and a bare
     // `null`/`{}` makes InMemoryCache warn "Missing field <field>". A
@@ -246,6 +271,22 @@ function buildQueuedResultData(query: DocumentNode): Record<string, null> {
     }
   }
   return data;
+}
+
+function pendingWriteOf(context: DefaultContext, pendingWrites: PendingWrites) {
+  const { pendingWriteId } = context;
+  return typeof pendingWriteId === 'string'
+    ? pendingWrites.get(pendingWriteId)
+    : undefined;
+}
+
+function waitsBehindQueuedWrite(operation: ApolloLink.Operation): boolean {
+  const undelivered = queueStore.getUndeliveredIds();
+  if (undelivered.size === 0) return false;
+  const write = { mutation: operation.query, variables: operation.variables };
+  return [...queuedSubject(write).subjectIds, ...dependencyIdsOf(write)].some(
+    id => undelivered.has(id),
+  );
 }
 
 function isMutation(operation: { query: DocumentNode }): boolean {

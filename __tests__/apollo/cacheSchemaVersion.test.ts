@@ -29,7 +29,7 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
-const REVIEWED_CACHE_POLICY_HASH = '400c61d75b349a2d';
+const REVIEWED_CACHE_POLICY_HASH = '1737b85222a8f4d5';
 
 const FEATURES = join('src', 'features');
 
@@ -56,10 +56,10 @@ const shapeFiles = (): string[] => {
  * redefinition are different reasons to purge, and only the first moves the
  * hash above. Without this, a bump made for the second reason is invisible.
  */
-// shape-6: a plan's days and a meal's day are calendar dates, and a plan's
-// meals and a template's meals are connections; purges plans cached with
-// instants under bare lists.
-const REVIEWED_CACHE_VERSION = 'shape-6';
+// shape-7: every network read of a versioned row selects `version`; purges
+// rows cached without the server's version, which no local write may stand in
+// for (an optimistic lock sends it).
+const REVIEWED_CACHE_VERSION = 'shape-7';
 
 it('the persisted cache version matches the decision recorded here', () => {
   const source = readFileSync(

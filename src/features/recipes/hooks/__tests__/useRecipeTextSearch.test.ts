@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import {
@@ -8,13 +8,14 @@ import {
   MealType,
 } from '#/graphql/generated/schemaTypes';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
-import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { showLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { MealPlanItem_RowFragmentDoc } from '#features/mealPlan/cache/mealPlanItem.generated';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { errorService } from '#/services/errorService';
 import type { FoundHit, FoundRecipe } from '#features/recipes/utils/recipeRows';
 import { SearchRecipesDocument } from '../useRecipeSearch.generated';
@@ -22,6 +23,7 @@ import { useRecipeTextSearch } from '../useRecipeTextSearch';
 
 const heldRecipe: FoundRecipe = {
   __typename: 'Recipe',
+  version: 1,
   id: 'recipe-1',
   name: 'Pasta al Forno',
   imageUrl: 'https://cdn.example.com/forno.jpg',
@@ -83,7 +85,8 @@ const pickSecondOfFive = async () => {
   const m = searchMock(heldRecipes(5));
   const { result } = renderSearch([m.mock], cache);
   act(() => result.current.search('curry'));
-  await waitFor(() => expect(result.current.results).toHaveLength(5));
+  await drainTimers();
+  expect(result.current.results).toHaveLength(5);
   const keptBeforePick = recipesKept(cache);
 
   let target: unknown;
@@ -92,6 +95,14 @@ const pickSecondOfFive = async () => {
   });
   return { cache, target, keptBeforePick };
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useRecipeTextSearch', () => {
   it('searches no shorter than three characters', () => {
@@ -110,7 +121,8 @@ describe('useRecipeTextSearch', () => {
     const { result } = renderSearch([m.mock]);
 
     act(() => result.current.search('  pasta '));
-    await waitFor(() => expect(result.current.searching).toBe(false));
+    await drainTimers();
+    expect(result.current.searching).toBe(false);
 
     // The Recipes tab's first page, with no filters.
     expect(m.fired).toEqual([
@@ -123,7 +135,8 @@ describe('useRecipeTextSearch', () => {
     const { result } = renderSearch([m.mock]);
 
     act(() => result.current.search('pasta'));
-    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.results).toHaveLength(1);
 
     expect(result.current.results[0]).toEqual({
       key: 'recipe-recipe-1',
@@ -143,7 +156,8 @@ describe('useRecipeTextSearch', () => {
     const { result } = renderSearch([m.mock]);
 
     act(() => result.current.search('pasta'));
-    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.results).toHaveLength(1);
 
     expect(result.current.results[0]?.dietTags).toEqual(['dairyFree']);
   });
@@ -153,7 +167,8 @@ describe('useRecipeTextSearch', () => {
     const { result } = renderSearch([m.mock]);
 
     act(() => result.current.search('pasta'));
-    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.results).toHaveLength(1);
 
     expect(result.current.results[0]).toEqual({
       key: 'catalog-SPOONACULAR-716429',
@@ -182,7 +197,8 @@ describe('useRecipeTextSearch', () => {
     const { result } = renderSearch([m.mock]);
 
     act(() => result.current.search('garlic'));
-    await waitFor(() => expect(result.current.results).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.results).toHaveLength(2);
 
     expect(result.current.results.map(item => item.title)).toEqual([
       'Pasta with Garlic',
@@ -194,7 +210,8 @@ describe('useRecipeTextSearch', () => {
     const m = searchMock([heldRecipe]);
     const { result } = renderSearch([m.mock]);
     act(() => result.current.search('pasta'));
-    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.results).toHaveLength(1);
 
     act(() => result.current.clear());
 
@@ -214,12 +231,13 @@ describe('useRecipeTextSearch', () => {
 
     act(() => result.current.search('pasta'));
     act(() => result.current.search('garlic'));
-    await waitFor(() => expect(result.current.searching).toBe(false));
+    await drainTimers();
+    expect(result.current.searching).toBe(false);
     expect(result.current.results.map(item => item.title)).toEqual([
       'Pasta with Garlic',
     ]);
 
-    await act(async () => {
+    await drained(async () => {
       older.release();
       await Promise.resolve();
     });
@@ -239,8 +257,10 @@ describe('useRecipeTextSearch', () => {
     const { result } = renderSearch([m.mock]);
 
     act(() => result.current.search('pasta'));
-    await waitFor(() => expect(m.fired).toHaveLength(1));
-    await waitFor(() => expect(result.current.searching).toBe(false));
+    await drainTimers();
+    expect(m.fired).toHaveLength(1);
+    await drainTimers();
+    expect(result.current.searching).toBe(false);
 
     expect(result.current.results).toEqual([]);
     expect(report).toHaveBeenCalledTimes(1);
@@ -270,7 +290,7 @@ describe('useRecipeTextSearch: picking', () => {
     const { cache } = await pickSecondOfFive();
     expect(isHeld(cache, { __typename: 'Recipe', id: 'recipe-2' })).toBe(true);
 
-    writeLocalMealPlanItem(cache, {
+    showLocalMealPlanItem(cache, {
       id: 'meal-1',
       mealPlanId: 'plan-1',
       date: '2026-10-20',
@@ -295,7 +315,8 @@ describe('useRecipeTextSearch: picking', () => {
     const m = searchMock([catalogHit]);
     const { result } = renderSearch([m.mock], cache);
     act(() => result.current.search('pasta'));
-    await waitFor(() => expect(result.current.results).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.results).toHaveLength(1);
 
     let target: unknown;
     act(() => {

@@ -1,7 +1,10 @@
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import { screen, userEvent } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { HomeCard } from '../HomeCard';
 import {
   HomeCard_HomeFragmentDoc,
@@ -129,7 +132,7 @@ function buildHome(
 
 function buildCache(home: HomeCard_HomeFragment) {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id:
       cache.identify({ __typename: home.__typename, id: home.id }) ??
       `Home:${home.id}`,

@@ -22,11 +22,3 @@ fragment useWastePantryItemBatch_pantryItem on PantryItem {
   activeBatchCount
   earliestBatchExpiresOn
 }
-
-# The pre-waste values a refused waste restores.
-fragment useWastePantryItemBatch_state on PantryItemBatch {
-  id
-  status
-  quantity
-  depletedAt
-}

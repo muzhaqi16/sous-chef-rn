@@ -1,7 +1,7 @@
 /**
  * The local-first lifecycle of one shopping-row create, for every surface that
- * adds a line: mint the id, write the row, send it local-first, settle, and
- * withdraw the row on a refusal. The surface keeps its own success UX.
+ * adds a line: mint the id, hold the row as a pending write, send it and
+ * settle. The surface keeps its own success UX.
  */
 
 import type { ApolloCache } from '@apollo/client';
@@ -11,6 +11,10 @@ import type {
   BatchAddShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
 import {
+  pendingWritesOf,
+  type LocalWriteSend,
+} from '#/apollo/pendingWrites/pendingWrites';
+import {
   settleMutation,
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
@@ -18,14 +22,13 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { isRecord } from '#/utils/isRecord';
 import { itemIdOf, type SentItemRef } from '#/utils/refInput';
-import { errorService } from '#/services/errorService';
 import { t } from '#/i18n';
+import type { AddRowsInputs } from '#features/shoppingList/offline/localWrites';
 import {
-  addLocalShoppingListItem,
   createLocalShoppingListItem,
+  type LocalShoppingListItem,
   type OptimisticShoppingListItemFields,
 } from './items';
-import { withdrawShoppingListItems } from './withdraw';
 
 /**
  * What a new row shows until the server answers; its list is the create's, and
@@ -50,10 +53,9 @@ interface ShoppingRowCreate<TData> {
   row: ShoppingRowFields;
   line: ShoppingRowLine;
   /** Fires the surface's own copy of the batch add. */
-  send: (options: {
-    variables: { input: AddItemsToShoppingListInput };
-    context: { localFirst: boolean };
-  }) => Promise<{ data?: TData | null; error?: unknown }>;
+  send: (
+    options: LocalWriteSend<{ input: AddItemsToShoppingListInput }>,
+  ) => Promise<{ data?: TData | null; error?: unknown }>;
   document: DocumentNode;
   /** The surface's copy for a refusal nothing more specific describes. */
   fallback: string;
@@ -92,48 +94,80 @@ function landedRowId(data: unknown): string | null {
   return isRecord(item) && typeof item.id === 'string' ? item.id : null;
 }
 
+/** The API refuses a batch add, or a create's lines, past this many. */
+export const ADD_ITEMS_BATCH_LIMIT = 50;
+
+/**
+ * Sends lines as batch adds the API accepts, each slice settled on its own and
+ * holding only its own rows, so a refusal takes back exactly those. Returns the
+ * first failure, for the caller to present, or null when every slice applied or
+ * queued.
+ */
+export async function addItemsInSlices<TItem extends { id?: string | null }>(
+  cache: ApolloCache,
+  listId: string,
+  items: readonly TItem[],
+  rowOf: (line: TItem) => LocalShoppingListItem | null,
+  send: (
+    write: LocalWriteSend<{
+      input: { shoppingListId: string; items: TItem[] };
+    }>,
+  ) => Promise<{ data?: unknown; error?: unknown }>,
+  settle: { document: DocumentNode; fallback: string },
+): Promise<SettledFailure | null> {
+  let firstFailure: SettledFailure | null = null;
+  // In order: a queued slice replays behind the one before it.
+  for (let start = 0; start < items.length; start += ADD_ITEMS_BATCH_LIMIT) {
+    const slice = items.slice(start, start + ADD_ITEMS_BATCH_LIMIT);
+    const inputs: AddRowsInputs = {
+      listId,
+      rows: slice.flatMap(line => rowOf(line) ?? []),
+      now: new Date().toISOString(),
+    };
+    const settled = await pendingWritesOf(cache).send(
+      settle.document,
+      { input: { shoppingListId: listId, items: slice } },
+      write =>
+        settleMutation(() => send(write), { ...settle, present: 'none' }),
+      inputs,
+    );
+    firstFailure ??= settled.failure ?? null;
+  }
+  return firstFailure;
+}
+
 export async function createShoppingListRow<TData>(
   cache: ApolloCache,
   { listId, row, line, send, document, fallback }: ShoppingRowCreate<TData>,
 ): Promise<ShoppingRowCreated<TData>> {
   const id = generateEntityId();
-  const withdraw = () => {
-    try {
-      withdrawShoppingListItems(cache, listId, [id]);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Shopping List Item',
-      });
-    }
-  };
-  const local = createLocalShoppingListItem(id, {
-    ...row,
-    itemId: row.itemId ?? itemIdOf(line.item),
-    shoppingListId: listId,
-  });
-  try {
-    addLocalShoppingListItem(cache, listId, local);
-  } catch (cacheError) {
-    errorService.reportError(cacheError, {
-      operation: 'Add Shopping List Item (optimistic)',
-    });
-  }
-
-  const settled = await settleMutation(
-    () =>
-      send({
-        variables: {
-          input: { shoppingListId: listId, items: [{ ...line, id }] },
-        },
-        context: { localFirst: true },
+  const inputs: AddRowsInputs = {
+    listId,
+    rows: [
+      createLocalShoppingListItem(id, {
+        ...row,
+        itemId: row.itemId ?? itemIdOf(line.item),
+        shoppingListId: listId,
       }),
-    { document, fallback, present: 'none', onFailed: withdraw },
+    ],
+    now: new Date().toISOString(),
+  };
+
+  const settled = await pendingWritesOf(cache).send(
+    document,
+    { input: { shoppingListId: listId, items: [{ ...line, id }] } },
+    write =>
+      settleMutation(() => send(write), {
+        document,
+        fallback,
+        present: 'none',
+      }),
+    inputs,
   );
   if (settled.failure) {
     return { id, outcome: 'reverted', failure: settled.failure, data: null };
   }
   if (refusedLine(settled.data)) {
-    withdraw();
     return {
       id,
       outcome: 'reverted',

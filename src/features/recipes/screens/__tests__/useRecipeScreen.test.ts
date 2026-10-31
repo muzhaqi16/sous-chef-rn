@@ -1,4 +1,4 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
@@ -8,6 +8,7 @@ import {
   type MockDataFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
 import {
   Diet,
@@ -212,6 +213,14 @@ function renderRecipeScreen(
 const ids = (items: ReadonlyArray<{ id: string }>) => items.map(i => i.id);
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   useStore.setState({ isOnline: true, apiReachable: true });
   mockUseDietaryProfile.mockReturnValue({ profile: null, loading: false });
@@ -386,9 +395,7 @@ describe('useRecipeScreen', () => {
     const search = searchAnswering(page([held('r1', 'Family Lasagna')]));
     const { result } = renderRecipeScreen([search.mock]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('lasagna');
-    });
+    await drained(() => result.current.handleTextSearch('lasagna'));
 
     expect(search.fired).toEqual([
       { query: 'lasagna', filters: {}, first: 25, after: null },
@@ -413,9 +420,7 @@ describe('useRecipeScreen', () => {
       searchAnswering(page([hit('7001', 'Pasta Carbonara')])).mock,
     ]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('pasta');
-    });
+    await drained(() => result.current.handleTextSearch('pasta'));
 
     expect(result.current.searchResults).toEqual([
       {
@@ -440,9 +445,7 @@ describe('useRecipeScreen', () => {
     const search = searchAnswering(page([]));
     const { result } = renderRecipeScreen([search.mock]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('   ');
-    });
+    await drained(() => result.current.handleTextSearch('   '));
 
     expect(search.fired).toEqual([]);
     expect(result.current.searchPerformed).toBe(false);
@@ -455,9 +458,7 @@ describe('useRecipeScreen', () => {
       ).mock,
     ]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('lasagna');
-    });
+    await drained(() => result.current.handleTextSearch('lasagna'));
 
     expect(ids(result.current.searchResults)).toEqual(['recipe-r1']);
     expect(mockToastInfo).toHaveBeenCalledWith(
@@ -471,9 +472,7 @@ describe('useRecipeScreen', () => {
       recordMock(SearchRecipesDocument, { error: new Error('boom') }).mock,
     ]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('pasta');
-    });
+    await drained(() => result.current.handleTextSearch('pasta'));
 
     expect(mockAlert).toHaveBeenCalledWith(
       'Search Error',
@@ -498,9 +497,7 @@ describe('useRecipeScreen', () => {
       }).mock,
     ]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('pasta');
-    });
+    await drained(() => result.current.handleTextSearch('pasta'));
 
     expect(mockAlert).toHaveBeenCalledWith(
       'Rate Limit',
@@ -516,9 +513,7 @@ describe('useRecipeScreen', () => {
       }).mock,
     ]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('pasta');
-    });
+    await drained(() => result.current.handleTextSearch('pasta'));
 
     expect(mockToastInfo).toHaveBeenCalledWith(
       'Recipe search needs a connection. Your saved recipes are still here.',
@@ -530,9 +525,7 @@ describe('useRecipeScreen', () => {
     const byIngredients = ingredientsAnswering([]);
     const { result } = renderRecipeScreen([byIngredients.mock]);
 
-    await act(async () => {
-      await result.current.handleIngredientSearch();
-    });
+    await drained(() => result.current.handleIngredientSearch());
 
     expect(mockAlert).toHaveBeenCalledWith(
       'No Ingredients Selected',
@@ -552,9 +545,7 @@ describe('useRecipeScreen', () => {
       result.current.toggleIngredient('Basil');
     });
 
-    await act(async () => {
-      await result.current.handleIngredientSearch();
-    });
+    await drained(() => result.current.handleIngredientSearch());
 
     expect(byIngredients.fired).toHaveLength(1);
     const [fired] = byIngredients.fired;
@@ -574,9 +565,7 @@ describe('useRecipeScreen', () => {
     act(() => {
       result.current.toggleIngredient('x'.repeat(150));
     });
-    await act(async () => {
-      await result.current.handleIngredientSearch();
-    });
+    await drained(() => result.current.handleIngredientSearch());
 
     expect(mockAlert).toHaveBeenCalledWith(
       'No Ingredients Selected',
@@ -593,9 +582,7 @@ describe('useRecipeScreen', () => {
       searchAnswering(page([held('r1', 'Pizza')])).mock,
     ]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('pizza');
-    });
+    await drained(() => result.current.handleTextSearch('pizza'));
     expect(result.current.searchPerformed).toBe(true);
     expect(result.current.searchResults).toHaveLength(1);
 
@@ -615,14 +602,10 @@ describe('useRecipeScreen', () => {
     const search = searchAnswering(page([held('r1', 'Pasta')]));
     const { result } = renderRecipeScreen([search.mock]);
 
-    await act(async () => {
-      await result.current.handleTextSearch('pasta');
-    });
+    await drained(() => result.current.handleTextSearch('pasta'));
     expect(search.fired).toHaveLength(1);
 
-    await act(async () => {
-      await result.current.handleRefresh();
-    });
+    await drained(() => result.current.handleRefresh());
 
     expect(search.fired).toHaveLength(2);
     expect(search.fired[1]).toMatchObject({ query: 'pasta' });
@@ -640,14 +623,10 @@ describe('useRecipeScreen', () => {
             }),
     });
     const { result } = renderRecipeScreen([search.mock]);
-    await act(async () => {
-      await result.current.handleTextSearch('pasta');
-    });
+    await drained(() => result.current.handleTextSearch('pasta'));
     expect(result.current.searchResults).toHaveLength(1);
 
-    await act(async () => {
-      await result.current.handleRefresh();
-    });
+    await drained(() => result.current.handleRefresh());
 
     expect(search.fired[1]).toMatchObject({ query: 'pasta', after: 'c-r1' });
     expect(result.current.searchResults.map(item => item.title)).toEqual([
@@ -666,16 +645,12 @@ describe('useRecipeScreen', () => {
     act(() => {
       result.current.toggleIngredient('Tomato');
     });
-    await act(async () => {
-      await result.current.handleIngredientSearch();
-    });
+    await drained(() => result.current.handleIngredientSearch());
     expect(mockToastInfo).toHaveBeenLastCalledWith(
       "Some recipes couldn't be loaded right now. Pull down to try again.",
     );
 
-    await act(async () => {
-      await result.current.handleRefresh();
-    });
+    await drained(() => result.current.handleRefresh());
 
     expect(byIngredients.fired).toEqual([
       { ingredients: ['tomato'], first: 25 },
@@ -688,9 +663,7 @@ describe('useRecipeScreen', () => {
     const search = searchAnswering(page([]));
     const { result } = renderRecipeScreen([search.mock]);
 
-    await act(async () => {
-      await result.current.handleRefresh();
-    });
+    await drained(() => result.current.handleRefresh());
 
     expect(mockDiscoveryRefresh).toHaveBeenCalledTimes(1);
     expect(search.fired).toEqual([]);
@@ -723,7 +696,7 @@ describe('useRecipeScreen', () => {
     expect(result.current.searchLoading).toBe(true);
     expect(result.current.emptyStateConfig.icon).toBe('search');
 
-    await act(async () => {
+    await drained(async () => {
       search.release();
       await done;
     });
@@ -746,14 +719,10 @@ describe('useRecipeScreen', () => {
       });
       const { result } = renderRecipeScreen([search.mock]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('lasagna');
-      });
+      await drained(() => result.current.handleTextSearch('lasagna'));
       expect(result.current.searchHasMore).toBe(true);
 
-      await act(async () => {
-        await result.current.loadMoreSearch();
-      });
+      await drained(() => result.current.loadMoreSearch());
 
       expect(search.fired[1]).toMatchObject({
         query: 'lasagna',
@@ -779,14 +748,10 @@ describe('useRecipeScreen', () => {
       });
       const { result } = renderRecipeScreen([search.mock]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('lasagna');
-      });
+      await drained(() => result.current.handleTextSearch('lasagna'));
       expect(mockToastInfo).not.toHaveBeenCalled();
 
-      await act(async () => {
-        await result.current.loadMoreSearch();
-      });
+      await drained(() => result.current.loadMoreSearch());
 
       expect(mockToastInfo).toHaveBeenCalledWith(
         "Some recipes couldn't be loaded right now. Pull down to try again.",
@@ -799,9 +764,7 @@ describe('useRecipeScreen', () => {
         searchAnswering(page([held('r1', 'Only')])).mock,
       ]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('only');
-      });
+      await drained(() => result.current.handleTextSearch('only'));
 
       expect(result.current.searchHasMore).toBe(false);
     });
@@ -821,9 +784,7 @@ describe('useRecipeScreen', () => {
       const search = searchAnswering(page([]));
       const { result } = renderRecipeScreen([search.mock]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('pasta');
-      });
+      await drained(() => result.current.handleTextSearch('pasta'));
 
       expect(search.fired[0]?.filters).toEqual({
         diets: [Diet.Vegan],
@@ -836,15 +797,14 @@ describe('useRecipeScreen', () => {
       const search = searchAnswering(page([held('r1', 'Pasta')]));
       const { result } = renderRecipeScreen([search.mock]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('pasta');
-      });
+      await drained(() => result.current.handleTextSearch('pasta'));
 
       await act(async () => {
         result.current.removeFilter('diet', Diet.Vegan);
       });
 
-      await waitFor(() => expect(search.fired).toHaveLength(2));
+      await drainTimers();
+      expect(search.fired).toHaveLength(2);
       expect(search.fired[1]?.filters).toEqual({ maxReadyTime: 30 });
       expect(result.current.activeFilters.diet).toEqual([]);
       expect(result.current.activeFilterCount).toBe(1);
@@ -855,15 +815,14 @@ describe('useRecipeScreen', () => {
       const search = searchAnswering(page([held('r1', 'Pasta')]));
       const { result } = renderRecipeScreen([search.mock]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('pasta');
-      });
+      await drained(() => result.current.handleTextSearch('pasta'));
 
       await act(async () => {
         result.current.clearFiltersAndSearchAgain();
       });
 
-      await waitFor(() => expect(search.fired).toHaveLength(2));
+      await drainTimers();
+      expect(search.fired).toHaveLength(2);
       expect(search.fired[1]?.filters).toEqual({});
       expect(result.current.activeFilterCount).toBe(0);
     });
@@ -873,9 +832,7 @@ describe('useRecipeScreen', () => {
       const search = searchAnswering(page([held('r1', 'Pasta')]));
       const { result } = renderRecipeScreen([search.mock]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('pasta');
-      });
+      await drained(() => result.current.handleTextSearch('pasta'));
 
       await act(async () => {
         result.current.applyFilters({
@@ -886,7 +843,8 @@ describe('useRecipeScreen', () => {
         });
       });
 
-      await waitFor(() => expect(search.fired).toHaveLength(2));
+      await drainTimers();
+      expect(search.fired).toHaveLength(2);
       expect(search.fired[1]?.filters).toEqual({ maxReadyTime: 15 });
       expect(result.current.activeFilterCount).toBe(1);
     });
@@ -903,9 +861,7 @@ describe('useRecipeScreen', () => {
           maxReadyTime: null,
         });
       });
-      await act(async () => {
-        await result.current.handleTextSearch('pancakes');
-      });
+      await drained(() => result.current.handleTextSearch('pancakes'));
 
       expect(search.fired[0]).toMatchObject({
         query: 'pancakes',
@@ -933,9 +889,7 @@ describe('useRecipeScreen', () => {
       act(() => {
         result.current.toggleIngredient('Durian');
       });
-      await act(async () => {
-        await result.current.handleIngredientSearch();
-      });
+      await drained(() => result.current.handleIngredientSearch());
 
       // Filters are active but don't apply to ingredient search — the empty
       // state must use the plain copy with no clear-filters action.
@@ -953,9 +907,7 @@ describe('useRecipeScreen', () => {
       const search = searchAnswering(page([]));
       const { result } = renderRecipeScreen([search.mock]);
 
-      await act(async () => {
-        await result.current.handleTextSearch('zzznothing');
-      });
+      await drained(() => result.current.handleTextSearch('zzznothing'));
 
       expect(result.current.emptyStateConfig.title).toBe('No recipes found');
       expect(result.current.emptyStateConfig.description).toContain(
@@ -970,7 +922,8 @@ describe('useRecipeScreen', () => {
         result.current.emptyStateConfig.action?.onPress();
       });
 
-      await waitFor(() => expect(search.fired).toHaveLength(2));
+      await drainTimers();
+      expect(search.fired).toHaveLength(2);
       expect(search.fired[1]?.filters).toEqual({});
       expect(result.current.activeFilterCount).toBe(0);
     });
@@ -992,16 +945,14 @@ describe('useRecipeScreen', () => {
       act(() => {
         appDone = result.current.handleTextSearch('app');
       });
-      await act(async () => {
-        await result.current.handleTextSearch('banana');
-      });
+      await drained(() => result.current.handleTextSearch('banana'));
 
       expect(result.current.searchQuery).toBe('banana');
       expect(ids(result.current.searchResults)).toEqual(['recipe-banana']);
 
       // The stale search resolves last — it must not overwrite the newer
       // results or the loading flag.
-      await act(async () => {
+      await drained(async () => {
         slow.release();
         await appDone;
       });
@@ -1033,7 +984,7 @@ describe('useRecipeScreen', () => {
       // state stays stuck on the "searching…" spinner.
       expect(result.current.searchLoading).toBe(false);
 
-      await act(async () => {
+      await drained(async () => {
         pending.release();
         await searchDone;
       });
@@ -1062,14 +1013,12 @@ describe('useRecipeScreen', () => {
       });
       expect(result.current.searchLoading).toBe(true);
 
-      await act(async () => {
-        await result.current.handleIngredientSearch();
-      });
+      await drained(() => result.current.handleIngredientSearch());
       expect(ids(result.current.searchResults)).toEqual([
         'catalog-SPOONACULAR-8001',
       ]);
 
-      await act(async () => {
+      await drained(async () => {
         text.release();
         await textDone;
       });
@@ -1096,12 +1045,10 @@ describe('useRecipeScreen', () => {
       });
       expect(result.current.searchLoading).toBe(true);
 
-      await act(async () => {
-        await result.current.handleTextSearch('pizza');
-      });
+      await drained(() => result.current.handleTextSearch('pizza'));
       expect(ids(result.current.searchResults)).toEqual(['recipe-pizza']);
 
-      await act(async () => {
+      await drained(async () => {
         byIngredients.release();
         await ingredientDone;
       });

@@ -1,10 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { waitFor } from '@testing-library/react-native';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ResolveShareLinkDocument } from '#operations/home/home.generated';
 import { JoinByLinkScreen } from '../JoinByLinkScreen';
 
@@ -60,6 +60,14 @@ function buildResolveMock(
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('JoinByLinkScreen', () => {
   beforeEach(() => jest.clearAllMocks());
 
@@ -69,11 +77,10 @@ describe('JoinByLinkScreen', () => {
         buildResolveMock('HOME9', { targetType: ShareLinkTargetType.HomeJoin }),
       ],
     });
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('JoinHomeByCode', {
-        joinCode: 'HOME9',
-      }),
-    );
+    await drainTimers();
+    expect(mockReplace).toHaveBeenCalledWith('JoinHomeByCode', {
+      joinCode: 'HOME9',
+    });
     expect(mockDispatch).toHaveBeenCalled();
   });
 
@@ -83,11 +90,10 @@ describe('JoinByLinkScreen', () => {
         buildResolveMock('LIST9', { targetType: ShareLinkTargetType.ListJoin }),
       ],
     });
-    await waitFor(() =>
-      expect(mockReplace).toHaveBeenCalledWith('JoinByShareCode', {
-        shareCode: 'LIST9',
-      }),
-    );
+    await drainTimers();
+    expect(mockReplace).toHaveBeenCalledWith('JoinByShareCode', {
+      shareCode: 'LIST9',
+    });
   });
 
   it('shows an invalid-link state when the code resolves to null', async () => {
@@ -95,7 +101,8 @@ describe('JoinByLinkScreen', () => {
       <JoinByLinkScreen route={makeRoute('BADCODE')} />,
       { operationMocks: [buildResolveMock('BADCODE', null)] },
     );
-    await waitFor(() => expect(tree.getByText('Link not found')).toBeTruthy());
+    await drainTimers();
+    expect(tree.getByText('Link not found')).toBeTruthy();
     expect(mockDispatch).not.toHaveBeenCalled();
   });
 });

@@ -517,6 +517,13 @@
     "unknown": "Sconosciuto",
     "unknownHome": "Casa sconosciuta",
     "unknownLoss": "Perdita sconosciuta",
+    "undo": "Annulla",
+    "anyStore": "{{chain}} (qualsiasi negozio)",
+    "storeNumber": "Punto vendita n. {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Aggiorna",
     "updated": "Aggiornato",
     "usage": "Utilizzo",
@@ -573,7 +580,8 @@
     "purchased": "Acquistato",
     "vegan": "Vegana",
     "sulfite": "Solfiti",
-    "budgetAndPrices": "Budget e prezzi"
+    "budgetAndPrices": "Budget e prezzi",
+    "shopping": "Spesa"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -643,7 +651,7 @@
     "shoppingListImagesDesc": "Mostra le immagini dei prodotti nelle liste",
     "storeMode": "Modalità negozio",
     "storeModeDesc": "Fai la spesa corsia per corsia dall'icona del negozio nella lista della spesa",
-    "budgetAndPricesDesc": "Prezzi, stime e budget nelle tue liste e nella dispensa, con il budget di ogni lista dietro l'icona del portafoglio. Disattivato, nulla ti chiede quanto hai pagato.",
+    "budgetAndPricesDesc": "Prezzi, stime e budget nelle tue liste e nella dispensa, con il budget di ogni lista dietro l'icona del portafoglio. Disattivato, i prezzi restano nascosti; una pressione prolungata su un articolo della lista registra comunque quanto hai pagato.",
     "shareUsageData": "Condividi dati di utilizzo",
     "shareUsageDataDesc": "Aiuta a migliorare {{appName}} condividendo statistiche anonime",
     "resetSection": "Ripristina",

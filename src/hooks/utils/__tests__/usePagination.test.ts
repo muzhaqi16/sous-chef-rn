@@ -1,17 +1,38 @@
 'use no memo';
 
-import { renderHook, act } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { GraphQLError } from 'graphql';
+import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import { usePagination } from '../usePagination';
 
 jest.mock('#/services/errorService');
 
-describe('usePagination', () => {
-  const mockFetchMore = jest.fn().mockResolvedValue({});
+const mockFetchPage = jest.fn();
+jest.mock('#hooks/utils/fetchPage', () => ({
+  fetchPage: (...args: unknown[]) => mockFetchPage(...args),
+}));
+const OBSERVABLE = {
+  query: gql`
+    query Page {
+      me {
+        id
+      }
+    }
+  `,
+  variables: {},
+};
 
+const renderHook = <TResult, TProps>(
+  callback: (props: TProps) => TResult,
+  options: { initialProps?: TProps } = {},
+) => renderHookWithApollo(callback, { operationMocks: [], ...options });
+
+describe('usePagination', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockFetchPage.mockResolvedValue({});
   });
 
   it('hasMore reflects pageInfo.hasNextPage', () => {
@@ -20,7 +41,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'abc' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -33,20 +54,20 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: false, endCursor: 'abc' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
     expect(result.current.hasMore).toBe(false);
   });
 
-  it('loadMore() calls fetchMore with cursor and variables', async () => {
+  it('loadMore() asks for the page with cursor and variables', async () => {
     const { result } = renderHook(() =>
       usePagination({
         pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
         fetchMoreVariables: { id: 'list-1' },
       }),
     );
@@ -55,11 +76,9 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(mockFetchMore).toHaveBeenCalledWith({
-      variables: {
-        id: 'list-1',
-        cursor: 'cursor-abc',
-      },
+    expect(mockFetchPage).toHaveBeenCalledWith(expect.anything(), OBSERVABLE, {
+      id: 'list-1',
+      cursor: 'cursor-abc',
     });
   });
 
@@ -69,7 +88,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'cursor-xyz' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
         cursorVariableName: 'itemsCursor',
       }),
     );
@@ -78,10 +97,8 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(mockFetchMore).toHaveBeenCalledWith({
-      variables: {
-        itemsCursor: 'cursor-xyz',
-      },
+    expect(mockFetchPage).toHaveBeenCalledWith(expect.anything(), OBSERVABLE, {
+      itemsCursor: 'cursor-xyz',
     });
   });
 
@@ -96,7 +113,7 @@ describe('usePagination', () => {
         }),
       ],
     });
-    const fetchMore = jest.fn().mockRejectedValue(refusal);
+    mockFetchPage.mockRejectedValueOnce(refusal);
     const restart = jest.fn().mockResolvedValue({});
 
     const { result } = renderHook(() =>
@@ -104,7 +121,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'stale-cursor' },
         loading: false,
         itemCount: 10,
-        fetchMore,
+        observable: OBSERVABLE,
         cursorVariableName: 'itemsCursor',
         restart,
       }),
@@ -124,7 +141,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: false, endCursor: 'cursor-abc' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -132,7 +149,7 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(mockFetchMore).not.toHaveBeenCalled();
+    expect(mockFetchPage).not.toHaveBeenCalled();
   });
 
   it('loadMore() does nothing when loading is true', async () => {
@@ -141,7 +158,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
         loading: true,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -149,7 +166,7 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(mockFetchMore).not.toHaveBeenCalled();
+    expect(mockFetchPage).not.toHaveBeenCalled();
   });
 
   it('loadMore() does nothing when endCursor is null', async () => {
@@ -158,7 +175,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: null },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -166,7 +183,7 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(mockFetchMore).not.toHaveBeenCalled();
+    expect(mockFetchPage).not.toHaveBeenCalled();
   });
 
   it('isLoadingMore is false during initial load even with cached items', () => {
@@ -175,7 +192,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'abc' },
         loading: true,
         itemCount: 5,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -188,16 +205,16 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'abc' },
         loading: true,
         itemCount: 0,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
     expect(result.current.isLoadingMore).toBe(false);
   });
 
-  it('isLoadingMore is true during fetchMore and false after', async () => {
+  it('isLoadingMore is true during a page and false after', async () => {
     let resolveFetch!: () => void;
-    mockFetchMore.mockImplementationOnce(
+    mockFetchPage.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -209,7 +226,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -230,9 +247,40 @@ describe('usePagination', () => {
     expect(result.current.isLoadingMore).toBe(false);
   });
 
+  it('opens for the next page after one that settles in a single render', async () => {
+    const raf = jest
+      .spyOn(globalThis, 'requestAnimationFrame')
+      .mockImplementation(run => {
+        run(0);
+        return 1;
+      });
+    try {
+      mockFetchPage.mockRejectedValueOnce(new Error('network unavailable'));
+      const { result } = renderHook(() =>
+        usePagination({
+          pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
+          loading: false,
+          itemCount: 10,
+          observable: OBSERVABLE,
+        }),
+      );
+
+      await act(async () => {
+        await result.current.loadMore();
+      });
+      await act(async () => {
+        await result.current.loadMore();
+      });
+
+      expect(mockFetchPage).toHaveBeenCalledTimes(2);
+    } finally {
+      raf.mockRestore();
+    }
+  });
+
   it('loadMore() does nothing when already fetching more', async () => {
     let resolveFetch!: () => void;
-    mockFetchMore.mockImplementationOnce(
+    mockFetchPage.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -244,7 +292,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -258,7 +306,7 @@ describe('usePagination', () => {
       await result.current.loadMore();
     });
 
-    expect(mockFetchMore).toHaveBeenCalledTimes(1);
+    expect(mockFetchPage).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveFetch();
@@ -267,11 +315,11 @@ describe('usePagination', () => {
   });
 
   it('ref guard stays active until re-render prevents stale-closure loadMore', async () => {
-    // Simulates: fetchMore resolves → isFetchingMore=false scheduled → before
+    // Simulates: the page resolves → isFetchingMore=false scheduled → before
     // re-render, onEndReached fires again with stale hasMore=true/endCursor.
     // The ref should still be true until the useEffect clears it post-render.
     let resolveFetch!: () => void;
-    mockFetchMore.mockImplementationOnce(
+    mockFetchPage.mockImplementationOnce(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -284,7 +332,7 @@ describe('usePagination', () => {
           pageInfo: { hasNextPage: props.hasMore, endCursor: props.endCursor },
           loading: false,
           itemCount: 10,
-          fetchMore: mockFetchMore,
+          observable: OBSERVABLE,
         }),
       { initialProps: { hasMore: true, endCursor: 'cursor-60' } },
     );
@@ -294,9 +342,9 @@ describe('usePagination', () => {
     act(() => {
       loadMorePromise = result.current.loadMore();
     });
-    expect(mockFetchMore).toHaveBeenCalledTimes(1);
+    expect(mockFetchPage).toHaveBeenCalledTimes(1);
 
-    // fetchMore resolves — but DON'T let React re-render yet
+    // The page resolves — but DON'T let React re-render yet
     await act(async () => {
       resolveFetch();
       await loadMorePromise!;
@@ -311,13 +359,13 @@ describe('usePagination', () => {
     });
 
     // Should still only have been called once
-    expect(mockFetchMore).toHaveBeenCalledTimes(1);
+    expect(mockFetchPage).toHaveBeenCalledTimes(1);
   });
 
   it('concurrent loadMore calls: ref guard prevents duplicate fetches even before state updates', async () => {
-    // fetchMore returns a slow promise so both calls overlap
+    // The page is slow so both calls overlap
     let resolveFetch!: () => void;
-    mockFetchMore.mockImplementation(
+    mockFetchPage.mockImplementation(
       () =>
         new Promise<void>(resolve => {
           resolveFetch = resolve;
@@ -329,7 +377,7 @@ describe('usePagination', () => {
         pageInfo: { hasNextPage: true, endCursor: 'cursor-abc' },
         loading: false,
         itemCount: 10,
-        fetchMore: mockFetchMore,
+        observable: OBSERVABLE,
       }),
     );
 
@@ -342,8 +390,8 @@ describe('usePagination', () => {
       promise2 = result.current.loadMore();
     });
 
-    // Only one fetchMore call should have gone through
-    expect(mockFetchMore).toHaveBeenCalledTimes(1);
+    // Only one page should have gone through
+    expect(mockFetchPage).toHaveBeenCalledTimes(1);
 
     await act(async () => {
       resolveFetch();
@@ -363,7 +411,7 @@ describe('usePagination', () => {
       .mockImplementation(() => 1);
 
     try {
-      mockFetchMore.mockResolvedValue({});
+      mockFetchPage.mockResolvedValue({});
 
       const { result, rerender } = renderHook(
         (props: { endCursor: string }) =>
@@ -371,7 +419,7 @@ describe('usePagination', () => {
             pageInfo: { hasNextPage: true, endCursor: props.endCursor },
             loading: false,
             itemCount: 25,
-            fetchMore: mockFetchMore,
+            observable: OBSERVABLE,
           }),
         { initialProps: { endCursor: 'cursor-25' } },
       );
@@ -379,7 +427,7 @@ describe('usePagination', () => {
       await act(async () => {
         await result.current.loadMore();
       });
-      expect(mockFetchMore).toHaveBeenCalledTimes(1);
+      expect(mockFetchPage).toHaveBeenCalledTimes(1);
 
       // Apollo publishes the merged page: more rows, cursor moved on.
       rerender({ endCursor: 'cursor-50' });
@@ -389,7 +437,7 @@ describe('usePagination', () => {
       await act(async () => {
         await result.current.loadMore();
       });
-      expect(mockFetchMore).toHaveBeenCalledTimes(1);
+      expect(mockFetchPage).toHaveBeenCalledTimes(1);
 
       // Once the frame runs, pagination resumes normally.
       const release = raf.mock.calls.at(-1)?.[0];
@@ -398,10 +446,12 @@ describe('usePagination', () => {
       await act(async () => {
         await result.current.loadMore();
       });
-      expect(mockFetchMore).toHaveBeenCalledTimes(2);
-      expect(mockFetchMore).toHaveBeenLastCalledWith({
-        variables: { cursor: 'cursor-50' },
-      });
+      expect(mockFetchPage).toHaveBeenCalledTimes(2);
+      expect(mockFetchPage).toHaveBeenLastCalledWith(
+        expect.anything(),
+        OBSERVABLE,
+        { cursor: 'cursor-50' },
+      );
     } finally {
       raf.mockRestore();
     }

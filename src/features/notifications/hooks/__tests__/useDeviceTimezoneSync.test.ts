@@ -1,7 +1,8 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   recordMock,
   renderHookWithApollo,
@@ -95,6 +96,14 @@ const heldSettingsZone = (cache: ReturnType<typeof makeCache>) =>
   cache.readQuery({ query: GetUserSettingsDocument })?.me?.settings?.timezone;
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockGetDeviceTimezone.mockReturnValue('America/New_York');
 });
@@ -105,6 +114,10 @@ beforeEach(() => {
  * 22:00–08:00 window mutes mid-afternoon in New York. `registerDevice` carries
  * a timezone too, but nothing reads it.
  */
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useDeviceTimezoneSync', () => {
   // A morning meal-plan reminder is scheduled in this zone too, so it is kept
   // in step whether or not quiet hours are on.
@@ -127,11 +140,10 @@ describe('useDeviceTimezoneSync', () => {
       ],
     });
 
-    await waitFor(() =>
-      expect(update.fired).toContainEqual({
-        input: { quietHours: { quietHoursTimezone: 'America/New_York' } },
-      }),
-    );
+    await drainTimers();
+    expect(update.fired).toContainEqual({
+      input: { quietHours: { quietHoursTimezone: 'America/New_York' } },
+    });
   });
 
   it.each<[string, StoredPreferences, string | null]>([
@@ -155,7 +167,8 @@ describe('useDeviceTimezoneSync', () => {
       ],
     });
 
-    await waitFor(() => expect(update.fired).toEqual([]));
+    await drainTimers();
+    expect(update.fired).toEqual([]);
   });
 
   /**
@@ -172,7 +185,8 @@ describe('useDeviceTimezoneSync', () => {
       operationMocks: [prefsQueryMock(), settingsQueryMock(), update.mock],
     });
 
-    await waitFor(() => expect(update.fired).toHaveLength(1));
+    await drainTimers();
+    expect(update.fired).toHaveLength(1);
     rerender({});
     rerender({});
     expect(update.fired).toHaveLength(1);
@@ -199,8 +213,7 @@ describe('useDeviceTimezoneSync', () => {
       operationMocks: [prefsQueryMock(), settingsQueryMock(), update.mock],
     });
 
-    await waitFor(() => expect(update.fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
     expect(update.fired).toHaveLength(1);
   });
 });
@@ -222,11 +235,10 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
       operationMocks: [matchingPrefs(), settingsQueryMock('UTC'), update.mock],
     });
 
-    await waitFor(() =>
-      expect(update.fired).toEqual([
-        { input: { regional: { timezone: 'America/New_York' } } },
-      ]),
-    );
+    await drainTimers();
+    expect(update.fired).toEqual([
+      { input: { regional: { timezone: 'America/New_York' } } },
+    ]);
     expect(heldSettingsZone(cache)).toBe('America/New_York');
   });
 
@@ -246,12 +258,10 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
       operationMocks: [matchingPrefs(), settingsQueryMock(held), update.mock],
     });
 
-    await waitFor(() =>
-      expect(
-        cache.readQuery({ query: GetUserSettingsDocument })?.me,
-      ).toMatchObject({ settings: held === null ? null : { timezone: held } }),
-    );
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
+    expect(
+      cache.readQuery({ query: GetUserSettingsDocument })?.me,
+    ).toMatchObject({ settings: held === null ? null : { timezone: held } });
     expect(update.fired).toEqual([]);
   });
 
@@ -273,8 +283,7 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
       operationMocks: [matchingPrefs(), settingsQueryMock('UTC'), update.mock],
     });
 
-    await waitFor(() => expect(update.fired).toHaveLength(1));
-    await new Promise(resolve => setTimeout(resolve, 50));
+    await drainTimers();
     expect(update.fired).toHaveLength(1);
     // The refusal puts the zone the server holds back.
     expect(heldSettingsZone(cache)).toBe('UTC');
@@ -296,25 +305,22 @@ describe('useDeviceTimezoneSync — the settings zone', () => {
         preferences.mock,
       ],
     });
-    await waitFor(() =>
-      expect(heldSettingsZone(cache)).toBe('America/New_York'),
-    );
+    await drainTimers();
+    expect(heldSettingsZone(cache)).toBe('America/New_York');
     expect(settings.fired).toEqual([]);
 
     act(() => memoryLifecycle().moveTo('background'));
     mockGetDeviceTimezone.mockReturnValue('Europe/Rome');
     act(() => memoryLifecycle().moveTo('active'));
 
-    await waitFor(() =>
-      expect(settings.fired).toEqual([
-        { input: { regional: { timezone: 'Europe/Rome' } } },
-      ]),
-    );
-    await waitFor(() =>
-      expect(preferences.fired).toEqual([
-        { input: { quietHours: { quietHoursTimezone: 'Europe/Rome' } } },
-      ]),
-    );
+    await drainTimers();
+    expect(settings.fired).toEqual([
+      { input: { regional: { timezone: 'Europe/Rome' } } },
+    ]);
+    await drainTimers();
+    expect(preferences.fired).toEqual([
+      { input: { quietHours: { quietHoursTimezone: 'Europe/Rome' } } },
+    ]);
     expect(heldSettingsZone(cache)).toBe('Europe/Rome');
   });
 });

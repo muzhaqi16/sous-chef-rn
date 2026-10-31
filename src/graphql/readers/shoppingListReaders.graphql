@@ -4,22 +4,30 @@ fragment ShoppingListReaders on ShoppingList {
   basedOnTemplate {
     id
     name
+    version
   }
   budgetAmount
   canMoveToPantry
   completedItems
   completedShopDate
   completionRate
+  costToGo {
+    amount
+    currency
+    lines
+    pricedLines
+  }
   currency
   description
-  estimatedTotal
   home {
     id
     myMembership {
       id
       role
+      version
     }
     name
+    version
   }
   homeId
   isCompleted
@@ -66,7 +74,6 @@ fragment ShoppingListReaders on ShoppingList {
   templateName
   totalCost
   totalItems
-  unpricedItems
   updatedAt
   version
 }

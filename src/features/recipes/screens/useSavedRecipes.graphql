@@ -11,6 +11,7 @@ query MySavedRecipes($first: Int, $after: String) {
           createdAt
           updatedAt
           recipe {
+            version
             id
             # Selected at the parent so consumers can filter the connection
             # without materializing each masked node. Already fetched inside

@@ -88,19 +88,19 @@ global `WebSocket`.
 
 Pick by what the mutation changes; the numbered patterns below carry the code.
 
-| Pattern                                      | Use when                                                            | Example                                                                    |
-| -------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
-| No `update` callback (preferred default)     | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
-| `cache.modify` on parent aggregates          | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
-| Local write BEFORE firing, revert on refusal | A field edit that shows at once and survives being queued           | `useToggleShoppingItem`, `usePublishRecipe` (Pattern 5)                    |
-| `updateEntityFieldsLocalFirst`               | Settings-shaped entity whose field names ARE the setting names      | `useAppSettings`, `useNotificationSettings`                                |
-| `cache.modify` on connection edges + counts  | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
-| `writeFragment`                              | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
-| `refetchQueries` (last resort)               | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                       |
+| Pattern                                     | Use when                                                            | Example                                                                    |
+| ------------------------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| No `update` callback (preferred default)    | Mutation returns the entity; Apollo normalizes by `__typename + id` | `useAdjustPantryItemQuantity`                                              |
+| `cache.modify` on parent aggregates         | Parent stat fields not in the response                              | `useRecipeReviews` (`Pantry.stats` uses its `mergeObjects` policy instead) |
+| A pending write                             | A field edit that shows at once and survives being queued           | `useToggleShoppingItem`, `usePublishRecipe` (Pattern 5)                    |
+| `sendFields`                                | A plain edit of one row's fields                                    | `useAppSettings`, `useNotificationSettings`                                |
+| `cache.modify` on connection edges + counts | Entity moves between filtered connections                           | `moveShoppingListItemTo*` helpers                                          |
+| `writeFragment`                             | Subscription push written through                                   | `usePantrySubscriptions`, `useShoppingListSubscriptions`                   |
+| `refetchQueries` (last resort)              | Query shape underivable from the response                           | `useHomeSubscriptions`, `usePantryItemDetailActions`                       |
 
-- A write that shows before the server answers is written into the cache
-  before firing and reverted on a refusal (Pattern 5); no write in the app
-  passes an `optimisticResponse`. If one is ever needed, build it from the
+- A write that shows before the server answers is a pending layer (Pattern 5),
+  dropped on a refusal; no write in the app passes an `optimisticResponse`. If
+  one is ever needed, build it from the
   cache (`cache.readFragment` + spread), never from a hand-rolled shape.
 - Avoid `refetchQueries` unless `cache.modify` would duplicate server logic
   ([refetchQueries Guidance](#refetchqueries-guidance)).
@@ -113,10 +113,7 @@ cached record lacks, so a record whose rules live in a merge policy
 `writePurchaseInfo` is the worked example: it writes with
 `extensions: { local: true }`, which Apollo hands to the merge function (4.1+;
 `writeFragment`'s options type omits `extensions`, but `write` forwards them),
-and the policy merges a local write field-wise instead of clearing on a flip. A second
-writer of such a field — the offline restoration pass — routes through
-`src/apollo/utils/fieldWriters.ts` (each feature contributes its entries, e.g.
-`src/features/shoppingList/offline/fieldWriters.ts`) rather than merging blind.
+and the policy merges a local write field-wise instead of clearing on a flip.
 Library mechanism:
 [`verified-library-behaviour.md` § cache.modify cannot add a field](verified-library-behaviour.md#cachemodify-cannot-add-a-field).
 
@@ -225,8 +222,8 @@ const [adjustMutation] = useMutation(AdjustPantryItemQuantityDocument, {
 });
 ```
 
-The same hook shows the new quantity before the server answers by writing the
-row locally first (Pattern 5); the response then settles it.
+The same hook shows the new quantity before the server answers in a pending
+layer (Pattern 5); the response then settles it.
 
 **Requirements**:
 
@@ -298,112 +295,75 @@ update: (cache, { data }, { variables }) => {
 
 ---
 
-### Pattern 5: A local write before firing - For Simple Field Updates ⭐ RECOMMENDED
+### Pattern 5: A pending write - For Simple Field Updates ⭐ RECOMMENDED
 
 **Use When**: Editing fields of an entity the cache already holds — a toggle, a setting, a rename — where the change shows at once and survives being queued.
 
-**Shape**: snapshot the fields, write the new values into the cache, fire the mutation with `context: { localFirst: true }`, settle it, and put the snapshot back only when it `failed`.
+**Shape**: register the operation in `LOCAL_WRITES`, then send it through `pendingWritesOf(cache).send`. The change is an optimistic layer over the server's data until the server answers; a refusal drops the layer, so there is nothing to revert (`docs/local-first-architecture.md` § 2).
 
-- **The write is permanent, not an optimistic layer.** Apollo tears an `optimisticResponse` layer down on the offline queue's null result, which reverts the change while it is still queued.
-- **It is made before firing, not in `update`.** `update` runs only with a server payload, so a queued write would show nothing.
+- **The layer is the write's own, not an `optimisticResponse`.** Apollo removes an `optimisticResponse` layer on the offline queue's null result, which would take the change away while it is still queued.
+- **`apply` re-runs.** It runs on every rebuild and after a restart, so it reads only the write's variables, its inputs and the cache (`sous-chef/local-write-is-deterministic`). A clock or a minted id goes in `inputs`.
 - **It goes through `writeEntityFields`** (`src/apollo/utils/localFirstFields.ts`), a `cache.writeFragment`: `cache.modify` cannot introduce a field the cached record lacks. A field whose rules live in a merge policy takes its own writer instead ([one writer](#a-field-with-a-write-time-invariant-has-one-writer)).
-- **`queued` is not a failure.** `settleMutation` answers `applied | queued | failed`, and only `failed` reverts.
+- **`commit` writes what the answer does not state.** Read the mutation's selection: a plain field edit's answer states its row, so `entityFields` has no `commit`.
+- **`queued` is not a failure.** `settleMutation` answers `applied | queued | failed`. Queued keeps the layer, and failed drops it.
 - **The settle shows the failure.** It alerts by default; `present: 'toast'` shows the same copy as an error toast, and `present: 'none'` hands it to the caller as `failure`, for a caller that combines several writes into one message.
-- **The snapshot omits what the cache lacks.** `snapshotFields` keeps only the keys the read carried, so a revert never blanks a field it never saw. Read it from the cache, not from a query result that may not have answered yet.
 
-**Example - a field edit that states its version** (`usePublishRecipe`):
+**Example - a plain field edit** (`useUpdateHomeFields`, `useAppSettings`, `useNotificationSettings`). `sendFields` sends a write registered as `entityFields`, and returns the outcome for the caller to report:
 
 ```typescript
-const [mutate] = useMutation(UpdateRecipeDocument, {
+const [updateHomeMutation] = useMutation(UpdateHomeDocument, {
   context: { localFirst: true },
 });
 
-const setSubmitted = async (recipeId: string, submitted: boolean) => {
-  const entity = { __typename: 'Recipe', id: recipeId };
-  const held = client.cache.readFragment<RecipeReadersFragment>({
-    id: client.cache.identify(entity),
-    fragment: RecipeReadersFragmentDoc,
-    returnPartialData: true,
-  });
-  const patch = {
-    status: submitted ? RecipeStatus.PendingReview : RecipeStatus.Draft,
-    isPublished: false,
-  };
-  const previous = snapshotFields(held, patch);
-  writeEntityFields(client.cache, entity, patch);
-
-  const status = submitted ? RecipeStatus.Published : RecipeStatus.Draft;
-  const settled = await settleMutation(
-    () =>
-      // Sends once earlier writes to this row have settled, at the version the
-      // cache holds then; rejects without sending when it holds none.
-      chainVersionedWrite(client.cache, entity, version =>
-        mutate({ variables: { input: { id: recipeId, status, version } } }),
-      ),
-    {
-      document: UpdateRecipeDocument,
-      fallback: t('labels.failedToUpdateRecipe'),
-      onFailed: () => writeEntityFields(client.cache, entity, previous),
-    },
-  );
-  return settled.status !== 'failed';
-};
-```
-
-**Example - a settings-shaped entity** (`useUpdateHomeFields`, `useAppSettings`, `useNotificationSettings`). `updateEntityFieldsLocalFirst` wraps the same write, fire and revert, and returns the outcome for the caller to report:
-
-```typescript
-const { persisted } = await updateEntityFieldsLocalFirst({
-  cache: client.cache,
+const settled = await sendFields(client.cache, {
   entity: { __typename: 'Home', id: homeId },
-  updates,
-  previous: snapshotFields(home, updates),
-  logLabel: 'Update Home Fields',
-  mutate: () => updateHomeMutation({ variables: { input } }),
+  fields: updates,
+  variables: { input: { id: homeId, ...updates, version: home.version } },
+  mutate: updateHomeMutation,
+  settle: { document: UpdateHomeDocument, fallback },
 });
 ```
 
-**Example - a field with a merge-policy invariant** (`useToggleShoppingItem`). A tick is an `updateShoppingListItem` carrying only the flag; `purchaseInfo` is written through its one writer, and the row moves between the filtered `itemsConnection` variants in the same step:
+**Example - a field with a merge-policy invariant** (`useToggleShoppingItem`). A tick is an `updateShoppingListItem` carrying only the flag. Its `LocalWrite` (`updateRow`) writes `purchaseInfo` through its one writer and moves the row between the filtered `itemsConnection` variants, and the call states what `apply` cannot re-derive:
 
 ```typescript
-const [updatePurchase] = useMutation(UpdateShoppingListItemDocument, {
-  context: { localFirst: true },
-});
+export const updateRow: LocalWrite<UpdateRowInputs> = {
+  apply(cache, { variables, inputs: { purchase } }) {
+    const row = rowOf(variables);
+    if (!row || !purchase || !isHeld(cache, row)) return;
+    const { listId, isPurchased, now } = purchase;
+    writePurchaseInfo(cache, row.id, { isPurchased }, { updatedAt: now });
+    moveShoppingListItemToPurchased(cache, listId, row);
+  },
+};
 
-writePurchaseInfo(
-  client.cache,
-  itemId,
-  { isPurchased: newStatus },
-  { updatedAt: new Date().toISOString() },
-);
-const counterChange = recordListCounters(client.cache, listId, () => {
-  moveShoppingListItemToPurchased(client.cache, listId, { id: itemId });
-});
-
-const settled = await settleMutation(
-  () =>
-    updatePurchase({
-      variables: {
-        input: {
-          id: itemId,
-          version: snapshot.version,
-          purchaseTracking: { isPurchased: newStatus },
-        },
-      },
+const settled = await pendingWritesOf(client.cache).send(
+  UpdateShoppingListItemDocument,
+  {
+    input: {
+      id: itemId,
+      version: snapshot.version,
+      purchaseTracking: { isPurchased: newStatus },
+    },
+  },
+  write =>
+    settleMutation(() => updatePurchaseMutation(write), {
+      document: UpdateShoppingListItemDocument,
+      fallback: t('errors.updateItemFailed'),
     }),
   {
-    document: UpdateShoppingListItemDocument,
-    fallback: t('errors.updateItemFailed'),
-    // Puts back the flag, the connection move and the counters.
-    onFailed: revert,
+    purchase: {
+      listId,
+      isPurchased: newStatus,
+      now: new Date().toISOString(),
+    },
   },
 );
 ```
 
 **When NOT to Use This Pattern**:
 
-- Creating a new entity: write the whole row before firing (`docs/local-first-architecture.md` § 2, and [New Entity](#pattern-new-entity-createadd) below)
-- Adding to or removing from a list: the edge writers of Pattern 1
+- Creating a new entity: `apply` writes the whole row (`docs/local-first-architecture.md` § 2, and [New Entity](#pattern-new-entity-createadd) below)
 - A change the server must compute (a total, a merged quantity): send it and let the response normalize (Pattern 2)
 
 ---
@@ -450,20 +410,18 @@ const [updateMutation] = useUpdateMutation({
 ### When to Use
 
 No write in the app passes an `optimisticResponse`. A change the user should see
-before the server answers is written into the cache before the mutation fires —
-a whole row for a create (below), the edited fields for an update (Pattern 5),
-an unlinked edge for a removal (Pattern 4) — and is reverted only when the write
-settles as `failed`. That write is permanent rather than a layer, which is what
-lets it outlive the offline queue's null result and an app restart.
+before the server answers is a pending write — a whole row for a create (below),
+the edited fields for an update (Pattern 5), a hidden row for a removal (Pattern 4) — held in a layer `PendingWrites` owns. Apollo does not remove that layer when
+the mutation settles, so it outlives the offline queue's null result, and it is
+rebuilt from the queue after an app restart.
 
 ### Pattern: New Entity (Create/Add)
 
-A create writes its entity to the cache PERMANENTLY before firing, under a
-client-minted id, and reverts only on a refusal — never an `optimisticResponse`,
-which the offline queue's null result tears down (`docs/local-first-architecture.md`
-§ 2). `useAddToPantry.addItem` is the worked example: `generateEntityId`, then
-`writeLocalPantryItem` + `addPantryItemLocally`, then `settleMutation` with
-`onFailed` reverting. `writeLocalPantryItem` states only what the create knows;
+A create's `apply` writes its whole entity under a client-minted id, and its
+`commit` lists the answered row (`docs/local-first-architecture.md` § 2).
+`useAddToPantry.addItem` is the worked example: `generateEntityId`, then
+`pendingWrites.send`, whose `createItem` write calls `writeLocalPantryItem` +
+`addPantryItemLocally`. `writeLocalPantryItem` states only what the create knows;
 `writeLocalEntity` fills the rest of the row fragment (the entity's readers plus
 its empty connections) from the cache where held, else from the SDL-derived
 neutral base. A nested record completes the same way from its type's neutral
@@ -666,6 +624,31 @@ For the server to support version conflicts, mutations must:
 3. Return version conflict error if mismatch
 4. Increment version on successful update
 
+### Every read carries `version`, and answers are ordered by it
+
+- **Every network read of a versioned row selects `version`.** That covers
+  operations and every fragment an operation spreads
+  (`sous-chef/network-read-selects-version`). A fragment no operation spreads
+  only feeds `readFragment` / `writeFragment` and is exempt.
+- **A version is never invented, because a write sends it as the lock.** A
+  hand-built row states the version it knows from an answer, else the one
+  the cache holds, else 0, and 0 only for a row the server hasn't created.
+  Persisted rows from before every read selected it were purged with
+  `shape-7`.
+- **`answerOrderingLink` keeps a newer row** (`src/apollo/links/`, under
+  `localWritePrecedenceLink`). When an answer's copy of a row has a lower
+  `version` than the one the server last gave the device, the link lays the
+  device's copy over the answer before Apollo stores it: scalars, embedded
+  objects (a tick is `purchaseInfo`) and the rows it points at. The answer's
+  other rows still land, and rows in a list or connection land as answered,
+  since nothing numbers membership. It reads the root, never an optimistic
+  layer. A local write keeps its row's version, so the link never keeps a
+  pending write over an answer at that version; that is the precedence link's
+  job.
+- **Why a link, not a type policy:** nothing in the cache sees a normalized
+  row's old and new copies together. Verified:
+  `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
+
 ---
 
 ## Decision Trees
@@ -679,7 +662,7 @@ START
   │   └─ YES → Use cache.evict() + cache.gc() + cache.modify()
   │
   ├─ Is this a SIMPLE FIELD UPDATE (toggle, setting, rename)?
-  │   └─ YES → Write the fields locally before firing, revert on refusal (Pattern 5)
+  │   └─ YES → A pending write (Pattern 5)
   │               [Shows at once, survives being queued]
   │
   ├─ Is this adding/removing from an ARRAY?
@@ -696,20 +679,19 @@ START
 
 ### "Should I Add an Optimistic Response?"
 
-No. Every write that shows before the server answers is a local write made
-before firing:
+No. Every write that shows before the server answers is a pending write:
 
 ```
 START
   │
   ├─ Does the write CREATE an entity?
-  │   └─ Write the whole row under a client-minted id, then fire (New Entity)
+  │   └─ `apply` writes the whole row under a client-minted id (New Entity)
   │
   ├─ Does it EDIT fields of a row the cache holds?
-  │   └─ Write the fields, then fire; revert on refusal (Pattern 5)
+  │   └─ `apply` writes the fields (Pattern 5)
   │
   ├─ Does it REMOVE a row?
-  │   └─ Unlink it, then fire; restore on refusal (Pattern 4)
+  │   └─ `apply` hides it, `commit` removes it (Pattern 4)
   │
   └─ Does the server compute the result?
       └─ Fire and let the response normalize (Pattern 2)
@@ -770,9 +752,9 @@ import { useFragmentList } from '#/hooks/apollo/useFragmentList';
 // A query that must not run yet
 import { skipToken } from '@apollo/client/react';
 
-// Optimistic response helpers
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
-import { generateId } from '#/utils/generateId';
+// A pending write and its client-minted id
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { generateEntityId } from '#/utils/generateEntityId';
 
 // A write's outcome
 import { settleMutation } from '#/apollo/utils/settleMutation';
@@ -817,8 +799,8 @@ import { CacheStrategy } from '#/services/subscriptions/types';
 ✅ **Do**: Let Apollo handle variable-change refetches automatically; use `refetch()` only for same-variable refreshes
 
 ❌ **Don't**: Leave a write's change invisible until the server answers
-✅ **Do**: Write the change to the cache permanently before firing, and revert it
-only on a refusal — never an `optimisticResponse`, which a queued write tears down
+✅ **Do**: Hold it in a pending layer, which a refusal drops — never an
+`optimisticResponse`, which a queued write tears down
 
 ❌ **Don't**: Ignore version conflicts
 ✅ **Do**: Handle version conflicts with user-friendly messages
@@ -833,25 +815,19 @@ only on a refusal — never an `optimisticResponse`, which a queued write tears 
 const [addItemMutation] = useMutation(AddItemDocument, {
   // Every call queues when the API is unreachable.
   context: { localFirst: true },
-  // The server's row replaces the local one, matched by the id it was minted
-  // with, so the edge is never duplicated.
-  update: (cache, { data }) => {
-    const added = appliedPayload(data)?.item;
-    if (added) addItemToCache(cache, listId, added);
-  },
 });
 
 const id = generateEntityId();
-// Permanent, before firing: a queued create shows now and survives a restart.
-addOptimisticItem(client.cache, listId, buildOptimisticItem(id, input));
-
-const settled = await settleMutation(
-  () => addItemMutation({ variables: { input: { ...input, id } } }),
-  {
-    document: AddItemDocument,
-    fallback: t('errors.addItemFailed'),
-    onFailed: () => revertOptimisticItem(client.cache, listId, id),
-  },
+// The layer shows the row now and is rebuilt from the queue after a restart.
+const settled = await pendingWritesOf(client.cache).send(
+  AddItemDocument,
+  { input: { ...input, id } },
+  write =>
+    settleMutation(() => addItemMutation(write), {
+      document: AddItemDocument,
+      fallback: t('errors.addItemFailed'),
+    }),
+  { row: buildLocalItem(id, input) },
 );
 ```
 
@@ -865,7 +841,6 @@ const settled = await settleMutation(
   {
     document: UpdateItemDocument,
     fallback: t('errors.updateItemFailed'),
-    onFailed: revertSnapshot,
     onConflictRefresh: refetch,
   },
 );
@@ -933,24 +908,12 @@ Use the hook-owned fragment form when the caller is a hook that runs outside the
 
 ### Which cache update approach
 
-| Operation         | Cache Update Needed? | Use This                                             |
-| ----------------- | -------------------- | ---------------------------------------------------- |
-| **Create/Add**    | YES                  | `createAddToParentConnectionUpdater()`               |
-| **Update**        | NO                   | Apollo auto-normalizes by `__typename` + `id`        |
-| **Delete/Remove** | YES                  | `createRemoveFromParentConnectionUpdater()`          |
-| **Toggle field**  | YES, before firing   | A local field write, reverted on refusal (Pattern 5) |
-
-### When to Use optimisticDataPersistence
-
-**Only use for rapid UI operations** like quantity steppers where:
-
-- User makes multiple rapid changes (increment/decrement)
-- Changes happen faster than network round-trips
-- Field-level persistence is needed for offline support
-
-**Current valid usage:** `useShoppingListActions.ts` for quantity increment/decrement.
-
-**Don't use for:** Standard CRUD operations (Apollo cache persistence handles this).
+| Operation         | Cache Update Needed? | Use This                                      |
+| ----------------- | -------------------- | --------------------------------------------- |
+| **Create/Add**    | YES                  | `createAddToParentConnectionUpdater()`        |
+| **Update**        | NO                   | Apollo auto-normalizes by `__typename` + `id` |
+| **Delete/Remove** | YES                  | `createRemoveFromParentConnectionUpdater()`   |
+| **Toggle field**  | YES, in a layer      | A pending write (Pattern 5)                   |
 
 ### When Subscriptions Need Manual writeFragment
 
@@ -1109,10 +1072,9 @@ connection, so a delete response that writes back the deleted `{ id }` cannot
 make the row readable again.
 
 **Field patches** (`src/apollo/utils/localFirstFields.ts`): `snapshotFields`
-captures what a local write is about to change, `writeEntityFields` writes it
-through a fragment (so an unheld field is added, not silently skipped), and the
-revert writes the snapshot back. `updateEntityFieldsLocalFirst` runs the whole
-lifecycle for a settings-shaped entity.
+captures what a write is about to change, and `writeEntityFields` writes it
+through a fragment (so an unheld field is added, not silently skipped).
+`sendFields` (`src/apollo/pendingWrites/`) sends a field edit as a pending write.
 
 **Example Usage:**
 
@@ -1131,12 +1093,6 @@ update: (cache, { data }) => {
   addToPantryItemsCache(cache, pantryId, data.createPantryItem);
 };
 ```
-
-### Local row helpers (`src/apollo/utils/createOptimisticResponse.ts`)
-
-| Utility                                    | Use Case                                                                                                                    |
-| ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| `enhanceWithVersion(currentItem, updates)` | The row a local write stores: the cached entity with the edit, `version` kept (the server moves it) and `updatedAt` stamped |
 
 ### CRUD Operations (`src/hooks/utils/useCrudOperations.ts`)
 
@@ -1181,13 +1137,13 @@ replaces contents wholesale, so it must not run once queries are watching.
 
 ### `apolloCachePersistence` API surface
 
-| Method                              | Use when                                                                                                                                                                                                                 |
-| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `load()`                            | Read the blob at restore; null when absent or of another shape                                                                                                                                                           |
-| `scheduleExtractAndSave(extractor)` | Debounced persist after every cache write (wired in `setupCachePersistence`); the extractor runs once per window, at idle                                                                                                |
-| `flushPending()`                    | Write an owed save now, synchronously — the app-background transition (`useAppStateLifecycle` → `flushCachePersistence()`) and every queued write (`queueLink`, right after `addMutation`); a no-op when nothing is owed |
-| `cancel()`                          | Drop an owed save — sign-out, so the previous account's last seconds never reach disk                                                                                                                                    |
-| `clear()`                           | Remove everything a later `load()` could restore — session end, version mismatch, parse failure                                                                                                                          |
+| Method                              | Use when                                                                                                                                                 |
+| ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `load()`                            | Read the blob at restore; null when absent or of another shape                                                                                           |
+| `scheduleExtractAndSave(extractor)` | Debounced persist after every cache write (wired in `setupCachePersistence`); the extractor runs once per window, at idle                                |
+| `flushPending()`                    | Write an owed save now, synchronously — the app-background transition (`useAppStateLifecycle` → `flushCachePersistence()`); a no-op when nothing is owed |
+| `cancel()`                          | Drop an owed save — sign-out, so the previous account's last seconds never reach disk                                                                    |
+| `clear()`                           | Remove everything a later `load()` could restore — session end, version mismatch, parse failure                                                          |
 
 Rules the module holds:
 
@@ -1513,8 +1469,8 @@ See `src/features/shoppingList/cache/connections.ts` for the full implementation
 
 ## Reference implementations
 
-- **Mutation patterns**: `useAddToPantry.ts` (local-first create through `writeLocalPantryItem` + `settleMutation`), `createShoppingListRow` in `src/features/shoppingList/cache/createShoppingListRow.ts` (the shopping-row create lifecycle every add site shares), `useToggleShoppingItem.ts` (a permanent local write, reverted on a refusal), `updateEntityFieldsLocalFirst` (settings-shaped entities).
-- **Replay reconciliation**: `REPLAY_RECONCILERS` in `src/apollo/offlineQueue/queueReplayReconcilers.ts`; `__tests__/apollo/replayReconcilerCoverage.test.ts` fails when a queueable mutation's foreground `update` adopts or withdraws an entity and no reconciler does the same on replay.
+- **Mutation patterns**: `useAddToPantry.ts` (local-first create through `pendingWrites.send`), `createShoppingListRow` in `src/features/shoppingList/cache/createShoppingListRow.ts` (the shopping-row create lifecycle every add site shares), `useToggleShoppingItem.ts` (a pending write with its own `LocalWrite`), `sendFields` (plain field edits).
+- **Replay reconciliation**: `REPLAY_RECONCILERS` in `src/apollo/offlineQueue/replayRegistry.ts`; `__tests__/apollo/queueableWritesTakeNoUpdate.test.ts` fails when a queueable mutation takes an `update` of its own, as what an answer leaves goes in `commit`.
 - **Resync**: `src/apollo/refetchEvents.ts`.
 - **Fragment reads**: `useFragmentList` (`src/hooks/apollo/useFragmentList.ts`); `useRecipeData` for a single masked entity.
 - **Cache updater utilities**: `src/apollo/utils/cacheUpdaters.ts`

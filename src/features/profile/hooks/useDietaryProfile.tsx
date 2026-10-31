@@ -11,7 +11,6 @@ import {
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import type { ApolloCache, Reference } from '@apollo/client';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
@@ -27,13 +26,14 @@ import type {
   RestrictionKindInput,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
-import {
-  snapshotFields,
-  writeEntityFields,
-} from '#/apollo/utils/localFirstFields';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import type {
+  AddRestrictionInputs,
+  RemoveRestrictionInputs,
+} from '#features/profile/offline/localWrites';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
 
 export interface DietaryRestriction {
@@ -63,6 +63,8 @@ export interface DietaryProfileData {
   fatTarget?: number | null;
   mealsPerDay: number;
   snacksPerDay: number;
+  /** How many people the user cooks for; null when not answered. */
+  cooksFor?: number | null;
   cookingSkillLevel?: CookingSkillLevel | null;
   maxPrepTimeMinutes?: number | null;
   maxCookTimeMinutes?: number | null;
@@ -121,9 +123,6 @@ export const useDietaryProfile = ({
   const client = useApolloClient();
 
   // ===== MUTATION 1: Update Dietary Profile =====
-  // Local-first: the changed fields are written to the cached DietaryProfile
-  // PERMANENTLY before firing (an optimisticResponse would be torn down on the
-  // offline queue's null result) and reverted on failure.
   const [updateProfile] = useMutation(UpdateDietaryProfileDocument, {
     context: { localFirst: true },
   });
@@ -131,47 +130,10 @@ export const useDietaryProfile = ({
   // ===== MUTATION 2: Add Dietary Restriction =====
   const [addRestriction] = useMutation(AddDietaryRestrictionDocument, {
     context: { localFirst: true },
-    // Note: No optimistic response - DietaryRestriction has complex enum types that need server validation
-    // cache.modify() handles instant UI update when server responds (~100-200ms)
-    update: (cache, { data }) => {
-      const payload = appliedPayload(data);
-      // Read from the cache, not the render: the add can follow the profile's
-      // creation within one handler.
-      const profileId = cache.readQuery({ query: GetDietaryProfileDocument })
-        ?.me?.dietaryProfile?.id;
-      if (!payload || !profileId) return;
-
-      const newRestriction = payload.dietaryRestriction;
-
-      // Add the new restriction reference to DietaryProfile.restrictions
-      cache.modify({
-        id: cache.identify({ __typename: 'DietaryProfile', id: profileId }),
-        fields: {
-          restrictions(
-            existingRestrictions: readonly Reference[] = [],
-            { toReference, readField },
-          ) {
-            const newRestrictionRef = toReference(newRestriction);
-
-            // Check if restriction already exists (prevent duplicates)
-            const exists = existingRestrictions.some(
-              ref => readField('id', ref) === newRestriction.id,
-            );
-
-            if (exists || !newRestrictionRef) return existingRestrictions;
-
-            // Add to end of array
-            return [...existingRestrictions, newRestrictionRef];
-          },
-        },
-      });
-    },
   });
 
   // ===== MUTATION 3: Remove Dietary Restriction =====
-  // The cache removal runs after the settle, for every outcome but a failure.
   const [removeRestriction] = useMutation(RemoveDietaryRestrictionDocument, {
-    // Queued offline and replayed idempotently; no optimistic layer to tear down.
     context: { localFirst: true },
   });
 
@@ -199,6 +161,7 @@ export const useDietaryProfile = ({
       fatTarget: profile.fatTarget,
       mealsPerDay: profile.mealsPerDay || 3,
       snacksPerDay: profile.snacksPerDay || 1,
+      cooksFor: profile.cooksFor,
       cookingSkillLevel: profile.cookingSkillLevel,
       maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
       maxCookTimeMinutes: profile.maxCookTimeMinutes,
@@ -216,6 +179,7 @@ export const useDietaryProfile = ({
     fatTarget?: number | null;
     mealsPerDay?: number;
     snacksPerDay?: number;
+    cooksFor?: number | null;
     cookingSkillLevel?: CookingSkillLevel | null;
     maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
@@ -226,23 +190,18 @@ export const useDietaryProfile = ({
       Object.entries(updates).map(([key, value]) => [key, value ?? undefined]),
     );
 
-    const entity = profile
-      ? { __typename: 'DietaryProfile', id: profile.id }
-      : undefined;
-    const previous = snapshotFields(profile, cleanedUpdates);
-    writeEntityFields(client.cache, entity, cleanedUpdates);
-
-    const settled = await settleMutation(
-      () =>
-        updateProfile({
-          variables: { input: cleanedUpdates },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: profile
+        ? { __typename: 'DietaryProfile', id: profile.id }
+        : undefined,
+      fields: cleanedUpdates,
+      variables: { input: cleanedUpdates },
+      mutate: updateProfile,
+      settle: {
         document: UpdateDietaryProfileDocument,
         fallback: t('errors.codes.genericRetry'),
-        onFailed: () => writeEntityFields(client.cache, entity, previous),
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 
@@ -266,42 +225,42 @@ export const useDietaryProfile = ({
     notes?: string,
   ) => {
     if (!(await ensureProfileExists())) return false;
-    const settled = await settleMutation(
-      () =>
-        addRestriction({
-          variables: {
-            input: { kind: restriction, severity, notes },
-          },
+    const id = generateEntityId();
+    const inputs: AddRestrictionInputs = {
+      row: { id, kind: restriction, severity, notes },
+      now: new Date().toISOString(),
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      AddDietaryRestrictionDocument,
+      { input: { id, kind: restriction, severity, notes } },
+      write =>
+        settleMutation(() => addRestriction(write), {
+          document: AddDietaryRestrictionDocument,
+          fallback: t('errors.codes.genericRetry'),
+          // Both callers alert on the false return; a second alert stacks, and
+          // a bulk add stacks one per restriction.
+          present: 'none',
         }),
-      {
-        document: AddDietaryRestrictionDocument,
-        fallback: t('errors.codes.genericRetry'),
-        // Both callers alert on the false return; a second alert stacks, and
-        // a bulk add stacks one per restriction.
-        present: 'none',
-      },
+      inputs,
     );
     return settled.status !== 'failed';
   };
 
   const removeDietaryRestriction = async (id: string) => {
-    const settled = await settleMutation(
-      () =>
-        removeRestriction({
-          variables: { input: { id } },
+    const inputs: RemoveRestrictionInputs = { profileId: profile?.id };
+    const settled = await pendingWritesOf(client.cache).send(
+      RemoveDietaryRestrictionDocument,
+      { input: { id } },
+      write =>
+        settleMutation(() => removeRestriction(write), {
+          document: RemoveDietaryRestrictionDocument,
+          fallback: t('dietary.removeRestrictionFailed'),
+          removal: true,
+          present: 'none',
         }),
-      {
-        document: RemoveDietaryRestrictionDocument,
-        fallback: t('dietary.removeRestrictionFailed'),
-        removal: true,
-        present: 'none',
-      },
+      inputs,
     );
-    if (settled.status === 'failed') return false;
-    // Applied, queued, or already gone — a top-level gone code included, which
-    // carries no payload an `update` could read.
-    if (profile) removeRestrictionFromCache(client.cache, profile.id, id);
-    return true;
+    return settled.status !== 'failed';
   };
 
   const dietaryProfile = getDietaryProfile();
@@ -318,25 +277,3 @@ export const useDietaryProfile = ({
     removeDietaryRestriction,
   };
 };
-
-/** Takes a removed restriction off its profile and out of the cache. */
-function removeRestrictionFromCache(
-  cache: ApolloCache,
-  profileId: string,
-  restrictionId: string,
-): void {
-  cache.modify({
-    id: cache.identify({ __typename: 'DietaryProfile', id: profileId }),
-    fields: {
-      restrictions(
-        existingRestrictions: readonly Reference[] = [],
-        { readField },
-      ) {
-        return existingRestrictions.filter(
-          ref => readField('id', ref) !== restrictionId,
-        );
-      },
-    },
-  });
-  safeEvict(cache, 'DietaryRestriction', restrictionId);
-}

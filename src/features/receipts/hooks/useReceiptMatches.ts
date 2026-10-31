@@ -13,6 +13,7 @@ import {
   type ResolveReceiptLinesQuery,
 } from './useReceiptMatches.generated';
 import type { PrintedStore } from '../store/receiptDraftStore';
+import { merchantInputOf } from '../utils/merchantInput';
 
 /** A catalog item the API proposes for a receipt line. */
 export interface ReceiptCandidate {
@@ -108,6 +109,7 @@ export function useReceiptMatches(
   const sent = lines.slice(0, MAX_LINES);
   // Asked once the pantry is known (or known to be none), never twice.
   const pantryKnown = !!pantry || !!currentHome;
+  const merchant = merchantInputOf(printedStore);
 
   const { data, loading, error, refetch } = useQuery(
     ResolveReceiptLinesDocument,
@@ -116,7 +118,7 @@ export function useReceiptMatches(
           variables: {
             input: {
               merchantHeader,
-              ...(printedStore ? { merchant: printedStore } : {}),
+              ...(merchant ? { merchant } : {}),
               ...(pickedStoreId ? { storeId: pickedStoreId } : {}),
               pantryId: pantry?.id,
               parsedBy:

@@ -7,7 +7,7 @@ import {
   type ObservableQuery,
 } from '@apollo/client';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { Telemetry } from '#/services/telemetry';
 import type { StoreApi } from 'zustand';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
@@ -23,6 +23,7 @@ import {
   createRefetchEventManager,
 } from '../refetchEvents';
 import { RESYNC_SCOPE } from '../scopedClient';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockReconnectListeners = new Set<() => void>();
 let mockChannelOpen = false;
@@ -293,12 +294,11 @@ describe('resync', () => {
       await pastTheWindow();
 
       expect(requests).toEqual(['ListForResync']);
-      await waitFor(() =>
-        expect(Telemetry.increment).toHaveBeenCalledWith(
-          'resync_queries_total',
-          1,
-          { source: trigger },
-        ),
+      await drainTimers();
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'resync_queries_total',
+        1,
+        { source: trigger },
       );
     },
   );
@@ -316,12 +316,11 @@ describe('resync', () => {
 
     expect(requests).toEqual(['ListForResync']);
     expect(queueManager.whenIdle).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(Telemetry.increment).toHaveBeenCalledWith(
-        'resync_queries_total',
-        1,
-        { source: 'apiReachable+appForeground+wsReconnected' },
-      ),
+    await drainTimers();
+    expect(Telemetry.increment).toHaveBeenCalledWith(
+      'resync_queries_total',
+      1,
+      { source: 'apiReachable+appForeground+wsReconnected' },
     );
   });
 
@@ -944,12 +943,11 @@ describe('resync', () => {
       await pastTheWindow();
 
       expect(requests).toEqual(['ListForResync']);
-      await waitFor(() =>
-        expect(Telemetry.increment).toHaveBeenCalledWith(
-          'resync_queries_total',
-          1,
-          { source: 'appForeground+wsReconnected' },
-        ),
+      await drainTimers();
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'resync_queries_total',
+        1,
+        { source: 'appForeground+wsReconnected' },
       );
     });
 
@@ -994,12 +992,11 @@ describe('resync', () => {
       await pastTheWindow();
 
       expect(requests).toEqual(['ListForResync', 'ListForResync']);
-      await waitFor(() =>
-        expect(Telemetry.increment).toHaveBeenLastCalledWith(
-          'resync_queries_total',
-          1,
-          { source: 'apiReachable+wsReconnected' },
-        ),
+      await drainTimers();
+      expect(Telemetry.increment).toHaveBeenLastCalledWith(
+        'resync_queries_total',
+        1,
+        { source: 'apiReachable+wsReconnected' },
       );
     });
   });

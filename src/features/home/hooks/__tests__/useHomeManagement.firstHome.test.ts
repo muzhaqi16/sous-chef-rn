@@ -4,13 +4,13 @@
  * server. Composes the REAL hooks through `useHomeManagement`, since each
  * sub-hook's own suite injects its collaborators.
  */
-import { act, waitFor } from '@testing-library/react-native';
 import type { RootState } from '#store/index';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateHomeDocument,
   GetHomesDocument,
@@ -62,6 +62,14 @@ jest.mock('#store/useAppStore', () => ({
 }));
 
 jest.mock('#/services/errorService');
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -172,11 +180,10 @@ describe('first home becomes the default', () => {
       ],
     });
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
-    await act(async () => {
-      await result.current.createHome('First Home');
-    });
+    await drained(() => result.current.createHome('First Home'));
 
     const mintedId = (create.fired[0] as { input: { id: string } }).input.id;
     expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(mintedId);
@@ -198,11 +205,10 @@ describe('first home becomes the default', () => {
       operationMocks: [homes.mock, joinedHomeMock().mock, markDefault.mock],
     });
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
-    await act(async () => {
-      await result.current.joinHomeByCode('ABC123');
-    });
+    await drained(() => result.current.joinHomeByCode('ABC123'));
 
     expect(mockStoreState.setSelectedHomeId).toHaveBeenCalledWith(
       'home-joined',

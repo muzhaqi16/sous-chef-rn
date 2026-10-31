@@ -53,9 +53,6 @@ query GetMealTemplate($id: ID!, $itemsFirst: Int!, $itemsAfter: String) {
 # so every field is read directly). Item mutations write these same
 # MealTemplateItem fields and the template's `itemsConnection` edges, so the
 # form stays in sync.
-# updatedAt is selected because useMealTemplateEditor's snapshot fragment
-# includes it — without it cached here, readFragment returns null and the
-# editor's optimistic update/revert silently skips.
 query GetMealTemplateForEdit($id: ID!, $itemsFirst: Int!, $itemsAfter: String) {
   mealTemplate(id: $id) {
     id
@@ -75,11 +72,9 @@ query GetMealTemplateForEdit($id: ID!, $itemsFirst: Int!, $itemsAfter: String) {
           servings
           notes
           # The editor WRITES this field (picking a recipe, or replacing one
-          # with a custom name), so it has to READ it too. Without it the
-          # revert snapshot could not tell "this row has no recipe" from "this
-          # query never asked", and a refused edit wrote null over a link it
-          # had never seen.
+          # with a custom name), so it has to READ it too.
           recipe {
+            version
             id
             name
             imageUrl

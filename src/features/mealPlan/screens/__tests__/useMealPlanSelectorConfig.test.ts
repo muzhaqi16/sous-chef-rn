@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import type { MealPlanDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { MealPlanType } from '#/graphql/generated/schemaTypes';
@@ -86,6 +86,14 @@ function renderSelector(
 
 const ids = (plans: ReadonlyArray<{ id: string }>) => plans.map(p => p.id);
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useMealPlanSelectorConfig', () => {
   it('lists the loaded pages and pages them when no filter is set', () => {
     const server = recordMock(GetMealPlansDocument, {});
@@ -138,9 +146,8 @@ describe('useMealPlanSelectorConfig', () => {
     // The loaded pages answer until the server does.
     expect(ids(result.current.data)).toEqual(['loaded-monthly']);
 
-    await waitFor(() =>
-      expect(ids(result.current.data)).toEqual(['monthly-page-9']),
-    );
+    await drainTimers();
+    expect(ids(result.current.data)).toEqual(['monthly-page-9']);
     expect(server.fired).toContainEqual(
       expect.objectContaining({ filters: { planType: MealPlanType.Monthly } }),
     );
@@ -151,10 +158,9 @@ describe('useMealPlanSelectorConfig', () => {
     const server = recordMock(GetMealPlansDocument, {});
     renderSelector({ ...EMPTY_MEAL_PLAN_FILTERS, search: ' soup ' }, server);
 
-    await waitFor(() =>
-      expect(server.fired).toContainEqual(
-        expect.objectContaining({ filters: { search: 'soup' } }),
-      ),
+    await drainTimers();
+    expect(server.fired).toContainEqual(
+      expect.objectContaining({ filters: { search: 'soup' } }),
     );
   });
 
@@ -169,7 +175,8 @@ describe('useMealPlanSelectorConfig', () => {
       loadMore,
     );
 
-    await waitFor(() => expect(server.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(server.fired.length).toBeGreaterThan(0);
     expect(ids(result.current.data)).toEqual(['loaded-weekly']);
     result.current.pagination?.onLoadMore();
     expect(loadMore).toHaveBeenCalled();
@@ -181,10 +188,9 @@ describe('useMealPlanSelectorConfig', () => {
     const server = recordMock(GetMealPlansDocument, {});
     renderSelector({ ...EMPTY_MEAL_PLAN_FILTERS, activeOnly: true }, server);
 
-    await waitFor(() =>
-      expect(server.fired).toContainEqual(
-        expect.objectContaining({ filters: { isActive: true, today: TODAY } }),
-      ),
+    await drainTimers();
+    expect(server.fired).toContainEqual(
+      expect.objectContaining({ filters: { isActive: true, today: TODAY } }),
     );
   });
 
@@ -195,7 +201,8 @@ describe('useMealPlanSelectorConfig', () => {
       server,
     );
 
-    await waitFor(() => expect(server.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(server.fired.length).toBeGreaterThan(0);
     expect(server.fired).toEqual([
       expect.objectContaining({ filters: { planType: MealPlanType.Weekly } }),
     ]);
@@ -222,7 +229,8 @@ describe('useMealPlanSelectorConfig', () => {
       ],
     );
 
-    await waitFor(() => expect(server.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(server.fired.length).toBeGreaterThan(0);
     expect(ids(result.current.data)).toEqual([
       'ends-today',
       'starts-today',

@@ -29,8 +29,14 @@ const config: CodegenConfig = {
   schema: API_URL,
   // Root `config` reaches the URL loader's introspection query. graphql-js leaves
   // `isOneOf` out unless asked, and without `@oneOf` the generated `*RefInput`
-  // types allow zero or two keys — both refused before any resolver runs.
-  config: { oneOf: true, specifiedByUrl: true },
+  // types allow zero or two keys — both refused before any resolver runs. A
+  // deprecated input field and `repeatable` are left out the same way.
+  config: {
+    oneOf: true,
+    specifiedByUrl: true,
+    inputValueDeprecation: true,
+    directiveIsRepeatable: true,
+  },
   generates: {
     'src/graphql/generated/schema.graphql': {
       plugins: ['schema-ast'],

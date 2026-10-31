@@ -32,6 +32,7 @@ function createList(
 ): ShoppingListFromQuery {
   return {
     __typename: 'ShoppingList',
+    version: 1,
     name: `List ${overrides.id}`,
     isDefault: false,
     totalItems: 0,

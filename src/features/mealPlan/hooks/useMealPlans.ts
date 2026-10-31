@@ -52,7 +52,7 @@ export function useMealPlanList(
     loading,
     error,
     refetch,
-    fetchMore,
+    observable,
   } = useQuery(
     GetMealPlansDocument,
     skipped
@@ -73,7 +73,7 @@ export function useMealPlanList(
     selector: d => d.mealPlans,
     key: JSON.stringify([filters ?? null, orderBy]),
     loading,
-    fetchMore,
+    observable,
     refetch,
   });
 

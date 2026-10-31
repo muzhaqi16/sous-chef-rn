@@ -137,4 +137,16 @@ describe('SearchBar', () => {
     await user.press(screen.getByLabelText('Clear input'));
     expect(defaultProps.onChangeText).toHaveBeenCalledWith('');
   });
+
+  it('searches as typed, with no autocorrect unless a caller asks for it', () => {
+    const { rerender } = render(<SearchBar {...defaultProps} />);
+    expect(screen.getByPlaceholderText('Search\u2026').props).toMatchObject({
+      autoCorrect: false,
+    });
+
+    rerender(<SearchBar {...defaultProps} autoCorrect />);
+    expect(screen.getByPlaceholderText('Search\u2026').props).toMatchObject({
+      autoCorrect: true,
+    });
+  });
 });

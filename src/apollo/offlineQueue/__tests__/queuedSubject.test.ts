@@ -16,7 +16,12 @@ import {
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
-import { UpdateDietaryProfileDocument } from '#operations/user/user.generated';
+import {
+  AddDietaryRestrictionDocument,
+  UpdateDietaryProfileDocument,
+} from '#operations/user/user.generated';
+import { AddBrandToListDocument } from '#features/profile/hooks/useBrandLists.generated';
+import { AddTemplateItemDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 import {
   CreatePantryItemDocument,
@@ -177,6 +182,18 @@ describe('which subjects the server has never seen', () => {
       variables: { input: { id: 'saved-new', recipeId: 'recipe-1' } },
     });
     expect(subject.mintedIds).toEqual(['saved-new']);
+  });
+
+  it.each([
+    ['AddBrandToList', AddBrandToListDocument],
+    ['AddDietaryRestriction', AddDietaryRestrictionDocument],
+    ['AddTemplateItem', AddTemplateItemDocument],
+  ])('counts the id %s minted', (_name, mutation) => {
+    const subject = queuedSubject({
+      mutation,
+      variables: { input: { id: 'row-new' } },
+    });
+    expect(subject.mintedIds).toEqual(['row-new']);
   });
 
   it('does not count the row an update names', () => {

@@ -57,6 +57,10 @@
 	<string>Take photos of your pantry items, and scan barcodes and receipts to quickly add products to your inventory.</string>
 	<key>NSFaceIDUsageDescription</key>
 	<string>Use Face ID to securely access your saved login credentials</string>
+	<key>NSLocationDefaultAccuracyReduced</key>
+	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Find the stores near you. Your approximate location is enough, and a zip code works too.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save photos of your items to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>

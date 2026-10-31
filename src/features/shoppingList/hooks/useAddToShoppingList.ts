@@ -4,7 +4,6 @@ import {
   GetShoppingListSuggestionsDocument,
   type GetShoppingListSuggestionsQuery,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { useTranslation } from '#/i18n';
 import {
@@ -44,9 +43,7 @@ interface ShoppingSuggestionRemoval {
 }
 
 /**
- * Every cache write the add-to-list sheet performs. The row is written before
- * the mutation fires and left, so it survives an offline queue, which an
- * `optimisticResponse` cannot: Apollo drops it on the queue's null result.
+ * Every cache write the add-to-list sheet performs.
  */
 export function useAddToShoppingList({
   shoppingListId,
@@ -55,18 +52,14 @@ export function useAddToShoppingList({
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    update: buildAddItemsReconcileUpdate({
-      listId: shoppingListId,
-      wrap: { operation: 'Cache update failed for addItem:' },
-    }),
-  });
+  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
 
   const readSuggestions = (forList: string) => {
     const variables = { id: forList, limit: suggestionsLimit };
     const data = client.cache.readQuery<GetShoppingListSuggestionsQuery>({
       query: GetShoppingListSuggestionsDocument,
       variables,
+      optimistic: true,
     });
     return { data, variables };
   };

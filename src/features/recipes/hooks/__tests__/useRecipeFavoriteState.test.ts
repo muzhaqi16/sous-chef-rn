@@ -1,5 +1,5 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { gql, type InMemoryCache } from '@apollo/client';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import {
@@ -7,7 +7,10 @@ import {
   renderHookWithApollo,
   type MockFor,
   type MockedResponse,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   AddRecipeToFavoritesDocument,
   SavedRecipeFoldersDocument,
@@ -30,6 +33,14 @@ const SERVER_SAVED_ID = 'server-saved-2';
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-saved-1'),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -65,7 +76,7 @@ const SAVED_RECIPE_FRAGMENT = gql`
 
 /** An empty saved list, so the favorite has a connection to join. */
 function seedFavoriteCache(cache: InMemoryCache = makeCache()) {
-  cache.writeQuery<MySavedRecipesQuery>({
+  seedQuery<MySavedRecipesQuery>(cache, {
     query: MySavedRecipesDocument,
     data: {
       __typename: 'Query',
@@ -105,6 +116,7 @@ const readSavedDetails = (cache: InMemoryCache) =>
   cache.readFragment<{ savedDetails: { id: string } | null }>({
     id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }) ?? '',
     fragment: SAVED_DETAILS_FRAGMENT,
+    optimistic: true,
   })?.savedDetails;
 
 const readSavedRecipe = (cache: InMemoryCache) =>
@@ -117,11 +129,14 @@ const readSavedRecipe = (cache: InMemoryCache) =>
     id:
       cache.identify({ __typename: 'SavedRecipe', id: SAVED_RECIPE_ID }) ?? '',
     fragment: SAVED_RECIPE_FRAGMENT,
+    optimistic: true,
   });
 
 const readSavedEdges = (cache: InMemoryCache) =>
-  cache.readQuery<MySavedRecipesQuery>({ query: MySavedRecipesDocument })?.me
-    ?.savedRecipesConnection;
+  cache.readQuery<MySavedRecipesQuery>({
+    query: MySavedRecipesDocument,
+    optimistic: true,
+  })?.me?.savedRecipesConnection;
 
 /**
  * `queued` resolves the field as null (offline, API down), `created` echoes the
@@ -185,12 +200,12 @@ async function save(
   act(() => {
     result.current.handleSaveRecipe(...args);
   });
-  await waitFor(() =>
-    expect(
-      mockToastSuccess.mock.calls.length + mockToastError.mock.calls.length,
-    ).toBe(1),
-  );
-  await waitFor(() => expect(result.current.saving).toBe(false));
+  await drainTimers();
+  expect(
+    mockToastSuccess.mock.calls.length + mockToastError.mock.calls.length,
+  ).toBe(1);
+  await drainTimers();
+  expect(result.current.saving).toBe(false);
 }
 
 describe('useRecipeFavoriteState', () => {
@@ -282,7 +297,7 @@ describe('useRecipeFavoriteState', () => {
 
     it('lists a new folder once the save lands', async () => {
       const cache = seedFavoriteCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: SavedRecipeFoldersDocument,
         data: { __typename: 'Query', savedRecipeFolders: ['Favorites'] },
       });
@@ -347,7 +362,7 @@ describe('useRecipeFavoriteState', () => {
 
     it('lists the saved row, complete, with the recipe the cache holds', async () => {
       const cache = seedFavoriteCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }),
         fragment: SAVED_ROW_RECIPE_FRAGMENT,
         data: {
@@ -400,7 +415,7 @@ describe('useRecipeFavoriteState', () => {
 
     it('re-points the heart at the earlier save by reference and releases the minted row when refused', async () => {
       const cache = seedFavoriteCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }),
         fragment: SAVED_DETAILS_FRAGMENT,
         data: {

@@ -20,6 +20,7 @@ class AppModulesPackage : ReactPackage {
     TextRecognitionModule(reactContext),
     ReceiptStructuringModule(reactContext),
     ReviewPromptModule(reactContext),
+    ApproximateLocationModule(reactContext),
     WindowBackgroundModule(reactContext),
   )
 

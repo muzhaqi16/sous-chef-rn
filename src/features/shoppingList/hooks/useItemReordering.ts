@@ -1,6 +1,4 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import type { ModifierDetails } from '@apollo/client/cache';
-import type { Reference } from '@apollo/client/utilities';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   UseItemReordering_ServerItemFragmentDoc,
@@ -8,13 +6,12 @@ import {
 } from './useItemReordering.generated';
 import { generateKeyBetween } from 'fractional-indexing';
 import { SubscriptionService } from '#/services/subscriptions/SubscriptionService';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
-import { isUnpurchasedVariant } from '#features/shoppingList/cache/connections';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import type { ReorderRowInputs } from '#features/shoppingList/offline/localWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useTranslation } from '#/i18n';
 import { logger } from '#/utils/environment';
-import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
 
 interface ShoppingListItem {
   id: string;
@@ -56,8 +53,6 @@ export function useItemReordering<T extends ShoppingListItem>(
   const [moveItem] = useMutation(MoveShoppingListItemDocument, {
     // Moves coalesce latest-wins on replay via SyncMoveShoppingListItem.
     context: { localFirst: true },
-    // No optimisticResponse and no update callback: cache.modify runs BEFORE the
-    // mutation call for immediate feedback.
   });
 
   /**
@@ -131,105 +126,28 @@ export function useItemReordering<T extends ShoppingListItem>(
         beforeItem?.sortOrder ?? null,
       );
 
-    // Batched so FlashList sees one consistent state instead of two renders.
-    client.cache.batch({
-      update: cache => {
-        cache.modify({
-          id: cache.identify({ __typename: 'ShoppingListItem', id: itemId }),
-          fields: {
-            sortOrder() {
-              return newSortOrder;
-            },
-            updatedAt() {
-              return new Date().toISOString();
-            },
-          },
-        });
-
-        const sortEdges = (
-          edges: NonNullable<ConnectionData['edges']>,
-          readField: ModifierDetails['readField'],
-        ) => {
-          return [...edges].sort((a, b) => {
-            const nodeA = readField<Reference>('node', a);
-            const nodeB = readField<Reference>('node', b);
-            const sortA =
-              (nodeA ? readField<string>('sortOrder', nodeA) : '') ?? '';
-            const sortB =
-              (nodeB ? readField<string>('sortOrder', nodeB) : '') ?? '';
-            if (sortA < sortB) return -1;
-            if (sortA > sortB) return 1;
-            // Secondary sort by id for deterministic ordering when sortOrder matches
-            const idA = (nodeA ? readField<string>('id', nodeA) : '') ?? '';
-            const idB = (nodeB ? readField<string>('id', nodeB) : '') ?? '';
-            return idA.localeCompare(idB);
-          });
-        };
-
-        // Re-sort the connection's edges so FlashList sees the new order.
-        // cache.modify, not writeQuery: an aliased writeQuery does not match the
-        // field policy's `keyArgs: ['filters']` cache key.
-        cache.modify({
-          id: cache.identify({ __typename: 'ShoppingList', id: listId }),
-          fields: {
-            itemsConnection(
-              existing: ConnectionData | undefined,
-              { storeFieldName, readField },
-            ) {
-              // cache.modify runs for every cached variant; only the unpurchased
-              // one is ordered by sortOrder.
-              if (!isUnpurchasedVariant(storeFieldName)) {
-                return existing;
-              }
-
-              return {
-                ...existing,
-                edges: sortEdges(existing?.edges ?? [], readField),
-              };
-            },
-          },
-        });
-      },
-    });
-
-    // Survives cache-and-network refetches while offline.
-    optimisticDataPersistence.save(
-      'ShoppingListItem',
-      itemId,
-      'sortOrder',
-      newSortOrder,
-    );
-
-    const moveAfterItemId = afterItemId ?? undefined;
-    const moveBeforeItemId = beforeItemId ?? undefined;
-    const settled = await settleMutation(
-      () =>
-        moveItem({
-          variables: {
-            input: {
-              id: itemId,
-              afterItemId: moveAfterItemId,
-              beforeItemId: moveBeforeItemId,
-            },
-          },
-        }),
+    const inputs: ReorderRowInputs = {
+      listId,
+      sortOrder: newSortOrder,
+      now: new Date().toISOString(),
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      MoveShoppingListItemDocument,
       {
-        document: MoveShoppingListItemDocument,
-        fallback: t('errors.updateShoppingItemFailed'),
-        onFailed: () => {
-          // The persisted sortOrder carries no version, so the restoration hook
-          // would re-apply the failed move on every cold start.
-          optimisticDataPersistence.clear(
-            'ShoppingListItem',
-            itemId,
-            'sortOrder',
-          );
-          refetch?.();
+        input: {
+          id: itemId,
+          afterItemId: afterItemId ?? undefined,
+          beforeItemId: beforeItemId ?? undefined,
         },
       },
+      write =>
+        settleMutation(() => moveItem(write), {
+          document: MoveShoppingListItemDocument,
+          fallback: t('errors.updateShoppingItemFailed'),
+        }),
+      inputs,
     );
-    // Queued offline, the local order stands until the replay lands; a failure
-    // has already been reverted and reported.
+    // Queued offline, the local order stands until the replay lands.
     if (settled.status !== 'applied') return;
 
     // serverItem is a masked ref — materialize it through a narrow fragment
@@ -240,14 +158,12 @@ export function useItemReordering<T extends ShoppingListItem>(
           fragment: UseItemReordering_ServerItemFragmentDoc,
           fragmentName: 'useItemReordering_serverItem',
           from: serverItemRef,
+          optimistic: true,
         })
       : null;
     const serverVersion = serverItem?.version;
     const serverSortOrder = serverItem?.sortOrder;
     const originalVersion = currentItem.version;
-
-    // Server confirmed, so the persisted value has nothing left to restore.
-    optimisticDataPersistence.clear('ShoppingListItem', itemId, 'sortOrder');
 
     if (serverVersion === originalVersion) {
       // Unchanged version means the item was already in position.
@@ -264,25 +180,6 @@ export function useItemReordering<T extends ShoppingListItem>(
       oldVersion: originalVersion,
       newVersion: serverVersion,
     });
-
-    // The server may compute a different sortOrder than the optimistic one.
-    if (serverSortOrder && serverSortOrder !== newSortOrder) {
-      logger.debug('Server returned different sortOrder, updating cache:', {
-        optimistic: newSortOrder,
-        server: serverSortOrder,
-      });
-      client.cache.modify({
-        id: client.cache.identify({
-          __typename: 'ShoppingListItem',
-          id: itemId,
-        }),
-        fields: {
-          sortOrder() {
-            return serverSortOrder;
-          },
-        },
-      });
-    }
 
     // Mark this item as recently reordered to ignore subscription echo
     SubscriptionService.getInstance().markItemReordered(itemId);

@@ -13,23 +13,26 @@ The document names come from `src/apollo/offlineQueue/preparationRegistry.ts` it
 
 ## Why
 
-`queueLink` queues a mutation when it carries `localFirst` **or** its operation is in `REPLAY_PREPARATIONS`. Such a write whose caller skips the local cache write is queued anyway, settles `queued`, and shows nothing: the sheet closes, the list keeps the old value, and a restart has nothing to restore. The quantity sheet shipped exactly that. `localFirst: true` is the house marker that the caller wrote the cache before firing.
+`queueLink` queues a mutation when it carries `localFirst` **or** its operation is in `REPLAY_PREPARATIONS`. Such a write whose caller skips the local cache write is queued anyway, settles `queued`, and shows nothing: the sheet closes, the list keeps the old value, and a restart has nothing to restore. The quantity sheet shipped exactly that. `localFirst: true` is the house marker that the write is held as a pending layer, or states why it shows nothing (`localWriteCoverage.test.ts`).
 
-The pairing is the opposite failure. A queued write completes at once with a null result, and Apollo drops the optimistic layer on completion — so the change flashes on screen and vanishes. Where the write is local-first, the cache write IS the optimistic update.
+The pairing is the opposite failure. A queued write completes at once with a null result, and Apollo drops the optimistic layer on completion — so the change flashes on screen and vanishes. Where the write is local-first, its pending layer IS the optimistic update.
 
 The marker sits on the hook because every call of a local-first mutate function is local-first. A per-call copy is noise, and a per-call `context` object is worse: `useMutation`'s execute merges options with `compact`, so the object replaces the hook's context and the call stops being queued. `src/apollo/__tests__/hookMutationContext.test.ts` pins that merge.
 
 ## Use instead
 
-Mark the hook, write the cache, then fire:
+Mark the hook, register a `LocalWrite`, then send it:
 
 ```ts
 const [fire] = useMutation(UpdatePantryItemQuantityDocument, {
   context: { localFirst: true },
 });
 
-writePantryItemQuantity(cache, id, next);
-await fire({ variables });
+await pendingWritesOf(cache).send(
+  UpdatePantryItemQuantityDocument,
+  variables,
+  write => settleMutation(() => fire(write), settle),
+);
 ```
 
 `client.mutate` and a helper that fires a caller's mutate function (`createShoppingListRow`'s `send`) keep the marker on the call.

@@ -4,8 +4,9 @@ import { todayKey } from '#/utils/dateUtils';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { screen, userEvent } from '@testing-library/react-native';
+import { renderWithApollo, seedQuery } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
@@ -16,6 +17,11 @@ import { pantryTestIDs } from '#features/pantry/testIDs';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { PantryItemForm } from '../PantryItemForm';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 /**
  * The quantity field through the real `QuantitySection` and `FractionInput`:
@@ -107,12 +113,20 @@ jest.mock('../ItemInformationSection', () => ({
 }));
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
 function buildCache(): InMemoryCache {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetHomeDocument,
     variables: { homeId: 'h1' },
     data: {
@@ -123,7 +137,7 @@ function buildCache(): InMemoryCache {
       }),
     },
   });
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetPantryDocument,
     variables: {
       id: 'p1',
@@ -133,7 +147,7 @@ function buildCache(): InMemoryCache {
     },
     data: pantryData({ id: 'p1' }),
   });
-  cache.writeQuery({
+  seedQuery(cache, {
     query: PantryItemForEditDocument,
     variables: { id: 'item-1' },
     data: pantryItemData({ id: 'item-1', quantity: 5 }),
@@ -147,31 +161,31 @@ describe('PantryItemForm — the quantity field', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache(),
     });
-    await user.press(await screen.findByText('Inventory'));
+    await drainTimers();
+    await user.press(screen.getByText('Inventory'));
 
     const field = screen.getByTestId(pantryTestIDs.editItemQuantityInput);
     await user.clear(field);
     await user.type(field, 'abc');
 
-    expect(await screen.findByText(t('errors.invalidQuantity'))).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(t('errors.invalidQuantity'))).toBeTruthy();
 
     await user.clear(field);
     await user.type(field, '2');
 
-    await waitFor(() =>
-      expect(screen.queryByText(t('errors.invalidQuantity'))).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByText(t('errors.invalidQuantity'))).toBeNull();
 
     await user.press(screen.getByTestId(pantryTestIDs.editItemSubmitButton));
 
-    await waitFor(() =>
-      expect(mockUpdateQuantity).toHaveBeenCalledWith(
-        expect.objectContaining({
-          itemId: 'item-1',
-          quantityInput: '2',
-          quantityValue: 2,
-        }),
-      ),
+    await drainTimers();
+    expect(mockUpdateQuantity).toHaveBeenCalledWith(
+      expect.objectContaining({
+        itemId: 'item-1',
+        quantityInput: '2',
+        quantityValue: 2,
+      }),
     );
     expect(alertService.alert).not.toHaveBeenCalled();
   });

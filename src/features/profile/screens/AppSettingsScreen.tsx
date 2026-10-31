@@ -292,26 +292,6 @@ export const AppSettingsScreen: React.FC = () => {
             updatePreference({ showShoppingListImages: value })
           }
         />
-        {storeModeOffered ? (
-          <SettingSwitch
-            testID={profileTestIDs.settingsStoreModeSwitch}
-            title={t('settings.storeMode')}
-            description={t('settings.storeModeDesc')}
-            value={userPrefs.storeMode ?? false}
-            onValueChange={value => updatePreference({ storeMode: value })}
-          />
-        ) : null}
-        {budgetAndPricesOffered ? (
-          <SettingSwitch
-            testID={profileTestIDs.settingsBudgetAndPricesSwitch}
-            title={t('labels.budgetAndPrices')}
-            description={t('settings.budgetAndPricesDesc')}
-            value={userPrefs.budgetAndPrices ?? false}
-            onValueChange={value =>
-              updatePreference({ budgetAndPrices: value })
-            }
-          />
-        ) : null}
         <SettingSwitch
           testID={profileTestIDs.settingsShareUsageDataSwitch}
           title={t('settings.shareUsageData')}
@@ -320,6 +300,31 @@ export const AppSettingsScreen: React.FC = () => {
           onValueChange={handleConsentChange}
         />
       </SettingsSection>
+
+      {storeModeOffered || budgetAndPricesOffered ? (
+        <SettingsSection variant="inset" title={t('labels.shopping')}>
+          {storeModeOffered ? (
+            <SettingSwitch
+              testID={profileTestIDs.settingsStoreModeSwitch}
+              title={t('settings.storeMode')}
+              description={t('settings.storeModeDesc')}
+              value={settings.storeMode}
+              onValueChange={value => handleSettingChange('storeMode', value)}
+            />
+          ) : null}
+          {budgetAndPricesOffered ? (
+            <SettingSwitch
+              testID={profileTestIDs.settingsBudgetAndPricesSwitch}
+              title={t('labels.budgetAndPrices')}
+              description={t('settings.budgetAndPricesDesc')}
+              value={settings.budgetAndPrices === true}
+              onValueChange={value =>
+                handleSettingChange('budgetAndPrices', value)
+              }
+            />
+          ) : null}
+        </SettingsSection>
+      ) : null}
 
       <SettingsSection variant="inset" title={t('settings.resetSection')}>
         <SettingSwitch

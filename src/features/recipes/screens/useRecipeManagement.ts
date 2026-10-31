@@ -38,7 +38,7 @@ export function useRecipeManagement({
 }: RecipeManagementOptions = {}) {
   const isLoggedOut = useIsLoggedOut();
 
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     MyRecipesDocument,
     isLoggedOut ? skipToken : { variables: { first: 25 } },
   );
@@ -50,7 +50,7 @@ export function useRecipeManagement({
     selector: d => d.recipes,
     key: 'MyRecipes',
     loading,
-    fetchMore,
+    observable,
     cursorVariableName: 'cursor',
     refetch,
   });

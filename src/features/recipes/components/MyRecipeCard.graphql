@@ -1,4 +1,5 @@
 fragment MyRecipeCard_recipe on Recipe {
+  version
   id
   name
   description

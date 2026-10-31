@@ -14,15 +14,18 @@ import { recipesTestIDs } from '#features/recipes/testIDs';
 interface HouseholdRecipeSummaryProps {
   check: HouseholdCheck;
   alerts: HouseholdAlert[];
+  /** Whether a restriction can alert, so a stale empty answer is worth noting. */
+  restrictionsApply: boolean;
 }
 
 /**
  * Who in the household a recipe affects, near the top of its page. Nothing
- * found shows nothing: the app never calls a recipe safe.
+ * flagged shows no card, never wording that calls the recipe safe.
  */
 export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
   check,
   alerts,
+  restrictionsApply,
 }) => {
   const { t } = useTranslation();
 
@@ -39,8 +42,16 @@ export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
       </Card>
     );
   }
-  if ((check !== 'checked' && check !== 'stale') || alerts.length === 0) {
-    return null;
+  if (check !== 'checked' && check !== 'stale') return null;
+  if (alerts.length === 0) {
+    if (check !== 'stale' || !restrictionsApply) return null;
+    return (
+      <Card style={styles.card} testID={recipesTestIDs.householdStale}>
+        <Text role="caption" tone="secondary">
+          {t('dietaryAlerts.stale')}
+        </Text>
+      </Card>
+    );
   }
 
   return (
@@ -54,7 +65,7 @@ export const HouseholdRecipeSummary: React.FC<HouseholdRecipeSummaryProps> = ({
           {t('dietaryAlerts.stale')}
         </Text>
       )}
-      <Text role="caption" tone="tertiary">
+      <Text role="caption" tone="secondary">
         {t('dietaryAlerts.checkLabel')}
       </Text>
     </Card>

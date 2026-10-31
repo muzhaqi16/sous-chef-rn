@@ -1,5 +1,5 @@
 import { gql, type InMemoryCache } from '@apollo/client';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   ErrorCode,
@@ -13,7 +13,10 @@ import {
   type MockDataFor,
   type MockedResponse,
   type MockFor,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateMealPlanDocument,
   UpdateMealPlanDocument,
@@ -33,6 +36,14 @@ function usePlanAndActions() {
   useMealPlan('plan-1');
   return useMealPlanActions();
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -79,9 +90,9 @@ describe('useMealPlanActions', () => {
     let created:
       | Awaited<ReturnType<typeof result.current.createMealPlan>>
       | undefined;
-    await act(async () => {
-      created = await result.current.createMealPlan(weekPlan('Week Plan'));
-    });
+    created = await drained(() =>
+      result.current.createMealPlan(weekPlan('Week Plan')),
+    );
 
     expect(created).toEqual({ status: 'applied' });
     // Local-first: the hook mints a permanent cuid id into the input.
@@ -105,14 +116,15 @@ describe('useMealPlanActions', () => {
       pending = result.current.createMealPlan(weekPlan('Camping'));
     });
 
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await drainTimers();
+    expect(create.fired).toHaveLength(1);
     const { id } = create.fired[0]?.input as { id: string };
 
     // In flight: the plan is in the cache and drives the active-plan selection,
     // but no server row exists for it yet.
     expect(unconfirmedCreates.has(id)).toBe(true);
 
-    await act(async () => {
+    await drained(async () => {
       create.release();
       await pending;
     });
@@ -126,9 +138,7 @@ describe('useMealPlanActions', () => {
     let created:
       | Awaited<ReturnType<typeof result.current.createMealPlan>>
       | undefined;
-    await act(async () => {
-      created = await result.current.createMealPlan(weekPlan('X'));
-    });
+    created = await drained(() => result.current.createMealPlan(weekPlan('X')));
 
     expect(created).toEqual({ status: 'queued' });
     expect(alertService.alert).not.toHaveBeenCalled();
@@ -145,11 +155,11 @@ describe('useMealPlanActions', () => {
     let created:
       | Awaited<ReturnType<typeof result.current.createMealPlan>>
       | undefined;
-    await act(async () => {
-      created = await result.current.createMealPlan(weekPlan('X'), {
+    created = await drained(() =>
+      result.current.createMealPlan(weekPlan('X'), {
         present: 'none',
-      });
-    });
+      }),
+    );
 
     expect(created).toEqual({
       status: 'failed',
@@ -168,7 +178,7 @@ describe('useMealPlanActions', () => {
 
   const planAtVersion = (version: number) => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: PLAN_VERSION,
       data: {
         __typename: 'MealPlan',
@@ -184,6 +194,7 @@ describe('useMealPlanActions', () => {
     cache.readFragment<{ name: string; version: number }>({
       id: 'MealPlan:plan-1',
       fragment: PLAN_VERSION,
+      optimistic: true,
     });
 
   it('updateMealPlan states the id and the version the cache holds, and its answer lands in the cache', async () => {
@@ -199,11 +210,11 @@ describe('useMealPlanActions', () => {
     const { result } = renderActions([update.mock], cache);
 
     let updated: boolean | undefined;
-    await act(async () => {
-      updated = await result.current.updateMealPlan('plan-1', {
+    updated = await drained(() =>
+      result.current.updateMealPlan('plan-1', {
         name: 'Updated',
-      });
-    });
+      }),
+    );
 
     expect(updated).toBe(true);
     // The caller states neither: the id is the argument, the version the cache's.
@@ -295,6 +306,7 @@ describe('useMealPlanActions', () => {
           endDate: '2025-06-07',
         },
         'user-1',
+        '2025-06-01T08:00:00.000Z',
       );
       const screenRead = recordMock(GetMealPlanDocument, {
         data: planAsServed({ name: 'Week Plan', version: 3 }),
@@ -309,18 +321,20 @@ describe('useMealPlanActions', () => {
         operationMocks: [screenRead.mock, reRead.mock, update.mock],
         cache,
       });
-      await waitFor(() => expect(readPlan(cache)?.version).toBe(3));
+      await drainTimers();
+      expect(readPlan(cache)?.version).toBe(3);
 
       let pending: Promise<boolean> | undefined;
       act(() => {
         pending = result.current.updateMealPlan('plan-1', { name: 'Renamed' });
       });
       // Local-first: the rename shows before the server answers.
-      await waitFor(() => expect(readPlan(cache)?.name).toBe('Renamed'));
+      await drainTimers();
+      expect(readPlan(cache)?.name).toBe('Renamed');
       expect(update.fired).toHaveLength(1);
 
       let updated: boolean | undefined;
-      await act(async () => {
+      await drained(async () => {
         update.release();
         updated = await pending;
       });
@@ -329,12 +343,11 @@ describe('useMealPlanActions', () => {
       expect(update.fired).toEqual([
         { input: { id: 'plan-1', name: 'Renamed', version: 3 } },
       ]);
-      await waitFor(() =>
-        expect(readPlan(cache)).toMatchObject({
-          name: 'Their Plan',
-          version: 4,
-        }),
-      );
+      await drainTimers();
+      expect(readPlan(cache)).toMatchObject({
+        name: 'Their Plan',
+        version: 4,
+      });
       expect(reRead.fired).toHaveLength(1);
       // Told, with nothing left to do: the plan on screen is already theirs.
       expect(alertService.alert).toHaveBeenCalledTimes(1);
@@ -357,6 +370,7 @@ describe('useMealPlanActions', () => {
         endDate: '2025-06-07',
       },
       'user-1',
+      '2025-06-01T08:00:00.000Z',
     );
     const screenRead = recordMock(GetMealPlanDocument, {
       data: planAsServed({ name: 'Week Plan', version: 3 }),
@@ -375,14 +389,15 @@ describe('useMealPlanActions', () => {
       operationMocks: [screenRead.mock, update.mock],
       cache,
     });
-    await waitFor(() => expect(readPlan(cache)?.version).toBe(3));
+    await drainTimers();
+    expect(readPlan(cache)?.version).toBe(3);
 
     let updated: boolean | undefined;
-    await act(async () => {
-      updated = await result.current.updateMealPlan('plan-1', {
+    updated = await drained(() =>
+      result.current.updateMealPlan('plan-1', {
         name: 'Renamed',
-      });
-    });
+      }),
+    );
 
     expect(updated).toBe(false);
     expect(readPlan(cache)).toMatchObject({ name: 'Week Plan', version: 3 });
@@ -398,9 +413,7 @@ describe('useMealPlanActions', () => {
     const { result } = renderActions([del.mock]);
 
     let deleted: boolean | undefined;
-    await act(async () => {
-      deleted = await result.current.deleteMealPlan('plan-1');
-    });
+    deleted = await drained(() => result.current.deleteMealPlan('plan-1'));
 
     expect(deleted).toBe(true);
     expect(del.fired).toContainEqual({ input: { id: 'plan-1' } });
@@ -430,9 +443,7 @@ describe('useMealPlanActions', () => {
     const { result } = renderActions([deleteAnswering(answer).mock]);
 
     let deleted: boolean | undefined;
-    await act(async () => {
-      deleted = await result.current.deleteMealPlan('plan-1');
-    });
+    deleted = await drained(() => result.current.deleteMealPlan('plan-1'));
 
     expect(deleted).toBe(removed);
     expect(alertService.alert).toHaveBeenCalledTimes(alerts);
@@ -455,7 +466,7 @@ describe('useMealPlanActions', () => {
       }
     `;
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PLANS,
       data: {
         mealPlans: {
@@ -474,9 +485,7 @@ describe('useMealPlanActions', () => {
     });
     const { result } = renderActions([del.mock], cache);
 
-    await act(async () => {
-      await result.current.deleteMealPlan('plan-1');
-    });
+    await drained(() => result.current.deleteMealPlan('plan-1'));
 
     const list = cache.readQuery<{
       mealPlans: { edges: Array<{ node: { id: string } }> };

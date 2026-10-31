@@ -8,7 +8,11 @@ import {
 } from 'react-native-permissions';
 import notifee, { AuthorizationStatus } from '@notifee/react-native';
 
-export type AppPermission = 'camera' | 'notifications' | 'photoLibrary';
+export type AppPermission =
+  | 'camera'
+  | 'notifications'
+  | 'photoLibrary'
+  | 'location';
 
 export type PermissionStatus =
   | 'granted'
@@ -35,7 +39,9 @@ function normalizeRNPermissionStatus(
   }
 }
 
-function getPlatformPermission(permission: 'camera' | 'photoLibrary') {
+function getPlatformPermission(
+  permission: Exclude<AppPermission, 'notifications'>,
+) {
   const map = {
     camera: Platform.select({
       ios: PERMISSIONS.IOS.CAMERA,
@@ -47,6 +53,12 @@ function getPlatformPermission(permission: 'camera' | 'photoLibrary') {
         Number(Platform.Version) >= 33
           ? PERMISSIONS.ANDROID.READ_MEDIA_IMAGES
           : PERMISSIONS.ANDROID.READ_EXTERNAL_STORAGE,
+    }),
+    // Approximate only: the coarse permission on Android; on iOS the
+    // Info.plist's NSLocationDefaultAccuracyReduced holds the prompt to it.
+    location: Platform.select({
+      ios: PERMISSIONS.IOS.LOCATION_WHEN_IN_USE,
+      android: PERMISSIONS.ANDROID.ACCESS_COARSE_LOCATION,
     }),
   };
   const platformPermission = map[permission];

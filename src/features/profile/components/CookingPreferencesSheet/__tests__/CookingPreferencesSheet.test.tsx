@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
 import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
   useSharedBottomSheetConfigs: jest.fn(() => ({})),
@@ -112,6 +113,14 @@ jest.mock('#domain/dietary', () => ({
   },
 }));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('CookingPreferencesSheet', () => {
   const defaultProps = {
     visible: true,
@@ -180,7 +189,8 @@ describe('CookingPreferencesSheet', () => {
     expect(screen.getByText('Intermediate')).toBeTruthy();
 
     fireEvent.press(screen.getByTestId('save-btn'));
-    await screen.findByText('Cooking Preferences');
+    await drainTimers();
+    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
     expect(defaultProps.onSave).toHaveBeenCalledWith(
       expect.objectContaining({
         cookingSkillLevel: CookingSkillLevel.Intermediate,

@@ -230,6 +230,16 @@ export function formatQuantityWithUnit(
   return `${formatQuantityForDisplay(quantity, options)} ${label}`.trim();
 }
 
+const NO_BREAK_SPACE = String.fromCharCode(0xa0);
+
+/** A package's size in a caption that wraps: "12 oz" never splits across lines. */
+export function formatPackageSize(
+  quantity: number | null | undefined,
+  unit: UnitLabelSource | null | undefined,
+): string {
+  return formatQuantityWithUnit(quantity, unit).replaceAll(' ', NO_BREAK_SPACE);
+}
+
 // Two quantities equal to `MAX_DECIMALS` places are the same quantity.
 const INPUT_ROUND_TRIP_TOLERANCE = 0.5 * 10 ** -MAX_DECIMALS;
 

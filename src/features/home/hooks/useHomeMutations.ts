@@ -65,7 +65,10 @@ export function useHomeMutations({
     }
     if (homeId !== selectedHomeId) return;
 
-    const cachedData = client.cache.readQuery({ query: GetHomesDocument });
+    const cachedData = client.cache.readQuery({
+      query: GetHomesDocument,
+      optimistic: true,
+    });
     const [newDefaultHome] = extractNodes(cachedData?.homes);
     if (newDefaultHome) {
       setSelectedHomeId(newDefaultHome.id);
@@ -147,7 +150,10 @@ export function useHomeMutations({
    * account default on the server, and its payload carries `isDefault`.
    */
   function adoptNewHome(homeId: string) {
-    const cachedData = client.cache.readQuery({ query: GetHomesDocument });
+    const cachedData = client.cache.readQuery({
+      query: GetHomesDocument,
+      optimistic: true,
+    });
     const freshHomes = extractNodes(cachedData?.homes);
     const isFirstHome = freshHomes.length === 1 && freshHomes[0]?.id === homeId;
     if (!isFirstHome) return;

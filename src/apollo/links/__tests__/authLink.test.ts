@@ -289,24 +289,18 @@ describe('authLink', () => {
       // The refresh never settles. The token is still valid for the rest of the
       // buffer window, so the request must go out immediately carrying it —
       // awaiting here stalls every concurrent request behind one slow refresh.
-      // Racing a timer keeps the regression a fast, named failure rather than a
-      // suite timeout.
+      // Racing a drained clock keeps the regression a fast, named failure
+      // rather than a suite timeout: the request takes no timer to go out.
       mockedProactiveRefresh.mockReturnValue(new Promise(() => {}));
       mockStoreState.accessToken = makeToken(120);
 
       const stalled = Symbol('stalled');
-      // Held so the loser can be cancelled: on the passing path the request
-      // wins the race and this timer would otherwise stay armed for its full
-      // 500ms after the test ends, which is enough to stop the Jest worker
-      // exiting on its own.
-      let stallTimer: ReturnType<typeof setTimeout> | undefined;
+      jest.useFakeTimers();
       const outcome = await Promise.race([
         run(GetPantryDocument),
-        new Promise<typeof stalled>(resolve => {
-          stallTimer = setTimeout(() => resolve(stalled), 500);
-        }),
+        jest.runAllTimersAsync().then(() => stalled),
       ]);
-      clearTimeout(stallTimer);
+      jest.useRealTimers();
 
       expect(outcome).not.toBe(stalled);
       expect((outcome as Headers).authorization).toBe(

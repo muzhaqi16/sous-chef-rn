@@ -8,6 +8,7 @@ import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import {
   ThemedBottomSheetTextInput,
   ThemedTextInput,
+  type ThemedTextInputRef,
 } from '#components/atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 
@@ -23,6 +24,11 @@ interface FormInputProps extends Omit<TextInputProps, 'style'> {
   useBottomSheetInput?: boolean;
   /** Optional element rendered inside the input on the right (e.g. an icon button). */
   trailing?: React.ReactNode;
+  /**
+   * The input outside a sheet, for a host that moves focus to it: gorhom's
+   * sheet input has its own ref type (see BaseInput's `sheetRef`).
+   */
+  ref?: React.Ref<ThemedTextInputRef>;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -35,13 +41,11 @@ export const FormInput: React.FC<FormInputProps> = ({
   accessibilityHint,
   useBottomSheetInput = false,
   trailing,
+  ref,
   ...textInputProps
 }) => {
   const contextValue = useIsBottomSheetInput();
-  const InputComponent =
-    useBottomSheetInput || contextValue
-      ? ThemedBottomSheetTextInput
-      : ThemedTextInput;
+  const inSheet = useBottomSheetInput || contextValue;
 
   styles.useVariants({
     error: !!error,
@@ -60,6 +64,14 @@ export const FormInput: React.FC<FormInputProps> = ({
     accessibilityHint && errorHint
       ? t('a11y.hintWithError', { hint: accessibilityHint, error: errorHint })
       : errorHint ?? accessibilityHint;
+  const inputProps = {
+    style: [styles.input, inputStyle],
+    accessible: true,
+    accessibilityLabel: fullLabel,
+    accessibilityHint: fullHint,
+    accessibilityState: { disabled: textInputProps.editable === false },
+    ...textInputProps,
+  };
 
   return (
     <FormFieldWrapper
@@ -69,16 +81,11 @@ export const FormInput: React.FC<FormInputProps> = ({
       containerStyle={containerStyle}
     >
       <View style={styles.inputContainer}>
-        <InputComponent
-          style={[styles.input, inputStyle]}
-          accessible={true}
-          accessibilityLabel={fullLabel}
-          accessibilityHint={fullHint}
-          accessibilityState={{
-            disabled: textInputProps.editable === false,
-          }}
-          {...textInputProps}
-        />
+        {inSheet ? (
+          <ThemedBottomSheetTextInput {...inputProps} />
+        ) : (
+          <ThemedTextInput ref={ref} {...inputProps} />
+        )}
         {!!trailing && <View style={styles.trailing}>{trailing}</View>}
       </View>
     </FormFieldWrapper>

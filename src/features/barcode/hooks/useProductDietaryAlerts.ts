@@ -7,6 +7,7 @@ import {
   type HouseholdCheck,
 } from '#domain/dietary';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { useRestrictionsInPlay } from '#features/profile/hooks/useRestrictionsInPlay';
 import { useSelectedHomeId, useUser } from '#store/useAppStore';
 import {
   ProductDietaryAlertsDocument,
@@ -30,6 +31,7 @@ export function useProductDietaryAlerts(itemId: string) {
   const homeId = useSelectedHomeId();
   const currentUserId = useUser()?.id;
   const offline = useIsApiUnavailable();
+  const restrictionsInPlay = useRestrictionsInPlay(homeId);
   // The scan's lookup stores these with the item, so this asks only for an
   // item that came another way.
   const { loading, error } = useQuery(
@@ -65,5 +67,9 @@ export function useProductDietaryAlerts(itemId: string) {
     loading,
   });
 
-  return { check, alerts, alternatives };
+  const answered = check === 'checked' || check === 'stale';
+  // An answer with no alert still shows the caveat unless no restriction can alert.
+  const caveat = answered && (alerts.length > 0 || restrictionsInPlay !== false);
+
+  return { check, alerts, alternatives, caveat };
 }
