@@ -1,9 +1,9 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import { storeChoiceName } from '#domain/stores';
 import { t } from '#/i18n';
@@ -48,12 +48,21 @@ const render = (
     operationMocks: [mock],
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useUsualStores', () => {
   it("reads the household's stores as rows", async () => {
     const query = answering([giantEagle]);
     const { result } = render(query.mock);
 
-    await waitFor(() => expect(result.current.stores).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.stores).toHaveLength(1);
     expect(query.fired).toEqual([{ homeId: 'home-1' }]);
     expect(result.current.stores?.[0]).toEqual({
       key: 'store:s1',
@@ -73,7 +82,8 @@ describe('useUsualStores', () => {
   it('names a whole chain as any of its stores, with no address', async () => {
     const { result } = render(answering([anyAldi]).mock);
 
-    await waitFor(() => expect(result.current.stores).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.stores).toHaveLength(1);
     const [row] = result.current.stores ?? [];
     expect(row).toMatchObject({
       key: 'chain:chain-aldi',
@@ -112,7 +122,8 @@ describe('useUsualStores', () => {
       ]).mock,
     );
 
-    await waitFor(() => expect(result.current.stores).toHaveLength(4));
+    await drainTimers();
+    expect(result.current.stores).toHaveLength(4);
     expect(
       result.current.stores?.map(row => storeChoiceName(row.choice, t)),
     ).toEqual([
@@ -137,7 +148,8 @@ describe('useUsualStores', () => {
     });
     const { result } = render(offline.mock, 'cache-and-network', cache);
 
-    await waitFor(() => expect(offline.fired).toHaveLength(1));
+    await drainTimers();
+    expect(offline.fired).toHaveLength(1);
     expect(
       result.current.stores?.map(row => storeChoiceName(row.choice, t)),
     ).toEqual(['ALDI (any store)']);

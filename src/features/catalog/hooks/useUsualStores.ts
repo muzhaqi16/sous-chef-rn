@@ -2,6 +2,7 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import type { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import { chainOption, storeOption, type StoreOption } from '#domain/stores';
 import type { UsualStoreEntry } from '#features/catalog/cache/usualStores';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
 import { UsualStoresDocument } from './useUsualStores.generated';
 
 /** A usual store as a row shows it. */
@@ -57,7 +58,9 @@ export function useUsualStores(
   );
 
   // A skipped query keeps its last answer, which may be another household's.
-  const entries = skip ? undefined : data?.usualStores;
+  const answered = skip ? undefined : data?.usualStores;
+  const preserved = usePreservedQueryData(answered, undefined, homeId ?? '');
+  const entries = skip ? undefined : preserved;
   return {
     stores: entries
       ? entries.flatMap(entry => toRow(entry) ?? []).sort(byUse)
