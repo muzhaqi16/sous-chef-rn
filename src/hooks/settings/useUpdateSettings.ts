@@ -9,12 +9,8 @@ import {
   settingsInput,
   type SettingValues,
 } from '#/domain/serverSettings';
-import {
-  snapshotFields,
-  updateEntityFieldsLocalFirst,
-} from '#/apollo/utils/localFirstFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { dropUnitSystemAnswers } from '#/apollo/utils/unitSystemAnswers';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { snapshotFields } from '#/apollo/utils/localFirstFields';
 import { useTranslation } from '#/i18n';
 
 /**
@@ -37,31 +33,26 @@ export function useUpdateSettings() {
       query: GetUserSettingsDocument,
       optimistic: true,
     })?.me?.settings;
+    // The store's mirror is no cached row, so its refusal is put back here.
     const previous = snapshotFields<SettingValues>(
       settings ?? mirroredFrom(useStore.getState()),
       updates,
     );
     useStore.getState().mirrorSettings(mirroredFrom(updates));
 
-    const landed = await updateEntityFieldsLocalFirst<SettingValues>({
-      cache: client.cache,
+    const settled = await sendFields(client.cache, {
       entity: settings
         ? { __typename: 'UserSettings', id: settings.id }
         : undefined,
-      updates,
-      previous,
-      settle: async () => {
-        const settled = await settleMutation(
-          () => mutate({ variables: { input: settingsInput(updates) } }),
-          { document: UpdateUserPreferencesDocument, fallback: failureMessage },
-        );
-        // A queued change drops them when it replays (`reconcileSettingsReplay`).
-        if (settled.status === 'applied' && 'preferredUnitSystem' in updates) {
-          dropUnitSystemAnswers(client.cache);
-        }
-        return settled;
+      fields: updates,
+      variables: { input: settingsInput(updates) },
+      mutate,
+      settle: {
+        document: UpdateUserPreferencesDocument,
+        fallback: failureMessage,
       },
     });
+    const landed = settled.status !== 'failed';
     if (!landed) useStore.getState().mirrorSettings(mirroredFrom(previous));
     return landed;
   };

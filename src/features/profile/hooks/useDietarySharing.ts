@@ -1,12 +1,11 @@
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import {
   DietarySharingHomesDocument,
   UpdateDietarySharingDocument,
-  UseDietarySharing_MembershipFragmentDoc,
 } from './useDietarySharing.generated';
 
 /** One of the caller's homes, and whether it sees their restrictions. */
@@ -18,9 +17,8 @@ export interface DietarySharingHome {
 
 /**
  * The caller's homes with their own dietary sharing switch in each, and the
- * write that flips one. The switch flips in the cache before the write is
- * sent, so it holds offline and the write queues; a refusal says why and shows
- * the server's state.
+ * write that flips one, which holds offline and queues; a refusal says why and
+ * shows the server's state.
  */
 export function useDietarySharing() {
   const { t } = useTranslation();
@@ -34,48 +32,22 @@ export function useDietarySharing() {
     node.myMembership ? [{ home: node, membership: node.myMembership }] : [],
   );
 
-  const writeShared = (membershipId: string, shared: boolean) => {
-    const cacheId = client.cache.identify({
-      __typename: 'Membership',
-      id: membershipId,
-    });
-    const held = cacheId
-      ? client.cache.readFragment({
-          id: cacheId,
-          fragment: UseDietarySharing_MembershipFragmentDoc,
-          fragmentName: 'useDietarySharing_membership',
-          optimistic: true,
-        })
-      : null;
-    client.cache.writeFragment({
-      fragment: UseDietarySharing_MembershipFragmentDoc,
-      fragmentName: 'useDietarySharing_membership',
-      data: {
-        __typename: 'Membership',
-        id: membershipId,
-        // The server raises it; a local write keeps the one it holds.
-        version: held?.version ?? 0,
-        sharesDietaryNeeds: shared,
-      },
-    });
-  };
-
   const setShared = async (homeId: string, shared: boolean) => {
     const entry = memberships.find(({ home }) => home.id === homeId);
     if (!entry) return;
-    const membershipId = entry.membership.id;
-    writeShared(membershipId, shared);
     // One key per toggle: a queued toggle resent on reconnect writes nothing
     // twice, and a late "off" never undoes a later "on".
     const idempotencyKey = generateEntityId();
-    await settleMutation(
-      () =>
-        mutate({ variables: { input: { homeId, shared, idempotencyKey } } }),
-      {
+    await sendFields(client.cache, {
+      entity: { __typename: 'Membership', id: entry.membership.id },
+      fields: { sharesDietaryNeeds: shared },
+      variables: { input: { homeId, shared, idempotencyKey } },
+      mutate,
+      settle: {
         document: UpdateDietarySharingDocument,
         fallback: t('dietary.sharingFailed'),
         present: 'toast',
-        // Flipping back could undo a later toggle the server took.
+        // A later toggle the server took may stand: show what it holds.
         onFailed: () => {
           void refetch().catch(error =>
             errorService.reportError(error, {
@@ -84,7 +56,7 @@ export function useDietarySharing() {
           );
         },
       },
-    );
+    });
   };
 
   const homes: DietarySharingHome[] = memberships.map(

@@ -39,7 +39,8 @@ const render = (write: ReturnType<typeof recordMock>) => {
     operationMocks: [write.mock],
   });
   const cached = () =>
-    cache.readQuery({ query: GetUserSettingsDocument })?.me?.settings;
+    cache.readQuery({ query: GetUserSettingsDocument, optimistic: true })?.me
+      ?.settings;
   return { update: result.current.updateSettings, cached };
 };
 

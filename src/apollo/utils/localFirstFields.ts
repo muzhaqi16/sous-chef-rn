@@ -1,12 +1,5 @@
-/**
- * Writes the cached entity PERMANENTLY and reverts from a snapshot only on
- * refusal: an `optimisticResponse` cannot, as Apollo tears its layer down on
- * the queue's null result, reverting while queued.
- */
-
 import { gql, type ApolloCache, type StoreObject } from '@apollo/client';
 import type { DocumentNode } from 'graphql';
-import type { SettleStatus } from './settleMutation';
 
 /**
  * The normalized entity holding the fields; its GraphQL field names must match the
@@ -142,33 +135,4 @@ export function snapshotFields<TFields extends object>(
     if (key in source) out[key] = Reflect.get(source, key);
   }
   return out as Partial<TFields>;
-}
-
-export interface LocalFirstFieldsOptions<TFields extends object> {
-  cache: ApolloCache;
-  /** Omit (or pass undefined) to skip the cache write — e.g. entity not loaded yet. */
-  entity: FieldsEntityRef | undefined;
-  /** The change to apply. */
-  updates: Partial<TFields>;
-  /** Current values for the same keys — restored if the server refuses. */
-  previous: Partial<TFields>;
-  /** Fires and settles the write, whose `useMutation` sets `context: { localFirst: true }`. */
-  settle: () => Promise<{ status: SettleStatus }>;
-}
-
-/**
- * Applies a field update at once and puts `previous` back only when the write
- * failed. True when it landed or was queued, which replays later.
- */
-export async function updateEntityFieldsLocalFirst<TFields extends object>({
-  cache,
-  entity,
-  updates,
-  previous,
-  settle,
-}: LocalFirstFieldsOptions<TFields>): Promise<boolean> {
-  writeEntityFields(cache, entity, updates);
-  const { status } = await settle();
-  if (status === 'failed') writeEntityFields(cache, entity, previous);
-  return status !== 'failed';
 }

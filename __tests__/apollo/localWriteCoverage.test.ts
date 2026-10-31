@@ -11,31 +11,15 @@ import {
 const STILL_TO_MOVE = 'writes the cache itself until its feature moves';
 
 const NO_LOCAL_WRITE: Record<string, string> = {
-  AddBrandToList: STILL_TO_MOVE,
-  AddDietaryRestriction: STILL_TO_MOVE,
-  CompleteOnboarding: STILL_TO_MOVE,
-  CreateBrandList: STILL_TO_MOVE,
+  AddDietaryRestriction:
+    'shows on the answer: its input takes no id, so a row shown sooner could not be removed while queued',
   CreateReceiptCheckIn: STILL_TO_MOVE,
-  DeleteBrandList: STILL_TO_MOVE,
-  DeleteMultipleNotifications: STILL_TO_MOVE,
-  DeleteNotification: STILL_TO_MOVE,
-  MarkAllNotificationsAsRead: STILL_TO_MOVE,
-  MarkExpirationAction: STILL_TO_MOVE,
-  MarkNotificationAsRead: STILL_TO_MOVE,
+  MarkExpirationAction:
+    'writes the notification store, not the cache: its answer states neither the row nor the badge',
   MarkRecipeAsCooked:
     'shows nothing until answered: the server picks the stacks it deducts',
-  MarkSuggestionActive: STILL_TO_MOVE,
-  MarkSuggestionDismissed: STILL_TO_MOVE,
   MovePurchasedItemsToPantry:
     'shows nothing until answered: the server picks the lines, and the pantry reads the rows',
-  RemoveBrandFromList: STILL_TO_MOVE,
-  RemoveDietaryRestriction: STILL_TO_MOVE,
-  UpdateBrandList: STILL_TO_MOVE,
-  UpdateDietaryProfile: STILL_TO_MOVE,
-  UpdateDietarySharing: STILL_TO_MOVE,
-  UpdateNotificationPreferences: STILL_TO_MOVE,
-  UpdateUserPreferences: STILL_TO_MOVE,
-  UpdateUserProfile: STILL_TO_MOVE,
 };
 
 const localFirst = () => {

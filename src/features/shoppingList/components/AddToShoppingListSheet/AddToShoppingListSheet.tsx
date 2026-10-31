@@ -68,7 +68,9 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
   // Dismiss a junk/unwanted suggestion from the SHOPPING surface.
   const { dismissSuggestion } = useSuggestionDismissal(
     SuggestionSurface.Shopping,
-    { remove: removeSuggestion, restore: restoreSuggestion },
+    shoppingListId
+      ? { __typename: 'ShoppingList', id: shoppingListId }
+      : undefined,
   );
 
   // Items whose add is in flight: a second tap on the same one is dropped, a

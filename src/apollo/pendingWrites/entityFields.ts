@@ -3,7 +3,8 @@ import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import type { LocalWrite } from './types';
 
 export type EntityFieldsInputs = {
-  entity: { __typename: string; id: string };
+  /** Absent when the cache holds no row: the server still takes the write. */
+  entity?: { __typename: string; id: string };
   /** What the row shows meanwhile, in its own field names. */
   fields: Readonly<Record<string, unknown>>;
 };
@@ -14,6 +15,8 @@ export type EntityFieldsInputs = {
  */
 export const entityFields: LocalWrite<EntityFieldsInputs> = {
   apply(cache, { inputs: { entity, fields } }) {
-    if (isHeld(cache, entity)) writeEntityFields(cache, entity, fields);
+    if (entity && isHeld(cache, entity)) {
+      writeEntityFields(cache, entity, fields);
+    }
   },
 };

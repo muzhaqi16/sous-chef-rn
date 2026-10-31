@@ -27,6 +27,12 @@ import {
   replaceUsualStore,
   writeUsualStores,
 } from '#features/catalog/cache/usualStores';
+import {
+  hideSuggestion,
+  putSuggestionsBack,
+  type HeldSuggestion,
+  type SuggestionParent,
+} from '#features/catalog/cache/suggestions';
 
 const locationRef = (id: string) => ({ __typename: 'StorageLocation', id });
 
@@ -180,4 +186,46 @@ export const removeUsualStore: LocalWrite<UsualStoreInputs> = {
       ),
     );
   },
+};
+
+export type DismissSuggestionInputs = { parent: SuggestionParent };
+
+const itemIdOf = ({ input }: OperationVariables): string | undefined => {
+  const value: unknown = input;
+  return isRecord(value) && typeof value.itemId === 'string'
+    ? value.itemId
+    : undefined;
+};
+
+const leaveSuggestions: LocalWrite<DismissSuggestionInputs>['apply'] = (
+  cache,
+  { variables, inputs: { parent } },
+) => {
+  const itemId = itemIdOf(variables);
+  if (itemId) hideSuggestion(cache, parent, itemId);
+};
+
+export const dismissSuggestion: LocalWrite<DismissSuggestionInputs> = {
+  apply: leaveSuggestions,
+  // The answer states no list.
+  commit: leaveSuggestions,
+};
+
+export type UndoDismissalInputs = {
+  parent: SuggestionParent;
+  held: HeldSuggestion[];
+};
+
+const returnSuggestion: LocalWrite<UndoDismissalInputs>['apply'] = (
+  cache,
+  { variables, inputs: { parent, held } },
+) => {
+  const itemId = itemIdOf(variables);
+  if (itemId) putSuggestionsBack(cache, parent, itemId, held);
+};
+
+export const undoDismissal: LocalWrite<UndoDismissalInputs> = {
+  apply: returnSuggestion,
+  // The answer states no list.
+  commit: returnSuggestion,
 };

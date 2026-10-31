@@ -1,5 +1,20 @@
 import { byOperation } from '#/apollo/utils/documentOperation';
 import {
+  MarkSuggestionActiveDocument,
+  MarkSuggestionDismissedDocument,
+} from '#operations/item/item.generated';
+import { settingsFields } from '#/apollo/utils/unitSystemAnswers';
+import {
+  CompleteOnboardingDocument,
+  UpdateUserPreferencesDocument,
+  UpdateUserProfileDocument,
+} from '#operations/auth/user.generated';
+import {
+  RemoveDietaryRestrictionDocument,
+  UpdateDietaryProfileDocument,
+  UpdateNotificationPreferencesDocument,
+} from '#operations/user/user.generated';
+import {
   CreateHomeDocument,
   UpdateHomeDocument,
 } from '#operations/home/home.generated';
@@ -25,10 +40,12 @@ import {
   addUsualStore,
   createLocation,
   createStore,
+  dismissSuggestion,
   locationFields,
   pinUsualStore,
   removeLocation,
   removeUsualStore,
+  undoDismissal,
 } from '#features/catalog/offline/localWrites';
 import {
   AdjustPantryItemQuantityDocument,
@@ -96,6 +113,34 @@ import {
   UpdateFavoriteRecipeDocument,
   UpdateRecipeDocument,
 } from '#features/recipes/graphql/recipe.generated';
+import {
+  DeleteMultipleNotificationsDocument,
+  MarkAllNotificationsAsReadDocument,
+} from '#features/notifications/graphql/bulkNotificationMutations.generated';
+import {
+  DeleteNotificationDocument,
+  MarkNotificationAsReadDocument,
+} from '#features/notifications/graphql/notificationMutations.generated';
+import {
+  markAllRead,
+  markRead,
+  removeNotifications,
+} from '#features/notifications/offline/localWrites';
+import {
+  AddBrandToListDocument,
+  CreateBrandListDocument,
+  DeleteBrandListDocument,
+  RemoveBrandFromListDocument,
+  UpdateBrandListDocument,
+} from '#features/profile/hooks/useBrandLists.generated';
+import { UpdateDietarySharingDocument } from '#features/profile/hooks/useDietarySharing.generated';
+import {
+  addBrand,
+  createBrandList,
+  removeBrand,
+  removeBrandList,
+  removeRestriction,
+} from '#features/profile/offline/localWrites';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
 import {
   addFavorite,
@@ -210,4 +255,22 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [CreateHomeDocument, createHome],
   [UpdateHomeDocument, entityFields],
   [MarkHomeAsDefaultDocument, markDefaultHome],
+  [UpdateUserPreferencesDocument, settingsFields],
+  [UpdateNotificationPreferencesDocument, entityFields],
+  [CompleteOnboardingDocument, entityFields],
+  [UpdateUserProfileDocument, entityFields],
+  [UpdateDietaryProfileDocument, entityFields],
+  [RemoveDietaryRestrictionDocument, removeRestriction],
+  [UpdateDietarySharingDocument, entityFields],
+  [CreateBrandListDocument, createBrandList],
+  [UpdateBrandListDocument, entityFields],
+  [DeleteBrandListDocument, removeBrandList],
+  [AddBrandToListDocument, addBrand],
+  [RemoveBrandFromListDocument, removeBrand],
+  [MarkNotificationAsReadDocument, markRead],
+  [MarkAllNotificationsAsReadDocument, markAllRead],
+  [DeleteNotificationDocument, removeNotifications],
+  [DeleteMultipleNotificationsDocument, removeNotifications],
+  [MarkSuggestionDismissedDocument, dismissSuggestion],
+  [MarkSuggestionActiveDocument, undoDismissal],
 ]);

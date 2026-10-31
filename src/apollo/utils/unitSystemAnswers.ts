@@ -1,6 +1,10 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
 import type { Query } from '#/graphql/generated/schemaTypes';
-import type { ReplayReconciler } from '#/apollo/offlineQueue/types';
+import {
+  entityFields,
+  type EntityFieldsInputs,
+} from '#/apollo/pendingWrites/entityFields';
+import type { LocalWrite } from '#/apollo/pendingWrites/types';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { isRecord } from '#/utils/isRecord';
 import { logger } from '#/utils/environment';
@@ -46,14 +50,17 @@ export async function refreshDeviceUnitSystem(
   }
 }
 
-/** A settings write replayed from the queue that set the unit system. */
-export const reconcileSettingsReplay: ReplayReconciler = (cache, variables) => {
-  const input: unknown = variables.input;
-  if (
-    isRecord(input) &&
-    isRecord(input.regional) &&
-    input.regional.preferredUnitSystem !== undefined
-  ) {
-    dropUnitSystemAnswers(cache);
-  }
+/** A settings write: one that set the unit system outdates those answers. */
+export const settingsFields: LocalWrite<EntityFieldsInputs> = {
+  ...entityFields,
+  commit(cache, { variables }) {
+    const input: unknown = variables.input;
+    if (
+      isRecord(input) &&
+      isRecord(input.regional) &&
+      input.regional.preferredUnitSystem !== undefined
+    ) {
+      dropUnitSystemAnswers(cache);
+    }
+  },
 };

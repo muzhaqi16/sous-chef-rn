@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { writeUserSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { alertService } from '#/services/alertService';
@@ -67,6 +68,14 @@ const press = (label: string) => {
   act(() => button?.onPress?.());
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('usePricePrompt', () => {
   beforeEach(() => {
     jest.mocked(alertService.alert).mockClear();
@@ -126,23 +135,25 @@ describe('usePricePrompt', () => {
     expect(asked()).toHaveLength(0);
   });
 
-  it('turns prices on with a yes', () => {
+  it('turns prices on with a yes', async () => {
     const { write } = given();
 
     press('Show prices');
 
     expect(useStore.getState().budgetAndPrices).toBe(true);
+    await drainTimers();
     expect(write.fired).toEqual([
       { input: { shopping: { budgetAndPrices: true } } },
     ]);
   });
 
-  it('keeps prices off with "Not now", for good', () => {
+  it('keeps prices off with "Not now", for good', async () => {
     const { write } = given();
 
     press('Not now');
 
     expect(useStore.getState().budgetAndPrices).toBe(false);
+    await drainTimers();
     expect(write.fired).toEqual([
       { input: { shopping: { budgetAndPrices: false } } },
     ]);

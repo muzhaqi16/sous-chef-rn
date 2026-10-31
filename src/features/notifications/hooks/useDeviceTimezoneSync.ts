@@ -15,11 +15,7 @@ import {
   UpdateUserPreferencesDocument,
 } from '#operations/auth/user.generated';
 import { useUser } from '#store/useAppStore';
-import {
-  snapshotFields,
-  updateEntityFieldsLocalFirst,
-} from '#/apollo/utils/localFirstFields';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { getDeviceTimezone } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
 import { t } from '#/i18n';
@@ -114,8 +110,7 @@ export const useDeviceTimezoneSync = (): void => {
           cache: client.cache,
           entity: { __typename: 'NotificationPreferences', id: preferencesId },
           updates,
-          previous: snapshotFields({ quietHoursTimezone }, updates),
-          mutate: input => updatePreferences({ variables: { input } }),
+          mutate: updatePreferences,
         }),
     );
   }, [
@@ -130,33 +125,23 @@ export const useDeviceTimezoneSync = (): void => {
     // No settings row yet: the first settings write creates one, and the
     // region-currency default reads "no row" as a currency never chosen.
     if (!deviceTimezone || !settingsId) return;
-    const updates = { timezone: deviceTimezone };
     writeZoneOnce(
       settingsAttemptedFor,
       deviceTimezone,
       settingsTimezone,
       'Settings timezone sync refused',
       () =>
-        updateEntityFieldsLocalFirst({
-          cache: client.cache,
+        sendFields(client.cache, {
           entity: { __typename: 'UserSettings', id: settingsId },
-          updates,
-          previous: snapshotFields({ timezone: settingsTimezone }, updates),
-          settle: () =>
-            settleMutation(
-              () =>
-                updateSettings({
-                  variables: {
-                    input: { regional: { timezone: deviceTimezone } },
-                  },
-                }),
-              {
-                document: UpdateUserPreferencesDocument,
-                fallback: t('settings.updateFailed'),
-                present: 'none',
-              },
-            ),
-        }),
+          fields: { timezone: deviceTimezone },
+          variables: { input: { regional: { timezone: deviceTimezone } } },
+          mutate: updateSettings,
+          settle: {
+            document: UpdateUserPreferencesDocument,
+            fallback: t('settings.updateFailed'),
+            present: 'none',
+          },
+        }).then(settled => settled.status !== 'failed'),
     );
   }, [client, deviceTimezone, settingsId, settingsTimezone, updateSettings]);
 };

@@ -21,8 +21,6 @@ import {
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { ChangePantryItemUnitDocument } from '#features/pantry/hooks/usePantryUnitChange.generated';
-import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
-import { reconcileSettingsReplay } from '#/apollo/utils/unitSystemAnswers';
 import {
   reconcileShoppingAddReplay,
   reconcileShoppingCreateReplay,
@@ -78,7 +76,6 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [CreateReceiptCheckInDocument, reconcileReceiptCheckInReplay],
   ...forEachBatchAdd(reconcileShoppingAddReplay),
   [CreateShoppingListDocument, reconcileShoppingCreateReplay],
-  [UpdateUserPreferencesDocument, reconcileSettingsReplay],
 ]);
 
 /**

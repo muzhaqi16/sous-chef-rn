@@ -1,13 +1,26 @@
-import { useMutation } from '@apollo/client/react';
+import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import {
   MarkSuggestionDismissedDocument,
   MarkSuggestionActiveDocument,
+  type MarkSuggestionActiveMutationVariables,
 } from '#operations/item/item.generated';
 import type { SuggestionSurface } from '#/graphql/generated/schemaTypes';
-import { toastService } from '#/services/toastService';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation, type Settled } from '#/apollo/utils/settleMutation';
+import { toastService } from '#/services/toastService';
 import { generateEntityId } from '#/utils/generateEntityId';
+import {
+  readHeldSuggestions,
+  type HeldSuggestion,
+  type SuggestionParent,
+} from '#features/catalog/cache/suggestions';
+import type {
+  DismissSuggestionInputs,
+  UndoDismissalInputs,
+} from '#features/catalog/offline/localWrites';
+
+type UndoVariables = MarkSuggestionActiveMutationVariables;
 
 interface DismissTarget {
   itemId: string;
@@ -15,25 +28,17 @@ interface DismissTarget {
 }
 
 /**
- * The sheet's own cache write: takes a suggestion out, and puts it back.
- * `remove` answers `null` when no list held the item, as after a second tap.
+ * Dismiss/undismiss catalog items from a suggestion surface. Both are pending
+ * layers: a failure drops the dismissal, and an Undo puts back exactly the
+ * entries taken, never a refetch, which would also restore suggestions whose
+ * own writes are still in flight.
  */
-interface SuggestionCacheWrites<TRemoval> {
-  remove: (itemId: string) => TRemoval | null;
-  restore: (removal: TRemoval) => void;
-}
-
-/**
- * Dismiss/undismiss catalog items from a suggestion surface. Both writes are
- * local-first: the suggestion leaves the cache before the dismissal is sent,
- * and a failure or Undo puts back exactly what was taken, never a refetch,
- * which would also restore suggestions whose own writes are still in flight.
- */
-export function useSuggestionDismissal<TRemoval>(
+export function useSuggestionDismissal(
   surface: SuggestionSurface,
-  { remove, restore }: SuggestionCacheWrites<TRemoval>,
+  parent: SuggestionParent | undefined,
 ) {
   const { t } = useTranslation();
+  const client = useApolloClient();
   const [dismiss] = useMutation(MarkSuggestionDismissedDocument, {
     context: { localFirst: true },
   });
@@ -42,54 +47,54 @@ export function useSuggestionDismissal<TRemoval>(
   });
 
   const undo = async (
+    from: SuggestionParent,
     itemId: string,
-    removal: TRemoval,
+    held: HeldSuggestion[],
     dismissed: Promise<Settled<unknown>>,
   ) => {
-    restore(removal);
-    // Sent after the dismissal settles, so the server cannot apply the two out
-    // of order; a dismissal that failed left nothing to undo.
-    if ((await dismissed).status === 'failed') return;
-    const idempotencyKey = generateEntityId();
-    await settleMutation(
-      () =>
-        undismiss({
-          variables: { input: { itemId, surface, idempotencyKey } },
-        }),
-      {
-        document: MarkSuggestionActiveDocument,
-        fallback: t('addItemSheet.undoFailed'),
-        // Still dismissed server-side: take it out again.
-        onFailed: () => {
-          remove(itemId);
-        },
-        present: 'toast',
+    const inputs: UndoDismissalInputs = { parent: from, held };
+    await pendingWritesOf(client.cache).send<unknown, UndoVariables>(
+      MarkSuggestionActiveDocument,
+      { input: { itemId, surface, idempotencyKey: generateEntityId() } },
+      async write => {
+        // Sent after the dismissal settles, so the server cannot apply the two
+        // out of order; a dismissal that failed left nothing to undo.
+        const outcome = await dismissed;
+        if (outcome.status === 'failed') return outcome;
+        return settleMutation(() => undismiss(write), {
+          document: MarkSuggestionActiveDocument,
+          fallback: t('addItemSheet.undoFailed'),
+          present: 'toast',
+        });
       },
+      inputs,
     );
   };
 
   const dismissSuggestion = ({ itemId, name }: DismissTarget) => {
-    const removal = remove(itemId);
+    if (!parent) return;
+    const held = readHeldSuggestions(client.cache, parent, itemId);
     // Already taken: this tap's dismissal is on its way.
-    if (removal === null) return;
+    if (held.length === 0) return;
+    const inputs: DismissSuggestionInputs = { parent };
     // One key per tap, kept by the queued write and its replays: a re-send
     // under a spent key writes nothing, so it never undoes a later Undo.
-    const idempotencyKey = generateEntityId();
-    const dismissed = settleMutation(
-      () =>
-        dismiss({ variables: { input: { itemId, surface, idempotencyKey } } }),
-      {
-        document: MarkSuggestionDismissedDocument,
-        fallback: t('addItemSheet.dismissFailed'),
-        onFailed: () => restore(removal),
-        present: 'toast',
-      },
+    const dismissed = pendingWritesOf(client.cache).send(
+      MarkSuggestionDismissedDocument,
+      { input: { itemId, surface, idempotencyKey: generateEntityId() } },
+      write =>
+        settleMutation(() => dismiss(write), {
+          document: MarkSuggestionDismissedDocument,
+          fallback: t('addItemSheet.dismissFailed'),
+          present: 'toast',
+        }),
+      inputs,
     );
     toastService.success(t('addItemSheet.dismissed', { name }), {
       action: {
         label: t('labels.undo'),
         onPress: () => {
-          void undo(itemId, removal, dismissed);
+          void undo(parent, itemId, held, dismissed);
         },
       },
     });

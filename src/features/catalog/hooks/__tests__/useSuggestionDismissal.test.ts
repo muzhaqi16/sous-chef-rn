@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react-native';
-import { ApolloClient, ApolloLink } from '@apollo/client';
+import { ApolloClient, ApolloLink, type InMemoryCache } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
@@ -9,8 +9,10 @@ import { createQueueLink } from '#/apollo/offlineQueue/queueLink';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { useStore } from '#store';
 import {
-  renderHookWithApollo,
   recordMock,
+  renderHookWithApollo,
+  seedQuery,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -18,7 +20,9 @@ import {
   MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
 import { ErrorCode, SuggestionSurface } from '#/graphql/generated/schemaTypes';
+import type { SuggestionParent } from '#features/catalog/cache/suggestions';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
+import { GetPantryItemSuggestionsDocument } from '#features/pantry/graphql/pantry.generated';
 
 import { toastService } from '#/services/toastService';
 
@@ -32,13 +36,60 @@ jest.mock('#/apollo/offlineQueue/queueManager', () => ({
 const mockSuccess = toastService.success as jest.Mock;
 const mockError = toastService.error as jest.Mock;
 
-/** The sheet's cache write, as a removal token the test can follow. */
-const cacheWrites = () => ({
-  remove: jest.fn((itemId: string) => ({ itemId })),
-  restore: jest.fn(),
+const PANTRY: SuggestionParent = { __typename: 'Pantry', id: 'pantry-1' };
+const VARIABLES = { pantryId: PANTRY.id, limit: 10, today: '2026-10-30' };
+
+const entry = (
+  itemId: string,
+): { __typename: 'PantryItemSuggestion'; id: string; itemId: string } => ({
+  __typename: 'PantryItemSuggestion',
+  id: `suggestion-${itemId}`,
+  itemId,
 });
 
-const dismissed = (surface = SuggestionSurface.Shopping) =>
+const seeded = (): InMemoryCache => {
+  const cache = makeCache();
+  seedQuery(cache, {
+    query: GetPantryItemSuggestionsDocument,
+    variables: VARIABLES,
+    data: {
+      pantry: {
+        __typename: 'Pantry',
+        id: PANTRY.id,
+        suggestions: {
+          __typename: 'PantrySuggestions',
+          lowStock: [entry('item-1')],
+          expiringSoon: [],
+          recentlyDeleted: [],
+          frequentlyAdded: [],
+          popular: [entry('item-2'), entry('item-1'), entry('item-3')],
+        },
+      },
+    },
+  });
+  return cache;
+};
+
+/** Where the sheet shows each suggestion, as it reads them. */
+const shown = (cache: InMemoryCache) => {
+  const sections = cache.readQuery({
+    query: GetPantryItemSuggestionsDocument,
+    variables: VARIABLES,
+    optimistic: true,
+  })?.pantry?.suggestions;
+  return {
+    lowStock: sections?.lowStock.map(({ itemId }) => itemId),
+    popular: sections?.popular.map(({ itemId }) => itemId),
+  };
+};
+
+const SHOWN = {
+  lowStock: ['item-1'],
+  popular: ['item-2', 'item-1', 'item-3'],
+};
+const DISMISSED = { lowStock: [], popular: ['item-2', 'item-3'] };
+
+const dismissed = (surface = SuggestionSurface.Pantry) =>
   recordMock(MarkSuggestionDismissedDocument, {
     data: {
       markSuggestionDismissed: {
@@ -62,6 +113,35 @@ const activated = () =>
     },
   });
 
+const refusedDismissal = () =>
+  recordMock(MarkSuggestionDismissedDocument, {
+    data: {
+      markSuggestionDismissed: {
+        __typename: 'NotFoundError',
+        code: ErrorCode.NotFound,
+        message: 'unknown item',
+      },
+    },
+  });
+
+const render = (operationMocks: MockedResponse[], cache = seeded()) => {
+  const { result } = renderHookWithApollo(
+    () => useSuggestionDismissal(SuggestionSurface.Pantry, PANTRY),
+    { operationMocks, cache },
+  );
+  return { result, cache };
+};
+
+const dismissItem = (
+  dismissSuggestion: ReturnType<
+    typeof useSuggestionDismissal
+  >['dismissSuggestion'],
+) => {
+  act(() => {
+    dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
+  });
+};
+
 const pressUndo = () => {
   act(() => {
     mockSuccess.mock.calls[0][1].action.onPress();
@@ -70,13 +150,6 @@ const pressUndo = () => {
 
 beforeEach(() => {
   jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -85,47 +158,38 @@ afterEach(() => {
 });
 
 describe('useSuggestionDismissal', () => {
-  it('takes the suggestion out before sending, and offers Undo', async () => {
-    const writes = cacheWrites();
+  it('takes the suggestion out of every section before sending, and offers Undo', async () => {
     const { fired, mock } = dismissed();
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Shopping, writes),
-      { operationMocks: [mock] },
-    );
+    const { result, cache } = render([mock]);
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
+    dismissItem(result.current.dismissSuggestion);
 
-    expect(writes.remove).toHaveBeenCalledWith('item-1');
+    expect(shown(cache)).toEqual(DISMISSED);
     await drainTimers();
     expect(fired).toContainEqual({
       input: {
         itemId: 'item-1',
-        surface: SuggestionSurface.Shopping,
+        surface: SuggestionSurface.Pantry,
         idempotencyKey: expect.any(String),
       },
     });
     expect(mockSuccess.mock.calls[0][1].action.label).toBeTruthy();
     expect(mockError).not.toHaveBeenCalled();
-    expect(writes.restore).not.toHaveBeenCalled();
+  });
+
+  it('keeps it out once answered, as the answer states no list', async () => {
+    const { mock } = dismissed();
+    const { result, cache } = render([mock]);
+
+    dismissItem(result.current.dismissSuggestion);
+    await drainTimers();
+
+    expect(shown(cache)).toEqual(DISMISSED);
   });
 
   it('sends one dismissal for a double tap', async () => {
-    const taken = new Set<string>();
-    const writes = {
-      remove: jest.fn((itemId: string) => {
-        if (taken.has(itemId)) return null;
-        taken.add(itemId);
-        return { itemId };
-      }),
-      restore: jest.fn(),
-    };
     const { fired, mock } = dismissed();
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Shopping, writes),
-      { operationMocks: [mock] },
-    );
+    const { result } = render([mock]);
 
     act(() => {
       result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
@@ -137,55 +201,44 @@ describe('useSuggestionDismissal', () => {
     expect(mockSuccess).toHaveBeenCalledTimes(1);
   });
 
-  it('puts back what it took when the server refuses', async () => {
-    const writes = cacheWrites();
-    const { mock } = recordMock(MarkSuggestionDismissedDocument, {
-      data: {
-        markSuggestionDismissed: {
-          __typename: 'NotFoundError',
-          code: ErrorCode.NotFound,
-          message: 'unknown item',
-        },
-      },
-    });
+  it('does nothing for a surface with no parent yet', async () => {
+    const { fired, mock } = dismissed();
     const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Shopping, writes),
+      () => useSuggestionDismissal(SuggestionSurface.Pantry, undefined),
       { operationMocks: [mock] },
     );
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'bad', name: 'Ghost' });
-    });
+    dismissItem(result.current.dismissSuggestion);
 
     await drainTimers();
-    expect(writes.restore).toHaveBeenCalledWith({ itemId: 'bad' });
+    expect(fired).toHaveLength(0);
+  });
+
+  it('puts back what it took when the server refuses', async () => {
+    const { mock } = refusedDismissal();
+    const { result, cache } = render([mock]);
+
+    dismissItem(result.current.dismissSuggestion);
+    await drainTimers();
+
+    expect(shown(cache)).toEqual(SHOWN);
     expect(mockError).toHaveBeenCalledTimes(1);
   });
 
-  it('leaves a queued dismissal hidden, with nothing restored or reported', async () => {
-    // The offline queue resolves a queued write with its payload field null.
-    const writes = cacheWrites();
-    const { fired, mock } = recordMock(MarkSuggestionDismissedDocument, {
+  it('leaves a queued dismissal hidden, with nothing reported', async () => {
+    const { mock } = recordMock(MarkSuggestionDismissedDocument, {
       data: { markSuggestionDismissed: null },
-      partial: true,
     });
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Shopping, writes),
-      { operationMocks: [mock] },
-    );
+    const { result, cache } = render([mock]);
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
-
+    dismissItem(result.current.dismissSuggestion);
     await drainTimers();
-    expect(fired).toHaveLength(1);
-    expect(writes.restore).not.toHaveBeenCalled();
+
+    expect(shown(cache)).toEqual(DISMISSED);
     expect(mockError).not.toHaveBeenCalled();
   });
 
   it('tells a throttled dismissal how long to wait, and restores the item', async () => {
-    const writes = cacheWrites();
     const { mock } = recordMock(MarkSuggestionDismissedDocument, {
       error: Object.assign(new Error('rate limited'), {
         errors: [
@@ -196,101 +249,51 @@ describe('useSuggestionDismissal', () => {
         ],
       }),
     });
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Shopping, writes),
-      { operationMocks: [mock] },
-    );
+    const { result, cache } = render([mock]);
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
-
+    dismissItem(result.current.dismissSuggestion);
     await drainTimers();
+
     expect(mockError).toHaveBeenCalledWith(
       'Too many requests. Please try again in 10 minutes.',
     );
-    expect(writes.restore).toHaveBeenCalledTimes(1);
+    expect(shown(cache)).toEqual(SHOWN);
   });
 
-  it('Undo puts the suggestion back at once and then undismisses it', async () => {
-    const writes = cacheWrites();
-    const dismiss = dismissed(SuggestionSurface.Pantry);
+  it('Undo puts the suggestion back in its place at once, then undismisses it', async () => {
+    const dismissal = dismissed();
     const undismiss = activated();
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
-      { operationMocks: [dismiss.mock, undismiss.mock] },
-    );
+    const { result, cache } = render([dismissal.mock, undismiss.mock]);
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
+    dismissItem(result.current.dismissSuggestion);
     await drainTimers();
-    expect(dismiss.fired).toHaveLength(1);
+    expect(shown(cache)).toEqual(DISMISSED);
 
     pressUndo();
+    expect(shown(cache)).toEqual(SHOWN);
 
-    expect(writes.restore).toHaveBeenCalledWith({ itemId: 'item-1' });
-    await drainTimers();
-    expect(undismiss.fired).toContainEqual({
-      input: {
-        itemId: 'item-1',
-        surface: SuggestionSurface.Pantry,
-        idempotencyKey: expect.any(String),
-      },
-    });
-    expect(writes.remove).toHaveBeenCalledTimes(1);
-  });
-
-  // The server refuses a key spent on the other mutation, and a shared key
-  // would let one write's re-send stand in for the other.
-  it('keys each dismissal and each Undo on its own', async () => {
-    const writes = cacheWrites();
-    const first = recordMock(MarkSuggestionDismissedDocument, {
-      data: {
-        markSuggestionDismissed: {
-          __typename: 'MarkSuggestionDismissedPayload',
-          itemId: 'item-1',
-          surface: SuggestionSurface.Pantry,
-          dismissed: true,
-        },
-      },
-      maxUsageCount: Number.POSITIVE_INFINITY,
-    });
-    const undismiss = activated();
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
-      { operationMocks: [first.mock, undismiss.mock] },
-    );
-
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
-    await drainTimers();
-    expect(first.fired).toHaveLength(1);
-    pressUndo();
     await drainTimers();
     expect(undismiss.fired).toHaveLength(1);
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-2', name: 'Eggs' });
-    });
-    await drainTimers();
-    expect(first.fired).toHaveLength(2);
-
-    const keyOf = (variables: unknown) =>
-      (variables as { input: { idempotencyKey: string } }).input.idempotencyKey;
-    const keys = [
-      keyOf(first.fired[0]),
-      keyOf(undismiss.fired[0]),
-      keyOf(first.fired[1]),
-    ];
-    expect(new Set(keys).size).toBe(3);
+    expect(shown(cache)).toEqual(SHOWN);
   });
 
-  // Two requests in flight could land in either order; the undo must land last.
+  it('keys each dismissal and each Undo on its own', async () => {
+    const dismissal = dismissed();
+    const undismiss = activated();
+    const { result } = render([dismissal.mock, undismiss.mock]);
+
+    dismissItem(result.current.dismissSuggestion);
+    await drainTimers();
+    pressUndo();
+    await drainTimers();
+
+    const keyOf = (fired: readonly unknown[]) =>
+      (fired[0] as { input: { idempotencyKey: string } }).input.idempotencyKey;
+    expect(keyOf(dismissal.fired)).not.toBe(keyOf(undismiss.fired));
+  });
+
   it('Undo waits for the dismissal to settle before undismissing', async () => {
-    const writes = cacheWrites();
-    const dismiss = recordMock(MarkSuggestionDismissedDocument, {
-      held: true,
+    const dismissal = recordMock(MarkSuggestionDismissedDocument, {
       data: {
         markSuggestionDismissed: {
           __typename: 'MarkSuggestionDismissedPayload',
@@ -299,114 +302,76 @@ describe('useSuggestionDismissal', () => {
           dismissed: true,
         },
       },
+      held: true,
     });
     const undismiss = activated();
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
-      { operationMocks: [dismiss.mock, undismiss.mock] },
-    );
+    const { result, cache } = render([dismissal.mock, undismiss.mock]);
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
+    dismissItem(result.current.dismissSuggestion);
     pressUndo();
+    await act(() => jest.advanceTimersByTimeAsync(0));
 
-    expect(writes.restore).toHaveBeenCalledTimes(1);
-    await drainTimers();
+    expect(shown(cache)).toEqual(SHOWN);
     expect(undismiss.fired).toHaveLength(0);
 
-    dismiss.release();
-
+    await act(async () => {
+      dismissal.release();
+    });
     await drainTimers();
     expect(undismiss.fired).toHaveLength(1);
+    expect(shown(cache)).toEqual(SHOWN);
   });
 
   it('Undo of a refused dismissal sends nothing', async () => {
-    const writes = cacheWrites();
-    const { mock } = recordMock(MarkSuggestionDismissedDocument, {
+    const { mock } = refusedDismissal();
+    const undismiss = activated();
+    const { result, cache } = render([mock, undismiss.mock]);
+
+    dismissItem(result.current.dismissSuggestion);
+    await drainTimers();
+    pressUndo();
+    await drainTimers();
+
+    expect(undismiss.fired).toHaveLength(0);
+    expect(shown(cache)).toEqual(SHOWN);
+  });
+
+  it('Undo that the server refuses takes the suggestion out again', async () => {
+    const dismissal = dismissed();
+    const undismiss = recordMock(MarkSuggestionActiveDocument, {
       data: {
-        markSuggestionDismissed: {
+        markSuggestionActive: {
           __typename: 'NotFoundError',
           code: ErrorCode.NotFound,
           message: 'unknown item',
         },
       },
     });
-    const undismiss = activated();
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
-      { operationMocks: [mock, undismiss.mock] },
-    );
+    const { result, cache } = render([dismissal.mock, undismiss.mock]);
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
+    dismissItem(result.current.dismissSuggestion);
     await drainTimers();
-    expect(writes.restore).toHaveBeenCalledTimes(1);
-
     pressUndo();
-
     await drainTimers();
-    expect(undismiss.fired).toHaveLength(0);
-  });
 
-  it('Undo that the server refuses takes the suggestion out again', async () => {
-    const writes = cacheWrites();
-    const dismiss = dismissed(SuggestionSurface.Pantry);
-    const undismiss = recordMock(MarkSuggestionActiveDocument, {
-      data: {
-        markSuggestionActive: {
-          __typename: 'NotFoundError',
-          code: ErrorCode.NotFound,
-          message: 'Suggestion not found',
-        },
-      },
-    });
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
-      { operationMocks: [dismiss.mock, undismiss.mock] },
-    );
-
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
-    await drainTimers();
-    expect(dismiss.fired).toHaveLength(1);
-
-    pressUndo();
-
-    // A refusal resolves as data: it surfaces in its code's copy, never the
-    // server's text, and the item stays dismissed.
-    await drainTimers();
-    expect(mockError).toHaveBeenCalledWith(
-      'The requested item could not be found. It may have been deleted.',
-    );
-    expect(mockError).not.toHaveBeenCalledWith('Suggestion not found');
-    expect(writes.remove).toHaveBeenCalledTimes(2);
+    expect(shown(cache)).toEqual(DISMISSED);
+    expect(mockError).toHaveBeenCalledTimes(1);
   });
 
   it('Undo reports a failure it has no code for in its own words', async () => {
-    const writes = cacheWrites();
-    const dismiss = dismissed(SuggestionSurface.Pantry);
+    const dismissal = dismissed();
     const undismiss = recordMock(MarkSuggestionActiveDocument, {
-      error: new Error('Network request failed'),
+      error: new Error('socket closed'),
     });
-    const { result } = renderHookWithApollo(
-      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
-      { operationMocks: [dismiss.mock, undismiss.mock] },
-    );
+    const { result } = render([dismissal.mock, undismiss.mock]);
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
+    dismissItem(result.current.dismissSuggestion);
     await drainTimers();
-    expect(dismiss.fired).toHaveLength(1);
-
     pressUndo();
-
     await drainTimers();
-    expect(mockError).toHaveBeenCalledWith("Couldn't undo");
-    expect(writes.remove).toHaveBeenCalledTimes(2);
+
+    expect(mockError).toHaveBeenCalledTimes(1);
+    expect(mockError.mock.calls[0][0]).not.toContain('socket closed');
   });
 });
 
@@ -429,22 +394,20 @@ describe('useSuggestionDismissal while offline', () => {
 
   // Replayed in this order, the server ends with the suggestion offered again.
   it('queues the dismissal and then its undo', async () => {
+    const cache = seeded();
     const client = new ApolloClient({
-      cache: makeCache(),
+      cache,
       link: ApolloLink.from([createQueueLink(), new MockLink([])]),
       defaultOptions: APOLLO_DEFAULT_OPTIONS,
     });
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(ApolloProvider, { client, children });
-    const writes = cacheWrites();
     const { result } = renderHook(
-      () => useSuggestionDismissal(SuggestionSurface.Pantry, writes),
+      () => useSuggestionDismissal(SuggestionSurface.Pantry, PANTRY),
       { wrapper },
     );
 
-    act(() => {
-      result.current.dismissSuggestion({ itemId: 'item-1', name: 'Milk' });
-    });
+    dismissItem(result.current.dismissSuggestion);
     pressUndo();
 
     // Each queued write keeps the key it was sent with, so its replays share it.
@@ -466,7 +429,7 @@ describe('useSuggestionDismissal while offline', () => {
       .getMutationsForUser(USER.id)
       .map(m => (m.variables as { input: { idempotencyKey: string } }).input);
     expect(dismissal?.idempotencyKey).not.toBe(undo?.idempotencyKey);
-    expect(writes.restore).toHaveBeenCalledTimes(1);
+    expect(shown(cache)).toEqual(SHOWN);
     expect(mockError).not.toHaveBeenCalled();
   });
 });

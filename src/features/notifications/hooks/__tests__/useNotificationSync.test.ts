@@ -131,7 +131,8 @@ const UNREAD = NotificationStatus.Sent;
 const READ = NotificationStatus.Read;
 
 const readBadge = (cache: InMemoryCache) =>
-  cache.readQuery({ query: NotificationSummaryDocument })?.notificationSummary;
+  cache.readQuery({ query: NotificationSummaryDocument, optimistic: true })
+    ?.notificationSummary;
 
 type MarkReadRefusal = 'not-found' | 'forbidden';
 

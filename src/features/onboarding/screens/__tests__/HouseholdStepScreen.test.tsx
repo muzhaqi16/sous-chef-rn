@@ -64,7 +64,7 @@ const queuedUpdate = () =>
   });
 
 const cachedCooksFor = (cache: ApolloCache) =>
-  (cache.extract() as Record<string, { cooksFor?: number | null }>)[
+  (cache.extract(true) as Record<string, { cooksFor?: number | null }>)[
     'DietaryProfile:dp-1'
   ]?.cooksFor;
 

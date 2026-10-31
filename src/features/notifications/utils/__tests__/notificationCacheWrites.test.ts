@@ -25,7 +25,6 @@ import {
   addNotificationToFeed,
   applyNotificationRead,
   applyNotificationRemoved,
-  applyNotificationUnread,
   cachedUnreadNotificationIds,
   readNotificationStatus,
 } from '../notificationCacheWrites';
@@ -130,15 +129,6 @@ describe('notification cache writes', () => {
     expect(badge(cache)).toBe(0);
   });
 
-  it('marks unread, and refuses when it was already unread', () => {
-    seed(cache, [['1', NotificationStatus.Read]], 0);
-
-    expect(applyNotificationUnread(cache, '1')).toBe(true);
-    expect(badge(cache)).toBe(1);
-    expect(applyNotificationUnread(cache, '1')).toBe(false);
-    expect(badge(cache)).toBe(1);
-  });
-
   it('removing an unread notification decrements; a read one does not', () => {
     seed(
       cache,
@@ -188,9 +178,8 @@ describe('notification cache writes', () => {
 
     expect(cachedUnreadNotificationIds(cache).sort()).toEqual(['1', '3']);
 
-    const flipped = applyAllNotificationsRead(cache);
+    applyAllNotificationsRead(cache);
 
-    expect(flipped.sort()).toEqual(['1', '3']);
     expect(readNotificationStatus(cache, '1')).toBe(NotificationStatus.Read);
     expect(readNotificationStatus(cache, '3')).toBe(NotificationStatus.Read);
     expect(badge(cache)).toBe(0);

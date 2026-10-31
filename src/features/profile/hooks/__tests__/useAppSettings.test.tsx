@@ -120,20 +120,6 @@ describe('useAppSettings', () => {
       held: true,
       maxUsageCount: 1,
     });
-    // Asked again once the write settles, so the server's answer holds it.
-    const reread = recordMock(GetUserSettingsDocument, {
-      data: {
-        me: {
-          __typename: 'User',
-          id: 'user-1',
-          settings: {
-            __typename: 'UserSettings',
-            id: 'settings-1',
-            budgetAndPrices: true,
-          },
-        },
-      },
-    });
     const flip = recordMock(UpdateUserPreferencesDocument, {
       data: {
         updateSettings: {
@@ -148,23 +134,26 @@ describe('useAppSettings', () => {
     });
     const { result } = renderHookWithApollo(() => useAppSettings(), {
       cache,
-      operationMocks: [refresh.mock, reread.mock, flip.mock],
+      operationMocks: [refresh.mock, flip.mock],
       links: [createLocalWritePrecedenceLink()],
     });
     await drainTimers();
     expect(refresh.fired).toHaveLength(1);
     expect(result.current.settings.budgetAndPrices).toBe(false);
 
-    await drained(() =>
-      result.current.updateAppSetting('budgetAndPrices', true),
-    );
+    // Stops short of a drain, which would outrun the read fence: the read here
+    // is still in flight when the write is answered.
+    await act(async () => {
+      void result.current.updateAppSetting('budgetAndPrices', true);
+      await jest.advanceTimersByTimeAsync(1000);
+    });
+    expect(flip.fired).toHaveLength(1);
     expect(result.current.settings.budgetAndPrices).toBe(true);
 
     await act(async () => {
       refresh.release();
     });
     await drainTimers();
-    expect(reread.fired).toHaveLength(1);
     expect(result.current.settings.budgetAndPrices).toBe(true);
   });
 
