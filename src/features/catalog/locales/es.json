@@ -90,7 +90,7 @@
     "noListTitle": "Ninguna lista seleccionada",
     "noListBody": "Selecciona o crea primero una lista de compras.",
     "createList": "Crear lista",
-    "searchPlaceholder": "Buscar o escanear artículo...",
+    "searchPlaceholder": "Buscar un artículo...",
     "added": "Se añadió {{name}}",
     "emptyTitle": "Aún no hay sugerencias",
     "emptyPantrySubtext": "Añade artículos a tu despensa para recibir sugerencias personalizadas",

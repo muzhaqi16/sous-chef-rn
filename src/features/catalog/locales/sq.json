@@ -90,7 +90,7 @@
     "noListTitle": "Asnjë listë e zgjedhur",
     "noListBody": "Zgjidh ose krijo më parë një listë blerjesh.",
     "createList": "Krijo listë",
-    "searchPlaceholder": "Kërko ose skano artikull...",
+    "searchPlaceholder": "Kërko një artikull...",
     "added": "U shtua {{name}}",
     "emptyTitle": "Ende asnjë sugjerim",
     "emptyPantrySubtext": "Shto artikuj në qilar për të marrë sugjerime të personalizuara",

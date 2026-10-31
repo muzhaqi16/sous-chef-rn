@@ -90,7 +90,7 @@
     "noListTitle": "No List Selected",
     "noListBody": "Please select or create a shopping list first.",
     "createList": "Create List",
-    "searchPlaceholder": "Search or scan item...",
+    "searchPlaceholder": "Search for an item...",
     "added": "Added {{name}}",
     "emptyTitle": "No suggestions yet",
     "emptyPantrySubtext": "Add items to your pantry to get personalized suggestions",

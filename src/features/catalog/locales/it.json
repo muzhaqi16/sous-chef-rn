@@ -90,7 +90,7 @@
     "noListTitle": "Nessuna lista selezionata",
     "noListBody": "Seleziona o crea prima una lista della spesa.",
     "createList": "Crea lista",
-    "searchPlaceholder": "Cerca o scansiona un articolo...",
+    "searchPlaceholder": "Cerca un articolo...",
     "added": "{{name}} aggiunto",
     "emptyTitle": "Ancora nessun suggerimento",
     "emptyPantrySubtext": "Aggiungi articoli alla tua dispensa per ricevere suggerimenti personalizzati",
