@@ -95,6 +95,14 @@ const seed = (
   });
 };
 
+const feed = (cache: InMemoryCache) =>
+  cache
+    .readQuery({
+      query: GetNotificationsDocument,
+      variables: { filter: undefined, first: 30 },
+    })
+    ?.me?.notificationsConnection.edges.map(edge => edge.node.id);
+
 const badge = (cache: InMemoryCache): number =>
   cache.readQuery({ query: NotificationSummaryDocument })?.notificationSummary
     .unreadCount ?? -1;
@@ -160,6 +168,7 @@ describe('notification cache writes', () => {
 
     addNotificationToFeed(cache, USER, '2', NotificationCategory.Pantry);
 
+    expect(feed(cache)).toEqual(['2', '1']);
     // The count is re-seeded from the server on this path — see
     // `useNotificationListener`. Applying a delta here as well would
     // double-count it.

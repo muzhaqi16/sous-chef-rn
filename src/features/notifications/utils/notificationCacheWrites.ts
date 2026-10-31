@@ -161,9 +161,11 @@ export function applyNotificationRemoved(
   return true;
 }
 
-const addToNotificationsConnection = createAddToParentConnectionUpdater<{
-  id: string;
-}>('User', 'notificationsConnection', 'Notification');
+const addToNotificationsConnection = createAddToParentConnectionUpdater(
+  'User',
+  'notificationsConnection',
+  'Notification',
+);
 
 /**
  * Adds the edge for an already-normalized notification. `cache.modify` runs for
@@ -181,7 +183,7 @@ export function addNotificationToFeed(
   addToNotificationsConnection(
     cache,
     userId,
-    { id },
+    { __typename: 'Notification', id },
     {
       position: 'start',
       skipStoreField: skipUnmatchedFilterVariants({
