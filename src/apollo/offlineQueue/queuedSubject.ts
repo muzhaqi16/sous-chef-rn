@@ -80,7 +80,10 @@ const ROW_SUBJECT_KEYS: Partial<Record<keyof SubjectInputs, string>> = {
 
 /** `id`-keyed inputs outside the `Create*` names whose `id` the device mints. */
 const MINTING_ID_INPUTS: ReadonlySet<string> = new Set([
+  'AddBrandToListInput',
   'AddRecipeToFavoritesInput',
+  'AddRestrictionInput',
+  'AddTemplateItemInput',
 ]);
 
 /**

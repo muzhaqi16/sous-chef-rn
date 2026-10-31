@@ -11,7 +11,6 @@ import {
   useMutation,
   useQuery,
 } from '@apollo/client/react';
-import type { Reference } from '@apollo/client';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
@@ -30,8 +29,11 @@ import type {
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import type { RemoveRestrictionInputs } from '#features/profile/offline/localWrites';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
+import type {
+  AddRestrictionInputs,
+  RemoveRestrictionInputs,
+} from '#features/profile/offline/localWrites';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { useTranslation } from '#/i18n';
 
 export interface DietaryRestriction {
@@ -128,43 +130,6 @@ export const useDietaryProfile = ({
   // ===== MUTATION 2: Add Dietary Restriction =====
   const [addRestriction] = useMutation(AddDietaryRestrictionDocument, {
     context: { localFirst: true },
-    // Shown on the answer: the input takes no id, so a row shown before it
-    // could not be removed while the add is queued.
-    update: (cache, { data }) => {
-      const payload = appliedPayload(data);
-      // Read from the cache, not the render: the add can follow the profile's
-      // creation within one handler.
-      const profileId = cache.readQuery({
-        query: GetDietaryProfileDocument,
-        optimistic: true,
-      })?.me?.dietaryProfile?.id;
-      if (!payload || !profileId) return;
-
-      const newRestriction = payload.dietaryRestriction;
-
-      // Add the new restriction reference to DietaryProfile.restrictions
-      cache.modify({
-        id: cache.identify({ __typename: 'DietaryProfile', id: profileId }),
-        fields: {
-          restrictions(
-            existingRestrictions: readonly Reference[] = [],
-            { toReference, readField },
-          ) {
-            const newRestrictionRef = toReference(newRestriction);
-
-            // Check if restriction already exists (prevent duplicates)
-            const exists = existingRestrictions.some(
-              ref => readField('id', ref) === newRestriction.id,
-            );
-
-            if (exists || !newRestrictionRef) return existingRestrictions;
-
-            // Add to end of array
-            return [...existingRestrictions, newRestrictionRef];
-          },
-        },
-      });
-    },
   });
 
   // ===== MUTATION 3: Remove Dietary Restriction =====
@@ -260,20 +225,23 @@ export const useDietaryProfile = ({
     notes?: string,
   ) => {
     if (!(await ensureProfileExists())) return false;
-    const settled = await settleMutation(
-      () =>
-        addRestriction({
-          variables: {
-            input: { kind: restriction, severity, notes },
-          },
+    const id = generateEntityId();
+    const inputs: AddRestrictionInputs = {
+      row: { id, kind: restriction, severity, notes },
+      now: new Date().toISOString(),
+    };
+    const settled = await pendingWritesOf(client.cache).send(
+      AddDietaryRestrictionDocument,
+      { input: { id, kind: restriction, severity, notes } },
+      write =>
+        settleMutation(() => addRestriction(write), {
+          document: AddDietaryRestrictionDocument,
+          fallback: t('errors.codes.genericRetry'),
+          // Both callers alert on the false return; a second alert stacks, and
+          // a bulk add stacks one per restriction.
+          present: 'none',
         }),
-      {
-        document: AddDietaryRestrictionDocument,
-        fallback: t('errors.codes.genericRetry'),
-        // Both callers alert on the false return; a second alert stacks, and
-        // a bulk add stacks one per restriction.
-        present: 'none',
-      },
+      inputs,
     );
     return settled.status !== 'failed';
   };

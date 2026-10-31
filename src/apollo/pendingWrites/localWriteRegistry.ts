@@ -10,6 +10,7 @@ import {
   UpdateUserProfileDocument,
 } from '#operations/auth/user.generated';
 import {
+  AddDietaryRestrictionDocument,
   RemoveDietaryRestrictionDocument,
   UpdateDietaryProfileDocument,
   UpdateNotificationPreferencesDocument,
@@ -136,6 +137,7 @@ import {
 import { UpdateDietarySharingDocument } from '#features/profile/hooks/useDietarySharing.generated';
 import {
   addBrand,
+  addRestriction,
   createBrandList,
   removeBrand,
   removeBrandList,
@@ -262,6 +264,7 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [CompleteOnboardingDocument, entityFields],
   [UpdateUserProfileDocument, entityFields],
   [UpdateDietaryProfileDocument, entityFields],
+  [AddDietaryRestrictionDocument, addRestriction],
   [RemoveDietaryRestrictionDocument, removeRestriction],
   [UpdateDietarySharingDocument, entityFields],
   [CreateBrandListDocument, createBrandList],

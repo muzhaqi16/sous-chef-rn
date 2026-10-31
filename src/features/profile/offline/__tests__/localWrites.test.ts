@@ -7,7 +7,16 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
-import { RemoveDietaryRestrictionDocument } from '#operations/user/user.generated';
+import {
+  AddDietaryRestrictionDocument,
+  GetDietaryProfileDocument,
+  RemoveDietaryRestrictionDocument,
+} from '#operations/user/user.generated';
+import {
+  Diet,
+  RestrictionSeverity,
+  type RestrictionKindInput,
+} from '#/graphql/generated/schemaTypes';
 import type { LocalBrandEntry } from '#features/profile/cache/brandLists';
 import {
   AddBrandToListDocument,
@@ -18,11 +27,13 @@ import {
 } from '#features/profile/hooks/useBrandLists.generated';
 import {
   addBrand,
+  addRestriction,
   createBrandList,
   removeBrand,
   removeBrandList,
   removeRestriction,
   type AddBrandInputs,
+  type AddRestrictionInputs,
   type CreateBrandListInputs,
   type RemoveBrandInputs,
   type RemoveRestrictionInputs,
@@ -69,12 +80,18 @@ function setup() {
       ],
     },
   });
-  seedFragment(cache, {
-    fragment: RESTRICTIONS,
+  seedQuery(cache, {
+    query: GetDietaryProfileDocument,
     data: {
-      __typename: 'DietaryProfile',
-      id: PROFILE_ID,
-      restrictions: [{ __typename: 'DietaryRestriction', id: 'held' }],
+      me: {
+        __typename: 'User',
+        id: 'user-1',
+        dietaryProfile: {
+          __typename: 'DietaryProfile',
+          id: PROFILE_ID,
+          restrictions: [{ __typename: 'DietaryRestriction', id: 'held' }],
+        },
+      },
     },
   });
   const table = {
@@ -82,6 +99,7 @@ function setup() {
     DeleteBrandList: removeBrandList,
     AddBrandToList: addBrand,
     RemoveBrandFromList: removeBrand,
+    AddDietaryRestriction: addRestriction,
     RemoveDietaryRestriction: removeRestriction,
   };
   return { cache, writes: new PendingWrites(cache, table) };
@@ -156,6 +174,26 @@ const removeEntry = ({ writes }: Setup) => {
     inputs,
   );
 };
+
+const addHeldKind = (
+  { writes }: Setup,
+  kind: RestrictionKindInput = { diet: Diet.Vegan },
+) => {
+  const severity = RestrictionSeverity.Preference;
+  const inputs: AddRestrictionInputs = {
+    row: { id: 'minted', kind, severity },
+    now: '2026-10-31T10:00:00.000Z',
+  };
+  return writes.begin(
+    AddDietaryRestrictionDocument,
+    { input: { id: 'minted', kind, severity } },
+    inputs,
+  );
+};
+
+const shownRestrictions = ({ cache }: Setup) =>
+  cache.readQuery({ query: GetDietaryProfileDocument, optimistic: true })?.me
+    ?.dietaryProfile?.restrictions;
 
 const removeHeldRestriction = ({ writes }: Setup) => {
   const inputs: RemoveRestrictionInputs = { profileId: PROFILE_ID };
@@ -266,6 +304,100 @@ describe('a brand on a list', () => {
     });
 
     expect(entries(screen, false)).toEqual([]);
+  });
+});
+
+describe('adding a dietary restriction', () => {
+  it('shows it last, complete for the profile, however often it is rebuilt', () => {
+    const screen = setup();
+
+    addHeldKind(screen);
+    screen.writes.rebuild();
+    screen.writes.rebuild();
+
+    expect(shownRestrictions(screen)?.at(-1)).toMatchObject({
+      id: 'minted',
+      diet: Diet.Vegan,
+      severity: RestrictionSeverity.Preference,
+    });
+    expect(restrictions(screen)).toEqual(['held', 'minted']);
+    expect(restrictions(screen, false)).toEqual(['held']);
+  });
+
+  it('ends on the server data when refused', () => {
+    const screen = setup();
+
+    screen.writes.drop(addHeldKind(screen).id);
+
+    expect(restrictions(screen)).toEqual(['held']);
+    expect(
+      screen.cache.extract(true)['DietaryRestriction:minted'],
+    ).toBeUndefined();
+  });
+
+  it('lists it in the server data once answered', () => {
+    const screen = setup();
+
+    answered(screen, addHeldKind(screen), {
+      addRestriction: {
+        __typename: 'AddRestrictionPayload',
+        converged: false,
+        dietaryRestriction: {
+          __typename: 'DietaryRestriction',
+          id: 'minted',
+          diet: Diet.Vegan,
+          intolerance: null,
+          healthGoal: null,
+          item: null,
+          severity: RestrictionSeverity.Preference,
+          notes: null,
+          createdAt: '2026-10-31T10:00:00.000Z',
+        },
+      },
+    });
+
+    expect(restrictions(screen, false)).toEqual(['held', 'minted']);
+  });
+
+  it('shows a food the device holds under its name', () => {
+    const screen = setup();
+    seedFragment(screen.cache, {
+      fragment: gql`
+        fragment LocalWritesFood on Item {
+          id
+          name
+          version
+        }
+      `,
+      data: { __typename: 'Item', id: 'food', name: 'Bacon', version: 3 },
+    });
+
+    addHeldKind(screen, { item: 'food' });
+
+    expect(shownRestrictions(screen)?.at(-1)?.item).toMatchObject({
+      id: 'food',
+      name: 'Bacon',
+    });
+  });
+
+  it('waits for the answer to show a food the device cannot name', () => {
+    const screen = setup();
+
+    addHeldKind(screen, { item: 'unread' });
+
+    expect(restrictions(screen)).toEqual(['held']);
+  });
+
+  it('shows nothing before the first write creates the profile', () => {
+    const screen = setup();
+    seedQuery(screen.cache, {
+      query: GetDietaryProfileDocument,
+      data: { me: { __typename: 'User', id: 'user-1', dietaryProfile: null } },
+    });
+
+    addHeldKind(screen);
+
+    expect(shownRestrictions(screen)).toBeUndefined();
   });
 });
 

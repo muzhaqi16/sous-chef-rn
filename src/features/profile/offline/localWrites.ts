@@ -4,6 +4,7 @@
  */
 import type { OperationVariables } from '@apollo/client';
 import type { LocalWrite } from '#/apollo/pendingWrites/types';
+import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
 import {
   changeBrandEntries,
@@ -15,12 +16,31 @@ import {
 import {
   dropRestriction,
   hideRestriction,
+  listRestriction,
+  showLocalRestriction,
+  type LocalRestriction,
 } from '#features/profile/cache/restrictions';
 
 /** The row a write names, from its variables. */
 const subjectOf = ({ input }: OperationVariables): string | undefined => {
   const value: unknown = input;
   return isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
+};
+
+export type AddRestrictionInputs = { row: LocalRestriction; now: string };
+
+export const addRestriction: LocalWrite<AddRestrictionInputs> = {
+  apply(cache, { inputs: { row, now } }) {
+    showLocalRestriction(cache, row, now);
+  },
+  // The answer states the row, not the profile that lists it.
+  commit(cache, _write, data) {
+    const payload: unknown = appliedPayload(data);
+    const id = isRecord(payload)
+      ? subjectOf({ input: payload.dietaryRestriction })
+      : undefined;
+    if (id) listRestriction(cache, id);
+  },
 };
 
 export type RemoveRestrictionInputs = { profileId?: string };

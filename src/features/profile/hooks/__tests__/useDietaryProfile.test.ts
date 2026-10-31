@@ -452,6 +452,10 @@ describe('useDietaryProfile', () => {
     expect(queued.fired).toHaveLength(1);
     expect(success).toBe(true);
     expect(alertService.alert).not.toHaveBeenCalled();
+    expect(result.current.profile?.restrictions.at(-1)).toMatchObject({
+      intolerance: Intolerance.Peanut,
+      severity: RestrictionSeverity.Allergy,
+    });
   });
 
   // The API takes what a restriction restricts as a one-key `kind`.
@@ -487,6 +491,7 @@ describe('useDietaryProfile', () => {
     expect(success).toBe(true);
     expect(fired).toContainEqual({
       input: expect.objectContaining({
+        id: expect.any(String),
         kind: { diet: Diet.Vegan },
         severity: RestrictionSeverity.Allergy,
       }),

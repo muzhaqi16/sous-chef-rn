@@ -54,6 +54,7 @@ const SCHEMA_PATH = fromRoot('src', 'graphql', 'generated', 'schema.graphql');
  * the answer is written once and reviewed.
  */
 const ENUM_DEFAULTS = {
+  'DietaryRestriction.severity': 'PREFERENCE',
   'PantryItem.condition': 'GOOD',
   'PantryItem.acquisitionMethod': 'PURCHASED',
   'PantryItem.storageState': 'NONE',
@@ -424,6 +425,30 @@ const TARGETS = [
       useBrandLists_row: [
         'NEUTRAL_LOCAL_BRAND_LIST',
         'UseBrandLists_RowFragment',
+      ],
+    },
+  },
+  {
+    graphql: fromRoot(
+      'src',
+      'features',
+      'profile',
+      'cache',
+      'restrictions.graphql',
+    ),
+    out: fromRoot(
+      'src',
+      'features',
+      'profile',
+      'cache',
+      'restrictionRowNeutral.generated.ts',
+    ),
+    typesFrom: './restrictions.generated',
+    unmasked: true,
+    fragments: {
+      restrictions_row: [
+        'NEUTRAL_LOCAL_RESTRICTION',
+        'Restrictions_RowFragment',
       ],
     },
   },

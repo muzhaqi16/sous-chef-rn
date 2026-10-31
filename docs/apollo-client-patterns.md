@@ -1470,7 +1470,7 @@ See `src/features/shoppingList/cache/connections.ts` for the full implementation
 ## Reference implementations
 
 - **Mutation patterns**: `useAddToPantry.ts` (local-first create through `pendingWrites.send`), `createShoppingListRow` in `src/features/shoppingList/cache/createShoppingListRow.ts` (the shopping-row create lifecycle every add site shares), `useToggleShoppingItem.ts` (a pending write with its own `LocalWrite`), `sendFields` (plain field edits).
-- **Replay reconciliation**: `REPLAY_RECONCILERS` in `src/apollo/offlineQueue/replayRegistry.ts`; `__tests__/apollo/replayReconcilerCoverage.test.ts` fails when a queueable mutation's own `update` evicts an entity and no reconciler does the same on replay.
+- **Replay reconciliation**: `REPLAY_RECONCILERS` in `src/apollo/offlineQueue/replayRegistry.ts`; `__tests__/apollo/queueableWritesTakeNoUpdate.test.ts` fails when a queueable mutation takes an `update` of its own, as what an answer leaves goes in `commit`.
 - **Resync**: `src/apollo/refetchEvents.ts`.
 - **Fragment reads**: `useFragmentList` (`src/hooks/apollo/useFragmentList.ts`); `useRecipeData` for a single masked entity.
 - **Cache updater utilities**: `src/apollo/utils/cacheUpdaters.ts`

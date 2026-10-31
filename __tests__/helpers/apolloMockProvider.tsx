@@ -303,6 +303,7 @@ if (typeof beforeEach === 'function') {
   });
   afterEach(throwOnUnknownFixtureKeys);
   afterEach(throwOnMisrepresentedFixtureValues);
+  afterEach(releasePendingWrites);
   // A mock served after the file's last test has no `afterEach` left to read
   // what it recorded, and a dropped finding reads as a pass. A test that does
   // not await its own mutation is in exactly that position — the result lands
@@ -593,9 +594,20 @@ export function completeMockedResponse(mock: MockedResponse): MockedResponse {
 }
 
 const rebuilt = new WeakSet<InMemoryCache>();
+const heldByThisTest = new Set<InMemoryCache>();
+
+/**
+ * A write a test leaves pending owes a rebuild on a timer, which would run its
+ * `apply` inside the next test, over that test's mocks.
+ */
+function releasePendingWrites(): void {
+  heldByThisTest.forEach(cache => pendingWritesOf(cache).clear());
+  heldByThisTest.clear();
+}
 
 /** The rebuild `createApolloClient` wires, so a pending write lies over what lands under it. */
 function rebuildOverServerWrites(cache: InMemoryCache): void {
+  heldByThisTest.add(cache);
   if (rebuilt.has(cache)) return;
   rebuilt.add(cache);
   const pending = pendingWritesOf(cache);

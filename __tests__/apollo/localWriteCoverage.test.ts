@@ -7,8 +7,6 @@ import {
 /** Sent local-first with no local write of their own, each with its reason. */
 
 const NO_LOCAL_WRITE: Record<string, string> = {
-  AddDietaryRestriction:
-    'shows on the answer: its input takes no id, so a row shown sooner could not be removed while queued',
   MarkExpirationAction:
     'writes the notification store, not the cache: its answer states neither the row nor the badge',
   MarkRecipeAsCooked:
