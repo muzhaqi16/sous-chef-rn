@@ -14,16 +14,6 @@ fragment MealPlanItemActions_item on MealPlanItem {
   }
 }
 
-# Compound fragment for `toggleCompleted` — the full `UpdateMealPlanItem`
-# `mealPlanItem` selection, so the item read off the cache by id can be written
-# back without a type cast.
-fragment MealPlanItemActions_optimisticFullItem on MealPlanItem {
-  id
-  ...MealPlanItemReaders
-  ...DailyMeals_item
-  ...MealPlanItemActions_item
-}
-
 # The plan's first and last day, which a new meal's day must fall between.
 fragment MealPlanItemActions_planBounds on MealPlan {
   id

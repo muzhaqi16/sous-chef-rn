@@ -409,7 +409,7 @@ describe('createAddToParentConnectionUpdater', () => {
   // and ignored it, so any parent connection with keyArgs got the new ref
   // written into every filtered variant.
   it('skips variants the caller opts out of', () => {
-    const add = createAddToParentConnectionUpdater<{ id: string }>(
+    const add = createAddToParentConnectionUpdater(
       'User',
       'notificationsConnection',
       'Notification',
@@ -440,7 +440,7 @@ describe('createAddToParentConnectionUpdater', () => {
     add(
       cache,
       'me',
-      { id: 'n1' },
+      { __typename: 'Notification', id: 'n1' },
       {
         skipStoreField: name => name.includes('RECIPES'),
       },

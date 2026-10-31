@@ -19,7 +19,11 @@ import {
   safeEvict,
   skipOtherHomeVariants,
 } from '#/apollo/utils/cacheUpdaters';
-import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import {
+  hideEntity,
+  isHeld,
+  writeLocalEntity,
+} from '#/apollo/utils/writeLocalEntity';
 import { matchesFilter } from './connections';
 
 /** What a list's row holds, as far as the cache knows it. */
@@ -184,17 +188,13 @@ export function removeShoppingListFromCache(
 }
 
 /**
- * Takes a list out from a layer, where `evict` leaves what the server holds:
- * deleting its fields hides it, and a list already hidden changes nothing.
+ * Takes a list out from a layer; a list already hidden changes nothing.
  */
 export function hideShoppingList(cache: ApolloCache, listId: string): void {
   const list = { __typename: 'ShoppingList', id: listId };
   if (!isHeld(cache, list)) return;
   removeShoppingListFromQueryCache(cache, listId, { evictItem: false });
-  cache.modify({
-    id: cache.identify(list),
-    fields: (_value, { DELETE }) => DELETE,
-  });
+  hideEntity(cache, list);
 }
 
 /** What a create's answer cannot state: the overview's edge and the item lists. */

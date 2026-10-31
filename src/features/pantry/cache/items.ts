@@ -9,7 +9,7 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import { isRecord } from '#/utils/isRecord';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import { hideEntity, isHeld } from '#/apollo/utils/writeLocalEntity';
 import {
   evictLocalPantryItemSeeds,
   writeLocalPantryItem,
@@ -177,8 +177,7 @@ export function listAnsweredPantryItem(
 }
 
 /**
- * Takes a row out from a layer, where `evict` leaves what the server holds:
- * deleting its fields hides it, and a row already hidden counts nothing.
+ * Takes a row out from a layer; a row already hidden counts nothing.
  */
 export function hidePantryItem(
   cache: ApolloCache,
@@ -188,10 +187,7 @@ export function hidePantryItem(
   const row = { __typename: 'PantryItem', id: itemId };
   if (!isHeld(cache, row)) return;
   removePantryItemLocally(cache, pantryId, itemId);
-  cache.modify({
-    id: cache.identify(row),
-    fields: (_value, { DELETE }) => DELETE,
-  });
+  hideEntity(cache, row);
 }
 
 /**

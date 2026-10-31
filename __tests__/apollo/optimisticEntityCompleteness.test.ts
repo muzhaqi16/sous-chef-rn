@@ -47,7 +47,7 @@ import { MealPlanItemReadersFragmentDoc } from '#/graphql/readers/mealPlanItemRe
 import { MealTemplateReadersFragmentDoc } from '#/graphql/readers/mealTemplateReaders.generated';
 import { MealTemplateItemReadersFragmentDoc } from '#/graphql/readers/mealTemplateItemReaders.generated';
 import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
-import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { showLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { writeLocalMealTemplate } from '#features/mealPlan/cache/mealTemplate';
 import {
   addTemplateItemToCache,
@@ -1199,7 +1199,7 @@ describe('optimistic entity completeness', () => {
 
     it('a local plan reads complete for every query', () => {
       const cache = makeCache();
-      writeLocalMealPlan(cache, 'plan-1', PLAN, 'user-1');
+      writeLocalMealPlan(cache, 'plan-1', PLAN, 'user-1', NOW);
 
       expect(
         readsComplete(cache, MealPlanReadersFragmentDoc, {
@@ -1214,7 +1214,7 @@ describe('optimistic entity completeness', () => {
     // acknowledged, and the screen reads the plan by entity meanwhile.
     it('a local plan reads complete for the detail screen, holding no meals and no generated lists', () => {
       const cache = makeCache();
-      writeLocalMealPlan(cache, 'plan-1', PLAN, 'user-1');
+      writeLocalMealPlan(cache, 'plan-1', PLAN, 'user-1', NOW);
       const plan = { __typename: 'MealPlan', id: 'plan-1' };
       const id = cache.identify(plan);
 
@@ -1248,8 +1248,8 @@ describe('optimistic entity completeness', () => {
 
     it('a local meal reads complete, and so does the plan listing it', () => {
       const cache = makeCache();
-      writeLocalMealPlan(cache, 'plan-2', PLAN, 'user-1');
-      writeLocalMealPlanItem(cache, {
+      writeLocalMealPlan(cache, 'plan-2', PLAN, 'user-1', NOW);
+      showLocalMealPlanItem(cache, {
         id: 'meal-1',
         mealPlanId: 'plan-2',
         date: '2026-10-06',
@@ -1296,7 +1296,7 @@ describe('optimistic entity completeness', () => {
         edge => edge.node.id,
       );
 
-      writeLocalMealPlanItem(cache, {
+      showLocalMealPlanItem(cache, {
         id: 'meal-local',
         mealPlanId: 'plan-1',
         date: '2026-10-06',
@@ -1337,6 +1337,7 @@ describe('optimistic entity completeness', () => {
           ],
         },
         'user-1',
+        NOW,
       );
 
       expect(
@@ -1364,7 +1365,7 @@ describe('optimistic entity completeness', () => {
 
     it('a local template with no items holds an empty list, not a missing one', () => {
       const cache = makeCache();
-      writeLocalMealTemplate(cache, 'tpl-0', { name: 'Blank' }, 'user-1');
+      writeLocalMealTemplate(cache, 'tpl-0', { name: 'Blank' }, 'user-1', NOW);
 
       expect(readTemplateSource(cache, 'tpl-0')?.items).toEqual([]);
     });
@@ -1420,7 +1421,13 @@ describe('optimistic entity completeness', () => {
 
     it('an added item and a restored one read complete', () => {
       const cache = makeCache();
-      writeLocalMealTemplate(cache, 'tpl-2', { name: 'Weekend' }, 'user-1');
+      writeLocalMealTemplate(
+        cache,
+        'tpl-2',
+        { name: 'Weekend' },
+        'user-1',
+        NOW,
+      );
       addTemplateItemToCache(
         cache,
         'tpl-2',
@@ -1680,12 +1687,10 @@ describe('optimistic entity completeness', () => {
         'covered: AcceptHomeInvite is compared below',
       'src/features/shoppingList/cache/list.ts':
         'covered: the optimistic list create case above, and CreateShoppingList (and its recipe twin) is compared below against all three lite readers',
-      'src/features/mealPlan/hooks/useMealPlanActions.ts':
+      'src/features/mealPlan/cache/mealPlan.ts':
         'covered: CreateMealPlan is compared below against GetMealPlans',
-      'src/features/mealPlan/hooks/useMealTemplateActions.ts':
-        'covered: CreateMealTemplate is compared below — the same document useMealTemplateEditor writes',
-      'src/features/mealPlan/hooks/useMealTemplateEditor.ts':
-        'covered: writes the same CreateMealTemplate document compared below',
+      'src/features/mealPlan/cache/mealTemplate.ts':
+        'covered: CreateMealTemplate is compared below',
       'src/features/mealPlan/cache/mealPlanItem.ts':
         'covered: the local meal cases above (the plan listing it, GetMealPlan after an add), and CreateMealPlanItem is compared below against the meals GetMealPlan reads',
       'src/features/mealPlan/cache/mealTemplateItem.ts':

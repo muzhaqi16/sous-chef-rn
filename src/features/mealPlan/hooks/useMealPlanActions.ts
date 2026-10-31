@@ -1,9 +1,3 @@
-/**
- * Create, update and delete write the cache PERMANENTLY before firing: an
- * `optimisticResponse` rolls back on the queue's null result. Create mints the
- * id its replay re-sends; update and delete restore a snapshot.
- */
-
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import {
   CreateMealPlanDocument,
@@ -11,34 +5,23 @@ import {
   DeleteMealPlanDocument,
   GetMealPlansDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import {
-  MealPlanDisplayFragmentDoc,
-  type MealPlanDisplayFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
-import { writeLocalMealPlan } from '#features/mealPlan/cache/mealPlan';
+import type { CreatePlanInputs } from '#features/mealPlan/offline/localWrites';
 import type {
   CreateMealPlanInput,
   UpdateMealPlanInput,
 } from '#/graphql/generated/schemaTypes';
-import { createAddToQueryConnectionUpdater } from '#/apollo/utils/cacheUpdaters';
-import { chainVersionedWrite } from '#/apollo/utils/entityWriteChain';
-import { removeFromMealPlans } from '#features/mealPlan/cache/removals';
-import { settleMealPlanDelete } from '#features/mealPlan/offline/replayReconcilers';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { readVersion } from '#/apollo/utils/entityWriteChain';
 import {
   settleMutation,
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { useUser } from '#store/useAppStore';
-import { errorService } from '#/services/errorService';
+import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
-
-const addToMealPlans = createAddToQueryConnectionUpdater(
-  'mealPlans',
-  'MealPlan',
-);
 
 /** A plan create as its caller acts on it; `failure` is what to show. */
 export type MealPlanCreateOutcome =
@@ -50,25 +33,19 @@ interface CreateMealPlanOptions {
   present?: 'alert' | 'none';
 }
 
-/** Fields an update can change that live on the cached `MealPlanDisplay`. */
-function mergeUpdateIntoSnapshot(
-  snapshot: MealPlanDisplayFragment,
+/** Fields an update can change that the plan's row shows. */
+const shownPlanFields = (
   input: Omit<UpdateMealPlanInput, 'id' | 'version'>,
-): MealPlanDisplayFragment {
-  return {
-    ...snapshot,
-    ...(input.name != null && { name: input.name }),
-    ...(input.description !== undefined && { description: input.description }),
-    ...(input.planType != null && { planType: input.planType }),
-    ...(input.startDate != null && { startDate: input.startDate }),
-    ...(input.endDate != null && { endDate: input.endDate }),
-    ...(input.servings != null && { servings: input.servings }),
-    ...(input.budgetAmount !== undefined && {
-      budgetAmount: input.budgetAmount,
-    }),
-    updatedAt: new Date().toISOString(),
-  };
-}
+) => ({
+  name: input.name ?? undefined,
+  description: input.description,
+  planType: input.planType ?? undefined,
+  startDate: input.startDate ?? undefined,
+  endDate: input.endDate ?? undefined,
+  servings: input.servings ?? undefined,
+  budgetAmount: input.budgetAmount,
+  updatedAt: new Date().toISOString(),
+});
 
 export function useMealPlanActions() {
   const client = useApolloClient();
@@ -77,14 +54,7 @@ export function useMealPlanActions() {
 
   const [createMealPlanMutation, { loading: creating }] = useMutation(
     CreateMealPlanDocument,
-    {
-      context: { localFirst: true },
-      update: (cache, { data }) => {
-        const payload = appliedPayload(data);
-        if (payload)
-          addToMealPlans(cache, payload.mealPlan, { position: 'start' });
-      },
-    },
+    { context: { localFirst: true } },
   );
 
   const [updateMealPlanMutation] = useMutation(UpdateMealPlanDocument, {
@@ -93,121 +63,57 @@ export function useMealPlanActions() {
 
   const [deleteMealPlanMutation, { loading: deleting }] = useMutation(
     DeleteMealPlanDocument,
-    {
-      context: { localFirst: true },
-      update: (cache, { data }, { variables }) => {
-        if (variables && appliedPayload(data))
-          settleMealPlanDelete(cache, variables, data);
-      },
-    },
+    { context: { localFirst: true } },
   );
-
-  const writePlan = (data: MealPlanDisplayFragment) =>
-    client.cache.writeFragment({
-      id: client.cache.identify(data),
-      fragment: MealPlanDisplayFragmentDoc,
-      fragmentName: 'MealPlanDisplay',
-      data,
-    });
-
-  const readPlanSnapshot = (id: string) => {
-    const cacheId = client.cache.identify({ __typename: 'MealPlan', id });
-    return cacheId
-      ? client.cache.readFragment<MealPlanDisplayFragment>({
-          id: cacheId,
-          fragment: MealPlanDisplayFragmentDoc,
-          fragmentName: 'MealPlanDisplay',
-          optimistic: true,
-        })
-      : null;
-  };
 
   const createMealPlan = async (
     input: CreateMealPlanInput,
     { present }: CreateMealPlanOptions = {},
   ): Promise<MealPlanCreateOutcome> => {
-    // Local-first: mint the permanent cuid (the row's real PK) and write the
-    // plan into the cache before firing, so creation works fully offline. A
-    // caller deriving a plan mints it first, since its items name it as parent.
-    const id = input.id ?? generateEntityId();
-    // The cache write below publishes this id to every consumer, including the
-    // detail query on MealPlanMain. Hold that query off until the server has a
-    // row to answer with — see `unconfirmedCreates`.
-    unconfirmedCreates.mark(id);
-    const creatorId = user?.id;
-    if (creatorId) {
-      try {
-        const plan = writeLocalMealPlan(client.cache, id, input, creatorId);
-        addToMealPlans(client.cache, plan, { position: 'start' });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Create Meal Plan (optimistic)',
-        });
-      }
-    }
-
-    const revertCreate = () => {
-      if (!creatorId) return;
-      try {
-        removeFromMealPlans(client.cache, id, { evictItem: true });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Meal Plan',
-        });
-      }
+    // A caller deriving a plan mints it first, since its items name it as parent.
+    const plan = { ...input, id: input.id ?? generateEntityId() };
+    // The local write publishes this id to every consumer, including the detail
+    // query on MealPlanMain. Hold that query off until the server has a row to
+    // answer with — see `unconfirmedCreates`.
+    unconfirmedCreates.mark(plan.id);
+    const inputs: CreatePlanInputs = {
+      plan,
+      creatorId: user?.id,
+      now: new Date().toISOString(),
     };
 
-    const settled = await settleMutation(
-      () =>
-        createMealPlanMutation({
-          variables: { input: { ...input, id } },
+    const settled = await pendingWritesOf(client.cache).send(
+      CreateMealPlanDocument,
+      { input: plan },
+      write =>
+        settleMutation(() => createMealPlanMutation(write), {
+          document: CreateMealPlanDocument,
+          fallback: t('mealPlan.failedToCreate'),
+          present,
         }),
-      {
-        document: CreateMealPlanDocument,
-        fallback: t('mealPlan.failedToCreate'),
-        onFailed: revertCreate,
-        present,
-      },
+      inputs,
     );
 
     // Released on every outcome: acknowledged and rejected both leave nothing
     // for a detail read to miss, and a queued create has already been handed
     // off to `queueStore` by the time the mutation resolves.
-    unconfirmedCreates.confirm(id);
+    unconfirmedCreates.confirm(plan.id);
 
     if (settled.failure) return { status: 'failed', failure: settled.failure };
-    // Offline / API down: the plan stays in cache and the create replays keyed
-    // by the same id.
     return { status: settled.status === 'queued' ? 'queued' : 'applied' };
   };
 
-  /** `true` once the change landed or is queued; `false` when it reverted. */
+  /** `true` once the change landed or is queued; `false` when it was refused. */
   const updateMealPlan = async (
     id: string,
     input: Omit<UpdateMealPlanInput, 'id' | 'version'>,
   ): Promise<boolean> => {
-    const snapshot = readPlanSnapshot(id);
-    // Permanent write BEFORE firing — survives an offline/API-down queue.
-    if (snapshot) {
-      try {
-        writePlan(mergeUpdateIntoSnapshot(snapshot, input));
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Update Meal Plan (optimistic)',
-        });
-      }
+    const entity = { __typename: 'MealPlan', id };
+    const version = readVersion(client.cache, entity);
+    if (version === undefined) {
+      alertService.alert(t('labels.error'), t('errors.saveFailed'));
+      return false;
     }
-
-    const revertUpdate = () => {
-      if (!snapshot) return;
-      try {
-        writePlan(snapshot);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Meal Plan update',
-        });
-      }
-    };
 
     // A stale version means another member saved the plan since: show theirs.
     const showServerPlan = () => {
@@ -216,64 +122,30 @@ export function useMealPlanActions() {
       });
     };
     // A save made elsewhere since is refused, not overwritten.
-    const settled = await settleMutation(
-      () =>
-        chainVersionedWrite(
-          client.cache,
-          { __typename: 'MealPlan', id },
-          version =>
-            updateMealPlanMutation({
-              variables: { input: { ...input, id, version } },
-            }),
-        ),
-      {
+    const settled = await sendFields(client.cache, {
+      entity,
+      fields: shownPlanFields(input),
+      variables: { input: { ...input, id, version } },
+      mutate: updateMealPlanMutation,
+      settle: {
         document: UpdateMealPlanDocument,
         fallback: t('errors.saveFailed'),
-        onFailed: revertUpdate,
         onVersionConflict: showServerPlan,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 
   const deleteMealPlan = async (id: string) => {
-    // Snapshot first so a server rejection can restore the plan card.
-    const snapshot = readPlanSnapshot(id);
-
-    // Local-first: remove from the cache BEFORE firing, so the deletion is
-    // visible immediately and survives an offline queue (a duplicate replay
-    // surfaces as NotFound, which counts as deleted).
-    try {
-      removeFromMealPlans(client.cache, id, { evictItem: true });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Meal Plan (optimistic)',
-      });
-    }
-
-    const restorePlan = () => {
-      if (!snapshot) return;
-      try {
-        writePlan(snapshot);
-        addToMealPlans(client.cache, snapshot, { position: 'start' });
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Restore refused Meal Plan delete',
-        });
-      }
-    };
-
-    const settled = await settleMutation(
-      () =>
-        deleteMealPlanMutation({
-          variables: { input: { id } },
+    const settled = await pendingWritesOf(client.cache).send(
+      DeleteMealPlanDocument,
+      { input: { id } },
+      write =>
+        settleMutation(() => deleteMealPlanMutation(write), {
+          document: DeleteMealPlanDocument,
+          fallback: t('mealPlanMain.deleteMealPlanFailed'),
+          removal: true,
         }),
-      {
-        document: DeleteMealPlanDocument,
-        fallback: t('mealPlanMain.deleteMealPlanFailed'),
-        removal: true,
-        onFailed: restorePlan,
-      },
     );
     return settled.status !== 'failed';
   };

@@ -56,6 +56,10 @@ const createItemMock = () =>
     partial: true,
   });
 
+/** What the offline queue resolves a queued write with. */
+const queuedPlanMock = () =>
+  recordMock(CreateMealPlanDocument, { data: { createMealPlan: null } });
+
 /** The ids of a plan's meals as the detail screen reads them, or null. */
 const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
   cache
@@ -63,6 +67,7 @@ const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
       id: cache.identify({ __typename: 'MealPlan', id: planId ?? '' }),
       fragment: MealPlanMain_MealPlanFragmentDoc,
       fragmentName: 'MealPlanMain_mealPlan',
+      optimistic: true,
     })
     ?.mealPlanItemsConnection.edges.map(edge => edge.node.id) ?? null;
 
@@ -130,8 +135,10 @@ describe('duplicating a meal plan', () => {
 
   it('writes the copied plan to the cache offline and creates every meal', async () => {
     useStore.setState({ apiReachable: false });
-    const plan = createPlanMock();
-    const item = createItemMock();
+    const plan = queuedPlanMock();
+    const item = recordMock(CreateMealPlanItemDocument, {
+      data: { createMealPlanItem: null },
+    });
     const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
       operationMocks: [plan.mock, item.mock],
@@ -145,7 +152,7 @@ describe('duplicating a meal plan', () => {
     expect(copyId).toBeTruthy();
 
     // The copy is in the cache under its minted id before any server round trip.
-    expect(cache.extract()[`MealPlan:${copyId}`]).toMatchObject({
+    expect(cache.extract(true)[`MealPlan:${copyId}`]).toMatchObject({
       name: 'Week Two',
       startDate: '2026-01-12',
       endDate: '2026-01-18',
@@ -182,7 +189,7 @@ describe('duplicating a meal plan', () => {
     });
     const cache = seedPlanSource();
     const { result } = renderHookWithApollo(() => useDuplicateMealPlan(), {
-      operationMocks: [createPlanMock().mock, queuedItem.mock],
+      operationMocks: [queuedPlanMock().mock, queuedItem.mock],
       cache,
     });
 
@@ -196,13 +203,13 @@ describe('duplicating a meal plan', () => {
     // screen reads the copy complete, with an edge per copied meal.
     expect(mealsOnScreen(cache, response?.mealPlanId ?? null)).toEqual(sentIds);
     for (const id of sentIds) {
-      expect(cache.extract()[`MealPlanItem:${id}`]).toMatchObject({
+      expect(cache.extract(true)[`MealPlanItem:${id}`]).toMatchObject({
         mealType: expect.any(String),
         version: 1,
       });
     }
     expect(
-      sentIds.map(id => cache.extract()[`MealPlanItem:${id}`]?.date),
+      sentIds.map(id => cache.extract(true)[`MealPlanItem:${id}`]?.date),
     ).toEqual(['2026-01-12', '2026-01-14']);
   });
 
@@ -230,7 +237,7 @@ describe('duplicating a meal plan', () => {
     );
     expect(refused).toHaveLength(2);
     for (const id of refused) {
-      expect(cache.extract()[`MealPlanItem:${id}`]).toBeUndefined();
+      expect(cache.extract(true)[`MealPlanItem:${id}`]).toBeUndefined();
     }
     // Neither is left as an edge of any plan.
     expect(JSON.stringify(cache.extract())).not.toMatch(

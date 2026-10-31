@@ -134,6 +134,7 @@ const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
       }),
       fragment: MealPlanMain_MealPlanFragmentDoc,
       fragmentName: 'MealPlanMain_mealPlan',
+      optimistic: true,
     })
     ?.mealPlanItemsConnection.edges.map(edge => edge.node.id) ?? null;
 
@@ -313,7 +314,7 @@ describe('useMealTemplateActions', () => {
         sentIds,
       );
       expect(
-        sentIds.map(id => cache.extract()[`MealPlanItem:${id}`]?.date),
+        sentIds.map(id => cache.extract(true)[`MealPlanItem:${id}`]?.date),
       ).toEqual(['2026-02-02', '2026-02-04']);
     });
   });
@@ -471,7 +472,7 @@ describe('useMealTemplateActions', () => {
 
       // The copy is in the cache before any server round trip, with its meals.
       expect(
-        cache.extract()[`MealTemplate:${response?.mealTemplateId}`],
+        cache.extract(true)[`MealTemplate:${response?.mealTemplateId}`],
       ).toMatchObject({ name: 'Weeknights (Copy)' });
       expect(
         readTemplateSource(cache, response?.mealTemplateId ?? '')?.items.map(
@@ -601,7 +602,9 @@ describe('useMealTemplateActions', () => {
       expect(list?.mealTemplates.edges.map(({ node }) => node.id)).toEqual([
         'template-2',
       ]);
-      expect(cache.extract()[`MealTemplate:${TEMPLATE_ID}`]).toBeUndefined();
+      expect(
+        cache.extract(true)[`MealTemplate:${TEMPLATE_ID}`],
+      ).toBeUndefined();
     });
   });
 });

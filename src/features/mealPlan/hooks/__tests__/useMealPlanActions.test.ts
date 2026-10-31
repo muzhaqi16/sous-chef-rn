@@ -194,6 +194,7 @@ describe('useMealPlanActions', () => {
     cache.readFragment<{ name: string; version: number }>({
       id: 'MealPlan:plan-1',
       fragment: PLAN_VERSION,
+      optimistic: true,
     });
 
   it('updateMealPlan states the id and the version the cache holds, and its answer lands in the cache', async () => {
@@ -305,6 +306,7 @@ describe('useMealPlanActions', () => {
           endDate: '2025-06-07',
         },
         'user-1',
+        '2025-06-01T08:00:00.000Z',
       );
       const screenRead = recordMock(GetMealPlanDocument, {
         data: planAsServed({ name: 'Week Plan', version: 3 }),
@@ -368,6 +370,7 @@ describe('useMealPlanActions', () => {
         endDate: '2025-06-07',
       },
       'user-1',
+      '2025-06-01T08:00:00.000Z',
     );
     const screenRead = recordMock(GetMealPlanDocument, {
       data: planAsServed({ name: 'Week Plan', version: 3 }),

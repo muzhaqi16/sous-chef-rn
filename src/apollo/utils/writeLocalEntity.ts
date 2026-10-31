@@ -188,6 +188,20 @@ function readField(
   return read && key in read ? read[key] : undefined;
 }
 
+/**
+ * Takes a row out from a layer, where `evict` leaves what the server holds:
+ * deleting its fields hides it.
+ */
+export function hideEntity(
+  cache: ApolloCache,
+  ref: { __typename: string; id: string },
+): void {
+  cache.modify({
+    id: cache.identify(ref),
+    fields: (_value, { DELETE }) => DELETE,
+  });
+}
+
 const idOnlyDocs = new Map<string, DocumentNode>();
 
 /** Whether the cache holds the entity at all (a create can then name it). */

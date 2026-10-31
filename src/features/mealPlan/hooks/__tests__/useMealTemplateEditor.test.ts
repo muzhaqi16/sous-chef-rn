@@ -1,4 +1,4 @@
-import type { TypedDocumentNode } from '@apollo/client';
+import { gql, type TypedDocumentNode } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
   renderHookWithApollo,
@@ -13,7 +13,6 @@ import {
   GetMealTemplateForEditDocument,
 } from '#features/mealPlan/graphql/mealTemplate.generated';
 import { MEALS_PAGE_SIZE } from '#features/mealPlan/utils/mealPlanPaging';
-import { UseMealTemplateEditor_TemplateFragmentDoc } from '../useMealTemplateEditor.generated';
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { useMealTemplateEditor } from '../useMealTemplateEditor';
 
@@ -28,11 +27,18 @@ const TEMPLATE = {
   updatedAt: '2026-01-01T00:00:00Z',
 };
 
+const TEMPLATE_NAME = gql`
+  fragment EditorTemplateName on MealTemplate {
+    name
+    category
+  }
+`;
+
 const readTemplate = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ name: string; category: TemplateCategory }>({
     id: cache.identify({ __typename: 'MealTemplate', id: 'tpl-1' }),
-    fragment: UseMealTemplateEditor_TemplateFragmentDoc,
-    fragmentName: 'useMealTemplateEditor_template',
+    fragment: TEMPLATE_NAME,
+    optimistic: true,
   });
 
 beforeEach(() => {
@@ -236,6 +242,7 @@ describe('updateItem maps the @oneOf meal ref onto BOTH fields', () => {
       id: cache.identify({ __typename: 'MealTemplateItem', id }),
       fragment: MealTemplateItemFragmentDoc,
       fragmentName: 'MealTemplateItemFragment',
+      optimistic: true,
     });
 
   // Queued: no server response arrives, so whatever the local write left is
@@ -331,17 +338,8 @@ describe("a row loaded by the editor's own query", () => {
     RemoveTemplateItemDocument,
   } = require('#features/mealPlan/graphql/mealTemplate.generated');
 
-  /**
-   * `GetMealTemplateForEdit` selects no `recipe`, so this is what the cache
-   * actually holds for a row the editor loaded. `readFragment` is
-   * all-or-nothing against `MealTemplateItemFragment`, which DOES select
-   * `recipe` — so the snapshot read came back null for every one of these rows,
-   * and both the local write and its revert silently did nothing.
-   */
   // `GetMealTemplateForEdit` selects `recipe`, so a row the editor loaded
-  // CARRIES the key — null when the row has none. That selection is what lets a
-  // revert tell "this row has no recipe" from "this query never asked", which
-  // is the distinction `snapshotFields` reads.
+  // CARRIES the key — null when the row has none.
   const EDITOR_LOADED_ITEM = {
     __typename: 'MealTemplateItem',
     id: 'item-9',
@@ -408,6 +406,7 @@ describe("a row loaded by the editor's own query", () => {
       .readQuery({
         query: GetMealTemplateForEditDocument,
         variables: EDIT_VARS,
+        optimistic: true,
       })
       ?.mealTemplate?.itemsConnection.edges.map(edge => edge.node.id) ?? null;
 
@@ -437,6 +436,7 @@ describe("a row loaded by the editor's own query", () => {
           .MealTemplateItemFragmentDoc,
       fragmentName: 'MealTemplateItemFragment',
       returnPartialData: true,
+      optimistic: true,
     });
 
     expect(item?.servings).toBe(6);
@@ -488,6 +488,7 @@ describe("a row loaded by the editor's own query", () => {
           .MealTemplateItemFragmentDoc,
       fragmentName: 'MealTemplateItemFragment',
       returnPartialData: true,
+      optimistic: true,
     });
 
     expect(item?.customMealName).toBe('Soup');
@@ -551,6 +552,7 @@ describe("a row loaded by the editor's own query", () => {
           .MealTemplateItemFragmentDoc,
       fragmentName: 'MealTemplateItemFragment',
       returnPartialData: true,
+      optimistic: true,
     });
 
     expect(item?.customMealName ?? null).toBeNull();
@@ -585,6 +587,7 @@ describe("a row loaded by the editor's own query", () => {
           .MealTemplateItemFragmentDoc,
       fragmentName: 'MealTemplateItemFragment',
       returnPartialData: true,
+      optimistic: true,
     });
     expect(restored?.id).toBe('item-9');
     expect(restored?.servings).toBe(2);
@@ -611,7 +614,7 @@ describe("a row loaded by the editor's own query", () => {
 
     expect(removed).toBe(true);
     expect(mealsInEditor(cache)).toEqual([]);
-    expect(cache.extract()['MealTemplateItem:item-9']).toBeUndefined();
+    expect(cache.extract(true)['MealTemplateItem:item-9']).toBeUndefined();
   });
 
   it('lists an added row on the loaded template while its add is queued', async () => {
@@ -643,7 +646,7 @@ describe("a row loaded by the editor's own query", () => {
     expect(meals).toHaveLength(2);
     expect(meals?.[0]).toBe('item-9');
     expect(
-      cache.extract()[`MealTemplateItem:${meals?.[1] ?? ''}`],
+      cache.extract(true)[`MealTemplateItem:${meals?.[1] ?? ''}`],
     ).toMatchObject({ dayOffset: 2, customMealName: 'Stew' });
   });
 

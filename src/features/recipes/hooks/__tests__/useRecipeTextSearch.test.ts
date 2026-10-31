@@ -8,7 +8,7 @@ import {
   MealType,
 } from '#/graphql/generated/schemaTypes';
 import { readRecipeRef } from '#features/mealPlan/cache/mealTemplateItem';
-import { writeLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
+import { showLocalMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
 import { MealPlanItem_RowFragmentDoc } from '#features/mealPlan/cache/mealPlanItem.generated';
 import {
   recordMock,
@@ -290,7 +290,7 @@ describe('useRecipeTextSearch: picking', () => {
     const { cache } = await pickSecondOfFive();
     expect(isHeld(cache, { __typename: 'Recipe', id: 'recipe-2' })).toBe(true);
 
-    writeLocalMealPlanItem(cache, {
+    showLocalMealPlanItem(cache, {
       id: 'meal-1',
       mealPlanId: 'plan-1',
       date: '2026-10-20',

@@ -38,19 +38,20 @@ import {
   seedPlanSource,
 } from '#/test-utils/fixtures/mealPlanFixtures';
 import { useMealPlan } from '#features/mealPlan/screens/useMealPlan';
-import { useMealPlanItemActions } from '../useMealPlanItemActions';
 import {
-  MealPlanItemActions_OptimisticFullItemFragmentDoc,
-  type MealPlanItemActions_OptimisticFullItemFragment,
-} from '../useMealPlanItemActions.generated';
+  MealPlanItem_RowFragmentDoc,
+  type MealPlanItem_RowFragment,
+} from '#features/mealPlan/cache/mealPlanItem.generated';
+import { useMealPlanItemActions } from '../useMealPlanItemActions';
+import { MealPlanItemActions_ItemFragmentDoc } from '../useMealPlanItemActions.generated';
 import type { Unmasked } from '@apollo/client/masking';
 
 const PLAN_ID = 'plan-1';
 const WEEK = { startDate: '2026-09-21', endDate: '2026-09-27' };
 
-type FullItem = Unmasked<MealPlanItemActions_OptimisticFullItemFragment>;
+type FullItem = Unmasked<MealPlanItem_RowFragment>;
 
-/** A meal complete for the compound selection the actions read back. */
+/** A meal complete for what every query reads on one. */
 const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
   __typename: 'MealPlanItem',
   id: 'mpi-1',
@@ -76,19 +77,27 @@ const fullItem = (overrides: Partial<FullItem> = {}): FullItem => ({
   ...overrides,
 });
 
-const writeItem = (cache: InMemoryCache, item: FullItem) =>
+const writeItem = (cache: InMemoryCache, item: FullItem) => {
   seedFragment(cache, {
     id: cache.identify(item),
-    fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-    fragmentName: 'MealPlanItemActions_optimisticFullItem',
+    fragment: MealPlanItem_RowFragmentDoc,
+    fragmentName: 'mealPlanItem_row',
     data: item,
   });
+  seedFragment(cache, {
+    id: cache.identify(item),
+    fragment: MealPlanItemActions_ItemFragmentDoc,
+    fragmentName: 'MealPlanItemActions_item',
+    data: item,
+  });
+};
 
 const readItem = (cache: InMemoryCache, id: string = 'mpi-1') =>
   cache.readFragment({
     id: cache.identify({ __typename: 'MealPlanItem', version: 1, id }),
-    fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-    fragmentName: 'MealPlanItemActions_optimisticFullItem',
+    fragment: MealPlanItem_RowFragmentDoc,
+    fragmentName: 'mealPlanItem_row',
+    optimistic: true,
   });
 
 /** The plan's days, and its meals as edges of the list a loaded plan holds. */

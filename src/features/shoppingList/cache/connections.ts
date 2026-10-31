@@ -11,7 +11,7 @@ import {
   createRemoveFromParentConnectionUpdater,
   safeEvictMany,
 } from '#/apollo/utils/cacheUpdaters';
-import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import { hideEntity, isHeld } from '#/apollo/utils/writeLocalEntity';
 import type { ShoppingList } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { Connections_ListCountersFragmentDoc } from './connections.generated';
@@ -427,12 +427,7 @@ export function hideShoppingListRows(
       ),
     },
   });
-  for (const row of rows) {
-    cache.modify({
-      id: cache.identify(row),
-      fields: (_value, { DELETE }) => DELETE,
-    });
-  }
+  rows.forEach(row => hideEntity(cache, row));
 }
 
 /** Removes answered rows from the server's data; the answer states the counts. */

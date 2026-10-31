@@ -1,10 +1,11 @@
 import type { ApolloCache } from '@apollo/client';
-import {
-  MealTemplateItemFragmentDoc,
-  type MealTemplateItemFragment,
-} from '#features/mealPlan/graphql/mealPlanFragments.generated';
+import type { MealTemplateItemFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import type { MealTemplateItemInput } from '#/graphql/generated/schemaTypes';
-import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
+import {
+  hideEntity,
+  isHeld,
+  writeLocalEntity,
+} from '#/apollo/utils/writeLocalEntity';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -27,7 +28,7 @@ import {
 /** The template field its meals hang off. */
 const TEMPLATE_ITEMS_FIELD = 'itemsConnection';
 
-const addToTemplateItems = createAddToParentConnectionUpdater<{ id: string }>(
+const addToTemplateItems = createAddToParentConnectionUpdater(
   'MealTemplate',
   TEMPLATE_ITEMS_FIELD,
   'MealTemplateItem',
@@ -99,7 +100,7 @@ export function localTemplateItem(
 /**
  * Writes an item complete for every query reading one — what it states, else
  * what the cache holds, else the neutral value — and appends its edge to the
- * template's meals. Also restores a removed item from its snapshot.
+ * template's meals.
  */
 export function addTemplateItemToCache(
   cache: ApolloCache,
@@ -133,25 +134,14 @@ export function removeTemplateItemFromCache(
   removeFromTemplateItems(cache, templateId, itemId, { evictItem: true });
 }
 
-/**
- * Reads an item back so a refused update or remove can restore it.
- * `returnPartialData` is load-bearing: the fragment selects `recipe` and the
- * editor's query does not, so a missing key means the cache never held it.
- */
-export function readTemplateItem(
+/** Takes an item out from a layer; one already hidden changes nothing. */
+export function hideTemplateItem(
   cache: ApolloCache,
+  templateId: string,
   itemId: string,
-): Partial<MealTemplateItemFragment> | null {
-  const cacheId = cache.identify({
-    __typename: 'MealTemplateItem',
-    id: itemId,
-  });
-  if (!cacheId) return null;
-  return cache.readFragment<Partial<MealTemplateItemFragment>>({
-    id: cacheId,
-    fragment: MealTemplateItemFragmentDoc,
-    fragmentName: 'MealTemplateItemFragment',
-    returnPartialData: true,
-    optimistic: true,
-  });
+): void {
+  const item = { __typename: 'MealTemplateItem', id: itemId };
+  if (!isHeld(cache, item)) return;
+  removeFromTemplateItems(cache, templateId, itemId);
+  hideEntity(cache, item);
 }

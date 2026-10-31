@@ -44,15 +44,11 @@ import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/ho
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
 import {
   CreateMealPlanItemDocument,
-  DeleteMealPlanDocument,
   DeleteMealPlanItemDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
-import { DeleteMealTemplateDocument } from '#features/mealPlan/graphql/mealTemplate.generated';
 import {
   reconcileCreateMealPlanItemReplay,
   settleGoneMealPlanItem,
-  settleMealPlanDelete,
-  settleMealTemplateDelete,
 } from '#features/mealPlan/offline/replayReconcilers';
 import { removeGoneNotification } from '#features/notifications/offline/replayReconcilers';
 import { reconcileReceiptCheckInReplay } from '#features/receipts/offline/receiptCheckIn';
@@ -79,10 +75,6 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [AddRecipeToFavoritesDocument, reconcileAddRecipeToFavoritesReplay],
   [CreateHomeDocument, reconcileCreateHomeReplay],
   [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
-  [DeleteMealPlanDocument, settleMealPlanDelete],
-  // A replayed delete answers `converged` as a success, not as not-found.
-  [DeleteMealPlanItemDocument, settleGoneMealPlanItem],
-  [DeleteMealTemplateDocument, settleMealTemplateDelete],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
   // A delta against a stack merged since lands on the survivor (USM-3).

@@ -38,7 +38,33 @@ import {
   UpdatePantryItemQuantityDocument,
   WastePantryItemBatchDocument,
 } from '#features/pantry/graphql/pantry.generated';
+import {
+  CreateMealPlanDocument,
+  CreateMealPlanItemDocument,
+  DeleteMealPlanDocument,
+  DeleteMealPlanItemDocument,
+  UpdateMealPlanDocument,
+  UpdateMealPlanItemDocument,
+} from '#features/mealPlan/graphql/mealPlan.generated';
+import {
+  AddTemplateItemDocument,
+  CreateMealTemplateDocument,
+  DeleteMealTemplateDocument,
+  RemoveTemplateItemDocument,
+  UpdateMealTemplateDocument,
+  UpdateTemplateItemDocument,
+} from '#features/mealPlan/graphql/mealTemplate.generated';
 import { AddDerivedItemsToShoppingListDocument } from '#features/mealPlan/hooks/useGenerateShoppingList.generated';
+import {
+  addTemplateItem,
+  createPlan,
+  createPlanItem,
+  createTemplate,
+  removePlan,
+  removePlanItem,
+  removeTemplate,
+  removeTemplateItem,
+} from '#features/mealPlan/offline/localWrites';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import {
@@ -134,4 +160,16 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [AddUsualStoreDocument, addUsualStore],
   [UpdateUsualStoreDocument, pinUsualStore],
   [RemoveUsualStoreDocument, removeUsualStore],
+  [CreateMealPlanDocument, createPlan],
+  [UpdateMealPlanDocument, entityFields],
+  [DeleteMealPlanDocument, removePlan],
+  [CreateMealPlanItemDocument, createPlanItem],
+  [UpdateMealPlanItemDocument, entityFields],
+  [DeleteMealPlanItemDocument, removePlanItem],
+  [CreateMealTemplateDocument, createTemplate],
+  [UpdateMealTemplateDocument, entityFields],
+  [DeleteMealTemplateDocument, removeTemplate],
+  [AddTemplateItemDocument, addTemplateItem],
+  [UpdateTemplateItemDocument, entityFields],
+  [RemoveTemplateItemDocument, removeTemplateItem],
 ]);
