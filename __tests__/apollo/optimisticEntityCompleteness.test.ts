@@ -1468,9 +1468,13 @@ describe('optimistic entity completeness', () => {
       );
       seedQuery(cache, { query: MySavedRecipesDocument, data });
 
-      writeLocalFavorite(cache, 'saved-1', 'recipe-uncached', {
-        folder: 'Soups',
-      });
+      writeLocalFavorite(
+        cache,
+        'saved-1',
+        'recipe-uncached',
+        { folder: 'Soups' },
+        NOW,
+      );
 
       const diff = cache.diff({
         query: MySavedRecipesDocument,
@@ -1499,7 +1503,13 @@ describe('optimistic entity completeness', () => {
       );
       seedQuery(cache, { query: MyRecipesDocument, data });
 
-      writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
+      writeLocalRecipe(
+        cache,
+        'client-recipe-1',
+        RECIPE_INPUT,
+        null,
+        RECIPE_INPUT.ingredients.map((_, index) => `ingredient-${index}`),
+      );
 
       const diff = cache.diff({
         query: MyRecipesDocument,
@@ -1516,7 +1526,13 @@ describe('optimistic entity completeness', () => {
       // the create has to materialize both or the detail screen (and the edit
       // form) are blank offline.
       const cache = makeCache();
-      writeLocalRecipe(cache, 'client-recipe-1', RECIPE_INPUT, null);
+      writeLocalRecipe(
+        cache,
+        'client-recipe-1',
+        RECIPE_INPUT,
+        null,
+        RECIPE_INPUT.ingredients.map((_, index) => `ingredient-${index}`),
+      );
 
       const diff = cache.diff<Unmasked<GetRecipeQuery>>({
         query: GetRecipeDocument,

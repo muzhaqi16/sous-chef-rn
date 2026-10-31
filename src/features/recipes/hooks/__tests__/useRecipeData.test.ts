@@ -510,7 +510,13 @@ describe('useRecipeData', () => {
       expect(result.current.backendRecipe?.savedDetails).toBeNull();
 
       await drained(async () => {
-        writeLocalFavorite(cache, 'saved-1', 'r1', { notes: 'Less salt' });
+        writeLocalFavorite(
+          cache,
+          'saved-1',
+          'r1',
+          { notes: 'Less salt' },
+          '2026-10-30T10:00:00.000Z',
+        );
         await Promise.resolve();
       });
       expect(result.current.backendRecipe?.savedDetails?.notes).toBe(

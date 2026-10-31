@@ -116,6 +116,7 @@ const readSavedDetails = (cache: InMemoryCache) =>
   cache.readFragment<{ savedDetails: { id: string } | null }>({
     id: cache.identify({ __typename: 'Recipe', id: 'backend-1' }) ?? '',
     fragment: SAVED_DETAILS_FRAGMENT,
+    optimistic: true,
   })?.savedDetails;
 
 const readSavedRecipe = (cache: InMemoryCache) =>
@@ -128,11 +129,14 @@ const readSavedRecipe = (cache: InMemoryCache) =>
     id:
       cache.identify({ __typename: 'SavedRecipe', id: SAVED_RECIPE_ID }) ?? '',
     fragment: SAVED_RECIPE_FRAGMENT,
+    optimistic: true,
   });
 
 const readSavedEdges = (cache: InMemoryCache) =>
-  cache.readQuery<MySavedRecipesQuery>({ query: MySavedRecipesDocument })?.me
-    ?.savedRecipesConnection;
+  cache.readQuery<MySavedRecipesQuery>({
+    query: MySavedRecipesDocument,
+    optimistic: true,
+  })?.me?.savedRecipesConnection;
 
 /**
  * `queued` resolves the field as null (offline, API down), `created` echoes the

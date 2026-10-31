@@ -77,7 +77,25 @@ import {
   removePantry,
   setStock,
 } from '#features/pantry/offline/localWrites';
+import {
+  AddRecipeToFavoritesDocument,
+  CreateRecipeDocument,
+  DeleteRecipeDocument,
+  DeleteRecipeFolderDocument,
+  ForkRecipeDocument,
+  RemoveRecipeFromFavoritesDocument,
+  UpdateFavoriteRecipeDocument,
+  UpdateRecipeDocument,
+} from '#features/recipes/graphql/recipe.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
+import {
+  addFavorite,
+  createRecipe,
+  moveFolder,
+  removeFavorite,
+  removeRecipe,
+  savedFields,
+} from '#features/recipes/offline/localWrites';
 import {
   AddItemToShoppingListDocument,
   CancelRecurringDocument,
@@ -172,4 +190,12 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [AddTemplateItemDocument, addTemplateItem],
   [UpdateTemplateItemDocument, entityFields],
   [RemoveTemplateItemDocument, removeTemplateItem],
+  [CreateRecipeDocument, createRecipe],
+  [ForkRecipeDocument, createRecipe],
+  [UpdateRecipeDocument, entityFields],
+  [DeleteRecipeDocument, removeRecipe],
+  [AddRecipeToFavoritesDocument, addFavorite],
+  [RemoveRecipeFromFavoritesDocument, removeFavorite],
+  [UpdateFavoriteRecipeDocument, savedFields],
+  [DeleteRecipeFolderDocument, moveFolder],
 ]);

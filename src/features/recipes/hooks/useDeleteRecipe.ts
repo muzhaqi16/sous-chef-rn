@@ -1,18 +1,10 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { DeleteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
-import {
-  forgetMyRecipesLists,
-  removeMyRecipesEdge,
-} from '#features/recipes/utils/recipeCacheWriters';
+import type { RemoveRecipeInputs } from '#features/recipes/offline/localWrites';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 
-/**
- * Delete a recipe local-first: the row leaves the list BEFORE the mutation
- * fires, so the deletion is visible immediately and survives an offline queue
- * (a duplicate replay answers `converged`, a success with no recipe).
- */
 export function useDeleteRecipe() {
   const client = useApolloClient();
   const { t } = useTranslation();
@@ -22,26 +14,17 @@ export function useDeleteRecipe() {
 
   /** `true` once the recipe is gone or its removal is queued; `false` when refused. */
   const deleteRecipe = async (id: string): Promise<boolean> => {
-    try {
-      removeMyRecipesEdge(client.cache, id);
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Delete Recipe (optimistic)',
-      });
-    }
-
-    const settled = await settleMutation(
-      () =>
-        deleteRecipeMutation({
-          variables: { input: { id } },
+    const inputs: RemoveRecipeInputs = { recipeId: id };
+    const settled = await pendingWritesOf(client.cache).send(
+      DeleteRecipeDocument,
+      { input: { id } },
+      write =>
+        settleMutation(() => deleteRecipeMutation(write), {
+          document: DeleteRecipeDocument,
+          fallback: t('recipes.deleteRecipeFailed'),
+          removal: true,
         }),
-      {
-        document: DeleteRecipeDocument,
-        fallback: t('recipes.deleteRecipeFailed'),
-        removal: true,
-        // Refused, so the recipe stands: the lists re-read to show it again.
-        onFailed: () => forgetMyRecipesLists(client.cache),
-      },
+      inputs,
     );
     return settled.status !== 'failed';
   };

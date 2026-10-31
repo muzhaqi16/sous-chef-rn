@@ -224,6 +224,7 @@ describe('folder actions move the recipes, not just the folder list', () => {
     cache.readFragment<{ folder: string | null }>({
       id: `SavedRecipe:${id}`,
       fragment: SAVED_RECIPE,
+      optimistic: true,
     })?.folder;
 
   // Queued: the response that would reconcile `savedRecipes` never arrives,

@@ -2,21 +2,13 @@ import { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { ApolloCache } from '@apollo/client';
-import {
-  snapshotFields,
-  writeEntityFields,
-} from '#/apollo/utils/localFirstFields';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  UpdateFavoriteRecipeDocument,
-  RemoveRecipeFromFavoritesDocument,
-  SavedRecipeFoldersDocument,
-  type SavedRecipeFoldersQuery,
-} from '#features/recipes/graphql/recipe.generated';
+import { UpdateFavoriteRecipeDocument } from '#features/recipes/graphql/recipe.generated';
+import type { SavedFieldsInputs } from '#features/recipes/offline/localWrites';
+import { useUnfavoriteRecipe } from '#features/recipes/hooks/useUnfavoriteRecipe';
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
-import { performOptimisticUnfavorite } from '#features/recipes/utils/optimisticUnfavorite';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import {
   UseRecipeSavedMetadata_RecipeFragmentDoc,
   type UseRecipeSavedMetadata_RecipeFragment,
@@ -52,6 +44,14 @@ export function useRecipeSavedMetadata({
 }: UseRecipeSavedMetadataOptions) {
   const { t } = useTranslation();
   const client = useApolloClient();
+  const { unfavoriteRecipe } = useUnfavoriteRecipe();
+  const [showFolderPicker, setShowFolderPicker] = useState(false);
+  const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
+
+  const [updateFavoriteRecipeMutation] = useMutation(
+    UpdateFavoriteRecipeDocument,
+    { context: { localFirst: true } },
+  );
 
   /**
    * One local-first write for all four metadata edits: they differ only in
@@ -64,65 +64,24 @@ export function useRecipeSavedMetadata({
   ): Promise<boolean> => {
     // Every caller returns early without a recipe; this keeps the id typed.
     if (!recipeId) return false;
-    const saved = readSavedDetails(client.cache, recipeId);
-    const entity = saved
-      ? { __typename: 'SavedRecipe', id: saved.id }
-      : undefined;
-    const previous = snapshotFields(saved, updates);
-    writeEntityFields(client.cache, entity, updates);
+    const inputs: SavedFieldsInputs = {
+      savedRecipeId: readSavedDetails(client.cache, recipeId)?.id,
+      fields: updates,
+    };
 
-    // A queued write keeps its cache change and counts as persisted.
-    const settled = await settleMutation(
-      () =>
-        updateFavoriteRecipeMutation({
-          variables: { input: { recipeId, ...input } },
+    const settled = await pendingWritesOf(client.cache).send(
+      UpdateFavoriteRecipeDocument,
+      { input: { recipeId, ...input } },
+      write =>
+        settleMutation(() => updateFavoriteRecipeMutation(write), {
+          document: UpdateFavoriteRecipeDocument,
+          fallback: t('recipes.updateRecipeFailed'),
+          present: 'toast',
         }),
-      {
-        document: UpdateFavoriteRecipeDocument,
-        fallback: t('recipes.updateRecipeFailed'),
-        onFailed: () => writeEntityFields(client.cache, entity, previous),
-        present: 'toast',
-      },
+      inputs,
     );
     return settled.status !== 'failed';
   };
-  const [showFolderPicker, setShowFolderPicker] = useState(false);
-  const [updatingFolderTags, setUpdatingFolderTags] = useState(false);
-
-  const [updateFavoriteRecipeMutation] = useMutation(
-    UpdateFavoriteRecipeDocument,
-    {
-      context: { localFirst: true },
-      update: (cache, { data }) => {
-        const payload = appliedPayload(data);
-        if (!payload) return;
-        const { folder } = payload.savedRecipe;
-        if (folder) {
-          cache.updateQuery<SavedRecipeFoldersQuery>(
-            { query: SavedRecipeFoldersDocument },
-            existing => {
-              if (!existing) return existing;
-              if (existing.savedRecipeFolders.includes(folder)) {
-                return existing;
-              }
-              return {
-                ...existing,
-                savedRecipeFolders: [...existing.savedRecipeFolders, folder],
-              };
-            },
-          );
-        }
-      },
-    },
-  );
-
-  // `handleUnfavoriteRecipe` drops the saved-list edge and
-  // `Recipe.savedDetails` BEFORE firing, so the un-save sticks offline, and
-  // reverts a refusal from a snapshot; hence no update or onError here.
-  const [unfavoriteRecipeMutation] = useMutation(
-    RemoveRecipeFromFavoritesDocument,
-    { context: { localFirst: true } },
-  );
 
   const handleUpdateFolder = (folder: string | null): Promise<void> => {
     if (!recipeId) return Promise.resolve();
@@ -194,15 +153,9 @@ export function useRecipeSavedMetadata({
     }
 
     return executeWithLoadingState(async () => {
-      const kept = await performOptimisticUnfavorite({
-        client,
-        recipeId: targetRecipeId,
-        mutate: () =>
-          unfavoriteRecipeMutation({
-            variables: { input: { recipeId: targetRecipeId } },
-          }),
+      const kept = await unfavoriteRecipe(targetRecipeId, {
         fallback: t('recipes.removeFromSavedFailed'),
-        present: failure => toastService.error(failure.body),
+        present: 'toast',
       });
       if (!kept) return;
 

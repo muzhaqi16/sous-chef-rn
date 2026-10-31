@@ -36,8 +36,6 @@ import {
   UpdateShoppingListItemDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { AddItemsToShoppingListFromRecipeDocument } from '#features/recipes/hooks/useRecipeShoppingList.generated';
-import { AddRecipeToFavoritesDocument } from '#features/recipes/graphql/recipe.generated';
-import { reconcileAddRecipeToFavoritesReplay } from '#features/recipes/offline/replayReconcilers';
 import { BarcodeAddItemToShoppingListDocument } from '#features/barcode/hooks/useAddScannedItem.generated';
 import { AddItemToShoppingListFromFilteredPantryDocument } from '#features/pantry/hooks/useAddPantryItemToShoppingList.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
@@ -72,7 +70,6 @@ export const forEachBatchAdd = <T>(value: T): Array<[DocumentNode, T]> =>
   ].map((document): [DocumentNode, T] => [document, value]);
 
 export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
-  [AddRecipeToFavoritesDocument, reconcileAddRecipeToFavoritesReplay],
   [CreateHomeDocument, reconcileCreateHomeReplay],
   [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],

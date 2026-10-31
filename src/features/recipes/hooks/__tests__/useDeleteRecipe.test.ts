@@ -10,10 +10,14 @@ import { useDeleteRecipe } from '../useDeleteRecipe';
 
 const LIST_FIELD = 'recipes({"first":20})';
 
-const heldLists = (cache: ReturnType<typeof makeCache>): string[] =>
-  Object.keys(cache.extract().ROOT_QUERY ?? {}).filter(key =>
-    key.startsWith('recipes'),
-  );
+type HeldList = { edges: { node: { __ref: string } }[] };
+
+const listed = (cache: ReturnType<typeof makeCache>) => {
+  const root: { [field: string]: unknown } =
+    cache.extract(true).ROOT_QUERY ?? {};
+  const list = root[LIST_FIELD] as HeldList | undefined;
+  return list?.edges.map(edge => edge.node.__ref);
+};
 
 const seeded = () => {
   const cache = makeCache();
@@ -42,7 +46,37 @@ const seeded = () => {
 };
 
 describe('useDeleteRecipe', () => {
-  it('re-reads the lists when the server refuses, so the recipe shows again', async () => {
+  it('takes the recipe off the list before the server answers', async () => {
+    const cache = seeded();
+    const held = recordMock(DeleteRecipeDocument, {
+      data: {
+        deleteRecipe: {
+          __typename: 'DeleteRecipePayload',
+          converged: false,
+          recipe: { __typename: 'Recipe', id: 'recipe-1' },
+        },
+      },
+      held: true,
+    });
+    const { result } = renderHookWithApollo(() => useDeleteRecipe(), {
+      cache,
+      operationMocks: [held.mock],
+    });
+
+    let pending: Promise<boolean> | undefined;
+    act(() => {
+      pending = result.current.deleteRecipe('recipe-1');
+    });
+    expect(listed(cache)).toEqual([]);
+
+    await act(async () => {
+      held.release();
+      await pending;
+    });
+    expect(listed(cache)).toEqual([]);
+  });
+
+  it('ends on the server list when refused, so the recipe shows again', async () => {
     const cache = seeded();
     const refused = recordMock(DeleteRecipeDocument, {
       data: {
@@ -64,10 +98,10 @@ describe('useDeleteRecipe', () => {
     });
 
     expect(deleted).toBe(false);
-    expect(heldLists(cache)).toEqual([]);
+    expect(listed(cache)).toEqual(['Recipe:recipe-1']);
   });
 
-  it('keeps the lists it removed the recipe from once the delete lands', async () => {
+  it('keeps it off the list once the delete lands', async () => {
     const cache = seeded();
     const landed = recordMock(DeleteRecipeDocument, {
       data: {
@@ -89,6 +123,6 @@ describe('useDeleteRecipe', () => {
     });
 
     expect(deleted).toBe(true);
-    expect(heldLists(cache)).toEqual([LIST_FIELD]);
+    expect(listed(cache)).toEqual([]);
   });
 });
