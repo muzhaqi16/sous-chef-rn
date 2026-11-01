@@ -137,7 +137,7 @@ beforeEach(() => {
 });
 
 describe('useRecipeDietaryAlerts', () => {
-  it('flags each row, and sums each restriction once, strongest and strictest first', async () => {
+  it('flags each row and says some row is flagged', async () => {
     const { result } = renderHookWithApollo(
       () => useRecipeDietaryAlerts('recipe-1'),
       { operationMocks: [alertsMock().mock] },
@@ -145,12 +145,7 @@ describe('useRecipeDietaryAlerts', () => {
 
     await drainTimers();
     expect(result.current.check).toBe('checked');
-    expect(
-      result.current.summary.map(alert => [alert.id, alert.state]),
-    ).toEqual([
-      ['r-peanut', DietaryAlertState.Contains],
-      ['r-bacon', DietaryAlertState.Contains],
-    ]);
+    expect(result.current.flagged).toBe(true);
     expect(result.current.alertsFor('sauce-row')).toEqual([
       expect.objectContaining({
         memberName: 'Tani',
@@ -178,7 +173,7 @@ describe('useRecipeDietaryAlerts', () => {
 
     await drainTimers();
     expect(result.current.check).toBe('stale');
-    expect(result.current.summary).toHaveLength(2);
+    expect(result.current.flagged).toBe(true);
   });
 
   it('checks nothing without a home', () => {
@@ -189,7 +184,7 @@ describe('useRecipeDietaryAlerts', () => {
     );
 
     expect(result.current.check).toBe('none');
-    expect(result.current.summary).toEqual([]);
+    expect(result.current.flagged).toBe(false);
   });
 
   // Both queries cache the recipe's `ingredientsConnection`, whose first page a

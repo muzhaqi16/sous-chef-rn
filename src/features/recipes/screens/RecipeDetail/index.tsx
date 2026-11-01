@@ -45,7 +45,7 @@ import { IngredientAlertsSheet } from '#features/recipes/components/recipeDetail
 import { HorizontalRail } from '#components/molecules/HorizontalRail';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
-import { HouseholdRecipeSummary } from '#features/recipes/components/recipeDetail/HouseholdRecipeSummary';
+import { DietaryCheckNote } from '#features/recipes/components/recipeDetail/DietaryCheckNote';
 import { RecipeCredit } from '#features/recipes/components/recipeDetail/RecipeCredit';
 import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
 import { useCooksFor } from '#features/profile/hooks/useCooksFor';
@@ -273,10 +273,7 @@ const RecipeDetailScreen: React.FC = () => {
   const household = useRecipeDietaryAlerts(recipeId);
   const cooksFor = useCooksFor();
   // Swaps are offered where the household flags an ingredient.
-  const substitutes = useRecipeSubstitutes(
-    recipeId,
-    household.summary.length > 0,
-  );
+  const substitutes = useRecipeSubstitutes(recipeId, household.flagged);
   // The flagged ingredient whose sheet is open.
   const [openIngredient, setOpenIngredient] =
     useState<DisplayIngredient | null>(null);
@@ -619,9 +616,9 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         )}
 
-        <HouseholdRecipeSummary
+        <DietaryCheckNote
           check={household.check}
-          alerts={household.summary}
+          flagged={household.flagged}
           restrictionsApply={household.restrictionsApply}
         />
 

@@ -46,10 +46,9 @@ export const recipesTestIDs = {
   heartButton: 'recipe-heart-button',
   reportButton: 'recipe-report-button',
   reviewReportButton: (reviewId: string) => `review-report-${reviewId}`,
-  /** The recipe page's household dietary summary, and its offline note. */
-  householdSummary: 'recipe-household-summary',
+  /** The recipe page's note when the household's check could not run. */
   householdUnchecked: 'recipe-household-unchecked',
-  /** The stale note alone, on an earlier answer that flagged nothing. */
+  /** Its note on an earlier answer. */
   householdStale: 'recipe-household-stale',
   /** An ingredient's tile on the recipe page, keyed by its place in the list. */
   ingredientTile: (index: number) => `recipe-ingredient-${index}`,

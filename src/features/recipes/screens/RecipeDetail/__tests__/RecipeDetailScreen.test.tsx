@@ -67,13 +67,13 @@ jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
 
 const mockHousehold: {
   check: string;
-  summary: unknown[];
+  flagged: boolean;
   rows: Record<string, unknown[]>;
-} = { check: 'none', summary: [], rows: {} };
+} = { check: 'none', flagged: false, rows: {} };
 jest.mock('#features/recipes/hooks/useRecipeDietaryAlerts', () => ({
   useRecipeDietaryAlerts: () => ({
     check: mockHousehold.check,
-    summary: mockHousehold.summary,
+    flagged: mockHousehold.flagged,
     alertsFor: (id: string) => mockHousehold.rows[id] ?? [],
   }),
 }));
@@ -647,14 +647,6 @@ describe('RecipeDetail', () => {
     });
 
     describe('for the household', () => {
-      const SHRIMP = {
-        id: 'r-shellfish',
-        memberName: 'Tani',
-        what: 'Shellfish',
-        state: 'CONTAINS',
-        severity: 'ALLERGY',
-        isDiet: false,
-      };
       const BUTTER = {
         id: 'r-vegan',
         memberName: 'You',
@@ -665,7 +657,7 @@ describe('RecipeDetail', () => {
       };
       afterEach(() => {
         mockHousehold.check = 'none';
-        mockHousehold.summary = [];
+        mockHousehold.flagged = false;
         mockHousehold.rows = {};
         for (const id of Object.keys(mockSubstitutes)) {
           delete mockSubstitutes[id];
@@ -675,7 +667,7 @@ describe('RecipeDetail', () => {
 
       it('opens a flagged ingredient’s sheet, with its alerts and swaps, instead of adding it', () => {
         mockHousehold.check = 'checked';
-        mockHousehold.summary = [BUTTER];
+        mockHousehold.flagged = true;
         mockHousehold.rows = { i4: [BUTTER] };
         mockSubstitutes.i0 = [{ id: 's-flour' }];
         mockSubstitutes.i4 = [{ id: 's-oil' }, { id: 's-applesauce' }];
@@ -701,32 +693,18 @@ describe('RecipeDetail', () => {
         expect(mockSubstitutesWanted.at(-1)).toBe(false);
       });
 
-      it('leads with who the recipe affects and badges each flagged tile', () => {
+      it('says it once, on the flagged tile, with nothing above the ingredients', () => {
         mockHousehold.check = 'checked';
-        mockHousehold.summary = [SHRIMP, BUTTER];
+        mockHousehold.flagged = true;
         mockHousehold.rows = { i4: [BUTTER] };
         renderIngredients();
 
-        expect(screen.getByTestId('recipe-household-summary')).toBeTruthy();
-        expect(screen.getByText('Tani')).toBeTruthy();
-        expect(
-          screen.getByText(
-            t('dietaryAlerts.reason.contains', { what: 'Shellfish' }),
-          ),
-        ).toBeTruthy();
-        // The summary's line and the butter tile's badge both say it.
         expect(
           screen.getAllByText(
             t('dietaryAlerts.reason.notDiet', { what: 'Vegan' }),
           ),
-        ).toHaveLength(2);
-      });
-
-      it('shows no summary when nobody is affected', () => {
-        mockHousehold.check = 'checked';
-        renderIngredients();
-
-        expect(screen.queryByTestId('recipe-household-summary')).toBeNull();
+        ).toHaveLength(1);
+        expect(screen.queryByText(t('dietaryAlerts.title'))).toBeNull();
       });
     });
 
