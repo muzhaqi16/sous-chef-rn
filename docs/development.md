@@ -378,6 +378,11 @@ code relies on.
   served, so state only what you assert on. A field written as `undefined` is
   served ABSENT, and a field the operation does not select is an error — a
   fixture the schema cannot produce is a test of a system that does not exist.
+- **A row stated in two answers is one row.** What a fixture leaves unstated
+  under a stated id is named by its place in that row, so a list and a read by
+  id agree on the plan's author, as a server's answers do. `MockLink` delays each
+  answer by a random 20–49 ms, so a test of the order two answers land in holds
+  one with `held: true` rather than relying on the order they were sent.
 - **`partial: true` on a `recordMock`** is the only opt-out from schema
   completion, and it excuses exactly the `(type, field)` pairs that mock's
   payload omits. Use it only when the omission IS the subject.

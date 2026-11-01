@@ -606,6 +606,43 @@ it('plans nothing for today when no plan covers it', async () => {
   expect(result.current.overview.meals).toEqual([]);
 });
 
+it('reads the plan once when the day’s list answers after it', async () => {
+  const oldPlan = {
+    id: 'mp-old',
+    startDate: '2026-03-01',
+    endDate: '2026-03-07',
+  };
+  const list = recordMock(GetMealPlansDocument, {
+    data: { mealPlans: connectionOf([oldPlan]) },
+    match: vars => !vars.filters,
+  });
+  const daysList = recordMock(GetMealPlansDocument, {
+    data: { mealPlans: connectionOf([oldPlan]) },
+    match: vars => !!vars.filters,
+    held: true,
+  });
+  const plan = recordMock(GetMealPlanDocument, {
+    data: {
+      mealPlan: { ...oldPlan, mealPlanItemsConnection: connectionOf([]) },
+    },
+  });
+  renderOverview([
+    countsMock(),
+    list,
+    daysList,
+    plan,
+    suggestionsMock(),
+    listsMock(),
+  ]);
+  await drainTimers();
+  expect(plan.fired).toHaveLength(1);
+
+  daysList.release();
+  await drainTimers();
+
+  expect(plan.fired).toHaveLength(1);
+});
+
 describe('the meals section', () => {
   const unreadablePlan = () =>
     recordMock(GetMealPlanDocument, {

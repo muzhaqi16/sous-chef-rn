@@ -179,6 +179,95 @@ describe('completion does not alter what the fixture states', () => {
   });
 });
 
+describe('a row stated in two answers is one row', () => {
+  const PLAN = gql`
+    query ProbePlan($id: ID!) {
+      mealPlan(id: $id) {
+        id
+        createdBy {
+          id
+          displayName
+        }
+        mealPlanItemsConnection {
+          edges {
+            node {
+              id
+            }
+          }
+        }
+      }
+    }
+  `;
+  const PLANS = gql`
+    query ProbePlans {
+      mealPlans {
+        edges {
+          node {
+            id
+            createdBy {
+              id
+            }
+          }
+        }
+      }
+    }
+  `;
+  const plansOf = (...ids: string[]) => ({
+    mealPlans: { edges: ids.map(id => ({ node: { id } })) },
+  });
+  type Plans = {
+    mealPlans: { edges: Array<{ node: { createdBy: { id: string } } }> };
+  };
+  const authors = (data: unknown) =>
+    (data as Plans).mealPlans.edges.map(({ node }) => node.createdBy.id);
+
+  it('names what it leaves unstated the same in each answer', () => {
+    // The store generates a row per field and arguments, so a list and a read by
+    // id are two rows until a fixture pins both to one id. Left apart, the later
+    // answer points the row at another author, and the read that selected more
+    // of the first goes incomplete and asks the network again.
+    const plan = complete(PLAN, { mealPlan: { id: 'mp-1' } }) as {
+      mealPlan: { createdBy: { id: string } };
+    };
+
+    expect(authors(complete(PLANS, plansOf('mp-1')))).toEqual([
+      plan.mealPlan.createdBy.id,
+    ]);
+  });
+
+  it('keeps apart what two stated rows leave unstated', () => {
+    const [first, second] = authors(complete(PLANS, plansOf('mp-1', 'mp-2')));
+
+    expect(first).not.toBe(second);
+  });
+
+  it('keeps apart the unstated entries of one stated row', () => {
+    const data = complete(PLAN, {
+      mealPlan: {
+        id: 'mp-1',
+        mealPlanItemsConnection: { edges: [{}, {}, {}] },
+      },
+    });
+
+    expect(new Set(idsIn(data)).size).toBe(idsIn(data).length);
+  });
+
+  it('keeps a nested id the fixture stated', () => {
+    const data = complete(PLAN, {
+      mealPlan: { id: 'mp-1', createdBy: { id: 'u-1' } },
+    }) as { mealPlan: { createdBy: { id: string } } };
+
+    expect(data.mealPlan.createdBy.id).toBe('u-1');
+  });
+
+  it('leaves a row under no stated row to the counter', () => {
+    // Two reads of nothing in particular may be two rows, as they may on a server.
+    const [author] = authors(complete(PLANS, {}));
+
+    expect(author).toMatch(/^mock-id-\d+$/);
+  });
+});
+
 describe('a pinned variant applies where it was pinned', () => {
   // Two positions of the same result union. Every one of the schema's result
   // unions carries the same four error members, so a pin keyed by TYPE could

@@ -1191,6 +1191,46 @@ function reissueGeneratedIds(merged: unknown, stated: unknown): unknown {
   return out;
 }
 
+/**
+ * Name what a stated row leaves unstated by its place in that row.
+ *
+ * `MockStore` generates a row per field and arguments, so a list and a read by
+ * id are two rows until a fixture pins both to one id, and each keeps its own
+ * nested rows. The later answer then points the row at another author, with
+ * none of the fields the first read selected, and that read goes incomplete and
+ * asks the network again. Only the runs `MockLink`'s random delay lands it last
+ * show this. A server sends one author, so the name is the same in each answer.
+ *
+ * A row under no stated row keeps the counter: two reads may be two rows.
+ */
+function nameAfterStatedRow(value: unknown, place: string | null): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry, index) =>
+      nameAfterStatedRow(entry, place && `${place}.${index}`),
+    );
+  }
+  if (!value || typeof value !== 'object') return value;
+  const named = (owner: string | null, key: string, field: unknown) =>
+    owner && typeof field === 'string' && GENERATED_ID.test(field)
+      ? `mock-id-of-${owner}.${key}`
+      : field;
+  const record = value as Record<string, unknown>;
+  const id = named(place, 'id', record.id);
+  const row =
+    typeof record.__typename === 'string' &&
+    typeof id === 'string' &&
+    !GENERATED_ID.test(id)
+      ? `${record.__typename}:${id}`
+      : place;
+  const out: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(record)) {
+    if (key === 'id') out[key] = id;
+    else if (typeof field === 'string') out[key] = named(row, key, field);
+    else out[key] = nameAfterStatedRow(field, row && `${row}.${key}`);
+  }
+  return out;
+}
+
 /** Caller data wins; anything it omits keeps the schema-generated value. */
 function mergeOverSchema(
   base: unknown,
@@ -1467,7 +1507,10 @@ function completeFromSchema(
         unknownKeys: [],
         keepUnknownKeys: !checkKeys,
       };
-      const merged = mergeOverSchema(executed.data, overrideData, '', report);
+      const merged = nameAfterStatedRow(
+        mergeOverSchema(executed.data, overrideData, '', report),
+        null,
+      );
       if (report.unknownKeys.length > 0) {
         reportUnknownFixtureKeys(document, report.unknownKeys);
       }
