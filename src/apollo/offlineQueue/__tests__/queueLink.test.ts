@@ -55,7 +55,16 @@ jest.mock('../queueStore', () => ({
 }));
 
 jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
-  LOCAL_WRITES: { AddItem: { apply: jest.fn() } },
+  LOCAL_WRITES: {
+    AddItem: {
+      apply: jest.fn(),
+      orderedBy: ({
+        variables,
+      }: {
+        variables: { input: { order?: string } };
+      }) => variables.input.order,
+    },
+  },
 }));
 
 // Mock queueManager (queueLink calls requestDrain on a successful local-first
@@ -450,6 +459,47 @@ describe('createQueueLink', () => {
           pendingWrite: { id: write.id, inputs: {} },
         }),
       );
+    });
+
+    // A check-in learns its store only when it is sent, so the order is read
+    // off the variables that leave, never those it began with.
+    const sendOrdered = (cache: ReturnType<typeof makeCache>) => {
+      const write = pendingWritesOf(cache).begin(MOCK_MUTATION, {
+        input: { name: 'Apple' },
+      });
+      return makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AddItem',
+        variables: { input: { name: 'Apple', order: 'list-1' } },
+        context: { localFirst: true, pendingWriteId: write.id },
+        cache,
+      });
+    };
+
+    it('queues the write with the order it keeps', () => {
+      offline();
+
+      link.request(sendOrdered(makeCache()), makeForward()).subscribe();
+
+      expect(queueStore.addMutation).toHaveBeenCalledWith(
+        expect.objectContaining({ orderedBy: 'list-1' }),
+      );
+    });
+
+    it('queues an online write behind one that keeps its order', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      (queueStore.getUndeliveredIds as jest.Mock).mockReturnValueOnce(
+        new Set(['list-1']),
+      );
+      const forward = makeForward();
+
+      link.request(sendOrdered(makeCache()), forward).subscribe();
+
+      expect(forward).not.toHaveBeenCalled();
+      expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
     });
 
     it('drops the layer of a write the enqueue superseded', () => {

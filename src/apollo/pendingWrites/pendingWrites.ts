@@ -121,7 +121,7 @@ export class PendingWrites {
       mutation: document,
       variables,
     });
-    const orderedBy = this.table[write.operationName]?.orderedBy?.(write);
+    const orderedBy = this.orderOf(write);
     const sentAs = orderedBy ? [...subjectIds, orderedBy] : subjectIds;
     const named = new Set([
       ...sentAs,
@@ -183,6 +183,11 @@ export class PendingWrites {
     return settled;
   }
 
+  /** What `write` stays in order behind, beyond the rows it names. */
+  orderOf(write: PendingWrite): string | undefined {
+    return this.table[write.operationName]?.orderedBy?.(write);
+  }
+
   /** The queue holds the write now: a later enqueue may supersede it. */
   markQueued(id: string): void {
     this.queued.add(id);
@@ -209,8 +214,8 @@ export class PendingWrites {
   }
 
   /**
-   * The server has it. `data` is its answer, or undefined when it answered with
-   * no row, so the write's own change is all the root can take. It commits once
+   * The server has it. `data` is its answer, or undefined for a removal it
+   * answered gone, so the write's own change is all the root can take. It commits once
    * the reads in flight now have landed: one may hold state from before it. Its
    * layer shows the answer meanwhile, as `apply` expects a root without it.
    */

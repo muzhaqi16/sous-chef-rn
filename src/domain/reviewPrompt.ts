@@ -10,7 +10,7 @@ export const DAYS_BEFORE_ASKING = 3;
 export const DAYS_BETWEEN_REQUESTS = 120;
 /** Quiet after the last toast before asking, so its Undo is never covered. */
 export const QUIET_MS = 4_000;
-/** No request this soon after an error or alert the person saw. */
+/** No request this soon after a failure the person saw. */
 export const CALM_AFTER_TROUBLE_MS = 30 * 60 * 1000;
 
 const DAY_MS = 24 * 60 * 60 * 1000;

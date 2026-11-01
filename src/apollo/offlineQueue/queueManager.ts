@@ -26,6 +26,7 @@ import {
 import {
   deletesItsSubject,
   dependencyIdsOf,
+  holdsBack,
   queuedSubject,
   subjectTypeOf,
 } from './queuedSubject';
@@ -485,12 +486,13 @@ export class QueueManager {
     const pendingWriteId = mutation.pendingWrite?.id;
     const pendingWrites = pendingWritesOf(client.cache);
     if (outcome.status === 'converged') {
-      // IDEMPOTENT_REPLAY: an earlier attempt already committed this op, so the
-      // change is on the server. Dequeue as success.
+      // IDEMPOTENT_REPLAY: an earlier attempt committed this op and its row is
+      // gone or out of reach, so the root takes nothing. The resync after the
+      // drain shows what the server holds. Dequeue as success.
       logger.info(
         `✅ Queue: ${mutation.operationName} already committed by an earlier attempt — dropping replay`,
       );
-      if (pendingWriteId) pendingWrites.confirm(pendingWriteId);
+      if (pendingWriteId) pendingWrites.drop(pendingWriteId);
       return result.data;
     }
     if (
@@ -871,9 +873,9 @@ export class QueueManager {
     };
   }
 
-  /** Every entity a queued write creates or changes — one per row of a batch. */
+  /** Every entity a queued write changes, one per row of a batch, and its order. */
   private getAllEntityIds(mutation: QueuedMutation): string[] {
-    return queuedSubject(mutation).subjectIds;
+    return holdsBack(mutation);
   }
 
   /**

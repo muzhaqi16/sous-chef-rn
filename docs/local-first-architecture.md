@@ -72,7 +72,7 @@ reason for having none (those show on the answer).
 | `capture`   | Once, when the write is made                             | Reads from the cache what its caller did not pass                                   |
 | `commit`    | On the root, after the server confirms                   | Writes what the answer does not state, such as a new row's edge                     |
 | `refused`   | When the server refuses a queued write for good          | Undoes what the write left outside the cache, which dropping its layer cannot reach |
-| `orderedBy` | At send                                                  | Names what the write is sent in order behind, when its input names no row           |
+| `orderedBy` | At send, and stored with a queued write                  | Names what the write stays in order behind, when its input names no row             |
 
 `apply` gives the same result from the same variables, inputs and cache, because it re-runs whenever
 the server's data under it changes. `sous-chef/local-write-is-deterministic` bans clocks, id minting
@@ -307,7 +307,8 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   that already committed answers its success payload with `converged: true` and the row as it stands,
   so it is treated as applied. A `ConflictError` whose `code` is `IDEMPOTENT_REPLAY` is **converged**
   too: this exact op committed once, but its row is gone or the caller can no longer read it, so there
-  is no row to commit; dequeue as success. Matched on the **code**, never the message; a generic
+  is no row to commit: the layer is dropped, the entry dequeues as success, and the resync after the
+  drain shows what the server holds. Matched on the **code**, never the message; a generic
   `ConflictError` is a real version/uniqueness conflict → rejected.
   A batch that applies with a row refused as `INTERNAL_SERVER_ERROR` or `DEADLOCK` is deferred whole
   (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while dropping that

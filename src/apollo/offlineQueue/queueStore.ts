@@ -3,11 +3,7 @@ import { storage } from '#/store/deviceStorage';
 import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
-import {
-  deletesItsSubject,
-  queuedSubject,
-  type QueuedSubject,
-} from './queuedSubject';
+import { deletesItsSubject, holdsBack, queuedSubject } from './queuedSubject';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -432,7 +428,11 @@ export class QueueStore {
    * Client ids with a still-PENDING mutation; empty when no user is set.
    */
   getPendingClientIds(): Set<string> {
-    return this.idsOf('pending', [QueueStatus.PENDING], s => s.subjectIds);
+    return this.idsOf(
+      'pending',
+      [QueueStatus.PENDING],
+      m => queuedSubject(m).subjectIds,
+    );
   }
 
   /**
@@ -444,7 +444,7 @@ export class QueueStore {
     return this.idsOf(
       'unconfirmed',
       [QueueStatus.PENDING, QueueStatus.PROCESSING],
-      s => s.mintedIds,
+      m => queuedSubject(m).mintedIds,
     );
   }
 
@@ -472,18 +472,18 @@ export class QueueStore {
   }
 
   /**
-   * Rows a write the server has not taken yet changes: pending, replaying, or
-   * parked for re-auth. A later write naming one waits behind it, as the
+   * What a write the server has not taken yet holds back: pending, replaying,
+   * or parked for re-auth. A later write naming one waits behind it, as the
    * drain holds a dependent.
    */
   getUndeliveredIds(): Set<string> {
-    return this.idsOf('undelivered', UNDELIVERED, s => s.subjectIds);
+    return this.idsOf('undelivered', UNDELIVERED, holdsBack);
   }
 
   private idsOf(
     set: IdSet,
     statuses: readonly QueueStatus[],
-    pick: (subject: QueuedSubject) => readonly string[],
+    pick: (mutation: QueuedMutation) => readonly string[],
   ): Set<string> {
     const known = this.idSets.get(set);
     if (known) return known;
@@ -493,7 +493,7 @@ export class QueueStore {
     if (userId) {
       for (const status of statuses) {
         for (const mutation of this.getMutationsForUser(userId, status)) {
-          for (const id of pick(queuedSubject(mutation))) ids.add(id);
+          for (const id of pick(mutation)) ids.add(id);
         }
       }
     }

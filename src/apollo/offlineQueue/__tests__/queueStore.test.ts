@@ -497,6 +497,27 @@ describe('QueueStore', () => {
     });
   });
 
+  describe('getUndeliveredIds', () => {
+    it('holds back the order an undelivered write keeps', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(makeMutation({ orderedBy: 'usualStores:home-1' }));
+
+      expect(store.getUndeliveredIds()).toEqual(
+        new Set(['usualStores:home-1']),
+      );
+    });
+
+    it('lets go of it once the write is delivered', () => {
+      store.setCurrentUserId('user-1');
+      const delivered = makeMutation({ orderedBy: 'usualStores:home-1' });
+      store.addMutation(delivered);
+
+      store.updateMutation(delivered.id, { status: QueueStatus.SUCCESS });
+
+      expect(store.getUndeliveredIds()).toEqual(new Set());
+    });
+  });
+
   // -------------------------------------------------------------------------
   // getMutationsForUser
   // -------------------------------------------------------------------------

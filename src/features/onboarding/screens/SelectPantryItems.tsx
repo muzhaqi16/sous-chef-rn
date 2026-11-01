@@ -140,7 +140,7 @@ export const SelectPantryItems = () => {
     if (hasChanges && selectedPantryId) {
       void executeWithLoadingState(
         async () => {
-          const [, removed] = await Promise.all([
+          const [added, removed] = await Promise.all([
             Promise.all(
               itemsToAdd.map(item =>
                 addItem(item.name, {
@@ -168,8 +168,12 @@ export const SelectPantryItems = () => {
               }),
             ),
           ]);
-          // The summary claims this count: a staple taken out leaves it.
-          recordStapleItems(itemsToAdd.length - removed.filter(Boolean).length);
+          // The summary claims this count: a refused staple never joins it, and
+          // one taken out leaves it.
+          recordStapleItems(
+            added.filter(({ status }) => status === 'added').length -
+              removed.filter(Boolean).length,
+          );
           navigateToNextStep('Staples');
         },
         setIsSaving,

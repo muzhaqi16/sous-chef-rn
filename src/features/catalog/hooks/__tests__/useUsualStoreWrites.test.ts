@@ -1,6 +1,6 @@
 import { createElement, type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react-native';
-import { ApolloClient, ApolloLink } from '@apollo/client';
+import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
@@ -14,7 +14,12 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
+import {
+  makeQueuedMutation,
+  queuedMutationFor,
+} from '#/test-utils/queuedMutation';
 import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import {
   readUsualStores,
   writeUsualStores,
@@ -27,15 +32,18 @@ import {
   type UsualStoreRow,
 } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
+import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,
   UpdateUsualStoreDocument,
 } from '#features/catalog/hooks/useUsualStoreWrites.generated';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
 
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     requestDrain: jest.fn(),
+    drainAfterPass: jest.fn(),
     withdrawUnqueueableWrite: jest.fn(),
   },
 }));
@@ -450,6 +458,122 @@ describe('a store learned from a receipt', () => {
     ]);
   });
 
+  const serverList = (...entries: UsualStoreEntry[]) =>
+    recordMock(UsualStoresDocument, { data: { usualStores: entries } });
+  const answeredRemoval = () =>
+    recordMock(RemoveUsualStoreDocument, {
+      data: {
+        removeUsualStore: {
+          __typename: 'RemoveUsualStorePayload',
+          usualStores: [{ id: banksville.id }, { id: marketDistrict.id }],
+        },
+      },
+    });
+  const rootList = (cache: ReturnType<typeof seeded>) =>
+    cache
+      .readQuery({
+        query: UsualStoresDocument,
+        variables: { homeId: 'home-1' },
+        optimistic: false,
+      })
+      ?.usualStores.map(({ id }) => id);
+
+  it('leaves the root as the server said it, whatever is pending', () => {
+    const cache = seeded();
+    const { result } = renderHookWithApollo(useBoth, {
+      cache,
+      operationMocks: [],
+    });
+
+    act(() => {
+      result.current.writes.learn(aldi, new Promise(() => undefined));
+    });
+
+    expect(rootList(cache)).toEqual([banksville.id, marketDistrict.id]);
+    expect(cache.extract()['UsualStore:local-store:s3']).toBeUndefined();
+  });
+
+  it('takes the server’s entry once its list names the store', async () => {
+    const aldiEntry = entry('s3', 'ALDI Wilkinsburg');
+    const cache = seeded();
+    const remove = answeredRemoval();
+    const { result } = renderHookWithApollo(useBoth, {
+      cache,
+      operationMocks: [
+        serverList(banksville, marketDistrict, aldiEntry).mock,
+        remove.mock,
+      ],
+    });
+
+    act(() => {
+      result.current.writes.learn(aldi, Promise.resolve(true));
+    });
+    await drainTimers();
+
+    expect(rootList(cache)).toContain(aldiEntry.id);
+
+    // With the layer gone, a removal's answer leaves nothing to put it back.
+    await drained(() => result.current.writes.remove(aldi));
+    await drainTimers();
+    expect(names(result.current.read.stores)).toEqual([
+      'Giant Eagle Banksville',
+      'Giant Eagle Market District',
+    ]);
+  });
+
+  // Another member's removal comes as a list without it, which a layer left
+  // behind would hide.
+  it('holds nothing over the list once the server has named the store', async () => {
+    const cache = seeded();
+    const { result } = renderHookWithApollo(useBoth, {
+      cache,
+      operationMocks: [
+        serverList(banksville, marketDistrict, entry('s3', 'ALDI Wilkinsburg'))
+          .mock,
+      ],
+    });
+    act(() => {
+      result.current.writes.learn(aldi, Promise.resolve(true));
+    });
+    await drainTimers();
+
+    act(() => {
+      writeUsualStores(cache, 'home-1', [banksville, marketDistrict]);
+    });
+    await drainTimers();
+
+    expect(
+      result.current.read.stores?.some(row => row.key === 'store:s3'),
+    ).toBe(false);
+  });
+
+  it('keeps showing while the check-in waits, until a removal ends it', async () => {
+    const cache = seeded();
+    const remove = answeredRemoval();
+    const { result } = renderHookWithApollo(useBoth, {
+      cache,
+      operationMocks: [
+        serverList(banksville, marketDistrict).mock,
+        remove.mock,
+      ],
+    });
+
+    act(() => {
+      result.current.writes.learn(aldi, Promise.resolve(true));
+    });
+    await drainTimers();
+
+    expect(
+      result.current.read.stores?.some(row => row.key === 'store:s3'),
+    ).toBe(true);
+
+    await drained(() => result.current.writes.remove(aldi));
+    await drainTimers();
+    expect(
+      result.current.read.stores?.some(row => row.key === 'store:s3'),
+    ).toBe(false);
+  });
+
   it('sends nothing for a check-in that was refused', async () => {
     const remove = recordMock(RemoveUsualStoreDocument, {
       data: { removeUsualStore: null },
@@ -533,6 +657,81 @@ describe('useUsualStoreWrites while offline', () => {
       result.current.read.stores?.find(row => row.key === 'store:s2'),
     ).toMatchObject({ pinned: false });
     expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  describe('online, with an earlier write still queued', () => {
+    const sent: (string | undefined)[] = [];
+    const networkDown = new ApolloLink(
+      operation =>
+        new Observable(observer => {
+          sent.push(operation.operationName);
+          observer.error(new NetworkRequestError('Network request failed'));
+        }),
+    );
+    const render = () => {
+      const client = new ApolloClient({
+        cache: seeded(),
+        link: ApolloLink.from([createQueueLink(), networkDown]),
+        defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      });
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(ApolloProvider, { client, children });
+      return renderHook(useBoth, { wrapper }).result;
+    };
+
+    beforeEach(() => {
+      sent.length = 0;
+      useStore.setState({ isOnline: true, apiReachable: true });
+      queueStore.setCurrentUserId(USER.id);
+    });
+
+    afterEach(() => {
+      queueStore.clearCurrentUserId();
+    });
+
+    // Sent ahead of the add, the removal would find nothing and the add's
+    // replay would put the store back.
+    it('keeps a removal behind the add the network failed', async () => {
+      const result = render();
+      const giantEagle = { store: { id: 's9', name: 'Giant Eagle' } };
+
+      await drained(async () => {
+        await result.current.writes.add(giantEagle);
+        await result.current.writes.remove(giantEagle);
+      });
+
+      expect(sent).toEqual(['AddUsualStore']);
+      expect(
+        queueStore.getMutationsForUser(USER.id).map(m => m.operationName),
+      ).toEqual(['AddUsualStore', 'RemoveUsualStore']);
+    });
+
+    // The check-in adds its store on replay, so a removal sent ahead of it
+    // would be undone.
+    it("keeps an Undo's removal behind the check-in that adds the store", async () => {
+      const result = render();
+      queueStore.addMutation(
+        makeQueuedMutation({
+          ...queuedMutationFor(CreateReceiptCheckInDocument),
+          userId: USER.id,
+          orderedBy: 's3',
+        }),
+      );
+      let undo: (() => Promise<void>) | undefined;
+      act(() => {
+        undo = result.current.writes.learn(
+          { store: { id: 's3', name: 'ALDI Wilkinsburg' } },
+          Promise.resolve(true),
+        );
+      });
+
+      await drained(() => undo?.());
+
+      expect(sent).not.toContain('RemoveUsualStore');
+      expect(
+        queueStore.getMutationsForUser(USER.id).map(m => m.operationName),
+      ).toEqual(['CreateReceiptCheckIn', 'RemoveUsualStore']);
+    });
   });
 
   // A queued check-in resolves its learning as recorded: the removal queues

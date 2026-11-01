@@ -20,10 +20,11 @@ export interface PendingWrite<TInputs extends LocalInputs = LocalInputs> {
  */
 export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
   /**
-   * What the write is sent in order behind, when it changes something its input
-   * names no row for, such as a list answered whole. Else its subject orders it.
+   * What the write stays in order behind, on its way and in the queue, when it
+   * changes something its input names no row for, such as a list answered
+   * whole. Else its subject orders it.
    */
-  orderedBy?(write: PendingWrite<TInputs>): string;
+  orderedBy?(write: PendingWrite<TInputs>): string | undefined;
   /** Runs once, when the write is made, for what its caller did not pass. */
   capture?(cache: ApolloCache, variables: OperationVariables): TInputs;
   apply(cache: ApolloCache, write: PendingWrite<TInputs>): void;

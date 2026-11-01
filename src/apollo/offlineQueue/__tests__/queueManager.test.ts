@@ -814,6 +814,45 @@ describe('QueueManager', () => {
       expect(processed).not.toContain('mut-update-a');
     });
 
+    it('holds a write behind a deferred one it shares an order with', async () => {
+      const add = makeMutation({
+        id: 'mut-add',
+        orderedBy: 'usualStores:home-1',
+      });
+      const remove = makeMutation({
+        id: 'mut-remove',
+        orderedBy: 'usualStores:home-1',
+      });
+      const other = makeMutation({
+        id: 'mut-other',
+        orderedBy: 'usualStores:home-2',
+      });
+      (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+        add,
+        remove,
+        other,
+      ]);
+
+      const processed: string[] = [];
+      manager['processMutation'] = jest.fn(
+        async (mutation: QueuedMutation): Promise<ProcessingResult> => {
+          processed.push(mutation.id);
+          return mutation.id === 'mut-add'
+            ? {
+                success: false,
+                deferred: true,
+                deferralScope: 'entry',
+                mutationId: mutation.id,
+              }
+            : { success: true, mutationId: mutation.id };
+        },
+      );
+
+      await manager.processQueue();
+
+      expect(processed).toEqual(['mut-add', 'mut-other']);
+    });
+
     it('holds a whole parent chain behind a deferred root create', async () => {
       // The chain `createHome` enqueues: the pantry names the home, the items
       // name the pantry. None carries the home's id as its own subject.
@@ -1603,7 +1642,9 @@ describe('QueueManager', () => {
           );
         });
 
-        it('confirms it with no answer when the server already had it', async () => {
+        // The op applied once and its row is gone: `confirm` would write it to
+        // the root, where the server holds nothing.
+        it('drops it when the server answers the row is gone', async () => {
           mockClient.mutate.mockResolvedValue({
             data: {
               createShoppingList: {
@@ -1618,7 +1659,8 @@ describe('QueueManager', () => {
           await processMutation(queued('pending-converged'));
           jest.useFakeTimers();
 
-          expect(mockPendingWrites.confirm).toHaveBeenCalledWith('write-1');
+          expect(mockPendingWrites.drop).toHaveBeenCalledWith('write-1');
+          expect(mockPendingWrites.confirm).not.toHaveBeenCalled();
         });
 
         it('leaves a write with none to the old path', async () => {

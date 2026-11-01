@@ -2,6 +2,7 @@ import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { PendingWrites } from '#/apollo/pendingWrites/pendingWrites';
 import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
   completeSeed,
   seedFragment,
@@ -176,6 +177,21 @@ const refused = (index: number) => ({
 });
 
 describe('a check-in', () => {
+  // It adds its store to the usual ones, and a removal names that store.
+  it('keeps the order of the store it was sent with', () => {
+    const sent = (input: Record<string, unknown>) =>
+      checkIn.orderedBy?.({
+        id: 'write-1',
+        operationName: operationNameOf(CreateReceiptCheckInDocument),
+        document: CreateReceiptCheckInDocument,
+        variables: { input },
+        inputs: { pantryId: PANTRY_ID, lines: [], now: NOW },
+      });
+
+    expect(sent({ storeId: 'store-1' })).toBe('store-1');
+    expect(sent({})).toBeUndefined();
+  });
+
   it('shows every line and counts each once, however often it is rebuilt', () => {
     const screen = setup();
 

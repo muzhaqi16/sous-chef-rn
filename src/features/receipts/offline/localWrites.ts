@@ -39,6 +39,13 @@ export type CheckInInputs = {
 };
 
 export const checkIn: LocalWrite<CheckInInputs> = {
+  // It adds its store to the usual ones, so taking that store off waits for it.
+  orderedBy({ variables }) {
+    const input: unknown = variables.input;
+    return isRecord(input) && typeof input.storeId === 'string'
+      ? input.storeId
+      : undefined;
+  },
   apply(cache, { inputs: { listId, lines, now } }) {
     for (const { stack, listLineId } of lines) {
       if (stack && !stack.joined) {

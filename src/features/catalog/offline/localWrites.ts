@@ -120,6 +120,8 @@ export type UsualStoreInputs = {
   homeId: string | null;
   choice: StoreChoice;
   now: string;
+  /** How it joined, for a store the household did not pick itself. */
+  addedVia?: UsualStoreSource;
 };
 
 /** Each write answers the household's whole list, so they reach it in order. */
@@ -140,13 +142,19 @@ function writeAnsweredList(
 
 export const addUsualStore: LocalWrite<UsualStoreInputs> = {
   ...usualStoresOf,
-  apply(cache, { inputs: { homeId, choice, now } }) {
+  apply(cache, { inputs: { homeId, choice, now, addedVia } }) {
     replaceUsualStore(
       cache,
       homeId,
       storeChoiceKey(choice),
       held =>
-        held ?? localUsualStore(cache, choice, UsualStoreSource.Picked, now),
+        held ??
+        localUsualStore(
+          cache,
+          choice,
+          addedVia ?? UsualStoreSource.Picked,
+          now,
+        ),
     );
   },
   commit(cache, { inputs: { homeId } }, data) {
@@ -197,6 +205,14 @@ const itemIdOf = ({ input }: OperationVariables): string | undefined => {
     : undefined;
 };
 
+/** An Undo and the dismissal it takes back change one suggestion, which no row names. */
+const suggestionOf = {
+  orderedBy: ({ variables }: { variables: OperationVariables }) => {
+    const itemId = itemIdOf(variables);
+    return itemId ? `suggestion:${itemId}` : undefined;
+  },
+};
+
 const leaveSuggestions: LocalWrite<DismissSuggestionInputs>['apply'] = (
   cache,
   { variables, inputs: { parent } },
@@ -206,6 +222,7 @@ const leaveSuggestions: LocalWrite<DismissSuggestionInputs>['apply'] = (
 };
 
 export const dismissSuggestion: LocalWrite<DismissSuggestionInputs> = {
+  ...suggestionOf,
   apply: leaveSuggestions,
   // The answer states no list.
   commit: leaveSuggestions,
@@ -225,6 +242,7 @@ const returnSuggestion: LocalWrite<UndoDismissalInputs>['apply'] = (
 };
 
 export const undoDismissal: LocalWrite<UndoDismissalInputs> = {
+  ...suggestionOf,
   apply: returnSuggestion,
   // The answer states no list.
   commit: returnSuggestion,

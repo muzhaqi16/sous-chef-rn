@@ -1,6 +1,11 @@
 import { createElement, type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react-native';
-import { ApolloClient, ApolloLink, type InMemoryCache } from '@apollo/client';
+import {
+  ApolloClient,
+  ApolloLink,
+  Observable,
+  type InMemoryCache,
+} from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
@@ -20,6 +25,7 @@ import {
   MarkSuggestionActiveDocument,
 } from '#operations/item/item.generated';
 import { ErrorCode, SuggestionSurface } from '#/graphql/generated/schemaTypes';
+import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import type { SuggestionParent } from '#features/catalog/cache/suggestions';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { GetPantryItemSuggestionsDocument } from '#features/pantry/graphql/pantry.generated';
@@ -29,6 +35,7 @@ import { toastService } from '#/services/toastService';
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: {
     requestDrain: jest.fn(),
+    drainAfterPass: jest.fn(),
     withdrawUnqueueableWrite: jest.fn(),
   },
 }));
@@ -390,6 +397,43 @@ describe('useSuggestionDismissal while offline', () => {
   afterEach(() => {
     queueStore.clearQueueForUser(USER.id);
     useStore.setState({ user: null, isOnline: true, apiReachable: null });
+  });
+
+  // A queued dismissal counts as settled, and neither write names a row: sent
+  // first, the Undo would be undone by the dismissal's replay.
+  it('keeps an online Undo behind the dismissal the network failed', async () => {
+    useStore.setState({ isOnline: true, apiReachable: true });
+    queueStore.setCurrentUserId(USER.id);
+    const sent: (string | undefined)[] = [];
+    const networkDown = new ApolloLink(
+      operation =>
+        new Observable(observer => {
+          sent.push(operation.operationName);
+          observer.error(new NetworkRequestError('Network request failed'));
+        }),
+    );
+    const client = new ApolloClient({
+      cache: seeded(),
+      link: ApolloLink.from([createQueueLink(), networkDown]),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(ApolloProvider, { client, children });
+    const { result } = renderHook(
+      () => useSuggestionDismissal(SuggestionSurface.Pantry, PANTRY),
+      { wrapper },
+    );
+
+    dismissItem(result.current.dismissSuggestion);
+    await drainTimers();
+    pressUndo();
+    await drainTimers();
+
+    expect(sent).toEqual(['MarkSuggestionDismissed']);
+    expect(
+      queueStore.getMutationsForUser(USER.id).map(m => m.operationName),
+    ).toEqual(['MarkSuggestionDismissed', 'MarkSuggestionActive']);
+    queueStore.clearCurrentUserId();
   });
 
   // Replayed in this order, the server ends with the suggestion offered again.

@@ -67,6 +67,8 @@ export interface QueuedMutation {
   replayInputs?: ReplayInputs;
   /** The pending write it carries, for an operation with a local write. */
   pendingWrite?: { id: string; inputs: LocalInputs };
+  /** What it stays in order behind, beyond the rows it names (`LocalWrite.orderedBy`). */
+  orderedBy?: string;
 
   status: QueueStatus;
   /** When this entry was queued. The drain replays in this order. */

@@ -57,8 +57,8 @@ export function useSuggestionDismissal(
       MarkSuggestionActiveDocument,
       { input: { itemId, surface, idempotencyKey: generateEntityId() } },
       async write => {
-        // Sent after the dismissal settles, so the server cannot apply the two
-        // out of order; a dismissal that failed left nothing to undo.
+        // A dismissal that failed left nothing to undo. One on its way or
+        // queued keeps this behind it, as both share an `orderedBy`.
         const outcome = await dismissed;
         if (outcome.status === 'failed') return outcome;
         return settleMutation(() => undismiss(write), {

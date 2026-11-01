@@ -39,6 +39,20 @@ export function readUsualStores(
   );
 }
 
+/** Whether the server's own list names `key`, under any layer's copy of it. */
+export const serverListsStore = (
+  cache: ApolloCache,
+  homeId: string | null,
+  key: string,
+): boolean =>
+  cache
+    .readQuery({
+      query: UsualStoresDocument,
+      variables: { homeId },
+      optimistic: false,
+    })
+    ?.usualStores.some(entry => entryKey(entry) === key) ?? false;
+
 /**
  * The one writer of a household's usual stores: the list is replaced whole,
  * by a local write or a write's answer alike, so an entry never shows twice.

@@ -9,7 +9,7 @@ import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
 import { queueManager } from './queueManager';
 import { captureReplayInputs, hasReplayPreparation } from './prepareReplay';
-import { dependencyIdsOf, queuedSubject } from './queuedSubject';
+import { dependencyIdsOf, holdsBack } from './queuedSubject';
 import { OfflineRejectedError } from './OfflineRejectedError';
 import { QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
@@ -203,6 +203,8 @@ function enqueueAndComplete(
     const write = pendingWriteOf(operationContext, pendingWrites);
     if (write) {
       queuedMutation.pendingWrite = { id: write.id, inputs: write.inputs };
+      const orderedBy = orderOf(operation);
+      if (orderedBy) queuedMutation.orderedBy = orderedBy;
     }
 
     try {
@@ -280,12 +282,25 @@ function pendingWriteOf(context: DefaultContext, pendingWrites: PendingWrites) {
     : undefined;
 }
 
+/** Read off the variables sent: a check-in learns its store only then. */
+function orderOf(operation: ApolloLink.Operation): string | undefined {
+  const pendingWrites = pendingWritesOf(operation.client.cache);
+  const write = pendingWriteOf(operation.getContext(), pendingWrites);
+  return write
+    ? pendingWrites.orderOf({ ...write, variables: operation.variables })
+    : undefined;
+}
+
 function waitsBehindQueuedWrite(operation: ApolloLink.Operation): boolean {
   const undelivered = queueStore.getUndeliveredIds();
   if (undelivered.size === 0) return false;
-  const write = { mutation: operation.query, variables: operation.variables };
-  return [...queuedSubject(write).subjectIds, ...dependencyIdsOf(write)].some(
-    id => undelivered.has(id),
+  const write = {
+    mutation: operation.query,
+    variables: operation.variables,
+    orderedBy: orderOf(operation),
+  };
+  return [...holdsBack(write), ...dependencyIdsOf(write)].some(id =>
+    undelivered.has(id),
   );
 }
 

@@ -304,11 +304,9 @@ describe('SelectPantryItems', () => {
     ).toBeTruthy();
   });
 
-  it('treats a DuplicatePantryItemError on the bulk add as a per-item skip', async () => {
-    // The list is pre-filtered against existing catalog ids, but a race
-    // (another device adding the same item) can still return the duplicate
-    // member. The item is already in the pantry — the onboarding goal — so
-    // the flow must proceed without surfacing an error.
+  // Every add is forced, so the server joins a held stack rather than refusing
+  // it; a refusal here is a real one.
+  it('moves on from a refused add, and the summary does not claim it', async () => {
     const { useSelectableItems } = jest.requireMock(
       '#features/onboarding/hooks/useSelectableItems',
     );
@@ -324,10 +322,9 @@ describe('SelectPantryItems', () => {
         ...onboardingMocks,
         Mutation: () => ({
           createPantryItem: {
-            __typename: 'DuplicatePantryItemError',
-            message: 'Item already exists in this pantry',
-            code: 'PANTRY_ITEM_ALREADY_EXISTS',
-            existingPantryItemIds: ['existing-1'],
+            __typename: 'ValidationError',
+            message: 'That quantity is not allowed',
+            code: 'VALIDATION_FAILED',
           },
         }),
       },
@@ -340,8 +337,50 @@ describe('SelectPantryItems', () => {
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('Staples');
     const { errorService } = jest.requireMock('#/services/errorService');
     expect(errorService.reportError).not.toHaveBeenCalled();
-    // The item is in the pantry either way, so the summary may say so.
-    expect(useOnboardingProgressStore.getState().stapleItems).toBe(1);
+    expect(useOnboardingProgressStore.getState().stapleItems).toBe(0);
+  });
+
+  it('takes a staple removed on a return out of the summary', async () => {
+    useOnboardingProgressStore.setState({
+      ...initialOnboardingProgress,
+      stapleItems: 3,
+    });
+    const { useSelectableItems } = jest.requireMock(
+      '#features/onboarding/hooks/useSelectableItems',
+    );
+    useSelectableItems.mockReturnValue({
+      items: mockItems,
+      selectedItems: [],
+      toggleItem: jest.fn(),
+      isMaxReached: false,
+    });
+    const held = {
+      totalCount: 1,
+      edges: [{ node: { id: 'row-1', item: { id: 'i1' } } }],
+      pageInfo: { hasNextPage: false, endCursor: null },
+    };
+
+    renderWithApollo(<SelectPantryItems />, {
+      mocks: {
+        ...onboardingMocks,
+        Query: () => ({
+          ...onboardingMocks.Query(),
+          pantry: { id: 'p1', itemsConnection: held },
+        }),
+        PantryItemConnection: () => held,
+        Pantry: () => ({ itemsConnection: held }),
+        Mutation: () => ({
+          deletePantryItem: { __typename: 'DeletePantryItemPayload' },
+        }),
+      },
+    });
+
+    await drainTimers();
+    fireEvent.press(screen.getByTestId('action-button'));
+
+    await drainTimers();
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('Staples');
+    expect(useOnboardingProgressStore.getState().stapleItems).toBe(2);
   });
 });
 
@@ -445,12 +484,7 @@ describe('SelectPantryItems as staples', () => {
             args: { input: { storage: { storageState: string } } },
           ) => {
             states.push(args.input.storage.storageState);
-            return {
-              __typename: 'DuplicatePantryItemError',
-              message: 'Item already exists in this pantry',
-              code: 'PANTRY_ITEM_ALREADY_EXISTS',
-              existingPantryItemIds: ['existing-1'],
-            };
+            return { __typename: 'CreatePantryItemPayload' };
           },
         },
       }),

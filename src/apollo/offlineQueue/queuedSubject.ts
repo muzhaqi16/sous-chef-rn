@@ -172,6 +172,14 @@ export function queuedSubject({
   return { subjectIds, sourceIds, mintedIds };
 }
 
+/** What a later write waits on while this one is undelivered: its rows and its order. */
+export function holdsBack(
+  write: Pick<QueuedMutation, 'mutation' | 'variables' | 'orderedBy'>,
+): string[] {
+  const { subjectIds } = queuedSubject(write);
+  return write.orderedBy ? [...subjectIds, write.orderedBy] : subjectIds;
+}
+
 /**
  * Input keys that name the PARENT a queued write attaches to. A deferred
  * parent holds these children back; the keys stay out of a write's
