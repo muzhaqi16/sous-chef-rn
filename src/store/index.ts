@@ -37,10 +37,7 @@ import { createNavigationSlice } from './slices/navigationSlice';
 import type { TelemetryState } from './slices/telemetrySlice';
 import { createTelemetrySlice } from './slices/telemetrySlice';
 import type { NetworkState } from './slices/networkSlice';
-import {
-  createNetworkSlice,
-  hydrateOfflineModeFromStorage,
-} from './slices/networkSlice';
+import { createNetworkSlice } from './slices/networkSlice';
 import { storage, zustandStorage } from '#/store/deviceStorage';
 import { STORAGE_KEY } from '#/store/persistedKeys';
 import { pickFresherSessionTokens } from '#/services/auth/sessionTokens';
@@ -163,12 +160,6 @@ export const handleStoreRehydration = (
         );
       })
       .catch(error => logger.warn('Loading telemetry failed', error));
-  }
-
-  // Outside persist (see partialize) so the last setting is readable before
-  // GetUserSettings resolves.
-  if (state?.setOfflineModeEnabled) {
-    hydrateOfflineModeFromStorage(state.setOfflineModeEnabled);
   }
 };
 

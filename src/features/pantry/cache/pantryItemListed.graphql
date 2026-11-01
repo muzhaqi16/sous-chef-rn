@@ -1,7 +1,7 @@
 # What a listed pantry item shows: every field the list's cells read
-# (`PantryItemCard_pantryItem`, `PantryActionModal_pantryItem`), so `GetPantry`
-# fetches them and each cell reads its own fragment by id
-# (`listedFragmentsCoverCells.test.ts`).
+# (`PantryItemCard_pantryItem`, `PantryActionModal_pantryItem`) and its edit form
+# (`PantryItemForm_pantryItem`), so `GetPantry` fetches them and each reads its
+# own fragment by id, offline too (`listedFragmentsCoverCells.test.ts`).
 fragment pantryItem_listed on PantryItem {
   version
   id
@@ -98,10 +98,17 @@ fragment pantryItem_listed on PantryItem {
   }
   consumeUnit {
     id
+    name
+    symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   storageLocation {
     id
     name
+    type
   }
   packageBreakdown {
     count
@@ -153,6 +160,7 @@ fragment pantryItem_listed on PantryItem {
   itemId
   displayUnit {
     id
+    name
     symbol
     localizedSymbolForms {
       one
@@ -162,6 +170,39 @@ fragment pantryItem_listed on PantryItem {
     hasStandardCountFactor
     baseUnitId
     conversionFactor
+    displayAsFraction
     commonFractions
+  }
+  # What the edit form reads as well, so a listed row opens with no read.
+  pantryId
+  minQuantity
+  restockQuantity
+  condition
+  storageNotes
+  tags
+  brand {
+    version
+    id
+    name
+  }
+  packageSize {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
   }
 }

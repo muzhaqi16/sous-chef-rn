@@ -13,7 +13,8 @@ import {
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
+import { createOfflineReadLink } from '#/apollo/links/offlineReadLink';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
 import { kitTestIDs } from '#components/testIDs';
@@ -821,7 +822,7 @@ describe('ShoppingListItemDetail', () => {
 
   // The list's row caches a subset of what the detail selects, so the detail's
   // own query is an incomplete cache read until it has answered once. Known
-  // offline, the real `offlineModeLink` answers that miss with `data: null`;
+  // offline, the real `offlineReadLink` answers that miss with `data: null`;
   // before the device reports its link (or with only the breaker open) the miss
   // goes to the network and fails there with `data: undefined`.
   describe('when the detail query cannot be answered', () => {
@@ -895,7 +896,7 @@ describe('ShoppingListItemDetail', () => {
       const client = new ApolloClient({
         cache: makeCache(),
         link: ApolloLink.from([
-          createOfflineModeLink(),
+          createOfflineReadLink(),
           new MockLink([listRowMock(), detail].map(completeMockedResponse)),
         ]),
         defaultOptions: APOLLO_DEFAULT_OPTIONS,
@@ -939,6 +940,7 @@ describe('ShoppingListItemDetail', () => {
 
       await drainTimers();
       expect(screen.getByText('Bakery')).toBeTruthy();
+      expect(screen.getByTestId(shoppingListTestIDs.itemPartial)).toBeTruthy();
       // Never fetched, so neither "no history" nor "added: never" is known.
       expect(screen.queryByText('No purchase history available')).toBeNull();
       expect(screen.queryByText('Additional Details')).toBeNull();

@@ -119,7 +119,6 @@ Your kitchen inventory, tracked accurately enough to be useful.
   automatically on reconnect.
 - A banner tells you what's going on — offline, server unreachable, _N_ changes
   pending, back online and syncing.
-- An explicit **Offline Mode** toggle for when you want cached data only.
 
 ### 🔔 Notifications
 

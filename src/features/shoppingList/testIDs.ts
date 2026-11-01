@@ -98,6 +98,7 @@ export const shoppingListTestIDs = {
   purchasePriceNote: 'purchase-price-note',
 
   itemDetail: 'shopping-item-detail',
+  itemPartial: 'shopping-item-partial',
   itemDetailEditButton: 'shopping-item-edit-button',
   itemDetailReportPhotoButton: 'shopping-item-report-photo-button',
   itemDetailHeroImage: 'shopping-item-hero-image',

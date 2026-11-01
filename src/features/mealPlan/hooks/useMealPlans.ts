@@ -23,8 +23,14 @@ import {
   resolveCurrentMealPlan,
 } from '#features/mealPlan/utils/mealPlanFilters';
 
-/** `useOfflineTabPreloading` warms the unfiltered list with these variables. */
 const PAGE_SIZE = 20;
+
+/** The Plan tab's list, which `useOfflineTabPreloading` warms. */
+export const UNFILTERED_PLANS_VARIABLES = {
+  first: PAGE_SIZE,
+  filters: undefined,
+  orderBy: { startDate: SortOrder.Desc },
+};
 
 /** Plans overlapping today, nearest first: a handful covers every real case. */
 const CURRENT_PLAN_PAGE_SIZE = 3;

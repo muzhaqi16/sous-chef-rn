@@ -60,7 +60,6 @@ beforeEach(() => {
   Object.assign(mockStoreState, {
     isOnline: true,
     apiReachable: true,
-    offlineModeEnabled: false,
     refreshToken: 'refresh-1',
     accessToken: 'access-1',
   });
@@ -200,9 +199,9 @@ describe('drainPendingRevocations', () => {
     expect(parked).toHaveLength(2);
   });
 
-  it('sends nothing while the network is withheld', async () => {
+  it('sends nothing while the API is unavailable', async () => {
     parked = [{ refreshToken: 'old-1', accessToken: null }];
-    mockStoreState.offlineModeEnabled = true;
+    mockStoreState.apiReachable = false;
 
     await loadRevocation().drainPendingRevocations();
 

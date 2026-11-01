@@ -3,6 +3,7 @@ import React from 'react';
 import { render, screen } from '@testing-library/react-native';
 import { OfflineGate } from '#features/shoppingList/components/OfflineGate';
 import { Text } from '#components/atoms/Text';
+import { useStore } from '#store';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: ({ name }: { name: string }) => {
@@ -11,14 +12,9 @@ jest.mock('#components/atoms/Icon', () => ({
   },
 }));
 
-const mockUseIsEffectivelyOffline = jest.fn(() => false);
-jest.mock('#hooks/settings/useOfflineMode', () => ({
-  useIsEffectivelyOffline: () => mockUseIsEffectivelyOffline(),
-}));
-
 describe('OfflineGate', () => {
   beforeEach(() => {
-    mockUseIsEffectivelyOffline.mockReturnValue(false);
+    useStore.setState({ isOnline: true, apiReachable: true });
   });
 
   it('renders children when online', () => {
@@ -30,8 +26,11 @@ describe('OfflineGate', () => {
     expect(screen.getByText('Online Content')).toBeTruthy();
   });
 
-  it('shows offline message when offline in replace mode', () => {
-    mockUseIsEffectivelyOffline.mockReturnValue(true);
+  it.each([
+    ['no connection', { isOnline: false, apiReachable: null }],
+    ['the API down on working Wi-Fi', { isOnline: true, apiReachable: false }],
+  ])('shows offline message with %s in replace mode', (_cause, network) => {
+    useStore.setState(network);
     render(
       <OfflineGate message="Custom offline message">
         <Text role="body">Online Content</Text>
@@ -42,7 +41,7 @@ describe('OfflineGate', () => {
   });
 
   it('renders nothing when offline in hide mode', () => {
-    mockUseIsEffectivelyOffline.mockReturnValue(true);
+    useStore.setState({ isOnline: false, apiReachable: null });
     const { toJSON } = render(
       <OfflineGate mode="hide">
         <Text role="body">Online Content</Text>
@@ -52,7 +51,7 @@ describe('OfflineGate', () => {
   });
 
   it('renders compact layout when compact prop is true', () => {
-    mockUseIsEffectivelyOffline.mockReturnValue(true);
+    useStore.setState({ isOnline: false, apiReachable: null });
     render(
       <OfflineGate compact message="Search unavailable">
         <Text role="body">Online Content</Text>

@@ -38,7 +38,6 @@ afterEach(() => {
   jest.useRealTimers();
 });
 
-let mockIsOnline = true;
 const mockState = {
   hasInitializedHomeData: true,
   isPantryQueryComplete: false,
@@ -47,6 +46,10 @@ const mockState = {
   lastCategoriesFetchedAt: null as number | null,
   lastBrandsFetchedAt: null as number | null,
   lastStoresFetchedAt: null as number | null,
+};
+const mockNetwork = {
+  isOnline: true,
+  apiReachable: true as boolean | null,
 };
 const mockSetters = {
   setCachedUnits: jest.fn(),
@@ -60,17 +63,11 @@ const mockSetters = {
 };
 
 jest.mock('#store/useAppStore', () => ({
-  useAppStore: (selector: (state: typeof mockState) => unknown) =>
-    selector(mockState),
-  useIsOnline: () => mockIsOnline,
+  useAppStore: (
+    selector: (state: typeof mockState & typeof mockNetwork) => unknown,
+  ) => selector({ ...mockState, ...mockNetwork }),
   useIsPantryQueryComplete: () => mockState.isPantryQueryComplete,
 }));
-
-const mockNetwork = {
-  isOnline: true,
-  apiReachable: true as boolean | null,
-  offlineModeEnabled: false,
-};
 
 jest.mock('#store', () => ({
   useStore: { getState: () => ({ ...mockSetters, ...mockNetwork }) },
@@ -100,7 +97,7 @@ function referenceMocks() {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockIsOnline = true;
+  mockNetwork.isOnline = true;
   mockNetwork.apiReachable = true;
   mockState.hasInitializedHomeData = true;
   mockState.isPantryQueryComplete = false;
@@ -129,8 +126,12 @@ describe('useDataPreloading', () => {
     ]);
   });
 
-  it('does not warm when offline', async () => {
-    mockIsOnline = false;
+  it.each([
+    ['no connection', false, null],
+    ['the API down on working Wi-Fi', true, false],
+  ])('does not warm with %s', async (_cause, isOnline, apiReachable) => {
+    mockNetwork.isOnline = isOnline;
+    mockNetwork.apiReachable = apiReachable;
     renderHookWithApollo(() => useDataPreloading(), {
       operationMocks: referenceMocks(),
     });

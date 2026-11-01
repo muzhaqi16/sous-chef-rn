@@ -598,8 +598,6 @@
     "syncing": "Sincronizando…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Modo sin conexión activado",
-    "offlineModeDetail": "Solo se usa lo guardado en este dispositivo",
     "deviceOfflineTitle": "Sin conexión",
     "deviceOfflineDetail": "Los cambios se sincronizarán cuando vuelvas a tener conexión",
     "deviceOfflinePendingDetail_one": "{{count}} cambio se sincronizará cuando vuelvas a tener conexión",
@@ -625,7 +623,9 @@
     "noPantryItems": "Tu despensa está vacía",
     "noShoppingListItems": "Tu lista de la compra está vacía",
     "noInvitations": "Sin invitaciones pendientes",
-    "noResultsFor": "No hay resultados para \"{{query}}\""
+    "noResultsFor": "No hay resultados para \"{{query}}\"",
+    "noHeldMatchFor": "Nada en este dispositivo coincide con \"{{query}}\"",
+    "widerSearchNeedsConnection": "Buscar en todo necesita conexión."
   },
   "settings": {
     "displayLanguage": "Idioma de visualización",
@@ -634,11 +634,6 @@
     "unitMetric": "Métrico (kg, g, L, mL)",
     "unitImperial": "Imperial (lb, oz, gal, fl oz)",
     "unitSystemDefault": "Predeterminado del sistema",
-    "syncOffline": "Sincronización y modo sin conexión",
-    "autoSync": "Sincronización automática",
-    "autoSyncDesc": "Sincroniza tus datos automáticamente cuando estés en línea",
-    "offlineMode": "Modo sin conexión",
-    "offlineModeDesc": "Usa solo datos almacenados. Desactiva búsqueda y compartir.",
     "features": "Funcionalidades",
     "showTutorials": "Mostrar tutoriales",
     "showTutorialsDesc": "Muestra consejos y tutoriales útiles",
@@ -747,7 +742,9 @@
     "loading": "Cargando…",
     "errorTitle": "No se pudo cargar",
     "errorBody": "Algo salió mal al cargar. Comprueba tu conexión e inténtalo de nuevo.",
-    "offlineBody": "Estás sin conexión y esto aún no se ha descargado. Vuelve a conectarte para cargarlo."
+    "offlineBody": "Estás sin conexión y esto aún no se ha descargado. Vuelve a conectarte para cargarlo.",
+    "partialTitle": "El resto necesita conexión",
+    "partialBody": "Esto es lo que tu dispositivo tiene por ahora."
   },
   "tabBar": {
     "actionButton": "Botón de acción",

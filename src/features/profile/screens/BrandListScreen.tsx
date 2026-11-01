@@ -13,6 +13,7 @@ import { ListItem } from '#components/molecules/ListItem';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { TextEditBottomSheet } from '#components/organisms/TextEditBottomSheet/TextEditBottomSheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useBrandLists } from '#features/profile/hooks/useBrandLists';
 import { AddBrandSheet } from '#features/profile/components/AddBrandSheet';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -25,8 +26,16 @@ export const BrandListScreen: React.FC<BrandListScreenProps> = ({ route }) => {
   const { listId } = route.params;
   const { t } = useTranslation();
   const { goBack } = useAppNavigation();
-  const { lists, setEnabled, renameList, deleteList, addBrand, removeBrand } =
-    useBrandLists();
+  const {
+    lists,
+    state,
+    refetch,
+    setEnabled,
+    renameList,
+    deleteList,
+    addBrand,
+    removeBrand,
+  } = useBrandLists();
   const [adding, setAdding] = useState(false);
   const [renaming, setRenaming] = useState(false);
   const list = lists.find(candidate => candidate.id === listId);
@@ -60,6 +69,14 @@ export const BrandListScreen: React.FC<BrandListScreenProps> = ({ route }) => {
           : []
       }
     >
+      {state === 'offline' || state === 'error' ? (
+        <DataStateView
+          state={state}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      ) : null}
       {!!list && (
         <View style={styles.content}>
           <SettingSwitch

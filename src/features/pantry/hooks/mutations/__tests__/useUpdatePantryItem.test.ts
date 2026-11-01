@@ -1,10 +1,20 @@
+import { gql } from '@apollo/client';
 import { act } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
+import { alertService } from '#/services/alertService';
 import {
+  recordMock,
   renderHookWithApollo,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { StorageState, UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  StorageState,
+  StorageType,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { UseUpdatePantryItem_PantryItemFragmentDoc } from '../useUpdatePantryItem.generated';
 import type { DirtyFieldFlags, FormDataInput } from '../types';
@@ -19,6 +29,11 @@ jest.mock('../utils', () => ({
       const input: Record<string, unknown> = {};
       if (dirtyFields.itemName) input.itemName = data.itemName;
       if (dirtyFields.notes) input.storageNotes = data.notes;
+      if (dirtyFields.brand) input.brand = { name: data.brand };
+      if (dirtyFields.location) input.storage = { location: null };
+      if (dirtyFields.consumeUnitId) {
+        input.consumeUnit = { id: data.consumeUnitId };
+      }
       if (dirtyFields.netWeight) {
         input.netWeight = {
           netWeight: Number(data.netWeight),
@@ -91,7 +106,6 @@ const createFormData = (
   storageState: StorageState.Ambient,
   location: '',
   notes: 'Fresh milk',
-  category: '',
   unit: 'kg',
   ...overrides,
 });
@@ -139,6 +153,60 @@ describe('useUpdatePantryItem', () => {
     );
 
     expect(stands).toBe(true);
+  });
+
+  it("edits a stack known only from its list row, at that row's version", async () => {
+    const cache = makeCache();
+    seedFragment(cache, {
+      fragment: PantryItem_ListedFragmentDoc,
+      fragmentName: 'pantryItem_listed',
+      data: { __typename: 'PantryItem', id: 'item-1', version: 7 },
+    });
+    const update = recordMock(UpdatePantryItemDocument, {
+      data: { updatePantryItem: null },
+    });
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache,
+      operationMocks: [update.mock],
+    });
+
+    const stands = await drained(() =>
+      result.current.updatePantryItemFields({
+        itemId: 'item-1',
+        input: createFormData(),
+        dirtyFields: { itemName: true },
+        selectedLocationId: null,
+        selectedBrandId: null,
+      }),
+    );
+
+    expect(stands).toBe(true);
+    expect(update.fired[0]).toMatchObject({
+      input: { id: 'item-1', version: 7 },
+    });
+  });
+
+  it('says so when the device holds no such stack, rather than saving nothing', async () => {
+    const alert = jest
+      .spyOn(alertService, 'alert')
+      .mockImplementation(() => {});
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache: makeCache(),
+    });
+
+    const stands = await drained(() =>
+      result.current.updatePantryItemFields({
+        itemId: 'not-held',
+        input: createFormData(),
+        dirtyFields: { itemName: true },
+        selectedLocationId: null,
+        selectedBrandId: null,
+      }),
+    );
+
+    expect(stands).toBe(false);
+    expect(alert).toHaveBeenCalledTimes(1);
+    alert.mockRestore();
   });
 
   it('resolves false when the server refuses the write', async () => {
@@ -248,6 +316,105 @@ describe('useUpdatePantryItem — a package size typed in another unit', () => {
   });
 });
 
+describe('useUpdatePantryItem — what shows at once', () => {
+  const SHOWN = gql`
+    fragment ShownProbe on PantryItem {
+      id
+      brand {
+        version
+        id
+        name
+      }
+      consumeUnit {
+        id
+        symbol
+      }
+      storageLocation {
+        id
+        name
+        type
+      }
+    }
+  `;
+
+  async function shownWhilePending(
+    input: Partial<FormDataInput>,
+    dirtyFields: DirtyFieldFlags,
+    picks: { selectedBrandId?: string } = {},
+  ) {
+    const cache = seedItem();
+    const { result } = renderHookWithApollo(() => useUpdatePantryItem({}), {
+      cache,
+      operationMocks: [
+        {
+          request: { query: UpdatePantryItemDocument, variables: () => true },
+          result: { data: { updatePantryItem: null } },
+        },
+      ],
+    });
+    let shown: unknown = null;
+    await act(async () => {
+      void result.current.updatePantryItemFields({
+        itemId: 'item-1',
+        input: createFormData(input),
+        dirtyFields,
+        selectedLocationId: null,
+        selectedBrandId: picks.selectedBrandId ?? null,
+      });
+      shown = cache.readFragment({
+        id: cache.identify({ __typename: 'PantryItem', id: 'item-1' }),
+        fragment: SHOWN,
+        optimistic: true,
+        returnPartialData: true,
+      });
+    });
+    return shown;
+  }
+
+  it('shows a picked brand', async () => {
+    const shown = await shownWhilePending(
+      { brand: 'Sunrise' },
+      { brand: true },
+      { selectedBrandId: 'brand-1' },
+    );
+
+    expect(shown).toMatchObject({
+      brand: { id: 'brand-1', name: 'Sunrise', version: 0 },
+    });
+  });
+
+  it('shows a typed brand and clears an emptied one', async () => {
+    expect(
+      await shownWhilePending({ brand: 'Sunrise' }, { brand: true }),
+    ).toMatchObject({ brand: { name: 'Sunrise' } });
+    expect(
+      await shownWhilePending({ brand: ' ' }, { brand: true }),
+    ).toMatchObject({ brand: null });
+  });
+
+  it('shows the unit a stack is used in', async () => {
+    const shown = await shownWhilePending(
+      { consumeUnit: 'cup', consumeUnitId: 'unit-cup' },
+      { consumeUnitId: true },
+    );
+
+    expect(shown).toMatchObject({
+      consumeUnit: { id: 'unit-cup', symbol: 'cup' },
+    });
+  });
+
+  it('shows a typed location and clears an emptied one', async () => {
+    expect(
+      await shownWhilePending({ location: 'Garage' }, { location: true }),
+    ).toMatchObject({
+      storageLocation: { name: 'Garage', type: StorageType.Custom },
+    });
+    expect(
+      await shownWhilePending({ location: '' }, { location: true }),
+    ).toMatchObject({ storageLocation: null });
+  });
+});
+
 describe('useUpdatePantryItem — local-first cache behavior', () => {
   const readItemName = (cache: ReturnType<typeof seedCache>) =>
     cache.readFragment<{ itemName: string }>({
@@ -331,7 +498,6 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
     // A refused union payload resolves as data, so the mutation's onError
     // never fires — the hook has to tell the user itself. The refusal names a
     // field, so its own sentence is what gets shown.
-    const { alertService } = require('#/services/alertService');
     // The app's copy for `field: 'itemName'`, not the server's "Name is
     // invalid" — the server has no locale to render that in.
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -370,7 +536,6 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
 
     await drainTimers();
     expect(readItemName(cache)).toBe('Milk');
-    const { alertService } = require('#/services/alertService');
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       'Failed to update item',
@@ -411,7 +576,6 @@ describe('useUpdatePantryItem — local-first cache behavior', () => {
 
     await drainTimers();
     expect(readItemName(cache)).toBe('Milk');
-    const { alertService } = require('#/services/alertService');
     expect(alertService.alert).toHaveBeenCalledWith(
       'Error',
       "This item's unit changes through the Unit field, which shows what happens to its stock before saving.",

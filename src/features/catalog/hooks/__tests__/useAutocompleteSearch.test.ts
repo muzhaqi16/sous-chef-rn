@@ -3,15 +3,18 @@ import type { RootState } from '#store/index';
 import type { AutocompleteSearchConfig } from '#features/catalog/hooks/useAutocompleteSearch';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 
-// Mock useAppStore to control isOnline
+// Mock useAppStore to control the network state
 let mockIsOnline = true;
+let mockApiReachable: boolean | null = null;
 jest.mock('#store/useAppStore', () => {
   const getState = () =>
-    ({ isOnline: mockIsOnline } as Partial<RootState> as RootState);
+    ({
+      isOnline: mockIsOnline,
+      apiReachable: mockApiReachable,
+    } as Partial<RootState> as RootState);
   return {
     useAppStore: <T>(selector: (state: RootState) => T): T =>
       selector(getState()),
-    useIsOnline: () => getState().isOnline,
   };
 });
 
@@ -38,6 +41,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockApiReachable = null;
 });
 
 afterEach(() => {
@@ -172,6 +176,33 @@ describe('useAutocompleteSearch', () => {
 
     expect(result.current.shouldSearch).toBe(false);
     expect(mockSearch).not.toHaveBeenCalled();
+  });
+
+  it('answers from the fallback with the API down, and sends nothing', () => {
+    mockApiReachable = false;
+    const mockSearch = jest.fn();
+    const fallback: TestItem[] = [{ id: '1', name: 'Held match' }];
+    const { result } = renderHook(() =>
+      useAutocompleteSearch(
+        makeConfig({
+          search: mockSearch,
+          fallbackItems: fallback,
+          filterFallback: (term, items) =>
+            items.filter(item => item.name.toLowerCase().includes(term)),
+        }),
+      ),
+    );
+
+    act(() => {
+      result.current.handleSearchTermChange('held');
+    });
+    act(() => {
+      jest.advanceTimersByTime(500);
+    });
+
+    expect(result.current.shouldSearch).toBe(false);
+    expect(mockSearch).not.toHaveBeenCalled();
+    expect(result.current.displayItems).toEqual(fallback);
   });
 
   it('triggers search when offline but requiresNetwork is false', () => {

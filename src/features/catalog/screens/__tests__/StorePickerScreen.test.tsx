@@ -102,7 +102,7 @@ beforeEach(() => {
 afterEach(() => {
   jest.useRealTimers();
   jest.restoreAllMocks();
-  useStore.setState({ isOnline: true });
+  useStore.setState({ isOnline: true, apiReachable: null });
   useStorePickerStore.setState({ lastZip: null });
 });
 
@@ -176,16 +176,24 @@ describe('StorePickerScreen', () => {
     expect(add.fired).toEqual([]);
   });
 
-  it("says finding stores needs a connection, and lists the household's", () => {
-    useStore.setState({ isOnline: false });
-    renderPicker([]);
+  it.each([
+    ['no connection', { isOnline: false, apiReachable: null }],
+    ['the API down on working Wi-Fi', { isOnline: true, apiReachable: false }],
+  ])(
+    "says finding stores needs a connection with %s, and lists the household's",
+    (_cause, network) => {
+      useStore.setState(network);
+      renderPicker([]);
 
-    expect(screen.getByText('Finding stores needs a connection')).toBeTruthy();
-    expect(screen.getByText('Giant Eagle Banksville')).toBeTruthy();
-    expect(
-      screen.queryByPlaceholderText('Search by store name or address'),
-    ).toBeNull();
-  });
+      expect(
+        screen.getByText('Finding stores needs a connection'),
+      ).toBeTruthy();
+      expect(screen.getByText('Giant Eagle Banksville')).toBeTruthy();
+      expect(
+        screen.queryByPlaceholderText('Search by store name or address'),
+      ).toBeNull();
+    },
+  );
 
   it('searches a store name as typed, never autocorrected', () => {
     renderPicker([]);

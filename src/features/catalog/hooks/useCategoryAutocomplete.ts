@@ -4,7 +4,7 @@ import { AutocompleteCategoriesDocument } from '#operations/item/item.generated'
 import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
 import { CategoryType } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
 
 interface UseCategoryAutocompleteOptions {
@@ -24,7 +24,6 @@ export function useCategoryAutocomplete(
   // requested category type so offline matches stay type-correct.
   const cachedCategories = useAppStore(state => state.cachedCategories);
   const fallbackItems = cachedCategories.filter(c => c.type === categoryType);
-  const isOnline = useIsOnline();
 
   const search = (term: string) => {
     void searchCategories({
@@ -43,9 +42,8 @@ export function useCategoryAutocomplete(
       []) as CategorySuggestion[];
   };
 
-  // Only serve from the warmed cache when offline. The cache is the first ~100
-  // categories (GetCategories), so online we must still hit the server search
-  // rather than cap results to the cached slice.
+  // The warmed cache is the first ~100 categories (GetCategories), so online the
+  // server search runs rather than capping results to the cached slice.
   const autocomplete = useAutocompleteSearch<CategorySuggestion>({
     search,
     getResults,
@@ -57,7 +55,6 @@ export function useCategoryAutocomplete(
     fallbackItems,
     filterFallback: filterByName,
     maxResults: 5,
-    localFirst: !isOnline,
   });
 
   return autocomplete;

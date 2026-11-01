@@ -5,7 +5,8 @@ import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
 import { useHybridPantrySearch } from '#features/pantry/hooks/useHybridPantrySearch';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useShallow } from 'zustand/shallow';
 import {
   type LocationFilter,
@@ -58,7 +59,7 @@ export function usePantryScreen() {
 
   // 4. Location filter + pantry management + hybrid search
   const [locationFilter, setLocationFilter] = useState<LocationFilter>('all');
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
 
   const locationQueryFilter = locationFilterToQueryFilter(locationFilter);
   const queryFilter = locationQueryFilter;
@@ -94,7 +95,7 @@ export function usePantryScreen() {
   });
 
   // Adjusting state during render: flip mode once the true total is known.
-  const nextServerMode = isOnline && (stats?.totalItems ?? 0) > PAGE_SIZE.MAX;
+  const nextServerMode = !isOffline && (stats?.totalItems ?? 0) > PAGE_SIZE.MAX;
   if (nextServerMode !== serverMode) {
     setServerMode(nextServerMode);
   }
@@ -121,7 +122,7 @@ export function usePantryScreen() {
     totalCount,
     hasMore,
     loading,
-    isOnline,
+    serverAvailable: !isOffline,
   });
 
   const pantryItems = activeItems;
@@ -326,6 +327,7 @@ export function usePantryScreen() {
     loadMore,
     hasMore,
     isLoadingMore,
+    mayHoldMore: isOffline && hasMore,
 
     // Location filter
     locationFilter,

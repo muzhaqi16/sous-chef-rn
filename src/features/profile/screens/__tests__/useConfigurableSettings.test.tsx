@@ -185,8 +185,6 @@ function buildMocks() {
           theme: AppTheme.Light,
           compactMode: false,
           showTutorials: true,
-          autoSync: true,
-          offlineMode: false,
           shareUsageData: false,
           shareWithPartners: false,
           personalizedAds: false,

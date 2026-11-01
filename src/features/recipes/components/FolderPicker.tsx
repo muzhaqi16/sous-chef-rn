@@ -26,6 +26,7 @@ import { FolderListItem } from '#features/recipes/components/FolderPicker/Folder
 import { ManageFolderSheet } from '#features/recipes/components/FolderPicker/ManageFolderSheet';
 import { resolveFolderLongPress } from '#features/recipes/utils/folderProtection';
 import { identity, useLocalSearch } from '#hooks/search/useLocalSearch';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { Divider } from '#components/atoms/Divider';
 
 // Every row is the same component, so one recycling pool is correct.
@@ -38,6 +39,8 @@ interface FolderPickerBaseProps {
   onSelect: (folder: string | null) => void;
   onCancel: () => void;
   loading?: boolean;
+  /** Why the folders could not be read, shown in place of an empty picker. */
+  unavailable?: { state: 'offline' | 'error'; onRetry: () => void };
   /** Default true; false for filter-only mode. */
   allowCreate?: boolean;
   folderActionLoading?: boolean;
@@ -73,6 +76,7 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
   onSelect,
   onCancel,
   loading = false,
+  unavailable,
   allowCreate = true,
   onRenameFolder,
   onDeleteFolder,
@@ -337,7 +341,12 @@ export const FolderPicker: React.FC<FolderPickerProps> = ({
               </AppPressable>
             ))}
 
-          {loading ? (
+          {unavailable ? (
+            <DataStateView
+              state={unavailable.state}
+              onRetry={unavailable.onRetry}
+            />
+          ) : loading ? (
             <View style={styles.centeredSpinner}>
               <Text role="body" tone="secondary">
                 {t('folderPicker.loading')}

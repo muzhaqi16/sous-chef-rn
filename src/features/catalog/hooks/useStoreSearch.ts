@@ -1,6 +1,7 @@
 import { skipToken, useLazyQuery, useQuery } from '@apollo/client/react';
 import { logger } from '#/utils/environment';
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import { filterByTerm, matchesTerm } from '#hooks/search/useLocalSearch';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -61,7 +62,7 @@ export function useStoreSearch({
   listBeforeTyping = true,
   maxResults = 10,
 }: StoreSearchOptions = {}) {
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
   const { stores: usualStores } = useUsualStores(household?.homeId ?? null, {
     fetchPolicy: 'cache-first',
     skip: !household,
@@ -90,14 +91,13 @@ export function useStoreSearch({
     fallbackItems: cachedStores,
     filterFallback: filterByName,
     maxResults,
-    localFirst: !isOnline,
   });
 
   const typed = useDebouncedValue(byName.searchTerm.trim(), DEBOUNCE_MS);
   const search = typed.length >= MIN_TERM ? typed : null;
   const nearby = useQuery(
     NearbyStoresDocument,
-    place && isOnline
+    place && !isOffline
       ? {
           variables: {
             input: {
@@ -116,7 +116,7 @@ export function useStoreSearch({
   const added = new Set(usualStores?.map(row => row.key));
   // A skipped query keeps its last answer, so only the active one is read.
   const found: { store: FoundStore; distanceKm: number | null }[] | null =
-    !isOnline && usualStores
+    isOffline && usualStores
       ? null
       : place
       ? nearby.data?.nearbyStores ?? null
@@ -141,15 +141,15 @@ export function useStoreSearch({
   }
 
   // Offline, the household's own stores stand in, narrowed by the term.
-  const offline =
-    !isOnline && usualStores
+  const heldStores =
+    isOffline && usualStores
       ? filterByTerm(usualStores, byName.searchTerm, [
           ({ choice }) => (choice.store ?? choice.chain).name,
         ])
       : null;
 
-  const options: StoreOption[] = offline
-    ? [...offline]
+  const options: StoreOption[] = heldStores
+    ? [...heldStores]
     : [...chainsNamed.values(), ...(stores ?? [])];
   const pending = place ? nearby.loading : byName.searchPending;
   const term = byName.searchTerm.trim();
@@ -184,6 +184,6 @@ export function useStoreSearch({
         : null,
     /** The zip searched near is not one the API has on file. */
     zipRefused: refusal?.code === ErrorCode.ValidationFailed,
-    isOnline,
+    isOffline,
   };
 }

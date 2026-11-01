@@ -334,7 +334,7 @@ describe('usePantryAnalytics', () => {
 
   /**
    * These queries are filtered, so every date range is its own cache entry.
-   * Offline, switching the range is a guaranteed miss and `offlineModeLink`
+   * Offline, switching the range is a guaranteed miss and `offlineReadLink`
    * answers with a synthetic error — which must not reach the screen as a red
    * chart error, because nothing has actually failed.
    */

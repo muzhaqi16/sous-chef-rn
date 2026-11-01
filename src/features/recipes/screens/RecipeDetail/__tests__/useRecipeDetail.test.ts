@@ -13,6 +13,10 @@ import type {
 import { useRecipeDetail } from '../useRecipeDetail';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import {
+  recordOpenedCatalogRecipe,
+  useOpenedCatalogRecipesStore,
+} from '#features/recipes/store/openedCatalogRecipes';
 
 type RecipeData = ReturnType<typeof useRecipeData>;
 type BackendRecipe = RecipeData['backendRecipe'];
@@ -139,11 +143,23 @@ afterEach(() => {
 beforeEach(() => {
   jest.clearAllMocks();
   useRoute.mockReturnValue({ params: {} });
+  useOpenedCatalogRecipesStore.setState({ recipeIds: {} });
   mockUseRecipeData.mockImplementation(() => mockRecipeDataReturn);
 });
 
 describe('useRecipeDetail', () => {
   describe('a recipe opened by id', () => {
+    it('hands the data hook what its row showed', () => {
+      const row = { name: 'Lentil soup', imageUrl: 'https://img/soup.jpg' };
+      useRoute.mockReturnValue({ params: { recipeId: 'r1', row } });
+
+      renderHookWithApollo(() => useRecipeDetail());
+
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipeId: 'r1', hint: row }),
+      );
+    });
+
     it('loads it by that id and never opens a catalog recipe', () => {
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
@@ -251,6 +267,25 @@ describe('useRecipeDetail', () => {
         hint: otherProvider,
         openFailure: null,
       });
+    });
+
+    it('finds a recipe opened before when it cannot be opened now', async () => {
+      recordOpenedCatalogRecipe(
+        { provider: HINT.provider, externalId: HINT.externalId },
+        'held-recipe',
+      );
+      mockOpenCatalogRecipe.mockResolvedValueOnce({
+        opened: false,
+        failure: 'Not available offline',
+      });
+      useRoute.mockReturnValue({ params: { catalog: HINT } });
+
+      renderHookWithApollo(() => useRecipeDetail());
+      await drainTimers();
+
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipeId: 'held-recipe', openFailure: null }),
+      );
     });
 
     it('hands the data hook the reason it could not be opened', async () => {

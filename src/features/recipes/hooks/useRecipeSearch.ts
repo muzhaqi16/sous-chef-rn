@@ -206,6 +206,8 @@ export function useRecipeSearch() {
   // A changed `next` or `resume` identity tells a page in flight that a new
   // search replaced the state.
   const [results, setResults] = useState<Results>(NO_RESULTS);
+  // The last search never reached the API: it runs again once it can.
+  const [waitingForApi, setWaitingForApi] = useState(false);
 
   const supersede = () => {
     generationRef.current += 1;
@@ -219,6 +221,7 @@ export function useRecipeSearch() {
   ): Promise<SearchOutcome> => {
     const isCurrent = supersede();
     setLoading(true);
+    setWaitingForApi(false);
     setLast(searched);
     const fetched = await fetchPage();
     // A newer search fired mid-flight: discard this response whole, so it
@@ -226,8 +229,15 @@ export function useRecipeSearch() {
     if (!isCurrent()) return SUPERSEDED;
     setLoading(false);
     if ('error' in fetched) {
-      setResults(NO_RESULTS);
-      return failedSearch(fetched.error);
+      const outcome = failedSearch(fetched.error);
+      if (outcome.status === 'failed' && outcome.failure === 'offline') {
+        // The rows on screen stand for the screen to narrow.
+        setResults(shown => ({ ...shown, next: null, resume: null }));
+        setWaitingForApi(true);
+      } else {
+        setResults(NO_RESULTS);
+      }
+      return outcome;
     }
     const { rows, next, resume } = fetched.page;
     setResults({ rows, next, resume });
@@ -308,6 +318,7 @@ export function useRecipeSearch() {
     supersede();
     setLast(null);
     setResults(NO_RESULTS);
+    setWaitingForApi(false);
     // A search cleared mid-flight would otherwise leave loading stuck on.
     setLoading(false);
   };
@@ -316,6 +327,7 @@ export function useRecipeSearch() {
     query: last?.kind === 'text' ? last.query : '',
     rows: results.rows,
     performed: last !== null,
+    waitingForApi,
     loading,
     loadingMore,
     hasMore: next !== null,

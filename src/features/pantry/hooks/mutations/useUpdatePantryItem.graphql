@@ -124,3 +124,13 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     }
   }
 }
+
+# What the write itself needs of the row, so a stack a list holds can be edited
+# with nothing read first.
+fragment useUpdatePantryItem_row on PantryItem {
+  id
+  version
+  netWeightUnit {
+    id
+  }
+}

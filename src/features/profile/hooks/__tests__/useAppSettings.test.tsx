@@ -197,7 +197,7 @@ describe('useAppSettings', () => {
     await drainTimers();
     expect(result.current.hasLoadedSettings).toBe(true);
 
-    await drained(() => result.current.updateAppSetting('autoSync', false));
+    await drained(() => result.current.updateAppSetting('compactMode', true));
 
     expect(holdsPicker(cache)).toBe(true);
   });

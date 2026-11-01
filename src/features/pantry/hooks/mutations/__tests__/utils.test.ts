@@ -10,7 +10,6 @@ describe('pantry mutations utils', () => {
       location: 'Fridge',
       expirationDate: new Date(2026, 5, 1),
       notes: 'Whole milk',
-      category: 'Dairy',
       unit: 'L',
       tags: ['organic'],
       minQuantity: '2',

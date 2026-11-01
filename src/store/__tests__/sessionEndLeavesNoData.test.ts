@@ -52,6 +52,7 @@ import {
   catalogFetchKey,
   recordCatalogFetch,
 } from '#features/recipes/store/catalogFetchTimes';
+import { useOpenedCatalogRecipesStore } from '#features/recipes/store/openedCatalogRecipes';
 import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
 import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
@@ -276,6 +277,15 @@ describe('a session end leaves no data belonging to the previous person', () => 
 
     expect(catalogFetchedAt(key)).toBeUndefined();
     expect(registeredSessionScopedStores()).toContain('catalogFetchTimes');
+  });
+
+  it('forgets which catalog recipes this account opened', async () => {
+    useOpenedCatalogRecipesStore.setState({ recipeIds: { 'a:1': 'r1' } });
+
+    await useStore.getState().endSession('signed_out');
+
+    expect(useOpenedCatalogRecipesStore.getState().recipeIds).toEqual({});
+    expect(registeredSessionScopedStores()).toContain('openedCatalogRecipes');
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

@@ -141,6 +141,8 @@ import {
   seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { t } from '#/i18n';
+import { useStore } from '#store';
 import { Diet, ExternalSource } from '#/graphql/generated/schemaTypes';
 import { OpenCatalogRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { SearchRecipesDocument } from '#features/recipes/hooks/useRecipeSearch.generated';
@@ -373,6 +375,40 @@ describe('AddMealSheet', () => {
 
     await drainTimers();
     expect(screen.getByText('No recipes match your search')).toBeTruthy();
+  });
+
+  describe('offline', () => {
+    beforeEach(() => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+    });
+
+    afterEach(() => {
+      useStore.setState({ isOnline: true, apiReachable: null });
+    });
+
+    it('offers no catalog search, and says a wider one needs a connection', () => {
+      renderWithApollo(<AddMealSheet {...defaultProps} />);
+      fireEvent.changeText(searchField(), 'zzz');
+
+      expect(screen.queryByText('Search all recipes for "zzz"')).toBeNull();
+      expect(screen.queryByText('No recipes match your search')).toBeNull();
+      expect(
+        screen.getByText(t('empty.noHeldMatchFor', { query: 'zzz' })),
+      ).toBeTruthy();
+      expect(
+        screen.getByText(t('empty.widerSearchNeedsConnection')),
+      ).toBeTruthy();
+    });
+
+    it('keeps the matches it holds, and says the rest needs a connection', () => {
+      renderWithApollo(<AddMealSheet {...defaultProps} />);
+      fireEvent.changeText(searchField(), 'pasta');
+
+      expect(screen.getByText('Pasta Carbonara')).toBeTruthy();
+      expect(
+        screen.getByText(t('errors.offlineSearchUnavailable')),
+      ).toBeTruthy();
+    });
   });
 
   it('asks the catalog only when Search is pressed, never while typing', async () => {

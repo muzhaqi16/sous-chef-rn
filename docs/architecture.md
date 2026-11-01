@@ -534,7 +534,7 @@ Set in `src/apollo/defaultOptions.ts` (`dataMasking: true` in `src/apollo/client
 ### Links
 
 `src/apollo/links/` composes the request pipeline: auth and token refresh,
-persisted queries, retry, offline-mode gating, API reachability probing and
+persisted queries, retry, offline reads, API reachability probing and
 circuit breaking, network status, telemetry, error handling, and the WebSocket
 link for subscriptions. Session end, token rotation, and the WebSocket
 close-code verdicts are covered in
@@ -610,7 +610,7 @@ mutation's selection, and the queue's replay fragment.
 home; handlers write entities through with `cache.writeFragment`.
 
 The user-visible surface is the offline banner (offline / server unreachable /
-_N_ pending / back online) and an explicit Offline Mode toggle in settings.
+_N_ pending / back online). Offline is detected, never a setting.
 
 Deep dive: **[`local-first-architecture.md`](local-first-architecture.md)**.
 

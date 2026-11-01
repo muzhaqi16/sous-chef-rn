@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useTranslation } from '#/i18n';
-import { useAppStore } from '#store/useAppStore';
-import { isApiUnavailable } from '#store/slices/networkSlice';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { filterByTerm } from '#hooks/search/useLocalSearch';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { t as tGlobal } from '#/i18n';
@@ -57,7 +57,7 @@ function presentSearchOutcome(outcome: SearchOutcome): void {
 
 export function useRecipeScreen() {
   const { t } = useTranslation();
-  const apiUnavailable = useAppStore(isApiUnavailable);
+  const apiUnavailable = useIsApiUnavailable();
 
   // ── Dietary profile (for filter defaults + discovery tags) ──
   const { profile: dietaryProfile } = useDietaryProfile({
@@ -143,20 +143,33 @@ export function useRecipeScreen() {
     },
   });
 
+  const { waitingForApi, retry: retrySearch } = recipeSearch;
+  useEffect(() => {
+    if (waitingForApi && !apiUnavailable) {
+      void retrySearch(activeFilters).then(presentSearchOutcome);
+    }
+  }, [waitingForApi, apiUnavailable, retrySearch, activeFilters]);
+
   // ── Derived display state ──
   const showSearchResults = searchPerformed && searchResults.length > 0;
-  const showDiscovery = !searchPerformed && discovery.rows.length > 0;
+  const showDiscovery =
+    (!searchPerformed || (waitingForApi && !showSearchResults)) &&
+    discovery.rows.length > 0;
 
   // The whole list is shown; pagination is real, not a client-side slice.
   const searchItems = showSearchResults ? searchResults : [];
 
   const searchHasMore = showSearchResults && recipeSearch.hasMore;
 
-  const items: DisplayItem[] = showSearchResults
+  const shownItems: DisplayItem[] = showSearchResults
     ? searchItems
     : showDiscovery
     ? toDisplayItems(discovery.rows, t)
     : [];
+  // A search that could not reach the API narrows what is on screen.
+  const items: DisplayItem[] = waitingForApi
+    ? [...filterByTerm(shownItems, searchQuery, ['title'])]
+    : shownItems;
 
   // Image preloading is handled by ItemList internally — no duplicate effect needed
 

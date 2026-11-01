@@ -205,6 +205,12 @@ let mockAllItems: MockPantryItem[] = mockLowStockItems;
 let mockLoading = false;
 let mockError: Error | undefined;
 let mockHasResult = true;
+let mockHasMore = false;
+const mockLoadMore = jest.fn();
+const mockIsOffline = jest.fn(() => false);
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => mockIsOffline(),
+}));
 
 const mockUsePantryManagement = jest.fn();
 jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
@@ -218,12 +224,12 @@ jest.mock('#features/pantry/hooks/usePantryManagement', () => ({
         // A response arrived — separates an empty result from a fetch that
         // never answered, which must not render the same way.
         hasResult: mockHasResult,
-        hasMore: false,
+        hasMore: mockHasMore,
         isLoadingMore: false,
       },
       actions: {
         refetch: jest.fn(() => Promise.resolve()),
-        loadMore: jest.fn(),
+        loadMore: mockLoadMore,
       },
     };
   },
@@ -318,6 +324,55 @@ describe('FilteredPantryItems', () => {
   // Cart visibility has ONE rule: a known permission refusal. A per-mode flag
   // beside it would hide the cart on the screens where a re-buy is most likely
   // — something expiring today — so there is none, and this pins that.
+  describe('offline', () => {
+    beforeEach(() => mockIsOffline.mockReturnValue(true));
+    afterEach(() => {
+      mockIsOffline.mockReturnValue(false);
+      mockHasMore = false;
+    });
+
+    it('narrows the rows the pantry holds, asking for no filtered view', () => {
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+      expect(mockUsePantryManagement).toHaveBeenLastCalledWith(
+        'p1',
+        expect.objectContaining({ filters: null }),
+      );
+      expect(screen.getAllByTestId(/pantry-row/).length).toBeGreaterThan(0);
+    });
+
+    it('says there may be more, and stops paging, when the pantry holds only part', () => {
+      mockHasMore = true;
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+      expect(screen.getByTestId(pantryTestIDs.filteredPartial)).toBeTruthy();
+      expect(mockLoadMore).not.toHaveBeenCalled();
+    });
+
+    it('claims nothing about stock when no held row matches and there may be more', () => {
+      mockHasMore = true;
+      mockAllItems = [];
+      renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+
+      expect(screen.getByTestId('state-offline')).toBeTruthy();
+      expect(
+        screen.queryByText('All items are above minimum stock levels'),
+      ).toBeNull();
+    });
+  });
+
+  it('keeps asking for the filtered view online, and pages through it', () => {
+    mockHasMore = true;
+    renderWithApollo(<FilteredPantryItems route={makeRoute('lowStock')} />);
+    mockHasMore = false;
+
+    expect(mockUsePantryManagement).toHaveBeenLastCalledWith(
+      'p1',
+      expect.objectContaining({ filters: { lowStock: true } }),
+    );
+    expect(mockLoadMore).toHaveBeenCalled();
+  });
+
   describe('the cart is offered in every mode', () => {
     const MODES = [
       ['lowStock', () => mockLowStockItems],

@@ -121,7 +121,7 @@ beforeEach(() => {
   // A build that cannot mask, unless a test says otherwise.
   maskPhotos.mockResolvedValue(null);
   canMaskPhotos.mockReturnValue(false);
-  useStore.setState({ isOnline: true });
+  useStore.setState({ isOnline: true, apiReachable: null });
   // The text path, unless a test says otherwise.
   useReceiptPhotoConsentStore.setState({ consent: 'declined' });
 });
@@ -354,6 +354,66 @@ describe('useReceiptScan', () => {
       return view;
     };
 
+    describe('offline, for a user who agreed', () => {
+      const offlineRead = async (lines: RecognizedPage[]) => {
+        useStore.setState({ isOnline: false, apiReachable: null });
+        useReceiptPhotoConsentStore.setState({ consent: 'granted' });
+        preparePhotos.mockImplementation(async uris =>
+          uris.map((_, at) => ({
+            uri: `file:///kept-${at}.jpg`,
+            fileSize: 900,
+          })),
+        );
+        mockUploadUnconfirmed.mockResolvedValue('receipt-photos/u1/p');
+        recognizeAndDelete.mockResolvedValue(lines);
+        scanDocument.mockResolvedValue({
+          status: ScanDocumentResponseStatus.Success,
+          scannedImages: PAGES,
+        });
+        const view = renderScan();
+        await drained(() => view.result.current.scan());
+        return view;
+      };
+
+      it('keeps a copy of a scan the phone finds no items in, and sends it on reconnect', async () => {
+        const { result, rerender } = await offlineRead([
+          { lines: [line('WALMART', 0.05)] },
+        ]);
+
+        expect(result.current.status).toBe('readFailed');
+        expect(preparePhotos).toHaveBeenCalledWith(PAGES, { keepPages: true });
+        expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+
+        useStore.setState({ isOnline: true, apiReachable: true });
+        await drained(async () => rerender({}));
+
+        expect(mockUploadUnconfirmed).toHaveBeenCalled();
+      });
+
+      it('drops the copy once the phone has read the receipt', async () => {
+        const { result } = await offlineRead(RECEIPT);
+
+        expect(result.current.status).toBe('saved');
+        expect(deletePhotos).toHaveBeenCalledWith([
+          'file:///kept-0.jpg',
+          'file:///kept-1.jpg',
+          'file:///kept-2.jpg',
+          'file:///kept-3.jpg',
+        ]);
+      });
+    });
+
+    it('waits for the tap from a user who has not agreed', async () => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+      const { result, rerender } = await failedRead();
+
+      useStore.setState({ isOnline: true, apiReachable: true });
+      await drained(async () => rerender({}));
+
+      expect(result.current.status).toBe('readFailed');
+      expect(mockUploadUnconfirmed).not.toHaveBeenCalled();
+    });
+
     it('asks before sending anything, and keeps the pages until it is told', async () => {
       const { result } = await failedRead();
 
@@ -475,8 +535,11 @@ describe('useReceiptScan', () => {
       expect(result.current.status).toBe('idle');
     });
 
-    it('waits for a connection to send', async () => {
-      useStore.setState({ isOnline: false });
+    it.each([
+      ['no connection', { isOnline: false, apiReachable: null }],
+      ['the API down', { isOnline: true, apiReachable: false }],
+    ])('waits to send with %s', async (_cause, network) => {
+      useStore.setState(network);
       const { result } = await failedRead();
 
       expect(result.current.canSendPhotos).toBe(false);

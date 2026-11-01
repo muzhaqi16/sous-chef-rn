@@ -5,6 +5,8 @@ import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { RelinkItemSheet } from '../RelinkItemSheet';
+import { t } from '#/i18n';
+import { useStore } from '#store';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
@@ -87,6 +89,17 @@ beforeEach(() => {
 });
 
 describe('RelinkItemSheet', () => {
+  it('says a wider search needs a connection when nothing held matches offline', () => {
+    useStore.setState({ isOnline: false, apiReachable: null });
+    mockItems = [];
+    renderSheet();
+
+    expect(
+      screen.getByText(t('empty.noHeldMatchFor', { query: 'Bananas' })),
+    ).toBeTruthy();
+    useStore.setState({ isOnline: true, apiReachable: null });
+  });
+
   it("opens searching the entry's own name", () => {
     renderSheet();
     expect(mockSearch).toHaveBeenCalledWith('Bananas');

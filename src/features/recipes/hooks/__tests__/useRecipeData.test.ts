@@ -10,6 +10,7 @@ import {
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
   statesFutureSchemaValues,
   type MockDataFor,
   type MockedResponse,
@@ -19,6 +20,8 @@ import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { UseRecipeData_HeldRecipeFragmentDoc } from '../useRecipeData.generated';
+import { useStore } from '#store';
 import { useRecipeData, type UseRecipeDataParams } from '../useRecipeData';
 import type { CatalogRecipeHint } from '../useOpenCatalogRecipe';
 
@@ -242,6 +245,74 @@ describe('useRecipeData', () => {
     });
   });
 
+  describe('a recipe never opened on this device', () => {
+    const cacheHoldingRow = () => {
+      const cache = makeCache();
+      seedFragment(cache, {
+        fragment: UseRecipeData_HeldRecipeFragmentDoc,
+        fragmentName: 'useRecipeData_heldRecipe',
+        data: {
+          __typename: 'Recipe',
+          id: 'r1',
+          name: 'Tomato soup',
+          imageUrl: 'https://img/soup.jpg',
+        },
+      });
+      return cache;
+    };
+    const unreadable = () =>
+      recordMock(GetRecipeDocument, {
+        error: new Error('Network request failed'),
+      }).mock;
+
+    afterEach(() => {
+      useStore.setState({ isOnline: true, apiReachable: null });
+    });
+
+    it('shows the name and image its row holds, offline', async () => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+      const { result } = renderData(
+        { recipeId: 'r1' },
+        [unreadable()],
+        cacheHoldingRow(),
+      );
+      await drainTimers();
+
+      expect(result.current.displayData).toMatchObject({
+        title: 'Tomato soup',
+        image: 'https://img/soup.jpg',
+        details: 'held',
+      });
+      expect(result.current.error).toBeNull();
+    });
+
+    it('shows what a catalog row named, offline', async () => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+      const { result } = renderData({
+        hint: { name: 'Lentil dal', imageUrl: 'https://img/dal.jpg' },
+        openFailure: 'Not available offline',
+      });
+      await drainTimers();
+
+      expect(result.current.displayData).toMatchObject({
+        title: 'Lentil dal',
+        details: 'held',
+      });
+    });
+
+    it('reports a failed read online, whatever the row holds', async () => {
+      const { result } = renderData(
+        { recipeId: 'r1' },
+        [unreadable()],
+        cacheHoldingRow(),
+      );
+      await drainTimers();
+
+      expect(result.current.displayData).toBeNull();
+      expect(result.current.error).not.toBeNull();
+    });
+  });
+
   describe('a recipe and its ingredients', () => {
     const shownIds = (result: { current: ReturnType<typeof useRecipeData> }) =>
       result.current.displayData?.ingredients.map(row => row.id);
@@ -406,7 +477,7 @@ describe('useRecipeData', () => {
 
     it('waits without a title when the row gave none', () => {
       const { result } = renderData({
-        hint: { provider: ExternalSource.Spoonacular, externalId: '716429' },
+        hint: {},
       });
 
       expect(result.current.displayData).toBeNull();

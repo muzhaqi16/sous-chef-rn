@@ -24,6 +24,7 @@ import { UpdateRequiredGate } from '#/app/UpdateRequiredGate';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
 import { CoreDataProvider } from '#bootstrap/CoreDataProvider';
+import { MOBILE_WARM_TARGETS } from '#/app/mobileWarmTargets';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
 import { CoreSubscriptionProvider } from '#bootstrap/CoreSubscriptionProvider';
@@ -80,7 +81,7 @@ const App = () => {
             {/* Which named form fields exist is an app decision, not the form
                 renderer's — see `#components/molecules/fieldRenderers`. */}
             <FieldRendererProvider renderers={catalogFieldRenderers}>
-              <CoreDataProvider>
+              <CoreDataProvider warmTargets={MOBILE_WARM_TARGETS}>
                 <CoreSubscriptionProvider>
                   <SafeAreaProvider initialMetrics={initialWindowMetrics}>
                     <OverlayBackdropProvider>

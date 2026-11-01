@@ -18,7 +18,6 @@ import { kitTestIDs } from '../../../src/components/testIDs';
 import { profileTestIDs } from '../../../src/features/profile/testIDs';
 
 const SWITCHES = [
-  { testID: profileTestIDs.settingsAutoSyncSwitch, label: 'Auto Sync' },
   {
     testID: profileTestIDs.settingsShowTutorialsSwitch,
     label: 'Show Tutorials',

@@ -5,6 +5,8 @@ import { useShoppingListItemWrites } from '#features/shoppingList/hooks/useShopp
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { CategoryType } from '#/graphql/generated/schemaTypes';
 import { FormScreen } from '#components/templates/FormScreen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { FormInput } from '#components/atoms/FormInput';
 import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAutocompleteField';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
@@ -74,6 +76,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       brand,
       brandId,
       netWeight,
+      netWeightUnit,
       netWeightUnitId,
     },
     setFieldValue,
@@ -89,10 +92,8 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   // Store version for optimistic concurrency control (strict version checking)
   const itemVersionRef = useRef<number | undefined>(undefined);
 
-  const { itemData, createItem, updateItem } = useShoppingListItemWrites(
-    listId,
-    isEdit ? itemId : undefined,
-  );
+  const { itemData, itemState, retryItem, createItem, updateItem } =
+    useShoppingListItemWrites(listId, isEdit ? itemId : undefined);
 
   // Seeded once per item: the save's own cache write and a refusal's refetch
   // both re-deliver `itemData`, and re-seeding would drop what the user typed.
@@ -160,7 +161,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
 
         if (isEdit) {
           // The server requires the version for the optimistic-concurrency
-          // check, and it is only known once the item has loaded.
+          // check; the form shows no Save until the item has loaded.
           const itemVersion = itemVersionRef.current;
           if (itemVersion == null) return;
 
@@ -174,6 +175,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
               // Strict version checking (optimistic concurrency control).
               version: itemVersion,
             },
+            { brand, store: storeName, netWeightUnit },
             () => navigation.goBack(),
           );
           if (updated) navigation.goBack();
@@ -240,6 +242,25 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
   const formTestIDs = isEdit
     ? shoppingListTestIDs.editItemForm
     : shoppingListTestIDs.addItemForm;
+
+  // No Save without the line: there is no version to send, and the form would
+  // stand defaults in for values the device does not know.
+  if (isEdit && itemState !== 'ready') {
+    return (
+      <SubScreen
+        title={t('labels.editItem')}
+        testID={formTestIDs.screen}
+        scroll="none"
+      >
+        <DataStateView
+          state={itemState}
+          onRetry={() => {
+            void retryItem();
+          }}
+        />
+      </SubScreen>
+    );
+  }
 
   return (
     <FormScreen

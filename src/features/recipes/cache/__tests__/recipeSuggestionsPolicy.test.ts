@@ -50,27 +50,30 @@ describe('Query.recipeSuggestions', () => {
     ).toEqual(['c']);
   });
 
-  it('keeps a ranking per day', () => {
+  it('keeps one ranking across days, so a new day reads the last', () => {
     const cache = makeCache();
     seedQuery(cache, {
       query: RecipeSuggestionsDocument,
       variables: { first: 20, today: '2026-10-14' },
-      data: ranking('today'),
+      data: ranking('yesterday'),
     });
-    seedQuery(cache, {
-      query: RecipeSuggestionsDocument,
-      variables: { first: 20, today: '2026-10-15' },
-      data: ranking('tomorrow'),
-    });
-
-    expect(
+    const onDay = (today: string) =>
       idsIn(
         cache.readQuery({
           query: RecipeSuggestionsDocument,
-          variables: { first: 20, today: '2026-10-14' },
+          variables: { first: 20, today },
         }),
-      ),
-    ).toEqual(['today']);
+      );
+
+    expect(onDay('2026-10-15')).toEqual(['yesterday']);
+
+    seedQuery(cache, {
+      query: RecipeSuggestionsDocument,
+      variables: { first: 20, today: '2026-10-15' },
+      data: ranking('today'),
+    });
+
+    expect(onDay('2026-10-15')).toEqual(['today']);
   });
 
   it('keeps a ranking per home, and one for no home', () => {

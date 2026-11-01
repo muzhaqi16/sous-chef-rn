@@ -76,13 +76,11 @@ fragment UserReaders on User {
   }
   settings {
     id
-    autoSync
     budgetAndPrices
     compactMode
     createdAt
     deviceUnitSystem
     language
-    offlineMode
     personalizedAds
     preferredCurrency
     preferredUnitSystem

@@ -19,6 +19,8 @@ export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
   'sous-chef-recipe-captures',
   // features/recipes/store/catalogFetchTimes.ts: when catalog answers arrived.
   'sous-chef-catalog-fetch-times',
+  // features/recipes/store/openedCatalogRecipes.ts: the catalog recipes opened.
+  'sous-chef-opened-catalog-recipes',
   // features/receipts/store/receiptDraftStore.ts: the shop and what was bought.
   'sous-chef-receipt-draft',
   // features/receipts/store/receiptPhotoConsentStore.ts: this user's consent.

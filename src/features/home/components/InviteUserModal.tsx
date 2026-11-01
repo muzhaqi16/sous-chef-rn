@@ -11,7 +11,7 @@ import {
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { Icon } from '#components/atoms/Icon';
-import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { localizedErrorMessage } from '#/services/errorService';
 import type { Translate } from '#/i18n/types';
@@ -172,7 +172,7 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
     defaultValues: { email: '', role: defaultRole },
   });
 
-  const isOffline = useIsEffectivelyOffline();
+  const isOffline = useIsApiUnavailable();
 
   styles.useVariants({ hasError: !!error });
 
@@ -286,12 +286,9 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
           </AppPressable>
 
           <AppPressable
-            style={[
-              styles.submitButton,
-              (isSubmitting || isOffline) && styles.disabledButton,
-            ]}
+            style={[styles.submitButton, isSubmitting && styles.disabledButton]}
             onPress={handleSubmit}
-            disabled={isSubmitting || isOffline}
+            disabled={isSubmitting}
           >
             {isSubmitting ? (
               <ThemedActivityIndicator size="small" />

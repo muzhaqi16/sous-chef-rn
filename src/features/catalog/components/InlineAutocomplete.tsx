@@ -13,6 +13,7 @@ import { Label } from '#components/atoms/Label';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
+import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
 /** Tallest the suggestion list is allowed to get; mirrored in `suggestionsContainer`. */
@@ -47,6 +48,9 @@ export interface InlineAutocompleteProps<T> {
   // Footer: a row after the suggestions; pressing it closes the list as a pick does.
   footer?: { content: React.ReactNode; onPress: () => void };
 
+  /** The device holds every option, so no match is an answer even offline. */
+  holdsEverything?: boolean;
+
   // Input
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   /** The field itself was finished: blurred or submitted. */
@@ -78,6 +82,7 @@ export function InlineAutocomplete<T>({
   keyExtractor,
   onSelect,
   footer,
+  holdsEverything = false,
   autoCapitalize = 'none',
   reserveDropdownSpace = false,
   onEndEditing,
@@ -98,11 +103,16 @@ export function InlineAutocomplete<T>({
   const hasSearchQuery = searchTerm.length >= minSearchLength;
   const hasData = slicedItems.length > 0 || (hasSearchQuery && !loading);
   const shouldShowDropdown = showDropdown && hasSearchQuery && hasData;
+  const noMatch = useNoMatchCopy(searchTerm, holdsEverything);
+  // The parent has this term: until it does, `items` answer the last one.
+  const saysNoHeldMatch =
+    noMatch.heldOnly && slicedItems.length === 0 && searchTerm === value;
   // `shouldShowDropdown` is also true for a settled search that matched NOTHING,
   // so one condition drives both the list and its reserved space — the space can
   // never be held open for a list that isn't there.
   const isDropdownOpen =
-    shouldShowDropdown && (slicedItems.length > 0 || !!footer);
+    shouldShowDropdown &&
+    (slicedItems.length > 0 || !!footer || saysNoHeldMatch);
 
   // The list goes momentarily empty mid-search — a debounce running, a page in
   // flight — and the reserved space is held across that. Releasing it would step
@@ -250,6 +260,16 @@ export function InlineAutocomplete<T>({
                   {index < slicedItems.length - 1 && <Divider />}
                 </React.Fragment>
               ))}
+              {saysNoHeldMatch ? (
+                <View style={styles.note}>
+                  <Text role="bodyStrong" tone="secondary">
+                    {noMatch.title}
+                  </Text>
+                  <Text role="caption" tone="secondary">
+                    {noMatch.description}
+                  </Text>
+                </View>
+              ) : null}
               {footer ? (
                 <AppPressable
                   onPress={() => {
@@ -338,4 +358,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 1,
   },
   suggestion: {},
+  note: {
+    padding: theme.spacing.md,
+  },
 }));

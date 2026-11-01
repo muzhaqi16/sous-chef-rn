@@ -2,7 +2,7 @@ import { logger } from '#/utils/environment';
 import { useLazyQuery } from '@apollo/client/react';
 import { SearchBrandsDocument } from '#operations/item/item.generated';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
 import { dedupeById } from '#utils/dedupeById';
 
@@ -38,8 +38,6 @@ export function useBrandAutocomplete(
     ...cachedBrands,
   ]).map(brand => ({ id: brand.id, name: brand.name, isSuggested: true }));
 
-  const isOnline = useIsOnline();
-
   const search = (term: string) => {
     void searchBrands({ variables: { search: term, limit: 20 } }).catch(error =>
       logger.warn('Brand autocomplete failed', error),
@@ -55,11 +53,11 @@ export function useBrandAutocomplete(
     }));
   };
 
-  // Only serve from the local fallback (suggested + warmed first ~100 brands)
-  // when offline. Online we must still hit the full-catalog search so a brand
-  // outside the cached slice isn't suppressed by a cached name collision. The
-  // curated suggestions still appear as the pre-search fallback (before the
-  // 2-char minimum) regardless of this flag.
+  // The local fallback (suggested + warmed first ~100 brands) answers typing
+  // only offline. Online the full-catalog search runs so a brand outside the
+  // cached slice isn't suppressed by a cached name collision. The curated
+  // suggestions still appear as the pre-search fallback (before the 2-char
+  // minimum).
   return useAutocompleteSearch<BrandItem>({
     search,
     getResults,
@@ -71,6 +69,5 @@ export function useBrandAutocomplete(
     fallbackItems,
     filterFallback: filterByName,
     maxResults: 10,
-    localFirst: !isOnline,
   });
 }

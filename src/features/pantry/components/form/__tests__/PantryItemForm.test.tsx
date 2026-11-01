@@ -15,6 +15,8 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
@@ -42,6 +44,11 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
   useSelectedPantryId: jest.fn(() => 'p1'),
   useSelectedHomeId: jest.fn(() => 'h1'),
+}));
+
+const mockIsOffline = jest.fn(() => false);
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => mockIsOffline(),
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -155,11 +162,20 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
 }));
 
 jest.mock('#components/organisms/Header', () => ({
-  Header: ({ title }: { title?: string }) => {
+  Header: ({
+    title,
+    rightActions,
+  }: {
+    title?: string;
+    rightActions?: Array<{ testID?: string }>;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="header">
         <Text>{title}</Text>
+        {rightActions?.map(action => (
+          <View key={action.testID} testID={action.testID} />
+        ))}
       </View>
     );
   },
@@ -460,6 +476,50 @@ describe('PantryItemForm — edit mode', () => {
     expect(screen.getByText('Item not found')).toBeTruthy();
     // The form's header — and so its close control — stays up.
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
+  });
+
+  describe('offline', () => {
+    const noServer = () =>
+      recordMock(PantryItemForEditDocument, {
+        error: new Error('This is not available offline yet'),
+      }).mock;
+
+    beforeEach(() => mockIsOffline.mockReturnValue(true));
+    afterEach(() => mockIsOffline.mockReturnValue(false));
+
+    it('opens a listed row on what the list holds, with Save', async () => {
+      const cache = buildCache({});
+      seedFragment(cache, {
+        fragment: PantryItem_ListedFragmentDoc,
+        fragmentName: 'pantryItem_listed',
+        data: { __typename: 'PantryItem', id: 'item-1', itemName: 'Flour' },
+      });
+
+      renderWithApollo(<PantryItemForm itemId="item-1" />, {
+        cache,
+        operationMocks: [noServer()],
+      });
+      await drainTimers();
+
+      expect(screen.getByText('name:Flour')).toBeTruthy();
+      expect(
+        screen.getByTestId(pantryTestIDs.editItemSubmitButton),
+      ).toBeTruthy();
+    });
+
+    it('says a stack the device does not hold is not available, with no Save', async () => {
+      renderWithApollo(<PantryItemForm itemId="not-held" />, {
+        cache: buildCache({}),
+        operationMocks: [noServer()],
+      });
+      await drainTimers();
+
+      expect(screen.getByTestId('state-offline')).toBeTruthy();
+      expect(screen.queryByText('Item not found')).toBeNull();
+      expect(
+        screen.queryByTestId(pantryTestIDs.editItemSubmitButton),
+      ).toBeNull();
+    });
   });
 
   // The form's fields are cached before the query is: it renders at once, then

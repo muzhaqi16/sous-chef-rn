@@ -9,13 +9,12 @@ import {
 import { InviteUserModal } from '#features/home/components/InviteUserModal';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { drainTimers } from '#/test-utils/drainTimers';
-
-jest.mock('#hooks/settings/useOfflineMode', () => ({
-  useIsEffectivelyOffline: jest.fn(() => false),
-}));
+import { useStore } from '#store';
+import { getI18n } from '#/i18n/config';
 
 beforeEach(() => {
   jest.useFakeTimers();
+  useStore.setState({ isOnline: true, apiReachable: true });
 });
 
 afterEach(() => {
@@ -129,15 +128,25 @@ describe('InviteUserModal', () => {
     expect(screen.getByText('Please enter a valid email address')).toBeTruthy();
   });
 
-  it('disables submit button when offline', () => {
-    const offlineMock = require('#hooks/settings/useOfflineMode');
-    offlineMock.useIsEffectivelyOffline.mockReturnValue(true);
-    render(<InviteUserModal {...defaultProps} />);
-    // In offline mode the submit button is disabled
-    // Verify the modal renders with roles and button visible
-    expect(screen.getByText('Send Invite')).toBeTruthy();
-    expect(screen.getByText('Email Address')).toBeTruthy();
-    offlineMock.useIsEffectivelyOffline.mockReturnValue(false);
+  it.each([
+    ['no connection', { isOnline: false, apiReachable: null }],
+    ['the API down on working Wi-Fi', { isOnline: true, apiReachable: false }],
+  ])('sends no invite with %s, and says why', async (_cause, network) => {
+    useStore.setState(network);
+    const user = userEvent.setup();
+    const onSubmit = jest.fn(() => Promise.resolve());
+    render(<InviteUserModal {...defaultProps} onSubmit={onSubmit} />);
+    fireEvent.changeText(
+      screen.getByPlaceholderText('Enter email address'),
+      'someone@example.com',
+    );
+
+    await user.press(screen.getByText('Send Invite'));
+
+    expect(onSubmit).not.toHaveBeenCalled();
+    expect(
+      screen.getByText(getI18n().t('inviteUser.offlineError')),
+    ).toBeTruthy();
   });
 
   it('allows selecting a different role', async () => {

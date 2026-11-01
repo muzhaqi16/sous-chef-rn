@@ -27,8 +27,6 @@ export function writeUserSettings(
         theme: AppTheme.System,
         compactMode: false,
         showTutorials: true,
-        autoSync: true,
-        offlineMode: false,
         shareUsageData: false,
         shareWithPartners: false,
         personalizedAds: false,

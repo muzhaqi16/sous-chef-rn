@@ -598,8 +598,6 @@
     "syncing": "Po sinkronizohet…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Modaliteti offline është aktiv",
-    "offlineModeDetail": "Përdoren vetëm të dhënat në këtë pajisje",
     "deviceOfflineTitle": "Je offline",
     "deviceOfflineDetail": "Ndryshimet do të sinkronizohen kur të jesh sërish online",
     "deviceOfflinePendingDetail_one": "{{count}} ndryshim do të sinkronizohet kur të jesh sërish online",
@@ -625,7 +623,9 @@
     "noPantryItems": "Qilari yt është bosh",
     "noShoppingListItems": "Lista jote e blerjeve është bosh",
     "noInvitations": "Asnjë ftesë në pritje",
-    "noResultsFor": "Asnjë rezultat për \"{{query}}\""
+    "noResultsFor": "Asnjë rezultat për \"{{query}}\"",
+    "noHeldMatchFor": "Asgjë në këtë pajisje nuk përputhet me \"{{query}}\"",
+    "widerSearchNeedsConnection": "Kërkimi i plotë kërkon lidhje."
   },
   "settings": {
     "displayLanguage": "Gjuha e shfaqjes",
@@ -634,11 +634,6 @@
     "unitMetric": "Metrik (kg, g, L, mL)",
     "unitImperial": "Imperial (lb, oz, gal, fl oz)",
     "unitSystemDefault": "I parazgjedhur i sistemit",
-    "syncOffline": "Sinkronizimi & offline",
-    "autoSync": "Sinkronizim automatik",
-    "autoSyncDesc": "Sinkronizo automatikisht të dhënat kur je online",
-    "offlineMode": "Modaliteti offline",
-    "offlineModeDesc": "Përdor vetëm të dhënat lokale. Çaktivizon kërkimin dhe ndarjen.",
     "features": "Veçoritë",
     "showTutorials": "Shfaq udhëzuesit",
     "showTutorialsDesc": "Shfaq këshilla dhe udhëzues të dobishëm",
@@ -747,7 +742,9 @@
     "loading": "Duke u ngarkuar…",
     "errorTitle": "Nuk u ngarkua dot",
     "errorBody": "Diçka shkoi keq gjatë ngarkimit. Kontrollo lidhjen dhe provo sërish.",
-    "offlineBody": "Je pa internet dhe kjo nuk është shkarkuar ende. Rilidhu për ta ngarkuar."
+    "offlineBody": "Je pa internet dhe kjo nuk është shkarkuar ende. Rilidhu për ta ngarkuar.",
+    "partialTitle": "Pjesa tjetër kërkon lidhje",
+    "partialBody": "Kaq ka pajisja jote për momentin."
   },
   "tabBar": {
     "actionButton": "Butoni i veprimit",

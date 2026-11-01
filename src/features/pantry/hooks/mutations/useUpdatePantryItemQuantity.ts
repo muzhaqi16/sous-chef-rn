@@ -7,13 +7,14 @@ import { useApolloClient, useMutation } from '@apollo/client/react';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { UpdatePantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
-  type UseUpdatePantryItemQuantity_PantryItemFragment,
+  UseUpdatePantryItemQuantity_RowFragmentDoc,
+  type UseUpdatePantryItemQuantity_RowFragment,
 } from './useUpdatePantryItemQuantity.generated';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { normalizeNumericTextForApi } from '#/utils/parseDecimalInput';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { logger } from '#/utils/environment';
+import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import type { writeHeldStock } from '#features/pantry/cache/stock';
 import type { SetStockInputs } from '#features/pantry/offline/localWrites';
@@ -64,17 +65,16 @@ export function useUpdatePantryItemQuantity({
       id: itemId,
     });
     const currentItem =
-      client.cache.readFragment<UseUpdatePantryItemQuantity_PantryItemFragment>(
-        {
-          id: cacheId,
-          fragment: UseUpdatePantryItemQuantity_PantryItemFragmentDoc,
-          fragmentName: 'useUpdatePantryItemQuantity_pantryItem',
-          optimistic: true,
-        },
-      );
+      client.cache.readFragment<UseUpdatePantryItemQuantity_RowFragment>({
+        id: cacheId,
+        fragment: UseUpdatePantryItemQuantity_RowFragmentDoc,
+        fragmentName: 'useUpdatePantryItemQuantity_row',
+        optimistic: true,
+      });
 
     if (!currentItem) {
       logger.warn('Item not found, cannot update quantity:', itemId);
+      alertService.alert(t('labels.error'), t('itemForm.updateFailed'));
       return false;
     }
 

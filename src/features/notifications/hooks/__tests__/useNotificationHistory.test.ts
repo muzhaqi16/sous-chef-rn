@@ -5,7 +5,11 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
-import { NotificationStatus } from '#/graphql/generated/schemaTypes';
+import {
+  NotificationCategory,
+  NotificationStatus,
+} from '#/graphql/generated/schemaTypes';
+import { useStore } from '#store';
 import { useNotificationHistory } from '../useNotificationHistory';
 
 beforeEach(() => {
@@ -14,6 +18,64 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+});
+
+describe('useNotificationHistory offline', () => {
+  it('shows the held rows of a category never loaded', async () => {
+    useStore.setState({ isOnline: false, apiReachable: null });
+    const feed = recordMock(GetNotificationsDocument, {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'u1',
+          notificationsConnection: {
+            edges: [
+              { node: { id: 'n1', category: NotificationCategory.Pantry } },
+              { node: { id: 'n2', category: NotificationCategory.Shopping } },
+            ],
+            pageInfo: { hasNextPage: false, endCursor: null },
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useNotificationHistory(NotificationCategory.Shopping, true),
+      { operationMocks: [feed.mock] },
+    );
+    await drainTimers();
+    useStore.setState({ isOnline: true, apiReachable: null });
+
+    expect(feed.fired[0]).toEqual({ filter: undefined, first: 30 });
+    expect(result.current.notifications.map(n => n.id)).toEqual(['n2']);
+    expect(result.current.mayHoldMore).toBe(false);
+  });
+
+  it('says the feed may hold more of a category while pages remain', async () => {
+    useStore.setState({ isOnline: false, apiReachable: null });
+    const feed = recordMock(GetNotificationsDocument, {
+      data: {
+        me: {
+          __typename: 'User',
+          id: 'u1',
+          notificationsConnection: {
+            edges: [
+              { node: { id: 'n1', category: NotificationCategory.Pantry } },
+            ],
+            pageInfo: { hasNextPage: true, endCursor: 'c1' },
+          },
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useNotificationHistory(NotificationCategory.Shopping, true),
+      { operationMocks: [feed.mock] },
+    );
+    await drainTimers();
+    useStore.setState({ isOnline: true, apiReachable: null });
+
+    expect(result.current.notifications).toEqual([]);
+    expect(result.current.mayHoldMore).toBe(true);
+  });
 });
 
 describe('useNotificationHistory', () => {

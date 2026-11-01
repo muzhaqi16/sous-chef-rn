@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { useIsOnline } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 export interface AutocompleteSearchConfig<TItem> {
   /** Trigger the query (lazy query call or setState for skip-based) */
@@ -27,7 +27,10 @@ export interface AutocompleteSearchConfig<TItem> {
   filterFallback?: (term: string, items: TItem[]) => TItem[];
   /** Maximum results to display. Default: 10 */
   maxResults?: number;
-  /** Search fallbackItems locally first; only fire API if no local matches. Default: false */
+  /**
+   * Search fallbackItems locally first; only fire API if no local matches.
+   * Default: false. Offline, a network picker answers from them regardless.
+   */
   localFirst?: boolean;
 }
 
@@ -72,9 +75,10 @@ export function useAutocompleteSearch<TItem>(
   const [lastResults, setLastResults] = useState<TItem[]>([]);
   const [lastFiredTerm, setLastFiredTerm] = useState('');
 
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
   const shouldSearch =
-    searchTerm.length >= minChars && (!requiresNetwork || isOnline);
+    searchTerm.length >= minChars && (!requiresNetwork || !isOffline);
+  const servesLocalFirst = localFirst || (requiresNetwork && isOffline);
 
   // Cleanup debounce timer on unmount
   useEffect(() => {
@@ -94,7 +98,7 @@ export function useAutocompleteSearch<TItem>(
 
     if (shouldSearch) {
       // Local-first: check fallbackItems before firing the API
-      if (localFirst && filterFallback) {
+      if (servesLocalFirst && filterFallback) {
         const matches = filterFallback(searchTerm, fallbackItems);
         if (matches.length > 0) {
           return;
@@ -118,7 +122,7 @@ export function useAutocompleteSearch<TItem>(
     shouldSearch,
     search,
     debounceMs,
-    localFirst,
+    servesLocalFirst,
     filterFallback,
     fallbackItems,
   ]);
@@ -171,7 +175,7 @@ export function useAutocompleteSearch<TItem>(
     }
 
     // Local-first: return local matches if available
-    if (localFirst && filterFallback) {
+    if (servesLocalFirst && filterFallback) {
       const localMatches = filterFallback(searchTerm, fallbackItems);
       if (localMatches.length > 0) {
         return localMatches.slice(0, maxResults);

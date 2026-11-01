@@ -25,6 +25,23 @@ afterEach(() => {
 });
 
 describe('AddToBrandListSheet', () => {
+  it('does not call lists it never read none, and offers no new list', () => {
+    render(
+      <AddToBrandListSheet
+        visible
+        brand={BRAND}
+        lists={[]}
+        unavailable={{ state: 'offline', onRetry: jest.fn() }}
+        onDismiss={jest.fn()}
+        onPick={jest.fn()}
+        onMakeList={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('state-offline')).toBeTruthy();
+    expect(screen.queryByText(t('brandLists.emptyTitle'))).toBeNull();
+  });
+
   it('puts the brand on the list picked, with the note typed, then closes', async () => {
     const onPick = jest.fn().mockResolvedValue(true);
     const onDismiss = jest.fn();

@@ -18,7 +18,7 @@ export const getHealthUrl = (): string => getApiRestUrl('/health');
 /**
  * A plain GET of `/health` — no GraphQL, no auth, no link chain. Lets
  * `apiReachabilityBreaker` re-check an open circuit rather than wait for
- * traffic `offlineModeLink` is blocking. Only 2xx counts as reachable; a 5xx
+ * traffic `offlineReadLink` is blocking. Only 2xx counts as reachable; a 5xx
  * keeps the app serving cache.
  */
 export async function probeApiHealth(): Promise<boolean> {

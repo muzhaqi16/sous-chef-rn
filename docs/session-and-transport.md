@@ -68,7 +68,7 @@ therefore parks the refresh token (plus the access token, which `/revoke`
 denylists) in the platform's secure store and then `POST /revoke`s it. Parking comes first, so
 a process kill mid-request loses nothing. A 2xx or a 4xx settles the entry; the
 network, a 5xx or a 429 leaves it parked. `usePendingRevocationDrain` drains the
-parked list on launch and whenever `isNetworkWithheld` clears, one entry at a
+parked list on launch and whenever `isApiUnavailable` clears, one entry at a
 time, stopping at the first unanswered request. The step is fire-and-forget: a
 sign-out never waits on the network. `/revoke` needs no access token and is
 idempotent, so it runs on server-ended sessions too. An `AUTH_TOKEN_EXPIRED`

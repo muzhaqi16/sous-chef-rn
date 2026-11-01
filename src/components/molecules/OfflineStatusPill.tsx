@@ -25,8 +25,7 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
   size = 22,
   style,
 }) => {
-  const { offline, iconName, title, detail, message, pendingCount } =
-    useOfflineStatus();
+  const { offline, title, detail, message, pendingCount } = useOfflineStatus();
 
   if (!offline) return null;
 
@@ -47,7 +46,11 @@ export const OfflineStatusPill: React.FC<OfflineStatusPillProps> = ({
         accessibilityRole="button"
         accessibilityLabel={message}
       >
-        <Icon name={iconName} size={size} tone="alertBannerWarning" />
+        <Icon
+          name="cloud-offline-outline"
+          size={size}
+          tone="alertBannerWarning"
+        />
         {pendingCount > 0 && (
           <View style={styles.badge}>
             <Text role="footnoteStrong" style={styles.badgeText}>

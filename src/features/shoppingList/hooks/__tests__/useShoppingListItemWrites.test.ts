@@ -6,7 +6,10 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  type UpdateShoppingListItemInput,
+} from '#/graphql/generated/schemaTypes';
 import {
   AddItemToShoppingListDocument,
   UpdateShoppingListItemDocument,
@@ -42,6 +45,10 @@ type Item = {
 };
 
 const EDIT = { itemName: 'Oat milk', notes: 'organic' };
+const updateInputOf = (
+  fields: Omit<UpdateShoppingListItemInput, 'id' | 'version'>,
+): UpdateShoppingListItemInput => ({ id: 'item-1', version: 3, ...fields });
+const NO_LABELS = { brand: '', store: '', netWeightUnit: '' };
 
 function setup(outcome: 'applied' | 'refused') {
   const cache = seedCache([
@@ -88,7 +95,7 @@ function setup(outcome: 'applied' | 'refused') {
       fragment: ITEM,
       optimistic: true,
     });
-  return { ...rendered, itemQuery, readItem };
+  return { ...rendered, cache, itemQuery, readItem };
 }
 
 beforeEach(() => {
@@ -115,6 +122,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
     await drained(async () => {
       const pending = result.current.updateItem(
         { id: 'item-1', version: 3, quantity: '1 1/2', ...EDIT },
+        NO_LABELS,
         jest.fn(),
       );
       // Offline nothing else lands: the queue resolves the write with no payload.
@@ -139,6 +147,7 @@ describe('useShoppingListItemWrites.updateItem', () => {
     await drained(async () => {
       const pending = result.current.updateItem(
         { id: 'item-1', version: 3, quantity: '1.250' },
+        NO_LABELS,
         jest.fn(),
       );
       written = readItem();
@@ -158,12 +167,134 @@ describe('useShoppingListItemWrites.updateItem', () => {
     updated = await drained(() =>
       result.current.updateItem(
         { id: 'item-1', version: 3, ...EDIT },
+        NO_LABELS,
         jest.fn(),
       ),
     );
 
     expect(updated).toBe(false);
     expect(readItem()).toMatchObject(before);
+  });
+});
+
+describe('useShoppingListItemWrites.updateItem, nested fields', () => {
+  const NESTED = gql`
+    fragment NestedProbe on ShoppingListItem {
+      id
+      unitName
+      unit {
+        id
+        symbol
+      }
+      netWeight
+      netWeightUnit {
+        id
+        symbol
+      }
+      priceEstimate {
+        estimated
+      }
+      storeInfo {
+        preferredStore {
+          id
+          name
+        }
+      }
+      brand {
+        version
+        id
+        name
+      }
+    }
+  `;
+
+  /** What the row shows while the write is pending. */
+  async function shownWhilePending(
+    input: Omit<Parameters<typeof updateInputOf>[0], 'id' | 'version'>,
+    labels = NO_LABELS,
+  ) {
+    const { result, cache } = setup('applied');
+    await drainTimers();
+    let shown: unknown = null;
+    await drained(async () => {
+      const pending = result.current.updateItem(
+        updateInputOf(input),
+        labels,
+        jest.fn(),
+      );
+      shown = cache.readFragment({
+        id: cache.identify({ __typename: 'ShoppingListItem', id: 'item-1' }),
+        fragment: NESTED,
+        optimistic: true,
+        returnPartialData: true,
+      });
+      await pending;
+    });
+    return shown;
+  }
+
+  it('shows a price, a store and a picked brand at once', async () => {
+    const shown = await shownWhilePending(
+      {
+        pricing: { estimatedPrice: 4.5 },
+        storePrefs: { preferredStoreId: 'store-1' },
+        brand: { id: 'brand-1' },
+      },
+      { ...NO_LABELS, brand: 'Sunrise', store: 'Corner Shop' },
+    );
+
+    expect(shown).toMatchObject({
+      priceEstimate: { estimated: 4.5 },
+      storeInfo: { preferredStore: { id: 'store-1', name: 'Corner Shop' } },
+      brand: { id: 'brand-1', name: 'Sunrise', version: 0 },
+    });
+  });
+
+  it('shows a typed brand under an id of its own, complete for a row', async () => {
+    const shown = await shownWhilePending(
+      { brand: { name: 'Sunrise' } },
+      { ...NO_LABELS, brand: 'Sunrise' },
+    );
+
+    expect(shown).toMatchObject({
+      brand: { id: expect.any(String), name: 'Sunrise', version: 0 },
+    });
+  });
+
+  it('clears what the edit cleared', async () => {
+    const shown = await shownWhilePending({
+      brand: null,
+      unit: null,
+      netWeight: { netWeight: null },
+      storePrefs: { preferredStoreId: null },
+    });
+
+    expect(shown).toMatchObject({
+      brand: null,
+      unit: null,
+      unitName: null,
+      netWeight: null,
+      netWeightUnit: null,
+      storeInfo: { preferredStore: null },
+    });
+  });
+
+  it('shows a picked unit and its label, and a new package size', async () => {
+    const shown = await shownWhilePending(
+      {
+        unit: { id: 'unit-1' },
+        unitLabel: 'cans',
+        netWeight: { netWeight: 500, netWeightUnitId: 'unit-2' },
+      },
+      { ...NO_LABELS, netWeightUnit: 'g' },
+    );
+
+    expect(shown).toMatchObject({
+      unitName: 'cans',
+      unit: { id: 'unit-1', symbol: 'cans' },
+      netWeight: 500,
+      netWeightUnit: { id: 'unit-2', symbol: 'g' },
+    });
   });
 });
 

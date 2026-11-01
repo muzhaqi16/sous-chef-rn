@@ -3,7 +3,7 @@ import { authLink } from './authLink';
 import { languageLink } from './languageLink';
 import { createConsoleLink } from './consoleLink';
 import { createTelemetryLink } from './telemetryLink';
-import { createOfflineModeLink } from './offlineModeLink';
+import { createOfflineReadLink } from './offlineReadLink';
 import { createLocalWritePrecedenceLink } from './localWritePrecedenceLink';
 import { createAnswerOrderingLink } from './answerOrderingLink';
 import { createNetworkStatusLink } from './networkStatusLink';
@@ -31,8 +31,8 @@ export function createLink() {
   // Telemetry link for tracking GraphQL operations
   const telemetryLink = createTelemetryLink();
 
-  // Offline mode link - blocks queries when user has enabled offline mode
-  const offlineModeLink = createOfflineModeLink();
+  // Offline read link - answers queries from the cache while the API is unavailable
+  const offlineReadLink = createOfflineReadLink();
 
   // Network status link - drives the API-reachability circuit breaker
   const networkStatusLink = createNetworkStatusLink();
@@ -43,13 +43,13 @@ export function createLink() {
   // Queue link for offline mutation support
   const queueLink = createQueueLink();
 
-  // Order matters: offlineModeLink first, so blocked queries never reach
+  // Order matters: offlineReadLink first, so blocked queries never reach
   // retryLink/errorLink as doomed requests. Deduplication is Apollo's own
   // `queryDeduplication: true`.
   const transportLink = createTransportLink();
 
   return ApolloLink.from([
-    offlineModeLink, // Block queries when effectively offline (before telemetry to skip tracking)
+    offlineReadLink, // Answer queries from the cache when offline (before telemetry to skip tracking)
     // Sees every read that may reach the network, and a re-sent read still
     // passes retry, error, auth and transport.
     createLocalWritePrecedenceLink(), // A read in flight never undoes a local-first write

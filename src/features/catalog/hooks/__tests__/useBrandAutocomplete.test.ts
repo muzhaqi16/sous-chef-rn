@@ -6,12 +6,16 @@ import type { RootState } from '#store/index';
 import { useBrandAutocomplete } from '#features/catalog/hooks/useBrandAutocomplete';
 
 let mockIsOnline = true;
+let mockApiReachable: boolean | null = null;
 jest.mock('#store/useAppStore', () => {
-  const getState = () => ({ isOnline: mockIsOnline, cachedBrands: [] });
+  const getState = () => ({
+    isOnline: mockIsOnline,
+    apiReachable: mockApiReachable,
+    cachedBrands: [],
+  });
   return {
     useAppStore: <T>(selector: (state: RootState) => T): T =>
       selector(getState() as Partial<RootState> as RootState),
-    useIsOnline: () => getState().isOnline,
   };
 });
 
@@ -50,6 +54,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockApiReachable = null;
 });
 
 afterEach(() => {
@@ -162,6 +167,26 @@ describe('useBrandAutocomplete', () => {
     const names = result.current.displayItems.map(i => i.name);
     expect(names).toContain('Heinz');
     expect(names).toContain('Hellmann');
+  });
+
+  it('with the API down: serves local suggestions and sends no search', () => {
+    mockApiReachable = false;
+    const recordedVariables: Array<Record<string, unknown>> = [];
+    const { result } = renderHookWithApollo(
+      () => useBrandAutocomplete({ suggestedBrands }),
+      { operationMocks: [createSearchBrandsMock(recordedVariables)] },
+    );
+
+    act(() => {
+      result.current.handleSearchTermChange('he');
+    });
+
+    act(() => {
+      jest.advanceTimersByTime(300);
+    });
+
+    expect(recordedVariables).toEqual([]);
+    expect(result.current.displayItems.map(i => i.name)).toContain('Heinz');
   });
 
   it('online: fires the lazy query even when local suggestions match the term', () => {

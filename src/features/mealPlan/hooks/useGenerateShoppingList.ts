@@ -27,8 +27,8 @@ import type {
   CreateShoppingListInput,
 } from '#/graphql/generated/schemaTypes';
 import { usePantryQuery } from '#features/pantry/hooks/usePantryQuery';
-import { useAppStore, useSelectedPantryId } from '#store/useAppStore';
-import { isApiUnavailable } from '#store/slices/networkSlice';
+import { useSelectedPantryId } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { t as tGlobal, useTranslation } from '#/i18n';
@@ -107,7 +107,7 @@ export function useGenerateShoppingList(mealPlanId: string | null) {
     { context: { localFirst: true } },
   );
 
-  const apiUnavailable = useAppStore(isApiUnavailable);
+  const apiUnavailable = useIsApiUnavailable();
 
   // An imported recipe's ingredients link to catalog items on a server job, so
   // a plan cached straight after the import holds `item: null` and the derive

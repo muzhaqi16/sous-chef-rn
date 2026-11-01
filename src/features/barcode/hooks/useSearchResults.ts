@@ -36,7 +36,7 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import { toShownNutrition } from '#domain/nutrition';
 import { storeApi } from '#store';
 import { useSelectedHomeId } from '#store/useAppStore';
-import { blocksCacheMissQueries } from '#store/slices/networkSlice';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 
 // `format` is react-native-vision-camera-barcode-scanner's BarcodeFormat, with
 // 'qr-code' normalized to 'qr' by BarcodeScannerScreen; a non-UPC format falls
@@ -244,13 +244,13 @@ export const useSearchResults = (
   const loading = upcLoading || (!skuSkipped && !skuAnswer && !skuError);
   const missed = !!skuAnswer && !skuItem && !createdId;
 
-  // Offline, `offlineModeLink` answers the uncached lookup itself. Read when the
+  // Offline, `offlineReadLink` answers the uncached lookup itself. Read when the
   // error lands, so reconnecting doesn't relabel that answer.
   const [labelled, setLabelled] = useState<LabelledError | null>(null);
   if (lookupError && labelled?.error !== lookupError) {
     setLabelled({
       error: lookupError,
-      neverAsked: blocksCacheMissQueries(storeApi.getState()),
+      neverAsked: isApiUnavailable(storeApi.getState()),
     });
   }
   const neverAsked =

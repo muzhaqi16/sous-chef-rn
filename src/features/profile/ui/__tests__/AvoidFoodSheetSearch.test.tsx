@@ -71,7 +71,6 @@ beforeEach(() => {
   storeApi.setState({
     isOnline: true,
     apiReachable: null,
-    offlineModeEnabled: false,
   });
 });
 

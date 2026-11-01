@@ -19,12 +19,14 @@ const COMMON_UNITS: UnitItem[] = [
 let mockCachedUnits = COMMON_UNITS;
 
 let mockIsOnline = true;
+let mockApiReachable: boolean | null = null;
 const mockSetCachedUnits = jest.fn();
 const mockSetLastUnitsFetchedAt = jest.fn();
 jest.mock('#store/useAppStore', () => {
   const getState = (): RootState =>
     ({
       isOnline: mockIsOnline,
+      apiReachable: mockApiReachable,
       cachedUnits: mockCachedUnits,
       setCachedUnits: mockSetCachedUnits,
       lastUnitsFetchedAt: Date.now(),
@@ -33,7 +35,6 @@ jest.mock('#store/useAppStore', () => {
   return {
     useAppStore: <T>(selector: (state: RootState) => T): T =>
       selector(getState()),
-    useIsOnline: () => getState().isOnline,
   };
 });
 
@@ -41,6 +42,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockApiReachable = null;
   mockCachedUnits = COMMON_UNITS;
 });
 
@@ -121,8 +123,12 @@ describe('useUnitAutocomplete', () => {
     expect(m.fired).toEqual([{ query: 'sticks', limit: 10 }]);
   });
 
-  it('matches the cached units while offline', () => {
-    mockIsOnline = false;
+  it.each([
+    ['no connection', false, null],
+    ['the API down on working Wi-Fi', true, false],
+  ])('matches the cached units with %s', (_cause, isOnline, apiReachable) => {
+    mockIsOnline = isOnline;
+    mockApiReachable = apiReachable;
     const { result } = renderHookWithApollo(
       () => useUnitAutocomplete(),
       apolloMocks,
@@ -132,6 +138,7 @@ describe('useUnitAutocomplete', () => {
       result.current.handleSearchTermChange('cup');
     });
 
+    expect(result.current.shouldSearch).toBe(false);
     expect(result.current.displayItems).toEqual([
       { id: 'u1', name: 'Cup', symbol: 'cup' },
     ]);

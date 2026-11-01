@@ -3,7 +3,7 @@ import { drainTimers } from '#/test-utils/drainTimers';
 import { useLoadRemainingPages } from '../useLoadRemainingPages';
 
 /**
- * While the network is withheld, `offlineModeLink` answers a cursor fetch from
+ * While the network is withheld, `offlineReadLink` answers a cursor fetch from
  * the cache with the same merged connection: the request settles, nothing
  * advances, and `hasMore` stays true. A loop that reads "answered" as
  * "advanced" re-fires every frame behind a spinner that never clears.

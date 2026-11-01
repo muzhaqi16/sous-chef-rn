@@ -39,6 +39,7 @@ import {
   pantryListKeyExtractor,
   type PantryListNode,
 } from './pantryDisplay/renderItem';
+import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { PantryEmptyState } from './PantryEmptyState';
 import { PantryListSkeletonOverlay } from './PantryListSkeletonOverlay';
 import type {
@@ -79,6 +80,7 @@ export const PantryContent = React.forwardRef<
       totalCount,
       onAddItem,
       hasMore = false,
+      mayHoldMore = false,
       isLoadingMore = false,
       onRefresh,
       onEndReached,
@@ -393,9 +395,22 @@ export const PantryContent = React.forwardRef<
                     />
                   ) : undefined
                 }
+                ListHeaderComponent={
+                  mayHoldMore &&
+                  !isEmpty &&
+                  onRefresh &&
+                  (locationFilter !== 'all' || searchQuery) ? (
+                    <PartialDataNote
+                      onRetry={onRefresh}
+                      testID={pantryTestIDs.listPartial}
+                    />
+                  ) : null
+                }
                 ListFooterComponent={
                   !footerVisible ? null : isEmpty ? (
                     <PantryEmptyState
+                      mayHoldMore={mayHoldMore}
+                      onRetryHeld={onRefresh}
                       showSkeletons={showSkeletons}
                       searchQuery={searchQuery}
                       itemCount={items.length}

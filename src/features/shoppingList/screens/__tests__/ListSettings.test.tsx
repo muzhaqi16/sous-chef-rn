@@ -33,7 +33,6 @@ jest.mock('#store/useAppStore', () => {
   return {
     useAppStore: fn,
     useUser: jest.fn(() => ({ id: 'u1', email: 'test@test.com' })),
-    useIsOnline: jest.fn(() => true),
   };
 });
 
@@ -658,14 +657,9 @@ describe('ListSettings', () => {
       expect(mockCreateFromTemplate).not.toHaveBeenCalled();
     });
 
-    it('offers the picker while offline — the copy is derived, not requested', () => {
-      const { useIsOnline } = require('#store/useAppStore');
-      useIsOnline.mockReturnValue(false);
-
+    it('offers the picker — the copy is derived, not requested', () => {
       render(<ListSettings route={createRoute} />);
       expect(screen.getByText('None (Blank List)')).toBeTruthy();
-
-      useIsOnline.mockReturnValue(true);
     });
   });
 

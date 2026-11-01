@@ -198,6 +198,11 @@ A nested entity reference (`unit`, `item`) is resolved with `cache.readFragment`
 selecting **every** field the query needs — it returns null on a partially
 cached entity exactly as on a missing one.
 
+An edit that names a nested record holds to the same rule: `localBrand` and
+`localUnit` (`features/catalog/cache/localRefs.ts`) return it complete, as held
+or from what the form shows, and a typed name shows under an id of its own. Both
+live in the write's layer, so the answer replaces them.
+
 The shopping add path is shared rather than copied:
 
 - **`createShoppingListRow(cache, { listId, row, line, send, document, fallback })`**
@@ -375,10 +380,18 @@ the reference data offline reads use:
    brings back, never a write, so this store may be slow, late or lost without harm, which is what lets
    an asynchronous storage port carry it.
 
+**What is warmed ahead** (`src/bootstrap/useOfflineTabPreloading.ts`, idle and `cache-first`, so a held
+read costs nothing): the pantry, the shopping lists and the meal plans (`WARM_TARGETS`); then what those
+name: the active list with both tabs of its items, and what the host adds through `warmTargets`, for
+reads its own screens own. The mobile host adds the plan covering today, the next to start and the
+recipes planned for the coming seven days, 14 at most, one at a time (`warmPlannedMeals`).
+A warm runs once a session, and what failed runs again when the API comes back.
+
 Offline reads also rely on persisted Zustand state: the root store's reference caches
 (`cachedUnits`, `cachedCategories`, `cachedBrands`, `cachedStores`, `cachedItemSuggestions` and their
-fetch stamps), the offline-mode flag (`user_offline_mode`), the catalog freshness stamps
-(`sous-chef-catalog-fetch-times`), the receipt draft (`sous-chef-receipt-draft`, so a scan made offline
+fetch stamps), the catalog freshness stamps
+(`sous-chef-catalog-fetch-times`), the catalog recipes opened here
+(`sous-chef-opened-catalog-recipes`, as opening one needs the API), the receipt draft (`sous-chef-receipt-draft`, so a scan made offline
 survives a restart) and recipe captures (`sous-chef-recipe-captures`).
 
 ## 7. Reconciliation & idempotency
@@ -436,8 +449,9 @@ tri-state: `true`/`false` once proven, `null` untried since the link dropped.
 - `shouldTreatAsOffline = !isOnline && apiReachable !== true`: NetInfo says offline and nothing has
   proven the API reachable. A `/health` success while NetInfo says offline proves NetInfo wrong.
 - `isApiUnavailable = apiReachable === false || shouldTreatAsOffline`: the server cannot be reached.
-- `blocksCacheMissQueries = offlineModeEnabled || shouldTreatAsOffline`: deliberately narrower (below).
-- `isNetworkWithheld = offlineModeEnabled || isApiUnavailable`.
+  This is the app's one meaning of offline. A feature reads it through `useIsApiUnavailable`, and
+  `isOnline` itself stays in transport, because it reads as online through an API outage on working
+  Wi-Fi (`__tests__/architecture/offlineHasOneMeaning.test.ts`).
 
 **API down while online (timeout / captive portal / 5xx):** the **`apiReachabilityBreaker`** circuit
 breaker (`closed | open`) drives `apiReachable`. `networkStatusLink` (above `retryLink`, so one outcome
@@ -452,33 +466,36 @@ starts probing.
 
 Who reads what:
 
-- **`offlineModeLink`** (first in chain) answers a query from the cache itself (`readQuery`) while
-  `isNetworkWithheld`, so blocked queries never reach `retryLink`/`errorLink`. On a cache miss it
-  answers an `offline.noCachedData` error when `blocksCacheMissQueries`; with only the breaker open it
-  forwards the miss as an organic probe, so a failure there is a real network error. `RefreshToken` and
-  `GetUserSettings` pass the user's offline mode while the server is reachable (`ALWAYS_ALLOW`), so
-  tokens rotate and offline mode can be switched off.
+- **`offlineReadLink`** (first in chain) answers a query from the cache itself (`readQuery`) while
+  `isApiUnavailable`, so blocked queries never reach `retryLink`/`errorLink`. On a cache miss it
+  answers an `offline.noCachedData` error when `shouldTreatAsOffline`; with only the breaker open it
+  forwards the miss as an organic probe, so a failure there is a real network error.
 - **`queueLink`** queues replay-allowlisted mutations when offline or the breaker is open (§5). The two
   differ for the rest: offline they fail fast; with only the breaker open they are forwarded and
   surface their own error.
 - **`queueManager.processQueue`** skips replay while `isApiUnavailable` (a replay to a down API would just
   fail and re-trip the breaker); recovery (`requestDrain` on breaker close) re-drains.
 
-The user-toggled **offline mode** (`offlineModeEnabled`) is a third input to `offlineModeLink`'s
-query-blocking, orthogonal to connectivity.
-
 ## 9. Failure handling & UX
 
 - **Offline indicator.** `OfflineStatusPill` (`components/molecules/OfflineStatusPill.tsx`) sits inline
-  in each screen's header and fades in once a cause has held for 30 s (offline mode at once), so a
+  in each screen's header and fades in once a cause has held for 30 s, so a
   passing hiccup shows nothing. No toast announces a transition: `OfflineTransitionAnnouncer`
   (`components/atoms/`, mounted once in `App.tsx`) reads it to a screen reader only. Both read
   `useOfflineStatus`, so they cannot disagree. They cover **both** unreachable cases — device offline AND API-down-while-online
-  (the reachability breaker) — plus the user-toggled offline mode, with distinct i18n'd messages
+  (the reachability breaker) — with distinct i18n'd messages
   (`offlineBanner.*` keys, pluralized). When the queue has PENDING entries the message carries the
   **pending-changes count**, read live via `usePendingMutationCount()` (`useSyncExternalStore` over
   `queueStore.subscribe`). The cause is the store's debounced `offlineBannerCause`, so a message does
   not rewrite itself mid-display.
+- **What a screen shows offline.** One of three, and never a fourth that reads as absence. **Held:**
+  the read is complete, so the screen is as it was. **Partly held:** a row the device lists opens on
+  what the row holds, and a note says the rest needs a connection. **Not available:** `useDataState`
+  classifies the miss as `offline` and `DataStateView` says so. A miss is not "no meals planned", "not
+  found" or an empty list: those come only from an answer. No gate holds this, so each screen fixed
+  for it has its own test.
+  A search with no held match says the wider search needs a connection (`useNoMatchCopy`), unless the
+  device holds the whole set.
 - **Permanent failure.** `registerQueueFailureHandler` (`apollo/offlineQueue/queueFailureHandler.ts`)
   is the one registration, made from `useCoreStartup` (`src/bootstrap/`). `handleQueueFailure` refuses the
   write (`pendingWrites.refuse`: its `refused`, then its layer goes), toasts the user in the app's own
@@ -548,10 +565,7 @@ were queueable. Areas, with what is worth knowing beyond the pattern:
 - **Receipts:** check-in (`useReceiptCheckIn`), which stamps list lines, moves and intakes locally.
 - **Settings, profile, notifications:** field edits through `sendFields`
   (§2), profile, dietary profile and sharing, brand lists, language, onboarding completion, notification
-  read/delete, the device time zone. **Offline mode is the one exception to "the cache is the source of
-  truth"**: the switch renders from the Zustand store, because that is what `offlineModeLink` reads and
-  what is mirrored to MMKV; the server copy is a cross-device mirror, and `useAppSettings` syncs the
-  store back off the query, so a refusal reverts the store too.
+  read/delete, the device time zone.
 
 **Online-only:** auth, sessions and device credentials; account deletion; home and shopping-list
 membership (invites, join codes and share codes, collaborators, roles, transfer, leave, delete home);
@@ -639,8 +653,8 @@ replay only after their parent has landed — the drain reads the parent referen
 - **Identity is client-generated cuid2** (planned §8), not temp-id + reconciliation. This removed the
   largest planned subsystem — the `idMapping` / `resolveIds` / temp-id machinery has been fully deleted
   (no references remain in the codebase).
-- **Offline-UX shipped** (planned Phase 4): the offline indicator (`OfflineStatusPill` + `OfflineTransitionAnnouncer`) covers device-offline, API-down, and
-  offline mode, with a live pending-changes count (§9).
+- **Offline-UX shipped** (planned Phase 4): the offline indicator (`OfflineStatusPill` + `OfflineTransitionAnnouncer`) covers device-offline and API-down,
+  with a live pending-changes count (§9).
 - **Replay through `Sync*` twins retired** (2026-09): every queued write replays as its canonical
   mutation (§ 5), after the API made each safe to re-send and deprecated the twins.
 
@@ -669,7 +683,7 @@ replay only after their parent has landed — the drain reads the parent referen
 | Write-outcome settling and classification          | `src/apollo/utils/settleMutation.ts` (`settleMutation`, `settledStatus`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | Optimistic-entity completeness guard               | `__tests__/apollo/optimisticEntityCompleteness.test.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Offline indicator                                  | `src/components/molecules/OfflineStatusPill.tsx` (in each screen header), `src/components/atoms/OfflineTransitionAnnouncer.tsx` (mounted in `App.tsx`), both reading `src/hooks/ui/useOfflineStatus.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| Query short-circuit when offline                   | `src/apollo/links/offlineModeLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| Query short-circuit when offline                   | `src/apollo/links/offlineReadLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 | API-reachability circuit breaker                   | `src/apollo/links/apiReachabilityBreaker.ts`, `networkStatusLink.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | Unified `isApiUnavailable` predicate               | `src/store/slices/networkSlice.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Primary add hooks                                  | `src/features/shoppingList/hooks/mutations/useAddShoppingItem.ts`, `src/features/pantry/hooks/mutations/useAddToPantry.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |

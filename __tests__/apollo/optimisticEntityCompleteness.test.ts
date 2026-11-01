@@ -8,7 +8,7 @@
  *
  *  - Online that is invisible. The background refetch returns the full node a
  *    few hundred ms later and the list repaints.
- *  - Offline there is no refetch. `offlineModeLink` re-reads the same
+ *  - Offline there is no refetch. `offlineReadLink` re-reads the same
  *    incomplete cache, reports a miss, and `usePantryQuery`'s
  *    `errorPolicy: 'ignore'` + `usePreservedConnection` re-serve the
  *    PRE-ADD snapshot. The item is queued and replays fine on reconnect, but it

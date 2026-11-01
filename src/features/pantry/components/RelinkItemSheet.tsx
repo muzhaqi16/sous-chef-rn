@@ -11,6 +11,7 @@ import { Loading } from '#components/molecules/Loading';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Sheet } from '#components/templates/Sheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { useItemAutocomplete } from '#features/catalog/hooks/useItemAutocomplete';
 import { useMovePantryItem } from '#features/pantry/hooks/mutations/useMovePantryItem';
 import { pantryTestIDs } from '#features/pantry/testIDs';
@@ -55,6 +56,7 @@ export const RelinkItemSheet: React.FC<RelinkItemSheetProps> = ({
   );
   const searched =
     autocomplete.searchTerm.length >= 2 && !autocomplete.isLoading;
+  const noMatch = useNoMatchCopy(autocomplete.searchTerm);
 
   const handlePick = async (picked: ItemSuggestion) => {
     const outcome = await moveToItem(stack, picked.id, onConflictRefresh);
@@ -128,9 +130,16 @@ export const RelinkItemSheet: React.FC<RelinkItemSheetProps> = ({
           ))
         )}
         {!moving && !!searched && candidates.length === 0 && (
-          <Text role="body" tone="secondary" align="center">
-            {t('empty.noResultsFor', { query: autocomplete.searchTerm })}
-          </Text>
+          <>
+            <Text role="body" tone="secondary" align="center">
+              {noMatch.title}
+            </Text>
+            {noMatch.description ? (
+              <Text role="caption" tone="secondary" align="center">
+                {noMatch.description}
+              </Text>
+            ) : null}
+          </>
         )}
       </View>
     </Sheet>

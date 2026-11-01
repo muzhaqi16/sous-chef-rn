@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { NotificationItem } from '#features/notifications/components/NotificationItem';
 import { EmptyNotifications } from '#features/notifications/components/EmptyNotifications';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { useDataState } from '#hooks/data/useDataState';
 import { NotificationHeader } from '#features/notifications/components/NotificationHeader';
 import { NotificationGroupHeader } from '#features/notifications/components/NotificationGroupHeader';
@@ -53,6 +54,7 @@ export const NotificationListScreen: React.FC = () => {
     loading: historyLoading,
     error: historyError,
     hasResult: historyHasResult,
+    mayHoldMore,
     refetch: refetchHistory,
   } = useNotificationHistory(filterCategory, true);
 
@@ -184,11 +186,18 @@ export const NotificationListScreen: React.FC = () => {
               renderItem={renderRow}
               getItemType={row => row.kind}
               renderScrollComponent={SwipeAwareScrollComponent}
+              ListHeaderComponent={
+                mayHoldMore && hasNotifications ? (
+                  <PartialDataNote onRetry={refetchHistory} />
+                ) : null
+              }
               ListEmptyComponent={
                 // An empty feed looks like a failed fetch unless the query is
                 // asked, and "all caught up" is wrong for a feed that never
                 // loaded.
-                historyState === 'error' || historyState === 'offline' ? (
+                mayHoldMore ? (
+                  <DataStateView state="offline" onRetry={refetchHistory} />
+                ) : historyState === 'error' || historyState === 'offline' ? (
                   <DataStateView
                     state={historyState}
                     onRetry={refetchHistory}

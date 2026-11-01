@@ -598,8 +598,6 @@
     "syncing": "Sincronizzazione…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Modalità offline attiva",
-    "offlineModeDetail": "Vengono usati solo i dati di questo dispositivo",
     "deviceOfflineTitle": "Sei offline",
     "deviceOfflineDetail": "Le modifiche si sincronizzeranno quando tornerai online",
     "deviceOfflinePendingDetail_one": "{{count}} modifica si sincronizzerà quando tornerai online",
@@ -625,7 +623,9 @@
     "noPantryItems": "La tua dispensa è vuota",
     "noShoppingListItems": "La tua lista della spesa è vuota",
     "noInvitations": "Nessun invito in sospeso",
-    "noResultsFor": "Nessun risultato per \"{{query}}\""
+    "noResultsFor": "Nessun risultato per \"{{query}}\"",
+    "noHeldMatchFor": "Niente su questo dispositivo corrisponde a \"{{query}}\"",
+    "widerSearchNeedsConnection": "La ricerca completa richiede una connessione."
   },
   "settings": {
     "displayLanguage": "Lingua di visualizzazione",
@@ -634,11 +634,6 @@
     "unitMetric": "Metrico (kg, g, L, mL)",
     "unitImperial": "Imperiale (lb, oz, gal, fl oz)",
     "unitSystemDefault": "Predefinito di sistema",
-    "syncOffline": "Sincronizzazione e offline",
-    "autoSync": "Sincronizzazione automatica",
-    "autoSyncDesc": "Sincronizza i dati automaticamente quando sei online",
-    "offlineMode": "Modalità offline",
-    "offlineModeDesc": "Usa solo dati in cache. Disabilita ricerca e condivisione.",
     "features": "Funzionalità",
     "showTutorials": "Mostra tutorial",
     "showTutorialsDesc": "Mostra suggerimenti e tutorial utili",
@@ -747,7 +742,9 @@
     "loading": "Caricamento…",
     "errorTitle": "Impossibile caricare",
     "errorBody": "Qualcosa è andato storto durante il caricamento. Controlla la connessione e riprova.",
-    "offlineBody": "Sei offline e questo contenuto non è ancora stato scaricato. Riconnettiti per caricarlo."
+    "offlineBody": "Sei offline e questo contenuto non è ancora stato scaricato. Riconnettiti per caricarlo.",
+    "partialTitle": "Il resto richiede una connessione",
+    "partialBody": "Questo è ciò che il dispositivo ha per ora."
   },
   "tabBar": {
     "actionButton": "Pulsante azione",

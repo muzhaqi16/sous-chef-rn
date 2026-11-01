@@ -28,7 +28,6 @@ jest.mock('#store', () => ({
 const REACHABLE = {
   isOnline: true,
   apiReachable: true,
-  offlineModeEnabled: false,
 };
 
 const QUERY = gql`
@@ -166,17 +165,6 @@ describe('createNetworkStatusLink', () => {
     expect(warn).toHaveBeenCalledWith(
       expect.stringContaining('Network error for GetItems'),
     );
-  });
-
-  it('suppresses the network-error warning while offline mode is enabled', () => {
-    getState.mockReturnValue({ ...REACHABLE, offlineModeEnabled: true });
-    run(
-      forwardEmitting(o => {
-        o.error({ network: true, message: 'Network request failed' });
-      }),
-    );
-    expect(recordFailure).toHaveBeenCalledTimes(1);
-    expect(warn).not.toHaveBeenCalled();
   });
 
   it('suppresses the network-error warning once the API is known-unavailable', () => {

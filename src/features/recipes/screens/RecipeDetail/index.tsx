@@ -32,7 +32,10 @@ import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 
 import { useRecipeDetail } from './useRecipeDetail';
-import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
+import type {
+  CatalogRecipeHint,
+  RecipeRowHint,
+} from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { DataAttributionNotices } from '#features/recipes/components/DataAttributionNotices';
@@ -114,6 +117,11 @@ const DETAILS_NOTICE: Readonly<
   unavailable: {
     title: 'recipes.catalogUnavailableTitle',
     subtitle: 'recipes.catalogUnavailableSubtitle',
+    icon: 'cloud-offline-outline',
+  },
+  held: {
+    title: 'dataState.partialTitle',
+    subtitle: 'dataState.partialBody',
     icon: 'cloud-offline-outline',
   },
 };
@@ -204,7 +212,7 @@ const RecipeDetailScreen: React.FC = () => {
   // Scroll component for FlashList instances rendered inside bottom sheets.
 
   // Get available folders and tags for picker and autocomplete
-  const { folders } = useRecipeFolders();
+  const { folders, unavailable: foldersUnavailable } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
 
   // Recipe reviews
@@ -762,6 +770,7 @@ const RecipeDetailScreen: React.FC = () => {
       <FolderPicker
         visible={showFolderPicker}
         folders={folders}
+        unavailable={foldersUnavailable}
         selectedFolder={savedFolder}
         onSelect={handleUpdateFolder}
         onCancel={() => setShowFolderPicker(false)}
@@ -817,6 +826,8 @@ const RecipeDetailScreen: React.FC = () => {
 export const RecipeDetail: React.FC<
   StaticScreenProps<{
     recipeId?: string;
+    /** What the row showed, for a recipe the device does not hold. */
+    row?: RecipeRowHint;
     /** A catalog recipe the screen opens itself, shown as the row was. */
     catalog?: CatalogRecipeHint;
   }>

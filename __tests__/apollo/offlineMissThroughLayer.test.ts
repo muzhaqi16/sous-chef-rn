@@ -1,5 +1,5 @@
 import { makeCache } from '#/apollo/cache';
-import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
+import { createOfflineReadLink } from '#/apollo/links/offlineReadLink';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
@@ -41,7 +41,7 @@ describe('a list made offline, opened offline', () => {
 
     const { result } = renderHookWithApollo(
       () => usePaginatedShoppingItems({ listId: 'minted-list' }),
-      { cache, operationMocks: [], links: [createOfflineModeLink()] },
+      { cache, operationMocks: [], links: [createOfflineReadLink()] },
     );
     await drainTimers();
 

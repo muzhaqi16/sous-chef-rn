@@ -15,6 +15,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { logger } from '#/utils/environment';
 import { useSelectedPantryId } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { cappedNames } from '#/utils/cappedNames';
 
 interface UseRecipeCookingActionsOptions {
@@ -59,6 +60,7 @@ export function useRecipeCookingActions({
 
   const ingredientMatching = useRecipeIngredientMatching(recipeId);
   const pantryId = useSelectedPantryId();
+  const isOffline = useIsApiUnavailable();
 
   const [markRecipeAsCookedMutation] = useMutation(MarkRecipeAsCookedDocument, {
     context: { localFirst: true },
@@ -186,7 +188,9 @@ export function useRecipeCookingActions({
             notes: input.notes,
           });
           if (failure) return;
-          deductionToast(skipped);
+          if (isOffline)
+            toastService.info(t('recipes.cookReviewNeedsConnection'));
+          else deductionToast(skipped);
         }
       }, setMarkingAsCooked);
       return;

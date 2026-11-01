@@ -7,10 +7,15 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import {
-  UseUpdatePantryItem_PantryItemFragmentDoc,
+  UseUpdatePantryItem_RowFragmentDoc,
   type UseUpdatePantryItem_PantryItemFragment,
+  type UseUpdatePantryItem_RowFragment,
 } from './useUpdatePantryItem.generated';
-import type { StorageType } from '#/graphql/generated/schemaTypes';
+import { alertService } from '#/services/alertService';
+import { StorageType } from '#/graphql/generated/schemaTypes';
+import { localBrand, localUnit } from '#features/catalog/cache/localRefs';
+import { firstNonBlank } from '#/utils/firstNonBlank';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { useTranslation } from '#/i18n';
 import { buildDirtyUpdateInput } from './utils';
@@ -68,20 +73,23 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
     if (Object.keys(updateInput).length === 0) return true;
 
     const currentItem =
-      client.cache.readFragment<UseUpdatePantryItem_PantryItemFragment>({
+      client.cache.readFragment<UseUpdatePantryItem_RowFragment>({
         id: client.cache.identify({ __typename: 'PantryItem', id: itemId }),
-        fragment: UseUpdatePantryItem_PantryItemFragmentDoc,
-        fragmentName: 'useUpdatePantryItem_pantryItem',
+        fragment: UseUpdatePantryItem_RowFragmentDoc,
+        fragmentName: 'useUpdatePantryItem_row',
         optimistic: true,
       });
 
     if (!currentItem) {
       logger.warn('Item not found, cannot update:', itemId);
+      alertService.alert(t('labels.error'), t('itemForm.updateFailed'));
       return false;
     }
 
     // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
-    const optimisticUpdate: Partial<UseUpdatePantryItem_PantryItemFragment> = {
+    const optimisticUpdate: Partial<UseUpdatePantryItem_PantryItemFragment> & {
+      consumeUnit?: ReturnType<typeof localUnit> | null;
+    } = {
       updatedAt: new Date().toISOString(),
     };
     if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
@@ -116,19 +124,33 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
         ? parseDecimalInput(input.netWeight)
         : null;
     }
-    if (dirtyFields.location && selectedStorageLocation) {
-      optimisticUpdate.storageLocation = {
-        __typename: 'StorageLocation',
-        id: selectedStorageLocation.id,
-        name: selectedStorageLocation.name,
-        type: selectedStorageLocation.type,
-      };
+    if (dirtyFields.location) {
+      // A typed name shows under an id of its own until the server finds or
+      // creates the location.
+      const typedLocation = input.location.trim();
+      optimisticUpdate.storageLocation = selectedStorageLocation
+        ? { __typename: 'StorageLocation', ...selectedStorageLocation }
+        : typedLocation
+        ? {
+            __typename: 'StorageLocation',
+            id: generateEntityId(),
+            name: typedLocation,
+            type: StorageType.Custom,
+          }
+        : null;
     }
     if (dirtyFields.notes) optimisticUpdate.storageNotes = input.notes;
     if (dirtyFields.brand) {
-      if (!selectedBrandId && !input.brand?.trim()) {
-        optimisticUpdate.brand = null;
-      }
+      const typedBrand = input.brand?.trim();
+      optimisticUpdate.brand = typedBrand
+        ? localBrand(client.cache, selectedBrandId, typedBrand)
+        : null;
+    }
+    if (dirtyFields.consumeUnit || dirtyFields.consumeUnitId) {
+      const consumeUnitId = firstNonBlank(input.consumeUnitId);
+      optimisticUpdate.consumeUnit = consumeUnitId
+        ? localUnit(client.cache, consumeUnitId, input.consumeUnit ?? '')
+        : null;
     }
 
     // A refusal naming `field: "unit"` (a unit change while the item has

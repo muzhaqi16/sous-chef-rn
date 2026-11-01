@@ -14,7 +14,7 @@ import {
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
-import { useIsOnline } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Icon } from '#components/atoms/Icon';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Text } from '#components/atoms/Text';
@@ -133,7 +133,7 @@ export function BottomSheetAutocompleteInput<T>({
   });
   const BottomSheetScrollable = useBottomSheetScrollableCreator();
 
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
 
   // While the modal is open `searchTerm` is the source of truth, or the cursor jumps.
   const [prevValue, setPrevValue] = useState(value);
@@ -148,7 +148,7 @@ export function BottomSheetAutocompleteInput<T>({
   }
 
   // Rows or a footer are the whole condition: the hooks answer from the warmed
-  // local sets when offline, so gating on `isOnline` hid suggestions the device
+  // local sets when offline, so gating on connectivity hid suggestions the device
   // already had. Connectivity gates the network leg, inside the search hook.
   const shouldAutoOpen =
     (data.length > 0 || !!footer) &&
@@ -208,7 +208,7 @@ export function BottomSheetAutocompleteInput<T>({
   const handleClose = dismissPicker;
 
   const defaultEmptyComponent = () => {
-    if (!isOnline) {
+    if (isOffline) {
       return (
         <View style={styles.messageContainer}>
           <Icon name="cloud-offline-outline" size={48} />

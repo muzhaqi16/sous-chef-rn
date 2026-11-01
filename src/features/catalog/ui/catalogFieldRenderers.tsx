@@ -3,7 +3,6 @@ import type { FieldRendererRegistry } from '#components/molecules/fieldRenderers
 import { ItemAutocompleteField } from './autocomplete/ItemAutocompleteField';
 import { BrandAutocompleteField } from './autocomplete/BrandAutocompleteField';
 import { UnitAutocompleteField } from './autocomplete/UnitAutocompleteField';
-import { CategoryAutocompleteField } from './autocomplete/CategoryAutocompleteField';
 import { StorageLocationAutocompleteField } from './autocomplete/StorageLocationAutocompleteField';
 import { StoreAutocompleteField } from './autocomplete/StoreAutocompleteField';
 
@@ -72,29 +71,6 @@ export const catalogFieldRenderers: FieldRendererRegistry = {
         onChangeText={onChangeText}
         placeholder={placeholder}
         testID={testID}
-        {...props}
-      />
-    ),
-  },
-  categoryAutocomplete: {
-    ownsErrorDisplay: true,
-    render: ({
-      label,
-      value,
-      onChangeText,
-      placeholder,
-      required,
-      error,
-      props,
-    }) => (
-      <CategoryAutocompleteField
-        variant="modal"
-        label={label}
-        value={value}
-        onChangeText={onChangeText}
-        placeholder={placeholder}
-        required={required}
-        error={error}
         {...props}
       />
     ),

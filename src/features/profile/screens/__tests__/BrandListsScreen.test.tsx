@@ -4,6 +4,7 @@ import { t } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { profileTestIDs } from '#features/profile/testIDs';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
+import type { DataState } from '#hooks/data/useDataState';
 import { BrandListsScreen } from '../BrandListsScreen';
 import { drainTimers } from '#/test-utils/drainTimers';
 
@@ -55,9 +56,9 @@ jest.mock(
   },
 );
 
-const mockLists: { lists: BrandListView[]; loaded: boolean } = {
+const mockLists: { lists: BrandListView[]; state: DataState } = {
   lists: [],
-  loaded: true,
+  state: 'empty',
 };
 const mockCreateList = jest.fn();
 const mockSetEnabled = jest.fn();
@@ -88,13 +89,23 @@ afterEach(() => {
 });
 
 describe('BrandListsScreen', () => {
+  it('says lists never loaded are not available offline, not that there are none', () => {
+    mockLists.state = 'offline';
+    render(<BrandListsScreen />);
+
+    expect(screen.getByText('Not available offline')).toBeTruthy();
+    expect(screen.queryByText(t('brandLists.emptyTitle'))).toBeNull();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockLists.lists = [];
+    mockLists.state = 'empty';
   });
 
   it('shows each list with its brand count and its own switch', () => {
     mockLists.lists = [BOYCOTT];
+    mockLists.state = 'ready';
     render(<BrandListsScreen />);
 
     expect(screen.getByText('Boycott')).toBeTruthy();

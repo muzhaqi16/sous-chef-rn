@@ -100,6 +100,7 @@ export const StorageLocationAutocompleteField: React.FC<
     return (
       <AutocompleteField<StorageLocationOption>
         variant="inline"
+        holdsEverything
         label={label}
         value={value}
         onChangeText={handleTextChange}

@@ -1,7 +1,8 @@
 import { useLazyQuery } from '@apollo/client/react';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
 import { GetUnitBySymbolDocument } from '#operations/item/unit.generated';
-import { useCachedUnits, useIsOnline } from '#store/useAppStore';
+import { useCachedUnits } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { CachedUnit as HeldUnit } from '#store/slices/appSlice';
 import { unitLabel } from '#/utils/formatQuantity';
 
@@ -75,11 +76,11 @@ const heldUnitNamed = (units: readonly HeldUnit[], typed: string) => {
 
 /**
  * The unit a typed text names: from the units held on the device first, from
- * the API only when they hold none and the phone is online.
+ * the API only when they hold none and it can be reached.
  */
 export function useResolveUnit() {
   const heldUnits = useCachedUnits();
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
   const [unitQuery] = useLazyQuery(GetUnitBySymbolDocument, {
     fetchPolicy: 'cache-first',
     refetchOn: false,
@@ -106,7 +107,7 @@ export function useResolveUnit() {
     if (!typed) return null;
     const held = heldUnitFor(typed);
     if (held) return held;
-    if (!isOnline) return null;
+    if (isOffline) return null;
     const result = await unitQuery({ variables: { symbol: typed } });
     const unit = result.data?.unitBySymbol;
     return unit

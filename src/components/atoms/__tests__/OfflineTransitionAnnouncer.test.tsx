@@ -16,7 +16,6 @@ const status = (
   message = 'You are offline',
 ): ReturnType<typeof useOfflineStatus> => ({
   offline,
-  iconName: 'cloud-offline-outline',
   title: 'You are offline',
   detail: 'Changes will sync',
   message,

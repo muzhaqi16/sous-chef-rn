@@ -145,3 +145,11 @@ fragment useRecipeData_recipe on Recipe {
     totalCount
   }
 }
+
+# What a list or a planned meal holds of a recipe, read by id: all an offline
+# screen has of one never opened on this device.
+fragment useRecipeData_heldRecipe on Recipe {
+  id
+  name
+  imageUrl
+}

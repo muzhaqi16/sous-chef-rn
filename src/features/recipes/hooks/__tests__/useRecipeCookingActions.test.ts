@@ -26,9 +26,14 @@ import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 jest.mock('#/domain/reviewPrompt');
 
 // useRecipeIngredientMatching (used internally) reads the selected pantry id.
+let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: RootState) => unknown) =>
-    selector({ selectedPantryId: 'pantry-1' } as RootState),
+    selector({
+      selectedPantryId: 'pantry-1',
+      isOnline: mockIsOnline,
+      apiReachable: null,
+    } as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
   useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
@@ -36,6 +41,7 @@ jest.mock('#store/useAppStore', () => ({
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
 const mockToastWarning = jest.mocked(toastService.warning);
+const mockToastInfo = jest.mocked(toastService.info);
 
 // Deterministic client-minted cooking-log id so we can assert the mutation
 // sends it.
@@ -335,6 +341,41 @@ describe('useRecipeCookingActions', () => {
     expect(mockToastSuccess).toHaveBeenCalledWith(
       'Recipe marked as cooked! Ingredients deducted from pantry.',
     );
+  });
+
+  describe('when the ingredient review cannot load', () => {
+    const noMatches = () =>
+      recordMock(MatchRecipeIngredientsToPantryDocument, {
+        error: new Error('Network request failed'),
+      });
+
+    it('records the cook offline, and says what it skipped', async () => {
+      mockIsOnline = false;
+      const cooked = cookedMock();
+      const { result } = renderCooking([noMatches().mock, cooked.mock]);
+
+      await cook(result, { servings: 2, useGranularDeduction: true });
+      await drainTimers();
+      mockIsOnline = true;
+
+      expect(cooked.fired).toHaveLength(1);
+      expect(mockToastInfo).toHaveBeenCalledWith(
+        'Reviewing the ingredients needs a connection. The amounts will be worked out when it syncs.',
+      );
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it('says the cook deducted online, as ever', async () => {
+      const cooked = cookedMock();
+      const { result } = renderCooking([noMatches().mock, cooked.mock]);
+
+      await cook(result, { servings: 2, useGranularDeduction: true });
+      await drainTimers();
+
+      expect(cooked.fired).toHaveLength(1);
+      expect(mockToastInfo).not.toHaveBeenCalled();
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
   });
 
   // The review opens with the servings and notes the cook entered; skipping it

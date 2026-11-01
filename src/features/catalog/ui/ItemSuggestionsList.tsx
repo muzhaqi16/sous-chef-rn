@@ -7,6 +7,7 @@ import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import { Text } from '#components/atoms/Text';
 import { ListItem } from '#components/molecules/ListItem';
 import { resolveImageUrl } from '#utils/imageUtils';
+import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { useTranslation } from '#/i18n';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { QuickAddButton } from '#features/catalog/components/QuickAddButton';
@@ -69,14 +70,15 @@ const SuggestionRow = ({
 };
 
 interface AddManuallyOptionProps {
-  hasResults: boolean;
+  /** Named as "no matches" only when the search really covered everything. */
+  saysNoMatches: boolean;
   searchQuery: string;
   onPress: () => void;
   testIDPrefix: string;
 }
 
 const AddManuallyOption = ({
-  hasResults,
+  saysNoMatches,
   searchQuery,
   onPress,
   testIDPrefix,
@@ -91,9 +93,9 @@ const AddManuallyOption = ({
     >
       <Icon name="add-circle-outline" size={20} tone="primary" />
       <Text role="bodyStrong" tone="accent">
-        {hasResults
-          ? t('addItemSheet.addManuallyWithTerm', { term: searchQuery })
-          : t('addItemSheet.noMatchesAddManually', { term: searchQuery })}
+        {saysNoMatches
+          ? t('addItemSheet.noMatchesAddManually', { term: searchQuery })
+          : t('addItemSheet.addManuallyWithTerm', { term: searchQuery })}
       </Text>
     </AppPressable>
   );
@@ -133,10 +135,11 @@ export const ItemSuggestionsList = ({
   const hasResults = suggestions.length > 0;
   // With no results there is nothing to report.
   const showReportOption = !!onReportItem && hasResults;
+  const noMatch = useNoMatchCopy(searchQuery);
 
   const addManually = (
     <AddManuallyOption
-      hasResults={hasResults}
+      saysNoMatches={!hasResults && !noMatch.heldOnly}
       searchQuery={searchQuery}
       onPress={onAddManually}
       testIDPrefix={testIDPrefix}
@@ -145,6 +148,16 @@ export const ItemSuggestionsList = ({
 
   return (
     <View style={styles.container}>
+      {!hasResults && noMatch.heldOnly ? (
+        <View style={styles.note}>
+          <Text role="bodyStrong" tone="secondary" align="center">
+            {noMatch.title}
+          </Text>
+          <Text role="caption" tone="secondary" align="center">
+            {noMatch.description}
+          </Text>
+        </View>
+      ) : null}
       {addManuallyPosition === 'top' && addManually}
       {suggestions.map(item => (
         <SuggestionRow
@@ -164,6 +177,10 @@ export const ItemSuggestionsList = ({
 const styles = StyleSheet.create(theme => ({
   container: {
     marginBottom: theme.spacing.lg,
+  },
+  note: {
+    paddingVertical: theme.layout.rowInset,
+    paddingHorizontal: theme.layout.rowInsetHorizontal,
   },
   // A plain action beside the cards, its content in line with theirs.
   action: {

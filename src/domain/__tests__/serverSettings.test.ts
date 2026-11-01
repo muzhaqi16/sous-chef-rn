@@ -3,7 +3,7 @@ import {
   mirroredFrom,
   settingsInput,
 } from '#/domain/serverSettings';
-import { AppTheme } from '#/graphql/generated/schemaTypes';
+import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
 
 describe('settingsInput', () => {
   it('puts each setting in the group updateSettings takes it in', () => {
@@ -11,13 +11,13 @@ describe('settingsInput', () => {
       settingsInput({
         theme: AppTheme.Dark,
         showTutorials: false,
-        offlineMode: true,
+        preferredUnitSystem: UnitSystem.Metric,
         storeMode: false,
         budgetAndPrices: true,
       }),
     ).toEqual({
       ui: { theme: AppTheme.Dark, showTutorials: false },
-      sync: { offlineMode: true },
+      regional: { preferredUnitSystem: UnitSystem.Metric },
       shopping: { storeMode: false, budgetAndPrices: true },
     });
   });

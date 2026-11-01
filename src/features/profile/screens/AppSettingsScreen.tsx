@@ -50,14 +50,6 @@ export const AppSettingsScreen: React.FC = () => {
     isEmpty: false,
   });
 
-  // Offline mode renders from the STORE, which `offlineModeLink` reads; the
-  // server copy is a cross-device mirror. So the flip is synchronous and needs
-  // no Apollo broadcast, exactly when the server can't be reached.
-  const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
-  const setOfflineModeEnabled = useAppStore(
-    state => state.setOfflineModeEnabled,
-  );
-
   // PERFORMANCE: Use selective selectors instead of inline functions
   const hapticFeedbackEnabled = useAppStore(
     state => state.hapticFeedbackEnabled,
@@ -107,20 +99,6 @@ export const AppSettingsScreen: React.FC = () => {
     // failure, and a second one on `!success` stacks two dialogs.
     void executeAsyncWithCleanup(
       () => updateAppSetting(key, value),
-      () => setUpdating(null),
-    );
-  };
-
-  /**
-   * The LOCAL write drives the link policy and cannot wait on a round trip.
-   * `immediate`: the one caller that IS a user gesture, so not flapping, needs
-   * no dwell.
-   */
-  const handleOfflineModeChange = (value: boolean) => {
-    setOfflineModeEnabled(value, true);
-    setUpdating('offlineMode');
-    void executeAsyncWithCleanup(
-      () => updateAppSetting('offlineMode', value),
       () => setUpdating(null),
     );
   };
@@ -181,18 +159,6 @@ export const AppSettingsScreen: React.FC = () => {
           }}
           testID={profileTestIDs.settingsState}
         />
-        {/* Offline is exactly when someone reaches for this switch, and its
-            value lives in the store, not in the settings query. Behind the
-            gate it was unreachable in the state it exists for. */}
-        <SettingsSection variant="inset" title={t('settings.syncOffline')}>
-          <SettingSwitch
-            testID={profileTestIDs.settingsOfflineModeSwitch}
-            title={t('settings.offlineMode')}
-            description={t('settings.offlineModeDesc')}
-            value={offlineModeEnabled}
-            onValueChange={handleOfflineModeChange}
-          />
-        </SettingsSection>
       </SubScreen>
     );
   }
@@ -229,23 +195,6 @@ export const AppSettingsScreen: React.FC = () => {
             setUnitPickerVisible(false);
           }}
           onCancel={() => setUnitPickerVisible(false)}
-        />
-      </SettingsSection>
-
-      <SettingsSection variant="inset" title={t('settings.syncOffline')}>
-        <SettingSwitch
-          testID={profileTestIDs.settingsAutoSyncSwitch}
-          title={t('settings.autoSync')}
-          description={t('settings.autoSyncDesc')}
-          value={settings.autoSync}
-          onValueChange={value => handleSettingChange('autoSync', value)}
-        />
-        <SettingSwitch
-          testID={profileTestIDs.settingsOfflineModeSwitch}
-          title={t('settings.offlineMode')}
-          description={t('settings.offlineModeDesc')}
-          value={offlineModeEnabled}
-          onValueChange={handleOfflineModeChange}
         />
       </SettingsSection>
 

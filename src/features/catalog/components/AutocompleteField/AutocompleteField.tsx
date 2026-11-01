@@ -34,6 +34,7 @@ interface InlineVariantProps<TItem> extends SharedProps<TItem> {
   debounceMs?: number;
   /** See `InlineAutocomplete`: for hosts sized to their own content. */
   reserveDropdownSpace?: boolean;
+  holdsEverything?: boolean;
 }
 
 interface ModalVariantProps<TItem> extends SharedProps<TItem> {
@@ -114,6 +115,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
         onSelect={props.onSelect}
         autoCapitalize={props.autoCapitalize}
         footer={addNew}
+        holdsEverything={props.holdsEverything}
         reserveDropdownSpace={props.reserveDropdownSpace}
         onEndEditing={props.onEndEditing}
       />

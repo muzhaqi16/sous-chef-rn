@@ -32,8 +32,8 @@ export interface UseHybridPantrySearchParams {
   hasMore: boolean;
   /** Whether the main pantry query is loading. */
   loading: boolean;
-  /** Whether the device is online. */
-  isOnline: boolean;
+  /** Whether the server can be asked. */
+  serverAvailable: boolean;
 }
 
 /**
@@ -49,7 +49,7 @@ export function useHybridPantrySearch({
   totalCount,
   hasMore,
   loading,
-  isOnline,
+  serverAvailable,
 }: UseHybridPantrySearchParams): UseHybridSearchReturn<PantryItem> {
   const today = useToday();
   const config: UseHybridSearchConfig<GetPantryQuery, PantryItem> = {
@@ -60,7 +60,7 @@ export function useHybridPantrySearch({
     // Server sort/search only kicks in past the full load window — below it the
     // client already holds every item, so sort/filter/search stay local.
     pageSize: PAGE_SIZE.MAX,
-    isOnline,
+    serverAvailable,
     searchDocument: GetPantryDocument,
     buildSearchVariables: search => {
       if (!pantryId?.trim()) return null;

@@ -19,7 +19,7 @@ import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { usePhotoCapture } from '#hooks/device/usePhotoCapture';
 import { useImageUpload } from '#hooks/data/useImageUpload';
 import { ImageUploadPurpose } from '#/graphql/generated/schemaTypes';
-import { useIsOnline } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { ImageFile } from '#/types/media';
 import { hasItemLines } from '../utils/hasItemLines';
 import { printedTimeOf } from '../utils/receiptDate';
@@ -154,7 +154,7 @@ export function useReceiptScan({
 
   const { takePhoto: capturePhoto, pickPhoto: choosePhoto } = usePhotoCapture();
   const { uploadUnconfirmed } = useImageUpload();
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
 
   // Pages the phone could not read, kept while the user decides whether to
   // send them; deleted if the screen goes first.
@@ -287,12 +287,27 @@ export function useReceiptScan({
   // A user who agreed, online: the scan's photos go to the server to be read.
   const readsPhotosFirst = async () =>
     serverParsing &&
-    isOnline &&
+    !isOffline &&
     (await storedReceiptPhotoConsent()) === 'granted';
 
+  // Reading deletes the pages, and a user who agreed has the server read what
+  // the phone could not, once it can be reached: a copy waits for that.
+  const copyForServer = async (imageUris: string[]) => {
+    const waits =
+      serverParsing &&
+      isOffline &&
+      imageUris.length <= MAX_PHOTOS &&
+      (await storedReceiptPhotoConsent()) === 'granted';
+    if (!waits) return null;
+    const copies = await preparePhotos(imageUris, { keepPages: true });
+    return copies?.map(photo => photo.uri) ?? null;
+  };
+
   const readText = async (imageUris: string[], library: boolean) => {
+    const copies = await copyForServer(imageUris);
     const recognized = await recognize(imageUris);
     if (!recognized) {
+      dropPhotos(copies ?? []);
       // Only iOS's scanner takes this many, and a receipt is not sent in part;
       // nor is one the server does not read.
       if (imageUris.length > MAX_PHOTOS || !serverParsing) {
@@ -305,6 +320,12 @@ export function useReceiptScan({
       return;
     }
     const next = textDraft(receiptText(recognized));
+    if (!next && copies) {
+      unread.current = copies;
+      setStatus('readFailed');
+      return;
+    }
+    dropPhotos(copies ?? []);
     if (!next) {
       setStatus('unreadable');
       return;
@@ -482,7 +503,7 @@ export function useReceiptScan({
     starting.current = true;
     if (
       serverParsing &&
-      isOnline &&
+      !isOffline &&
       (await storedReceiptPhotoConsent()) === null
     ) {
       askConsent(start);
@@ -493,7 +514,7 @@ export function useReceiptScan({
 
   /** Sends the pages the phone could not read for the server to read them. */
   const sendPhotos = async () => {
-    if (!isOnline) return;
+    if (isOffline) return;
     const pages = unread.current;
     // A second tap finds them taken: it must not save a receipt of no photos.
     if (pages.length === 0) return;
@@ -509,6 +530,21 @@ export function useReceiptScan({
     if (keys) keepPhotos(keys, false, false);
     else setStatus('failed');
   };
+
+  // Through a ref, so the effect keys on the pages waiting alone.
+  const sendRef = useRef(sendPhotos);
+  useEffect(() => {
+    sendRef.current = sendPhotos;
+  });
+
+  // Pages held offline for a user who already agreed go when the API is back.
+  const pagesWaiting = status === 'readFailed' && !isOffline;
+  useEffect(() => {
+    if (!pagesWaiting) return;
+    void storedReceiptPhotoConsent().then(consent => {
+      if (consent === 'granted') void sendRef.current();
+    });
+  }, [pagesWaiting]);
 
   /** Deletes the pages the phone could not read, sending nothing. */
   const declinePhotos = () => {
@@ -529,7 +565,7 @@ export function useReceiptScan({
     draft,
     pickedFromLibrary: fromLibrary,
     /** Sending the photo needs a connection. */
-    canSendPhotos: isOnline,
+    canSendPhotos: !isOffline,
     scan: () => begin(openScanner),
     takePhoto: () => begin(capture),
     pickPhoto: () => begin(choose),

@@ -5,7 +5,7 @@ import {
   SearchUnitsDocument,
   GetCommonUnitsDocument,
 } from '#operations/item/unit.generated';
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
 import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm, type Accessor } from '#hooks/search/useLocalSearch';
@@ -30,7 +30,6 @@ const UNITS_CACHE_TTL = 24 * 60 * 60 * 1000;
 
 export function useUnitAutocomplete() {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
-  const isOnline = useIsOnline();
   const cachedUnits = useAppStore(state => state.cachedUnits);
   const setCachedUnits = useAppStore(state => state.setCachedUnits);
   const lastUnitsFetchedAt = useAppStore(selectUnitsFetchedAt);
@@ -100,6 +99,8 @@ export function useUnitAutocomplete() {
     return [];
   };
 
+  // The common units only, and the server matches plurals and alternate names
+  // ("sticks", "ounces"): it answers when it can.
   const fallbackItems: UnitItem[] = cachedUnits;
 
   const filterFallback = (term: string, items: UnitItem[]): UnitItem[] => {
@@ -117,9 +118,6 @@ export function useUnitAutocomplete() {
     fallbackItems,
     filterFallback,
     maxResults: 10,
-    // The cached units are the common ones only, and the server matches
-    // plurals and alternate names ("sticks", "ounces"): it answers when it can.
-    localFirst: !isOnline,
   });
 
   return autocomplete;

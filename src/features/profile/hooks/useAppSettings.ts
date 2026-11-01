@@ -1,6 +1,4 @@
-import { useEffect } from 'react';
 import { useMirroredSettings, useUser } from '#store/useAppStore';
-import { useStore } from '#store';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { AppTheme, UnitSystem } from '#/graphql/generated/schemaTypes';
@@ -14,8 +12,6 @@ export type AppSettings = SettingValues;
 const DEFAULT_SETTINGS: AppSettings = {
   theme: AppTheme.System,
   compactMode: false,
-  autoSync: true,
-  offlineMode: false,
   preferredUnitSystem: UnitSystem.System,
   ...MIRRORED_SETTINGS,
 };
@@ -46,21 +42,11 @@ export const useAppSettings = () => {
       theme: AppTheme.System,
       compactMode: false,
       showTutorials: true,
-      autoSync: true,
-      offlineMode: false,
       preferredUnitSystem: UnitSystem.System,
     };
 
     return updateSettings(defaultSettings, t('errors.resetSettingsFailed'));
   };
-
-  // Offline mode renders from the store; the server copy follows the device's
-  // last choice to the account's other devices.
-  useEffect(() => {
-    if (settings?.offlineMode !== undefined) {
-      useStore.getState().setOfflineModeEnabled(settings.offlineMode);
-    }
-  }, [settings?.offlineMode]);
 
   return {
     settings: current,

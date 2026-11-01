@@ -1,4 +1,5 @@
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { sendFields } from '#/apollo/pendingWrites/sendFields';
@@ -61,10 +62,16 @@ export function useBrandLists({
 }: { fetchPolicy?: 'cache-first' } = {}) {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { data } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     BrandListsDocument,
     fetchPolicy ? { fetchPolicy } : {},
   );
+  const state = useDataState({
+    loading,
+    error,
+    hasResult: data !== undefined,
+    isEmpty: data?.brandLists.length === 0,
+  });
   const [createMutation] = useMutation(CreateBrandListDocument, {
     context: { localFirst: true },
   });
@@ -199,6 +206,8 @@ export function useBrandLists({
     lists: data?.brandLists.map(toView) ?? [],
     /** True once the lists have been read, from the network or the cache. */
     loaded: !!data,
+    state,
+    refetch,
     createList,
     renameList: (id: string, name: string) => updateList(id, { name }),
     setEnabled: (id: string, enabled: boolean) => updateList(id, { enabled }),

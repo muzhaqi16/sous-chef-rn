@@ -569,9 +569,12 @@ describe('useImageUpload', () => {
     );
   });
 
-  it('uploadProfileImage returns null when offline', async () => {
+  it.each([
+    ['no connection', { isOnline: false, apiReachable: null }],
+    ['the API down on working Wi-Fi', { isOnline: true, apiReachable: false }],
+  ])('uploadProfileImage starts nothing with %s', async (_cause, network) => {
     const { useStore } = require('#store');
-    useStore.getState = () => ({ isOnline: false });
+    useStore.getState = () => network;
 
     const { result } = renderHookWithApollo(() => useImageUpload());
     const onError = jest.fn();

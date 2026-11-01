@@ -38,6 +38,7 @@ import {
 import { toastService } from '#/services/toastService';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { filterByTerm } from '#hooks/search/useLocalSearch';
+import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { Loading } from '#components/molecules/Loading';
@@ -216,6 +217,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
       )
     : [];
   const searchingCatalog = catalogSearched && searchingApi;
+  const noMatch = useNoMatchCopy(searchQuery.trim());
 
   const mealTypeOptions: ChipOption<MealType>[] = MEAL_TYPE_ORDER.map(type => ({
     key: type,
@@ -329,7 +331,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                 />
               ) : null}
 
-              {canSearchCatalog && !catalogSearched ? (
+              {canSearchCatalog && !catalogSearched && !noMatch.heldOnly ? (
                 <AppPressable
                   onPress={handleSearchCatalog}
                   style={styles.customMealRow}
@@ -345,6 +347,12 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
                     })}
                   </Text>
                 </AppPressable>
+              ) : null}
+
+              {hasQuery && noMatch.heldOnly && filteredRecipes.length > 0 ? (
+                <Text role="caption" tone="secondary" align="center">
+                  {t('errors.offlineSearchUnavailable')}
+                </Text>
               ) : null}
 
               {/* Additional search results */}
@@ -419,14 +427,19 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
               ) : null}
 
               {hasQuery &&
-              (catalogSearched || !canSearchCatalog) &&
+              (catalogSearched || !canSearchCatalog || noMatch.heldOnly) &&
               filteredRecipes.length === 0 &&
               !isLoadingRemainingPages &&
               !searchingCatalog &&
               otherResults.length === 0 ? (
                 <EmptyState
                   size="compact"
-                  title={t('addMealSheet.noResults')}
+                  title={
+                    noMatch.heldOnly
+                      ? noMatch.title
+                      : t('addMealSheet.noResults')
+                  }
+                  description={noMatch.description}
                 />
               ) : null}
             </>

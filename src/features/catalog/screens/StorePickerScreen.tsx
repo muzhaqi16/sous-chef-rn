@@ -95,7 +95,7 @@ export const StorePickerScreen: React.FC<
   const term = search.term.trim();
   // A refused zip says why on its field, with nothing under it.
   const empty =
-    !search.isOnline || search.zipRefused ? null : search.loading ? (
+    search.isOffline || search.zipRefused ? null : search.loading ? (
       <Loading size="small" />
     ) : (
       <Text role="body" tone="secondary" style={styles.note}>
@@ -106,7 +106,7 @@ export const StorePickerScreen: React.FC<
           : t('storePicker.nothingNear')}
       </Text>
     );
-  const unlisted = search.isOnline ? search.unlistedName : null;
+  const unlisted = search.isOffline ? null : search.unlistedName;
 
   return (
     <SubScreen
@@ -118,7 +118,7 @@ export const StorePickerScreen: React.FC<
       <StoreList
         header={
           <>
-            {search.isOnline ? (
+            {!search.isOffline ? (
               <>
                 <SearchBar
                   value={search.term}

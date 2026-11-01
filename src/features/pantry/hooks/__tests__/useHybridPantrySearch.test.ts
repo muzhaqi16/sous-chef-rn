@@ -27,8 +27,8 @@ jest.mock('#features/pantry/utils/hybridSort', () => ({
   shouldUseServerSort: (
     totalCount: number,
     pageSize: number,
-    isOnline: boolean,
-  ) => isOnline && totalCount > pageSize,
+    serverAvailable: boolean,
+  ) => serverAvailable && totalCount > pageSize,
 }));
 
 beforeEach(() => {
@@ -60,7 +60,7 @@ describe('useHybridPantrySearch', () => {
           totalCount: 2,
           hasMore: false,
           loading: false,
-          isOnline: true,
+          serverAvailable: true,
         }),
       );
 
@@ -78,7 +78,7 @@ describe('useHybridPantrySearch', () => {
           totalCount: 2,
           hasMore: false,
           loading: false,
-          isOnline: true,
+          serverAvailable: true,
         }),
       );
 
@@ -86,6 +86,37 @@ describe('useHybridPantrySearch', () => {
         result.current.setSearchQuery('Milk');
       });
 
+      expect(result.current.activeItems).toEqual([
+        { id: 'i1', itemName: 'Milk' },
+      ]);
+    });
+  });
+
+  describe('with the API down', () => {
+    it('searches locally past the page size, and sends nothing', async () => {
+      const m = recordMock(GetPantryDocument, {});
+      const { result } = renderHookWithApollo(
+        () =>
+          useHybridPantrySearch({
+            pantryId: 'p1',
+            locationQueryFilter: null,
+            orderBy: undefined,
+            items: baseItems,
+            totalCount: 500,
+            hasMore: true,
+            loading: false,
+            serverAvailable: false,
+          }),
+        { operationMocks: [m.mock] },
+      );
+
+      act(() => {
+        result.current.setSearchQuery('Milk');
+      });
+      await drainTimers();
+
+      expect(m.fired).toEqual([]);
+      expect(result.current.useServerSort).toBe(false);
       expect(result.current.activeItems).toEqual([
         { id: 'i1', itemName: 'Milk' },
       ]);
@@ -177,7 +208,7 @@ describe('useHybridPantrySearch', () => {
             totalCount: 1000,
             hasMore: true,
             loading: false,
-            isOnline: true,
+            serverAvailable: true,
           }),
         { operationMocks: [m.mock] },
       );
@@ -217,7 +248,7 @@ describe('useHybridPantrySearch', () => {
             totalCount: 1000,
             hasMore: true,
             loading: false,
-            isOnline: true,
+            serverAvailable: true,
           }),
         { operationMocks: [failure] },
       );
@@ -247,7 +278,7 @@ describe('useHybridPantrySearch', () => {
             totalCount: 1000,
             hasMore: true,
             loading: false,
-            isOnline: true,
+            serverAvailable: true,
           }),
         { operationMocks: [m.mock] },
       );
@@ -273,7 +304,7 @@ describe('useHybridPantrySearch', () => {
           totalCount: 2,
           hasMore: false,
           loading: false,
-          isOnline: true,
+          serverAvailable: true,
         }),
       );
 

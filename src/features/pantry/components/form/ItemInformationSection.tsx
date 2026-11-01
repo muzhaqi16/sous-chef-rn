@@ -19,7 +19,6 @@ interface ItemInformationSectionProps {
   errors: FieldErrors<PantryItemFormData>;
   suggestedBrands?: SuggestedBrand[];
   onBrandSelected?: (brandId: string | null) => void;
-  onCategorySelected?: (categoryId: string | null) => void;
 }
 
 export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
@@ -27,7 +26,6 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
   errors,
   suggestedBrands,
   onBrandSelected,
-  onCategorySelected,
 }) => {
   const { t } = useTranslation();
   const getFields = (): FieldDef<PantryItemFormData>[] => {
@@ -37,13 +35,6 @@ export const ItemInformationSection: React.FC<ItemInformationSectionProps> = ({
         label: t('labels.itemName'),
         placeholder: t('itemForm.placeholderItemName'),
         component: FormInput,
-      },
-      {
-        name: 'category',
-        label: t('labels.category'),
-        placeholder: t('itemForm.placeholderCategory'),
-        component: 'categoryAutocomplete',
-        props: { onCategorySelected },
       },
       {
         name: 'brand',

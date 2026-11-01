@@ -606,6 +606,50 @@ it('plans nothing for today when no plan covers it', async () => {
   expect(result.current.overview.meals).toEqual([]);
 });
 
+describe('the meals section', () => {
+  const unreadablePlan = () =>
+    recordMock(GetMealPlanDocument, {
+      error: new Error('Network request failed'),
+    });
+
+  it('is offline when the plan covering today is listed but not held', async () => {
+    useStore.setState({ isOnline: true, apiReachable: false });
+    const { result } = renderOverview([
+      countsMock(),
+      plansMock(),
+      unreadablePlan(),
+      suggestionsMock(),
+      listsMock(),
+    ]);
+
+    await drainTimers();
+
+    expect(result.current.overview.meals).toEqual([]);
+    expect(result.current.overview.mealsState).toBe('offline');
+  });
+
+  it('is ready with really no plan', async () => {
+    const { result } = renderOverview([
+      countsMock(),
+      plansMock(false),
+      suggestionsMock(),
+      listsMock(),
+    ]);
+
+    await drainTimers();
+
+    expect(result.current.overview.mealsState).toBe('empty');
+  });
+
+  it('is ready when the plan is held with no meals today', async () => {
+    const { result } = renderOverview();
+
+    await drainTimers();
+
+    expect(result.current.overview.mealsState).toBe('ready');
+  });
+});
+
 describe("a new day's counts", () => {
   /** Yesterday's counts, as a cold start restores them: `stats` has no day in its key. */
   function cacheWithYesterdaysCounts() {

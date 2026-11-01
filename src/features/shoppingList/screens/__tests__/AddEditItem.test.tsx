@@ -4,7 +4,14 @@ import React from 'react';
 import type { TextInputProps } from 'react-native';
 import { fireEvent, screen, userEvent } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { ShoppingListItem_ListedFragmentDoc } from '#features/shoppingList/cache/shoppingListItemListed.generated';
+import { useStore } from '#store';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 import { alertService } from '#/services/alertService';
@@ -563,10 +570,88 @@ describe('AddEditItem', () => {
     expect(screen.getByTestId('add-item-name-input')).toBeTruthy();
   });
 
-  it('shows base input for item name when editing', () => {
+  describe('with the server out of reach', () => {
+    const noServer = (): MockFor<typeof ShoppingListItemForEditDocument> => ({
+      request: {
+        query: ShoppingListItemForEditDocument,
+        variables: { id: 'item1' },
+      },
+      error: new Error('Network request failed'),
+      maxUsageCount: 10,
+    });
+
+    beforeEach(() => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+    });
+
+    afterEach(() => {
+      useStore.setState({ isOnline: true, apiReachable: null });
+    });
+
+    it('opens a listed line on its values, and saves it at its version', async () => {
+      const user = userEvent.setup();
+      const cache = makeCache();
+      seedFragment(cache, {
+        fragment: ShoppingListItem_ListedFragmentDoc,
+        fragmentName: 'shoppingListItem_listed',
+        data: {
+          __typename: 'ShoppingListItem',
+          id: 'item1',
+          itemName: 'Held milk',
+          version: 7,
+        },
+      });
+      const update = recordMock(UpdateShoppingListItemDocument, {
+        held: true,
+        data: {
+          updateShoppingListItem: {
+            __typename: 'UpdateShoppingListItemPayload',
+            shoppingListItem: { id: 'item1' },
+          },
+        },
+      });
+
+      renderWithApollo(<AddEditItem route={editRoute} />, {
+        cache,
+        operationMocks: [noServer(), update.mock],
+      });
+      await drainTimers();
+
+      const name = screen.getByTestId('edit-item-name-input');
+      expect(name.props.value).toBe('Held milk');
+      fireEvent.changeText(name, 'Oat milk');
+      await user.press(screen.getByTestId('edit-item-submit-button'));
+      await drainTimers();
+
+      expect(update.fired[0]).toMatchObject({
+        input: { id: 'item1', version: 7, itemName: 'Oat milk' },
+      });
+      expect(
+        cache.readFragment({
+          id: cache.identify({ __typename: 'ShoppingListItem', id: 'item1' }),
+          fragment: ShoppingListItem_ListedFragmentDoc,
+          fragmentName: 'shoppingListItem_listed',
+          optimistic: true,
+        }),
+      ).toMatchObject({ itemName: 'Oat milk' });
+    });
+
+    it('offers no Save for a line the device does not hold', async () => {
+      renderWithApollo(<AddEditItem route={editRoute} />, {
+        operationMocks: [noServer()],
+      });
+      await drainTimers();
+
+      expect(screen.getByTestId('state-offline')).toBeTruthy();
+      expect(screen.queryByTestId('edit-item-submit-button')).toBeNull();
+    });
+  });
+
+  it('shows base input for item name when editing', async () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildItemForEditMock('item1')],
     });
+    await drainTimers();
     expect(screen.getByTestId('edit-item-name-input')).toBeTruthy();
   });
 
@@ -652,10 +737,11 @@ describe('AddEditItem', () => {
     ).toHaveTextContent('g');
   });
 
-  it('shows brand and net weight fields when editing', () => {
+  it('shows brand and net weight fields when editing', async () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildItemForEditMock('item1')],
     });
+    await drainTimers();
     expect(screen.getByTestId('edit-item-brand-input')).toBeTruthy();
     expect(screen.getByTestId('edit-item-net-weight-input')).toBeTruthy();
     expect(screen.getByTestId('edit-item-net-weight-unit-picker')).toBeTruthy();
@@ -695,10 +781,11 @@ describe('AddEditItem', () => {
     expect(screen.getByTestId('add-item-submit-button')).toBeTruthy();
   });
 
-  it('shows correct submit button testID for editing', () => {
+  it('shows correct submit button testID for editing', async () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildItemForEditMock('item1')],
     });
+    await drainTimers();
     expect(screen.getByTestId('edit-item-submit-button')).toBeTruthy();
   });
 
@@ -714,10 +801,11 @@ describe('AddEditItem', () => {
     expect(screen.getByTestId('add-item-quantity-input')).toBeTruthy();
   });
 
-  it('shows edit-item-quantity-input testID for editing', () => {
+  it('shows edit-item-quantity-input testID for editing', async () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildItemForEditMock('item1')],
     });
+    await drainTimers();
     expect(screen.getByTestId('edit-item-quantity-input')).toBeTruthy();
   });
 
@@ -726,10 +814,11 @@ describe('AddEditItem', () => {
     expect(screen.getByTestId('add-item-unit-picker')).toBeTruthy();
   });
 
-  it('shows edit-item-unit-picker testID for editing', () => {
+  it('shows edit-item-unit-picker testID for editing', async () => {
     renderWithApollo(<AddEditItem route={editRoute} />, {
       operationMocks: [buildItemForEditMock('item1')],
     });
+    await drainTimers();
     expect(screen.getByTestId('edit-item-unit-picker')).toBeTruthy();
   });
 

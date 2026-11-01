@@ -3,10 +3,8 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useToday } from '#hooks/app/useToday';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
-import {
-  heldFetchPolicy,
-  type StandDownOptions,
-} from '#hooks/apollo/standDownOptions';
+import type { StandDownOptions } from '#hooks/apollo/standDownOptions';
+import { useDayConfirmedRead } from '#hooks/apollo/useDayConfirmedRead';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { RecipeSuggestionsDocument } from './useServerRecipeSuggestions.generated';
@@ -31,7 +29,11 @@ export function useServerRecipeSuggestions(
 ) {
   const today = useToday();
   const homeId = useSelectedHomeId() ?? undefined;
-  const { data, loading, error, refetch } = useQuery(
+  const dayRead = useDayConfirmedRead(
+    enabled ? `${today}:${homeId ?? ''}` : null,
+    fetchPolicy,
+  );
+  const { data, loading, error, refetch, variables } = useQuery(
     RecipeSuggestionsDocument,
     enabled
       ? {
@@ -41,9 +43,14 @@ export function useServerRecipeSuggestions(
             homeId,
             excludeDietaryConflicts,
           },
-          ...heldFetchPolicy(fetchPolicy),
+          ...dayRead.policy,
         }
       : skipToken,
+  );
+  dayRead.markAnswered(
+    data && !loading && !error
+      ? `${variables.today}:${variables.homeId ?? ''}`
+      : null,
   );
   // A failed ask answers `undefined`: the last answer for this day and home
   // stands until a new one, and never stands in for another home's.

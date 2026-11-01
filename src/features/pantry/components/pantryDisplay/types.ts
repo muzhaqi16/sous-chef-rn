@@ -27,6 +27,9 @@ export interface PantryContentProps {
   /** The header's title: the pantry shown, which it switches. */
   pantryName: string;
 
+  /** Offline with pages the device never loaded, so a narrowed view may miss rows. */
+  mayHoldMore?: boolean;
+
   // Opaque fragment refs, unmasked by the leaf card. Carries `id` so the
   // keyExtractor and sort comparators work without unmasking.
   items: PantryListNode[];
@@ -113,6 +116,9 @@ export interface PantryContentProps {
 }
 
 export interface PantryEmptyStateProps {
+  /** Offline with pages the device never loaded, so a narrowed view may miss rows. */
+  mayHoldMore?: boolean;
+  onRetryHeld?: () => void;
   showSkeletons: boolean;
   searchQuery: string;
   itemCount: number;

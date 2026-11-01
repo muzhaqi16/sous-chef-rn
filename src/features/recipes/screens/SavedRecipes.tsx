@@ -92,7 +92,11 @@ export const SavedRecipes: React.FC = () => {
     isEmpty: recipes.length === 0,
   });
 
-  const { folders, refetch: refetchFolders } = useRecipeFolders();
+  const {
+    folders,
+    unavailable: foldersUnavailable,
+    refetch: refetchFolders,
+  } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
   // An unloaded page may hold the only tagged recipe, so the tab stays offered
   // until every page is in.
@@ -202,7 +206,7 @@ export const SavedRecipes: React.FC = () => {
       },
     ];
 
-    if (folders.length > 0) {
+    if (folders.length > 0 || foldersUnavailable) {
       tabs.push({
         id: 'folder',
         label: selectedFolder ?? t('recipes.folders'),
@@ -245,7 +249,7 @@ export const SavedRecipes: React.FC = () => {
 
   // Filter header - shown when folders or tags are available
   const FilterHeader = (() => {
-    if (folders.length === 0 && !offersTagFilter) {
+    if (folders.length === 0 && !foldersUnavailable && !offersTagFilter) {
       return null;
     }
 
@@ -351,6 +355,7 @@ export const SavedRecipes: React.FC = () => {
       <FolderPicker
         visible={showFolderPicker}
         folders={folders}
+        unavailable={foldersUnavailable}
         selectedFolder={selectedFolder}
         onSelect={folder => {
           setSelectedFolder(folder);

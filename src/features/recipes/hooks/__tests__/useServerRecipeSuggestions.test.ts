@@ -1,7 +1,9 @@
 import { act } from '@testing-library/react-native';
+import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
   type MockDataFor,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
@@ -179,6 +181,59 @@ describe('useServerRecipeSuggestions per home', () => {
 
     await drainTimers();
     expect(result.current.unanswered).toBe(true);
+    expect(result.current.rows).toEqual([]);
+  });
+});
+
+describe("yesterday's ranking on a new day", () => {
+  const cacheHolding = (homeId?: string) => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: RecipeSuggestionsDocument,
+      variables: { first: 20, today: '2026-10-13', homeId },
+      data: { recipeSuggestions: { edges: [edge('r-yesterday', 50)] } },
+    });
+    return cache;
+  };
+
+  it('shows at once, and one request replaces it', async () => {
+    const suggestions = suggestionsMock([edge('r-today', 80)]);
+    const { result } = renderHookWithApollo(
+      () => useServerRecipeSuggestions(true),
+      { cache: cacheHolding(), operationMocks: [suggestions.mock] },
+    );
+
+    expect(ids(result.current.rows)).toEqual(['recipe-r-yesterday']);
+
+    await drainTimers();
+
+    expect(ids(result.current.rows)).toEqual(['recipe-r-today']);
+    expect(suggestions.fired).toEqual([{ first: 20, today: '2026-10-14' }]);
+  });
+
+  it('stands when the server cannot answer', async () => {
+    const failing = recordMock(RecipeSuggestionsDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useServerRecipeSuggestions(true),
+      { cache: cacheHolding(), operationMocks: [failing.mock] },
+    );
+
+    await drainTimers();
+
+    expect(ids(result.current.rows)).toEqual(['recipe-r-yesterday']);
+    expect(result.current.unanswered).toBe(false);
+  });
+
+  it("never answers for a home it isn't", async () => {
+    useStore.setState({ selectedHomeId: 'home-b' });
+    const homeB = homeRanking('home-b', [edge('r-b', 40)], { held: true });
+    const { result } = renderHookWithApollo(
+      () => useServerRecipeSuggestions(true),
+      { cache: cacheHolding('home-a'), operationMocks: [homeB.mock] },
+    );
+
     expect(result.current.rows).toEqual([]);
   });
 });

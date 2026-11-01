@@ -10,6 +10,7 @@
 
 import type { Unmasked } from '@apollo/client/masking';
 import {
+  ItemCondition,
   StorageState,
   StorageType,
   UnitType,
@@ -155,6 +156,14 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     storageLocation: null,
     packageBreakdown: null,
     quantityBreakdown: null,
+    pantryId: 'pantry-1',
+    minQuantity: null,
+    restockQuantity: null,
+    condition: ItemCondition.Good,
+    storageNotes: null,
+    tags: [],
+    brand: null,
+    packageSize: null,
   };
 }
 

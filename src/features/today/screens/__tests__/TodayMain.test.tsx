@@ -105,7 +105,8 @@ const overviewOf = (overrides: Partial<Overview> = {}): Overview => ({
   retry: jest.fn(),
   counts: { expired: 6, expiring: 3, lowStock: 0 },
   meals: [],
-  mealsLoading: false,
+  mealsState: 'ready',
+  retryMeals: jest.fn(),
   suggestions: { items: [], loading: false, fromPantry: true },
   refreshing: false,
   refresh: jest.fn(),
@@ -252,11 +253,24 @@ describe("today's meals", () => {
   });
 
   it('holds a meal row’s place until the plans answer, never "nothing planned"', () => {
-    renderToday({ meals: [], mealsLoading: true });
+    renderToday({ meals: [], mealsState: 'loading' });
 
     expect(screen.getByTestId('meal-skeleton')).toBeTruthy();
     expect(screen.queryByText('Nothing planned for today')).toBeNull();
   });
+
+  it.each([
+    ['offline', 'Not available offline'],
+    ['error', "Couldn't load this"],
+  ] as const)(
+    'says so when the meals are %s, never "nothing planned"',
+    (mealsState, title) => {
+      renderToday({ meals: [], mealsState });
+
+      expect(screen.getByText(title)).toBeTruthy();
+      expect(screen.queryByText('Nothing planned for today')).toBeNull();
+    },
+  );
 
   it('says nothing is planned, and opens Meal Plan from there', () => {
     renderToday({ meals: [] });

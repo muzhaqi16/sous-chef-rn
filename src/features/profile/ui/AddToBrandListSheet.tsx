@@ -7,6 +7,7 @@ import { RowCard } from '#components/atoms/RowCard';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { ListItem } from '#components/molecules/ListItem';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { Sheet } from '#components/templates/Sheet';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -16,6 +17,8 @@ interface AddToBrandListSheetProps {
   visible: boolean;
   brand: { id: string; name: string };
   lists: BrandListView[];
+  /** Set when the lists were never read, so none held is not "none". */
+  unavailable?: { state: 'offline' | 'error'; onRetry: () => void };
   onDismiss: () => void;
   /** Resolves whether the brand was added; the sheet closes only when it was. */
   onPick: (listId: string, reason: string | null) => Promise<boolean>;
@@ -31,6 +34,7 @@ export const AddToBrandListSheet: React.FC<AddToBrandListSheetProps> = ({
   visible,
   brand,
   lists,
+  unavailable,
   onDismiss,
   onPick,
   onMakeList,
@@ -64,7 +68,12 @@ export const AddToBrandListSheet: React.FC<AddToBrandListSheetProps> = ({
       contentContainerStyle={commonStyles.bottomSheetContent}
     >
       <View testID={profileTestIDs.addToBrandListSheet}>
-        {lists.length === 0 ? (
+        {unavailable && lists.length === 0 ? (
+          <DataStateView
+            state={unavailable.state}
+            onRetry={unavailable.onRetry}
+          />
+        ) : lists.length === 0 ? (
           <View style={styles.empty}>
             <Text role="body" tone="secondary" align="center">
               {t('brandLists.emptyTitle')}

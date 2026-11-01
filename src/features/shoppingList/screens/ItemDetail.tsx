@@ -29,6 +29,7 @@ import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
@@ -118,7 +119,7 @@ export const ShoppingListItemDetail: React.FC<
   // `item` may be only the list's row (offline, or before the fetch answers):
   // its detail-only reads are guarded, and a section made only of them waits
   // for `detail`.
-  const { item, detail, notFound, state, retry } =
+  const { item, detail, heldOnly, notFound, state, retry } =
     useShoppingListItemDetail(itemId);
   const shelfPrices = useStoreShelfPrices(item?.item?.id, listId);
 
@@ -295,6 +296,13 @@ export const ShoppingListItemDetail: React.FC<
           numberOfLines={2}
           style={styles.titleRow}
         />
+
+        {heldOnly ? (
+          <PartialDataNote
+            onRetry={retry}
+            testID={shoppingListTestIDs.itemPartial}
+          />
+        ) : null}
 
         {!!purchaseInfo?.isPurchased && (
           <View style={styles.statusBadge}>

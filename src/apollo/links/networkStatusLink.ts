@@ -4,7 +4,7 @@ import { Kind, OperationTypeNode } from 'graphql';
 import { isNetworkError } from '#/utils/isNetworkError';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
-import { isNetworkWithheld } from '#store/slices/networkSlice';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { isOfflineRejectedError } from '../offlineQueue/OfflineRejectedError';
 import { apiReachabilityBreaker } from './apiReachabilityBreaker';
 
@@ -16,7 +16,7 @@ const describeError = (error: unknown): string => {
 
 /**
  * Feeds the reachability breaker one outcome per operation. Placement is
- * load-bearing: above `retryLink` (retries absorbed), below `offlineModeLink`
+ * load-bearing: above `retryLink` (retries absorbed), below `offlineReadLink`
  * (blocked traffic never counts), above `queueLink` (only a mutation queued
  * after a REAL network failure counts). Subscriptions never feed it.
  */
@@ -86,7 +86,7 @@ export const createNetworkStatusLink = () =>
             // retries are absorbed. Suppressed once offline or the circuit is
             // open — the breaker's one-line verdict is the signal then.
             const state = useStore.getState();
-            if (!isNetworkWithheld(state)) {
+            if (!isApiUnavailable(state)) {
               logger.warn(
                 `Network error for ${operationName}: ${describeError(error)}`,
               );

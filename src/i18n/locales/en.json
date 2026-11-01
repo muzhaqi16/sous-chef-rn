@@ -598,8 +598,6 @@
     "syncing": "Syncing…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Offline mode is on",
-    "offlineModeDetail": "Using what's on this device only",
     "deviceOfflineTitle": "You're offline",
     "deviceOfflineDetail": "Changes will sync when you're back online",
     "deviceOfflinePendingDetail_one": "{{count}} change will sync when you're back online",
@@ -625,7 +623,9 @@
     "noPantryItems": "Your pantry is empty",
     "noShoppingListItems": "Your shopping list is empty",
     "noInvitations": "No pending invitations",
-    "noResultsFor": "No results for \"{{query}}\""
+    "noResultsFor": "No results for \"{{query}}\"",
+    "noHeldMatchFor": "Nothing on this device matches \"{{query}}\"",
+    "widerSearchNeedsConnection": "Searching everything needs a connection."
   },
   "settings": {
     "displayLanguage": "Display Language",
@@ -634,11 +634,6 @@
     "unitMetric": "Metric (kg, g, L, mL)",
     "unitImperial": "Imperial (lb, oz, gal, fl oz)",
     "unitSystemDefault": "System Default",
-    "syncOffline": "Sync & Offline",
-    "autoSync": "Auto Sync",
-    "autoSyncDesc": "Automatically sync your data when online",
-    "offlineMode": "Offline Mode",
-    "offlineModeDesc": "Use cached data only. Disables search and sharing.",
     "features": "Features",
     "showTutorials": "Show Tutorials",
     "showTutorialsDesc": "Display helpful tips and tutorials",
@@ -747,7 +742,9 @@
     "loading": "Loading…",
     "errorTitle": "Couldn't load this",
     "errorBody": "Something went wrong while loading. Check your connection and try again.",
-    "offlineBody": "You're offline and this hasn't been downloaded yet. Reconnect to load it."
+    "offlineBody": "You're offline and this hasn't been downloaded yet. Reconnect to load it.",
+    "partialTitle": "The rest needs a connection",
+    "partialBody": "This is what your device holds for now."
   },
   "tabBar": {
     "actionButton": "Action button",

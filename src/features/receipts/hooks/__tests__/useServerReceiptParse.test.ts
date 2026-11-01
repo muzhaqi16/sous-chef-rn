@@ -128,7 +128,7 @@ function render(
 beforeEach(() => {
   jest.useFakeTimers();
   jest.mocked(useIsLiveChannelOpen).mockReturnValue(false);
-  useStore.setState({ isOnline: true });
+  useStore.setState({ isOnline: true, apiReachable: null });
   useReceiptDraftStore.setState({ draft: null });
 });
 
@@ -739,16 +739,38 @@ describe('useServerReceiptParse', () => {
     expect(refused.fired).toHaveLength(1);
   });
 
-  it('asks nothing offline, and says the items are read once back online', async () => {
+  it.each([
+    ['no connection', { isOnline: false, apiReachable: null }],
+    ['the API down on working Wi-Fi', { isOnline: true, apiReachable: false }],
+  ])(
+    'asks nothing with %s, and says it reads them once back',
+    async (_cause, network) => {
+      seedMilkDraft();
+      useStore.setState(network);
+      const create = created(ReceiptParseStatus.Pending);
+      const { result } = render([create.mock]);
+
+      await pollOnce();
+
+      expect(create.fired).toEqual([]);
+      expect(result.current.readingStatus).toBe('offline');
+    },
+  );
+
+  it('sends a waiting scan once the API is back, with nothing to tap', async () => {
     seedMilkDraft();
-    useStore.setState({ isOnline: false });
+    useStore.setState({ isOnline: true, apiReachable: false });
     const create = created(ReceiptParseStatus.Pending);
-    const { result } = render([create.mock]);
-
+    render([create.mock]);
     await pollOnce();
-
     expect(create.fired).toEqual([]);
-    expect(result.current.readingStatus).toBe('offline');
+
+    await act(async () => {
+      useStore.setState({ apiReachable: true });
+      await jest.advanceTimersByTimeAsync(0);
+    });
+
+    expect(create.fired).toHaveLength(1);
   });
 
   it('sends a parse already asked for again with its own id', async () => {

@@ -325,7 +325,7 @@ describe('usePantryItemSuggestions', () => {
       data: buildData([makeSuggestion()]),
     });
 
-    // `offlineModeLink` answers an offline cache hit by re-emitting the cached
+    // `offlineReadLink` answers an offline cache hit by re-emitting the cached
     // result; the mock stands in for it. A skipped read would never ask.
     const { result } = renderHookWithApollo(
       () => usePantryItemSuggestions({ pantryId: 'pantry-1' }),

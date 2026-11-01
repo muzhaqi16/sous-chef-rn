@@ -28,19 +28,20 @@ const makeSuggestion = (id: string, name: string): ItemSuggestion => ({
 });
 
 let mockIsOnline = true;
+let mockApiReachable: boolean | null = null;
 let mockCachedItemSuggestions: ItemSuggestion[] = [];
 const mockAddCachedItemSuggestions = jest.fn();
 jest.mock('#store/useAppStore', () => {
   const getState = () =>
     ({
       isOnline: mockIsOnline,
+      apiReachable: mockApiReachable,
       cachedItemSuggestions: mockCachedItemSuggestions,
       addCachedItemSuggestions: mockAddCachedItemSuggestions,
     } as Partial<RootState> as RootState);
   return {
     useAppStore: <T>(selector: (state: RootState) => T): T =>
       selector(getState()),
-    useIsOnline: () => getState().isOnline,
   };
 });
 
@@ -96,6 +97,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockApiReachable = null;
   mockCachedItemSuggestions = [];
 });
 
@@ -207,8 +209,12 @@ describe('useItemAutocomplete', () => {
     expect(result.current.shouldSearch).toBe(true);
   });
 
-  it('sets shouldSearch to false when offline', () => {
-    mockIsOnline = false;
+  it.each([
+    ['no connection', false, null],
+    ['the API down on working Wi-Fi', true, false],
+  ])('sends no search with %s', (_cause, isOnline, apiReachable) => {
+    mockIsOnline = isOnline;
+    mockApiReachable = apiReachable;
     const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
     act(() => {
@@ -329,30 +335,37 @@ describe('useItemAutocomplete', () => {
     });
   });
 
-  it('offline cold-start: serves persisted seen-items as fallback suggestions', () => {
-    // Simulates a cold start where the persisted LRU (cachedItemSuggestions)
-    // was rehydrated but there is no network. With localFirst active offline,
-    // a matching cached item must surface without any query firing.
-    mockIsOnline = false;
-    mockCachedItemSuggestions = [
-      makeSuggestion('i1', 'Milk'),
-      makeSuggestion('i2', 'Bread'),
-    ];
+  it.each([
+    ['no connection', false, null],
+    ['the API down on working Wi-Fi', true, false],
+  ])(
+    'serves persisted seen-items with %s',
+    (_cause, isOnline, apiReachable) => {
+      // A cold start where the persisted LRU (cachedItemSuggestions) was rehydrated
+      // but the server can't be reached: a matching cached item must surface
+      // without any query firing.
+      mockIsOnline = isOnline;
+      mockApiReachable = apiReachable;
+      mockCachedItemSuggestions = [
+        makeSuggestion('i1', 'Milk'),
+        makeSuggestion('i2', 'Bread'),
+      ];
 
-    const { result } = renderHookWithApollo(() => useItemAutocomplete());
+      const { result } = renderHookWithApollo(() => useItemAutocomplete());
 
-    act(() => {
-      result.current.handleSearchTermChange('mil');
-    });
-    act(() => {
-      jest.advanceTimersByTime(500);
-    });
+      act(() => {
+        result.current.handleSearchTermChange('mil');
+      });
+      act(() => {
+        jest.advanceTimersByTime(500);
+      });
 
-    expect(result.current.displayItems).toContainEqual(
-      expect.objectContaining({ id: 'i1', name: 'Milk' }),
-    );
-    expect(result.current.displayItems).not.toContainEqual(
-      expect.objectContaining({ id: 'i2' }),
-    );
-  });
+      expect(result.current.displayItems).toContainEqual(
+        expect.objectContaining({ id: 'i1', name: 'Milk' }),
+      );
+      expect(result.current.displayItems).not.toContainEqual(
+        expect.objectContaining({ id: 'i2' }),
+      );
+    },
+  );
 });

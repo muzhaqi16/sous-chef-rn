@@ -7,6 +7,8 @@ import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
 import { useToday } from '#hooks/app/useToday';
+import { useDataState } from '#hooks/data/useDataState';
+import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
 
 interface UsePantryItemFormDataArgs {
   itemId: string | null | undefined;
@@ -32,7 +34,12 @@ export function usePantryItemFormData({
   // the row; querying in that window can only return RESOURCE_NOT_FOUND,
   // which renders as the dead-end "item not found" state.
   const fetchedItemId = itemId && !isUnconfirmed ? itemId : null;
-  const { loading: itemLoading, refetch } = useQuery(
+  const {
+    data: fetchedItem,
+    loading: itemLoading,
+    error: itemError,
+    refetch,
+  } = useQuery(
     PantryItemForEditDocument,
     fetchedItemId ? { variables: { id: fetchedItemId } } : skipToken,
   );
@@ -48,6 +55,17 @@ export function usePantryItemFormData({
     from: itemId ? { __typename: 'PantryItem', id: itemId } : null,
   });
   const existingPantryItem = liveItem.complete ? liveItem.data : null;
+
+  // The server saying the stack is gone is an answer, not a failed read.
+  const answeredNotFound =
+    (!!fetchedItem && fetchedItem.pantryItem === null) ||
+    isResourceNotFoundError(itemError);
+  const itemState = useDataState({
+    loading: itemLoading,
+    error: answeredNotFound ? undefined : itemError,
+    hasResult: !!existingPantryItem || answeredNotFound,
+    isEmpty: false,
+  });
 
   const pantry = defaultPantryOf(homeData?.home) ?? null;
   const currentPantryId =
@@ -73,6 +91,7 @@ export function usePantryItemFormData({
     currentPantryId,
     storageLocations,
     itemLoading,
+    itemState,
     refetchItem,
   };
 }

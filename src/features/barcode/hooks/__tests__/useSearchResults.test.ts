@@ -4,7 +4,7 @@ import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createOfflineModeLink } from '#/apollo/links/offlineModeLink';
+import { createOfflineReadLink } from '#/apollo/links/offlineReadLink';
 import {
   recordMock,
   renderHookWithApollo,
@@ -534,7 +534,7 @@ describe('useSearchResults', () => {
         });
       });
 
-      // The real `offlineModeLink` in front of a network that records calls.
+      // The real `offlineReadLink` in front of a network that records calls.
       function renderOffline() {
         useStore.setState({ isOnline: false, apiReachable: null });
         const network = jest.fn(
@@ -546,7 +546,7 @@ describe('useSearchResults', () => {
         const client = new ApolloClient({
           cache: makeCache(),
           link: ApolloLink.from([
-            createOfflineModeLink(),
+            createOfflineReadLink(),
             new ApolloLink(network),
           ]),
           defaultOptions: APOLLO_DEFAULT_OPTIONS,

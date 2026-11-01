@@ -1,7 +1,8 @@
 /**
  * The notification feed — the ONLY source; it projects the Apollo cache and
  * holds nothing. The category filter is server-side, so the screen must not
- * filter again. Each row is read live: `dataMasking` leaves `node` as
+ * filter again; offline, a category never loaded narrows the feed the device
+ * holds here. Each row is read live: `dataMasking` leaves `node` as
  * `{ __typename, id }`, and marking one read changes only its own fields.
  */
 
@@ -16,6 +17,7 @@ import {
 } from './useNotificationsOnLaunch.generated';
 import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import {
   toDisplayNotification,
   type DisplayNotification,
@@ -31,12 +33,15 @@ export function useNotificationHistory(
     state => state.pendingExpirationLinks,
   );
 
+  const narrowsHeldFeed = useIsApiUnavailable() && !!category;
+  const askedCategory = narrowsHeldFeed ? null : category;
+
   const { data, error, loading, observable, refetch } = useQuery(
     GetNotificationsDocument,
     enabled
       ? {
           variables: {
-            filter: category ? { category } : undefined,
+            filter: askedCategory ? { category: askedCategory } : undefined,
             first: PAGE_SIZE,
           },
         }
@@ -56,7 +61,8 @@ export function useNotificationHistory(
     .filter(
       (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
     )
-    .map(n => toDisplayNotification(n, pendingExpirationLinks[n.id]));
+    .map(n => toDisplayNotification(n, pendingExpirationLinks[n.id]))
+    .filter(n => !narrowsHeldFeed || n.category === category);
 
   // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
   // oldest, so paging past it fetched rows that could never become visible;
@@ -76,6 +82,8 @@ export function useNotificationHistory(
     loadingMore: isLoadingMore,
     loading,
     error,
+    /** A category narrowed from the held feed, with pages the device never loaded. */
+    mayHoldMore: narrowsHeldFeed && !!connection?.pageInfo.hasNextPage,
     // `data !== undefined` — a response arrived, empty or not. Separates "no
     // notifications" from "the feed could not be loaded".
     hasResult: data !== undefined,

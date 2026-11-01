@@ -88,7 +88,7 @@ describe('useShoppingListsLite', () => {
     expect(overview.fired).toEqual([{ first: 50 }]);
     main.unmount();
 
-    // Offline, `offlineModeLink` answers a query from this same read, so a
+    // Offline, `offlineReadLink` answers a query from this same read, so a
     // picker's page size must not miss the collection the overview holds.
     const offlineRead = cache.readQuery({
       query: GetShoppingListsLiteDocument,

@@ -156,6 +156,8 @@ const MealPlanMainInner: React.FC = () => {
     nutritionSummary,
     mealsIncomplete,
     retryRemainingMeals,
+    loading: planLoading,
+    error: planError,
     refetch,
   } = useActiveMealPlan({
     currentPlanId: currentPlan?.id ?? null,
@@ -190,6 +192,17 @@ const MealPlanMainInner: React.FC = () => {
     skipped: plansSkipped,
     isEmpty: mealPlans.length === 0,
   });
+
+  // A plan listed but never read holds no meals on the device, which is not
+  // the same as a plan with empty days.
+  const planState = useDataState({
+    loading: planLoading,
+    error: planError,
+    hasResult: !!activeMealPlan,
+    isEmpty: false,
+    skipped: !activePlanId,
+  });
+  const planUnavailable = planState === 'error' || planState === 'offline';
 
   // Permissions for the active plan
   const permissions = useMealPlanPermissions(activeMealPlan);
@@ -474,7 +487,7 @@ const MealPlanMainInner: React.FC = () => {
   }
 
   const headerActions: BarAction[] = [];
-  if (activePlanId) {
+  if (activePlanId && !planUnavailable) {
     if (permissions.canGenerateShoppingList) {
       headerActions.push({
         icon: 'cart-outline',
@@ -496,83 +509,92 @@ const MealPlanMainInner: React.FC = () => {
       testID={mealPlanTestIDs.screen}
       header={{
         ...tabHeader,
-        title: activeMealPlan?.name ?? tabHeader.title,
+        title:
+          activeMealPlan?.name ?? activePlanForDisplay?.name ?? tabHeader.title,
         switchable: { onPress: handleOpenSelector },
         actions: headerActions,
       }}
       scroll="list"
       gutter="none"
     >
-      {/* Calendar view */}
-      {calendar.viewMode === 'week' ? (
-        <WeekStrip
-          weekDays={calendar.weekDays}
-          selectedDate={calendar.selectedDate}
-          onSelectDate={calendar.selectDate}
-          onPrevWeek={calendar.goToPrevWeek}
-          onNextWeek={calendar.goToNextWeek}
-          daysWithMeals={daysWithMeals}
-          canGoPrev={calendar.canGoPrevWeek}
-          canGoNext={calendar.canGoNextWeek}
-          minDate={calendar.minDate}
-          maxDate={calendar.maxDate}
-        />
+      {planUnavailable ? (
+        <DataStateView state={planState} onRetry={handleRefresh} />
       ) : (
-        <MonthCalendar
-          selectedDate={calendar.selectedDate}
-          onSelectDate={calendar.selectDate}
-          markedDays={daysWithMeals}
-          minDate={calendar.minDate}
-          maxDate={calendar.maxDate}
-        />
+        <>
+          {/* Calendar view */}
+          {calendar.viewMode === 'week' ? (
+            <WeekStrip
+              weekDays={calendar.weekDays}
+              selectedDate={calendar.selectedDate}
+              onSelectDate={calendar.selectDate}
+              onPrevWeek={calendar.goToPrevWeek}
+              onNextWeek={calendar.goToNextWeek}
+              daysWithMeals={daysWithMeals}
+              canGoPrev={calendar.canGoPrevWeek}
+              canGoNext={calendar.canGoNextWeek}
+              minDate={calendar.minDate}
+              maxDate={calendar.maxDate}
+            />
+          ) : (
+            <MonthCalendar
+              selectedDate={calendar.selectedDate}
+              onSelectDate={calendar.selectDate}
+              markedDays={daysWithMeals}
+              minDate={calendar.minDate}
+              maxDate={calendar.maxDate}
+            />
+          )}
+
+          {/* Calendar toggle bar */}
+          <CalendarToggleBar
+            isExpanded={calendar.viewMode === 'month'}
+            onToggle={toggleCalendarView}
+          />
+
+          {/* Daily meals */}
+          <DayMealList
+            selectedDate={calendar.selectedDate}
+            dailyMeals={dailyMeals}
+            isEmpty={isEmpty}
+            onToggleCompleted={
+              permissions.canEdit ? handleToggleCompleted : undefined
+            }
+            onItemPress={handleItemPress}
+            onDeleteItem={permissions.canEdit ? handleDeleteItem : undefined}
+            onAddMeal={permissions.canEdit ? handleOpenAddMeal : undefined}
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            listHeader={
+              <>
+                {mealsIncomplete ? (
+                  <View style={styles.headerBlock}>
+                    <AlertBanner
+                      variant="warning"
+                      icon="cloud-offline-outline"
+                      iconLibrary="Ionicons"
+                      title={t('mealPlanMain.mealsIncompleteTitle')}
+                      subtitle={t('mealPlanMain.mealsIncompleteBody')}
+                      onPress={retryRemainingMeals}
+                      showChevron={false}
+                      testID={mealPlanTestIDs.mealsIncomplete}
+                    />
+                  </View>
+                ) : null}
+                {nutritionSummary ? (
+                  <View style={styles.headerBlock}>
+                    <NutritionSummaryCard
+                      nutritionSummary={nutritionSummary}
+                      nutritionGoalProgress={
+                        activeMealPlan?.nutritionGoalProgress
+                      }
+                    />
+                  </View>
+                ) : null}
+              </>
+            }
+          />
+        </>
       )}
-
-      {/* Calendar toggle bar */}
-      <CalendarToggleBar
-        isExpanded={calendar.viewMode === 'month'}
-        onToggle={toggleCalendarView}
-      />
-
-      {/* Daily meals */}
-      <DayMealList
-        selectedDate={calendar.selectedDate}
-        dailyMeals={dailyMeals}
-        isEmpty={isEmpty}
-        onToggleCompleted={
-          permissions.canEdit ? handleToggleCompleted : undefined
-        }
-        onItemPress={handleItemPress}
-        onDeleteItem={permissions.canEdit ? handleDeleteItem : undefined}
-        onAddMeal={permissions.canEdit ? handleOpenAddMeal : undefined}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-        listHeader={
-          <>
-            {mealsIncomplete ? (
-              <View style={styles.headerBlock}>
-                <AlertBanner
-                  variant="warning"
-                  icon="cloud-offline-outline"
-                  iconLibrary="Ionicons"
-                  title={t('mealPlanMain.mealsIncompleteTitle')}
-                  subtitle={t('mealPlanMain.mealsIncompleteBody')}
-                  onPress={retryRemainingMeals}
-                  showChevron={false}
-                  testID={mealPlanTestIDs.mealsIncomplete}
-                />
-              </View>
-            ) : null}
-            {nutritionSummary ? (
-              <View style={styles.headerBlock}>
-                <NutritionSummaryCard
-                  nutritionSummary={nutritionSummary}
-                  nutritionGoalProgress={activeMealPlan?.nutritionGoalProgress}
-                />
-              </View>
-            ) : null}
-          </>
-        }
-      />
 
       {/* Add meal bottom sheet */}
       <AddMealSheet

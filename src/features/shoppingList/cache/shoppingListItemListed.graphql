@@ -1,7 +1,7 @@
 # What a listed shopping-list line shows: every field the list's row cell
-# reads (`SortableItem_item`), so `GetShoppingListItemsFiltered` fetches them
-# and each row reads its own fragment by id
-# (`listedFragmentsCoverCells.test.ts`).
+# reads (`SortableItem_item`) and its edit form (`useShoppingListItemForm_item`),
+# so `GetShoppingListItemsFiltered` fetches them and each reads its own fragment
+# by id, offline too (`listedFragmentsCoverCells.test.ts`).
 fragment shoppingListItem_listed on ShoppingListItem {
   version
   id
@@ -66,5 +66,32 @@ fragment shoppingListItem_listed on ShoppingListItem {
       url
       kind
     }
+  }
+  # What the edit form reads as well, so a listed line opens with no read.
+  notes
+  priority
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+    localizedSymbolForms {
+      one
+      other
+    }
+  }
+  priceEstimate {
+    estimated
+  }
+  storeInfo {
+    preferredStore {
+      id
+      name
+    }
+  }
+  brand {
+    version
+    id
+    name
   }
 }

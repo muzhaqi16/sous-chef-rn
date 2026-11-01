@@ -1,6 +1,9 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/data/useDataPreloading';
-import { useOfflineTabPreloading } from './useOfflineTabPreloading';
+import {
+  useOfflineTabPreloading,
+  type WarmTarget,
+} from './useOfflineTabPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { skipToken, useQuery } from '@apollo/client/react';
@@ -11,6 +14,8 @@ import { useSettingsMirror } from './useSettingsMirror';
 
 interface CoreDataProviderProps {
   children: React.ReactNode;
+  /** What the host adds to the warm-up, for reads its own screens own. */
+  warmTargets?: readonly WarmTarget[];
 }
 
 /**
@@ -21,6 +26,7 @@ interface CoreDataProviderProps {
  */
 export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   children,
+  warmTargets,
 }) => {
   const user = useUser();
   const updateUser = useUpdateUser();
@@ -32,7 +38,7 @@ export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   // Warm the sibling tabs' first-screen queries so a tab the user has not
   // opened is still usable offline. `lazy: true` keeps them unmounted; only
   // their data is fetched, on the idle queue.
-  useOfflineTabPreloading();
+  useOfflineTabPreloading(warmTargets);
 
   // Load all unread notifications on startup via notificationsConnection
   // Re-queries on foreground to catch missed events (reconnect proxy)

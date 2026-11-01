@@ -14,7 +14,6 @@ const status = (
   over: Partial<ReturnType<typeof useOfflineStatus>> = {},
 ): ReturnType<typeof useOfflineStatus> => ({
   offline: true,
-  iconName: 'cloud-offline-outline',
   title: 'You are offline',
   detail: 'Changes will sync',
   message: 'You are offline, Changes will sync',

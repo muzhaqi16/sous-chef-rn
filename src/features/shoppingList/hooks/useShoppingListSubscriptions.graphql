@@ -93,6 +93,29 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     }
     storeDepartment
   }
+  # What the edit form reads off a listed line.
+  priority
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+    localizedSymbolForms {
+      one
+      other
+    }
+  }
+  storeInfo {
+    preferredStore {
+      id
+      name
+    }
+  }
+  brand {
+    version
+    id
+    name
+  }
 }
 
 # ============================================

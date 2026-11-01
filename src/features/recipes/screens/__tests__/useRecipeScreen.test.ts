@@ -31,7 +31,6 @@ const appStoreState = {
   // reads `undefined` as "offline" and every case renders the offline state.
   isOnline: true,
   apiReachable: true as boolean | null,
-  offlineModeEnabled: false,
 };
 jest.mock('#store/useAppStore', () => {
   const useAppStore = jest.fn((selector: (s: unknown) => unknown) =>
@@ -407,7 +406,10 @@ describe('useRecipeScreen', () => {
         subtitle: '⏱ 60 min • 4 servings',
         badge: undefined,
         imageUrl: undefined,
-        target: { recipeId: 'r1' },
+        target: {
+          recipeId: 'r1',
+          row: { name: 'Family Lasagna', imageUrl: undefined },
+        },
       },
     ]);
     expect(result.current.showSearchResults).toBe(true);
@@ -505,7 +507,70 @@ describe('useRecipeScreen', () => {
     );
   });
 
+  describe('a search that cannot reach the API', () => {
+    const goOffline = () => {
+      appStoreState.apiReachable = false;
+      useStore.setState({ isOnline: true, apiReachable: false });
+    };
+
+    afterEach(() => {
+      appStoreState.apiReachable = true;
+    });
+
+    const failing = () =>
+      recordMock(SearchRecipesDocument, {
+        error: new Error('Network request failed'),
+        maxUsageCount: 1,
+      }).mock;
+
+    it('narrows the rows on screen by name', async () => {
+      goOffline();
+      mockUseRecipeDiscovery.mockReturnValue(
+        makeDiscovery({ rows: [sampleDiscoveryRow] }),
+      );
+      const { result } = renderRecipeScreen([failing()]);
+
+      await drained(() => result.current.handleTextSearch('sample'));
+
+      expect(ids(result.current.items)).toEqual([sampleDiscoveryItem.id]);
+    });
+
+    it('says a wider search needs a connection when nothing held matches', async () => {
+      goOffline();
+      mockUseRecipeDiscovery.mockReturnValue(
+        makeDiscovery({ rows: [sampleDiscoveryRow] }),
+      );
+      const { result } = renderRecipeScreen([failing()]);
+
+      await drained(() => result.current.handleTextSearch('stew'));
+
+      expect(result.current.items).toEqual([]);
+      expect(result.current.emptyStateConfig.title).toBe(
+        'Not available offline',
+      );
+    });
+
+    it('runs once the API is back, with nothing to tap', async () => {
+      goOffline();
+      const answered = searchAnswering(page([]));
+      const { result, rerender } = renderRecipeScreen([
+        failing(),
+        answered.mock,
+      ]);
+      await drained(() => result.current.handleTextSearch('stew'));
+      expect(answered.fired).toEqual([]);
+
+      appStoreState.apiReachable = true;
+      useStore.setState({ apiReachable: true });
+      rerender({});
+      await drainTimers();
+
+      expect(answered.fired).toHaveLength(1);
+    });
+  });
+
   it('says offline with a toast, not an alert, when the API is unreachable', async () => {
+    appStoreState.apiReachable = false;
     useStore.setState({ isOnline: false, apiReachable: false });
     const { result } = renderRecipeScreen([
       recordMock(SearchRecipesDocument, {
@@ -515,6 +580,7 @@ describe('useRecipeScreen', () => {
 
     await drained(() => result.current.handleTextSearch('pasta'));
 
+    appStoreState.apiReachable = true;
     expect(mockToastInfo).toHaveBeenCalledWith(
       'Recipe search needs a connection. Your saved recipes are still here.',
     );

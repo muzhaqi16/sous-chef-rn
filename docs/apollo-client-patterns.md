@@ -577,9 +577,26 @@ has already switched, and `execute` in 4.2.12 takes no `fetchPolicy`. A lazy
 query that re-issues to refresh sets `nextFetchPolicy: 'network-only'` on the
 hook (`useRecipeIngredientMatching`); a time-to-live warmer uses
 `client.query({ fetchPolicy: 'network-only' })` through `fromServer`
-(`src/apollo/utils/fromServer.ts`), which returns nothing while the network is
-withheld so a cached answer is never stamped fresh. Probe:
+(`src/apollo/utils/fromServer.ts`), which returns nothing while the API is
+unavailable so a cached answer is never stamped fresh. Probe:
 `src/apollo/__tests__/lazyReexecuteFetchPolicy.test.tsx`.
+
+## A Row Shown Offline Opens
+
+A row is the only thing the device is sure to hold of a subject, so what it opens
+on offline is read from the row, by entity id.
+
+- **An edit form** cannot run on part of its data, and a local-first edit needs the
+  row's `version`. Its row (`shoppingListItem_listed`, `pantryItem_listed`) carries
+  every field the form's fragment selects, and so does every writer that links a
+  row. The form reads its fragment with `useFragment` by entity, not off the query
+  result, so a row a list holds opens with no read. Incomplete, it shows
+  `DataStateView` and no Save.
+- **A detail screen** reads its full fragment by entity. When that is incomplete
+  offline, it reads a complete smaller fragment by entity (`pantryItem_listed`,
+  `useRecipeData_heldRecipe`) and shows `PartialDataNote` above it. A smaller
+  complete fragment keeps the types strict; a partial read of the full one would
+  need a guard on every field.
 
 ## Version Conflicts
 

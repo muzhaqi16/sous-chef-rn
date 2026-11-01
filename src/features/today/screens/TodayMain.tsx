@@ -9,6 +9,7 @@ import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { StatCard } from '#features/today/components/StatCard';
 import { ItemCard } from '#components/organisms/ItemCard';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import {
@@ -165,7 +166,7 @@ export const TodayMain: React.FC = () => {
         testID: todayTestIDs.firstRun,
       };
 
-  const { counts, meals, mealsLoading, suggestions, shopping } = overview;
+  const { counts, meals, mealsState, suggestions, shopping } = overview;
 
   return (
     <Screen
@@ -246,8 +247,10 @@ export const TodayMain: React.FC = () => {
                 />
               </View>
             ))
-          ) : mealsLoading ? (
+          ) : mealsState === 'loading' ? (
             <MealPlanItemCardSkeleton />
+          ) : mealsState === 'offline' || mealsState === 'error' ? (
+            <DataStateView state={mealsState} onRetry={overview.retryMeals} />
           ) : (
             <ItemCard
               id="nothing-planned"

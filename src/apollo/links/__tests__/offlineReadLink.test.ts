@@ -7,15 +7,11 @@ import {
 } from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { createOfflineModeLink } from '../offlineModeLink';
+import { createOfflineReadLink } from '../offlineReadLink';
 import { useStore } from '#store';
 import { getI18n } from '#/i18n/config';
 import { Telemetry } from '#/services/telemetry';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import {
-  GetUserSettingsDocument,
-  type GetUserSettingsQuery,
-} from '#operations/auth/user.generated';
 import { seedQuery } from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
 
@@ -83,9 +79,9 @@ function expectUserFacingOfflineMessage(message: string | undefined): void {
   expect(message).not.toContain('GetItems');
 }
 
-describe('createOfflineModeLink', () => {
+describe('createOfflineReadLink', () => {
   const mockedGetState = useStore.getState as jest.Mock;
-  const link = createOfflineModeLink();
+  const link = createOfflineReadLink();
 
   beforeEach(() => jest.clearAllMocks());
 
@@ -106,20 +102,19 @@ describe('createOfflineModeLink', () => {
     return { emitted, completed, value };
   }
 
-  it('forwards queries when online and offline mode disabled', () => {
+  it('forwards queries while the API is available', () => {
     mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
       isOnline: true,
+      apiReachable: true,
     });
     const forward = makeForward();
     link.request(makeOperation(MOCK_QUERY), forward);
     expect(forward).toHaveBeenCalled();
   });
 
-  it('blocks cache-miss queries when offline mode is enabled (error result, no `{}` cache write)', () => {
+  it('blocks cache-miss queries when the device is offline (error result)', () => {
     mockedGetState.mockReturnValue({
-      offlineModeEnabled: true,
-      isOnline: true,
+      isOnline: false,
     });
     const forward = makeForward();
     const { emitted, completed, value } = observe(
@@ -134,28 +129,11 @@ describe('createOfflineModeLink', () => {
     expectUserFacingOfflineMessage(value?.errors?.[0]?.message);
   });
 
-  it('blocks cache-miss queries when the device is offline (error result)', () => {
-    mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
-      isOnline: false,
-    });
-    const forward = makeForward();
-    const { emitted, completed, value } = observe(
-      link.request(makeOperation(MOCK_QUERY), forward),
-    );
-    expect(forward).not.toHaveBeenCalled();
-    expect(emitted).toBe(true);
-    expect(completed).toBe(true);
-    expect(value?.data).toBeNull();
-    expectUserFacingOfflineMessage(value?.errors?.[0]?.message);
-  });
-
   it('forwards cache-miss queries when only the circuit breaker is open (organic probe)', () => {
-    // Device online + offline mode off + apiReachable false: blocking would
+    // Device online + apiReachable false: blocking would
     // render an empty screen anyway, so the query fires as a probe — a
     // success closes a spuriously-open circuit via networkStatusLink.
     mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
       isOnline: true,
       apiReachable: false,
     });
@@ -166,7 +144,6 @@ describe('createOfflineModeLink', () => {
 
   it('serves cached data (no forward) when the circuit breaker is open and the cache has it', () => {
     mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
       isOnline: true,
       apiReachable: false,
     });
@@ -184,7 +161,6 @@ describe('createOfflineModeLink', () => {
 
   it('serves cached data for blocked queries (idempotent re-emit, no clobber)', () => {
     mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
       isOnline: false,
     });
     const cache = makeCache();
@@ -201,43 +177,6 @@ describe('createOfflineModeLink', () => {
     expect(value?.data).toEqual(cachedData);
   });
 
-  it('lets allow-listed queries through offline mode while the server is reachable', () => {
-    mockedGetState.mockReturnValue({
-      offlineModeEnabled: true,
-      isOnline: true,
-      apiReachable: true,
-    });
-    const forward = makeForward();
-    link.request(makeOperation(GetUserSettingsDocument), forward);
-    expect(forward).toHaveBeenCalled();
-  });
-
-  // Forwarded with the device offline, the settings read failed and its error
-  // result replaced the cached settings: the screen said "not available offline".
-  it('serves an allow-listed query from the cache while the device is offline', () => {
-    mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
-      isOnline: false,
-      apiReachable: null,
-    });
-    const cache = makeCache();
-    const cachedData: GetUserSettingsQuery = {
-      __typename: 'Query',
-      me: { __typename: 'User', id: 'u1', settings: null },
-    };
-    seedQuery(cache, {
-      query: GetUserSettingsDocument,
-      data: cachedData,
-    });
-
-    const forward = makeForward();
-    const { value } = observe(
-      link.request(makeOperation(GetUserSettingsDocument, cache), forward),
-    );
-    expect(forward).not.toHaveBeenCalled();
-    expect(value?.data).toEqual({ me: cachedData.me });
-  });
-
   // Each branch of this link is a distinct answer to "did offline work?", and
   // until these counters existed none of them were visible in release —
   // `logger` is console-only. The mapping is asserted per branch because a
@@ -246,8 +185,7 @@ describe('createOfflineModeLink', () => {
   describe('telemetry', () => {
     it('counts a cache hit as served', () => {
       mockedGetState.mockReturnValue({
-        offlineModeEnabled: true,
-        isOnline: true,
+        isOnline: false,
       });
       const cache = makeCache();
       seedQuery(cache, { query: MOCK_QUERY, data: { items: [] } });
@@ -261,8 +199,7 @@ describe('createOfflineModeLink', () => {
 
     it('counts a blocked cache miss — the one the user feels', () => {
       mockedGetState.mockReturnValue({
-        offlineModeEnabled: true,
-        isOnline: true,
+        isOnline: false,
       });
       observe(link.request(makeOperation(MOCK_QUERY), makeForward()));
       expect(Telemetry.increment).toHaveBeenCalledWith(
@@ -280,7 +217,6 @@ describe('createOfflineModeLink', () => {
 
   it('lets mutations through when offline (queueLink handles queuing)', () => {
     mockedGetState.mockReturnValue({
-      offlineModeEnabled: false,
       isOnline: false,
     });
     const forward = makeForward();

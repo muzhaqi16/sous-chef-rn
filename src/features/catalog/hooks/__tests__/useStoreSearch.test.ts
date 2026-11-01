@@ -205,7 +205,7 @@ describe('useStoreSearch', () => {
     const { result } = render({ zip: '15220' }, [nearby.mock]);
 
     expect(nearby.fired).toEqual([]);
-    expect(result.current.isOnline).toBe(false);
+    expect(result.current.isOffline).toBe(true);
     expect(
       result.current.options.map(option => [option.key, option.added]),
     ).toEqual([['store:s-ge-b', true]]);

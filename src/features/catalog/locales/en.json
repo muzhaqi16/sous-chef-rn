@@ -319,7 +319,6 @@
     "updateFailed": "Failed to update pantry item. Please try again.",
     "brandOptional": "Brand (optional)",
     "placeholderItemName": "e.g., Rice, Pasta",
-    "placeholderCategory": "e.g., Grains, Dairy",
     "tagsPlaceholder": "Enter tags separated by commas",
     "location": "Location",
     "locationPlaceholder": "e.g., Top shelf, Drawer 2",

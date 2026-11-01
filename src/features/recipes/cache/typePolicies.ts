@@ -46,11 +46,12 @@ export const recipesTypePolicies: TypePolicies = {
         ...mergeConnectionByNodeId(),
         keyArgs: ['filters'],
       },
-      // A ranking for one day and home: a new answer replaces the last, never
-      // merges, and one home's never answers for another's. A screened ranking
-      // is its own entry: an unscreened one must never answer for it.
+      // A ranking for one home: a new answer replaces the last, never merges,
+      // and one home's never answers for another's. A screened ranking is its
+      // own entry: an unscreened one must never answer for it. No `today`: a new
+      // day keeps the last ranking until the server answers for it.
       recipeSuggestions: {
-        keyArgs: ['today', 'homeId', 'excludeDietaryConflicts'],
+        keyArgs: ['homeId', 'excludeDietaryConflicts'],
         merge: (_existing: unknown, incoming: unknown) => incoming,
       },
       catalogRecipesByIngredients: catalogPage('catalogRecipesByIngredients'),

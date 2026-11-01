@@ -19,6 +19,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
@@ -52,6 +53,7 @@ import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { useToday } from '#hooks/app/useToday';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -304,6 +306,7 @@ export const FilteredPantryItems: React.FC<
     user?.id,
   );
   const { addToList } = useAddPantryItemToShoppingList();
+  const isOffline = useIsApiUnavailable();
 
   const {
     state: {
@@ -317,7 +320,9 @@ export const FilteredPantryItems: React.FC<
     },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id, {
-    filters: config.serverFilters,
+    // Offline a view never loaded has no entry, so it narrows the rows the
+    // pantry holds: a partial answer, and `mayHoldMore` says so.
+    filters: isOffline ? null : config.serverFilters,
   });
 
   // Classified on the FETCHED set: a client filter narrowing to nothing is the
@@ -332,10 +337,11 @@ export const FilteredPantryItems: React.FC<
 
   // Progressively load all pages so the filter sees every item
   useEffect(() => {
-    if (hasMore && !isLoadingMore && !loading) {
+    if (hasMore && !isLoadingMore && !loading && !isOffline) {
       void loadMore();
     }
-  }, [hasMore, isLoadingMore, loading, loadMore]);
+  }, [hasMore, isLoadingMore, loading, isOffline, loadMore]);
+  const mayHoldMore = isOffline && hasMore;
 
   const filteredItems = (() => {
     const filtered = allItems.filter(config.filter);
@@ -464,9 +470,17 @@ export const FilteredPantryItems: React.FC<
                 onRefresh={handleRefresh}
               />
             }
+            ListHeaderComponent={
+              mayHoldMore && filteredItems.length > 0 ? (
+                <PartialDataNote
+                  onRetry={handleRefresh}
+                  testID={pantryTestIDs.filteredPartial}
+                />
+              ) : null
+            }
             ListEmptyComponent={
               <FilteredEmpty
-                state={dataState}
+                state={mayHoldMore ? 'offline' : dataState}
                 onRetry={handleRefresh}
                 icon={config.emptyIcon}
                 message={config.emptyMessage}

@@ -383,6 +383,7 @@ function PantryMainContent({
         }
         isLoadingMore={screen.searchActive ? false : screen.isLoadingMore}
         hasMore={screen.searchActive ? false : screen.hasMore}
+        mayHoldMore={screen.mayHoldMore}
         refreshing={screen.isRefreshing}
         loading={screen.isLoadingInitial}
         itemsFailure={screen.itemsFailure}

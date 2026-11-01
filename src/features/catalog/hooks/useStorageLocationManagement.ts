@@ -21,7 +21,7 @@ import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useCreateStorageLocation } from '#features/catalog/hooks/useCreateStorageLocation';
-import { useBlocksCacheMissQueries } from '#features/catalog/hooks/useBlocksCacheMissQueries';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useTranslation } from '#/i18n';
 import { errorCopy } from '#/services/errorService';
 
@@ -112,10 +112,10 @@ export function useStorageLocationManagement(
   // previous home is dropped.
   const data = variables.homeId === homeId ? result : undefined;
 
-  // Offline, no data means "never tried", and offlineModeLink's synthetic
+  // Offline, no data means "never tried", and offlineReadLink's synthetic
   // cache-miss error is not one to show; else the ordinary empty state invites
   // creating a location that may already exist on the server.
-  const networkBlocked = useBlocksCacheMissQueries();
+  const networkBlocked = useIsApiUnavailable();
 
   // Reuse the lightweight create hook — it handles both ROOT_QUERY and
   // Pantry.storageLocationsConnection cache updates so PantryMain tabs sync instantly.

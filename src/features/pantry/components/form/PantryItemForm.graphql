@@ -105,17 +105,4 @@ fragment PantryItemForm_pantryItem on PantryItem {
     id
     name
   }
-  item {
-    version
-    id
-    categories {
-      id
-      isPrimary
-      category {
-        version
-        id
-        name
-      }
-    }
-  }
 }

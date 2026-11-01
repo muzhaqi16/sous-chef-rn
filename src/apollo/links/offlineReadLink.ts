@@ -4,45 +4,27 @@ import { Kind, OperationTypeNode } from 'graphql';
 import { useStore } from '#store';
 import {
   isApiUnavailable,
-  isNetworkWithheld,
-  blocksCacheMissQueries,
+  shouldTreatAsOffline,
 } from '#store/slices/networkSlice';
 import { logger } from '#/utils/environment';
 import { Telemetry } from '#/services/telemetry';
 import { t } from '#/i18n';
-import { RefreshTokenDocument } from '#operations/auth/auth.generated';
-import { GetUserSettingsDocument } from '#operations/auth/user.generated';
-import { operationNameOf } from '../utils/documentOperation';
 import { HELD_BY_LAYER } from '../utils/heldByLayer';
 
 /**
- * Reach the network through the user's offline mode: RefreshToken for token
- * rotation, GetUserSettings so offline mode itself can be toggled off. With the
- * server unavailable they take the cache like any read: the request is doomed,
- * and its failure would replace the cached answer.
- */
-const ALWAYS_ALLOW = [RefreshTokenDocument, GetUserSettingsDocument].map(
-  document => operationNameOf(document),
-);
-
-/**
- * Short-circuits a query's network leg when it is unwanted or doomed. A cache
+ * Answers a query from the device while its network leg is doomed. A cache
  * HIT re-emits and completes; a MISS forwards when only the breaker is open,
  * and errors explicitly when there is no network leg — emitting `{data: null}`
  * would make Apollo write `{}` and spam "Missing field".
  */
-export const createOfflineModeLink = () => {
+export const createOfflineReadLink = () => {
   return new ApolloLink((operation, forward) => {
     const state = useStore.getState();
-    if (!isNetworkWithheld(state)) {
+    if (!isApiUnavailable(state)) {
       return forward(operation);
     }
 
     const operationName = operation.operationName ?? '';
-    if (ALWAYS_ALLOW.includes(operationName) && !isApiUnavailable(state)) {
-      return forward(operation);
-    }
-
     const definition = getMainDefinition(operation.query);
 
     // Only block queries — mutations queue via queueLink, subscriptions manage themselves
@@ -92,7 +74,7 @@ export const createOfflineModeLink = () => {
     }
 
     // Cache miss, circuit-open-only — forward as an organic probe.
-    if (!blocksCacheMissQueries(state)) {
+    if (!shouldTreatAsOffline(state)) {
       logger.info(
         `🔌 Offline link: cache miss for ${operationName} while the circuit is open — forwarding as a probe`,
       );

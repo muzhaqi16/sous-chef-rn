@@ -11,7 +11,13 @@ import type {
   MockDataFor,
   QueryDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
@@ -114,7 +120,6 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => 'sl-1'),
   useSelectedPantryId: jest.fn(() => 'p1'),
   useSelectedHomeId: jest.fn(() => 'home-1'),
-  useIsOnline: jest.fn(() => true),
   // The screen classifies its own data state via useDataState ->
   // useOfflineAwareError -> useIsApiUnavailable, which calls
   // useAppStore(selector). Online by default; individual tests override.
@@ -154,9 +159,9 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
 
 // The offline predicate `useDataState` consults. Mocked at the hook rather than
 // the slice so the test does not depend on networkSlice internals.
-const mockBlocksCacheMissQueries = jest.fn(() => false);
+const mockIsOffline = jest.fn(() => false);
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
-  useIsApiUnavailable: () => mockBlocksCacheMissQueries(),
+  useIsApiUnavailable: () => mockIsOffline(),
 }));
 
 beforeEach(() => {
@@ -171,6 +176,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   Object.assign(mockPermissions, FULL_PERMISSIONS);
   mockSuggestedRecipes.length = 0;
+  mockIsOffline.mockReturnValue(false);
 });
 
 const route = { params: { itemId: 'pi1' } };
@@ -651,7 +657,7 @@ describe('PantryItemDetail (integration)', () => {
     // The screen read only `data` from useQuery and rendered a bare loader
     // whenever `item` was falsy, so offline it span forever with no error and
     // no retry. `loading` and `error` were never consulted.
-    mockBlocksCacheMissQueries.mockReturnValue(true);
+    mockIsOffline.mockReturnValue(true);
 
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [
@@ -664,6 +670,54 @@ describe('PantryItemDetail (integration)', () => {
     await drainTimers();
     expect(screen.getByTestId('state-offline')).toBeTruthy();
     expect(screen.queryByTestId('state-loading')).toBeNull();
+  });
+
+  describe('a row never opened on this device, offline', () => {
+    const openHeldRow = async () => {
+      mockIsOffline.mockReturnValue(true);
+      const cache = makeCache();
+      seedFragment(cache, {
+        fragment: PantryItem_ListedFragmentDoc,
+        fragmentName: 'pantryItem_listed',
+        data: {
+          __typename: 'PantryItem',
+          id: 'pi1',
+          itemName: 'Oat milk',
+          expiresOn: null,
+          storageLocation: { id: 'loc-1', name: 'Fridge door' },
+        },
+      });
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        cache,
+        operationMocks: [
+          recordMock(GetPantryItemDocument, {
+            error: new Error('offline: no cached data'),
+          }).mock,
+        ],
+      });
+      await drainTimers();
+    };
+
+    it('shows the name, location and expiry, and says the rest needs a connection', async () => {
+      await openHeldRow();
+
+      expect(screen.getAllByText('Oat milk')).toBeTruthy();
+      expect(screen.getByText('Fridge door')).toBeTruthy();
+      expect(screen.getByText('No expiry')).toBeTruthy();
+      expect(screen.getByTestId(pantryTestIDs.itemPartial)).toBeTruthy();
+      expect(screen.queryByTestId('state-offline')).toBeNull();
+    });
+
+    it('offers Edit to someone who may edit, and not to anyone else', async () => {
+      await openHeldRow();
+      expect(headerAction(pantryTestIDs.itemEditButton)).toBeTruthy();
+    });
+
+    it('offers no Edit to a viewer', async () => {
+      mockPermissions.canEditItems = false;
+      await openHeldRow();
+      expect(headerAction(pantryTestIDs.itemEditButton)).toBeNull();
+    });
   });
 
   it('says a stack the server holds nothing for is gone, not that it failed to load', async () => {

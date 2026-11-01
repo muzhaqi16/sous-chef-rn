@@ -8,7 +8,7 @@ import {
 } from '#operations/item/item.generated';
 import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
-import { useAppStore, useIsOnline } from '#store/useAppStore';
+import { useAppStore } from '#store/useAppStore';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
 
 type SemanticItem = NonNullable<
@@ -125,7 +125,6 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
   // The catalog is far too large to cache, so we keep the items the user has
   // actually seen via search in a bounded LRU. Online we still hit the API for
   // fresh, full-catalog results; offline we serve those cached items.
-  const isOnline = useIsOnline();
   const cachedItemSuggestions = useAppStore(
     state => state.cachedItemSuggestions,
   );
@@ -154,9 +153,6 @@ export function useItemAutocomplete(options?: { debounceMs?: number }) {
     // listing it shows another search's results.
     fallbackBeforeSearch: false,
     filterFallback: filterByName,
-    // Only serve from the seen-items cache when offline — online keeps hitting
-    // the full-catalog API so search isn't limited to the cached subset.
-    localFirst: !isOnline,
     maxResults: 10,
   });
 

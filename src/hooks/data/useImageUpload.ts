@@ -24,6 +24,7 @@ import {
   type ImageValidationError,
 } from '#utils/imageValidation';
 import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import {
   isRateLimitError,
   getRateLimitMessage,
@@ -248,7 +249,7 @@ export const useImageUpload = () => {
 
     // Check if online before attempting upload
     const state = useStore.getState();
-    if (!state.isOnline) {
+    if (isApiUnavailable(state)) {
       // UserFacingUploadError, not a bare Error: being offline is fatal for a
       // whole batch, and the batch runner recognises this type as "stop now".
       // Every remaining photo would take this same branch and alert again.

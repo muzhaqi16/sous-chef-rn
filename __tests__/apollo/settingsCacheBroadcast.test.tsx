@@ -75,7 +75,7 @@ describe('settings cache broadcast', () => {
           Query: () => ({
             me: {
               id: 'user-1',
-              settings: { id: 'settings-1', offlineMode: false },
+              settings: { id: 'settings-1', compactMode: false },
             },
           }),
         },
@@ -83,17 +83,17 @@ describe('settings cache broadcast', () => {
     );
 
     await drainTimers();
-    expect(result.current.data?.me?.settings?.offlineMode).toBe(false);
+    expect(result.current.data?.me?.settings?.compactMode).toBe(false);
 
     act(() => {
       writeEntityFields(
         cache,
         { __typename: 'UserSettings', id: 'settings-1' },
-        { offlineMode: true },
+        { compactMode: true },
       );
     });
 
     await drainTimers();
-    expect(result.current.data?.me?.settings?.offlineMode).toBe(true);
+    expect(result.current.data?.me?.settings?.compactMode).toBe(true);
   });
 });

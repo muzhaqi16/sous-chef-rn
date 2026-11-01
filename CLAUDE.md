@@ -181,7 +181,9 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   fragment spreading the entity's readers: known, else held, else the SDL
   neutral (`generate-optimistic-fillers`). A shared `*Fragments.graphql` has a consumer-list header, 2+ operations
   and 1+ hook. List cells are **strict** (`null` on `!complete`); detail panels and
-  sheets **resilient** with guarded scalar reads.
+  sheets **resilient** with guarded scalar reads. A detail screen offline falls back
+  to a complete smaller fragment, read with `useFragment` by entity, never to a
+  partial read; an edit form reads its fragment by entity, and the row carries it.
 - **A selection that spreads a fragment on a type with an `id` selects `id`
   directly** — masking hides the spread's `id` and `cache.identify` throws
   (`sous-chef/selects-key-field-directly`).
@@ -226,6 +228,14 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   a removal's key is no read),
   and an answer's older copy never replaces a newer row (`answerOrderingLink`). Never invent or
   default a version: a write sends it as the lock. Verified: `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
+- **Offline has one meaning**: `useIsApiUnavailable` (`isApiUnavailable` outside
+  React), the decision the read path acts on. Raw `isOnline` is transport's: it
+  reads as online through an API outage on working Wi-Fi
+  (`offlineHasOneMeaning.test.ts`).
+- **A miss offline is never an answer**: data the device does not hold is
+  `useDataState`'s `offline`, never "none", "not found" or empty days, and a
+  search with no held match says so through `useNoMatchCopy`. No gate holds this;
+  each screen classifies its own read.
 - **Resync is `RefetchEventManager`** (`src/apollo/refetchEvents.ts`): app
   foreground, API reachable, socket reconnect, after the queue drains. Never add
   a refetch listener; a search, preview or analytics query sets `refetchOn: false`
@@ -398,8 +408,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 ### Pickers, row actions, forms
 
 - **Autocomplete hooks use `useAutocompleteSearch`** (`src/features/catalog/hooks/`):
-  `localFirst: true` only for a complete reference set (units), `!isOnline` for a
-  bounded slice; staleness is handled centrally. `InlineAutocomplete` caps at 6,
+  `localFirst: true` only for a complete reference set; offline, a network picker
+  answers from its `fallbackItems` by itself, and staleness is handled centrally.
+  `InlineAutocomplete` caps at 6,
   else a modal picker; a stacked picker sets `stackBehavior="push"`.
 - **Wrap vertically stacked form content in `DropdownStack`**; never hand-roll
   zIndex chains — the failure is device-only.

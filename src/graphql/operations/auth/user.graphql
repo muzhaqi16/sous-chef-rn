@@ -9,8 +9,6 @@ query GetUserSettings {
       theme
       compactMode
       showTutorials
-      autoSync
-      offlineMode
       shareUsageData
       shareWithPartners
       personalizedAds

@@ -12,8 +12,6 @@ const SETTING_GROUPS = {
   theme: 'ui',
   compactMode: 'ui',
   showTutorials: 'ui',
-  autoSync: 'sync',
-  offlineMode: 'sync',
   preferredUnitSystem: 'regional',
   storeMode: 'shopping',
   budgetAndPrices: 'shopping',
