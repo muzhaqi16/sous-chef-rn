@@ -103,7 +103,11 @@ export function useDietaryIntake() {
       }
     }
 
-    recordDietarySaved(wanted.size > 0);
+    recordDietarySaved(
+      [...wanted.keys()].some(
+        key => existing.has(key) || addedRef.current.has(key),
+      ),
+    );
     return ok;
   };
 

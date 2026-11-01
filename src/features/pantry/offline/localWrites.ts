@@ -56,7 +56,7 @@ function stackOf(variables: OperationVariables): PantryItemRef | null {
 }
 
 /** The stack a delta landed on: the payload's own, else its ledger row's. */
-const answeredStack = (payload: Record<string, unknown>): unknown =>
+export const answeredStack = (payload: Record<string, unknown>): unknown =>
   isRecord(payload.pantryItem)
     ? payload.pantryItem
     : isRecord(payload.pantryItemUsage)

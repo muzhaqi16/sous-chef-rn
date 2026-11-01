@@ -5,19 +5,12 @@
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
+import { answeredStack } from './localWrites';
 
 type Reconciler = ReplayReconcilerTable[string];
 
 const idOf = (value: unknown): string | undefined =>
   isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
-
-/** The stack a write landed on: the payload's own, else its ledger row's. */
-const stackOf = (payload: Record<string, unknown>): unknown => {
-  if (isRecord(payload.pantryItem)) return payload.pantryItem;
-  return isRecord(payload.pantryItemUsage)
-    ? payload.pantryItemUsage.pantryItem
-    : undefined;
-};
 
 /** `subjectKey` is the input field naming the row the write expected. */
 const adoptAnsweredStack =
@@ -27,7 +20,7 @@ const adoptAnsweredStack =
     const payload: unknown = extractMutationPayload(data);
     if (!isRecord(input) || !isRecord(payload)) return;
     const queuedId = input[subjectKey];
-    const row = stackOf(payload);
+    const row = answeredStack(payload);
     const servedId = idOf(row);
     if (typeof queuedId !== 'string' || !servedId || servedId === queuedId) {
       return;

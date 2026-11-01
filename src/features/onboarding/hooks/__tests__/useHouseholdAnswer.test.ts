@@ -32,6 +32,14 @@ describe('useHouseholdAnswer', () => {
     expect(useOnboardingProgressStore.getState().cooksFor).toBe(20);
   });
 
+  it('claims no count the server refused', async () => {
+    mockUpdate.mockResolvedValueOnce(false);
+
+    await answer(4);
+
+    expect(useOnboardingProgressStore.getState().cooksFor).toBeNull();
+  });
+
   it.each([0, 21, 2.5])('never sends %p', async count => {
     await answer(count);
 

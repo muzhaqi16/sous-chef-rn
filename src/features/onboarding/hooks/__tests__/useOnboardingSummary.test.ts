@@ -68,4 +68,19 @@ describe('useOnboardingSummary', () => {
       stapleItems: 5,
     });
   });
+
+  it('takes out the staples a return to the step removed, never below none', () => {
+    const { result } = renderHook(() => useOnboardingSummary());
+    act(() => {
+      const { recordStapleItems } = useOnboardingProgressStore.getState();
+      recordStapleItems(5);
+      recordStapleItems(-3);
+    });
+    expect(result.current.stapleItems).toBe(2);
+
+    act(() => {
+      useOnboardingProgressStore.getState().recordStapleItems(-4);
+    });
+    expect(result.current.stapleItems).toBe(0);
+  });
 });

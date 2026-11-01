@@ -140,31 +140,36 @@ export const SelectPantryItems = () => {
     if (hasChanges && selectedPantryId) {
       void executeWithLoadingState(
         async () => {
-          await Promise.all([
-            ...itemsToAdd.map(item =>
-              addItem(item.name, {
-                item: { id: item.id },
-                ...(item.displayUnit?.id && {
-                  unit: { id: item.displayUnit.id },
+          const [, removed] = await Promise.all([
+            Promise.all(
+              itemsToAdd.map(item =>
+                addItem(item.name, {
+                  item: { id: item.id },
+                  ...(item.displayUnit?.id && {
+                    unit: { id: item.displayUnit.id },
+                  }),
+                  quantity: null,
+                  storage: {
+                    // Kept where its group said: one with no state is the pantry's.
+                    storageState: groupOf(item.storageState),
+                    condition: ItemCondition.Good,
+                  },
+                  purchase: {
+                    acquisitionMethod: AcquisitionMethod.Purchased,
+                  },
                 }),
-                quantity: null,
-                storage: {
-                  // Kept where its group said: one with no state is the pantry's.
-                  storageState: groupOf(item.storageState),
-                  condition: ItemCondition.Good,
-                },
-                purchase: {
-                  acquisitionMethod: AcquisitionMethod.Purchased,
-                },
-              }),
+              ),
             ),
             // `itemsToRemove` is drawn from the same index as the map.
-            ...itemsToRemove.flatMap(catalogId => {
-              const pantryItemId = existingItemMap.get(catalogId);
-              return pantryItemId ? [removeItem(pantryItemId)] : [];
-            }),
+            Promise.all(
+              itemsToRemove.flatMap(catalogId => {
+                const pantryItemId = existingItemMap.get(catalogId);
+                return pantryItemId ? [removeItem(pantryItemId)] : [];
+              }),
+            ),
           ]);
-          recordStapleItems(itemsToAdd.length);
+          // The summary claims this count: a staple taken out leaves it.
+          recordStapleItems(itemsToAdd.length - removed.filter(Boolean).length);
           navigateToNextStep('Staples');
         },
         setIsSaving,

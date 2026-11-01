@@ -116,9 +116,7 @@ function rowOf(
   const { currency } = node;
   const money = (amount: number) =>
     formatCurrency(amount, currency.code, currency.decimalPlaces);
-  // Compared to the currency's smallest coin, as a shopper reads them.
-  const coins = (amount: number) =>
-    Math.round(amount * 10 ** currency.decimalPlaces);
+  const coins = (amount: number) => coinsOf(amount, currency.decimalPlaces);
   const price = coins(node.price);
   const typical = coins(node.typicalPrice);
   const short = node.coveredDays < SHORT_HISTORY_DAYS;

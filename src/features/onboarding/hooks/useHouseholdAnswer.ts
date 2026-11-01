@@ -19,8 +19,7 @@ export function useHouseholdAnswer() {
    */
   const answer = async (count: number): Promise<void> => {
     if (!Number.isInteger(count) || count < 1 || count > COOKS_FOR_MAX) return;
-    recordCooksFor(count);
-    await updateDietaryProfile({ cooksFor: count });
+    if (await updateDietaryProfile({ cooksFor: count })) recordCooksFor(count);
   };
 
   return { answer };

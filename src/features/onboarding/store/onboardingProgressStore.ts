@@ -18,6 +18,7 @@ export interface OnboardingProgressState {
   recordCooksFor: (count: number) => void;
   recordDietarySaved: (saved: boolean) => void;
   recordReceiptItems: (added: number) => void;
+  /** `added` falls when a return to the step takes staples out. */
   recordStapleItems: (added: number) => void;
 }
 
@@ -39,7 +40,7 @@ export const useOnboardingProgressStore = create<OnboardingProgressState>()(
     recordReceiptItems: added =>
       set(state => ({ receiptItems: state.receiptItems + added })),
     recordStapleItems: added =>
-      set(state => ({ stapleItems: state.stapleItems + added })),
+      set(state => ({ stapleItems: Math.max(0, state.stapleItems + added) })),
   }),
 );
 

@@ -181,11 +181,26 @@ const order = (
   const typename =
     typeof value.__typename === 'string' ? value.__typename : rootTypename;
   if (!typename) return;
-  const fields = fieldsFor(selectionSet, typename, fragments);
-  for (const field of fields) {
-    if (!field.selectionSet) continue;
-    const child = value[keyOf(field)];
-    order(cache, child, field.selectionSet, fragments, variables);
+  const selectionsByKey = new Map<string, FieldNode[]>();
+  for (const field of fieldsFor(selectionSet, typename, fragments)) {
+    const key = keyOf(field);
+    selectionsByKey.set(key, [...(selectionsByKey.get(key) ?? []), field]);
+  }
+  // Every selection of a child at once: a pass lays the held version over the
+  // answer's, so a second pass would find the row current and leave its fields.
+  for (const [key, selections] of selectionsByKey) {
+    const nested = selections.flatMap(
+      field => field.selectionSet?.selections ?? [],
+    );
+    if (nested.length > 0) {
+      order(
+        cache,
+        value[key],
+        { kind: Kind.SELECTION_SET, selections: nested },
+        fragments,
+        variables,
+      );
+    }
   }
   if (
     !VERSIONED_TYPES.has(typename) ||
@@ -198,11 +213,6 @@ const order = (
   if (!cacheId) return;
   const held = heldVersion(cache, cacheId, typename);
   if (held === undefined || value.version >= held) return;
-  const selectionsByKey = new Map<string, FieldNode[]>();
-  for (const field of fields) {
-    const key = keyOf(field);
-    selectionsByKey.set(key, [...(selectionsByKey.get(key) ?? []), field]);
-  }
   for (const [key, selections] of selectionsByKey) {
     if (landsAsAnswered(value[key])) continue;
     const read = (returnPartialData: boolean) =>

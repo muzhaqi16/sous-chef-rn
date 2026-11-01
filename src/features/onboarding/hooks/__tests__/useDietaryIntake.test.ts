@@ -104,6 +104,20 @@ describe('useDietaryIntake', () => {
     );
   });
 
+  it('claims nothing saved when every add was refused', async () => {
+    mockAdd.mockResolvedValueOnce(false);
+    const { result } = renderHook(() => useDietaryIntake());
+
+    await save(result, {
+      ...NONE,
+      allergens: [
+        { value: Intolerance.Peanut, severity: RestrictionSeverity.Allergy },
+      ],
+    });
+
+    expect(useOnboardingProgressStore.getState().dietarySaved).toBe(false);
+  });
+
   it('never adds a kind the profile already holds', async () => {
     mockRestrictions = [
       held(

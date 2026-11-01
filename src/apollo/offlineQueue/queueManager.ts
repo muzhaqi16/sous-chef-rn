@@ -96,7 +96,6 @@ const mentionsId = (value: unknown, id: string): boolean =>
     : isRecord(value) &&
       Object.values(value).some(field => mentionsId(field, id)));
 
-/** The `version` a record carries, if it is a number. */
 /** The fields a replay reads off whichever union member the server returned. */
 interface ReplayPayload {
   __typename?: string;

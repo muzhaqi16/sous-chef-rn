@@ -53,12 +53,13 @@ export const useMarkHomeAsDefault = () => {
           document: MarkHomeAsDefaultDocument,
           fallback: t('errors.setDefaultHomeFailed'),
           present: 'none',
-          onFailed: clearPending,
         }),
       inputs,
     );
 
     if (settled.failure) {
+      // Here, not `onFailed`: refused with a home's create, this never settles.
+      clearPending();
       // A refusal carries its member in `data`; settling reports only the
       // failures that never reached a ruling, and a lost default is silent.
       const refused = !!settled.data?.markHomeAsDefault;

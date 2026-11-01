@@ -47,6 +47,30 @@ const SPREAD = gql`
   }
 `;
 
+const TWO_SELECTIONS = gql`
+  query ProbeTwoSelections {
+    probeLine {
+      id
+      version
+      ...ProbeLineItemName
+      ...ProbeLineItemDepartment
+    }
+  }
+  fragment ProbeLineItemName on ShoppingListItem {
+    item {
+      id
+      version
+      name
+    }
+  }
+  fragment ProbeLineItemDepartment on ShoppingListItem {
+    item {
+      id
+      storeDepartment
+    }
+  }
+`;
+
 const SHOPPING_LINE = gql`
   query ProbeLine {
     probeLine {
@@ -280,6 +304,28 @@ describe('answerOrderingLink', () => {
 
     expect(cache.readQuery({ query: SPREAD })).toEqual({
       probeItem: item(2, 'Oat milk', 'DAIRY'),
+    });
+  });
+
+  it('keeps every field of a row two fragments select', async () => {
+    const lineOf = (itemCopy: ReturnType<typeof item>) => ({
+      __typename: 'ShoppingListItem',
+      id: 'line-1',
+      version: 1,
+      item: itemCopy,
+    });
+    const { cache, read } = client([
+      { probeLine: lineOf(item(1, 'Milk', 'OTHER')) },
+    ]);
+    seedQuery(cache, {
+      query: TWO_SELECTIONS,
+      data: { probeLine: lineOf(item(2, 'Oat milk', 'DAIRY')) },
+    });
+
+    await read(TWO_SELECTIONS);
+
+    expect(cache.readQuery({ query: TWO_SELECTIONS })).toEqual({
+      probeLine: lineOf(item(2, 'Oat milk', 'DAIRY')),
     });
   });
 
