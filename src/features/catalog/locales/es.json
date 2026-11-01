@@ -104,9 +104,7 @@
     "addTitle": "Añadir ubicación de almacenamiento"
   },
   "suggestItemEdit": {
-    "sentTitle": "Sugerencia enviada",
     "sentBody": "Gracias: un administrador revisará tus cambios. La ficha permanecerá igual hasta que se aprueben.",
-    "duplicateTitle": "Ya lo sugeriste",
     "duplicateBody": "Ya sugeriste exactamente estos cambios y siguen pendientes de revisión, así que conservamos el original.",
     "pendingCapTitle": "5 sugerencias pendientes",
     "pendingCapBody": "Tienes 5 sugerencias de edición pendientes de revisión, que es el límite. Cuando un administrador revise una, podrás enviar otra.",
@@ -116,11 +114,8 @@
     "readOnlyBody": "No forma parte del catálogo público, así que aquí no hay nada que corregir. Solo los artículos del catálogo público se pueden editar o proponer para revisión.",
     "noChangesTitle": "Nada que sugerir",
     "noChangesBody": "Cambia el campo que quieres corregir y envíalo. Tu nota por sí sola no se puede revisar.",
-    "photosOnlyTitle": "Foto añadida",
     "photosOnlyBody": "Tu foto ya está en el artículo. Cambia también un campo si hay algo más que corregir.",
-    "photosForReviewTitle": "Foto enviada a revisión",
     "photosForReviewBody": "Un administrador la revisa antes de que todos la vean. Hasta entonces solo la ves tú. Cambia también un campo si hay algo más que corregir.",
-    "updatedTitle": "Artículo actualizado",
     "updatedBody": "Tus cambios están publicados.",
     "failedBody": "Algo salió mal al enviar tu sugerencia. Inténtalo de nuevo.",
     "photoNotice": "Un administrador revisa las fotos y los demás cambios antes de que todos los vean."
@@ -133,10 +128,8 @@
     "reasonPlaceholder": "p. ej., la marca es incorrecta, la foto es de otro producto",
     "reasonTooShort": "Añade al menos {{count}} caracteres para que un administrador sepa qué revisar.",
     "submit": "Enviar",
-    "sentTitle": "Informe enviado",
     "sentBody": "Gracias: un administrador revisará este artículo.",
     "failedBody": "Algo salió mal al enviar tu informe. Inténtalo de nuevo.",
-    "alreadyReportedTitle": "Ya lo informaste",
     "alreadyReportedBody": "Este artículo ya está marcado y pendiente de que un administrador lo revise, así que no enviamos un duplicado.",
     "wrongPhotoAction": "Informar de foto incorrecta",
     "wrongPhotoConfirmTitle": "¿Informar de esta foto?",

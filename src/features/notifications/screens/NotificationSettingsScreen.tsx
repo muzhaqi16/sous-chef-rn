@@ -3,6 +3,7 @@ import { errorService } from '#/services/errorService';
 import { View, Platform, Linking } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
@@ -159,10 +160,7 @@ export const NotificationSettingsScreen: React.FC = () => {
           async () => {
             const success = await resetToDefaults();
             if (success) {
-              alertService.alert(
-                t('labels.success'),
-                t('notifications.resetSuccess'),
-              );
+              toastService.success(t('notifications.resetSuccess'));
             } else {
               alertService.alert(
                 t('labels.error'),

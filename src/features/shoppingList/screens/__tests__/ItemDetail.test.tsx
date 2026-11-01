@@ -28,7 +28,7 @@ import {
   EntryImageSource,
   ItemImageStatus,
 } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { AddedContext } from '#/graphql/generated/schemaTypes';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { resolveImageUrl } from '#utils/imageUtils';
@@ -795,8 +795,7 @@ describe('ShoppingListItemDetail', () => {
 
     fireEvent.press(flag);
 
-    expect(alertService.alert).toHaveBeenCalledWith(
-      t('itemPhotos.pendingReview'),
+    expect(toastService.info).toHaveBeenCalledWith(
       t('itemPhotos.pendingReviewBody'),
     );
   });

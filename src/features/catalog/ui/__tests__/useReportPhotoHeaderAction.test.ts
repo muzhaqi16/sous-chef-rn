@@ -4,7 +4,7 @@ import {
   EntryImageSource,
   ItemImageStatus,
 } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import type { ItemPhotoCarousel_ItemPhotoFragment } from '#features/catalog/ui/ItemPhotoCarousel.generated';
 import { useReportPhotoHeaderAction } from '../useReportPhotoHeaderAction';
@@ -51,7 +51,7 @@ const actions = (item: Args[0], image: Args[1], gallery?: Args[2]) =>
 
 beforeEach(() => {
   mockReportWrongPhoto.mockClear();
-  jest.mocked(alertService.alert).mockClear();
+  jest.mocked(toastService.info).mockClear();
 });
 
 describe('useReportPhotoHeaderAction', () => {
@@ -131,8 +131,7 @@ describe('useReportPhotoHeaderAction', () => {
         accessibilityLabel: t('itemPhotos.pendingReviewAction'),
       });
       flag?.onPress();
-      expect(alertService.alert).toHaveBeenCalledWith(
-        t('itemPhotos.pendingReview'),
+      expect(toastService.info).toHaveBeenCalledWith(
         t('itemPhotos.pendingReviewBody'),
       );
       expect(mockReportWrongPhoto).not.toHaveBeenCalled();

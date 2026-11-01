@@ -104,9 +104,7 @@
     "addTitle": "Aggiungi posizione di conservazione"
   },
   "suggestItemEdit": {
-    "sentTitle": "Suggerimento inviato",
     "sentBody": "Grazie: un amministratore esaminerà le tue modifiche. La scheda resta invariata finché non vengono approvate.",
-    "duplicateTitle": "Già suggerito",
     "duplicateBody": "Hai già suggerito esattamente queste modifiche e sono ancora in attesa di revisione, quindi abbiamo mantenuto l'originale.",
     "pendingCapTitle": "5 suggerimenti in attesa",
     "pendingCapBody": "Hai 5 suggerimenti di modifica in attesa di revisione: è il limite. Quando un amministratore ne esaminerà uno, potrai inviarne un altro.",
@@ -116,11 +114,8 @@
     "readOnlyBody": "Non fa parte del catalogo pubblico, quindi non c’è nulla da correggere qui. Solo gli articoli del catalogo pubblico possono essere modificati o proposti per la revisione.",
     "noChangesTitle": "Niente da suggerire",
     "noChangesBody": "Modifica il campo che vuoi correggere, poi invia. La tua nota da sola non può essere esaminata.",
-    "photosOnlyTitle": "Foto aggiunta",
     "photosOnlyBody": "La tua foto è ora sull'articolo. Modifica anche un campo se c'è altro da correggere.",
-    "photosForReviewTitle": "Foto inviata per la revisione",
     "photosForReviewBody": "Un amministratore la controlla prima che tutti la vedano. Fino ad allora la vedi solo tu. Modifica anche un campo se c'è altro da correggere.",
-    "updatedTitle": "Articolo aggiornato",
     "updatedBody": "Le tue modifiche sono online.",
     "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
     "photoNotice": "Un amministratore esamina le foto e le altre modifiche prima che tutti le vedano."
@@ -133,10 +128,8 @@
     "reasonPlaceholder": "es. il marchio è sbagliato, la foto è di un altro prodotto",
     "reasonTooShort": "Aggiungi almeno {{count}} caratteri, così un amministratore sa cosa controllare.",
     "submit": "Invia",
-    "sentTitle": "Segnalazione inviata",
     "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
     "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",
-    "alreadyReportedTitle": "Già segnalato",
     "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato.",
     "wrongPhotoAction": "Segnala foto errata",
     "wrongPhotoConfirmTitle": "Segnalare questa foto?",

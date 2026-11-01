@@ -130,6 +130,11 @@ core and have no React Native in them. A host registers what shows them:
   pairs each outcome type with its haptic (success, error, warning; `info` is
   silent). No caller fires a haptic beside a toast
   (`outcomeHapticHasOneOwner.test.ts`).
+- **An alert reports a failure or asks a question; news is a toast.** So one
+  that only tells is trouble, and no rating request follows it soon. An alert
+  offering a choice is a question, and a failure that offers one says so itself
+  (`presentFailure`). `alertsAreFailuresOrQuestions.test.ts` holds its copy to
+  that.
 - **Alerts:** `installNativePlatform` registers the OS alert at startup, so an
   alert raised before the app renders still shows. `AlertProvider` replaces it
   with the app's dialog once it mounts. A button whose action presents native UI

@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { errorService } from '#/services/errorService';
 import { typedItemRef } from '#/utils/refInput';
@@ -122,8 +123,7 @@ export function usePantryItemDetailActions({
 
   const { convertExpiredToWaste } = useConvertExpiredToWaste({
     onSuccess: ({ hasBatches }) => {
-      alertService.alert(
-        t('labels.done'),
+      toastService.success(
         hasBatches
           ? t('success.expiredBatchesDiscarded')
           : t('success.expiredItemDiscarded'),

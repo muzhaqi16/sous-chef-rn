@@ -104,9 +104,7 @@
     "addTitle": "Shto vendndodhje ruajtjeje"
   },
   "suggestItemEdit": {
-    "sentTitle": "Sugjerimi u dërgua",
     "sentBody": "Faleminderit — një administrator do t'i shqyrtojë ndryshimet e tua. Artikulli mbetet i pandryshuar derisa të miratohen.",
-    "duplicateTitle": "Tashmë e sugjeruar",
     "duplicateBody": "I ke sugjeruar tashmë pikërisht këto ndryshime dhe janë ende në pritje të shqyrtimit, prandaj ruajtëm sugjerimin origjinal.",
     "pendingCapTitle": "5 sugjerime në pritje",
     "pendingCapBody": "Ke 5 sugjerime ndryshimi në pritje të shqyrtimit — ky është kufiri. Sapo një administrator të shqyrtojë njërin, mund të dërgosh një tjetër.",
@@ -116,11 +114,8 @@
     "readOnlyBody": "Ai nuk është pjesë e katalogut publik, prandaj këtu nuk ka çfarë të korrigjohet. Vetëm artikujt e katalogut publik mund të redaktohen ose të propozohen për shqyrtim.",
     "noChangesTitle": "Asgjë për të sugjeruar",
     "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
-    "photosOnlyTitle": "Fotoja u shtua",
     "photosOnlyBody": "Fotoja jote tani është në artikull. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
-    "photosForReviewTitle": "Fotoja u dërgua për shqyrtim",
     "photosForReviewBody": "Një administrator e kontrollon para se ta shohin të gjithë. Deri atëherë e sheh vetëm ti. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
-    "updatedTitle": "Artikulli u përditësua",
     "updatedBody": "Ndryshimet e tua janë publikuar.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
     "photoNotice": "Një administrator shqyrton fotot dhe ndryshimet e tjera para se t'i shohin të gjithë."
@@ -133,10 +128,8 @@
     "reasonPlaceholder": "p.sh. marka është e gabuar, fotoja është e një produkti tjetër",
     "reasonTooShort": "Shto të paktën {{count}} karaktere që administratori të dijë çfarë të shohë.",
     "submit": "Dërgo",
-    "sentTitle": "Raporti u dërgua",
     "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri.",
-    "alreadyReportedTitle": "Tashmë e raportuar",
     "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë.",
     "wrongPhotoAction": "Raporto foto të gabuar",
     "wrongPhotoConfirmTitle": "Të raportohet kjo foto?",

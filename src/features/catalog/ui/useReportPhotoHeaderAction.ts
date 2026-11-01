@@ -4,7 +4,7 @@ import {
   EntryImageSource,
   ItemImageStatus,
 } from '#/graphql/generated/schemaTypes';
-import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { useReportWrongPhoto } from '#features/catalog/hooks/useReportWrongPhoto';
 import type { EntryImageRead } from '#features/catalog/ui/entryGallery';
@@ -45,11 +45,7 @@ export function useReportPhotoHeaderAction(
   const shown = useItemPhoto(photoOnPage(gallery, page));
 
   if (shown?.status === ItemImageStatus.Pending) {
-    const explain = () =>
-      alertService.alert(
-        t('itemPhotos.pendingReview'),
-        t('itemPhotos.pendingReviewBody'),
-      );
+    const explain = () => toastService.info(t('itemPhotos.pendingReviewBody'));
     return {
       actions: [
         {

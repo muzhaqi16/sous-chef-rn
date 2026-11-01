@@ -7,6 +7,7 @@ import { MarkItemForReviewDocument } from '#operations/item/item.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useReportItem } from '#features/catalog/hooks/useReportItem';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 
 const REASON = 'The photo shows a completely different product.';
@@ -37,8 +38,7 @@ describe('useReportItem', () => {
     expect(fired).toContainEqual({
       input: { itemId: 'item-1', reason: REASON },
     });
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Report sent',
+    expect(toastService.success).toHaveBeenCalledWith(
       expect.stringContaining('admin'),
     );
   });
@@ -80,14 +80,10 @@ describe('useReportItem', () => {
     const succeeded = await result.current.reportItem('item-1', REASON);
 
     expect(succeeded).toBe(true);
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Already reported',
+    expect(toastService.info).toHaveBeenCalledWith(
       expect.stringContaining('waiting'),
     );
-    expect(alertService.alert).not.toHaveBeenCalledWith(
-      'Report sent',
-      expect.anything(),
-    );
+    expect(toastService.success).not.toHaveBeenCalled();
   });
 
   // A server without `alreadyReported` answers a repeat with a Conflict.
@@ -106,8 +102,7 @@ describe('useReportItem', () => {
     const succeeded = await result.current.reportItem('item-1', REASON);
 
     expect(succeeded).toBe(true);
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Already reported',
+    expect(toastService.info).toHaveBeenCalledWith(
       expect.stringContaining('waiting'),
     );
   });

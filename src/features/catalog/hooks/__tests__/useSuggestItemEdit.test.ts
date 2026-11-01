@@ -19,6 +19,7 @@ import {
 import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 
 const mockUploadItemImages = jest
   .fn()
@@ -213,8 +214,7 @@ describe('useSuggestItemEdit', () => {
     expect(fired).toHaveLength(0);
     expect(mockUploadItemImages).toHaveBeenCalled();
     // A suggester's photo lands PENDING: saying it is on the item is untrue.
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Photo sent for review',
+    expect(toastService.success).toHaveBeenCalledWith(
       expect.stringContaining('only you can see it'),
     );
   });
@@ -232,8 +232,7 @@ describe('useSuggestItemEdit', () => {
     );
 
     expect(outcome).toEqual({ status: 'imagesOnly' });
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Photo added',
+    expect(toastService.success).toHaveBeenCalledWith(
       expect.stringContaining('on the item now'),
     );
   });

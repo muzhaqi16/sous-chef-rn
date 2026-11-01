@@ -12,6 +12,7 @@ import { hidePantryItem } from '#features/pantry/cache/items';
 import { DeletePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
 import { AddItemToShoppingListFromPantryItemDocument } from '#features/pantry/hooks/usePantryItemDetailActions.generated';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { createLocalShoppingListItem } from '#features/shoppingList/cache/items';
 import { usePantryItemDetailActions } from '../usePantryItemDetailActions';
 
@@ -703,8 +704,7 @@ describe('usePantryItemDetailActions', () => {
       expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
         hasBatches: true,
       });
-      expect(alertService.alert).toHaveBeenLastCalledWith(
-        t('labels.done'),
+      expect(toastService.success).toHaveBeenCalledWith(
         t('success.expiredBatchesDiscarded'),
       );
     });
@@ -723,8 +723,7 @@ describe('usePantryItemDetailActions', () => {
       expect(mockConvertExpiredToWaste).toHaveBeenCalledWith('item-1', {
         hasBatches: false,
       });
-      expect(alertService.alert).toHaveBeenLastCalledWith(
-        t('labels.done'),
+      expect(toastService.success).toHaveBeenCalledWith(
         t('success.expiredItemDiscarded'),
       );
     });

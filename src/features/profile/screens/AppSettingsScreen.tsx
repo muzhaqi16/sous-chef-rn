@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
@@ -115,14 +116,9 @@ export const AppSettingsScreen: React.FC = () => {
             // Also reset feature hints/tutorials and per-user preferences
             resetAllFeatureHints();
             resetUserPreferences();
-            // Only the success path alerts — `resetToDefaults` already
+            // Only the success path speaks: `resetToDefaults` already
             // surfaces its own failure with `errors.resetSettingsFailed`.
-            if (success) {
-              alertService.alert(
-                t('labels.success'),
-                t('settings.resetSuccess'),
-              );
-            }
+            if (success) toastService.success(t('settings.resetSuccess'));
           },
           () => setUpdating(null),
         );

@@ -6,6 +6,7 @@ import {
 } from '#features/catalog/hooks/useSuggestItemEdit.generated';
 import { useImageUpload } from '#hooks/data/useImageUpload';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import {
   settleMutation,
   type SettledFailure,
@@ -98,17 +99,11 @@ export function useSuggestItemEdit() {
       if (uploaded === 0) return FAILED;
       // Only the owner's photo lands APPROVED; a suggester's waits PENDING,
       // seen by them alone until an admin approves it.
-      if (writesItemDirectly(original)) {
-        alertService.alert(
-          t('suggestItemEdit.photosOnlyTitle'),
-          t('suggestItemEdit.photosOnlyBody'),
-        );
-      } else {
-        alertService.alert(
-          t('suggestItemEdit.photosForReviewTitle'),
-          t('suggestItemEdit.photosForReviewBody'),
-        );
-      }
+      toastService.success(
+        writesItemDirectly(original)
+          ? t('suggestItemEdit.photosOnlyBody')
+          : t('suggestItemEdit.photosForReviewBody'),
+      );
       return { status: 'imagesOnly' };
     }
 
@@ -137,10 +132,7 @@ export function useSuggestItemEdit() {
           return FAILED;
         }
         await uploadImages(uploadItemImages, images, original.id);
-        alertService.alert(
-          t('suggestItemEdit.updatedTitle'),
-          t('suggestItemEdit.updatedBody'),
-        );
+        toastService.success(t('suggestItemEdit.updatedBody'));
         return { status: 'updated' };
       }
     }
@@ -171,18 +163,8 @@ export function useSuggestItemEdit() {
     const collapsed = payload.suggestion.note.trim() !== note;
 
     await uploadImages(uploadItemImages, images, original.id);
-    alertService.alert(
-      t(
-        collapsed
-          ? 'suggestItemEdit.duplicateTitle'
-          : 'suggestItemEdit.sentTitle',
-      ),
-      t(
-        collapsed
-          ? 'suggestItemEdit.duplicateBody'
-          : 'suggestItemEdit.sentBody',
-      ),
-    );
+    if (collapsed) toastService.info(t('suggestItemEdit.duplicateBody'));
+    else toastService.success(t('suggestItemEdit.sentBody'));
     return { status: collapsed ? 'duplicate' : 'suggested' };
   };
 
