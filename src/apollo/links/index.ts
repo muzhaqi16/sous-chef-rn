@@ -50,8 +50,7 @@ export function createLink() {
 
   return ApolloLink.from([
     offlineReadLink, // Answer queries from the cache when offline (before telemetry to skip tracking)
-    // Sees every read that may reach the network, and a re-sent read still
-    // passes retry, error, auth and transport.
+    // Sees every read that may reach the network.
     createLocalWritePrecedenceLink(), // A read in flight never undoes a local-first write
     // Under the precedence link, so it and Apollo only see ordered answers.
     createAnswerOrderingLink(), // An answer's older copy of a row never replaces a newer one

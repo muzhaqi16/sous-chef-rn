@@ -152,13 +152,26 @@ export class PendingWrites {
     }
 
     let data: unknown;
-    const settled = await settle({
-      variables: this.onAnsweredVersion(variables, subjectIds),
-      context: { localFirst: true, pendingWriteId: write.id },
-      update: (_cache, result) => {
-        data = result.data;
-      },
-    });
+    let settled: Settled<TData>;
+    try {
+      settled = await settle({
+        variables: this.onAnsweredVersion(variables, subjectIds),
+        context: { localFirst: true, pendingWriteId: write.id },
+        update: (_cache, result) => {
+          data = result.data;
+        },
+      });
+    } catch (error) {
+      // Only reporting a failure can throw, and what waits on the write must
+      // still hear of it.
+      this.sending.delete(write.id);
+      this.drop(write.id);
+      answer({
+        settled: { status: 'failed', data: undefined },
+        data: undefined,
+      });
+      throw error;
+    }
     if (settled.status === 'applied') {
       this.noteAnsweredVersion(subjectIds, data ?? settled.data);
       this.confirm(write.id, data ?? settled.data);

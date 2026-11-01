@@ -309,9 +309,10 @@ describe('localWritePrecedenceLink', () => {
     expect(list.forwarded.map(op => op.name)).toEqual(['UpdateUsualStore']);
   });
 
-  it('holds a read the cache cannot answer, and sends it again after the write', async () => {
+  it('lets a read the cache cannot answer land as the server sends it, sent once', async () => {
     const list = await openWithRefreshInFlight({
       homeId: 'home-2',
+      refreshed: [aldi],
       rereads: [[aldi]],
     });
     await settled(list.pin());
@@ -319,71 +320,9 @@ describe('localWritePrecedenceLink', () => {
     list.refresh.release();
     await drainTimers();
 
-    expect(list.reasks[0]?.fired).toHaveLength(1);
+    expect(list.reasks[0]?.fired).toHaveLength(0);
     expect(list.cached('home-2')?.map(store => store.id)).toEqual([aldi.id]);
     list.close();
-  });
-
-  it('holds a read sent again when a later write catches it as well', async () => {
-    const refresh = recordMock(UsualStoresDocument, {
-      data: { usualStores: [aldi] },
-      held: true,
-      maxUsageCount: 1,
-    });
-    const resent = recordMock(UsualStoresDocument, {
-      data: { usualStores: [aldi] },
-      held: true,
-      maxUsageCount: 1,
-    });
-    const third = recordMock(UsualStoresDocument, {
-      data: { usualStores: [aldi] },
-      maxUsageCount: 1,
-    });
-    const pinMock = recordMock(UpdateUsualStoreDocument, {
-      data: pinAnswer([pinnedMarket, banksville]),
-      maxUsageCount: 2,
-    });
-    const cache = makeCache();
-    writeUsualStores(cache, 'home-1', [banksville, market]);
-    const client = new ApolloClient({
-      cache,
-      link: ApolloLink.from([
-        createLocalWritePrecedenceLink(),
-        testMockLink([refresh.mock, resent.mock, third.mock, pinMock.mock]),
-      ]),
-      defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    });
-    const pin = () =>
-      client.mutate({
-        mutation: UpdateUsualStoreDocument,
-        variables: {
-          input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true },
-        },
-        context: { localFirst: true },
-      });
-    // Another household's list, which the cache cannot answer.
-    const subscription = client
-      .watchQuery({
-        query: UsualStoresDocument,
-        variables: { homeId: 'home-2' },
-        fetchPolicy: 'cache-and-network',
-      })
-      .subscribe(() => undefined);
-    await drainTimers();
-    expect(refresh.fired).toHaveLength(1);
-
-    await settled(pin());
-    refresh.release();
-    await drainTimers();
-    expect(resent.fired).toHaveLength(1);
-
-    // A second write while the read is out again: its answer is held too.
-    await settled(pin());
-    resent.release();
-    await drainTimers();
-
-    expect(third.fired).toHaveLength(1);
-    subscription.unsubscribe();
   });
 
   it('lets a page loading during a write land as the server sends it', async () => {

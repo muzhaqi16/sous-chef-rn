@@ -632,8 +632,8 @@ replay only after their parent has landed — the drain reads the parent referen
   before the write, and Apollo shows its watcher nothing newer until it does. `localWritePrecedenceLink`
   (`src/apollo/links/`) answers each such read whose data the write changed from the cache as the write
   passes, so the change shows at once, and its late answer lands under the write's layer, where the fence
-  holds the commit until it has (§2). A read the cache can't answer completely is held and re-sent
-  instead. A read whose data the write left as it was goes on untouched, so a caller that acts on the
+  holds the commit until it has (§2). A read the cache can't answer completely goes on, and lands under
+  the layer the same way. A read whose data the write left as it was goes on untouched, so a caller that acts on the
   server's answer (`useVerifyEmail`, an event's read-back) still gets it. A `fetchMore` page
   (`context: { page: true }`, sent only by `src/hooks/utils/fetchPage.ts`)
   passes untouched: the cache could only answer it with the list already shown. Verified:

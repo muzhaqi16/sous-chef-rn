@@ -504,6 +504,24 @@ describe('PendingWrites', () => {
       expect(shownRows(cache)).toEqual(['row-1']);
     });
 
+    it('lets go of a write whose settling throws, and of the write behind it', async () => {
+      const { cache, pending } = seeded();
+      const throwing = pending.send(
+        SET_QUANTITY,
+        { input: { id: 'row-1', quantity: 2 } },
+        () => Promise.reject(new Error('a failure callback threw')),
+      );
+      const behind = held(pending, SET_QUANTITY, { id: 'row-1', quantity: 3 });
+
+      await expect(throwing).rejects.toThrow('a failure callback threw');
+      await new Promise(resolve => setImmediate(resolve));
+      expect(behind.sent).toHaveLength(1);
+
+      behind.answer({ status: 'failed', data: undefined });
+      await behind.result;
+      expect(shown(cache)?.quantity).toBe(1);
+    });
+
     it('leaves a queued write pending, for the queue to settle', async () => {
       const { cache, pending } = seeded();
       const queued = held(pending, SET_QUANTITY, { id: 'row-1', quantity: 5 });

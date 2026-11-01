@@ -225,6 +225,37 @@ describe('a pending write and the reads around it', () => {
     watching.unsubscribe();
   });
 
+  it('lands a first read the device cannot answer under the write, sent once', async () => {
+    const { cache, client, answer, write, shown, requests } = setUp();
+    const watching = client
+      .watchQuery<{ probeRow: ReturnType<typeof row> }>({
+        query: ROW,
+        fetchPolicy: 'cache-and-network',
+      })
+      .subscribe(() => undefined);
+    await drainTimers();
+
+    const pin = write(PIN, { id: 'row-1', pinned: true });
+    await drainTimers();
+    answer('PinRow', {
+      pinRow: { __typename: 'ProbeItem', id: 'row-1', pinned: true },
+    });
+    await pin;
+
+    answer('FenceRow', { probeRow: row('Oat milk', false) });
+    await drainTimers();
+
+    expect(shown()).toMatchObject({ name: 'Oat milk', pinned: true });
+    expect(
+      cache.readQuery<{ probeRow: ReturnType<typeof row> }>({
+        query: ROW,
+        optimistic: false,
+      })?.probeRow.pinned,
+    ).toBe(true);
+    expect(requests.filter(name => name === 'FenceRow')).toHaveLength(1);
+    watching.unsubscribe();
+  });
+
   it('keeps a removed row out of the list when a page from before it lands', async () => {
     const { cache, client, answer, write } = setUp();
     cache.writeQuery({
