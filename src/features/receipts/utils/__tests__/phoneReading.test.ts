@@ -29,6 +29,38 @@ describe('a barcode text recognition split', () => {
     ]);
   });
 
+  it('reads a clean line as it always did', () => {
+    expect(
+      itemsOf([
+        'MAPLE ROW MARKET',
+        'SOAP BAR 001234567890 F 2.00',
+        'DISH RAG 009876543210 3.00',
+        'SUBTOTAL 5.00',
+        'TOTAL 5.00',
+      ]),
+    ).toEqual([
+      { product: 'SOAP BAR', code: '001234567890' },
+      { product: 'DISH RAG', code: '009876543210' },
+    ]);
+  });
+
+  it('sends no fragment that cannot join a whole code, beside codes that prove the length', () => {
+    expect(
+      itemsOf([
+        'MAPLE ROW MARKET',
+        'SOAP BAR 001234567890 F 2.00',
+        'DISH RAG 009876543210 3.00',
+        'BLUE TOWEL 01928 F 7.00',
+        'SUBTOTAL 12.00',
+        'TOTAL 12.00',
+      ]),
+    ).toEqual([
+      { product: 'SOAP BAR', code: '001234567890' },
+      { product: 'DISH RAG', code: '009876543210' },
+      { product: 'BLUE TOWEL', code: null },
+    ]);
+  });
+
   it('is no code at all with nothing to prove its length, never a fragment', () => {
     expect(
       itemsOf([

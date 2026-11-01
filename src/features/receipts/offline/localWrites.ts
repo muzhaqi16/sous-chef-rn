@@ -21,7 +21,12 @@ import { refuseReceiptCheckIn, resultsOf } from './receiptCheckIn';
 /** What one line shows until the server answers. */
 export type LocalCheckInLine = {
   /** The stack it mints, with the row that shows; absent for a line kept out. */
-  stack?: { id: string; row: LocalPantryItem };
+  stack?: {
+    id: string;
+    row: LocalPantryItem;
+    /** Shown on an earlier line's row, as the server joins them. */
+    joined?: boolean;
+  };
   /** The open list line it ticks. */
   listLineId?: string;
 };
@@ -36,7 +41,7 @@ export type CheckInInputs = {
 export const checkIn: LocalWrite<CheckInInputs> = {
   apply(cache, { inputs: { listId, lines, now } }) {
     for (const { stack, listLineId } of lines) {
-      if (stack) {
+      if (stack && !stack.joined) {
         const ref: PantryItemRef = { __typename: 'PantryItem', id: stack.id };
         showLocalPantryItem(cache, ref, stack.row, now);
       }

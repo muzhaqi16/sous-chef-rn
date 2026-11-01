@@ -398,11 +398,18 @@ export const ReceiptReviewScreen: React.FC = () => {
         });
   };
 
+  // Lines nobody has decided on, a match that could not run among them.
+  const openCount = rows.filter(
+    row =>
+      row.status === 'unmatched' ||
+      (row.status === 'pending' && matchState === 'failed'),
+  ).length;
+  const stillMatching =
+    matchState !== 'failed' && rows.some(row => row.status === 'pending');
   // Offered once something went in: before that, nothing would be finished.
-  const openCount = rows.filter(row => row.status === 'unmatched').length;
   const canFinish =
     pendingCount === 0 &&
-    openCount > 0 &&
+    !stillMatching &&
     rows.some(row => row.status === 'added');
 
   const footer =
@@ -412,7 +419,9 @@ export const ReceiptReviewScreen: React.FC = () => {
         icon="checkmark-circle-outline"
         testID={receiptsTestIDs.reviewFinish}
       >
-        {t('receipts.review.finishOpen', { count: openCount })}
+        {openCount > 0
+          ? t('receipts.review.finishOpen', { count: openCount })
+          : t('labels.done')}
       </Button>
     ) : (
       <Button
@@ -570,6 +579,7 @@ export const ReceiptReviewScreen: React.FC = () => {
         visible={sheetVisible}
         line={editing ?? null}
         choice={editing?.choice}
+        canLeaveOut={editing?.status !== 'skipped'}
         candidates={editing?.candidates ?? []}
         listItemNameFor={key =>
           editing ? listItemNameFor(editing.index, key) : undefined

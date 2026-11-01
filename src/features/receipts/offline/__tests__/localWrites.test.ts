@@ -190,6 +190,19 @@ describe('a check-in', () => {
     expect(shown(screen, false)).toEqual({ ids: ['held'], total: 1 });
   });
 
+  it('shows nothing of its own for a line joined to an earlier row', () => {
+    const screen = setup();
+    const joined = line('line-b');
+
+    recordOf(screen, [
+      line('line-a'),
+      { ...joined, stack: joined.stack && { ...joined.stack, joined: true } },
+    ]);
+
+    expect(shown(screen)).toEqual({ ids: ['line-a', 'held'], total: 2 });
+    expect(screen.cache.extract(true)['PantryItem:line-b']).toBeUndefined();
+  });
+
   it('dates each row when it was made, not when it is rebuilt', () => {
     const screen = setup();
 

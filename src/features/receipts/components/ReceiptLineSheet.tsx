@@ -35,6 +35,8 @@ import { receiptsTestIDs } from '../testIDs';
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
   choice: ReceiptLineChoice | undefined;
+  /** False for a line already left out, where leaving it out does nothing. */
+  canLeaveOut: boolean;
   /** Items the API proposes for the line, best first. */
   candidates: readonly ReceiptCandidate[];
   /** The shopping list line the product and unit being picked would tick off. */
@@ -50,6 +52,7 @@ interface ReceiptLineFormProps {
 const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   line,
   choice,
+  canLeaveOut,
   candidates,
   listItemNameFor,
   onPickItem,
@@ -274,7 +277,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
         </View>
       </DropdownStack>
 
-      {!!choice && (
+      {!!canLeaveOut && (
         <Button variant="ghost" icon="close-circle-outline" onPress={onRemove}>
           {t('receipts.review.dontAdd')}
         </Button>

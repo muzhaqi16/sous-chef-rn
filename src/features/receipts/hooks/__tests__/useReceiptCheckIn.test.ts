@@ -115,6 +115,109 @@ describe('useReceiptCheckIn', () => {
     });
   });
 
+  describe('two lines of one known item', () => {
+    const quantityOf = (cache: ReturnType<typeof makeCache>, id: string) => {
+      const row = cache.extract(true)[`PantryItem:${id}`];
+      return row?.quantity;
+    };
+    const ofItem = (index: number, itemId: string): CheckInLineToSend => {
+      const sent = line(index);
+      return { ...sent, input: { ...sent.input, item: { id: itemId } } };
+    };
+
+    it('shows one row at their total until the answer', async () => {
+      const cache = makeCache();
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        held: true,
+        dataFor: checkInAnswer(),
+      });
+      const { result } = renderHookWithApollo(
+        () => useReceiptCheckIn(undefined),
+        { cache, operationMocks: [checkIn.mock] },
+      );
+
+      let shown: string[] = [];
+      let quantity: unknown;
+      await act(async () => {
+        void result.current.checkIn(receipt(checkInIds()), [
+          ofItem(0, 'cat-milk'),
+          ofItem(1, 'cat-milk'),
+        ]);
+        shown = pantryRows(cache);
+        quantity = quantityOf(cache, 'pi-0');
+      });
+
+      expect(shown).toEqual(['PantryItem:pi-0']);
+      expect(quantity).toBe(2);
+    });
+
+    it('keeps apart two lines of one item in different units', async () => {
+      const cache = makeCache();
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        held: true,
+        dataFor: checkInAnswer(),
+      });
+      const { result } = renderHookWithApollo(
+        () => useReceiptCheckIn(undefined),
+        { cache, operationMocks: [checkIn.mock] },
+      );
+      const inUnit = (index: number, unitId: string) => {
+        const sent = ofItem(index, 'cat-milk');
+        return {
+          ...sent,
+          input: {
+            ...sent.input,
+            amount: { packages: { count: 1, unitId } },
+          },
+        };
+      };
+
+      let shown: string[] = [];
+      await act(async () => {
+        void result.current.checkIn(receipt(checkInIds()), [
+          inUnit(0, 'unit-a'),
+          inUnit(1, 'unit-b'),
+        ]);
+        shown = pantryRows(cache);
+      });
+
+      expect(shown).toEqual(['PantryItem:pi-0', 'PantryItem:pi-1']);
+    });
+
+    it('never joins typed names, which only the server can compare', async () => {
+      const cache = makeCache();
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        held: true,
+        dataFor: checkInAnswer(),
+      });
+      const { result } = renderHookWithApollo(
+        () => useReceiptCheckIn(undefined),
+        { cache, operationMocks: [checkIn.mock] },
+      );
+      const typed = (index: number) => {
+        const sent = line(index, 'Oat milk');
+        return {
+          ...sent,
+          input: {
+            ...sent.input,
+            item: { inline: { id: `typed-${index}`, name: 'Oat milk' } },
+          },
+        };
+      };
+
+      let shown: string[] = [];
+      await act(async () => {
+        void result.current.checkIn(receipt(checkInIds()), [
+          typed(0),
+          typed(1),
+        ]);
+        shown = pantryRows(cache);
+      });
+
+      expect(shown).toEqual(['PantryItem:pi-0', 'PantryItem:pi-1']);
+    });
+  });
+
   it('withdraws only the line the API refused, and names it', async () => {
     const cache = makeCache();
     const checkIn = answering({ refuses: sent => sent.clientId === '1' });

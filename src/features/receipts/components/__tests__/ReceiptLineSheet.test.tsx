@@ -1,6 +1,7 @@
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ReceiptLineSheet } from '../ReceiptLineSheet';
+import { t } from '#/i18n';
 import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { drainTimers } from '#/test-utils/drainTimers';
@@ -121,13 +122,15 @@ const renderSheet = (line: typeof MILK & { discount?: number } = MILK) => {
       onClose={onClose}
       onSave={onSave}
       onRemove={jest.fn()}
+      canLeaveOut
     />,
   );
   return { onSave, onClose };
 };
 
-const renderUnchosenSheet = () => {
+const renderUnchosenSheet = (canLeaveOut = true) => {
   const onSave = jest.fn();
+  const onRemove = jest.fn();
   render(
     <ReceiptLineSheet
       visible
@@ -139,10 +142,11 @@ const renderUnchosenSheet = () => {
       opening={1}
       onClose={jest.fn()}
       onSave={onSave}
-      onRemove={jest.fn()}
+      onRemove={onRemove}
+      canLeaveOut={canLeaveOut}
     />,
   );
-  return { onSave };
+  return { onSave, onRemove };
 };
 
 const typeTotal = (text: string) =>
@@ -255,6 +259,20 @@ describe('a receipt line not for the pantry', () => {
     expect(onSave).toHaveBeenCalledWith(
       expect.objectContaining({ notStocked: true, itemName: 'Whole milk' }),
     );
+  });
+
+  it('lets a line with no product be left out', () => {
+    const { onRemove } = renderUnchosenSheet();
+
+    fireEvent.press(screen.getByText(t('receipts.review.dontAdd')));
+
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not offer to leave out a line already left out', () => {
+    renderUnchosenSheet(false);
+
+    expect(screen.queryByText(t('receipts.review.dontAdd'))).toBeNull();
   });
 
   it('takes the printed name when nothing is chosen, so nothing need be typed', async () => {

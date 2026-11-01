@@ -6,6 +6,7 @@ import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtu
 import { makeCache } from '#/apollo/cache';
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
+import { t } from '#/i18n';
 import type { ReceiptReviewRow } from '../../hooks/useReceiptReview';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
@@ -26,6 +27,7 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
 }));
 
 let mockRows: ReceiptReviewRow[] = [];
+let mockMatchState: 'matching' | 'done' | 'failed' = 'done';
 let mockStoreOffer: { id: string; name: string } | null = null;
 let mockStoreLocation: {
   address: string | null;
@@ -63,7 +65,7 @@ jest.mock('../../hooks/useReceiptReview', () => ({
     setPurchasedOn: jest.fn(),
     chooseStore: mockChooseStore,
     totalsGap: null,
-    matchState: 'done',
+    matchState: mockMatchState,
     retryMatching: jest.fn(),
     pantryName: 'Kitchen Pantry',
     pendingCount: mockRows.filter(
@@ -210,6 +212,10 @@ describe('ReceiptReviewScreen rows', () => {
 });
 
 describe('ReceiptReviewScreen Add', () => {
+  afterEach(() => {
+    mockMatchState = 'done';
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockRows = [
@@ -436,6 +442,59 @@ describe('ReceiptReviewScreen Add', () => {
     expect(mockToPantryMain).toHaveBeenCalledTimes(1);
     screen.unmount();
     expect(mockFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('ends with Done once the last open line is left out, nothing discarded', async () => {
+    mockRows = [
+      row({
+        printed: 'MILK',
+        status: 'added',
+        choice: lineChoice({ price: 2.79 }),
+      }),
+      row({ index: 1, printed: 'GV EYES', status: 'skipped', price: 4.48 }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.queryByText('Choose the items to add')).toBeNull();
+    expect(screen.getByText(t('labels.done'))).toBeTruthy();
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewFinish));
+
+    expect(mockToPantryMain).toHaveBeenCalledTimes(1);
+    screen.unmount();
+    expect(mockFinish).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts lines a failed match left open among those it finishes without', () => {
+    mockMatchState = 'failed';
+    mockRows = [
+      row({
+        printed: 'MILK',
+        status: 'added',
+        choice: lineChoice({ price: 2.79 }),
+      }),
+      row({ index: 1, printed: 'GV EYES', status: 'pending', price: 4.48 }),
+      row({ index: 2, printed: 'TOWEL', status: 'unmatched', price: 1.5 }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getByText('Finish without 2 lines')).toBeTruthy();
+  });
+
+  it('offers no finish while a match is still running', () => {
+    mockMatchState = 'matching';
+    mockRows = [
+      row({
+        printed: 'MILK',
+        status: 'added',
+        choice: lineChoice({ price: 2.79 }),
+      }),
+      row({ index: 1, printed: 'GV EYES', status: 'pending', price: 4.48 }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.queryByTestId(receiptsTestIDs.reviewFinish)).toBeNull();
   });
 
   it('offers no finish before anything went in', () => {

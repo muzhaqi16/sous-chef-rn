@@ -19,6 +19,7 @@ import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { useTranslation } from '#/i18n';
 import { useReceiptDraftActions } from '../store/receiptDraftStore';
+import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
 import type { CheckInInputs, LocalCheckInLine } from '../offline/localWrites';
 import {
   receiptLineOutcomes,
@@ -95,12 +96,15 @@ const chunked = <T>(rows: readonly T[], size: number): T[][] =>
 
 // What each line shows, by its place in the send as its result is: the pantry
 // row under its minted id and a listed line's list line stamped as moved. A
-// line kept out of the pantry only ticks its list line.
+// line kept out of the pantry only ticks its list line. A later line of a known
+// item in the same unit adds to the first's row, as the server joins them; a
+// typed name has no item to compare until the server has matched it.
 const localLines = (
   pantryId: string,
   lines: readonly CheckInLineToSend[],
-): LocalCheckInLine[] =>
-  lines.map(({ input, itemName, listLine }) => {
+): LocalCheckInLine[] => {
+  const firstRows = new Map<string, { row: LocalPantryItem }>();
+  return lines.map(({ input, itemName, listLine }) => {
     const listLineId = listLine?.id;
     const { pantryItemId } = input;
     if (!pantryItemId) return { listLineId };
@@ -116,8 +120,20 @@ const localLines = (
           amount: input.amount,
           purchase: { acquisitionMethod: AcquisitionMethod.Purchased },
         });
-    return { stack: { id: pantryItemId, row }, listLineId };
+    const stack = { id: pantryItemId, row };
+    const key = input.item.id ? `${input.item.id}:${row.unitId ?? ''}` : null;
+    const first = key ? firstRows.get(key) : undefined;
+    if (first) {
+      first.row = {
+        ...first.row,
+        quantity: (first.row.quantity ?? 1) + (row.quantity ?? 1),
+      };
+      return { stack: { ...stack, joined: true }, listLineId };
+    }
+    if (key) firstRows.set(key, stack);
+    return { stack, listLineId };
   });
+};
 
 const markLines = (lines: readonly CheckInLineToSend[]) => {
   for (const { input } of lines) {
