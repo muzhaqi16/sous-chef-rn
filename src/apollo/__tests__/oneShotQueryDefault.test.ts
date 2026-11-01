@@ -41,6 +41,8 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
     "confirms the signed-in account's verification, which the cache holds stale",
   'features/home/hooks/useJoinHomeByCode.ts':
     'loads the joined home into a list no screen may be watching',
+  'features/catalog/hooks/useUsualStoreWrites.ts':
+    'reads the list a check-in just changed, which the cache holds from before it',
   'features/pantry/hooks/useHybridSearch.ts':
     'the server leg of a hybrid search; the local leg already answered',
   'services/biometric/deviceCredential.ts':
