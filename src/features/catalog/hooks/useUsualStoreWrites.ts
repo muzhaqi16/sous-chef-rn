@@ -1,4 +1,4 @@
-import type { ApolloCache, OperationVariables } from '@apollo/client';
+import type { OperationVariables } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
 import { useTranslation } from '#/i18n';
@@ -11,38 +11,16 @@ import {
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
 import type { LocalInputs } from '#/apollo/pendingWrites/types';
-import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
-import {
-  storeChoiceKey,
-  storeChoiceTarget,
-  type StoreChoice,
-} from '#domain/stores';
-import { serverListsStore } from '#features/catalog/cache/usualStores';
+import { storeChoiceTarget, type StoreChoice } from '#domain/stores';
 import type {
   PinUsualStoreInputs,
   UsualStoreInputs,
 } from '#features/catalog/offline/localWrites';
-import { UsualStoresDocument } from './useUsualStores.generated';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,
   UpdateUsualStoreDocument,
 } from './useUsualStoreWrites.generated';
-
-/**
- * The layers showing a store the server adds itself, by household and store.
- * No write of the device's ends one, so a removal of the store has to, or the
- * layer would put it back once the removal is answered.
- */
-const learnedLayers = new WeakMap<ApolloCache, Map<string, string>>();
-
-const learnedLayersOf = (cache: ApolloCache): Map<string, string> => {
-  const known = learnedLayers.get(cache);
-  if (known) return known;
-  const created = new Map<string, string>();
-  learnedLayers.set(cache, created);
-  return created;
-};
 
 /**
  * A household's usual-store writes (\`homeId\` null: the caller's own), each
@@ -106,26 +84,6 @@ export function useUsualStoreWrites(homeId: string | null) {
     now: new Date().toISOString(),
   });
 
-  const endLearned = (key: string) => {
-    const layers = learnedLayersOf(cache);
-    const layerKey = `${homeId ?? 'own'}:${key}`;
-    const id = layers.get(layerKey);
-    if (!id) return;
-    layers.delete(layerKey);
-    pendingWritesOf(cache).drop(id);
-  };
-
-  const remove = (choice: StoreChoice) => {
-    endLearned(storeChoiceKey(choice));
-    return write(
-      RemoveUsualStoreDocument,
-      { input: { homeId, target: storeChoiceTarget(choice) } },
-      removeStore,
-      inputsOf(choice),
-      { removal: true },
-    );
-  };
-
   return {
     add: (choice: StoreChoice) =>
       write(
@@ -145,38 +103,13 @@ export function useUsualStoreWrites(homeId: string | null) {
         { copy: overTheLimit },
       );
     },
-    remove: (choice: StoreChoice) => remove(choice),
-    /**
-     * A store the household's activity adds on the server, a receipt's, shown
-     * at once as a layer with no write of its own, until the server's list
-     * names it; a queued check-in keeps it showing. Its undo takes the layer
-     * off, and once \`recorded\` settles true (answered, or queued ahead)
-     * removes the store there.
-     */
-    learn: (choice: StoreChoice, recorded: Promise<boolean>) => {
-      const key = storeChoiceKey(choice);
-      const pending = pendingWritesOf(cache);
-      const { id } = pending.begin(
-        AddUsualStoreDocument,
+    remove: (choice: StoreChoice) =>
+      write(
+        RemoveUsualStoreDocument,
         { input: { homeId, target: storeChoiceTarget(choice) } },
-        { ...inputsOf(choice), addedVia: UsualStoreSource.Receipt },
-      );
-      learnedLayersOf(cache).set(`${homeId ?? 'own'}:${key}`, id);
-      void recorded.then(async landed => {
-        if (!landed) return;
-        await client
-          .query({
-            query: UsualStoresDocument,
-            variables: { homeId },
-            fetchPolicy: 'network-only',
-          })
-          .catch(() => undefined);
-        if (serverListsStore(cache, homeId, key)) endLearned(key);
-      });
-      return async () => {
-        endLearned(key);
-        if (await recorded) await remove(choice);
-      };
-    },
+        removeStore,
+        inputsOf(choice),
+        { removal: true },
+      ),
   };
 }

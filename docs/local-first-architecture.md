@@ -77,7 +77,12 @@ reason for having none (those show on the answer).
 `apply` gives the same result from the same variables, inputs and cache, because it re-runs whenever
 the server's data under it changes. `sous-chef/local-write-is-deterministic` bans clocks, id minting
 and eviction there: what it cannot re-derive goes in `inputs`, which are queued with the write, so they
-are JSON.
+are JSON. What is known only after the write is made goes in through `amend`, before the send.
+
+A write shows everything it changes, including what the server does because of it. A check-in adds its
+store to the household's usual stores, so that store is in the check-in's `apply`, and in its `commit`
+since the answer states no list: it shows while the check-in is queued, survives a restart, and goes
+with a refusal, with no layer of its own to end.
 
 Lifecycle of a local-first mutation:
 

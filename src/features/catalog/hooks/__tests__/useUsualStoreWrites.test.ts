@@ -21,6 +21,7 @@ import {
 import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import {
+  listNewUsualStore,
   readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
@@ -32,7 +33,6 @@ import {
   type UsualStoreRow,
 } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
-import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
 import {
   AddUsualStoreDocument,
   RemoveUsualStoreDocument,
@@ -411,189 +411,59 @@ describe('useUsualStoreWrites', () => {
   });
 });
 
-// A receipt's check-in adds its store on the server; the device shows it at once.
-describe('a store learned from a receipt', () => {
+// A check-in lists its store under a minted id, until a read brings the server's.
+describe('a store a check-in listed', () => {
   const aldi = { store: { id: 's3', name: 'ALDI Wilkinsburg' } };
-
-  it('shows at once, as from a receipt, and sends nothing of its own', async () => {
-    const { result } = renderHookWithApollo(useBoth, {
-      cache: seeded(),
-      operationMocks: [],
-    });
-
-    act(() => {
-      result.current.writes.learn(aldi, Promise.resolve(true));
-    });
-
-    await drainTimers();
-    expect(
-      result.current.read.stores?.find(row => row.key === 'store:s3'),
-    ).toMatchObject({ addedVia: UsualStoreSource.Receipt });
-  });
-
-  it('undoes at once, and removes it once the check-in is recorded', async () => {
-    const remove = recordMock(RemoveUsualStoreDocument, {
-      data: {
-        removeUsualStore: {
-          __typename: 'RemoveUsualStorePayload',
-          usualStores: [{ id: banksville.id }, { id: marketDistrict.id }],
-        },
-      },
-    });
-    const { result, unmount } = renderHookWithApollo(useBoth, {
-      cache: seeded(),
-      operationMocks: [remove.mock],
-    });
-    let undo: (() => Promise<void>) | undefined;
-    act(() => {
-      undo = result.current.writes.learn(aldi, Promise.resolve(true));
-    });
-
-    // The review has left by the time Undo is pressed.
-    unmount();
-    await drained(() => undo?.());
-
-    expect(remove.fired).toEqual([
-      { input: { homeId: 'home-1', target: { storeId: 's3' } } },
-    ]);
-  });
-
-  const serverList = (...entries: UsualStoreEntry[]) =>
-    recordMock(UsualStoresDocument, { data: { usualStores: entries } });
-  const answeredRemoval = () =>
+  const removal = (...ids: string[]) =>
     recordMock(RemoveUsualStoreDocument, {
       data: {
         removeUsualStore: {
           __typename: 'RemoveUsualStorePayload',
-          usualStores: [{ id: banksville.id }, { id: marketDistrict.id }],
+          usualStores: ids.map(id => ({ id })),
         },
       },
     });
-  const rootList = (cache: ReturnType<typeof seeded>) =>
-    cache
-      .readQuery({
-        query: UsualStoresDocument,
-        variables: { homeId: 'home-1' },
-        optimistic: false,
-      })
-      ?.usualStores.map(({ id }) => id);
-
-  it('leaves the root as the server said it, whatever is pending', () => {
+  const listed = () => {
     const cache = seeded();
-    const { result } = renderHookWithApollo(useBoth, {
+    listNewUsualStore(
       cache,
-      operationMocks: [],
-    });
+      { homeId: 'home-1', choice: aldi },
+      '2026-11-01T12:00:00.000Z',
+    );
+    return cache;
+  };
 
-    act(() => {
-      result.current.writes.learn(aldi, new Promise(() => undefined));
-    });
-
-    expect(rootList(cache)).toEqual([banksville.id, marketDistrict.id]);
-    expect(cache.extract()['UsualStore:local-store:s3']).toBeUndefined();
-  });
-
-  it('takes the server’s entry once its list names the store', async () => {
-    const aldiEntry = entry('s3', 'ALDI Wilkinsburg');
-    const cache = seeded();
-    const remove = answeredRemoval();
+  it('goes with its removal, whose answer cannot name its id', async () => {
     const { result } = renderHookWithApollo(useBoth, {
-      cache,
-      operationMocks: [
-        serverList(banksville, marketDistrict, aldiEntry).mock,
-        remove.mock,
-      ],
+      cache: listed(),
+      operationMocks: [removal(banksville.id, marketDistrict.id).mock],
     });
 
-    act(() => {
-      result.current.writes.learn(aldi, Promise.resolve(true));
-    });
-    await drainTimers();
-
-    expect(rootList(cache)).toContain(aldiEntry.id);
-
-    // With the layer gone, a removal's answer leaves nothing to put it back.
     await drained(() => result.current.writes.remove(aldi));
     await drainTimers();
+
     expect(names(result.current.read.stores)).toEqual([
       'Giant Eagle Banksville',
       'Giant Eagle Market District',
     ]);
   });
 
-  // Another member's removal comes as a list without it, which a layer left
-  // behind would hide.
-  it('holds nothing over the list once the server has named the store', async () => {
-    const cache = seeded();
+  it('stays through the removal of another store', async () => {
     const { result } = renderHookWithApollo(useBoth, {
-      cache,
-      operationMocks: [
-        serverList(banksville, marketDistrict, entry('s3', 'ALDI Wilkinsburg'))
-          .mock,
-      ],
+      cache: listed(),
+      operationMocks: [removal(banksville.id, 'home-1:s3').mock],
     });
-    act(() => {
-      result.current.writes.learn(aldi, Promise.resolve(true));
-    });
+
+    await drained(() =>
+      result.current.writes.remove({
+        store: { id: 's2', name: 'Giant Eagle Market District' },
+      }),
+    );
     await drainTimers();
 
-    act(() => {
-      writeUsualStores(cache, 'home-1', [banksville, marketDistrict]);
-    });
-    await drainTimers();
-
-    expect(
-      result.current.read.stores?.some(row => row.key === 'store:s3'),
-    ).toBe(false);
-  });
-
-  it('keeps showing while the check-in waits, until a removal ends it', async () => {
-    const cache = seeded();
-    const remove = answeredRemoval();
-    const { result } = renderHookWithApollo(useBoth, {
-      cache,
-      operationMocks: [
-        serverList(banksville, marketDistrict).mock,
-        remove.mock,
-      ],
-    });
-
-    act(() => {
-      result.current.writes.learn(aldi, Promise.resolve(true));
-    });
-    await drainTimers();
-
-    expect(
-      result.current.read.stores?.some(row => row.key === 'store:s3'),
-    ).toBe(true);
-
-    await drained(() => result.current.writes.remove(aldi));
-    await drainTimers();
-    expect(
-      result.current.read.stores?.some(row => row.key === 'store:s3'),
-    ).toBe(false);
-  });
-
-  it('sends nothing for a check-in that was refused', async () => {
-    const remove = recordMock(RemoveUsualStoreDocument, {
-      data: { removeUsualStore: null },
-    });
-    const { result } = renderHookWithApollo(useBoth, {
-      cache: seeded(),
-      operationMocks: [remove.mock],
-    });
-    let undo: (() => Promise<void>) | undefined;
-    act(() => {
-      undo = result.current.writes.learn(aldi, Promise.resolve(false));
-    });
-
-    await drained(() => undo?.());
-
-    expect(remove.fired).toEqual([]);
-    await drainTimers();
     expect(names(result.current.read.stores)).toEqual([
+      'ALDI Wilkinsburg',
       'Giant Eagle Banksville',
-      'Giant Eagle Market District',
     ]);
   });
 });
@@ -708,7 +578,7 @@ describe('useUsualStoreWrites while offline', () => {
 
     // The check-in adds its store on replay, so a removal sent ahead of it
     // would be undone.
-    it("keeps an Undo's removal behind the check-in that adds the store", async () => {
+    it('keeps a removal behind the check-in that adds the store', async () => {
       const result = render();
       queueStore.addMutation(
         makeQueuedMutation({
@@ -717,56 +587,17 @@ describe('useUsualStoreWrites while offline', () => {
           orderedBy: 's3',
         }),
       );
-      let undo: (() => Promise<void>) | undefined;
-      act(() => {
-        undo = result.current.writes.learn(
-          { store: { id: 's3', name: 'ALDI Wilkinsburg' } },
-          Promise.resolve(true),
-        );
-      });
 
-      await drained(() => undo?.());
+      await drained(() =>
+        result.current.writes.remove({
+          store: { id: 's3', name: 'ALDI Wilkinsburg' },
+        }),
+      );
 
-      expect(sent).not.toContain('RemoveUsualStore');
+      expect(sent).toEqual([]);
       expect(
         queueStore.getMutationsForUser(USER.id).map(m => m.operationName),
       ).toEqual(['CreateReceiptCheckIn', 'RemoveUsualStore']);
     });
-  });
-
-  // A queued check-in resolves its learning as recorded: the removal queues
-  // behind it, and the queue sends them in that order.
-  it("queues an Undo's removal while the receipt's check-in waits", async () => {
-    const client = new ApolloClient({
-      cache: seeded(),
-      link: ApolloLink.from([createQueueLink(), new MockLink([])]),
-      defaultOptions: APOLLO_DEFAULT_OPTIONS,
-    });
-    const wrapper = ({ children }: { children: ReactNode }) =>
-      createElement(ApolloProvider, { client, children });
-    const { result } = renderHook(useBoth, { wrapper });
-    let undo: (() => Promise<void>) | undefined;
-    act(() => {
-      undo = result.current.writes.learn(
-        { store: { id: 's3', name: 'ALDI Wilkinsburg' } },
-        Promise.resolve(true),
-      );
-    });
-
-    await drained(() => undo?.());
-
-    expect(
-      queueStore
-        .getMutationsForUser(USER.id)
-        .map(m => [m.operationName, m.variables]),
-    ).toEqual([
-      [
-        'RemoveUsualStore',
-        { input: { homeId: 'home-1', target: { storeId: 's3' } } },
-      ],
-    ]);
-    expect(
-      result.current.read.stores?.some(row => row.key === 'store:s3'),
-    ).toBe(false);
   });
 });

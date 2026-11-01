@@ -183,6 +183,20 @@ export class PendingWrites {
     return settled;
   }
 
+  /**
+   * Adds to a write's inputs what was known only after it was made, such as
+   * the store a check-in waited for. Queued with it from then on, so it comes
+   * before the send.
+   */
+  amend(id: string, inputs: LocalInputs): void {
+    this.writes = this.writes.map(write =>
+      write.id === id
+        ? { ...write, inputs: { ...write.inputs, ...inputs } }
+        : write,
+    );
+    this.rebuild();
+  }
+
   /** What `write` stays in order behind, beyond the rows it names. */
   orderOf(write: PendingWrite): string | undefined {
     return this.table[write.operationName]?.orderedBy?.(write);

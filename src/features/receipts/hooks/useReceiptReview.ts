@@ -32,6 +32,7 @@ import {
   LINES_PER_CHECK_IN,
   useReceiptCheckIn,
   type CheckInLineToSend,
+  type ReceiptCheckInOutcome,
 } from './useReceiptCheckIn';
 import { useReceiptMatches, type ReceiptCandidate } from './useReceiptMatches';
 import { UseReceiptReview_StoreFragmentDoc } from './useReceiptReview.generated';
@@ -43,7 +44,12 @@ import { purchaseMomentOf } from '../utils/receiptDate';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
 import { useUsualStores } from '#features/catalog/hooks/useUsualStores';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
-import { storeChoiceKey, type StoreChoice } from '#domain/stores';
+import type { NewUsualStore } from '#features/catalog/cache/usualStores';
+import {
+  storeChoiceKey,
+  storeChoiceName,
+  type StoreChoice,
+} from '#domain/stores';
 import { toDateKey } from '#/utils/dateUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 
@@ -89,8 +95,8 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
 /** A store new to the household, which the receipt's check-in adds to it. */
 export interface LearnedStore {
   name: string;
-  /** Takes it back out, once the check-in has added it. */
-  undo: () => Promise<void>;
+  /** Takes it back out, in order behind the check-in that adds it. */
+  undo: () => Promise<boolean>;
 }
 
 export function useReceiptReview() {
@@ -324,29 +330,26 @@ export function useReceiptReview() {
   };
 
   /**
-   * The receipt's store, written into the household's stores when it is new
-   * to them, as the check-in adds it on the server. Nothing is learned while
-   * the household's stores were never read: an Undo must not remove a store
-   * the household already had.
+   * The receipt's store when it is new to the household, as the check-in adds
+   * it on the server. Nothing is new while the household's stores were never
+   * read: an Undo must not remove a store the household already had.
    */
-  const learnStore = async (
-    storeId: string | Promise<string | undefined>,
-    recorded: Promise<boolean>,
-  ): Promise<LearnedStore | null> => {
-    const known = usualStores;
+  const newStoreOf = (id: string): NewUsualStore | null => {
     const name = store?.name ?? proposedStore?.name;
-    const id = await storeId;
-    if (!known || !id || !name) return null;
+    if (!usualStores || !name) return null;
     const choice: StoreChoice = { store: { id, name } };
     const key = storeChoiceKey(choice);
-    if (known.some(row => row.key === key)) return null;
-    const undo = usualStoreWrites.learn(choice, recorded);
-    // Refused whole, the check-in recorded nothing: the store never joined.
-    if (!(await recorded)) {
-      await undo();
-      return null;
-    }
-    return { name, undo };
+    return usualStores.some(row => row.key === key) ? null : { homeId, choice };
+  };
+
+  // Refused whole, the check-in recorded nothing: the store never joined.
+  const learnedFrom = (outcome: ReceiptCheckInOutcome): LearnedStore | null => {
+    if (outcome.status === 'refused' || !outcome.newStore) return null;
+    const { choice } = outcome.newStore;
+    return {
+      name: storeChoiceName(choice, t),
+      undo: () => usualStoreWrites.remove(choice),
+    };
   };
 
   /**
@@ -421,14 +424,14 @@ export function useReceiptReview() {
     let learned: Promise<LearnedStore | null> = none;
     if (toSend.length > 0) {
       // Online, the check-in waits for the store's create; its lines don't.
-      const storeId = store?.id ?? addProposedStore();
-      const recorded = checkIn(
+      learned = checkIn(
         {
           checkInIds: minted.ids,
           pantryId,
           purchasedOn,
           purchasedAt: purchaseMomentOf(purchasedOn, draft?.purchaseTime),
-          storeId,
+          storeId: store?.id ?? addProposedStore(),
+          newStoreOf,
           ...(listId && links.size > 0 ? { shoppingListId: listId } : {}),
           ...(receiptParseId ? { receiptParseId } : {}),
           ...(phoneMerchant ? { merchant: phoneMerchant } : {}),
@@ -436,15 +439,10 @@ export function useReceiptReview() {
           ...(orderDiscount ? { orderDiscount } : {}),
         },
         toSend,
-      ).then(
-        // Refused whole: nothing was recorded, so nothing joins the stores.
-        outcome => outcome.status !== 'refused',
-        (error: unknown) => {
-          errorService.reportError(error, { operation: 'Check in a receipt' });
-          return false;
-        },
-      );
-      learned = learnStore(storeId, recorded);
+      ).then(learnedFrom, (error: unknown) => {
+        errorService.reportError(error, { operation: 'Check in a receipt' });
+        return null;
+      });
     }
     return {
       sent: toSend.length,

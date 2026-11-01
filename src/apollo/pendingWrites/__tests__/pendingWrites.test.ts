@@ -249,6 +249,18 @@ describe('PendingWrites', () => {
     expect(stored).toMatchObject({ name: 'Captured', version: 0 });
   });
 
+  it('adds what was known only later to its inputs and its layer', () => {
+    const { cache, pending } = seeded();
+    const { id } = pending.begin(ADD_ROW, { input: { id: 'row-2' } });
+
+    pending.amend(id, { name: 'Known later' });
+
+    expect(pending.get(id)?.inputs).toMatchObject({ name: 'Known later' });
+    expect(cache.extract(true)['ProbeItem:row-2']).toMatchObject({
+      name: 'Known later',
+    });
+  });
+
   it('captures inputs once, so a rebuild writes the same thing', () => {
     const capture = jest.fn(() => ({ name: 'Once' }));
     const cache = makeCache();

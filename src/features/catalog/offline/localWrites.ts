@@ -120,8 +120,6 @@ export type UsualStoreInputs = {
   homeId: string | null;
   choice: StoreChoice;
   now: string;
-  /** How it joined, for a store the household did not pick itself. */
-  addedVia?: UsualStoreSource;
 };
 
 /** Each write answers the household's whole list, so they reach it in order. */
@@ -142,19 +140,13 @@ function writeAnsweredList(
 
 export const addUsualStore: LocalWrite<UsualStoreInputs> = {
   ...usualStoresOf,
-  apply(cache, { inputs: { homeId, choice, now, addedVia } }) {
+  apply(cache, { inputs: { homeId, choice, now } }) {
     replaceUsualStore(
       cache,
       homeId,
       storeChoiceKey(choice),
       held =>
-        held ??
-        localUsualStore(
-          cache,
-          choice,
-          addedVia ?? UsualStoreSource.Picked,
-          now,
-        ),
+        held ?? localUsualStore(cache, choice, UsualStoreSource.Picked, now),
     );
   },
   commit(cache, { inputs: { homeId } }, data) {
@@ -181,11 +173,13 @@ export const removeUsualStore: LocalWrite<UsualStoreInputs> = {
   apply(cache, { inputs: { homeId, choice } }) {
     replaceUsualStore(cache, homeId, storeChoiceKey(choice), () => null);
   },
-  // A removal's answer names the list by its keys only.
-  commit(cache, { inputs: { homeId } }, data) {
+  // A removal's answer names the list by its keys only, which leaves a store a
+  // check-in listed under a minted id: it goes by its own key.
+  commit(cache, { inputs: { homeId, choice } }, data) {
     const payload: unknown = appliedPayload(data);
     const kept = isRecord(payload) ? payload.usualStores : undefined;
     if (!Array.isArray(kept)) return;
+    replaceUsualStore(cache, homeId, storeChoiceKey(choice), () => null);
     keepUsualStores(
       cache,
       homeId,

@@ -6,6 +6,10 @@ import type { LocalWrite } from '#/apollo/pendingWrites/types';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
 import {
+  listNewUsualStore,
+  type NewUsualStore,
+} from '#features/catalog/cache/usualStores';
+import {
   listAnsweredPantryItem,
   showLocalPantryItem,
   type PantryItemRef,
@@ -36,6 +40,8 @@ export type CheckInInputs = {
   listId?: string;
   lines: LocalCheckInLine[];
   now: string;
+  /** The store it adds to the household's, known once the store exists. */
+  newStore?: NewUsualStore;
 };
 
 export const checkIn: LocalWrite<CheckInInputs> = {
@@ -46,7 +52,8 @@ export const checkIn: LocalWrite<CheckInInputs> = {
       ? input.storeId
       : undefined;
   },
-  apply(cache, { inputs: { listId, lines, now } }) {
+  apply(cache, { inputs: { listId, lines, now, newStore } }) {
+    if (newStore) listNewUsualStore(cache, newStore, now);
     for (const { stack, listLineId } of lines) {
       if (stack && !stack.joined) {
         const ref: PantryItemRef = { __typename: 'PantryItem', id: stack.id };
@@ -69,9 +76,11 @@ export const checkIn: LocalWrite<CheckInInputs> = {
   },
   // A line the server refused had only its layer, and one it merged into a held
   // stack answers that stack's id, so the minted row was never the server's.
-  commit(cache, { inputs: { pantryId, lines } }, data) {
+  // The answer states no usual stores, so the new one is listed here.
+  commit(cache, { inputs: { pantryId, lines, now, newStore } }, data) {
     const payload: unknown = appliedPayload(data);
     if (!isRecord(payload)) return;
+    if (newStore) listNewUsualStore(cache, newStore, now);
     for (const { index, success, pantryItem } of resultsOf(data)) {
       const stack = lines[index]?.stack;
       if (!success || !stack) continue;

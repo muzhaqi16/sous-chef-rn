@@ -1,6 +1,6 @@
 import type { ApolloCache } from '@apollo/client';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import type { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import {
   storeChoiceKey,
   storeChoiceOf,
@@ -38,20 +38,6 @@ export function readUsualStores(
     })?.usualStores ?? null
   );
 }
-
-/** Whether the server's own list names `key`, under any layer's copy of it. */
-export const serverListsStore = (
-  cache: ApolloCache,
-  homeId: string | null,
-  key: string,
-): boolean =>
-  cache
-    .readQuery({
-      query: UsualStoresDocument,
-      variables: { homeId },
-      optimistic: false,
-    })
-    ?.usualStores.some(entry => entryKey(entry) === key) ?? false;
 
 /**
  * The one writer of a household's usual stores: the list is replaced whole,
@@ -163,4 +149,28 @@ export function localUsualStore(
   });
   if (!entry) return null;
   return { ...entry, chain: entry.chain ?? entry.store?.chain ?? null };
+}
+
+/** A store new to a household, which a receipt's check-in adds on the server. */
+export interface NewUsualStore {
+  homeId: string | null;
+  choice: StoreChoice;
+}
+
+/**
+ * Lists a store a check-in adds, which its answer does not state, under the
+ * entry the list holds if it already names it.
+ */
+export function listNewUsualStore(
+  cache: ApolloCache,
+  { homeId, choice }: NewUsualStore,
+  now: string,
+): void {
+  replaceUsualStore(
+    cache,
+    homeId,
+    storeChoiceKey(choice),
+    held =>
+      held ?? localUsualStore(cache, choice, UsualStoreSource.Receipt, now),
+  );
 }

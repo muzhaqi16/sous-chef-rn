@@ -8,6 +8,13 @@ import {
   seedFragment,
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import {
+  readUsualStores,
+  writeUsualStores,
+  type UsualStoreEntry,
+} from '#features/catalog/cache/usualStores';
+import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
 import { useReceiptDraftStore } from '../../store/receiptDraftStore';
 import { seedDraft } from '../../__tests__/helpers/receiptFixtures';
 import { CreateReceiptCheckInDocument } from '../../hooks/useReceiptCheckIn.generated';
@@ -109,8 +116,14 @@ const recordOf = (
   { writes }: Setup,
   lines: LocalCheckInLine[],
   id = 'check-in-1',
+  extra: Partial<CheckInInputs> = {},
 ) => {
-  const inputs: CheckInInputs = { pantryId: PANTRY_ID, lines, now: NOW };
+  const inputs: CheckInInputs = {
+    pantryId: PANTRY_ID,
+    lines,
+    now: NOW,
+    ...extra,
+  };
   return writes.begin(
     CreateReceiptCheckInDocument,
     {
@@ -296,6 +309,96 @@ describe('a check-in', () => {
 
     expect(shown(screen)).toEqual({ ids: ['held'], total: 1 });
     expect(stock(screen, 'held')).toMatchObject({ quantity: 4 });
+  });
+});
+
+describe('the store a check-in adds to the household', () => {
+  const HOME_ID = 'home-1';
+  const ALDI = { store: { id: 'store-aldi', name: 'ALDI' } };
+  const held = (id: string): UsualStoreEntry => ({
+    __typename: 'UsualStore',
+    id: `${HOME_ID}:${id}`,
+    addedVia: UsualStoreSource.Picked,
+    pinned: false,
+    compared: true,
+    lastUsedAt: NOW,
+    store: { __typename: 'Store', id, name: id, address: null, chain: null },
+    chain: null,
+  });
+  const withStores = (...ids: string[]) => {
+    const set = setup();
+    writeUsualStores(set.cache, HOME_ID, ids.map(held));
+    return set;
+  };
+  const adding = (set: Setup) =>
+    recordOf(set, [line('new-1')], 'check-in-1', {
+      newStore: { homeId: HOME_ID, choice: ALDI },
+    });
+  const stores = ({ cache }: Setup) =>
+    readUsualStores(cache, HOME_ID)?.map(entry => entry.store?.id);
+  const serverStores = ({ cache }: Setup) =>
+    cache
+      .readQuery({
+        query: UsualStoresDocument,
+        variables: { homeId: HOME_ID },
+        optimistic: false,
+      })
+      ?.usualStores.map(entry => entry.store?.id);
+
+  it('shows from the layer, with the root as the server said it', () => {
+    const set = withStores('store-ge');
+
+    adding(set);
+
+    expect(stores(set)).toEqual(['store-ge', 'store-aldi']);
+    expect(serverStores(set)).toEqual(['store-ge']);
+  });
+
+  it('shows again after a restart, carried by the queued write', () => {
+    const before = withStores('store-ge');
+    const write = adding(before);
+
+    // The queue hands the write to a new cache, which holds only the root.
+    const after = withStores('store-ge');
+    after.writes.restore([write]);
+
+    expect(stores(after)).toEqual(['store-ge', 'store-aldi']);
+  });
+
+  it('leaves nothing when the check-in is refused', () => {
+    const set = withStores('store-ge');
+    const { id } = adding(set);
+
+    set.writes.refuse(id);
+
+    expect(stores(set)).toEqual(['store-ge']);
+  });
+
+  it('is listed once the server has answered, as from a receipt', () => {
+    const set = withStores('store-ge');
+
+    answered(set, adding(set), [recorded(0, 'new-1', 1)], 2);
+
+    expect(serverStores(set)).toEqual(['store-ge', 'store-aldi']);
+    expect(readUsualStores(set.cache, HOME_ID)?.[1]).toMatchObject({
+      addedVia: UsualStoreSource.Receipt,
+    });
+  });
+
+  it('keeps the entry of a store the list already names', () => {
+    const set = withStores('store-aldi');
+
+    answered(set, adding(set), [recorded(0, 'new-1', 1)], 2);
+
+    expect(readUsualStores(set.cache, HOME_ID)).toEqual([held('store-aldi')]);
+  });
+
+  it('writes nothing to a list never read, which would claim to be whole', () => {
+    const set = setup();
+
+    answered(set, adding(set), [recorded(0, 'new-1', 1)], 2);
+
+    expect(readUsualStores(set.cache, HOME_ID)).toBeNull();
   });
 });
 

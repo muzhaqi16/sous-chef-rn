@@ -1,5 +1,18 @@
-import { act } from '@testing-library/react-native';
+import { createElement, type ReactNode } from 'react';
+import { act, renderHook } from '@testing-library/react-native';
+import { ApolloClient, ApolloLink } from '@apollo/client';
+import { ApolloProvider } from '@apollo/client/react';
+import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { createQueueLink } from '#/apollo/offlineQueue/queueLink';
+import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { useStore } from '#store';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
+import {
+  readUsualStores,
+  writeUsualStores,
+} from '#features/catalog/cache/usualStores';
 import {
   inputOf,
   recordMock,
@@ -112,6 +125,94 @@ describe('useReceiptCheckIn', () => {
       storeId: 'store-1',
       purchasedOn: '2026-10-15',
       lines: [{ clientId: '0' }, { clientId: '1' }],
+    });
+  });
+
+  describe('a store new to the household', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    const newStore = {
+      homeId: 'home-1',
+      choice: { store: { id: 'store-1', name: 'ALDI' } },
+    };
+    const withStoresRead = () => {
+      const cache = makeCache();
+      writeUsualStores(cache, 'home-1', []);
+      return cache;
+    };
+    const listed = (cache: ReturnType<typeof makeCache>) =>
+      readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id);
+
+    it('shows once the store is known, and the outcome names it', async () => {
+      const cache = withStoresRead();
+      const checkIn = recordMock(CreateReceiptCheckInDocument, {
+        dataFor: checkInAnswer(),
+        held: true,
+      });
+      const { result } = renderHookWithApollo(
+        () => useReceiptCheckIn(undefined),
+        { cache, operationMocks: [checkIn.mock] },
+      );
+
+      let sending: Promise<unknown> | undefined;
+      act(() => {
+        sending = result.current.checkIn(
+          { ...receipt(checkInIds()), newStoreOf: () => newStore },
+          [line(0)],
+        );
+      });
+      await drainTimers();
+      expect(listed(cache)).toEqual(['store-1']);
+
+      checkIn.release();
+      await expect(drained(() => sending)).resolves.toMatchObject({
+        status: 'recorded',
+        newStore,
+      });
+      expect(listed(cache)).toEqual(['store-1']);
+      expect(checkIn.fired[0]?.input).not.toHaveProperty('newStore');
+    });
+
+    // What a restart restores the layer from.
+    it('goes into the queue with the write', async () => {
+      const user = {
+        id: 'user-1',
+        email: 'tani@example.com',
+        emailVerified: true,
+        onBoarded: true,
+      };
+      useStore.setState({ user, isOnline: false, apiReachable: null });
+      queueStore.setCurrentUserId(user.id);
+      const client = new ApolloClient({
+        cache: withStoresRead(),
+        link: ApolloLink.from([createQueueLink(), new MockLink([])]),
+        defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      });
+      const wrapper = ({ children }: { children: ReactNode }) =>
+        createElement(ApolloProvider, { client, children });
+      const { result } = renderHook(() => useReceiptCheckIn(undefined), {
+        wrapper,
+      });
+
+      await drained(() =>
+        result.current.checkIn(
+          { ...receipt(checkInIds()), newStoreOf: () => newStore },
+          [line(0)],
+        ),
+      );
+
+      expect(queueStore.getPendingWrites()[0]?.inputs.newStore).toEqual(
+        newStore,
+      );
+      queueStore.clearQueueForUser(user.id);
+      queueStore.clearCurrentUserId();
+      useStore.setState({ user: null, isOnline: true, apiReachable: null });
     });
   });
 

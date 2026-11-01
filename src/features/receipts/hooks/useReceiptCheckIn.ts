@@ -6,6 +6,7 @@ import {
   type ReceiptCheckInLineInput,
 } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListItemNode } from '#features/shoppingList/hooks/usePaginatedShoppingItems';
+import type { NewUsualStore } from '#features/catalog/cache/usualStores';
 import { localIntakeRow } from '#features/pantry/cache/localIntake';
 import { localMoveRow } from '#features/shoppingList/cache/localMove';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
@@ -71,18 +72,28 @@ export interface ReceiptToCheckIn
    * sent once the store exists, while its lines already show.
    */
   storeId?: string | Promise<string | undefined>;
+  /** Whether the store, once it exists, is new to the household. */
+  newStoreOf?: (storeId: string) => NewUsualStore | null;
 }
 
-type ReceiptFields = Omit<ReceiptToCheckIn, 'checkInIds' | 'storeId'>;
+type ReceiptFields = Omit<
+  ReceiptToCheckIn,
+  'checkInIds' | 'storeId' | 'newStoreOf'
+>;
 
 /** What a check-in learns once its store exists. */
-type PlacedStore = { storeId?: string };
+type PlacedStore = { storeId?: string; newStore?: NewUsualStore };
 
 export type ReceiptCheckInOutcome =
   /** Every send was answered; `failed` names the lines the API refused. */
-  | { status: 'recorded'; added: number[]; failed: number[] }
+  | {
+      status: 'recorded';
+      added: number[];
+      failed: number[];
+      newStore?: NewUsualStore;
+    }
   /** Kept for delivery: the lines are shown, and land once the API is reached. */
-  | { status: 'queued' }
+  | { status: 'queued'; newStore?: NewUsualStore }
   /**
    * A send was refused whole: its lines and every later send's are withdrawn,
    * and an earlier send's stay recorded.
@@ -246,11 +257,17 @@ export function useReceiptCheckIn(listId: string | undefined) {
       async (write): Promise<Settled<CreateReceiptCheckInMutation>> => {
         const placed = await turn;
         if (!placed) return { status: 'failed', data: undefined };
+        const { newStore, ...store } = placed;
+        if (newStore) {
+          pendingWritesOf(client.cache).amend(write.context.pendingWriteId, {
+            newStore,
+          });
+        }
         return settleMutation(
           () =>
             createCheckIn({
               ...write,
-              variables: { ...write.variables, input: { ...input, ...placed } },
+              variables: { ...write.variables, input: { ...input, ...store } },
             }),
           {
             document: CreateReceiptCheckInDocument,
@@ -273,7 +290,7 @@ export function useReceiptCheckIn(listId: string | undefined) {
     lines: readonly CheckInLineToSend[],
   ): Promise<ReceiptCheckInOutcome> => {
     setCheckInState('sending');
-    const { checkInIds, storeId: placing, ...fields } = receipt;
+    const { checkInIds, storeId: placing, newStoreOf, ...fields } = receipt;
     const chunks = chunked(lines, LINES_PER_CHECK_IN).flatMap((chunk, at) => {
       const checkInId = checkInIds[at];
       if (!checkInId) return [];
@@ -293,7 +310,11 @@ export function useReceiptCheckIn(listId: string | undefined) {
     // Shown, so added: a second Add must not send them again.
     markAdded(lines.map(line => line.index));
     const storeId = await placing;
-    const placed: PlacedStore = storeId ? { storeId } : {};
+    const newStore = storeId ? newStoreOf?.(storeId) ?? undefined : undefined;
+    const placed: PlacedStore = {
+      ...(storeId ? { storeId } : {}),
+      ...(newStore ? { newStore } : {}),
+    };
     const added: number[] = [];
     const failed: number[] = [];
     let queued = false;
@@ -361,10 +382,15 @@ export function useReceiptCheckIn(listId: string | undefined) {
     if (queued) {
       setCheckInState('queued');
       askForReviewAfterSuccess();
-      return { status: 'queued' };
+      return { status: 'queued', ...(newStore ? { newStore } : {}) };
     }
     if (added.length > 0) askForReviewAfterSuccess();
-    return { status: 'recorded', added, failed };
+    return {
+      status: 'recorded',
+      added,
+      failed,
+      ...(newStore ? { newStore } : {}),
+    };
   };
 
   return { checkIn };
