@@ -79,6 +79,7 @@ jest.mock('react-native-unistyles', () => {
       setAdaptiveThemes: jest.fn(),
       updateTheme: jest.fn(),
       getTheme: jest.fn(() => lightTheme),
+      setRootViewBackgroundColor: jest.fn(),
       ...runtime,
     },
   };

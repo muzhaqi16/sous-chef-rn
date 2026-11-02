@@ -315,6 +315,35 @@ The effect reads `getTheme()` only inside the listener. On a device: point
 `ProfileHero` at the library hook, open Profile, push two more screens,
 `setTheme` to the other theme, and go back twice.
 
+### A style on the iOS window hides the OS's theme from the app
+
+**Claim:** while the window has an `overrideUserInterfaceStyle`, iOS sends the
+app no change of appearance, and Unistyles reads the override as the OS's colour
+scheme. A style set while following the system pins the app to that style until
+it relaunches.
+
+**Verified against `react-native-unistyles@3.8.0` + `react-native@0.86.3`
+(2026-11-02, iOS 27 simulator).** With a style on the window, on the System
+preference, `rt.colorScheme` stayed on the launch value through a change of OS
+appearance. With `.unspecified`, the app followed the OS in both directions: 0
+of 609 views stale across the tabs. `getColorScheme` in
+`NativePlatform+ios.swift` reads `RCTKeyWindow()?.traitCollection`.
+
+The fix: `WindowBackground` calls the iOS module's `followSystem` on the System
+preference. Android has no such method and keeps `setTheme`, because its
+navigation bar needs the resolved theme. Guarded by
+`src/components/atoms/__tests__/ThemedStatusBar.test.tsx`.
+
+That flip lands natively, a moment after the tap's React render, so a render
+that straddles it can put old values back. `AppearanceScreen`'s selected swatch
+did on the first Dark then System of a session, 3 runs of 3; with a
+`ThemeEpochSentinel` beside it, 0 of 2. Timing decides it, so a probe recording
+every commit hides it.
+
+Re-check: on System, relaunch and run `xcrun simctl ui <udid> appearance dark`;
+`rt.colorScheme` follows. For the swatch: OS dark, relaunch, open Appearance,
+OS light, tap Dark, tap System, then read `verify()` with nothing else attached.
+
 ### react-compiler try shapes
 
 **Claim:** inside hook/component bodies, exactly two `try` shapes make the

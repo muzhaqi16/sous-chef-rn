@@ -2,6 +2,7 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
@@ -111,6 +112,8 @@ export default function AppearanceScreen() {
               ]}
             />
           ))}
+          {/* The System choice flips the theme natively, just after a render. */}
+          <ThemeEpochSentinel />
         </View>
 
         {/* Density */}

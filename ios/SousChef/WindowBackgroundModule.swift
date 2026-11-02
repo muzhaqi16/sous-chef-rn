@@ -15,9 +15,16 @@ class WindowBackgroundModule: NSObject {
   }
 
   @objc func setTheme(_ theme: String) {
+    apply(theme == "dark" ? .dark : .light)
+  }
+
+  @objc func followSystem() {
+    apply(.unspecified)
+  }
+
+  private func apply(_ style: UIUserInterfaceStyle) {
     DispatchQueue.main.async {
       guard let window = Self.keyWindow() else { return }
-      let style: UIUserInterfaceStyle = theme == "dark" ? .dark : .light
       window.overrideUserInterfaceStyle = style
       window.rootViewController?.overrideUserInterfaceStyle = style
       window.rootViewController?.setNeedsStatusBarAppearanceUpdate()
