@@ -6,6 +6,7 @@ import { shadows } from '../foundations/shadows';
 import { sizes } from '../foundations/sizes';
 import { zIndex } from '../foundations/zIndex';
 import { breakpoints } from '../foundations/breakpoints';
+import { spring } from '../foundations/motion';
 import { lightTheme, darkTheme } from '../themes';
 
 describe('theme foundations', () => {
@@ -366,5 +367,21 @@ describe('light and dark declare the same tokens', () => {
 
   it('motion is shared, not duplicated per theme', () => {
     expect(darkTheme.motion).toBe(lightTheme.motion);
+  });
+});
+
+describe('spring tokens', () => {
+  const tokens = Object.entries(spring);
+
+  it.each(tokens)('%s states its mass', (_name, config) => {
+    // Unset, Reanimated uses 4, and the spring runs about four times longer.
+    expect(config.mass).toBeGreaterThan(0);
+  });
+
+  it.each(tokens)('%s ends within two seconds', (_name, config) => {
+    // Energy falls as e^(-t * damping / mass), and Reanimated stops at 6e-9.
+    const seconds = (Math.log(1 / 6e-9) * config.mass) / config.damping;
+
+    expect(seconds).toBeLessThan(2);
   });
 });

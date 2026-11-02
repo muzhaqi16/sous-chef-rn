@@ -561,6 +561,26 @@ Re-check:
 node scripts/probe-reanimated-reduce-motion.mjs
 ```
 
+### Reanimated springs default to mass 4
+
+**Claim:** `withSpring` merges a config over `GentleSpringConfig`, whose `mass`
+is 4, so a config naming only `damping` and `stiffness` runs at mass 4. Energy
+falls as `e^(-t * damping / mass)` and the spring ends at 6e-9 of its start, so
+that spring runs about four times longer and overshoots far more than the same
+numbers at mass 1. Every frame of it commits, however little the value moves.
+
+**Verified against `react-native-reanimated@4.7.1` (2026-11-02, iOS simulator),**
+by timing `withSpring` from 120 to 0 in the running app. `{ damping: 20,
+stiffness: 180 }` ran 3,851 ms and overshot 28%; with `mass: 1`, 968 ms and 3%.
+`{ damping: 15, stiffness: 300 }` ran 5,034 ms and overshot 50%; with `mass: 1`,
+1,283 ms and 22%.
+
+Re-check:
+
+```
+grep -n -A3 'GentleSpringConfig = ' node_modules/react-native-reanimated/src/animation/spring/springConfigs.ts
+```
+
 ### Reanimated CSS transitions need a baseline commit
 
 **Claim:** a CSS transition (`transitionProperty` / `transitionDuration` in a

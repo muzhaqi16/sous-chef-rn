@@ -703,9 +703,14 @@ rm -rf android/app/build android/app/.cxx
 **Disk full mid-build** (`No space left on device`, often inside `pod install`)
 — Xcode and Gradle never delete native build output; it reached 34 GB in one
 checkout. Every build script runs `build:prune` first: it deletes derived data
-unused for 14 days or written by an older Xcode, Android native output (app and
-`node_modules/*/android`) with no Gradle build for 14 days, and stops the build
-below 15 GB free. `npm run build:prune -- --max-age-days 0` removes all of it.
+unused for 14 days or written by an older Xcode, and Android native output (app
+and `node_modules/*/android`) with no Gradle build for 14 days. Below 15 GB free
+it also deletes all Android output, then iOS output oldest first, keeping the
+newest; if that is not enough it stops the build. A running `xcodebuild` or
+Gradle build keeps its platform's output. It warns about a simulator holding an
+older app version, and never erases one: that wipes its logins. `--android` or
+`--ios` limits a run, and `npm run build:prune -- --max-age-days 0` removes all
+of it.
 
 **"codegen produced changes — your committed generated files are stale"** — the
 two tracked artifacts (`schema.graphql`, `persisted-query-manifest.json`) have
