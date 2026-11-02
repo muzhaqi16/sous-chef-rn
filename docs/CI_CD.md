@@ -254,7 +254,8 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 
 # Or trigger manually via Actions tab:
 # Actions → Build Android → Run workflow → Choose environment + build type
-# A playstore build runs from a store tag; any other ref is refused.
+# A playstore build from a branch tags its commit playstore-v{version}, moving
+# that tag if it exists, so the API can find it. A non-store tag is refused.
 ```
 
 **A release is held to production.** A job before the build, `.github/actions/release-check`, runs on `prod-v*` and `playstore-v*` tags and on a hand-dispatched prod or playstore build, and on every iOS build; `dev-v*` and `stg-v*` skip it and still build. `api-schema-check` reads `/health` ten times, fetches the schema published for each hash, and validates `persisted-query-manifest.json` against each. The job then compiles the app against each, since the check can't see variables. Anything it can't establish fails it, and a failure stops the build. It needs this repo's Actions read access on the `api-schema` package. Up to half the `/health` reads may fail, as a draining replica answers 503. `tsc` narrows a client ahead of production and doesn't close it: it flags an unknown input field only in a fresh object literal.

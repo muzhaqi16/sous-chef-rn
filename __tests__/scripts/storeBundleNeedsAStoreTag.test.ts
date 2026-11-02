@@ -3,9 +3,9 @@ import { readFileSync } from 'fs';
 import path from 'path';
 
 /**
- * The API finds store builds by tag, so a build from a branch is one its release
- * check can't see, and a suffixed tag is no store version. Each job's own step
- * runs here through bash, as CI runs it.
+ * The API finds store builds by tag, and a suffixed tag is no store version.
+ * Each job's own step runs here through bash, as CI runs it. A build from a
+ * branch skips this step and tags its own commit.
  */
 
 const workflow = (name: string): string =>
@@ -22,8 +22,6 @@ const STORE_TAGS = [
 ];
 
 const OTHER_REFS = [
-  'refs/heads/main',
-  'refs/heads/dev',
   'refs/tags/dev-v4.9.0',
   'refs/tags/stg-v4.9.0',
   'refs/tags/playstore-v4.9.0-rc1',
