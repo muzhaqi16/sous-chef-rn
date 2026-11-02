@@ -38,13 +38,14 @@ const MOCK_MUTATION = gql`
 function makeOperation(
   query: DocumentNode,
   cache: InMemoryCache = makeCache(),
+  context: Record<string, unknown> = {},
 ): ApolloLink.Operation {
   return {
     query,
     operationName: operationNameOf(query),
     operationType: OperationTypeNode.QUERY,
     variables: {},
-    getContext: () => ({}),
+    getContext: () => context,
     setContext: jest.fn(),
     extensions: {},
     // The offline short-circuit reads the query back out of the cache via
@@ -182,6 +183,40 @@ describe('createOfflineReadLink', () => {
   // `logger` is console-only. The mapping is asserted per branch because a
   // counter on the wrong branch is worse than none: it would report the
   // offline promise holding at exactly the moment it broke.
+  describe('a page', () => {
+    const PAGE = { page: true };
+    const cacheHolding = () => {
+      const cache = makeCache();
+      seedQuery(cache, {
+        query: MOCK_QUERY,
+        data: { items: [{ __typename: 'Item', id: 'item-1' }] },
+      });
+      return cache;
+    };
+
+    it('is refused offline, however much of the list the cache holds', () => {
+      mockedGetState.mockReturnValue({ isOnline: false });
+      const forward = makeForward();
+
+      const { value } = observe(
+        link.request(makeOperation(MOCK_QUERY, cacheHolding(), PAGE), forward),
+      );
+
+      expect(forward).not.toHaveBeenCalled();
+      expect(value?.data).toBeNull();
+      expectUserFacingOfflineMessage(value?.errors?.[0]?.message);
+    });
+
+    it('goes to the server as a probe when only the breaker is open', () => {
+      mockedGetState.mockReturnValue({ isOnline: true, apiReachable: false });
+      const forward = makeForward();
+
+      link.request(makeOperation(MOCK_QUERY, cacheHolding(), PAGE), forward);
+
+      expect(forward).toHaveBeenCalled();
+    });
+  });
+
   describe('telemetry', () => {
     it('counts a cache hit as served', () => {
       mockedGetState.mockReturnValue({

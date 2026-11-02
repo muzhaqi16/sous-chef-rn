@@ -761,7 +761,7 @@ Answering the in-flight read from the cache releases the watcher at once:
   watcher never hears the answer.
 
 **What depends on it:** `src/apollo/links/localWritePrecedenceLink.ts` and the
-`sync/local-write-precedence` spec. A local-first write answers every read in
+`sync/local-write-precedence` spec. A local-first write answers every watched read in
 flight from the cache, so the person's change shows at once and an older
 answer cannot undo it.
 

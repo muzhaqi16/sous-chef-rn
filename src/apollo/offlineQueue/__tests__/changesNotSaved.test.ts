@@ -458,6 +458,21 @@ describe('a write past the age limit', () => {
     expect(queueStore.getRefused().map(({ id }) => id)).toEqual([EDIT]);
     expect(shownRow(client)).toMatchObject({ storageNotes: 'top shelf' });
   });
+
+  it('sends nothing when retried, as the server no longer knows its key', async () => {
+    const never = accepted(6, {});
+    const client = serverAnswers(never);
+    queueEdit(client, EDIT);
+    queueStore.updateMutation(EDIT, {
+      createdAt: Date.now() - 91 * 24 * 60 * 60 * 1000,
+    });
+    await drain();
+
+    await retryRefusedChange(EDIT);
+
+    expect(never.fired).toEqual([]);
+    expect(queueStore.getRefused().map(({ id }) => id)).toEqual([EDIT]);
+  });
 });
 
 describe('a write the queue has no room for', () => {

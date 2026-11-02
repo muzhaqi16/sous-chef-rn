@@ -29,6 +29,7 @@ interface MealTemplatesState {
    */
   hasResult: boolean;
   hasMore: boolean;
+  isLoadingMore: boolean;
   searchQuery: string;
   selectedCategory: TemplateCategory | undefined;
 }
@@ -90,6 +91,7 @@ export function useMealTemplates(
       // `data !== undefined` — a response arrived, empty or not.
       hasResult: data !== undefined,
       hasMore: connectionData.hasMore,
+      isLoadingMore: connectionData.isLoadingMore,
       searchQuery,
       selectedCategory,
     },

@@ -15,6 +15,7 @@ import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { Icon } from '#components/atoms/Icon';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import {
   MEAL_TYPE_LABEL_KEYS,
@@ -102,7 +103,7 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
     searchedQuery !== '' && searchedQuery === searchQuery.trim();
   const canSearchCatalog = searchQuery.trim().length >= MIN_QUERY_LENGTH;
   const {
-    state: { recipes, hasMore, isLoadingRemainingPages },
+    state: { recipes, hasMore, isLoadingMore, isLoadingRemainingPages },
     actions: { loadMore },
   } = useSavedRecipes({ loadAllPages: hasQuery });
 
@@ -323,6 +324,11 @@ export const AddMealSheet: React.FC<AddMealSheetProps> = ({
           }
           ListFooterComponent={
             <>
+              <PaginationFooter
+                hasMore={hasMore}
+                isFetchingMore={!hasQuery && isLoadingMore}
+                itemCount={filteredRecipes.length}
+              />
               {hasQuery && isLoadingRemainingPages ? (
                 <Loading
                   size="small"

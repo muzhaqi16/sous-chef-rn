@@ -23,7 +23,7 @@ export async function fetchPage(
     variables: { ...variables, ...page },
     fetchPolicy: 'network-only',
     errorPolicy: 'none',
-    context: { page: true },
+    context: { page: true, oneShot: true },
   });
   // A watcher hears of a write on a zero timer, queued by now, so the list shows
   // the page before its caller asks for the next from the new cursor.

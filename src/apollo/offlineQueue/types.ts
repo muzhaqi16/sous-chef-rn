@@ -82,8 +82,8 @@ export interface QueuedMutation {
   createdAt: number;
   /**
    * The age the 90-day horizon counts from, when it differs from `createdAt`:
-   * a coalesced move carries the first move's. Kept apart from `createdAt`
-   * because that one also decides delivery order.
+   * a coalesced move carries the first move's, a retried change its own. Kept
+   * apart from `createdAt` because that one also decides delivery order.
    */
   agedFrom?: number;
   updatedAt: number;

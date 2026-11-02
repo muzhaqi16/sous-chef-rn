@@ -15,7 +15,8 @@ import { HELD_BY_LAYER } from '../utils/heldByLayer';
  * Answers a query from the device while its network leg is doomed. A cache
  * HIT re-emits and completes; a MISS forwards when only the breaker is open,
  * and errors explicitly when there is no network leg — emitting `{data: null}`
- * would make Apollo write `{}` and spam "Missing field".
+ * would make Apollo write `{}` and spam "Missing field". A page is always a
+ * miss: the device holds the list already shown, not the page's rows.
  */
 export const createOfflineReadLink = () => {
   return new ApolloLink((operation, forward) => {
@@ -36,6 +37,7 @@ export const createOfflineReadLink = () => {
     }
 
     const read = (optimistic: boolean) => {
+      if (operation.getContext().page === true) return null;
       try {
         return operation.client.cache.readQuery<Record<string, unknown>>({
           query: operation.query,

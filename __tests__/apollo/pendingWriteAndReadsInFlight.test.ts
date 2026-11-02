@@ -266,7 +266,7 @@ describe('a pending write and the reads around it', () => {
     const page = client.query({
       query: ROWS,
       fetchPolicy: 'network-only',
-      context: { page: true },
+      context: { page: true, oneShot: true },
     });
     await drainTimers();
     const removal = write(REMOVE, { id: 'b' });

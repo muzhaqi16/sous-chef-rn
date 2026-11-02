@@ -288,6 +288,11 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   own document, so an API deploy or an app update cures it, and its dependents hold behind it.
   Otherwise the bound on a pending entry is `expireStalePending`'s 90-day age
   horizon. Either way the entry goes through the failure handler to the changes not saved.
+  The horizon is the API's: its daily `idempotency-key-cleanup` job deletes keys older than 90 days,
+  after which `claim` takes the same key as new and the write applies again, and a retry's
+  `overwrites` carries a versioned write past its lock too. So past it the list offers only Discard
+  (`isPastSyncWindow`), and a retry keeps the entry's age in `agedFrom`, as it renews nothing on the
+  server. A create or a plain edit could replay safely; one rule covers every change.
   Two rewrites happen at **enqueue time** in `queueStore.addMutation`: the latest move per item wins,
   and a delete supersedes the pending or parked non-create writes whose only subject is the deleted
   row (a create minted on the device goes with it, and neither is sent). Writes to one entity queued
@@ -687,16 +692,23 @@ replay only after their parent has landed — the drain reads the parent referen
   they self-correct via `cache-and-network` on the next visit. With the persisted MMKV cache this means a
   non-active list can show a briefly stale collaborator set until it is reopened — an expected, accepted
   window, not a bug (it mirrors the `pantryEvents` active-container-only maintenance).
-- **A read already in flight when a local-first write is sent** — it would answer with the state from
+- **A watched read already in flight when a local-first write is sent** — it would answer with the state from
   before the write, and Apollo shows its watcher nothing newer until it does. `localWritePrecedenceLink`
   (`src/apollo/links/`) answers each such read whose data the write changed from the cache as the write
   passes, so the change shows at once, and its late answer lands under the write's layer, where the fence
   holds the commit until it has (§2). A read the cache can't answer completely goes on, and lands under
-  the layer the same way. A read whose data the write left as it was goes on untouched, so a caller that acts on the
-  server's answer (`useVerifyEmail`, an event's read-back) still gets it. A `fetchMore` page
-  (`context: { page: true }`, sent only by `src/hooks/utils/fetchPage.ts`)
-  passes untouched: the cache could only answer it with the list already shown. Verified:
-  `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
+  the layer the same way. A read whose data the write left as it was goes on untouched.
+  A one-shot `client.query` passes untouched, under the same fence: it has no watcher to release, its
+  caller acts on the answer (a conflict's re-read, a time-to-live refresh), and all the cache could give
+  it is what the server last said, from before the write. A link cannot see a fetch policy, so
+  `APOLLO_DEFAULT_OPTIONS.query` marks it `context: { oneShot: true }`, and a caller's own `context`
+  restates the key. A watcher that Apollo deduplicates onto a one-shot read in flight is released
+  when that answer lands. Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
+- **A page of a list** (`context: { page: true, oneShot: true }`, sent only by
+  `src/hooks/utils/fetchPage.ts`) is never answered from the device, which holds the list already shown
+  and none of the page's rows: `offlineReadLink` treats it as a miss. Offline, `usePagination` does not
+  send it. The list stays as it is, `PaginationFooter` says why, and the page loads once the server
+  can answer; `useLoadRemainingPages` pauses and resumes the same way, and neither counts it as a failure.
 - **An answer older than the row the device holds** — answers can arrive out of order, so a read that
   left before another member's change (or before the person's own confirmed change) can land after it.
   `answerOrderingLink` keeps the device's copy of any row whose answer carries a lower `version` than the

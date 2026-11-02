@@ -32,12 +32,14 @@ const sameData = (a: unknown, b: unknown) =>
   a === b || canonicalStringify(a) === canonicalStringify(b);
 
 /**
- * A read already in flight when a local-first write is sent would answer with
- * the state from before the write, and Apollo shows a watcher nothing newer
- * until it does. So the write answers each such read at once from the cache
- * when it touched the read's data, and the read's late answer lands under the
- * write's layer, where the fence holds the commit until it has. A read the
- * cache cannot answer goes on, and lands under the layer the same way.
+ * A watched read already in flight when a local-first write is sent would
+ * answer with the state from before the write, and Apollo shows its watcher
+ * nothing newer until it does. So the write answers each such read at once from
+ * the cache when it touched the read's data, and the read's late answer lands
+ * under the write's layer, where the fence holds the commit until it has. A
+ * read the cache cannot answer goes on, and lands under the layer the same way.
+ * A one-shot read has no watcher to release, so it always gets the server's
+ * answer, under the same fence.
  * Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
  */
 export function createLocalWritePrecedenceLink(): ApolloLink {
@@ -105,16 +107,16 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
       };
     });
 
-  // A page is stored a tick after its request ends, and the fence must still
-  // hold then, or a page from before a removal puts the row back.
-  const pageThrough = (
+  // A one-shot answer is stored a tick after its request ends, and the fence
+  // must still hold then, or a page from before a removal puts the row back.
+  const oneShotThrough = (
     operation: ApolloLink.Operation,
     forward: ApolloLink.ForwardFunction,
   ) =>
     new Observable<ApolloLink.Result>(observer => {
       const land = readFenceOf(operation.client.cache).begin();
       const landAfterStored = () => setTimeout(land, 0);
-      const page = forward(operation).subscribe({
+      const answer = forward(operation).subscribe({
         next: value => observer.next(value),
         error: (error: unknown) => {
           observer.error(error);
@@ -126,17 +128,17 @@ export function createLocalWritePrecedenceLink(): ApolloLink {
         },
       });
       return () => {
-        page.unsubscribe();
+        answer.unsubscribe();
         landAfterStored();
       };
     });
 
   return new ApolloLink((operation, forward) => {
-    // A page (`context.page`) is its own request beside the list's watcher, and
-    // the cache can only answer it with the list already shown, so it passes.
     if (isQueryOperation(operation.query)) {
-      if (operation.getContext().page === true) {
-        return pageThrough(operation, forward);
+      // Its caller acts on the answer, and all the cache could offer it is what
+      // the server last said, from before the write.
+      if (operation.getContext().oneShot === true) {
+        return oneShotThrough(operation, forward);
       }
       if (!isIncremental(operation.query)) {
         return readThrough(operation, forward);

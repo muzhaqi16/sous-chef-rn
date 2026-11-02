@@ -17,6 +17,10 @@ export const APOLLO_DEFAULT_OPTIONS: ApolloClient.DefaultOptions.Input = {
     // callers that opt out.
     fetchPolicy: 'cache-first',
     errorPolicy: 'all', // Return both data and errors for observability
+    // A link cannot see a fetch policy, and only a watcher waits on its read, so
+    // this is how `localWritePrecedenceLink` tells them apart. A caller's own
+    // `context` replaces this one, so it restates the key.
+    context: { oneShot: true },
   },
   mutate: {
     errorPolicy: 'all', // Mutations need full error info for handling

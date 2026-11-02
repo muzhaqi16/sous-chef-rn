@@ -1,10 +1,13 @@
-import { useRef, useEffect, useState } from 'react';
+import { useRef, useEffect, useEffectEvent, useState } from 'react';
 import { useApolloClient } from '@apollo/client/react';
 import { errorService } from '#/services/errorService';
 import { isDeadCursorError } from '#/utils/errors/graphqlErrors';
 import { logger } from '#/utils/environment';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { fetchPage, type PagedQuery } from '#hooks/utils/fetchPage';
 import type { PaginationState } from '#hooks/utils/types';
+import { useStore } from '#store';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 
 /**
  * Configuration for pagination from normalized data
@@ -35,11 +38,17 @@ export interface PaginationConfig {
 
 export interface UsePaginationReturn extends PaginationState {
   loadMore: () => Promise<void>;
-  /** Whether the last loadMore call failed */
+  /** Whether the last loadMore call failed; offline is not a failure. */
   loadMoreError: boolean;
 }
 
-/** Cursor pagination for any Apollo connection query exposing `pageInfo`. */
+const offlineNow = () => isApiUnavailable(useStore.getState());
+
+/**
+ * Cursor pagination for any Apollo connection query exposing `pageInfo`. Only
+ * the server holds the next page, so offline the list stays as it is, the
+ * footer says why, and the page loads once the server can answer.
+ */
 export function usePagination(config: PaginationConfig): UsePaginationReturn {
   const {
     pageInfo,
@@ -51,6 +60,8 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
   } = config;
 
   const client = useApolloClient();
+  const offline = useIsApiUnavailable();
+  const pageOwed = useRef(false);
   const hasMore = pageInfo?.hasNextPage ?? false;
   const endCursor = pageInfo?.endCursor;
 
@@ -105,6 +116,11 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
       return;
     }
 
+    if (offlineNow()) {
+      pageOwed.current = true;
+      return;
+    }
+
     isFetchingMoreRef.current = true;
     setIsFetchingMore(true);
     setLoadMoreError(false);
@@ -115,18 +131,28 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
     };
 
     let result;
-    let deadCursor = false;
+    let failure: unknown;
     try {
       result = await fetchPage(client, observable, variables);
     } catch (error) {
-      deadCursor = isDeadCursorError(error, endCursor);
-      errorService.reportError(error, { operation: 'Pagination.loadMore' });
+      failure = error;
+    }
+
+    // The connection went while the page was out: the same wait as above, and
+    // no page landed for the re-entry guard to hold back behind.
+    const failed = !result && !offlineNow();
+    if (!result && !failed) {
+      pageOwed.current = true;
+      isFetchingMoreRef.current = false;
+    }
+    if (failed) {
+      errorService.reportError(failure, { operation: 'Pagination.loadMore' });
     }
 
     // A refused cursor cannot be retried — the same value is all this hook has,
     // and re-presenting it loops. Re-read from page one instead and show the
     // reader nothing: the list keeps working, and the refusal is in the log.
-    if (deadCursor && restart) {
+    if (failed && restart && isDeadCursorError(failure, endCursor)) {
       try {
         result = await restart();
       } catch (restartError) {
@@ -138,10 +164,19 @@ export function usePagination(config: PaginationConfig): UsePaginationReturn {
 
     setIsFetchingMore(false);
     setPagesSettled(settled => settled + 1);
-    if (!result) {
+    if (failed && !result) {
       setLoadMoreError(true);
     }
   };
+
+  const loadOwedPage = useEffectEvent(() => {
+    pageOwed.current = false;
+    void loadMore();
+  });
+
+  useEffect(() => {
+    if (!offline && !loading && pageOwed.current) loadOwedPage();
+  }, [offline, loading]);
 
   const isLoadingMore = isFetchingMore;
 

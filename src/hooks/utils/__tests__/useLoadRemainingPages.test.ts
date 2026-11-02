@@ -1,12 +1,12 @@
 import { act, renderHook } from '@testing-library/react-native';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { useStore } from '#store';
 import { useLoadRemainingPages } from '../useLoadRemainingPages';
 
 /**
- * While the network is withheld, `offlineReadLink` answers a cursor fetch from
- * the cache with the same merged connection: the request settles, nothing
- * advances, and `hasMore` stays true. A loop that reads "answered" as
- * "advanced" re-fires every frame behind a spinner that never clears.
+ * A page can settle without adding a row: `hasMore` stays true and nothing
+ * advances. A loop that reads "answered" as "advanced" re-fires every frame
+ * behind a spinner that never clears.
  */
 
 type PageState = Parameters<typeof useLoadRemainingPages>[2];
@@ -26,6 +26,7 @@ const page = (
 
 beforeEach(() => {
   jest.useFakeTimers();
+  useStore.setState({ isOnline: true, apiReachable: null });
 });
 
 afterEach(() => {
@@ -37,6 +38,41 @@ afterEach(() => {
 });
 
 describe('loading the rest of a collection', () => {
+  describe('offline', () => {
+    beforeEach(() => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+    });
+    afterAll(() => {
+      useStore.setState({ isOnline: true, apiReachable: null });
+    });
+
+    it('waits, and says the match may miss rows', async () => {
+      const state = page({});
+      const { result } = renderHook(() =>
+        useLoadRemainingPages(true, false, state, ''),
+      );
+
+      await drainTimers();
+
+      expect(state.loadMore).not.toHaveBeenCalled();
+      expect(result.current.isLoadingRemainingPages).toBe(false);
+      expect(result.current.incomplete).toBe(true);
+    });
+
+    it('goes on by itself once the server can answer', async () => {
+      const state = page({});
+      renderHook(() => useLoadRemainingPages(true, false, state, ''));
+      await drainTimers();
+
+      act(() => {
+        useStore.setState({ isOnline: true, apiReachable: true });
+      });
+      await drainTimers();
+
+      expect(state.loadMore).toHaveBeenCalled();
+    });
+  });
+
   it('stops when a page settles without adding anything', async () => {
     const state = page({});
     const { result } = renderHook(

@@ -65,6 +65,11 @@ describe('the one-shot query default', () => {
     expect(APOLLO_DEFAULT_OPTIONS.query?.errorPolicy).toBe('all');
   });
 
+  it('marks a read no watcher waits on', () => {
+    expect(APOLLO_DEFAULT_OPTIONS.query?.context).toEqual({ oneShot: true });
+    expect(APOLLO_DEFAULT_OPTIONS.watchQuery?.context).toBeUndefined();
+  });
+
   it('is what a caller gets when it names no policy', () => {
     const unexplained: string[] = [];
 

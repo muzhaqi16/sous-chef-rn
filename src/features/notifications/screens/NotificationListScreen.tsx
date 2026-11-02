@@ -17,7 +17,7 @@ import type { DisplayNotification as NotificationType } from '#features/notifica
 import { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
-import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { NotificationActionHandler } from '#features/notifications/components/NotificationActionHandler';
 import {
   groupNotificationsByDate,
@@ -49,6 +49,7 @@ export const NotificationListScreen: React.FC = () => {
   // same rows could disagree with the query that produced them.
   const {
     notifications,
+    hasMore,
     loadMore,
     loadingMore,
     loading: historyLoading,
@@ -207,9 +208,11 @@ export const NotificationListScreen: React.FC = () => {
                 )
               }
               ListFooterComponent={
-                loadingMore ? (
-                  <ThemedActivityIndicator style={styles.footerLoader} />
-                ) : null
+                <PaginationFooter
+                  hasMore={hasMore}
+                  isFetchingMore={loadingMore}
+                  itemCount={notifications.length}
+                />
               }
               onEndReached={loadMore}
               onEndReachedThreshold={0.4}
@@ -225,11 +228,8 @@ export const NotificationListScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create(theme => ({
+const styles = StyleSheet.create({
   emptyInset: {
     flex: 1,
   },
-  footerLoader: {
-    paddingVertical: theme.spacing.md,
-  },
-}));
+});

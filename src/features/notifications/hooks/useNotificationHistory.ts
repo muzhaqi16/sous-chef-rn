@@ -67,7 +67,7 @@ export function useNotificationHistory(
   // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
   // oldest, so paging past it fetched rows that could never become visible;
   // the cache has no such ceiling and the connection merges by node id.
-  const { loadMore, isLoadingMore } = usePagination({
+  const { hasMore, loadMore, isLoadingMore } = usePagination({
     pageInfo: connection?.pageInfo,
     loading,
     itemCount: notifications.length,
@@ -78,6 +78,7 @@ export function useNotificationHistory(
 
   return {
     notifications,
+    hasMore,
     loadMore,
     loadingMore: isLoadingMore,
     loading,

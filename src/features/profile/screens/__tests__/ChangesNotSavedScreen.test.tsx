@@ -127,6 +127,31 @@ describe('ChangesNotSavedScreen', () => {
     ).toBeTruthy();
   });
 
+  it('leaves only discard for a change past the sync window', () => {
+    keep({ createdAt: Date.now() - 91 * 24 * 60 * 60 * 1000 });
+
+    render(<ChangesNotSavedScreen />);
+
+    expect(screen.getByText(t('changesNotSaved.reasonExpired'))).toBeTruthy();
+    expect(
+      screen.queryByTestId(profileTestIDs.changeNotSavedRetry('change')),
+    ).toBeNull();
+    expect(
+      screen.getByTestId(profileTestIDs.changeNotSavedDiscard('change')),
+    ).toBeTruthy();
+  });
+
+  it('counts the window from the first queueing, through a retry', () => {
+    keep({
+      createdAt: Date.now(),
+      agedFrom: Date.now() - 91 * 24 * 60 * 60 * 1000,
+    });
+
+    render(<ChangesNotSavedScreen />);
+
+    expect(screen.getByText(t('changesNotSaved.reasonExpired'))).toBeTruthy();
+  });
+
   it('follows the queue as a change leaves it', () => {
     keep();
     render(<ChangesNotSavedScreen />);

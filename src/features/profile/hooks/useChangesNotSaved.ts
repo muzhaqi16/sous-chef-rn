@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react';
-import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { isPastSyncWindow, queueStore } from '#/apollo/offlineQueue/queueStore';
 import {
   discardRefusedChange,
   namesNoRow,
@@ -10,7 +10,7 @@ import { isTranslationKey, useTranslation } from '#/i18n';
 import { formatQuantity } from '#/utils/formatQuantity';
 import { isRecord } from '#/utils/isRecord';
 
-export type NotSavedReason = 'conflict' | 'gone' | 'refused';
+export type NotSavedReason = 'conflict' | 'expired' | 'gone' | 'refused';
 
 export interface ChangeNotSaved {
   id: string;
@@ -18,6 +18,7 @@ export interface ChangeNotSaved {
   /** What the person entered, as far as it reads on its own. */
   entered: readonly string[];
   reason: NotSavedReason;
+  canRetry: boolean;
 }
 
 /** Row fields that are not the person's words: stamps, positions and enums. */
@@ -75,9 +76,10 @@ function enteredIn(fields: unknown): string[] {
   });
 }
 
-function reasonOf({ lastError }: QueuedMutation): NotSavedReason {
-  if (namesNoRow(lastError)) return 'gone';
-  return lastError?.type === 'conflict' ? 'conflict' : 'refused';
+function reasonOf(entry: QueuedMutation): NotSavedReason {
+  if (namesNoRow(entry.lastError)) return 'gone';
+  if (isPastSyncWindow(entry)) return 'expired';
+  return entry.lastError?.type === 'conflict' ? 'conflict' : 'refused';
 }
 
 /** The changes the server would not take, and what the person can do with them. */
@@ -87,6 +89,7 @@ export function useChangesNotSaved() {
 
   const changes = refused.map((entry): ChangeNotSaved => {
     const resourceKey = `errors.resourceNames.${entry.refusedResource ?? ''}`;
+    const reason = reasonOf(entry);
     return {
       id: entry.id,
       name:
@@ -95,7 +98,8 @@ export function useChangesNotSaved() {
           ? t(resourceKey)
           : t('changesNotSaved.aChange')),
       entered: enteredIn(entry.pendingWrite?.inputs.fields),
-      reason: reasonOf(entry),
+      reason,
+      canRetry: reason === 'conflict' || reason === 'refused',
     };
   });
 

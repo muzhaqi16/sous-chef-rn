@@ -259,6 +259,28 @@ describe('QueueStore', () => {
       expect(store.getMutation('follower')?.heldBy).toBeUndefined();
     });
 
+    it('reopens as old as it was, whatever order it now sends in', () => {
+      store.addMutation(refused({ id: 'old', createdAt: 5_000 }));
+      store.addMutation(refused({ id: 'older', agedFrom: 1_000 }));
+
+      store.reopen('old');
+      store.reopen('older');
+
+      expect(store.getMutation('old')?.agedFrom).toBe(5_000);
+      expect(store.getMutation('older')?.agedFrom).toBe(1_000);
+    });
+
+    it('expires a reopened change past the window instead of sending it', () => {
+      const ninetyOneDaysAgo = Date.now() - 91 * 24 * 60 * 60 * 1000;
+      store.addMutation(refused({ id: 'old', createdAt: ninetyOneDaysAgo }));
+
+      store.reopen('old');
+
+      expect(store.expireStalePending('user-1').map(({ id }) => id)).toEqual([
+        'old',
+      ]);
+    });
+
     it('discards with its followers', () => {
       store.addMutation(refused({ id: 'parent' }));
       store.addMutation(refused({ id: 'follower', heldBy: 'parent' }));

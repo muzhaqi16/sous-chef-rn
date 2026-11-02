@@ -45,6 +45,13 @@ function isTerminal(status: QueueStatus): boolean {
 // PENDING entries older than this are marked FAILED rather than replayed.
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
+/** Past the server's dedup horizon, where a send can apply a second time. */
+export const isPastSyncWindow = ({
+  agedFrom,
+  createdAt,
+}: Pick<QueuedMutation, 'agedFrom' | 'createdAt'>): boolean =>
+  (agedFrom ?? createdAt) <= Date.now() - MAX_PENDING_AGE_MS;
+
 type StoredEntry = Omit<QueuedMutation, 'mutation'>;
 
 /** What the server has not taken: pending, replaying, or parked for re-auth. */
@@ -413,13 +420,12 @@ export class QueueStore {
   ): Array<QueuedMutation & { lastError: QueueError }> {
     const queue = this.loadQueue();
     const now = Date.now();
-    const cutoff = now - MAX_PENDING_AGE_MS;
     const expired: Array<QueuedMutation & { lastError: QueueError }> = [];
     const updated = queue.map(m => {
       if (
         m.userId !== userId ||
         m.status !== QueueStatus.PENDING ||
-        (m.agedFrom ?? m.createdAt) > cutoff
+        !isPastSyncWindow(m)
       ) {
         return m;
       }
@@ -693,7 +699,8 @@ export class QueueStore {
 
   /**
    * Back to the queue with its followers, newest, as the person's latest word
-   * on the row. Returns the layers to show again.
+   * on the row, and as old as it was: a retry does not renew the server's dedup
+   * record. Returns the layers to show again.
    */
   reopen(id: string): PendingWrite[] {
     const reopened = this.refusedWith(id);
@@ -711,7 +718,7 @@ export class QueueStore {
           retryCount: 0,
           conflictResends: 0,
           overwrites: true,
-          agedFrom: undefined,
+          agedFrom: m.agedFrom ?? m.createdAt,
           faults: undefined,
           lastError: undefined,
           processedAt: undefined,

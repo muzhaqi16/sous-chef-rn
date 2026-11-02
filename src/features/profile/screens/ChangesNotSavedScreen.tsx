@@ -18,6 +18,7 @@ import { profileTestIDs } from '#features/profile/testIDs';
 
 const REASON_KEYS = {
   conflict: 'changesNotSaved.reasonConflict',
+  expired: 'changesNotSaved.reasonExpired',
   gone: 'changesNotSaved.reasonGone',
   refused: 'changesNotSaved.reasonRefused',
 } satisfies Record<NotSavedReason, TranslationKey>;
@@ -67,7 +68,7 @@ const ChangesNotSavedScreen: React.FC = () => {
                       {t(REASON_KEYS[change.reason])}
                     </Text>
                     <View style={styles.actions}>
-                      {change.reason !== 'gone' && (
+                      {!!change.canRetry && (
                         <Button
                           title={t('labels.retry')}
                           variant="primary"

@@ -220,7 +220,7 @@ describe('a stored fingerprint sign-in, after a password sign-in', () => {
     expect(mockQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         fetchPolicy: 'no-cache',
-        context: { signInToken: 'at', skipRetryLink: true },
+        context: { signInToken: 'at', skipRetryLink: true, oneShot: true },
       }),
     );
     expect(mockRemoveCredentials).not.toHaveBeenCalled();

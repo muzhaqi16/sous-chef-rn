@@ -5,6 +5,8 @@ import { gql } from '@apollo/client';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { GraphQLError } from 'graphql';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { errorService } from '#/services/errorService';
+import { useStore } from '#store';
 import { usePagination } from '../usePagination';
 
 jest.mock('#/services/errorService');
@@ -33,6 +35,119 @@ describe('usePagination', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockFetchPage.mockResolvedValue({});
+    useStore.setState({ isOnline: true, apiReachable: null });
+  });
+
+  afterAll(() => {
+    useStore.setState({ isOnline: true, apiReachable: null });
+  });
+
+  describe('offline', () => {
+    const LIST = {
+      pageInfo: { hasNextPage: true, endCursor: 'abc' },
+      itemCount: 10,
+      observable: OBSERVABLE,
+    };
+    const goOffline = () => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+    };
+    const comeBack = () => {
+      act(() => {
+        useStore.setState({ isOnline: true, apiReachable: true });
+      });
+    };
+
+    it('asks for no page, and reports no failure', async () => {
+      goOffline();
+      const { result } = renderHook(() =>
+        usePagination({ ...LIST, loading: false }),
+      );
+
+      await act(() => result.current.loadMore());
+
+      expect(mockFetchPage).not.toHaveBeenCalled();
+      expect(result.current.loadMoreError).toBe(false);
+      expect(result.current.isLoadingMore).toBe(false);
+      expect(result.current.hasMore).toBe(true);
+    });
+
+    it('loads the page it held back once the server can answer', async () => {
+      goOffline();
+      const { result } = renderHook(() =>
+        usePagination({ ...LIST, loading: false }),
+      );
+      await act(() => result.current.loadMore());
+
+      comeBack();
+
+      await act(() => Promise.resolve());
+      expect(mockFetchPage).toHaveBeenCalledTimes(1);
+      expect(mockFetchPage).toHaveBeenCalledWith(
+        expect.anything(),
+        OBSERVABLE,
+        { cursor: 'abc' },
+      );
+    });
+
+    it('waits for a read running at reconnect before asking', async () => {
+      goOffline();
+      const { result, rerender } = renderHook(
+        ({ loading }: { loading: boolean }) =>
+          usePagination({ ...LIST, loading }),
+        { initialProps: { loading: false } },
+      );
+      await act(() => result.current.loadMore());
+
+      rerender({ loading: true });
+      comeBack();
+      await act(() => Promise.resolve());
+      expect(mockFetchPage).not.toHaveBeenCalled();
+
+      rerender({ loading: false });
+      await act(() => Promise.resolve());
+      expect(mockFetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it('asks for nothing at reconnect when no page was held back', async () => {
+      goOffline();
+      renderHook(() => usePagination({ ...LIST, loading: false }));
+
+      comeBack();
+
+      await act(() => Promise.resolve());
+      expect(mockFetchPage).not.toHaveBeenCalled();
+    });
+
+    it('reads a connection lost mid-page as offline, not as a failure', async () => {
+      mockFetchPage.mockImplementationOnce(() => {
+        goOffline();
+        return Promise.reject(new Error('Network request failed'));
+      });
+      const { result } = renderHook(() =>
+        usePagination({ ...LIST, loading: false }),
+      );
+
+      await act(() => result.current.loadMore());
+
+      expect(errorService.reportError).not.toHaveBeenCalled();
+      expect(result.current.loadMoreError).toBe(false);
+
+      comeBack();
+      await act(() => Promise.resolve());
+      expect(mockFetchPage).toHaveBeenCalledTimes(2);
+    });
+
+    it('still reports a page that fails online', async () => {
+      mockFetchPage.mockRejectedValueOnce(new Error('boom'));
+      const { result } = renderHook(() =>
+        usePagination({ ...LIST, loading: false }),
+      );
+
+      await act(() => result.current.loadMore());
+
+      expect(errorService.reportError).toHaveBeenCalledTimes(1);
+      expect(result.current.loadMoreError).toBe(true);
+    });
   });
 
   it('hasMore reflects pageInfo.hasNextPage', () => {

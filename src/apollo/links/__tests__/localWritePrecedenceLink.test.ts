@@ -345,13 +345,13 @@ describe('localWritePrecedenceLink', () => {
       defaultOptions: APOLLO_DEFAULT_OPTIONS,
     });
     let rows: string[] | undefined;
-    // As `fetchMore` sends a page: its own no-cache request, marked.
+    // As `fetchPage` sends one: its own no-cache request, marked.
     const loading = client
       .query({
         query: UsualStoresDocument,
         variables: { homeId: 'home-1' },
         fetchPolicy: 'no-cache',
-        context: { page: true },
+        context: { page: true, oneShot: true },
       })
       .then(({ data }) => {
         rows = data?.usualStores.map(store => store.id);
@@ -375,6 +375,57 @@ describe('localWritePrecedenceLink', () => {
     // The server's page, not the list the cache had merged.
     expect(rows).toEqual([aldi.id]);
     expect(pinnedIn(readUsualStores(cache, 'home-1'))).toBe(true);
+  });
+
+  it('gives a one-shot read the server’s answer, whatever a write changes', async () => {
+    const read = recordMock(UsualStoresDocument, {
+      data: { usualStores: [aldi] },
+      held: true,
+      maxUsageCount: 1,
+    });
+    const pinMock = recordMock(UpdateUsualStoreDocument, {
+      data: pinAnswer([pinnedMarket, banksville]),
+    });
+    const cache = makeCache();
+    writeUsualStores(cache, 'home-1', [banksville, market]);
+    const client = new ApolloClient({
+      cache,
+      link: ApolloLink.from([
+        createLocalWritePrecedenceLink(),
+        testMockLink([read.mock, pinMock.mock]),
+      ]),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    });
+    let answer: string[] | undefined;
+    // No `context`: the client's default marks every `client.query`.
+    const asking = client
+      .query({
+        query: UsualStoresDocument,
+        variables: { homeId: 'home-1' },
+        fetchPolicy: 'network-only',
+      })
+      .then(({ data }) => {
+        answer = data?.usualStores.map(store => store.id);
+      });
+    await drainTimers();
+    expect(read.fired).toHaveLength(1);
+
+    writeUsualStores(cache, 'home-1', [banksville, pinnedMarket]);
+    await settled(
+      client.mutate({
+        mutation: UpdateUsualStoreDocument,
+        variables: {
+          input: { homeId: 'home-1', target: { storeId: 's2' }, pinned: true },
+        },
+        context: { localFirst: true },
+      }),
+    );
+    expect(answer).toBeUndefined();
+
+    read.release();
+    await settled(asking);
+
+    expect(answer).toEqual([aldi.id]);
   });
 
   it('passes a deferred read through untouched', async () => {
