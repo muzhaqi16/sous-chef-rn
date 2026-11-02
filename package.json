@@ -180,6 +180,7 @@
     "@graphql-tools/mock": "^9.1.7",
     "@jest/test-sequencer": "^29.7.0",
     "@jest/types": "^29.6.3",
+    "@muzhaqi16/api-schema": "4.9.6-s63c2588c0661f7a0",
     "@react-native-community/cli": "^20.1.1",
     "@react-native/babel-preset": "0.86.3",
     "@react-native/eslint-config": "0.86.3",

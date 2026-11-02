@@ -257,6 +257,8 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 # A playstore build runs from a store tag; any other ref is refused.
 ```
 
+**A release is held to production.** A job before the build, `.github/actions/release-check`, runs on `prod-v*` and `playstore-v*` tags and on a hand-dispatched prod or playstore build, and on every iOS build; `dev-v*` and `stg-v*` skip it and still build. `api-schema-check` reads `/health` ten times, fetches the schema published for each hash, and validates `persisted-query-manifest.json` against each. The job then compiles the app against each, since the check can't see variables. Anything it can't establish fails it, and a failure stops the build. It needs this repo's Actions read access on the `api-schema` package. Up to half the `/health` reads may fail, as a draining replica answers 503. `tsc` narrows a client ahead of production and doesn't close it: it flags an unknown input field only in a fresh object literal.
+
 **Store tags are read by the API.** On every push, the API's CI validates `persisted-query-manifest.json` and checks each variable's input types against `src/graphql/generated/schema.graphql` at every `playstore-vX.Y.Z`, `ios-vX.Y.Z`, `prod-vX.Y.Z` and bare `vX.Y.Z` tag at or above the client floor. So a store tag keeps that exact name, both files stay committed at those paths, and a tag missing either fails the API's CI. Both build workflows refuse anything else: a bundle from a branch is invisible to that check, and a suffixed tag such as `playstore-v1.2.0-rc1` is no store version. `check:manifest`, held by `persistedManifestIsCurrent.test.ts`, keeps the manifest matching the `.graphql` sources.
 
 ---

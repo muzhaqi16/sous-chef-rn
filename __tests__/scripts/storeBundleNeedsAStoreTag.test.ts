@@ -71,7 +71,10 @@ describe.each(jobsBuildingBundles.map(job => [firstStepOf(job)]))(
 );
 
 describe('the iOS build', () => {
-  const step = firstStepOf(workflow('build-ios.yml'));
+  const [, job = ''] = workflow('build-ios.yml').split(
+    /^ {2}build_with_signing:$/m,
+  );
+  const step = firstStepOf(job);
 
   it('refuses before anything else runs', () => {
     expect(step).toContain('name: Refuse a build without a store tag');

@@ -513,6 +513,7 @@ The whole-tree gates, and where each runs:
 | `find-stale-cache-fields`           | every mutation returns what the queries read on each entity it returns and on the collection it moves (via the generated `<Type>Readers`); the readers files are current; API-blocked pairs expire when the schema gains the field | CI                    |
 | `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                                                                                                                                                                     | build                 |
 | `check-build-provenance`            | the build identity in `env.generated.ts` is the one CI intended                                                                                                                                                                    | build                 |
+| `release-check`                     | a release's operations validate against every schema production serves, and the app compiles against each                                                                                                                         | store build           |
 
 Everything else that used to be a script — the data-layer boundary, the
 canonical mechanisms, the token, typography and tier rules — is either a
