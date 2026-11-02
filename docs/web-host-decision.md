@@ -82,7 +82,10 @@ touching the data layer.
   recognition, push, biometrics, haptics and native performance.
 - **Web adapters** for each port, and an `installWebPlatform`.
 - **A web bundler** for a bare CLI app, such as Vite with
-  `vite-plugin-react-native-web`, running the plugins above.
+  `vite-plugin-react-native-web`, running the plugins above. The mobile app runs
+  Unistyles through its Metro integration, which only Metro can use, so a web
+  host still needs the Babel plugin; Unistyles 4.0 removes that plugin, so check
+  its web path before choosing.
 - **Two ports reshaped**, against a real web adapter:
   - cache persistence: the whole cache is serialised to one key of a synchronous
     store every few seconds, which on the web means `localStorage` (a few MB,

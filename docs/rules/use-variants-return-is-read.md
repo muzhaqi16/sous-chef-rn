@@ -17,6 +17,5 @@ return <View style={variantStyles.button} />;
 
 The sheet ignores variants, the default ones included, so a style read from it
 renders without them. Nothing throws, warns or type-errors, and the screen just
-looks wrong. The Babel plugin used to hide this by shadowing `styles` after a
-bare call; the return form does not depend on the plugin, and Unistyles'
-Metro integration has no plugin to do it.
+looks wrong. Unistyles' Metro integration has no Babel pass to shadow `styles`
+after a bare call, so the call selects nothing unless its return is read.

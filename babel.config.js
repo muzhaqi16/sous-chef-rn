@@ -16,11 +16,6 @@ module.exports = api => {
       ],
     ],
     plugins: [
-      // Unistyles BEFORE the React Compiler, as Unistyles' docs prescribe. With
-      // the compiler first, a `useVariants` style read is cached on the wrong
-      // dependencies and freezes at its first-render value
-      // (`check:unistyles-variants`).
-      ['react-native-unistyles/plugin', { root: 'src' }],
       'babel-plugin-react-compiler',
       [
         'module-resolver',

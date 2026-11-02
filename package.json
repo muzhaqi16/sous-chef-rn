@@ -40,7 +40,6 @@
     "check:version-sync": "node scripts/check-version-sync.mjs",
     "check:startup-origin": "node scripts/check-startup-origin.mjs",
     "check:launch-arg-auth": "node scripts/check-launch-arg-auth.mjs",
-    "check:unistyles-variants": "node scripts/check-unistyles-variant-staleness.mjs",
     "check:compiler-bailouts": "node scripts/check-compiler-bailouts.mjs",
     "check:dead-modules": "knip --include files,exports,nsExports --no-progress",
     "check:import-cycles": "madge --circular src",

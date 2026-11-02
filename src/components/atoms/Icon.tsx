@@ -28,10 +28,9 @@ export type IconName = IoniconsIconName | GlyphName;
 export type IconLibrary = string;
 
 // withUnistyles wraps the third-party Ionicons component so its `color` prop
-// can react to theme changes. RN core components are auto-patched by the
-// Unistyles babel plugin, but third-party libraries are not — this is the
-// canonical opt-in. uniProps is re-evaluated on every theme change and only
-// this Icon re-renders, not the parent screen.
+// can react to theme changes: Unistyles binds a node's `style`, never another
+// prop. uniProps is re-evaluated on every theme change and only this Icon
+// re-renders, not the parent screen.
 const ThemedIonicons = withUnistyles(Ionicons);
 
 // An icon is never the label: its glyph is a private-use character, which a

@@ -198,8 +198,8 @@ the child receives `{}`.
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
-properties. RN's `Pressable` needs no wrapper: the Unistyles babel plugin
-auto-binds it.
+properties. RN's `Pressable` needs no wrapper: Unistyles' Metro resolver swaps
+in a bound one.
 
 Re-check:
 
@@ -223,7 +223,10 @@ the first theme change left 3 or 4 views (`dot`, `heroInner`) on the old theme
 through 3 s, on 3.7.0 and on 3.8.0, and a screenshot showed the same. With the
 sentinels, 3.8.0 gave 0 of 165 in both directions, and 0 mismatches in a paused
 stack, on the list rows, under a toast and an open sheet, for density, high
-contrast and primary colour, and for a change made during a rotation.
+contrast and primary colour, and for a change made during a rotation. The Metro
+integration behaves the same: with the sentinel's key held still, 3 or 4 views
+stayed stale through 3 s; with it re-keying, none did, here or on the paused
+stack, list rows, toast, open swipe row or rotation.
 
 The mechanism: `ReanimatedCommitHook` clones each registered view and its
 ancestors without a runtime shadow node reference, so React's own instance of

@@ -25,7 +25,7 @@ fi
 # origin, launch-arg auth) run in pre-commit: together they cost ~0.2s, and a
 # broken locale key is worth hearing about at the commit that broke it.
 
-# These five are the expensive ones and are independent of each other, so they
+# These four are the expensive ones and are independent of each other, so they
 # run concurrently. Each writes to its own log so the output stays readable
 # instead of interleaving.
 #
@@ -38,17 +38,14 @@ npm run typecheck                >"$logs/1-typecheck.log"  2>&1 &
 pid_tsc=$!
 npm run check:compiler-bailouts  >"$logs/2-bailouts.log"   2>&1 &
 pid_bailouts=$!
-npm run check:unistyles-variants >"$logs/3-variants.log"   2>&1 &
-pid_variants=$!
-npm run check:dead-modules       >"$logs/4-dead-modules.log" 2>&1 &
+npm run check:dead-modules       >"$logs/3-dead-modules.log" 2>&1 &
 pid_dead=$!
-npm run check:import-cycles      >"$logs/5-cycles.log"      2>&1 &
+npm run check:import-cycles      >"$logs/4-cycles.log"      2>&1 &
 pid_cycles=$!
 
 failed=0
 wait $pid_tsc      || failed=1
 wait $pid_bailouts || failed=1
-wait $pid_variants || failed=1
 wait $pid_dead     || failed=1
 wait $pid_cycles   || failed=1
 

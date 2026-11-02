@@ -271,8 +271,8 @@ they read it.
   ([Unistyles' useAnimatedTheme misses a theme change made while its screen is paused](verified-library-behaviour.md#unistyles-useanimatedtheme-misses-a-theme-change-made-while-its-screen-is-paused)).
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
   copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
-  `Pressable` needs no wrapper, because the Unistyles Babel plugin binds it to
-  the ShadowTree itself
+  `Pressable` needs no wrapper, because Unistyles binds it to the ShadowTree
+  itself
   ([withUnistyles drops function styles](verified-library-behaviour.md#unistyles-withunistyles-drops-function-styles)).
 - **`useUnistyles()` is for runtime metadata** (`rt.colorScheme`, `rt.themeName`,
   `rt.insets`). Reading `theme.*` through it re-renders the whole component on
@@ -388,9 +388,9 @@ they read it.
 ## Pressable & gestures
 
 - **Pick the `Pressable` by gesture system.** The default is `Pressable` from
-  `#components/atoms/themedComponents`: RN's Pressable re-exported, which the
-  Unistyles Babel plugin binds to the ShadowTree, so function-style styles and
-  theme switches work with no wrapper. RN's Pressable does not take part in
+  `#components/atoms/themedComponents`: RN's Pressable re-exported, which
+  Unistyles binds to the ShadowTree, so function-style styles and theme switches
+  work with no wrapper. RN's Pressable does not take part in
   RNGH's gesture system. So inside a `Swipeable`, a
   `GestureDetector`/`Gesture.X` chain, or `RectButton`-style coordination, the
   control imports `Pressable` from `react-native-gesture-handler`.

@@ -22,8 +22,8 @@ import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
 // Shared withUnistyles wrappers for third-party components taking theme-derived
 // props. Module scope, so screens carry no useUnistyles re-render subscription.
 
-// RN's Pressable, which the babel plugin binds to the ShadowTree; `withUnistyles`
-// over RNGH's drops proxy values in a `({pressed}) => [...]` style. For gesture
+// RN's Pressable, which Unistyles binds to the ShadowTree; `withUnistyles` over
+// RNGH's drops proxy values in a `({pressed}) => [...]` style. For gesture
 // composition, import RNGH's at the call site.
 export const Pressable = RNPressable;
 

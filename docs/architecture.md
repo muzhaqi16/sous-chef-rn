@@ -802,7 +802,10 @@ inside the factory:
   `rt.themeName`, `rt.insets`), not for reading `theme.*`.
 - Shared themed wrappers live in `src/components/atoms/themedComponents.tsx`.
 
-The Unistyles babel plugin must run **before** the React Compiler plugin.
+Unistyles runs through its Metro integration (`withUnistylesConfig`, outermost
+in `metro.config.js`), which has no Babel pass: a StyleSheet records what it
+reads at runtime, and React Native components are swapped inside `node_modules`
+too. Changing that config needs a Metro restart with `--reset-cache`.
 
 ### Lists
 

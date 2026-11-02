@@ -2,6 +2,7 @@ const { getDefaultConfig, mergeConfig } = require('@react-native/metro-config');
 const {
   wrapWithReanimatedMetroConfig,
 } = require('react-native-reanimated/metro-config');
+const { withUnistylesConfig } = require('react-native-unistyles/metro');
 const { generateEnv } = require('./scripts/generate-env');
 
 // Regenerate the build-time config (src/config/env.generated.ts) whenever Metro
@@ -60,6 +61,8 @@ const config = {
   },
 };
 
-module.exports = wrapWithReanimatedMetroConfig(
-  mergeConfig(defaultConfig, config),
+// Outermost: it wraps `resolveRequest`, and a wrapper applied after it can drop
+// that, which leaves StyleSheets tracking nothing.
+module.exports = withUnistylesConfig(
+  wrapWithReanimatedMetroConfig(mergeConfig(defaultConfig, config)),
 );
