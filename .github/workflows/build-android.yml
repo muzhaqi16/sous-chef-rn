@@ -85,6 +85,18 @@ jobs:
         }}
 
     steps:
+      # The API holds its schema to shipped builds by reading store tags, so a
+      # bundle no tag names is held to nothing. A suffixed tag is no store
+      # version, so it is refused too.
+      - name: Refuse a store bundle without a store tag
+        if: env.IS_PLAYSTORE == 'true'
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/(playstore-|ios-|prod-)?v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$GITHUB_REF is not a store tag, and the API's release check finds builds by store tag. Run npm run tag:playstore, or dispatch this workflow from a store tag."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -433,6 +445,18 @@ jobs:
         }}
 
     steps:
+      # The API holds its schema to shipped builds by reading store tags, so a
+      # bundle no tag names is held to nothing. A suffixed tag is no store
+      # version, so it is refused too.
+      - name: Refuse a store bundle without a store tag
+        if: env.IS_PLAYSTORE == 'true'
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/(playstore-|ios-|prod-)?v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$GITHUB_REF is not a store tag, and the API's release check finds builds by store tag. Run npm run tag:playstore, or dispatch this workflow from a store tag."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 

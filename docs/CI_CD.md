@@ -254,9 +254,10 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 
 # Or trigger manually via Actions tab:
 # Actions → Build Android → Run workflow → Choose environment + build type
+# A playstore build runs from a store tag; any other ref is refused.
 ```
 
-**Store tags are read by the API.** On every push, the API's CI validates `persisted-query-manifest.json` at each `playstore-vX.Y.Z` and `ios-vX.Y.Z` tag at or above the client floor, so a store tag keeps that exact name, and a tag with no manifest fails the API's CI. `check:manifest`, held by `persistedManifestIsCurrent.test.ts`, keeps the file matching the `.graphql` sources.
+**Store tags are read by the API.** On every push, the API's CI validates `persisted-query-manifest.json` and checks each variable's input types against `src/graphql/generated/schema.graphql` at every `playstore-vX.Y.Z`, `ios-vX.Y.Z`, `prod-vX.Y.Z` and bare `vX.Y.Z` tag at or above the client floor. So a store tag keeps that exact name, both files stay committed at those paths, and a tag missing either fails the API's CI. Both build workflows refuse anything else: a bundle from a branch is invisible to that check, and a suffixed tag such as `playstore-v1.2.0-rc1` is no store version. `check:manifest`, held by `persistedManifestIsCurrent.test.ts`, keeps the manifest matching the `.graphql` sources.
 
 ---
 
@@ -270,7 +271,7 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 
 **Environment:** Always `prod`
 
-The version number is extracted from the tag (stripping the `v` or `ios-v` prefix) and set as the marketing version. The GitHub Actions run number is used as the build number.
+The version number is extracted from the tag (stripping the `v` or `ios-v` prefix) and set as the marketing version, so the workflow refuses any tag that isn't exactly `vX.Y.Z` or `ios-vX.Y.Z`. The GitHub Actions run number is used as the build number.
 
 **Pipeline steps:**
 
