@@ -16,14 +16,14 @@ export enum QueueStatus {
   REFUSED = 'refused',
 }
 
+/** A write the queue had no room for. */
+export const QUEUE_FULL_CODE = 'QUEUE_FULL';
+
 /**
  * The queue is at capacity with nothing terminal to evict — full of un-synced
  * work. Refusing the enqueue is deliberate: dropping the oldest PENDING op
  * instead would break create→update dependency chains.
  */
-/** A write the queue had no room for. */
-export const QUEUE_FULL_CODE = 'QUEUE_FULL';
-
 export class QueueCapacityError extends Error {
   constructor(
     message = 'Too many unsynced changes. Reconnect to sync before making more changes.',

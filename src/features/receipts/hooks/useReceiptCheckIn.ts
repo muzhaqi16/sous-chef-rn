@@ -309,7 +309,12 @@ export function useReceiptCheckIn(listId: string | undefined) {
     });
     // Shown, so added: a second Add must not send them again.
     markAdded(lines.map(line => line.index));
-    const storeId = await placing;
+    // Every chunk waits on this turn with its lines on screen, so a store that
+    // could not be placed sends them without one, never leaves them waiting.
+    const storeId = await Promise.resolve(placing).catch((error: unknown) => {
+      errorService.reportError(error, { operation: 'Place a receipt store' });
+      return undefined;
+    });
     const newStore = storeId ? newStoreOf?.(storeId) ?? undefined : undefined;
     const placed: PlacedStore = {
       ...(storeId ? { storeId } : {}),

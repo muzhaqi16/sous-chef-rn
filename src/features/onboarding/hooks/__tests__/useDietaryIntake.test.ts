@@ -75,6 +75,8 @@ describe('useDietaryIntake', () => {
     expect(mockAdd).toHaveBeenCalledWith(
       { intolerance: Intolerance.Peanut },
       RestrictionSeverity.Allergy,
+      undefined,
+      expect.any(String),
     );
     expect(useOnboardingProgressStore.getState().dietarySaved).toBe(true);
   });
@@ -97,11 +99,33 @@ describe('useDietaryIntake', () => {
     expect(mockAdd).toHaveBeenCalledWith(
       { item: 'bacon' },
       RestrictionSeverity.Preference,
+      undefined,
+      expect.any(String),
     );
     expect(mockAdd).toHaveBeenCalledWith(
       { item: 'kiwi' },
       RestrictionSeverity.Allergy,
+      undefined,
+      expect.any(String),
     );
+  });
+
+  it('sends nothing twice, and undoes by its own id, before the profile lists a row', async () => {
+    const { result } = renderHook(() => useDietaryIntake());
+    const peanut: DietarySelection = {
+      ...NONE,
+      allergens: [
+        { value: Intolerance.Peanut, severity: RestrictionSeverity.Allergy },
+      ],
+    };
+
+    await save(result, peanut);
+    await save(result, peanut);
+    expect(mockAdd).toHaveBeenCalledTimes(1);
+    expect(mockRemove).not.toHaveBeenCalled();
+
+    await save(result, NONE);
+    expect(mockRemove).toHaveBeenCalledWith(mockAdd.mock.calls[0]?.[3]);
   });
 
   it('claims nothing saved when every add was refused', async () => {
@@ -198,6 +222,8 @@ describe('useDietaryIntake', () => {
     expect(mockAdd).toHaveBeenLastCalledWith(
       { intolerance: Intolerance.Dairy },
       RestrictionSeverity.Intolerance,
+      undefined,
+      expect.any(String),
     );
   });
 
@@ -215,6 +241,8 @@ describe('useDietaryIntake', () => {
     expect(mockAdd).toHaveBeenLastCalledWith(
       { diet: Diet.Vegan },
       RestrictionSeverity.Preference,
+      undefined,
+      expect.any(String),
     );
   });
 

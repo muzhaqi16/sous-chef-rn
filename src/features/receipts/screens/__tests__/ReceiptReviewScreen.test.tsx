@@ -41,6 +41,7 @@ const mockAddChosen = jest.fn<
     recorded: number;
     held: number;
     learned: Promise<{ name: string; undo: () => Promise<void> } | null>;
+    stocked: Promise<number>;
   }>,
   []
 >();
@@ -50,6 +51,7 @@ const added = (sent: number, held: number, recorded = 0) => ({
   recorded,
   held,
   learned: Promise.resolve(null),
+  stocked: Promise.resolve(sent - recorded),
 });
 const mockFinish = jest.fn();
 let mockListState: DataState = 'ready';
@@ -273,6 +275,7 @@ describe('ReceiptReviewScreen Add', () => {
       recorded: 0,
       held: 0,
       learned: Promise.resolve({ name: 'ALDI Wilkinsburg', undo }),
+      stocked: Promise.resolve(0),
     });
     const screen = renderWithApollo(<ReceiptReviewScreen />);
 
@@ -298,6 +301,30 @@ describe('ReceiptReviewScreen Add', () => {
       >
     ).mock.calls[0]?.[1].action.onPress();
     expect(undo).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts for a borrowing flow only what the check-in kept', async () => {
+    mockAddChosen.mockResolvedValue({
+      ...added(2, 0),
+      stocked: Promise.resolve(0),
+    });
+    const exits = {
+      toReview: jest.fn(),
+      close: jest.fn(),
+      added: jest.fn(),
+      finished: jest.fn(),
+    };
+    const screen = renderWithApollo(
+      <ReceiptFlowExitsProvider actions={exits}>
+        <ReceiptReviewScreen />
+      </ReceiptFlowExitsProvider>,
+    );
+
+    await userEvent
+      .setup()
+      .press(screen.getByTestId(receiptsTestIDs.reviewAdd));
+
+    expect(exits.added).not.toHaveBeenCalled();
   });
 
   it('reports what it added and finishes through a borrowing flow’s exits', async () => {

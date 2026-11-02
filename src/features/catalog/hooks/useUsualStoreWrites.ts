@@ -2,6 +2,7 @@ import type { OperationVariables } from '@apollo/client';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import type { DocumentNode } from 'graphql';
 import { useTranslation } from '#/i18n';
+import { errorService } from '#/services/errorService';
 import {
   pendingWritesOf,
   type LocalWriteSend,
@@ -23,7 +24,7 @@ import {
 } from './useUsualStoreWrites.generated';
 
 /**
- * A household's usual-store writes (\`homeId\` null: the caller's own), each
+ * A household's usual-store writes (`homeId` null: the caller's own), each
  * shown at once and sent local-first, in the order they were made. Each answers
  * the whole list, which replaces the cached one. Each resolves false only when
  * the write failed, which settle has reported.
@@ -73,7 +74,13 @@ export function useUsualStoreWrites(homeId: string | null) {
     // "Could you save?" compares the list at these stores. It is another
     // feature's query, so it is named rather than imported.
     if (settled.status === 'applied') {
-      void client.refetchQueries({ include: ['ListSavings'] });
+      void client
+        .refetchQueries({ include: ['ListSavings'] })
+        .catch((error: unknown) => {
+          errorService.reportError(error, {
+            operation: 'Refresh list savings',
+          });
+        });
     }
     return settled.status !== 'failed';
   };

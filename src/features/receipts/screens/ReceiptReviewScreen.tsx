@@ -341,12 +341,12 @@ export const ReceiptReviewScreen: React.FC = () => {
 
   // The check-in runs on without the review: its lines are in the pantry now.
   const handleAdd = async () => {
-    const { sent, recorded, held, learned } = await addChosen();
-    if (sent > 0) {
-      const stocked = sent - recorded;
-      if (stocked > 0) exits?.added(stocked);
-      toastService.success(addedMessage(stocked, recorded));
-    }
+    const { sent, recorded, held, learned, stocked } = await addChosen();
+    if (sent > 0) toastService.success(addedMessage(sent - recorded, recorded));
+    // Counted once answered: a refused line is back to add, and adds again.
+    void stocked.then(count => {
+      if (count > 0) exits?.added(count);
+    });
     // An info toast queues behind the items' success toast; its Undo outlives
     // this screen, which the review leaves at once.
     void learned.then(newStore => {

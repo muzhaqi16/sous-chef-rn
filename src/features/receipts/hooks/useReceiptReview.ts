@@ -87,11 +87,6 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
   onList: boolean;
 }
 
-/**
- * The saved receipt's item lines, each with what the user chose it to be (else
- * the item the API is sure of) and the open line of the active shopping list
- * it matches, and the step that adds the chosen ones to the current pantry.
- */
 /** A store new to the household, which the receipt's check-in adds to it. */
 export interface LearnedStore {
   name: string;
@@ -99,6 +94,24 @@ export interface LearnedStore {
   undo: () => Promise<boolean>;
 }
 
+/** The sent lines a check-in put in the pantry; queued, it is keeping them. */
+const stockedBy = (
+  outcome: ReceiptCheckInOutcome,
+  sent: readonly CheckInLineToSend[],
+): number => {
+  if (outcome.status === 'refused') return 0;
+  const added = outcome.status === 'recorded' ? new Set(outcome.added) : null;
+  return sent.filter(
+    ({ index, input }) =>
+      input.stock !== false && (added === null || added.has(index)),
+  ).length;
+};
+
+/**
+ * The saved receipt's item lines, each with what the user chose it to be (else
+ * the item the API is sure of) and the open line of the active shopping list
+ * it matches, and the step that adds the chosen ones to the current pantry.
+ */
 export function useReceiptReview() {
   const { t } = useTranslation();
   const draft = useReceiptDraft();
@@ -362,17 +375,26 @@ export function useReceiptReview() {
    * line shows in the pantry before this returns. A line that still lacks its
    * product, unit or price stays, saying which. `recorded` is how many of the
    * sent lines stock nothing; `learned` is the receipt's store, once known,
-   * when it is new to the household.
+   * when it is new to the household; `stocked` is how many sent lines the
+   * check-in kept in the pantry, once it answers.
    */
   const addChosen = async (): Promise<{
     sent: number;
     recorded: number;
     held: number;
     learned: Promise<LearnedStore | null>;
+    stocked: Promise<number>;
   }> => {
     const none = Promise.resolve(null);
-    const nothingSent = { sent: 0, recorded: 0, held: pending.length };
-    if (!pantryId) return { ...nothingSent, learned: none };
+    const noStock = Promise.resolve(0);
+    const nothingSent = {
+      sent: 0,
+      recorded: 0,
+      held: pending.length,
+      learned: none,
+      stocked: noStock,
+    };
+    if (!pantryId) return nothingSent;
     setPreparing(true);
     // A typed unit goes as the unit it names, from the device's units first.
     const resolved = await Promise.all(
@@ -393,7 +415,7 @@ export function useReceiptReview() {
       Math.max(1, Math.ceil(resolved.length / LINES_PER_CHECK_IN)),
     );
     const minted = useReceiptDraftStore.getState().draft?.checkIn;
-    if (!minted) return { ...nothingSent, learned: none };
+    if (!minted) return nothingSent;
 
     const toSend: CheckInLineToSend[] = [];
     const lacking: Partial<Record<number, CheckInLineNeed>> = {};
@@ -427,9 +449,10 @@ export function useReceiptReview() {
 
     const orderDiscount = draft?.parsed ? orderDiscountOf(draft.parsed) : 0;
     let learned: Promise<LearnedStore | null> = none;
+    let stocked = noStock;
     if (toSend.length > 0) {
       // Online, the check-in waits for the store's create; its lines don't.
-      learned = checkIn(
+      const checkedIn = checkIn(
         {
           checkInIds: minted.ids,
           pantryId,
@@ -444,16 +467,22 @@ export function useReceiptReview() {
           ...(orderDiscount ? { orderDiscount } : {}),
         },
         toSend,
-      ).then(learnedFrom, (error: unknown) => {
+      );
+      learned = checkedIn.then(learnedFrom, (error: unknown) => {
         errorService.reportError(error, { operation: 'Check in a receipt' });
         return null;
       });
+      stocked = checkedIn.then(
+        outcome => stockedBy(outcome, toSend),
+        () => 0,
+      );
     }
     return {
       sent: toSend.length,
       recorded: toSend.filter(({ input }) => input.stock === false).length,
       held: Object.keys(lacking).length,
       learned,
+      stocked,
     };
   };
 

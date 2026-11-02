@@ -122,6 +122,17 @@ async function performSetup(deps: SetupDeps): Promise<OnboardingSetupOutcome> {
   return { status: 'done' };
 }
 
+// A launch that owes a setup restarts the stack at its setup screen, so that
+// screen and `OwedAccountSetup` both read no home: run apart, each creates one.
+let setupInFlight: Promise<OnboardingSetupOutcome> | null = null;
+
+function setupOnce(deps: SetupDeps): Promise<OnboardingSetupOutcome> {
+  setupInFlight ??= performSetup(deps).finally(() => {
+    setupInFlight = null;
+  });
+  return setupInFlight;
+}
+
 /**
  * The home, pantry and list onboarding needs, selected where they exist and
  * created with default names where they do not, with no form to fill.
@@ -191,7 +202,7 @@ export function useOnboardingSetup() {
     },
     /** Selects what exists and creates the rest; a home only when asked to. */
     run: ({ createMissingHome }: { createMissingHome: boolean }) =>
-      performSetup({
+      setupOnce({
         home,
         pantry,
         list,

@@ -229,9 +229,9 @@ export const useDietaryProfile = ({
     restriction: RestrictionKindInput,
     severity: RestrictionSeverity,
     notes?: string,
+    id: string = generateEntityId(),
   ) => {
     if (!(await ensureProfileExists())) return false;
-    const id = generateEntityId();
     const inputs: AddRestrictionInputs = {
       row: { id, kind: restriction, severity, notes },
       now: new Date().toISOString(),

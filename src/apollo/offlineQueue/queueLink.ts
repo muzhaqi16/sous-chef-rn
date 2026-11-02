@@ -76,8 +76,8 @@ export const createQueueLink = () => {
 
     const state = useStore.getState();
     const localFirst = operation.getContext().localFirst === true;
-    // Replay allowlist: local-first opt-ins (their hooks already wrote the
-    // change to the cache and read the queued result as success) plus the
+    // Replay allowlist: local-first opt-ins (their pending layers show the
+    // change, and their hooks read the queued result as success) plus the
     // registered canonical writes, which are safe without the opt-in.
     const replayable =
       localFirst || hasReplayPreparation(operation.operationName ?? '');
@@ -201,7 +201,7 @@ function entryFor(
     maxRetries: 3,
     requiresAuth: !NEVER_QUEUE_OPERATIONS.includes(operationName),
   };
-  // The hook's permanent write already landed, so the row is cached now.
+  // The row as the device holds it, for what a replay restates.
   const replayInputs = captureReplayInputs(
     queuedMutation,
     operation.client.cache,
@@ -252,8 +252,7 @@ function queuedReasonFor(error: unknown): QueuedReason | null {
 
 /**
  * Enqueues, then completes with a null-field result marked `queued`. The UI
- * change comes from the hook's own permanent cache write made before firing;
- * Apollo's `optimisticResponse` is never used here and never reaches a link.
+ * change is the write's pending layer, which stays until the replay answers.
  */
 function enqueueAndComplete(
   operation: ApolloLink.Operation,
@@ -281,9 +280,9 @@ function enqueueAndComplete(
       else queueStore.addMutation(queuedMutation);
     } catch (error) {
       if (!(error instanceof QueueCapacityError)) throw error;
-      // The local-first cache write already landed (write, then fire), so a
-      // refused enqueue leaves the change on screen with nothing to send it.
-      // Withdraw it as a refused replay would be.
+      // The write's layer is on screen, so a refused enqueue would leave the
+      // change showing with nothing to send it. Withdraw it as a refused
+      // replay would be.
       queueManager.withdrawUnqueueableWrite(queuedMutation, {
         type: 'unknown',
         message: 'Offline queue is full — change could not be queued',

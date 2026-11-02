@@ -243,6 +243,28 @@ describe('useOnboardingSetup, offline', () => {
     ).toBe("Maya's home");
   });
 
+  it('creates one home when the screen and an owed setup start together', async () => {
+    const home = queuedHome();
+    const rendered = await renderSetup(
+      homesMock(),
+      listsMock(),
+      home,
+      queuedPantry(),
+      queuedList(),
+    );
+
+    const [first, second] = await drained(() =>
+      Promise.all([
+        rendered.result.current.run({ createMissingHome: true }),
+        rendered.result.current.run({ createMissingHome: true }),
+      ]),
+    );
+
+    expect(first).toEqual({ status: 'done' });
+    expect(second).toEqual({ status: 'done' });
+    expect(home.fired).toHaveLength(1);
+  });
+
   it('creates nothing when the home, its pantry and a list are already there', async () => {
     const home = queuedHome();
     const pantry = queuedPantry();

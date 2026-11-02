@@ -40,8 +40,8 @@ function bySortOrderCodePoint(
 }
 
 /**
- * Optimistic reordering by fractional index: the new sortOrder is written to the
- * cache before the mutation fires, and reverted from persistence on failure.
+ * Reordering by fractional index: the new sortOrder shows as a pending layer
+ * until the server answers, and a refusal drops it.
  */
 export function useItemReordering<T extends ShoppingListItem>(
   options: UseItemReorderingOptions<T>,

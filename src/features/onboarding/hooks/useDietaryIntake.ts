@@ -5,6 +5,7 @@ import {
   type Intolerance,
   type RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';
 
@@ -66,8 +67,11 @@ export function useDietaryIntake() {
   const { profile, addDietaryRestriction, removeDietaryRestriction } =
     useDietaryProfile({ fetchPolicy: 'cache-first' });
   const { recordDietarySaved } = useRecordOnboardingProgress();
-  // Keys this step added, with the severity sent: only these may be undone.
-  const addedRef = useRef(new Map<string, RestrictionSeverity>());
+  // Keys this step added, with the id and severity sent: only these may be
+  // undone. Before the profile exists on the device, no read lists them.
+  const addedRef = useRef(
+    new Map<string, { id: string; severity: RestrictionSeverity }>(),
+  );
 
   /** Resolves false when a write was refused; what succeeded stays saved. */
   const save = async (selection: DietarySelection): Promise<boolean> => {
@@ -82,11 +86,10 @@ export function useDietaryIntake() {
     }
 
     let ok = true;
-    for (const [key, sentSeverity] of addedRef.current) {
-      const held = existing.get(key);
-      const still = wanted.get(key);
-      if (!held || (still && still.severity === sentSeverity)) continue;
-      if (await removeDietaryRestriction(held.id)) {
+    for (const [key, added] of addedRef.current) {
+      if (wanted.get(key)?.severity === added.severity) continue;
+      const id = existing.get(key)?.id ?? added.id;
+      if (await removeDietaryRestriction(id)) {
         existing.delete(key);
         addedRef.current.delete(key);
       } else {
@@ -95,9 +98,16 @@ export function useDietaryIntake() {
     }
 
     for (const [key, entry] of wanted) {
-      if (existing.has(key)) continue;
-      if (await addDietaryRestriction(entry.kind, entry.severity)) {
-        addedRef.current.set(key, entry.severity);
+      if (existing.has(key) || addedRef.current.has(key)) continue;
+      const id = generateEntityId();
+      const added = await addDietaryRestriction(
+        entry.kind,
+        entry.severity,
+        undefined,
+        id,
+      );
+      if (added) {
+        addedRef.current.set(key, { id, severity: entry.severity });
       } else {
         ok = false;
       }

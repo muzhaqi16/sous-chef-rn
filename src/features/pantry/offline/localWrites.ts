@@ -4,6 +4,7 @@
  */
 import type { ApolloCache, OperationVariables } from '@apollo/client';
 import { rowBaseline } from '#/apollo/pendingWrites/conflictRead';
+import { inputIdOf } from '#/apollo/pendingWrites/inputId';
 import {
   entityFields,
   type EntityFieldsInputs,
@@ -254,18 +255,15 @@ export const createPantry: LocalWrite<CreatePantryInputs> = {
 
 export type RemovePantryInputs = { homeId?: string | null };
 
-const pantryIdOf = (variables: OperationVariables): string | undefined =>
-  idOf(variables.input);
-
 export const removePantry: LocalWrite<RemovePantryInputs> = {
   apply(cache, { variables, inputs: { homeId } }) {
-    const id = pantryIdOf(variables);
+    const id = inputIdOf(variables);
     if (homeId && id) {
       removeOptimisticPantry(cache, homeId, id, { evictEntity: false });
     }
   },
   commit(cache, { variables, inputs: { homeId } }) {
-    const id = pantryIdOf(variables);
+    const id = inputIdOf(variables);
     if (homeId && id) removeOptimisticPantry(cache, homeId, id);
   },
 };

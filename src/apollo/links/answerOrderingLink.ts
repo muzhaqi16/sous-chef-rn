@@ -231,12 +231,6 @@ const order = (
   }
 };
 
-/**
- * A server answer's copy of a row never replaces a copy the server numbered
- * newer: nothing in the cache sees both copies of a normalized row, so this
- * lays the device's copy over the answer before Apollo stores it. Verified:
- * `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
- */
 const operationOf = (document: DocumentNode) => {
   const definition = document.definitions.find(
     node => node.kind === Kind.OPERATION_DEFINITION,
@@ -263,12 +257,18 @@ export function orderAnswer(
   );
 }
 
+/**
+ * A server answer's copy of a row never replaces a copy the server numbered
+ * newer: nothing in the cache sees both copies of a normalized row, so this
+ * lays the device's copy over the answer before Apollo stores it. Verified:
+ * `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
+ */
 export function createAnswerOrderingLink(): ApolloLink {
   return new ApolloLink((operation, forward) => {
+    const definition = operationOf(operation.query);
     if (
-      !operationOf(operation.query) ||
-      operationOf(operation.query)?.operation ===
-        OperationTypeNode.SUBSCRIPTION ||
+      !definition ||
+      definition.operation === OperationTypeNode.SUBSCRIPTION ||
       isIncremental(operation.query)
     ) {
       return forward(operation);

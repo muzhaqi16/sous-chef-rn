@@ -3,6 +3,7 @@
  * server's answer writes its own rows; `commit` adds what it cannot state.
  */
 import type { ApolloCache, OperationVariables } from '@apollo/client';
+import { inputIdOf } from '#/apollo/pendingWrites/inputId';
 import type { LocalWrite } from '#/apollo/pendingWrites/types';
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
@@ -90,18 +91,13 @@ export const locationFields: LocalWrite<LocationFieldsInputs> = {
 
 export type RemoveLocationInputs = { pantryId?: string };
 
-const locationIdOf = (variables: OperationVariables): string | null => {
-  const input: unknown = variables.input;
-  return isRecord(input) && typeof input.id === 'string' ? input.id : null;
-};
-
 export const removeLocation: LocalWrite<RemoveLocationInputs> = {
   apply(cache, { variables, inputs: { pantryId } }) {
-    const id = locationIdOf(variables);
+    const id = inputIdOf(variables);
     if (id) unlistStorageLocation(cache, id, pantryId, { evictItem: false });
   },
   commit(cache, { variables, inputs: { pantryId } }) {
-    const id = locationIdOf(variables);
+    const id = inputIdOf(variables);
     if (id) unlistStorageLocation(cache, id, pantryId, { evictItem: true });
   },
 };

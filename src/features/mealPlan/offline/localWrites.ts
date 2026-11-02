@@ -3,7 +3,7 @@
  * layer. The server's answer writes its own rows; `commit` adds what it cannot
  * state.
  */
-import type { OperationVariables } from '@apollo/client';
+import { inputIdOf } from '#/apollo/pendingWrites/inputId';
 import type { LocalWrite } from '#/apollo/pendingWrites/types';
 import {
   TemplateCategory,
@@ -44,10 +44,6 @@ import {
 const idOf = (value: unknown): string | undefined =>
   isRecord(value) && typeof value.id === 'string' ? value.id : undefined;
 
-/** The row a write names, from its variables. */
-const subjectOf = (variables: OperationVariables): string | undefined =>
-  idOf(variables.input);
-
 export type CreatePlanInputs = {
   plan: CreateMealPlanInput & { id: string };
   creatorId?: string;
@@ -71,12 +67,12 @@ export const createPlan: LocalWrite<CreatePlanInputs> = {
 
 export const removePlan: LocalWrite = {
   apply(cache, { variables }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id) hideMealPlan(cache, id);
   },
   // The answer names the row, which puts it back in the server's data.
   commit(cache, { variables }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id) removeFromMealPlans(cache, id, { evictItem: true });
   },
 };
@@ -101,12 +97,12 @@ export type RemovePlanItemInputs = { mealPlanId: string | null };
 
 export const removePlanItem: LocalWrite<RemovePlanItemInputs> = {
   apply(cache, { variables, inputs: { mealPlanId } }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id && mealPlanId) hideMealPlanItem(cache, mealPlanId, id);
   },
   // The answer names the row, which puts it back in the server's data.
   commit(cache, { variables, inputs: { mealPlanId } }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id && mealPlanId) {
       removeFromMealPlanItems(cache, mealPlanId, id, { evictItem: true });
     }
@@ -138,12 +134,12 @@ export const createTemplate: LocalWrite<CreateTemplateInputs> = {
 
 export const removeTemplate: LocalWrite = {
   apply(cache, { variables }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id) hideMealTemplate(cache, id);
   },
   // The answer names the row, which puts it back in the server's data.
   commit(cache, { variables }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id) removeFromMealTemplates(cache, id, { evictItem: true });
   },
 };
@@ -173,12 +169,12 @@ export type RemoveTemplateItemInputs = { templateId: string };
 
 export const removeTemplateItem: LocalWrite<RemoveTemplateItemInputs> = {
   apply(cache, { variables, inputs: { templateId } }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id) hideTemplateItem(cache, templateId, id);
   },
   // The answer names the row, which puts it back in the server's data.
   commit(cache, { variables, inputs: { templateId } }) {
-    const id = subjectOf(variables);
+    const id = inputIdOf(variables);
     if (id) removeTemplateItemFromCache(cache, templateId, id);
   },
 };
