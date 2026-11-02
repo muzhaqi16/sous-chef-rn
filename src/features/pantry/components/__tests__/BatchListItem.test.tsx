@@ -26,6 +26,7 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 
 const batch = (quantity: number): PantryItemBatchFragment => ({
   __typename: 'PantryItemBatch',
+  version: 1,
   id: 'b1',
   batchNumber: 1,
   quantity,

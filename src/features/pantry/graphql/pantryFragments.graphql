@@ -5,6 +5,7 @@
 #   usePantryBatchHistory.ts
 # Kept shared — all 6 consumers need the identical write-back shape.
 fragment PantryItemBatchFragment on PantryItemBatch {
+  version
   id
   batchNumber
   quantity

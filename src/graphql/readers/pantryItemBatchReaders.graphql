@@ -37,5 +37,6 @@ fragment PantryItemBatchReaders on PantryItemBatch {
   }
   totalCost
   updatedAt
+  version
   wasteReason
 }

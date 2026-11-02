@@ -56,10 +56,10 @@ const shapeFiles = (): string[] => {
  * redefinition are different reasons to purge, and only the first moves the
  * hash above. Without this, a bump made for the second reason is invisible.
  */
-// shape-7: every network read of a versioned row selects `version`; purges
-// rows cached without the server's version, which no local write may stand in
-// for (an optimistic lock sends it).
-const REVIEWED_CACHE_VERSION = 'shape-7';
+// shape-8: `PantryItemBatch` gained a `version` and every read selects it, so a
+// batch cached without one reads as incomplete offline. Purges those rows, which
+// no local write may stand in for (a version is never invented).
+const REVIEWED_CACHE_VERSION = 'shape-8';
 
 it('the persisted cache version matches the decision recorded here', () => {
   const source = readFileSync(
