@@ -327,8 +327,8 @@ const PhotoFrame: React.FC<{
 };
 
 const Dot: React.FC<{ isActive: boolean }> = ({ isActive }) => {
-  styles.useVariants({ active: isActive });
-  return <View style={styles.dot} />;
+  const variantStyles = styles.useVariants({ active: isActive });
+  return <View style={variantStyles.dot} />;
 };
 
 const styles = StyleSheet.create(theme => ({

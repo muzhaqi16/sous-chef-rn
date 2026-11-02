@@ -68,7 +68,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
   // Same vocabulary as the hint below, with the device's separator substituted.
   const formatsHint = localizeNumericHint(t('fractionInput.formatsHint'));
 
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     focused: isFocused,
     error: hasError,
     disabled,
@@ -81,7 +81,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
       required={required}
     >
       <InputComponent
-        style={styles.input}
+        style={variantStyles.input}
         value={value}
         onChangeText={handleChangeText}
         onFocus={() => setIsFocused(true)}
@@ -93,7 +93,7 @@ export const FractionInput: React.FC<FractionInputProps> = ({
         testID={testID}
       />
       {!hasError && !!value && !!isFocused && (
-        <Text role="caption" tone="secondary" style={styles.hintText}>
+        <Text role="caption" tone="secondary" style={variantStyles.hintText}>
           {formatsHint}
         </Text>
       )}

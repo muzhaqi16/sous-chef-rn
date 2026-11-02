@@ -36,7 +36,7 @@ export const Card: React.FC<CardProps> = ({
   style,
   testID,
 }) => {
-  styles.useVariants({ elevation, padding, radius });
+  const variantStyles = styles.useVariants({ elevation, padding, radius });
   if (onPress) {
     return (
       <AppPressable
@@ -44,7 +44,7 @@ export const Card: React.FC<CardProps> = ({
         disabled={disabled}
         accessibilityLabel={accessibilityLabel}
         accessibilityHint={accessibilityHint}
-        style={[styles.card, style]}
+        style={[variantStyles.card, style]}
         testID={testID}
       >
         {children}
@@ -52,7 +52,7 @@ export const Card: React.FC<CardProps> = ({
     );
   }
   return (
-    <View style={[styles.card, style]} testID={testID}>
+    <View style={[variantStyles.card, style]} testID={testID}>
       {children}
     </View>
   );

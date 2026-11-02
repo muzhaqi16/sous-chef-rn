@@ -53,6 +53,7 @@ const PRODUCTION_RULES = [
   'rngh-refresh-control-matches-host',
   'on-fill-text-uses-its-token',
   'animated-node-takes-no-themed-style',
+  'use-variants-return-is-read',
 ];
 
 const productionRules = severity =>

@@ -23,16 +23,16 @@ export const HorizontalRail: React.FC<HorizontalRailProps> = ({
   bleed = 'none',
   testID,
 }) => {
-  styles.useVariants({ bleed });
+  const variantStyles = styles.useVariants({ bleed });
   const { edges, onScroll, onContentSizeChange, onLayout } =
     useScrollEdgeFades();
 
   return (
-    <View style={styles.rail}>
+    <View style={variantStyles.rail}>
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={variantStyles.content}
         onLayout={onLayout}
         onContentSizeChange={onContentSizeChange}
         onScroll={onScroll}

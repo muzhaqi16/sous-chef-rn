@@ -59,7 +59,11 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
 
   // `error` last so an invalid value stays visibly invalid while focused —
   // the focus ring would otherwise paint over the thing being reported.
-  styles.useVariants({ focused: isFocused, disabled, error: !!error });
+  const variantStyles = styles.useVariants({
+    focused: isFocused,
+    disabled,
+    error: !!error,
+  });
 
   const handleIncrement = (e?: GestureResponderEvent) => {
     e?.stopPropagation();
@@ -78,10 +82,10 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   };
 
   return (
-    <View style={styles.wrapper}>
+    <View style={variantStyles.wrapper}>
       {label ? <Label required={required}>{label}</Label> : null}
       <View
-        style={styles.container}
+        style={variantStyles.container}
         accessible
         accessibilityRole="adjustable"
         accessibilityLabel={t('a11y.counterValue', {
@@ -112,8 +116,8 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           onPress={handleDecrement}
           disabled={disabled}
           style={({ pressed }) => [
-            styles.button,
-            pressed && !disabled && styles.pressed,
+            variantStyles.button,
+            pressed && !disabled && variantStyles.pressed,
           ]}
           accessible
           accessibilityRole="button"
@@ -129,7 +133,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         </Pressable>
 
         <InputComponent
-          style={styles.input}
+          style={variantStyles.input}
           value={value}
           onChangeText={onChangeText}
           onFocus={() => setIsFocused(true)}
@@ -151,8 +155,8 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           onPress={handleIncrement}
           disabled={disabled}
           style={({ pressed }) => [
-            styles.button,
-            pressed && !disabled && styles.pressed,
+            variantStyles.button,
+            pressed && !disabled && variantStyles.pressed,
           ]}
           accessible
           accessibilityRole="button"
@@ -168,7 +172,7 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
         </Pressable>
       </View>
       {error ? (
-        <Text role="error" tone="error" style={styles.errorText}>
+        <Text role="error" tone="error" style={variantStyles.errorText}>
           {error}
         </Text>
       ) : null}

@@ -156,11 +156,11 @@ const ListItemTitle: React.FC<{
   numberOfLines: number;
   children: React.ReactNode;
 }> = ({ purchased, numberOfLines, children }) => {
-  styles.useVariants({ purchased });
+  const variantStyles = styles.useVariants({ purchased });
   return (
     <Text
       role={rowType.title}
-      style={styles.title}
+      style={variantStyles.title}
       numberOfLines={numberOfLines}
       ellipsizeMode="tail"
     >
@@ -173,11 +173,11 @@ const ListItemSubtitle: React.FC<{
   purchased: boolean;
   children: React.ReactNode;
 }> = ({ purchased, children }) => {
-  styles.useVariants({ purchased });
+  const variantStyles2 = styles.useVariants({ purchased });
   return (
     <Text
       role={rowType.subtitle}
-      style={styles.subtitle}
+      style={variantStyles2.subtitle}
       numberOfLines={1}
       ellipsizeMode="tail"
     >
@@ -190,8 +190,8 @@ const ListItemSubtitleSlot: React.FC<{
   purchased: boolean;
   children: React.ReactNode;
 }> = ({ purchased, children }) => {
-  styles.useVariants({ purchased });
-  return <View style={styles.subtitleContainer}>{children}</View>;
+  const variantStyles3 = styles.useVariants({ purchased });
+  return <View style={variantStyles3.subtitleContainer}>{children}</View>;
 };
 
 export const ListItem = ListItemComponent;

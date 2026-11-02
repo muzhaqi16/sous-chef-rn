@@ -85,13 +85,15 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
   const [lead] = ordered;
   const summary = alertSummary(ordered, t);
   const strict = !!lead && isStrictSeverity(lead.severity);
-  styles.useVariants({ corner: isAdded ? 'added' : 'add' });
+  const variantStyles = styles.useVariants({
+    corner: isAdded ? 'added' : 'add',
+  });
 
   return (
     <Card
       elevation="sm"
       padding="sm"
-      style={styles.tile}
+      style={variantStyles.tile}
       onPress={onPress}
       disabled={isAdded ? !lead : false}
       accessibilityLabel={[name, amount, price, summary]
@@ -109,7 +111,7 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
       {!!imageUrl && (
         <CachedImage
           uri={imageUrl}
-          style={styles.image}
+          style={variantStyles.image}
           displaySize={IMAGE_SIZE}
         />
       )}
@@ -135,11 +137,11 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
         </Badge>
       )}
       {isAdded ? (
-        <View style={styles.corner}>
+        <View style={variantStyles.corner}>
           <Icon name="checkmark" size={12} tone="onSuccess" />
         </View>
       ) : lead ? null : (
-        <View style={styles.corner}>
+        <View style={variantStyles.corner}>
           <Icon name="add" size={16} tone="onPrimary" />
         </View>
       )}

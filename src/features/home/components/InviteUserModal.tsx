@@ -84,37 +84,37 @@ const RoleOption: React.FC<RoleOptionProps> = ({
   disabled,
   warningText,
 }) => {
-  styles.useVariants({ selected });
+  const variantStyles = styles.useVariants({ selected });
   return (
     <AppPressable
-      style={styles.roleOption}
+      style={variantStyles.roleOption}
       onPress={onPress}
       disabled={disabled}
     >
-      <View style={styles.roleOptionContent}>
-        <View style={styles.roleMain}>
-          <View style={styles.roleHeaderLeft}>
+      <View style={variantStyles.roleOptionContent}>
+        <View style={variantStyles.roleMain}>
+          <View style={variantStyles.roleHeaderLeft}>
             <Icon
               name={role.icon}
               size={22}
               tone={selected ? 'primary' : 'textSecondary'}
             />
-            <Text role="bodyStrong" style={styles.roleOptionLabel}>
+            <Text role="bodyStrong" style={variantStyles.roleOptionLabel}>
               {role.label}
             </Text>
           </View>
-          <Text role="caption" style={styles.roleDescription}>
+          <Text role="caption" style={variantStyles.roleDescription}>
             {role.description}
           </Text>
           {!!role.warning && selected ? (
-            <Text role="bodyStrong" style={styles.warningText}>
+            <Text role="bodyStrong" style={variantStyles.warningText}>
               {warningText}
             </Text>
           ) : null}
         </View>
-        <View style={styles.radioContainer}>
-          <View style={styles.radioOuter}>
-            {selected ? <View style={styles.radioInner} /> : null}
+        <View style={variantStyles.radioContainer}>
+          <View style={variantStyles.radioOuter}>
+            {selected ? <View style={variantStyles.radioInner} /> : null}
           </View>
         </View>
       </View>
@@ -174,7 +174,7 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
 
   const isOffline = useIsApiUnavailable();
 
-  styles.useVariants({ hasError: !!error });
+  const variantStyles2 = styles.useVariants({ hasError: !!error });
 
   // Reaching here means the schema passed, so only the submission can fail.
   const onValid = (values: InviteUserFormValues) => {
@@ -209,12 +209,12 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
   return (
     <>
       <DialogBody>
-        <Text role="bodyStrong" style={styles.title}>
+        <Text role="bodyStrong" style={variantStyles2.title}>
           {resolvedTitle}
         </Text>
 
         {/* Email Input */}
-        <Text role="bodyStrong" style={styles.label}>
+        <Text role="bodyStrong" style={variantStyles2.label}>
           {t('inviteUser.emailLabel')}
         </Text>
         <Controller
@@ -222,7 +222,7 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
           name="email"
           render={({ field: { value, onChange, onBlur } }) => (
             <ThemedTextInput
-              style={styles.input}
+              style={variantStyles2.input}
               placeholder={t('inviteUser.emailPlaceholder')}
               value={value}
               onChangeText={text => {
@@ -240,13 +240,13 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
         {/* On the field, not in the submission banner: this is the one the
             user can correct without dismissing anything. */}
         {errors.email ? (
-          <Text role="error" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={variantStyles2.errorText}>
             {errors.email.message}
           </Text>
         ) : null}
 
         {/* Role Selection */}
-        <Text role="bodyStrong" style={styles.roleSectionLabel}>
+        <Text role="bodyStrong" style={variantStyles2.roleSectionLabel}>
           {t('labels.selectRole')}
         </Text>
         {availableRoleOptions.map(role => (
@@ -268,32 +268,35 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
 
         {/* Error Message */}
         {error ? (
-          <Text role="error" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={variantStyles2.errorText}>
             {error}
           </Text>
         ) : null}
       </DialogBody>
       <DialogFooter>
-        <View style={styles.buttonContainer}>
+        <View style={variantStyles2.buttonContainer}>
           <AppPressable
-            style={styles.cancelButton}
+            style={variantStyles2.cancelButton}
             onPress={onClose}
             disabled={isSubmitting}
           >
-            <Text role="bodyStrong" style={styles.cancelButtonText}>
+            <Text role="bodyStrong" style={variantStyles2.cancelButtonText}>
               {resolvedCancelText}
             </Text>
           </AppPressable>
 
           <AppPressable
-            style={[styles.submitButton, isSubmitting && styles.disabledButton]}
+            style={[
+              variantStyles2.submitButton,
+              isSubmitting && variantStyles2.disabledButton,
+            ]}
             onPress={handleSubmit}
             disabled={isSubmitting}
           >
             {isSubmitting ? (
               <ThemedActivityIndicator size="small" />
             ) : (
-              <Text role="bodyStrong" style={styles.submitButtonText}>
+              <Text role="bodyStrong" style={variantStyles2.submitButtonText}>
                 {resolvedSubmitText}
               </Text>
             )}

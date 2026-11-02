@@ -47,7 +47,7 @@ export const FormInput: React.FC<FormInputProps> = ({
   const contextValue = useIsBottomSheetInput();
   const inSheet = useBottomSheetInput || contextValue;
 
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     error: !!error,
     hasTrailing: !!trailing,
     multiline: !!textInputProps.multiline,
@@ -65,7 +65,7 @@ export const FormInput: React.FC<FormInputProps> = ({
       ? t('a11y.hintWithError', { hint: accessibilityHint, error: errorHint })
       : errorHint ?? accessibilityHint;
   const inputProps = {
-    style: [styles.input, inputStyle],
+    style: [variantStyles.input, inputStyle],
     accessible: true,
     accessibilityLabel: fullLabel,
     accessibilityHint: fullHint,
@@ -80,13 +80,13 @@ export const FormInput: React.FC<FormInputProps> = ({
       required={required}
       containerStyle={containerStyle}
     >
-      <View style={styles.inputContainer}>
+      <View style={variantStyles.inputContainer}>
         {inSheet ? (
           <ThemedBottomSheetTextInput {...inputProps} />
         ) : (
           <ThemedTextInput ref={ref} {...inputProps} />
         )}
-        {!!trailing && <View style={styles.trailing}>{trailing}</View>}
+        {!!trailing && <View style={variantStyles.trailing}>{trailing}</View>}
       </View>
     </FormFieldWrapper>
   );

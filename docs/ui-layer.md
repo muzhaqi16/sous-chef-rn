@@ -234,8 +234,9 @@ they read it.
 
 - **`StyleSheet.create(theme => …)`** pushes theme changes straight to native
   through the C++ ShadowTree, with no React re-render — as long as theme reads
-  happen inside the factory. `styles.useVariants({ … })` carries runtime flags
-  instead of conditional theme reads. One element takes one `styles.*` entry,
+  happen inside the factory. `const variantStyles = styles.useVariants({ … })`
+  carries runtime flags instead of conditional theme reads, and the variants are
+  read from what it returns: the sheet ignores them. One element takes one `styles.*` entry,
   merged with a caller style as `style={[styles.x, callerStyle]}`: Unistyles 3
   styles are proxies, and two of them spread through reanimated's
   `StyleSheet.flatten()` lose their native binding

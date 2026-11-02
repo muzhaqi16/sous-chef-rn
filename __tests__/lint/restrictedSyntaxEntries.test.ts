@@ -164,8 +164,11 @@ const PRODUCTION_FIXTURES: Fixture[] = [
   },
   {
     id: 'combinedUnistyles',
-    invalid: ['const a = <View style={[styles.a, styles.b]} />;'],
-    valid: ['const a = <View style={[styles.row, style]} />;'],
+    invalid: [
+      'const a = <View style={[styles.a, styles.b]} />;',
+      'const a = <View style={[variantStyles.a, variantStyles2.b]} />;',
+    ],
+    valid: ['const a = <View style={[variantStyles.row, style]} />;'],
   },
   {
     id: 'modalPropsOverride',

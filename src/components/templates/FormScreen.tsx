@@ -61,7 +61,7 @@ export const FormScreen: React.FC<FormScreenProps> = ({
   submitButtonTestID,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({ leadIn });
+  const variantStyles = styles.useVariants({ leadIn });
   return (
     <Screen
       testID={testID}
@@ -85,7 +85,7 @@ export const FormScreen: React.FC<FormScreenProps> = ({
       {unsavedChanges === undefined ? null : (
         <DiscardChangesGuard active={unsavedChanges} />
       )}
-      <View style={styles.body}>{children}</View>
+      <View style={variantStyles.body}>{children}</View>
     </Screen>
   );
 };

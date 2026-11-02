@@ -36,5 +36,6 @@ module.exports = {
     'selects-key-field-directly': require('./rules/selects-key-field-directly'),
     'network-read-selects-version': require('./rules/network-read-selects-version'),
     'animated-node-takes-no-themed-style': require('./rules/animated-node-takes-no-themed-style'),
+    'use-variants-return-is-read': require('./rules/use-variants-return-is-read'),
   },
 };

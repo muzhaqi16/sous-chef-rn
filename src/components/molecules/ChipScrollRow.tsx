@@ -50,7 +50,7 @@ export function ChipScrollRow<T>({
   chipStyle,
   edgeFadeColor,
 }: ChipScrollRowProps<T>) {
-  styles.useVariants({ size });
+  const variantStyles = styles.useVariants({ size });
 
   const { edges, metrics, onScroll, onContentSizeChange, onLayout } =
     useScrollEdgeFades(!!edgeFadeColor);
@@ -70,7 +70,13 @@ export function ChipScrollRow<T>({
         onLayout={e => onItemLayout(opt.key, e)}
         testID={opt.testID}
       >
-        <View style={[styles.chip, isActive && styles.chipActive, chipStyle]}>
+        <View
+          style={[
+            variantStyles.chip,
+            isActive && variantStyles.chipActive,
+            chipStyle,
+          ]}
+        >
           {opt.icon ? (
             <Icon
               name={opt.icon}
@@ -80,7 +86,10 @@ export function ChipScrollRow<T>({
           ) : null}
           <Text
             role="caption"
-            style={[styles.chipText, isActive && styles.chipTextActive]}
+            style={[
+              variantStyles.chipText,
+              isActive && variantStyles.chipTextActive,
+            ]}
           >
             {opt.label}
           </Text>
@@ -97,7 +106,7 @@ export function ChipScrollRow<T>({
       ref={animatedRef}
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.chipRow, contentContainerStyle]}
+      contentContainerStyle={[variantStyles.chipRow, contentContainerStyle]}
       style={edgeFadeColor ? undefined : style}
       onLayout={onLayout}
       onContentSizeChange={onContentSizeChange}

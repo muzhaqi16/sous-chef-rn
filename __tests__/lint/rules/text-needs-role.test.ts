@@ -88,6 +88,11 @@ testRule('text-needs-role', {
       errors: ['errorColourInStyle'],
     },
     {
+      // Read through the styles `useVariants` returned.
+      code: `${IMPORT}const C = () => {\nconst variantStyles = styles.useVariants({});\nreturn <Text role="caption" style={variantStyles.errorText}>x</Text>;\n};\nconst styles = StyleSheet.create(theme => ({ errorText: { color: theme.colors.error } }));`,
+      errors: ['errorColourInStyle'],
+    },
+    {
       code: `${IMPORT}const l = <Text role="heading" style={[styles.title, bad && styles.warn]} />;\nconst styles = StyleSheet.create(theme => ({ title: {}, warn: { color: theme.colors.danger } }));`,
       errors: ['errorColourInStyle'],
     },

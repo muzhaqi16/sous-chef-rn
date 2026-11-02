@@ -5,53 +5,11 @@ import { render, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { CardContent } from '#features/pantry/components/BaseItemCard/CardContent';
 import { CardRightSlot } from '#features/pantry/components/BaseItemCard/CardRightSlot';
-import type { Theme } from '#/theme/themes';
 import { BaseItemCard } from '#features/pantry/components/BaseItemCard/BaseItemCard';
-
-type StyleSheetInput =
-  | Record<string, unknown>
-  | ((theme: Theme) => Record<string, unknown>);
 
 jest.mock('#components/organisms/SwipeableItem/SwipeableItem', () => ({
   SwipeableItem: ({ children }: { children: React.ReactNode }) => children,
 }));
-
-// Unistyles v2 useVariants is a method on the stylesheet - we need to add it
-jest.mock('react-native-unistyles', () => {
-  const { lightTheme } = require('#/theme/themes');
-  return {
-    StyleSheet: {
-      create: (styleFnOrObj: StyleSheetInput) => {
-        const result =
-          typeof styleFnOrObj === 'function'
-            ? styleFnOrObj(lightTheme)
-            : styleFnOrObj;
-        result.useVariants = jest.fn();
-        return result;
-      },
-      configure: jest.fn(),
-    },
-    useUnistyles: jest.fn(() => ({
-      theme: lightTheme,
-      styles: {},
-    })),
-    useStyles: jest.fn((stylesheet: StyleSheetInput) => ({
-      styles:
-        typeof stylesheet === 'function'
-          ? stylesheet(lightTheme)
-          : stylesheet || {},
-      theme: lightTheme,
-    })),
-    useInitialTheme: jest.fn(),
-    withUnistyles: jest.fn(<C,>(component: C): C => component),
-    UnistylesRuntime: {
-      setTheme: jest.fn(),
-      getTheme: jest.fn(() => lightTheme),
-      colorScheme: 'light',
-      themeName: 'light',
-    },
-  };
-});
 
 describe('BaseItemCard', () => {
   it('renders without crashing', () => {

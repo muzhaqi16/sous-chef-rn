@@ -46,7 +46,7 @@ export const Header: React.FC<HeaderProps> = ({
   borderless = false,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({ borderless });
+  const variantStyles = styles.useVariants({ borderless });
   const { barActions, menuRef, overflow } = useHeaderOverflow(rightActions);
 
   const showTitle = title !== undefined && title !== '';
@@ -93,7 +93,7 @@ export const Header: React.FC<HeaderProps> = ({
       style={[
         commonStyles.header,
         commonStyles.barInset,
-        styles.headerOverrides,
+        variantStyles.headerOverrides,
       ]}
     >
       <BarActions actions={leading} onLayout={trackSide('left')} />
@@ -103,12 +103,16 @@ export const Header: React.FC<HeaderProps> = ({
           onPress={onTitlePress}
           accessibilityRole="button"
           style={[
-            styles.title(leftImbalance, rightImbalance),
-            styles.titleButton(!!centerTitle),
+            variantStyles.title(leftImbalance, rightImbalance),
+            variantStyles.titleButton(!!centerTitle),
           ]}
           testID={kitTestIDs.headerTitleButton}
         >
-          <Text role="heading" numberOfLines={1} style={styles.titleText}>
+          <Text
+            role="heading"
+            numberOfLines={1}
+            style={variantStyles.titleText}
+          >
             {title}
           </Text>
           {titleAccessory}
@@ -117,13 +121,13 @@ export const Header: React.FC<HeaderProps> = ({
         <Text
           role="heading"
           align={centerTitle ? 'center' : undefined}
-          style={styles.title(leftImbalance, rightImbalance)}
+          style={variantStyles.title(leftImbalance, rightImbalance)}
           numberOfLines={1}
         >
           {title}
         </Text>
       ) : (
-        <View style={styles.titleSpacer} />
+        <View style={variantStyles.titleSpacer} />
       )}
       {/* The offline pill leads the action group, so every screen using this
           header carries the signal rather than just the tab headers. Renders

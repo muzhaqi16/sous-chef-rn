@@ -511,7 +511,8 @@ const Banner: React.FC<BannerProps> = ({
   onWidth,
 }) => {
   // Variants reach only the component that sets them, so the banner sets its own.
-  componentStyles.useVariants({ size });
+  const componentStylesWithVariants = componentStyles.useVariants({ size });
+
   const animatedTheme = useAnimatedTheme();
   const ref = useRef<View>(null);
   // Fabric measures synchronously here, so the art has its size before the first
@@ -535,7 +536,7 @@ const Banner: React.FC<BannerProps> = ({
     <View
       ref={ref}
       onLayout={event => onWidth(event.nativeEvent.layout.width)}
-      style={componentStyles.banner}
+      style={componentStylesWithVariants.banner}
       accessible
       accessibilityRole="text"
       accessibilityLabel={label}
@@ -546,14 +547,14 @@ const Banner: React.FC<BannerProps> = ({
             key={text}
             style={
               slot === flowSlot
-                ? componentStyles.line
-                : componentStyles.overlayLine
+                ? componentStylesWithVariants.line
+                : componentStylesWithVariants.overlayLine
             }
           >
             {placeLetters(text).map(word => (
               <View
                 key={word.map(({ at }) => at).join()}
-                style={componentStyles.word}
+                style={componentStylesWithVariants.word}
               >
                 {word.map(({ char, at }) => (
                   <BannerLetter

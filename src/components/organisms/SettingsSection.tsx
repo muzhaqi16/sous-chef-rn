@@ -29,21 +29,25 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
   children,
   variant = 'card',
 }) => {
-  styles.useVariants({ variant });
+  const variantStyles = styles.useVariants({ variant });
 
   return (
-    <View style={styles.section}>
-      <View style={styles.header}>
-        <Text role="label" tone="secondary" style={styles.title}>
+    <View style={variantStyles.section}>
+      <View style={variantStyles.header}>
+        <Text role="label" tone="secondary" style={variantStyles.title}>
           {title}
         </Text>
         {description ? (
-          <Text role="caption" tone="tertiary" style={styles.description}>
+          <Text
+            role="caption"
+            tone="tertiary"
+            style={variantStyles.description}
+          >
             {description}
           </Text>
         ) : null}
       </View>
-      <View style={styles.body}>
+      <View style={variantStyles.body}>
         {children ??
           items?.map((item, idx) => (
             <SettingRow

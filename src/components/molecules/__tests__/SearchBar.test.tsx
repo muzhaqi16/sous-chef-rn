@@ -6,62 +6,6 @@ import {
   userEvent,
 } from '@testing-library/react-native';
 
-// Override the global unistyles mock to add useVariants (needed by BaseInput's style variants)
-jest.mock('react-native-unistyles', () => {
-  const { lightTheme } = require('../../../theme/themes');
-  // NB: param types are inlined — a named `type` alias inside a jest.mock
-  // factory trips babel-plugin-jest-hoist (it doesn't track type decls as
-  // bindings, so it reports the reference as an out-of-scope variable).
-  return {
-    StyleSheet: {
-      create: (
-        styleFnOrObj:
-          | Record<string, unknown>
-          | ((theme: unknown) => Record<string, unknown>),
-      ) => {
-        const result =
-          typeof styleFnOrObj === 'function'
-            ? styleFnOrObj(lightTheme)
-            : styleFnOrObj;
-        result.useVariants = jest.fn();
-        return result;
-      },
-      configure: jest.fn(),
-    },
-    useUnistyles: jest.fn(() => ({ theme: lightTheme, styles: {} })),
-    useStyles: jest.fn(
-      (
-        stylesheet:
-          | Record<string, unknown>
-          | ((theme: unknown) => Record<string, unknown>),
-      ) => ({
-        styles:
-          typeof stylesheet === 'function'
-            ? stylesheet(lightTheme)
-            : stylesheet || {},
-        theme: lightTheme,
-      }),
-    ),
-    useInitialTheme: jest.fn(),
-    withUnistyles: jest.fn(<T,>(component: T) => component),
-    UnistylesRuntime: {
-      setTheme: jest.fn(),
-      getTheme: jest.fn(() => lightTheme),
-      colorScheme: 'light',
-      themeName: 'light',
-      contentSizeCategory: 'Medium',
-      breakpoint: undefined,
-      orientation: 'portrait',
-      pixelRatio: 2,
-      fontScale: 1,
-      screen: { width: 390, height: 844 },
-      insets: { top: 0, bottom: 0, left: 0, right: 0 },
-      statusBar: { width: 390, height: 44 },
-      navigationBar: { width: 390, height: 0 },
-    },
-  };
-});
-
 import { SearchBar } from '../SearchBar';
 
 jest.mock('#services/haptic/HapticService', () => ({

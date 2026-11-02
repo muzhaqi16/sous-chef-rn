@@ -793,7 +793,7 @@ the C++ ShadowTree — no React re-render. That only holds if theme reads happen
 inside the factory:
 
 - Use `StyleSheet.create(theme => …)` for RN primitives, and
-  `styles.useVariants({ … })` for runtime flags.
+  `const variantStyles = styles.useVariants({ … })` for runtime flags.
 - Use `withUnistyles(Component)` for third-party components taking
   theme-derived props — but **never** on `Pressable`/`TouchableX`, where the
   wrapper drops `StyleSheet.create` proxies inside function-style `style`

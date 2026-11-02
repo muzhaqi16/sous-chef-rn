@@ -105,13 +105,13 @@ export const GranularityButton: React.FC<{
   isActive: boolean;
   onPress: () => void;
 }> = ({ label, isActive, onPress }) => {
-  styles.useVariants({ active: isActive });
+  const variantStyles = styles.useVariants({ active: isActive });
   return (
-    <AppPressable onPress={onPress} style={styles.granularityButton}>
+    <AppPressable onPress={onPress} style={variantStyles.granularityButton}>
       <Text
         role="label"
         tone={isActive ? undefined : 'secondary'}
-        style={isActive ? styles.granularityButtonTextActive : undefined}
+        style={isActive ? variantStyles.granularityButtonTextActive : undefined}
       >
         {label}
       </Text>

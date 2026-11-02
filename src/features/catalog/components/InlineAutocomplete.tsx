@@ -206,17 +206,17 @@ export function InlineAutocomplete<T>({
     }
   };
 
-  styles.useVariants({ error: !!error });
+  const variantStyles = styles.useVariants({ error: !!error });
 
   return (
     <>
       {/* collapsable={false}: this view carries the dropdown's own zIndex; if
           Android view flattening pruned it, the overlay would lose its stacking. */}
-      <View style={styles.container} collapsable={false}>
+      <View style={variantStyles.container} collapsable={false}>
         {label ? <Label required={required}>{label}</Label> : null}
-        <View style={styles.inputContainer}>
+        <View style={variantStyles.inputContainer}>
           <ThemedBottomSheetTextInput
-            style={styles.input}
+            style={variantStyles.input}
             value={searchTerm}
             onChangeText={handleTextChange}
             placeholder={placeholder}
@@ -229,22 +229,22 @@ export function InlineAutocomplete<T>({
           {!!loading && !!hasSearchQuery && (
             <ThemedActivityIndicator
               size="small"
-              style={styles.loadingIndicator}
+              style={variantStyles.loadingIndicator}
             />
           )}
         </View>
         {error ? (
-          <Text role="error" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={variantStyles.errorText}>
             {error}
           </Text>
         ) : null}
         {!!isDropdownOpen && (
           <View
-            style={styles.suggestionsContainer}
+            style={variantStyles.suggestionsContainer}
             onLayout={reserveDropdownSpace ? handleDropdownLayout : undefined}
           >
             <ScrollView
-              style={styles.scrollView}
+              style={variantStyles.scrollView}
               keyboardShouldPersistTaps="handled"
               nestedScrollEnabled={true}
               showsVerticalScrollIndicator={true}
@@ -253,7 +253,7 @@ export function InlineAutocomplete<T>({
                 <React.Fragment key={keyExtractor(item)}>
                   <AppPressable
                     onPress={() => handleSelect(item)}
-                    style={styles.suggestion}
+                    style={variantStyles.suggestion}
                   >
                     {renderItem(item, index)}
                   </AppPressable>
@@ -261,7 +261,7 @@ export function InlineAutocomplete<T>({
                 </React.Fragment>
               ))}
               {saysNoHeldMatch ? (
-                <View style={styles.note}>
+                <View style={variantStyles.note}>
                   <Text role="bodyStrong" tone="secondary">
                     {noMatch.title}
                   </Text>
@@ -293,7 +293,7 @@ export function InlineAutocomplete<T>({
         <View
           collapsable={false}
           testID={catalogTestIDs.dropdownSpacer}
-          style={[styles.dropdownSpacer, { height: dropdownHeight }]}
+          style={[variantStyles.dropdownSpacer, { height: dropdownHeight }]}
         />
       )}
     </>

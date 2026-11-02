@@ -85,7 +85,7 @@ function FilterTabsItemComponent<T extends string>({
     ? 'filtered'
     : 'inactive';
 
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     state: isActive ? 'active' : isFiltered ? 'filtered' : 'inactive',
     compact: isCompact,
     stacked: !!tab.subLabel,
@@ -102,7 +102,7 @@ function FilterTabsItemComponent<T extends string>({
       onLayout={onLayout}
       testID={testID}
       style={[
-        styles.tab,
+        variantStyles.tab,
         isActive && tab.activeColor
           ? { backgroundColor: tab.activeColor }
           : undefined,
@@ -137,22 +137,26 @@ function FilterTabsItemComponent<T extends string>({
       )}
       {!(tab.isAction && !tab.label) &&
         (tab.subLabel ? (
-          <View style={styles.labelColumn}>
-            <Text role="label" style={styles.tabLabel}>
+          <View style={variantStyles.labelColumn}>
+            <Text role="label" style={variantStyles.tabLabel}>
               {tab.label}
             </Text>
-            <Text role="footnote" style={styles.tabSubLabel} numberOfLines={1}>
+            <Text
+              role="footnote"
+              style={variantStyles.tabSubLabel}
+              numberOfLines={1}
+            >
               {tab.subLabel}
             </Text>
           </View>
         ) : (
-          <Text role="label" style={styles.tabLabel}>
+          <Text role="label" style={variantStyles.tabLabel}>
             {tab.label}
           </Text>
         ))}
       {!!hasCount && (
-        <View style={styles.countBadge}>
-          <Text role="footnoteStrong" style={styles.countText}>
+        <View style={variantStyles.countBadge}>
+          <Text role="footnoteStrong" style={variantStyles.countText}>
             {count}
           </Text>
         </View>

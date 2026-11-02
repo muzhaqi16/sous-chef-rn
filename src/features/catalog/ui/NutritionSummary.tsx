@@ -51,10 +51,10 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
   unit,
   tone,
 }) => {
-  circleStyles.useVariants({ tone });
+  const circleStylesWithVariants = circleStyles.useVariants({ tone });
   return (
-    <View style={circleStyles.container}>
-      <View style={circleStyles.circle}>
+    <View style={circleStylesWithVariants.container}>
+      <View style={circleStylesWithVariants.circle}>
         <Text role="bodyStrong" tone={MACRO_TEXT_TONE[tone]}>
           {value}
         </Text>
@@ -62,7 +62,7 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
           <Text
             role="label"
             tone={MACRO_TEXT_TONE[tone]}
-            style={circleStyles.unit}
+            style={circleStylesWithVariants.unit}
           >
             {unit}
           </Text>
@@ -72,7 +72,7 @@ const MacroCircle: React.FC<MacroCircleProps> = ({
         role="caption"
         tone="secondary"
         align="center"
-        style={circleStyles.label}
+        style={circleStylesWithVariants.label}
       >
         {label}
       </Text>
@@ -98,10 +98,10 @@ interface HighlightBadgeProps {
 const HighlightBadge: React.FC<HighlightBadgeProps> = ({ highlight }) => {
   const { t } = useTranslation();
   const variant = toVariant(highlight.type);
-  badgeStyles.useVariants({ variant });
+  const badgeStylesWithVariants = badgeStyles.useVariants({ variant });
 
   return (
-    <View style={badgeStyles.badge}>
+    <View style={badgeStylesWithVariants.badge}>
       <Text role="label" tone={HIGHLIGHT_TEXT_TONE[variant]}>
         {t(highlight.labelKey)}
       </Text>
@@ -116,7 +116,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   onPress,
   style,
 }) => {
-  styles.useVariants({ compact });
+  const variantStyles = styles.useVariants({ compact });
   const { t } = useTranslation();
 
   const macros = extractMacroSummary(nutritionFacts);
@@ -128,21 +128,21 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
   }
 
   const content = (
-    <Card padding="none" style={[styles.container, style]}>
+    <Card padding="none" style={[variantStyles.container, style]}>
       {/* Serving size label */}
       {!!macros.servingSize && (
         <Text
           role="caption"
           tone="secondary"
           align="center"
-          style={styles.servingSize}
+          style={variantStyles.servingSize}
         >
           {t('nutritionSummary.perServing', { serving: macros.servingSize })}
         </Text>
       )}
 
       {/* Macro circles row */}
-      <View style={styles.macrosRow}>
+      <View style={variantStyles.macrosRow}>
         <MacroCircle
           label={t('labels.calories')}
           value={formatCalories(macros.calories)}
@@ -173,8 +173,8 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
-          style={styles.highlightsScroll}
-          contentContainerStyle={styles.highlightsContent}
+          style={variantStyles.highlightsScroll}
+          contentContainerStyle={variantStyles.highlightsContent}
         >
           {highlights.map((highlight, index) => (
             <HighlightBadge key={index} highlight={highlight} />
@@ -184,7 +184,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
 
       {/* Navigation chevron */}
       {!!onPress && (
-        <View style={styles.actionRow}>
+        <View style={variantStyles.actionRow}>
           <Text role="label" tone="accent">
             {t('labels.viewDetails')}
           </Text>
@@ -200,7 +200,7 @@ export const NutritionSummary: React.FC<NutritionSummaryProps> = ({
         onPress={onPress}
         android_ripple={null}
         needsOffscreenAlphaCompositing
-        style={styles.pressableWrapper}
+        style={variantStyles.pressableWrapper}
       >
         {content}
       </AppPressable>

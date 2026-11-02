@@ -44,6 +44,15 @@ testRule('animated-node-takes-no-themed-style', {
       errors: ['themedStyle'],
     },
     {
+      // Read through the styles `useVariants` returned.
+      code: withStyles(
+        `${ANIMATED}\nconst variantStyles = styles.useVariants({});`,
+        '<Animated.View style={[variantStyles.card, fade]} />',
+        '{ card: { backgroundColor: theme.colors.surface } }',
+      ),
+      errors: ['themedStyle'],
+    },
+    {
       // A themed key behind a condition, and a dynamic style reading the theme.
       code: withStyles(
         ANIMATED,

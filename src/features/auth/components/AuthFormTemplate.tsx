@@ -104,13 +104,13 @@ export function AuthFormTemplate<T extends FieldValues>({
 
   const layoutTransition = LinearTransition.duration(transitionMs);
 
-  styles.useVariants({ compact: isKeyboardVisible });
+  const variantStyles = styles.useVariants({ compact: isKeyboardVisible });
 
   return (
-    <View style={styles.formContainer}>
-      <View style={styles.leadingSpace} />
+    <View style={variantStyles.formContainer}>
+      <View style={variantStyles.leadingSpace} />
       <Animated.View layout={layoutTransition}>
-        <View style={styles.titleRow} testID={authTestIDs.formTitleRow}>
+        <View style={variantStyles.titleRow} testID={authTestIDs.formTitleRow}>
           <Text role="title" tone="primary" align="center">
             {title}
           </Text>
@@ -120,14 +120,17 @@ export function AuthFormTemplate<T extends FieldValues>({
             role="body"
             tone="secondary"
             align="center"
-            style={styles.subtitle}
+            style={variantStyles.subtitle}
           >
             {subtitle}
           </Text>
         ) : null}
       </Animated.View>
 
-      <Animated.View style={styles.fieldsGroup} layout={layoutTransition}>
+      <Animated.View
+        style={variantStyles.fieldsGroup}
+        layout={layoutTransition}
+      >
         <DynamicFormFields<T>
           fields={fields}
           control={control}
@@ -136,7 +139,7 @@ export function AuthFormTemplate<T extends FieldValues>({
         />
 
         {!!linkText && !!onLinkPress && (
-          <View style={styles.linkRow}>
+          <View style={variantStyles.linkRow}>
             <Link
               onPress={onLinkPress}
               testID={linkTestID}
@@ -150,9 +153,9 @@ export function AuthFormTemplate<T extends FieldValues>({
         )}
       </Animated.View>
 
-      <View style={styles.trailingSpace} />
+      <View style={variantStyles.trailingSpace} />
 
-      <Animated.View style={styles.action} layout={layoutTransition}>
+      <Animated.View style={variantStyles.action} layout={layoutTransition}>
         <Button
           title={
             submitCountdown && submitCountdown > 0
@@ -172,15 +175,15 @@ export function AuthFormTemplate<T extends FieldValues>({
             onPress={onFooterLinkPress}
             disabled={footerLinkDisabled}
             testID={footerLinkTestID}
-            style={({ pressed }) => pressed && styles.pressed}
+            style={({ pressed }) => pressed && variantStyles.pressed}
           >
             <Text
               role="body"
               tone="secondary"
               align="center"
               style={[
-                styles.footer,
-                footerLinkDisabled && styles.footerDisabled,
+                variantStyles.footer,
+                footerLinkDisabled && variantStyles.footerDisabled,
               ]}
             >
               {footerText}{' '}

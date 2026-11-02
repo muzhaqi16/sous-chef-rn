@@ -53,7 +53,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   const useWhiteRipple = variant === 'primary' || variant === 'danger';
 
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     variant,
     size,
     fullWidth,
@@ -63,7 +63,7 @@ export const Button: React.FC<ButtonProps> = ({
   return (
     <PressableScale
       testID={testID}
-      style={[styles.button, style, btnStyle]}
+      style={[variantStyles.button, style, btnStyle]}
       onPress={onPress}
       haptic="light"
       disabled={disabled || loading}
@@ -98,7 +98,7 @@ export const Button: React.FC<ButtonProps> = ({
               }
             />
           )}
-          <Text role="bodyStrong" style={[styles.text, txtStyle]}>
+          <Text role="bodyStrong" style={[variantStyles.text, txtStyle]}>
             {title ?? children}
           </Text>
         </>

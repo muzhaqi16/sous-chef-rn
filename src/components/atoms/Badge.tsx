@@ -61,7 +61,7 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'small',
   style,
 }) => {
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     variant: variant === 'default' ? undefined : variant,
     size,
   });
@@ -72,7 +72,7 @@ export const Badge: React.FC<BadgeProps> = ({
       accessible={typeof children === 'string'}
       accessibilityRole="text"
       accessibilityLabel={typeof children === 'string' ? children : undefined}
-      style={[styles.badge, !!icon && styles.withIcon, style]}
+      style={[variantStyles.badge, !!icon && variantStyles.withIcon, style]}
     >
       {!!icon && <Icon name={icon} size="xs" tone={BADGE_ICON_TONE[variant]} />}
       <Text role="footnoteStrong" tone={BADGE_TEXT_TONE[variant]}>

@@ -133,9 +133,9 @@ const PRODUCTION_SYNTAX = [
   {
     id: 'combinedUnistyles',
     selector:
-      'ArrayExpression > MemberExpression[object.name="styles"] ~ MemberExpression[object.name="styles"]',
+      'ArrayExpression > MemberExpression[object.name=/^(styles|variantStyles\\d*)$/] ~ MemberExpression[object.name=/^(styles|variantStyles\\d*)$/]',
     message:
-      "Avoid combining multiple `styles.*` on the same element — Unistyles v3 proxies break when spread by reanimated's StyleSheet.flatten(). Use `styles.useVariants()` instead.",
+      "Avoid combining multiple `styles.*` on the same element — Unistyles v3 proxies break when spread by reanimated's StyleSheet.flatten(). Use `const variantStyles = styles.useVariants()` instead.",
   },
   {
     id: 'modalPropsOverride',

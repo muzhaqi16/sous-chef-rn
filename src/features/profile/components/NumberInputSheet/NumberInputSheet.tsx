@@ -94,7 +94,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
   const rangeText =
     min !== undefined && max !== undefined ? `(${min}-${max})` : '';
 
-  styles.useVariants({ error: !!error });
+  const variantStyles = styles.useVariants({ error: !!error });
 
   return (
     <Sheet
@@ -102,7 +102,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
       visible={visible}
       onDismiss={onClose}
       snapPoints={['30%']}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={variantStyles.content}
     >
       <BottomSheetHeader
         contentPadding="lg"
@@ -112,15 +112,15 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
         confirmDisabled={loading}
       />
 
-      <View style={styles.inputContainer}>
+      <View style={variantStyles.inputContainer}>
         {!!rangeText && (
-          <Text role="caption" tone="secondary" style={styles.rangeText}>
+          <Text role="caption" tone="secondary" style={variantStyles.rangeText}>
             {rangeText}
           </Text>
         )}
 
         <ThemedBottomSheetTextInput
-          style={styles.input}
+          style={variantStyles.input}
           value={inputValue}
           onChangeText={text => {
             setInputValue(text);
@@ -133,7 +133,7 @@ export const NumberInputSheet: React.FC<NumberInputSheetProps> = ({
         />
 
         {!!error && (
-          <Text role="error" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={variantStyles.errorText}>
             {error}
           </Text>
         )}

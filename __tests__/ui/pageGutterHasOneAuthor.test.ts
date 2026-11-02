@@ -112,7 +112,8 @@ const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
  * a wrapper reading the gutter token, a list content container, or a screen
  * that is not `gutter="none"`.
  */
-const SUPPLIES_AN_INSET = /layout\.pageGutter|gutter="page"|styles\.gutter/;
+const SUPPLIES_AN_INSET =
+  /layout\.pageGutter|gutter="page"|[sS]tyles\d*\.gutter/;
 
 const sources = glob('src/**/*.{ts,tsx}', { ignore: ['**/*.generated.ts'] });
 

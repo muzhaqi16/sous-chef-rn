@@ -135,7 +135,10 @@ export const Screen: React.FC<ScreenProps> = props => {
     : variant === 'tab'
     ? getScrollClearancePadding(insets.bottom)
     : insets.bottom;
-  styles.useVariants({ gutter, chrome: variant === 'tab' ? 'tab' : 'other' });
+  const variantStyles = styles.useVariants({
+    gutter,
+    chrome: variant === 'tab' ? 'tab' : 'other',
+  });
 
   const chrome =
     variant === 'standard' ? (
@@ -186,14 +189,14 @@ export const Screen: React.FC<ScreenProps> = props => {
       // The list is the child; it takes the RNGH control because an RNGH
       // scrollable only routes its scroll gesture into a control from
       // `createNativeWrapper`.
-      return <View style={styles.body}>{body}</View>;
+      return <View style={variantStyles.body}>{body}</View>;
     }
     if (scroll === 'form') {
       return (
         <ThemedKeyboardAwareScrollView
           contentContainerStyle={[
-            styles.scrollContent,
-            styles.contentBottom(contentBottom),
+            variantStyles.scrollContent,
+            variantStyles.contentBottom(contentBottom),
           ]}
           showsVerticalScrollIndicator={false}
           // Stated, not inherited: KeyboardAwareScrollView supplies no default
@@ -216,10 +219,10 @@ export const Screen: React.FC<ScreenProps> = props => {
     }
     if (scroll === 'scroll') {
       const hostProps = {
-        style: styles.body,
+        style: variantStyles.body,
         contentContainerStyle: [
-          styles.scrollContent,
-          styles.contentBottom(contentBottom),
+          variantStyles.scrollContent,
+          variantStyles.contentBottom(contentBottom),
         ],
         contentInsetAdjustmentBehavior: NO_AUTOMATIC_INSET,
         showsVerticalScrollIndicator: false,
@@ -241,21 +244,29 @@ export const Screen: React.FC<ScreenProps> = props => {
       );
     }
     return (
-      <View style={[styles.fixed, styles.contentBottom(contentBottom)]}>
+      <View
+        style={[
+          variantStyles.fixed,
+          variantStyles.contentBottom(contentBottom),
+        ]}
+      >
         {body}
       </View>
     );
   })();
 
   return (
-    <View style={[styles.container, style]} testID={testID}>
-      <View style={styles.chromeInset}>{chrome}</View>
+    <View style={[variantStyles.container, style]} testID={testID}>
+      <View style={variantStyles.chromeInset}>{chrome}</View>
       {content}
       {footer && scroll === 'form' ? (
         // Open, the keyboard covers the home indicator, so its inset drops.
         <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
           <View
-            style={[styles.footer, styles.footerBottom(insets.bottom)]}
+            style={[
+              variantStyles.footer,
+              variantStyles.footerBottom(insets.bottom),
+            ]}
             onLayout={event => setFooterHeight(event.nativeEvent.layout.height)}
           >
             {footer}
@@ -263,7 +274,12 @@ export const Screen: React.FC<ScreenProps> = props => {
           <ThemeEpochSentinel />
         </KeyboardStickyView>
       ) : footer ? (
-        <View style={[styles.footer, styles.footerBottom(insets.bottom)]}>
+        <View
+          style={[
+            variantStyles.footer,
+            variantStyles.footerBottom(insets.bottom),
+          ]}
+        >
           {footer}
         </View>
       ) : null}

@@ -91,10 +91,10 @@ function OptionRow({
   onPress: () => void;
 }) {
   const { t } = useTranslation();
-  styles.useVariants({ notLast: !isLast });
+  const variantStyles = styles.useVariants({ notLast: !isLast });
   return (
     <AppPressable
-      style={styles.optionButton}
+      style={variantStyles.optionButton}
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={t(option.labelKey)}
@@ -107,7 +107,7 @@ function OptionRow({
       <Text
         role="bodyStrong"
         tone={option.destructive ? 'danger' : undefined}
-        style={styles.optionLabel}
+        style={variantStyles.optionLabel}
       >
         {t(option.labelKey)}
       </Text>

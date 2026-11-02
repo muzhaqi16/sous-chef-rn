@@ -100,7 +100,7 @@ export const AddStorageLocationSheet: React.FC<
 
   const isCreateDisabled = creating || name.trim().length < 2;
 
-  styles.useVariants({ error: !!error });
+  const variantStyles = styles.useVariants({ error: !!error });
 
   return (
     <Sheet
@@ -108,13 +108,13 @@ export const AddStorageLocationSheet: React.FC<
       visible={visible}
       onDismiss={onClose}
       snapPoints={['35%']}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={variantStyles.content}
     >
       {/* Header with Cancel/Create */}
-      <View style={styles.header}>
+      <View style={variantStyles.header}>
         <AppPressable
           onPress={handleCancel}
-          style={styles.headerButton}
+          style={variantStyles.headerButton}
           accessibilityRole="button"
           accessibilityLabel={t('labels.cancel')}
         >
@@ -123,13 +123,13 @@ export const AddStorageLocationSheet: React.FC<
           </Text>
         </AppPressable>
 
-        <Text role="heading" align="center" style={styles.title}>
+        <Text role="heading" align="center" style={variantStyles.title}>
           {t('labels.addLocation')}
         </Text>
 
         <AppPressable
           onPress={handleCreate}
-          style={styles.headerButton}
+          style={variantStyles.headerButton}
           accessibilityRole="button"
           accessibilityLabel={t('labels.create')}
           disabled={isCreateDisabled}
@@ -149,17 +149,17 @@ export const AddStorageLocationSheet: React.FC<
       </View>
 
       {/* Divider */}
-      <Divider style={styles.dividerGap} />
+      <Divider style={variantStyles.dividerGap} />
 
       {/* Input Field */}
-      <View style={styles.inputContainer}>
-        <Text role="label" tone="secondary" style={styles.label}>
+      <View style={variantStyles.inputContainer}>
+        <Text role="label" tone="secondary" style={variantStyles.label}>
           {t('addStorageLocation.locationName')}
         </Text>
 
         <ThemedBottomSheetTextInput
           ref={inputRef}
-          style={styles.input}
+          style={variantStyles.input}
           defaultValue={name}
           onChangeText={handleNameChange}
           placeholder={t('addStorageLocation.namePlaceholder')}
@@ -170,12 +170,12 @@ export const AddStorageLocationSheet: React.FC<
           onSubmitEditing={handleCreate}
         />
         {!!error && (
-          <Text role="error" tone="error" style={styles.errorText}>
+          <Text role="error" tone="error" style={variantStyles.errorText}>
             {error}
           </Text>
         )}
 
-        <Text role="caption" tone="tertiary" style={styles.hint}>
+        <Text role="caption" tone="tertiary" style={variantStyles.hint}>
           {t('addStorageLocation.hintText')}
         </Text>
       </View>

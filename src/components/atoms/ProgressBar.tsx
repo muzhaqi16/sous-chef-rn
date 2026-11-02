@@ -25,16 +25,16 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
   testID,
 }) => {
   const ratio = Math.min(1, Math.max(0, Number.isFinite(value) ? value : 0));
-  styles.useVariants({ size, tone });
+  const variantStyles = styles.useVariants({ size, tone });
   return (
     <View
       accessibilityRole="progressbar"
       accessibilityLabel={accessibilityLabel}
       accessibilityValue={{ min: 0, max: 100, now: Math.round(ratio * 100) }}
-      style={[styles.track, style]}
+      style={[variantStyles.track, style]}
       testID={testID}
     >
-      <View style={[styles.fill, { width: `${ratio * 100}%` }]} />
+      <View style={[variantStyles.fill, { width: `${ratio * 100}%` }]} />
     </View>
   );
 };

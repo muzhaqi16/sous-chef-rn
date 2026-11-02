@@ -33,8 +33,8 @@ const InviteSurface: React.FC<{
   status: InviteStatusKey;
   children: React.ReactNode;
 }> = ({ status, children }) => {
-  styles.useVariants({ status });
-  return <View style={styles.inviteCard}>{children}</View>;
+  const variantStyles = styles.useVariants({ status });
+  return <View style={variantStyles.inviteCard}>{children}</View>;
 };
 
 const InviteStatusBadge: React.FC<{
@@ -42,9 +42,9 @@ const InviteStatusBadge: React.FC<{
   tone: TextTone;
   children: React.ReactNode;
 }> = ({ status, tone, children }) => {
-  styles.useVariants({ status });
+  const variantStyles2 = styles.useVariants({ status });
   return (
-    <View style={styles.inviteStatusBadge}>
+    <View style={variantStyles2.inviteStatusBadge}>
       <Text role="label" tone={tone}>
         {children}
       </Text>

@@ -43,7 +43,7 @@ const PageIndicatorItemRow: React.FC<{
   onPress: () => void;
 }> = ({ label, testID, selected, hasError, onPress }) => {
   const state: DotState = hasError ? 'error' : selected ? 'selected' : 'idle';
-  styles.useVariants({ state });
+  const variantStyles = styles.useVariants({ state });
 
   return (
     <AppPressable
@@ -54,9 +54,9 @@ const PageIndicatorItemRow: React.FC<{
       accessibilityRole="tab"
       accessibilityLabel={label}
       accessibilityState={{ selected }}
-      style={styles.item}
+      style={variantStyles.item}
     >
-      <View style={styles.dot} />
+      <View style={variantStyles.dot} />
       <Text
         size="sm"
         weight={selected ? 'semibold' : 'regular'}

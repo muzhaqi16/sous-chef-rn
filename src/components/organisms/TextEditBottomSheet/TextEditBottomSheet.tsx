@@ -74,7 +74,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
   };
 
   const fieldError = form.formState.errors[fieldKey];
-  styles.useVariants({ multiline, error: !!fieldError });
+  const variantStyles = styles.useVariants({ multiline, error: !!fieldError });
 
   return (
     <Sheet
@@ -82,9 +82,9 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
       visible={visible}
       onDismiss={onClose}
       snapPoints={['30%']}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={variantStyles.content}
     >
-      <View style={styles.header}>
+      <View style={variantStyles.header}>
         <Button
           variant="ghost"
           size="small"
@@ -94,7 +94,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           {t('labels.cancel')}
         </Button>
 
-        <Text role="heading" align="center" style={styles.title}>
+        <Text role="heading" align="center" style={variantStyles.title}>
           {title}
         </Text>
 
@@ -108,11 +108,11 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
         </Button>
       </View>
 
-      <Divider style={styles.divider} />
+      <Divider style={variantStyles.divider} />
 
-      <View style={styles.inputContainer}>
+      <View style={variantStyles.inputContainer}>
         {!!label && (
-          <Text role="label" tone="secondary" style={styles.label}>
+          <Text role="label" tone="secondary" style={variantStyles.label}>
             {label}
           </Text>
         )}
@@ -123,7 +123,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
           render={({ field, fieldState }) => (
             <View>
               <ThemedBottomSheetTextInput
-                style={styles.input}
+                style={variantStyles.input}
                 value={
                   typeof field.value === 'string' ? field.value : undefined
                 }
@@ -137,7 +137,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
                 textAlignVertical={multiline ? 'top' : 'center'}
               />
               {!!fieldState.error && (
-                <Text role="error" tone="error" style={styles.errorText}>
+                <Text role="error" tone="error" style={variantStyles.errorText}>
                   {fieldState.error.message}
                 </Text>
               )}

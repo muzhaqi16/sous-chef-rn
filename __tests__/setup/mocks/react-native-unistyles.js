@@ -32,7 +32,7 @@ jest.mock('react-native-unistyles', () => {
           typeof styleFnOrObj === 'function'
             ? styleFnOrObj(lightTheme, runtime)
             : styleFnOrObj;
-        result.useVariants = jest.fn();
+        result.useVariants = jest.fn(() => result);
         return result;
       },
       configure: jest.fn(),

@@ -4,19 +4,16 @@
  *
  * ## The mechanism
  *
- * The Unistyles plugin rewrites
+ *     const variantStyles = styles.useVariants({ disabled });
+ *     return <Pressable style={[variantStyles.button, style]} />;
  *
- *     styles.useVariants({ disabled });
- *     return <Pressable style={[styles.button, style]} />;
+ * If the compiler cannot see that local as a dependency, it caches the style
+ * read against the OTHER values in the expression:
  *
- * into a shadowed local carrying the resolved variants. If the compiler cannot
- * see that local as a dependency, it caches the style read against the OTHER
- * values in the expression:
- *
- *     if ($[3] !== style) { t2 = [_styles2.button, style]; $[4] = t2; }
+ *     if ($[3] !== style) { t2 = [variantStyles.button, style]; $[4] = t2; }
  *     else { t2 = $[4]; }          // `style` never changes, so this wins
  *
- * The shadow is rebuilt every render; the read off it is not. The variant then
+ * The local is rebuilt every render; the read off it is not. The variant then
  * freezes at whatever it resolved to on the render that filled the cache. The
  * worst form is a read cached against `Symbol.for("react.memo_cache_sentinel")`
  * — read exactly once, ever.
@@ -127,13 +124,17 @@ function variantBearingKeys(source) {
 }
 
 /**
- * `circleStyles$0` / `_circleStyles2` → `circleStyles`.
- * Both plugin orders rename the shadowed stylesheet with different suffixes, so
- * the compiled local has to be mapped back to the source stylesheet name before
- * it can be matched against the pairs above.
+ * `circleStyles$0` / `_circleStyles2` / `circleStylesWithVariants` →
+ * `circleStyles`, and `variantStyles2` → `styles`.
+ * The compiled local has to be mapped back to the source stylesheet name before
+ * it can be matched against the pairs above. Left unmapped, no read matches a
+ * pair and every file reports clean.
  */
 function sheetOf(local) {
-  return local.replace(/^_/, '').replace(/(\$\d+|\d+)$/, '');
+  const name = local.replace(/^_/, '').replace(/(\$\d+|\d+)$/, '');
+  return name === 'variantStyles'
+    ? 'styles'
+    : name.replace(/WithVariants$/, '');
 }
 
 /**
@@ -217,8 +218,8 @@ if (EXPLAIN) {
 import { StyleSheet } from 'react-native-unistyles';
 import { Pressable } from 'react-native';
 export const Demo = ({ disabled, style }) => {
-  styles.useVariants({ disabled });
-  return <Pressable style={[styles.button, style]} />;
+  const variantStyles = styles.useVariants({ disabled });
+  return <Pressable style={[variantStyles.button, style]} />;
 };
 const styles = StyleSheet.create(() => ({
   button: { variants: { disabled: { true: { opacity: 0.4 } } } },

@@ -26,9 +26,9 @@ const InviteChip: React.FC<{ invite: ListInvite }> = ({ invite }) => {
   const statusKey = getInviteStatusKey(invite.status);
   const displayName = getInviteDisplayName(invite, t);
   const tone = INVITE_STATUS_TONE[invite.status];
-  styles.useVariants({ status: statusKey });
+  const variantStyles = styles.useVariants({ status: statusKey });
   return (
-    <View style={styles.inviteChip}>
+    <View style={variantStyles.inviteChip}>
       <Text role="bodyStrong" tone={tone}>
         {displayName}
       </Text>
@@ -45,13 +45,13 @@ const MemberChip: React.FC<{
   isCurrentUser: boolean;
 }> = ({ displayName, role, isCurrentUser }) => {
   const { t } = useTranslation();
-  styles.useVariants({ currentUser: isCurrentUser });
+  const variantStyles2 = styles.useVariants({ currentUser: isCurrentUser });
   return (
-    <View style={styles.memberChip}>
-      <Text role="bodyStrong" style={styles.memberChipText}>
+    <View style={variantStyles2.memberChip}>
+      <Text role="bodyStrong" style={variantStyles2.memberChipText}>
         {displayName}
       </Text>
-      <Text role="caption" style={styles.memberRole}>
+      <Text role="caption" style={variantStyles2.memberRole}>
         {formatRole(role, t)}
       </Text>
     </View>

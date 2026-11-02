@@ -333,9 +333,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 
 ### Unistyles
 
-- **`StyleSheet.create(theme => …)`** styles RN primitives; `styles.useVariants`
-  carries runtime flags; a per-element value is a dynamic function style. Merge a
-  caller style as `style={[styles.x, callerStyle]}`. An element that can't take a
+- **`StyleSheet.create(theme => …)`** styles RN primitives; runtime flags go
+  through `const variantStyles = styles.useVariants(…)`, read from what it returns
+  (`sous-chef/use-variants-return-is-read`); a per-element value is a dynamic
+  function style. Merge a caller style as `style={[styles.x, callerStyle]}`. An element that can't take a
   typography `role` spreads `...theme.type.<role>`. Switches use `BaseSwitch`.
 - **`withUnistyles(Component)`** themes a third-party component's props. A wrapper
   2+ files use lives in `src/components/atoms/themedComponents.tsx`; a single-use

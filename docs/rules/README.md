@@ -37,6 +37,7 @@ exemption is a file-scoped override in `eslint/project.js`, where review sees it
 | [`sous-chef/rngh-refresh-control-matches-host`](rngh-refresh-control-matches-host.md)     | A pull-to-refresh control matches its scrollable host.                                          |
 | [`sous-chef/on-fill-text-uses-its-token`](on-fill-text-uses-its-token.md)                 | Text on a fill reads that fill's own `on*` token.                                               |
 | [`sous-chef/animated-node-takes-no-themed-style`](animated-node-takes-no-themed-style.md) | A node Reanimated animates takes no Unistyles style that reads the theme.                       |
+| [`sous-chef/use-variants-return-is-read`](use-variants-return-is-read.md)                 | Variants are read from the styles `useVariants` returns, never from the sheet.                  |
 | [`sous-chef/selects-key-field-directly`](selects-key-field-directly.md)                   | A selection that spreads a fragment on a type with an `id` selects `id` itself.                 |
 | [`sous-chef/network-read-selects-version`](network-read-selects-version.md)               | A selection on a type with a server `version` that reaches the network selects `version`.       |
 

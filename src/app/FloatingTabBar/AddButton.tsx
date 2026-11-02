@@ -16,7 +16,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
   menuProgress,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({ disabled });
+  const variantStyles = styles.useVariants({ disabled });
 
   const glyphStyle = useAnimatedStyle(() => ({
     transform: [{ rotate: `${(menuProgress?.get() ?? 0) * 45}deg` }],
@@ -29,7 +29,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       onPress={onPress}
       activeScale={0.9}
       haptic="medium"
-      style={styles.addButton}
+      style={variantStyles.addButton}
       accessibilityRole="button"
       accessibilityLabel={
         menuOpen ? t('labels.close') : t('tabBar.actionButton')
