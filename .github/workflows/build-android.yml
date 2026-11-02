@@ -113,9 +113,9 @@ jobs:
     steps:
       # The API holds its schema to shipped builds by reading store tags, so a
       # bundle no tag names is held to nothing. A suffixed tag is no store
-      # version, so it is refused too.
+      # version, so it is refused too. A branch is tagged below.
       - name: Refuse a store bundle without a store tag
-        if: env.IS_PLAYSTORE == 'true'
+        if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'tag'
         shell: bash
         run: |
           if [[ ! "$GITHUB_REF" =~ ^refs/tags/(playstore-|ios-|prod-)?v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -135,6 +135,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '22'
+
+      # A bundle built by hand from a branch tags its own commit, moving the tag
+      # as `npm run tag:playstore` does. The job's token starts no second build.
+      - name: Tag a store bundle built from a branch
+        if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'branch'
+        shell: bash
+        run: |
+          tag="playstore-v$(node -p "require('./package.json').version")"
+          git tag --force "$tag"
+          git push --force origin "refs/tags/$tag"
 
       - name: Detect Android SDK and Java paths
         run: |
@@ -475,9 +485,9 @@ jobs:
     steps:
       # The API holds its schema to shipped builds by reading store tags, so a
       # bundle no tag names is held to nothing. A suffixed tag is no store
-      # version, so it is refused too.
+      # version, so it is refused too. A branch is tagged below.
       - name: Refuse a store bundle without a store tag
-        if: env.IS_PLAYSTORE == 'true'
+        if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'tag'
         shell: bash
         run: |
           if [[ ! "$GITHUB_REF" =~ ^refs/tags/(playstore-|ios-|prod-)?v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -499,6 +509,16 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
+
+      # A bundle built by hand from a branch tags its own commit, moving the tag
+      # as `npm run tag:playstore` does. The job's token starts no second build.
+      - name: Tag a store bundle built from a branch
+        if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'branch'
+        shell: bash
+        run: |
+          tag="playstore-v$(node -p "require('./package.json').version")"
+          git tag --force "$tag"
+          git push --force origin "refs/tags/$tag"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
