@@ -55,6 +55,14 @@ target 'SousChef' do
         if current && current.to_f < ios_deployment_target.to_f
           config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = ios_deployment_target
         end
+
+        # turbo-image guards `.visualLookUp` at iOS 16 and Xcode Cloud's SDK says
+        # 17. It sits behind `enableLiveTextInteraction`, which the app never
+        # sets: drop this before setting it, or iOS 16 reads a missing symbol.
+        if target.name == 'react-native-turbo-image'
+          config.build_settings['OTHER_SWIFT_FLAGS'] =
+            '$(inherited) -Xfrontend -disable-availability-checking'
+        end
       end
     end
   end
