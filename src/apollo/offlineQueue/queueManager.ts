@@ -20,6 +20,7 @@ import {
 } from './types';
 import { prepareReplay } from './prepareReplay';
 import type { FeedApplied } from '#/apollo/feed/types';
+import { PROMISED_WINDOW_MS, readReplayWindow } from './replayWindow';
 import { lastCleanAnswerAt } from './serverAnswers';
 import {
   overwritesMergedQuantity,
@@ -46,10 +47,9 @@ import {
   classifyReplayResult,
   ReplayRejectedError,
   ReplayNotPreparedError,
-  REPLAY_NOT_PREPARED_CODE,
-  SCHEMA_INVALID_CODE,
   BatchRowDeferredError,
-  BATCH_ROW_TRANSIENT_CODE,
+  BatchRowRefusedError,
+  refusedBatchRowCode,
   transientBatchRowCode,
 } from './queueErrorPolicy';
 import {
@@ -104,18 +104,11 @@ const outlastedAnOutage = (faults: WriteFaults): boolean =>
   faults.count >= MAX_WRITE_FAULTS &&
   faults.lastAt - faults.firstAt >= MIN_FAULT_SPAN_MS;
 
-/** Deferrals that belong to one row, so the rest of the pass still runs. */
-const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
-  ErrorCode.Deadlock,
-  SCHEMA_INVALID_CODE,
-  REPLAY_NOT_PREPARED_CODE,
-  BATCH_ROW_TRANSIENT_CODE,
-]);
-
 /** The fields a replay reads off whichever union member the server returned. */
 interface ReplayPayload {
   __typename?: string;
   code?: string;
+  disposition?: string;
   message?: string;
   // `NotFoundError.resource`: without it a refusal over a merged-away Unit is
   // indistinguishable from one over the record itself.
@@ -269,9 +262,12 @@ export class QueueManager {
     // not live work. Reset to PENDING so this drain picks them up.
     queueStore.resetProcessingToPending(userId);
 
-    // Never replay past the server's 90-day idempotency-dedup horizon — the
-    // dedup record is pruned by then, so a replay would double-apply instead
-    // of converging. An expired entry is withdrawn.
+    // Never replay past the server's idempotency-dedup horizon: the dedup
+    // record is pruned by then, so a replay would double-apply instead of
+    // converging. An expired entry is withdrawn.
+    if (queueStore.hasPendingOlderThan(userId, PROMISED_WINDOW_MS)) {
+      await readReplayWindow();
+    }
     for (const expired of queueStore.expireStalePending(userId)) {
       this.invokeFailureHandler(expired, expired.lastError);
     }
@@ -501,14 +497,15 @@ export class QueueManager {
     // a field under it errors; a success payload is the server's verdict.
     const committed =
       payload?.__typename !== undefined && !isErrorTypename(payload.__typename);
-    if (result.error && !committed) {
-      throw result.error;
-    }
+    const refusal = committed ? undefined : result.error;
 
     // Under errorPolicy 'all' a server refusal RESOLVES as an error union
     // member instead of throwing; without this a rejected replay is marked
     // SUCCESS and dequeued while the optimistic cache write lingers.
-    const outcome = classifyReplayResult(payload);
+    const outcome = classifyReplayResult(payload, refusal);
+    if (refusal && outcome.status !== 'converged') {
+      throw refusal;
+    }
     const transientRowCode = transientBatchRowCode(payload);
     if (outcome.status === 'applied' && transientRowCode !== null) {
       throw new BatchRowDeferredError(mutation.operationName, transientRowCode);
@@ -519,9 +516,9 @@ export class QueueManager {
     const pendingWriteId = mutation.pendingWrite?.id;
     const pendingWrites = pendingWritesOf(client.cache);
     if (outcome.status === 'converged') {
-      // IDEMPOTENT_REPLAY: an earlier attempt committed this op and its row is
-      // gone or out of reach, so the root takes nothing. The resync after the
-      // drain shows what the server holds. Dequeue as success.
+      // `APPLIED`: an earlier attempt committed this op and its row is gone or
+      // out of reach, so the root takes nothing. The resync after the drain
+      // shows what the server holds. Dequeue as success.
       logger.info(
         `✅ Queue: ${mutation.operationName} already committed by an earlier attempt — dropping replay`,
       );
@@ -546,6 +543,7 @@ export class QueueManager {
           `${mutation.operationName} was rejected by the server on replay`,
         payload?.code ?? null,
         payload?.resource ?? null,
+        payload?.disposition,
       );
     }
 
@@ -556,6 +554,11 @@ export class QueueManager {
       this.adoptSurvivingRow(mutation, adoption),
     );
     if (pendingWriteId) pendingWrites.confirm(pendingWriteId, data);
+
+    const refusedRowCode = refusedBatchRowCode(payload);
+    if (refusedRowCode !== null) {
+      throw new BatchRowRefusedError(mutation.operationName, refusedRowCode);
+    }
 
     return result.data;
   }
@@ -670,15 +673,13 @@ export class QueueManager {
       !givesUp &&
       (queueError.type === 'network' || queueError.type === 'server')
     ) {
-      // DEADLOCK and an unbuildable replay are scoped to the row, as is a fault
-      // met again while the server answers others. Every other network/server
-      // verdict is the API's own state, which pauses the drain.
+      // A row's own verdict and an unbuildable replay are scoped to the row, as
+      // is a fault met again while the server answers others. Every other
+      // network/server verdict is the API's own state, which pauses the drain.
       const answeringOthers =
         !!mutation.faults && lastCleanAnswerAt() > mutation.faults.lastAt;
       const deferralScope =
-        answeringOthers || ENTRY_SCOPED_DEFERRALS.has(queueError.code ?? '')
-          ? 'entry'
-          : 'transport';
+        answeringOthers || queueError.entryScoped ? 'entry' : 'transport';
       queueStore.updateMutation(mutation.id, {
         status: QueueStatus.PENDING,
         retryCount: 0,

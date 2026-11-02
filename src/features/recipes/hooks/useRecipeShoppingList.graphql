@@ -31,6 +31,7 @@ mutation AddItemsToShoppingListFromRecipe(
         outcome
         failure {
           code
+          disposition
           reason
           errorId
         }
@@ -48,6 +49,7 @@ mutation AddItemsToShoppingListFromRecipe(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

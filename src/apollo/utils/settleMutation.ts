@@ -2,6 +2,7 @@ import type { DocumentNode } from 'graphql';
 import { ServerError } from '@apollo/client/errors';
 import {
   ErrorCode,
+  ErrorDisposition,
   TopLevelErrorCode,
   UnitDenial,
 } from '#/graphql/generated/schemaTypes';
@@ -18,7 +19,10 @@ import {
 } from '#/utils/errors/versionConflict';
 import { getNotFoundMessage } from '#/utils/errors/notFoundMessage';
 import { presentFailure } from '#/utils/errors/presentFailure';
-import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
+import {
+  asDisposition,
+  getTopLevelGraphQLError,
+} from '#/utils/errors/graphqlErrors';
 import {
   getRateLimitMessage,
   isRateLimitError,
@@ -85,6 +89,7 @@ export interface SettleOptions {
 
 interface Failure {
   code: string | null;
+  disposition: ErrorDisposition | undefined;
   field: string | null;
   /** The whole path as one copy key: `amount.packages.size` is `amountPackagesSize`. */
   fieldPath: string | null;
@@ -128,11 +133,13 @@ function failureFromError(error: unknown): Failure {
   const code = isTransportFailure(error)
     ? null
     : errorService.parseApolloError(error, { logError: false }).error?.code;
+  const topLevel = getTopLevelGraphQLError(error);
   return {
     code: code ?? null,
+    disposition: topLevel?.disposition,
     // A scalar refused before any resolver ran names its path here.
-    field: fieldName(getTopLevelGraphQLError(error)?.field),
-    fieldPath: fieldPathKey(getTopLevelGraphQLError(error)?.field),
+    field: fieldName(topLevel?.field),
+    fieldPath: fieldPathKey(topLevel?.field),
     resource: null,
     validUnits: [],
     denial: null,
@@ -143,6 +150,8 @@ function failureFromError(error: unknown): Failure {
 
 function failureFromPayload(payload: object): Failure {
   const code = 'code' in payload ? payload.code : undefined;
+  const disposition =
+    'disposition' in payload ? payload.disposition : undefined;
   const field = 'field' in payload ? payload.field : undefined;
   const resource = 'resource' in payload ? payload.resource : undefined;
   const validUnits = 'validUnits' in payload ? payload.validUnits : undefined;
@@ -152,6 +161,7 @@ function failureFromPayload(payload: object): Failure {
     'availableUnitSymbol' in payload ? payload.availableUnitSymbol : undefined;
   return {
     code: stringOrNull(code),
+    disposition: asDisposition(disposition),
     field: fieldName(stringOrNull(field)),
     fieldPath: fieldPathKey(stringOrNull(field)),
     resource: stringOrNull(resource),
@@ -216,7 +226,10 @@ function classify(
     // A gone-code the service never issued — a bare HTTP 404 from a proxy —
     // says nothing about the row. Not queued: a write the queue takes resolves
     // with a null payload instead.
-    if (removal && isGoneCode(failure.code) && !ServerError.is(error)) {
+    if (
+      failure.disposition === ErrorDisposition.Applied ||
+      (removal && isGoneCode(failure.code) && !ServerError.is(error))
+    ) {
       return { status: 'applied' };
     }
     return { status: 'failed', failure, error };
@@ -229,7 +242,7 @@ function classify(
   }
   const failure = failureFromPayload(payload);
   if (
-    failure.code === ErrorCode.IdempotentReplay ||
+    failure.disposition === ErrorDisposition.Applied ||
     (removal && isGoneCode(failure.code))
   ) {
     return { status: 'applied' };

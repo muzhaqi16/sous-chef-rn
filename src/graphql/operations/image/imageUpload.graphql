@@ -14,6 +14,7 @@ mutation CreateImageUploadUrl($input: CreateImageUploadUrlInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -34,6 +35,7 @@ mutation ConfirmProfileImageUpload($input: ConfirmProfileImageUploadInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -85,6 +87,7 @@ mutation ConfirmItemImageUpload(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

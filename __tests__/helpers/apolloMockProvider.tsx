@@ -169,6 +169,9 @@ const DEFAULT_SCALAR_MOCKS: IMocks = {
   CountryCode: () => 'US',
   CurrencyCode: () => 'USD',
   Upload: () => ({ uri: 'file://mock', type: 'image/png', name: 'mock.png' }),
+  // The first member is APPLIED, which reads every mocked refusal as a write
+  // that landed. A test of any other disposition states it.
+  ErrorDisposition: () => 'FAIL',
 };
 
 interface SharedApolloTestOptions {

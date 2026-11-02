@@ -493,6 +493,7 @@ mutation CreatePantry($input: CreatePantryInput!, $today: LocalDate!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -518,6 +519,7 @@ mutation UpdatePantry($input: UpdatePantryInput!, $today: LocalDate!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -540,6 +542,7 @@ mutation DeletePantry($input: DeletePantryInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -566,6 +569,7 @@ mutation MarkPantryAsDefault(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -600,6 +604,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -642,6 +647,7 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -676,6 +682,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!, $today: LocalDate!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -740,6 +747,7 @@ mutation CreatePantryItemUsage(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -790,6 +798,7 @@ mutation RestockPantryItem(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -830,6 +839,7 @@ mutation UpdatePantryItemQuantity(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -871,6 +881,7 @@ mutation AdjustPantryItemQuantity(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -917,6 +928,7 @@ mutation CorrectPantryItemPackageSize(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -958,6 +970,7 @@ mutation ConvertExpiredToWaste(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -1092,6 +1105,7 @@ mutation OpenPantryItemBatch(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -1127,6 +1141,7 @@ mutation WastePantryItemBatch(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

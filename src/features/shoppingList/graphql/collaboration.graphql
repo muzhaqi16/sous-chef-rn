@@ -27,6 +27,7 @@ mutation AcceptShoppingListInvite($input: AcceptShoppingListInviteInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -53,6 +54,7 @@ mutation DeclineShoppingListInvite($input: DeclineShoppingListInviteInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

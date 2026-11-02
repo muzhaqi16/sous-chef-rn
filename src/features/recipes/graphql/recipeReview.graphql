@@ -18,6 +18,7 @@ mutation CreateRecipeReview($input: CreateRecipeReviewInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -46,6 +47,7 @@ mutation UpdateRecipeReview($input: UpdateRecipeReviewInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -74,6 +76,7 @@ mutation DeleteRecipeReview($input: DeleteRecipeReviewInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -104,6 +107,7 @@ mutation ToggleReviewHelpful($input: ToggleReviewHelpfulInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

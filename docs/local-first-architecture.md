@@ -316,20 +316,35 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   (`PARENT_REFERENCE_KEYS`: the home a pantry joins, the pantry or list an item joins, …) while
   unrelated entries continue. A transport-class deferral (unreachable, 5xx, `INTERNAL_SERVER_ERROR`,
   pacing, `CLIENT_UPGRADE_REQUIRED`) pauses the pass instead, since every later entry would meet it too;
-  only a row-scoped one (DEADLOCK, an unbuildable replay, a batch row that failed transiently) lets
-  the rest replay. An entry parked for re-authentication still holds its dependents, and a session
-  token that revives parked entries during a pass triggers one more pass.
+  only a row-scoped one (`QueueError.entryScoped`: a union member or batch row answering `RETRY`, an
+  unbuildable replay, a `RESOLVE`) lets the rest replay. An entry parked for re-authentication still
+  holds its dependents, and a session token that revives parked entries during a pass triggers one
+  more pass.
+- **The server's `disposition` decides.** Every refusal states one (a union error's field, a batch
+  row's `failure.disposition`, `extensions.disposition` on a top-level error), so a code newer than
+  the build still settles; `classifyError` reads a code only where the client has a recovery of its
+  own. `RETRY` defers, honouring `retryAfter`. `APPLIED` is done: the layer drops and the entry
+  dequeues. `FAIL` goes to the changes not saved, and takes precedence over a 5xx status. `RESOLVE`
+  depends on the channel. A union member goes to the changes not saved, which is the choice it waits
+  for; a version conflict settles from the row first. At top level the auth family refreshes,
+  `CLIENT_UPGRADE_REQUIRED` pauses the pass, and anything else defers for that entry and is counted
+  as a fault below: a queue resends its stored variables, so an update cannot cure a
+  `BAD_USER_INPUT`, and nothing else would tell the person. `AUTH_ACCOUNT_SUSPENDED` is `RESOLVE` on
+  the wire and refused here, as no refresh clears it.
 - **A fault the server cannot name.** A resolver crash answers HTTP 200, `data: null`,
   `INTERNAL_SERVER_ERROR`. Masking hides a crash on one input from an outage, and a fault after a commit
   reads the same, so the write defers and `QueuedMutation.faults` counts it once per drain. Met again
   once the server has answered something else cleanly, the fault is scoped to the entry, so the rest of
   the pass runs. After 5 faults over at least an hour with the server answering, the write gives up
-  (`serverAnswers.ts`). `GRAPHQL_VALIDATION_FAILED` defers too, scoped to the entry: a build sends its
-  own document, so an API deploy or an app update cures it, and its dependents hold behind it.
-  Otherwise the bound on a pending entry is `expireStalePending`'s 90-day age
-  horizon. Either way the entry goes through the failure handler to the changes not saved.
-  The horizon is the API's: its daily `idempotency-key-cleanup` job deletes keys older than 90 days,
-  after which `claim` takes the same key as new and the write applies again, and a retry's
+  (`serverAnswers.ts`). `GRAPHQL_VALIDATION_FAILED` defers too, scoped to the entry and not counted: a
+  build sends its own document, so an API deploy or an app update cures it, and its dependents hold
+  behind it. Otherwise the bound on a pending entry is `expireStalePending`'s age horizon, the
+  replay window. Either way the entry goes through the failure handler to the changes not saved.
+  The horizon is the API's: its daily `idempotency-key-cleanup` job deletes keys past
+  `offlineLimits.replayWindowDays`, after which `claim` takes the same key as new and the write
+  applies again. `replayWindow.ts` follows a shorter window and never exceeds this build's 90 days.
+  It reads the window only when a pending entry is past the API's 30-day offline promise, so an
+  ordinary drain spends no round trip, and an unanswered read keeps the limit. A retry's
   `overwrites` carries a versioned write past its lock too. So past it the list offers only Discard
   (`isPastSyncWindow`), and a retry keeps the entry's age in `agedFrom`, as it renews nothing on the
   server. A create or a plain edit could replay safely; one rule covers every change.
@@ -369,14 +384,18 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   keep a change the server refused. A rejected payload routes through the permanent-failure pipeline
   (drop + toast + dequeue, via `ReplayRejectedError` → the registered failure handler). A write
   that already committed answers its success payload with `converged: true` and the row as it stands,
-  so it is treated as applied. A `ConflictError` whose `code` is `IDEMPOTENT_REPLAY` is **converged**
-  too: this exact op committed once, but its row is gone or the caller can no longer read it, so there
-  is no row to commit: the layer is dropped, the entry dequeues as success, and the resync after the
-  drain shows what the server holds. Matched on the **code**, never the message; a generic
+  so it is treated as applied. A refusal stating `APPLIED` is **converged** too (`IDEMPOTENT_REPLAY`
+  today): this exact op committed once, but its row is gone or the caller can no longer read it, so
+  there is no row to commit: the layer is dropped, the entry dequeues as success, and the resync after
+  the drain shows what the server holds. Matched on the **disposition**, never the message; a generic
   `ConflictError` is a real version/uniqueness conflict → rejected.
-  A batch that applies with a row refused as `INTERNAL_SERVER_ERROR` or `DEADLOCK` is deferred whole
-  (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while dropping that
-  row would discard a write the server never refused.
+  A batch settles row by row from `failure.disposition`. A row answering `RETRY` defers the entry
+  whole (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while
+  dropping that row would discard a write the server never refused. A row answering `APPLIED` has
+  landed. Any other row is refused (`BatchRowRefusedError`), after the rows that landed are confirmed:
+  the entry goes to the changes not saved whole, and a retry resends it all, as the landed rows
+  converge. A retry never trims the input: a batch keyed at the top would then send other input under
+  a spent key, which the API counts and will refuse.
 - **A replay refused because its row is gone can settle silently.** An operation listed in
   `GONE_REPLAYS` (`replayRegistry.ts`: notification mark-read and delete, meal-plan item delete) treats a replayed
   `NotFoundError` as settled: its reconciler removes the row locally and the entry dequeues with no

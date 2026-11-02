@@ -14,6 +14,7 @@ import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/sh
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import { QueueManager } from '../queueManager';
+import { BatchRowRefusedError } from '../queueErrorPolicy';
 import { queueStore } from '../queueStore';
 
 /**
@@ -97,7 +98,12 @@ describe('a replayed batch add with a refused row', () => {
           shoppingList: { id: 'list-1', totalItems: 4, completedItems: 0 },
         },
       },
-      { index: 1, success: false, item: null },
+      {
+        index: 1,
+        success: false,
+        failure: { code: 'VALIDATION_FAILED', disposition: 'FAIL' },
+        item: null,
+      },
     ]);
     const entry = makeQueuedMutation({
       ...queuedMutationFor(AddItemToShoppingListDocument),
@@ -112,7 +118,9 @@ describe('a replayed batch add with a refused row', () => {
       },
     });
 
-    await new QueueManager()['executeMutation'](entry);
+    await expect(
+      new QueueManager()['executeMutation'](entry),
+    ).rejects.toBeInstanceOf(BatchRowRefusedError);
 
     expect(totalItemsOf(mockClient)).toBe(4);
   });

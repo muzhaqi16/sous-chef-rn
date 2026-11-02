@@ -27,6 +27,7 @@ mutation ChangePantryItemItem(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

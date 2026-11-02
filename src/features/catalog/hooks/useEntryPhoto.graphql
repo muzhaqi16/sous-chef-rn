@@ -37,6 +37,7 @@ mutation UpdateHomeItemPhoto(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -80,6 +81,7 @@ mutation DeleteHomeItemPhoto(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

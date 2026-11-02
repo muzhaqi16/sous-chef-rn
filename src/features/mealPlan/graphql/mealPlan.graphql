@@ -62,6 +62,7 @@ mutation CreateMealPlan($input: CreateMealPlanInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -86,6 +87,7 @@ mutation UpdateMealPlan($input: UpdateMealPlanInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -110,6 +112,7 @@ mutation DeleteMealPlan($input: DeleteMealPlanInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -139,6 +142,7 @@ mutation CreateMealPlanItem($input: CreateMealPlanItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -168,6 +172,7 @@ mutation UpdateMealPlanItem($input: UpdateMealPlanItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -196,6 +201,7 @@ mutation DeleteMealPlanItem($input: DeleteMealPlanItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

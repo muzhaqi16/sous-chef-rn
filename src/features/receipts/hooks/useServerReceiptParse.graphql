@@ -12,6 +12,7 @@ mutation CreateReceiptParse($input: CreateReceiptParseInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

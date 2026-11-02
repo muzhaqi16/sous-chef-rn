@@ -18,6 +18,7 @@ mutation MarkAllNotificationsAsRead {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -45,6 +46,7 @@ mutation DeleteMultipleNotifications(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

@@ -108,6 +108,7 @@ mutation DeleteMealTemplate($input: DeleteMealTemplateInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -132,6 +133,7 @@ mutation CreateMealTemplate($input: CreateMealTemplateInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -156,6 +158,7 @@ mutation UpdateMealTemplate($input: UpdateMealTemplateInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -179,6 +182,7 @@ mutation AddTemplateItem($input: AddTemplateItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -207,6 +211,7 @@ mutation UpdateTemplateItem($input: UpdateTemplateItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -233,6 +238,7 @@ mutation RemoveTemplateItem($input: RemoveTemplateItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

@@ -89,6 +89,7 @@ mutation CreateHome($input: CreateHomeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -108,6 +109,7 @@ mutation UpdateHome($input: UpdateHomeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -131,6 +133,7 @@ mutation EnableHomeJoinLink($input: EnableHomeJoinLinkInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -154,6 +157,7 @@ mutation UpdateHomeJoinCode($input: UpdateHomeJoinCodeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -197,6 +201,7 @@ mutation TransferHomeOwnership($input: TransferHomeOwnershipInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -221,6 +226,7 @@ mutation DeleteHome($input: DeleteHomeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -245,6 +251,7 @@ mutation InviteToHome($input: InviteToHomeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -280,6 +287,7 @@ mutation AcceptHomeInvite($input: AcceptHomeInviteInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -302,6 +310,7 @@ mutation DeclineHomeInvite($input: DeclineHomeInviteInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -325,6 +334,7 @@ mutation UpdateMembership($input: UpdateMembershipInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -349,6 +359,7 @@ mutation RemoveMember($input: RemoveMemberInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -373,6 +384,7 @@ mutation DeleteHomeInvite($input: DeleteHomeInviteInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -407,6 +419,7 @@ mutation JoinHomeByCode($input: JoinHomeByCodeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -431,6 +444,7 @@ mutation LeaveHome($input: LeaveHomeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

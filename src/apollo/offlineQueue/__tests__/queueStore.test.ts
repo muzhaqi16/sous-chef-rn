@@ -281,6 +281,19 @@ describe('QueueStore', () => {
       ]);
     });
 
+    it('counts a reopened change as old as it was, not from its retry', () => {
+      const dayMs = 24 * 60 * 60 * 1000;
+      store.addMutation(
+        refused({ id: 'old', createdAt: Date.now() - 40 * dayMs }),
+      );
+      expect(store.hasPendingOlderThan('user-1', 30 * dayMs)).toBe(false);
+
+      store.reopen('old');
+
+      expect(store.hasPendingOlderThan('user-1', 30 * dayMs)).toBe(true);
+      expect(store.hasPendingOlderThan('user-1', 50 * dayMs)).toBe(false);
+    });
+
     it('discards with its followers', () => {
       store.addMutation(refused({ id: 'parent' }));
       store.addMutation(refused({ id: 'follower', heldBy: 'parent' }));

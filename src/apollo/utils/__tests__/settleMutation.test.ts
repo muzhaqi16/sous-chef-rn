@@ -7,6 +7,7 @@ import { storeApi } from '#store';
 import { t } from '#/i18n';
 import {
   ErrorCode,
+  ErrorDisposition,
   TopLevelErrorCode,
   UnitDenial,
 } from '#/graphql/generated/schemaTypes';
@@ -30,6 +31,7 @@ import { Telemetry } from '#/services/telemetry';
 type Member<T extends { __typename: string }> = {
   __typename: T['__typename'];
   code?: string;
+  disposition?: ErrorDisposition;
   field?: string | null;
   resource?: string | null;
   validUnits?: string[];
@@ -94,7 +96,11 @@ describe('settleMutation', () => {
 
   it('counts a replay the server already committed as applied', async () => {
     const settled = await settleMutation(
-      create({ __typename: 'ConflictError', code: ErrorCode.IdempotentReplay }),
+      create({
+        __typename: 'ConflictError',
+        code: ErrorCode.IdempotentReplay,
+        disposition: ErrorDisposition.Applied,
+      }),
       options,
     );
     expect(settled.status).toBe('applied');

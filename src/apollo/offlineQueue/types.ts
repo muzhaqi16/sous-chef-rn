@@ -54,6 +54,8 @@ export interface QueueError {
   retryAfterMs?: number;
   /** A fault on the server's side that may be this write's own: it is counted. */
   fault?: boolean;
+  /** A deferral that is this write's alone, so the rest of the pass still runs. */
+  entryScoped?: boolean;
 }
 
 /** Named cache values a replay reads, captured when queued (`unit:<id>` → symbol). */
@@ -81,7 +83,7 @@ export interface QueuedMutation {
   /** When this entry was queued. The drain replays in this order. */
   createdAt: number;
   /**
-   * The age the 90-day horizon counts from, when it differs from `createdAt`:
+   * The age the replay window counts from, when it differs from `createdAt`:
    * a coalesced move carries the first move's, a retried change its own. Kept
    * apart from `createdAt` because that one also decides delivery order.
    */

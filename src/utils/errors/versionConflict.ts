@@ -50,9 +50,8 @@ export function isVersionConflictError(error: unknown): boolean {
 }
 
 /**
- * Always the generic "updated elsewhere" body: the API drops the
- * `currentVersion`/`expectedVersion` extensions when mapping to a union member,
- * so no typed detail exists on either channel.
+ * Always the generic "updated elsewhere" body: `ConflictError.currentVersion`
+ * says which version won, which tells the person nothing.
  */
 export function getVersionConflictMessage(): string {
   return t('errors.codes.versionConflict');

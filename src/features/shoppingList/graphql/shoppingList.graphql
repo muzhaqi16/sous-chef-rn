@@ -388,6 +388,7 @@ mutation CreateShoppingList($input: CreateShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -407,6 +408,7 @@ mutation UpdateShoppingList($input: UpdateShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -430,6 +432,7 @@ mutation CompleteShoppingList($input: CompleteShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -453,6 +456,7 @@ mutation MarkShoppingListActive($input: MarkShoppingListActiveInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -478,6 +482,7 @@ mutation CreateRecurringShoppingList(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -501,6 +506,7 @@ mutation CancelRecurring($input: CancelRecurringInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -524,6 +530,7 @@ mutation MarkAsTemplate($input: MarkAsTemplateInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -547,6 +554,7 @@ mutation UpdateShoppingListReminder($input: UpdateShoppingListReminderInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -570,6 +578,7 @@ mutation DeleteShoppingListReminder($input: DeleteShoppingListReminderInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -593,6 +602,7 @@ mutation MarkShoppingListAsDefault($input: MarkShoppingListAsDefaultInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -617,6 +627,7 @@ mutation DeleteShoppingList($input: DeleteShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -646,6 +657,7 @@ mutation AddCollaborator($input: InviteToShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -674,6 +686,7 @@ mutation RemoveCollaborator($input: RemoveShoppingListCollaboratorInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -700,6 +713,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         success
         failure {
           code
+          disposition
           reason
           errorId
         }
@@ -713,6 +727,7 @@ mutation AddItemToShoppingList($input: AddItemsToShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -745,6 +760,7 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -771,6 +787,7 @@ mutation RemoveItemFromShoppingList($input: RemoveItemFromShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -799,6 +816,7 @@ mutation MoveShoppingListItem($input: MoveShoppingListItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -826,6 +844,7 @@ mutation UpdateCollaboratorRole($input: UpdateCollaboratorRoleInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -855,6 +874,7 @@ mutation UpdateCollaboratorPermissions(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -898,6 +918,7 @@ mutation MoveShoppingItemToPantry(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -942,6 +963,7 @@ mutation RemoveItemsFromShoppingList(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -961,6 +983,7 @@ mutation ShareShoppingList($input: ShareShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -987,6 +1010,7 @@ mutation JoinShoppingListByShareCode(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

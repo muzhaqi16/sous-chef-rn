@@ -16,6 +16,7 @@ mutation AddItemToShoppingListFromPantryItem(
         success
         failure {
           code
+          disposition
           reason
           errorId
         }
@@ -29,6 +30,7 @@ mutation AddItemToShoppingListFromPantryItem(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

@@ -109,6 +109,7 @@ mutation UpdateNotificationPreferences(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -170,6 +171,7 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -203,6 +205,7 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -227,6 +230,7 @@ mutation RemoveDietaryRestriction($input: RemoveRestrictionInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

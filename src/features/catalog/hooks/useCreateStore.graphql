@@ -13,6 +13,7 @@ mutation CreateStore($input: CreateStoreInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

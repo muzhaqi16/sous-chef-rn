@@ -52,7 +52,7 @@ export const page = (id: string, overrides: Record<string, unknown> = {}) => ({
 export const fault = (code = 'INTERNAL_SERVER_ERROR', extensions = {}) => ({
   errors: [
     new GraphQLError('Refused', {
-      extensions: { code, ...extensions },
+      extensions: { code, disposition: 'RETRY', ...extensions },
     }),
   ],
 });

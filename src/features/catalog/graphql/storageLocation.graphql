@@ -50,6 +50,7 @@ mutation CreateStorageLocation($input: CreateStorageLocationInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -74,6 +75,7 @@ mutation UpdateStorageLocation($input: UpdateStorageLocationInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -96,6 +98,7 @@ mutation DeleteStorageLocation($input: DeleteStorageLocationInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -121,6 +124,7 @@ mutation MarkStorageLocationAsDefault(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

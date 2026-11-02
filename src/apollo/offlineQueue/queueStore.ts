@@ -15,6 +15,7 @@ import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/sho
 import { isOwnKey } from '#/utils/isOwnKey';
 import { isRecord } from '#/utils/isRecord';
 import type { PendingWrite } from '#/apollo/pendingWrites/types';
+import { replayWindowMs } from './replayWindow';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -45,17 +46,18 @@ function isTerminal(status: QueueStatus): boolean {
   );
 }
 
-// The server prunes its idempotency-dedup records after 90 days, so a replay
-// past that horizon double-applies instead of converging.
-// PENDING entries older than this are marked FAILED rather than replayed.
-const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
+const isOlderThan = (
+  { agedFrom, createdAt }: Pick<QueuedMutation, 'agedFrom' | 'createdAt'>,
+  ageMs: number,
+): boolean => (agedFrom ?? createdAt) <= Date.now() - ageMs;
 
-/** Past the server's dedup horizon, where a send can apply a second time. */
-export const isPastSyncWindow = ({
-  agedFrom,
-  createdAt,
-}: Pick<QueuedMutation, 'agedFrom' | 'createdAt'>): boolean =>
-  (agedFrom ?? createdAt) <= Date.now() - MAX_PENDING_AGE_MS;
+/**
+ * Past the server's dedup horizon, where a send can apply a second time, so a
+ * PENDING entry this old is marked FAILED rather than replayed.
+ */
+export const isPastSyncWindow = (
+  entry: Pick<QueuedMutation, 'agedFrom' | 'createdAt'>,
+): boolean => isOlderThan(entry, replayWindowMs());
 
 type StoredEntry = Omit<QueuedMutation, 'mutation'>;
 
@@ -427,6 +429,13 @@ export class QueueStore {
     });
   }
 
+  /** Whether a PENDING entry has waited this long, counted as the window counts. */
+  hasPendingOlderThan(userId: string, ageMs: number): boolean {
+    return this.getMutationsForUser(userId).some(
+      m => m.status === QueueStatus.PENDING && isOlderThan(m, ageMs),
+    );
+  }
+
   /**
    * PENDING entries past the dedup horizon become FAILED, surfacing through the
    * failure UX instead of double-applying. Age-based, so a FIFO queue expires
@@ -448,8 +457,7 @@ export class QueueStore {
       }
       const lastError: QueueError = {
         type: 'unknown',
-        message:
-          'Queued change expired: older than the 90-day offline sync window',
+        message: 'Queued change expired: older than the offline sync window',
         code: 'OFFLINE_SYNC_WINDOW_EXPIRED',
         timestamp: now,
         retryable: false,
@@ -468,7 +476,7 @@ export class QueueStore {
     if (expired.length > 0) {
       this.saveQueue(updated);
       logger.warn(
-        `🧹 Queue: Expired ${expired.length} PENDING mutation(s) past the 90-day sync window`,
+        `🧹 Queue: Expired ${expired.length} PENDING mutation(s) past the sync window`,
       );
     }
     return expired;

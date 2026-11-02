@@ -142,6 +142,7 @@ mutation ChangePantryItemUnit(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

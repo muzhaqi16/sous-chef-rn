@@ -43,6 +43,7 @@ mutation CreateBrandList($input: CreateBrandListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -63,6 +64,7 @@ mutation UpdateBrandList($input: UpdateBrandListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -82,6 +84,7 @@ mutation DeleteBrandList($input: DeleteBrandListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -105,6 +108,7 @@ mutation AddBrandToList($input: AddBrandToListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -124,6 +128,7 @@ mutation RemoveBrandFromList($input: RemoveBrandFromListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

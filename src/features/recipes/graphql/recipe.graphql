@@ -48,6 +48,7 @@ mutation CreateRecipe($input: CreateRecipeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -79,6 +80,7 @@ mutation OpenCatalogRecipe(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -112,6 +114,7 @@ mutation UpdateRecipe($input: UpdateRecipeInput!, $ingredientsFirst: Int!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -135,6 +138,7 @@ mutation ForkRecipe($input: ForkRecipeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -159,6 +163,7 @@ mutation DeleteRecipe($input: DeleteRecipeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -188,6 +193,7 @@ mutation AddRecipeToFavorites($input: AddRecipeToFavoritesInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -214,6 +220,7 @@ mutation RemoveRecipeFromFavorites($input: RemoveRecipeFromFavoritesInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -235,6 +242,7 @@ mutation DeleteRecipeFolder($input: DeleteRecipeFolderInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -264,6 +272,7 @@ mutation UpdateFavoriteRecipe($input: UpdateFavoriteRecipeInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -410,6 +419,7 @@ mutation MarkRecipeAsCooked(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
