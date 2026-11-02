@@ -12573,6 +12573,12 @@ type PantryItemBatch {
   """
   unitCostBasis: Float
   updatedAt: DateTime!
+  """
+  Rises with every stock change, so an older answer can be told from a newer one. It stays
+  put when a deleted store, user or currency clears store, addedBy or currency, and when
+  the batch's stack is removed or restored.
+  """
+  version: Int!
   wasteReason: WasteReason
 }
 
@@ -15093,6 +15099,26 @@ type Query {
     """
     orderBy: StoreOrderBy
   ): StoreConnection!
+  """What changed in up to 25 scopes, each from its own cursor."""
+  syncChanges(input: SyncChangesInput!): [SyncPage!]!
+  """
+  Every scope the caller can reach. Read it on connect and on a REACH_CHANGED
+  poke: a scope absent here is one the device no longer reaches.
+  """
+  syncScopes(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): SyncScopeConnection!
+  """
+  One page of a scope's complete rows, for a first sync or after RESYNC_REQUIRED.
+  """
+  syncSnapshot(input: SyncSnapshotInput!): SyncSnapshotPage!
   """Fetch a single unit by its ID."""
   unit(
     """The id of the Unit to read"""
@@ -19688,6 +19714,13 @@ type Subscription {
   """
   myShoppingListsEvents: ShoppingListEvent!
   """
+  One subscription for every scope the caller reaches. SCOPE_CHANGED says to
+  pull unless its cursor is the one you hold, and REACH_CHANGED says to read
+  syncScopes, and arrives even after your access ended. Delivery is
+  best-effort, and pulling on connect covers anything missed.
+  """
+  mySyncPokes: SyncPoke!
+  """
   Notification event stream for the current user (created,
   updated, read, dismissed). Subscribe once and branch on subtype. Always
   scoped to the authenticated user.
@@ -19853,12 +19886,183 @@ type SuspiciousActivity {
   unusualTimeLogins: [LoginHistory!]!
 }
 
+"""A row one of this device's operations committed."""
+type SyncApplied {
+  entityId: ID!
+  """The row's GraphQL type"""
+  entityType: String!
+  """The X-Operation-Id the write sent"""
+  operationId: ID!
+  """The version the write left the row at; null for a type with none"""
+  version: Int
+}
+
+input SyncChangesInput {
+  """Entities per scope, at most 100. The list's own row is not counted"""
+  first: Int
+  """The scopes to pull, at most 25"""
+  scopes: [SyncScopeCursorInput!]!
+}
+
+"""A row a sync page can carry."""
+union SyncEntity = ShoppingList | ShoppingListCollaborator | ShoppingListItem
+
+"""What changed in one scope since a cursor."""
+type SyncPage {
+  """
+  This device's own operations that committed, row by row, also on RESYNC_REQUIRED
+  """
+  applied: [SyncApplied!]!
+  """
+  The rows changed since the cursor, as they stand now, each at most once. Any
+  page holding a change or a removal also holds the scope's own row, so a total
+  computed from its members reads correctly.
+  """
+  changed: [SyncEntity!]!
+  """
+  Where to pull from next. Null unless CURRENT: after RESYNC_REQUIRED, hold the cursor a snapshot gives
+  """
+  cursor: String
+  """True when more remains past this page: pull again from cursor"""
+  hasMore: Boolean!
+  """The rows that left the scope since the cursor"""
+  removed: [SyncRemoval!]!
+  scope: SyncScope!
+  status: SyncPageStatus!
+}
+
+"""What a pull of one scope answers."""
+enum SyncPageStatus {
+  """The page holds what changed since the cursor; it may be empty"""
+  CURRENT
+  """
+  The cursor is missing or older than the scope retains. Nothing here is a
+  delta: take a syncSnapshot, then pull from its cursor.
+  """
+  RESYNC_REQUIRED
+  """
+  The caller cannot reach this scope: it was deleted, access ended, or it never
+  existed. The answer is the same for all three.
+  """
+  UNAVAILABLE
+}
+
+"""
+A signal to pull. It holds no row, so everything a client reads comes through
+the one authorized read; a lost poke only delays a pull. Branch on kind.
+"""
+type SyncPoke {
+  kind: SyncPokeKind!
+  """
+  The device behind the whole range this poke covers. Null unless the
+  subscriber made the write and one device and operation wrote all of it.
+  """
+  originDeviceId: ID
+  """
+  The X-Operation-Id behind the whole range, under the same rule as
+  originDeviceId. Skip a pull only for your own operation.
+  """
+  originOperationId: ID
+  """
+  The scope that changed and a cursor at or past the change. Null on
+  REACH_CHANGED, which names no scope: read syncScopes instead.
+  """
+  scope: SyncScope
+}
+
+"""What a poke asks of a client."""
+enum SyncPokeKind {
+  """What you can reach changed: read syncScopes"""
+  REACH_CHANGED
+  """A scope changed: pull it unless the poke's cursor is the one you hold"""
+  SCOPE_CHANGED
+}
+
+"""A row that left the scope since the cursor, with no data of its own."""
+type SyncRemoval {
+  """The row's GraphQL type"""
+  entityType: String!
+  id: ID!
+}
+
+"""A scope the caller reaches, and the cursor of its latest position."""
+type SyncScope {
+  cursor: String!
+  id: ID!
+  kind: SyncScopeKind!
+}
+
+"""
+A page of SyncScope results. Read "edges" for the rows and "pageInfo" to decide
+whether to request another page.
+"""
+type SyncScopeConnection implements Connection {
+  """The rows in this page, in the connection's sort order."""
+  edges: [SyncScopeEdge!]!
+  """Cursors and flags describing where this page sits in the full result."""
+  pageInfo: PageInfo!
+  """
+  Total rows matching the query across all pages. Computed only when selected; null when not available.
+  """
+  totalCount: Int
+}
+
+"""One scope to pull, and how far this device has read it."""
+input SyncScopeCursorInput {
+  """
+  The cursor the last pull or snapshot of this scope answered; null on a first sync
+  """
+  cursor: String
+  id: ID!
+  kind: SyncScopeKind!
+}
+
+"""
+One SyncScope in a paginated result, paired with the cursor that identifies its
+position. Pass the cursor as "after" to resume from just past this edge.
+"""
+type SyncScopeEdge implements Edge {
+  """Opaque position marker for this edge. Do not parse or construct it."""
+  cursor: String!
+  """The SyncScope this edge wraps."""
+  node: SyncScope!
+}
+
+"""What a sync scope covers. One list is one scope."""
+enum SyncScopeKind {
+  SHOPPING_LIST
+}
+
 """Sub-input for sync settings"""
 input SyncSettingsInput {
   """Whether the app syncs automatically; on by default, null is refused"""
   autoSync: Boolean
   """Whether the app works offline; off by default, null is refused"""
   offlineMode: Boolean
+}
+
+input SyncSnapshotInput {
+  """The endCursor of the previous page; null for the first page"""
+  after: String
+  """Rows per page, at most 100"""
+  first: Int
+  id: ID!
+  kind: SyncScopeKind!
+}
+
+"""One page of a scope's complete rows."""
+type SyncSnapshotPage {
+  """
+  On the first page, the position taken before any row was read: pull from it
+  after the last page. Null on later pages.
+  """
+  cursor: String
+  """Pass as after for the next page"""
+  endCursor: String
+  hasMore: Boolean!
+  """The scope's rows as they stand. All pages together are the whole scope"""
+  rows: [SyncEntity!]!
+  status: SyncPageStatus!
 }
 
 """Sub-input for tag-based filters"""
@@ -20402,6 +20606,8 @@ input UpcLookupInput {
 
 input UpdateBrandListEntryInput {
   id: ID!
+  """As on UpdateBrandListInput.idempotencyKey"""
+  idempotencyKey: ID
   """The owner's own note, at most 500 characters; null clears it"""
   reason: String
   """As on UpdateBrandListInput.version"""
@@ -20410,6 +20616,11 @@ input UpdateBrandListEntryInput {
 
 type UpdateBrandListEntryPayload {
   brandListEntry: BrandListEntry!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -20422,6 +20633,10 @@ union UpdateBrandListEntryResult = ConflictError | ForbiddenError | NotFoundErro
 input UpdateBrandListInput {
   enabled: Boolean
   id: ID!
+  """
+  A CUID2 minted per edit for an offline queue: a resend under a spent key writes nothing and answers the row as it stands with converged true, whatever version it names
+  """
+  idempotencyKey: ID
   name: String
   """
   The write applies only at this version, else VERSION_CONFLICT; omitted, the last write wins
@@ -20431,6 +20646,11 @@ input UpdateBrandListInput {
 
 type UpdateBrandListPayload {
   brandList: BrandList!
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
 }
 
 """
@@ -21039,6 +21259,10 @@ input UpdatePantryItemInput {
   """
   expiresOn: LocalDate
   id: ID!
+  """
+  A CUID2 minted per edit for an offline queue: a resend under a spent key writes nothing and answers the stack as it stands with converged true, whatever version it names
+  """
+  idempotencyKey: ID
   isComposted: Boolean
   isRecycled: Boolean
   itemName: String
@@ -21076,6 +21300,11 @@ input UpdatePantryItemInput {
 }
 
 type UpdatePantryItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   pantry: Pantry
   pantryItem: PantryItem!
   """
@@ -21394,6 +21623,10 @@ input UpdateShoppingListItemInput {
   """The line to update"""
   id: ID!
   """
+  A CUID2 minted per edit for an offline queue: a resend under a spent key writes nothing and answers the line as it stands with converged true, whatever version it names, so it never undoes a later edit
+  """
+  idempotencyKey: ID
+  """
   The line's own name; null clears it. A localized name sent back as it was shown leaves the name as it is.
   """
   itemName: String
@@ -21440,6 +21673,11 @@ input UpdateShoppingListItemInput {
 }
 
 type UpdateShoppingListItemPayload {
+  """
+  True when this call was a replay of a write already applied: it wrote nothing,
+  and this payload is read as it stands now. The canonical, API-wide replay flag.
+  """
+  converged: Boolean!
   shoppingList: ShoppingList
   shoppingListItem: ShoppingListItem!
 }
