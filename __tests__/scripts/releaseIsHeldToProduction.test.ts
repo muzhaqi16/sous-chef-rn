@@ -14,7 +14,8 @@ import { runInNewContext } from 'vm';
 /**
  * A store build waits on `release-check`, and a failed check stops it. The
  * job's condition runs here as an expression, and the action's own steps run
- * through bash as a composite step does, with `npm` and `npx` stood in.
+ * through bash as a composite step does, with `npm` and `npx` stood in. One
+ * test keeps the real `npx`: a stand-in can't see what npm does to the flags.
  */
 
 const ROOT = path.join(__dirname, '..', '..');
@@ -127,7 +128,7 @@ describe('the tool', () => {
   });
 
   it('never comes from the public registry', () => {
-    expect(action).toContain('npx --no api-schema-check');
+    expect(action).toContain('npx --no -- api-schema-check');
   });
 });
 
@@ -209,6 +210,24 @@ describe('the action’s steps', () => {
     expect(
       read(path.relative(ROOT, path.join(sandbox, 'release-check.json'))),
     ).toContain('"passed":true');
+  });
+
+  it('reaches the tool with its flags through the real npx', () => {
+    const bin = path.join(sandbox, 'node_modules', '.bin');
+    const tool = path.join(bin, 'api-schema-check');
+    mkdirSync(bin, { recursive: true });
+    writeFileSync(tool, '#!/bin/bash\necho "$*"\n');
+    chmodSync(tool, 0o755);
+    writeFileSync(path.join(sandbox, 'package.json'), '{}');
+
+    const { status, stdout } = run(
+      stepNamed('Validate the operations against production'),
+    );
+
+    expect(status).toBe(0);
+    expect(stdout.trim()).toBe(
+      '--url https://api.souschef.dev --manifest persisted-query-manifest.json',
+    );
   });
 
   it('compiles against every schema production serves', () => {

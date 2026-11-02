@@ -20,11 +20,12 @@ runs:
       run: npm ci
 
     # `--no`: without the pin, plain npx would run whatever the public registry
-    # holds under this name, in a job with a token.
+    # holds under this name, in a job with a token. `--`: without it, npm takes
+    # the tool's flags for its own and passes on only their values.
     - name: Validate the operations against production
       shell: bash
       run: |
-        npx --no api-schema-check --url https://api.souschef.dev --manifest persisted-query-manifest.json |
+        npx --no -- api-schema-check --url https://api.souschef.dev --manifest persisted-query-manifest.json |
           tee "$RUNNER_TEMP/release-check.json"
 
     - name: Compile against each schema production serves
