@@ -34,7 +34,7 @@ npm test             # full suite, unfiltered (~830 suites)
 
 # after a change, before pushing
 npm run typecheck && npm run lint && npm test
-npm run check:compiler-bailouts && npm run check:unistyles-variants
+npm run check:compiler-bailouts
 npm run check:dead-modules && npm run check:import-cycles
 ```
 
@@ -353,8 +353,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **`useUnistyles()` only for runtime metadata** (`rt.*`); a `theme.*` read
   re-renders on every theme change. The cross-library exceptions are listed in
   `docs/ui-layer.md`.
-- **Plugin order is Unistyles → React Compiler.** The compiler first silently
-  freezes `useVariants` (`check:unistyles-variants`).
+- **Unistyles runs through `withUnistylesConfig`, outermost in `metro.config.js`**,
+  with no Babel plugin (having both throws). A StyleSheet records what it reads
+  at runtime, and RN components are swapped inside `node_modules` too; a raw one
+  is imported from `react-native/index.js`. A config change needs `--reset-cache`.
 
 ### Theme: elevation, colour, motion
 
@@ -463,8 +465,7 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   (`syncAsAccountDefault`, `useDefaultHome.ts`). Memoization skips re-renders,
   never a mount: a slow `(mount)` needs fewer elements.
 - **`check-compiler-bailouts` holds production `src` to zero bailouts and zero
-  `'use no memo'`.** Needing one means the plugin order regressed:
-  `npm run check:unistyles-variants`.
+  `'use no memo'`.**
 - **A `finally` (or catch-less `try`), or a value block (`?.` `??` `&&` `||`
   ternary) inside a `try` body, bails the whole function** — move the conditional
   after the `try`; `src/utils/finallyHelpers.ts` for `finally`. Verified: `#react-compiler-try-shapes`.

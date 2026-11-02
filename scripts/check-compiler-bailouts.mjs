@@ -53,9 +53,7 @@ const failures = [];
 
 /**
  * `'use no memo'` — the OTHER way out of compiler coverage: voluntary, same
- * outcome as a bailout, so tracked too. Never the right fix — a frozen variant
- * means the `babel.config.js` plugin order broke, so repair the toolchain
- * (`check-unistyles-variant-staleness.mjs`). With no baseline, any opt-out fails.
+ * outcome as a bailout, so tracked too. With no baseline, any opt-out fails.
  */
 const OPT_OUT_DIRECTIVE = /^\s*['"]use no memo['"]\s*;?\s*$/;
 const optOuts = [];
@@ -243,9 +241,8 @@ if (count > maxFilesWithBailouts) {
   console.error(
     `\nThe compiler skipped these, so they are not memoized — and the project's\n` +
       `rules against useMemo/useCallback/React.memo assume it did not skip them.\n` +
-      `If MANY files bail at once, check the plugin order in babel.config.js —\n` +
-      `react-native-unistyles/plugin, then babel-plugin-react-compiler — and\n` +
-      `whether a Unistyles upgrade changed its useVariants rewrite.\n\n` +
+      `If MANY files bail at once, check what changed in babel.config.js: a plugin\n` +
+      `that rewrites source before the compiler reads it can cause all of them.\n\n` +
       `For a single file, rewrite the construct the compiler named above — the\n` +
       `usual causes are a try/finally or a catch-less try, and value blocks\n` +
       `(?., ??, &&, ||, ternary) inside a try body. See src/utils/finallyHelpers.ts\n` +
@@ -267,13 +264,8 @@ if (newOptOuts.length > 0) {
   for (const k of newOptOuts) console.error(`  ${k}`);
   console.error(
     `\nRemove it. \`noMemoOptOuts\` is empty on purpose and may only shrink.\n\n` +
-      `If you added it because a \`styles.useVariants(...)\` read was freezing at\n` +
-      `its first-render value, that is a TOOLCHAIN regression, not a property of\n` +
-      `the component: babel.config.js must run Unistyles -> React Compiler,\n` +
-      `in that order.\n\n` +
-      `Opting the component out hides that regression everywhere else it applies,\n` +
-      `and costs the component its memoization. See\n` +
-      `check-unistyles-variant-staleness.mjs.\n`,
+      `Opting a component out costs it its memoization. Rewrite the construct\n` +
+      `the compiler named instead.\n`,
   );
   process.exit(1);
 }

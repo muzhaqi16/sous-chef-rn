@@ -480,13 +480,7 @@ a leaf — moving it back into the composite keeps the count unchanged and would
 otherwise pass; and separately again, the `'use no memo'` opt-out list.
 `scripts/check-compiler-bailouts.baseline.json` does not exist, and a missing
 baseline makes each of the three an INVARIANT (`baselineFile` in
-`scripts/lib/tooling.mjs`): no file may bail, and needing the directive means the
-Babel plugin order has regressed.
-
-`check-unistyles-variant-staleness` compiles each file to find a style read
-frozen at its first-render value — a defect neither ESLint nor tsc can see,
-because it exists only in the output of two Babel plugins composed in a
-particular order. Its baseline lists no files.
+`scripts/lib/tooling.mjs`): no file may bail, and none may opt out.
 
 **Why `check:version-sync` is a pre-commit hook and not a habit:** it compares
 `package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
@@ -507,7 +501,6 @@ The whole-tree gates, and where each runs:
 | `check-startup-origin`              | the startup clock is the first module Metro's output evaluates                                                                                                                                                                     | pre-commit, CI        |
 | `check-launch-arg-auth`             | no distributable build accepts an injected session                                                                                                                                                                                 | pre-commit, CI, build |
 | `check-compiler-bailouts`           | no component silently skips React Compiler compilation                                                                                                                                                                             | pre-push, CI          |
-| `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value                                                                                                                                                                             | pre-push, CI          |
 | `check:dead-modules` (knip)         | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal`                                        | pre-push, CI          |
 | `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped                                                                                                                                                    | pre-push, CI          |
 | `find-stale-cache-fields`           | every mutation returns what the queries read on each entity it returns and on the collection it moves (via the generated `<Type>Readers`); the readers files are current; API-blocked pairs expire when the schema gains the field | CI                    |
@@ -568,10 +561,10 @@ only. Detection does not depend on either.
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **pre-commit** | `lint-staged --no-revert` — ESLint + Prettier + related Jest tests on staged files; a failed task never resets the shared tree — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
 | **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required                                                                                                                                                                                        |
-| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                     |
+| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                     |
 
 The split is by cost. The five sub-second checks run per commit so a broken
-locale key or a version drift surfaces at the commit that caused it. The five
+locale key or a version drift surfaces at the commit that caused it. The four
 expensive ones are independent, so pre-push runs them at the same time, each
 into its own log so the output does not interleave.
 

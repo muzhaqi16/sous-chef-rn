@@ -289,16 +289,12 @@ they read it.
   - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
   - `FilteredPantryItems`' loading skeleton, which counts a screenful of rows
     from `theme.spacing` and `theme.type` in JS.
-- **Plugin order is Unistyles → React Compiler** (`babel.config.js`), as
-  Unistyles documents. With the compiler FIRST the file compiles, but the
-  variant-resolved style is cached on the wrong dependencies and freezes at its
-  first-render value — memoized, zero bailouts, and silently wrong.
-  `scripts/check-unistyles-variant-staleness.mjs` is the cover.
-- **A style returns object literals**, directly or through a ternary, `&&` or
-  `||`. The plugin attaches a style's dependencies only there; a style returned
-  from a `switch`, loop or `try`, or as a call result, gets none and keeps the
-  theme it first rendered with. `__tests__/ui/stylesCarryTheirDependencies.test.ts`
-  compiles every stylesheet with the plugin's `debug` warnings and fails on one.
+- **Unistyles runs through its Metro integration** (`withUnistylesConfig`,
+  outermost in `metro.config.js`), with no Babel plugin, so it has no order
+  against the React Compiler. A StyleSheet records its dependencies at runtime,
+  and `useVariants` returns a new object per call, so the compiler cannot freeze
+  a read from it. A bare call selects nothing
+  (`sous-chef/use-variants-return-is-read`).
 - **A host that mounts its children later than they were created wraps them in
   `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
   an element against its other dependencies, so a parent that outlives a theme

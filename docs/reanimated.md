@@ -30,9 +30,8 @@ Android SIGSEGV in `MountingCoordinator::pullTransaction` that is still open.
 - **Bump Reanimated and Worklets in one command.** Each Reanimated minor pins one Worklets
   minor (`react-native-worklets@0.13.x` for 4.7). Both are native: run `pod install`, then
   rebuild iOS and Android.
-- **Run the Babel gates:** `npm run check:compiler-bailouts` and
-  `npm run check:unistyles-variants`. Both compile through the Worklets Babel plugin, which
-  sits at the end of the load-bearing plugin order.
+- **Run the Babel gate:** `npm run check:compiler-bailouts`. It compiles through the Worklets
+  Babel plugin, which has to stay last.
 - **Re-run the probes:** `node scripts/probe-reanimated-reduce-motion.mjs`, plus the
   re-checks under the Reanimated entries in
   [verified library behaviour](verified-library-behaviour.md).
