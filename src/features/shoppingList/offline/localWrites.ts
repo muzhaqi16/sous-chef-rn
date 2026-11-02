@@ -3,11 +3,19 @@
  * server's answer writes its own rows; `commit` adds what it cannot state.
  */
 import type { ApolloCache, OperationVariables } from '@apollo/client';
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
+import {
+  rowBaseline,
+  type RowFields,
+} from '#/apollo/pendingWrites/conflictRead';
+import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
+import {
+  ShoppingListItemConflict_ShoppingListItemFragmentDoc,
+  ShoppingListItemForConflictDocument,
+} from './shoppingListItemConflict.generated';
 import {
   listAnsweredPantryItem,
   showLocalPantryItem,
@@ -83,6 +91,8 @@ export type UpdateRowInputs = {
   /** What the row shows meanwhile, in its own field names. */
   fields?: Readonly<Record<string, unknown>>;
   purchase?: { listId: string; isPurchased: boolean; now: string };
+  /** The row as the person saw it. */
+  baseline?: RowFields;
 };
 
 export type RemoveRowsInputs = { listId: string };
@@ -114,7 +124,21 @@ function rowIdsOf(variables: OperationVariables): string[] {
     : [];
 }
 
+const rowConflict: ConflictRead<UpdateRowInputs> = {
+  typename: 'ShoppingListItem',
+  query: ShoppingListItemForConflictDocument,
+  fragment: ShoppingListItemConflict_ShoppingListItemFragmentDoc,
+  changed: ({ fields, purchase }) => ({
+    ...fields,
+    ...(purchase && { purchaseInfo: { isPurchased: purchase.isPurchased } }),
+  }),
+};
+
 export const updateRow: LocalWrite<UpdateRowInputs> = {
+  conflict: rowConflict,
+  capture: (cache, variables) => ({
+    baseline: rowBaseline(cache, rowConflict, variables),
+  }),
   apply(cache, { variables, inputs: { fields, purchase } }) {
     const row = rowOf(variables);
     if (!row || !isHeld(cache, row)) return;

@@ -73,6 +73,7 @@ export const SelectorContent = <T extends SelectableItem>({
     displayProperty,
     loading = false,
     emptyMessage,
+    emptyContent,
     keyExtractor,
     renderCustomItem,
     listHeader,
@@ -178,10 +179,12 @@ export const SelectorContent = <T extends SelectableItem>({
       <Animated.View layout={LinearTransition} style={styles.container}>
         {listHeader}
         <Animated.View entering={FadeIn}>
-          <EmptyState
-            size="compact"
-            title={emptyMessage ?? t('empty.noItems')}
-          />
+          {emptyContent ?? (
+            <EmptyState
+              size="compact"
+              title={emptyMessage ?? t('empty.noItems')}
+            />
+          )}
         </Animated.View>
         <LoadMoreRow pagination={pagination} />
       </Animated.View>

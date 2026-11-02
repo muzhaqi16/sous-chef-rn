@@ -10,6 +10,8 @@ import { Text } from '#components/atoms/Text';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector/AnimatedItemSelector';
+import { DataStateView } from '#components/organisms/DataStateView';
+import type { DataState } from '#hooks/data/useDataState';
 import type { SelectorConfig } from '#components/organisms/AnimatedItemSelector/types';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 
@@ -23,6 +25,8 @@ interface ShoppingList {
 interface ShoppingListPickerSheetProps {
   visible: boolean;
   shoppingLists: ShoppingList[];
+  listsState: DataState;
+  onRetryLists: () => void;
   defaultNewListName: string;
   creatingList: boolean;
   onListSelected: (listId: string) => void;
@@ -39,6 +43,8 @@ export const ShoppingListPickerSheet: React.FC<
 > = ({
   visible,
   shoppingLists,
+  listsState,
+  onRetryLists,
   defaultNewListName,
   creatingList,
   onListSelected,
@@ -87,6 +93,10 @@ export const ShoppingListPickerSheet: React.FC<
     displayProperty: 'name',
     actions: [],
     emptyMessage: t('shoppingListPicker.noLists'),
+    emptyContent:
+      listsState === 'error' || listsState === 'offline' ? (
+        <DataStateView state={listsState} onRetry={onRetryLists} />
+      ) : undefined,
     renderCustomItem,
     // Top right, where every other tray puts its action.
     headerActions: [

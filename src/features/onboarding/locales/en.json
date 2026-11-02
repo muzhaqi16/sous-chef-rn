@@ -5,6 +5,7 @@
     "inviteOpenFromNotifications": "Open this invitation from your notifications, or the email we sent you, to accept it.",
     "createOwnHome": "Create My Own Home",
     "skipForNow": "Skip for Now",
+    "finishSetupLater": "You can carry on. We'll finish setting up once you're connected.",
     "setupError": "An error occurred during setup",
     "settingUpTitle": "Setting up your kitchen…",
     "setupFailedTitle": "We couldn't finish setting up",

@@ -2,7 +2,10 @@
 
 import React from 'react';
 import { screen, fireEvent, within } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
+import { GetOnboardingItemsDocument } from '#operations/item/item.generated';
+import { t } from '#/i18n';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { makeCache } from '#/apollo/cache';
 import { SelectPantryItems } from '../SelectPantryItems';
@@ -207,6 +210,30 @@ describe('SelectPantryItems', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
+  });
+
+  it('offers to read the pantry again rather than show nothing picked', async () => {
+    const items = recordMock(GetOnboardingItemsDocument, {
+      data: { items: { edges: [] } },
+    });
+    const failed = recordMock(GetPantryDocument, {
+      error: new Error('network down'),
+      maxUsageCount: 1,
+    });
+    const read = recordMock(GetPantryDocument, {
+      data: { pantry: { id: 'p1', itemsConnection: { edges: [] } } },
+    });
+    renderWithApollo(<SelectPantryItems />, {
+      operationMocks: [items.mock, failed.mock, read.mock],
+    });
+
+    await drainTimers();
+    fireEvent.press(screen.getByText(t('labels.tryAgain')));
+
+    await drainTimers();
+    expect(screen.queryByText(t('labels.tryAgain'))).toBeNull();
+    expect(failed.fired).toHaveLength(1);
+    expect(read.fired).toHaveLength(1);
   });
 
   it('renders the title', async () => {

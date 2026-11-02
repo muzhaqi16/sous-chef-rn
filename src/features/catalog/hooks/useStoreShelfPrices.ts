@@ -1,4 +1,5 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { pricePerBasis } from '#/domain/money';
 import { PriceBasis } from '#/graphql/generated/schemaTypes';
 import { useTranslation } from '#/i18n';
@@ -251,12 +252,13 @@ export function useStoreShelfPrices(
     offered && pricesShown && itemId && listId ? { itemId, listId } : null;
   // A store-mode scan's lookup stores these with the item, so this asks only
   // for an item that came another way.
-  useQuery(
+  const { error } = useQuery(
     StoreShelfPricesDocument,
     subject
       ? { variables: { itemId: subject.itemId }, fetchPolicy: 'cache-first' }
       : skipToken,
   );
+  useApolloErrorLogger(StoreShelfPricesDocument, error);
   const item = useFragment({
     fragment: UseStoreShelfPrices_ItemFragmentDoc,
     fragmentName: 'useStoreShelfPrices_item',

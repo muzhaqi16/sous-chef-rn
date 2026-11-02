@@ -5,11 +5,13 @@ import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { Loading } from '#components/molecules/Loading';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { OnboardingErrorBoundary } from '#components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
 import { InviteCard } from '#features/onboarding/components/InviteCard';
 import { useOnboardingSetup } from '#features/onboarding/hooks/useOnboardingSetup';
+import { unreadAccountState } from '#features/onboarding/utils/unreadAccountState';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingNavigation } from './useOnboardingNavigation';
 import { useOnboardingInvites } from './useOnboardingInvites';
@@ -22,7 +24,12 @@ const OnboardingSetupScreenComponent = () => {
   const { t } = useTranslation();
   useScreenTransition('OnboardingSetupScreen');
   const setup = useOnboardingSetup();
-  const { invites, loading: invitesLoading } = useOnboardingInvites();
+  const {
+    invites,
+    loading: invitesLoading,
+    state: invitesState,
+    refetch: refetchInvites,
+  } = useOnboardingInvites();
   const { navigateToNextStep } = useOnboardingNavigation();
   // Null until setup starts: until then, pending invitations are offered.
   const [phase, setPhase] = useState<Phase | null>(null);
@@ -46,7 +53,12 @@ const OnboardingSetupScreenComponent = () => {
     });
   };
 
-  const ready = !setup.loading && !invitesLoading;
+  const unreadState = unreadAccountState(
+    setup.readState,
+    setup.hasHome,
+    invitesState,
+  );
+  const ready = !setup.loading && !invitesLoading && unreadState === null;
   const offersInvites = !setup.hasHome && invites.length > 0;
   const startUnasked = useEffectEvent(() => {
     if (startedRef.current || offersInvites) return;
@@ -55,6 +67,35 @@ const OnboardingSetupScreenComponent = () => {
   useEffect(() => {
     if (ready) startUnasked();
   }, [ready]);
+
+  if (!phase && unreadState) {
+    return (
+      <OnBoardingWrapper testID={onboardingTestIDs.setupScreen}>
+        <DataStateView
+          state={unreadState}
+          onRetry={() => {
+            setup.retryRead();
+            void refetchInvites();
+          }}
+        />
+        <Text role="body" tone="secondary" style={styles.later}>
+          {t('onBoarding.finishSetupLater')}
+        </Text>
+        <Button
+          title={t('labels.continue')}
+          onPress={() => {
+            // This screen stays mounted under the next one: started, it leaves
+            // the setup to `OwedAccountSetup` when the read answers.
+            startedRef.current = true;
+            setup.setOwed(true);
+            navigateToNextStep('OnboardingSetup');
+          }}
+          variant="ghost"
+          testID={onboardingTestIDs.setupContinueOffline}
+        />
+      </OnBoardingWrapper>
+    );
+  }
 
   if (!phase && ready && offersInvites) {
     return (
@@ -133,6 +174,9 @@ export const OnboardingSetupScreen = () => (
 );
 
 const styles = StyleSheet.create(theme => ({
+  later: {
+    textAlign: 'center',
+  },
   invites: {
     marginVertical: theme.spacing.lg,
   },

@@ -553,9 +553,10 @@ describe("a merged create's queued writes", () => {
     expect(held['PantryItem:minted-1']).toBeUndefined();
     expect(held['PantryItem:surviving-1']).toMatchObject({ quantity: 5 });
     expect(toastService.error).toHaveBeenCalledWith(
-      t('errors.queuedChangeOverwrittenResource', {
+      t('errors.queuedClashKeptResource', {
         resource: t('errors.resourceNames.PantryItem'),
       }),
+      undefined,
     );
   });
 

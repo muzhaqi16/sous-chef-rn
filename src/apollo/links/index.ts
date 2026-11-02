@@ -6,12 +6,15 @@ import { createTelemetryLink } from './telemetryLink';
 import { createOfflineReadLink } from './offlineReadLink';
 import { createLocalWritePrecedenceLink } from './localWritePrecedenceLink';
 import { createAnswerOrderingLink } from './answerOrderingLink';
+import { createHeldFieldLink } from './heldFieldLink';
+import { createAnswerNotesLink } from './answerNotesLink';
 import { createNetworkStatusLink } from './networkStatusLink';
 import { createClientReleaseLink } from './clientReleaseLink';
 import { errorLink } from './errorLink';
 import { retryLink } from './retryLink';
 import { createTransportLink } from './transportLink';
 import { createQueueLink } from '../offlineQueue/queueLink';
+import { FEATURE_ANSWER_NOTES } from '#features/registry.cache';
 
 /**
  * Create link chain for Apollo client
@@ -54,6 +57,8 @@ export function createLink() {
     createLocalWritePrecedenceLink(), // A read in flight never undoes a local-first write
     // Under the precedence link, so it and Apollo only see ordered answers.
     createAnswerOrderingLink(), // An answer's older copy of a row never replaces a newer one
+    createHeldFieldLink(), // A failed field keeps the value the device holds
+    createAnswerNotesLink(FEATURE_ANSWER_NOTES), // What only a server's answer records
     networkStatusLink, // Feed the API-reachability circuit breaker (one outcome/op)
     clientReleaseLink, // Surface the server's "newer build available" extension
     telemetryLink, // Track operations for monitoring

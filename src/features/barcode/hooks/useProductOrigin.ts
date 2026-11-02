@@ -1,4 +1,5 @@
 import { useFragment, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
@@ -55,10 +56,11 @@ export function useProductOrigin(
   const { t } = useTranslation();
   // The scan's lookup stores these with the item, so this asks only for an
   // item that came another way.
-  useQuery(ProductOriginDocument, {
+  const { error } = useQuery(ProductOriginDocument, {
     variables: { itemId },
     fetchPolicy: 'cache-first',
   });
+  useApolloErrorLogger(ProductOriginDocument, error);
   const { data, complete } = useFragment({
     fragment: UseProductOrigin_ItemFragmentDoc,
     fragmentName: 'useProductOrigin_item',

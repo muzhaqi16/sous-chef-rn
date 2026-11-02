@@ -6,6 +6,7 @@ import {
   GetCommonUnitsDocument,
 } from '#operations/item/unit.generated';
 import { useAppStore } from '#store/useAppStore';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { fromServer } from '#/apollo/utils/fromServer';
 import { useAutocompleteSearch } from '#features/catalog/hooks/useAutocompleteSearch';
 import { filterByTerm, type Accessor } from '#hooks/search/useLocalSearch';
@@ -77,7 +78,11 @@ export function useUnitAutocomplete() {
   ]);
 
   // Gated by `skipToken` (not lazy)
-  const { data: searchData, loading } = useQuery(
+  const {
+    data: searchData,
+    loading,
+    error,
+  } = useQuery(
     SearchUnitsDocument,
     debouncedSearchTerm.length >= 2
       ? {
@@ -87,6 +92,7 @@ export function useUnitAutocomplete() {
         }
       : skipToken,
   );
+  useApolloErrorLogger(SearchUnitsDocument, error);
 
   const search = (term: string) => {
     setDebouncedSearchTerm(term);

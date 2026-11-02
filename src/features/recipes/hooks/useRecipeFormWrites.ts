@@ -27,6 +27,8 @@ import {
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import { UnreadVersionError } from '#/apollo/utils/entityWriteChain';
 import { useTranslation } from '#/i18n';
 import {
@@ -64,7 +66,12 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const { data: recipeData, refetch: refetchRecipe } = useQuery(
+  const {
+    data,
+    loading,
+    error,
+    refetch: refetchRecipe,
+  } = useQuery(
     GetRecipeDocument,
     recipeId
       ? {
@@ -75,7 +82,16 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         }
       : skipToken,
   );
+  // A resync that fails mid-edit must not take the form away.
+  const recipeData = usePreservedQueryData(data, undefined, recipeId ?? '');
   const recipeRef = recipeData?.recipe ?? null;
+  const recipeState = useDataState({
+    loading,
+    error,
+    hasResult: recipeData !== undefined,
+    isEmpty: !recipeRef,
+    skipped: !recipeId,
+  });
 
   /**
    * Materialize the masked ref into the form's own narrow fragment. A callback
@@ -185,6 +201,10 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
 
   return {
     recipeRef,
+    recipeState,
+    retryRecipe: () => {
+      void refetchRecipe();
+    },
     readRecipe,
     reloadRecipe,
     createRecipe,

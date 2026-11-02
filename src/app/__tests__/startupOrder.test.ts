@@ -48,6 +48,7 @@ jest.mock('react-native-launch-arguments', () => ({
 jest.mock('#/services/auth/deviceId', () => ({ ensureDeviceId: jest.fn() }));
 jest.mock('#/apollo/offlineQueue/queueFailureHandler', () => ({
   registerQueueFailureHandler: jest.fn(),
+  setChangesNotSavedOpener: jest.fn(),
 }));
 jest.mock('#native/storage/keychain', () => ({
   getLastBiometricEmail: jest.fn(),

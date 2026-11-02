@@ -3,8 +3,10 @@ import type { DocumentNode } from 'graphql';
 import { orderAnswer } from '#/apollo/links/answerOrderingLink';
 import {
   dependencyIdsOf,
+  inputOnSurvivingRow,
   queuedSubject,
 } from '#/apollo/offlineQueue/queuedSubject';
+import type { RowAdoption } from '#/apollo/offlineQueue/types';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { returnedVersionOf, versionOf } from '#/apollo/utils/returnedVersion';
 import type { Settled } from '#/apollo/utils/settleMutation';
@@ -13,7 +15,12 @@ import { generateId } from '#/utils/generateId';
 import { isRecord } from '#/utils/isRecord';
 import { LOCAL_WRITES } from './localWriteRegistry';
 import { readFenceOf } from './readFence';
-import type { LocalInputs, LocalWriteTable, PendingWrite } from './types';
+import type {
+  ConflictRead,
+  LocalInputs,
+  LocalWriteTable,
+  PendingWrite,
+} from './types';
 
 const REBUILD_WINDOW_MS = 50;
 
@@ -154,8 +161,9 @@ export class PendingWrites {
     let data: unknown;
     let settled: Settled<TData>;
     try {
+      const { input } = this.get(write.id)?.variables ?? variables;
       settled = await settle({
-        variables: this.onAnsweredVersion(variables, subjectIds),
+        variables: this.onAnsweredVersion({ ...variables, input }, subjectIds),
         context: { localFirst: true, pendingWriteId: write.id },
         update: (_cache, result) => {
           data = result.data;
@@ -213,6 +221,22 @@ export class PendingWrites {
     this.rebuild();
   }
 
+  /** A refusal keeps the write for the person, unless it has a retry of its own. */
+  keepsRefusal(operationName: string): boolean {
+    return this.table[operationName]?.recoverable !== false;
+  }
+
+  conflictOf(operationName: string): ConflictRead | undefined {
+    return this.table[operationName]?.conflict;
+  }
+
+  /** Writes the person sent back: they show again, and the queue carries them. */
+  reopen(writes: readonly PendingWrite[]): void {
+    this.writes = [...this.writes, ...writes];
+    writes.forEach(write => this.queued.add(write.id));
+    this.rebuild();
+  }
+
   /** The server refused a queued write for good. */
   refuse(id: string): void {
     const write = this.get(id);
@@ -247,6 +271,31 @@ export class PendingWrites {
     void fence.passed().then(() => {
       if (this.get(id)) this.commit(write, data, true);
     });
+  }
+
+  /** A create the server merged: the writes held behind it go to the surviving row. */
+  followMerge(
+    adoption: RowAdoption,
+    moves: (write: PendingWrite) => boolean,
+  ): void {
+    const { mintedId } = adoption;
+    this.writes = this.writes.map(write => {
+      const sending = this.sending.get(write.id);
+      const { input } = write.variables;
+      return sending &&
+        !sending.mintedIds.includes(mintedId) &&
+        isRecord(input) &&
+        moves(write)
+        ? {
+            ...write,
+            variables: {
+              ...write.variables,
+              input: inputOnSurvivingRow(input, adoption),
+            },
+          }
+        : write;
+    });
+    this.rebuild();
   }
 
   /** Drops the queued writes a later write superseded, which the queue has let go. */

@@ -11,6 +11,8 @@ import { mirroredFrom } from '#/domain/serverSettings';
  */
 export function useSettingsMirror(): void {
   const user = useUser();
+  // The session's one network read of settings: no resync fires at launch, and
+  // every other reader takes `cache-first`.
   const { data } = useQuery(GetUserSettingsDocument, user?.id ? {} : skipToken);
   const settings = data?.me?.settings;
   useEffect(() => {

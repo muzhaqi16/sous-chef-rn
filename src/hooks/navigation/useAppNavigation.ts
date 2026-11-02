@@ -137,6 +137,7 @@ export function useAppNavigation() {
     toDietaryProfile: () => navigation.navigate('DietaryProfile'),
     toPersonalInformation: () => navigation.navigate('PersonalInformation'),
     toAppSettings: () => navigation.navigate('AppSettings'),
+    toChangesNotSaved: () => navigation.navigate('ChangesNotSaved'),
     toDataSources: () => navigation.navigate('DataSources'),
     toMyReports: () => navigation.navigate('MyReports'),
     toBrandLists: () => navigation.navigate('BrandLists'),

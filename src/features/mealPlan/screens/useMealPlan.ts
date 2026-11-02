@@ -118,6 +118,7 @@ export function useCurrentMealPlan({
           ...heldFetchPolicy(fetchPolicy),
         },
   );
+  useApolloErrorLogger(CurrentMealPlanDocument, result.error);
   // `skipToken` keeps the last run's answer, which may be another day's.
   const forToday = result.variables.today === today;
   return {

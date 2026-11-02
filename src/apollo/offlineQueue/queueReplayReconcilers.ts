@@ -1,6 +1,7 @@
 import { errorService } from '#/services/errorService';
 import {
   GONE_REPLAYS,
+  MERGE_REPORTERS,
   MERGED_QUANTITY_OVERWRITES,
   REPLAY_RECONCILERS,
 } from './replayRegistry';
@@ -43,6 +44,16 @@ export function reconcileReplaySuccess(
   adopt?: (adoption: RowAdoption) => void,
 ): void {
   runReconciler(REPLAY_RECONCILERS, operationName, variables, data, adopt);
+}
+
+/** A write answered online that the server merged is reported through `adopt`. */
+export function reportMergedRow(
+  operationName: string,
+  variables: OperationVariables,
+  data: unknown,
+  adopt: (adoption: RowAdoption) => void,
+): void {
+  runReconciler(MERGE_REPORTERS, operationName, variables, data, adopt);
 }
 
 /**

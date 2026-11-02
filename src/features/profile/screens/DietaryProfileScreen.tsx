@@ -36,7 +36,7 @@ import { MacroTargetsSheet } from '#features/profile/components/MacroTargetsShee
 import { Text } from '#components/atoms/Text';
 import { errorService } from '#/services/errorService';
 import { motion } from '#/theme/motion';
-import { EmptyState } from '#components/molecules/EmptyState';
+import { DataStateView } from '#components/organisms/DataStateView';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
@@ -44,6 +44,8 @@ export const DietaryProfileScreen: React.FC = () => {
   const {
     editableProfile: profile,
     loading,
+    state,
+    refetch,
     updateDietaryProfile,
     addDietaryRestriction,
     removeDietaryRestriction,
@@ -249,9 +251,11 @@ export const DietaryProfileScreen: React.FC = () => {
   if (!profile) {
     return (
       <SubScreen title={t('dietary.title')} scroll="none">
-        <EmptyState
-          title={t('dietary.loadFailedTitle')}
-          description={t('dietary.loadFailedSubtitle')}
+        <DataStateView
+          state={state}
+          onRetry={() => {
+            void refetch();
+          }}
         />
       </SubScreen>
     );

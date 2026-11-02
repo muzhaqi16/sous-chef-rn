@@ -1,4 +1,5 @@
 import { useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import { SAVED_RECIPES_PAGE_SIZE } from '#features/recipes/screens/useSavedRecipes';
 
@@ -7,10 +8,11 @@ import { SAVED_RECIPES_PAGE_SIZE } from '#features/recipes/screens/useSavedRecip
  * Returns a list of tags for autocomplete suggestions and filtering
  */
 export function useRecipeTags() {
-  const { data } = useQuery(MySavedRecipesDocument, {
+  const { data, error } = useQuery(MySavedRecipesDocument, {
     variables: { first: SAVED_RECIPES_PAGE_SIZE },
     fetchPolicy: 'cache-first',
   });
+  useApolloErrorLogger(MySavedRecipesDocument, error);
 
   const savedRecipes =
     data?.me?.savedRecipesConnection.edges.map(e => e.node) ?? [];

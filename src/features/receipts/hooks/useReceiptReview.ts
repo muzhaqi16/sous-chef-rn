@@ -114,9 +114,12 @@ export function useReceiptReview() {
   // The product being picked in a line's sheet, asked about before it is saved.
   const [pickingItemId, setPickingItemId] = useState<string | null>(null);
   // The list the user works in, checked against the lists they still have.
-  const { lists, loading: listsLoading } = useShoppingListsLite({
-    fetchPolicy: 'cache-first',
-  });
+  const {
+    lists,
+    loading: listsLoading,
+    state: listsState,
+    refetch: refetchLists,
+  } = useShoppingListsLite({ fetchPolicy: 'cache-first' });
   const listId = useActiveShoppingListId(lists);
   const { pantry, currentHome } = useCurrentPantry();
   // The household's stores, to tell a receipt's new store from a known one.
@@ -190,6 +193,8 @@ export function useReceiptReview() {
     lines: openLines,
     loading: openLinesLoading,
     incomplete: listIncomplete,
+    state: openLinesState,
+    retry: retryOpenLines,
   } = useOpenListLinesFor(
     listId,
     chosen
@@ -494,6 +499,15 @@ export function useReceiptReview() {
     listLoading: openLinesLoading || (listsLoading && lists.length === 0),
     /** The list is longer than the review can see, so a line may miss its list line. */
     listIncomplete,
+    /** A failure here leaves a line on the list reading as not on it. */
+    listState:
+      listsState === 'error' || listsState === 'offline'
+        ? listsState
+        : openLinesState,
+    retryList: () => {
+      void refetchLists();
+      retryOpenLines();
+    },
     chooseLine,
     /** The list line a line would tick off with this product and unit, as they are picked. */
     listItemNameFor,

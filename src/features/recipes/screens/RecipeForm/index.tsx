@@ -3,6 +3,8 @@ import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { FormScreen } from '#components/templates/FormScreen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import {
@@ -69,6 +71,8 @@ export const RecipeFormScreen: React.FC<
   const user = useUser();
   const {
     recipeRef,
+    recipeState,
+    retryRecipe,
     readRecipe,
     reloadRecipe,
     createRecipe,
@@ -87,7 +91,12 @@ export const RecipeFormScreen: React.FC<
   }, [recipeRef, readRecipe, populateFromRecipe]);
 
   // An incomplete capture fills a new recipe once, when its draft is read.
-  const { draft: captureDraft, link: captureLink } = useCaptureDraft(captureId);
+  const {
+    draft: captureDraft,
+    link: captureLink,
+    draftState,
+    retry: retryDraft,
+  } = useCaptureDraft(captureId);
   const { populateFromCapture } = form;
   const filledFrom = useRef<string | null>(null);
   useEffect(() => {
@@ -222,6 +231,32 @@ export const RecipeFormScreen: React.FC<
       form.addStep(step.instruction);
     }
   };
+
+  // A blank form here would read as a capture that found nothing.
+  if (draftState === 'error' || draftState === 'offline') {
+    return (
+      <SubScreen
+        title={t('recipes.createRecipe')}
+        testID={recipesTestIDs.recipeFormScreen}
+        scroll="none"
+      >
+        <DataStateView state={draftState} onRetry={retryDraft} />
+      </SubScreen>
+    );
+  }
+
+  // A blank form here would save over the recipe it failed to read.
+  if (recipeState === 'error' || recipeState === 'offline') {
+    return (
+      <SubScreen
+        title={t('recipes.editRecipe')}
+        testID={recipesTestIDs.recipeFormScreen}
+        scroll="none"
+      >
+        <DataStateView state={recipeState} onRetry={retryRecipe} />
+      </SubScreen>
+    );
+  }
 
   return (
     <>

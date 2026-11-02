@@ -260,66 +260,9 @@ instrumented. They show a handful of rows for a few seconds, so
 every cell in an `Animated.View` + layout effect, which is real mount cost in
 the sampled sessions. Instrumenting them would cost more than it tells you.
 
-## Still open
+## Filtered modes
 
-- **BUG — ROOT-CAUSED: a paginated `itemsConnection` can report completeness
-  while holding a subset, and client-side filtering over it silently lies.**
-  Probed on device (139-item pantry, one item expiring in 2 days):
-  `allItems.length: 101`, `totalCount: 139`, **`hasMore: false`**,
-  `withExpiry: 0`. `MAX_WINDOW_EDGES = 100` (`src/apollo/cacheFieldPolicies.ts`) caps the cached edges,
-  but `pageInfo.hasNextPage` reflects the LAST FETCHED PAGE, so the connection
-  ends up claiming there is nothing more while 38 items — including the only one
-  carrying `expiresAt` — are absent. `FilteredPantryItems` then filters an
-  incomplete set and correctly finds nothing, and its "load every page" effect
-  cannot recover because it is gated on `hasMore`.
-
-  Broken invariant: **`edges.length < totalCount` while `hasNextPage === false`.**
-
-  **Do NOT "fix" this by deriving `hasMore` from `totalCount`** (e.g.
-  `hasNextPage || itemCount < totalCount` in `usePagination`): each fetched page
-  is capped straight back to 100 edges, so `hasMore` would never go false and the
-  screen would fetch forever.
-
-  **FIXED for the expiry modes:** `FilteredPantryItems` now narrows server-side
-  via `ModeConfig.serverFilters` (`{ expiringSoon: true }` for both `expiring`
-  and `expired` — the API filter has no lower bound, so it returns the superset
-  and the client predicate splits it). A non-null filter also re-keys the cache
-  entry, so those screens get their own small connection instead of sharing the
-  capped one. Verified against the API: `expiringSoon: true` on a 139-item
-  pantry returns `totalCount: 1, hasNextPage: false`.
-
-  **`lowStock` is FIXED too** — sous-chef-api#293 landed, so all three modes now
-  narrow server-side. The filter is quantity <= 0 (or <= minQuantity when set):
-  exactly what `PantryStats.lowStockCount` counts and `PantryItem.isLowStock`
-  reports, so a filtered page and the badge cannot disagree. It is NOT the
-  `lowStockAlert` opt-in — that records whether the user wants notifying, and
-  the suggestion and shopping-list paths gate on it because they answer a
-  different question. `ModeConfig.serverFilters` is non-nullable so a new mode
-  cannot ship without declaring narrowing.
-
-  We deliberately do not pass `expirationDays`. It defaults to 7 and
-  `PantryStats.expiringCount` is ALWAYS a 7-day window regardless of it, so
-  filter and badge line up arithmetically only at the default; widening the
-  horizon would list items the badge never counted.
-
-  **The MAIN pantry list is NOT affected** — falsified on device, not assumed.
-  `usePantryScreen` flips to SERVER mode when `stats.totalItems > PAGE_SIZE.MAX`
-  (`usePantryScreen.ts:133`), sending filter/sort/search to the server so they
-  stay correct beyond the window. Verified on a seeded 114-item pantry: search
-  finds an item far outside the newest-first window, and a full scroll to the
-  bottom and back leaves the head of the list intact despite the merge policy
-  evicting oldest edges. The switch is gated on `isOnline`, so offline a >100
-  pantry filters over the cached window — a physical limit, not a defect.
-
-  Note the screen's tests mock BOTH `useCurrentPantry` and `usePantryManagement`,
-  so they verify the filter against injected data and structurally cannot catch
-  this.
-
-- The pantry's frame-rate ceiling: ~4 ms must come out of RenderThread draw +
-  GPU present (image decode/upload, rounded-corner clipping, overdraw) to reach
-  10.4 ms. Nothing cheap found. Row REACT cost is not the lever —
-  `SlideAnimatedWrapper` measures 0.63 ms of render time per recycled row, and
-  the swipe action trays are already lazy.
-- `HomeEvents` / `MealPlanEvents` `no-cache` (see the rule above) — no symptom
-  measured there yet.
-- Issues 3 and 4 above: mitigated / low, not re-measured.
+The filtered pantry modes narrow on the server (`ModeConfig.serverFilters`,
+non-nullable so a new mode cannot ship without it). A client-only filter sees only
+the pages loaded. Their filters match `PantryStats` and `PantryItem.isLowStock`, and
+`lowStock` is not the `lowStockAlert` opt-in.

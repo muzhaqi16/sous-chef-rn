@@ -1,4 +1,5 @@
 import { skipToken, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { canAlert } from '#domain/dietary';
 import { HomeDietaryNeedsDocument } from '#features/home/hooks/useHomeDietaryNeeds.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
@@ -21,6 +22,8 @@ export function useRestrictionsInPlay(
     HomeDietaryNeedsDocument,
     homeId ? { variables: { homeId }, fetchPolicy: 'cache-first' } : skipToken,
   );
+  useApolloErrorLogger(GetDietaryProfileDocument, own.error);
+  useApolloErrorLogger(HomeDietaryNeedsDocument, shared.error);
 
   // `skipToken` keeps the last run's answer: with no home it is another's.
   const ownRead = userId ? own.data : undefined;

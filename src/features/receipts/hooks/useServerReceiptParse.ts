@@ -11,6 +11,7 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { backoffDelay } from '#/utils/backoff';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Telemetry } from '#/services/telemetry';
 import {
@@ -238,7 +239,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     return () => clearTimeout(limit);
   }, [polled, polling]);
   const channelOpen = useIsLiveChannelOpen();
-  const { data, refetch } = useQuery(
+  const { data, error, refetch } = useQuery(
     ReceiptParseDocument,
     polled
       ? {
@@ -255,6 +256,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
         }
       : skipToken,
   );
+  useApolloErrorLogger(ReceiptParseDocument, error);
 
   useEffect(() => {
     if (!polled) return;

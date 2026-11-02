@@ -5,6 +5,7 @@
     "inviteOpenFromNotifications": "Abre esta invitación desde tus notificaciones, o desde el correo que te enviamos, para aceptarla.",
     "createOwnHome": "Crear mi propio hogar",
     "skipForNow": "Omitir por ahora",
+    "finishSetupLater": "Puedes continuar. Terminaremos la configuración cuando tengas conexión.",
     "setupError": "Ocurrió un error durante la configuración",
     "settingUpTitle": "Preparando tu cocina…",
     "setupFailedTitle": "No pudimos terminar la configuración",

@@ -56,6 +56,7 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
     resetProcessingToPending: jest.fn(() => 0),
     expireStalePending: jest.fn(() => []),
     cleanupTerminal: jest.fn(() => []),
+    getRefusedRows: jest.fn(() => new Map<string, string>()),
     getQueueStats: jest.fn(() => ({
       total: 0,
       pending: 0,

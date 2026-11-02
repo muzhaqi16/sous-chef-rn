@@ -637,11 +637,11 @@ describe('cache pagination integration', () => {
   });
 
   // =========================================================================
-  // Section C.2: itemsConnectionFieldPolicy — bounded edge window
-  //   Verifies MAX_WINDOW_EDGES eviction behavior
+  // Section C.2: itemsConnectionFieldPolicy — a long list
+  //   Forward-only paging can never bring an evicted row back
   // =========================================================================
 
-  describe('itemsConnectionFieldPolicy bounded edge window', () => {
+  describe('itemsConnectionFieldPolicy on a long list', () => {
     const QUERY = gql`
       query GetList($id: ID!, $after: String) {
         shoppingList(id: $id) {
@@ -699,7 +699,7 @@ describe('cache pagination integration', () => {
       return result?.shoppingList?.itemsConnection?.edges ?? [];
     };
 
-    it('initial load within window limit retains all edges', () => {
+    it('initial load retains all edges', () => {
       const cache = makeCache();
 
       const edges = Array.from({ length: 50 }, (_, i) =>
@@ -716,45 +716,31 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(50);
     });
 
-    it('evicts oldest edges when exceeding window limit', () => {
+    it('keeps every row a 130-row list loaded, in order', () => {
       const cache = makeCache();
+      const PAGE = 25;
 
-      // Write 80 edges as page 1
-      const page1 = Array.from({ length: 80 }, (_, i) =>
-        itemEdge(`si-${i}`, `Item ${i}`),
-      );
-      writeConn(
-        cache,
-        page1,
-        { hasNextPage: true, endCursor: 'c80' },
-        undefined,
-        300,
-      );
+      for (let page = 0; page * PAGE < 130; page++) {
+        const start = page * PAGE;
+        const count = Math.min(PAGE, 130 - start);
+        writeConn(
+          cache,
+          Array.from({ length: count }, (_, i) =>
+            itemEdge(`si-${start + i}`, `Item ${start + i}`),
+          ),
+          { hasNextPage: start + count < 130, endCursor: `c${start + count}` },
+          page === 0 ? undefined : { after: `c${start}` },
+          130,
+        );
+      }
 
-      // Write 40 more edges as page 2 (total would be 120, exceeding 100)
-      const page2 = Array.from({ length: 40 }, (_, i) =>
-        itemEdge(`si-${80 + i}`, `Item ${80 + i}`),
-      );
-      writeConn(
-        cache,
-        page2,
-        { hasNextPage: true, endCursor: 'c120' },
-        { after: 'c80' },
-        300,
-      );
-
-      const edges = readEdges(cache);
-      // Should be capped at 100 (MAX_WINDOW_EDGES)
-      expect(edges).toHaveLength(100);
-      // Oldest 20 edges (si-0 through si-19) should be evicted
-      const ids = edges.map(e => e.node.id);
-      expect(ids).not.toContain('si-0');
-      expect(ids).not.toContain('si-19');
-      expect(ids).toContain('si-20');
-      expect(ids).toContain('si-119');
+      const ids = readEdges(cache).map(e => e.node.id);
+      expect(ids).toHaveLength(130);
+      expect(ids[0]).toBe('si-0');
+      expect(ids[129]).toBe('si-129');
     });
 
-    it('background refetch within window limit does not evict', () => {
+    it('background refetch keeps the rows past its page', () => {
       const cache = makeCache();
 
       // Write 100 edges
@@ -781,7 +767,7 @@ describe('cache pagination integration', () => {
         200,
       );
 
-      // All 100 should still be there (deduped, within limit)
+      // All 100 should still be there (deduped)
       expect(readEdges(cache)).toHaveLength(100);
     });
   });
@@ -891,6 +877,48 @@ describe('cache pagination integration', () => {
 
       const ids = readEdges(cache).map(e => e.node.id);
       expect(ids).toEqual(expect.arrayContaining(['pi-1', 'pi-2', 'pi-3']));
+    });
+
+    describe('past one page', () => {
+      const loadAll = (cache: ReturnType<typeof makeCache>) => {
+        const PAGE = 100;
+        for (let page = 0; page * PAGE < 250; page++) {
+          const start = page * PAGE;
+          const count = Math.min(PAGE, 250 - start);
+          writeConn(
+            cache,
+            Array.from({ length: count }, (_, i) =>
+              piEdge(`pi-${start + i}`, `Item ${start + i}`),
+            ),
+            {
+              hasNextPage: start + count < 250,
+              endCursor: `c${start + count}`,
+            },
+            page === 0 ? undefined : { after: `c${start}` },
+          );
+        }
+      };
+
+      it('keeps the first page at the top through later pages', () => {
+        const cache = makeCache();
+
+        loadAll(cache);
+
+        const ids = readEdges(cache).map(e => e.node.id);
+        expect(ids).toHaveLength(250);
+        expect(ids[0]).toBe('pi-0');
+        expect(ids[249]).toBe('pi-249');
+      });
+
+      it('holds every row through a persist and a restore', () => {
+        const cache = makeCache();
+        loadAll(cache);
+
+        const reopened = makeCache();
+        reopened.restore(cache.extract());
+
+        expect(readEdges(reopened)).toHaveLength(250);
+      });
     });
 
     it('shrinkage: hasNextPage:false clears stale items', () => {

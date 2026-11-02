@@ -2,6 +2,8 @@ import { ApolloLink, Observable } from '@apollo/client';
 import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, OperationTypeNode } from 'graphql';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { isGatewayFault } from '#/utils/isServerFault';
+import { noteCleanAnswer } from '../offlineQueue/serverAnswers';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
@@ -58,15 +60,17 @@ export const createNetworkStatusLink = () =>
       const subscription = forward(operation).subscribe({
         next: result => {
           if (result.extensions?.queued) {
-            if (result.extensions.queuedReason === 'network-error') {
+            const reason: unknown = result.extensions.queuedReason;
+            if (reason === 'network-error' || reason === 'gateway-fault') {
               apiReachabilityBreaker.recordFailure(
-                `${operationName} (${operationKind}): queued after a network error`,
+                `${operationName} (${operationKind}): queued after a ${reason}`,
               );
             }
           } else {
             apiReachabilityBreaker.recordSuccess(
               `${operationName} (${operationKind})`,
             );
+            if (!result.errors?.length) noteCleanAnswer();
           }
           observer.next(result);
         },
@@ -78,7 +82,7 @@ export const createNetworkStatusLink = () =>
             observer.error(error);
             return;
           }
-          if (isNetworkError(error)) {
+          if (isNetworkError(error) || isGatewayFault(error)) {
             apiReachabilityBreaker.recordFailure(
               `${operationName} (${operationKind}): ${describeError(error)}`,
             );

@@ -46,7 +46,6 @@ const VARIABLES: RandomCatalogRecipesQueryVariables = {
   intolerances: [],
   first: 25,
 };
-const KEY = catalogFetchKey('randomCatalogRecipes', VARIABLES);
 
 describe('catalog page policy', () => {
   it('keeps a complete page over one answered without the catalog', () => {
@@ -57,7 +56,6 @@ describe('catalog page policy', () => {
       data: page(true, 'stew', 'curry'),
     });
     const held = read(cache, VARIABLES);
-    const recordedAt = catalogFetchedAt(KEY);
 
     seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
@@ -68,7 +66,6 @@ describe('catalog page policy', () => {
     const after = read(cache, VARIABLES);
     expect(after).toBe(held);
     expect(after?.randomCatalogRecipes.edges).toHaveLength(2);
-    expect(catalogFetchedAt(KEY)).toBe(recordedAt);
   });
 
   it('holds a degraded page when nothing complete was held', () => {
@@ -89,14 +86,13 @@ describe('catalog page policy', () => {
     ).toBeUndefined();
   });
 
-  it('replaces a page with the next complete one and records when it came', () => {
+  it('replaces a page with the next complete one', () => {
     const cache = makeCache();
     seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
       data: page(true, 'stew'),
     });
-    const before = Date.now();
     seedQuery(cache, {
       query: RandomCatalogRecipesDocument,
       variables: VARIABLES,
@@ -108,7 +104,6 @@ describe('catalog page policy', () => {
         edge => edge.node.name,
       ),
     ).toEqual(['curry']);
-    expect(catalogFetchedAt(KEY)).toBeGreaterThanOrEqual(before);
   });
 
   it('keeps a page per set of arguments', () => {

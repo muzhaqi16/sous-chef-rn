@@ -8,6 +8,7 @@ import { extractNodes } from '#/utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
 import { useToday } from '#hooks/app/useToday';
 import { useDataState } from '#hooks/data/useDataState';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
 
 interface UsePantryItemFormDataArgs {
@@ -24,10 +25,11 @@ export function usePantryItemFormData({
 }: UsePantryItemFormDataArgs) {
   const today = useToday();
 
-  const { data: homeData } = useQuery(
+  const { data: homeData, error: homeError } = useQuery(
     GetHomeDocument,
     selectedHomeId ? { variables: { homeId: selectedHomeId } } : skipToken,
   );
+  useApolloErrorLogger(GetHomeDocument, homeError);
 
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
   // A client-minted id is cached (and edit-swipeable) before the server has
@@ -71,7 +73,7 @@ export function usePantryItemFormData({
   const currentPantryId =
     selectedPantryId ?? pantry?.id ?? existingPantryItem?.pantryId;
 
-  const { data: pantryData } = useQuery(
+  const { data: pantryData, error: pantryError } = useQuery(
     GetPantryDocument,
     currentPantryId
       ? {
@@ -80,6 +82,7 @@ export function usePantryItemFormData({
         }
       : skipToken,
   );
+  useApolloErrorLogger(GetPantryDocument, pantryError);
 
   const storageLocations = extractNodes(
     pantryData?.pantry?.storageLocationsConnection,

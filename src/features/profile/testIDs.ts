@@ -46,6 +46,11 @@ export const profileTestIDs = {
 
   /** The user's own brand lists, and one list's screen. */
   brandListsScreen: 'brand-lists-screen',
+  changesNotSavedScreen: 'changes-not-saved-screen',
+  changesNotSavedBanner: 'changes-not-saved-banner',
+  changeNotSavedRow: (id: string) => `change-not-saved-${id}`,
+  changeNotSavedRetry: (id: string) => `change-not-saved-retry-${id}`,
+  changeNotSavedDiscard: (id: string) => `change-not-saved-discard-${id}`,
   brandListsNew: 'brand-lists-new',
   brandListRow: (listId: string) => `brand-list-row-${listId}`,
   brandListSwitch: (listId: string) => `brand-list-switch-${listId}`,

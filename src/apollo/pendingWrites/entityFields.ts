@@ -1,5 +1,6 @@
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
+import type { RowFields } from './conflictRead';
 import type { LocalWrite } from './types';
 
 export type EntityFieldsInputs = {
@@ -7,6 +8,8 @@ export type EntityFieldsInputs = {
   entity?: { __typename: string; id: string };
   /** What the row shows meanwhile, in its own field names. */
   fields: Readonly<Record<string, unknown>>;
+  /** The row as the person saw it, for a write that settles its conflicts. */
+  baseline?: RowFields;
 };
 
 /**

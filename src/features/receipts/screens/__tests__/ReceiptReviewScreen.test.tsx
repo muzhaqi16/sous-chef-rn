@@ -8,6 +8,7 @@ import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import type { ReceiptReviewRow } from '../../hooks/useReceiptReview';
+import type { DataState } from '#hooks/data/useDataState';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
 import { ReceiptReviewScreen } from '../ReceiptReviewScreen';
@@ -51,6 +52,8 @@ const added = (sent: number, held: number, recorded = 0) => ({
   learned: Promise.resolve(null),
 });
 const mockFinish = jest.fn();
+let mockListState: DataState = 'ready';
+const mockRetryList = jest.fn();
 jest.mock('../../hooks/useReceiptReview', () => ({
   useReceiptReview: () => ({
     rows: mockRows,
@@ -77,6 +80,8 @@ jest.mock('../../hooks/useReceiptReview', () => ({
     applying: false,
     listLoading: false,
     listIncomplete: false,
+    listState: mockListState,
+    retryList: mockRetryList,
     chooseLine: jest.fn(),
     listItemNameFor: () => undefined,
     pickItem: jest.fn(),
@@ -101,6 +106,29 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+});
+
+describe('ReceiptReviewScreen, a list it could not read', () => {
+  afterEach(() => {
+    mockListState = 'ready';
+  });
+
+  it('says so and offers to read it again, leaving the lines in place', async () => {
+    mockListState = 'error';
+    mockRows = [row({ printed: 'MILK' })];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.getAllByText('MILK').length).toBeGreaterThan(0);
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    expect(mockRetryList).toHaveBeenCalledTimes(1);
+  });
+
+  it('says nothing while the list was read', () => {
+    mockRows = [row({ printed: 'MILK' })];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(screen.queryByText(t('labels.tryAgain'))).toBeNull();
+  });
 });
 
 describe('ReceiptReviewScreen rows', () => {

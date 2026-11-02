@@ -104,8 +104,12 @@ export function useRecipeShoppingList({
 }: UseRecipeShoppingListOptions) {
   const { t } = useTranslation();
   // A picker for the List tab's lists: the cache it keeps current answers.
-  const { lists: shoppingLists, loading: shoppingListsLoading } =
-    useShoppingListsLite({ fetchPolicy: 'cache-first' });
+  const {
+    lists: shoppingLists,
+    loading: shoppingListsLoading,
+    state: shoppingListsState,
+    refetch: refetchShoppingLists,
+  } = useShoppingListsLite({ fetchPolicy: 'cache-first' });
 
   const targetListId = useActiveShoppingListId(shoppingLists);
   const setSelectedShoppingListId = useAppStore(
@@ -376,6 +380,10 @@ export function useRecipeShoppingList({
 
   return {
     shoppingLists,
+    shoppingListsState,
+    retryShoppingLists: () => {
+      void refetchShoppingLists();
+    },
     addingToList,
     addedIngredients,
     creatingList,

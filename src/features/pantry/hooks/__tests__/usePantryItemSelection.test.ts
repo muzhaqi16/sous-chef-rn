@@ -6,6 +6,7 @@ import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -89,6 +90,50 @@ const catalogIds = (cache: ReturnType<typeof makeCache>) =>
 
 const rowIds = (cache: ReturnType<typeof makeCache>) =>
   readPantry(cache).rows.map(row => row.id);
+
+describe('usePantryItemSelection, a read that fails', () => {
+  it('reports it with nothing held', async () => {
+    const failed = recordMock(GetPantryDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSelection('p1'),
+      {
+        cache: makeCache(),
+        operationMocks: [failed.mock],
+      },
+    );
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+    expect(result.current.existingCatalogIds.size).toBe(0);
+  });
+
+  it('keeps what it held selected', async () => {
+    const cache = makeCache();
+    const today = jest.requireActual('#/utils/dateUtils').todayKey();
+    seedQuery(cache, {
+      query: GetPantryDocument,
+      variables: { ...PANTRY_VARS, today },
+      data: PANTRY,
+    });
+    const failed = recordMock(GetPantryDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSelection('p1'),
+      {
+        cache,
+        operationMocks: [failed.mock],
+      },
+    );
+
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.state).toBe('ready');
+    expect(result.current.existingCatalogIds.has('cat-eggs')).toBe(true);
+  });
+});
 
 async function setup(
   cache: ReturnType<typeof makeCache>,

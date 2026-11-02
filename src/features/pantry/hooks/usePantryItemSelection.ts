@@ -8,6 +8,8 @@ import { usePantryItemMutations } from '#features/pantry/hooks/mutations/usePant
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { extractNodes } from '#/utils/connectionUtils';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import { useToday } from '#hooks/app/useToday';
 
 interface ExistingPantryIndex {
@@ -52,7 +54,7 @@ function buildIndex(rows: readonly PantryRow[]): ExistingPantryIndex {
  */
 export function usePantryItemSelection(pantryId: string | null | undefined) {
   const today = useToday();
-  const { data, loading } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     GetPantryDocument,
     pantryId
       ? {
@@ -64,6 +66,14 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
         }
       : skipToken,
   );
+  const held = usePreservedQueryData(data, undefined, pantryId ?? '');
+  const state = useDataState({
+    loading,
+    error,
+    hasResult: held !== undefined,
+    isEmpty: false,
+    skipped: !pantryId,
+  });
 
   const { removeItem } = usePantryItemMutations({
     pantryId: pantryId ?? undefined,
@@ -74,7 +84,7 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
   const rows = useFragmentList({
     fragment: UsePantryItemSelection_PantryItemFragmentDoc,
     fragmentName: 'usePantryItemSelection_pantryItem',
-    from: extractNodes(data?.pantry?.itemsConnection),
+    from: extractNodes(held?.pantry?.itemsConnection),
   });
   const { existingItemMap, existingCatalogIds } = buildIndex(rows);
 
@@ -87,7 +97,9 @@ export function usePantryItemSelection(pantryId: string | null | undefined) {
      * `loading: true` on EVERY mount whatever the cache holds, so a caller that
      * gates on `loading` alone blanks the screen on every revisit.
      */
-    hasLoaded: !!data?.pantry,
+    hasLoaded: !!held?.pantry,
+    state,
+    refetch,
     addItem,
     /** Local-first: the row leaves the cache before the delete fires. */
     removeItem,

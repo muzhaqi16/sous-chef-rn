@@ -5,6 +5,7 @@ import {
   type StandDownOptions,
 } from '#/hooks/apollo/standDownOptions';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import {
   skipToken,
   useApolloClient,
@@ -97,14 +98,12 @@ export const useDietaryProfile = ({
 
   // Each mount of the default asks the network once; a screen that only reads
   // the profile passes `cache-first`, which the profile's writes keep current.
-  const { data, loading } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     GetDietaryProfileDocument,
-    user?.id
-      ? { errorPolicy: 'ignore', ...heldFetchPolicy(fetchPolicy) }
-      : skipToken,
+    user?.id ? heldFetchPolicy(fetchPolicy) : skipToken,
   );
 
-  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  // A failed read answers `undefined`: keep the last answer.
   const profileKey = user?.id ?? '';
   const profile = usePreservedQueryData(
     data?.me?.dietaryProfile,
@@ -116,6 +115,13 @@ export const useDietaryProfile = ({
     false,
     profileKey,
   );
+  const state = useDataState({
+    loading,
+    error,
+    hasResult: hasLoadedProfile,
+    isEmpty: false,
+    skipped: !user?.id,
+  });
 
   // A profile row is created by the first write, never by a read.
   const pendingCreation = useRef<Promise<boolean> | null>(null);
@@ -272,6 +278,8 @@ export const useDietaryProfile = ({
     editableProfile:
       dietaryProfile ?? (hasLoadedProfile ? DIETARY_PROFILE_DEFAULTS : null),
     loading,
+    state,
+    refetch,
     updateDietaryProfile,
     addDietaryRestriction,
     removeDietaryRestriction,

@@ -1,5 +1,6 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from './usePantryItemDetailData.generated';
 import {
@@ -35,10 +36,15 @@ export function usePantryItemDetailData(itemId: string) {
   // No status filter: the derived costs and the expired-batch check both read
   // the whole active set from this one fetch, while the section shows a few.
   // Resolves the pantry item first, so it 404s on an unconfirmed id too.
-  const { data: batchesData, refetch: refetchBatches } = useQuery(
+  const {
+    data: batchesData,
+    error: batchesError,
+    refetch: refetchBatches,
+  } = useQuery(
     GetPantryItemBatchesDocument,
     isUnconfirmed ? skipToken : { variables: { pantryItemId: itemId } },
   );
+  useApolloErrorLogger(GetPantryItemBatchesDocument, batchesError);
 
   // Keyed by ENTITY, not by the query result: that is what lets a locally-created
   // item render with no API at all, since `data` is undefined while the query is

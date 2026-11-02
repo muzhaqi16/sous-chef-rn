@@ -1,3 +1,4 @@
+import { DataStateView } from '#components/organisms/DataStateView';
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -127,6 +128,15 @@ export function ShoppingListModalsProvider({
         visible={moveToPantry.visible}
         shoppingListItemId={moveToPantry.selectedItemId}
         pantries={moveToPantry.pantries}
+        pantriesUnavailable={
+          moveToPantry.pantriesState === 'error' ||
+          moveToPantry.pantriesState === 'offline' ? (
+            <DataStateView
+              state={moveToPantry.pantriesState}
+              onRetry={moveToPantry.retryPantries}
+            />
+          ) : undefined
+        }
         selectedPantryId={moveToPantry.selectedPantryId}
         onClose={moveToPantry.close}
         onConfirm={moveToPantry.confirm}

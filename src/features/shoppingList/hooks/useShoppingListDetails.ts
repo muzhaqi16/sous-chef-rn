@@ -1,5 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import {
   ShoppingListCollaboratorFragmentDoc,
@@ -14,11 +15,13 @@ export function useShoppingListDetails(listId: string | undefined) {
     data: result,
     variables,
     loading,
+    error,
     refetch,
   } = useQuery(
     GetShoppingListDetailsDocument,
-    listId ? { variables: { id: listId }, errorPolicy: 'ignore' } : skipToken,
+    listId ? { variables: { id: listId } } : skipToken,
   );
+  useApolloErrorLogger(GetShoppingListDetailsDocument, error);
   // `skipToken` keeps the last run's variables AND data, so a result for a
   // previous list is dropped.
   const data = variables.id === listId ? result : undefined;
@@ -27,7 +30,7 @@ export function useShoppingListDetails(listId: string | undefined) {
   // The MyShoppingListsEvents subscription automatically updates the cache via
   // Apollo's normalization, eliminating the need for manual client.writeQuery.
 
-  // Preserve last successful data when errorPolicy: 'ignore' returns undefined on error
+  // A failed read answers `undefined`: keep the last answer.
   const shoppingList = usePreservedQueryData(
     data?.shoppingList,
     null,
@@ -57,8 +60,7 @@ export function useShoppingListDetails(listId: string | undefined) {
   return {
     shoppingList,
     loading,
-    // `errorPolicy: 'ignore'` drops the error, so a missing list with nothing
-    // preserved is the only sign a read failed.
+    // A missing list with nothing preserved is a read that failed.
     hasResult: shoppingList !== null,
     refetch: () => (listId ? refetch() : Promise.resolve()),
     name: shoppingList?.name ?? '',

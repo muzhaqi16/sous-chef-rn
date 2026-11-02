@@ -2,6 +2,7 @@ import { Kind } from 'graphql';
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import type { StoreObject } from '@apollo/client';
 import { QueueManager } from '../queueManager';
+import { noteCleanAnswer } from '../serverAnswers';
 import { queueStore } from '../queueStore';
 import { useStore } from '#store';
 import type { QueuedMutation, QueueError, ProcessingResult } from '../types';
@@ -98,6 +99,7 @@ jest.mock('#/apollo/clientRegistry', () => ({
 
 const mockPendingWrites = {
   confirm: jest.fn(),
+  conflictOf: jest.fn(),
   drop: jest.fn(),
   restore: jest.fn(),
 };
@@ -117,6 +119,7 @@ jest.mock('../queueStore', () => ({
     incrementRetry: jest.fn(() => true),
     markMutationFailed: jest.fn(() => true),
     cleanupTerminal: jest.fn(() => []),
+    getRefusedRows: jest.fn(() => new Map<string, string>()),
     revivePendingAuthErrors: jest.fn(() => 0),
     clearQueueForUser: jest.fn(() => 0),
     setCurrentUserId: jest.fn(),
@@ -1291,6 +1294,160 @@ describe('QueueManager', () => {
   // -------------------------------------------------------------------------
   // Rate-limit hold
   // -------------------------------------------------------------------------
+  describe('a server fault', () => {
+    let handleMutationError: (
+      mutation: QueuedMutation,
+      error: unknown,
+    ) => Promise<ProcessingResult>;
+    const handler = jest.fn();
+    const crash = () =>
+      new CombinedGraphQLErrors({
+        data: null,
+        errors: [
+          {
+            message: 'Internal server error',
+            extensions: { code: ErrorCode.InternalServerError },
+          },
+        ],
+      });
+    const HOUR = 60 * 60 * 1000;
+    // Past its in-run retries: a drain's last attempt.
+    const lastAttempt = (overrides: Partial<QueuedMutation> = {}) =>
+      makeMutation({
+        id: 'write-1',
+        retryCount: 3,
+        maxRetries: 3,
+        ...queuedMutationFor(UpdatePantryItemDocument),
+        variables: { input: { id: 'item-x' } },
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      handleMutationError = manager['handleMutationError'].bind(manager);
+      manager.setFailureHandler(handler);
+      handler.mockClear();
+      mockedGetState.mockReturnValue({
+        user: { id: 'user-1' },
+        accessToken: 'token',
+        isOnline: true,
+      });
+      jest.spyOn(Date, 'now').mockReturnValue(10 * HOUR);
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('defers a write the schema does not validate, holding back only its row', async () => {
+      const invalid = new CombinedGraphQLErrors({
+        errors: [
+          {
+            message: 'Cannot query field',
+            extensions: { code: 'GRAPHQL_VALIDATION_FAILED' },
+          },
+        ],
+      });
+
+      const result = await handleMutationError(lastAttempt(), invalid);
+
+      expect(result).toMatchObject({ deferred: true, deferralScope: 'entry' });
+      expect(handler).not.toHaveBeenCalled();
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+    });
+
+    it('defers and pauses the drain, withdrawing nothing, on a crash answered 200', async () => {
+      const result = await handleMutationError(lastAttempt(), crash());
+
+      expect(result).toMatchObject({
+        deferred: true,
+        deferralScope: 'transport',
+      });
+      expect(queueStore.updateMutation).toHaveBeenCalledWith(
+        'write-1',
+        expect.objectContaining({
+          status: QueueStatus.PENDING,
+          faults: { count: 1, firstAt: 10 * HOUR, lastAt: 10 * HOUR },
+        }),
+      );
+      expect(handler).not.toHaveBeenCalled();
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+    });
+
+    it('keeps ten queued writes through a drain the server cannot answer', async () => {
+      const writes = Array.from({ length: 10 }, (_, at) =>
+        lastAttempt({
+          id: `write-${at}`,
+          variables: { input: { id: `item-${at}` } },
+        }),
+      );
+      jest
+        .mocked(queueStore.getPendingMutationsForUser)
+        .mockReturnValue(writes);
+      mockClient.mutate.mockResolvedValue({ data: null, error: crash() });
+
+      await manager.processQueue();
+
+      expect(mockClient.mutate).toHaveBeenCalledTimes(1);
+      expect(handler).not.toHaveBeenCalled();
+      expect(queueStore.markMutationFailed).not.toHaveBeenCalled();
+      expect(queueStore.removeMutation).not.toHaveBeenCalled();
+    });
+
+    it('counts a 500, and leaves an outage uncounted', async () => {
+      await handleMutationError(lastAttempt(), serverError(500));
+      expect(queueStore.updateMutation).toHaveBeenLastCalledWith(
+        'write-1',
+        expect.objectContaining({
+          faults: expect.objectContaining({ count: 1 }),
+        }),
+      );
+
+      await handleMutationError(lastAttempt(), serverError(503));
+      expect(queueStore.updateMutation).toHaveBeenLastCalledWith(
+        'write-1',
+        expect.not.objectContaining({ faults: expect.anything() }),
+      );
+    });
+
+    it('stops holding the rest once the server answers others and this still fails', async () => {
+      noteCleanAnswer();
+      const met = { count: 1, firstAt: 9 * HOUR, lastAt: 9 * HOUR };
+
+      const result = await handleMutationError(
+        lastAttempt({ faults: met }),
+        crash(),
+      );
+
+      expect(result).toMatchObject({ deferred: true, deferralScope: 'entry' });
+    });
+
+    it('gives up on a write that outlasted any outage while the server answered', async () => {
+      noteCleanAnswer();
+      const met = { count: 4, firstAt: 8 * HOUR, lastAt: 9 * HOUR };
+
+      const result = await handleMutationError(
+        lastAttempt({ faults: met }),
+        crash(),
+      );
+
+      expect(result.deferred).toBeUndefined();
+      expect(handler).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps waiting through a long outage in which nothing answered', async () => {
+      jest.spyOn(Date, 'now').mockReturnValue(20 * HOUR);
+      const met = { count: 9, firstAt: 15 * HOUR, lastAt: 19 * HOUR };
+
+      const result = await handleMutationError(
+        lastAttempt({ faults: met }),
+        crash(),
+      );
+
+      expect(result.deferred).toBe(true);
+      expect(handler).not.toHaveBeenCalled();
+    });
+  });
+
   describe('a rate-limit refusal holds every drain for retryAfter', () => {
     const rateLimited = (retryAfter?: number) => ({
       data: undefined,

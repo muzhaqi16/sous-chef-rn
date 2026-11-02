@@ -38,11 +38,6 @@ jest.mock('#store/useAppStore', () => {
   };
 });
 
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedQueryData: <T>(data: T | undefined, fallback: T): T =>
-    data ?? fallback,
-}));
-
 /** The profile the query itself selects, so the fixture is checked against it. */
 type DietaryProfile = NonNullable<
   NonNullable<GetDietaryProfileQuery['me']>['dietaryProfile']
@@ -169,6 +164,10 @@ function buildRemoveRestrictionMock(): MockFor<
   };
 }
 
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => false,
+}));
+
 beforeEach(() => {
   jest.useFakeTimers();
 });
@@ -233,6 +232,45 @@ describe('useDietaryProfile', () => {
       maxPrepTimeMinutes: 45,
       maxCookTimeMinutes: 60,
     });
+  });
+
+  it('reports a read that failed with nothing held, and a retry reads it', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [
+        {
+          request: { query: GetDietaryProfileDocument, variables: () => true },
+          error: new Error('network down'),
+        },
+        buildGetProfileMock(),
+      ],
+    });
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+    expect(result.current.editableProfile).toBeNull();
+
+    await drained(() => result.current.refetch());
+    expect(result.current.state).toBe('ready');
+    expect(result.current.profile?.id).toBe('dp-1');
+  });
+
+  it('keeps the profile through a re-read that fails', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [
+        buildGetProfileMock(),
+        {
+          request: { query: GetDietaryProfileDocument, variables: () => true },
+          error: new Error('network down'),
+        },
+      ],
+    });
+
+    await drainTimers();
+    expect(result.current.profile?.id).toBe('dp-1');
+
+    await drained(() => result.current.refetch());
+    expect(result.current.state).toBe('ready');
+    expect(result.current.profile?.id).toBe('dp-1');
   });
 
   it('has nothing to edit before the profile has been read', () => {

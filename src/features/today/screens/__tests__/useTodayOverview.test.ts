@@ -304,6 +304,20 @@ it('is a first run for an empty pantry with no plan or list', async () => {
   expect(result.current.overview.state).toBe('empty');
 });
 
+it('is no first run when the lists could not be read', async () => {
+  const { result } = renderOverview([
+    countsMock(stats(0, 0, 0)),
+    plansMock(false),
+    suggestionsMock(0),
+    recordMock(GetShoppingListsLiteDocument, {
+      error: new Error('network down'),
+    }),
+  ]);
+
+  await drainTimers();
+  expect(result.current.overview.state).toBe('ready');
+});
+
 it('is a first run with no household', () => {
   inHousehold(null);
   const { result } = renderOverview([plansMock(false), listsMock(false)]);

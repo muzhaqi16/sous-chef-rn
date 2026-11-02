@@ -40,6 +40,26 @@ afterEach(() => {
 });
 
 describe('useOpenListLinesFor', () => {
+  it('reports a lookup that failed, and a retry asks again', async () => {
+    const failed = recordMock(GetShoppingListItemsFilteredDocument, {
+      error: new Error('network down'),
+      maxUsageCount: 1,
+    });
+    const asked = lookup();
+    const { result } = renderHookWithApollo(
+      () => useOpenListLinesFor('list-1', ['item-a']),
+      { operationMocks: [failed.mock, asked.mock] },
+    );
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+
+    result.current.retry();
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
+    expect(asked.fired).toHaveLength(1);
+  });
+
   it('asks for every item of a receipt, each once', async () => {
     const asked = lookup();
     const { result } = renderHookWithApollo(

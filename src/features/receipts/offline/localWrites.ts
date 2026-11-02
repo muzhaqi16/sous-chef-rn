@@ -93,4 +93,5 @@ export const checkIn: LocalWrite<CheckInInputs> = {
   refused(cache, { variables }) {
     refuseReceiptCheckIn(cache, variables);
   },
+  recoverable: false,
 };

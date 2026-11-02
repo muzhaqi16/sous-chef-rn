@@ -12,6 +12,9 @@ const ProfilePhotoUploadScreen = React.lazy(
 const ImageCropScreen = React.lazy(() => import('./ImageCropScreen'));
 const DeleteAccountScreen = React.lazy(() => import('./DeleteAccountScreen'));
 const DietaryProfileScreen = React.lazy(() => import('./DietaryProfileScreen'));
+const ChangesNotSavedScreen = React.lazy(
+  () => import('./ChangesNotSavedScreen'),
+);
 const AppSettingsScreen = React.lazy(() => import('./AppSettingsScreen'));
 const PersonalInformationScreen = React.lazy(
   () => import('./PersonalInformationScreen'),
@@ -90,6 +93,11 @@ export const profileScreens = {
   }),
   AppSettings: createNativeStackScreen({
     screen: AppSettingsScreen,
+    options: settingsScreenOptions,
+    linking: null,
+  }),
+  ChangesNotSaved: createNativeStackScreen({
+    screen: ChangesNotSavedScreen,
     options: settingsScreenOptions,
     linking: null,
   }),

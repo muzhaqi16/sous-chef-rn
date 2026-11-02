@@ -21,7 +21,7 @@ export const useAppSettings = () => {
   const user = useUser();
   const { data, loading, error, refetch } = useQuery(
     GetUserSettingsDocument,
-    user?.id ? {} : skipToken,
+    user?.id ? { fetchPolicy: 'cache-first' } : skipToken,
   );
   const { updateSettings } = useUpdateSettings();
 

@@ -74,6 +74,12 @@ reason for having none (those show on the answer).
 | `refused`   | When the server refuses a queued write for good          | Undoes what the write left outside the cache, which dropping its layer cannot reach |
 | `orderedBy` | At send, and stored with a queued write                  | Names what the write stays in order behind, when its input names no row             |
 
+`recoverable: false` marks a write whose `refused` hands it back to a retry of its own, as a receipt
+check-in does, so it stays out of the list of changes not saved. `conflict` declares the row a stale
+write is compared with: its query, a fragment of the fields a write can change, and what the write
+changed. Its `capture` stores that fragment as `baseline`, read `optimistic`, so it is what the person
+saw. `rowBaseline` (`conflictRead.ts`) reads it.
+
 `apply` gives the same result from the same variables, inputs and cache, because it re-runs whenever
 the server's data under it changes. `sous-chef/local-write-is-deterministic` bans clocks, id minting
 and eviction there: what it cannot re-derive goes in `inputs`, which are queued with the write, so they
@@ -244,7 +250,8 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
     still in flight online is not in the queue, so an edit made while its row's create is on the wire
     is sent at once, and can meet `NotFoundError` or a `VERSION_CONFLICT` against the local row's
     version. That window is an open gap;
-  - (d) a `localFirst` write sent online fails with a network error before any result.
+  - (d) a `localFirst` write sent online gets no result: a network error or a 5xx. A 502, 503 or 504
+    also counts towards the breaker, as the API is not there; a 500 says one request broke.
 
   Offline, a mutation NOT on the allowlist fails fast with `OfflineRejectedError`, an honest immediate
   failure instead of a ghost replay on reconnect; with only the breaker open it is forwarded and
@@ -267,13 +274,20 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   append-only from one user's actions, so insertion order IS causal order, and an entry the server
   did not accept holds back every later entry that names its subject or its parent
   (`PARENT_REFERENCE_KEYS`: the home a pantry joins, the pantry or list an item joins, …) while
-  unrelated entries continue. A transport-class deferral (unreachable, 5xx, pacing,
-  `CLIENT_UPGRADE_REQUIRED`) pauses the pass instead, since every later entry would meet it too;
+  unrelated entries continue. A transport-class deferral (unreachable, 5xx, `INTERNAL_SERVER_ERROR`,
+  pacing, `CLIENT_UPGRADE_REQUIRED`) pauses the pass instead, since every later entry would meet it too;
   only a row-scoped one (DEADLOCK, an unbuildable replay, a batch row that failed transiently) lets
   the rest replay. An entry parked for re-authentication still holds its dependents, and a session
-  token that revives parked entries during a pass triggers one more pass. Nothing counts passes: the
-  sole lifetime bound on a pending entry is `expireStalePending`'s 90-day age horizon, and an entry
-  that reaches it is withdrawn through the failure handler (the user is told) and then cleaned up.
+  token that revives parked entries during a pass triggers one more pass.
+- **A fault the server cannot name.** A resolver crash answers HTTP 200, `data: null`,
+  `INTERNAL_SERVER_ERROR`. Masking hides a crash on one input from an outage, and a fault after a commit
+  reads the same, so the write defers and `QueuedMutation.faults` counts it once per drain. Met again
+  once the server has answered something else cleanly, the fault is scoped to the entry, so the rest of
+  the pass runs. After 5 faults over at least an hour with the server answering, the write gives up
+  (`serverAnswers.ts`). `GRAPHQL_VALIDATION_FAILED` defers too, scoped to the entry: a build sends its
+  own document, so an API deploy or an app update cures it, and its dependents hold behind it.
+  Otherwise the bound on a pending entry is `expireStalePending`'s 90-day age
+  horizon. Either way the entry goes through the failure handler to the changes not saved.
   Two rewrites happen at **enqueue time** in `queueStore.addMutation`: the latest move per item wins,
   and a delete supersedes the pending or parked non-create writes whose only subject is the deleted
   row (a create minted on the device goes with it, and neither is sent). Writes to one entity queued
@@ -285,12 +299,12 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   the surviving row, at its version; the server refuses the minted id from then on. Two kinds are not
   moved: a queued removal of the minted row is dropped, since removing the surviving row would remove
   stock the person never saw (they are told, `queuedRemovalKept`), and a write that overwrites the
-  quantity or unit the merge combined (`MERGED_QUANTITY_OVERWRITES`) is withdrawn as a conflict. Both moves are
+  quantity or unit the merge combined (`MERGED_QUANTITY_OVERWRITES`) is refused as a conflict. Both moves are
   written to the queue itself, so a restart mid-drain keeps them. Retries use exponential
   backoff + jitter;
   an auth error forces ONE token refresh and then retries through the same bounded counter. A failed
   refresh PARKS the entry (`AUTH_ERROR`) until a new session token revives it (`onSessionToken`); a
-  parked entry the 24 h terminal cleanup ages out is withdrawn through the failure handler. A rate
+  parked entry the 24 h terminal cleanup ages out goes through the failure handler. A rate
   limit holds every drain until its `retryAfterMs` (`drainNotBefore`). Triggers: `useOnlineQueueSync`
   (offline→online), `useAppStateLifecycle` (every return to `active`), `onUserChange`,
   `onSessionToken`, the resync's `whenIdle`, `drainAfterPass` (a write queued while a pass runs) and
@@ -326,12 +340,43 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   `client.mutate` returns, so `executeMutation` captures the payload in an `update` callback and hands
   that to `reconcileReplaySuccess`; a reconciler reading the returned value sees fragment spreads as
   `{ id }` only (list totals included).
-- **A version conflict lets the server's row stand.** A stale `version` is refused as `ConflictError`
-  coded `VERSION_CONFLICT` and applies nothing: someone else changed the row. The write is withdrawn
-  and reported through the failure handler's conflict copy, and the resync after the drain re-reads
-  the row. It is never re-sent without its version.
+- **A version conflict is decided from the row.** A stale `version` is refused as `ConflictError`
+  coded `VERSION_CONFLICT` and applies nothing. For a write that declares `conflict`, the queue reads
+  the row `network-only` and compares each field the write changed (`conflictOutcome`):
+
+  | The server's row | Outcome |
+  | --- | --- |
+  | Every field holds what the write sent | **Landed**: a lost reply, or both agreed. The layer drops, nothing is reported, and the writes behind it move on as after a converged answer |
+  | Every field holds what was sent or what the person saw | **Merge**: sent again at the row's version, nothing reported. The writes behind it meet the row themselves |
+  | Any field holds neither, or the write has no baseline or declares no `conflict` | **Clash**: the server's row stands, and the write goes to the changes not saved |
+
+  A read that cannot run defers the entry. A row that moves again on each of 2 resends is a clash.
+- **A local-first write is saved before it is sent.** Online, `queueLink` stores the entry as
+  `PROCESSING` (`queueStore.journal`), forwards it, and removes it on any answer. With no answer, from a
+  network failure or a 5xx, `handBack` turns it `PENDING` and the drain carries it. The drain's reset
+  leaves an entry this run is still sending, by an in-memory set, and writes on its row wait behind it.
+  Killed mid-send, the entry is still `PROCESSING` at the next launch: `restore` shows its layer, and the
+  first drain returns it to `PENDING` and replays it. A create resolves to the same row, a delta
+  converges on its key, and an update that landed settles from the row. A write that cannot be stored,
+  with storage or the queue full, goes anyway, and `offline_queue_journal_failed_total` counts it.
+- **Onboarding's setup waits for the account to be read.** Offline with nothing held, it cannot tell a
+  new account from one that holds a home or an invitation, and a local-first create cannot be merged
+  later. So the setup step never creates on a guess: the person goes on with `accountSetupOwed` set, and
+  `OwedAccountSetup` at the app root finishes setup once the reads answer. Still on the step, setup runs
+  by itself when the read answers.
+- **Changes not saved keep what the server would not take.** `handleQueueFailure` drops the layer, so
+  the row ends on the server's state, and marks the entry `QueueStatus.REFUSED`, where it stays until
+  the person acts: on the Changes not saved screen, reached from the toast's action and from a banner
+  in Profile while any exists. `REFUSED` is not replayed and takes no place in `MAX_QUEUE_SIZE`,
+  `cleanupTerminal` and eviction pass it by, and the sign-out warning counts it. It belongs to its
+  account as a queued write does: it survives a session end, and a deliberate sign-out or a change of
+  account clears it. Writes on a refused create's row follow it unsent (`heldBy`): the list shows the
+  parent, and its retry or discard takes them along. `retryRefusedChange` returns the entries to
+  `PENDING`, newest, with `overwrites` set, and shows their layers again; on a conflict such a write
+  goes out at the row's version with no comparison, as the person chose it. A retry that finds the row
+  gone stays listed with discard as the only choice (`namesNoRow`).
 - **Queue-health telemetry** at each drain: `offline_queue_depth` + `offline_queue_oldest_age_ms`
-  gauges, `offline_queue_conflicts_total` (server-wins version conflicts) and
+  gauges, `offline_queue_conflicts_total` (version conflicts met) and
   `offline_queue_permanent_failures_total` counters.
 
 ### Replay as queued (`prepareReplay`)
@@ -459,10 +504,11 @@ tri-state: `true`/`false` once proven, `null` untried since the link dropped.
   `isOnline` itself stays in transport, because it reads as online through an API outage on working
   Wi-Fi (`__tests__/architecture/offlineHasOneMeaning.test.ts`).
 
-**API down while online (timeout / captive portal / 5xx):** the **`apiReachabilityBreaker`** circuit
+**API down while online (timeout / captive portal / gateway):** the **`apiReachabilityBreaker`** circuit
 breaker (`closed | open`) drives `apiReachable`. `networkStatusLink` (above `retryLink`, so one outcome
-per operation) feeds it: a real response → success; a network error, or a write queued after one
-(`queuedReason: 'network-error'`) → failure. A write queued without touching the wire and an
+per operation) feeds it: a real response → success; a network error, a 502, 503 or 504, or a write queued
+after one (`queuedReason: 'network-error' | 'gateway-fault'`) → failure. A 500 counts as nothing, as it
+says one request broke. A write queued without touching the wire and an
 `OfflineRejectedError` count as nothing. The first failure while closed fires one `/health` probe at
 once: a success forgives the blip, a failure opens the circuit (3 consecutive failures open it anyway,
 for an environment with no `/health`). While open, a `/health` probe loop (20 s, backing off to 120 s,

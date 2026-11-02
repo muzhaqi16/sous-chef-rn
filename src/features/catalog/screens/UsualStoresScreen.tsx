@@ -1,11 +1,7 @@
 import React from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Pressable } from 'react-native-gesture-handler';
-import {
-  useTranslation,
-  type TranslateFn,
-  type TranslationKey,
-} from '#/i18n';
+import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
 import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
 import { SubScreen } from '#components/templates/SubScreen';
 import { Icon } from '#components/atoms/Icon';

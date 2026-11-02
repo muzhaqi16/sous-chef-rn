@@ -3,12 +3,21 @@
  * answer writes its own rows; `commit` adds what it cannot state.
  */
 import type { ApolloCache, OperationVariables } from '@apollo/client';
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
+import { rowBaseline } from '#/apollo/pendingWrites/conflictRead';
+import {
+  entityFields,
+  type EntityFieldsInputs,
+} from '#/apollo/pendingWrites/entityFields';
+import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import { ItemCondition } from '#/graphql/generated/schemaTypes';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { isRecord } from '#/utils/isRecord';
+import {
+  PantryItemConflict_PantryItemFragmentDoc,
+  PantryItemForConflictDocument,
+} from './pantryItemConflict.generated';
 import {
   addPantryItemLocally,
   addToPantryItemsCache,
@@ -259,4 +268,19 @@ export const removePantry: LocalWrite<RemovePantryInputs> = {
     const id = pantryIdOf(variables);
     if (homeId && id) removeOptimisticPantry(cache, homeId, id);
   },
+};
+
+const pantryRowConflict: ConflictRead<EntityFieldsInputs> = {
+  typename: 'PantryItem',
+  query: PantryItemForConflictDocument,
+  fragment: PantryItemConflict_PantryItemFragmentDoc,
+  changed: ({ fields }) => fields,
+};
+
+export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
+  ...entityFields,
+  conflict: pantryRowConflict,
+  capture: (cache, variables) => ({
+    baseline: rowBaseline(cache, pantryRowConflict, variables),
+  }),
 };

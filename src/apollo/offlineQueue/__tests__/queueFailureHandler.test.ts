@@ -1,6 +1,7 @@
 import {
   handleQueueFailure,
   registerQueueFailureHandler,
+  setChangesNotSavedOpener,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -13,6 +14,7 @@ import { subjectTypeOf } from '../queuedSubject';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ApolloClient } from '@apollo/client';
+import type { LocalWriteTable } from '#/apollo/pendingWrites/types';
 import { registerApolloClient } from '#/apollo/clientRegistry';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
@@ -52,11 +54,20 @@ jest.mock('#features/shoppingList/cache/purchase', () => ({
 }));
 const mockRefuse = jest.fn();
 jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
-  pendingWritesOf: () => ({ refuse: mockRefuse }),
+  pendingWritesOf: () => ({
+    refuse: mockRefuse,
+    keepsRefusal: (operationName: string) => {
+      const { LOCAL_WRITES } = jest.requireActual<{
+        LOCAL_WRITES: LocalWriteTable;
+      }>('#/apollo/pendingWrites/localWriteRegistry');
+      return LOCAL_WRITES[operationName]?.recoverable !== false;
+    },
+  }),
 }));
 jest.mock('../queueStore', () => ({
   queueStore: {
     removeMutation: jest.fn(),
+    markRefused: jest.fn(),
     // No signed-in queue, so nothing is pending and the reread runs.
     getCurrentUserId: jest.fn(() => null),
     getQueueStats: jest.fn(() => ({
@@ -156,6 +167,18 @@ describe('queue failure handler', () => {
       expect(toastService.error).toHaveBeenCalledTimes(1);
       expect(queueStore.removeMutation).toHaveBeenCalledWith('q1');
     });
+
+    it('stays out of the list when its lines go back to the receipt', () => {
+      setChangesNotSavedOpener(jest.fn());
+
+      handleQueueFailure(withLocalWrite());
+
+      expect(queueStore.markRefused).not.toHaveBeenCalled();
+      expect(toastService.error).toHaveBeenCalledWith(
+        expect.any(String),
+        undefined,
+      );
+    });
   });
 
   it('withdraws the locally-applied change from the cache', () => {
@@ -184,7 +207,7 @@ describe('queue failure handler', () => {
 
     it('names the entity a refused change was to', () => {
       expect(toldAfter({})).toBe(
-        t('errors.queuedChangeRejectedResource', {
+        t('errors.queuedChangeKeptResource', {
           resource: t('errors.resourceNames.PantryItem'),
         }),
       );
@@ -200,7 +223,7 @@ describe('queue failure handler', () => {
       });
 
       expect(message).toBe(
-        t('errors.queuedChangeRejectedResource', {
+        t('errors.queuedChangeKeptResource', {
           resource: t('errors.resourceNames.MealPlanItem'),
         }),
       );
@@ -211,7 +234,7 @@ describe('queue failure handler', () => {
       'says a change was not saved when nothing names it (%s)',
       subjectType => {
         expect(toldAfter({ entityType: null, subjectType })).toBe(
-          t('errors.queuedChangeRejected'),
+          t('errors.queuedChangeKept'),
         );
       },
     );
@@ -234,7 +257,7 @@ describe('queue failure handler', () => {
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
     expect(message).toContain('pantry item');
-    expect(message).not.toBe(t('errors.queuedChangeRejected'));
+    expect(message).not.toBe(t('errors.queuedChangeKept'));
     expect(safeEvict).toHaveBeenCalledWith(
       expect.anything(),
       'PantryItem',
@@ -259,7 +282,7 @@ describe('queue failure handler', () => {
     );
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
-    expect(message).toBe(t('errors.queuedChangeOverwritten'));
+    expect(message).toBe(t('errors.queuedClashKept'));
   });
 
   it('gives a RESOURCE_VERSION_CONFLICT refusal the overwrite copy', () => {
@@ -279,7 +302,7 @@ describe('queue failure handler', () => {
     );
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
-    expect(message).toBe(t('errors.queuedChangeOverwritten'));
+    expect(message).toBe(t('errors.queuedClashKept'));
   });
 
   it('still tells the person when the entity cannot be identified', () => {
@@ -292,15 +315,35 @@ describe('queue failure handler', () => {
   });
 });
 
-describe('queue failure handler — dequeue and sole ownership', () => {
-  it('removes the withdrawn entry from the queue', () => {
-    // Left behind, it sits as FAILED until `cleanupTerminal` ages it out a day
-    // later, padding every drain scan and persisted write until then.
-    handleQueueFailure(failure({ mutationId: 'q-42' }));
-    expect(queueStore.removeMutation).toHaveBeenCalledWith('q-42');
+describe('queue failure handler — what is kept and sole ownership', () => {
+  it('keeps a refused change for the person', () => {
+    const refused = failure({ mutationId: 'q-42' });
+    handleQueueFailure(refused);
+
+    expect(queueStore.markRefused).toHaveBeenCalledWith('q-42', refused.error, {
+      resource: 'PantryItem',
+    });
+    expect(queueStore.removeMutation).not.toHaveBeenCalled();
   });
 
-  it('dequeues even when the entity cannot be identified', () => {
+  it('keeps a refused add, whose row leaves the screen', () => {
+    handleQueueFailure(
+      failure({
+        mutationId: 'q-44',
+        operationName: operationNameOf(UpdateShoppingListItemDocument),
+        pendingWriteId: 'write-44',
+      }),
+    );
+
+    expect(mockRefuse).toHaveBeenCalledWith('write-44');
+    expect(queueStore.markRefused).toHaveBeenCalledWith(
+      'q-44',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('keeps a change even when the entity cannot be identified', () => {
     handleQueueFailure(
       failure({
         mutationId: 'q-43',
@@ -309,7 +352,11 @@ describe('queue failure handler — dequeue and sole ownership', () => {
       }),
     );
     expect(safeEvict).not.toHaveBeenCalled();
-    expect(queueStore.removeMutation).toHaveBeenCalledWith('q-43');
+    expect(queueStore.markRefused).toHaveBeenCalledWith(
+      'q-43',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('is the only thing in the app that registers a failure handler', () => {

@@ -176,6 +176,8 @@ const RecipeDetailScreen: React.FC = () => {
     isSaved,
     handleSaveRecipe,
     shoppingLists,
+    shoppingListsState,
+    retryShoppingLists,
     addingToList,
     addedIngredients,
     handleAddSingleIngredient,
@@ -734,6 +736,8 @@ const RecipeDetailScreen: React.FC = () => {
       <ShoppingListPickerSheet
         visible={listPickerVisible}
         shoppingLists={shoppingLists}
+        listsState={shoppingListsState}
+        onRetryLists={retryShoppingLists}
         defaultNewListName={displayData.title}
         creatingList={creatingList}
         onListSelected={handleListSelected}

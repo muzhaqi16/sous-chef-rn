@@ -89,8 +89,6 @@
     "protein": "Proteína",
     "fat": "Grasa",
     "loadingProfile": "Cargando perfil alimentario...",
-    "loadFailedTitle": "No se pudo cargar tu perfil alimentario",
-    "loadFailedSubtitle": "Comprueba tu conexión e inténtalo de nuevo.",
     "sharedWith": "Compartido con",
     "sharedWithShown": "Los miembros de estos hogares ven tus restricciones con tu nombre al escanear o cocinar. Tus notas siguen siendo privadas.",
     "sharedWithNone": "Activa un hogar para que sus miembros vean lo que no puedes comer al escanear o cocinar.",
@@ -365,6 +363,20 @@
     "emptyDescription": "Las denuncias, los cambios sugeridos y las fotos que envíes para revisar aparecen aquí, con el estado de cada uno.",
     "sentOn": "Fecha de envío: {{date}}",
     "reviewNote": "Nota de revisión: {{note}}"
+  },
+  "changesNotSaved": {
+    "title": "Cambios sin guardar",
+    "bannerSubtitle_one": "{{count}} cambio necesita tu decisión",
+    "bannerSubtitle_other": "{{count}} cambios necesitan tu decisión",
+    "intro": "El servidor no los aceptó. Inténtalo de nuevo o descártalos.",
+    "aChange": "Un cambio",
+    "reasonConflict": "Otra persona cambió lo mismo antes.",
+    "reasonGone": "Esto ya no existe, así que solo se puede descartar.",
+    "reasonRefused": "El servidor no aceptó este cambio.",
+    "discardTitle": "¿Descartar este cambio?",
+    "discardBody": "Tu cambio en {{name}} se perderá para siempre.",
+    "emptyTitle": "Nada pendiente",
+    "emptyBody": "Todos tus cambios se han guardado."
   },
   "brandLists": {
     "title": "Listas de marcas",

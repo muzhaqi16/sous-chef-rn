@@ -60,6 +60,21 @@ mid-update is, is not reported.
 
 ---
 
+## Two decisions that look like gaps
+
+**`errorPolicy: 'all'` stays global.** Apollo's objection is type safety, which
+`DeclareDefaultOptions` answers. `'none'` returns `data: undefined` on an error,
+which would blank an offline screen over a good cache. A resolver's `null` no
+longer overwrites a held value either: `createHeldFieldLink` puts the held value
+back at each error's path, matching list rows by `id`, and the error still
+reaches the caller.
+
+**A page keeps several queries.** With `returnPartialData: false`, one page query
+would blank a whole screen offline on one missing field, and the API limits depth
+and cost. So a screen's sections fail and fill on their own.
+
+---
+
 ## Building the client
 
 `src/apollo` builds nothing when it is imported. `createApolloClient(options)`
@@ -469,8 +484,10 @@ const items = usePreservedNodes(
 (`refetchOn: false`) and are kept in the cache instead. The field policy in
 `src/features/recipes/cache/typePolicies.ts` keeps a complete page over one the
 API answered with `catalogAvailable: false`, so a refresh during an outage keeps
-the list. It also records when each complete page arrived
-(`features/recipes/store/catalogFetchTimes.ts`). A reader takes its options
+the list. `createAnswerNotesLink` records when each complete page arrived
+(`noteCatalogAnswer`, `features/recipes/store/catalogFetchTimes.ts`). A link and
+not `merge`, which also runs on a rebuilt layer and on an answer served from the
+device, so a week-old page read offline would count as fresh. A reader takes its options
 from `useCatalogReadOptions`: `network-only` when the held page is degraded,
 `cache-and-network` when it has no recorded time or is older than the reader's
 window (24 h for discovery, 7 days for a pantry item's suggestions),
@@ -608,7 +625,9 @@ The app uses **optimistic versioning** for conflict resolution:
 2. Client sends current version with updates
 3. Server increments version on successful update
 4. If versions don't match → conflict detected
-5. User sees friendly message with option to refresh
+5. A foreground write offers a refresh. A queued write is decided from the row
+   (`docs/local-first-architecture.md` § Offline queue): it landed, it merges, or
+   it clashes and goes to the changes not saved.
 
 ### Client Implementation
 
@@ -740,6 +759,10 @@ START
   │
   ├─ Is it a one-shot warmer or time-to-live refresh?
   │   └─ YES → client.query({ fetchPolicy: 'network-only' }) via fromServer
+  │
+  ├─ Is it read app-wide (settings, flags, currencies, homes)?
+  │   └─ YES → fetchPolicy: 'cache-first', and one reader per session on the
+  │            defaults: no resync fires at launch, so else nothing asks
   │
   └─ DEFAULT → fetchPolicy: 'cache-and-network', nextFetchPolicy: 'cache-first'
 

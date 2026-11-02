@@ -145,9 +145,8 @@ export const PantryItemDetail: React.FC<
 
   const permissions = usePantryPermissions();
 
-  const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
-    item?.itemName ?? undefined,
-  );
+  const { suggestedRecipes, loadingRecipes, recipesState, retryRecipes } =
+    useRecipeSuggestionsForItem(item?.itemName ?? undefined);
 
   const actions = usePantryItemDetailActions({
     itemId,
@@ -599,6 +598,8 @@ export const PantryItemDetail: React.FC<
                 </AppPressable>
               ))}
             </HorizontalRail>
+          ) : recipesState === 'error' || recipesState === 'offline' ? (
+            <DataStateView state={recipesState} onRetry={retryRecipes} />
           ) : (
             <Text role="caption" style={styles.noRecipes}>
               {t('pantryItemDetail.noRecipeSuggestions')}

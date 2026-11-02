@@ -2,6 +2,8 @@
 import React from 'react';
 import { act, screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { t } from '#/i18n';
+import type { DataState } from '#hooks/data/useDataState';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
@@ -36,10 +38,14 @@ jest.mock('react-hook-form', () => {
 // of its meals as a flat list — however many pages they were read in.
 let mockLoadedTemplate: Record<string, unknown> | null = null;
 let mockLoadedItems: Record<string, unknown>[] = [];
+let mockLoadState: DataState = 'ready';
+const mockReloadTemplate = jest.fn();
 jest.mock('#features/mealPlan/hooks/useMealTemplateForEdit', () => ({
   useMealTemplateForEdit: () => ({
     template: mockLoadedTemplate,
     items: mockLoadedItems,
+    state: mockLoadState,
+    refetch: mockReloadTemplate,
   }),
 }));
 
@@ -130,6 +136,43 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+});
+
+describe('MealTemplateBuilderScreen, a template it could not read', () => {
+  afterEach(() => {
+    mockLoadState = 'ready';
+    mockLoadedTemplate = null;
+  });
+
+  it('offers to read it again in place of a blank form', async () => {
+    mockLoadState = 'error';
+    renderWithApollo(
+      <MealTemplateBuilderScreen route={{ params: { templateId: 't1' } }} />,
+    );
+
+    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+    expect(screen.queryByTestId(mealPlanTestIDs.templateNameInput)).toBeNull();
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    expect(mockReloadTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the form while it holds the template', () => {
+    mockLoadedTemplate = {
+      id: 't1',
+      name: 'Week A',
+      category: 'WEEKLY',
+      description: null,
+      defaultServings: 2,
+      tags: [],
+    };
+    renderWithApollo(
+      <MealTemplateBuilderScreen route={{ params: { templateId: 't1' } }} />,
+    );
+
+    expect(screen.getByTestId(mealPlanTestIDs.templateNameInput)).toBeTruthy();
+    expect(screen.queryByText(t('dataState.errorTitle'))).toBeNull();
+  });
 });
 
 describe('MealTemplateBuilderScreen', () => {

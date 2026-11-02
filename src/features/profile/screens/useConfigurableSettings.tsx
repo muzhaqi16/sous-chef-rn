@@ -1,3 +1,4 @@
+import { DataStateView } from '#components/organisms/DataStateView';
 import React, { useState, useEffect } from 'react';
 import { getResolvedLanguage, useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
@@ -49,6 +50,8 @@ export const useConfigurableSettings = () => {
     preferredCurrency,
     currentLabel: currencyLabel,
     options: currencyOptions,
+    optionsState: currencyOptionsState,
+    retryOptions: retryCurrencyOptions,
     selectCurrency,
   } = useCurrencyPreference();
   const { checkStoredCredentials, getBiometricInfo } = biometricService;
@@ -173,6 +176,14 @@ export const useConfigurableSettings = () => {
             valueLabel: currencyLabel,
             subtitle: t('settings.currencySubtitle'),
             options: currencyOptions,
+            unavailable:
+              currencyOptionsState === 'error' ||
+              currencyOptionsState === 'offline' ? (
+                <DataStateView
+                  state={currencyOptionsState}
+                  onRetry={retryCurrencyOptions}
+                />
+              ) : undefined,
             onSave: selectCurrency,
           };
         }
@@ -270,7 +281,8 @@ export const useConfigurableSettings = () => {
     // A deliberate sign-out DELETES the queue
     // (`queueManager.onLogout`), so prompt only when there is something
     // to lose; an empty queue stays a one-tap sign-out.
-    const pendingCount = queueStore.getPendingCount();
+    const pendingCount =
+      queueStore.getPendingCount() + queueStore.getRefusedCount();
     if (pendingCount === 0) {
       signOut();
       return;

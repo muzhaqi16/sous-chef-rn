@@ -7,15 +7,24 @@ import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
 import { isTranslationKey, t } from '#/i18n';
 import { logger } from '#/utils/environment';
-import type {
-  FailedMutationInfo,
-  QueueError,
+import {
+  QUEUE_FULL_CODE,
+  type FailedMutationInfo,
+  type QueueError,
 } from '#/apollo/offlineQueue/types';
 
+let openChangesNotSaved: (() => void) | undefined;
+
+/** A host's way to the list of changes not saved, for the toast to offer. */
+export function setChangesNotSavedOpener(open: () => void): void {
+  openChangesNotSaved = open;
+}
+
 /**
- * Withdraws a change the server permanently rejected by evicting it, as the
- * queue keeps no pre-change snapshot: a create's row goes, an update's entity
- * is read back from the server. An unidentifiable entity heals the same way.
+ * Takes a change the server will not take off the screen, as the queue keeps no
+ * pre-change snapshot: a create's row goes, an update's entity is read back
+ * from the server. The change stays for the person to retry or discard, unless
+ * its flow has a retry of its own.
  */
 export function handleQueueFailure(info: FailedMutationInfo): void {
   const {
@@ -32,19 +41,31 @@ export function handleQueueFailure(info: FailedMutationInfo): void {
     { entityType, entityId, code: error.code, type: error.type },
   );
 
+  const pendingWrites = pendingWritesOf(requireApolloClient().cache);
+  const kept = pendingWrites.keepsRefusal(operationName);
   if (info.pendingWriteId) {
-    pendingWritesOf(requireApolloClient().cache).refuse(info.pendingWriteId);
+    pendingWrites.refuse(info.pendingWriteId);
   } else {
     withdrawLocalChange(info);
   }
 
   // The app's own words: `error.message` is written for developers and can
   // carry operation names and identifiers. A conflict gets its own sentence.
-  toastService.error(withdrawalMessage(error.type, entityType ?? subjectType));
+  const resource = entityType ?? subjectType;
+  toastService.error(
+    withdrawalMessage(error, resource, kept),
+    kept && openChangesNotSaved
+      ? { action: { label: t('labels.open'), onPress: openChangesNotSaved } }
+      : undefined,
+  );
 
-  // Withdrawn, so it records nothing; left in place it would pad every drain
-  // scan and persisted write until `cleanupTerminal` ages it out 24h later.
-  queueStore.removeMutation(mutationId);
+  if (kept) {
+    queueStore.markRefused(mutationId, error, {
+      resource: resource ?? undefined,
+    });
+  } else {
+    queueStore.removeMutation(mutationId);
+  }
 
   scheduleReread();
 }
@@ -113,13 +134,25 @@ function onQueueDrained(): void {
 
 /** Resolves the withdrawal toast, naming the entity where the map knows it. */
 function withdrawalMessage(
-  type: QueueError['type'],
+  { type, code }: QueueError,
   entityType: string | null,
+  kept: boolean,
 ): string {
   // A persisted entry's typename; only the loaded copy knows which have a name.
   const resourceKey = `errors.resourceNames.${entityType ?? ''}`;
   const resource = isTranslationKey(resourceKey) ? t(resourceKey) : null;
 
+  if (code === QUEUE_FULL_CODE) return t('errors.queueFull');
+  if (kept) {
+    if (type === 'conflict') {
+      return resource
+        ? t('errors.queuedClashKeptResource', { resource })
+        : t('errors.queuedClashKept');
+    }
+    return resource
+      ? t('errors.queuedChangeKeptResource', { resource })
+      : t('errors.queuedChangeKept');
+  }
   if (type === 'conflict') {
     return resource
       ? t('errors.queuedChangeOverwrittenResource', { resource })

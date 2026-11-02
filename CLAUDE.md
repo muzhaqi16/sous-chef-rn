@@ -177,6 +177,10 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   is deterministic (`sous-chef/local-write-is-deterministic`). **`commit` writes what
   the answer does NOT state**, so read the mutation's selection first; no gate catches
   a `commit` that misses one — `docs/local-first-architecture.md` § 2.
+- **A refusal keeps the change** (`QueueStatus.REFUSED`, the Changes not saved list):
+  a `LocalWrite` declaring `conflict` settles a `VERSION_CONFLICT` from the row
+  (`conflictOutcome`), and `recoverable: false` is only for a flow with its own
+  retry — `docs/local-first-architecture.md` § Offline queue.
 - **A local-first create writes its row with `writeLocalEntity`** over a row
   fragment spreading the entity's readers: known, else held, else the SDL
   neutral (`generate-optimistic-fillers`). A shared `*Fragments.graphql` has a consumer-list header, 2+ operations
@@ -254,6 +258,9 @@ Mechanism: `docs/session-and-transport.md`. No gate holds these.
 
 - **`authService.logout()` is the only sign-out**; `SESSION_SCOPED_STATE` lists
   what it removes (`sessionEndLeavesNoData.test.ts`).
+- **Never `client.stop()`**: one client serves every session, and `stop()` ends
+  its watched queries and disconnects resync for good; `clearStore` cancels what
+  is in flight (`sessionEndKeepsResync.test.ts`).
 - **A session end STOPS things before clearing**: `runSessionTeardown()` first,
   the sign-out gate is one counted `whileSessionEnds` scope held through the
   store reset, `queueManager.onLogout()` only on deliberate sign-out, `/health`

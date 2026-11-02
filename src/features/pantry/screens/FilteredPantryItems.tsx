@@ -81,10 +81,9 @@ interface ModeConfig {
   emptyMessage: string;
   emptyIcon: string;
   /**
-   * Non-nullable on purpose. `itemsConnection` caps cached edges at
-   * `MAX_WINDOW_EDGES` (100) while `hasNextPage` reports the last FETCHED page,
-   * so above 100 items a client-only filter silently reports "none". A non-null
-   * value also re-keys the cache entry (`keyArgs: ['filters', …]`).
+   * Non-nullable on purpose. A client-only filter sees only the pages loaded,
+   * so past one page it would silently report "none". A non-null value also
+   * re-keys the cache entry (`keyArgs: ['filters', …]`).
    */
   serverFilters: PantryItemFilters;
   filter: (item: FilteredItem) => boolean;
@@ -350,9 +349,11 @@ export const FilteredPantryItems: React.FC<
     }
     return filtered;
   })();
-  const { lists: pickerLists } = useShoppingListsLite({
-    fetchPolicy: 'cache-first',
-  });
+  const {
+    lists: pickerLists,
+    state: pickerListsState,
+    refetch: refetchPickerLists,
+  } = useShoppingListsLite({ fetchPolicy: 'cache-first' });
   const picker = useLowStockListPicker({
     addToList,
     // The rows on screen: the button adds what the person is looking at, not a
@@ -518,6 +519,10 @@ export const FilteredPantryItems: React.FC<
       <ShoppingListPickerSheet
         visible={picker.pickerVisible}
         shoppingLists={pickerLists}
+        listsState={pickerListsState}
+        onRetryLists={() => {
+          void refetchPickerLists();
+        }}
         defaultNewListName={config.title}
         creatingList={picker.busy}
         onListSelected={picker.handleListSelected}

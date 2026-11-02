@@ -42,9 +42,9 @@ describe('a store choice', () => {
 
 describe('storeBranchLabel', () => {
   it('tells branches apart by address, else by store number', () => {
-    expect(storeBranchLabel({ address: '1 Main St', storeNumber: '87' }, t)).toBe(
-      '1 Main St',
-    );
+    expect(
+      storeBranchLabel({ address: '1 Main St', storeNumber: '87' }, t),
+    ).toBe('1 Main St');
     expect(storeBranchLabel({ address: '  ', storeNumber: '87' }, t)).toBe(
       'Store #87',
     );

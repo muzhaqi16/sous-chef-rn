@@ -4,7 +4,14 @@ import { screen, userEvent } from '@testing-library/react-native';
 import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
 import type { PantryActionModal_PantryItemFragment } from '../PantryActionModal.generated';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
-import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedCache,
+} from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
+import { t } from '#/i18n';
+import { GetPantryActionItemDocument } from '#features/pantry/components/modals/PantryActionModal.generated';
 import { PantryActionModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/PantryActionModal.generated';
 import type { PantryActionSharedState } from '#features/pantry/types';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
@@ -209,6 +216,46 @@ describe('PantryActionModal', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockUseOperationUnits.mockReturnValue(mockNoUnits);
+  });
+
+  describe('an item it cannot read', () => {
+    beforeEach(() => {
+      jest.useFakeTimers();
+    });
+
+    afterEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('offers to read it again rather than opening empty', async () => {
+      const failed = recordMock(GetPantryActionItemDocument, {
+        error: new Error('network down'),
+      });
+      renderWithApollo(<PantryActionModal {...defaultProps} />, {
+        operationMocks: [failed.mock],
+      });
+
+      await drainTimers();
+      expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+
+      await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+      await drainTimers();
+      expect(failed.fired).toHaveLength(2);
+    });
+
+    it('keeps the item the device holds when the read fails', async () => {
+      const failed = recordMock(GetPantryActionItemDocument, {
+        error: new Error('network down'),
+      });
+      renderWithApollo(<PantryActionModal {...defaultProps} />, {
+        cache: makeCache(),
+        operationMocks: [failed.mock],
+      });
+
+      await drainTimers();
+      expect(screen.getByText('Flour')).toBeTruthy();
+      expect(screen.queryByText(t('dataState.errorTitle'))).toBeNull();
+    });
   });
 
   it('renders with the provided title', () => {

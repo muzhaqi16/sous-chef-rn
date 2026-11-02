@@ -252,8 +252,11 @@ async function setup({
   held = PANTRY,
   listHeld = false,
   listFor = listItems,
+  listFails = false,
   cache = makeCache(),
 }: {
+  /** The lookup of the list's lines is refused by the network. */
+  listFails?: boolean;
   /** The cache to render with, to see what one visit leaves the next. */
   cache?: ReturnType<typeof makeCache>;
   /** The list's pages as the API answers them. */
@@ -275,10 +278,12 @@ async function setup({
   held?: MockDataFor<typeof GetPantryDocument>;
 } = {}) {
   const getPantry = recordMock(GetPantryDocument, { data: held });
-  const list = recordMock(GetShoppingListItemsFilteredDocument, {
-    dataFor: listFor,
-    held: listHeld,
-  });
+  const list = recordMock(
+    GetShoppingListItemsFilteredDocument,
+    listFails
+      ? { error: new Error('network down') }
+      : { dataFor: listFor, held: listHeld },
+  );
   // The user's lists: list-1 while a test has selected it, else none.
   const lists = recordMock(GetShoppingListsLiteDocument, {
     dataFor: (): MockDataFor<typeof GetShoppingListsLiteDocument> => ({
@@ -1578,6 +1583,17 @@ describe('useReceiptReview', () => {
 
       await drainTimers();
       expect(result.current.review.rows[0]?.onList).toBe(true);
+    });
+
+    it('says when the list could not be read', async () => {
+      const { result } = await setup({ listFails: true });
+      await act(async () => {
+        result.current.review.chooseLine(1, MILK);
+      });
+
+      await drainTimers();
+      expect(result.current.review.listState).toBe('error');
+      expect(result.current.review.rows[0]?.onList).toBe(false);
     });
 
     it('says when the list is longer than the review can see', async () => {

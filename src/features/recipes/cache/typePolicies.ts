@@ -3,21 +3,14 @@ import {
   mergeConnectionByNodeId,
   readByIdFromCache,
 } from '#/apollo/cacheFieldPolicies';
-import {
-  catalogFetchKey,
-  recordCatalogFetch,
-  type CatalogField,
-} from '#features/recipes/store/catalogFetchTimes';
 
 /**
  * A catalog page: one answered without the catalog never replaces a complete
- * one, so a refresh during an outage keeps the list. A complete one records
- * when it arrived, which decides when a read asks again.
+ * one, so a refresh during an outage keeps the list.
  */
-const catalogPage = (field: CatalogField): FieldPolicy<StoreObject> => ({
-  merge(existing, incoming, { args, readField }) {
+const catalogPage: FieldPolicy<StoreObject> = {
+  merge(existing, incoming, { readField }) {
     if (readField<boolean>('catalogAvailable', incoming) !== false) {
-      recordCatalogFetch(catalogFetchKey(field, args), Date.now());
       return incoming;
     }
     return existing !== undefined &&
@@ -25,7 +18,7 @@ const catalogPage = (field: CatalogField): FieldPolicy<StoreObject> => ({
       ? existing
       : incoming;
   },
-});
+};
 
 /**
  * A recipe merges field-wise; `recipes` keys on the whole `filters` input.
@@ -54,8 +47,8 @@ export const recipesTypePolicies: TypePolicies = {
         keyArgs: ['homeId', 'excludeDietaryConflicts'],
         merge: (_existing: unknown, incoming: unknown) => incoming,
       },
-      catalogRecipesByIngredients: catalogPage('catalogRecipesByIngredients'),
-      randomCatalogRecipes: catalogPage('randomCatalogRecipes'),
+      catalogRecipesByIngredients: catalogPage,
+      randomCatalogRecipes: catalogPage,
     },
   },
 };

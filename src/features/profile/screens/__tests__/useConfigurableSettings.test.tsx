@@ -1,4 +1,5 @@
-'use no memo';
+import { t } from '#/i18n';
+('use no memo');
 
 import { act } from '@testing-library/react-native';
 import { Platform } from 'react-native';
@@ -163,8 +164,12 @@ jest.mock('#features/profile/components/BiometricSetupModal', () => ({
 }));
 
 const mockPendingCount = jest.fn(() => 0);
+const mockRefusedCount = jest.fn(() => 0);
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({
-  queueStore: { getPendingCount: () => mockPendingCount() },
+  queueStore: {
+    getPendingCount: () => mockPendingCount(),
+    getRefusedCount: () => mockRefusedCount(),
+  },
 }));
 
 /**
@@ -361,6 +366,42 @@ describe('useConfigurableSettings', () => {
 
     expect(mockLogout).toHaveBeenCalled();
     mockPendingCount.mockReturnValue(0);
+  });
+
+  it('counts changes not saved in the warning, which signing out also loses', () => {
+    mockPendingCount.mockReturnValue(1);
+    mockRefusedCount.mockReturnValue(2);
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.anything(),
+      t('confirmations.logoutWithPending', { count: 3 }),
+      expect.anything(),
+    );
+    mockPendingCount.mockReturnValue(0);
+    mockRefusedCount.mockReturnValue(0);
+  });
+
+  it('warns on changes not saved alone', () => {
+    mockRefusedCount.mockReturnValue(1);
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(mockLogout).not.toHaveBeenCalled();
+    mockRefusedCount.mockReturnValue(0);
   });
 
   // Signing back in after a deliberate sign-out is the case biometric sign-in

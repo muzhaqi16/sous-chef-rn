@@ -11,7 +11,10 @@ import { useUpdateSettings } from '#hooks/settings/useUpdateSettings';
  */
 export function useBudgetAndPricesCarryOver(): void {
   const user = useUser();
-  const { data } = useQuery(GetUserSettingsDocument, user?.id ? {} : skipToken);
+  const { data } = useQuery(
+    GetUserSettingsDocument,
+    user?.id ? { fetchPolicy: 'cache-first' } : skipToken,
+  );
   const answer = data?.me?.settings?.budgetAndPrices;
   const deviceOn = useAppStore(state =>
     user ? state.userPreferences[user.id]?.budgetAndPrices === true : false,

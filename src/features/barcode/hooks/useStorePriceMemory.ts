@@ -1,4 +1,5 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useTranslation } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import {
@@ -55,12 +56,13 @@ export function useStorePriceMemory(
   const shown = listId && homeId ? { listId, homeId } : null;
   // The scan's lookup stores these with the item and the list in store mode,
   // so this asks only for an item that came another way.
-  useQuery(
+  const { error: memoryError } = useQuery(
     StorePriceMemoryDocument,
     shown
       ? { variables: { itemId, ...shown }, fetchPolicy: 'cache-first' }
       : skipToken,
   );
+  useApolloErrorLogger(StorePriceMemoryDocument, memoryError);
   const paid = useFragment({
     fragment: UseStorePriceMemory_ItemFragmentDoc,
     fragmentName: 'useStorePriceMemory_item',
@@ -87,6 +89,7 @@ export function useStorePriceMemory(
         }
       : skipToken,
   );
+  useApolloErrorLogger(HouseholdUsualUnitPriceDocument, ownUnitPrice.error);
   const money = (
     amount: number,
     currency: { code: string; decimalPlaces: number },

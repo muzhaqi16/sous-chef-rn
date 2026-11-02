@@ -81,6 +81,7 @@
     "codegen:fillers": "node scripts/generate-optimistic-fillers.mjs",
     "codegen:versioned": "node scripts/generate-versioned-types.mjs",
     "check:fillers": "node scripts/generate-optimistic-fillers.mjs --check",
+    "check:manifest": "node scripts/generate-pq-manifest.mjs --check",
     "check:audit": "npm audit --omit=dev --audit-level=high"
   },
   "dependencies": {

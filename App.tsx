@@ -24,6 +24,7 @@ import { UpdateRequiredGate } from '#/app/UpdateRequiredGate';
 import { NotificationProvider } from '#features/notifications/components/NotificationProvider';
 import { AlertProvider } from '#/components/providers/AlertProvider';
 import { CoreDataProvider } from '#bootstrap/CoreDataProvider';
+import { OwedAccountSetup } from '#features/onboarding/ui/OwedAccountSetup';
 import { MOBILE_WARM_TARGETS } from '#/app/mobileWarmTargets';
 import { FieldRendererProvider } from '#components/molecules/fieldRenderers';
 import { catalogFieldRenderers } from '#features/catalog/ui/catalogFieldRenderers';
@@ -100,6 +101,8 @@ const App = () => {
                             until closed; a native Modal there would be lost.
                         2. OfflineTransitionAnnouncer - renders null; reads the
                            offline/online transition to a screen reader once.
+                        2b. OwedAccountSetup - renders null; finishes a setup
+                            onboarding went past offline.
                         3. GlobalBackdrop - covers everything including status bar
                         3b. ToastProvider - a LEAF, mounted last so the toast is
                             last in the native order; it exposes no context, so
@@ -115,6 +118,7 @@ const App = () => {
                             </AlertProvider>
                           </UpdateRequiredGate>
                           <OfflineTransitionAnnouncer />
+                          <OwedAccountSetup />
                         </View>
                         <GlobalBackdrop />
                         {/* Last, so the card composites above every screen's

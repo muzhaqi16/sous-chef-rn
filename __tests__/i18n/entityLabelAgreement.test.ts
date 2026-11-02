@@ -50,6 +50,10 @@ const REVIEWED_SLOTS: Record<string, string> = {
   // colon, so their participles agree with `modifica` / nothing.
   'errors.queuedChangeOverwrittenResource': 'colon frame or `en`; no agreement',
   // The same frames: es `cambio`, it `modifica`, sq `ndryshimi` take the verbs.
+  'errors.queuedChangeKeptResource':
+    'colon frame or `en`; no agreeing word in any locale',
+  'errors.queuedClashKeptResource':
+    'colon frame, or `en` with "the"; what agrees is `cambio` / `modifica` / `ndryshim`',
   'errors.queuedChangeRejectedResource': 'colon frame or `en`; no agreement',
   // Same frames; es/it/sq participles agree with `eliminación` / `voce` / `hyrja`.
   'errors.queuedRemovalKeptResource': 'colon frame or `en`; no agreement',

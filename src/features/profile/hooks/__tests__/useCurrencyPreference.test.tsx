@@ -1,6 +1,6 @@
 import React, { type ReactNode } from 'react';
 import { act, renderHook } from '@testing-library/react-native';
-import { ApolloClient, ApolloLink } from '@apollo/client';
+import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
 import { ApolloProvider } from '@apollo/client/react';
 import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
@@ -153,6 +153,35 @@ const persisted = (): { preferredCurrency?: string; user?: typeof ACCOUNT } => {
 };
 
 describe('useCurrencyPreference', () => {
+  it('says the options could not be read, and asks again', async () => {
+    const failing = jest.fn();
+    const client = new ApolloClient({
+      cache: makeCache(),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      link: new ApolloLink(
+        () =>
+          new Observable(observer => {
+            failing();
+            observer.error(new Error('no route to host'));
+          }),
+      ),
+    });
+    const { result } = renderHook(() => useCurrencyPreference(), {
+      wrapper: ({ children }: { children: ReactNode }) => (
+        <ApolloProvider client={client}>{children}</ApolloProvider>
+      ),
+    });
+
+    await act(() =>
+      client.query({ query: GetCurrenciesDocument }).catch(() => undefined),
+    );
+    expect(result.current.optionsState).toBe('error');
+
+    act(() => result.current.retryOptions());
+
+    expect(failing.mock.calls.length).toBeGreaterThan(1);
+  });
+
   it('offers the active currencies and labels the one the account holds', async () => {
     const { result } = renderCurrency({ data: APPLIED });
 

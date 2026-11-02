@@ -10,6 +10,8 @@ import {
   ResolveShareLinkDocument,
 } from '#operations/home/home.generated';
 import { homeLink } from '#features/home/utils/shareLink';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -34,19 +36,30 @@ export type JoinHomeOutcome =
 export function useJoinHomeByCode({ code, skip }: UseJoinHomeByCodeArgs) {
   const { t } = useTranslation();
   const client = useApolloClient();
+  const asked = !!code && !skip;
   // The pre-join preview: `homeByJoinCode` serves a whole Home whose
   // connections a non-member may not read, so its answer nulls for them.
-  const { data, loading } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     ResolveShareLinkDocument,
-    code && !skip ? { variables: { code }, refetchOn: false } : skipToken,
+    asked ? { variables: { code }, refetchOn: false } : skipToken,
   );
+  // A null link is the server's "no match"; a failed read is `undefined`.
+  const held = usePreservedQueryData(data, undefined, code);
+  const home = homeLink(held?.resolveShareLink);
+  const previewState = useDataState({
+    loading,
+    error,
+    hasResult: held !== undefined,
+    isEmpty: !home,
+    skipped: !asked,
+  });
 
   const [joinMutation] = useMutation(JoinHomeByCodeDocument, {
     update: (cache, { data }) => {
-      const home = appliedPayload(data)?.home;
+      const joined = appliedPayload(data)?.home;
       // Idempotent by id, and in the same step as the result: nothing selects
       // the joined home before the list has it.
-      if (home) addToHomesCache(cache, home, { position: 'end' });
+      if (joined) addToHomesCache(cache, joined, { position: 'end' });
     },
   });
 
@@ -92,8 +105,12 @@ export function useJoinHomeByCode({ code, skip }: UseJoinHomeByCodeArgs) {
   }
 
   return {
-    home: homeLink(data?.resolveShareLink),
+    home,
     previewLoading: loading,
+    previewState,
+    retryPreview: () => {
+      void refetch();
+    },
     joinHome,
   };
 }

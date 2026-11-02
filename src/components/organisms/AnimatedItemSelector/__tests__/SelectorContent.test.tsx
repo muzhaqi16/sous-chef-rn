@@ -34,6 +34,36 @@ const pagination = (
   ...overrides,
 });
 
+describe('SelectorContent with no rows', () => {
+  it('shows what stands in for the empty state, which says nothing', () => {
+    render(
+      <SelectorContent
+        config={{
+          ...config(),
+          data: [],
+          emptyMessage: 'No rows',
+          emptyContent: <Text>Could not read them</Text>,
+        }}
+      />,
+    );
+    expect(screen.getByText('Could not read them')).toBeTruthy();
+    expect(screen.queryByText('No rows')).toBeNull();
+  });
+
+  it('leaves rows it holds in place', () => {
+    render(
+      <SelectorContent
+        config={{
+          ...config(),
+          emptyContent: <Text>Could not read them</Text>,
+        }}
+      />,
+    );
+    expect(screen.getByText('First')).toBeTruthy();
+    expect(screen.queryByText('Could not read them')).toBeNull();
+  });
+});
+
 describe('SelectorContent pagination', () => {
   it('offers no load-more row without a next page', () => {
     render(<SelectorContent config={config(pagination({ hasMore: false }))} />);

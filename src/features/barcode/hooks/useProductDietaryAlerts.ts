@@ -69,7 +69,8 @@ export function useProductDietaryAlerts(itemId: string) {
 
   const answered = check === 'checked' || check === 'stale';
   // An answer with no alert still shows the caveat unless no restriction can alert.
-  const caveat = answered && (alerts.length > 0 || restrictionsInPlay !== false);
+  const caveat =
+    answered && (alerts.length > 0 || restrictionsInPlay !== false);
 
   return { check, alerts, alternatives, caveat };
 }

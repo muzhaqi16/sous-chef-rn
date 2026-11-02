@@ -23,11 +23,14 @@ export interface UserPreferences {
    * once to carry an "on" over. A `false` may be a default, never an answer.
    */
   budgetAndPrices?: boolean;
+  /** Onboarding went past setup with the account unread; finish it when read. */
+  accountSetupOwed?: boolean;
 }
 
 export const defaultUserPreferences: Required<UserPreferences> = {
   showShoppingListImages: true,
   budgetAndPrices: false,
+  accountSetupOwed: false,
 };
 
 export interface PreferencesState extends MirroredSettings {

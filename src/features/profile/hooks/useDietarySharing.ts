@@ -1,4 +1,5 @@
 import { useApolloClient, useMutation, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useTranslation } from '#/i18n';
 import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -23,7 +24,8 @@ export interface DietarySharingHome {
 export function useDietarySharing() {
   const { t } = useTranslation();
   const client = useApolloClient();
-  const { data, refetch } = useQuery(DietarySharingHomesDocument);
+  const { data, error, refetch } = useQuery(DietarySharingHomesDocument);
+  useApolloErrorLogger(DietarySharingHomesDocument, error);
   const [mutate] = useMutation(UpdateDietarySharingDocument, {
     context: { localFirst: true },
   });

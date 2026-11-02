@@ -1,6 +1,7 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   HeldStacksDocument,
   UseHeldStacks_PantryFragmentDoc,
@@ -52,6 +53,7 @@ export function useHeldStacks(
         }
       : skipToken,
   );
+  useApolloErrorLogger(HeldStacksDocument, asked.error);
   // `skipToken` keeps the last run's answer, which may be another item's.
   const askedFor =
     asked.variables.pantryId === pantryId && asked.variables.itemId === itemId;

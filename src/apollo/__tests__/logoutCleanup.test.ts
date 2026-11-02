@@ -7,7 +7,6 @@
 
 const mockClient = {
   clearStore: jest.fn(() => Promise.resolve()),
-  stop: jest.fn(),
   cache: { gc: jest.fn(() => []) },
 };
 jest.mock('#/apollo/clientRegistry', () => ({
@@ -85,11 +84,6 @@ describe('LogoutCleanup', () => {
     it('cancels cache persistence', async () => {
       await LogoutCleanup.performLogoutCleanup();
       expect(apolloCachePersistence.cancel).toHaveBeenCalled();
-    });
-
-    it('stops in-flight queries', async () => {
-      await LogoutCleanup.performLogoutCleanup();
-      expect(mockClient.stop).toHaveBeenCalled();
     });
 
     it('clears Apollo cache by default', async () => {
@@ -218,12 +212,11 @@ describe('session teardown step', () => {
     LogoutCleanup.completeLogout();
   });
 
-  it('stops in-flight operations, disposes the socket, and clears the cache', async () => {
+  it('disposes the socket and clears the cache', async () => {
     await runStep();
 
     const { disposeWebSocket } = require('../links/wsLink');
 
-    expect(mockClient.stop).toHaveBeenCalled();
     expect(disposeWebSocket).toHaveBeenCalled();
     expect(apolloCachePersistence.clear).toHaveBeenCalled();
   });

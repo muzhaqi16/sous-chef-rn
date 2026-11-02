@@ -9,6 +9,7 @@ import type {
   ProcessingResult,
   QueueConfig,
   QueueError,
+  WriteFaults,
 } from './types';
 import {
   QueueStatus,
@@ -18,15 +19,19 @@ import {
   type RowAdoption,
 } from './types';
 import { prepareReplay } from './prepareReplay';
+import { lastCleanAnswerAt } from './serverAnswers';
 import {
   overwritesMergedQuantity,
   reconcileReplaySuccess,
+  reportMergedRow,
   settleGoneReplay,
 } from './queueReplayReconcilers';
 import {
   deletesItsSubject,
   dependencyIdsOf,
   holdsBack,
+  inputOnSurvivingRow,
+  mentionsId,
   queuedSubject,
   subjectTypeOf,
 } from './queuedSubject';
@@ -41,6 +46,7 @@ import {
   ReplayRejectedError,
   ReplayNotPreparedError,
   REPLAY_NOT_PREPARED_CODE,
+  SCHEMA_INVALID_CODE,
   BatchRowDeferredError,
   BATCH_ROW_TRANSIENT_CODE,
   transientBatchRowCode,
@@ -59,6 +65,10 @@ import { registerSessionTeardown } from '#store/sessionTeardown';
 import { isRecord } from '#/utils/isRecord';
 import { returnedVersionOf, versionOf } from '#/apollo/utils/returnedVersion';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import {
+  conflictOutcome,
+  readServerRow,
+} from '#/apollo/pendingWrites/conflictRead';
 
 const DEFAULT_CONFIG: QueueConfig = {
   retryDelayMs: 1000,
@@ -67,35 +77,39 @@ const DEFAULT_CONFIG: QueueConfig = {
 
 const TIMED_OUT = Symbol('timedOut');
 
+/**
+ * How long a write may keep meeting a server fault. The API masks what tells a
+ * crash on one input from an outage, so a write that always crashes is known
+ * only by outlasting one.
+ */
+const MAX_WRITE_FAULTS = 5;
+const MIN_FAULT_SPAN_MS = 60 * 60 * 1000;
+/** A row busier than this while resending is the person's to decide. */
+const MAX_CONFLICT_RESENDS = 2;
+
+/** The write whose answer moved others, and whose queue they are in. */
+type WriteAt = Pick<QueuedMutation, 'id' | 'userId'>;
+
+const withFault = (faults: WriteFaults | undefined): WriteFaults => {
+  const now = Date.now();
+  return {
+    count: (faults?.count ?? 0) + 1,
+    firstAt: faults?.firstAt ?? now,
+    lastAt: now,
+  };
+};
+
+const outlastedAnOutage = (faults: WriteFaults): boolean =>
+  faults.count >= MAX_WRITE_FAULTS &&
+  faults.lastAt - faults.firstAt >= MIN_FAULT_SPAN_MS;
+
 /** Deferrals that belong to one row, so the rest of the pass still runs. */
 const ENTRY_SCOPED_DEFERRALS: ReadonlySet<string> = new Set([
   ErrorCode.Deadlock,
+  SCHEMA_INVALID_CODE,
   REPLAY_NOT_PREPARED_CODE,
   BATCH_ROW_TRANSIENT_CODE,
 ]);
-
-/** `value` with every occurrence of the id `from` replaced by `to`. */
-function replaceId(value: unknown, from: string, to: string): unknown {
-  if (value === from) return to;
-  if (Array.isArray(value)) {
-    return value.map((element: unknown) => replaceId(element, from, to));
-  }
-  if (!isRecord(value)) return value;
-  return Object.fromEntries(
-    Object.entries(value).map(([key, field]) => [
-      key,
-      replaceId(field, from, to),
-    ]),
-  );
-}
-
-/** Whether `value` names the id anywhere. */
-const mentionsId = (value: unknown, id: string): boolean =>
-  value === id ||
-  (Array.isArray(value)
-    ? value.some((element: unknown) => mentionsId(element, id))
-    : isRecord(value) &&
-      Object.values(value).some(field => mentionsId(field, id)));
 
 /** The fields a replay reads off whichever union member the server returned. */
 interface ReplayPayload {
@@ -289,12 +303,14 @@ export class QueueManager {
     let failed = 0;
     // Ids of entries undelivered this drain: only entries touching one wait, so
     // a create→update chain keeps its order without blocking unrelated
-    // entities. A write parked for re-auth holds its dependents too.
+    // entities. A write parked for re-auth holds its dependents too, as does
+    // one still on its way, which the reset above left alone.
     const blockedIds = new Set<string>(
-      queueStore
-        .getMutationsForUser(userId, QueueStatus.AUTH_ERROR)
-        .flatMap(parked => this.getAllEntityIds(parked)),
+      [QueueStatus.AUTH_ERROR, QueueStatus.PROCESSING]
+        .flatMap(status => queueStore.getMutationsForUser(userId, status))
+        .flatMap(held => this.getAllEntityIds(held)),
     );
+    let refusedRows = queueStore.getRefusedRows(userId);
     for (const mutation of mutations) {
       // An adoption earlier in this drain settled it (a dropped removal, a
       // withdrawn overwrite); the snapshot still lists it.
@@ -314,6 +330,16 @@ export class QueueManager {
 
       const entityIds = this.getAllEntityIds(mutation);
       const dependencyIds = dependencyIdsOf(mutation);
+      const heldBy = [...entityIds, ...dependencyIds]
+        .map(id => refusedRows.get(id))
+        .find(id => id !== undefined);
+      if (heldBy) {
+        this.followRefused(mutation, heldBy);
+        for (const id of queuedSubject(mutation).mintedIds) {
+          refusedRows.set(id, heldBy);
+        }
+        continue;
+      }
       if ([...entityIds, ...dependencyIds].some(id => blockedIds.has(id))) {
         // Depends on an entry that has not landed; blocked itself, so anything
         // downstream of IT waits too.
@@ -345,6 +371,7 @@ export class QueueManager {
         // names, so the child is withdrawn rather than delayed.
         if (!result.success) {
           for (const id of entityIds) blockedIds.add(id);
+          refusedRows = queueStore.getRefusedRows(userId);
           logger.info(
             '🕓 Queue: Mutation did not land, holding its dependents',
           );
@@ -586,16 +613,15 @@ export class QueueManager {
       }
     }
 
-    // A stale `version` applied nothing (`VERSION_CONFLICT`): someone else
-    // changed the row, and the server's state stands. The write is withdrawn
-    // and reported, and the resync after the drain re-reads the row.
+    // A stale `version` applied nothing (`VERSION_CONFLICT`), but its row may
+    // already hold the write, or have moved on elsewhere.
     if (queueError.type === 'conflict') {
-      logger.warn(
-        `❌ Queue: ${mutation.id} conflicts — the server's row stands`,
-      );
+      logger.warn(`❌ Queue: ${mutation.id} conflicts with the server's row`);
       Telemetry.increment('offline_queue_conflicts_total', 1, {
         operation: mutation.operationName,
       });
+      const settled = await this.settleConflict(mutation, queueError);
+      if (settled) return settled;
       queueError.retryable = false;
     }
 
@@ -629,15 +655,28 @@ export class QueueManager {
     // A transient error past the in-run retries stays PENDING, retryCount
     // reset, for the next drain; only `queueStore.expireStalePending`'s age
     // horizon bounds it.
-    if (queueError.type === 'network' || queueError.type === 'server') {
-      // DEADLOCK and an unbuildable replay are scoped to the row; every other
-      // network/server verdict is the API's own state, which pauses the drain.
-      const deferralScope = ENTRY_SCOPED_DEFERRALS.has(queueError.code ?? '')
-        ? 'entry'
-        : 'transport';
+    const faults = queueError.fault ? withFault(mutation.faults) : undefined;
+    const givesUp =
+      !!faults &&
+      outlastedAnOutage(faults) &&
+      lastCleanAnswerAt() > faults.firstAt;
+    if (
+      !givesUp &&
+      (queueError.type === 'network' || queueError.type === 'server')
+    ) {
+      // DEADLOCK and an unbuildable replay are scoped to the row, as is a fault
+      // met again while the server answers others. Every other network/server
+      // verdict is the API's own state, which pauses the drain.
+      const answeringOthers =
+        !!mutation.faults && lastCleanAnswerAt() > mutation.faults.lastAt;
+      const deferralScope =
+        answeringOthers || ENTRY_SCOPED_DEFERRALS.has(queueError.code ?? '')
+          ? 'entry'
+          : 'transport';
       queueStore.updateMutation(mutation.id, {
         status: QueueStatus.PENDING,
         retryCount: 0,
+        ...(faults && { faults }),
       });
       if (queueError.retryAfterMs !== undefined) {
         this.drainNotBefore = Date.now() + queueError.retryAfterMs;
@@ -682,6 +721,87 @@ export class QueueManager {
   }
 
   /**
+   * Settles a stale write from the row as the server holds it, or returns
+   * `undefined` when the person has to decide. A landed write's followers move
+   * on as after any answer; a write sent again leaves them to meet the row
+   * themselves, as what they changed has not been compared.
+   */
+  private async settleConflict(
+    mutation: QueuedMutation,
+    queueError: QueueError,
+  ): Promise<ProcessingResult | undefined> {
+    const client = requireApolloClient();
+    const pendingWrites = pendingWritesOf(client.cache);
+    const conflict = pendingWrites.conflictOf(mutation.operationName);
+    const [entityId, ...otherSubjects] = queuedSubject(mutation).subjectIds;
+    const write = mutation.pendingWrite;
+    const resends = mutation.conflictResends ?? 0;
+    if (
+      !conflict ||
+      !write ||
+      !entityId ||
+      otherSubjects.length > 0 ||
+      resends >= MAX_CONFLICT_RESENDS
+    ) {
+      return undefined;
+    }
+
+    const row = await readServerRow(client, conflict, entityId);
+    if (!row) {
+      queueStore.updateMutation(mutation.id, {
+        status: QueueStatus.PENDING,
+        retryCount: 0,
+      });
+      return {
+        success: false,
+        deferred: true,
+        deferralScope: 'entry',
+        mutationId: mutation.id,
+        error: queueError,
+      };
+    }
+
+    const outcome = mutation.overwrites
+      ? 'merge'
+      : conflictOutcome(
+          conflict.changed(write.inputs),
+          write.inputs.baseline,
+          row,
+        );
+    if (outcome === 'clash') return undefined;
+
+    const input: unknown = mutation.variables.input;
+    if (outcome === 'landed') {
+      this.rebasePending(mutation, entityId, versionOf(input), {
+        ...row,
+        converged: true,
+      });
+      pendingWrites.drop(write.id);
+      queueStore.removeMutation(mutation.id);
+      return { success: true, mutationId: mutation.id };
+    }
+
+    const variables = {
+      ...mutation.variables,
+      input: isRecord(input) ? { ...input, version: row.version } : input,
+    };
+    const conflictResends = resends + 1;
+    queueStore.updateMutation(mutation.id, { variables, conflictResends });
+    return await this.processMutation({
+      ...mutation,
+      variables,
+      conflictResends,
+    });
+  }
+
+  /** A write on a refused create's row goes with it, unsent and unreported. */
+  private followRefused(mutation: QueuedMutation, heldBy: string): void {
+    queueStore.markRefused(mutation.id, mutation.lastError, { heldBy });
+    const writeId = mutation.pendingWrite?.id;
+    if (writeId) pendingWritesOf(requireApolloClient().cache).drop(writeId);
+  }
+
+  /**
    * Moves writes still queued against `entityId` at this replay's base version
    * onto the version the server returned, as they build on this one. Written
    * to the queue, so a restart mid-drain keeps it.
@@ -718,10 +838,8 @@ export class QueueManager {
    * delta was queued. A removal of that row is dropped: it would delete a row
    * the person never saw.
    */
-  private adoptSurvivingRow(
-    replayed: QueuedMutation,
-    { mintedId, survivingId, version }: RowAdoption,
-  ): void {
+  private adoptSurvivingRow(replayed: WriteAt, adoption: RowAdoption): void {
+    const { mintedId, survivingId } = adoption;
     const onMinted = queueStore
       .getPendingMutationsForUser(replayed.userId)
       .map(stored => ({
@@ -766,13 +884,7 @@ export class QueueManager {
       pending =>
         !this.settledByAdoption.has(pending.id) &&
         mentionsId(pending.variables.input, mintedId),
-      input => {
-        const moved = replaceId(input, mintedId, survivingId);
-        if (!isRecord(moved)) return input;
-        return version !== undefined && typeof moved.version === 'number'
-          ? { ...moved, version }
-          : moved;
-      },
+      input => inputOnSurvivingRow(input, adoption),
     );
     pendingWritesOf(requireApolloClient().cache).followQueue(
       queueStore.getPendingWrites(),
@@ -799,9 +911,32 @@ export class QueueManager {
     this.invokeFailureHandler(mutation, queueError, entityType);
   }
 
+  /**
+   * An answer online that the server merged: what waits on the minted row goes
+   * to the row that survives, as behind a replay. A removal or a quantity
+   * overwrite on its way stays on the minted row, which refuses it.
+   */
+  followAnsweredMerge(
+    operationName: string,
+    variables: OperationVariables,
+    data: unknown,
+  ): void {
+    const userId = queueStore.getCurrentUserId();
+    if (!userId) return;
+    reportMergedRow(operationName, variables, data, adoption => {
+      this.adoptSurvivingRow({ id: operationName, userId }, adoption);
+      pendingWritesOf(requireApolloClient().cache).followMerge(
+        adoption,
+        write =>
+          !deletesItsSubject({ mutation: write.document }) &&
+          !overwritesMergedQuantity(write),
+      );
+    });
+  }
+
   /** Rewrites the input of each other pending write `affects` picks. */
   private rewritePending(
-    replayed: QueuedMutation,
+    replayed: WriteAt,
     affects: (pending: QueuedMutation) => boolean,
     rewrite: (input: Record<string, unknown>) => Record<string, unknown>,
   ): void {
@@ -921,11 +1056,11 @@ export class QueueManager {
   }
 
   /**
-   * Withdraws a local-first write that could not be queued: the cache is
-   * written permanently BEFORE the enqueue, so the change would otherwise stay
-   * with no entry to carry it.
+   * A local-first write the queue had no room for: its layer goes and the
+   * change is kept for the person, who can send it once the queue empties.
    */
   withdrawUnqueueableWrite(mutation: QueuedMutation, error: QueueError): void {
+    queueStore.addMutation({ ...mutation, status: QueueStatus.REFUSED });
     this.invokeFailureHandler(mutation, error);
   }
 

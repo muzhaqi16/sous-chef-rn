@@ -137,7 +137,7 @@ primary: `docs/subscriptions-echo-and-budget.md` § The device identity.
 
 **A session end mints nothing.** A credential landing after the teardown cleared
 storage is written back and re-arms the refresh, leaving a signed-out device a
-live session — and `client.stop()` does not cancel an in-flight refresh
+live session — and `clearStore` does not cancel an in-flight refresh
 mutation. So `setTokens` refuses a pair while the scope is held, the refresh
 opens no rotation inside it, and a rotation that completes after its session
 was cleared or replaced (the stored refresh token is no longer the one it

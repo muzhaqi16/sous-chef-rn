@@ -39,6 +39,61 @@ function overviewMock() {
   });
 }
 
+describe('useShoppingListsLite, a read that fails', () => {
+  it('reports it, which is not "no lists"', async () => {
+    const failed = recordMock(GetShoppingListsLiteDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(() => useShoppingListsLite(), {
+      operationMocks: [failed.mock],
+    });
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+    expect(result.current.lists).toEqual([]);
+  });
+
+  it('keeps the lists it holds through a read that fails', async () => {
+    const read = overviewMock();
+    const failed = recordMock(GetShoppingListsLiteDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(() => useShoppingListsLite(), {
+      operationMocks: [{ ...read.mock, maxUsageCount: 1 }, failed.mock],
+    });
+
+    await drainTimers();
+    expect(result.current.lists).toHaveLength(2);
+
+    await drained(() => result.current.refetch());
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.state).toBe('ready');
+    expect(result.current.lists).toHaveLength(2);
+  });
+
+  it('calls a settled empty answer empty', async () => {
+    const { result } = renderHookWithApollo(() => useShoppingListsLite(), {
+      operationMocks: [
+        recordMock(GetShoppingListsLiteDocument, {
+          data: { shoppingLists: { edges: [] } },
+        }).mock,
+      ],
+    });
+
+    await drainTimers();
+    expect(result.current.state).toBe('empty');
+  });
+
+  it('calls a skipped read empty, not failed', () => {
+    const { result } = renderHookWithApollo(
+      () => useShoppingListsLite({ skip: true }),
+      { operationMocks: [] },
+    );
+
+    expect(result.current.state).toBe('empty');
+  });
+});
+
 const ALL_LISTS = 30;
 const SERVER_DEFAULT_PAGE = 20;
 

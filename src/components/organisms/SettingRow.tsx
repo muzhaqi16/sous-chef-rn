@@ -38,6 +38,8 @@ export interface SettingItem {
   loading?: boolean;
   selected?: string;
   options?: SettingOption[];
+  /** Shown under the options when the read behind them failed. */
+  unavailable?: React.ReactNode;
   icon?: React.ReactNode;
   onSave?: (value: string) => void;
   onPress?: () => void;
@@ -281,6 +283,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
               )}
             </AppPressable>
           ))}
+          {item.unavailable}
         </Sheet>
       )}
     </>

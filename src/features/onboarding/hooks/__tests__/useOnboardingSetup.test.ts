@@ -6,6 +6,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -104,6 +105,82 @@ beforeEach(() => {
 
 afterEach(() => {
   jest.useRealTimers();
+});
+
+describe('useOnboardingSetup, a read that fails', () => {
+  const failedHomes = () =>
+    recordMock(GetHomesDocument, { error: new Error('network down') });
+  const failedLists = () =>
+    recordMock(GetShoppingListsLiteDocument, {
+      error: new Error('network down'),
+    });
+
+  beforeEach(() => {
+    useStore.setState({ user: USER });
+  });
+
+  afterEach(() => {
+    useStore.setState({ user: null });
+  });
+
+  it('reports failed homes, which are not "no home"', async () => {
+    const { result } = await renderSetup(failedHomes(), listsMock());
+
+    expect(result.current.readState).toBe('error');
+    expect(result.current.hasHome).toBe(false);
+  });
+
+  it('reports failed lists, which are not "no list"', async () => {
+    const { result } = await renderSetup(
+      homesMock([{ id: 'home-1', name: 'Home', pantries: ['p1'] }]),
+      failedLists(),
+    );
+
+    expect(result.current.readState).toBe('error');
+    expect(result.current.hasHome).toBe(true);
+  });
+
+  it('asks both again on a retry', async () => {
+    const homes = failedHomes();
+    const lists = listsMock();
+    const { result } = await renderSetup(homes, lists);
+    const asked = homes.fired.length;
+
+    result.current.retryRead();
+    await drainTimers();
+    expect(homes.fired.length).toBe(asked + 1);
+  });
+
+  it('keeps the home it holds when the read fails', async () => {
+    const cache = seedCache([]);
+    seedQuery(cache, {
+      query: GetHomesDocument,
+      data: {
+        homes: {
+          edges: [
+            {
+              cursor: 'home-1',
+              node: {
+                id: 'home-1',
+                name: 'Home',
+                pantriesConnection: { edges: [] },
+              },
+            },
+          ],
+        },
+      },
+    });
+    const homes = failedHomes();
+    const rendered = renderHookWithApollo(() => useOnboardingSetup(), {
+      cache,
+      operationMocks: [homes.mock, listsMock().mock],
+    });
+
+    await drainTimers();
+    expect(homes.fired).toHaveLength(1);
+    expect(rendered.result.current.hasHome).toBe(true);
+    expect(rendered.result.current.readState).not.toBe('error');
+  });
 });
 
 describe('useOnboardingSetup, offline', () => {

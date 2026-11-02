@@ -6,6 +6,7 @@ import {
   renderHookWithApollo,
   recordMock,
   seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetRecipeReviewsDocument } from '#features/recipes/graphql/recipe.generated';
@@ -21,6 +22,9 @@ import type { MaterializedRecipe } from '../useRecipeData';
 
 jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => ({ id: 'user-1' })),
+}));
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => false,
 }));
 
 const mockToastSuccess = jest.mocked(toastService.success);
@@ -399,6 +403,66 @@ describe('useRecipeReviews', () => {
     await drained(() => result.current.actions.createReview(5, 'Amazing!'));
 
     expect(mockToastSuccess).toHaveBeenCalledWith('Review submitted');
+  });
+
+  describe('a read that fails', () => {
+    const failedRead = {
+      request: {
+        query: GetRecipeReviewsDocument,
+        variables: { id: 'recipe-1' },
+      },
+      error: new Error('network down'),
+    };
+
+    it('reports the failure, and a retry reads the reviews', async () => {
+      const { result } = renderHookWithApollo(
+        () =>
+          useRecipeReviews({
+            recipeId: 'recipe-1',
+            backendRecipe: makeBackendRecipe(),
+          }),
+        { operationMocks: [failedRead, buildGetRecipeReviewsMock()] },
+      );
+
+      await drainTimers();
+      expect(result.current.state.reviewsState).toBe('error');
+      expect(result.current.state.reviews).toEqual([]);
+
+      await drained(async () => result.current.actions.retryReviews());
+      expect(result.current.state.reviewsState).toBe('ready');
+      expect(result.current.state.reviews).toHaveLength(2);
+    });
+
+    it('keeps the reviews it held', async () => {
+      const cache = makeCache();
+      seedQuery(cache, {
+        query: GetRecipeReviewsDocument,
+        variables: { id: 'recipe-1' },
+        data: {
+          recipe: {
+            id: 'recipe-1',
+            reviewsConnection: {
+              edges: [
+                { node: buildReviewNode('rev-1', 3, 'user-2') },
+                { node: buildReviewNode('rev-2', 1, 'user-1') },
+              ],
+            },
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () =>
+          useRecipeReviews({
+            recipeId: 'recipe-1',
+            backendRecipe: makeBackendRecipe(),
+          }),
+        { cache, operationMocks: [failedRead] },
+      );
+
+      await drainTimers();
+      expect(result.current.state.reviewsState).toBe('ready');
+      expect(result.current.state.reviews).toHaveLength(2);
+    });
   });
 
   it('createReview reports a refusal in the app’s own words', async () => {

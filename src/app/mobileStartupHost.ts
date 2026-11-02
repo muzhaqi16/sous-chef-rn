@@ -20,6 +20,8 @@ import {
 import { registerDeviceInBackground } from '#/services/device/deviceRegistration';
 import { isSignedIn, type AuthUserInput } from '#store/slices/authSlice';
 import type { StartupHost } from '#bootstrap/startupHost';
+import { setChangesNotSavedOpener } from '#/apollo/offlineQueue/queueFailureHandler';
+import NavigationService from '#/services/NavigationService';
 
 /** What an end-to-end run's launch arguments asked of this start. */
 interface EndToEndFlags {
@@ -134,6 +136,10 @@ export function createMobileStartupHost(
       return { telemetry: measures() };
     },
     afterStart: () => {
+      setChangesNotSavedOpener(() => {
+        NavigationService.navigate('ChangesNotSaved');
+      });
+
       void getLastBiometricEmail().then(email => {
         if (!email) {
           setHasStoredCredentials(false);

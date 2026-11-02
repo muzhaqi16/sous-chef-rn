@@ -89,8 +89,6 @@
     "protein": "Proteinë",
     "fat": "Yndyrë",
     "loadingProfile": "Po ngarkohet profili dietik...",
-    "loadFailedTitle": "Profili dietik nuk u ngarkua",
-    "loadFailedSubtitle": "Kontrollo lidhjen dhe provo sërish.",
     "sharedWith": "E ndarë me",
     "sharedWithShown": "Anëtarët e këtyre shtëpive shohin kufizimet e tua me emrin tënd kur skanojnë ose gatuajnë. Shënimet e tua mbeten private.",
     "sharedWithNone": "Aktivizo një shtëpi që anëtarët e saj të shohin çfarë nuk mund të hash kur skanojnë ose gatuajnë.",
@@ -365,6 +363,20 @@
     "emptyDescription": "Raportimet, ndryshimet e sugjeruara dhe fotot që dërgon për shqyrtim shfaqen këtu, me gjendjen e secilit.",
     "sentOn": "Dërguar më {{date}}",
     "reviewNote": "Shënim i shqyrtimit: {{note}}"
+  },
+  "changesNotSaved": {
+    "title": "Ndryshime të paruajtura",
+    "bannerSubtitle_one": "{{count}} ndryshim pret vendimin tuaj",
+    "bannerSubtitle_other": "{{count}} ndryshime presin vendimin tuaj",
+    "intro": "Serveri nuk i pranoi. Provoni sërish ose hidhini.",
+    "aChange": "Një ndryshim",
+    "reasonConflict": "Dikush tjetër ndryshoi të njëjtën gjë më parë.",
+    "reasonGone": "Kjo nuk ekziston më, prandaj mund vetëm ta hidhni.",
+    "reasonRefused": "Serveri nuk e pranoi këtë ndryshim.",
+    "discardTitle": "Ta hidhni këtë ndryshim?",
+    "discardBody": "Ndryshimi juaj te {{name}} do të humbasë përgjithmonë.",
+    "emptyTitle": "Asgjë në pritje",
+    "emptyBody": "Të gjitha ndryshimet tuaja u ruajtën."
   },
   "brandLists": {
     "title": "Listat e markave",

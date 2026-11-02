@@ -32,6 +32,7 @@ import {
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
+import type { DataState } from '#hooks/data/useDataState';
 import {
   pantryItemData,
   type PantryItemFixture,
@@ -59,10 +60,14 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 // useRecipeSuggestionsForItem.test). Mock it so this integration test
 // doesn't need its query's mocks too.
 const mockSuggestedRecipes: ItemRecipeSuggestion[] = [];
+let mockRecipesState: DataState = 'empty';
+const mockRetryRecipes = jest.fn();
 jest.mock('#features/pantry/hooks/useRecipeSuggestionsForItem', () => ({
   useRecipeSuggestionsForItem: () => ({
     suggestedRecipes: mockSuggestedRecipes,
     loadingRecipes: false,
+    recipesState: mockRecipesState,
+    retryRecipes: mockRetryRecipes,
   }),
 }));
 
@@ -176,6 +181,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   Object.assign(mockPermissions, FULL_PERMISSIONS);
   mockSuggestedRecipes.length = 0;
+  mockRecipesState = 'empty';
   mockIsOffline.mockReturnValue(false);
 });
 
@@ -403,6 +409,22 @@ describe('PantryItemDetail (integration)', () => {
     });
     await drainTimers();
     expect(screen.getByText('Recipes to try')).toBeTruthy();
+  });
+
+  it('says the suggestions could not be read, never that there are none', async () => {
+    mockRecipesState = 'error';
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await drainTimers();
+
+    expect(
+      screen.queryByText(t('pantryItemDetail.noRecipeSuggestions')),
+    ).toBeNull();
+    // The screen stands: only the section reports it.
+    expect(screen.getByText('Recipes to try')).toBeTruthy();
+    fireEvent.press(screen.getByText(t('labels.tryAgain')));
+    expect(mockRetryRecipes).toHaveBeenCalledTimes(1);
   });
 
   it('opens a suggested catalog recipe with what its card shows', async () => {

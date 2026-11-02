@@ -121,6 +121,45 @@ describe('useRecipeSuggestionsForItem', () => {
     expect(result.current.loadingRecipes).toBe(false);
   });
 
+  it('reports a read that failed, and a retry reads it', async () => {
+    const failed = recordMock(CatalogRecipesForItemDocument, {
+      error: new Error('network down'),
+      maxUsageCount: 1,
+    });
+    const { result } = renderSuggestions('tomatoes', [
+      failed.mock,
+      suggestionsMock([edge('1', 'Tomato soup')]).mock,
+    ]);
+
+    await drainTimers();
+    expect(result.current.recipesState).toBe('error');
+    expect(result.current.suggestedRecipes).toEqual([]);
+
+    result.current.retryRecipes();
+    await drainTimers();
+    expect(result.current.recipesState).toBe('ready');
+    expect(result.current.suggestedRecipes).toHaveLength(1);
+  });
+
+  it('keeps the suggestions it holds when a refresh fails', async () => {
+    const failed = recordMock(CatalogRecipesForItemDocument, {
+      error: new Error('network down'),
+    });
+    // No recorded arrival, so it shows the held page and asks again.
+    const { result } = renderSuggestions(
+      'milk',
+      [failed.mock],
+      cacheHoldingMilk(['Rice pudding'], true),
+    );
+
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.recipesState).toBe('ready');
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Rice pudding',
+    ]);
+  });
+
   it('asks for nothing, and suggests nothing, without an item name', () => {
     const suggestions = suggestionsMock([edge('1', 'Tomato soup')]);
     const { result } = renderSuggestions(undefined, [suggestions.mock]);
@@ -167,11 +206,9 @@ describe('useRecipeSuggestionsForItem', () => {
 
   it('answers from the cache when it holds a whole answer', async () => {
     const suggestions = suggestionsMock([edge('1', 'Milkshake')]);
-    const { result } = renderSuggestions(
-      'milk',
-      [suggestions.mock],
-      cacheHoldingMilk(['Rice pudding'], true),
-    );
+    const cache = cacheHoldingMilk(['Rice pudding'], true);
+    milkFetched(0);
+    const { result } = renderSuggestions('milk', [suggestions.mock], cache);
 
     await drainTimers();
     expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([

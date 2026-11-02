@@ -128,7 +128,7 @@ export function useTodayOverview() {
 
   const {
     lists,
-    loading: listsLoading,
+    state: listsState,
     refetch: refetchLists,
   } = useShoppingListsLite(standDown);
   const [refreshing, setRefreshing] = useState(false);
@@ -140,8 +140,7 @@ export function useTodayOverview() {
     (noPantry || stats?.totalItems === 0) &&
     plansHaveResult &&
     mealPlans.length === 0 &&
-    !listsLoading &&
-    lists.length === 0;
+    listsState === 'empty';
   const isFirstRun = hasNoHousehold || householdIsEmpty;
 
   // Only the counts gate the screen: each other section shows when it arrives.

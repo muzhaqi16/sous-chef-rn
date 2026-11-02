@@ -16,6 +16,7 @@ export const onboardingTestIDs = {
   setupScreen: 'onboarding-setup-screen',
   setupCreateHome: 'onboarding-setup-create-home',
   setupSkipHome: 'onboarding-setup-skip-home',
+  setupContinueOffline: 'onboarding-setup-continue-offline',
   /** The household question: who the user cooks for. */
   householdScreen: 'onboarding-household-screen',
   householdChoice: (choice: string) => `onboarding-household-${choice}`,

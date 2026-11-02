@@ -1,4 +1,5 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { resolveCurrency, usePreferredCurrency } from '#/domain/money';
 import {
   ListCurrencyDocument,
@@ -19,12 +20,13 @@ export function useListCurrency(
     fragmentName: 'useListCurrency_list',
     from: listId ? { __typename: 'ShoppingList', id: listId } : null,
   });
-  useQuery(
+  const { error } = useQuery(
     ListCurrencyDocument,
     listId && !read.complete
       ? { variables: { id: listId }, fetchPolicy: 'cache-first' }
       : skipToken,
   );
+  useApolloErrorLogger(ListCurrencyDocument, error);
   if (!read.complete) return null;
   return resolveCurrency(
     read.data.currency ? { code: read.data.currency } : null,

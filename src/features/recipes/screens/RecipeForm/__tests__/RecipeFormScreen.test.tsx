@@ -6,8 +6,10 @@ import type { StaticScreenProps } from '@react-navigation/native';
 import {
   recordMock,
   renderWithApollo,
+  seedQuery,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateRecipeDocument,
@@ -369,6 +371,52 @@ describe('RecipeFormScreen', () => {
           totalCount: hasNextPage ? 150 : 1,
         },
       },
+    });
+
+    it('offers to read the recipe again in place of a blank form', async () => {
+      const failed = recordMock(GetRecipeDocument, {
+        error: new Error('network down'),
+        maxUsageCount: 1,
+      });
+      const read = recordMock(GetRecipeDocument, {
+        data: loadedRecipe(false),
+      });
+      const tree = renderWithApollo(<RecipeFormScreen {...editProps} />, {
+        operationMocks: [failed.mock, read.mock],
+      });
+
+      await drainTimers();
+      expect(tree.getByText(t('dataState.errorTitle'))).toBeTruthy();
+      expect(tree.queryByTestId('save-button')).toBeNull();
+
+      await userEvent.setup().press(tree.getByText(t('labels.tryAgain')));
+      await drainTimers();
+      expect(tree.getByTestId('save-button')).toBeTruthy();
+      expect(tree.getByTestId('ingredient-count')).toHaveTextContent('1');
+    });
+
+    it('keeps the form when a read fails over the recipe it holds', async () => {
+      const cache = makeCache();
+      seedQuery(cache, {
+        query: GetRecipeDocument,
+        variables: {
+          id: 'recipe-1',
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
+        data: loadedRecipe(false),
+      });
+      const failed = recordMock(GetRecipeDocument, {
+        error: new Error('network down'),
+      });
+      const tree = renderWithApollo(<RecipeFormScreen {...editProps} />, {
+        cache,
+        operationMocks: [failed.mock],
+      });
+
+      await drainTimers();
+      expect(failed.fired).toHaveLength(1);
+      expect(tree.getByTestId('ingredient-count')).toHaveTextContent('1');
+      expect(tree.queryByText(t('dataState.errorTitle'))).toBeNull();
     });
 
     const renderEdit = async (hasNextPage: boolean) => {

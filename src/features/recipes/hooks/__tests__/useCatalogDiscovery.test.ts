@@ -440,6 +440,13 @@ describe('useCatalogDiscovery', () => {
       variables: { ingredients: ['tomato'], first: 25 },
       data: cachedPantryPage(3),
     });
+    recordCatalogFetch(
+      catalogFetchKey('catalogRecipesByIngredients', {
+        ingredients: ['tomato'],
+        first: 25,
+      }),
+      Date.now(),
+    );
     pantryHolding(['tomato']);
     const byIngredients = byIngredientsMock([matchEdge(1)]);
     const { result } = renderDiscovery([byIngredients.mock], undefined, cache);

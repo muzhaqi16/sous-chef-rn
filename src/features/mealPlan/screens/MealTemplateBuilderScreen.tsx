@@ -10,6 +10,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { FormScreen } from '#components/templates/FormScreen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormSelect } from '#components/molecules/FormSelect';
@@ -85,8 +87,12 @@ export const MealTemplateBuilderScreen: React.FC<
 
   // Edit mode writes each item as it is saved; create mode holds drafts until
   // the template itself is created.
-  const { template: loaded, items: loadedItems } =
-    useMealTemplateForEdit(templateId);
+  const {
+    template: loaded,
+    items: loadedItems,
+    state: loadState,
+    refetch: reloadTemplate,
+  } = useMealTemplateForEdit(templateId);
 
   // Two forms on one screen: the template's own metadata, and the sub-form that
   // adds one meal to it.
@@ -301,6 +307,24 @@ export const MealTemplateBuilderScreen: React.FC<
     });
     if (newId) goBack();
   };
+
+  // A blank form here would save over the template it failed to read.
+  if (loadState === 'error' || loadState === 'offline') {
+    return (
+      <SubScreen
+        title={t('labels.editTemplate')}
+        testID={mealPlanTestIDs.templateBuilderScreen}
+        scroll="none"
+      >
+        <DataStateView
+          state={loadState}
+          onRetry={() => {
+            void reloadTemplate();
+          }}
+        />
+      </SubScreen>
+    );
+  }
 
   return (
     <FormScreen

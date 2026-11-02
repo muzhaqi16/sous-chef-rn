@@ -26,7 +26,7 @@ export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
    */
   orderedBy?(write: PendingWrite<TInputs>): string | undefined;
   /** Runs once, when the write is made, for what its caller did not pass. */
-  capture?(cache: ApolloCache, variables: OperationVariables): TInputs;
+  capture?(cache: ApolloCache, variables: OperationVariables): Partial<TInputs>;
   apply(cache: ApolloCache, write: PendingWrite<TInputs>): void;
   /**
    * What the server's answer does not write itself, such as a new row's edge.
@@ -43,6 +43,21 @@ export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
    * which dropping its layer cannot reach.
    */
   refused?(cache: ApolloCache, write: PendingWrite<TInputs>): void;
+  /** False when `refused` hands the write back to a retry of its own. */
+  recoverable?: false;
+  /** How a stale write learns what became of it; absent, the person decides. */
+  conflict?: ConflictRead<TInputs>;
+}
+
+/** The row a stale write is compared with, on the device and on the server. */
+export interface ConflictRead<TInputs extends LocalInputs = LocalInputs> {
+  typename: string;
+  /** Asks the server for the row, by `id`. */
+  query: DocumentNode;
+  /** The row's fields a write can change. */
+  fragment: DocumentNode;
+  /** What the write changed, in the row's own field names. */
+  changed(inputs: TInputs): Readonly<Record<string, unknown>>;
 }
 
 export type LocalWriteTable = Record<string, LocalWrite>;

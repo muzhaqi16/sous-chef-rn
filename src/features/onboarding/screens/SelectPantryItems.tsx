@@ -15,6 +15,7 @@ import {
 } from '#/graphql/generated/schemaTypes';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { Button } from '#components/molecules/Button';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { errorService } from '#/services/errorService';
@@ -63,6 +64,8 @@ export const SelectPantryItems = () => {
     existingCatalogIds,
     loading: pantryLoading,
     hasLoaded: pantryHasLoaded,
+    state: pantryState,
+    refetch: refetchPantry,
     addItem,
     removeItem,
   } = usePantryItemSelection(selectedPantryId);
@@ -124,6 +127,25 @@ export const SelectPantryItems = () => {
             {t('auth.tryAgain')}
           </Button>
         </View>
+      </OnBoardingWrapper>
+    );
+  }
+
+  // Unread, a held item would show as unpicked and be added a second time.
+  if (pantryState === 'error' || pantryState === 'offline') {
+    return (
+      <OnBoardingWrapper
+        title={t('onBoarding.stockPantryTitle')}
+        subtitle={t('onBoarding.stockPantrySubtitle')}
+        onBack={() => navigateToPreviousStep('Staples')}
+        onSkip={() => navigateToNextStep('Staples')}
+      >
+        <DataStateView
+          state={pantryState}
+          onRetry={() => {
+            void refetchPantry();
+          }}
+        />
       </OnBoardingWrapper>
     );
   }

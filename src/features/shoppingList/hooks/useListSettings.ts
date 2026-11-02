@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { alertService } from '#/services/alertService';
 import { useTranslation } from '#/i18n';
 import { useShoppingListDetails } from '#features/shoppingList/hooks/useShoppingListDetails';
+import { useDataState } from '#hooks/data/useDataState';
 import { useShoppingListTemplates } from '#features/shoppingList/hooks/useShoppingListTemplates';
 import { useNavigationIntents, useScreenFocusEffect } from '#platform/screen';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
@@ -83,8 +84,15 @@ export const useListSettings = (listId: string | undefined) => {
     isShared,
     collaborators,
     ownerships,
+    loading: detailsLoading,
+    hasResult: detailsHeld,
     refetch: refetchDetails,
   } = useShoppingListDetails(listId);
+  const detailsState = useDataState({
+    loading: detailsLoading,
+    hasResult: detailsHeld,
+    isEmpty: false,
+  });
   // Only the create screen offers "start from template"; an existing list's
   // settings shouldn't pay for the request.
   const { templates } = useShoppingListTemplates({ skip: !!listId });
@@ -93,7 +101,12 @@ export const useListSettings = (listId: string | undefined) => {
   const user = useUser();
   // Lazy: eager home data writes to the Zustand store and re-renders
   // ShoppingListMain.
-  const { homes, fetchHomeData, isLoaded: homesLoaded } = useLazyHomeData();
+  const {
+    homes,
+    state: homesState,
+    fetchHomeData,
+    isLoaded: homesLoaded,
+  } = useLazyHomeData();
 
   // ownerships + collaborators are materialized in the hook so the helpers
   // (typed against structural shapes) accept them via a synthesized arg.
@@ -520,12 +533,15 @@ export const useListSettings = (listId: string | undefined) => {
     handleToggleComplete,
     hasChanges,
     homes,
+    homesState,
+    retryHomes: fetchHomeData,
     isArchived,
     isCompleted,
     isDefault,
     isHomeMember,
     isOwner,
     ownership,
+    detailsState,
     retryOwnership: () => {
       void refetchDetails();
     },

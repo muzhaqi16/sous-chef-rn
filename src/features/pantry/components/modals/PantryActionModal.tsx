@@ -21,6 +21,7 @@ import {
   type UnitLabelSource,
 } from '#/utils/formatQuantity';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
+import { DataStateView } from '#components/organisms/DataStateView';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { usePantryActionItem } from '#features/pantry/components/modals/usePantryActionItem';
 import { shownStock } from '#domain/stockDisplay';
@@ -85,8 +86,12 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     snapPoints,
   });
 
-  const { pantryItem, loading: itemQueryLoading } =
-    usePantryActionItem(pantryItemId);
+  const {
+    pantryItem,
+    loading: itemQueryLoading,
+    state: itemState,
+    retry: retryItem,
+  } = usePantryActionItem(pantryItemId);
 
   const [selectedUnitInfo, setSelectedUnitInfo] =
     useState<SelectedUnitInfo | null>(null);
@@ -356,6 +361,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
           <View style={commonStyles.bottomSheetLoading}>
             <ThemedActivityIndicator />
           </View>
+        ) : null}
+
+        {itemState === 'error' || itemState === 'offline' ? (
+          <DataStateView state={itemState} onRetry={retryItem} />
         ) : null}
       </BottomSheetFormScrollView>
     </BottomSheetModal>

@@ -3,7 +3,11 @@
 import React from 'react';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { renderWithApollo, seedQuery } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { kitTestIDs } from '#components/testIDs';
+import { t } from '#/i18n';
+import { userEvent } from '@testing-library/react-native';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { ResolveShareLinkDocument } from '#operations/home/home.generated';
 import { JoinByLinkScreen } from '../JoinByLinkScreen';
@@ -30,6 +34,11 @@ const makeRoute = (code?: string) => ({
   key: 'JoinByLink-1',
   name: 'JoinByLink' as const,
   params: code ? { code } : {},
+});
+
+const failedResolve = (code: string) => ({
+  request: { query: ResolveShareLinkDocument, variables: { code } },
+  error: new Error('network down'),
 });
 
 function buildResolveMock(
@@ -104,5 +113,48 @@ describe('JoinByLinkScreen', () => {
     await drainTimers();
     expect(tree.getByText('Link not found')).toBeTruthy();
     expect(mockDispatch).not.toHaveBeenCalled();
+  });
+
+  it('offers a retry when the link cannot be read, never calling it invalid', async () => {
+    const tree = renderWithApollo(
+      <JoinByLinkScreen route={makeRoute('HOME9')} />,
+      {
+        operationMocks: [
+          failedResolve('HOME9'),
+          buildResolveMock('HOME9', {
+            targetType: ShareLinkTargetType.HomeJoin,
+          }),
+        ],
+      },
+    );
+    await drainTimers();
+    expect(tree.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(tree.queryByText('Link not found')).toBeNull();
+
+    await userEvent.setup().press(tree.getByText(t('labels.tryAgain')));
+    await drainTimers();
+    expect(mockReplace).toHaveBeenCalledWith('JoinHomeByCode', {
+      joinCode: 'HOME9',
+    });
+  });
+
+  it('routes on a held answer when the read fails', async () => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: ResolveShareLinkDocument,
+      variables: { code: 'HOME9' },
+      data: {
+        resolveShareLink: { targetType: ShareLinkTargetType.HomeJoin },
+      },
+    });
+    const tree = renderWithApollo(
+      <JoinByLinkScreen route={makeRoute('HOME9')} />,
+      { cache, operationMocks: [failedResolve('HOME9')] },
+    );
+    await drainTimers();
+    expect(mockReplace).toHaveBeenCalledWith('JoinHomeByCode', {
+      joinCode: 'HOME9',
+    });
+    expect(tree.queryByTestId(kitTestIDs.stateError)).toBeNull();
   });
 });

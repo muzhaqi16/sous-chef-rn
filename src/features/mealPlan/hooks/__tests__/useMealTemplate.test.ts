@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
   type MockDataFor,
   seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
@@ -189,6 +190,42 @@ describe('useMealTemplateForEdit', () => {
       ],
     );
     expect(get.fired).toEqual([{ id: 't2', itemsFirst: MEALS_PAGE_SIZE }]);
+  });
+
+  it('reports a read that failed with nothing held', async () => {
+    const failed = recordMock(GetMealTemplateForEditDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useMealTemplateForEdit('t2'),
+      { operationMocks: [failed.mock], cache: makeCache() },
+    );
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+    expect(result.current.template).toBeUndefined();
+  });
+
+  it('keeps the template it holds when a read fails', async () => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: GetMealTemplateForEditDocument,
+      variables: { id: 't2', itemsFirst: MEALS_PAGE_SIZE },
+      data: editPage(['i1'], { hasNextPage: false, endCursor: null }),
+    });
+    const failed = recordMock(GetMealTemplateForEditDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useMealTemplateForEdit('t2'),
+      { operationMocks: [failed.mock], cache },
+    );
+
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.state).toBe('ready');
+    expect(result.current.template?.name).toBe('Week A');
+    expect(result.current.items).toHaveLength(1);
   });
 
   it('follows the cursor: the editor saves against every meal, not the first page', async () => {

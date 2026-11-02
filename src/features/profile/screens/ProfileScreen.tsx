@@ -26,6 +26,7 @@ import {
   useHasUnverifiedEmail,
 } from '#store/useAppStore';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { useChangesNotSaved } from '#features/profile/hooks/useChangesNotSaved';
 import { SubScreen } from '#components/templates/SubScreen';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { firstNonBlank } from '#/utils/firstNonBlank';
@@ -35,8 +36,14 @@ export const ProfileScreen = () => {
   useScreenTransition('ProfileScreen');
   const canAccessDevTools = useCanAccessDevTools();
   const hasUnverifiedEmail = useHasUnverifiedEmail();
-  const { toProfilePhotoUpload, toDeleteAccount, toVerifyEmail, goBack } =
-    useAppNavigation();
+  const {
+    toProfilePhotoUpload,
+    toDeleteAccount,
+    toVerifyEmail,
+    toChangesNotSaved,
+    goBack,
+  } = useAppNavigation();
+  const changesNotSaved = useChangesNotSaved().changes.length;
   const { profile, user, loading } = useProfileData();
   const { sections, BiometricModal, logout } = useConfigurableSettings();
   const actionTrayRef = useRef<ActionTrayRef>(null);
@@ -116,6 +123,19 @@ export const ProfileScreen = () => {
           variant="warning"
           onPress={toVerifyEmail}
           testID={profileTestIDs.verifyEmailBanner}
+        />
+      )}
+      {changesNotSaved > 0 && (
+        <AlertBanner
+          title={t('changesNotSaved.title')}
+          subtitle={t('changesNotSaved.bannerSubtitle', {
+            count: changesNotSaved,
+          })}
+          icon="alert-circle-outline"
+          iconLibrary="Ionicons"
+          variant="warning"
+          onPress={toChangesNotSaved}
+          testID={profileTestIDs.changesNotSavedBanner}
         />
       )}
       {sections

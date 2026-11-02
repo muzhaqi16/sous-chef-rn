@@ -13,7 +13,7 @@ import type {
   UpdateRecipeIngredientsInput,
   WastePantryItemBatchInput,
 } from '#/graphql/generated/schemaTypes';
-import type { QueuedMutation } from './types';
+import type { QueuedMutation, RowAdoption } from './types';
 import { isRecord } from '#/utils/isRecord';
 
 /** The input types whose subject is a field other than `id`. */
@@ -234,4 +234,38 @@ export function dependencyIdsOf(write: {
   };
   collect(write.variables?.input);
   return [...ids];
+}
+
+function replaceId(value: unknown, from: string, to: string): unknown {
+  if (value === from) return to;
+  if (Array.isArray(value)) {
+    return value.map((element: unknown) => replaceId(element, from, to));
+  }
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, field]) => [
+      key,
+      replaceId(field, from, to),
+    ]),
+  );
+}
+
+/** Whether `value` names the id anywhere. */
+export const mentionsId = (value: unknown, id: string): boolean =>
+  value === id ||
+  (Array.isArray(value)
+    ? value.some((element: unknown) => mentionsId(element, id))
+    : isRecord(value) &&
+      Object.values(value).some(field => mentionsId(field, id)));
+
+/** An input moved off a minted row, at the version the surviving row is at. */
+export function inputOnSurvivingRow(
+  input: Record<string, unknown>,
+  { mintedId, survivingId, version }: RowAdoption,
+): Record<string, unknown> {
+  const moved = replaceId(input, mintedId, survivingId);
+  if (!isRecord(moved)) return input;
+  return version !== undefined && typeof moved.version === 'number'
+    ? { ...moved, version }
+    : moved;
 }

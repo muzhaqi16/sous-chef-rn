@@ -1,4 +1,5 @@
 import { useFragment, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
 import {
   ProductBrandListingsDocument,
@@ -30,10 +31,11 @@ export function useProductBrandListings(
 ) {
   // The scan's lookup stores these with the item, so this asks only for an
   // item that came another way.
-  useQuery(ProductBrandListingsDocument, {
+  const { error } = useQuery(ProductBrandListingsDocument, {
     variables: { itemId },
     fetchPolicy: 'cache-first',
   });
+  useApolloErrorLogger(ProductBrandListingsDocument, error);
   const { data, complete } = useFragment({
     fragment: UseProductBrandListings_ItemFragmentDoc,
     fragmentName: 'useProductBrandListings_item',

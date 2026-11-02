@@ -14,6 +14,7 @@ import {
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { createLocalWritePrecedenceLink } from '#/apollo/links/localWritePrecedenceLink';
 import { writeUserSettings } from '#/test-utils/fixtures/userSettingsFixtures';
+import { useSettingsMirror } from '#bootstrap/useSettingsMirror';
 import { useAppSettings } from '../useAppSettings';
 
 jest.mock('#store/useAppStore', () =>
@@ -132,11 +133,17 @@ describe('useAppSettings', () => {
         },
       },
     });
-    const { result } = renderHookWithApollo(() => useAppSettings(), {
-      cache,
-      operationMocks: [refresh.mock, flip.mock],
-      links: [createLocalWritePrecedenceLink()],
-    });
+    const { result } = renderHookWithApollo(
+      () => {
+        useSettingsMirror();
+        return useAppSettings();
+      },
+      {
+        cache,
+        operationMocks: [refresh.mock, flip.mock],
+        links: [createLocalWritePrecedenceLink()],
+      },
+    );
     await drainTimers();
     expect(refresh.fired).toHaveLength(1);
     expect(result.current.settings.budgetAndPrices).toBe(false);

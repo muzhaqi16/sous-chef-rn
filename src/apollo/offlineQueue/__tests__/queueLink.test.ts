@@ -1,3 +1,4 @@
+import { ServerError } from '@apollo/client/errors';
 import { type InMemoryCache, Observable } from '@apollo/client';
 import type {
   ApolloClient,
@@ -7,6 +8,7 @@ import type {
 import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
+import { Telemetry } from '#/services/telemetry';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { generateId } from '#/utils/generateId';
 import { queueStore } from '../queueStore';
@@ -49,6 +51,9 @@ jest.mock('#store', () => ({
 jest.mock('../queueStore', () => ({
   queueStore: {
     addMutation: jest.fn(),
+    journal: jest.fn(() => true),
+    answered: jest.fn(),
+    handBack: jest.fn(),
     getUndeliveredIds: jest.fn(() => new Set<string>()),
     getQueuedWriteIds: jest.fn(() => new Set<string>()),
   },
@@ -72,6 +77,7 @@ jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
 jest.mock('../queueManager', () => ({
   queueManager: {
     requestDrain: jest.fn(),
+    followAnsweredMerge: jest.fn(),
     drainAfterPass: jest.fn(),
     withdrawUnqueueableWrite: jest.fn(),
   },
@@ -214,6 +220,71 @@ describe('createQueueLink', () => {
           }),
       );
 
+    it.each([
+      [502, 'gateway-fault'],
+      [503, 'gateway-fault'],
+      [504, 'gateway-fault'],
+      [500, 'server-fault'],
+    ])('queues a localFirst mutation answered %i', async (status, reason) => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'DeleteItem',
+        variables: { input: { id: 'item-1' } },
+        context: { localFirst: true },
+      });
+      const forward = failingForward(
+        new ServerError('HTTP', {
+          response: new Response('', { status }),
+          bodyText: '',
+        }),
+      );
+
+      const queuedReason = await new Promise((resolve, reject) => {
+        let seen: unknown;
+        link.request(operation, forward).subscribe({
+          next: result => {
+            seen = result.extensions?.queuedReason;
+          },
+          error: reject,
+          complete: () => resolve(seen),
+        });
+      });
+
+      expect(queuedReason).toBe(reason);
+      expect(queueStore.journal).toHaveBeenCalledTimes(1);
+      expect(queueStore.handBack).toHaveBeenCalledTimes(1);
+      expect(queueStore.addMutation).not.toHaveBeenCalled();
+    });
+
+    it('leaves a 4xx to surface on its own', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'DeleteItem',
+        variables: { input: { id: 'item-1' } },
+        context: { localFirst: true },
+      });
+      const refused = new ServerError('HTTP', {
+        response: new Response('', { status: 400 }),
+        bodyText: '',
+      });
+
+      link.request(operation, failingForward(refused)).subscribe({
+        error(err) {
+          expect(err).toBe(refused);
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
     it('queues a localFirst mutation when online and the request fails with a network error', done => {
       mockedGetState.mockReturnValue({
         isOnline: true,
@@ -243,8 +314,8 @@ describe('createQueueLink', () => {
         },
         complete() {
           expect(sawQueued).toBe(true);
-          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
-          const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
+          expect(queueStore.handBack).toHaveBeenCalledTimes(1);
+          const queued = (queueStore.journal as jest.Mock).mock.calls[0][0];
           expect(queued.operationName).toBe('DeleteItem');
           done();
         },
@@ -280,10 +351,103 @@ describe('createQueueLink', () => {
 
       link.request(operation, forward).subscribe({
         complete() {
-          const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
+          const queued = (queueStore.journal as jest.Mock).mock.calls[0][0];
           expect(queued.context).toEqual({ localFirst: true });
           done();
         },
+      });
+    });
+
+    describe('a write answered online', () => {
+      const answering = (): ApolloLink.ForwardFunction =>
+        jest.fn(
+          () =>
+            new Observable<ApolloLink.Result>(observer => {
+              observer.next({ data: { addItem: { id: 'item-1' } } });
+              observer.complete();
+            }),
+        );
+      const localFirst = () => {
+        mockedGetState.mockReturnValue({
+          isOnline: true,
+          user: { id: 'user-1' },
+        });
+        return makeOperation({
+          query: MOCK_MUTATION,
+          operationName: 'AddItem',
+          variables: { input: { name: 'Apple' } },
+          context: { localFirst: true },
+        });
+      };
+
+      it('is saved before it is sent, and let go on the answer', done => {
+        const operation = localFirst();
+        const forward = jest.fn(() => {
+          expect(queueStore.journal).toHaveBeenCalledTimes(1);
+          expect(queueStore.answered).not.toHaveBeenCalled();
+          return answering()(operation);
+        });
+
+        link.request(operation, forward).subscribe({
+          complete() {
+            expect(queueStore.answered).toHaveBeenCalledWith('test-uuid');
+            expect(queueStore.handBack).not.toHaveBeenCalled();
+            done();
+          },
+        });
+      });
+
+      it('is let go when the answer is a refusal', done => {
+        const refused = new Error('Bad request');
+
+        link.request(localFirst(), failingForward(refused)).subscribe({
+          error() {
+            expect(queueStore.answered).toHaveBeenCalledWith('test-uuid');
+            done();
+          },
+        });
+      });
+
+      it('still goes when it cannot be saved, and the counter says so', done => {
+        (queueStore.journal as jest.Mock).mockReturnValueOnce(false);
+        const forward = answering();
+
+        link.request(localFirst(), forward).subscribe({
+          complete() {
+            expect(forward).toHaveBeenCalledTimes(1);
+            expect(queueStore.answered).not.toHaveBeenCalled();
+            expect(Telemetry.increment).toHaveBeenCalledWith(
+              'offline_queue_journal_failed_total',
+              1,
+              { operation: 'AddItem' },
+            );
+            done();
+          },
+        });
+      });
+
+      it('still goes when saving throws', done => {
+        (queueStore.journal as jest.Mock).mockImplementationOnce(() => {
+          throw new Error('storage full');
+        });
+        const forward = answering();
+
+        link.request(localFirst(), forward).subscribe({
+          complete() {
+            expect(forward).toHaveBeenCalledTimes(1);
+            done();
+          },
+        });
+      });
+
+      it('goes back to the queue if the send is torn down unanswered', () => {
+        const forward: ApolloLink.ForwardFunction = jest.fn(
+          () => new Observable<ApolloLink.Result>(() => undefined),
+        );
+
+        link.request(localFirst(), forward).subscribe().unsubscribe();
+
+        expect(queueStore.handBack).toHaveBeenCalledWith('test-uuid');
       });
     });
 

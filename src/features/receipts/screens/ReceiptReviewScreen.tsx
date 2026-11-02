@@ -12,6 +12,7 @@ import { Icon, type IconTone } from '#components/atoms/Icon';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Button } from '#components/molecules/Button';
 import { AlertBanner } from '#components/molecules/AlertBanner';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { StoreAutocompleteField } from '#features/catalog/ui/autocomplete/StoreAutocompleteField';
 import { storeBranchLabel } from '#domain/stores';
@@ -145,6 +146,8 @@ export const ReceiptReviewScreen: React.FC = () => {
     applying,
     listLoading,
     listIncomplete,
+    listState,
+    retryList,
     chooseLine,
     listItemNameFor,
     pickItem,
@@ -552,6 +555,9 @@ export const ReceiptReviewScreen: React.FC = () => {
                   subtitle={t('receipts.review.listIncompleteBody')}
                   testID={receiptsTestIDs.reviewListIncomplete}
                 />
+              ) : null}
+              {listState === 'error' || listState === 'offline' ? (
+                <DataStateView state={listState} onRetry={retryList} />
               ) : null}
               {!!totalsGap && (
                 <AlertBanner

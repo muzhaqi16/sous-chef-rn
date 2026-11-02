@@ -6,15 +6,9 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetHomesDocument } from '#operations/home/home.generated';
+import { Telemetry } from '#/services/telemetry';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useHomeQuery } from '../useHomeQuery';
-
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  // usePreservedNodes composes usePreservedQueryData internally — passthrough.
-  usePreservedQueryData: jest.fn(
-    <T>(data: T | undefined, initial: T): T => data ?? initial,
-  ),
-}));
 
 beforeEach(() => {
   jest.useFakeTimers();
@@ -215,6 +209,27 @@ describe('useHomeQuery', () => {
     expect(result.current.loading).toBe(false);
     expect(result.current.homes).toEqual([]);
     expect(result.current.hasResult).toBe(false);
+  });
+
+  it('logs a read that fails, and keeps the homes it held', async () => {
+    const { result } = renderHookWithApollo(() => useHomeQuery(), {
+      operationMocks: [
+        { ...homesMock([{ id: 'home-1' }]), maxUsageCount: 1 },
+        errorMock('network down'),
+      ],
+    });
+
+    await drainTimers();
+    expect(result.current.homes).toHaveLength(1);
+    expect(Telemetry.error).not.toHaveBeenCalled();
+
+    await drained(() => result.current.refetch());
+    expect(Telemetry.error).toHaveBeenCalledWith(
+      'Apollo query error: GetHomes',
+      expect.objectContaining({ error_message: 'network down' }),
+    );
+    expect(result.current.homes).toHaveLength(1);
+    expect(result.current.hasResult).toBe(true);
   });
 
   it('provides a refetch function', async () => {

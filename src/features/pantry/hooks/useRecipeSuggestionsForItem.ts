@@ -1,6 +1,8 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { catalogIngredientNames } from '#domain/catalogRecipes';
 import { useCatalogReadOptions } from '#features/recipes/hooks/useCatalogReadOptions';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
+import { useDataState, type DataState } from '#hooks/data/useDataState';
 import {
   CatalogRecipesForItemDocument,
   type CatalogRecipesForItemQuery,
@@ -15,6 +17,8 @@ export type ItemRecipeSuggestion =
 export interface UseRecipeSuggestionsForItemResult {
   suggestedRecipes: ItemRecipeSuggestion[];
   loadingRecipes: boolean;
+  recipesState: DataState;
+  retryRecipes: () => void;
 }
 
 /**
@@ -37,15 +41,33 @@ export function useRecipeSuggestionsForItem(
       pageOf: data => data.catalogRecipesByIngredients,
     },
   );
-  const { data, loading } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     CatalogRecipesForItemDocument,
     variables ? { variables, ...readOptions } : skipToken,
   );
   // A skipped query keeps the last item's suggestions; with nothing asked, none.
-  const edges = asked ? data?.catalogRecipesByIngredients.edges : undefined;
+  const held = usePreservedQueryData(
+    asked ? data : undefined,
+    undefined,
+    ingredients.join('\n'),
+  );
+  const suggestedRecipes = (held?.catalogRecipesByIngredients.edges ?? []).map(
+    edge => edge.node,
+  );
+  const recipesState = useDataState({
+    loading,
+    error,
+    hasResult: held !== undefined,
+    isEmpty: suggestedRecipes.length === 0,
+    skipped: !asked,
+  });
 
   return {
-    suggestedRecipes: (edges ?? []).map(edge => edge.node),
-    loadingRecipes: asked && loading && !data,
+    suggestedRecipes,
+    loadingRecipes: asked && loading && !held,
+    recipesState,
+    retryRecipes: () => {
+      void refetch();
+    },
   };
 }

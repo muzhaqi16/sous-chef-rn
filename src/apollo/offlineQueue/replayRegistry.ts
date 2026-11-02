@@ -65,7 +65,7 @@ export const forEachBatchAdd = <T>(value: T): Array<[DocumentNode, T]> =>
     AddDerivedItemsToShoppingListDocument,
   ].map((document): [DocumentNode, T] => [document, value]);
 
-export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
+export const MERGE_REPORTERS: ReplayReconcilerTable = byOperation([
   [CreateMealPlanItemDocument, reconcileCreateMealPlanItemReplay],
   [MoveShoppingItemToPantryDocument, reconcileMoveToPantryReplay],
   [CreatePantryItemDocument, reconcileCreatePantryItemReplay],
@@ -73,10 +73,17 @@ export const REPLAY_RECONCILERS: ReplayReconcilerTable = byOperation([
   [CreatePantryItemUsageDocument, reconcilePantryUsageReplay],
   [RestockPantryItemDocument, reconcileRestockReplay],
   [ConvertExpiredToWasteDocument, reconcileConvertExpiredReplay],
-  [CreateReceiptCheckInDocument, reconcileReceiptCheckInReplay],
   ...forEachBatchAdd(reconcileShoppingAddReplay),
   [CreateShoppingListDocument, reconcileShoppingCreateReplay],
 ]);
+
+export const REPLAY_RECONCILERS: ReplayReconcilerTable = {
+  ...MERGE_REPORTERS,
+  // Also settles the receipt's lines, which a check-in's own answer does online.
+  ...byOperation([
+    [CreateReceiptCheckInDocument, reconcileReceiptCheckInReplay],
+  ]),
+};
 
 /**
  * Replays a `NotFoundError` makes moot: the entry dequeues as settled and the

@@ -10,6 +10,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { RadioRow } from '#components/molecules/RadioRow';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { FormInput } from '#components/atoms/FormInput';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
 import { Icon } from '#components/atoms/Icon';
@@ -51,7 +52,11 @@ export const GenerateShoppingListSheet: React.FC<
     }
   }
 
-  const { lists: shoppingLists } = useShoppingListsLite({
+  const {
+    lists: shoppingLists,
+    state: listsState,
+    refetch: refetchLists,
+  } = useShoppingListsLite({
     skip: !visible,
     fetchPolicy: 'cache-first',
   });
@@ -185,7 +190,14 @@ export const GenerateShoppingListSheet: React.FC<
           <Text role="label" tone="secondary">
             {t('generateShoppingList.selectListLabel')}
           </Text>
-          {shoppingLists.length === 0 ? (
+          {listsState === 'error' || listsState === 'offline' ? (
+            <DataStateView
+              state={listsState}
+              onRetry={() => {
+                void refetchLists();
+              }}
+            />
+          ) : shoppingLists.length === 0 ? (
             <Text
               role="caption"
               tone="tertiary"

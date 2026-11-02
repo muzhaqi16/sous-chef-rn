@@ -256,6 +256,8 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 # Actions → Build Android → Run workflow → Choose environment + build type
 ```
 
+**Store tags are read by the API.** On every push, the API's CI validates `persisted-query-manifest.json` at each `playstore-vX.Y.Z` and `ios-vX.Y.Z` tag at or above the client floor, so a store tag keeps that exact name, and a tag with no manifest fails the API's CI. `check:manifest`, held by `persistedManifestIsCurrent.test.ts`, keeps the file matching the `.graphql` sources.
+
 ---
 
 ### 6. Build iOS (`build-ios.yml`)

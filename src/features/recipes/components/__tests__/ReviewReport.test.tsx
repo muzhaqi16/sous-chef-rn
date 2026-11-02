@@ -120,6 +120,8 @@ describe('reporting a review from the recipe', () => {
     renderWithApollo(
       <ReviewSection
         reviews={[own, other]}
+        reviewsState="ready"
+        retryReviews={jest.fn()}
         totalReviews={2}
         averageRating={4}
         rating1Count={0}

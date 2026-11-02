@@ -55,10 +55,12 @@ jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
   useShoppingListDetails: () => mockListDetails,
 }));
 
+let mockHomesState = 'ready';
 jest.mock('#features/home/hooks/useLazyHomeData', () => ({
   useLazyHomeData: () => ({
     homes: [],
     fetchHomeData: jest.fn(),
+    state: mockHomesState,
     isLoaded: false,
   }),
 }));
@@ -135,11 +137,13 @@ jest.mock('#components/templates/Screen', () => ({
   Screen: ({
     header,
     children,
+    state,
   }: {
     header?: { title?: string; actions?: BarAction[] };
     children: React.ReactNode;
+    state?: { value: string; onRetry: () => void };
   }) => {
-    const { View, Text } = require('react-native');
+    const { View, Text, Pressable } = require('react-native');
     const { BarActions } = require('#components/molecules/BarActions');
     return (
       <View>
@@ -147,6 +151,11 @@ jest.mock('#components/templates/Screen', () => ({
           <Text>{header?.title}</Text>
           <BarActions actions={header?.actions} />
         </View>
+        {state ? (
+          <Pressable testID="screen-retry" onPress={state.onRetry}>
+            <Text testID="screen-state">{state.value}</Text>
+          </Pressable>
+        ) : null}
         {children}
       </View>
     );
@@ -365,6 +374,28 @@ describe('ListSettings', () => {
     render(<ListSettings route={editRoute} />);
     expect(screen.getByText('Your Role')).toBeTruthy();
     expect(screen.getByText('Editor')).toBeTruthy();
+  });
+
+  it('says a list it could not read failed, rather than waiting on it', () => {
+    const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+    const refetch = jest.fn();
+    useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+      shoppingList: null,
+      loading: false,
+      hasResult: false,
+      collaborators: [],
+      ownerships: [],
+      isShared: false,
+      refetch,
+    }));
+
+    render(<ListSettings route={editRoute} />);
+
+    expect(screen.getByTestId('screen-state')).toHaveTextContent(
+      /error|offline/,
+    );
+    fireEvent.press(screen.getByTestId('screen-retry'));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('shows Leave List section for non-owner collaborator', () => {

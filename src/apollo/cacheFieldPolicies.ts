@@ -29,13 +29,6 @@ export interface CachedConnection {
 }
 
 /**
- * Maximum number of edges to retain in an itemsConnection cache entry.
- * When a merge would exceed this limit, the oldest edges are evicted.
- * 100 = 1 page of 100 (pantry, `PAGE_SIZE.MAX`) or 4 pages of 25 (shopping list).
- */
-const MAX_WINDOW_EDGES = 100;
-
-/**
  * The id of the row an edge holds, from its cache reference. Never
  * `readField('id', node)`: Apollo stores a write's entities in the order it met
  * them, and a row selecting its parent list is met after that list, so a page's
@@ -252,9 +245,10 @@ export function mergeConnectionByNodeId(
 }
 
 /**
- * Paginated append-only merge: existing edges keep their positions, only new
- * node ids are appended, and the window is capped at MAX_WINDOW_EDGES. Use
- * {@link mergeConnectionByNodeId} where fresh data should overwrite duplicates.
+ * Paginated append-only merge: existing edges keep their positions and only new
+ * node ids are appended. Every loaded row stays: these lists page forward only,
+ * so a dropped row could not come back. Use {@link mergeConnectionByNodeId}
+ * where fresh data should overwrite duplicates.
  */
 export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
   return {
@@ -335,19 +329,7 @@ export function itemsConnectionFieldPolicy(keyArgs: string[] = ['filters']) {
         };
       }
 
-      let mergedEdges = [...(existing.edges ?? []), ...newEdges];
-
-      // Evict oldest edges when exceeding the window limit
-      if (mergedEdges.length > MAX_WINDOW_EDGES) {
-        const evictCount = mergedEdges.length - MAX_WINDOW_EDGES;
-        mergedEdges = mergedEdges.slice(evictCount);
-
-        if (__DEV__) {
-          logger.debug(
-            `📊 [Cache] itemsConnection evicted ${evictCount} oldest edges, remaining=${mergedEdges.length}`,
-          );
-        }
-      }
+      const mergedEdges = [...(existing.edges ?? []), ...newEdges];
 
       // Connection size is a release signal — an unbounded connection is what
       // makes the persisted cache expensive to restore.

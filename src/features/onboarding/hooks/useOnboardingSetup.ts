@@ -6,6 +6,8 @@ import { defaultPantryOf } from '#domain/homePantries';
 import { extractNodes } from '#/utils/connectionUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { errorService } from '#/services/errorService';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import {
   useCreateHome,
   type CreateHomeFn,
@@ -97,7 +99,8 @@ async function performSetup(deps: SetupDeps): Promise<OnboardingSetupOutcome> {
     deps.setSelectedHomeId(homeId);
     const pantryId =
       deps.pantry?.id ?? (await createDefaultPantry(homeId, deps.createPantry));
-    if (!pantryId) return { status: 'failed', message: deps.pantryFailedMessage };
+    if (!pantryId)
+      return { status: 'failed', message: deps.pantryFailedMessage };
     deps.setSelectedPantryId(pantryId);
   }
 
@@ -129,9 +132,17 @@ export function useOnboardingSetup() {
   const userId = user?.id;
   const hasUnverifiedEmail = useHasUnverifiedEmail();
   const homesQuery = useQuery(GetHomesDocument, userId ? {} : skipToken);
-  const { lists, loading: listsLoading } = useShoppingListsLite({
-    skip: !userId,
-  });
+  const homesHeld = usePreservedQueryData(
+    homesQuery.data,
+    undefined,
+    userId ?? '',
+  );
+  const {
+    lists,
+    loading: listsLoading,
+    state: listsState,
+    refetch: refetchLists,
+  } = useShoppingListsLite({ skip: !userId });
   const { createHome } = useCreateHome(() => {
     void homesQuery.refetch();
   });
@@ -139,13 +150,21 @@ export function useOnboardingSetup() {
   const { createShoppingList } = useCreateShoppingList(
     t('errors.createShoppingListFailed'),
   );
+  const setUserPreference = useAppStore(state => state.setUserPreference);
   const setSelectedHomeId = useAppStore(state => state.setSelectedHomeId);
   const setSelectedPantryId = useSetSelectedPantryId();
   const setSelectedShoppingListId = useAppStore(
     state => state.setSelectedShoppingListId,
   );
 
-  const home = extractNodes(homesQuery.data?.homes)[0];
+  const home = extractNodes(homesHeld?.homes)[0];
+  const homesState = useDataState({
+    loading: homesQuery.loading,
+    error: homesQuery.error,
+    hasResult: homesHeld !== undefined,
+    isEmpty: !home,
+    skipped: !userId,
+  });
   const pantry = defaultPantryOf(home);
   const list = lists.find(candidate => candidate.isDefault) ?? lists[0];
   const name = firstNonBlank(user?.firstName, user?.displayName, user?.name);
@@ -154,9 +173,22 @@ export function useOnboardingSetup() {
     /** The account's homes and lists have not been read yet. */
     loading:
       !userId ||
-      (homesQuery.loading && !homesQuery.data) ||
+      (homesQuery.loading && !homesHeld) ||
       (listsLoading && lists.length === 0),
+    /** What is missing gets created, so a read that failed must stop setup. */
+    readState:
+      homesState === 'error' || homesState === 'offline'
+        ? homesState
+        : listsState,
+    retryRead: () => {
+      void homesQuery.refetch();
+      void refetchLists();
+    },
     hasHome: !!home,
+    /** Whether `OwedAccountSetup` is to finish this once the account is read. */
+    setOwed: (owed: boolean) => {
+      if (userId) setUserPreference(userId, { accountSetupOwed: owed });
+    },
     /** Selects what exists and creates the rest; a home only when asked to. */
     run: ({ createMissingHome }: { createMissingHome: boolean }) =>
       performSetup({

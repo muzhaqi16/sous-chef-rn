@@ -8,6 +8,7 @@ import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotif
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useBudgetAndPricesCarryOver } from '#features/profile/hooks/useBudgetAndPricesCarryOver';
 import { usePricePrompt } from '#features/shoppingList/hooks/usePricePrompt';
 import { useSettingsMirror } from './useSettingsMirror';
@@ -52,10 +53,11 @@ export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   // Fetch profile on every app load to keep Zustand store in sync
   // (e.g., profilePicture is only set at login/register and goes stale).
   // First mount fires the network once; subsequent re-renders read cache only.
-  const { data: profileData } = useQuery(
+  const { data: profileData, error: profileError } = useQuery(
     GetUserProfileDocument,
     !user ? skipToken : { notifyOnNetworkStatusChange: false },
   );
+  useApolloErrorLogger(GetUserProfileDocument, profileError);
 
   useEffect(() => {
     const profile = profileData?.me?.profile;

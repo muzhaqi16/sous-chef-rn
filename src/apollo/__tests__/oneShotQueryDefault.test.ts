@@ -29,6 +29,8 @@ const walk = (dir: string, out: string[] = []): string[] => {
 
 /** Sites that deliberately go to the network, with why. */
 const NETWORK_ONLY_CALLERS: Record<string, string> = {
+  'apollo/pendingWrites/conflictRead.ts':
+    'a stale write is judged by the row as the server holds it now',
   'hooks/utils/fetchPage.ts':
     'a page is never answered from the list the cache already merged',
   'features/notifications/hooks/useNotificationActionData.ts':

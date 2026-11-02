@@ -103,6 +103,7 @@ import {
   removeItem,
   removePantry,
   setStock,
+  updatePantryRow,
 } from '#features/pantry/offline/localWrites';
 import {
   AddRecipeToFavoritesDocument,
@@ -214,7 +215,7 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [DeleteShoppingListReminderDocument, entityFields],
   [MoveShoppingItemToPantryDocument, moveToPantry],
   [CreatePantryItemDocument, createItem],
-  [UpdatePantryItemDocument, entityFields],
+  [UpdatePantryItemDocument, updatePantryRow],
   [UpdatePantryItemQuantityDocument, setStock],
   [AdjustPantryItemQuantityDocument, setStock],
   [DeletePantryItemDocument, removeItem],

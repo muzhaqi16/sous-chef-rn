@@ -12,6 +12,8 @@ export interface ModalPickerProps<T extends string> {
   label: string;
   visible: boolean;
   options: { label: string; value: T }[];
+  /** Shown under the options when the read behind them failed. */
+  unavailable?: React.ReactNode;
   /** Null when nothing is selected yet. */
   selected: T | null;
   onSelect: (value: T) => void;
@@ -26,6 +28,7 @@ export function ModalPicker<T extends string>({
   label,
   visible,
   options,
+  unavailable,
   selected,
   onSelect,
   onCancel,
@@ -93,6 +96,7 @@ export function ModalPicker<T extends string>({
             )}
           </AppPressable>
         ))}
+        {unavailable}
       </View>
     </ActionTray>
   );

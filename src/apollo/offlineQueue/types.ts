@@ -12,6 +12,8 @@ export enum QueueStatus {
   FAILED = 'failed',
   AUTH_ERROR = 'auth_error',
   SUCCESS = 'success', // Kept briefly after replay, for reconciliation.
+  /** The server would not take it. Kept, unsent, for the person to decide. */
+  REFUSED = 'refused',
 }
 
 /**
@@ -19,6 +21,9 @@ export enum QueueStatus {
  * work. Refusing the enqueue is deliberate: dropping the oldest PENDING op
  * instead would break create→update dependency chains.
  */
+/** A write the queue had no room for. */
+export const QUEUE_FULL_CODE = 'QUEUE_FULL';
+
 export class QueueCapacityError extends Error {
   constructor(
     message = 'Too many unsynced changes. Reconnect to sync before making more changes.',
@@ -47,6 +52,8 @@ export interface QueueError {
   retryable: boolean;
   /** Set on a rate-limit refusal: no drain runs until this much time passes. */
   retryAfterMs?: number;
+  /** A fault on the server's side that may be this write's own: it is counted. */
+  fault?: boolean;
 }
 
 /** Named cache values a replay reads, captured when queued (`unit:<id>` → symbol). */
@@ -85,8 +92,24 @@ export interface QueuedMutation {
   retryCount: number;
   maxRetries: number;
   lastError?: QueueError;
+  /** The server faults it met across drains, one each however often retried. */
+  faults?: WriteFaults;
+  /** The entity a refused change was to, for the person's list. */
+  refusedResource?: string;
+  /** The refused entry whose row this needs, which it follows. */
+  heldBy?: string;
+  /** The person chose to send it again, so a conflict sends it at the row's version. */
+  overwrites?: boolean;
+  /** How often a conflict sent it again at the row's current version. */
+  conflictResends?: number;
 
   requiresAuth: boolean;
+}
+
+export interface WriteFaults {
+  count: number;
+  firstAt: number;
+  lastAt: number;
 }
 
 export interface QueueStats {

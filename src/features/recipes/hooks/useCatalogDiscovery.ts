@@ -219,6 +219,7 @@ export function useCatalogDiscovery(
   };
 
   const active = mode === 'pantry' ? byIngredients : random;
+  const activeError = mode === 'pantry' ? byIngredients.error : random.error;
   const loading =
     enabled &&
     (pantryPending || (mode !== 'none' && active.loading && !active.data));
@@ -226,7 +227,7 @@ export function useCatalogDiscovery(
     mode !== 'none' &&
     !loading &&
     found.length === 0 &&
-    (page ? isDegraded(page) : active.error !== undefined);
+    (page ? isDegraded(page) : activeError !== undefined);
 
   // Set by `refresh` only: a resync refetches the same page unseen.
   const [refreshing, setRefreshing] = useState(false);

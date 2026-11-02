@@ -3,6 +3,7 @@ import React from 'react';
 import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { t } from '#/i18n';
 import { GetShoppingListsLiteDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { GenerateShoppingListSheet } from '../GenerateShoppingListSheet';
 
@@ -230,6 +231,24 @@ describe('GenerateShoppingListSheet', () => {
     await drainTimers();
     expect(screen.getByText('Weekly Groceries')).toBeTruthy();
     expect(screen.getByText('Party Supplies')).toBeTruthy();
+  });
+
+  it('offers to read the lists again, never that there are none', async () => {
+    const user = userEvent.setup();
+    const failed = recordMock(GetShoppingListsLiteDocument, {
+      error: new Error('network down'),
+      maxUsageCount: 1,
+    });
+    renderWithApollo(<GenerateShoppingListSheet {...defaultProps} />, {
+      operationMocks: [failed.mock, listsMock()],
+    });
+    await user.press(screen.getByText('Existing List'));
+    await drainTimers();
+    expect(screen.queryByText(t('generateShoppingList.noLists'))).toBeNull();
+
+    await user.press(screen.getByText(t('labels.tryAgain')));
+    await drainTimers();
+    expect(screen.getByText('Weekly Groceries')).toBeTruthy();
   });
 
   it('calls onGenerate when confirm button is pressed', async () => {

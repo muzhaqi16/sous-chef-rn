@@ -39,10 +39,12 @@ export class LogoutCleanup {
       // 2. Cancel pending cache persistence
       apolloCachePersistence.cancel();
 
-      // 3. Stop all in-flight queries
-      LogoutCleanup.stopInFlightQueries();
+      // 3. Close the socket
+      LogoutCleanup.closeSocket();
 
-      // 4. Clear Apollo cache (only cache we need now)
+      // 4. Clear Apollo cache, which cancels the fetches in flight. Never
+      // `client.stop()`: this client serves the next session, and `stop()`
+      // ends its watched queries and disconnects resync for good.
       await LogoutCleanup.clearApolloCache();
 
       // 5. Forget which queries were answered since a language switch: the
@@ -61,14 +63,8 @@ export class LogoutCleanup {
     logger.info('🏁 Apollo logout process completed');
   }
 
-  /**
-   * Stop all in-flight GraphQL queries and clean up WebSocket
-   */
-  private static stopInFlightQueries(): void {
+  private static closeSocket(): void {
     try {
-      // Stop all queries by stopping the network layer temporarily
-      getApolloClient()?.stop();
-
       // Disposing the socket also turns auto-reconnect off, so nothing dials
       // again on the credentials this is in the middle of clearing.
       disposeWebSocket();
@@ -77,10 +73,8 @@ export class LogoutCleanup {
       // `lastRefreshTime` and `retryCount` are module state, so without this the
       // next account's first refresh is throttled by the previous one's clock.
       clearRefreshState();
-
-      logger.info('🛑 Stopped all in-flight queries and connections');
     } catch (error) {
-      logger.warn('Failed to stop in-flight queries:', error);
+      logger.warn('Failed to close the socket:', error);
     }
   }
 

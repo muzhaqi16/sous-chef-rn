@@ -9,7 +9,14 @@ import {
   ShareLinkTargetType,
 } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedCache,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { kitTestIDs } from '#components/testIDs';
+import { t } from '#/i18n';
 import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetHomesDocument,
@@ -64,6 +71,11 @@ jest.mock('#store', () => ({
 
 jest.mock('#components/organisms/Header', () => ({
   Header: () => null,
+}));
+
+// The real one reads `#store`, mocked above.
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => false,
 }));
 
 // `route` prop shape for a static screen.
@@ -207,6 +219,63 @@ describe('JoinHomeByCodeScreen', () => {
     await drainTimers();
     expect(tree.getByText('Beach House')).toBeTruthy();
     expect(tree.queryByText('Family Home')).toBeNull();
+  });
+
+  it('offers a retry when the preview cannot be read, never "not found"', async () => {
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
+      {
+        operationMocks: [
+          {
+            request: {
+              query: ResolveShareLinkDocument,
+              variables: { code: 'ABC123' },
+            },
+            error: new Error('network down'),
+          },
+          buildPreviewMock('ABC123', { name: 'Family Home' }),
+        ],
+      },
+    );
+    await drainTimers();
+    expect(tree.getByTestId(kitTestIDs.stateError)).toBeTruthy();
+    expect(tree.queryByText('Home not found')).toBeNull();
+
+    await userEvent.setup().press(tree.getByText(t('labels.tryAgain')));
+    await drainTimers();
+    expect(tree.getByText('Family Home')).toBeTruthy();
+  });
+
+  it('keeps a held preview when the read fails', async () => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: ResolveShareLinkDocument,
+      variables: { code: 'ABC123' },
+      data: {
+        resolveShareLink: {
+          targetType: ShareLinkTargetType.HomeJoin,
+          name: 'Family Home',
+        },
+      },
+    });
+    const tree = renderWithApollo(
+      <JoinHomeByCodeScreen route={makeRoute('ABC123')} />,
+      {
+        cache,
+        operationMocks: [
+          {
+            request: {
+              query: ResolveShareLinkDocument,
+              variables: { code: 'ABC123' },
+            },
+            error: new Error('network down'),
+          },
+        ],
+      },
+    );
+    await drainTimers();
+    expect(tree.getByText('Family Home')).toBeTruthy();
+    expect(tree.queryByTestId(kitTestIDs.stateError)).toBeNull();
   });
 
   it('shows "Home not found" when the code resolves to null', async () => {

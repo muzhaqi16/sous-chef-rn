@@ -3,7 +3,9 @@ import { getMainDefinition } from '@apollo/client/utilities';
 import { Kind, OperationTypeNode, type DocumentNode } from 'graphql';
 import { generateId } from '#/utils/generateId';
 import { logger } from '#/utils/environment';
+import { Telemetry } from '#/services/telemetry';
 import { isNetworkError } from '#/utils/isNetworkError';
+import { isGatewayFault, isServerFault } from '#/utils/isServerFault';
 import { useStore } from '#store';
 import { shouldTreatAsOffline } from '#store/slices/networkSlice';
 import { queueStore } from './queueStore';
@@ -11,7 +13,7 @@ import { queueManager } from './queueManager';
 import { captureReplayInputs, hasReplayPreparation } from './prepareReplay';
 import { dependencyIdsOf, holdsBack } from './queuedSubject';
 import { OfflineRejectedError } from './OfflineRejectedError';
-import { QueueCapacityError } from './types';
+import { QUEUE_FULL_CODE, QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
 import { QueueStatus } from './types';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
@@ -28,13 +30,16 @@ import {
 
 /**
  * Rides the queued result as `extensions.queuedReason` so `networkStatusLink`
- * can tell a REAL network failure (`'network-error'`, evidence the API is
- * unreachable) from a preemptive queue decision, which never touched the wire.
+ * can tell a REAL failure (`'network-error'` or `'gateway-fault'`, evidence the
+ * API is unreachable) from one request breaking (`'server-fault'`) and from a
+ * preemptive queue decision, which never touched the wire.
  */
 export type QueuedReason =
   | 'offline'
   | 'api-unreachable'
   | 'network-error'
+  | 'gateway-fault'
+  | 'server-fault'
   | 'behind-queued';
 
 /** Never queued, even offline. */
@@ -124,14 +129,27 @@ export const createQueueLink = () => {
       return forward(operation);
     }
 
-    // Local-first online: forward, but fall back to queuing on a genuine network
-    // failure (no result received) so the change replays later. Any result — a
-    // GraphQL or validation error included — propagates normally.
+    // Local-first online: saved first, so a killed app replays it, then
+    // forwarded, falling back to the queue when no result came, from a network
+    // failure or a 5xx. Any result, a GraphQL or validation error included,
+    // propagates normally.
     return new Observable(observer => {
+      const journaled = journalWrite(operation);
+      let settled = false;
+      const settle = () => {
+        settled = true;
+        if (journaled) queueStore.answered(journaled.id);
+      };
       let received = false;
       const subscription = forward(operation).subscribe({
         next: result => {
           received = true;
+          settle();
+          queueManager.followAnsweredMerge(
+            operation.operationName ?? '',
+            operation.variables,
+            result.data,
+          );
           observer.next(result);
           // Proof the API is reachable, covering the API-down-while-online
           // recovery the offline→online trigger misses. Debounced, and a no-op
@@ -139,21 +157,98 @@ export const createQueueLink = () => {
           queueManager.requestDrain();
         },
         error: error => {
-          if (!received && isNetworkError(error)) {
+          const reason = received ? null : queuedReasonFor(error);
+          if (reason) {
+            settled = true;
             logger.info(
-              `Queue Link: Network error while online — queuing local-first mutation ${operation.operationName}`,
+              `Queue Link: ${reason} while online — queuing local-first mutation ${operation.operationName}`,
             );
-            enqueueAndComplete(operation, observer, 'network-error');
+            enqueueAndComplete(operation, observer, reason, journaled);
           } else {
+            settle();
             observer.error(error);
           }
         },
         complete: () => observer.complete(),
       });
-      return () => subscription.unsubscribe();
+      return () => {
+        subscription.unsubscribe();
+        if (journaled && !settled) queueStore.handBack(journaled.id);
+      };
     });
   });
 };
+
+/** A write as the queue holds it, with what it read when made. */
+function entryFor(
+  operation: ApolloLink.Operation,
+  userId: string,
+): QueuedMutation {
+  const operationContext = operation.getContext();
+  const operationName = operation.operationName ?? 'UnknownMutation';
+
+  const queuedMutation: QueuedMutation = {
+    id: generateId(),
+    userId,
+    operationName,
+    mutation: operation.query,
+    variables: operation.variables,
+    context: pickPersistedContext(operationContext),
+    status: QueueStatus.PENDING,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+    retryCount: 0,
+    maxRetries: 3,
+    requiresAuth: !NEVER_QUEUE_OPERATIONS.includes(operationName),
+  };
+  // The hook's permanent write already landed, so the row is cached now.
+  const replayInputs = captureReplayInputs(
+    queuedMutation,
+    operation.client.cache,
+  );
+  if (replayInputs) queuedMutation.replayInputs = replayInputs;
+  const pendingWrites = pendingWritesOf(operation.client.cache);
+  const write = pendingWriteOf(operationContext, pendingWrites);
+  if (write) {
+    queuedMutation.pendingWrite = { id: write.id, inputs: write.inputs };
+    const orderedBy = orderOf(operation);
+    if (orderedBy) queuedMutation.orderedBy = orderedBy;
+  }
+  return queuedMutation;
+}
+
+/**
+ * Saves a write before it is sent. One that cannot be saved goes anyway: an
+ * online person keeps the behaviour they had, and the counter shows it.
+ */
+function journalWrite(operation: ApolloLink.Operation): QueuedMutation | null {
+  const { user } = useStore.getState();
+  if (!user) return null;
+  const operationName = operation.operationName ?? 'UnknownMutation';
+  const startedAt = performance.now();
+  try {
+    const entry = entryFor(operation, user.id);
+    if (queueStore.journal(entry)) return entry;
+  } catch (error) {
+    logger.error('Queue Link: could not save a write before sending it', error);
+  } finally {
+    Telemetry.histogram(
+      'offline_queue_journal_ms',
+      performance.now() - startedAt,
+    );
+  }
+  Telemetry.increment('offline_queue_journal_failed_total', 1, {
+    operation: operationName,
+  });
+  return null;
+}
+
+/** Why a local-first write that got no result queues; null when it should not. */
+function queuedReasonFor(error: unknown): QueuedReason | null {
+  if (isNetworkError(error)) return 'network-error';
+  if (isGatewayFault(error)) return 'gateway-fault';
+  return isServerFault(error) ? 'server-fault' : null;
+}
 
 /**
  * Enqueues, then completes with a null-field result marked `queued`. The UI
@@ -168,6 +263,7 @@ function enqueueAndComplete(
     complete: () => void;
   },
   reason: QueuedReason,
+  journaled: QueuedMutation | null = null,
 ): void {
   try {
     const { user } = useStore.getState();
@@ -176,39 +272,13 @@ function enqueueAndComplete(
       return;
     }
 
-    const operationContext = operation.getContext();
-    const operationName = operation.operationName ?? 'UnknownMutation';
-
-    const queuedMutation: QueuedMutation = {
-      id: generateId(),
-      userId: user.id,
-      operationName,
-      mutation: operation.query,
-      variables: operation.variables,
-      context: pickPersistedContext(operationContext),
-      status: QueueStatus.PENDING,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      retryCount: 0,
-      maxRetries: 3,
-      requiresAuth: !NEVER_QUEUE_OPERATIONS.includes(operationName),
-    };
-    // The hook's permanent write already landed, so the row is cached now.
-    const replayInputs = captureReplayInputs(
-      queuedMutation,
-      operation.client.cache,
-    );
-    if (replayInputs) queuedMutation.replayInputs = replayInputs;
+    const queuedMutation = journaled ?? entryFor(operation, user.id);
     const pendingWrites = pendingWritesOf(operation.client.cache);
-    const write = pendingWriteOf(operationContext, pendingWrites);
-    if (write) {
-      queuedMutation.pendingWrite = { id: write.id, inputs: write.inputs };
-      const orderedBy = orderOf(operation);
-      if (orderedBy) queuedMutation.orderedBy = orderedBy;
-    }
+    const write = pendingWriteOf(operation.getContext(), pendingWrites);
 
     try {
-      queueStore.addMutation(queuedMutation);
+      if (journaled) queueStore.handBack(journaled.id);
+      else queueStore.addMutation(queuedMutation);
     } catch (error) {
       if (!(error instanceof QueueCapacityError)) throw error;
       // The local-first cache write already landed (write, then fire), so a
@@ -217,6 +287,7 @@ function enqueueAndComplete(
       queueManager.withdrawUnqueueableWrite(queuedMutation, {
         type: 'unknown',
         message: 'Offline queue is full — change could not be queued',
+        code: QUEUE_FULL_CODE,
         timestamp: Date.now(),
         retryable: false,
       });
@@ -237,7 +308,7 @@ function enqueueAndComplete(
     });
     observer.complete();
 
-    logger.info(`Queue Link: Queued ${operationName} (${reason})`);
+    logger.info(`Queue Link: Queued ${operation.operationName} (${reason})`);
   } catch (error) {
     observer.error(error);
   }
