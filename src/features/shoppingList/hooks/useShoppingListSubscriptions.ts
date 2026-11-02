@@ -8,6 +8,7 @@
 import type { ApolloCache, Reference } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { positionOf } from '#/apollo/feed/feedPositions';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
@@ -340,6 +341,10 @@ export function useShoppingListSubscriptions(userId?: string) {
         if (payload.listId !== selectedShoppingListId) return;
         if (subscriptionService.isParentDeleting(selectedShoppingListId))
           return;
+
+        // Its next pull brings these with the totals that settle them, and these
+        // writers count, so applying both would count a row twice.
+        if (positionOf(selectedShoppingListId)) return;
 
         // Self-echo skip — this device's own mutation already updated the
         // cache optimistically. Keyed on the originating DEVICE, so the same

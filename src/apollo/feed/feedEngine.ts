@@ -170,11 +170,14 @@ export class FeedEngine {
     const reached = new Map<string, { kind: string; cursor: string }>();
     let after: string | null = null;
     let hasNextPage = true;
+    // Taken up before asking: a change of reach during the read asks again.
+    this.scopesOwed = false;
     while (hasNextPage) {
       const { data, error }: Awaited<ReturnType<typeof readScopesPage>> =
         await readScopesPage(client, after);
       if (!this.isCurrent(session)) return false;
       if (error || !data) {
+        this.scopesOwed = true;
         this.paceAfter(error);
         return false;
       }
@@ -183,10 +186,12 @@ export class FeedEngine {
       }
       ({ hasNextPage } = data.syncScopes.pageInfo);
       after = data.syncScopes.pageInfo.endCursor ?? null;
-      if (hasNextPage && !after) return false;
+      if (hasNextPage && !after) {
+        this.scopesOwed = true;
+        return false;
+      }
     }
 
-    this.scopesOwed = false;
     this.evictMissing(client, reached);
     for (const [id, { kind, cursor }] of reached) {
       if (adapterFor(kind) && positionOf(id)?.cursor !== cursor) {
@@ -269,13 +274,21 @@ export class FeedEngine {
   ): Promise<boolean> {
     const client = requireApolloClient();
     const startedAt = performance.now();
+    // Taken up before asking: a poke during the pull can name a change its
+    // answer cannot hold, so it has to owe another.
+    for (const id of batch) this.owed.delete(id);
     const answer = await adapter.pull(
       client,
       batch.map(id => ({ id, cursor: positionOf(id)?.cursor ?? null })),
     );
-    if (!this.isCurrent(session) || answer.data === undefined) {
+    if (!this.isCurrent(session)) {
       forgetAnswers(client.cache);
-      if (answer.data === undefined) this.paceAfter(answer.error);
+      return false;
+    }
+    if (answer.data === undefined) {
+      forgetAnswers(client.cache);
+      for (const id of batch) this.owed.set(id, adapter.kind);
+      this.paceAfter(answer.error);
       return false;
     }
     const { data: pages } = answer;
@@ -305,7 +318,6 @@ export class FeedEngine {
       return;
     }
     if (status === SyncPageStatus.ResyncRequired || !cursor) {
-      this.owed.delete(scopeId);
       unread.push(scopeId);
       return;
     }
@@ -316,7 +328,7 @@ export class FeedEngine {
       cursor,
       snapshotAt: positionOf(scopeId)?.snapshotAt ?? 0,
     });
-    if (!hasMore) this.owed.delete(scopeId);
+    if (hasMore) this.owed.set(scopeId, adapter.kind);
   }
 
   private async snapshotOf(

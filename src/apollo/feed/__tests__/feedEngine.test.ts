@@ -486,7 +486,58 @@ describe('a signal', () => {
     engine.receivePoke(poke(SyncPokeKind.ScopeChanged, 'c'));
     await engine.whenSettled();
 
-    expect(pulls.length).toBeLessThanOrEqual(2);
+    expect(pulls.map(({ scopes }) => scopes[0]?.cursor)).toEqual([
+      'old',
+      'old+',
+    ]);
+    expect(positionOf(LIST)?.cursor).toBe('old++');
+  });
+
+  it('reads again when reach changes during a read', async () => {
+    const scopes = jest.fn(() => listed([]));
+    await started({ scopes });
+    scopes.mockClear();
+
+    engine.catchUp();
+    engine.receivePoke(poke(SyncPokeKind.ReachChanged, null));
+    await engine.whenSettled();
+
+    expect(scopes).toHaveBeenCalledTimes(2);
+  });
+
+  it('owes a failed pull to the next pass', async () => {
+    hold(LIST, 'old');
+    let answers = 0;
+    await started({
+      scopes: () => listed([{ id: LIST, cursor: 'old' }]),
+      pull: () => {
+        answers += 1;
+        return answers === 1
+          ? fault()
+          : pulled([page(LIST, { cursor: 'new' })]);
+      },
+    });
+
+    await run(() => engine.receivePoke(poke(SyncPokeKind.ScopeChanged, 'new')));
+    expect(positionOf(LIST)?.cursor).toBe('old');
+
+    await run(() => engine.catchUp());
+
+    expect(positionOf(LIST)?.cursor).toBe('new');
+  });
+
+  it('reads what is reached again after a failed read', async () => {
+    let answers = 0;
+    const scopes = jest.fn(() => {
+      answers += 1;
+      return answers === 2 ? fault() : listed([]);
+    });
+    await started({ scopes });
+
+    await run(() => engine.catchUp());
+    await run(() => engine.receivePoke(poke(SyncPokeKind.ScopeChanged, 'any')));
+
+    expect(scopes).toHaveBeenCalledTimes(3);
   });
 });
 

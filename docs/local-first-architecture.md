@@ -86,8 +86,13 @@ during a pass joins it.
   write only when its `LocalWrite` sets `settlesFromFeed` and it names that one row, dropping the layer
   without `commit`, as the page has placed the row; writes behind it move to the version it reached.
   Any other write replays and converges, so a miss costs a send. `applied` speaks for a row, not a write.
-- **`myShoppingListsEvents` stays** until a later change moves off it. Both write through the same
-  connection writers. `listChangeFeed` switches the feed off, and with it every list reads as before.
+- **`myShoppingListsEvents` stays** until a later change moves off it, for what the feed does not
+  hold. For a held list its line and collaborator events do nothing: those writers count, and the pull
+  that follows states the totals, so applying both counts a row twice. `listChangeFeed` switches the
+  feed off, and with it every list reads as before.
+- **A signal is taken up before its request is sent**, so one landing during a pull or a scopes read
+  costs another, and a failed request puts it back. Cleared after the answer, a poke landing while a
+  pull was out was lost until the next trigger.
 
 ## 2. Write path — the implemented pattern
 

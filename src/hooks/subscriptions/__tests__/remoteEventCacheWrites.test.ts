@@ -28,6 +28,7 @@ import {
   PantrySubtype,
   ShoppingListSubtype,
   StorageState,
+  SyncScopeKind,
 } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
@@ -44,6 +45,7 @@ import { MealTemplateItemsForEventDocument } from '#features/mealPlan/hooks/useM
 import { useShoppingListSubscriptions } from '#features/shoppingList/hooks/useShoppingListSubscriptions';
 import { ShoppingListItemsForEventsDocument } from '#features/shoppingList/hooks/useShoppingListSubscriptions.generated';
 import { captureOnData } from '#/test-utils/subscriptionCapture';
+import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
 import { typedConnectionOf } from '#/test-utils/fixtures/connectionOf';
 
 jest.mock('#/services/auth/deviceId', () => ({
@@ -620,6 +622,82 @@ describe('a row ticked off, then back on, by another member', () => {
       totalCount: 2,
     });
     expect(read(cache, true)).toEqual({ ids: [], totalCount: 0 });
+    expect(counters(cache)).toEqual({
+      totalItems: 2,
+      completedItems: 0,
+      remainingItems: 2,
+      completionRate: 0,
+    });
+  });
+});
+
+// The pull that follows brings these rows with the totals that settle them.
+describe('an event on a list the feed holds', () => {
+  beforeEach(() => {
+    useStore.setState({ selectedShoppingListId: 'list-1' });
+    holdPosition('list-1', {
+      kind: SyncScopeKind.ShoppingList,
+      cursor: 'held',
+      snapshotAt: 0,
+    });
+  });
+  afterEach(() => {
+    useStore.setState({ selectedShoppingListId: null });
+    clearPositions();
+  });
+
+  it.each([
+    [
+      'a line added',
+      ShoppingListSubtype.ItemsChanged,
+      MutationType.ItemAdded,
+      { node: { __typename: 'ShoppingListItem', id: 'item-3' } },
+    ],
+    [
+      'a line ticked',
+      ShoppingListSubtype.ItemsChanged,
+      MutationType.ItemCompleted,
+      { node: { __typename: 'ShoppingListItem', id: 'item-1' } },
+    ],
+    [
+      'bought lines cleared',
+      ShoppingListSubtype.ItemsBatchCleared,
+      MutationType.ItemsBatchCleared,
+      { clearedItemIds: ['item-1'] },
+    ],
+  ])('leaves %s to the pull', async (_name, subtype, mutation, change) => {
+    const cache = seedList();
+    const readBack = rowReadBack(true);
+    const { result } = renderHookWithApollo(
+      () => {
+        useShoppingListSubscriptions('user-1');
+        return useApolloClient();
+      },
+      { cache, operationMocks: [readBack.mock] },
+    );
+
+    await act(async () => {
+      onData()(
+        {
+          subtype,
+          mutation,
+          listId: 'list-1',
+          actorUserId: 'user-2',
+          originatorClientId: 'device_other',
+          updatedFields: [],
+          ...change,
+        },
+        result.current,
+      );
+    });
+    await drainTimers();
+    await settle();
+
+    expect(readBack.fired).toEqual([]);
+    expect(read(cache, false)).toEqual({
+      ids: ['item-1', 'item-2'],
+      totalCount: 2,
+    });
     expect(counters(cache)).toEqual({
       totalItems: 2,
       completedItems: 0,
