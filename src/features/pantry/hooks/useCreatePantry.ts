@@ -1,19 +1,14 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { CreatePantryDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  addPantryToHomeCache,
-  removeOptimisticPantry,
-  writeLocalPantry,
-} from '#features/pantry/cache/pantry';
+import type { CreatePantryInputs } from '#features/pantry/offline/localWrites';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   settleMutation,
   type SettledFailure,
 } from '#/apollo/utils/settleMutation';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { CreatePantryInput } from '#/graphql/generated/schemaTypes';
-import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
 
@@ -31,9 +26,9 @@ export interface CreatePantryOutcome extends PantryWriteOutcome {
 }
 
 /**
- * The one pantry create. Local-first: the pantry is written complete under a
- * client-minted id before firing, so a home created offline has a pantry every
- * later write can name as its parent. Public because onboarding and the
+ * The one pantry create. Local-first: the pantry shows complete under a
+ * client-minted id, so a home created offline has a pantry every later write
+ * can name as its parent. Public because onboarding and the
  * settings screen both create one before any pantry screen mounts. Presents
  * nothing: each caller decides whether a refusal is worth a message.
  */
@@ -42,14 +37,6 @@ export function useCreatePantry() {
   const client = useApolloClient();
   const [createPantry, { loading }] = useMutation(CreatePantryDocument, {
     context: { localFirst: true },
-    update: (cache, { data }) => {
-      const payload = appliedPayload(data);
-      if (!payload) return;
-      const newPantry = payload.pantry;
-      // Idempotent by pantry id: the pre-fire write already inserted this one,
-      // so the server row confirms it rather than duplicating it.
-      addPantryToHomeCache(cache, newPantry.homeId, newPantry);
-    },
   });
 
   const create = async (
@@ -60,42 +47,26 @@ export function useCreatePantry() {
     // Selecting the pantry opens its event subscription, which the server
     // refuses until the create lands — see `unconfirmedCreates`.
     unconfirmedCreates.mark(id);
-    try {
-      writeLocalPantry(client.cache, id, input);
-      addPantryToHomeCache(client.cache, input.homeId, {
-        __typename: 'Pantry',
-        id,
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Create Pantry (optimistic)',
-      });
-    }
-
-    const revert = () => {
-      try {
-        removeOptimisticPantry(client.cache, input.homeId, id);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Revert rejected Pantry create',
-        });
-      }
-    };
+    const today = todayKey();
+    const inputs: CreatePantryInputs = { pantry: input, today };
 
     let result: CreatePantryOutcome['result'] = {};
-    const settled = await settleMutation(
-      async () => {
-        result = await createPantry({
-          variables: { input, today: todayKey() },
-        });
-        return result;
-      },
-      {
-        document: CreatePantryDocument,
-        fallback: t('errors.createPantryFailed'),
-        onFailed: revert,
-        present: 'none',
-      },
+    const settled = await pendingWritesOf(client.cache).send(
+      CreatePantryDocument,
+      { input, today },
+      write =>
+        settleMutation(
+          async () => {
+            result = await createPantry(write);
+            return result;
+          },
+          {
+            document: CreatePantryDocument,
+            fallback: t('errors.createPantryFailed'),
+            present: 'none',
+          },
+        ),
+      inputs,
     );
     // Released on every outcome; a queued create is tracked by the offline
     // queue's pending set from here on.

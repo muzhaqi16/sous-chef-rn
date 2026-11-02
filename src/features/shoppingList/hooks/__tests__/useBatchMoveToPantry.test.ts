@@ -8,6 +8,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { MovePurchasedItemsToPantryDocument } from '../useBatchMoveToPantry.generated';
 import { useBatchMoveToPantry } from '../useBatchMoveToPantry';
@@ -488,7 +489,6 @@ describe('useBatchMoveToPantry', () => {
       movePurchasedItemsToPantry: {
         __typename: 'ForbiddenError',
         code: ErrorCode.Forbidden,
-        message: 'Not allowed',
       },
     };
     const move = recordMock(MovePurchasedItemsToPantryDocument, {
@@ -648,7 +648,7 @@ describe('counters are adjusted exactly once', () => {
   function seededCache() {
     const { makeCache } = require('#/apollo/cache');
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingList:list-1',
       fragment: COUNTS,
       data: {
@@ -711,7 +711,6 @@ describe('counters are adjusted exactly once', () => {
     const data: MockDataFor<typeof MovePurchasedItemsToPantryDocument> = {
       movePurchasedItemsToPantry: {
         __typename: 'ValidationError',
-        message: 'nope',
       },
     };
     const refused = recordMock(MovePurchasedItemsToPantryDocument, {
@@ -760,7 +759,7 @@ describe('moved lines are marked stocked in the cache', () => {
   function seededCache() {
     const { makeCache } = require('#/apollo/cache');
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:item-1',
       fragment: STOCKED,
       data: {
@@ -822,7 +821,7 @@ describe('moved lines are marked stocked in the cache', () => {
   it('keeps the server stamp on a line an earlier call already moved', async () => {
     const cache = seededCache();
     const SERVER_STAMP = '2026-08-01T09:00:00.000Z';
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:item-1',
       fragment: STOCKED,
       data: {
@@ -918,7 +917,7 @@ describe('the write-back cannot clear the purchase record', () => {
   function seedLocallyUnpurchased() {
     const { makeCache } = require('#/apollo/cache');
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'ShoppingListItem:item-1',
       fragment: RECORD,
       data: {

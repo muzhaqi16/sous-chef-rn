@@ -29,6 +29,7 @@ const seedBatch = () =>
 
 const readStatus = (cache: ReturnType<typeof seedCache>) =>
   cache.readFragment<{ status: BatchStatus }>({
+    optimistic: true,
     id: 'PantryItemBatch:batch-1',
     fragment: READ_BATCH,
   })?.status;

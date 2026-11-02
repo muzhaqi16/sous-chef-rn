@@ -10,15 +10,7 @@ import {
   UpdateShoppingListReminderDocument,
   DeleteShoppingListReminderDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import {
-  UseShoppingListReminder_ListFragmentDoc,
-  type UseShoppingListReminder_ListFragment,
-} from './useShoppingListReminder.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  snapshotFields,
-  writeEntityFields,
-} from '#/apollo/utils/localFirstFields';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 
 export function useShoppingListReminder() {
   const { t } = useTranslation();
@@ -30,62 +22,35 @@ export function useShoppingListReminder() {
     context: { localFirst: true },
   });
 
-  /** Writes `patch` over the list and returns what restores the held values. */
-  const applyOptimistic = (
-    id: string,
-    patch: Partial<UseShoppingListReminder_ListFragment>,
-  ): (() => void) => {
-    const entity = { __typename: 'ShoppingList', id };
-    const held =
-      client.cache.readFragment<UseShoppingListReminder_ListFragment>({
-        id: client.cache.identify(entity),
-        fragment: UseShoppingListReminder_ListFragmentDoc,
-        fragmentName: 'useShoppingListReminder_list',
-        returnPartialData: true,
-      });
-    const previous = snapshotFields(held, patch);
-    writeEntityFields(client.cache, entity, patch);
-    return () => writeEntityFields(client.cache, entity, previous);
-  };
-
   const setReminder = async (
     id: string,
     reminderDate: string,
     reminderEnabled = true,
   ): Promise<boolean> => {
-    const revert = applyOptimistic(id, { reminderEnabled, reminderDate });
-
-    const settled = await settleMutation(
-      () =>
-        setMutation({
-          variables: { input: { id, reminderDate, reminderEnabled } },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: { reminderEnabled, reminderDate },
+      variables: { input: { id, reminderDate, reminderEnabled } },
+      mutate: setMutation,
+      settle: {
         document: UpdateShoppingListReminderDocument,
         fallback: t('shoppingListScreens.failedToSetReminder'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 
   const clearReminder = async (id: string): Promise<boolean> => {
-    const revert = applyOptimistic(id, {
-      reminderEnabled: false,
-      reminderDate: null,
-    });
-
-    const settled = await settleMutation(
-      () =>
-        clearMutation({
-          variables: { input: { id } },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: { reminderEnabled: false, reminderDate: null },
+      variables: { input: { id } },
+      mutate: clearMutation,
+      settle: {
         document: DeleteShoppingListReminderDocument,
         fallback: t('shoppingListScreens.failedToClearReminder'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 

@@ -11,6 +11,7 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { alertService } from '#/services/alertService';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { PantryItemHeldDetail } from '#features/pantry/components/PantryItemHeldDetail';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { useDataState } from '#hooks/data/useDataState';
 import { useTranslation } from '#/i18n';
@@ -119,6 +120,7 @@ export const PantryItemDetail: React.FC<
 
   const {
     item,
+    listedRow,
     batches,
     batchPricing,
     batchTotalCount,
@@ -143,9 +145,8 @@ export const PantryItemDetail: React.FC<
 
   const permissions = usePantryPermissions();
 
-  const { suggestedRecipes, loadingRecipes } = useRecipeSuggestionsForItem(
-    item?.itemName ?? undefined,
-  );
+  const { suggestedRecipes, loadingRecipes, recipesState, retryRecipes } =
+    useRecipeSuggestionsForItem(item?.itemName ?? undefined);
 
   const actions = usePantryItemDetailActions({
     itemId,
@@ -285,6 +286,17 @@ export const PantryItemDetail: React.FC<
           />
         </View>
       </CollapsingHeroDetail>
+    );
+  }
+
+  if (!item && itemState === 'offline' && listedRow) {
+    return (
+      <PantryItemHeldDetail
+        item={listedRow}
+        onBack={goBack}
+        onRetry={handleRefresh}
+        onEdit={permissions.canEditItems ? handleEdit : undefined}
+      />
     );
   }
 
@@ -586,6 +598,8 @@ export const PantryItemDetail: React.FC<
                 </AppPressable>
               ))}
             </HorizontalRail>
+          ) : recipesState === 'error' || recipesState === 'offline' ? (
+            <DataStateView state={recipesState} onRetry={retryRecipes} />
           ) : (
             <Text role="caption" style={styles.noRecipes}>
               {t('pantryItemDetail.noRecipeSuggestions')}

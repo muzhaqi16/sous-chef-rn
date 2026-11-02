@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { useKeepAwake } from '@sayem314/react-native-keep-awake';
 import { useTranslation } from '#/i18n';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { SubScreen } from '#components/templates/SubScreen';
 import type { BarAction } from '#components/molecules/BarActions';
 import { Loading } from '#components/molecules/Loading';
@@ -95,6 +96,13 @@ const StoreModeBody: React.FC<{
         }}
         onQuantityPress={inCart ? undefined : openQuantityEdit}
         onEndReached={inCart ? actions.loadMoreCart : undefined}
+        ListFooterComponent={
+          <PaginationFooter
+            hasMore={state.hasMore}
+            isFetchingMore={state.isLoadingMore}
+            itemCount={state.rows.length}
+          />
+        }
         refreshing={refreshing}
         onRefresh={() =>
           executeRefreshWithFinally(() => actions.refetch(), setRefreshing)

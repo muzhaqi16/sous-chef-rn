@@ -50,7 +50,7 @@ type UsePaginatedShoppingItemsResult = HookReturn<
 
 /**
  * Two independent queries, one per tab, so each gets its own cursor and
- * `fetchMore` with no alias-based cross-contamination — `keyArgs: ['filters']`
+ * a page with no alias-based cross-contamination — `keyArgs: ['filters']`
  * on `itemsConnection` is what keeps their cache entries separate.
  */
 export function usePaginatedShoppingItems({
@@ -82,7 +82,7 @@ export function usePaginatedShoppingItems({
     variables: unpurchasedVariables,
     loading: uLoading,
     error: uError,
-    fetchMore: uFetchMore,
+    observable: uObservable,
     refetch: uRefetch,
   } = useQuery(
     GetShoppingListItemsFilteredDocument,
@@ -102,7 +102,7 @@ export function usePaginatedShoppingItems({
     variables: purchasedVariables,
     loading: pLoading,
     error: pError,
-    fetchMore: pFetchMore,
+    observable: pObservable,
     refetch: pRefetch,
   } = useQuery(
     GetShoppingListItemsFilteredDocument,
@@ -134,7 +134,7 @@ export function usePaginatedShoppingItems({
     selector: d => d.shoppingList?.itemsConnection,
     key: listId ?? '',
     loading: uLoading,
-    fetchMore: uFetchMore,
+    observable: uObservable,
     refetch: uRefetch,
   });
 
@@ -143,7 +143,7 @@ export function usePaginatedShoppingItems({
     selector: d => d.shoppingList?.itemsConnection,
     key: listId ?? '',
     loading: pLoading,
-    fetchMore: pFetchMore,
+    observable: pObservable,
     refetch: pRefetch,
   });
 

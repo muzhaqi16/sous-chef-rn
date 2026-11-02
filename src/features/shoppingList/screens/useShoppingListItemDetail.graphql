@@ -4,6 +4,7 @@ query GetShoppingListItem($id: ID!) {
     # dataMasking the returned shoppingListItem ref still carries its key field.
     # useFragment / cache.identify needs it to locate the entity; without it the
     # masked ref is just { __typename } and identification throws.
+    version
     id
     ...ItemDetail_shoppingListItem
   }

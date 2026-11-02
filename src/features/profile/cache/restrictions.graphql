@@ -1,0 +1,5 @@
+# A restriction add's row: everything a query reads on one.
+fragment restrictions_row on DietaryRestriction {
+  id
+  ...DietaryRestrictionReaders
+}

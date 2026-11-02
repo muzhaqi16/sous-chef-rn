@@ -8,18 +8,23 @@ import {
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload, isAlreadyGone } from '#/utils/errors/mutationPayload';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { recordOpenedCatalogRecipe } from '#features/recipes/store/openedCatalogRecipes';
 
-/** A catalog recipe as a search row shows it, before the API has it. */
-export interface CatalogRecipeHint {
-  provider: ExternalSource;
-  externalId: string;
+/** What a row shows of a recipe, which the detail shows until it has the rest. */
+export interface RecipeRowHint {
   name?: string;
   imageUrl?: string;
 }
 
+/** A catalog recipe as a search row shows it, before the API has it. */
+export interface CatalogRecipeHint extends RecipeRowHint {
+  provider: ExternalSource;
+  externalId: string;
+}
+
 /** What pressing a card opens: a recipe the API holds, or a catalog one. */
 export type RecipeTarget =
-  | { recipeId: string }
+  | { recipeId: string; row?: RecipeRowHint }
   | { catalog: CatalogRecipeHint };
 
 /** What a catalog hit tells the API to open it, and shows meanwhile. */
@@ -81,7 +86,10 @@ export function useOpenCatalogRecipe() {
     );
 
     const payload = appliedPayload(settled.data);
-    if (payload) return { opened: true, recipeId: payload.recipe.id };
+    if (payload) {
+      recordOpenedCatalogRecipe(hint, payload.recipe.id);
+      return { opened: true, recipeId: payload.recipe.id };
+    }
     // An admin removed it: the same dead end as any recipe that is gone.
     if (isAlreadyGone(settled.data)) {
       return { opened: false, failure: t('recipes.recipeNotFound') };

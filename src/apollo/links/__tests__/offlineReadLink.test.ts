@@ -1,0 +1,261 @@
+import {
+  ApolloClient,
+  ApolloLink,
+  type InMemoryCache,
+  Observable,
+  gql,
+} from '@apollo/client';
+import { OperationTypeNode, type DocumentNode } from 'graphql';
+import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
+import { createOfflineReadLink } from '../offlineReadLink';
+import { useStore } from '#store';
+import { getI18n } from '#/i18n/config';
+import { Telemetry } from '#/services/telemetry';
+import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+
+jest.mock('#store', () => ({
+  useStore: { getState: jest.fn() },
+}));
+
+const MOCK_QUERY = gql`
+  query GetItems {
+    items {
+      id
+    }
+  }
+`;
+
+const MOCK_MUTATION = gql`
+  mutation AddItem($input: AddItemInput!) {
+    addItem(input: $input) {
+      id
+    }
+  }
+`;
+
+function makeOperation(
+  query: DocumentNode,
+  cache: InMemoryCache = makeCache(),
+  context: Record<string, unknown> = {},
+): ApolloLink.Operation {
+  return {
+    query,
+    operationName: operationNameOf(query),
+    operationType: OperationTypeNode.QUERY,
+    variables: {},
+    getContext: () => context,
+    setContext: jest.fn(),
+    extensions: {},
+    // The offline short-circuit reads the query back out of the cache via
+    // operation.client.cache, so the operation needs a real client + cache.
+    client: new ApolloClient({
+      cache,
+      link: ApolloLink.empty(),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+    }),
+  };
+}
+
+function makeForward(): ApolloLink.ForwardFunction {
+  return jest.fn(
+    () =>
+      new Observable<ApolloLink.Result>(observer => {
+        observer.next({ data: {} });
+        observer.complete();
+      }),
+  );
+}
+
+/**
+ * Screens render `error.message` verbatim, so this string is UI copy. It used
+ * to be built as `Offline: no cached data available for ${operationName}`,
+ * which put a GraphQL operation name on screen in untranslated English. Assert
+ * the localized copy and the absence of the operation name rather than a
+ * substring of the old wording, which any rewording would defeat.
+ */
+function expectUserFacingOfflineMessage(message: string | undefined): void {
+  expect(message).toBe(getI18n().t('offline.noCachedData'));
+  expect(message).not.toContain('GetItems');
+}
+
+describe('createOfflineReadLink', () => {
+  const mockedGetState = useStore.getState as jest.Mock;
+  const link = createOfflineReadLink();
+
+  beforeEach(() => jest.clearAllMocks());
+
+  /** Subscribe and report whether the observable emitted / completed + the value. */
+  function observe(observable: ReturnType<ApolloLink['request']>) {
+    let emitted = false;
+    let completed = false;
+    let value: ApolloLink.Result | undefined;
+    observable?.subscribe({
+      next: result => {
+        emitted = true;
+        value = result;
+      },
+      complete: () => {
+        completed = true;
+      },
+    });
+    return { emitted, completed, value };
+  }
+
+  it('forwards queries while the API is available', () => {
+    mockedGetState.mockReturnValue({
+      isOnline: true,
+      apiReachable: true,
+    });
+    const forward = makeForward();
+    link.request(makeOperation(MOCK_QUERY), forward);
+    expect(forward).toHaveBeenCalled();
+  });
+
+  it('blocks cache-miss queries when the device is offline (error result)', () => {
+    mockedGetState.mockReturnValue({
+      isOnline: false,
+    });
+    const forward = makeForward();
+    const { emitted, completed, value } = observe(
+      link.request(makeOperation(MOCK_QUERY), forward),
+    );
+    expect(forward).not.toHaveBeenCalled();
+    expect(emitted).toBe(true);
+    expect(completed).toBe(true);
+    // The error is load-bearing: an error-free `{ data: null }` makes Apollo 4
+    // write `{}` against the selection set ("Missing field X" warning spam).
+    expect(value?.data).toBeNull();
+    expectUserFacingOfflineMessage(value?.errors?.[0]?.message);
+  });
+
+  it('forwards cache-miss queries when only the circuit breaker is open (organic probe)', () => {
+    // Device online + apiReachable false: blocking would
+    // render an empty screen anyway, so the query fires as a probe — a
+    // success closes a spuriously-open circuit via networkStatusLink.
+    mockedGetState.mockReturnValue({
+      isOnline: true,
+      apiReachable: false,
+    });
+    const forward = makeForward();
+    link.request(makeOperation(MOCK_QUERY), forward);
+    expect(forward).toHaveBeenCalledTimes(1);
+  });
+
+  it('serves cached data (no forward) when the circuit breaker is open and the cache has it', () => {
+    mockedGetState.mockReturnValue({
+      isOnline: true,
+      apiReachable: false,
+    });
+    const cache = makeCache();
+    const cachedData = { items: [{ __typename: 'Item', id: '1' }] };
+    seedQuery(cache, { query: MOCK_QUERY, data: cachedData });
+
+    const forward = makeForward();
+    const { value } = observe(
+      link.request(makeOperation(MOCK_QUERY, cache), forward),
+    );
+    expect(forward).not.toHaveBeenCalled();
+    expect(value?.data).toEqual(cachedData);
+  });
+
+  it('serves cached data for blocked queries (idempotent re-emit, no clobber)', () => {
+    mockedGetState.mockReturnValue({
+      isOnline: false,
+    });
+    const cache = makeCache();
+    const cachedData = { items: [{ __typename: 'Item', id: '1' }] };
+    seedQuery(cache, { query: MOCK_QUERY, data: cachedData });
+
+    const forward = makeForward();
+    const { emitted, completed, value } = observe(
+      link.request(makeOperation(MOCK_QUERY, cache), forward),
+    );
+    expect(forward).not.toHaveBeenCalled();
+    expect(emitted).toBe(true);
+    expect(completed).toBe(true);
+    expect(value?.data).toEqual(cachedData);
+  });
+
+  // Each branch of this link is a distinct answer to "did offline work?", and
+  // until these counters existed none of them were visible in release —
+  // `logger` is console-only. The mapping is asserted per branch because a
+  // counter on the wrong branch is worse than none: it would report the
+  // offline promise holding at exactly the moment it broke.
+  describe('a page', () => {
+    const PAGE = { page: true };
+    const cacheHolding = () => {
+      const cache = makeCache();
+      seedQuery(cache, {
+        query: MOCK_QUERY,
+        data: { items: [{ __typename: 'Item', id: 'item-1' }] },
+      });
+      return cache;
+    };
+
+    it('is refused offline, however much of the list the cache holds', () => {
+      mockedGetState.mockReturnValue({ isOnline: false });
+      const forward = makeForward();
+
+      const { value } = observe(
+        link.request(makeOperation(MOCK_QUERY, cacheHolding(), PAGE), forward),
+      );
+
+      expect(forward).not.toHaveBeenCalled();
+      expect(value?.data).toBeNull();
+      expectUserFacingOfflineMessage(value?.errors?.[0]?.message);
+    });
+
+    it('goes to the server as a probe when only the breaker is open', () => {
+      mockedGetState.mockReturnValue({ isOnline: true, apiReachable: false });
+      const forward = makeForward();
+
+      link.request(makeOperation(MOCK_QUERY, cacheHolding(), PAGE), forward);
+
+      expect(forward).toHaveBeenCalled();
+    });
+  });
+
+  describe('telemetry', () => {
+    it('counts a cache hit as served', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+      });
+      const cache = makeCache();
+      seedQuery(cache, { query: MOCK_QUERY, data: { items: [] } });
+      observe(link.request(makeOperation(MOCK_QUERY, cache), makeForward()));
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'offline_reads_served_total',
+        1,
+        { operation: 'GetItems' },
+      );
+    });
+
+    it('counts a blocked cache miss — the one the user feels', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+      });
+      observe(link.request(makeOperation(MOCK_QUERY), makeForward()));
+      expect(Telemetry.increment).toHaveBeenCalledWith(
+        'offline_reads_blocked_total',
+        1,
+        { operation: 'GetItems' },
+      );
+      expect(Telemetry.increment).not.toHaveBeenCalledWith(
+        'offline_reads_served_total',
+        expect.anything(),
+        expect.anything(),
+      );
+    });
+  });
+
+  it('lets mutations through when offline (queueLink handles queuing)', () => {
+    mockedGetState.mockReturnValue({
+      isOnline: false,
+    });
+    const forward = makeForward();
+    link.request(makeOperation(MOCK_MUTATION), forward);
+    expect(forward).toHaveBeenCalled();
+  });
+});

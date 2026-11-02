@@ -1,4 +1,5 @@
-import { InMemoryCache, Observable } from '@apollo/client';
+import { ServerError } from '@apollo/client/errors';
+import { type InMemoryCache, Observable } from '@apollo/client';
 import type {
   ApolloClient,
   OperationVariables,
@@ -7,14 +8,17 @@ import type {
 import { OperationTypeNode } from 'graphql';
 import type { DocumentNode } from 'graphql';
 import { createQueueLink } from '../queueLink';
+import { Telemetry } from '#/services/telemetry';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { generateId } from '#/utils/generateId';
 import { queueStore } from '../queueStore';
+import { queueManager } from '../queueManager';
 import {
   isOfflineRejectedError,
   OfflineRejectedError,
 } from '../OfflineRejectedError';
 import { useStore } from '#store';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { gql } from '@apollo/client';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
@@ -29,6 +33,8 @@ import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/s
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -45,6 +51,24 @@ jest.mock('#store', () => ({
 jest.mock('../queueStore', () => ({
   queueStore: {
     addMutation: jest.fn(),
+    journal: jest.fn(() => true),
+    answered: jest.fn(),
+    handBack: jest.fn(),
+    getUndeliveredIds: jest.fn(() => new Set<string>()),
+    getQueuedWriteIds: jest.fn(() => new Set<string>()),
+  },
+}));
+
+jest.mock('#/apollo/pendingWrites/localWriteRegistry', () => ({
+  LOCAL_WRITES: {
+    AddItem: {
+      apply: jest.fn(),
+      orderedBy: ({
+        variables,
+      }: {
+        variables: { input: { order?: string } };
+      }) => variables.input.order,
+    },
   },
 }));
 
@@ -53,6 +77,8 @@ jest.mock('../queueStore', () => ({
 jest.mock('../queueManager', () => ({
   queueManager: {
     requestDrain: jest.fn(),
+    followAnsweredMerge: jest.fn(),
+    drainAfterPass: jest.fn(),
     withdrawUnqueueableWrite: jest.fn(),
   },
 }));
@@ -60,10 +86,6 @@ jest.mock('../queueManager', () => ({
 // Mock generateId
 jest.mock('#/utils/generateId', () => ({
   generateId: jest.fn(() => 'test-uuid'),
-}));
-
-jest.mock('#/apollo/offline/ApolloCachePersistence', () => ({
-  apolloCachePersistence: { flushPending: jest.fn() },
 }));
 
 // Mock the logger
@@ -104,7 +126,7 @@ function makeOperation(options: {
     extensions: {},
     // The link reads only the cache, where the queued write's row is.
     client: {
-      cache: options.cache ?? new InMemoryCache(),
+      cache: options.cache ?? makeCache(),
     } as Partial<ApolloClient> as ApolloClient,
   };
 }
@@ -198,6 +220,71 @@ describe('createQueueLink', () => {
           }),
       );
 
+    it.each([
+      [502, 'gateway-fault'],
+      [503, 'gateway-fault'],
+      [504, 'gateway-fault'],
+      [500, 'server-fault'],
+    ])('queues a localFirst mutation answered %i', async (status, reason) => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'DeleteItem',
+        variables: { input: { id: 'item-1' } },
+        context: { localFirst: true },
+      });
+      const forward = failingForward(
+        new ServerError('HTTP', {
+          response: new Response('', { status }),
+          bodyText: '',
+        }),
+      );
+
+      const queuedReason = await new Promise((resolve, reject) => {
+        let seen: unknown;
+        link.request(operation, forward).subscribe({
+          next: result => {
+            seen = result.extensions?.queuedReason;
+          },
+          error: reject,
+          complete: () => resolve(seen),
+        });
+      });
+
+      expect(queuedReason).toBe(reason);
+      expect(queueStore.journal).toHaveBeenCalledTimes(1);
+      expect(queueStore.handBack).toHaveBeenCalledTimes(1);
+      expect(queueStore.addMutation).not.toHaveBeenCalled();
+    });
+
+    it('leaves a 4xx to surface on its own', done => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      const operation = makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'DeleteItem',
+        variables: { input: { id: 'item-1' } },
+        context: { localFirst: true },
+      });
+      const refused = new ServerError('HTTP', {
+        response: new Response('', { status: 400 }),
+        bodyText: '',
+      });
+
+      link.request(operation, failingForward(refused)).subscribe({
+        error(err) {
+          expect(err).toBe(refused);
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+
     it('queues a localFirst mutation when online and the request fails with a network error', done => {
       mockedGetState.mockReturnValue({
         isOnline: true,
@@ -227,8 +314,8 @@ describe('createQueueLink', () => {
         },
         complete() {
           expect(sawQueued).toBe(true);
-          expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
-          const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
+          expect(queueStore.handBack).toHaveBeenCalledTimes(1);
+          const queued = (queueStore.journal as jest.Mock).mock.calls[0][0];
           expect(queued.operationName).toBe('DeleteItem');
           done();
         },
@@ -264,10 +351,103 @@ describe('createQueueLink', () => {
 
       link.request(operation, forward).subscribe({
         complete() {
-          const queued = (queueStore.addMutation as jest.Mock).mock.calls[0][0];
+          const queued = (queueStore.journal as jest.Mock).mock.calls[0][0];
           expect(queued.context).toEqual({ localFirst: true });
           done();
         },
+      });
+    });
+
+    describe('a write answered online', () => {
+      const answering = (): ApolloLink.ForwardFunction =>
+        jest.fn(
+          () =>
+            new Observable<ApolloLink.Result>(observer => {
+              observer.next({ data: { addItem: { id: 'item-1' } } });
+              observer.complete();
+            }),
+        );
+      const localFirst = () => {
+        mockedGetState.mockReturnValue({
+          isOnline: true,
+          user: { id: 'user-1' },
+        });
+        return makeOperation({
+          query: MOCK_MUTATION,
+          operationName: 'AddItem',
+          variables: { input: { name: 'Apple' } },
+          context: { localFirst: true },
+        });
+      };
+
+      it('is saved before it is sent, and let go on the answer', done => {
+        const operation = localFirst();
+        const forward = jest.fn(() => {
+          expect(queueStore.journal).toHaveBeenCalledTimes(1);
+          expect(queueStore.answered).not.toHaveBeenCalled();
+          return answering()(operation);
+        });
+
+        link.request(operation, forward).subscribe({
+          complete() {
+            expect(queueStore.answered).toHaveBeenCalledWith('test-uuid');
+            expect(queueStore.handBack).not.toHaveBeenCalled();
+            done();
+          },
+        });
+      });
+
+      it('is let go when the answer is a refusal', done => {
+        const refused = new Error('Bad request');
+
+        link.request(localFirst(), failingForward(refused)).subscribe({
+          error() {
+            expect(queueStore.answered).toHaveBeenCalledWith('test-uuid');
+            done();
+          },
+        });
+      });
+
+      it('still goes when it cannot be saved, and the counter says so', done => {
+        (queueStore.journal as jest.Mock).mockReturnValueOnce(false);
+        const forward = answering();
+
+        link.request(localFirst(), forward).subscribe({
+          complete() {
+            expect(forward).toHaveBeenCalledTimes(1);
+            expect(queueStore.answered).not.toHaveBeenCalled();
+            expect(Telemetry.increment).toHaveBeenCalledWith(
+              'offline_queue_journal_failed_total',
+              1,
+              { operation: 'AddItem' },
+            );
+            done();
+          },
+        });
+      });
+
+      it('still goes when saving throws', done => {
+        (queueStore.journal as jest.Mock).mockImplementationOnce(() => {
+          throw new Error('storage full');
+        });
+        const forward = answering();
+
+        link.request(localFirst(), forward).subscribe({
+          complete() {
+            expect(forward).toHaveBeenCalledTimes(1);
+            done();
+          },
+        });
+      });
+
+      it('goes back to the queue if the send is torn down unanswered', () => {
+        const forward: ApolloLink.ForwardFunction = jest.fn(
+          () => new Observable<ApolloLink.Result>(() => undefined),
+        );
+
+        link.request(localFirst(), forward).subscribe().unsubscribe();
+
+        expect(queueStore.handBack).toHaveBeenCalledWith('test-uuid');
       });
     });
 
@@ -347,6 +527,169 @@ describe('createQueueLink', () => {
   // -------------------------------------------------------------------------
   // Offline interception
   // -------------------------------------------------------------------------
+  describe('an online write behind an undelivered one', () => {
+    const undelivered = queueStore.getUndeliveredIds as jest.Mock;
+    const online = () =>
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+    const send = (input: Record<string, unknown>) =>
+      makeOperation({
+        query: UpdateShoppingListItemDocument,
+        operationName: operationNameOf(UpdateShoppingListItemDocument),
+        variables: { input },
+        context: { localFirst: true },
+      });
+
+    it('queues behind a write the server has not taken for its row', () => {
+      online();
+      undelivered.mockReturnValueOnce(new Set(['item-1']));
+      const forward = makeForward();
+      const results: ApolloLink.Result[] = [];
+
+      link
+        .request(send({ id: 'item-1', name: 'Oat milk' }), forward)
+        .subscribe(result => results.push(result));
+
+      expect(results.map(result => result.extensions)).toEqual([
+        { queued: true, queuedReason: 'behind-queued' },
+      ]);
+      expect(forward).not.toHaveBeenCalled();
+      expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+      expect(queueManager.drainAfterPass).toHaveBeenCalledTimes(1);
+    });
+
+    it('queues behind a write that mints the parent it names', done => {
+      online();
+      undelivered.mockReturnValueOnce(new Set(['list-1']));
+      const forward = makeForward();
+
+      link
+        .request(send({ id: 'item-1', shoppingListId: 'list-1' }), forward)
+        .subscribe({
+          complete() {
+            expect(forward).not.toHaveBeenCalled();
+            expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+            done();
+          },
+        });
+    });
+
+    it('sends a write that names no undelivered row', done => {
+      online();
+      undelivered.mockReturnValueOnce(new Set(['item-2']));
+      const forward = makeForward();
+
+      link.request(send({ id: 'item-1' }), forward).subscribe({
+        complete() {
+          expect(forward).toHaveBeenCalledTimes(1);
+          expect(queueStore.addMutation).not.toHaveBeenCalled();
+          done();
+        },
+      });
+    });
+  });
+
+  describe('a write with a local write', () => {
+    const offline = () =>
+      mockedGetState.mockReturnValue({
+        isOnline: false,
+        user: { id: 'user-1' },
+      });
+    const send = (
+      cache: ReturnType<typeof makeCache>,
+      pendingWriteId: string,
+    ) =>
+      makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AddItem',
+        variables: { input: { name: 'Apple' } },
+        context: { localFirst: true, pendingWriteId },
+        cache,
+      });
+
+    it('queues the write with its id and captured inputs', () => {
+      offline();
+      const cache = makeCache();
+      const write = pendingWritesOf(cache).begin(MOCK_MUTATION, {
+        input: { name: 'Apple' },
+      });
+
+      link.request(send(cache, write.id), makeForward()).subscribe();
+
+      expect(queueStore.addMutation).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pendingWrite: { id: write.id, inputs: {} },
+        }),
+      );
+    });
+
+    // A check-in learns its store only when it is sent, so the order is read
+    // off the variables that leave, never those it began with.
+    const sendOrdered = (cache: ReturnType<typeof makeCache>) => {
+      const write = pendingWritesOf(cache).begin(MOCK_MUTATION, {
+        input: { name: 'Apple' },
+      });
+      return makeOperation({
+        query: MOCK_MUTATION,
+        operationName: 'AddItem',
+        variables: { input: { name: 'Apple', order: 'list-1' } },
+        context: { localFirst: true, pendingWriteId: write.id },
+        cache,
+      });
+    };
+
+    it('queues the write with the order it keeps', () => {
+      offline();
+
+      link.request(sendOrdered(makeCache()), makeForward()).subscribe();
+
+      expect(queueStore.addMutation).toHaveBeenCalledWith(
+        expect.objectContaining({ orderedBy: 'list-1' }),
+      );
+    });
+
+    it('queues an online write behind one that keeps its order', () => {
+      mockedGetState.mockReturnValue({
+        isOnline: true,
+        user: { id: 'user-1' },
+      });
+      (queueStore.getUndeliveredIds as jest.Mock).mockReturnValueOnce(
+        new Set(['list-1']),
+      );
+      const forward = makeForward();
+
+      link.request(sendOrdered(makeCache()), forward).subscribe();
+
+      expect(forward).not.toHaveBeenCalled();
+      expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
+    });
+
+    it('drops the layer of a write the enqueue superseded', () => {
+      offline();
+      const cache = makeCache();
+      const pending = pendingWritesOf(cache);
+      (generateId as jest.Mock)
+        .mockReturnValueOnce('first')
+        .mockReturnValueOnce('second');
+      const first = pending.begin(MOCK_MUTATION, { input: { name: 'Apple' } });
+      const second = pending.begin(MOCK_MUTATION, { input: { name: 'Pear' } });
+      (queueStore.getQueuedWriteIds as jest.Mock).mockReturnValue(
+        new Set([first.id]),
+      );
+      link.request(send(cache, first.id), makeForward()).subscribe();
+
+      (queueStore.getQueuedWriteIds as jest.Mock).mockReturnValue(
+        new Set([second.id]),
+      );
+      link.request(send(cache, second.id), makeForward()).subscribe();
+
+      expect(pending.get(first.id)).toBeUndefined();
+      expect(pending.get(second.id)).toBeDefined();
+    });
+  });
+
   describe('offline interception', () => {
     // The queue is durable at enqueue, so the cache row it replays against must
     // be too: a kill before a deferred save relaunched with no row.
@@ -364,13 +707,6 @@ describe('createQueueLink', () => {
       link.request(operation, makeForward()).subscribe({
         complete() {
           expect(queueStore.addMutation).toHaveBeenCalledTimes(1);
-          expect(apolloCachePersistence.flushPending).toHaveBeenCalledTimes(1);
-          expect(
-            jest.mocked(apolloCachePersistence.flushPending).mock
-              .invocationCallOrder[0],
-          ).toBeGreaterThan(
-            jest.mocked(queueStore.addMutation).mock.invocationCallOrder[0]!,
-          );
           done();
         },
       });
@@ -383,8 +719,8 @@ describe('createQueueLink', () => {
         isOnline: false,
         user: { id: 'user-1' },
       });
-      const cache = new InMemoryCache();
-      cache.writeFragment({
+      const cache = makeCache();
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id: 'unit-1' }),
         fragment: gql`
           fragment QueuedUnit on Unit {
@@ -733,7 +1069,6 @@ describe('createQueueLink', () => {
     // no queue entry and no drain that will ever carry it — the one way this
     // system could diverge from the server silently and permanently.
     const { QueueCapacityError } = require('../types');
-    const { queueManager } = require('../queueManager');
 
     beforeEach(() => {
       jest.clearAllMocks();
@@ -768,8 +1103,6 @@ describe('createQueueLink', () => {
             expect.objectContaining({ operationName: 'AddItem' }),
             expect.objectContaining({ retryable: false }),
           );
-          // Nothing was queued, so no save is owed to a queued write.
-          expect(apolloCachePersistence.flushPending).not.toHaveBeenCalled();
           done();
         },
       });

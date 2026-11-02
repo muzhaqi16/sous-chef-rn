@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { t } from '#/i18n';
 import {
   Diet,
@@ -22,6 +22,10 @@ jest.mock('#store/useAppStore', () => ({
 let mockOffline = false;
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: () => mockOffline,
+}));
+let mockRestrictionsInPlay: boolean | null = true;
+jest.mock('#features/profile/hooks/useRestrictionsInPlay', () => ({
+  useRestrictionsInPlay: () => mockRestrictionsInPlay,
 }));
 
 const restriction = (
@@ -84,9 +88,25 @@ const alertsMock = () =>
     },
   });
 
+const noAlertsMock = () =>
+  recordMock(ProductDietaryAlertsDocument, {
+    data: {
+      item: { id: 'granola', dietaryAlerts: [], dietaryAlternatives: [] },
+    },
+  });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => {
   mockHomeId = 'home-1';
   mockOffline = false;
+  mockRestrictionsInPlay = true;
 });
 
 describe('useProductDietaryAlerts', () => {
@@ -96,7 +116,8 @@ describe('useProductDietaryAlerts', () => {
       { operationMocks: [alertsMock().mock] },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
     expect(result.current.alerts).toEqual([
       {
         id: 'r-peanut',
@@ -130,7 +151,8 @@ describe('useProductDietaryAlerts', () => {
       () => useProductDietaryAlerts('granola'),
       { operationMocks: [alertsMock().mock] },
     );
-    await waitFor(() => expect(result.current.check).toBe('checked'));
+    await drainTimers();
+    expect(result.current.check).toBe('checked');
 
     mockOffline = true;
     rerender({});
@@ -162,7 +184,8 @@ describe('useProductDietaryAlerts', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.check).toBe('failed'));
+    await drainTimers();
+    expect(result.current.check).toBe('failed');
     expect(result.current.alerts).toEqual([]);
   });
 
@@ -174,5 +197,63 @@ describe('useProductDietaryAlerts', () => {
     );
 
     expect(result.current.check).toBe('none');
+  });
+
+  describe('the label caveat', () => {
+    const answeredWith = async (
+      mock: ReturnType<typeof recordMock>,
+      inPlay: boolean | null,
+    ) => {
+      mockRestrictionsInPlay = inPlay;
+      const rendered = renderHookWithApollo(
+        () => useProductDietaryAlerts('granola'),
+        { operationMocks: [mock.mock] },
+      );
+      await drainTimers();
+      expect(rendered.result.current.check).toBe('checked');
+      return rendered.result.current;
+    };
+
+    it('shows beside an alert', async () => {
+      expect((await answeredWith(alertsMock(), false)).caveat).toBe(true);
+    });
+
+    it('shows for a product that matched nothing while a restriction is in play', async () => {
+      expect((await answeredWith(noAlertsMock(), true)).caveat).toBe(true);
+    });
+
+    it('shows while it is not yet known whether a restriction is in play', async () => {
+      expect((await answeredWith(noAlertsMock(), null)).caveat).toBe(true);
+    });
+
+    it('is absent when no restriction anywhere can alert', async () => {
+      expect((await answeredWith(noAlertsMock(), false)).caveat).toBe(false);
+    });
+
+    it('is absent while the check is unchecked, failed or loading', async () => {
+      mockOffline = true;
+      const offline = renderHookWithApollo(
+        () => useProductDietaryAlerts('granola'),
+        { operationMocks: [] },
+      );
+      expect(offline.result.current.caveat).toBe(false);
+
+      mockOffline = false;
+      const failing = renderHookWithApollo(
+        () => useProductDietaryAlerts('granola'),
+        {
+          operationMocks: [
+            recordMock(ProductDietaryAlertsDocument, {
+              error: new Error('boom'),
+            }).mock,
+          ],
+        },
+      );
+      expect(failing.result.current.check).toBe('loading');
+      expect(failing.result.current.caveat).toBe(false);
+      await drainTimers();
+      expect(failing.result.current.check).toBe('failed');
+      expect(failing.result.current.caveat).toBe(false);
+    });
   });
 });

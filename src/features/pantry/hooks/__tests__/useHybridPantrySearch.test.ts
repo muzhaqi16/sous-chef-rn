@@ -1,12 +1,16 @@
 import { act } from '@testing-library/react-native';
 import { StorageState } from '#/graphql/generated/schemaTypes';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { useHybridPantrySearch } from '../useHybridPantrySearch';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({ useToday: () => '2026-03-10' }));
 
 jest.mock('#/utils/searchUtils', () => ({
   pantryItemSearch: jest.fn(
@@ -23,12 +27,17 @@ jest.mock('#features/pantry/utils/hybridSort', () => ({
   shouldUseServerSort: (
     totalCount: number,
     pageSize: number,
-    isOnline: boolean,
-  ) => isOnline && totalCount > pageSize,
+    serverAvailable: boolean,
+  ) => serverAvailable && totalCount > pageSize,
 }));
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 // Minimal fixtures — the hook only reads `id` and `itemName` (via the mocked
@@ -51,7 +60,7 @@ describe('useHybridPantrySearch', () => {
           totalCount: 2,
           hasMore: false,
           loading: false,
-          isOnline: true,
+          serverAvailable: true,
         }),
       );
 
@@ -69,7 +78,7 @@ describe('useHybridPantrySearch', () => {
           totalCount: 2,
           hasMore: false,
           loading: false,
-          isOnline: true,
+          serverAvailable: true,
         }),
       );
 
@@ -77,6 +86,37 @@ describe('useHybridPantrySearch', () => {
         result.current.setSearchQuery('Milk');
       });
 
+      expect(result.current.activeItems).toEqual([
+        { id: 'i1', itemName: 'Milk' },
+      ]);
+    });
+  });
+
+  describe('with the API down', () => {
+    it('searches locally past the page size, and sends nothing', async () => {
+      const m = recordMock(GetPantryDocument, {});
+      const { result } = renderHookWithApollo(
+        () =>
+          useHybridPantrySearch({
+            pantryId: 'p1',
+            locationQueryFilter: null,
+            orderBy: undefined,
+            items: baseItems,
+            totalCount: 500,
+            hasMore: true,
+            loading: false,
+            serverAvailable: false,
+          }),
+        { operationMocks: [m.mock] },
+      );
+
+      act(() => {
+        result.current.setSearchQuery('Milk');
+      });
+      await drainTimers();
+
+      expect(m.fired).toEqual([]);
+      expect(result.current.useServerSort).toBe(false);
       expect(result.current.activeItems).toEqual([
         { id: 'i1', itemName: 'Milk' },
       ]);
@@ -168,7 +208,7 @@ describe('useHybridPantrySearch', () => {
             totalCount: 1000,
             hasMore: true,
             loading: false,
-            isOnline: true,
+            serverAvailable: true,
           }),
         { operationMocks: [m.mock] },
       );
@@ -178,10 +218,7 @@ describe('useHybridPantrySearch', () => {
       });
       expect(result.current.isSearching).toBe(true);
 
-      // Wait for the effect → client.query → recordMock to fire
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
+      await drainTimers();
       expect(result.current.isSearching).toBe(false);
 
       expect(m.fired).toContainEqual({
@@ -211,7 +248,7 @@ describe('useHybridPantrySearch', () => {
             totalCount: 1000,
             hasMore: true,
             loading: false,
-            isOnline: true,
+            serverAvailable: true,
           }),
         { operationMocks: [failure] },
       );
@@ -221,9 +258,7 @@ describe('useHybridPantrySearch', () => {
       });
       expect(result.current.isSearching).toBe(true);
 
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
+      await drainTimers();
 
       expect(result.current.isSearching).toBe(false);
     });
@@ -243,7 +278,7 @@ describe('useHybridPantrySearch', () => {
             totalCount: 1000,
             hasMore: true,
             loading: false,
-            isOnline: true,
+            serverAvailable: true,
           }),
         { operationMocks: [m.mock] },
       );
@@ -252,9 +287,7 @@ describe('useHybridPantrySearch', () => {
         result.current.setSearchQuery('Anything');
       });
 
-      await act(async () => {
-        await new Promise(r => setTimeout(r, 50));
-      });
+      await drainTimers();
 
       expect(m.fired).toEqual([]);
     });
@@ -271,7 +304,7 @@ describe('useHybridPantrySearch', () => {
           totalCount: 2,
           hasMore: false,
           loading: false,
-          isOnline: true,
+          serverAvailable: true,
         }),
       );
 

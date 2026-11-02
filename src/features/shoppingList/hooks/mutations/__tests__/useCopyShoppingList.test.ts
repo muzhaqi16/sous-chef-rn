@@ -12,6 +12,7 @@ import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import type { DerivedList } from '#features/shoppingList/utils/listFromTemplate';
 import { toastService } from '#/services/toastService';
 import { useStore } from '#store';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { useCopyShoppingList } from '../useCopyShoppingList';
 
 const USER = {
@@ -45,10 +46,13 @@ const queuedCreate = () =>
     data: { createShoppingList: null },
   });
 
-const cachedRows = (cache: ReturnType<typeof seedCache>) =>
-  Object.keys(cache.extract()).filter(key =>
-    key.startsWith('ShoppingListItem:'),
+/** The rows shown once the writes answered have left their layers. */
+const cachedRows = (cache: ReturnType<typeof seedCache>) => {
+  pendingWritesOf(cache).rebuild();
+  return Object.entries(cache.extract(true)).flatMap(([key, row]) =>
+    key.startsWith('ShoppingListItem:') && row ? [key] : [],
   );
+};
 
 describe('useCopyShoppingList', () => {
   beforeEach(() => {
@@ -108,7 +112,7 @@ describe('useCopyShoppingList', () => {
 
     expect(copied).toBeNull();
     expect(
-      Object.keys(cache.extract()).filter(key =>
+      Object.keys(cache.extract(true)).filter(key =>
         key.startsWith('ShoppingList:'),
       ),
     ).toEqual([]);

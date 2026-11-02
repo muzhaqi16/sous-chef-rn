@@ -2,6 +2,7 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { PAGINATION } from '#features/shoppingList/utils/shoppingListConstants';
 import {
@@ -53,6 +54,8 @@ export function useStoreModeCart(
         }
       : skipToken,
   );
+  useApolloErrorLogger(GetShoppingListItemsFilteredDocument, toBuy.error);
+  useApolloErrorLogger(GetShoppingListItemsFilteredDocument, cart.error);
   const recordsIn = useListCurrency(listId);
   // A refused tick re-reads both tabs from the server, as store mode's does.
   const { claimPurchased, recordPurchase } = useToggleShoppingItem({

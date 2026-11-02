@@ -42,6 +42,8 @@ export interface SelectorConfig<T extends SelectableItem> {
   // end-reached callback, because the tray's scroll view reports no position.
   pagination?: SelectorPagination;
   emptyMessage?: string;
+  // Replaces the empty state when no rows mean something else, as a failed read.
+  emptyContent?: React.ReactNode;
   keyExtractor?: (item: T) => string;
   renderCustomItem?: (
     item: T,

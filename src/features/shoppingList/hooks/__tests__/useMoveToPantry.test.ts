@@ -7,6 +7,8 @@ import {
   seedCache,
   type MockDataFor,
   type RecordedMock,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -16,10 +18,8 @@ import {
   UnitType,
 } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
-import {
-  removeItemFromShoppingListForMoveToPantry,
-  restoreItemToShoppingListAfterMoveToPantry,
-} from '#features/shoppingList/cache/moveToPantry';
+import { removeItemFromShoppingListForMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
@@ -30,7 +30,6 @@ import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
 jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
   ...jest.requireActual('#features/shoppingList/cache/moveToPantry'),
   removeItemFromShoppingListForMoveToPantry: jest.fn(),
-  restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
 }));
 
 const { gql } = require('@apollo/client');
@@ -82,6 +81,25 @@ const moveMock = () =>
     },
   });
 
+// The answer states the line it kept on the list.
+const keptMoveMock = () =>
+  recordMock(MoveShoppingItemToPantryDocument, {
+    data: {
+      moveShoppingItemToPantry: {
+        __typename: 'MoveShoppingItemToPantryPayload',
+        pantryItem: { id: 'pantry-item-1' },
+        shoppingList: { id: 'list-1', completedItems: 1 },
+        shoppingListItem: {
+          id: 'item-1',
+          purchaseInfo: {
+            isPurchased: true,
+            movedToPantryAt: '2026-10-30T10:00:00.000Z',
+          },
+        },
+      },
+    },
+  });
+
 // Queued: no response lands, so what the screens read is the local write.
 const queuedMoveMock = () =>
   recordMock(MoveShoppingItemToPantryDocument, {
@@ -119,9 +137,12 @@ async function moveWith(
     () => useMoveToPantry({ currentListId: 'list-1' }),
     { operationMocks: [move.mock], cache },
   );
-  return act(() =>
+  const moved = await act(() =>
     result.current.moveToPantry(item, { ...MOVE_INPUT, ...input }),
   );
+  // What a server write schedules, so a read here sees the answer.
+  if (cache) pendingWritesOf(cache).rebuild();
+  return moved;
 }
 
 function mintedIdOf({ fired }: RecordedMock): string {
@@ -351,7 +372,7 @@ describe('useMoveToPantry pantry item count', () => {
   function seededCache(): InMemoryCache {
     const { makeCache } = require('#/apollo/cache');
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Pantry:pantry-1',
       fragment: STATS_FRAGMENT,
       data: {
@@ -360,7 +381,7 @@ describe('useMoveToPantry pantry item count', () => {
         stats: { __typename: 'PantryStats', totalItems: 63 },
       },
     });
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Pantry:pantry-1',
       fragment: ROWS_FRAGMENT,
       data: {
@@ -374,6 +395,7 @@ describe('useMoveToPantry pantry item count', () => {
 
   function readTotal(cache: InMemoryCache) {
     return cache.readFragment<{ stats: { totalItems: number } }>({
+      optimistic: true,
       id: 'Pantry:pantry-1',
       fragment: STATS_FRAGMENT,
     })?.stats.totalItems;
@@ -382,7 +404,7 @@ describe('useMoveToPantry pantry item count', () => {
   function isCached(cache: InMemoryCache, id: string) {
     const key = cache.identify({ __typename: 'PantryItem', id });
     if (!key) throw new Error('A PantryItem must normalize');
-    return cache.extract()[key] !== undefined;
+    return cache.extract(true)[key] !== undefined;
   }
 
   /**
@@ -433,6 +455,7 @@ describe('useMoveToPantry pantry item count', () => {
     // The row's own arithmetic is pinned in writeLocalPantryItem.test.ts.
     expect(
       cache.readFragment({
+        optimistic: true,
         id: `PantryItem:${mintedIdOf(move)}`,
         fragment: DETAIL_FRAGMENT,
       }),
@@ -475,6 +498,7 @@ describe('useMoveToPantry pantry item count', () => {
         totalCost: 3.98,
       });
       return cache.readFragment({
+        optimistic: true,
         id: `PantryItem:${mintedIdOf(move)}`,
         fragment: ROW_FRAGMENT,
       });
@@ -505,19 +529,6 @@ describe('useMoveToPantry pantry item count', () => {
     expect(readTotal(cache)).toBe(63);
   });
 
-  it('puts the shopping row back when the move is refused', async () => {
-    // Both sides were written before firing, so both are undone. The row was
-    // unlinked rather than evicted, which is what leaves an entity to re-link.
-    await moveWith(refusedMock(), { cache: seededCache() });
-
-    // The removal is stubbed here, so it records no counter change to pass on.
-    expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
-      expect.anything(),
-      'item-1',
-      undefined,
-    );
-  });
-
   it('evicts the pantry row it published when the move is refused', async () => {
     const cache = seededCache();
     const rejected = refusedMock();
@@ -535,21 +546,6 @@ describe('useMoveToPantry pantry item count', () => {
     await moveWith(move, { cache });
 
     expect(isCached(cache, mintedIdOf(move))).toBe(false);
-  });
-
-  it('re-reads when the list counters moved while the refused move was in flight', async () => {
-    const { ApolloClient } = require('@apollo/client');
-    const refetchQueries = jest
-      .spyOn(ApolloClient.prototype, 'refetchQueries')
-      .mockReturnValue(Promise.resolve([]));
-    jest
-      .mocked(restoreItemToShoppingListAfterMoveToPantry)
-      .mockReturnValueOnce(false);
-
-    await moveWith(refusedMock(), { cache: seededCache() });
-
-    expect(refetchQueries).toHaveBeenCalled();
-    refetchQueries.mockRestore();
   });
 
   it('takes the count from the response when the server restocks another row', async () => {
@@ -628,7 +624,7 @@ describe('useMoveToPantry keeping the row on the list', () => {
       },
     };
     const write = (isPurchased: boolean, edges: unknown[]) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: LIST_QUERY,
         variables: { listId: 'list-1', isPurchased },
         data: {
@@ -652,6 +648,7 @@ describe('useMoveToPantry keeping the row on the list', () => {
 
   const read = (cache: InMemoryCache, isPurchased: boolean) =>
     cache.readQuery({
+      optimistic: true,
       query: LIST_QUERY,
       variables: { listId: 'list-1', isPurchased },
     }) as {
@@ -672,13 +669,12 @@ describe('useMoveToPantry keeping the row on the list', () => {
     };
 
   // The API marks a kept line purchased and stamps it, whatever its state. The
-  // stamp is what stops the row offering the move; a queued move runs no
-  // `update`, so the stamp is part of the local-first write. A refusal puts the
-  // row back where it was, unstamped.
+  // stamp is what stops the row offering the move, so a queued move shows it
+  // too. A refusal leaves the row where it was, unstamped.
   it.each([
-    ['an unpurchased', 'online', true, true, moveMock],
+    ['an unpurchased', 'online', true, true, keptMoveMock],
     ['an unpurchased', 'queued', true, true, queuedMoveMock],
-    ['a purchased', 'online', true, true, moveMock],
+    ['a purchased', 'online', true, true, keptMoveMock],
     ['a purchased', 'queued', true, true, queuedMoveMock],
     ['a purchased', 'refused', true, false, conflictMock],
     ['an unpurchased', 'refused', false, false, conflictMock],
@@ -735,10 +731,11 @@ describe('useMoveToPantry default expiry', () => {
       }),
     });
 
-    await moveWith(move, { cache });
+    await moveWith(move, { cache, input: { removeFromList: false } });
 
     expect(
       cache.readFragment<{ expiresOn: string | null }>({
+        optimistic: true,
         id: `PantryItem:${mintedIdOf(move)}`,
         fragment: EXPIRY,
       })?.expiresOn,

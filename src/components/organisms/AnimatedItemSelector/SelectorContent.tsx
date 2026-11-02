@@ -8,6 +8,7 @@ import Animated, {
   LinearTransition,
 } from 'react-native-reanimated';
 import { Icon } from '#components/atoms/Icon';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { useActionTrayScroll } from '#components/templates/ActionTray/ActionTrayScrollContext';
 import { SelectorItemContainer } from './SelectorItemContainer';
 import type {
@@ -19,6 +20,7 @@ import { Text } from '#components/atoms/Text';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { motion } from '#/theme/motion';
 import { EmptyState } from '#components/molecules/EmptyState';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 interface SelectorContentProps<T extends SelectableItem> {
   config: SelectorConfig<T>;
@@ -38,15 +40,24 @@ const LoadingState = () => {
 
 const LoadMoreRow = ({
   pagination,
+  itemCount,
 }: {
   pagination: SelectorPagination | undefined;
+  itemCount: number;
 }) => {
+  const offline = useIsApiUnavailable();
+
   if (!pagination?.hasMore) return null;
   if (pagination.loadingMore) {
     return (
       <View style={styles.loadingMore}>
         <ThemedActivityIndicator size="small" />
       </View>
+    );
+  }
+  if (offline) {
+    return (
+      <PaginationFooter hasMore isFetchingMore={false} itemCount={itemCount} />
     );
   }
   return (
@@ -73,6 +84,7 @@ export const SelectorContent = <T extends SelectableItem>({
     displayProperty,
     loading = false,
     emptyMessage,
+    emptyContent,
     keyExtractor,
     renderCustomItem,
     listHeader,
@@ -178,12 +190,14 @@ export const SelectorContent = <T extends SelectableItem>({
       <Animated.View layout={LinearTransition} style={styles.container}>
         {listHeader}
         <Animated.View entering={FadeIn}>
-          <EmptyState
-            size="compact"
-            title={emptyMessage ?? t('empty.noItems')}
-          />
+          {emptyContent ?? (
+            <EmptyState
+              size="compact"
+              title={emptyMessage ?? t('empty.noItems')}
+            />
+          )}
         </Animated.View>
-        <LoadMoreRow pagination={pagination} />
+        <LoadMoreRow pagination={pagination} itemCount={data.length} />
       </Animated.View>
     );
   }
@@ -207,7 +221,7 @@ export const SelectorContent = <T extends SelectableItem>({
           {renderItem(item)}
         </View>
       ))}
-      <LoadMoreRow pagination={pagination} />
+      <LoadMoreRow pagination={pagination} itemCount={data.length} />
     </Animated.View>
   );
 };

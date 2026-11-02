@@ -1,9 +1,10 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MyReviewSubmissionsDocument } from '../useMyReports.generated';
 import { useMyReports } from '../useMyReports';
 
@@ -36,6 +37,14 @@ const pagedMock = () =>
 const ids = (result: { current: ReturnType<typeof useMyReports> }) =>
   result.current.reports.map(report => report.id);
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useMyReports', () => {
   it('reads the first page with the page size as a variable', async () => {
     const mock = pagedMock();
@@ -44,7 +53,8 @@ describe('useMyReports', () => {
     });
 
     expect(result.current.state).toBe('loading');
-    await waitFor(() => expect(ids(result)).toEqual(['report-3', 'report-2']));
+    await drainTimers();
+    expect(ids(result)).toEqual(['report-3', 'report-2']);
 
     expect(result.current.state).toBe('ready');
     expect(result.current.hasMore).toBe(true);
@@ -56,15 +66,15 @@ describe('useMyReports', () => {
     const { result } = renderHookWithApollo(() => useMyReports(), {
       operationMocks: [mock.mock],
     });
-    await waitFor(() => expect(ids(result)).toHaveLength(2));
+    await drainTimers();
+    expect(ids(result)).toHaveLength(2);
 
     act(() => {
       result.current.loadMore();
     });
 
-    await waitFor(() =>
-      expect(ids(result)).toEqual(['report-3', 'report-2', 'report-1']),
-    );
+    await drainTimers();
+    expect(ids(result)).toEqual(['report-3', 'report-2', 'report-1']);
     expect(result.current.hasMore).toBe(false);
     expect(mock.fired).toContainEqual({ first: 20, after: 'cursor-1' });
   });
@@ -76,7 +86,8 @@ describe('useMyReports', () => {
       ],
     });
 
-    await waitFor(() => expect(result.current.state).toBe('empty'));
+    await drainTimers();
+    expect(result.current.state).toBe('empty');
     expect(result.current.reports).toEqual([]);
     expect(result.current.hasMore).toBe(false);
   });
@@ -89,12 +100,14 @@ describe('useMyReports', () => {
       operationMocks: [mock.mock],
     });
 
-    await waitFor(() => expect(result.current.state).toBe('error'));
+    await drainTimers();
+    expect(result.current.state).toBe('error');
 
     act(() => {
       result.current.retry();
     });
 
-    await waitFor(() => expect(mock.fired).toHaveLength(2));
+    await drainTimers();
+    expect(mock.fired).toHaveLength(2);
   });
 });

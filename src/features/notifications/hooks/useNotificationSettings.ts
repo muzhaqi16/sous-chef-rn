@@ -15,12 +15,9 @@ import {
   type UpdateNotificationPreferencesInput,
 } from '#/graphql/generated/schemaTypes';
 import type { ApolloCache } from '@apollo/client';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import {
-  snapshotFields,
-  type FieldsEntityRef,
-  updateEntityFieldsLocalFirst,
-} from '#/apollo/utils/localFirstFields';
+import type { LocalWriteSend } from '#/apollo/pendingWrites/pendingWrites';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import type { FieldsEntityRef } from '#/apollo/utils/localFirstFields';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { computeIsQuietTime } from '#features/notifications/utils/quietHours';
 import { logger } from '#/utils/environment';
@@ -147,40 +144,35 @@ function toNestedInput(
 }
 
 /**
- * Cache first, fire with `localFirst`, revert only on a genuine refusal. Module
- * scope so the timezone effect's dependency never re-arms it. True when the
- * change counts as saved (queued included).
+ * Module scope so the timezone effect's dependency never re-arms it. True when
+ * the change counts as saved (queued included).
  */
 export async function applySettingsUpdate({
   cache,
   entity,
   updates,
-  previous,
   mutate,
 }: {
   cache: ApolloCache;
   entity: FieldsEntityRef | undefined;
   updates: Partial<NotificationSettings>;
-  previous: Partial<NotificationSettings>;
   mutate: (
-    input: UpdateNotificationPreferencesInput,
+    write: LocalWriteSend<{ input: UpdateNotificationPreferencesInput }>,
   ) => Promise<{ data?: unknown; error?: unknown }>;
 }): Promise<boolean> {
-  return updateEntityFieldsLocalFirst<NotificationSettings>({
-    cache,
+  const settled = await sendFields(cache, {
     entity,
-    updates,
-    previous,
-    // localFirst: an unreachable API queues the change for replay rather
-    // than failing it, so the toggle the user just flipped isn't lost.
-    settle: () =>
-      settleMutation(() => mutate(toNestedInput(updates)), {
-        document: UpdateNotificationPreferencesDocument,
-        fallback: t('notifications.updateFailed'),
-        // The screen alerts off the returned boolean; the timezone sync logs.
-        present: 'none',
-      }),
+    fields: { ...updates },
+    variables: { input: toNestedInput(updates) },
+    mutate,
+    settle: {
+      document: UpdateNotificationPreferencesDocument,
+      fallback: t('notifications.updateFailed'),
+      // The screen alerts off the returned boolean; the timezone sync logs.
+      present: 'none',
+    },
   });
+  return settled.status !== 'failed';
 }
 
 export const useNotificationSettings = (options?: { skip?: boolean }) => {
@@ -211,9 +203,6 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     }
   }, [loading, readUser, skipped, error]);
 
-  // No `optimisticResponse`: callers write permanently before firing, and an
-  // optimistic layer is torn down on completion, which offline is `queueLink`'s
-  // null result, snapping every toggle back.
   const [updatePreferences] = useMutation(
     UpdateNotificationPreferencesDocument,
     { context: { localFirst: true } },
@@ -265,20 +254,13 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
 
   const updateMultipleSettings = async (
     updates: Partial<NotificationSettings>,
-  ) => {
-    const previous = snapshotFields<NotificationSettings>(settings, updates);
-
-    return applySettingsUpdate({
+  ) =>
+    applySettingsUpdate({
       cache: client.cache,
       entity: preferencesEntity,
       updates,
-      previous,
-      mutate: input =>
-        updatePreferences({
-          variables: { input },
-        }),
+      mutate: updatePreferences,
     });
-  };
 
   /** Single-key convenience over {@link updateMultipleSettings}. */
   const updateNotificationSetting = async (
@@ -331,6 +313,7 @@ export const useNotificationSettings = (options?: { skip?: boolean }) => {
     error,
     refetch,
     updateNotificationSetting,
+    updateMultipleSettings,
     resetToDefaults,
     isQuietTime,
   };

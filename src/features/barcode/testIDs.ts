@@ -18,6 +18,8 @@ export const barcodeTestIDs = {
   /** The household's dietary alerts on a scan, and its offline note. */
   householdAlerts: 'household-alerts',
   householdUnchecked: 'household-unchecked',
+  /** The label caveat alone, on a checked product that matched nothing. */
+  householdCaveat: 'household-caveat',
   /** A product of the same kind that raises no alert. */
   householdAlternative: (itemId: string) => `household-alternative-${itemId}`,
   /** Store mode's price lines on a scan, and its shelf price at each store. */

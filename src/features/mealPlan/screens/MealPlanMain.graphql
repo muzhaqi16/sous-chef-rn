@@ -1,8 +1,10 @@
 fragment MealPlanMain_item on MealPlanItem {
+  version
   id
   servings
   customMealName
   recipe {
+    version
     id
     name
     servings
@@ -20,9 +22,11 @@ fragment MealPlanMain_mealPlan on MealPlan {
   homeId
   version
   home {
+    version
     id
     name
     myMembership {
+      version
       id
       role
     }

@@ -1,9 +1,11 @@
 fragment DailyMeals_item on MealPlanItem {
+  version
   id
   date
   mealType
   customMealName
   recipe {
+    version
     id
     name
   }

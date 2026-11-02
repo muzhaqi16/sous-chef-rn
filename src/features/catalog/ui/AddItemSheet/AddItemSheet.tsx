@@ -288,7 +288,6 @@ export function AddItemSheet<
               defaultValue={initialSearchQuery}
               debounceMs={250}
               autoCapitalize="words"
-              autoCorrect={false}
               returnKeyType="search"
               isLoading={!!autocomplete.isLoading && hasSearchQuery}
             />

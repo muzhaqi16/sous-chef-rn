@@ -62,7 +62,7 @@ describe('no-restricted-syntax overrides', () => {
     expect(activeOverrides.length).toBeGreaterThan(1);
     expect(
       activeOverrides.filter(o => isTestSwap(o.rules[RULE]!)),
-    ).toHaveLength(1);
+    ).toHaveLength(2);
   });
 
   it('keeps every production entry in every override that narrows the list', () => {
@@ -88,6 +88,13 @@ describe('no-restricted-syntax overrides', () => {
   it('keeps the whole test-only list on test files', () => {
     const swap = activeOverrides.find(o => isTestSwap(o.rules[RULE]!));
     expect(selectorsOf(swap!.rules[RULE]!)).toEqual(TEST_SELECTORS);
+  });
+
+  it('lets the seed exemptions drop only the raw-seed ban', () => {
+    const [, exempt] = activeOverrides.filter(o => isTestSwap(o.rules[RULE]!));
+    expect(selectorsOf(exempt!.rules[RULE]!)).toEqual(
+      TEST_SELECTORS.filter(s => s !== selectorFor('rawCacheSeed')),
+    );
   });
 
   it('keeps the allowed-drop list honest', () => {

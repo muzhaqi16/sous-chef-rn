@@ -17,7 +17,7 @@ describe('storeOfferOf', () => {
     'matching %s, with the store %j, offers %j',
     (matchState, store, offer) => {
       expect(
-        storeOfferOf({ parseId: 'parse-1', store }, matchState, {
+        storeOfferOf({ locates: true, store }, matchState, {
           api: API,
           device: DEVICE,
         }),
@@ -28,16 +28,17 @@ describe('storeOfferOf', () => {
   // The API answers that none of the household's would be located.
   it("offers none of the device's once the API answers none", () => {
     expect(
-      storeOfferOf({ parseId: 'parse-1', store: null }, 'done', {
+      storeOfferOf({ locates: true, store: null }, 'done', {
         api: null,
         device: DEVICE,
       }),
     ).toBeNull();
   });
 
-  it('offers none without a server parse to locate it from', () => {
+  // A server parse, or an address or store number the phone read, locates it.
+  it('offers none when the receipt names no place to locate it from', () => {
     expect(
-      storeOfferOf({ parseId: undefined, store: null }, 'done', {
+      storeOfferOf({ locates: false, store: null }, 'done', {
         api: API,
         device: DEVICE,
       }),

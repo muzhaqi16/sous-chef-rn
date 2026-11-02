@@ -41,6 +41,11 @@ testRule('recycling-list-host-is-bounded', {
       errors: ['unboundedHost'],
     },
     {
+      // Read through the styles `useVariants` returned.
+      code: `const C = () => {\nconst variantStyles = styles.useVariants({});\nreturn <View style={variantStyles.pad}><FlashList data={rows} /></View>;\n};\nconst styles = StyleSheet.create(theme => ({ pad: { padding: 8 } }));\n`,
+      errors: ['unboundedHost'],
+    },
+    {
       code: withStyles(
         '<Animated.View style={styles.pad}><FlashList data={rows} /></Animated.View>',
         '{ pad: { gap: 4 } }',

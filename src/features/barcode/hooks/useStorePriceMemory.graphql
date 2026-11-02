@@ -1,9 +1,11 @@
-# What the household itself paid for a scanned product: store mode's "Last
-# paid" and "Your usual", and the usual per one of the unit `trackingUnit`
-# names, with no pantry: the one the server prices it in when asked for none.
-# The scan's lookup carries it in store mode. Keyed by the item and the home,
-# so a product read before still shows it offline at the shelf.
+# Store mode's prices for a scanned product: what the household itself paid
+# ("Last paid", "Your usual"), the usual per one of the unit `trackingUnit`
+# names, with no pantry: the one the server prices it in when asked for none,
+# and what it typically costs where. The scan's lookup carries it in store
+# mode. Keyed by the item and the home, so a product read before still shows
+# it offline at the shelf.
 fragment useStorePriceMemory_item on Item {
+  version
   id
   # Aliased: the lookup asks for the pantry's.
   usualUnit: trackingUnit {
@@ -41,44 +43,8 @@ fragment useStorePriceMemory_item on Item {
       unitPrice
     }
   }
-}
-
-# The same for an item that came another way than the scan's lookup.
-query HouseholdPricePaid($itemId: ID!, $homeId: ID!) {
-  item(id: $itemId) {
-    id
-    ...useStorePriceMemory_item
-  }
-}
-
-# The usual per one of a list line's own unit, when the price sheet counts in
-# it. The summary's objects merge (`catalogTypePolicies`), so this joins what
-# the lookup stored rather than replacing it.
-query HouseholdUsualUnitPrice($itemId: ID!, $homeId: ID!, $unitId: ID!) {
-  item(id: $itemId) {
-    id
-    householdPriceSummary(homeId: $homeId) {
-      usual {
-        unitPrice(unitId: $unitId)
-      }
-    }
-  }
-}
-
-# What the product typically costs where the list is being shopped: the list's
-# store and its chain, beside the item's comparison rows.
-query StorePriceComparison($itemId: ID!, $listId: ID!) {
-  shoppingList(id: $listId) {
-    id
-    targetStore {
-      id
-      chain {
-        id
-        name
-      }
-    }
-  }
-  itemPriceComparison(input: { itemId: $itemId }) {
+  # What it typically costs by store and by chain, read for the list's store.
+  priceComparison {
     currency {
       id
       code
@@ -94,6 +60,49 @@ query StorePriceComparison($itemId: ID!, $listId: ID!) {
       }
       chain {
         id
+      }
+    }
+  }
+}
+
+# The store the list is shopped at and its chain, whose typical price shows.
+# The scan's lookup carries it in store mode beside the item.
+fragment useStorePriceMemory_list on ShoppingList {
+  version
+  id
+  targetStore {
+    id
+    chain {
+      id
+      name
+    }
+  }
+}
+
+# The same for an item that came another way than the scan's lookup.
+query StorePriceMemory($itemId: ID!, $homeId: ID!, $listId: ID!) {
+  item(id: $itemId) {
+    version
+    id
+    ...useStorePriceMemory_item
+  }
+  shoppingList(id: $listId) {
+    version
+    id
+    ...useStorePriceMemory_list
+  }
+}
+
+# The usual per one of a list line's own unit, when the price sheet counts in
+# it. The summary's objects merge (`catalogTypePolicies`), so this joins what
+# the lookup stored rather than replacing it.
+query HouseholdUsualUnitPrice($itemId: ID!, $homeId: ID!, $unitId: ID!) {
+  item(id: $itemId) {
+    version
+    id
+    householdPriceSummary(homeId: $homeId) {
+      usual {
+        unitPrice(unitId: $unitId)
       }
     }
   }

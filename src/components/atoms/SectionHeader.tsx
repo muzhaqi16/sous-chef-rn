@@ -26,12 +26,12 @@ export const SectionHeader: React.FC<SectionHeaderProps> = ({
   style,
   testID,
 }) => {
-  styles.useVariants({ variant });
+  const variantStyles = styles.useVariants({ variant });
   return (
     <Text
       role={variant === 'overline' ? 'label' : 'heading'}
       tone={variant === 'overline' ? 'secondary' : 'primary'}
-      style={[styles.header, style]}
+      style={[variantStyles.header, style]}
       testID={testID}
     >
       {children}

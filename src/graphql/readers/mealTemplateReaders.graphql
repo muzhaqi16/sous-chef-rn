@@ -11,8 +11,10 @@ fragment MealTemplateReaders on MealTemplate {
     myMembership {
       id
       role
+      version
     }
     name
+    version
   }
   homeId
   lastUsedAt

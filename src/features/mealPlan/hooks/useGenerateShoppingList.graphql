@@ -5,6 +5,7 @@
 # path in the app: it puts GetMealPlan AT the server's HTTP depth limit, so one
 # more level here is refused. `documentLimits.test.ts` pins depth and cost.
 fragment useGenerateShoppingList_mealPlan on MealPlan {
+  version
   id
   # The derived list takes its default name from the plan and inherits its home,
   # which is what the server's fan-out does.
@@ -18,9 +19,11 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
     totalCount
     edges {
       node {
+        version
         id
         servings
         recipe {
+          version
           id
           # Names the recipe that is over the ingredient limit.
           name
@@ -47,6 +50,7 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
                   id
                 }
                 item {
+                  version
                   id
                   name
                 }
@@ -60,8 +64,7 @@ fragment useGenerateShoppingList_mealPlan on MealPlan {
 }
 
 # The derived lines, added in one batch. Mirrors the pantry screen's add so both
-# reconcile through `buildAddItemsReconcileUpdate`, which pairs a result back to
-# the client-minted id by its index into `input.items`.
+# settle through `addRows`.
 mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
   addItemsToShoppingList(input: $input) {
     __typename
@@ -109,6 +112,7 @@ query GenerateShoppingListPlan(
   $ingredientsFirst: Int!
 ) {
   mealPlan(id: $id) {
+    version
     id
     ...useGenerateShoppingList_mealPlan
     # It replaces the plan's one cached list of meals, which the plan screen

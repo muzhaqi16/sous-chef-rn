@@ -23,6 +23,8 @@ export const ThemedStatusBar = () => {
       ? 'dark'
       : 'light';
 
+  const followsSystem = userThemePreference === ThemePreference.SYSTEM;
+
   const barStyle = resolvedTheme === 'dark' ? 'light-content' : 'dark-content';
 
   // Read from the *registered* Unistyles theme so any runtime overrides
@@ -38,8 +40,8 @@ export const ThemedStatusBar = () => {
     if (!isHydrated) return;
 
     UnistylesRuntime.setRootViewBackgroundColor(bgColor);
-    WindowBackground.setTheme(resolvedTheme);
-  }, [isHydrated, resolvedTheme, bgColor]);
+    WindowBackground.setTheme(resolvedTheme, followsSystem);
+  }, [isHydrated, resolvedTheme, followsSystem, bgColor]);
 
   // Track theme changes for telemetry
   const prevThemeRef = useRef(rt.themeName);

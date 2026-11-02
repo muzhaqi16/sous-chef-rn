@@ -1,5 +1,6 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from './usePantryItemDetailData.generated';
 import {
@@ -7,6 +8,7 @@ import {
   type PantryItemBatchFragment,
 } from '#features/pantry/graphql/pantryFragments.generated';
 import { PantryItemDetail_PantryItemFragmentDoc } from './PantryItemDetail.generated';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { summarizeBatchPricing } from '#features/pantry/utils/summarizeBatchPricing';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
@@ -34,10 +36,15 @@ export function usePantryItemDetailData(itemId: string) {
   // No status filter: the derived costs and the expired-batch check both read
   // the whole active set from this one fetch, while the section shows a few.
   // Resolves the pantry item first, so it 404s on an unconfirmed id too.
-  const { data: batchesData, refetch: refetchBatches } = useQuery(
+  const {
+    data: batchesData,
+    error: batchesError,
+    refetch: refetchBatches,
+  } = useQuery(
     GetPantryItemBatchesDocument,
     isUnconfirmed ? skipToken : { variables: { pantryItemId: itemId } },
   );
+  useApolloErrorLogger(GetPantryItemBatchesDocument, batchesError);
 
   // Keyed by ENTITY, not by the query result: that is what lets a locally-created
   // item render with no API at all, since `data` is undefined while the query is
@@ -48,6 +55,13 @@ export function usePantryItemDetailData(itemId: string) {
     from: { __typename: 'PantryItem', id: itemId },
   });
   const item = livePantryItem.complete ? livePantryItem.data : null;
+  // What a list holds of a stack never opened here, for the screen's fallback.
+  const liveListedRow = useFragment({
+    fragment: PantryItem_ListedFragmentDoc,
+    fragmentName: 'pantryItem_listed',
+    from: { __typename: 'PantryItem', id: itemId },
+  });
+  const listedRow = liveListedRow.complete ? liveListedRow.data : null;
 
   // A stack removed elsewhere reads as an explicit null (an older API answered
   // RESOURCE_NOT_FOUND, still read). Trusted only from a settled read once the
@@ -88,6 +102,7 @@ export function usePantryItemDetailData(itemId: string) {
 
   return {
     item,
+    listedRow,
     batches,
     // Only how to LABEL the item's own money fields — the server derives their
     // values from these same batches.

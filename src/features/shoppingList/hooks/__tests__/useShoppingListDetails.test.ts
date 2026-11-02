@@ -1,7 +1,7 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetShoppingListDetailsDocument,
   type GetShoppingListDetailsQuery,
@@ -24,8 +24,6 @@ interface BuildShoppingListArgs {
   name?: string;
   isDefault?: boolean;
   collaborators?: Array<{ id: string; email: string }>;
-  estimatedTotal?: number | null;
-  unpricedItems?: number;
 }
 
 type ShoppingListDetails = GetShoppingListDetailsQuery['shoppingList'];
@@ -54,8 +52,6 @@ function buildShoppingList(
     reminderDate: null,
     budgetAmount: null,
     totalCost: null,
-    estimatedTotal: args.estimatedTotal ?? null,
-    unpricedItems: args.unpricedItems ?? 0,
     currency: null,
     priceTracking: false,
     totalItems: 0,
@@ -140,6 +136,14 @@ function buildDetailsErrorMock(
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useShoppingListDetails', () => {
   it('returns shopping list data', async () => {
     const { result } = renderHookWithApollo(
@@ -159,47 +163,14 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.shoppingList).not.toBeNull();
     expect(result.current.name).toBe('Groceries');
     expect(result.current.collaborators).toHaveLength(1);
     expect(result.current.collaborators[0]!.email).toBe('alice@test.com');
     expect(result.current.isShared).toBe(true);
     expect(result.current.hasResult).toBe(true);
-  });
-
-  it('reads an estimate nobody can state as null, with the lines it leaves out', async () => {
-    const { result } = renderHookWithApollo(
-      () => useShoppingListDetails('list-1'),
-      {
-        operationMocks: [
-          buildDetailsMock('list-1', buildShoppingList({ unpricedItems: 3 })),
-        ],
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.shoppingList?.estimatedTotal).toBeNull();
-    expect(result.current.shoppingList?.totalCost).toBeNull();
-    expect(result.current.shoppingList?.unpricedItems).toBe(3);
-  });
-
-  it('reads a stated estimate beside its unpriced count', async () => {
-    const { result } = renderHookWithApollo(
-      () => useShoppingListDetails('list-1'),
-      {
-        operationMocks: [
-          buildDetailsMock(
-            'list-1',
-            buildShoppingList({ estimatedTotal: 12.5, unpricedItems: 0 }),
-          ),
-        ],
-      },
-    );
-
-    await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(result.current.shoppingList?.estimatedTotal).toBe(12.5);
-    expect(result.current.shoppingList?.unpricedItems).toBe(0);
   });
 
   it('returns default values when no shopping list data', async () => {
@@ -210,7 +181,8 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.name).toBe('');
     expect(result.current.collaborators).toEqual([]);
@@ -228,7 +200,8 @@ describe('useShoppingListDetails', () => {
 
     // Hook uses errorPolicy: 'ignore', so error is swallowed and shoppingList
     // falls back to null (default). Wait for the network cycle to complete.
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.shoppingList).toBeNull();
     expect(result.current.hasResult).toBe(false);
   });
@@ -241,7 +214,8 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(typeof result.current.refetch).toBe('function');
   });
 
@@ -263,7 +237,8 @@ describe('useShoppingListDetails', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.isShared).toBe(false);
   });
 
@@ -285,13 +260,10 @@ describe('useShoppingListDetails', () => {
         ],
       },
     );
-    await waitFor(() =>
-      expect(result.current.collaborators[0]?.role).toBe(
-        CollaboratorRole.Editor,
-      ),
-    );
+    await drainTimers();
+    expect(result.current.collaborators[0]?.role).toBe(CollaboratorRole.Editor);
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({
           __typename: 'ShoppingListCollaborator',
@@ -301,12 +273,7 @@ describe('useShoppingListDetails', () => {
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(result.current.collaborators[0]?.role).toBe(
-        CollaboratorRole.Viewer,
-      ),
-    );
+    expect(result.current.collaborators[0]?.role).toBe(CollaboratorRole.Viewer);
     expect(result.current.isShared).toBe(true);
   });
 });

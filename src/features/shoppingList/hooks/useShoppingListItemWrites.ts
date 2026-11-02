@@ -1,3 +1,4 @@
+import type { ApolloCache } from '@apollo/client';
 import {
   skipToken,
   useApolloClient,
@@ -14,19 +15,19 @@ import type {
   ShoppingListItem,
   UpdateShoppingListItemInput,
 } from '#/graphql/generated/schemaTypes';
-import { writeEntityFields } from '#/apollo/utils/localFirstFields';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { localBrand, localUnit } from '#features/catalog/cache/localRefs';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { parseStoredQuantityText } from '#/utils/formatQuantity';
 import { UseShoppingListItemForm_ItemFragmentDoc } from '#features/shoppingList/hooks/useShoppingListItemForm.generated';
-import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import {
   createShoppingListRow,
   type ShoppingRowFields,
   type ShoppingRowLine,
 } from '#features/shoppingList/cache/createShoppingListRow';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { errorService } from '#/services/errorService';
+import { useDataState } from '#hooks/data/useDataState';
+import type { UpdateRowInputs } from '#features/shoppingList/offline/localWrites';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from '#/i18n';
@@ -41,15 +42,69 @@ type LocalItemFields = Partial<
     | 'sortOrder'
     | 'quantity'
     | 'quantityInput'
+    | 'unitName'
+    | 'netWeight'
   >
->;
+> &
+  Readonly<Record<string, unknown>>;
+
+/** What an edit's fields show, where its input carries only an id. */
+export interface ShownLabels {
+  brand: string;
+  store: string;
+  netWeightUnit: string;
+}
+
+function localUnitFields(
+  cache: ApolloCache,
+  { unit, unitLabel }: UpdateShoppingListItemInput,
+): LocalItemFields {
+  if (unit === undefined) return {};
+  const unitId = unit?.id ?? null;
+  return {
+    unitName: unitLabel ?? null,
+    unit: unitId ? localUnit(cache, unitId, unitLabel ?? '') : null,
+  };
+}
+
+function localNetWeightFields(
+  cache: ApolloCache,
+  { netWeight }: UpdateShoppingListItemInput,
+  label: string,
+): LocalItemFields {
+  if (!netWeight) return {};
+  const { netWeightUnitId } = netWeight;
+  if (netWeight.netWeight == null) {
+    return { netWeight: null, netWeightUnit: null };
+  }
+  return {
+    netWeight: netWeight.netWeight,
+    ...(netWeightUnitId && {
+      netWeightUnit: localUnit(cache, netWeightUnitId, label),
+    }),
+  };
+}
+
+function localBrandFields(
+  cache: ApolloCache,
+  { brand }: UpdateShoppingListItemInput,
+  label: string,
+): LocalItemFields {
+  if (brand === undefined) return {};
+  return { brand: brand ? localBrand(cache, brand.id, label) : null };
+}
 
 /**
- * The edited fields a cached `ShoppingListItem` holds in the input's own shape.
- * Nested inputs (pricing, store, brand, unit) cache differently and replay only.
+ * The edited fields a cached `ShoppingListItem` holds, in the row's own shape.
+ * `quantity`, `amount` and the rest the server derives wait for its answer.
  */
-function localItemFields(input: UpdateShoppingListItemInput): LocalItemFields {
+function localItemFields(
+  cache: ApolloCache,
+  input: UpdateShoppingListItemInput,
+  labels: ShownLabels,
+): LocalItemFields {
   const quantity: unknown = input.quantity;
+  const storeId = input.storePrefs?.preferredStoreId;
   // The input carries API text, so "1.250" is one and a quarter on any device.
   const parsed =
     typeof quantity === 'string' ? parseStoredQuantityText(quantity) : null;
@@ -67,6 +122,23 @@ function localItemFields(input: UpdateShoppingListItemInput): LocalItemFields {
       quantity,
       quantityInput: String(quantity),
     }),
+    ...(input.pricing?.estimatedPrice !== undefined && {
+      priceEstimate: {
+        __typename: 'PriceEstimate',
+        estimated: input.pricing.estimatedPrice,
+      },
+    }),
+    ...(storeId !== undefined && {
+      storeInfo: {
+        __typename: 'ShoppingListItemStoreInfo',
+        preferredStore: storeId
+          ? { __typename: 'Store', id: storeId, name: labels.store }
+          : null,
+      },
+    }),
+    ...localBrandFields(cache, input, labels.brand),
+    ...localUnitFields(cache, input),
+    ...localNetWeightFields(cache, input, labels.netWeightUnit),
   };
 }
 
@@ -82,30 +154,27 @@ export function useShoppingListItemWrites(
   const client = useApolloClient();
   const { t } = useTranslation();
 
-  const { data, refetch } = useQuery(
+  const { loading, error, refetch } = useQuery(
     ShoppingListItemForEditDocument,
     itemId ? { variables: { id: itemId } } : skipToken,
   );
 
-  // The form hook owns its own narrow fragment. Subscribing to the entity's
-  // cache record is what lets an edit made elsewhere flow back in with no
-  // refetch.
-  const itemFragmentRef = data?.shoppingListItem ?? null;
+  // Watched by ENTITY key, not read off the query result: a line the list holds
+  // opens offline with no read, and an edit made elsewhere flows back in.
   const itemFragmentResult = useFragment({
     fragment: UseShoppingListItemForm_ItemFragmentDoc,
     fragmentName: 'useShoppingListItemForm_item',
-    from: itemFragmentRef,
+    from: itemId ? { __typename: 'ShoppingListItem', id: itemId } : null,
   });
-  const itemData =
-    itemFragmentRef && itemFragmentResult.complete
-      ? itemFragmentResult.data
-      : null;
+  const itemData = itemFragmentResult.complete ? itemFragmentResult.data : null;
+  const itemState = useDataState({
+    loading,
+    error,
+    hasResult: itemData !== null,
+    isEmpty: false,
+  });
 
-  const [addItemMutation] = useMutation(AddItemToShoppingListDocument, {
-    // Reconcile the server response with the item written into the cache before
-    // the create fired.
-    update: buildAddItemsReconcileUpdate({ listId }),
-  });
+  const [addItemMutation] = useMutation(AddItemToShoppingListDocument);
 
   const [updateItemMutation] = useMutation(UpdateShoppingListItemDocument, {
     context: { localFirst: true },
@@ -135,50 +204,29 @@ export function useShoppingListItemWrites(
 
   const updateItem = async (
     input: UpdateShoppingListItemInput,
+    labels: ShownLabels,
     onConflictRefresh: () => void,
   ): Promise<boolean> => {
-    // Local-first: the edit shows at once and survives a restart while queued.
-    const fields = localItemFields(input);
-    writeEntityFields(
-      client.cache,
-      { __typename: 'ShoppingListItem', id: input.id },
-      fields,
-    );
-    const clearPersisted = optimisticDataPersistence.trackFields(
-      'ShoppingListItem',
-      input.id,
-      fields,
-    );
-
+    const inputs: UpdateRowInputs = {
+      fields: localItemFields(client.cache, input, labels),
+    };
     // A refusal naming a field gets that field's copy: this mutation carries
     // brand, net weight, unit and storage in one call.
-    const settled = await settleMutation(
-      () =>
-        updateItemMutation({
-          variables: { input },
-          onCompleted: result => {
-            if (appliedPayload(result)) clearPersisted();
-          },
+    const settled = await pendingWritesOf(client.cache).send(
+      UpdateShoppingListItemDocument,
+      { input },
+      write =>
+        settleMutation(() => updateItemMutation(write), {
+          document: UpdateShoppingListItemDocument,
+          fallback: t('shoppingListScreens.serverNotUpdated', {
+            action: t('shoppingListScreens.updated'),
+          }),
+          onConflictRefresh,
         }),
-      {
-        document: UpdateShoppingListItemDocument,
-        fallback: t('shoppingListScreens.serverNotUpdated', {
-          action: t('shoppingListScreens.updated'),
-        }),
-        onConflictRefresh,
-        // The server still holds the item as it was; re-reading restores it.
-        onFailed: () => {
-          clearPersisted();
-          void refetch().catch(error =>
-            errorService.reportError(error, {
-              operation: 'ShoppingListItemWrites.refetch',
-            }),
-          );
-        },
-      },
+      inputs,
     );
     return settled.status !== 'failed';
   };
 
-  return { itemData, createItem, updateItem };
+  return { itemData, itemState, retryItem: refetch, createItem, updateItem };
 }

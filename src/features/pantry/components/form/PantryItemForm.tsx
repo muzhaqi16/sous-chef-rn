@@ -27,6 +27,8 @@ import type { FieldDef } from '#components/molecules/DynamicFormFields';
 import { DynamicFormFields } from '#components/molecules/DynamicFormFields';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormScreen } from '#components/templates/FormScreen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { ItemInformationSection } from './ItemInformationSection';
@@ -82,7 +84,6 @@ export interface PantryItemFormData {
   location: string;
   expirationDate?: Date;
   notes: string;
-  category: string;
 }
 
 interface PantryItemFormProps {
@@ -112,7 +113,6 @@ const EMPTY_FORM_VALUES: PantryItemFormData = {
   condition: ItemCondition.Good,
   location: '',
   notes: '',
-  category: '',
 };
 
 const trackingUnitOf = (
@@ -168,7 +168,6 @@ const formValuesFromItem = (
   location: item.storageLocation?.name ?? '',
   expirationDate: item.expiresOn ? fromDateKey(item.expiresOn) : undefined,
   notes: item.storageNotes ?? '',
-  category: item.item.categories[0]?.category.name ?? '',
   tags: item.tags,
 });
 
@@ -186,9 +185,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
 
   const [pickedUnit, setPickedUnit] = useState<UnitSelection | null>(null);
 
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(
-    null,
-  );
   const [selectedLocationId, setSelectedLocationId] = useState<string | null>(
     null,
   );
@@ -211,6 +207,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     currentPantryId,
     storageLocations,
     itemLoading,
+    itemState,
     refetchItem,
   } = usePantryItemFormData({ itemId, selectedHomeId, selectedPantryId });
 
@@ -260,10 +257,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     (existingPantryItem
       ? trackingUnitOf(existingPantryItem)
       : emptyUnitSelection);
-
-  const handleCategorySelect = (categoryId: string | null) => {
-    setSelectedCategoryId(categoryId);
-  };
 
   const handleStorageLocationSelect = (
     locationId: string | null,
@@ -330,7 +323,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
     netWeightUnitId: firstNonBlank(watchedValues.netWeightUnitId) ?? null,
     selectedLocationId,
     selectedBrandId,
-    selectedCategoryId,
     selectedStorageLocation,
     updatePantryItemFields,
     updateQuantity,
@@ -384,6 +376,27 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
         <PrimaryActivityIndicator size="large" />
       </View>,
       false,
+    );
+  }
+
+  // No Save without the stack: there is no version to send.
+  if (
+    !existingPantryItem &&
+    (itemState === 'offline' || itemState === 'error')
+  ) {
+    return (
+      <SubScreen
+        title={t('itemForm.editTitle')}
+        testID={pantryTestIDs.editItemModal}
+        scroll="none"
+      >
+        <DataStateView
+          state={itemState}
+          onRetry={() => {
+            void refetchItem();
+          }}
+        />
+      </SubScreen>
     );
   }
 
@@ -458,7 +471,6 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
             control={control}
             errors={errors}
             onBrandSelected={setSelectedBrandId}
-            onCategorySelected={handleCategorySelect}
           />
         )}
 

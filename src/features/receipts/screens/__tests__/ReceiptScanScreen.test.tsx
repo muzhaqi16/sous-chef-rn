@@ -11,6 +11,8 @@ import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
 import { receiptsTestIDs } from '../../testIDs';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { ReceiptScanScreen } from '../ReceiptScanScreen';
+import { ReceiptFlowExitsProvider } from '../receiptFlowExits';
+import { kitTestIDs } from '#components/testIDs';
 
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => ({ goBack: jest.fn(), toReceiptReview: jest.fn() }),
@@ -156,6 +158,26 @@ describe('ReceiptScanScreen', () => {
     },
   );
 
+  it('offers only the lines left, once some went in', () => {
+    mockScan = {
+      status: 'saved',
+      draft: {
+        pages: ['MILK 3.48'],
+        scannedAt: SCANNED_AT,
+        parsed: {
+          lines: [
+            { index: 0, rawText: 'MILK 3.48', kind: 'item', product: 'MILK' },
+            { index: 1, rawText: 'EYES 4.48', kind: 'item', product: 'EYES' },
+          ],
+        },
+        added: [0],
+      },
+    };
+    const screen = renderWithApollo(<ReceiptScanScreen />);
+
+    expect(screen.getByText('Review 1 item')).toBeTruthy();
+  });
+
   it('says a check-in waiting for a connection lands once the phone is back online', () => {
     mockScan = {
       status: 'saved',
@@ -205,4 +227,24 @@ describe('ReceiptScanScreen', () => {
       for (const text of alsoShown) expect(screen.getByText(text)).toBeTruthy();
     },
   );
+});
+
+describe('ReceiptScanScreen under a borrowing flow', () => {
+  it('closes through the flow’s exit, not the receipts stack', () => {
+    const exits = {
+      toReview: jest.fn(),
+      close: jest.fn(),
+      added: jest.fn(),
+      finished: jest.fn(),
+    };
+    const screen = renderWithApollo(
+      <ReceiptFlowExitsProvider actions={exits}>
+        <ReceiptScanScreen />
+      </ReceiptFlowExitsProvider>,
+    );
+
+    fireEvent.press(screen.getByTestId(kitTestIDs.headerCloseButton));
+
+    expect(exits.close).toHaveBeenCalledTimes(1);
+  });
 });

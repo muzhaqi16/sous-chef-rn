@@ -11,7 +11,10 @@ import { useStore } from '#store';
  */
 export function useAccountCurrencySync(): void {
   const user = useUser();
-  const { data } = useQuery(GetUserSettingsDocument, user?.id ? {} : skipToken);
+  const { data } = useQuery(
+    GetUserSettingsDocument,
+    user?.id ? { fetchPolicy: 'cache-first' } : skipToken,
+  );
   const currency = data?.me?.settings?.preferredCurrency;
 
   // Keyed on the server's value alone: a pick in flight moves the mirror ahead

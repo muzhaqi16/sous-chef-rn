@@ -4,6 +4,7 @@ import { useNavigationIntents } from '#platform/screen';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { sleep } from '#/utils/backoff';
 import { catalogKey } from '#domain/catalogRecipes';
+import { useOpenedRecipeId } from '#features/recipes/store/openedCatalogRecipes';
 import { useRecipeData } from '../../hooks/useRecipeData';
 import { useRecipeFavoriteState } from '../../hooks/useRecipeFavoriteState';
 import { useRecipeSavedMetadata } from '../../hooks/useRecipeSavedMetadata';
@@ -77,21 +78,26 @@ function useOpenedCatalogRecipe(hint: CatalogRecipeHint | undefined) {
  * a narrow concern; this hook just wires them together for the screen.
  */
 export function useRecipeDetail() {
-  const { recipeId: routeRecipeId, catalog } = useRoute('RecipeDetail').params;
+  const {
+    recipeId: routeRecipeId,
+    row,
+    catalog,
+  } = useRoute('RecipeDetail').params;
   const { goBack } = useNavigationIntents();
 
   const catalogHint = routeRecipeId ? undefined : catalog;
   const catalogOpen = useOpenedCatalogRecipe(catalogHint);
   const opened = catalogOpen.result;
+  const openedBefore = useOpenedRecipeId(catalogHint);
   const recipeId =
-    routeRecipeId ?? (opened?.opened ? opened.recipeId : undefined);
+    routeRecipeId ?? (opened?.opened ? opened.recipeId : openedBefore);
 
   const cookingActions = useRecipeCookingActions({ recipeId });
 
   const data = useRecipeData({
     recipeId,
-    hint: catalog,
-    openFailure: opened && !opened.opened ? opened.failure : null,
+    hint: catalog ?? row,
+    openFailure: !recipeId && opened && !opened.opened ? opened.failure : null,
   });
 
   const recheckTimers = useRef<ReturnType<typeof setTimeout>[]>([]);

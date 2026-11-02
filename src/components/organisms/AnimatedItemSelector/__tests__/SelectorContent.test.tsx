@@ -5,8 +5,10 @@ import {
   screen,
   userEvent,
 } from '@testing-library/react-native';
+import { t } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { ActionTrayScrollContext } from '#components/templates/ActionTray/ActionTrayScrollContext';
+import { useStore } from '#store';
 import { SelectorContent } from '../SelectorContent';
 import type { SelectorConfig, SelectorPagination } from '../types';
 
@@ -34,7 +36,50 @@ const pagination = (
   ...overrides,
 });
 
+describe('SelectorContent with no rows', () => {
+  it('shows what stands in for the empty state, which says nothing', () => {
+    render(
+      <SelectorContent
+        config={{
+          ...config(),
+          data: [],
+          emptyMessage: 'No rows',
+          emptyContent: <Text>Could not read them</Text>,
+        }}
+      />,
+    );
+    expect(screen.getByText('Could not read them')).toBeTruthy();
+    expect(screen.queryByText('No rows')).toBeNull();
+  });
+
+  it('leaves rows it holds in place', () => {
+    render(
+      <SelectorContent
+        config={{
+          ...config(),
+          emptyContent: <Text>Could not read them</Text>,
+        }}
+      />,
+    );
+    expect(screen.getByText('First')).toBeTruthy();
+    expect(screen.queryByText('Could not read them')).toBeNull();
+  });
+});
+
 describe('SelectorContent pagination', () => {
+  afterEach(() => {
+    useStore.setState({ isOnline: true, apiReachable: null });
+  });
+
+  it('says why offline, in place of a button that could only wait', () => {
+    useStore.setState({ isOnline: false, apiReachable: null });
+
+    render(<SelectorContent config={config(pagination())} />);
+
+    expect(screen.queryByText('Show more')).toBeNull();
+    expect(screen.getByText(t('errors.offlineNoMorePages'))).toBeTruthy();
+  });
+
   it('offers no load-more row without a next page', () => {
     render(<SelectorContent config={config(pagination({ hasMore: false }))} />);
     expect(screen.getByText('Second')).toBeTruthy();

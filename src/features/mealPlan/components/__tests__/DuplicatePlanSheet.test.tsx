@@ -124,10 +124,12 @@ describe('DuplicatePlanSheet', () => {
     updatedAt: '2025-03-01T00:00:00.000Z',
     home: {
       __typename: 'Home',
+      version: 1,
       id: 'home-1',
       name: 'Test Home',
       myMembership: {
         __typename: 'Membership',
+        version: 1,
         id: 'm-1',
         role: MembershipRole.Owner,
       },

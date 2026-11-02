@@ -16,6 +16,7 @@ fragment SavedRecipeReaders on SavedRecipe {
     prepTimeMinutes
     servings
     totalTimeMinutes
+    version
   }
   recipeId
   tags

@@ -38,6 +38,7 @@ jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
 // entities carry `__typename` + `id`.)
 const baseItem: PantryDetailInfo_PantryItemFragment = {
   __typename: 'PantryItem',
+  version: 1,
   id: 'pi1',
   quantity: 2,
   heldQuantity: 2,
@@ -108,6 +109,7 @@ describe('PantryDetailInfo', () => {
           totalCost: 2.95,
           purchase: {
             __typename: 'Purchase',
+            version: 1,
             id: 'pu1',
             purchaseDate: '2026-08-30T00:00:00Z',
             unitPrice: 0.59,
@@ -169,6 +171,7 @@ describe('PantryDetailInfo', () => {
             totalCost: 2.95,
             purchase: {
               __typename: 'Purchase',
+              version: 1,
               id: 'pu1',
               purchaseDate: '2026-08-30T00:00:00Z',
               unitPrice: 0.59,

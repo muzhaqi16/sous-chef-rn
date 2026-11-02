@@ -5,11 +5,13 @@
  * re-read it, which is how the badge recovers from an event missed while away.
  */
 import { useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 
 export function useUnreadNotificationCount(): number {
-  const { data } = useQuery(NotificationSummaryDocument, {
+  const { data, error } = useQuery(NotificationSummaryDocument, {
     fetchPolicy: 'cache-only',
   });
+  useApolloErrorLogger(NotificationSummaryDocument, error);
   return data?.notificationSummary.unreadCount ?? 0;
 }

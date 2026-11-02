@@ -20,7 +20,6 @@ import {
   GetPantryItemBatchesDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { ItemCondition, ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { todayKey } from '#/utils/dateUtils';
@@ -28,7 +27,6 @@ import { useConvertExpiredToWaste } from '../useConvertExpiredToWaste';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  optimisticDataPersistence.clearAll();
 });
 
 const READ_STATE = gql`
@@ -54,16 +52,7 @@ const readState = (cache: InMemoryCache) =>
     quantity: number;
     heldQuantity: number;
     condition: ItemCondition;
-  }>({
-    id: 'PantryItem:item-1',
-    fragment: READ_STATE,
-  });
-
-/** What survives a cold start for the item — the queued convert's own values. */
-const persistedState = () => {
-  optimisticDataPersistence.flush();
-  return optimisticDataPersistence.get('PantryItem', 'item-1');
-};
+  }>({ optimistic: true, id: 'PantryItem:item-1', fragment: READ_STATE });
 
 type ConvertData = MockDataFor<typeof ConvertExpiredToWasteDocument>;
 
@@ -168,14 +157,8 @@ describe('useConvertExpiredToWaste — a stack with no batches', () => {
     });
 
     expect(resolved).toBe(true);
-    // Queued result keeps the optimistic state for replay, in the cache and
-    // across a cold start.
+    // Queued result keeps the optimistic state for replay.
     expect(readState(cache)).toMatchObject({
-      quantity: 0,
-      heldQuantity: 0,
-      condition: ItemCondition.Spoiled,
-    });
-    expect(persistedState()).toEqual({
       quantity: 0,
       heldQuantity: 0,
       condition: ItemCondition.Spoiled,
@@ -200,7 +183,6 @@ describe('useConvertExpiredToWaste — a stack with no batches', () => {
 
     expect(resolved).toBe(false);
     expect(readState(cache)).toMatchObject(SEEDED_STATE);
-    expect(persistedState()).toEqual({});
     expect(onSuccess).not.toHaveBeenCalled();
     // A refusal resolves as data; the hook still tells the user, in the copy
     // for a missing record rather than the server's text.
@@ -231,7 +213,6 @@ describe('useConvertExpiredToWaste — a stack held in batches', () => {
 
     expect(resolved).toBe(true);
     expect(readState(cache)).toMatchObject(SEEDED_STATE);
-    expect(persistedState()).toEqual({});
     expectConvertSent(fired);
     expect(onSuccess).toHaveBeenCalledTimes(1);
     expect(onSuccess).toHaveBeenCalledWith({ hasBatches: true });
@@ -280,11 +261,11 @@ describe('useConvertExpiredToWaste — a stack held in batches', () => {
       heldQuantity: 1,
       condition: ItemCondition.Good,
     });
-    expect(persistedState()).toEqual({});
     expect(onSuccess).toHaveBeenCalledWith({ hasBatches: true });
     // The answer restates the batches too: the wasted one leaves the detail's
     // list with its discard, and nothing is read again.
     const batches = cache.readQuery({
+      optimistic: true,
       query: GetPantryItemBatchesDocument,
       variables: { pantryItemId: 'item-1' },
     })?.pantryItemBatchesConnection;

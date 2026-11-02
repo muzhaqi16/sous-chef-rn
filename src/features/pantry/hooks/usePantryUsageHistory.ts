@@ -1,6 +1,5 @@
-import { NetworkStatus } from '@apollo/client';
 import { useQuery } from '@apollo/client/react';
-import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
+import { usePagination } from '#hooks/utils/usePagination';
 import { GetPantryItemUsageHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import { useDataState } from '#hooks/data/useDataState';
 import { errorService } from '#/services/errorService';
@@ -10,7 +9,7 @@ const PAGE_SIZE = 30;
 
 /** One page of a pantry item's usage ledger, oldest cursor forward. */
 export function usePantryUsageHistory(pantryItemId: string) {
-  const { data, loading, error, refetch, fetchMore, networkStatus } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     GetPantryItemUsageHistoryDocument,
     {
       variables: { pantryItemId, first: PAGE_SIZE },
@@ -26,19 +25,18 @@ export function usePantryUsageHistory(pantryItemId: string) {
   const records: UsageRecord[] = connection?.edges.map(e => e.node) ?? [];
 
   const totalCount = connection?.totalCount ?? records.length;
-  const hasNextPage = connection?.pageInfo.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo.endCursor ?? null;
-  const isFetchingMore = networkStatus === NetworkStatus.fetchMore;
-
-  const loadMore = () => {
-    if (!hasNextPage || !endCursor || loading || isFetchingMore) return;
-    void loadPageWithCursorRecovery({
-      fetchMore,
-      refetch,
-      variables: { pantryItemId, first: PAGE_SIZE, after: endCursor },
-      operation: 'PantryUsageHistory.loadMore',
-    });
-  };
+  const {
+    hasMore: hasNextPage,
+    isLoadingMore: isFetchingMore,
+    loadMore,
+  } = usePagination({
+    pageInfo: connection?.pageInfo,
+    loading,
+    itemCount: records.length,
+    observable,
+    cursorVariableName: 'after',
+    restart: refetch,
+  });
 
   // A failed read is not an empty ledger — `useDataState` also splits offline
   // out of error so the retry is offered only where retrying can help.

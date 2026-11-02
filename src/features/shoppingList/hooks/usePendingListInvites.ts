@@ -10,6 +10,7 @@ import { toastService } from '#/services/toastService';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
 import { extractNodes } from '#/utils/connectionUtils';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { useTranslation } from '#/i18n';
 import { GetPendingListInvitesDocument } from './usePendingListInvites.generated';
@@ -48,9 +49,10 @@ export function usePendingListInvites({
   const { t } = useTranslation();
   const { acceptListInvite, declineListInvite } = useAnswerListInvite();
   const [answering, setAnswering] = useState<PendingAnswer | null>(null);
-  const { data, refetch } = useQuery(GetPendingListInvitesDocument, {
+  const { data, error, refetch } = useQuery(GetPendingListInvitesDocument, {
     variables: { first: PENDING_INVITES_PAGE_SIZE },
   });
+  useApolloErrorLogger(GetPendingListInvitesDocument, error);
 
   const invites: PendingListInvite[] = extractNodes(
     data?.me?.pendingCollaborationInvitesConnection,

@@ -1,12 +1,13 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ItemImageStatus } from '#/graphql/generated/schemaTypes';
 import { MarkPrimaryItemImageDocument } from '#features/catalog/hooks/useMarkPrimaryItemImage.generated';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
@@ -56,6 +57,14 @@ const renderViewer = (
     />,
     { operationMocks },
   );
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -115,9 +124,8 @@ describe('ItemPhotoViewer set-as-main action', () => {
     renderViewer({ item: OWN_ITEM }, [mock]);
     fireEvent.press(screen.getByLabelText('Set as main photo'));
 
-    await waitFor(() =>
-      expect(fired).toContainEqual({ input: { imageId: 'photo-1' } }),
-    );
+    await drainTimers();
+    expect(fired).toContainEqual({ input: { imageId: 'photo-1' } });
   });
 });
 
@@ -172,13 +180,12 @@ describe('ItemPhotoViewer report action', () => {
     const [, , buttons] = jest.mocked(alertService.alert).mock.calls[0] ?? [];
     buttons?.find(button => button.text === 'Report')?.onPress?.();
 
-    await waitFor(() =>
-      expect(report.fired).toEqual([
-        expect.objectContaining({
-          input: expect.objectContaining({ imageId: 'photo-1' }),
-        }),
-      ]),
-    );
+    await drainTimers();
+    expect(report.fired).toEqual([
+      expect.objectContaining({
+        input: expect.objectContaining({ imageId: 'photo-1' }),
+      }),
+    ]);
   });
 });
 

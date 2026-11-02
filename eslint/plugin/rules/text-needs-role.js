@@ -1,4 +1,5 @@
 const path = require('node:path');
+const { sheetNameOf } = require('../variantSheets');
 
 const ALIASES = new Set(['#components/atoms/Text', '#/components/atoms/Text']);
 
@@ -219,7 +220,7 @@ module.exports = {
         node.property.type === 'Identifier'
       ) {
         styleReferences.push({
-          sheet: node.object.name,
+          sheet: sheetNameOf(node.object, context.sourceCode),
           key: node.property.name,
           element,
         });

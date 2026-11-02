@@ -1,6 +1,6 @@
 'use no memo';
 import React from 'react';
-import { screen, act, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, act, fireEvent } from '@testing-library/react-native';
 import CollaboratorPermissionsBottomSheet, {
   type CollaboratorPermissionsBottomSheetRef,
 } from '#features/shoppingList/components/CollaboratorPermissionsBottomSheet';
@@ -9,7 +9,9 @@ import {
   CollaboratorStatus,
 } from '#/graphql/generated/schemaTypes';
 import type { ShoppingListCollaboratorFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { UpdateCollaboratorPermissionsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
@@ -66,6 +68,14 @@ const makeCollaborator = (): ShoppingListCollaboratorFragment => ({
   canInviteOthers: false,
   invitedAt: '2024-01-01T00:00:00Z',
   collaborator: null,
+});
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('CollaboratorPermissionsBottomSheet', () => {
@@ -146,15 +156,22 @@ describe('CollaboratorPermissionsBottomSheet', () => {
 
   it('fires the permissions mutation when a toggle changes', async () => {
     const ref = React.createRef<CollaboratorPermissionsBottomSheetRef>();
+    const update = recordMock(UpdateCollaboratorPermissionsDocument, {
+      held: true,
+      data: {},
+    });
     renderWithApollo(
       <CollaboratorPermissionsBottomSheet {...defaultProps} ref={ref} />,
+      { operationMocks: [update.mock] },
     );
     act(() => {
       ref.current?.open(makeCollaborator());
     });
     const switches = screen.getAllByRole('switch');
     fireEvent(switches[0]!, 'valueChange', false);
-    // The switch flips optimistically before the mutation resolves.
-    await waitFor(() => expect(switches[0]!.props.value).toBe(false));
+    await drainTimers();
+    expect(update.fired).toHaveLength(1);
+    // The answer is held: the switch flips before the mutation resolves.
+    expect(switches[0]!.props.value).toBe(false);
   });
 });

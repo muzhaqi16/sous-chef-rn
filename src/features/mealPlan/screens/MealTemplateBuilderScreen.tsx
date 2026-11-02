@@ -10,6 +10,8 @@ import { StyleSheet } from 'react-native-unistyles';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Pressable } from '#components/atoms/themedComponents';
 import { FormScreen } from '#components/templates/FormScreen';
+import { SubScreen } from '#components/templates/SubScreen';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { FormSelect } from '#components/molecules/FormSelect';
@@ -19,6 +21,7 @@ import { Text } from '#components/atoms/Text';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useMealTemplateEditor } from '#features/mealPlan/hooks/useMealTemplateEditor';
 import { useMealTemplateForEdit } from '#features/mealPlan/hooks/useMealTemplateForEdit';
+import { useCooksFor } from '#features/profile/hooks/useCooksFor';
 import { TemplateCategory, MealType } from '#/graphql/generated/schemaTypes';
 import { generateId } from '#/utils/generateId';
 import { SectionHeader } from '#components/atoms/SectionHeader';
@@ -84,14 +87,19 @@ export const MealTemplateBuilderScreen: React.FC<
 
   // Edit mode writes each item as it is saved; create mode holds drafts until
   // the template itself is created.
-  const { template: loaded, items: loadedItems } =
-    useMealTemplateForEdit(templateId);
+  const {
+    template: loaded,
+    items: loadedItems,
+    state: loadState,
+    refetch: reloadTemplate,
+  } = useMealTemplateForEdit(templateId);
 
   // Two forms on one screen: the template's own metadata, and the sub-form that
   // adds one meal to it.
+  const cooksFor = useCooksFor();
   const templateForm = useForm<TemplateFormValues>({
     resolver: yupResolver(templateSchema),
-    defaultValues: templateDefaults(TemplateCategory.Weekly),
+    defaultValues: templateDefaults(TemplateCategory.Weekly, cooksFor),
     mode: 'onTouched',
   });
 
@@ -100,10 +108,25 @@ export const MealTemplateBuilderScreen: React.FC<
 
   const itemForm = useForm<TemplateItemFormValues>({
     resolver: yupResolver(templateItemSchema),
-    defaultValues: templateItemDefaults(MealType.Breakfast),
+    defaultValues: templateItemDefaults(MealType.Breakfast, cooksFor),
     mode: 'onTouched',
   });
   const [editingKey, setEditingKey] = useState<string | null>(null);
+  // The profile can answer after the forms mounted: it fills the servings a
+  // new template and a new meal start with, only while the user has not
+  // changed them and no saved meal is loaded.
+  useEffect(() => {
+    if (cooksFor === null) return;
+    if (!isEdit && !templateForm.getFieldState('defaultServings').isDirty) {
+      templateForm.setValue('defaultServings', String(cooksFor));
+    }
+    if (
+      editingKey === null &&
+      !itemForm.getFieldState('itemServings').isDirty
+    ) {
+      itemForm.setValue('itemServings', String(cooksFor));
+    }
+  }, [cooksFor, isEdit, editingKey, templateForm, itemForm]);
   const [editingServerId, setEditingServerId] = useState<string | null>(null);
   const [recipePickerVisible, setRecipePickerVisible] = useState(false);
   const [itemRecipeId, itemRecipeName, itemMealType] = useWatch({
@@ -141,7 +164,7 @@ export const MealTemplateBuilderScreen: React.FC<
     : draftItems;
 
   const resetItemForm = () => {
-    itemForm.reset(templateItemDefaults(MealType.Breakfast));
+    itemForm.reset(templateItemDefaults(MealType.Breakfast, cooksFor));
     setEditingKey(null);
     setEditingServerId(null);
   };
@@ -284,6 +307,24 @@ export const MealTemplateBuilderScreen: React.FC<
     });
     if (newId) goBack();
   };
+
+  // A blank form here would save over the template it failed to read.
+  if (loadState === 'error' || loadState === 'offline') {
+    return (
+      <SubScreen
+        title={t('labels.editTemplate')}
+        testID={mealPlanTestIDs.templateBuilderScreen}
+        scroll="none"
+      >
+        <DataStateView
+          state={loadState}
+          onRetry={() => {
+            void reloadTemplate();
+          }}
+        />
+      </SubScreen>
+    );
+  }
 
   return (
     <FormScreen

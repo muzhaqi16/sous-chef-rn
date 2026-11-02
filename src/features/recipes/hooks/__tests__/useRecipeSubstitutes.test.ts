@@ -1,4 +1,3 @@
-import { waitFor } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { t } from '#/i18n';
 import {
@@ -6,7 +5,9 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   GetRecipeDocument,
   type GetRecipeQuery,
@@ -107,12 +108,19 @@ const substitutesMock = () =>
             },
             { node: { id: 'flour', substitutes: [] } },
           ],
-          pageInfo: { hasNextPage: false, endCursor: 'c-2' },
-          totalCount: 2,
+          pageInfo: {},
         },
       },
     },
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useRecipeSubstitutes', () => {
   beforeEach(() => {
@@ -126,9 +134,8 @@ describe('useRecipeSubstitutes', () => {
       { operationMocks: [mock.mock] },
     );
 
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
     expect(mock.fired[0]).toMatchObject({
       homeId: 'home-1',
       pantryId: 'pantry-1',
@@ -185,9 +192,8 @@ describe('useRecipeSubstitutes', () => {
       () => useRecipeSubstitutes('recipe-1', true),
       { operationMocks: [substitutesMock().mock] },
     );
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
 
     mockHomeId = null;
     rerender({});
@@ -204,9 +210,8 @@ describe('useRecipeSubstitutes', () => {
         initialProps: { wanted: true },
       },
     );
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
 
     rerender({ wanted: false });
 
@@ -235,10 +240,7 @@ describe('useRecipeSubstitutes', () => {
               })),
               pageInfo: {
                 __typename: 'PageInfo',
-                hasNextPage: false,
-                endCursor: 'c-2',
               },
-              totalCount: 2,
             },
           },
         },
@@ -247,7 +249,7 @@ describe('useRecipeSubstitutes', () => {
       data: Unmasked<GetRecipeQuery>;
     };
     const cache = seedCache([]);
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetRecipeDocument,
       variables: recipeVars,
       data: completed(recipeVars).data,
@@ -257,9 +259,8 @@ describe('useRecipeSubstitutes', () => {
       () => useRecipeSubstitutes('recipe-1', true),
       { cache, operationMocks: [substitutesMock().mock] },
     );
-    await waitFor(() =>
-      expect(result.current.substitutesFor('buttermilk')).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.substitutesFor('buttermilk')).toHaveLength(2);
 
     const recipe = cache.readQuery({
       query: GetRecipeDocument,

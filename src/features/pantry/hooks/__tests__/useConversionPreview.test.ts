@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ConvertQuantityDocument } from '#operations/item/conversions.generated';
 import { useConversionPreview } from '../useConversionPreview';
 
@@ -11,6 +11,14 @@ const CUP_PER_GRAM = 1.25 / 177.4412;
 interface Props {
   inputQuantity: number | null;
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useConversionPreview', () => {
   it('formats both sides of a locally converted preview', async () => {
@@ -100,9 +108,8 @@ describe('useConversionPreview', () => {
     expect(result.current.previewLoading).toBe(true);
     expect(result.current.convertedValue).toBeNull();
 
-    await waitFor(() =>
-      expect(result.current.previewText).toBe('2 tbsp ≈ 29.574 mL'),
-    );
+    await drainTimers();
+    expect(result.current.previewText).toBe('2 tbsp ≈ 29.574 mL');
     expect(result.current.previewLoading).toBe(false);
     expect(convert.fired).toEqual([
       expect.objectContaining({ quantity: 2, fromUnitId: 'tbsp' }),

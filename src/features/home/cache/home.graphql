@@ -66,6 +66,7 @@ fragment home_gained on Home {
   invitesConnection(first: 5) {
     edges {
       node {
+        version
         id
         ...HomeInviteReaders
       }
@@ -79,6 +80,7 @@ fragment home_gained on Home {
   pantriesConnection(first: 10) {
     edges {
       node {
+        version
         id
         name
         isDefault
@@ -96,11 +98,13 @@ fragment home_gained on Home {
 # (`HomeCard_home`), so `GetHomes` fetches them and each card reads its own
 # fragment by id (`listedFragmentsCoverCells.test.ts`).
 fragment home_listed on Home {
+  version
   id
   name
   membersConnection(first: 5) {
     edges {
       node {
+        version
         id
         role
         userId
@@ -121,6 +125,7 @@ fragment home_listed on Home {
   invitesConnection(first: 5) {
     edges {
       node {
+        version
         id
         email
         recipientName

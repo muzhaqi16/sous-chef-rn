@@ -161,6 +161,7 @@ export function pantryItemData(
       earliestBatchExpiresOn: fixture.earliestBatchExpiresOn ?? null,
       item: {
         __typename: 'Item',
+        version: 1,
         id: 'item1',
         // Read-only by default: the photo viewer's "set as main" action is
         // gated on this, and a fixture that grants it would exercise a path
@@ -180,6 +181,7 @@ export function pantryItemData(
               typicalOf: fixture.typicalOf
                 ? {
                     __typename: 'Item',
+                    version: 1,
                     id: 'concept-1',
                     name: fixture.typicalOf,
                   }
@@ -194,6 +196,7 @@ export function pantryItemData(
                 isPrimary: true,
                 category: {
                   __typename: 'Category',
+                  version: 1,
                   id: 'cat1',
                   name: fixture.categoryName,
                 },
@@ -216,7 +219,7 @@ export function pantryItemData(
       packageBreakdown: null,
       quantityBreakdown: null,
       brand: fixture.brandName
-        ? { __typename: 'Brand', id: 'b1', name: fixture.brandName }
+        ? { __typename: 'Brand', version: 1, id: 'b1', name: fixture.brandName }
         : null,
       tags,
       storageNotes: fixture.storageNotes ?? null,

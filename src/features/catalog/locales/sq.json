@@ -78,7 +78,6 @@
     "allAdded": "Të gjitha u shtuan",
     "dismiss": "Hiq sugjerimin",
     "dismissed": "U hoq {{name}}",
-    "undo": "Zhbëj",
     "dismissFailed": "S'u hoq dot sugjerimi",
     "undoFailed": "S'u zhbë dot",
     "sections": {
@@ -91,7 +90,7 @@
     "noListTitle": "Asnjë listë e zgjedhur",
     "noListBody": "Zgjidh ose krijo më parë një listë blerjesh.",
     "createList": "Krijo listë",
-    "searchPlaceholder": "Kërko ose skano artikull...",
+    "searchPlaceholder": "Kërko një artikull...",
     "added": "U shtua {{name}}",
     "emptyTitle": "Ende asnjë sugjerim",
     "emptyPantrySubtext": "Shto artikuj në qilar për të marrë sugjerime të personalizuara",
@@ -105,9 +104,7 @@
     "addTitle": "Shto vendndodhje ruajtjeje"
   },
   "suggestItemEdit": {
-    "sentTitle": "Sugjerimi u dërgua",
     "sentBody": "Faleminderit — një administrator do t'i shqyrtojë ndryshimet e tua. Artikulli mbetet i pandryshuar derisa të miratohen.",
-    "duplicateTitle": "Tashmë e sugjeruar",
     "duplicateBody": "I ke sugjeruar tashmë pikërisht këto ndryshime dhe janë ende në pritje të shqyrtimit, prandaj ruajtëm sugjerimin origjinal.",
     "pendingCapTitle": "5 sugjerime në pritje",
     "pendingCapBody": "Ke 5 sugjerime ndryshimi në pritje të shqyrtimit — ky është kufiri. Sapo një administrator të shqyrtojë njërin, mund të dërgosh një tjetër.",
@@ -117,11 +114,8 @@
     "readOnlyBody": "Ai nuk është pjesë e katalogut publik, prandaj këtu nuk ka çfarë të korrigjohet. Vetëm artikujt e katalogut publik mund të redaktohen ose të propozohen për shqyrtim.",
     "noChangesTitle": "Asgjë për të sugjeruar",
     "noChangesBody": "Ndrysho një fushë që do të korrigjohet, pastaj dërgoje. Vetëm shënimi yt nuk mund të shqyrtohet.",
-    "photosOnlyTitle": "Fotoja u shtua",
     "photosOnlyBody": "Fotoja jote tani është në artikull. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
-    "photosForReviewTitle": "Fotoja u dërgua për shqyrtim",
     "photosForReviewBody": "Një administrator e kontrollon para se ta shohin të gjithë. Deri atëherë e sheh vetëm ti. Ndrysho edhe një fushë nëse ka diçka tjetër për të korrigjuar.",
-    "updatedTitle": "Artikulli u përditësua",
     "updatedBody": "Ndryshimet e tua janë publikuar.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të sugjerimit. Provo përsëri.",
     "photoNotice": "Një administrator shqyrton fotot dhe ndryshimet e tjera para se t'i shohin të gjithë."
@@ -134,10 +128,8 @@
     "reasonPlaceholder": "p.sh. marka është e gabuar, fotoja është e një produkti tjetër",
     "reasonTooShort": "Shto të paktën {{count}} karaktere që administratori të dijë çfarë të shohë.",
     "submit": "Dërgo",
-    "sentTitle": "Raporti u dërgua",
     "sentBody": "Faleminderit — një administrator do ta shohë këtë artikull.",
     "failedBody": "Diçka shkoi keq gjatë dërgimit të raportit. Provo përsëri.",
-    "alreadyReportedTitle": "Tashmë e raportuar",
     "alreadyReportedBody": "Ky artikull është raportuar tashmë dhe pret të shihet nga një administrator, prandaj nuk dërguam një dublikatë.",
     "wrongPhotoAction": "Raporto foto të gabuar",
     "wrongPhotoConfirmTitle": "Të raportohet kjo foto?",
@@ -320,7 +312,6 @@
     "updateFailed": "Përditësimi i artikullit dështoi. Provo përsëri.",
     "brandOptional": "Marka (opsionale)",
     "placeholderItemName": "p.sh., Oriz, Makarona",
-    "placeholderCategory": "p.sh., Drithëra, Bulmet",
     "tagsPlaceholder": "Shkruaj etiketat të ndara me presje",
     "location": "Vendndodhja",
     "locationPlaceholder": "p.sh., Rafti i sipërm, Sirtari 2",
@@ -451,9 +442,6 @@
     "selectedCount_one": "{{count}} element i zgjedhur",
     "selectedCount_other": "{{count}} elemente të zgjedhura"
   },
-  "storeBranch": {
-    "number": "Dyqani nr. {{number}}"
-  },
   "storeShelfPrices": {
     "title": "Çmimet në dyqane",
     "cheapest": "Më i liri",
@@ -467,6 +455,46 @@
     "lowestIn_other": "Çmimi më i ulët në {{count}} ditë",
     "lastSeen": "Parë së fundi më {{date}}",
     "showMore_one": "Shfaq edhe {{count}}",
-    "showMore_other": "Shfaq edhe {{count}}"
+    "showMore_other": "Shfaq edhe {{count}}",
+    "similarTitle": "Produkte të ngjashme",
+    "mightBeCheaper": "Mund të jetë më lirë"
+  },
+  "usualStores": {
+    "title": "Dyqanet e tua",
+    "addStore": "Shto një dyqan",
+    "pinned": "I fiksuar",
+    "pin": "Fikso",
+    "unpin": "Hiqe fiksimin",
+    "addedViaReceipt": "Nga një faturë",
+    "addedViaPurchase": "Nga një blerje",
+    "addedViaListStore": "Dyqani i një liste",
+    "addedViaPicked": "Shtuar nga shtëpia jote",
+    "lastUsed": "Përdorur së fundi: {{date}}",
+    "notCompared": "Nuk krahasohet: i papërdorur prej 90 ditësh",
+    "removed": "U hoq {{name}}",
+    "emptyTitle": "Ende asnjë dyqan",
+    "emptyBody": "Dyqanet shfaqen këtu sapo skanon një faturë, blen në mënyrën e dyqanit ose zgjedh dyqanin e një liste.",
+    "limitTitle": "Shumë dyqane",
+    "limitBody": "Mund të mbash deri në 20 dyqane. Hiq një ose hiqi fiksimin, pastaj provo sërish.",
+    "saveFailed": "Dyqanet e tua nuk u ruajtën dot"
+  },
+  "storePicker": {
+    "searchPlaceholder": "Kërko sipas emrit ose adresës së dyqanit",
+    "zipLabel": "Kodi postar",
+    "zipRefused": "Ende nuk e njohim këtë kod postar. Provo një tjetër ose kërko sipas emrit.",
+    "notListed": "Nuk është në listë? Shto “{{name}}”",
+    "addedToStores": "U shtua te dyqanet e tua",
+    "needsConnectionTitle": "Për të gjetur dyqane duhet lidhje",
+    "needsConnectionBody": "Këto janë dyqanet ku blen. Lidhu për të gjetur të tjera.",
+    "nothingNear": "Nuk u gjet asnjë dyqan këtu afër.",
+    "nothingNamed": "Asnjë dyqan nuk përputhet me “{{term}}”.",
+    "hint": "Kërko sipas emrit ose shkruaj një kod postar për të parë dyqanet afër.",
+    "nearMe": "Dyqanet pranë meje",
+    "nearMeTitle": "Gjej dyqane pranë teje",
+    "nearMeBody": "{{appName}} përdor vendndodhjen tënde të përafërt për të shfaqur dyqanet përreth. Nuk i duhet vendndodhja e saktë, dhe mjafton edhe një kod postar.",
+    "locating": "Po kërkojmë dyqane pranë teje…",
+    "locationOff": "Vendndodhja është e çaktivizuar për {{appName}}. Aktivizoje te Cilësimet ose shkruaj një kod postar.",
+    "locationFailed": "Nuk u kuptua dot ku ndodhesh. Shkruaj një kod postar.",
+    "hasPrices": "Ka çmime"
   }
 }

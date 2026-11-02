@@ -37,6 +37,7 @@ const refusedWith = (code: string, extensions: Record<string, unknown> = {}) =>
 describe('captureOutcomeOf', () => {
   const MISO_SALMON: Capture['recipe'] = {
     __typename: 'Recipe',
+    version: 1,
     id: 'r-1',
     name: 'Miso salmon',
   };

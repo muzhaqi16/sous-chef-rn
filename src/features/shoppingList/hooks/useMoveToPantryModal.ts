@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
+import type { DataState } from '#hooks/data/useDataState';
 import { useLazyHomeData } from '#features/home/hooks/useLazyHomeData';
 import { useSelectedHomeId } from '#store/useAppStore';
 import {
@@ -21,6 +22,8 @@ export interface UseMoveToPantryModalResult {
   /** Cache key for the modal's `useFragment`, not the item itself. */
   selectedItemId: string | null;
   pantries: readonly MoveTarget[];
+  pantriesState: DataState;
+  retryPantries: () => void;
   selectedPantryId: string | null;
   /** Lazy-loads the pantry list on first open. */
   openForItem: (itemId: string) => void;
@@ -45,6 +48,7 @@ export function useMoveToPantryModal(
     homes,
     selectedPantryId: globalPantryId,
     isLoaded: homeDataLoaded,
+    state: homesState,
     fetchHomeData,
   } = useLazyHomeData();
   const selectedHomeId = useSelectedHomeId();
@@ -110,6 +114,8 @@ export function useMoveToPantryModal(
     visible,
     selectedItemId,
     pantries,
+    pantriesState: homesState,
+    retryPantries: fetchHomeData,
     selectedPantryId,
     openForItem,
     close,

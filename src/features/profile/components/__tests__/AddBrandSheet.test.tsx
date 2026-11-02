@@ -1,12 +1,9 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { t } from '#/i18n';
+import { useStore } from '#store';
 import { AddBrandSheet } from '../AddBrandSheet';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockAutocomplete = {
   searchTerm: '',
@@ -37,9 +34,35 @@ const renderSheet = (onPick = jest.fn().mockResolvedValue(true)) => {
   return { onPick, onDismiss, rerender: () => rerender(sheet()) };
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AddBrandSheet', () => {
   beforeEach(() => {
     mockAutocomplete.searchTerm = '';
+  });
+
+  it('says a wider search needs a connection when nothing held matches offline', () => {
+    useStore.setState({ isOnline: false, apiReachable: null });
+    const held = mockAutocomplete.displayItems;
+    mockAutocomplete.displayItems = [];
+    mockAutocomplete.searchTerm = 'kale';
+    renderSheet();
+
+    expect(
+      screen.getByText(t('empty.noHeldMatchFor', { query: 'kale' })),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText(t('empty.noResultsFor', { query: 'kale' })),
+    ).toBeNull();
+
+    mockAutocomplete.displayItems = held;
+    useStore.setState({ isOnline: true, apiReachable: null });
   });
 
   it('lists brands only once the user searches, leaving out ones the list holds', () => {
@@ -65,7 +88,8 @@ describe('AddBrandSheet', () => {
       screen.getByLabelText(t('labels.addNamed', { name: 'ChipCo' })),
     );
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
     expect(onPick).toHaveBeenCalledWith(
       { id: 'b-chips', name: 'ChipCo' },
       'too salty',
@@ -82,7 +106,8 @@ describe('AddBrandSheet', () => {
       screen.getByLabelText(t('labels.addNamed', { name: 'ChipCo' })),
     );
 
-    await waitFor(() => expect(onPick).toHaveBeenCalled());
+    await drainTimers();
+    expect(onPick).toHaveBeenCalled();
     expect(onDismiss).not.toHaveBeenCalled();
   });
 });

@@ -14,6 +14,7 @@ import {
   DeleteMealPlanItemDocument,
   GetMealPlansDocument,
 } from '#features/mealPlan/graphql/mealPlan.generated';
+import { MealPlanDisplayFragmentDoc } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { readPlanSource } from '#features/mealPlan/cache/derivationSources';
 import { useAddRecipeToMealPlan } from '#features/mealPlan/hooks/useAddRecipeToMealPlan';
 import { useMealPlanItemActions } from '#features/mealPlan/hooks/useMealPlanItemActions';
@@ -25,6 +26,7 @@ import {
   createApolloTestWrapper,
   inputOf,
   recordMock,
+  seedFragment,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import {
@@ -74,20 +76,11 @@ const current = (): Planner => {
   return planner;
 };
 
-/** Lets the mocked network answer until `check` holds. */
-async function until(check: () => boolean): Promise<void> {
-  for (let tries = 0; tries < 50 && !check(); tries += 1) {
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 10));
-    });
-  }
-  expect(check()).toBe(true);
-}
-
-const plansMock = () =>
+const plansMock = (answered: () => void) =>
   recordMock(GetMealPlansDocument, {
-    data: {
-      mealPlans: { edges: [{ node: { id: PLAN_ID, ...WEEK } }] },
+    dataFor: () => {
+      answered();
+      return { mealPlans: { edges: [{ node: { id: PLAN_ID, ...WEEK } }] } };
     },
     maxUsageCount: Number.POSITIVE_INFINITY,
   });
@@ -147,10 +140,20 @@ it('adds a recipe to a plan and removes it, with no React Native', async () => {
   const cache = seedPlanSource(
     planSource({ id: PLAN_ID, ...WEEK, mealPlanItems: [] }),
   );
+  seedFragment(cache, {
+    id: cache.identify({ __typename: 'MealPlan', id: PLAN_ID }),
+    fragment: MealPlanDisplayFragmentDoc,
+    fragmentName: 'MealPlanDisplay',
+    data: { __typename: 'MealPlan', id: PLAN_ID, ...WEEK },
+  });
+  let plansAnswered = () => {};
+  const plansSettled = new Promise<void>(resolve => {
+    plansAnswered = resolve;
+  });
   const added = createMock();
   const removed = deleteMock();
   const Wrapper = createApolloTestWrapper({
-    operationMocks: [plansMock().mock, added.mock, removed.mock],
+    operationMocks: [plansMock(plansAnswered).mock, added.mock, removed.mock],
     cache,
   });
 
@@ -160,7 +163,8 @@ it('adds a recipe to a plan and removes it, with no React Native', async () => {
       createElement(Wrapper, null, createElement(PlannerProbe)),
     );
   });
-  await until(() => current().add.hasPlan);
+  await act(() => plansSettled);
+  expect(current().add.hasPlan).toBe(true);
 
   const day = dayFrom(2);
   let addedOk = false;

@@ -7,7 +7,7 @@ import { backoffDelay } from '#/utils/backoff';
 
 /**
  * API reachability, distinct from device internet. Recovery probes `/health`,
- * as `offlineModeLink` blocks the traffic that would prove it. `recordSuccess`
+ * as `offlineReadLink` blocks the traffic that would prove it. `recordSuccess`
  * always writes and nothing persists the flag, so a desync heals itself.
  */
 

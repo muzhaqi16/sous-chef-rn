@@ -43,10 +43,10 @@ function StatusBadge({
   variant: StatusVariant;
   text: string;
 }) {
-  styles.useVariants({ status: variant });
+  const variantStyles = styles.useVariants({ status: variant });
   return (
-    <View style={styles.statusBadge}>
-      <Text role="bodyStrong" style={styles.statusText}>
+    <View style={variantStyles.statusBadge}>
+      <Text role="bodyStrong" style={variantStyles.statusText}>
         {text}
       </Text>
     </View>

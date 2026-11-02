@@ -1,23 +1,20 @@
-import { act, waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetShoppingListItemsFilteredDocument,
   UpdateShoppingListDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseUpdateShoppingList_ListFragmentDoc } from '../useUpdateShoppingList.generated';
-import {
-  ErrorCode,
-  PriceComparisonScope,
-} from '#/graphql/generated/schemaTypes';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '../useUpdateShoppingList';
 import { useShoppingListBudget } from '../useShoppingListBudget';
 import { ApolloClient } from '@apollo/client';
-import { ListStoreComparisonDocument } from '#features/shoppingList/hooks/useListStoreComparison.generated';
+import { ListSavingsDocument } from '#features/shoppingList/hooks/useListSavings.generated';
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -41,7 +38,16 @@ const readName = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: UseUpdateShoppingList_ListFragmentDoc,
     fragmentName: 'useUpdateShoppingList_list',
+    optimistic: true,
   })?.name;
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useUpdateShoppingList', () => {
   it('writes the rename PERMANENTLY before the mutation settles; a queued (null) result keeps it and resolves null', async () => {
@@ -64,7 +70,7 @@ describe('useUpdateShoppingList', () => {
     );
 
     let resolved: unknown = 'unset';
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.updateShoppingList('list-1', {
         name: 'Weekly Run',
       });
@@ -105,20 +111,19 @@ describe('useUpdateShoppingList', () => {
     );
 
     let thrown: unknown;
-    await act(async () => {
-      await result.current
+    await drained(() =>
+      result.current
         .updateShoppingList('list-1', { name: 'x'.repeat(500) })
         .catch((error: unknown) => {
           thrown = error;
-        });
-    });
+        }),
+    );
     // The caller's copy, never the server's English message.
     expect(thrown).toBeInstanceOf(Error);
     expect((thrown as Error).message).toBe('Failed to save');
 
-    await waitFor(() => {
-      expect(readName(cache)).toBe('Groceries');
-    });
+    await drainTimers();
+    expect(readName(cache)).toBe('Groceries');
   });
 
   it('returns the server entity on online success', async () => {
@@ -157,12 +162,12 @@ describe('useUpdateShoppingList', () => {
     let updated:
       | Awaited<ReturnType<typeof result.current.updateShoppingList>>
       | undefined;
-    await act(async () => {
-      updated = await result.current.updateShoppingList('list-1', {
+    updated = await drained(() =>
+      result.current.updateShoppingList('list-1', {
         name: 'Weekly Run',
         isDefault: true,
-      });
-    });
+      }),
+    );
 
     expect(updated).toMatchObject({ id: 'list-1', name: 'Weekly Run' });
   });
@@ -177,7 +182,7 @@ describe('useUpdateShoppingList', () => {
       { cache, operationMocks: [update.mock] },
     );
 
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.updateShoppingList('list-1', {
         name: 'Groceries',
         planning: { budgetAmount: 150, currency: 'USD' },
@@ -187,6 +192,7 @@ describe('useUpdateShoppingList', () => {
           id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
           fragment: UseUpdateShoppingList_ListFragmentDoc,
           fragmentName: 'useUpdateShoppingList_list',
+          optimistic: true,
         })?.budgetAmount,
       ).toBe(150);
       await promise;
@@ -200,7 +206,6 @@ describe('useUpdateShoppingList', () => {
           planning: { budgetAmount: 150, currency: 'USD' },
           version: 1,
         },
-        withComparison: false,
       },
     ]);
   });
@@ -220,9 +225,10 @@ describe('useUpdateShoppingList', () => {
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
         fragment: UseUpdateShoppingList_ListFragmentDoc,
         fragmentName: 'useUpdateShoppingList_list',
+        optimistic: true,
       })?.targetStore;
 
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.updateShoppingList('list-1', {
         name: 'Groceries',
         targetStore: { id: 'store-1', name: 'Costco' },
@@ -230,12 +236,12 @@ describe('useUpdateShoppingList', () => {
       expect(readStore()).toMatchObject({ id: 'store-1', name: 'Costco' });
       await promise;
     });
-    await act(async () => {
-      await result.current.updateShoppingList('list-1', {
+    await drained(() =>
+      result.current.updateShoppingList('list-1', {
         name: 'Groceries',
         targetStore: null,
-      });
-    });
+      }),
+    );
 
     expect(readStore()).toBeNull();
     expect(update.fired).toEqual([
@@ -246,7 +252,6 @@ describe('useUpdateShoppingList', () => {
           planning: { targetStoreId: 'store-1' },
           version: 1,
         },
-        withComparison: false,
       },
       {
         input: {
@@ -255,90 +260,52 @@ describe('useUpdateShoppingList', () => {
           planning: { targetStoreId: null },
           version: 1,
         },
-        withComparison: false,
       },
     ]);
   });
 
-  // The list's store prices every line's suggestion and marks the comparison's
-  // target. The answer restates the comparison on screen, not the lines.
+  // The list's store prices every line's suggestion and is what the savings
+  // compare against: once the change is applied, both are read again.
   describe('what the store prices', () => {
     const toCostco = { id: 'store-1', name: 'Costco' };
     const saveStore = async (
       result: MockDataFor<typeof UpdateShoppingListDocument>,
-      comparisonShown?: PriceComparisonScope,
     ) => {
       const refetchQueries = jest.spyOn(
         ApolloClient.prototype,
         'refetchQueries',
       );
-      const cache = seedList();
       const update = recordMock(UpdateShoppingListDocument, { data: result });
       const hook = renderHookWithApollo(
         () => useUpdateShoppingList('Failed to save'),
-        { cache, operationMocks: [update.mock] },
+        { cache: seedList(), operationMocks: [update.mock] },
       );
-      await act(async () => {
-        await hook.result.current.updateShoppingList(
-          'list-1',
-          { name: 'Groceries', targetStore: toCostco },
-          comparisonShown,
-        );
-      });
-      return { refetchQueries, cache, update };
+      await drained(() =>
+        hook.result.current.updateShoppingList('list-1', {
+          name: 'Groceries',
+          targetStore: toCostco,
+        }),
+      );
+      return refetchQueries;
     };
 
     afterEach(() => jest.restoreAllMocks());
 
-    it('re-reads the lines, and the comparison on screen comes with the answer', async () => {
-      const { refetchQueries, cache, update } = await saveStore(
-        {
-          updateShoppingList: {
-            __typename: 'UpdateShoppingListPayload',
-            shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
-            storeComparison: {
-              scope: PriceComparisonScope.Chain,
-              comparableLines: 7,
-            },
-          },
-        },
-        PriceComparisonScope.Chain,
-      );
-
-      expect(update.fired[0]).toMatchObject({
-        withComparison: true,
-        comparisonScope: PriceComparisonScope.Chain,
-      });
-      expect(
-        cache.readQuery({
-          query: ListStoreComparisonDocument,
-          variables: {
-            input: { listId: 'list-1', scope: PriceComparisonScope.Chain },
-          },
-        })?.shoppingListStoreComparison.comparableLines,
-      ).toBe(7);
-      expect(refetchQueries).toHaveBeenCalledWith({
-        include: [GetShoppingListItemsFilteredDocument],
-      });
-    });
-
-    // Store mode changes the store with no comparison on screen.
-    it('asks for no comparison when none is shown', async () => {
-      const { update } = await saveStore({
+    it('re-reads the lines and the savings once the change is applied', async () => {
+      const refetchQueries = await saveStore({
         updateShoppingList: {
           __typename: 'UpdateShoppingListPayload',
           shoppingList: { __typename: 'ShoppingList', id: 'list-1' },
         },
       });
 
-      expect(update.fired[0]).not.toMatchObject({ withComparison: true });
+      expect(refetchQueries).toHaveBeenCalledWith({
+        include: [GetShoppingListItemsFilteredDocument, ListSavingsDocument],
+      });
     });
 
     it('is not asked while the change waits in the queue', async () => {
-      const { refetchQueries } = await saveStore(
-        { updateShoppingList: null },
-        PriceComparisonScope.Store,
-      );
+      const refetchQueries = await saveStore({ updateShoppingList: null });
 
       expect(refetchQueries).not.toHaveBeenCalled();
     });
@@ -365,7 +332,7 @@ describe('useUpdateShoppingList', () => {
       { cache, operationMocks: [update.mock] },
     );
 
-    await act(async () => {
+    await drained(async () => {
       await result.current.updateShoppingList('list-1', { name: 'Weekly Run' });
       await result.current.setPriceTracking('list-1', true);
     });

@@ -1,0 +1,116 @@
+import { ApolloLink, Observable } from '@apollo/client';
+import { getMainDefinition } from '@apollo/client/utilities';
+import { Kind, OperationTypeNode } from 'graphql';
+import { useStore } from '#store';
+import {
+  isApiUnavailable,
+  shouldTreatAsOffline,
+} from '#store/slices/networkSlice';
+import { logger } from '#/utils/environment';
+import { Telemetry } from '#/services/telemetry';
+import { t } from '#/i18n';
+import { HELD_BY_LAYER } from '../utils/heldByLayer';
+
+/**
+ * Answers a query from the device while its network leg is doomed. A cache
+ * HIT re-emits and completes; a MISS forwards when only the breaker is open,
+ * and errors explicitly when there is no network leg — emitting `{data: null}`
+ * would make Apollo write `{}` and spam "Missing field". A page is always a
+ * miss: the device holds the list already shown, not the page's rows.
+ */
+export const createOfflineReadLink = () => {
+  return new ApolloLink((operation, forward) => {
+    const state = useStore.getState();
+    if (!isApiUnavailable(state)) {
+      return forward(operation);
+    }
+
+    const operationName = operation.operationName ?? '';
+    const definition = getMainDefinition(operation.query);
+
+    // Only block queries — mutations queue via queueLink, subscriptions manage themselves
+    if (
+      definition.kind !== Kind.OPERATION_DEFINITION ||
+      definition.operation !== OperationTypeNode.QUERY
+    ) {
+      return forward(operation);
+    }
+
+    const read = (optimistic: boolean) => {
+      if (operation.getContext().page === true) return null;
+      try {
+        return operation.client.cache.readQuery<Record<string, unknown>>({
+          query: operation.query,
+          variables: operation.variables,
+          optimistic,
+        });
+      } catch {
+        return null;
+      }
+    };
+    const cached = read(false);
+
+    // Cache hit — serve it (idempotent re-write, see matrix above).
+    if (cached !== null) {
+      const data = cached;
+      logger.debug(`Offline link: served ${operationName} from cache`);
+      // `logger` is console-only and stripped from release, so this counter is
+      // the only signal that distinguishes a working offline read session from
+      // a broken one. `operation` is bounded by the persisted-query manifest.
+      Telemetry.increment('offline_reads_served_total', 1, {
+        operation: operationName,
+      });
+      return new Observable<ApolloLink.Result>(observer => {
+        observer.next({ data });
+        observer.complete();
+      });
+    }
+
+    // Only a pending write holds it: shown, and never stored as the server's.
+    const held = read(true);
+    if (held !== null) {
+      return new Observable<ApolloLink.Result>(observer => {
+        observer.next({ data: held, extensions: { [HELD_BY_LAYER]: true } });
+        observer.complete();
+      });
+    }
+
+    // Cache miss, circuit-open-only — forward as an organic probe.
+    if (!shouldTreatAsOffline(state)) {
+      logger.info(
+        `🔌 Offline link: cache miss for ${operationName} while the circuit is open — forwarding as a probe`,
+      );
+      Telemetry.increment('offline_reads_probed_total', 1, {
+        operation: operationName,
+      });
+      return forward(operation);
+    }
+
+    // Cache miss, no network leg — explicit error result (blocks the `{}`
+    // cache write; errorPolicy 'all' hands the hook a null-data error state).
+    logger.info(
+      `Offline link: cache miss for ${operationName} while offline — emitting error result`,
+    );
+    // The one the user actually feels: "This isn't available offline yet."
+    // A rising rate here is the evidence that an entity's cached shape is
+    // incomplete for the screen reading it — the failure mode the optimistic
+    // completeness invariant exists to prevent.
+    Telemetry.increment('offline_reads_blocked_total', 1, {
+      operation: operationName,
+    });
+    return new Observable<ApolloLink.Result>(observer => {
+      observer.next({
+        data: null,
+        errors: [
+          {
+            // Surfaced to the user verbatim by screens that render
+            // `error.message`, so it stays localized and free of internals —
+            // the operation name is in the log line above, not here.
+            message: t('offline.noCachedData'),
+          },
+        ],
+      });
+      observer.complete();
+    });
+  });
+};

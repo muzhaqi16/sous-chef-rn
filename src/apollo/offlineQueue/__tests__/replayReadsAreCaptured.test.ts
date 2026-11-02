@@ -9,13 +9,14 @@ import { makeQueuedMutation } from '#/test-utils/queuedMutation';
 import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
 import { captureReplayInputs } from '#/apollo/offlineQueue/prepareReplay';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 describe('replay reads are captured when queued', () => {
   it.each(Object.keys(REPLAY_PREPARATIONS))(
     '%s captures the unit symbols its replay reads',
     operationName => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: gql`
           fragment CapturedUnit on Unit {
             id

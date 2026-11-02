@@ -1,6 +1,7 @@
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ResendVerificationEmailDocument } from '#operations/auth/auth.generated';
 import { SignUpScreen } from '../SignUpScreen';
 
@@ -164,6 +165,14 @@ jest.mock('#/utils/validation/auth', () => {
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   mockRegister.mockReset();
 });
 
@@ -221,9 +230,8 @@ describe('SignUpScreen', () => {
     // The address refused the password (taken, or a deleted account), so the
     // form is replaced by the code screen. The activation mail carries a code
     // AND a link, so the user can finish here instead of leaving for their inbox.
-    await waitFor(() => {
-      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
     expect(screen.getByText('Enter Code')).toBeTruthy();
     expect(mockRegister).toHaveBeenCalledTimes(1);
   });
@@ -256,10 +264,10 @@ describe('SignUpScreen', () => {
       ],
     });
 
+    // Stops at the send: a drain runs the cooldown out.
     await user.press(screen.getByTestId('signup-submit-button'));
-    await waitFor(() => {
-      expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
-    });
+    await act(() => jest.advanceTimersByTimeAsync(0));
+    expect(screen.getByTestId('code-verification-screen')).toBeTruthy();
 
     // Resend sits in the link slot on this context and opens inside the first
     // cooldown, so the tap cannot fire a duplicate send.
@@ -278,7 +286,8 @@ describe('SignUpScreen', () => {
 
     await user.press(screen.getByTestId('signup-submit-button'));
 
-    await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockRegister).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('code-verification-screen')).toBeNull();
   });
 
@@ -289,7 +298,8 @@ describe('SignUpScreen', () => {
 
     await user.press(screen.getByTestId('signup-submit-button'));
 
-    await waitFor(() => expect(mockRegister).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(mockRegister).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('code-verification-screen')).toBeNull();
     expect(screen.getByTestId('signup-screen')).toBeTruthy();
   });

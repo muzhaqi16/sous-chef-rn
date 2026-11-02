@@ -9,6 +9,7 @@ import { commonStyles } from '#/styles/commonStyles';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { ModalPicker } from '#components/molecules/ModalPicker';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { RecurringPattern } from '#/graphql/generated/schemaTypes';
 import { LIST_NAME_MAX_LENGTH } from '#features/shoppingList/utils/shoppingListConstants';
 
@@ -59,6 +60,8 @@ export const ListSettings: React.FC<
     handleToggleComplete,
     hasChanges,
     homes,
+    homesState,
+    retryHomes,
     isArchived,
     isCompleted,
     isDefault,
@@ -76,6 +79,7 @@ export const ListSettings: React.FC<
     nextRecurringDate,
     ownerInfo,
     ownership,
+    detailsState,
     patternLabel,
     reactivating,
     recurringPattern,
@@ -109,7 +113,7 @@ export const ListSettings: React.FC<
     return (
       <SubScreen
         title={t('shoppingListScreens.listSettings')}
-        state={{ value: 'loading', onRetry: retryOwnership }}
+        state={{ value: detailsState, onRetry: retryOwnership }}
       >
         <></>
       </SubScreen>
@@ -461,6 +465,11 @@ export const ListSettings: React.FC<
             value: home.id,
           })),
         ]}
+        unavailable={
+          homesState === 'error' || homesState === 'offline' ? (
+            <DataStateView state={homesState} onRetry={retryHomes} />
+          ) : undefined
+        }
         selected={selectedHomeId ?? ''}
         onSelect={value => {
           setSelectedHomeId(value || null);

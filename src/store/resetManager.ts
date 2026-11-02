@@ -10,6 +10,7 @@ import { holdsSessionTokens } from './slices/authSlice';
 import { resetSessionScopedStores } from './sessionScopedStores';
 import { logger } from '#/utils/environment';
 import { getApolloResetBridge } from './apolloResetBridge';
+import { MIRRORED_SETTINGS } from '#/domain/serverSettings';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
 import { isRecord } from '#/utils/isRecord';
 
@@ -67,10 +68,10 @@ const SESSION_SCOPED_STATE = {
   // Persisted, and shown directly to whoever opens the app next. Feature-owned
   // persisted state clears through resetSessionScopedStores() instead.
   cachedItemSuggestions: initialAppState.cachedItemSuggestions,
-  // The PREVIOUS account's setting. Login seeds it again from the server, so
-  // the next person on a shared device starts from the default rather than
-  // inheriting someone else's answer.
-  showTutorials: true,
+  // The PREVIOUS account's settings. Login seeds them again from the server,
+  // so the next person on a shared device starts from the defaults rather than
+  // inheriting someone else's answers.
+  ...MIRRORED_SETTINGS,
   // Likewise the previous account's: it denominates what the server records
   // next, so inheriting it would price one person's pantry in another's money.
   preferredCurrency: DEFAULT_CURRENCY,

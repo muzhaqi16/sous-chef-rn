@@ -1,9 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { gql, type TypedDocumentNode } from '@apollo/client';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { useFragmentList } from '../useFragmentList';
 
 type Batch = {
@@ -50,6 +50,14 @@ function renderList(ids: string[], seeded: Batch[]) {
   return { cache, ...rendered };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useFragmentList', () => {
   it('reads one entry per ref, in order', () => {
     const { result } = renderList(
@@ -66,7 +74,7 @@ describe('useFragmentList', () => {
       [batch('b1', 1), batch('b2', 2)],
     );
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify(key('b2')),
         fields: { batchNumber: () => 7 },
@@ -74,9 +82,8 @@ describe('useFragmentList', () => {
       await Promise.resolve();
     });
 
-    await waitFor(() =>
-      expect(result.current.map(b => b?.batchNumber)).toEqual([1, 7]),
-    );
+    await drainTimers();
+    expect(result.current.map(b => b?.batchNumber)).toEqual([1, 7]);
   });
 
   // Counted rather than dropped: the caller decides what an unreadable entry
@@ -95,12 +102,13 @@ describe('useFragmentList', () => {
       [batch('b1', 1), batch('b2', 2)],
     );
 
-    await act(async () => {
+    await drained(async () => {
       cache.evict({ id: cache.identify(key('b1')), fieldName: 'notes' });
       await Promise.resolve();
     });
 
-    await waitFor(() => expect(result.current[0]).toBeNull());
+    await drainTimers();
+    expect(result.current[0]).toBeNull();
     expect(result.current[1]?.batchNumber).toBe(2);
   });
 });

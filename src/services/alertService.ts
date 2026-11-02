@@ -6,6 +6,7 @@
 
 import { logger } from '#/utils/environment';
 import { t } from '#/i18n';
+import { noteTrouble } from '#/services/toastService';
 import type {
   AlertButton,
   AlertEntry,
@@ -23,6 +24,9 @@ class AlertService {
 
   /** No buttons means a single "OK". Without a presenter it is dropped. */
   alert(title: string, message?: string, buttons?: AlertButton[]) {
+    // An alert that only tells reports what went wrong: no rating request
+    // follows one soon. One that offers a choice is a question.
+    if (!buttons || buttons.length < 2) noteTrouble();
     const resolvedButtons: AlertButton[] =
       buttons && buttons.length > 0
         ? buttons

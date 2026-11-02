@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { CreateOutcome } from '#/graphql/generated/schemaTypes';
 import {
   inputOf,
@@ -8,6 +8,7 @@ import {
   type MockDataFor,
   type RecordedMock,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { useStore } from '#store';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
@@ -87,15 +88,23 @@ async function expectAddedAndPicked(
   name: string,
   { onChangeText, onStoreSelected }: ReturnType<typeof renderField>,
 ) {
-  await waitFor(() => expect(created.fired).toHaveLength(1));
+  await drainTimers();
+  expect(created.fired).toHaveLength(1);
   const [create] = created.fired;
   const id = String(inputOf(create ?? {}).id);
   expect(create).toEqual({ input: { id, name } });
-  await waitFor(() =>
-    expect(onStoreSelected).toHaveBeenLastCalledWith(id, name),
-  );
+  await drainTimers();
+  expect(onStoreSelected).toHaveBeenLastCalledWith(id, name);
   expect(onChangeText).toHaveBeenLastCalledWith(name);
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   created.fired.length = 0;
@@ -111,7 +120,8 @@ describe('StoreAutocompleteField', () => {
     const field = renderField('inline', searchFor('East End', found()));
 
     fireEvent.changeText(screen.getByTestId('store-field'), 'East End');
-    fireEvent.press(await screen.findByText('Add East End'));
+    await drainTimers();
+    fireEvent.press(screen.getByText('Add East End'));
 
     await expectAddedAndPicked('East End', field);
     expect(screen.queryByText('Corner Grocer')).toBeNull();
@@ -137,7 +147,8 @@ describe('StoreAutocompleteField', () => {
     );
 
     fireEvent.changeText(screen.getByTestId('store-field'), 'Fresh Market');
-    expect(await screen.findByText('Fresh Market East')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Fresh Market East')).toBeTruthy();
     expect(screen.queryByText('Fresh Market Express')).toBeNull();
     fireEvent.press(screen.getByText('Add Fresh Market'));
 
@@ -149,7 +160,8 @@ describe('StoreAutocompleteField', () => {
 
     fireEvent.changeText(screen.getByTestId('store-field'), 'east end');
 
-    expect(await screen.findByText('East End')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('East End')).toBeTruthy();
     expect(screen.queryByText(/^Add /)).toBeNull();
   });
 
@@ -166,7 +178,8 @@ describe('StoreAutocompleteField', () => {
     const field = renderField('inline', searchFor('Kroger', branch));
 
     fireEvent.changeText(screen.getByTestId('store-field'), 'Kroger');
-    fireEvent.press(await screen.findByText('Add Kroger'));
+    await drainTimers();
+    fireEvent.press(screen.getByText('Add Kroger'));
 
     await expectAddedAndPicked('Kroger', field);
   });
@@ -199,7 +212,8 @@ describe('StoreAutocompleteField', () => {
 
     fireEvent.changeText(screen.getByTestId('store-field'), 'Giant Eagle');
 
-    expect(await screen.findByText('7516 Meade St')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('7516 Meade St')).toBeTruthy();
     expect(screen.getByText('Store #1234')).toBeTruthy();
   });
 
@@ -208,7 +222,8 @@ describe('StoreAutocompleteField', () => {
 
     fireEvent.changeText(screen.getByTestId('store-field'), 'Corner Shop');
 
-    expect(await screen.findByText('Add Corner Shop')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Add Corner Shop')).toBeTruthy();
     expect(
       screen.queryByText('Type at least 2 characters to search'),
     ).toBeNull();
@@ -220,9 +235,11 @@ describe('StoreAutocompleteField', () => {
     const input = screen.getByTestId('store-field');
 
     fireEvent.changeText(input, 'Ea');
-    expect(await screen.findByText('Eastgate')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Eastgate')).toBeTruthy();
     fireEvent.changeText(input, 'East End');
-    await waitFor(() => expect(running.fired).toHaveLength(1));
+    await drainTimers();
+    expect(running.fired).toHaveLength(1);
 
     // The held rows stay while the new search runs, with no offer under them.
     expect(screen.getByText('Eastgate')).toBeTruthy();
@@ -233,7 +250,8 @@ describe('StoreAutocompleteField', () => {
     const field = renderField('modal', searchFor('East End', found()));
 
     fireEvent.changeText(screen.getByTestId('store-field'), 'East End');
-    const offer = await screen.findByText('Add East End');
+    await drainTimers();
+    const offer = screen.getByText('Add East End');
     expect(pickerVisible()).toBe(true);
     fireEvent.press(offer);
 

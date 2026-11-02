@@ -20,11 +20,11 @@ export const Divider: React.FC<DividerProps> = ({
   style,
   testID,
 }) => {
-  styles.useVariants({ orientation, inset });
+  const variantStyles = styles.useVariants({ orientation, inset });
   return (
     <View
       accessibilityRole="none"
-      style={[styles.rule, style]}
+      style={[variantStyles.rule, style]}
       testID={testID}
     />
   );

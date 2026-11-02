@@ -1,23 +1,16 @@
 /**
- * Local-first: the corrected count is written to the cache PERMANENTLY before
- * firing — an `optimisticResponse` rolls back on the offline queue's null
- * result. The server writes an ADJUSTMENT ledger row per adjust, so
- * `input.idempotencyKey` is what keeps a queued replay from double-counting.
+ * Local-first: the corrected count shows until the server answers. The server
+ * writes an ADJUSTMENT ledger row per adjust, so `input.idempotencyKey` is what
+ * keeps a queued replay from double-counting.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AdjustPantryItemQuantityDocument } from '#features/pantry/graphql/pantry.generated';
-import {
-  UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
-  type UseAdjustPantryItemQuantity_PantryItemFragment,
-} from './useAdjustPantryItemQuantity.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
+import type { SetStockInputs } from '#features/pantry/offline/localWrites';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
-import { enhanceWithVersion } from '#/apollo/utils/createOptimisticResponse';
 import { generateEntityId } from '#/utils/generateEntityId';
-import { errorService } from '#/services/errorService';
-import { writeHeldStock } from '#features/pantry/cache/stock';
 import { todayKey } from '#/utils/dateUtils';
 import type { RecountUnits } from '#features/pantry/types';
 
@@ -43,135 +36,42 @@ export function useAdjustPantryItemQuantity({
     remainingNetWeight?: number,
     units: RecountUnits = {},
   ): Promise<boolean> => {
-    const cacheId = client.cache.identify({
-      __typename: 'PantryItem',
-      id: pantryItemId,
-    });
-    const readItem = () =>
-      client.cache.readFragment<UseAdjustPantryItemQuantity_PantryItemFragment>(
-        {
-          id: cacheId,
-          fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
-          fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
-        },
-      );
-    const currentItem = readItem();
-
-    const writeItem = (data: UseAdjustPantryItemQuantity_PantryItemFragment) =>
-      client.cache.writeFragment({
-        id: cacheId,
-        fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
-        fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
-        data,
-      });
-
-    // Permanent optimistic write before firing — newQuantity is absolute (a
-    // physical recount), so set it directly. Persist it too so the exact value
-    // survives an app-kill before the queue replays. A figure stated in another
-    // unit is not written ahead: only the server converts it.
+    // A recount is absolute. A figure stated in another unit is not shown ahead:
+    // only the server converts it.
     const statedInOwnUnit = !units.newQuantityUnitId;
     const weightInOwnUnit = !units.remainingNetWeightUnitId;
-    // What the recount writes over the stack, and the stack as it was.
-    const ahead =
-      currentItem && statedInOwnUnit
-        ? {
-            before: currentItem,
-            written: enhanceWithVersion(currentItem, {
-              quantity: newQuantity,
-              heldQuantity: newQuantity,
-              ...(remainingNetWeight != null && weightInOwnUnit
-                ? { remainingNetWeight }
-                : {}),
-            }),
-          }
-        : null;
-    if (ahead) {
-      try {
-        writeItem(ahead.written);
-        writeHeldStock(client.cache, pantryItemId, newQuantity);
-      } catch (cacheError) {
-        errorService.reportError(cacheError, {
-          operation: 'Adjust Pantry Item Quantity (optimistic)',
-        });
-      }
-      optimisticDataPersistence.save(
-        'PantryItem',
-        pantryItemId,
-        'quantity',
-        newQuantity,
-      );
-      optimisticDataPersistence.save(
-        'PantryItem',
-        pantryItemId,
-        'heldQuantity',
-        newQuantity,
-      );
-    }
-
-    const clearPersisted = () => {
-      optimisticDataPersistence.clear('PantryItem', pantryItemId, 'quantity');
-      optimisticDataPersistence.clear(
-        'PantryItem',
-        pantryItemId,
-        'heldQuantity',
-      );
-    };
-
-    // A newer answer for the stack since (another member's use) replaced what
-    // this recount wrote, and stays.
-    const stillHolds = (
-      written: UseAdjustPantryItemQuantity_PantryItemFragment,
-    ) => {
-      const now = readItem();
-      return (
-        !!now &&
-        now.version === written.version &&
-        now.updatedAt === written.updatedAt &&
-        now.quantity === written.quantity
-      );
-    };
-    const revert = () => {
-      if (ahead && stillHolds(ahead.written)) {
-        try {
-          writeItem(ahead.before);
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert rejected pantry quantity adjust',
-          });
-        }
-      }
-      clearPersisted();
+    const inputs: SetStockInputs = {
+      now: new Date().toISOString(),
+      ...(statedInOwnUnit && { held: newQuantity }),
+      ...(statedInOwnUnit &&
+        weightInOwnUnit &&
+        remainingNetWeight != null && { remainingNetWeight }),
     };
 
     // idempotencyKey dedups the ADJUSTMENT ledger entry on replay. `version` is
     // the optimistic-concurrency check the server requires.
-    const settled = await settleMutation(
-      () =>
-        adjustMutation({
-          variables: {
-            today: todayKey(),
-            input: {
-              id: pantryItemId,
-              newQuantity,
-              reason,
-              idempotencyKey: generateEntityId(),
-              version,
-              ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
-              ...units,
-            },
-          },
-        }),
+    const settled = await pendingWritesOf(client.cache).send(
+      AdjustPantryItemQuantityDocument,
       {
-        document: AdjustPantryItemQuantityDocument,
-        fallback: t('errors.adjustQuantityFailed'),
-        onFailed: revert,
+        today: todayKey(),
+        input: {
+          id: pantryItemId,
+          newQuantity,
+          reason,
+          idempotencyKey: generateEntityId(),
+          version,
+          ...(remainingNetWeight != null ? { remainingNetWeight } : {}),
+          ...units,
+        },
       },
+      write =>
+        settleMutation(() => adjustMutation(write), {
+          document: AdjustPantryItemQuantityDocument,
+          fallback: t('errors.adjustQuantityFailed'),
+        }),
+      inputs,
     );
     if (settled.status === 'failed') return false;
-
-    // Applied: the response normalized the authoritative value. Queued: the
-    // persisted value stands until the replay lands.
-    if (settled.status === 'applied') clearPersisted();
     onSuccess?.();
     return true;
   };

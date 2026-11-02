@@ -112,7 +112,6 @@ const PantryMainInner: React.FC = () => {
 
   useTabScreenLifecycle({
     screenName: 'PantryMain',
-    optimisticTypes: ['PantryItem', 'PantryItemBatch'],
     telemetryProperties: () => ({
       home_id: screen.selectedHomeId,
       pantry_id: screen.pantry?.id,
@@ -384,6 +383,7 @@ function PantryMainContent({
         }
         isLoadingMore={screen.searchActive ? false : screen.isLoadingMore}
         hasMore={screen.searchActive ? false : screen.hasMore}
+        mayHoldMore={screen.mayHoldMore}
         refreshing={screen.isRefreshing}
         loading={screen.isLoadingInitial}
         itemsFailure={screen.itemsFailure}

@@ -5,6 +5,8 @@ import {
   TemplateCategory,
   type MealRefInput,
 } from '#/graphql/generated/schemaTypes';
+import { startingServings } from '#domain/servings';
+import { DEFAULT_PLAN_SERVINGS } from './createMealPlanFormConfig';
 
 /** The template itself. */
 export interface TemplateFormValues {
@@ -65,23 +67,25 @@ export const templateItemSchema: ObjectSchema<TemplateItemFormValues> = object({
 
 export const templateDefaults = (
   category: TemplateCategory,
+  cooksFor: number | null = null,
 ): TemplateFormValues => ({
   name: '',
   category,
-  defaultServings: '2',
+  defaultServings: String(startingServings(cooksFor, DEFAULT_PLAN_SERVINGS)),
   description: '',
   tags: '',
 });
 
 export const templateItemDefaults = (
   mealType: MealType,
+  cooksFor: number | null = null,
 ): TemplateItemFormValues => ({
   itemDay: '0',
   itemMealType: mealType,
   itemName: '',
   itemRecipeId: '',
   itemRecipeName: '',
-  itemServings: '2',
+  itemServings: String(startingServings(cooksFor, DEFAULT_PLAN_SERVINGS)),
 });
 
 /** `MealRefInput` is @oneOf: a saved recipe, else the custom name. */

@@ -1,6 +1,7 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   MeasurementRegionBasis,
   RecipeCaptureWarningCode,
@@ -35,6 +36,14 @@ const captureMock = () =>
       },
     },
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   useRecipeCaptureStore.getState().reset();
@@ -82,9 +91,8 @@ describe('CaptureReviewBanner', () => {
       onReview,
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId(recipesTestIDs.captureReview)).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByTestId(recipesTestIDs.captureReview)).toBeTruthy();
     expect(screen.getByText(/from the page's language/)).toBeTruthy();
     expect(
       screen.getByText(/A line the source doesn't contain was left out\./),
@@ -101,9 +109,8 @@ describe('CaptureReviewBanner', () => {
       { originalText: '2 scallions', item: { id: 'item-green-onion' } },
     ]);
 
-    await waitFor(() =>
-      expect(screen.getByTestId(recipesTestIDs.captureReview)).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByTestId(recipesTestIDs.captureReview)).toBeTruthy();
     expect(
       screen.queryByTestId(recipesTestIDs.captureReviewUnmatched),
     ).toBeNull();

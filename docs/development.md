@@ -173,7 +173,8 @@ npm run codegen
 Three steps run in order:
 
 1. `codegen:schema` — pulls the schema into `src/graphql/generated/schema.graphql`
-2. `graphql-codegen` — emits `*.generated.ts` next to each operation file
+2. `graphql-codegen` — emits `*.generated.ts` next to each operation file; one it no longer writes is deleted (`codegen.ts`'s
+   `beforeAllFileWrite` hook)
 3. `codegen:manifest` — regenerates `persisted-query-manifest.json`
 
 Generated files are **committed**. The pre-push hook re-runs codegen and fails
@@ -181,7 +182,6 @@ if your committed copies are stale.
 
 ```bash
 npm run codegen:watch          # regenerate on change while developing
-npm run check:codegen-orphans  # find .generated.ts files with no source .graphql
 ```
 
 `npm run lint` validates every `.graphql` operation against the pulled schema
@@ -337,6 +337,21 @@ code relies on.
   only makes the window likely, and a loaded CI runner closes it. A hand-built
   mock (top-level `errors`) is held with `holdMock(mock)`; a test that builds
   its own client takes `testMockLink(responses)`.
+- **A wait ends on its signal, never on elapsed time** (`fixedSleep`,
+  `realTimeWait`). Await the thing itself: the write's promise, `loadMore`,
+  `whenIdle()`. Where nothing can be awaited, or an absence is the claim,
+  `jest.useFakeTimers()` and `drainTimers()` (`__tests__/helpers/drainTimers.ts`)
+  run the clock until no timer is pending, at any answer delay, and a plain query
+  reads the result. `drained(start)` starts work whose answer needs the clock:
+  `await act(async () => { await work(); })` hangs there. `waitFor` and `findBy*`
+  are refused, as they owe a real timeout.
+- **A drain runs past what comes before the end.** A claim about a countdown, a
+  status that resets or a state before an answer holds the answer, or stops there
+  with `advanceTimersByTimeAsync`. So does a test about the window while a write
+  waits on a read: a drain passes the read fence's `MOST_WAITED_MS` (30 s), which
+  commits the write and skips the window, so the test passes without reaching it.
+- **A timer that re-arms never drains.** Mock `useToday`, give a mounted list
+  `reportInterval: 0`, and step a live poll to each answer.
 - **`seedCache(entries)`** — pre-writes entities into a fresh PRODUCTION cache
   (`makeCache()`, not a bare `InMemoryCache`) so hooks that call
   `useApolloClient().cache.readFragment(…)` find them, and find them through the
@@ -345,10 +360,15 @@ code relies on.
   returned cache as `{ cache }` to `renderHookWithApollo`.
   A nested collection of identified entities is stored as its own records and
   referenced, so a later write to a child reaches every reader of the parent.
-  **Prefer the checked form** — `seedCache([{ fragment: SomeDoc, data }])` —
-  which holds the seed to a REAL selection; the derived form builds its
-  selection from the fixture's own keys, so it can never be incomplete and
-  therefore cannot hold the seed to anything.
+  **Prefer the fragment form** — `seedCache([{ fragment: SomeDoc, data }])` —
+  which writes a REAL selection, completed from the SDL; the derived form
+  selects only the fixture's own keys, so a reader of any other field misses.
+- **`seedQuery(cache, …)` / `seedFragment(cache, …)`** — `cache.writeQuery` and
+  `writeFragment`, with `data` completed from the real SDL as a mock's is, so a
+  seed states only what the test asserts on and a field a query gains breaks no
+  test. A stated key stands even where the SDL lacks it, and a type the SDL does
+  not know is written as stated. A raw write in a test is an error
+  (`rawCacheSeed`).
 - **Pick ONE mocking strategy.** `operationMocks` and `mocks`/`resolvers` are
   mutually exclusive by type, because combined, the second is discarded in
   silence and a suite runs its hook on defaults with every test passing.
@@ -358,6 +378,11 @@ code relies on.
   served, so state only what you assert on. A field written as `undefined` is
   served ABSENT, and a field the operation does not select is an error — a
   fixture the schema cannot produce is a test of a system that does not exist.
+- **A row stated in two answers is one row.** What a fixture leaves unstated
+  under a stated id is named by its place in that row, so a list and a read by
+  id agree on the plan's author, as a server's answers do. `MockLink` delays each
+  answer by a random 20–49 ms, so a test of the order two answers land in holds
+  one with `held: true` rather than relying on the order they were sent.
 - **`partial: true` on a `recordMock`** is the only opt-out from schema
   completion, and it excuses exactly the `(type, field)` pairs that mock's
   payload omits. Use it only when the omission IS the subject.
@@ -455,13 +480,7 @@ a leaf — moving it back into the composite keeps the count unchanged and would
 otherwise pass; and separately again, the `'use no memo'` opt-out list.
 `scripts/check-compiler-bailouts.baseline.json` does not exist, and a missing
 baseline makes each of the three an INVARIANT (`baselineFile` in
-`scripts/lib/tooling.mjs`): no file may bail, and needing the directive means the
-Babel plugin order has regressed.
-
-`check-unistyles-variant-staleness` compiles each file to find a style read
-frozen at its first-render value — a defect neither ESLint nor tsc can see,
-because it exists only in the output of two Babel plugins composed in a
-particular order. Its baseline lists no files.
+`scripts/lib/tooling.mjs`): no file may bail, and none may opt out.
 
 **Why `check:version-sync` is a pre-commit hook and not a habit:** it compares
 `package.json`, `versionName`, and **each** `MARKETING_VERSION` in the
@@ -478,17 +497,16 @@ The whole-tree gates, and where each runs:
 | Gate                                | Holds                                                                                                                                                                                                                              | Runs in               |
 | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
 | `check-i18n`                        | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged                                                                                                                                                        | pre-commit, CI        |
-| `check-codegen-orphans`             | no `.generated.ts` without its `.graphql` source (they break `tsc`)                                                                                                                                                                | pre-commit, CI        |
 | `check-version-sync`                | `package.json`, `versionName` and every `MARKETING_VERSION` agree                                                                                                                                                                  | pre-commit, CI        |
 | `check-startup-origin`              | the startup clock is the first module Metro's output evaluates                                                                                                                                                                     | pre-commit, CI        |
 | `check-launch-arg-auth`             | no distributable build accepts an injected session                                                                                                                                                                                 | pre-commit, CI, build |
 | `check-compiler-bailouts`           | no component silently skips React Compiler compilation                                                                                                                                                                             | pre-push, CI          |
-| `check-unistyles-variant-staleness` | no `useVariants` read frozen at its first-render value                                                                                                                                                                             | pre-push, CI          |
 | `check:dead-modules` (knip)         | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal`                                        | pre-push, CI          |
 | `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped                                                                                                                                                    | pre-push, CI          |
 | `find-stale-cache-fields`           | every mutation returns what the queries read on each entity it returns and on the collection it moves (via the generated `<Type>Readers`); the readers files are current; API-blocked pairs expire when the schema gains the field | CI                    |
 | `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                                                                                                                                                                     | build                 |
 | `check-build-provenance`            | the build identity in `env.generated.ts` is the one CI intended                                                                                                                                                                    | build                 |
+| `release-check`                     | a release's operations validate against every schema production serves, and the app compiles against each                                                                                                                         | store build           |
 
 Everything else that used to be a script — the data-layer boundary, the
 canonical mechanisms, the token, typography and tier rules — is either a
@@ -539,14 +557,14 @@ only. Detection does not depend on either.
 
 ### Git hooks (installed by husky on `npm install`)
 
-| Hook           | Runs                                                                                                                                                                                                                                                                                               |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **pre-commit** | `lint-staged --no-revert` — ESLint + Prettier + related Jest tests on staged files; a failed task never resets the shared tree — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-codegen-orphans`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
-| **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required                                                                                                                                                                                                                 |
-| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:unistyles-variants`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                                              |
+| Hook           | Runs                                                                                                                                                                                                                                                                      |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **pre-commit** | `lint-staged --no-revert` — ESLint + Prettier + related Jest tests on staged files; a failed task never resets the shared tree — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
+| **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required                                                                                                                                                                                        |
+| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                     |
 
 The split is by cost. The five sub-second checks run per commit so a broken
-locale key or a version drift surfaces at the commit that caused it. The five
+locale key or a version drift surfaces at the commit that caused it. The four
 expensive ones are independent, so pre-push runs them at the same time, each
 into its own log so the output does not interleave.
 
@@ -606,14 +624,13 @@ Pipelines, environments, and secrets: [`CI_CD.md`](CI_CD.md) and
 
 **Codegen**
 
-| Command                 | Description                                          |
-| ----------------------- | ---------------------------------------------------- |
-| `codegen`               | Schema pull + types + persisted query manifest       |
-| `codegen:schema`        | Schema pull only                                     |
-| `codegen:manifest`      | Persisted query manifest only                        |
-| `codegen:watch`         | Regenerate on change                                 |
-| `check:codegen-orphans` | Orphaned `.generated.ts` files                       |
-| `genenv`                | Regenerate `src/config/env.generated.ts` from `.env` |
+| Command            | Description                                          |
+| ------------------ | ---------------------------------------------------- |
+| `codegen`          | Schema pull + types + persisted query manifest       |
+| `codegen:schema`   | Schema pull only                                     |
+| `codegen:manifest` | Persisted query manifest only                        |
+| `codegen:watch`    | Regenerate on change                                 |
+| `genenv`           | Regenerate `src/config/env.generated.ts` from `.env` |
 
 **Quality**
 

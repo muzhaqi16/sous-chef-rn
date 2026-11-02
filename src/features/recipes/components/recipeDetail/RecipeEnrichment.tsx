@@ -44,7 +44,6 @@ interface RecipeEnrichmentProps {
   tips?: string;
   videoUrl?: string;
   forkedFromName?: string;
-  originalAuthor?: string;
   tags?: string[];
   status?: RecipeStatus;
   reviewNote?: string;
@@ -58,7 +57,6 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
   tips,
   videoUrl,
   forkedFromName,
-  originalAuthor,
   tags,
   status,
   reviewNote,
@@ -125,22 +123,14 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
         </View>
       )}
 
-      {/* Attribution / provenance */}
-      {(!!forkedFromName || !!originalAuthor || !!videoUrl) && (
+      {/* Provenance */}
+      {(!!forkedFromName || !!videoUrl) && (
         <View style={styles.metaColumn}>
           {!!forkedFromName && (
             <View style={styles.metaLine}>
               <Icon name="git-branch-outline" size={14} tone="textSecondary" />
               <Text role="caption" tone="secondary" style={styles.metaText}>
                 {t('recipes.forkedFrom', { name: forkedFromName })}
-              </Text>
-            </View>
-          )}
-          {!!originalAuthor && (
-            <View style={styles.metaLine}>
-              <Icon name="person-outline" size={14} tone="textSecondary" />
-              <Text role="caption" tone="secondary" style={styles.metaText}>
-                {t('recipes.byAuthor', { author: originalAuthor })}
               </Text>
             </View>
           )}

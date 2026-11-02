@@ -3,12 +3,13 @@ import { storage } from '#/store/deviceStorage';
 import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
-import { deletesItsSubject, queuedSubject } from './queuedSubject';
+import { deletesItsSubject, holdsBack, queuedSubject } from './queuedSubject';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { isOwnKey } from '#/utils/isOwnKey';
 import { isRecord } from '#/utils/isRecord';
+import type { PendingWrite } from '#/apollo/pendingWrites/types';
 
 const QUEUE_STORAGE_KEY = 'apollo-mutation-queue';
 const CURRENT_USER_KEY = 'apollo-queue-current-user';
@@ -16,7 +17,7 @@ const CURRENT_USER_KEY = 'apollo-queue-current-user';
 // Hard cap on total queued mutations across all users. When reached, terminal
 // (SUCCESS/FAILED) entries are evicted first; a queue full of un-synced work
 // rejects the enqueue rather than dropping a PENDING op mid dependency chain.
-const MAX_QUEUE_SIZE = 100;
+const MAX_QUEUE_SIZE = 500;
 
 const MOVE_SHOPPING_LIST_ITEM = operationNameOf(MoveShoppingListItemDocument);
 
@@ -40,11 +41,38 @@ function isTerminal(status: QueueStatus): boolean {
 }
 
 // The server prunes its idempotency-dedup records after 90 days, so a replay
-// past that horizon double-applies instead of classifying as IDEMPOTENT_REPLAY.
+// past that horizon double-applies instead of converging.
 // PENDING entries older than this are marked FAILED rather than replayed.
 const MAX_PENDING_AGE_MS = 90 * 24 * 60 * 60 * 1000;
 
+/** Past the server's dedup horizon, where a send can apply a second time. */
+export const isPastSyncWindow = ({
+  agedFrom,
+  createdAt,
+}: Pick<QueuedMutation, 'agedFrom' | 'createdAt'>): boolean =>
+  (agedFrom ?? createdAt) <= Date.now() - MAX_PENDING_AGE_MS;
+
 type StoredEntry = Omit<QueuedMutation, 'mutation'>;
+
+/** What the server has not taken: pending, replaying, or parked for re-auth. */
+const UNDELIVERED: readonly QueueStatus[] = [
+  QueueStatus.PENDING,
+  QueueStatus.PROCESSING,
+  QueueStatus.AUTH_ERROR,
+];
+
+const pendingWriteOf = ({
+  pendingWrite,
+  operationName,
+  mutation,
+  variables,
+}: QueuedMutation): PendingWrite[] =>
+  pendingWrite
+    ? [{ ...pendingWrite, operationName, document: mutation, variables }]
+    : [];
+
+/** The memoized id sets the queue derives; any queue change drops them all. */
+type IdSet = 'pending' | 'unconfirmed' | 'undelivered';
 
 /** Entries without their documents: each is sent as this build's document. */
 interface QueueBlob {
@@ -73,11 +101,14 @@ export class QueueStore {
   private cache: QueuedMutation[] | null = null;
 
   // Mirror of CURRENT_USER_KEY (undefined = not yet read) plus the memoized
-  // pending-ids set. getPendingClientIds() runs on EVERY itemsConnection merge
-  // (cache.ts), so without these each write costs an MMKV read and a rebuild.
+  // id sets. The connection merge and the queue link read them on every
+  // write, so without these each costs an MMKV read and a rebuild.
   private currentUserId: string | null | undefined = undefined;
-  private pendingClientIds: Set<string> | null = null;
-  private unconfirmedCreateIds: Set<string> | null = null;
+  private idSets = new Map<IdSet, Set<string>>();
+  private refused: QueuedMutation[] | null = null;
+  private lastRefused: QueuedMutation[] = [];
+  /** Entries a send in this run still holds, which a drain must leave alone. */
+  private sending = new Set<string>();
 
   // Lets UI read live queue state (the offline banner's pending count) through
   // useSyncExternalStore instead of polling MMKV.
@@ -146,8 +177,8 @@ export class QueueStore {
     } catch (error) {
       logger.error('Failed to save queue to storage:', error);
     }
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
+    this.refused = null;
     this.notifyListeners();
   }
 
@@ -163,8 +194,8 @@ export class QueueStore {
       storage.set(CURRENT_USER_KEY, userId);
     }
     this.currentUserId = userId;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
+    this.refused = null;
     // The pending count is user-scoped, so a user switch changes it even
     // though the queue contents didn't.
     this.notifyListeners();
@@ -173,8 +204,8 @@ export class QueueStore {
   clearCurrentUserId(): void {
     storage.remove(CURRENT_USER_KEY);
     this.currentUserId = null;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
+    this.refused = null;
     this.notifyListeners();
   }
 
@@ -226,7 +257,11 @@ export class QueueStore {
     // Never drop a PENDING op: it would break a create→update chain. Evict a
     // reconciled entry first; an AUTH_ERROR still has its change on screen, so
     // it goes only when nothing else can. With none terminal, enqueue refuses.
-    if (queue.length >= MAX_QUEUE_SIZE) {
+    const held = queue.filter(m => m.status !== QueueStatus.REFUSED);
+    if (
+      mutation.status !== QueueStatus.REFUSED &&
+      held.length >= MAX_QUEUE_SIZE
+    ) {
       const reconciled = (m: QueuedMutation): boolean =>
         m.status === QueueStatus.SUCCESS || m.status === QueueStatus.FAILED;
       const preferred = queue.findIndex(reconciled);
@@ -355,7 +390,13 @@ export class QueueStore {
     const queue = this.loadQueue();
     let reset = 0;
     const updated = queue.map(m => {
-      if (m.userId !== userId || m.status !== QueueStatus.PROCESSING) return m;
+      if (
+        m.userId !== userId ||
+        m.status !== QueueStatus.PROCESSING ||
+        this.sending.has(m.id)
+      ) {
+        return m;
+      }
       reset++;
       return { ...m, status: QueueStatus.PENDING, updatedAt: Date.now() };
     });
@@ -379,13 +420,12 @@ export class QueueStore {
   ): Array<QueuedMutation & { lastError: QueueError }> {
     const queue = this.loadQueue();
     const now = Date.now();
-    const cutoff = now - MAX_PENDING_AGE_MS;
     const expired: Array<QueuedMutation & { lastError: QueueError }> = [];
     const updated = queue.map(m => {
       if (
         m.userId !== userId ||
         m.status !== QueueStatus.PENDING ||
-        (m.agedFrom ?? m.createdAt) > cutoff
+        !isPastSyncWindow(m)
       ) {
         return m;
       }
@@ -421,17 +461,11 @@ export class QueueStore {
    * Client ids with a still-PENDING mutation; empty when no user is set.
    */
   getPendingClientIds(): Set<string> {
-    if (this.pendingClientIds) return this.pendingClientIds;
-
-    const ids = new Set<string>();
-    const userId = this.getCurrentUserId();
-    if (userId) {
-      for (const mutation of this.getPendingMutationsForUser(userId)) {
-        for (const id of queuedSubject(mutation).subjectIds) ids.add(id);
-      }
-    }
-    this.pendingClientIds = ids;
-    return ids;
+    return this.idsOf(
+      'pending',
+      [QueueStatus.PENDING],
+      m => queuedSubject(m).subjectIds,
+    );
   }
 
   /**
@@ -440,20 +474,59 @@ export class QueueStore {
    * the server owns, and counting it pins it into lists it left.
    */
   getUnconfirmedCreateIds(): Set<string> {
-    if (this.unconfirmedCreateIds) return this.unconfirmedCreateIds;
+    return this.idsOf(
+      'unconfirmed',
+      [QueueStatus.PENDING, QueueStatus.PROCESSING],
+      m => queuedSubject(m).mintedIds,
+    );
+  }
+
+  /** The pending writes the server has not taken, in the order they replay. */
+  getPendingWrites(): PendingWrite[] {
+    const userId = this.getCurrentUserId();
+    if (!userId) return [];
+    return this.getMutationsForUser(userId)
+      .filter(({ status }) => UNDELIVERED.includes(status))
+      .sort((a, b) => a.createdAt - b.createdAt)
+      .flatMap(pendingWriteOf);
+  }
+
+  /** The ids of the pending writes the queue carries, whatever their status. */
+  getQueuedWriteIds(): Set<string> {
+    return new Set(
+      this.loadQueue().flatMap(({ pendingWrite }) =>
+        pendingWrite ? [pendingWrite.id] : [],
+      ),
+    );
+  }
+
+  /**
+   * What a write the server has not taken yet holds back: pending, replaying,
+   * or parked for re-auth. A later write naming one waits behind it, as the
+   * drain holds a dependent.
+   */
+  getUndeliveredIds(): Set<string> {
+    return this.idsOf('undelivered', UNDELIVERED, holdsBack);
+  }
+
+  private idsOf(
+    set: IdSet,
+    statuses: readonly QueueStatus[],
+    pick: (mutation: QueuedMutation) => readonly string[],
+  ): Set<string> {
+    const known = this.idSets.get(set);
+    if (known) return known;
 
     const ids = new Set<string>();
     const userId = this.getCurrentUserId();
     if (userId) {
-      const unconfirmed = [
-        ...this.getMutationsForUser(userId, QueueStatus.PENDING),
-        ...this.getMutationsForUser(userId, QueueStatus.PROCESSING),
-      ];
-      for (const mutation of unconfirmed) {
-        for (const id of queuedSubject(mutation).mintedIds) ids.add(id);
+      for (const status of statuses) {
+        for (const mutation of this.getMutationsForUser(userId, status)) {
+          for (const id of pick(mutation)) ids.add(id);
+        }
       }
     }
-    this.unconfirmedCreateIds = ids;
+    this.idSets.set(set, ids);
     return ids;
   }
 
@@ -483,8 +556,8 @@ export class QueueStore {
   clearAllQueues(): void {
     storage.remove(QUEUE_STORAGE_KEY);
     this.cache = null;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
+    this.refused = null;
     logger.debug('🧹 Queue: Cleared all mutations');
     this.notifyListeners();
   }
@@ -530,6 +603,136 @@ export class QueueStore {
       // failure lives in the queue forever.
       processedAt: Date.now(),
     });
+  }
+
+  /**
+   * Saves a write before it goes out, so a killed app replays it. False when it
+   * could not be saved: the write still goes, with nothing to bring it back.
+   */
+  journal(mutation: QueuedMutation): boolean {
+    try {
+      this.addMutation({ ...mutation, status: QueueStatus.PROCESSING });
+    } catch (error) {
+      if (!(error instanceof QueueCapacityError)) throw error;
+      return false;
+    }
+    if (!this.getMutation(mutation.id)) return false;
+    this.sending.add(mutation.id);
+    return true;
+  }
+
+  /** The server answered a write sent from {@link journal}. */
+  answered(mutationId: string): void {
+    this.sending.delete(mutationId);
+    this.removeMutation(mutationId);
+  }
+
+  /** A write sent from {@link journal} got no answer: the drain carries it now. */
+  handBack(mutationId: string): void {
+    this.sending.delete(mutationId);
+    this.updateMutation(mutationId, { status: QueueStatus.PENDING });
+  }
+
+  /** Kept for the person; `heldBy` is the refused entry whose row it needs. */
+  markRefused(
+    mutationId: string,
+    error: QueuedMutation['lastError'],
+    kept: { resource?: string; heldBy?: string } = {},
+  ): boolean {
+    return this.updateMutation(mutationId, {
+      status: QueueStatus.REFUSED,
+      lastError: error,
+      processedAt: Date.now(),
+      ...(kept.resource && { refusedResource: kept.resource }),
+      ...(kept.heldBy && { heldBy: kept.heldBy }),
+    });
+  }
+
+  /**
+   * The changes the person can act on, oldest first; a follower goes with its
+   * parent. One array until the queue changes, for `useSyncExternalStore`.
+   */
+  getRefused(): QueuedMutation[] {
+    if (this.refused) return this.refused;
+    const refused = this.getMutationsForUser(
+      this.getCurrentUserId() ?? '',
+      QueueStatus.REFUSED,
+    )
+      .filter(m => !m.heldBy)
+      .sort((a, b) => a.createdAt - b.createdAt);
+    // Every write online changes the queue twice; the list rarely changes.
+    const unchanged =
+      this.lastRefused.length === refused.length &&
+      refused.every((m, index) => m === this.lastRefused[index]);
+    this.refused = unchanged ? this.lastRefused : refused;
+    this.lastRefused = this.refused;
+    return this.refused;
+  }
+
+  /** Every refused entry, as a sign-out would lose it. */
+  getRefusedCount(): number {
+    const userId = this.getCurrentUserId();
+    if (!userId) return 0;
+    return this.getMutationsForUser(userId, QueueStatus.REFUSED).length;
+  }
+
+  /** The id each refused create minted, to the entry that holds it. */
+  getRefusedRows(userId: string): Map<string, string> {
+    const rows = new Map<string, string>();
+    for (const m of this.getMutationsForUser(userId, QueueStatus.REFUSED)) {
+      for (const id of queuedSubject(m).mintedIds) {
+        rows.set(id, m.heldBy ?? m.id);
+      }
+    }
+    return rows;
+  }
+
+  /** A refused entry and the entries following it, oldest first. */
+  private refusedWith(id: string): QueuedMutation[] {
+    return this.loadQueue()
+      .filter(
+        m =>
+          m.status === QueueStatus.REFUSED && (m.id === id || m.heldBy === id),
+      )
+      .sort((a, b) => a.createdAt - b.createdAt);
+  }
+
+  /**
+   * Back to the queue with its followers, newest, as the person's latest word
+   * on the row, and as old as it was: a retry does not renew the server's dedup
+   * record. Returns the layers to show again.
+   */
+  reopen(id: string): PendingWrite[] {
+    const reopened = this.refusedWith(id);
+    const order = new Map(reopened.map((m, index) => [m.id, index]));
+    const now = Date.now();
+    this.saveQueue(
+      this.loadQueue().map(m => {
+        const place = order.get(m.id);
+        if (place === undefined) return m;
+        return {
+          ...m,
+          status: QueueStatus.PENDING,
+          createdAt: now + place,
+          updatedAt: now,
+          retryCount: 0,
+          conflictResends: 0,
+          overwrites: true,
+          agedFrom: m.agedFrom ?? m.createdAt,
+          faults: undefined,
+          lastError: undefined,
+          processedAt: undefined,
+          heldBy: undefined,
+        };
+      }),
+    );
+    return reopened.flatMap(pendingWriteOf);
+  }
+
+  /** Gone with its followers, none of them sent. */
+  discard(id: string): void {
+    const ids = new Set(this.refusedWith(id).map(m => m.id));
+    this.saveQueue(this.loadQueue().filter(m => !ids.has(m.id)));
   }
 
   incrementRetry(mutationId: string): boolean {
@@ -598,8 +801,9 @@ export class QueueStore {
 
   invalidateCache(): void {
     this.cache = null;
-    this.pendingClientIds = null;
-    this.unconfirmedCreateIds = null;
+    this.idSets.clear();
+    this.refused = null;
+    this.sending.clear();
     this.currentUserId = undefined;
     // A pending-write badge reads through the cache; it must re-read now.
     this.notifyListeners();

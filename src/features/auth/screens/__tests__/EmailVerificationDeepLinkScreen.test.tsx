@@ -1,7 +1,8 @@
 import React from 'react';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { VerifyEmailDocument } from '#operations/auth/auth.generated';
 import { SignedInEmailVerificationDocument } from '#features/auth/hooks/useVerifyEmail.generated';
 import { UserRole, AppTheme, ErrorCode } from '#/graphql/generated/schemaTypes';
@@ -133,6 +134,14 @@ function buildVerifyMock(
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('EmailVerificationDeepLinkScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -159,10 +168,9 @@ describe('EmailVerificationDeepLinkScreen', () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock(recordedVariables)],
     });
-    await waitFor(() => {
-      expect(recordedVariables).toContainEqual({
-        input: { code: 'abc123def456' },
-      });
+    await drainTimers();
+    expect(recordedVariables).toContainEqual({
+      input: { code: 'abc123def456' },
     });
   });
 
@@ -179,20 +187,18 @@ describe('EmailVerificationDeepLinkScreen', () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock()],
     });
-    await waitFor(() => {
-      expect(screen.getByText('Email Verified!')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
   });
 
   it('updates user after successful verification', async () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock()],
     });
-    await waitFor(() => {
-      expect(mockUpdateUser).toHaveBeenCalledWith(
-        expect.objectContaining({ emailVerified: true }),
-      );
-    });
+    await drainTimers();
+    expect(mockUpdateUser).toHaveBeenCalledWith(
+      expect.objectContaining({ emailVerified: true }),
+    );
   });
 
   it('spends the token exactly once even as the stored user changes identity', async () => {
@@ -208,9 +214,8 @@ describe('EmailVerificationDeepLinkScreen', () => {
       operationMocks: [buildVerifyMock(recordedVariables)],
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Email Verified!')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
 
     rerender(<EmailVerificationDeepLinkScreen />);
     rerender(<EmailVerificationDeepLinkScreen />);
@@ -225,9 +230,8 @@ describe('EmailVerificationDeepLinkScreen', () => {
       operationMocks: [buildVerifyMock([], 'account-b')],
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Email Verified!')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
@@ -259,9 +263,8 @@ describe('EmailVerificationDeepLinkScreen', () => {
       operationMocks: [alreadyVerifiedMock, signedInVerificationMock(true)],
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Email Verified!')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
     expect(mockUpdateUser).toHaveBeenCalledWith({ emailVerified: true });
   });
 
@@ -270,9 +273,8 @@ describe('EmailVerificationDeepLinkScreen', () => {
       operationMocks: [alreadyVerifiedMock, signedInVerificationMock(false)],
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Email Verified!')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
     expect(mockUpdateUser).not.toHaveBeenCalled();
   });
 
@@ -280,14 +282,12 @@ describe('EmailVerificationDeepLinkScreen', () => {
     // The root navigator re-derives its target from `emailVerified`, but this
     // screen lives in the always-mounted deep-link group and would otherwise
     // stay on top of the destination it just unlocked.
-    jest.useFakeTimers();
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock()],
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Email Verified!')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
     // Signed in, so the next step is the app — not the sign-in hand-off.
     expect(screen.queryByTestId('email-verified-sign-in')).toBeNull();
 
@@ -296,18 +296,15 @@ describe('EmailVerificationDeepLinkScreen', () => {
     });
     expect(mockGoBack).toHaveBeenCalled();
     expect(mockNavigateToLogin).not.toHaveBeenCalled();
-    jest.useRealTimers();
   });
 
   it('cancels the hand-off when the screen is closed first', async () => {
-    jest.useFakeTimers();
     const { unmount } = renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock()],
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Email Verified!')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Email Verified!')).toBeTruthy();
 
     unmount();
     mockGoBack.mockClear();
@@ -316,14 +313,12 @@ describe('EmailVerificationDeepLinkScreen', () => {
     });
 
     expect(mockGoBack).not.toHaveBeenCalled();
-    jest.useRealTimers();
   });
 });
 
 describe('EmailVerificationDeepLinkScreen - no session', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    jest.useFakeTimers();
     const { useRoute } = require('@react-navigation/native');
     (useRoute as jest.Mock).mockReturnValue({
       params: { token: 'abc123def456' },
@@ -335,18 +330,13 @@ describe('EmailVerificationDeepLinkScreen - no session', () => {
     (useUserId as jest.Mock).mockReturnValue(undefined);
   });
 
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('hands off to sign-in, since verifying opens no session', async () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />, {
       operationMocks: [buildVerifyMock()],
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('email-verified-sign-in')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByTestId('email-verified-sign-in')).toBeTruthy();
     expect(
       screen.getByText(
         /Your account is active — sign in with the password it already has\./,
@@ -377,16 +367,14 @@ describe('EmailVerificationDeepLinkScreen - no token', () => {
 
   it('shows error state when token is missing', async () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />);
-    await waitFor(() => {
-      expect(screen.getByText('Verification Failed')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Verification Failed')).toBeTruthy();
   });
 
   it('shows Try Again button when token is missing', async () => {
     renderWithApollo(<EmailVerificationDeepLinkScreen />);
-    await waitFor(() => {
-      expect(screen.getByText('Try Again')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Try Again')).toBeTruthy();
   });
 });
 
@@ -427,12 +415,12 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
       operationMocks: [first.mock, retry.mock],
     });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('verification-retry')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByTestId('verification-retry')).toBeTruthy();
 
     await user.press(screen.getByTestId('verification-retry'));
-    await waitFor(() => expect(retry.fired).toHaveLength(1));
+    await drainTimers();
+    expect(retry.fired).toHaveLength(1);
 
     // While the retry is in flight: still the failure state — no full-page loader, no lost error message.
     expect(screen.getByText('Verification Failed')).toBeTruthy();
@@ -464,9 +452,8 @@ describe('EmailVerificationDeepLinkScreen - retry', () => {
       ],
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Verification Failed')).toBeTruthy();
-    });
+    await drainTimers();
+    expect(screen.getByText('Verification Failed')).toBeTruthy();
     expect(screen.queryByText('SERVER PROSE')).toBeNull();
     expect(
       screen.getAllByText(

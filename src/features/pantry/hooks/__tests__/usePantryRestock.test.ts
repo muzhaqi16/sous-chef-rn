@@ -1,10 +1,13 @@
 import { act } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreatePantryItemDocument,
@@ -42,7 +45,7 @@ type Row = {
 
 function cacheWithRow(held = 3) {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: ROW,
     data: {
       __typename: 'PantryItem',
@@ -62,6 +65,7 @@ function cacheWithRow(held = 3) {
 
 const readRow = (cache: ReturnType<typeof makeCache>) =>
   cache.readFragment<Row>({
+    optimistic: true,
     id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
     fragment: ROW,
   });
@@ -83,7 +87,6 @@ const refusedRestock = (
       restockPantryItem: {
         __typename: 'ValidationError',
         code,
-        message: 'nope',
         field,
       },
     },
@@ -164,9 +167,11 @@ describe('usePantryRestock', () => {
         present: 'none',
       });
     });
+    pendingWritesOf(cache).rebuild();
 
     expect(
       cache.readFragment({
+        optimistic: true,
         id: cache.identify({ __typename: 'PantryItem', id: ROW_ID }),
         fragment: gql`
           fragment _PantryRestockAnswer on PantryItem {
@@ -244,7 +249,7 @@ describe('usePantryRestock', () => {
     it('restocks a counted stack by the count, in its unit', async () => {
       // The row's unit (bag) is counted.
       const cache = cacheWithRow(3);
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id: 'unit-bag' }),
         fragment: gql`
           fragment _CountedBag on Unit {
@@ -275,7 +280,7 @@ describe('usePantryRestock', () => {
     it('restocks the stack it names by packages nothing sizes, for the server to size', async () => {
       // An add would name no stack, and could land on another one.
       const create = recordMock(CreatePantryItemDocument, {
-        data: { createPantryItem: null },
+        data: {},
       });
       const restock = queuedRestock();
       const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
@@ -325,7 +330,7 @@ describe('usePantryRestock', () => {
     it('adds a count in a unit the stack is not counted in', async () => {
       // The row's unit (bag) is counted; the buyer counted boxes.
       const cache = cacheWithRow(3);
-      cache.writeFragment({
+      seedFragment(cache, {
         id: cache.identify({ __typename: 'Unit', id: 'unit-bag' }),
         fragment: gql`
           fragment _CountedBagOther on Unit {
@@ -336,7 +341,7 @@ describe('usePantryRestock', () => {
         data: { __typename: 'Unit', id: 'unit-bag', type: 'COUNT' },
       });
       const create = recordMock(CreatePantryItemDocument, {
-        data: { createPantryItem: null },
+        data: {},
       });
       const restock = queuedRestock();
       const { result } = renderHookWithApollo(() => usePantryRestock('p-1'), {
@@ -382,18 +387,15 @@ describe('usePantryRestock', () => {
   describe('the batches the server builds', () => {
     const cacheWithBatches = () => {
       const cache = cacheWithRow();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: ROW_ID },
         data: {
           __typename: 'Query',
           pantryItemBatchesConnection: {
             __typename: 'PantryItemBatchConnection',
-            totalCount: 0,
             pageInfo: {
               __typename: 'PageInfo',
-              hasNextPage: false,
-              endCursor: null,
             },
             edges: [],
           },
@@ -403,6 +405,7 @@ describe('usePantryRestock', () => {
     };
     const readBatches = (cache: ReturnType<typeof makeCache>) =>
       cache.readQuery({
+        optimistic: true,
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: ROW_ID },
       });

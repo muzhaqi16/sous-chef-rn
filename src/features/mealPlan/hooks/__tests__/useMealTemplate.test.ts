@@ -1,10 +1,12 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetMealTemplateDocument,
   GetMealTemplateForEditDocument,
@@ -52,14 +54,21 @@ async function loadTemplate() {
     operationMocks: [get.mock],
     cache,
   });
-  await waitFor(() =>
-    expect(rendered.result.current.groupedByDay).toHaveLength(2),
-  );
+  await drainTimers();
+  expect(rendered.result.current.groupedByDay).toHaveLength(2);
   return { cache, get, ...rendered };
 }
 
 const daysOf = (groups: { dayOffset: number; items: { id: string }[] }[]) =>
   groups.map(g => [g.dayOffset, g.items.map(i => i.id)]);
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useMealTemplate', () => {
   it('groups the items by day', async () => {
@@ -98,13 +107,12 @@ describe('useMealTemplate', () => {
       cache: makeCache(),
     });
 
-    await waitFor(() =>
-      expect(daysOf(result.current.groupedByDay)).toEqual([
-        [0, ['i1']],
-        [1, ['i2', 'i3']],
-        [2, ['i4']],
-      ]),
-    );
+    await drainTimers();
+    expect(daysOf(result.current.groupedByDay)).toEqual([
+      [0, ['i1']],
+      [1, ['i2', 'i3']],
+      [2, ['i4']],
+    ]);
     expect(second.fired).toEqual([
       { id: 't1', itemsFirst: MEALS_PAGE_SIZE, itemsAfter: 'cursor-2' },
     ]);
@@ -129,18 +137,15 @@ describe('useMealTemplate', () => {
   it('regroups an item moved to another day', async () => {
     const { cache, result } = await loadTemplate();
 
-    await act(async () => {
-      cache.writeFragment({
+    await drained(async () => {
+      seedFragment(cache, {
         fragment: MealTemplateItemFragmentDoc,
         fragmentName: 'MealTemplateItemFragment',
         data: item('i2', 0),
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect(daysOf(result.current.groupedByDay)).toEqual([[0, ['i1', 'i2']]]),
-    );
+    expect(daysOf(result.current.groupedByDay)).toEqual([[0, ['i1', 'i2']]]);
   });
 });
 
@@ -175,7 +180,8 @@ describe('useMealTemplateForEdit', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.items).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.items).toHaveLength(2);
     expect(result.current.template?.name).toBe('Week A');
     expect(result.current.items.map(meal => [meal.id, meal.dayOffset])).toEqual(
       [
@@ -184,6 +190,42 @@ describe('useMealTemplateForEdit', () => {
       ],
     );
     expect(get.fired).toEqual([{ id: 't2', itemsFirst: MEALS_PAGE_SIZE }]);
+  });
+
+  it('reports a read that failed with nothing held', async () => {
+    const failed = recordMock(GetMealTemplateForEditDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useMealTemplateForEdit('t2'),
+      { operationMocks: [failed.mock], cache: makeCache() },
+    );
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+    expect(result.current.template).toBeUndefined();
+  });
+
+  it('keeps the template it holds when a read fails', async () => {
+    const cache = makeCache();
+    seedQuery(cache, {
+      query: GetMealTemplateForEditDocument,
+      variables: { id: 't2', itemsFirst: MEALS_PAGE_SIZE },
+      data: editPage(['i1'], { hasNextPage: false, endCursor: null }),
+    });
+    const failed = recordMock(GetMealTemplateForEditDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => useMealTemplateForEdit('t2'),
+      { operationMocks: [failed.mock], cache },
+    );
+
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.state).toBe('ready');
+    expect(result.current.template?.name).toBe('Week A');
+    expect(result.current.items).toHaveLength(1);
   });
 
   it('follows the cursor: the editor saves against every meal, not the first page', async () => {
@@ -207,13 +249,12 @@ describe('useMealTemplateForEdit', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.items.map(meal => meal.id)).toEqual([
-        'i1',
-        'i2',
-        'i3',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.items.map(meal => meal.id)).toEqual([
+      'i1',
+      'i2',
+      'i3',
+    ]);
     expect(second.fired).toEqual([
       { id: 't2', itemsFirst: MEALS_PAGE_SIZE, itemsAfter: 'cursor-2' },
     ]);

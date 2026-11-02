@@ -4,8 +4,10 @@ fragment usePantrySubscriptions_expirationNotification on ExpirationNotification
   actionTaken
   genericNotificationId
   pantryItem {
+    version
     id
     item {
+      version
       id
       name
       imageUrl
@@ -85,12 +87,22 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     catalogImageId
   }
   item {
+    version
     id
     imageUrl
     images {
       id
       url
       kind
+    }
+    categories {
+      id
+      isPrimary
+      category {
+        version
+        id
+        name
+      }
     }
   }
   unit {
@@ -106,6 +118,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   }
   displayUnit {
     id
+    name
     symbol
     localizedSymbolForms {
       one
@@ -115,6 +128,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     hasStandardCountFactor
     baseUnitId
     conversionFactor
+    displayAsFraction
     commonFractions
   }
   netWeightUnit {
@@ -128,6 +142,12 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   }
   consumeUnit {
     id
+    name
+    symbol
+    localizedSymbolForms {
+      one
+      other
+    }
   }
   storageLocation {
     id
@@ -179,6 +199,36 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
         one
         other
       }
+    }
+  }
+  # What the edit form reads off a listed row.
+  restockQuantity
+  condition
+  storageNotes
+  tags
+  brand {
+    version
+    id
+    name
+  }
+  packageSize {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
     }
   }
 }

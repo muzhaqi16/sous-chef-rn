@@ -1,10 +1,12 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import {
   MealPlanMain_ItemFragmentDoc,
@@ -20,6 +22,14 @@ const PLAN_PAGES = {
   mealsFirst: MEALS_PAGE_SIZE,
   ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useMealPlan', () => {
   // A tab that reads the plan from beside Meal Plan stands down while hidden.
@@ -55,9 +65,8 @@ describe('useMealPlan', () => {
       unconfirmedCreates.confirm('plan-1');
     });
 
-    await waitFor(() =>
-      expect(get.fired).toContainEqual({ id: 'plan-1', ...PLAN_PAGES }),
-    );
+    await drainTimers();
+    expect(get.fired).toContainEqual({ id: 'plan-1', ...PLAN_PAGES });
   });
 
   it('queries immediately for a plan the server already knows', async () => {
@@ -71,13 +80,12 @@ describe('useMealPlan', () => {
 
     // The server's largest page: a plan of up to a hundred meals is one
     // request, and so are a hundred ingredients of each recipe in it.
-    await waitFor(() =>
-      expect(get.fired).toContainEqual({
-        id: 'plan-2',
-        mealsFirst: 100,
-        ingredientsFirst: 100,
-      }),
-    );
+    await drainTimers();
+    expect(get.fired).toContainEqual({
+      id: 'plan-2',
+      mealsFirst: 100,
+      ingredientsFirst: 100,
+    });
   });
 
   it('skips entirely when there is no active plan', () => {
@@ -109,7 +117,6 @@ describe('useMealPlan', () => {
                     __typename: 'MealPlanItem',
                     id: 'item-1',
                     servings: 2,
-                    customMealName: 'Soup',
                     recipe: null,
                   },
                 },
@@ -123,9 +130,8 @@ describe('useMealPlan', () => {
         operationMocks: [get.mock],
         cache,
       });
-      await waitFor(() =>
-        expect(rendered.result.current.itemDetails).toHaveLength(1),
-      );
+      await drainTimers();
+      expect(rendered.result.current.itemDetails).toHaveLength(1);
       return { cache, get, ...rendered };
     };
 
@@ -141,45 +147,41 @@ describe('useMealPlan', () => {
       const { cache, result } = await loadPlan();
       expect(result.current.itemDetails[0]?.servings).toBe(2);
 
-      await act(async () => {
-        cache.writeFragment({
+      await drained(async () => {
+        seedFragment(cache, {
           fragment: MealPlanMain_ItemFragmentDoc,
           fragmentName: 'MealPlanMain_item',
           data: {
             __typename: 'MealPlanItem',
             id: 'item-1',
             servings: 4,
-            customMealName: 'Soup',
             recipe: null,
           },
         });
         await Promise.resolve();
       });
-
-      await waitFor(() =>
-        expect(result.current.itemDetails[0]?.servings).toBe(4),
-      );
+      expect(result.current.itemDetails[0]?.servings).toBe(4);
     });
 
     it("follows the plan's own fields", async () => {
       const { cache, result } = await loadPlan();
       expect(result.current.mealPlan?.name).toBe('Week one');
 
-      await act(async () => {
+      await drained(async () => {
         cache.updateFragment(
           {
             fragment: MealPlanMain_MealPlanFragmentDoc,
             fragmentName: 'MealPlanMain_mealPlan',
-            id: cache.identify({ __typename: 'MealPlan', id: 'plan-3' }),
+            id: cache.identify({
+              __typename: 'MealPlan',
+              id: 'plan-3',
+            }),
           },
           plan => (plan ? { ...plan, name: 'Week two' } : plan),
         );
         await Promise.resolve();
       });
-
-      await waitFor(() =>
-        expect(result.current.mealPlan?.name).toBe('Week two'),
-      );
+      expect(result.current.mealPlan?.name).toBe('Week two');
     });
   });
   describe('a plan longer than one page', () => {
@@ -195,6 +197,7 @@ describe('useMealPlan', () => {
           edges: ids.map(id => ({
             node: {
               __typename: 'MealPlanItem',
+              version: 1,
               id,
               servings: 1,
               customMealName: `Meal ${id}`,
@@ -224,18 +227,18 @@ describe('useMealPlan', () => {
         cache: makeCache(),
       });
 
-      await waitFor(() =>
-        expect(result.current.items.map(item => item.id)).toEqual([
-          'item-1',
-          'item-2',
-          'item-3',
-        ]),
-      );
+      await drainTimers();
+      expect(result.current.items.map(item => item.id)).toEqual([
+        'item-1',
+        'item-2',
+        'item-3',
+      ]);
       expect(second.fired).toEqual([
         { id: 'plan-4', ...PLAN_PAGES, mealsAfter: 'cursor-2' },
       ]);
       expect(result.current.itemDetails).toHaveLength(3);
-      await waitFor(() => expect(result.current.mealsIncomplete).toBe(false));
+      await drainTimers();
+      expect(result.current.mealsIncomplete).toBe(false);
     });
 
     it('reports the plan partial when a later page cannot be read', async () => {
@@ -256,7 +259,8 @@ describe('useMealPlan', () => {
         cache: makeCache(),
       });
 
-      await waitFor(() => expect(result.current.mealsIncomplete).toBe(true));
+      await drainTimers();
+      expect(result.current.mealsIncomplete).toBe(true);
       // The page it did read stays on screen.
       expect(result.current.items.map(item => item.id)).toEqual([
         'item-1',
@@ -287,21 +291,22 @@ describe('useMealPlan', () => {
         operationMocks: [first.mock, failing.mock, landing.mock],
         cache: makeCache(),
       });
-      await waitFor(() => expect(result.current.mealsIncomplete).toBe(true));
+      await drainTimers();
+      expect(result.current.mealsIncomplete).toBe(true);
       expect(landing.fired).toHaveLength(0);
 
       act(() => {
         result.current.retryRemainingMeals();
       });
 
-      await waitFor(() =>
-        expect(result.current.items.map(item => item.id)).toEqual([
-          'item-1',
-          'item-2',
-          'item-3',
-        ]),
-      );
-      await waitFor(() => expect(result.current.mealsIncomplete).toBe(false));
+      await drainTimers();
+      expect(result.current.items.map(item => item.id)).toEqual([
+        'item-1',
+        'item-2',
+        'item-3',
+      ]);
+      await drainTimers();
+      expect(result.current.mealsIncomplete).toBe(false);
       expect(landing.fired).toEqual([
         { id: 'plan-4', ...PLAN_PAGES, mealsAfter: 'cursor-2' },
       ]);

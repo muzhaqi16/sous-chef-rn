@@ -14,6 +14,7 @@ describe('profileScreens', () => {
       'BrandList',
       'BrandLists',
       'ChangePassword',
+      'ChangesNotSaved',
       'DataSources',
       'DebugInfo',
       'DeleteAccount',

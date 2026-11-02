@@ -14,9 +14,9 @@ const FilterChip: React.FC<{
   active: boolean;
   onPress: () => void;
 }> = ({ label, active, onPress }) => {
-  styles.useVariants({ active });
+  const variantStyles = styles.useVariants({ active });
   return (
-    <Pressable style={styles.chip} onPress={onPress}>
+    <Pressable style={variantStyles.chip} onPress={onPress}>
       <Text role="label" tone={active ? 'onPrimary' : 'secondary'}>
         {label}
       </Text>

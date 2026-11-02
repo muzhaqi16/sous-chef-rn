@@ -2,10 +2,11 @@ import React from 'react';
 import { createNativeStackScreen } from '@react-navigation/native-stack';
 
 // Lazy, so the scanner and text recognition load only when a scan starts.
-const ReceiptScanScreen = React.lazy(() =>
+// Exported for a flow that borrows them under its own exits (onboarding).
+export const ReceiptScanScreen = React.lazy(() =>
   import('./ReceiptScanScreen').then(m => ({ default: m.ReceiptScanScreen })),
 );
-const ReceiptReviewScreen = React.lazy(() =>
+export const ReceiptReviewScreen = React.lazy(() =>
   import('./ReceiptReviewScreen').then(m => ({
     default: m.ReceiptReviewScreen,
   })),

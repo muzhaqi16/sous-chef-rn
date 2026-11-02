@@ -1,3 +1,4 @@
+import { DataStateView } from '#components/organisms/DataStateView';
 import React, { createContext, useContext, type ReactNode } from 'react';
 import { createActionsContext } from '#hooks/utils/createActionsContext';
 import type { ShoppingListItemDisplayFragment } from '#features/shoppingList/graphql/shoppingListFragments.generated';
@@ -15,7 +16,10 @@ import {
 import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPantryModal';
 import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisleModal';
 import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
-import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
+import {
+  useListAsksPrice,
+  useListTracksPrices,
+} from '#features/shoppingList/hooks/useListAsksPrice';
 import { useListCurrency } from '#features/shoppingList/hooks/useListCurrency';
 
 /**
@@ -83,6 +87,8 @@ export function ShoppingListModalsProvider({
   });
 
   const asksPrice = useListAsksPrice(currentListId);
+  // Long-press takes a price with prices off, so prices can be gathered.
+  const tracksPrices = useListTracksPrices(currentListId);
   const listCurrency = useListCurrency(currentListId);
   const purchaseAmount = usePurchaseAmountModal({
     items,
@@ -122,6 +128,15 @@ export function ShoppingListModalsProvider({
         visible={moveToPantry.visible}
         shoppingListItemId={moveToPantry.selectedItemId}
         pantries={moveToPantry.pantries}
+        pantriesUnavailable={
+          moveToPantry.pantriesState === 'error' ||
+          moveToPantry.pantriesState === 'offline' ? (
+            <DataStateView
+              state={moveToPantry.pantriesState}
+              onRetry={moveToPantry.retryPantries}
+            />
+          ) : undefined
+        }
         selectedPantryId={moveToPantry.selectedPantryId}
         onClose={moveToPantry.close}
         onConfirm={moveToPantry.confirm}
@@ -161,7 +176,7 @@ export function ShoppingListModalsProvider({
           tutorial?.notifyLongPressPriceSeen();
         }}
         loading={purchaseAmount.isLoading}
-        askPrice={asksPrice}
+        askPrice={tracksPrices}
       />
 
       <AislePickerSheet

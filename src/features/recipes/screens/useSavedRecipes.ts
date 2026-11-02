@@ -68,7 +68,7 @@ export function useSavedRecipes({
 }: SavedRecipesOptions = {}): UseSavedRecipesResult {
   const isLoggedOut = useIsLoggedOut();
 
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     MySavedRecipesDocument,
     isLoggedOut ? skipToken : { variables: { first: SAVED_RECIPES_PAGE_SIZE } },
   );
@@ -80,7 +80,7 @@ export function useSavedRecipes({
     selector: d => d.me?.savedRecipesConnection,
     key: 'MySavedRecipes',
     loading,
-    fetchMore,
+    observable,
     refetch,
   });
 

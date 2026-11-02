@@ -32,6 +32,14 @@ jest.mock('react-native-keychain', () => ({
     SECURE_HARDWARE: 'SecureHardware',
     ANY: 'Any',
   },
+  BIOMETRY_TYPE: {
+    TOUCH_ID: 'TouchID',
+    FACE_ID: 'FaceID',
+    OPTIC_ID: 'OpticID',
+    FINGERPRINT: 'Fingerprint',
+    FACE: 'Face',
+    IRIS: 'Iris',
+  },
   getSupportedBiometryType: jest.fn(() => Promise.resolve('FaceID')),
   canImplyAuthentication: jest.fn(() => Promise.resolve(true)),
 }));

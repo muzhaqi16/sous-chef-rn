@@ -34,7 +34,7 @@ npm test             # full suite, unfiltered (~830 suites)
 
 # after a change, before pushing
 npm run typecheck && npm run lint && npm test
-npm run check:compiler-bailouts && npm run check:unistyles-variants
+npm run check:compiler-bailouts
 npm run check:dead-modules && npm run check:import-cycles
 ```
 
@@ -171,11 +171,23 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   the key; connections stay with their edge writers.
 - **A response that states a count settles it**: no handler adjusts on top
   (`carriesListTotals`, `carriesPantryCount`).
+- **A local-first write is one `LocalWrite`** in `LOCAL_WRITES`, held as an optimistic
+  layer by `pendingWritesOf(cache).send` (`localWriteCoverage.test.ts`): the root holds
+  only what the server said, and a refusal just drops the layer. `apply` re-runs, so it
+  is deterministic (`sous-chef/local-write-is-deterministic`). **`commit` writes what
+  the answer does NOT state**, so read the mutation's selection first; no gate catches
+  a `commit` that misses one — `docs/local-first-architecture.md` § 2.
+- **A refusal keeps the change** (`QueueStatus.REFUSED`, the Changes not saved list):
+  a `LocalWrite` declaring `conflict` settles a `VERSION_CONFLICT` from the row
+  (`conflictOutcome`), and `recoverable: false` is only for a flow with its own
+  retry — `docs/local-first-architecture.md` § Offline queue.
 - **A local-first create writes its row with `writeLocalEntity`** over a row
   fragment spreading the entity's readers: known, else held, else the SDL
   neutral (`generate-optimistic-fillers`). A shared `*Fragments.graphql` has a consumer-list header, 2+ operations
   and 1+ hook. List cells are **strict** (`null` on `!complete`); detail panels and
-  sheets **resilient** with guarded scalar reads.
+  sheets **resilient** with guarded scalar reads. A detail screen offline falls back
+  to a complete smaller fragment, read with `useFragment` by entity, never to a
+  partial read; an edit form reads its fragment by entity, and the row carries it.
 - **A selection that spreads a fragment on a type with an `id` selects `id`
   directly** — masking hides the spread's `id` and `cache.identify` throws
   (`sous-chef/selects-key-field-directly`).
@@ -195,8 +207,7 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   default, `refetchQueries` last); build optimistic responses from
   `cache.readFragment` + spread, never hand-rolled shapes.
 - **A field with a write-time invariant goes through its ONE writer** —
-  `cache.writeFragment` (`writePurchaseInfo`), never `cache.modify`; the
-  restoration pass uses `src/apollo/utils/fieldWriters.ts`.
+  `cache.writeFragment` (`writePurchaseInfo`), never `cache.modify`.
 - **An optimistic entity is COMPLETE for every query reading it**: a new read
   field reaches every connection writer (builder, create and its replay,
   move/restock, subscription read-back) — `optimisticEntityCompleteness.test.ts`.
@@ -211,6 +222,24 @@ Deep dive: `docs/apollo-client-patterns.md`; offline model:
   `#apollo-skiptoken-keeps-serving-the-last-runs-data`.
 - **`returnPartialData: false`: `!data` means the read was INCOMPLETE**, so every
   writer writes the full shape its reader selects (`userProfileCompleteness.test.ts`). Verified: `#apollo-reports-loading-true-on-every-mount-warm-cache-or-not`.
+- **A read in flight never undoes a local-first write** (`localWritePrecedenceLink`):
+  the write answers it from the cache and its late answer lands under the write's
+  layer, so no hook refetches for this. Verified: `#apollo-a-read-in-flight-hides-a-newer-write-then-overwrites-it`.
+- **A field `merge` identifies a row by its reference** (`readEdgeNodeId`,
+  `fieldPolicyReadsRowId`): a row selecting its parent is not stored yet when the
+  parent's merge runs. Verified: `#apollo-a-merge-cannot-read-a-row-that-selects-its-parent`.
+- **Every network read of a versioned row selects `version`** (`sous-chef/network-read-selects-version`;
+  a removal's key is no read),
+  and an answer's older copy never replaces a newer row (`answerOrderingLink`). Never invent or
+  default a version: a write sends it as the lock. Verified: `#apollo-a-type-merge-never-sees-a-normalized-rows-fields`.
+- **Offline has one meaning**: `useIsApiUnavailable` (`isApiUnavailable` outside
+  React), the decision the read path acts on. Raw `isOnline` is transport's: it
+  reads as online through an API outage on working Wi-Fi
+  (`offlineHasOneMeaning.test.ts`).
+- **A miss offline is never an answer**: data the device does not hold is
+  `useDataState`'s `offline`, never "none", "not found" or empty days, and a
+  search with no held match says so through `useNoMatchCopy`. No gate holds this;
+  each screen classifies its own read.
 - **Resync is `RefetchEventManager`** (`src/apollo/refetchEvents.ts`): app
   foreground, API reachable, socket reconnect, after the queue drains. Never add
   a refetch listener; a search, preview or analytics query sets `refetchOn: false`
@@ -229,6 +258,9 @@ Mechanism: `docs/session-and-transport.md`. No gate holds these.
 
 - **`authService.logout()` is the only sign-out**; `SESSION_SCOPED_STATE` lists
   what it removes (`sessionEndLeavesNoData.test.ts`).
+- **Never `client.stop()`**: one client serves every session, and `stop()` ends
+  its watched queries and disconnects resync for good; `clearStore` cancels what
+  is in flight (`sessionEndKeepsResync.test.ts`).
 - **A session end STOPS things before clearing**: `runSessionTeardown()` first,
   the sign-out gate is one counted `whileSessionEnds` scope held through the
   store reset, `queueManager.onLogout()` only on deliberate sign-out, `/health`
@@ -301,9 +333,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 
 ### Unistyles
 
-- **`StyleSheet.create(theme => …)`** styles RN primitives; `styles.useVariants`
-  carries runtime flags; a per-element value is a dynamic function style. Merge a
-  caller style as `style={[styles.x, callerStyle]}`. An element that can't take a
+- **`StyleSheet.create(theme => …)`** styles RN primitives; runtime flags go
+  through `const variantStyles = styles.useVariants(…)`, read from what it returns
+  (`sous-chef/use-variants-return-is-read`); a per-element value is a dynamic
+  function style. Merge a caller style as `style={[styles.x, callerStyle]}`. An element that can't take a
   typography `role` spreads `...theme.type.<role>`. Switches use `BaseSwitch`.
 - **`withUnistyles(Component)`** themes a third-party component's props. A wrapper
   2+ files use lives in `src/components/atoms/themedComponents.tsx`; a single-use
@@ -320,8 +353,10 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **`useUnistyles()` only for runtime metadata** (`rt.*`); a `theme.*` read
   re-renders on every theme change. The cross-library exceptions are listed in
   `docs/ui-layer.md`.
-- **Plugin order is Unistyles → React Compiler.** The compiler first silently
-  freezes `useVariants` (`check:unistyles-variants`).
+- **Unistyles runs through `withUnistylesConfig`, outermost in `metro.config.js`**,
+  with no Babel plugin (having both throws). A StyleSheet records what it reads
+  at runtime, and RN components are swapped inside `node_modules` too; a raw one
+  is imported from `react-native/index.js`. A config change needs `--reset-cache`.
 
 ### Theme: elevation, colour, motion
 
@@ -383,8 +418,9 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 ### Pickers, row actions, forms
 
 - **Autocomplete hooks use `useAutocompleteSearch`** (`src/features/catalog/hooks/`):
-  `localFirst: true` only for a complete reference set (units), `!isOnline` for a
-  bounded slice; staleness is handled centrally. `InlineAutocomplete` caps at 6,
+  `localFirst: true` only for a complete reference set; offline, a network picker
+  answers from its `fallbackItems` by itself, and staleness is handled centrally.
+  `InlineAutocomplete` caps at 6,
   else a modal picker; a stacked picker sets `stackBehavior="push"`.
 - **Wrap vertically stacked form content in `DropdownStack`**; never hand-roll
   zIndex chains — the failure is device-only.
@@ -429,8 +465,7 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
   (`syncAsAccountDefault`, `useDefaultHome.ts`). Memoization skips re-renders,
   never a mount: a slow `(mount)` needs fewer elements.
 - **`check-compiler-bailouts` holds production `src` to zero bailouts and zero
-  `'use no memo'`.** Needing one means the plugin order regressed:
-  `npm run check:unistyles-variants`.
+  `'use no memo'`.**
 - **A `finally` (or catch-less `try`), or a value block (`?.` `??` `&&` `||`
   ternary) inside a `try` body, bails the whole function** — move the conditional
   after the `try`; `src/utils/finallyHelpers.ts` for `finally`. Verified: `#react-compiler-try-shapes`.
@@ -466,6 +501,7 @@ Patterns: `docs/development.md` § Testing.
   `error`, never a stubbed throw.
 - A mock's `data` is completed from the SDL: state only what you assert on;
   `partial: true` opts out. `operationMocks: []` is not "answer from the schema".
+  A cache seed is too, through `seedQuery` / `seedFragment` (`rawCacheSeed`).
 - **`Environment` and `Telemetry` are auto-mocked** (`jest.setup.js`): override
   with `mockReturnValue`, never a partial `jest.mock` factory.
 - Never stub a react-hook-form form with an object: use the real hook, and pair

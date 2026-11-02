@@ -2,6 +2,7 @@
 # in the dozen it is shown in when that is whole or a common fraction of one,
 # and its package size in the unit every batch's size is recorded in.
 fragment BatchListItem_pantryItem on PantryItem {
+  version
   id
   unit {
     id

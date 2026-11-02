@@ -1,4 +1,5 @@
 fragment MealPlanItemCard_item on MealPlanItem {
+  version
   id
   isCompleted
   customMealName
@@ -9,6 +10,7 @@ fragment MealPlanItemCard_item on MealPlanItem {
     quantityUsed
   }
   recipe {
+    version
     id
     name
     imageUrl

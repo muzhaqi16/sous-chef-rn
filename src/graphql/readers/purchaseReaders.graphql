@@ -23,4 +23,5 @@ fragment PurchaseReaders on Purchase {
       displayName
     }
   }
+  version
 }

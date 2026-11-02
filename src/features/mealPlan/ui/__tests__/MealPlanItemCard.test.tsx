@@ -17,6 +17,7 @@ const meal = (
   totalTimeMinutes: number | null,
 ): MealPlanItemCard_ItemFragment => ({
   __typename: 'MealPlanItem',
+  version: 1,
   id: 'mpi-1',
   isCompleted: false,
   customMealName: null,
@@ -25,6 +26,7 @@ const meal = (
   usedPantryItems: [],
   recipe: {
     __typename: 'Recipe',
+    version: 1,
     id: 'r-1',
     name: 'Pizza',
     imageUrl: null,
@@ -34,6 +36,7 @@ const meal = (
 
 const ref = toFragmentRef<typeof MealPlanItemCard_ItemFragmentDoc>({
   __typename: 'MealPlanItem',
+  version: 1,
   id: 'mpi-1',
 });
 

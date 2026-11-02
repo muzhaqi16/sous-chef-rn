@@ -20,6 +20,7 @@ query ParseIngredientLines($input: ParseIngredientLinesInput!) {
       section
       # Set only when the line names it confidently.
       item {
+        version
         id
       }
     }

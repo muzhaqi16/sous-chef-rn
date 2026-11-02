@@ -1,5 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import type { Translate } from '#/i18n/types';
 import {
   ConsumptionUnitsForPantryItemDocument,
@@ -167,6 +168,10 @@ export function useOperationUnits({
     ConsumptionUnitsForPantryItemDocument,
     isConsumption && pantryItemId ? { variables: { pantryItemId } } : skipToken,
   );
+  useApolloErrorLogger(
+    ConsumptionUnitsForPantryItemDocument,
+    consumptionResult.error,
+  );
 
   // Restock query
   const restockResult = useQuery(
@@ -175,6 +180,7 @@ export function useOperationUnits({
       ? { variables: { pantryItemId } }
       : skipToken,
   );
+  useApolloErrorLogger(RestockUnitsForPantryItemDocument, restockResult.error);
 
   const rawUnits = isConsumption
     ? consumptionResult.data?.consumptionUnitsForPantryItem ?? []

@@ -45,6 +45,7 @@ function seed() {
 
 const readBatch = (cache: ReturnType<typeof seed>) =>
   cache.readFragment<{ netWeight: number; remainingNetWeight: number }>({
+    optimistic: true,
     id: cache.identify({ __typename: 'PantryItemBatch', id: 'b-1' }),
     fragment: BATCH,
   });

@@ -2,6 +2,7 @@ import { useQuery } from '@apollo/client/react';
 import { useSelectedHomeId, useIsHomeSelectionReady } from '#store/useAppStore';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { heldFetchPolicy } from '#hooks/apollo/standDownOptions';
 
 /**
@@ -13,10 +14,11 @@ export function useCurrentHome() {
   const selectedHomeId = useSelectedHomeId();
   const isHomeSelectionReady = useIsHomeSelectionReady();
 
-  const { data: homesData } = useQuery(GetHomesDocument, {
-    ...heldFetchPolicy('cache-only'),
-    errorPolicy: 'ignore',
-  });
+  const { data: homesData, error } = useQuery(
+    GetHomesDocument,
+    heldFetchPolicy('cache-only'),
+  );
+  useApolloErrorLogger(GetHomesDocument, error);
 
   // Preserve homes (connection-shape nodes) across incomplete cache reads.
   const homes = usePreservedNodes(homesData?.homes, 'GetHomes');

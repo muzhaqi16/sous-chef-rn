@@ -1,6 +1,9 @@
 import React from 'react';
 import { fireEvent, screen } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -23,6 +26,7 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 
 const batch = (quantity: number): PantryItemBatchFragment => ({
   __typename: 'PantryItemBatch',
+  version: 1,
   id: 'b1',
   batchNumber: 1,
   quantity,
@@ -57,11 +61,12 @@ const stackCache = (
   { unit = 'pc', netWeightUnit }: { unit?: string; netWeightUnit?: string },
   cache = makeCache(),
 ) => {
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: BatchListItem_PantryItemFragmentDoc,
     fragmentName: 'BatchListItem_pantryItem',
     data: {
       __typename: 'PantryItem',
+      version: 1,
       id: 'pi1',
       unit: unitOf(unit),
       displayUnit: null,
@@ -139,11 +144,12 @@ describe('BatchListItem', () => {
     const DOZEN_FRACTIONS: number[] = [1 / 4, 1 / 3, 1 / 2, 2 / 3, 3 / 4];
     const eggsCache = () => {
       const cache = makeCache();
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: BatchListItem_PantryItemFragmentDoc,
         fragmentName: 'BatchListItem_pantryItem',
         data: {
           __typename: 'PantryItem',
+          version: 1,
           id: 'pi1',
           unit: asAbbreviation({ __typename: 'Unit', id: 'pc', symbol: 'pc' }),
           displayUnit: asAbbreviation({

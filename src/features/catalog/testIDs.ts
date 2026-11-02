@@ -29,6 +29,22 @@ export const catalogTestIDs = {
   /** `StoreShelfPriceList`: one store's row, and the control showing the rest. */
   storeShelfPrice: (storeId: string) => `store-shelf-price-${storeId}`,
   storeShelfPricesShowMore: 'store-shelf-prices-show-more',
+  /** The same for another product of the item's kind, under "Similar products". */
+  storeShelfSimilarPrice: (storeId: string) =>
+    `store-shelf-similar-price-${storeId}`,
+  storeShelfSimilarShowMore: 'store-shelf-similar-show-more',
+  /** `UsualStoresScreen`; a row (its swipe actions take it as prefix) and its pin, by row key. */
+  usualStoresScreen: 'usual-stores-screen',
+  usualStoreRow: (key: string) => `usual-store-${key}`,
+  usualStorePin: (key: string) => `usual-store-pin-${key}`,
+  usualStoresAdd: 'usual-stores-add',
+  /** `StorePickerScreen`, its two fields and one row, by row key. */
+  storePickerScreen: 'store-picker-screen',
+  storePickerSearch: 'store-picker-search',
+  storePickerZip: 'store-picker-zip',
+  storePickerNearMe: 'store-picker-near-me',
+  storePickerNearMeContinue: 'store-picker-near-me-continue',
+  storePickerRow: (key: string) => `store-picker-${key}`,
 
   /** `AddItemSheet`, under its host's `testIDPrefix`. */
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,

@@ -202,6 +202,7 @@ describe('which acquisition is the newest', () => {
         createdAt: '2026-10-19T09:00:00Z',
         purchase: {
           __typename: 'Purchase',
+          version: 1,
           id: 'pu1',
           purchaseDate: '2026-10-10T00:00:00Z',
         },
@@ -213,6 +214,7 @@ describe('which acquisition is the newest', () => {
         createdAt: '2026-10-15T18:30:00Z',
         purchase: {
           __typename: 'Purchase',
+          version: 1,
           id: 'pu2',
           purchaseDate: '2026-10-15T18:30:00Z',
         },
@@ -234,6 +236,7 @@ describe('which acquisition is the newest', () => {
         createdAt: '2026-10-19T09:00:00Z',
         purchase: {
           __typename: 'Purchase',
+          version: 1,
           id: 'pu1',
           purchaseDate: '2026-10-17T00:00:00Z',
         },

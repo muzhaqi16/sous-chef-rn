@@ -26,6 +26,8 @@ const AUTHORS: Record<string, string> = {
     'list owns its content inset',
   'src/features/shoppingList/components/SortableShoppingList/SortableList.tsx':
     'list owns its content inset',
+  'src/features/catalog/ui/StoreList.tsx':
+    'list owns its content inset, its fixed header included',
 
   // The scaffolds that apply `gutter="page"` for every screen not built on a list.
   'src/components/templates/Screen.tsx': 'the gutter prop itself',
@@ -110,7 +112,8 @@ const SKELETON_INHERITS_AN_INSET: Record<string, string> = {
  * a wrapper reading the gutter token, a list content container, or a screen
  * that is not `gutter="none"`.
  */
-const SUPPLIES_AN_INSET = /layout\.pageGutter|gutter="page"|styles\.gutter/;
+const SUPPLIES_AN_INSET =
+  /layout\.pageGutter|gutter="page"|[sS]tyles\d*\.gutter/;
 
 const sources = glob('src/**/*.{ts,tsx}', { ignore: ['**/*.generated.ts'] });
 

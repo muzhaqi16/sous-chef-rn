@@ -136,6 +136,11 @@
     "queuedChangeOverwrittenResource": "Your change to the {{resource}} was overwritten by a newer one and has been undone.",
     "queuedChangeOverwritten": "A change was overwritten by a newer one and has been undone.",
     "queuedRemovalKeptResource": "The {{resource}} you removed had been combined with one already there, so it stays.",
+    "queueFull": "Too many changes are waiting to sync.",
+    "queuedChangeKept": "A change wasn't saved.",
+    "queuedChangeKeptResource": "Your change to the {{resource}} wasn't saved.",
+    "queuedClashKept": "Someone else changed this first.",
+    "queuedClashKeptResource": "Someone else changed the {{resource}} first.",
     "queuedRemovalKept": "Something you removed had been combined with an entry already there, so it stays.",
     "itemNameRequired": "Please enter an item name",
     "homeNameRequired": "Please enter a home name",
@@ -321,7 +326,6 @@
     "continue": "Continue",
     "cookingFail": "Cooking Fail",
     "cookingPreferences": "Cooking Preferences",
-    "copied": "Copied",
     "copy": "Copy",
     "copyOfName": "{{name}} (Copy)",
     "nameWithDetail": "{{name}} ({{detail}})",
@@ -495,7 +499,6 @@
     "store": "Store",
     "storeSelectHint": "Pick a store from the list to save it.",
     "submit": "Submit",
-    "success": "Success",
     "suggestEdit": "Suggest Edit",
     "suggested": "Suggested",
     "system": "System",
@@ -517,6 +520,13 @@
     "unknown": "Unknown",
     "unknownHome": "Unknown Home",
     "unknownLoss": "Unknown Loss",
+    "undo": "Undo",
+    "anyStore": "{{chain}} (any store)",
+    "storeNumber": "Store #{{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Update",
     "updated": "Updated",
     "usage": "Usage",
@@ -573,7 +583,8 @@
     "purchased": "Purchased",
     "vegan": "Vegan",
     "sulfite": "Sulfite",
-    "budgetAndPrices": "Budget & prices"
+    "budgetAndPrices": "Budget & prices",
+    "shopping": "Shopping"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",
@@ -590,8 +601,6 @@
     "syncing": "Syncing…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Offline mode is on",
-    "offlineModeDetail": "Using what's on this device only",
     "deviceOfflineTitle": "You're offline",
     "deviceOfflineDetail": "Changes will sync when you're back online",
     "deviceOfflinePendingDetail_one": "{{count}} change will sync when you're back online",
@@ -617,7 +626,9 @@
     "noPantryItems": "Your pantry is empty",
     "noShoppingListItems": "Your shopping list is empty",
     "noInvitations": "No pending invitations",
-    "noResultsFor": "No results for \"{{query}}\""
+    "noResultsFor": "No results for \"{{query}}\"",
+    "noHeldMatchFor": "Nothing on this device matches \"{{query}}\"",
+    "widerSearchNeedsConnection": "Searching everything needs a connection."
   },
   "settings": {
     "displayLanguage": "Display Language",
@@ -626,11 +637,6 @@
     "unitMetric": "Metric (kg, g, L, mL)",
     "unitImperial": "Imperial (lb, oz, gal, fl oz)",
     "unitSystemDefault": "System Default",
-    "syncOffline": "Sync & Offline",
-    "autoSync": "Auto Sync",
-    "autoSyncDesc": "Automatically sync your data when online",
-    "offlineMode": "Offline Mode",
-    "offlineModeDesc": "Use cached data only. Disables search and sharing.",
     "features": "Features",
     "showTutorials": "Show Tutorials",
     "showTutorialsDesc": "Display helpful tips and tutorials",
@@ -643,7 +649,7 @@
     "shoppingListImagesDesc": "Show product images in shopping lists",
     "storeMode": "Store mode",
     "storeModeDesc": "Shop a list aisle by aisle from the store icon on the shopping list",
-    "budgetAndPricesDesc": "Prices, estimates and budgets on your lists and in your pantry, with each list's budget behind the wallet icon. Off, nothing asks what you paid.",
+    "budgetAndPricesDesc": "Prices, estimates and budgets on your lists and in your pantry, with each list's budget behind the wallet icon. Off, prices stay hidden; a long-press on a list item still records what you paid.",
     "shareUsageData": "Share Usage Data",
     "shareUsageDataDesc": "Help improve {{appName}} by sharing anonymous usage statistics",
     "resetSection": "Reset",
@@ -739,7 +745,9 @@
     "loading": "Loading…",
     "errorTitle": "Couldn't load this",
     "errorBody": "Something went wrong while loading. Check your connection and try again.",
-    "offlineBody": "You're offline and this hasn't been downloaded yet. Reconnect to load it."
+    "offlineBody": "You're offline and this hasn't been downloaded yet. Reconnect to load it.",
+    "partialTitle": "The rest needs a connection",
+    "partialBody": "This is what your device holds for now."
   },
   "tabBar": {
     "actionButton": "Action button",

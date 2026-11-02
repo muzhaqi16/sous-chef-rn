@@ -21,6 +21,7 @@ const makeItem = (
   overrides: Partial<MealPlanItemCard_ItemFragment> = {},
 ): MealPlanItemCard_ItemFragment => ({
   __typename: 'MealPlanItem',
+  version: 1,
   id: 'mp1',
   isCompleted: false,
   customMealName: 'Pasta Night',
@@ -67,6 +68,7 @@ describe('MealPlanItemCard', () => {
     const item = makeItem({
       recipe: {
         __typename: 'Recipe',
+        version: 1,
         id: 'r1',
         name: 'Spaghetti Bolognese',
         imageUrl: null,

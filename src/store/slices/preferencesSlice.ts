@@ -10,23 +10,30 @@ import type {
 } from './preferenceTypes';
 import type { RootState } from '../index';
 import { DEFAULT_CURRENCY } from '#/utils/formatters/number';
+import {
+  MIRRORED_SETTINGS,
+  type MirroredSettings,
+} from '#/domain/serverSettings';
 
 // Per-user preferences (keyed by userId)
 export interface UserPreferences {
   showShoppingListImages: boolean;
-  /** Store mode offered on the shopping list; absent on preferences saved before it. */
-  storeMode?: boolean;
-  /** A list's budget and prices shown; absent on preferences saved before it. */
+  /**
+   * The device's Budget & prices switch from before the account kept it: read
+   * once to carry an "on" over. A `false` may be a default, never an answer.
+   */
   budgetAndPrices?: boolean;
+  /** Onboarding went past setup with the account unread; finish it when read. */
+  accountSetupOwed?: boolean;
 }
 
 export const defaultUserPreferences: Required<UserPreferences> = {
   showShoppingListImages: true,
-  storeMode: false,
   budgetAndPrices: false,
+  accountSetupOwed: false,
 };
 
-export interface PreferencesState {
+export interface PreferencesState extends MirroredSettings {
   // Theme
   theme: ThemePreference;
   setTheme: (theme: ThemePreference) => void;
@@ -45,10 +52,9 @@ export interface PreferencesState {
   showNavigationLabels: boolean;
   setShowNavigationLabels: (enabled: boolean) => void;
 
-  // Tutorials — the server owns the setting; this mirrors it so the first paint
-  // does not wait on `GetUserSettings`.
-  showTutorials: boolean;
-  setShowTutorials: (enabled: boolean) => void;
+  // Settings the server owns, mirrored so a first paint does not wait on
+  // `GetUserSettings` (`MIRRORED_SETTINGS`).
+  mirrorSettings: (settings: Partial<MirroredSettings>) => void;
 
   // Currency — mirrored for the same reason, and read by every money surface:
   // an Apollo watcher per list cell would be a query subscription per row.
@@ -86,7 +92,7 @@ const initialPreferencesState = {
   language: undefined,
   hapticFeedbackEnabled: true, // Enabled by default
   showNavigationLabels: true, // Enabled by default
-  showTutorials: true,
+  ...MIRRORED_SETTINGS,
   preferredCurrency: DEFAULT_CURRENCY,
   pantrySortOption: PREFERENCE_DEFAULTS.pantrySortOption,
   pantrySortDirection: PREFERENCE_DEFAULTS.pantrySortDirection, // Newest first
@@ -118,7 +124,7 @@ export const createPreferencesSlice: StateCreator<
   setHapticFeedbackEnabled: enabled => set({ hapticFeedbackEnabled: enabled }),
   setShowNavigationLabels: enabled => set({ showNavigationLabels: enabled }),
 
-  setShowTutorials: enabled => set({ showTutorials: enabled }),
+  mirrorSettings: settings => set(settings),
   setPreferredCurrency: code => set({ preferredCurrency: code }),
   setPantrySortOption: option => set({ pantrySortOption: option }),
   setPantrySortDirection: direction => set({ pantrySortDirection: direction }),

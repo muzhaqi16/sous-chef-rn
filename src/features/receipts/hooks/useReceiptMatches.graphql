@@ -30,11 +30,13 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
       best {
         method
         item {
+          version
           id
           name
           brands {
             id
             brand {
+              version
               id
               name
             }
@@ -55,6 +57,7 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
       candidates {
         method
         item {
+          version
           id
           name
           # What tells two candidates of one name apart: a single brand, else
@@ -62,6 +65,7 @@ query ResolveReceiptLines($input: ResolveReceiptLinesInput!) {
           brands {
             id
             brand {
+              version
               id
               name
             }

@@ -1,5 +1,5 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import {
   ErrorCode,
@@ -12,6 +12,7 @@ import {
   seedCache,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   MarkRecipeAsCookedDocument,
   MatchRecipeIngredientsToPantryDocument,
@@ -25,9 +26,14 @@ import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 jest.mock('#/domain/reviewPrompt');
 
 // useRecipeIngredientMatching (used internally) reads the selected pantry id.
+let mockIsOnline = true;
 jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: RootState) => unknown) =>
-    selector({ selectedPantryId: 'pantry-1' } as RootState),
+    selector({
+      selectedPantryId: 'pantry-1',
+      isOnline: mockIsOnline,
+      apiReachable: null,
+    } as RootState),
   useSelectedPantryId: jest.fn(() => 'pantry-1'),
   useSelectedHomeId: jest.fn(() => 'home-1'),
 }));
@@ -35,12 +41,21 @@ jest.mock('#store/useAppStore', () => ({
 const mockToastSuccess = jest.mocked(toastService.success);
 const mockToastError = jest.mocked(toastService.error);
 const mockToastWarning = jest.mocked(toastService.warning);
+const mockToastInfo = jest.mocked(toastService.info);
 
 // Deterministic client-minted cooking-log id so we can assert the mutation
 // sends it.
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -126,7 +141,8 @@ describe('useRecipeCookingActions', () => {
 
     await cook(result);
 
-    await waitFor(() => expect(cooked.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(cooked.fired.length).toBeGreaterThan(0);
     expect(cooked.fired).toEqual([
       {
         input: {
@@ -139,10 +155,9 @@ describe('useRecipeCookingActions', () => {
         stacksFirst: 100,
       },
     ]);
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Recipe marked as cooked! Ingredients deducted from pantry.',
-      ),
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Recipe marked as cooked! Ingredients deducted from pantry.',
     );
     expect(askForReviewAfterSuccess).toHaveBeenCalledTimes(1);
   });
@@ -155,10 +170,12 @@ describe('useRecipeCookingActions', () => {
 
     await cook(result);
 
-    await waitFor(() => expect(cooked.fired).toHaveLength(1));
+    await drainTimers();
+    expect(cooked.fired).toHaveLength(1);
     expect(inputOf(cooked.fired[0]!)).toMatchObject({ deductFromPantry: true });
     expect(inputOf(cooked.fired[0]!)).not.toHaveProperty('pantryId');
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalled();
   });
 
   // The server names what it could not deduct; an unqualified success would
@@ -218,7 +235,8 @@ describe('useRecipeCookingActions', () => {
 
     await cook(result);
 
-    await waitFor(() => expect(mockToastWarning).toHaveBeenCalledWith(toast));
+    await drainTimers();
+    expect(mockToastWarning).toHaveBeenCalledWith(toast);
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
 
@@ -246,7 +264,8 @@ describe('useRecipeCookingActions', () => {
 
     await cook(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalled();
     expect(cache.extract()['PantryItem:pi-rice']).toMatchObject({
       quantity: 300,
     });
@@ -260,7 +279,8 @@ describe('useRecipeCookingActions', () => {
 
     await cook(result);
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalled();
     expect(mockToastWarning).not.toHaveBeenCalled();
   });
 
@@ -270,9 +290,8 @@ describe('useRecipeCookingActions', () => {
 
     await cook(result, { servings: 2, deductFromPantry: false });
 
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith('Recipe marked as cooked!'),
-    );
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith('Recipe marked as cooked!');
     // A cook that deducts nothing draws on no pantry.
     expect(cooked.fired).toHaveLength(1);
     expect(inputOf(cooked.fired[0]!)).toMatchObject({
@@ -287,10 +306,9 @@ describe('useRecipeCookingActions', () => {
     await cook(result);
 
     // The refusal names `servings`, which has copy of its own.
-    await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith(
-        'Enter a number of servings greater than zero',
-      ),
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalledWith(
+      'Enter a number of servings greater than zero',
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(askForReviewAfterSuccess).not.toHaveBeenCalled();
@@ -304,7 +322,8 @@ describe('useRecipeCookingActions', () => {
       result.current.handleSkipReview();
     });
 
-    await waitFor(() => expect(cooked.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(cooked.fired.length).toBeGreaterThan(0);
     expect(cooked.fired).toEqual([
       {
         input: {
@@ -318,11 +337,45 @@ describe('useRecipeCookingActions', () => {
     ]);
     // The toast is this test's subject, so it is asserted here rather than
     // left to the teardown's flush of pending work.
-    await waitFor(() =>
-      expect(mockToastSuccess).toHaveBeenCalledWith(
-        'Recipe marked as cooked! Ingredients deducted from pantry.',
-      ),
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalledWith(
+      'Recipe marked as cooked! Ingredients deducted from pantry.',
     );
+  });
+
+  describe('when the ingredient review cannot load', () => {
+    const noMatches = () =>
+      recordMock(MatchRecipeIngredientsToPantryDocument, {
+        error: new Error('Network request failed'),
+      });
+
+    it('records the cook offline, and says what it skipped', async () => {
+      mockIsOnline = false;
+      const cooked = cookedMock();
+      const { result } = renderCooking([noMatches().mock, cooked.mock]);
+
+      await cook(result, { servings: 2, useGranularDeduction: true });
+      await drainTimers();
+      mockIsOnline = true;
+
+      expect(cooked.fired).toHaveLength(1);
+      expect(mockToastInfo).toHaveBeenCalledWith(
+        'Reviewing the ingredients needs a connection. The amounts will be worked out when it syncs.',
+      );
+      expect(mockToastSuccess).not.toHaveBeenCalled();
+    });
+
+    it('says the cook deducted online, as ever', async () => {
+      const cooked = cookedMock();
+      const { result } = renderCooking([noMatches().mock, cooked.mock]);
+
+      await cook(result, { servings: 2, useGranularDeduction: true });
+      await drainTimers();
+
+      expect(cooked.fired).toHaveLength(1);
+      expect(mockToastInfo).not.toHaveBeenCalled();
+      expect(mockToastSuccess).toHaveBeenCalled();
+    });
   });
 
   // The review opens with the servings and notes the cook entered; skipping it
@@ -346,15 +399,15 @@ describe('useRecipeCookingActions', () => {
       useGranularDeduction: true,
       notes: 'Halved it',
     });
-    await waitFor(() =>
-      expect(result.current.ingredientMatching.isSheetVisible).toBe(true),
-    );
+    await drainTimers();
+    expect(result.current.ingredientMatching.isSheetVisible).toBe(true);
 
     await act(async () => {
       result.current.handleSkipReview();
     });
 
-    await waitFor(() => expect(cooked.fired.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(cooked.fired.length).toBeGreaterThan(0);
     expect(cooked.fired).toContainEqual(
       expect.objectContaining({
         input: expect.objectContaining({
@@ -364,7 +417,8 @@ describe('useRecipeCookingActions', () => {
         }),
       }),
     );
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockToastSuccess).toHaveBeenCalled();
   });
 
   it('a confirmed review records the servings and notes entered before it', async () => {
@@ -390,13 +444,10 @@ describe('useRecipeCookingActions', () => {
       useGranularDeduction: true,
       notes: 'Halved it',
     });
-    await waitFor(() =>
-      expect(result.current.ingredientMatching.editableMatches).toHaveLength(1),
-    );
+    await drainTimers();
+    expect(result.current.ingredientMatching.editableMatches).toHaveLength(1);
 
-    await act(async () => {
-      await result.current.handleConfirmReview();
-    });
+    await drained(() => result.current.handleConfirmReview());
 
     expect(confirm.fired).toEqual([
       {
@@ -472,12 +523,11 @@ describe('useRecipeCookingActions', () => {
 
       await cook(result, { deductFromPantry: false });
 
-      await waitFor(() =>
-        expect(readSavedDetails(cache)).toMatchObject({
-          cookedCount: 3,
-          lastCookedAt: COOKED_AT,
-        }),
-      );
+      await drainTimers();
+      expect(readSavedDetails(cache)).toMatchObject({
+        cookedCount: 3,
+        lastCookedAt: COOKED_AT,
+      });
     });
   });
 });

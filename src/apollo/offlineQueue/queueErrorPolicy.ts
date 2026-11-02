@@ -47,6 +47,11 @@ export class ReplayRejectedError extends Error {
   }
 }
 
+const INTERNAL_FAULT_CODE: string = TopLevelErrorCode.InternalServerError;
+
+/** The server cannot validate this build's document, which a deploy or an update cures. */
+export const SCHEMA_INVALID_CODE = 'GRAPHQL_VALIDATION_FAILED';
+
 export const REPLAY_NOT_PREPARED_CODE = 'REPLAY_NOT_PREPARED';
 
 /**
@@ -170,12 +175,15 @@ function readStatusCode(error: unknown): number | undefined {
 const UNIT_RESOURCE = 'unit';
 
 /**
- * Codes the API documents as shedding load or pacing the caller. Each clears on
- * its own, so the entry is deferred rather than withdrawn — reverting a write
- * over one of these discards work the server never refused.
+ * Codes the API documents as shedding load or pacing the caller, or a fault on
+ * its side. The entry is deferred rather than withdrawn: reverting a write over
+ * one of these discards work the server never refused. A resolver crash answers
+ * 200 with `INTERNAL_SERVER_ERROR`, and masking hides a crash on this one input
+ * from an outage, so `fault` bounds it (`QueueManager.handleMutationError`).
  */
 const TRANSIENT_SERVER_CODES: readonly string[] = [
   TopLevelErrorCode.ServiceUnavailable,
+  TopLevelErrorCode.InternalServerError,
 ];
 
 /** Budget refusals: re-sending inside the window is refused again, so none is. */
@@ -318,13 +326,17 @@ export function classifyError(error: unknown): QueueError {
       code,
       timestamp: Date.now(),
       retryable: true,
+      fault: code === INTERNAL_FAULT_CODE,
     };
   }
 
   // Deferred, not failed, so the change survives on disk and syncs once the
   // user updates; `retryable: false` skips the in-run loop, as every attempt
   // sends the same version.
-  if (code === TopLevelErrorCode.ClientUpgradeRequired) {
+  if (
+    code === TopLevelErrorCode.ClientUpgradeRequired ||
+    code === SCHEMA_INVALID_CODE
+  ) {
     return {
       type: 'server',
       message,
@@ -372,13 +384,15 @@ export function classifyError(error: unknown): QueueError {
     };
   }
 
-  if ((readStatusCode(error) ?? 0) >= 500) {
+  const status = readStatusCode(error) ?? 0;
+  if (status >= 500) {
     return {
       type: 'server',
       message,
       code,
       timestamp: Date.now(),
       retryable: true,
+      fault: status === 500,
     };
   }
 

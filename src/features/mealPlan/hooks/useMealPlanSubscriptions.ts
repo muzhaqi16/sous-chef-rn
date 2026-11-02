@@ -120,6 +120,7 @@ async function handlePlanChanged(
     fragment: MealPlanDisplayFragmentDoc,
     fragmentName: 'MealPlanDisplay',
     from: { __typename: 'MealPlan', id: planId },
+    optimistic: true,
   });
   if (!plan) return;
 
@@ -253,6 +254,7 @@ async function handleTemplateChanged(
     fragment: MealTemplateDisplayFragmentDoc,
     fragmentName: 'MealTemplateDisplay',
     from: { __typename: 'MealTemplate', id: templateId },
+    optimistic: true,
   });
   if (!template) return;
 

@@ -136,6 +136,11 @@
     "queuedChangeOverwrittenResource": "{{resource}}: la tua modifica è stata sostituita da una più recente ed è stata annullata.",
     "queuedChangeOverwritten": "Una modifica è stata sostituita da una più recente ed è stata annullata.",
     "queuedRemovalKeptResource": "{{resource}}: la rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
+    "queueFull": "Troppe modifiche in attesa di sincronizzazione.",
+    "queuedChangeKept": "Una modifica non è stata salvata.",
+    "queuedChangeKeptResource": "{{resource}}: la tua modifica non è stata salvata.",
+    "queuedClashKept": "Qualcun altro ha cambiato questo prima.",
+    "queuedClashKeptResource": "{{resource}}: qualcun altro ha fatto una modifica prima.",
     "queuedRemovalKept": "Una rimozione non è stata applicata, perché la voce era stata unita a una già presente.",
     "itemNameRequired": "Inserisci il nome dell'articolo",
     "homeNameRequired": "Inserisci il nome della casa",
@@ -321,7 +326,6 @@
     "continue": "Continua",
     "cookingFail": "Errore di cottura",
     "cookingPreferences": "Preferenze di cucina",
-    "copied": "Copiato",
     "copy": "Copia",
     "copyOfName": "{{name}} (Copia)",
     "nameWithDetail": "{{name}} ({{detail}})",
@@ -495,7 +499,6 @@
     "store": "Negozio",
     "storeSelectHint": "Scegli un negozio dall'elenco per salvarlo.",
     "submit": "Invia",
-    "success": "Fatto",
     "suggestEdit": "Suggerisci modifica",
     "suggested": "Consigliato",
     "system": "Sistema",
@@ -517,6 +520,13 @@
     "unknown": "Sconosciuto",
     "unknownHome": "Casa sconosciuta",
     "unknownLoss": "Perdita sconosciuta",
+    "undo": "Annulla",
+    "anyStore": "{{chain}} (qualsiasi negozio)",
+    "storeNumber": "Punto vendita n. {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Aggiorna",
     "updated": "Aggiornato",
     "usage": "Utilizzo",
@@ -573,7 +583,8 @@
     "purchased": "Acquistato",
     "vegan": "Vegana",
     "sulfite": "Solfiti",
-    "budgetAndPrices": "Budget e prezzi"
+    "budgetAndPrices": "Budget e prezzi",
+    "shopping": "Spesa"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",
@@ -590,8 +601,6 @@
     "syncing": "Sincronizzazione…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Modalità offline attiva",
-    "offlineModeDetail": "Vengono usati solo i dati di questo dispositivo",
     "deviceOfflineTitle": "Sei offline",
     "deviceOfflineDetail": "Le modifiche si sincronizzeranno quando tornerai online",
     "deviceOfflinePendingDetail_one": "{{count}} modifica si sincronizzerà quando tornerai online",
@@ -617,7 +626,9 @@
     "noPantryItems": "La tua dispensa è vuota",
     "noShoppingListItems": "La tua lista della spesa è vuota",
     "noInvitations": "Nessun invito in sospeso",
-    "noResultsFor": "Nessun risultato per \"{{query}}\""
+    "noResultsFor": "Nessun risultato per \"{{query}}\"",
+    "noHeldMatchFor": "Niente su questo dispositivo corrisponde a \"{{query}}\"",
+    "widerSearchNeedsConnection": "La ricerca completa richiede una connessione."
   },
   "settings": {
     "displayLanguage": "Lingua di visualizzazione",
@@ -626,11 +637,6 @@
     "unitMetric": "Metrico (kg, g, L, mL)",
     "unitImperial": "Imperiale (lb, oz, gal, fl oz)",
     "unitSystemDefault": "Predefinito di sistema",
-    "syncOffline": "Sincronizzazione e offline",
-    "autoSync": "Sincronizzazione automatica",
-    "autoSyncDesc": "Sincronizza i dati automaticamente quando sei online",
-    "offlineMode": "Modalità offline",
-    "offlineModeDesc": "Usa solo dati in cache. Disabilita ricerca e condivisione.",
     "features": "Funzionalità",
     "showTutorials": "Mostra tutorial",
     "showTutorialsDesc": "Mostra suggerimenti e tutorial utili",
@@ -643,7 +649,7 @@
     "shoppingListImagesDesc": "Mostra le immagini dei prodotti nelle liste",
     "storeMode": "Modalità negozio",
     "storeModeDesc": "Fai la spesa corsia per corsia dall'icona del negozio nella lista della spesa",
-    "budgetAndPricesDesc": "Prezzi, stime e budget nelle tue liste e nella dispensa, con il budget di ogni lista dietro l'icona del portafoglio. Disattivato, nulla ti chiede quanto hai pagato.",
+    "budgetAndPricesDesc": "Prezzi, stime e budget nelle tue liste e nella dispensa, con il budget di ogni lista dietro l'icona del portafoglio. Disattivato, i prezzi restano nascosti; una pressione prolungata su un articolo della lista registra comunque quanto hai pagato.",
     "shareUsageData": "Condividi dati di utilizzo",
     "shareUsageDataDesc": "Aiuta a migliorare {{appName}} condividendo statistiche anonime",
     "resetSection": "Ripristina",
@@ -739,7 +745,9 @@
     "loading": "Caricamento…",
     "errorTitle": "Impossibile caricare",
     "errorBody": "Qualcosa è andato storto durante il caricamento. Controlla la connessione e riprova.",
-    "offlineBody": "Sei offline e questo contenuto non è ancora stato scaricato. Riconnettiti per caricarlo."
+    "offlineBody": "Sei offline e questo contenuto non è ancora stato scaricato. Riconnettiti per caricarlo.",
+    "partialTitle": "Il resto richiede una connessione",
+    "partialBody": "Questo è ciò che il dispositivo ha per ora."
   },
   "tabBar": {
     "actionButton": "Pulsante azione",

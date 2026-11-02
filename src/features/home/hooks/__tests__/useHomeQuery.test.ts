@@ -1,20 +1,22 @@
-import { act, waitFor } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetHomesDocument } from '#operations/home/home.generated';
+import { Telemetry } from '#/services/telemetry';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useHomeQuery } from '../useHomeQuery';
 
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  // usePreservedNodes composes usePreservedQueryData internally — passthrough.
-  usePreservedQueryData: jest.fn(
-    <T>(data: T | undefined, initial: T): T => data ?? initial,
-  ),
-}));
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -113,7 +115,8 @@ describe('useHomeQuery', () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(null)],
     });
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.homes).toEqual([]);
     expect(result.current.remoteDefaultHomeId).toBeNull();
   });
@@ -126,7 +129,8 @@ describe('useHomeQuery', () => {
 
     // A response carrying zero homes is still a response — the screen must
     // settle to its empty list rather than an error.
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.homes).toEqual([]);
     expect(result.current.hasResult).toBe(true);
   });
@@ -139,7 +143,8 @@ describe('useHomeQuery', () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(homes)],
     });
-    await waitFor(() => expect(result.current.homes).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.homes).toHaveLength(2);
   });
 
   it('derives remoteDefaultHomeId from isDefault field', async () => {
@@ -150,9 +155,8 @@ describe('useHomeQuery', () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(homes)],
     });
-    await waitFor(() =>
-      expect(result.current.remoteDefaultHomeId).toBe('home-2'),
-    );
+    await drainTimers();
+    expect(result.current.remoteDefaultHomeId).toBe('home-2');
   });
 
   it('returns null remoteDefaultHomeId when no home is default', async () => {
@@ -160,7 +164,8 @@ describe('useHomeQuery', () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(homes)],
     });
-    await waitFor(() => expect(result.current.homes).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.homes).toHaveLength(1);
     expect(result.current.remoteDefaultHomeId).toBeNull();
   });
 
@@ -182,7 +187,8 @@ describe('useHomeQuery', () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(homes)],
     });
-    await waitFor(() => expect(result.current.stats.totalHomes).toBe(2));
+    await drainTimers();
+    expect(result.current.stats.totalHomes).toBe(2);
     expect(result.current.stats.totalMembers).toBe(3);
     expect(result.current.stats.totalPantries).toBe(3);
   });
@@ -191,27 +197,49 @@ describe('useHomeQuery', () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(null)],
     });
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
   });
 
   it('has no result when the first read fails', async () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [errorMock('Query failed')],
     });
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.homes).toEqual([]);
     expect(result.current.hasResult).toBe(false);
+  });
+
+  it('logs a read that fails, and keeps the homes it held', async () => {
+    const { result } = renderHookWithApollo(() => useHomeQuery(), {
+      operationMocks: [
+        { ...homesMock([{ id: 'home-1' }]), maxUsageCount: 1 },
+        errorMock('network down'),
+      ],
+    });
+
+    await drainTimers();
+    expect(result.current.homes).toHaveLength(1);
+    expect(Telemetry.error).not.toHaveBeenCalled();
+
+    await drained(() => result.current.refetch());
+    expect(Telemetry.error).toHaveBeenCalledWith(
+      'Apollo query error: GetHomes',
+      expect.objectContaining({ error_message: 'network down' }),
+    );
+    expect(result.current.homes).toHaveLength(1);
+    expect(result.current.hasResult).toBe(true);
   });
 
   it('provides a refetch function', async () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(null), homesMock(null)],
     });
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(typeof result.current.refetch).toBe('function');
-    await act(async () => {
-      await result.current.refetch();
-    });
+    await drained(() => result.current.refetch());
   });
 
   it('counts members as 0 when home has no members', async () => {
@@ -221,6 +249,7 @@ describe('useHomeQuery', () => {
     const { result } = renderHookWithApollo(() => useHomeQuery(), {
       operationMocks: [homesMock(homes)],
     });
-    await waitFor(() => expect(result.current.stats.totalMembers).toBe(0));
+    await drainTimers();
+    expect(result.current.stats.totalMembers).toBe(0);
   });
 });

@@ -232,6 +232,7 @@
     "markCookedFailed": "Impossibile segnare la ricetta come cucinata",
     "cookExternalError": "Impossibile segnare ricette esterne come cucinate. Salva prima la ricetta.",
     "markedCookedDeducted": "Ricetta segnata come cucinata! Ingredienti detratti dalla dispensa.",
+    "cookReviewNeedsConnection": "La revisione degli ingredienti richiede una connessione. Le quantità saranno calcolate alla sincronizzazione.",
     "markedCookedSkipped_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato.",
     "markedCookedSkipped_other": "Ricetta segnata come cucinata. {{count}} ingredienti non sono stati scalati.",
     "markedCookedSkippedUnit_one": "Ricetta segnata come cucinata. {{count}} ingrediente non è stato scalato: la sua unità non si converte in quella della dispensa.",

@@ -4,6 +4,7 @@ import {
   createApolloTestWrapper,
   seedCache,
   toFragmentRef,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { SavedRecipeCard } from '../SavedRecipeCard';
 import { SavedRecipeCard_SavedRecipeFragmentDoc } from '../SavedRecipeCard.generated';
@@ -14,7 +15,7 @@ jest.mock('#components/atoms/CachedImage', () => ({
 
 function renderCard(recipe: null | { name: string }) {
   const cache = seedCache([]);
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: SavedRecipeCard_SavedRecipeFragmentDoc,
     fragmentName: 'SavedRecipeCard_savedRecipe',
     data: {
@@ -29,6 +30,7 @@ function renderCard(recipe: null | { name: string }) {
       lastCookedAt: null,
       recipe: recipe && {
         __typename: 'Recipe',
+        version: 1,
         id: 'recipe-1',
         name: recipe.name,
         description: null,

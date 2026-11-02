@@ -1,6 +1,7 @@
 import { useQuery } from '@apollo/client/react';
 import { StoreRouteSource } from '#/graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import type {
   ShoppingListEntry,
   ShoppingListRowItem,
@@ -26,10 +27,11 @@ export function useAisleView(
   rows: ShoppingListRowItem[],
 ): { aisleEntries: ShoppingListEntry[]; routeNote: AisleRouteNote | null } {
   const learnedRoutes = useFeatureFlag('storeRoutes');
-  const { data, previousData } = useQuery(AisleViewRouteDocument, {
+  const { data, previousData, error } = useQuery(AisleViewRouteDocument, {
     variables: { id: listId, storeId },
     fetchPolicy: 'cache-first',
   });
+  useApolloErrorLogger(AisleViewRouteDocument, error);
 
   const route = data?.shoppingList?.storeRoute;
   // Another store's order keeps the aisles in place while this one's loads.

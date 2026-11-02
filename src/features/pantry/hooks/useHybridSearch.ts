@@ -27,8 +27,8 @@ export interface UseHybridSearchConfig<TQuery, TItem extends { id: string }> {
   loading: boolean;
   /** Page size (e.g. PAGE_SIZE.EXTENDED) */
   pageSize: number;
-  /** Whether the device is online */
-  isOnline: boolean;
+  /** Whether the server can be asked */
+  serverAvailable: boolean;
   /** GraphQL document for server search */
   searchDocument: DocumentNode;
   /** Build variables for the server search query. Return null to skip. */
@@ -103,7 +103,7 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
     hasMore,
     loading,
     pageSize,
-    isOnline,
+    serverAvailable,
     searchDocument,
     buildSearchVariables,
     extractItems,
@@ -151,7 +151,8 @@ export function useHybridSearch<TQuery, TItem extends { id: string }>(
   }
 
   const useServerSort =
-    shouldUseServerSort(knownTotalCount, pageSize, isOnline) && !allItemsLoaded;
+    shouldUseServerSort(knownTotalCount, pageSize, serverAvailable) &&
+    !allItemsLoaded;
 
   const searchActive = useServerSort && !!debouncedSearch;
 

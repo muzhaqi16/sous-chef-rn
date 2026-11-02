@@ -4,6 +4,7 @@ import { env } from '#/config/env';
 import { resolveFeatureFlags, type FeatureFlag } from '#/config/featureFlags';
 import { isServerOwned, serverFlagsOf } from '#/config/serverFeatureFlags';
 import { MyFeatureFlagsDocument } from '#operations/user/featureFlags.generated';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { useUser } from '#store/useAppStore';
 
 // A build's flags cannot change while it runs, so they resolve once, at the
@@ -22,10 +23,11 @@ const resolvedBuildFlags = () =>
  */
 export const useFeatureFlag = (flag: FeatureFlag): boolean => {
   const user = useUser();
-  const { data, previousData } = useQuery(
+  const { data, previousData, error } = useQuery(
     MyFeatureFlagsDocument,
     user ? { fetchPolicy: 'cache-first' } : skipToken,
   );
+  useApolloErrorLogger(MyFeatureFlagsDocument, error);
   // A failed re-read empties `data`; the answer before it still stands.
   const answer = data ?? previousData;
   if (!resolvedBuildFlags()[flag]) return false;

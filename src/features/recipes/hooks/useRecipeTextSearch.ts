@@ -101,13 +101,15 @@ export const useRecipeTextSearch = () => {
   const pick = (result: PickerRecipe): RecipeTarget => {
     const row = found.find(candidate => rowKey(candidate) === result.key);
     if (row?.source === 'recipe') {
-      const { id, name, imageUrl, servings, totalTimeMinutes } = row.recipe;
+      const { id, version, name, imageUrl, servings, totalTimeMinutes } =
+        row.recipe;
       client.cache.writeFragment({
         fragment: UseRecipeTextSearch_PickedRecipeFragmentDoc,
         fragmentName: 'useRecipeTextSearch_pickedRecipe',
         data: {
           __typename: 'Recipe',
           id,
+          version,
           name,
           imageUrl,
           servings,

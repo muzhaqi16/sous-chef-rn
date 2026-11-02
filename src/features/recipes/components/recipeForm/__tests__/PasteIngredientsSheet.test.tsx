@@ -1,6 +1,7 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { ParseIngredientLinesDocument } from '#features/recipes/hooks/useIngredientPaste.generated';
@@ -10,6 +11,14 @@ import { PasteIngredientsSheet } from '../PasteIngredientsSheet';
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
   useIsApiUnavailable: jest.fn(() => false),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.mocked(useIsApiUnavailable).mockReturnValue(false);
@@ -52,7 +61,8 @@ describe('PasteIngredientsSheet', () => {
     paste('2 cups flour\n\nsalt, to taste');
     fireEvent.press(screen.getByTestId(recipesTestIDs.pasteIngredientsAdd));
 
-    await waitFor(() => expect(onPasted).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(onPasted).toHaveBeenCalledTimes(1);
     expect(onPasted.mock.calls[0][0]).toEqual([
       expect.objectContaining({ originalText: '2 cups flour' }),
       expect.objectContaining({ originalText: 'salt, to taste' }),

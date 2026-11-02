@@ -1,10 +1,11 @@
 import React from 'react';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CollaboratorRole,
   CollaboratorStatus,
@@ -23,6 +24,18 @@ jest.mock('#hooks/navigation/useAppNavigation', () => ({
     throw new Error("Couldn't find a navigation object.");
   },
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 const pending = (
   edges: NonNullable<
@@ -96,7 +109,8 @@ describe('PendingListInvites', () => {
       },
     );
 
-    expect(await screen.findByText('Pending Invitations')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Pending Invitations')).toBeTruthy();
     expect(screen.getByText('Weekly groceries')).toBeTruthy();
     expect(screen.getByText('Alice invited you · Editor')).toBeTruthy();
     // No name to show: the sender is left out rather than guessed.
@@ -142,15 +156,13 @@ describe('PendingListInvites', () => {
       },
     );
 
-    await act(async () => {
-      await user.press(
-        await screen.findByTestId(
-          shoppingListTestIDs.pendingInviteAccept('inv-1'),
-        ),
-      );
-    });
+    await drainTimers();
+    await user.press(
+      screen.getByTestId(shoppingListTestIDs.pendingInviteAccept('inv-1')),
+    );
 
-    await waitFor(() => expect(onAccepted).toHaveBeenCalledWith('list-1'));
+    await drainTimers();
+    expect(onAccepted).toHaveBeenCalledWith('list-1');
     expect(accept.fired).toEqual([{ input: { inviteId: 'inv-1' } }]);
   });
 
@@ -166,13 +178,10 @@ describe('PendingListInvites', () => {
       },
     );
 
-    await act(async () => {
-      await user.press(
-        await screen.findByTestId(
-          shoppingListTestIDs.pendingInviteDecline('inv-2'),
-        ),
-      );
-    });
+    await drainTimers();
+    await user.press(
+      screen.getByTestId(shoppingListTestIDs.pendingInviteDecline('inv-2')),
+    );
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
@@ -193,12 +202,9 @@ describe('PendingListInvites', () => {
       },
     );
 
-    await waitFor(() => expect(none.fired).toHaveLength(1));
-    // Let the empty answer land before asserting it renders nothing.
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    await drainTimers();
 
+    expect(none.fired).toHaveLength(1);
     expect(screen.queryByTestId(shoppingListTestIDs.pendingInvites)).toBeNull();
   });
 });

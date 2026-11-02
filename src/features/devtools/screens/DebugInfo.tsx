@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { StyleSheet } from 'react-native-unistyles';
 import { SubScreen } from '#components/templates/SubScreen';
 import { Environment } from '#/utils/environment';
@@ -158,15 +158,12 @@ export const DebugInfo: React.FC = () => {
       .join('\n\n');
 
     Clipboard.setString(allDebugInfo);
-    alertService.alert(t('labels.copied'), t('debugInfo.copiedAll'));
+    toastService.success(t('debugInfo.copiedAll'));
   };
 
   const handleCopySection = ({ title, rows }: DebugSection) => {
     Clipboard.setString(formatRows(rows));
-    alertService.alert(
-      t('labels.copied'),
-      t('debugInfo.copiedSection', { section: title }),
-    );
+    toastService.success(t('debugInfo.copiedSection', { section: title }));
   };
 
   // Only show in development, local, or staging builds — or for users with dev tools access

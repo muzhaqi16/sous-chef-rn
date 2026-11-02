@@ -4,6 +4,10 @@
 fragment list_row on ShoppingList {
   id
   ...ShoppingListReaders
+  # A view no write returns, so the readers leave it out; a new list has none.
+  priceReadiness {
+    enough
+  }
   collaboratorsConnection(first: 20) {
     edges {
       cursor

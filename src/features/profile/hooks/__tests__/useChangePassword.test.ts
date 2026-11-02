@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { ChangePasswordDocument } from '#operations/auth/auth.generated';
 import { PasswordActionStatus } from '#/graphql/generated/schemaTypes';
 import {
@@ -56,6 +56,14 @@ const changed = (
   }).mock;
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   registerSessionHost(HOST);
   useStore
@@ -76,7 +84,7 @@ describe('useChangePassword', () => {
       ],
     });
 
-    const outcome = await result.current.changePassword(INPUT);
+    const outcome = await drained(() => result.current.changePassword(INPUT));
 
     expect(outcome).toEqual({
       status: 'completed',
@@ -109,7 +117,8 @@ describe('useChangePassword', () => {
       settled = true;
       return outcome;
     });
-    await waitFor(() => expect(renewStoredSignIn).toHaveBeenCalled());
+    await drainTimers();
+    expect(renewStoredSignIn).toHaveBeenCalled();
     expect(settled).toBe(false);
 
     finishRenewal('dropped');
@@ -126,7 +135,7 @@ describe('useChangePassword', () => {
       operationMocks: [changed(null)],
     });
 
-    const outcome = await result.current.changePassword(INPUT);
+    const outcome = await drained(() => result.current.changePassword(INPUT));
 
     expect(outcome).toEqual({
       status: 'completed',
@@ -152,7 +161,7 @@ describe('useChangePassword', () => {
       ],
     });
 
-    const outcome = await result.current.changePassword(INPUT);
+    const outcome = await drained(() => result.current.changePassword(INPUT));
 
     expect(outcome.status).toBe('refused');
     expect(useStore.getState().accessToken).toBe(OLD_ACCESS);

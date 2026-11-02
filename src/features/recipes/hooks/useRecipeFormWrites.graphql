@@ -34,6 +34,7 @@ fragment useRecipeFormWrites_recipe on Recipe {
         quantity
         originalText
         item {
+          version
           id
           name
           imageUrl
@@ -67,6 +68,7 @@ fragment useRecipeFormWrites_recipe on Recipe {
   # never from the live fields above: a save sends the whole form, and live
   # values would set every pending change back.
   pendingRevision {
+    version
     id
     proposed {
       name
@@ -92,6 +94,7 @@ fragment useRecipeFormWrites_recipe on Recipe {
         name
         quantity
         item {
+          version
           id
           name
           imageUrl

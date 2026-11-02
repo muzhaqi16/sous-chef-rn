@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { t } from '#/i18n';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { kitTestIDs } from '#components/testIDs';
 import { catalogTestIDs } from '#features/catalog/testIDs';
@@ -11,7 +11,14 @@ import type {
   MockDataFor,
   QueryDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
 import { GetPantryItemDocument } from '../usePantryItemDetailData.generated';
 import {
@@ -25,6 +32,7 @@ import {
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import type { ItemRecipeSuggestion } from '#features/pantry/hooks/useRecipeSuggestionsForItem';
+import type { DataState } from '#hooks/data/useDataState';
 import {
   pantryItemData,
   type PantryItemFixture,
@@ -38,6 +46,11 @@ import {
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
 
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
+
 // The cost rows' own on/off cases live in PantryDetailInfo's suite.
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => true),
@@ -47,10 +60,14 @@ jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
 // useRecipeSuggestionsForItem.test). Mock it so this integration test
 // doesn't need its query's mocks too.
 const mockSuggestedRecipes: ItemRecipeSuggestion[] = [];
+let mockRecipesState: DataState = 'empty';
+const mockRetryRecipes = jest.fn();
 jest.mock('#features/pantry/hooks/useRecipeSuggestionsForItem', () => ({
   useRecipeSuggestionsForItem: () => ({
     suggestedRecipes: mockSuggestedRecipes,
     loadingRecipes: false,
+    recipesState: mockRecipesState,
+    retryRecipes: mockRetryRecipes,
   }),
 }));
 
@@ -108,7 +125,6 @@ jest.mock('#store/useAppStore', () => ({
   useSelectedShoppingListId: jest.fn(() => 'sl-1'),
   useSelectedPantryId: jest.fn(() => 'p1'),
   useSelectedHomeId: jest.fn(() => 'home-1'),
-  useIsOnline: jest.fn(() => true),
   // The screen classifies its own data state via useDataState ->
   // useOfflineAwareError -> useIsApiUnavailable, which calls
   // useAppStore(selector). Online by default; individual tests override.
@@ -148,15 +164,25 @@ jest.mock('#components/atoms/SousChefLoader', () => ({
 
 // The offline predicate `useDataState` consults. Mocked at the hook rather than
 // the slice so the test does not depend on networkSlice internals.
-const mockBlocksCacheMissQueries = jest.fn(() => false);
+const mockIsOffline = jest.fn(() => false);
 jest.mock('#hooks/app/useIsApiUnavailable', () => ({
-  useIsApiUnavailable: () => mockBlocksCacheMissQueries(),
+  useIsApiUnavailable: () => mockIsOffline(),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
   Object.assign(mockPermissions, FULL_PERMISSIONS);
   mockSuggestedRecipes.length = 0;
+  mockRecipesState = 'empty';
+  mockIsOffline.mockReturnValue(false);
 });
 
 const route = { params: { itemId: 'pi1' } };
@@ -243,7 +269,8 @@ describe('PantryItemDetail (integration)', () => {
         ],
       });
 
-      expect(await screen.findByText('Avg Cost/Unit')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Avg Cost/Unit')).toBeTruthy();
       expect(screen.getByText('$0.74')).toBeTruthy();
       expect(screen.getByText('Stock value')).toBeTruthy();
       expect(screen.getByText('$5.95')).toBeTruthy();
@@ -265,7 +292,8 @@ describe('PantryItemDetail (integration)', () => {
         ],
       });
 
-      expect(await screen.findByText('Cost/Unit')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Cost/Unit')).toBeTruthy();
       expect(screen.getByText('$0.59')).toBeTruthy();
       expect(screen.getByText('$2.95')).toBeTruthy();
       expect(screen.queryByText('Avg Cost/Unit')).toBeNull();
@@ -288,7 +316,8 @@ describe('PantryItemDetail (integration)', () => {
         ],
       });
 
-      expect(await screen.findByText('Stock value')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('Stock value')).toBeTruthy();
       expect(screen.queryByText('Cost/Unit')).toBeNull();
       expect(screen.queryByText('$0.37')).toBeNull();
     });
@@ -301,7 +330,8 @@ describe('PantryItemDetail (integration)', () => {
         ],
       });
 
-      await screen.findAllByText('Milk');
+      await drainTimers();
+      expect(screen.getAllByText('Milk')).toBeTruthy();
       expect(screen.queryByText('Cost/Unit')).toBeNull();
       expect(screen.queryByText('Stock value')).toBeNull();
       expect(screen.queryByText('$0.00')).toBeNull();
@@ -312,7 +342,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
   });
 
   it('renders a fractional quantity as a cooking fraction', async () => {
@@ -326,21 +357,24 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    expect(await screen.findAllByText('1 1/4 cup')).toHaveLength(3);
+    await drainTimers();
+    expect(screen.getAllByText('1 1/4 cup')).toHaveLength(3);
   });
 
   it('keeps decimals, rounded to three places, for a unit that opts out of fractions', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock({ ...fullItem, quantity: 177.4412 })],
     });
-    expect(await screen.findAllByText('177.441 L')).toHaveLength(3);
+    await drainTimers();
+    expect(screen.getAllByText('177.441 L')).toHaveLength(3);
   });
 
   it('shows the category and storage state', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText(/Dairy/);
+    await drainTimers();
+    expect(screen.getByText(/Dairy/)).toBeTruthy();
     expect(screen.getByText(/Fridge/)).toBeTruthy();
   });
 
@@ -348,21 +382,24 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText('Organic Valley');
+    await drainTimers();
+    expect(screen.getByText('Organic Valley')).toBeTruthy();
   });
 
   it('shows notes section', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText('Keep cold');
+    await drainTimers();
+    expect(screen.getByText('Keep cold')).toBeTruthy();
   });
 
   it('shows tags section', async () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText('organic');
+    await drainTimers();
+    expect(screen.getByText('organic')).toBeTruthy();
     expect(screen.getByText('dairy')).toBeTruthy();
   });
 
@@ -370,7 +407,24 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findByText('Recipes to try');
+    await drainTimers();
+    expect(screen.getByText('Recipes to try')).toBeTruthy();
+  });
+
+  it('says the suggestions could not be read, never that there are none', async () => {
+    mockRecipesState = 'error';
+    renderWithApollo(<PantryItemDetail route={route} />, {
+      operationMocks: [itemMock(fullItem)],
+    });
+    await drainTimers();
+
+    expect(
+      screen.queryByText(t('pantryItemDetail.noRecipeSuggestions')),
+    ).toBeNull();
+    // The screen stands: only the section reports it.
+    expect(screen.getByText('Recipes to try')).toBeTruthy();
+    fireEvent.press(screen.getByText(t('labels.tryAgain')));
+    expect(mockRetryRecipes).toHaveBeenCalledTimes(1);
   });
 
   it('opens a suggested catalog recipe with what its card shows', async () => {
@@ -387,7 +441,8 @@ describe('PantryItemDetail (integration)', () => {
       operationMocks: [itemMock(fullItem)],
     });
 
-    fireEvent.press(await screen.findByText('Tomato soup'));
+    await drainTimers();
+    fireEvent.press(screen.getByText('Tomato soup'));
 
     expect(mockToRecipeDetail).toHaveBeenCalledWith({
       catalog: {
@@ -412,7 +467,8 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('pantry-item-discard-button')).toBeTruthy();
   });
 
@@ -426,7 +482,8 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
   });
 
@@ -439,7 +496,8 @@ describe('PantryItemDetail (integration)', () => {
         itemMock({ ...fullItem, expiresOn: toDateKey(yesterday) }),
       ],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(screen.queryByTestId('pantry-item-discard-button')).toBeNull();
   });
 
@@ -458,7 +516,8 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('pantry-item-edit-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
     expect(screen.queryByTestId('pantry-item-delete-button')).toBeNull();
@@ -469,7 +528,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     // Add to list and adjust stay in the bar; the rest open from "more".
     expect(screen.getByTestId('pantry-item-add-to-list-button')).toBeTruthy();
     expect(screen.getByTestId('pantry-item-adjust-button')).toBeTruthy();
@@ -487,7 +547,8 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('pantry-item-report-photo-button')).toBeTruthy();
   });
 
@@ -508,7 +569,8 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('pantry-item-report-photo-button')).toBeNull();
   });
 
@@ -516,7 +578,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('entry-photo-change-button')).toBeTruthy();
   });
 
@@ -525,7 +588,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('entry-photo-change-button')).toBeNull();
   });
 
@@ -544,10 +608,12 @@ describe('PantryItemDetail (integration)', () => {
       renderWithApollo(<PantryItemDetail route={route} />, {
         operationMocks: [itemMock({ ...fullItem, ...fixture })],
       });
-      await screen.findAllByText('Milk');
+      await drainTimers();
+      expect(screen.getAllByText('Milk')).toBeTruthy();
       const change = headerAction(catalogTestIDs.entryPhotoChangeButton);
       if (change) fireEvent.press(change);
-      await screen.findByTestId(catalogTestIDs.entryPhotoSheet);
+      await drainTimers();
+      expect(screen.getByTestId(catalogTestIDs.entryPhotoSheet)).toBeTruthy();
       return screen.queryByTestId(catalogTestIDs.entryPhotoPickItemPhoto);
     };
 
@@ -585,7 +651,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('pantry-item-relink-button')).toBeTruthy();
   });
 
@@ -594,7 +661,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('pantry-item-relink-button')).toBeNull();
   });
 
@@ -602,7 +670,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock({ ...fullItem, canSuggest: true })],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(headerAction('pantry-item-report-photo-button')).toBeNull();
   });
 
@@ -610,7 +679,7 @@ describe('PantryItemDetail (integration)', () => {
     // The screen read only `data` from useQuery and rendered a bare loader
     // whenever `item` was falsy, so offline it span forever with no error and
     // no retry. `loading` and `error` were never consulted.
-    mockBlocksCacheMissQueries.mockReturnValue(true);
+    mockIsOffline.mockReturnValue(true);
 
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [
@@ -620,8 +689,57 @@ describe('PantryItemDetail (integration)', () => {
       ],
     });
 
-    expect(await screen.findByTestId('state-offline')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByTestId('state-offline')).toBeTruthy();
     expect(screen.queryByTestId('state-loading')).toBeNull();
+  });
+
+  describe('a row never opened on this device, offline', () => {
+    const openHeldRow = async () => {
+      mockIsOffline.mockReturnValue(true);
+      const cache = makeCache();
+      seedFragment(cache, {
+        fragment: PantryItem_ListedFragmentDoc,
+        fragmentName: 'pantryItem_listed',
+        data: {
+          __typename: 'PantryItem',
+          id: 'pi1',
+          itemName: 'Oat milk',
+          expiresOn: null,
+          storageLocation: { id: 'loc-1', name: 'Fridge door' },
+        },
+      });
+      renderWithApollo(<PantryItemDetail route={route} />, {
+        cache,
+        operationMocks: [
+          recordMock(GetPantryItemDocument, {
+            error: new Error('offline: no cached data'),
+          }).mock,
+        ],
+      });
+      await drainTimers();
+    };
+
+    it('shows the name, location and expiry, and says the rest needs a connection', async () => {
+      await openHeldRow();
+
+      expect(screen.getAllByText('Oat milk')).toBeTruthy();
+      expect(screen.getByText('Fridge door')).toBeTruthy();
+      expect(screen.getByText('No expiry')).toBeTruthy();
+      expect(screen.getByTestId(pantryTestIDs.itemPartial)).toBeTruthy();
+      expect(screen.queryByTestId('state-offline')).toBeNull();
+    });
+
+    it('offers Edit to someone who may edit, and not to anyone else', async () => {
+      await openHeldRow();
+      expect(headerAction(pantryTestIDs.itemEditButton)).toBeTruthy();
+    });
+
+    it('offers no Edit to a viewer', async () => {
+      mockPermissions.canEditItems = false;
+      await openHeldRow();
+      expect(headerAction(pantryTestIDs.itemEditButton)).toBeNull();
+    });
   });
 
   it('says a stack the server holds nothing for is gone, not that it failed to load', async () => {
@@ -631,7 +749,8 @@ describe('PantryItemDetail (integration)', () => {
       ],
     });
 
-    expect(await screen.findByTestId('pantry-item-removed')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByTestId('pantry-item-removed')).toBeTruthy();
     expect(
       screen.getByText('This item is no longer in your pantry'),
     ).toBeTruthy();
@@ -684,7 +803,8 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    expect(await screen.findByText('Nutrition')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Nutrition')).toBeTruthy();
     expect(screen.getByText('64')).toBeTruthy();
     expect(screen.getByText('3.3')).toBeTruthy();
     expect(screen.getByText('4.8')).toBeTruthy();
@@ -700,11 +820,10 @@ describe('PantryItemDetail (integration)', () => {
       { operationMocks: [itemMock(fullItem)] },
     );
 
-    await waitFor(() =>
-      expect(mockReplaceWithPantryItemDetail).toHaveBeenCalledWith({
-        itemId: 'pi1',
-      }),
-    );
+    await drainTimers();
+    expect(mockReplaceWithPantryItemDetail).toHaveBeenCalledWith({
+      itemId: 'pi1',
+    });
   });
 
   it('stays put when the answer is the stack it asked for', async () => {
@@ -712,7 +831,8 @@ describe('PantryItemDetail (integration)', () => {
       operationMocks: [itemMock(fullItem)],
     });
 
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(mockReplaceWithPantryItemDetail).not.toHaveBeenCalled();
   });
 
@@ -748,8 +868,9 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
+    await drainTimers();
     expect(
-      await screen.findByText(t('labels.typicalFor', { concept: 'flour' })),
+      screen.getByText(t('labels.typicalFor', { concept: 'flour' })),
     ).toBeTruthy();
     expect(screen.getByText('334')).toBeTruthy();
     expect(screen.queryByText('Nutrition')).toBeNull();
@@ -761,7 +882,8 @@ describe('PantryItemDetail (integration)', () => {
     renderWithApollo(<PantryItemDetail route={route} />, {
       operationMocks: [itemMock(fullItem)],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
     expect(screen.queryByText('Nutrition')).toBeNull();
   });
 
@@ -774,7 +896,8 @@ describe('PantryItemDetail (integration)', () => {
         }),
       ],
     });
-    await screen.findAllByText('Milk');
+    await drainTimers();
+    expect(screen.getAllByText('Milk')).toBeTruthy();
   });
 
   // The weights read in the user's unit system by the API's own readings,
@@ -875,7 +998,8 @@ describe('PantryItemDetail (integration)', () => {
         renderWithApollo(<PantryItemDetail route={route} />, {
           operationMocks: [weighed(value, stored), settings(UnitSystem.System)],
         });
-        expect(await screen.findByText('3 lb')).toBeTruthy();
+        await drainTimers();
+        expect(screen.getByText('3 lb')).toBeTruthy();
       },
     );
 
@@ -883,7 +1007,8 @@ describe('PantryItemDetail (integration)', () => {
       renderWithApollo(<PantryItemDetail route={route} />, {
         operationMocks: [weighed(1360.78, g), settings(UnitSystem.Metric)],
       });
-      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('1.36 kg')).toBeTruthy();
     });
 
     it('follows a change of setting at once, with no request for it', async () => {
@@ -893,7 +1018,8 @@ describe('PantryItemDetail (integration)', () => {
         cache,
         operationMocks: [weighed(1360.78, g)],
       });
-      expect(await screen.findByText('3 lb')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('3 lb')).toBeTruthy();
 
       act(() => {
         cache.modify({
@@ -902,14 +1028,16 @@ describe('PantryItemDetail (integration)', () => {
         });
       });
 
-      expect(await screen.findByText('1.36 kg')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('1.36 kg')).toBeTruthy();
     });
 
     it('reads what remains in the same system', async () => {
       renderWithApollo(<PantryItemDetail route={route} />, {
         operationMocks: [weighed(1360.78, g, 940), settings(UnitSystem.System)],
       });
-      expect(await screen.findByText('2.07 lb')).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText('2.07 lb')).toBeTruthy();
     });
 
     it('reads what it holds as the row does, not in stored grams', async () => {
@@ -930,7 +1058,8 @@ describe('PantryItemDetail (integration)', () => {
           settings(UnitSystem.Imperial),
         ],
       });
-      expect((await screen.findAllByText('2 lb')).length).toBeGreaterThan(0);
+      await drainTimers();
+      expect(screen.getAllByText('2 lb').length).toBeGreaterThan(0);
       expect(screen.queryByText('907.18 g')).toBeNull();
     });
 
@@ -957,7 +1086,8 @@ describe('PantryItemDetail (integration)', () => {
           settings(system),
         ],
       });
-      expect(await screen.findByText(text)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(text)).toBeTruthy();
     });
   });
 });

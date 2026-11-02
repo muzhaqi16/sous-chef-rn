@@ -1,6 +1,5 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { AddItemToShoppingListFromFilteredPantryDocument } from './useAddPantryItemToShoppingList.generated';
-import { buildAddItemsReconcileUpdate } from '#features/shoppingList/cache/items';
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { useTranslation } from '#/i18n';
 
@@ -8,8 +7,8 @@ import { useTranslation } from '#/i18n';
 export type AddToListOutcome = 'kept' | 'reverted';
 
 /**
- * Puts one pantry item on a shopping list: written before firing, withdrawn on
- * a refusal. The list is per call, since one screen adds a row to the selected
+ * Puts one pantry item on a shopping list, held until the server answers. The
+ * list is per call, since one screen adds a row to the selected
  * list and every row to a list picked in the moment.
  */
 export function useAddPantryItemToShoppingList() {
@@ -18,11 +17,6 @@ export function useAddPantryItemToShoppingList() {
 
   const [addToShoppingList] = useMutation(
     AddItemToShoppingListFromFilteredPantryDocument,
-    {
-      // Reads the list id from the mutation's own variables, so it stays
-      // correct across re-renders.
-      update: buildAddItemsReconcileUpdate({}),
-    },
   );
 
   const addToList = async (

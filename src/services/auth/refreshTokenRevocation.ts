@@ -1,7 +1,7 @@
 import { env } from '#/config/env';
 import { getApiRestUrl } from '#/apollo/links/apiHealthProbe';
 import { useStore } from '#store';
-import { isNetworkWithheld } from '#store/slices/networkSlice';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 import { registerSessionTeardown } from '#store/sessionTeardown';
 import { requirePlatform } from '#platform/install';
 import type { PendingRevocation } from '#platform/ports';
@@ -57,7 +57,7 @@ let drainInFlight: Promise<void> | null = null;
 async function drainOnce(): Promise<void> {
   const pending = await secureStore().loadPendingRevocations();
   for (const revocation of pending) {
-    if (isNetworkWithheld(useStore.getState())) return;
+    if (isApiUnavailable(useStore.getState())) return;
     const outcome = await postRevoke(revocation);
     // The API is not answering; the next reconnect retries the rest.
     if (outcome === 'retry') return;
@@ -67,7 +67,7 @@ async function drainOnce(): Promise<void> {
 
 /** Revoke every parked token. Single-flight; a no-op while offline. */
 export function drainPendingRevocations(): Promise<void> {
-  if (isNetworkWithheld(useStore.getState())) return Promise.resolve();
+  if (isApiUnavailable(useStore.getState())) return Promise.resolve();
   drainInFlight ??= drainOnce()
     .catch(error => logger.warn('Pending revocation drain failed:', error))
     .finally(() => {

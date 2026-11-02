@@ -36,7 +36,7 @@ import { firstNonBlank } from '#/utils/firstNonBlank';
 import { toShownNutrition } from '#domain/nutrition';
 import { storeApi } from '#store';
 import { useSelectedHomeId } from '#store/useAppStore';
-import { blocksCacheMissQueries } from '#store/slices/networkSlice';
+import { isApiUnavailable } from '#store/slices/networkSlice';
 
 // `format` is react-native-vision-camera-barcode-scanner's BarcodeFormat, with
 // 'qr-code' normalized to 'qr' by BarcodeScannerScreen; a non-UPC format falls
@@ -146,13 +146,14 @@ interface LabelledError {
 
 /**
  * `pantryId` is where an add from the result lands, so the lookup can report the
- * unit that pantry would count the item in.
+ * unit that pantry would count the item in. `pricesListId` is the list store
+ * mode shops with prices shown, whose store the comparison is read for.
  */
 export const useSearchResults = (
   barcode: string,
   format?: string,
   pantryId?: string,
-  inStoreMode = false,
+  pricesListId?: string,
 ) => {
   const { t } = useTranslation();
   const client = useApolloClient();
@@ -165,14 +166,19 @@ export const useSearchResults = (
 
   const [addNewItem, { loading: addingItem }] = useMutation(CreateItemDocument);
   // The household's dietary alerts ride the lookup when there is a household,
-  // and in store mode what it paid.
+  // and in store mode its prices and the list's store they are compared at.
   const homeId = useSelectedHomeId();
   const homeVariables = homeId
-    ? { homeId, withHome: true, withPrices: inStoreMode }
+    ? {
+        homeId,
+        withHome: true,
+        withPrices: !!pricesListId,
+        listId: pricesListId,
+      }
     : {};
   // A store's shelf price is no household's, so it rides with or without one.
   const shelfPricesOffered = useFeatureFlag('storeShelfPrices');
-  const withShelfPrices = inStoreMode && shelfPricesOffered;
+  const withShelfPrices = !!pricesListId && shelfPricesOffered;
 
   const {
     data: upcData,
@@ -238,13 +244,13 @@ export const useSearchResults = (
   const loading = upcLoading || (!skuSkipped && !skuAnswer && !skuError);
   const missed = !!skuAnswer && !skuItem && !createdId;
 
-  // Offline, `offlineModeLink` answers the uncached lookup itself. Read when the
+  // Offline, `offlineReadLink` answers the uncached lookup itself. Read when the
   // error lands, so reconnecting doesn't relabel that answer.
   const [labelled, setLabelled] = useState<LabelledError | null>(null);
   if (lookupError && labelled?.error !== lookupError) {
     setLabelled({
       error: lookupError,
-      neverAsked: blocksCacheMissQueries(storeApi.getState()),
+      neverAsked: isApiUnavailable(storeApi.getState()),
     });
   }
   const neverAsked =

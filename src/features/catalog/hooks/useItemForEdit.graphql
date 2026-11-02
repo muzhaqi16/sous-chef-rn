@@ -63,6 +63,7 @@ fragment useItemForEdit_item on Item {
   brands {
     id
     brand {
+      version
       id
       name
     }

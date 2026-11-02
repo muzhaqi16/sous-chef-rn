@@ -7,13 +7,9 @@ import { alertService } from '#/services/alertService';
 import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import Clipboard from '@react-native-clipboard/clipboard';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
-import {
-  useHomeDetailManagement,
-  ROLE_OPTIONS,
-} from '#features/home/screens/useHomeDetailManagement';
+import { useHomeDetailManagement } from '#features/home/screens/useHomeDetailManagement';
 
 import { DetailTemplate } from '#components/templates/DetailTemplate';
-import { ModalPicker } from '#components/molecules/ModalPicker';
 import { EditableField } from '#features/home/components/EditableField';
 import { NavigationRow } from '#features/home/components/NavigationRow';
 
@@ -38,10 +34,7 @@ import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 import { buildJoinHomeUrl } from '#/utils/deepLinkUrls';
 import { shareUrl } from '#native/share';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
-import {
-  canManageHome,
-  getAssignableRoles,
-} from '#features/home/utils/homePermissions';
+import { canManageHome } from '#features/home/utils/homePermissions';
 import { homeTestIDs } from '#features/home/testIDs';
 import { fieldError, homeNameRule } from '#/utils/validation/common';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
@@ -55,7 +48,8 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
 }) => {
   useScreenTransition('HomeDetailScreen');
   const { t } = useTranslation();
-  const { goBack, toStorageLocations, toHomeDietaryNeeds } = useAppNavigation();
+  const { goBack, toStorageLocations, toHomeDietaryNeeds, toUsualStores } =
+    useAppNavigation();
   const { homeId } = route.params;
   // PERFORMANCE: Use selective selector instead of full store subscription
   const currentUser = useUser();
@@ -70,9 +64,6 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
     homeState,
     leaving,
     refetch,
-    rolePickerState,
-    handleRoleSelect,
-    closeRolePicker,
     saveName,
     changeRole,
     removeMember,
@@ -159,9 +150,6 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   const currentUserMembership = home?.myMembership;
   const isOwner = currentUserMembership?.role === MembershipRole.Owner;
   const canManage = canManageHome(currentUserMembership);
-  const assignableRoles = currentUserMembership
-    ? getAssignableRoles(currentUserMembership.role)
-    : [];
 
   const handleLeaveHome = async () => {
     if (!home) return;
@@ -349,6 +337,18 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
         />
       ),
     },
+    {
+      title: t('homeDetail.storesSectionTitle'),
+      content: (
+        <ThemedNavigationRow
+          icon="storefront-outline"
+          title={t('usualStores.title')}
+          subtitle={t('homeDetail.usualStoresRowSubtitle')}
+          onPress={() => toUsualStores({ homeId })}
+          testID={homeTestIDs.usualStoresRow}
+        />
+      ),
+    },
     // Only show Leave Home section for non-owners
     ...(!isOwner
       ? [
@@ -378,30 +378,14 @@ export const HomeDetailScreen: React.FC<StaticScreenProps<RouteParams>> = ({
   ];
 
   return (
-    <>
-      <DetailTemplate
-        title={t('homeDetail.title')}
-        onBack={goBack}
-        headerActions={[]}
-        sections={sections}
-        refreshing={refreshing}
-        onRefresh={handleRefresh}
-      />
-      <ModalPicker
-        visible={rolePickerState.visible}
-        label={t('labels.selectRole')}
-        options={ROLE_OPTIONS.filter(role =>
-          assignableRoles.includes(role.value),
-        ).map(role => ({
-          label: t(role.labelKey),
-          value: role.value,
-        }))}
-        selected={rolePickerState.currentRole}
-        onSelect={handleRoleSelect}
-        onCancel={closeRolePicker}
-        confirmLabel={t('labels.save')}
-      />
-    </>
+    <DetailTemplate
+      title={t('homeDetail.title')}
+      onBack={goBack}
+      headerActions={[]}
+      sections={sections}
+      refreshing={refreshing}
+      onRefresh={handleRefresh}
+    />
   );
 };
 

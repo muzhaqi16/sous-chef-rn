@@ -1,6 +1,6 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type {
   MockFor,
   MockDataFor,
@@ -9,7 +9,9 @@ import type {
 import {
   renderHookWithApollo,
   recordMock,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   NotificationEventsDocument,
   GetUnreadNotificationsDocument,
@@ -29,6 +31,7 @@ import type { UseNotificationsOnLaunch_NotificationFragment } from '#features/no
 import { readNotificationStatus } from '#features/notifications/utils/notificationCacheWrites';
 import { useNotifications, useNotificationListener } from '../useNotifications';
 import { reportSubscriptionError } from '#utils/subscriptionErrorHandler';
+import { MAX_RESTART_ATTEMPTS } from '#hooks/subscriptions/useSubscriptionTransportRecovery';
 import { logger } from '#/utils/environment';
 import { memoryLifecycle } from '#/test-utils/memoryPlatform';
 
@@ -236,6 +239,14 @@ const unreadFeedData: MockDataFor<typeof GetUnreadNotificationsDocument> = {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockUser = { id: 'user-1' };
   // The installed lifecycle is shared by the file; a test that moved it and
@@ -297,7 +308,7 @@ const seededCache = (
       },
     },
   };
-  cache.writeQuery({ query: GetUnreadNotificationsDocument, data });
+  seedQuery(cache, { query: GetUnreadNotificationsDocument, data });
   return cache;
 };
 
@@ -323,9 +334,7 @@ describe('useNotifications', () => {
   it('handleMarkAllAsRead calls syncMarkAllAsRead', async () => {
     const { result } = renderHookWithApollo(() => useNotifications());
 
-    await act(async () => {
-      await result.current.handleMarkAllAsRead();
-    });
+    await drained(() => result.current.handleMarkAllAsRead());
 
     expect(mockSyncMarkAllAsRead).toHaveBeenCalled();
   });
@@ -401,13 +410,12 @@ describe('useNotificationListener', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(onArrivedWhileAway).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Scheduled maintenance',
-          body: 'The app is offline tonight from 2 to 3.',
-        }),
-      ),
+    await drainTimers();
+    expect(onArrivedWhileAway).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Scheduled maintenance',
+        body: 'The app is offline tonight from 2 to 3.',
+      }),
     );
   });
 
@@ -434,7 +442,8 @@ describe('useNotificationListener', () => {
       },
     );
 
-    await waitFor(() => expect(summary.fired).toHaveLength(1));
+    await drainTimers();
+    expect(summary.fired).toHaveLength(1);
     expect(onArrivedWhileAway).not.toHaveBeenCalled();
   });
 
@@ -467,17 +476,15 @@ describe('useNotificationListener', () => {
       ],
     });
 
-    await waitFor(() => {
-      expect(readNotificationStatus(cache, 'notif-1')).toBe(
-        NotificationStatus.Pending,
-      );
-    });
+    await drainTimers();
+    expect(readNotificationStatus(cache, 'notif-1')).toBe(
+      NotificationStatus.Pending,
+    );
     // The count is the server's, not a local +1 — see the comment on
     // `reseedUnreadCount`.
-    await waitFor(() => {
-      expect(fired.length).toBeGreaterThan(0);
-      expect(badgeCount(cache)).toBe(1);
-    });
+    await drainTimers();
+    expect(fired.length).toBeGreaterThan(0);
+    expect(badgeCount(cache)).toBe(1);
   });
 
   // The badge is re-read, never moved here: a handler that asked the cache
@@ -500,16 +507,14 @@ describe('useNotificationListener', () => {
       ],
     });
 
-    await waitFor(() => {
-      expect(readNotificationStatus(cache, 'notif-1')).toBe(
-        NotificationStatus.Read,
-      );
-    });
+    await drainTimers();
+    expect(readNotificationStatus(cache, 'notif-1')).toBe(
+      NotificationStatus.Read,
+    );
     // The badge lands when the re-query resolves, not when it is issued.
-    await waitFor(() => {
-      expect(fired.length).toBeGreaterThan(0);
-      expect(badgeCount(cache)).toBe(0);
-    });
+    await drainTimers();
+    expect(fired.length).toBeGreaterThan(0);
+    expect(badgeCount(cache)).toBe(0);
   });
 
   it('DISMISSED subtype removes the row AND re-reads the count', async () => {
@@ -528,13 +533,11 @@ describe('useNotificationListener', () => {
       ],
     });
 
-    await waitFor(() => {
-      expect(readNotificationStatus(cache, 'notif-2')).toBeUndefined();
-    });
-    await waitFor(() => {
-      expect(fired.length).toBeGreaterThan(0);
-      expect(badgeCount(cache)).toBe(0);
-    });
+    await drainTimers();
+    expect(readNotificationStatus(cache, 'notif-2')).toBeUndefined();
+    await drainTimers();
+    expect(fired.length).toBeGreaterThan(0);
+    expect(badgeCount(cache)).toBe(0);
   });
 
   it.each([
@@ -557,10 +560,9 @@ describe('useNotificationListener', () => {
     // The aggregate event's rows are unknown client-side — the handler must
     // fall back to a server re-sync instead of guessing at the local ones. The
     // feed query states the badge as well.
-    await waitFor(() => {
-      expect(fired.length).toBeGreaterThan(0);
-      expect(badgeCount(cache)).toBe(0);
-    });
+    await drainTimers();
+    expect(fired.length).toBeGreaterThan(0);
+    expect(badgeCount(cache)).toBe(0);
     expect(readNotificationStatus(cache, 'notif-1')).toBe(
       NotificationStatus.Sent,
     );
@@ -572,6 +574,10 @@ describe('useNotificationListener', () => {
     ): MockFor<typeof NotificationEventsDocument> => ({
       request: { query: NotificationEventsDocument },
       error,
+      // Recovery re-subscribes: each attempt ends as the first did, soon enough
+      // that the count of attempts is not reset as a stable connection.
+      maxUsageCount: MAX_RESTART_ATTEMPTS + 1,
+      delay: 0,
     });
     const warnedAboutSubscription = () =>
       jest
@@ -588,9 +594,8 @@ describe('useNotificationListener', () => {
         ],
       });
 
-      await waitFor(() => {
-        expect(reportSubscriptionError).toHaveBeenCalled();
-      });
+      await drainTimers();
+      expect(reportSubscriptionError).toHaveBeenCalled();
       expect(warnedAboutSubscription()).toBe(false);
     });
 
@@ -603,9 +608,8 @@ describe('useNotificationListener', () => {
         ],
       });
 
-      await waitFor(() => {
-        expect(reportSubscriptionError).toHaveBeenCalled();
-      });
+      await drainTimers();
+      expect(reportSubscriptionError).toHaveBeenCalled();
       expect(warnedAboutSubscription()).toBe(true);
     });
   });

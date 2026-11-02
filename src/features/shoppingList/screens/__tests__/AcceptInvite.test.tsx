@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import type {
   MockedResponse,
   MockFor,
@@ -9,6 +9,7 @@ import type {
   RecordedMock,
 } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
@@ -274,10 +275,19 @@ const alerts = () => jest.mocked(alertService.alert).mock.calls;
 
 /** Presses Decline, then the confirmation's own Decline. */
 async function declineAndConfirm(user: ReturnType<typeof userEvent.setup>) {
-  await user.press(await screen.findByText('Decline'));
+  await drainTimers();
+  await user.press(screen.getByText('Decline'));
   const [confirmation] = alerts();
   confirmation?.[2]?.find(b => b.text === 'Decline')?.onPress?.();
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('AcceptInvite', () => {
   beforeEach(() => {
@@ -366,7 +376,8 @@ describe('AcceptInvite', () => {
     renderInvite(invite);
 
     for (const text of texts) {
-      expect((await screen.findAllByText(text)).length).toBeGreaterThan(0);
+      await drainTimers();
+      expect(screen.getAllByText(text).length).toBeGreaterThan(0);
     }
   });
 
@@ -380,8 +391,9 @@ describe('AcceptInvite', () => {
   ])('offers nothing to accept on %s', async (_name, invite) => {
     renderInvite(invite);
 
+    await drainTimers();
     expect(
-      await screen.findByText(/This invitation is no longer available/),
+      screen.getByText(/This invitation is no longer available/),
     ).toBeTruthy();
     expect(screen.queryByText('Accept')).toBeNull();
   });
@@ -404,7 +416,8 @@ describe('AcceptInvite', () => {
       })),
     });
 
-    expect(await screen.findByText('Try again')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Try again')).toBeTruthy();
     expect(screen.queryByText(/Invitation not found/)).toBeNull();
   });
 
@@ -426,7 +439,8 @@ describe('AcceptInvite', () => {
     async (kind, token, invite, name) => {
       renderInvite(invite, [], token);
 
-      expect(await screen.findByText("You've been invited!")).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText("You've been invited!")).toBeTruthy();
       expect(screen.getByText(name)).toBeTruthy();
       if (kind === 'shopping-list') {
         expect(screen.getByText(/collaborate on/)).toBeTruthy();
@@ -451,9 +465,11 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     renderInvite(invite, [accept]);
 
-    await user.press(await screen.findByText('Accept'));
+    await drainTimers();
+    await user.press(screen.getByText('Accept'));
 
-    await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockGoBack).toHaveBeenCalled();
     expect(toastService.success).toHaveBeenCalledWith(message);
     // The accepted invite resolves to not found; the screen has already left.
     expect(alertService.alert).not.toHaveBeenCalled();
@@ -467,13 +483,13 @@ describe('AcceptInvite', () => {
       'deep-link-token',
     );
 
-    await screen.findByText(/collaborate on/);
+    await drainTimers();
+    expect(screen.getByText(/collaborate on/)).toBeTruthy();
     await user.press(screen.getByText('Accept'));
 
-    await waitFor(() =>
-      expect(toastService.success).toHaveBeenCalledWith(
-        'Shopping list invitation accepted!',
-      ),
+    await drainTimers();
+    expect(toastService.success).toHaveBeenCalledWith(
+      'Shopping list invitation accepted!',
     );
   });
 
@@ -485,8 +501,10 @@ describe('AcceptInvite', () => {
     ) => {
       const user = userEvent.setup();
       renderInvite(LIST_INVITE, [refusedListMock(typename)]);
-      await user.press(await screen.findByText('Accept'));
-      await waitFor(() => expect(alertService.alert).toHaveBeenCalled());
+      await drainTimers();
+      await user.press(screen.getByText('Accept'));
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenCalled();
       return alerts().flat();
     };
 
@@ -549,16 +567,16 @@ describe('AcceptInvite', () => {
         const accept = acceptMock();
         renderInvite(invite, [accept.mock]);
 
-        await user.press(await screen.findByText('Accept'));
+        await drainTimers();
+        await user.press(screen.getByText('Accept'));
 
-        await waitFor(() =>
-          expect(alertService.alert).toHaveBeenCalledWith(
-            'Verify your email first',
-            expect.any(String),
-            expect.arrayContaining([
-              expect.objectContaining({ text: 'Verify Now' }),
-            ]),
-          ),
+        await drainTimers();
+        expect(alertService.alert).toHaveBeenCalledWith(
+          'Verify your email first',
+          expect.any(String),
+          expect.arrayContaining([
+            expect.objectContaining({ text: 'Verify Now' }),
+          ]),
         );
         expect(accept.fired).toHaveLength(0);
         expect(alerts().flat()).not.toContain(success);
@@ -573,7 +591,8 @@ describe('AcceptInvite', () => {
 
       await declineAndConfirm(user);
 
-      await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+      await drainTimers();
+      expect(mockGoBack).toHaveBeenCalled();
       expect(alerts().flat()).not.toContain('Verify your email first');
     });
   });
@@ -582,7 +601,8 @@ describe('AcceptInvite', () => {
     const user = userEvent.setup();
     renderInvite(LIST_INVITE);
 
-    await user.press(await screen.findByText('Decline'));
+    await drainTimers();
+    await user.press(screen.getByText('Decline'));
 
     expect(alertService.alert).toHaveBeenCalledWith(
       'Decline Invitation',
@@ -608,7 +628,8 @@ describe('AcceptInvite', () => {
 
     await declineAndConfirm(user);
 
-    await waitFor(() => expect(mockGoBack).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockGoBack).toHaveBeenCalled();
   });
 
   it('shows error alert when accept fails', async () => {
@@ -617,16 +638,16 @@ describe('AcceptInvite', () => {
       failingMock(AcceptShoppingListInviteDocument, new Error('Network error')),
     ]);
 
-    await user.press(await screen.findByText('Accept'));
+    await drainTimers();
+    await user.press(screen.getByText('Accept'));
 
     // The server's own text is unlocalizable English by construction — the
     // client sends no `Accept-Language` and the token carries no locale — so it
     // must not be what the alert body says.
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Failed to accept invitation. Please try again.',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to accept invitation. Please try again.',
     );
   });
 
@@ -644,13 +665,13 @@ describe('AcceptInvite', () => {
       failingMock(AcceptShoppingListInviteDocument, rateLimited),
     ]);
 
-    await user.press(await screen.findByText('Accept'));
+    await drainTimers();
+    await user.press(screen.getByText('Accept'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Too many requests. Please try again in 10 minutes.',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Too many requests. Please try again in 10 minutes.',
     );
     expect(mockGoBack).not.toHaveBeenCalled();
   });
@@ -663,11 +684,10 @@ describe('AcceptInvite', () => {
 
     await declineAndConfirm(user);
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Failed to decline invitation. Please try again.',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Failed to decline invitation. Please try again.',
     );
     expect(mockGoBack).not.toHaveBeenCalled();
   });
@@ -678,14 +698,16 @@ describe('AcceptInvite', () => {
       .useRoute.mockReturnValue({ params: {} });
     renderWithApollo(<AcceptInvite />, { operationMocks: [] });
 
-    expect(await screen.findByText(/Invitation not found/)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(/Invitation not found/)).toBeTruthy();
   });
 
   it('navigates back when Go Back is pressed on not found screen', async () => {
     const user = userEvent.setup();
     renderInvite(null);
 
-    await user.press(await screen.findByText('Go Back'));
+    await drainTimers();
+    await user.press(screen.getByText('Go Back'));
 
     expect(mockGoBack).toHaveBeenCalled();
   });

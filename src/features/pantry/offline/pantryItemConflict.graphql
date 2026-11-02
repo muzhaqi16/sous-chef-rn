@@ -1,0 +1,32 @@
+# The row a stale edit is compared with: what it held and what the server holds now.
+query PantryItemForConflict($id: ID!) {
+  pantryItem(id: $id) {
+    version
+    id
+    ...PantryItemConflict_pantryItem
+  }
+}
+
+fragment PantryItemConflict_pantryItem on PantryItem {
+  version
+  id
+  itemName
+  storageState
+  condition
+  expiresOn
+  tags
+  minQuantity
+  restockQuantity
+  netWeight
+  storageNotes
+  storageLocation {
+    id
+  }
+  brand {
+    version
+    id
+  }
+  consumeUnit {
+    id
+  }
+}

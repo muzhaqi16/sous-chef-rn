@@ -14,13 +14,16 @@ export const CardContent: React.FC<CardContentProps> = ({
   subtitle,
   isPurchased = false,
 }) => {
-  styles.useVariants({ purchased: isPurchased });
+  const variantStyles = styles.useVariants({ purchased: isPurchased });
 
   return (
-    <View style={styles.container}>
+    <View style={variantStyles.container}>
       <Text
         role={rowType.title}
-        style={[styles.title, isPurchased && styles.purchasedTitle]}
+        style={[
+          variantStyles.title,
+          isPurchased && variantStyles.purchasedTitle,
+        ]}
         numberOfLines={1}
       >
         {title}

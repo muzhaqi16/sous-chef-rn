@@ -232,6 +232,7 @@
     "markCookedFailed": "Shënimi i recetës si e gatuar dështoi",
     "cookExternalError": "Recetat e jashtme nuk mund të shënohen si të gatuara. Ruaj recetën fillimisht.",
     "markedCookedDeducted": "Receta u shënua si e gatuar! Përbërësit u zbritën nga qilari.",
+    "cookReviewNeedsConnection": "Rishikimi i përbërësve kërkon lidhje. Sasitë do të llogariten kur të sinkronizohet.",
     "markedCookedSkipped_one": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbrit.",
     "markedCookedSkipped_other": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbritën.",
     "markedCookedSkippedUnit_one": "Receta u shënua si e gatuar. {{count}} përbërës nuk u zbrit: njësia e tij nuk shndërrohet në atë të qilarit.",

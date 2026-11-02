@@ -4,11 +4,12 @@ import {
   captureOnData,
   type CapturedOnData,
 } from '#/test-utils/subscriptionCapture';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
 import { MealPlanSubtype, MutationType } from '#/graphql/generated/schemaTypes';
@@ -39,6 +40,7 @@ const mockRemoveFromMealTemplates = jest.fn();
 const mockAddEdge = jest.fn();
 const mockRemoveEdge = jest.fn();
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   // The updater factories are stubbed so each call site can be asserted, but
   // the pure helpers keep their real behaviour — a fully-partial factory drops
   // whatever the module gains next.
@@ -568,8 +570,7 @@ describe('useMealPlanSubscriptions: a home the server has not created yet', () =
       unconfirmedCreates.confirm('home-1');
     });
 
-    await waitFor(() =>
-      expect(events.fired).toContainEqual({ homeId: 'home-1' }),
-    );
+    await drainTimers();
+    expect(events.fired).toContainEqual({ homeId: 'home-1' });
   });
 });

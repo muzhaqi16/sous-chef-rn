@@ -1,8 +1,9 @@
 import { toastService } from '#/services/toastService';
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   VerifyEmailDocument,
   ResendVerificationEmailDocument,
@@ -259,6 +260,14 @@ function mockStoreUser(user: Record<string, unknown> | null) {
   jest.spyOn(storeModule, 'useUser').mockReturnValue(user as never);
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('CodeVerificationScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -295,10 +304,9 @@ describe('CodeVerificationScreen', () => {
       operationMocks: [buildResendMock(recordedVariables), buildVerifyMock()],
     });
     await user.press(screen.getByTestId('resend-code'));
-    await waitFor(() => {
-      expect(recordedVariables).toContainEqual({
-        input: { email: 'test@example.com' },
-      });
+    await drainTimers();
+    expect(recordedVariables).toContainEqual({
+      input: { email: 'test@example.com' },
     });
   });
 
@@ -319,9 +327,8 @@ describe('CodeVerificationScreen', () => {
     await user.type(screen.getByTestId('field-code'), '123456');
     await user.press(screen.getByTestId('submit-button'));
 
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalled();
-    });
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalled();
   });
 
   it('reports a transport failure on resend rather than logging a send', async () => {
@@ -340,9 +347,8 @@ describe('CodeVerificationScreen', () => {
 
     await user.press(screen.getByTestId('resend-code'));
 
-    await waitFor(() => {
-      expect(mockToastError).toHaveBeenCalled();
-    });
+    await drainTimers();
+    expect(mockToastError).toHaveBeenCalled();
   });
 
   it('offers a way back to sign in', async () => {
@@ -527,9 +533,8 @@ describe('CodeVerificationScreen', () => {
       await user.type(screen.getByTestId('field-code'), '123456');
       await user.press(screen.getByTestId('submit-button'));
 
-      await waitFor(() => {
-        expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
-      });
+      await drainTimers();
+      expect(mockNavigateToLogin).toHaveBeenCalledTimes(1);
       expect(mockToastSuccess).toHaveBeenCalledTimes(1);
       const [message, options] = mockToastSuccess.mock.calls[0] as [
         string,
@@ -567,10 +572,9 @@ describe('CodeVerificationScreen', () => {
 
       await user.press(screen.getByTestId('resend-code'));
 
-      await waitFor(() => {
-        expect(recordedVariables).toContainEqual({
-          input: { email: 'test@example.com' },
-        });
+      await drainTimers();
+      expect(recordedVariables).toContainEqual({
+        input: { email: 'test@example.com' },
       });
     });
   });

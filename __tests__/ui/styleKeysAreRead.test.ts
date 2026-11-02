@@ -88,17 +88,25 @@ const sheetsIn = (source: ts.SourceFile): Sheet[] => {
 /** Keys of `binding` read in `source`; `'*'` when the whole sheet escapes. */
 const readsIn = (source: ts.SourceFile, binding: string): Set<string> => {
   const reads = new Set<string>();
+  // The sheet, and each local holding what its `useVariants` returned.
+  const names = new Set([binding]);
   const visit = (node: ts.Node) => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.initializer?.getText().startsWith(`${binding}.useVariants(`)
+    ) {
+      names.add(node.name.getText());
+    }
     if (
       ts.isPropertyAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === binding
+      names.has(node.expression.text)
     ) {
       reads.add(node.name.text);
     } else if (
       ts.isElementAccessExpression(node) &&
       ts.isIdentifier(node.expression) &&
-      node.expression.text === binding
+      names.has(node.expression.text)
     ) {
       reads.add('*');
     } else if (
@@ -106,17 +114,14 @@ const readsIn = (source: ts.SourceFile, binding: string): Set<string> => {
       ts.isSpreadAssignment(node) ||
       ts.isJsxSpreadAttribute(node)
     ) {
-      if (
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === binding
-      ) {
+      if (ts.isIdentifier(node.expression) && names.has(node.expression.text)) {
         reads.add('*');
       }
     } else if (
       ts.isVariableDeclaration(node) &&
       node.initializer &&
       ts.isIdentifier(node.initializer) &&
-      node.initializer.text === binding
+      names.has(node.initializer.text)
     ) {
       if (ts.isObjectBindingPattern(node.name)) {
         node.name.elements.forEach(element =>

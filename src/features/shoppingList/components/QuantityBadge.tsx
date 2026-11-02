@@ -55,7 +55,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
 
   const isDisabled = disabled || isPurchased;
 
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     inline: true,
     disabled: isDisabled,
     purchased: isPurchased,
@@ -89,11 +89,11 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
       accessibilityState={{ disabled: isDisabled }}
       hitSlop={hitSlop.md}
     >
-      <View style={[styles.container, containerOverride]}>
+      <View style={[variantStyles.container, containerOverride]}>
         <Text
           role="label"
           align="center"
-          style={[styles.quantityText, quantityOverride]}
+          style={[variantStyles.quantityText, quantityOverride]}
         >
           {formattedQuantity}
         </Text>
@@ -105,7 +105,7 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
             // width: a long unit at the font-scale ceiling would otherwise wrap
             // inside the row-direction box and grow the row with it.
             numberOfLines={1}
-            style={[styles.unitText, unitOverride]}
+            style={[variantStyles.unitText, unitOverride]}
           >
             {unit}
           </Text>

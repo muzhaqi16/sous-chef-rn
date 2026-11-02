@@ -13,13 +13,19 @@ import type { MultiSelectChipSheetProps } from '#components/organisms/MultiSelec
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 
 const mockAvoidPick: {
-  pick?: (itemId: string, severity: string) => Promise<boolean>;
+  pick?: (
+    food: { id: string; name: string },
+    severity: string,
+  ) => Promise<boolean>;
 } = {};
-jest.mock('#features/profile/components/AvoidFoodSheet', () => ({
+jest.mock('#features/profile/ui/AvoidFoodSheet', () => ({
   AvoidFoodSheet: ({
     onPick,
   }: {
-    onPick: (itemId: string, severity: string) => Promise<boolean>;
+    onPick: (
+      food: { id: string; name: string },
+      severity: string,
+    ) => Promise<boolean>;
   }) => {
     mockAvoidPick.pick = onPick;
     return null;
@@ -161,6 +167,33 @@ describe('DietaryRestrictionSelector', () => {
     expect(screen.getByText('Dairy')).toBeTruthy();
   });
 
+  it('says whether an allergen is an allergy or an intolerance', () => {
+    const restrictions = [
+      {
+        id: 'r-peanut',
+        diet: null,
+        intolerance: Intolerance.Peanut,
+        healthGoal: null,
+        severity: RestrictionSeverity.Allergy,
+      },
+      {
+        id: 'r-dairy',
+        diet: null,
+        intolerance: Intolerance.Dairy,
+        healthGoal: null,
+        severity: RestrictionSeverity.Intolerance,
+      },
+    ];
+    render(
+      <DietaryRestrictionSelector
+        {...defaultProps}
+        existingRestrictions={restrictions}
+      />,
+    );
+    expect(screen.getByText('Peanut (allergy)')).toBeTruthy();
+    expect(screen.getByText('Dairy (intolerance)')).toBeTruthy();
+  });
+
   it('renders existing health goal restrictions', () => {
     const restrictions = [
       {
@@ -258,7 +291,10 @@ describe('DietaryRestrictionSelector', () => {
     render(<DietaryRestrictionSelector {...defaultProps} onAdd={onAdd} />);
 
     await expect(
-      mockAvoidPick.pick?.('bacon', RestrictionSeverity.Allergy),
+      mockAvoidPick.pick?.(
+        { id: 'bacon', name: 'Bacon' },
+        RestrictionSeverity.Allergy,
+      ),
     ).resolves.toBe(true);
     expect(onAdd).toHaveBeenCalledWith(
       [{ item: 'bacon' }],

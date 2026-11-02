@@ -25,6 +25,7 @@ describe('writeLocalRecipe', () => {
       'client-recipe-1',
       { ...INPUT, nutrition: { caloriesPerServing: 420 } },
       null,
+      [],
     );
 
     expect(readRow(cache)?.nutritionPerServing).toEqual({
@@ -41,7 +42,7 @@ describe('writeLocalRecipe', () => {
 
   it('states no nutrition for a create without calories', () => {
     const cache = makeCache();
-    writeLocalRecipe(cache, 'client-recipe-1', INPUT, null);
+    writeLocalRecipe(cache, 'client-recipe-1', INPUT, null, []);
 
     expect(readRow(cache)?.nutritionPerServing).toBeNull();
   });

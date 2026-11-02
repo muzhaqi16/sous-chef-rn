@@ -4,11 +4,11 @@ import { useUser } from '#store/useAppStore';
 import { useDataState } from '#hooks/data/useDataState';
 import { toastService } from '#/services/toastService';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import type { PriceComparisonScope } from '#/graphql/generated/schemaTypes';
 import { useUpdateShoppingList } from '#features/shoppingList/hooks/mutations/useUpdateShoppingList';
 import { useShoppingListBudget } from '#features/shoppingList/hooks/mutations/useShoppingListBudget';
 import { listOwnershipOf } from '#features/shoppingList/utils/ownershipHelpers';
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
+import { useListCostToGo } from '#features/shoppingList/hooks/useListCostToGo';
 import {
   ListBudgetDocument,
   UseListBudget_ListFragmentDoc,
@@ -38,6 +38,9 @@ export function useListBudget(listId: string) {
     from: { __typename: 'ShoppingList', id: listId },
   });
   const list = read.complete ? read.data : null;
+
+  const costToGo = useListCostToGo(listId);
+
   const isOwner =
     listOwnershipOf(
       listId,
@@ -73,19 +76,15 @@ export function useListBudget(listId: string) {
     return 'saved';
   };
 
-  // The comparison on screen comes back in the same answer as the store.
-  const pickStore = (
-    store: { id: string; name: string } | null,
-    comparisonShown: PriceComparisonScope,
-  ) => {
+  const pickStore = (store: { id: string; name: string } | null) => {
     if (store?.id === list?.targetStore?.id) return;
-    updateShoppingList(listId, { targetStore: store }, comparisonShown).catch(
-      reportFailure,
-    );
+    updateShoppingList(listId, { targetStore: store }).catch(reportFailure);
   };
 
   return {
     list,
+    /** Null until the unbought lines are read. */
+    costToGo,
     /** The API's EDIT: the owner, a home's MEMBER and above, a collaborator holding canEdit. */
     canEdit: isOwner || permissions.canEditList,
     state,

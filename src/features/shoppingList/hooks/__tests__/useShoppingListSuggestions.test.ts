@@ -1,6 +1,7 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { useStore } from '#store';
 import {
   GetShoppingListSuggestionsDocument,
@@ -16,6 +17,14 @@ jest.mock('#utils/imageUtils', () => ({
 jest.mock('#components/atoms/CachedImage', () => ({
   preloadImages: jest.fn(),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -106,7 +115,8 @@ describe('useShoppingListSuggestions', () => {
       { operationMocks: [buildSuggestionsMock('list-1', [])] },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('empty'));
+    await drainTimers();
+    expect(result.current.state).toBe('empty');
     expect(result.current.grouped.recentlyDeleted).toEqual([]);
     expect(result.current.grouped.frequentlyAdded).toEqual([]);
     expect(result.current.grouped.popular).toEqual([]);
@@ -136,7 +146,8 @@ describe('useShoppingListSuggestions', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
     expect(result.current.grouped.recentlyDeleted).toHaveLength(2);
     expect(result.current.grouped.frequentlyAdded).toHaveLength(1);
     expect(result.current.grouped.popular).toHaveLength(1);
@@ -152,7 +163,8 @@ describe('useShoppingListSuggestions', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('error'));
+    await drainTimers();
+    expect(result.current.state).toBe('error');
   });
 
   it('is offline, not empty, when the server is unreachable and nothing was cached', async () => {
@@ -166,7 +178,8 @@ describe('useShoppingListSuggestions', () => {
       },
     );
 
-    await waitFor(() => expect(result.current.state).toBe('offline'));
+    await drainTimers();
+    expect(result.current.state).toBe('offline');
   });
 
   it('retries the read', async () => {
@@ -184,13 +197,15 @@ describe('useShoppingListSuggestions', () => {
         ],
       },
     );
-    await waitFor(() => expect(result.current.state).toBe('error'));
+    await drainTimers();
+    expect(result.current.state).toBe('error');
 
     act(() => {
       result.current.refetch();
     });
 
-    await waitFor(() => expect(result.current.state).toBe('ready'));
+    await drainTimers();
+    expect(result.current.state).toBe('ready');
   });
 
   it('does not read without a list id', () => {

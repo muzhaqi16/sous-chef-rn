@@ -1,8 +1,14 @@
 'use no memo';
 import React from 'react';
-import { screen, waitFor } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
-import { renderWithApollo, recordMock } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  recordMock,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -79,6 +85,14 @@ jest.mock(
 jest.mock('../AddDetailsSheet', () => ({
   AddDetailsSheet: () => null,
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('AddToPantrySheet', () => {
   const defaultProps = {
@@ -199,10 +213,9 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd({ id: 'item-1', name: 'Milk' });
 
-      await waitFor(() =>
-        expect(toastService.error).toHaveBeenCalledWith(
-          'Failed to add item. Please try again.',
-        ),
+      await drainTimers();
+      expect(toastService.error).toHaveBeenCalledWith(
+        'Failed to add item. Please try again.',
       );
       expect(onItemAdded).not.toHaveBeenCalled();
     });
@@ -243,12 +256,13 @@ describe('AddToPantrySheet', () => {
 
     const seedCache = () => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: SEED_PANTRY,
         variables: { id: 'pantry-1' },
         data: {
           pantry: {
             __typename: 'Pantry',
+            version: 1,
             id: 'pantry-1',
             stats: { __typename: 'PantryStats', totalItems: 70 },
             itemsConnection: {
@@ -258,7 +272,7 @@ describe('AddToPantrySheet', () => {
                 {
                   __typename: 'PantryItemEdge',
                   cursor: 'pi-1',
-                  node: { __typename: 'PantryItem', id: 'pi-1' },
+                  node: { __typename: 'PantryItem', version: 1, id: 'pi-1' },
                 },
               ],
             },
@@ -274,7 +288,11 @@ describe('AddToPantrySheet', () => {
           stats: { totalItems: number };
           itemsConnection: { totalCount: number };
         };
-      }>({ query: SEED_PANTRY, variables: { id: 'pantry-1' } });
+      }>({
+        optimistic: true,
+        query: SEED_PANTRY,
+        variables: { id: 'pantry-1' },
+      });
       return {
         totalItems: read?.pantry?.stats?.totalItems,
         totalCount: read?.pantry?.itemsConnection?.totalCount,
@@ -291,9 +309,10 @@ describe('AddToPantrySheet', () => {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
             // The held stack's id, not the minted one: the add joined it.
-            pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-1' },
             pantry: {
               __typename: 'Pantry',
+              version: 1,
               id: 'pantry-1',
               stats: { __typename: 'PantryStats', totalItems: 70 },
             },
@@ -317,9 +336,8 @@ describe('AddToPantrySheet', () => {
       // The optimistic write lands synchronously, before the answer arrives.
       expect(readTotals(cache)).toEqual({ totalItems: 71, totalCount: 71 });
 
-      await waitFor(() =>
-        expect(readTotals(cache)).toEqual({ totalItems: 70, totalCount: 70 }),
-      );
+      await drainTimers();
+      expect(readTotals(cache)).toEqual({ totalItems: 70, totalCount: 70 });
     });
   });
 
@@ -390,7 +408,7 @@ describe('AddToPantrySheet', () => {
 
     const seedStocked = (edges: unknown[]) => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: STOCKED_PANTRY,
         variables: {
           id: 'pantry-1',
@@ -401,6 +419,7 @@ describe('AddToPantrySheet', () => {
         data: {
           pantry: {
             __typename: 'Pantry',
+            version: 1,
             id: 'pantry-1',
             stats: { __typename: 'PantryStats', totalItems: edges.length },
             itemsConnection: {
@@ -419,10 +438,11 @@ describe('AddToPantrySheet', () => {
       cursor: 'pi-1',
       node: {
         __typename: 'PantryItem',
+        version: 1,
         id: 'pi-1',
         itemName: 'Milk',
         quantity: 3,
-        item: { __typename: 'Item', id: 'item-1' },
+        item: { __typename: 'Item', version: 1, id: 'item-1' },
         unit: asAbbreviation({ __typename: 'Unit', id: 'unit-l', symbol: 'L' }),
       },
     };
@@ -440,7 +460,7 @@ describe('AddToPantrySheet', () => {
         pantryItemUsage: {
           __typename: 'PantryItemUsage',
           id: 'usage-1',
-          pantryItem: { __typename: 'PantryItem', id: 'pi-1' },
+          pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-1' },
         },
       },
     } as const;
@@ -451,6 +471,7 @@ describe('AddToPantrySheet', () => {
 
     const readQuantity = (cache: ReturnType<typeof makeCache>) =>
       cache.readFragment<{ quantity: number }>({
+        optimistic: true,
         id: 'PantryItem:pi-1',
         fragment: QUANTITY,
       })?.quantity;
@@ -462,7 +483,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -479,9 +500,8 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(milkInLitres);
 
-      await waitFor(() =>
-        expect(toastService.success).toHaveBeenCalledWith('Restocked Milk'),
-      );
+      await drainTimers();
+      expect(toastService.success).toHaveBeenCalledWith('Restocked Milk');
       // The point of the whole exercise: nothing was queued that the server would
       // only refuse, so there is nothing to undo on reconnect.
       expect(create.fired).toHaveLength(0);
@@ -501,7 +521,7 @@ describe('AddToPantrySheet', () => {
       id: string,
       type: UnitType,
     ) =>
-      cache.writeFragment({
+      seedFragment(cache, {
         id: `Unit:${id}`,
         fragment: gql`
           fragment StockedUnitType on Unit {
@@ -537,8 +557,10 @@ describe('AddToPantrySheet', () => {
       const create = recordMock(CreatePantryItemDocument, {
         data: { createPantryItem: null },
       });
+      // Held: what the device writes ahead is the claim, not the answer.
       const restock = recordMock(RestockPantryItemDocument, {
         data: restockData,
+        held: true,
       });
       renderWithApollo(<AddToPantrySheet {...defaultProps} />, {
         cache,
@@ -550,7 +572,8 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(milkInLitres);
 
-      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      await drainTimers();
+      expect(restock.fired).toHaveLength(1);
       expect(restock.fired[0]?.input).toMatchObject({
         id: 'pi-1',
         amount: { packages: { count: 1 } },
@@ -572,10 +595,12 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(milkInLitres);
 
-      await waitFor(() => expect(toastService.success).toHaveBeenCalled());
+      await drainTimers();
+      expect(toastService.success).toHaveBeenCalled();
       const read = cache.readQuery<{
         pantry: { stats: { totalItems: number } };
       }>({
+        optimistic: true,
         query: STOCKED_PANTRY,
         variables: {
           id: 'pantry-1',
@@ -594,7 +619,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -611,7 +636,8 @@ describe('AddToPantrySheet', () => {
         defaultUnit: { __typename: 'ItemUnitSuggestion', id: 'unit-ml' },
       });
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await drainTimers();
+      expect(create.fired).toHaveLength(1);
       expect(readQuantity(cache)).toBe(3);
       expect(toastService.success).not.toHaveBeenCalledWith('Restocked Milk');
     });
@@ -622,7 +648,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -636,7 +662,8 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd({ id: 'item-1', name: 'Milk', defaultUnit: null });
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await drainTimers();
+      expect(create.fired).toHaveLength(1);
       expect(readQuantity(cache)).toBe(3);
     });
 
@@ -649,7 +676,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -663,7 +690,8 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd({ id: 'item-other', name: 'Eggs' });
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await drainTimers();
+      expect(create.fired).toHaveLength(1);
     });
   });
 
@@ -688,7 +716,7 @@ describe('AddToPantrySheet', () => {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
       });
@@ -701,7 +729,11 @@ describe('AddToPantrySheet', () => {
             pantryItemUsage: {
               __typename: 'PantryItemUsage',
               id: 'usage-1',
-              pantryItem: { __typename: 'PantryItem', id: 'pi-held' },
+              pantryItem: {
+                __typename: 'PantryItem',
+                version: 1,
+                id: 'pi-held',
+              },
             },
           },
         },
@@ -722,14 +754,14 @@ describe('AddToPantrySheet', () => {
 
       // The stack is past the loaded window, so its unit is unknown: the
       // server sizes the package, on the stack the row names.
-      await waitFor(() => expect(restock.fired).toHaveLength(1));
+      await drainTimers();
+      expect(restock.fired).toHaveLength(1);
       expect(restock.fired[0]).toMatchObject({
         input: { id: 'pi-held', amount: { packages: { count: 1 } } },
       });
       expect(create.fired).toHaveLength(0);
-      await waitFor(() =>
-        expect(toastService.success).toHaveBeenCalledWith('Restocked Milk'),
-      );
+      await drainTimers();
+      expect(toastService.success).toHaveBeenCalledWith('Restocked Milk');
     });
 
     describe('a restock the server cannot size', () => {
@@ -764,11 +796,10 @@ describe('AddToPantrySheet', () => {
 
         tapExpiring();
 
-        await waitFor(() =>
-          expect(onRestockNeedsAmount).toHaveBeenCalledWith(
-            'pi-held',
-            expect.stringContaining('how much one package'),
-          ),
+        await drainTimers();
+        expect(onRestockNeedsAmount).toHaveBeenCalledWith(
+          'pi-held',
+          expect.stringContaining('how much one package'),
         );
         expect(toastService.success).not.toHaveBeenCalled();
         expect(toastService.error).not.toHaveBeenCalled();
@@ -786,10 +817,9 @@ describe('AddToPantrySheet', () => {
 
         tapExpiring();
 
-        await waitFor(() =>
-          expect(toastService.error).toHaveBeenCalledWith(
-            expect.stringContaining('how much one package'),
-          ),
+        await drainTimers();
+        expect(toastService.error).toHaveBeenCalledWith(
+          expect.stringContaining('how much one package'),
         );
         expect(toastService.success).not.toHaveBeenCalled();
       });
@@ -808,7 +838,8 @@ describe('AddToPantrySheet', () => {
       ) => void;
       quickAdd(suggestionRow(PantrySuggestionSource.RecentlyDeleted, 'pi-old'));
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
+      await drainTimers();
+      expect(create.fired).toHaveLength(1);
       expect(restock.fired).toHaveLength(0);
     });
   });
@@ -842,13 +873,14 @@ describe('AddToPantrySheet', () => {
       lowStock: Sections['lowStock'] = [],
     ) => {
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetPantryItemSuggestionsDocument,
         variables: VARIABLES,
         data: {
           __typename: 'Query',
           pantry: {
             __typename: 'Pantry',
+            version: 1,
             id: 'pantry-1',
             suggestions: {
               __typename: 'PantrySuggestions',
@@ -866,6 +898,7 @@ describe('AddToPantrySheet', () => {
 
     const shown = (cache: ReturnType<typeof makeCache>) => {
       const sections = cache.readQuery({
+        optimistic: true,
         query: GetPantryItemSuggestionsDocument,
         variables: VARIABLES,
       })?.pantry?.suggestions;
@@ -887,14 +920,18 @@ describe('AddToPantrySheet', () => {
     });
 
     const quickAdd = (item: unknown) =>
-      (sheetProps.current.onQuickAddSuggestion as (row: unknown) => void)(item);
+      (
+        sheetProps.current.onQuickAddSuggestion as (
+          row: unknown,
+        ) => Promise<void>
+      )(item);
 
     const created = (match?: (variables: unknown) => boolean) =>
       recordMock(CreatePantryItemDocument, {
         data: {
           createPantryItem: {
             __typename: 'CreatePantryItemPayload',
-            pantryItem: { __typename: 'PantryItem', id: 'pi-new' },
+            pantryItem: { __typename: 'PantryItem', version: 1, id: 'pi-new' },
           },
         },
         ...(match ? { match } : {}),
@@ -923,11 +960,12 @@ describe('AddToPantrySheet', () => {
         operationMocks: [create.mock],
       });
 
-      quickAdd(tile('apples'));
-      quickAdd(tile('bread'));
+      void quickAdd(tile('apples'));
+      void quickAdd(tile('bread'));
 
       expect(shown(cache).popular).toEqual(['cheese']);
-      await waitFor(() => expect(create.fired).toHaveLength(2));
+      await drainTimers();
+      expect(create.fired).toHaveLength(2);
     });
 
     it('sends one add for a double tap', async () => {
@@ -938,11 +976,11 @@ describe('AddToPantrySheet', () => {
         operationMocks: [create.mock],
       });
 
-      quickAdd(tile('apples'));
-      quickAdd(tile('apples'));
+      // Each tap settles only with its own add, so a second send is in by then.
+      await drained(() =>
+        Promise.all([quickAdd(tile('apples')), quickAdd(tile('apples'))]),
+      );
 
-      await waitFor(() => expect(create.fired).toHaveLength(1));
-      await new Promise(resolve => setTimeout(resolve, 50));
       expect(create.fired).toHaveLength(1);
     });
 
@@ -955,12 +993,11 @@ describe('AddToPantrySheet', () => {
         operationMocks: [refused.mock, accepted.mock],
       });
 
-      quickAdd(tile('apples'));
-      quickAdd(tile('bread'));
+      void quickAdd(tile('apples'));
+      void quickAdd(tile('bread'));
 
-      await waitFor(() =>
-        expect(shown(cache).popular).toEqual(['apples', 'cheese']),
-      );
+      await drainTimers();
+      expect(shown(cache).popular).toEqual(['apples', 'cheese']);
       expect(toastService.error).toHaveBeenCalledTimes(1);
     });
 
@@ -992,7 +1029,7 @@ describe('AddToPantrySheet', () => {
         operationMocks: [restock.mock],
       });
 
-      quickAdd(
+      void quickAdd(
         tile('milk', {
           id: 'low-milk',
           source: PantrySuggestionSource.LowStock,
@@ -1001,7 +1038,8 @@ describe('AddToPantrySheet', () => {
       );
 
       expect(shown(cache).lowStock).toEqual([]);
-      await waitFor(() => expect(shown(cache).lowStock).toEqual(['milk']));
+      await drainTimers();
+      expect(shown(cache).lowStock).toEqual(['milk']);
       expect(toastService.error).toHaveBeenCalledTimes(1);
     });
   });

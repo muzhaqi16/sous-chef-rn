@@ -55,6 +55,7 @@ function concernsViewer(
     cache.readFragment({
       id: cacheId,
       fragment: UseHomeSubscriptions_HomeFragmentDoc,
+      optimistic: true,
     });
   const viewerMembershipId = home ? home.myMembership?.id : undefined;
   return !viewerMembershipId || viewerMembershipId === membershipId;

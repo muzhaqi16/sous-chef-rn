@@ -1,34 +1,42 @@
 import { renderHook } from '@testing-library/react-native';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
-import { useUserPreference } from '#hooks/settings/useUserPreferences';
-import { defaultUserPreferences } from '#store/slices/preferencesSlice';
+import { useMirroredSetting } from '#store/useAppStore';
 import { useBudgetAndPricesEnabled } from '../useBudgetAndPricesEnabled';
 
 jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(),
 }));
-jest.mock('#hooks/settings/useUserPreferences', () => ({
-  useUserPreference: jest.fn(),
+jest.mock('#store/useAppStore', () => ({
+  useMirroredSetting: jest.fn(),
 }));
 
-const given = ({ offered, chosen }: { offered: boolean; chosen: boolean }) => {
+const given = ({
+  offered,
+  answer,
+}: {
+  offered: boolean;
+  answer: boolean | null;
+}) => {
   jest.mocked(useFeatureFlag).mockReturnValue(offered);
-  jest.mocked(useUserPreference).mockReturnValue([chosen, jest.fn()]);
+  jest.mocked(useMirroredSetting).mockReturnValue(answer);
   return renderHook(() => useBudgetAndPricesEnabled()).result.current;
 };
 
 describe('useBudgetAndPricesEnabled', () => {
-  // The plain list is the default; a person who uses budgets turns them on.
-  it('is off for a person who never set it', () => {
-    expect(defaultUserPreferences.budgetAndPrices).toBe(false);
-    expect(given({ offered: true, chosen: false })).toBe(false);
+  // Prices stay hidden until there is enough price data and the user says yes.
+  it('is off for an account that never answered', () => {
+    expect(given({ offered: true, answer: null })).toBe(false);
   });
 
-  it('is on once the person turns it on', () => {
-    expect(given({ offered: true, chosen: true })).toBe(true);
+  it('is on once the account turns it on', () => {
+    expect(given({ offered: true, answer: true })).toBe(true);
   });
 
-  it('stays off where the build withholds it, whatever the person chose', () => {
-    expect(given({ offered: false, chosen: true })).toBe(false);
+  it('is off after "Not now"', () => {
+    expect(given({ offered: true, answer: false })).toBe(false);
+  });
+
+  it('stays off where the build withholds it, whatever the account chose', () => {
+    expect(given({ offered: false, answer: true })).toBe(false);
   });
 });

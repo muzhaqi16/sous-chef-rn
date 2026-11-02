@@ -1,0 +1,46 @@
+name: 'Release check'
+description: |
+  Holds a client release to what production serves. Validates the operations
+  against every schema `/health` reports, then compiles against each, since the
+  check reads documents and can't see variables. Fails closed.
+
+  Runs in a job of its own, never a build job: codegen here writes
+  `schemaTypes.ts` and `fragmentMatcher.json`, which the app reads at runtime,
+  from production's schema, and `setup-deps` would cache them under the committed
+  one. Leave `API_URL` unset, or `codegen:schema` pulls over the committed file.
+
+  Caller is responsible for `actions/checkout` and `actions/setup-node`.
+
+runs:
+  using: 'composite'
+  steps:
+    # `postinstall` writes env.generated.ts, which `tsc` needs.
+    - name: Install npm dependencies
+      shell: bash
+      run: npm ci
+
+    # `--no`: without the pin, plain npx would run whatever the public registry
+    # holds under this name, in a job with a token.
+    - name: Validate the operations against production
+      shell: bash
+      run: |
+        npx --no api-schema-check --url https://api.souschef.dev --manifest persisted-query-manifest.json |
+          tee "$RUNNER_TEMP/release-check.json"
+
+    - name: Compile against each schema production serves
+      shell: bash
+      run: |
+        versions=$(node -e "
+          const { served } = JSON.parse(require('fs').readFileSync(process.argv[1], 'utf8'));
+          console.log(served.map(({ version }) => version).join('\n'));
+        " "$RUNNER_TEMP/release-check.json")
+
+        for version in $versions; do
+          dir="$RUNNER_TEMP/api-schema-$version"
+          mkdir -p "$dir"
+          npm pack "@muzhaqi16/api-schema@$version" --silent --pack-destination "$dir"
+          tar xzf "$dir"/*.tgz -C "$dir"
+          SCHEMA_PATH="$dir/package/schema.graphql" npm run codegen
+          npx tsc --noEmit
+          npx tsc --noEmit -p tsconfig.core.json
+        done

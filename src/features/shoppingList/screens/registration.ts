@@ -8,6 +8,7 @@ import { AddEditItem } from './AddEditItem';
 import { ShoppingListItemDetail } from './ItemDetail';
 import { PurchaseHistoryScreen } from './PurchaseHistoryScreen';
 import { StoreMode } from './StoreMode';
+import { StoreSavingsItems } from './StoreSavingsItems';
 
 /**
  * Shopping list's detail/sub screens, registered as siblings of `Home` — see
@@ -48,6 +49,11 @@ export const shoppingListDetailScreens = {
   }),
   StoreMode: createNativeStackScreen({
     screen: StoreMode,
+    options: detailScreenOptions,
+    linking: null,
+  }),
+  StoreSavingsItems: createNativeStackScreen({
+    screen: StoreSavingsItems,
     options: detailScreenOptions,
     linking: null,
   }),

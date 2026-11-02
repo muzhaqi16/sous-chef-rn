@@ -1,14 +1,25 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { gql } from '@apollo/client';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CompleteShoppingListDocument,
   MarkShoppingListActiveDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
-import { UseCompleteShoppingList_ListFragmentDoc } from '../useCompleteShoppingList.generated';
 import { useCompleteShoppingList } from '../useCompleteShoppingList';
+
+const LIST_FRAGMENT = gql`
+  fragment useCompleteShoppingList_list on ShoppingList {
+    id
+    status
+    isCompleted
+    completedShopDate
+    version
+    updatedAt
+  }
+`;
 
 const LIST = {
   __typename: 'ShoppingList',
@@ -27,9 +38,18 @@ const readState = (cache: ReturnType<typeof seedCache>) =>
     completedShopDate: string | null;
   }>({
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
-    fragment: UseCompleteShoppingList_ListFragmentDoc,
+    fragment: LIST_FRAGMENT,
     fragmentName: 'useCompleteShoppingList_list',
+    optimistic: true,
   });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useCompleteShoppingList', () => {
   it('writes COMPLETED optimistically before settle; a queued (null) result keeps it and returns true', async () => {
@@ -49,7 +69,7 @@ describe('useCompleteShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.completeList('list-1');
       // Synchronous permanent write — visible before the mutation settles.
       expect(readState(cache)?.status).toBe('COMPLETED');
@@ -86,15 +106,12 @@ describe('useCompleteShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.completeList('list-1');
-    });
+    resolved = await drained(() => result.current.completeList('list-1'));
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readState(cache)?.status).toBe('ACTIVE');
-      expect(readState(cache)?.isCompleted).toBe(false);
-    });
+    await drainTimers();
+    expect(readState(cache)?.status).toBe('ACTIVE');
+    expect(readState(cache)?.isCompleted).toBe(false);
   });
 
   it('reactivate writes ACTIVE optimistically and returns true on success', async () => {
@@ -134,7 +151,7 @@ describe('useCompleteShoppingList', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.reactivateList('list-1');
       expect(readState(cache)?.status).toBe('ACTIVE');
       expect(readState(cache)?.isCompleted).toBe(false);

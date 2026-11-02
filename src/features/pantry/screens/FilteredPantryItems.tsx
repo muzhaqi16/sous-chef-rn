@@ -19,6 +19,7 @@ import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { useDataState, type DataState } from '#hooks/data/useDataState';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { usePantryManagement } from '#features/pantry/hooks/usePantryManagement';
@@ -52,6 +53,7 @@ import { EmptyState } from '#components/molecules/EmptyState';
 import { SubScreen } from '#components/templates/SubScreen';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { useToday } from '#hooks/app/useToday';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 export type FilteredPantryItemsMode = 'lowStock' | 'expiring' | 'expired';
 
@@ -79,10 +81,9 @@ interface ModeConfig {
   emptyMessage: string;
   emptyIcon: string;
   /**
-   * Non-nullable on purpose. `itemsConnection` caps cached edges at
-   * `MAX_WINDOW_EDGES` (100) while `hasNextPage` reports the last FETCHED page,
-   * so above 100 items a client-only filter silently reports "none". A non-null
-   * value also re-keys the cache entry (`keyArgs: ['filters', …]`).
+   * Non-nullable on purpose. A client-only filter sees only the pages loaded,
+   * so past one page it would silently report "none". A non-null value also
+   * re-keys the cache entry (`keyArgs: ['filters', …]`).
    */
   serverFilters: PantryItemFilters;
   filter: (item: FilteredItem) => boolean;
@@ -304,6 +305,7 @@ export const FilteredPantryItems: React.FC<
     user?.id,
   );
   const { addToList } = useAddPantryItemToShoppingList();
+  const isOffline = useIsApiUnavailable();
 
   const {
     state: {
@@ -317,7 +319,9 @@ export const FilteredPantryItems: React.FC<
     },
     actions: { refetch, loadMore },
   } = usePantryManagement(pantry?.id, {
-    filters: config.serverFilters,
+    // Offline a view never loaded has no entry, so it narrows the rows the
+    // pantry holds: a partial answer, and `mayHoldMore` says so.
+    filters: isOffline ? null : config.serverFilters,
   });
 
   // Classified on the FETCHED set: a client filter narrowing to nothing is the
@@ -332,10 +336,11 @@ export const FilteredPantryItems: React.FC<
 
   // Progressively load all pages so the filter sees every item
   useEffect(() => {
-    if (hasMore && !isLoadingMore && !loading) {
+    if (hasMore && !isLoadingMore && !loading && !isOffline) {
       void loadMore();
     }
-  }, [hasMore, isLoadingMore, loading, loadMore]);
+  }, [hasMore, isLoadingMore, loading, isOffline, loadMore]);
+  const mayHoldMore = isOffline && hasMore;
 
   const filteredItems = (() => {
     const filtered = allItems.filter(config.filter);
@@ -344,9 +349,11 @@ export const FilteredPantryItems: React.FC<
     }
     return filtered;
   })();
-  const { lists: pickerLists } = useShoppingListsLite({
-    fetchPolicy: 'cache-first',
-  });
+  const {
+    lists: pickerLists,
+    state: pickerListsState,
+    refetch: refetchPickerLists,
+  } = useShoppingListsLite({ fetchPolicy: 'cache-first' });
   const picker = useLowStockListPicker({
     addToList,
     // The rows on screen: the button adds what the person is looking at, not a
@@ -464,9 +471,17 @@ export const FilteredPantryItems: React.FC<
                 onRefresh={handleRefresh}
               />
             }
+            ListHeaderComponent={
+              mayHoldMore && filteredItems.length > 0 ? (
+                <PartialDataNote
+                  onRetry={handleRefresh}
+                  testID={pantryTestIDs.filteredPartial}
+                />
+              ) : null
+            }
             ListEmptyComponent={
               <FilteredEmpty
-                state={dataState}
+                state={mayHoldMore ? 'offline' : dataState}
                 onRetry={handleRefresh}
                 icon={config.emptyIcon}
                 message={config.emptyMessage}
@@ -504,6 +519,10 @@ export const FilteredPantryItems: React.FC<
       <ShoppingListPickerSheet
         visible={picker.pickerVisible}
         shoppingLists={pickerLists}
+        listsState={pickerListsState}
+        onRetryLists={() => {
+          void refetchPickerLists();
+        }}
         defaultNewListName={config.title}
         creatingList={picker.busy}
         onListSelected={picker.handleListSelected}

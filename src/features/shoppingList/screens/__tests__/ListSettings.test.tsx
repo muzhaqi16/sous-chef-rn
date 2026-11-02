@@ -4,8 +4,9 @@ import { memoryIntents } from '#/test-utils/memoryPlatform';
 import React from 'react';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { TextInputProps } from 'react-native';
-import { screen, fireEvent, waitFor } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { InfoRowProps } from '#components/atoms/InfoRow';
 import { ListSettings } from '../ListSettings';
 import { t } from '#/i18n';
@@ -32,7 +33,6 @@ jest.mock('#store/useAppStore', () => {
   return {
     useAppStore: fn,
     useUser: jest.fn(() => ({ id: 'u1', email: 'test@test.com' })),
-    useIsOnline: jest.fn(() => true),
   };
 });
 
@@ -55,10 +55,12 @@ jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
   useShoppingListDetails: () => mockListDetails,
 }));
 
+let mockHomesState = 'ready';
 jest.mock('#features/home/hooks/useLazyHomeData', () => ({
   useLazyHomeData: () => ({
     homes: [],
     fetchHomeData: jest.fn(),
+    state: mockHomesState,
     isLoaded: false,
   }),
 }));
@@ -98,6 +100,7 @@ jest.mock(
 );
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
@@ -134,11 +137,13 @@ jest.mock('#components/templates/Screen', () => ({
   Screen: ({
     header,
     children,
+    state,
   }: {
     header?: { title?: string; actions?: BarAction[] };
     children: React.ReactNode;
+    state?: { value: string; onRetry: () => void };
   }) => {
-    const { View, Text } = require('react-native');
+    const { View, Text, Pressable } = require('react-native');
     const { BarActions } = require('#components/molecules/BarActions');
     return (
       <View>
@@ -146,6 +151,11 @@ jest.mock('#components/templates/Screen', () => ({
           <Text>{header?.title}</Text>
           <BarActions actions={header?.actions} />
         </View>
+        {state ? (
+          <Pressable testID="screen-retry" onPress={state.onRetry}>
+            <Text testID="screen-state">{state.value}</Text>
+          </Pressable>
+        ) : null}
         {children}
       </View>
     );
@@ -210,6 +220,14 @@ jest.mock('#/styles/commonStyles', () => ({
     settingsRowDescription: {},
   },
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('ListSettings', () => {
   const editRoute = { params: { listId: 'sl1' } };
@@ -356,6 +374,28 @@ describe('ListSettings', () => {
     render(<ListSettings route={editRoute} />);
     expect(screen.getByText('Your Role')).toBeTruthy();
     expect(screen.getByText('Editor')).toBeTruthy();
+  });
+
+  it('says a list it could not read failed, rather than waiting on it', () => {
+    const useShoppingListDetailsModule = require('#features/shoppingList/hooks/useShoppingListDetails');
+    const refetch = jest.fn();
+    useShoppingListDetailsModule.useShoppingListDetails = jest.fn(() => ({
+      shoppingList: null,
+      loading: false,
+      hasResult: false,
+      collaborators: [],
+      ownerships: [],
+      isShared: false,
+      refetch,
+    }));
+
+    render(<ListSettings route={editRoute} />);
+
+    expect(screen.getByTestId('screen-state')).toHaveTextContent(
+      /error|offline/,
+    );
+    fireEvent.press(screen.getByTestId('screen-retry'));
+    expect(refetch).toHaveBeenCalledTimes(1);
   });
 
   it('shows Leave List section for non-owner collaborator', () => {
@@ -630,12 +670,11 @@ describe('ListSettings', () => {
       fireEvent.press(screen.getByText('option:Party Supplies'));
       fireEvent.press(screen.getByText('Create'));
 
-      await waitFor(() =>
-        expect(mockCreateFromTemplate).toHaveBeenCalledWith(
-          'tpl2',
-          'Party Supplies',
-          undefined,
-        ),
+      await drainTimers();
+      expect(mockCreateFromTemplate).toHaveBeenCalledWith(
+        'tpl2',
+        'Party Supplies',
+        undefined,
       );
       expect(goBack).toHaveBeenCalled();
     });
@@ -645,19 +684,13 @@ describe('ListSettings', () => {
       fireEvent.changeText(screen.getByDisplayValue(''), 'Groceries');
       fireEvent.press(screen.getByText('Create'));
 
-      await waitFor(() =>
-        expect(mockCreateFromTemplate).not.toHaveBeenCalled(),
-      );
+      await drainTimers();
+      expect(mockCreateFromTemplate).not.toHaveBeenCalled();
     });
 
-    it('offers the picker while offline — the copy is derived, not requested', () => {
-      const { useIsOnline } = require('#store/useAppStore');
-      useIsOnline.mockReturnValue(false);
-
+    it('offers the picker — the copy is derived, not requested', () => {
       render(<ListSettings route={createRoute} />);
       expect(screen.getByText('None (Blank List)')).toBeTruthy();
-
-      useIsOnline.mockReturnValue(true);
     });
   });
 

@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from '@testing-library/react-native';
+import { renderHook } from '@testing-library/react-native';
 import { gql } from '@apollo/client';
 import {
   recordMock,
@@ -6,6 +6,7 @@ import {
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { alertService } from '#/services/alertService';
 import {
   ErrorCode,
@@ -41,6 +42,14 @@ jest.mock('../unitChangeFlow');
 const mockRunUnitChange = jest.mocked(runUnitChange);
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockRunUnitChange.mockResolvedValue(true);
 });
@@ -53,7 +62,6 @@ const baseData: PantryItemFormData = {
   condition: ItemCondition.Good,
   location: '',
   notes: '',
-  category: '',
   brand: '',
   netWeight: '',
   netWeightUnit: '',
@@ -88,7 +96,6 @@ function defaults(
     netWeightUnitId: null,
     selectedLocationId: null,
     selectedBrandId: null,
-    selectedCategoryId: null,
     selectedStorageLocation: null,
     updatePantryItemFields: jest.fn().mockResolvedValue(true),
     updateQuantity: jest.fn().mockResolvedValue(true),
@@ -106,7 +113,9 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({ dirtyFields: { quantityInput: true } });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, quantityInput: '' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, quantityInput: '' }),
+      );
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -120,7 +129,7 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({ currentPantryId: null });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave(baseData);
+      await drained(() => result.current.handleSave(baseData));
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -141,11 +150,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        quantityInput: '0',
-        notes: 'Top shelf',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          quantityInput: '0',
+          notes: 'Top shelf',
+        }),
+      );
 
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(params.updatePantryItemFields).toHaveBeenCalled();
@@ -159,7 +170,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, quantityInput: '0' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, quantityInput: '0' }),
+      );
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -177,7 +190,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, unit: 'kg' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, unit: 'kg' }),
+      );
 
       expect(mockRunUnitChange).toHaveBeenCalledWith(
         expect.objectContaining({ reportFieldError: params.reportFieldError }),
@@ -201,11 +216,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        unit: 'kg',
-        quantityInput: '1',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          unit: 'kg',
+          quantityInput: '1',
+        }),
+      );
 
       expect(mockRunUnitChange).toHaveBeenCalledWith(
         expect.anything(),
@@ -221,11 +238,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        unit: 'kg',
-        quantityInput: '0.5',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          unit: 'kg',
+          quantityInput: '0.5',
+        }),
+      );
 
       expect(mockRunUnitChange).toHaveBeenCalledWith(expect.anything(), {
         unitId: 'unit-kg',
@@ -244,12 +263,14 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        unit: 'kg',
-        netWeight: '32',
-        netWeightUnit: 'oz',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          unit: 'kg',
+          netWeight: '32',
+          netWeightUnit: 'oz',
+        }),
+      );
 
       expect(mockRunUnitChange).toHaveBeenCalledWith(
         expect.anything(),
@@ -267,7 +288,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, unit: 'kg', notes: 'x' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, unit: 'kg', notes: 'x' }),
+      );
 
       expect(params.updatePantryItemFields).not.toHaveBeenCalled();
       expect(params.onSuccess).not.toHaveBeenCalled();
@@ -280,7 +303,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, unit: 'kg', notes: 'x' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, unit: 'kg', notes: 'x' }),
+      );
 
       const [call] = (params.updatePantryItemFields as jest.Mock).mock.calls[0];
       expect(call.dirtyFields).toEqual({ notes: true });
@@ -294,7 +319,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, unit: 'sticks of' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, unit: 'sticks of' }),
+      );
 
       expect(params.reportFieldError).toHaveBeenCalledWith(
         'unit',
@@ -312,7 +339,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, unit: 'sticks' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, unit: 'sticks' }),
+      );
 
       expect(resolveUnitId).toHaveBeenCalledWith(null, 'sticks');
       expect(mockRunUnitChange).toHaveBeenCalledWith(
@@ -331,7 +360,7 @@ describe('usePantryItemFormSubmit', () => {
       );
 
       const data = { ...baseData, netWeight: '12', netWeightUnit: 'oz' };
-      await result.current.handleSave(data);
+      await drained(() => result.current.handleSave(data));
 
       expect(resolveUnitId).toHaveBeenCalledWith(null, 'oz');
       expect(data.netWeightUnitId).toBe('nw-unit');
@@ -344,11 +373,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        netWeight: '12',
-        netWeightUnit: 'ozz',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          netWeight: '12',
+          netWeightUnit: 'ozz',
+        }),
+      );
 
       expect(params.reportFieldError).toHaveBeenCalledWith(
         'netWeightUnit',
@@ -370,11 +401,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        netWeight: '32',
-        netWeightUnit: 'oz',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          netWeight: '32',
+          netWeightUnit: 'oz',
+        }),
+      );
 
       const [call] = (params.updatePantryItemFields as jest.Mock).mock.calls[0];
       expect(call.dirtyFields.netWeight).toBe(true);
@@ -391,7 +424,7 @@ describe('usePantryItemFormSubmit', () => {
       );
 
       const data = { ...baseData, consumeUnit: 'tbsp', consumeUnitId: '' };
-      await result.current.handleSave(data);
+      await drained(() => result.current.handleSave(data));
 
       expect(resolveUnitId).toHaveBeenCalledWith(null, 'tbsp');
       expect(data.consumeUnitId).toBe('unit-tbsp');
@@ -407,7 +440,7 @@ describe('usePantryItemFormSubmit', () => {
         consumeUnit: 'tbsp',
         consumeUnitId: 'unit-tbsp',
       };
-      await result.current.handleSave(data);
+      await drained(() => result.current.handleSave(data));
 
       expect(params.resolveUnitId).not.toHaveBeenCalled();
       expect(data.consumeUnitId).toBe('unit-tbsp');
@@ -420,7 +453,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, consumeUnit: 'tbs' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, consumeUnit: 'tbs' }),
+      );
 
       expect(params.reportFieldError).toHaveBeenCalledWith(
         'consumeUnit',
@@ -434,7 +469,7 @@ describe('usePantryItemFormSubmit', () => {
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
       const data = { ...baseData, consumeUnit: '', consumeUnitId: 'unit-tbsp' };
-      await result.current.handleSave(data);
+      await drained(() => result.current.handleSave(data));
 
       expect(data.consumeUnitId).toBe('');
     });
@@ -445,13 +480,10 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({ existingPantryItem: null });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave(baseData);
-
-      await waitFor(() =>
-        expect(alertService.alert).toHaveBeenCalledWith(
-          'Error',
-          'Item not found',
-        ),
+      await drained(() => result.current.handleSave(baseData));
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Item not found',
       );
     });
 
@@ -459,7 +491,9 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({ dirtyFields: { quantityInput: true } });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, quantityInput: '3' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, quantityInput: '3' }),
+      );
 
       expect(params.updateQuantity).toHaveBeenCalledWith({
         itemId: 'item-1',
@@ -477,7 +511,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, quantityInput: '1.235' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, quantityInput: '1.235' }),
+      );
 
       expect(params.updateQuantity).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -491,9 +527,8 @@ describe('usePantryItemFormSubmit', () => {
       const params = defaults({ dirtyFields: {} });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave(baseData);
-
-      await waitFor(() => expect(params.onSuccess).toHaveBeenCalled());
+      await drained(() => result.current.handleSave(baseData));
+      expect(params.onSuccess).toHaveBeenCalled();
       expect(params.updateQuantity).not.toHaveBeenCalled();
       expect(params.updatePantryItemFields).not.toHaveBeenCalled();
     });
@@ -522,11 +557,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        unit: 'doz',
-        quantityInput: '2',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          unit: 'doz',
+          quantityInput: '2',
+        }),
+      );
 
       expect(params.updateQuantity).toHaveBeenCalledWith(
         expect.objectContaining({ quantityValue: 2, statedIn: DOZEN }),
@@ -547,11 +584,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        unit: 'doz',
-        quantityInput: '1',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          unit: 'doz',
+          quantityInput: '1',
+        }),
+      );
 
       expect(mockRunUnitChange).not.toHaveBeenCalled();
       expect(params.updateQuantity).toHaveBeenCalledWith(
@@ -567,11 +606,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        unit: 'L',
-        quantityInput: '1',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          unit: 'L',
+          quantityInput: '1',
+        }),
+      );
 
       expect(mockRunUnitChange).toHaveBeenCalledWith(
         expect.anything(),
@@ -588,7 +629,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, quantityInput: '3' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, quantityInput: '3' }),
+      );
 
       expect(params.updatePantryItemFields).not.toHaveBeenCalled();
       expect(params.onSuccess).not.toHaveBeenCalled();
@@ -601,7 +644,9 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({ ...baseData, notes: 'Top shelf' });
+      await drained(() =>
+        result.current.handleSave({ ...baseData, notes: 'Top shelf' }),
+      );
 
       expect(params.updatePantryItemFields).toHaveBeenCalled();
       expect(params.onSuccess).not.toHaveBeenCalled();
@@ -613,11 +658,13 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave({
-        ...baseData,
-        quantityInput: '3',
-        notes: 'Top shelf',
-      });
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          quantityInput: '3',
+          notes: 'Top shelf',
+        }),
+      );
 
       expect(params.onSuccess).toHaveBeenCalledTimes(1);
     });
@@ -633,13 +680,10 @@ describe('usePantryItemFormSubmit', () => {
       });
       const { result } = renderHook(() => usePantryItemFormSubmit(params));
 
-      await result.current.handleSave(baseData);
-
-      await waitFor(() =>
-        expect(alertService.alert).toHaveBeenCalledWith(
-          'Error',
-          'Failed to update pantry item. Please try again.',
-        ),
+      await drained(() => result.current.handleSave(baseData));
+      expect(alertService.alert).toHaveBeenCalledWith(
+        'Error',
+        'Failed to update pantry item. Please try again.',
       );
     });
   });
@@ -774,23 +818,23 @@ describe('usePantryItemFormSubmit', () => {
         { cache, operationMocks: [quantity.mock, fields.mock] },
       );
 
-      await result.current.handleSave({
-        ...baseData,
-        quantityInput: '3',
-        notes: 'Top shelf',
-      });
-
-      await waitFor(() => expect(fields.fired).toHaveLength(1));
-      await waitFor(() =>
-        expect(
-          cache.readFragment({ id: 'PantryItem:item-1', fragment: STORED }),
-        ).toEqual({
-          __typename: 'PantryItem',
-          quantity: 3,
-          storageNotes: 'Top shelf',
-          version: 3,
+      await drained(() =>
+        result.current.handleSave({
+          ...baseData,
+          quantityInput: '3',
+          notes: 'Top shelf',
         }),
       );
+      expect(fields.fired).toHaveLength(1);
+      await drainTimers();
+      expect(
+        cache.readFragment({ id: 'PantryItem:item-1', fragment: STORED }),
+      ).toEqual({
+        __typename: 'PantryItem',
+        quantity: 3,
+        storageNotes: 'Top shelf',
+        version: 3,
+      });
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(onSuccess).toHaveBeenCalledTimes(1);
     });

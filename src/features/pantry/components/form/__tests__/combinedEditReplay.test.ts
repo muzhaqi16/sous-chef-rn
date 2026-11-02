@@ -8,6 +8,7 @@ import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 import {
   completeMockedResponse,
   inputOf,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import {
   makeQueuedMutation,
@@ -55,6 +56,7 @@ jest.mock('#/apollo/offlineQueue/queueStore', () => ({
     resetProcessingToPending: jest.fn(() => 0),
     expireStalePending: jest.fn(() => []),
     cleanupTerminal: jest.fn(() => []),
+    getRefusedRows: jest.fn(() => new Map<string, string>()),
     getQueueStats: jest.fn(() => ({
       total: 0,
       pending: 0,
@@ -126,7 +128,6 @@ function fakePantryServer() {
             [field]: {
               __typename: 'ConflictError',
               code: ErrorCode.VersionConflict,
-              message: 'Version conflict',
             },
           },
         };
@@ -169,7 +170,7 @@ function fakePantryServer() {
 function startServer() {
   const server = fakePantryServer();
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: 'PantryItem:item-1',
     fragment: gqlPantryIdAndUnit,
     data: {

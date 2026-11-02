@@ -1,8 +1,10 @@
 # An item's shelf price at each store that collected one, cheapest current
-# first: a list line's detail reads it here, and store mode's scan lookup
-# (`ItemByLookup`) carries it so a scan asks once. `first` is a literal so both
-# read one cache entry.
+# first, and another product of its kind at each of the household's stores: a
+# list line's detail reads it here, and store mode's scan lookup
+# (`ItemByLookup`) carries it so a scan asks once. Each `first` is a literal so
+# both read one cache entry.
 fragment useStoreShelfPrices_item on Item {
+  version
   id
   storePricesConnection(first: 10) {
     edges {
@@ -38,6 +40,42 @@ fragment useStoreShelfPrices_item on Item {
       }
     }
   }
+  similarStorePrices(first: 10) {
+    store {
+      id
+      name
+    }
+    product {
+      version
+      id
+      name
+    }
+    price
+    unit {
+      id
+      symbol
+      localizedSymbolForms {
+        one
+        other
+      }
+    }
+    packageNetWeight
+    packageNetWeightUnit {
+      id
+      symbol
+      localizedSymbolForms {
+        one
+        other
+      }
+    }
+    normalizedPrice
+    basis
+    currency {
+      id
+      code
+      decimalPlaces
+    }
+  }
 }
 
 # The store the list is shopped at, read from what the list screen stored:
@@ -52,6 +90,7 @@ fragment useStoreShelfPrices_list on ShoppingList {
 # The same for an item no scan lookup brought.
 query StoreShelfPrices($itemId: ID!) {
   item(id: $itemId) {
+    version
     id
     ...useStoreShelfPrices_item
   }

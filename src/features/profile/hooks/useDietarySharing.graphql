@@ -10,9 +10,11 @@ query DietarySharingHomes {
     edges {
       cursor
       node {
+        version
         id
         name
         myMembership {
+          version
           id
           sharesDietaryNeeds
         }
@@ -28,6 +30,7 @@ query DietarySharingHomes {
 
 # The switch the hook flips in the cache before the write is sent.
 fragment useDietarySharing_membership on Membership {
+  version
   id
   sharesDietaryNeeds
 }

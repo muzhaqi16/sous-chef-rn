@@ -1,0 +1,8 @@
+# What the invite button shares: the home's join link, minted on first use.
+fragment useHouseholdInvite_home on Home {
+  id
+  joinCode
+  joinLink {
+    universal
+  }
+}

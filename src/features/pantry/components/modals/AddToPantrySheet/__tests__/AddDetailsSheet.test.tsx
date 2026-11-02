@@ -1,15 +1,11 @@
 'use no memo';
 import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
-import {
-  render,
-  screen,
-  userEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { AddDetailsSheet } from '../AddDetailsSheet';
 import type { StoragePageProps } from '../StoragePage';
 import type { StorageState as StorageStateType } from '#/graphql/generated/schemaTypes';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 type PagerViewMockProps = {
   children?: React.ReactNode;
@@ -176,6 +172,14 @@ const defaultProps = {
   onSuccess: jest.fn(),
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AddDetailsSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -249,8 +253,9 @@ describe('AddDetailsSheet', () => {
     await user.press(screen.getByTestId('add-pantry-item-submit-button'));
 
     expect(mockHandleConfirm).not.toHaveBeenCalled();
+    await drainTimers();
     expect(
-      await screen.findByTestId('main-details-page-name-error'),
+      screen.getByTestId('main-details-page-name-error'),
     ).toHaveTextContent('Please enter an item name');
   });
 
@@ -267,7 +272,8 @@ describe('AddDetailsSheet', () => {
     render(<AddDetailsSheet {...defaultProps} prefilledItemName="Olive Oil" />);
     await user.press(screen.getByTestId('add-pantry-item-submit-button'));
 
-    await waitFor(() => expect(mockHandleConfirm).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockHandleConfirm).toHaveBeenCalled();
   });
 
   it('uses prefilledItemName when provided', () => {
@@ -285,9 +291,10 @@ describe('AddDetailsSheet — the net-weight pair', () => {
 
     await user.press(screen.getByTestId('type-net-weight'));
 
-    expect(
-      await screen.findByTestId('details-page-unit-error'),
-    ).toHaveTextContent('Please select a unit for the net weight.');
+    await drainTimers();
+    expect(screen.getByTestId('details-page-unit-error')).toHaveTextContent(
+      'Please select a unit for the net weight.',
+    );
   });
 
   it('clears that message once a unit is picked', async () => {
@@ -295,13 +302,13 @@ describe('AddDetailsSheet — the net-weight pair', () => {
     render(<AddDetailsSheet {...defaultProps} />);
 
     await user.press(screen.getByTestId('type-net-weight'));
-    await screen.findByTestId('details-page-unit-error');
+    await drainTimers();
+    expect(screen.getByTestId('details-page-unit-error')).toBeTruthy();
 
     await user.press(screen.getByTestId('pick-net-weight-unit'));
 
-    await waitFor(() =>
-      expect(screen.queryByTestId('details-page-unit-error')).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByTestId('details-page-unit-error')).toBeNull();
   });
 });
 
@@ -315,11 +322,10 @@ describe('AddDetailsSheet — a picked location seeds the storage state', () => 
 
     await user.press(screen.getByTestId('pick-frozen-location'));
 
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('main-details-page-storage-state'),
-      ).toHaveTextContent('FROZEN'),
-    );
+    await drainTimers();
+    expect(
+      screen.getByTestId('main-details-page-storage-state'),
+    ).toHaveTextContent('FROZEN');
   });
 
   it('leaves the chosen state alone for a location with no temperature control', async () => {
@@ -329,10 +335,9 @@ describe('AddDetailsSheet — a picked location seeds the storage state', () => 
     await user.press(screen.getByTestId('pick-frozen-location'));
     await user.press(screen.getByTestId('pick-unrated-location'));
 
-    await waitFor(() =>
-      expect(
-        screen.getByTestId('main-details-page-storage-state'),
-      ).toHaveTextContent('FROZEN'),
-    );
+    await drainTimers();
+    expect(
+      screen.getByTestId('main-details-page-storage-state'),
+    ).toHaveTextContent('FROZEN');
   });
 });

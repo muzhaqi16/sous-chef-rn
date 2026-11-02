@@ -36,7 +36,6 @@ function Wrapper(
   } = useForm<PantryItemFormData>({
     defaultValues: {
       itemName: '',
-      category: '',
       brand: '',
     },
   });
@@ -58,8 +57,9 @@ describe('ItemInformationSection', () => {
     render(<Wrapper />);
     expect(screen.getByTestId('dynamic-fields')).toBeTruthy();
     expect(screen.getByText('Item Name')).toBeTruthy();
-    expect(screen.getByText('Category')).toBeTruthy();
     expect(screen.getByText('Brand (optional)')).toBeTruthy();
+    // A category is the catalog item's: a stack's edit cannot write one.
+    expect(screen.queryByText('Category')).toBeNull();
   });
 
   it('renders with suggested brands', () => {

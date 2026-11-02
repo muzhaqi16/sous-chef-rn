@@ -8,13 +8,14 @@ jest.mock('#/services/permissions/PermissionService', () => ({
   },
 }));
 
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import { AppState, type AppStateStatus } from 'react-native';
 import { usePermission } from '../usePermission';
 import {
   PermissionService,
   type AppPermission,
 } from '#/services/permissions/PermissionService';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 
 /**
  * The RN jest mock leaves `AppState.addEventListener` as a jest.fn returning a
@@ -41,6 +42,14 @@ function findAppStateChangeCall() {
   };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('usePermission', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -59,9 +68,8 @@ describe('usePermission', () => {
   it('checks permission on mount', async () => {
     renderHook(() => usePermission('camera'));
 
-    await waitFor(() => {
-      expect(PermissionService.check).toHaveBeenCalledWith('camera');
-    });
+    await drainTimers();
+    expect(PermissionService.check).toHaveBeenCalledWith('camera');
   });
 
   it('updates status after check resolves', async () => {
@@ -69,9 +77,8 @@ describe('usePermission', () => {
 
     const { result } = renderHook(() => usePermission('camera'));
 
-    await waitFor(() => {
-      expect(result.current.isGranted).toBe(true);
-    });
+    await drainTimers();
+    expect(result.current.isGranted).toBe(true);
   });
 
   it('isBlocked is true when status is blocked', async () => {
@@ -79,10 +86,9 @@ describe('usePermission', () => {
 
     const { result } = renderHook(() => usePermission('camera'));
 
-    await waitFor(() => {
-      expect(result.current.isBlocked).toBe(true);
-      expect(result.current.isGranted).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.isBlocked).toBe(true);
+    expect(result.current.isGranted).toBe(false);
   });
 
   it('request calls PermissionService.request and updates status', async () => {
@@ -91,12 +97,11 @@ describe('usePermission', () => {
 
     const { result } = renderHook(() => usePermission('camera'));
 
-    await waitFor(() => {
-      expect(result.current.isChecking).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.isChecking).toBe(false);
     expect(result.current.isGranted).toBe(false);
 
-    await act(async () => {
+    await drained(async () => {
       const requestResult = await result.current.request();
       expect(requestResult).toBe('granted');
     });
@@ -108,9 +113,7 @@ describe('usePermission', () => {
   it('openSettings calls PermissionService.openSettings', async () => {
     const { result } = renderHook(() => usePermission('camera'));
 
-    await act(async () => {
-      await result.current.openSettings();
-    });
+    await drained(() => result.current.openSettings());
 
     expect(PermissionService.openSettings).toHaveBeenCalled();
   });
@@ -125,15 +128,13 @@ describe('usePermission', () => {
       { initialProps: { perm: 'camera' } },
     );
 
-    await waitFor(() => {
-      expect(result.current.isGranted).toBe(true);
-    });
+    await drainTimers();
+    expect(result.current.isGranted).toBe(true);
 
     rerender({ perm: 'photos' as AppPermission });
 
-    await waitFor(() => {
-      expect(PermissionService.check).toHaveBeenCalledWith('photos');
-    });
+    await drainTimers();
+    expect(PermissionService.check).toHaveBeenCalledWith('photos');
   });
 
   it('re-checks the permission when the app returns to the foreground', async () => {
@@ -141,9 +142,8 @@ describe('usePermission', () => {
 
     const { result } = renderHook(() => usePermission('camera'));
 
-    await waitFor(() => {
-      expect(result.current.isBlocked).toBe(true);
-    });
+    await drainTimers();
+    expect(result.current.isBlocked).toBe(true);
 
     // The person grants the permission in system settings and comes back.
     (PermissionService.check as jest.Mock)
@@ -156,17 +156,15 @@ describe('usePermission', () => {
     });
 
     expect(PermissionService.check).toHaveBeenCalledWith('camera');
-    await waitFor(() => {
-      expect(result.current.isGranted).toBe(true);
-    });
+    await drainTimers();
+    expect(result.current.isGranted).toBe(true);
   });
 
   it('does not re-check while the app is leaving the foreground', async () => {
     const { result } = renderHook(() => usePermission('camera'));
 
-    await waitFor(() => {
-      expect(result.current.isChecking).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.isChecking).toBe(false);
 
     (PermissionService.check as jest.Mock).mockClear();
     const { notify } = findAppStateChangeCall();
@@ -187,15 +185,13 @@ describe('usePermission', () => {
       { initialProps: { perm: 'camera' } },
     );
 
-    await waitFor(() => {
-      expect(result.current.isChecking).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.isChecking).toBe(false);
 
     rerender({ perm: 'photos' as AppPermission });
 
-    await waitFor(() => {
-      expect(PermissionService.check).toHaveBeenCalledWith('photos');
-    });
+    await drainTimers();
+    expect(PermissionService.check).toHaveBeenCalledWith('photos');
 
     (PermissionService.check as jest.Mock).mockClear();
     const { notify } = findAppStateChangeCall();
@@ -211,9 +207,8 @@ describe('usePermission', () => {
   it('tears down the AppState subscription on unmount', async () => {
     const { result, unmount } = renderHook(() => usePermission('camera'));
 
-    await waitFor(() => {
-      expect(result.current.isChecking).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.isChecking).toBe(false);
 
     const { subscription } = findAppStateChangeCall();
     unmount();

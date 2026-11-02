@@ -127,6 +127,7 @@ describe('IngredientTile', () => {
       ingredient(1, 'cup', {
         item: {
           __typename: 'Item',
+          version: 1,
           id: 'item-1',
           name: 'Monk fruit',
           imageUrl: 'https://example.com/item.jpg',

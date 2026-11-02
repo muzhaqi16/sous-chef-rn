@@ -1,6 +1,7 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import React from 'react';
 import { useTranslation } from '#/i18n';
+import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { View } from 'react-native';
 import { EmptyState } from '#components/molecules/EmptyState';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -24,8 +25,13 @@ export function PantryEmptyState({
   onCreatePantry,
   overallItemCount,
   failure,
+  mayHoldMore = false,
+  onRetryHeld,
 }: PantryEmptyStateProps) {
   const { t } = useTranslation();
+  const displayQuery =
+    searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
+  const noMatch = useNoMatchCopy(displayQuery, !mayHoldMore);
 
   if (showSkeletons) return <PantryScreenSkeleton />;
 
@@ -110,14 +116,14 @@ export function PantryEmptyState({
   }
 
   if (searchQuery) {
-    const displayQuery =
-      searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
     return (
       <EmptyState
         testID={pantryTestIDs.emptyState}
         icon="search-outline"
-        title={t('empty.noResultsFor', { query: displayQuery })}
-        description={t('pantryScreen.searchNoResultsDescription')}
+        title={noMatch.title}
+        description={
+          noMatch.description ?? t('pantryScreen.searchNoResultsDescription')
+        }
         style={styles.emptyState}
         action={
           onAddItem
@@ -128,6 +134,15 @@ export function PantryEmptyState({
             : undefined
         }
       />
+    );
+  }
+
+  // The tab's rows may be on pages the device never loaded.
+  if (mayHoldMore && locationFilter !== 'all' && onRetryHeld) {
+    return (
+      <View style={styles.emptyState}>
+        <DataStateView state="offline" onRetry={onRetryHeld} />
+      </View>
     );
   }
 

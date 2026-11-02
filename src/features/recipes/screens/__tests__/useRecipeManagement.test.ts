@@ -1,10 +1,10 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient } from '@apollo/client/react';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { MyRecipesDocument } from '../useRecipeManagement.generated';
 import {
   MyRecipeCard_RecipeFragmentDoc,
@@ -23,6 +23,14 @@ jest.mock('#/utils/finallyHelpers', () => ({
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -87,7 +95,8 @@ async function renderReady() {
       operationMocks: [recipesMock().mock],
     },
   );
-  await waitFor(() => expect(result.current.state.recipes).toHaveLength(3));
+  await drainTimers();
+  expect(result.current.state.recipes).toHaveLength(3);
   return result;
 }
 
@@ -121,14 +130,12 @@ describe('useRecipeManagement', () => {
       operationMocks: [pagedRecipesMock().mock],
     });
 
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.state.recipes).toHaveLength(1);
     expect(result.current.state.hasMore).toBe(true);
 
-    await act(async () => {
-      await result.current.actions.loadMore();
-    });
-
-    await waitFor(() => expect(result.current.state.recipes).toHaveLength(2));
+    await drained(() => result.current.actions.loadMore());
+    expect(result.current.state.recipes).toHaveLength(2);
     expect(result.current.state.hasMore).toBe(false);
   });
 
@@ -138,12 +145,11 @@ describe('useRecipeManagement', () => {
       { operationMocks: [pagedRecipesMock().mock] },
     );
 
-    await waitFor(() =>
-      expect(result.current.state.recipes.map(r => r.name)).toEqual([
-        'Pasta',
-        'Lasagne',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.state.recipes.map(r => r.name)).toEqual([
+      'Pasta',
+      'Lasagne',
+    ]);
     expect(result.current.state.isLoadingRemainingPages).toBe(false);
   });
 

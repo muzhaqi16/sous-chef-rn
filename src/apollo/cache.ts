@@ -1,20 +1,42 @@
 import { InMemoryCache } from '@apollo/client';
-import type { TypePolicies, TypePolicy } from '@apollo/client';
+import type {
+  Cache,
+  OperationVariables,
+  Reference,
+  TypePolicies,
+  TypePolicy,
+} from '@apollo/client';
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 import { FEATURE_TYPE_POLICIES } from '#features/registry.cache';
+import { HELD_BY_LAYER } from './utils/heldByLayer';
 
 /**
  * Assembles every feature's type policies; owns nothing domain-shaped itself.
  * A policy lives in `features/<name>/cache/typePolicies.ts`.
  */
 export function makeCache(): InMemoryCache {
-  return new InMemoryCache({
+  return new AppCache({
     // Configure possibleTypes for proper fragment matching on interfaces
     // This ensures Apollo can correctly normalize types implementing Node, Connection, Edge
     possibleTypes: fragmentMatcherData.possibleTypes,
     typePolicies: mergeTypePolicies(FEATURE_TYPE_POLICIES),
   });
+}
+
+/**
+ * An answer a link marks {@link HELD_BY_LAYER} is what a pending write shows,
+ * so it is delivered and never stored as the server's. Apollo hands a result's
+ * `extensions` to the write that stores it.
+ */
+class AppCache extends InMemoryCache {
+  override write<TData, TVariables extends OperationVariables>(
+    options: Cache.WriteOptions<TData, TVariables>,
+  ): Reference | undefined {
+    return options.extensions?.[HELD_BY_LAYER]
+      ? undefined
+      : super.write(options);
+  }
 }
 
 /**

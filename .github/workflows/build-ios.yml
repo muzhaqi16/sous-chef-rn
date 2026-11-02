@@ -13,10 +13,38 @@ on:
       - 'ios-v*'
 
 jobs:
+  release-check:
+    name: Release Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Check against production
+        uses: ./.github/actions/release-check
+
   build_with_signing:
+    needs: release-check
     runs-on: [self-hosted, macOS]
     environment: prod
     steps:
+      # "Set version from git tag" makes this name the marketing version, and a
+      # suffixed tag is no store version. The API finds builds by store tag.
+      - name: Refuse a build without a store tag
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/(ios-)?v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$GITHUB_REF is not a store tag, and the API's release check finds builds by store tag. Run npm run tag:ios."
+            exit 1
+          fi
+
       - name: check Xcode version
         run: /usr/bin/xcodebuild -version
 

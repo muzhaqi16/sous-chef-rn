@@ -1,11 +1,14 @@
 import { errorCopy } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
+import type { ApolloClient } from '@apollo/client';
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import {
+  UseRecipeData_HeldRecipeFragmentDoc,
   UseRecipeData_RecipeFragmentDoc,
   type UseRecipeData_RecipeFragment,
 } from './useRecipeData.generated';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { extractNodes } from '#/utils/connectionUtils';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
 import { knownEntry } from '#/utils/closedEnum';
@@ -16,7 +19,7 @@ import {
   RecipeRevisionStatus,
   type RecipeStatus,
 } from '#/graphql/generated/schemaTypes';
-import type { CatalogRecipeHint } from './useOpenCatalogRecipe';
+import type { RecipeRowHint } from './useOpenCatalogRecipe';
 import type { RecipeNutritionFacts } from '#domain/nutrition';
 import type { DataAttributionValue } from '#/types/attribution';
 
@@ -29,9 +32,15 @@ export type DisplayIngredient = NonNullable<
 /**
  * How much of a recipe there is to show. A catalog recipe the API has not
  * fetched carries only its name and image: `pending` until a save brings the
- * rest in, `unavailable` when its provider does not have it.
+ * rest in, `unavailable` when its provider does not have it. Offline, one never
+ * opened on this device is `held`: what the row showed.
  */
-export type RecipeDetails = 'complete' | 'opening' | 'pending' | 'unavailable';
+export type RecipeDetails =
+  | 'complete'
+  | 'opening'
+  | 'pending'
+  | 'unavailable'
+  | 'held';
 
 const DETAILS_BY_SYNC_STATUS: Record<ExternalSyncStatus, RecipeDetails> = {
   [ExternalSyncStatus.Synced]: 'complete',
@@ -79,7 +88,7 @@ export interface RecipeDisplayData {
 export interface UseRecipeDataParams {
   recipeId: string | undefined;
   /** What the list row showed, shown while a catalog recipe is being opened. */
-  hint: CatalogRecipeHint | undefined;
+  hint: RecipeRowHint | undefined;
   /** Localized: why a catalog recipe could not be opened. */
   openFailure: string | null;
 }
@@ -92,6 +101,24 @@ export interface UseRecipeDataResult {
   backendRecipe: MaterializedRecipe | undefined;
   /** Settles when the recipe has been read again, so a pull can wait on it. */
   refetch: () => Promise<unknown>;
+}
+
+const nameKey = (name: string) =>
+  name.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
+
+/**
+ * The author, unless it only names the recipe's source: a catalog recipe's
+ * credit is usually its publisher, which the source line credits with a link.
+ */
+function authorBesidesSource(author: string | null, source: string | null) {
+  if (!author) return undefined;
+  const authorKey = nameKey(author);
+  const sourceKey = nameKey(source ?? '');
+  const repeatsSource =
+    !!authorKey &&
+    !!sourceKey &&
+    (authorKey.includes(sourceKey) || sourceKey.includes(authorKey));
+  return repeatsSource ? undefined : author;
 }
 
 function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
@@ -124,7 +151,7 @@ function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
     publishedAt: recipe.publishedAt ?? undefined,
     forkedFromId: recipe.forkedFromId ?? undefined,
     forkedFromName: recipe.forkedFrom?.name ?? undefined,
-    originalAuthor: recipe.originalAuthor ?? undefined,
+    originalAuthor: authorBesidesSource(recipe.originalAuthor, recipe.source),
     tips: recipe.tips ?? undefined,
     videoUrl: recipe.videoUrl ?? undefined,
     tags: recipe.tags,
@@ -134,6 +161,15 @@ function buildDisplayData(recipe: MaterializedRecipe): RecipeDisplayData {
       : 'complete',
   };
 }
+
+/** Holds a recipe as this hook reads it; one already held costs nothing. */
+export const warmRecipe = (client: ApolloClient, id: string) =>
+  client.query({
+    query: GetRecipeDocument,
+    variables: { id, ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE },
+    fetchPolicy: 'cache-first',
+    errorPolicy: 'none',
+  });
 
 /**
  * The recipe the screen shows, always the API's `Recipe`. A catalog recipe
@@ -172,6 +208,17 @@ export function useRecipeData({
 
   const opening = !recipeId && !!hint && !openFailure;
 
+  const heldRecipe = useFragment({
+    fragment: UseRecipeData_HeldRecipeFragmentDoc,
+    fragmentName: 'useRecipeData_heldRecipe',
+    from: recipeId ? { __typename: 'Recipe', id: recipeId } : null,
+  });
+  const row = heldRecipe.complete
+    ? { name: heldRecipe.data.name, image: heldRecipe.data.imageUrl }
+    : { name: hint?.name, image: hint?.imageUrl };
+  const offlineRowName =
+    useIsApiUnavailable() && !backendRecipe && !opening ? row.name : undefined;
+
   const displayData: RecipeDisplayData | null = backendRecipe
     ? buildDisplayData(backendRecipe)
     : opening && hint.name
@@ -183,9 +230,19 @@ export function useRecipeData({
         hasPendingRevision: false,
         details: 'opening',
       }
+    : offlineRowName
+    ? {
+        title: offlineRowName,
+        image: row.image ?? undefined,
+        ingredients: [],
+        dataAttributions: [],
+        hasPendingRevision: false,
+        details: 'held',
+      }
     : null;
 
   const resolveError = () => {
+    if (offlineRowName) return null;
     if (openFailure) return openFailure;
     if (current && error) {
       return errorCopy(error, t, t('recipes.loadFailed'));

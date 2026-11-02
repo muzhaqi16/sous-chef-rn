@@ -15,7 +15,13 @@ type RuleOptions = unknown[];
 interface RuleCases {
   /** A bare string runs with the rule's default options. */
   valid: Array<string | { code: string; options: RuleOptions }>;
-  invalid: Array<{ code: string; errors: string[]; options?: RuleOptions }>;
+  invalid: Array<{
+    code: string;
+    errors: string[];
+    options?: RuleOptions;
+    /** What the rule's fix leaves; null when it offers none. */
+    output?: string | null;
+  }>;
 }
 
 const casesFor = (cases: RuleCases, filename: string) => ({
@@ -24,10 +30,11 @@ const casesFor = (cases: RuleCases, filename: string) => ({
       ? { code: entry, filename }
       : { code: entry.code, options: entry.options, filename },
   ),
-  invalid: cases.invalid.map(({ code, errors, options }) => ({
+  invalid: cases.invalid.map(({ code, errors, options, output }) => ({
     code,
     filename,
     ...(options ? { options } : {}),
+    ...(output === undefined ? {} : { output }),
     errors: errors.map(messageId => ({ messageId })),
   })),
 });

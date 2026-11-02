@@ -110,7 +110,198 @@ describe('QueueStore', () => {
   // -------------------------------------------------------------------------
   // addMutation
   // -------------------------------------------------------------------------
+  describe('a refused change', () => {
+    const refused = (overrides: Partial<QueuedMutation> = {}) =>
+      makeMutation({
+        id: 'refused',
+        ...queuedMutationFor(UpdateShoppingListItemDocument),
+        status: QueueStatus.REFUSED,
+        lastError: {
+          type: 'conflict',
+          message: 'stale',
+          timestamp: 0,
+          retryable: false,
+        },
+        ...overrides,
+      });
+
+    beforeEach(() => {
+      store.setCurrentUserId('user-1');
+    });
+
+    it('is not replayed, nor shown as a pending write', () => {
+      store.addMutation(
+        refused({
+          pendingWrite: { id: 'write-1', inputs: {} },
+        }),
+      );
+
+      expect(store.getPendingMutationsForUser('user-1')).toEqual([]);
+      expect(store.getPendingWrites()).toEqual([]);
+      expect(store.getPendingCount()).toBe(0);
+    });
+
+    it('takes no place in the queue and is never evicted', () => {
+      store.addMutation(refused());
+      for (let i = 0; i < 500; i++) {
+        store.addMutation(makeMutation({ id: `pending-${i}` }));
+      }
+
+      expect(() =>
+        store.addMutation(makeMutation({ id: 'one too many' })),
+      ).toThrow(QueueCapacityError);
+      expect(() =>
+        store.addMutation(refused({ id: 'kept while full' })),
+      ).not.toThrow();
+      expect(store.getRefused().map(({ id }) => id)).toEqual([
+        'refused',
+        'kept while full',
+      ]);
+    });
+
+    it('outlives the terminal cleanup, however old', () => {
+      store.addMutation(refused({ processedAt: 1 }));
+
+      store.cleanupTerminal();
+
+      expect(store.getRefused().map(({ id }) => id)).toEqual(['refused']);
+    });
+
+    it('survives a restart', () => {
+      store.addMutation(refused());
+
+      store.invalidateCache();
+
+      expect(store.getRefused().map(({ id }) => id)).toEqual(['refused']);
+    });
+
+    it('loads an entry from before the status unchanged', () => {
+      store.addMutation(
+        makeMutation({
+          id: 'older',
+          ...queuedMutationFor(UpdateShoppingListItemDocument),
+        }),
+      );
+
+      store.invalidateCache();
+
+      expect(store.getMutation('older')?.status).toBe(QueueStatus.PENDING);
+      expect(store.getRefused()).toEqual([]);
+    });
+
+    it('stays with its account', () => {
+      store.addMutation(refused());
+
+      store.setCurrentUserId('user-2');
+
+      expect(store.getRefused()).toEqual([]);
+      expect(store.getRefusedCount()).toBe(0);
+
+      store.setCurrentUserId('user-1');
+
+      expect(store.getRefusedCount()).toBe(1);
+    });
+
+    it('goes with a deliberate sign-out', () => {
+      store.addMutation(refused());
+
+      store.clearQueueForUser('user-1');
+
+      expect(store.getRefusedCount()).toBe(0);
+    });
+
+    it('lists a follower only through its parent, and counts both', () => {
+      store.addMutation(refused({ id: 'parent' }));
+      store.addMutation(refused({ id: 'follower', heldBy: 'parent' }));
+
+      expect(store.getRefused().map(({ id }) => id)).toEqual(['parent']);
+      expect(store.getRefusedCount()).toBe(2);
+    });
+
+    it('keeps one list until the list itself changes', () => {
+      store.addMutation(refused());
+      const list = store.getRefused();
+
+      store.addMutation(makeMutation());
+
+      expect(store.getRefused()).toBe(list);
+
+      store.addMutation(refused({ id: 'another' }));
+
+      expect(store.getRefused()).not.toBe(list);
+    });
+
+    it('reopens newest, with its followers behind it and its faults gone', () => {
+      store.addMutation(
+        refused({
+          id: 'parent',
+          pendingWrite: { id: 'write-1', inputs: {} },
+          faults: { count: 5, firstAt: 1, lastAt: 2 },
+          conflictResends: 2,
+        }),
+      );
+      store.addMutation(refused({ id: 'follower', heldBy: 'parent' }));
+      store.addMutation(
+        makeMutation({ id: 'made since', createdAt: Date.now() - 1000 }),
+      );
+
+      const layers = store.reopen('parent');
+
+      expect(layers.map(({ id }) => id)).toEqual(['write-1']);
+      expect(
+        store.getPendingMutationsForUser('user-1').map(({ id }) => id),
+      ).toEqual(['made since', 'parent', 'follower']);
+      expect(store.getMutation('parent')).toMatchObject({
+        overwrites: true,
+        conflictResends: 0,
+      });
+      expect(store.getMutation('parent')?.faults).toBeUndefined();
+      expect(store.getMutation('follower')?.heldBy).toBeUndefined();
+    });
+
+    it('reopens as old as it was, whatever order it now sends in', () => {
+      store.addMutation(refused({ id: 'old', createdAt: 5_000 }));
+      store.addMutation(refused({ id: 'older', agedFrom: 1_000 }));
+
+      store.reopen('old');
+      store.reopen('older');
+
+      expect(store.getMutation('old')?.agedFrom).toBe(5_000);
+      expect(store.getMutation('older')?.agedFrom).toBe(1_000);
+    });
+
+    it('expires a reopened change past the window instead of sending it', () => {
+      const ninetyOneDaysAgo = Date.now() - 91 * 24 * 60 * 60 * 1000;
+      store.addMutation(refused({ id: 'old', createdAt: ninetyOneDaysAgo }));
+
+      store.reopen('old');
+
+      expect(store.expireStalePending('user-1').map(({ id }) => id)).toEqual([
+        'old',
+      ]);
+    });
+
+    it('discards with its followers', () => {
+      store.addMutation(refused({ id: 'parent' }));
+      store.addMutation(refused({ id: 'follower', heldBy: 'parent' }));
+
+      store.discard('parent');
+
+      expect(store.getRefusedCount()).toBe(0);
+    });
+  });
+
   describe('addMutation', () => {
+    it('takes every change of a long session offline', () => {
+      store.setCurrentUserId('user-1');
+
+      for (let i = 0; i < 150; i++) {
+        store.addMutation(makeMutation({ id: `change-${i}` }));
+      }
+
+      expect(store.getPendingCount()).toBe(150);
+    });
+
     it('adds a mutation and persists it', () => {
       const m = makeMutation({ id: 'add-1' });
       store.addMutation(m);
@@ -125,7 +316,7 @@ describe('QueueStore', () => {
       store.addMutation(
         makeMutation({ id: 'done-0', status: QueueStatus.SUCCESS }),
       );
-      for (let i = 0; i < 99; i++) {
+      for (let i = 0; i < 499; i++) {
         store.addMutation(makeMutation({ id: `pending-${i}` }));
       }
 
@@ -133,7 +324,7 @@ describe('QueueStore', () => {
       store.addMutation(makeMutation({ id: 'overflow' }));
 
       const all = store.getMutationsForUser('user-1');
-      expect(all).toHaveLength(100);
+      expect(all).toHaveLength(500);
       expect(all.find(m => m.id === 'done-0')).toBeUndefined();
       expect(all.find(m => m.id === 'pending-0')).toBeDefined();
       expect(all.find(m => m.id === 'overflow')).toBeDefined();
@@ -141,10 +332,10 @@ describe('QueueStore', () => {
 
     it('evicts an AUTH_ERROR at capacity rather than wedging the queue', () => {
       // AUTH_ERROR belongs in the terminal set. Excluded, it is neither aged
-      // out nor evictable, so 100 accumulated auth failures wedge the queue
+      // out nor evictable, so 500 accumulated auth failures wedge the queue
       // permanently — every later offline write throwing QueueCapacityError
       // with no way back short of a reinstall.
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 500; i++) {
         store.addMutation(
           makeMutation({ id: `auth-${i}`, status: QueueStatus.AUTH_ERROR }),
         );
@@ -155,7 +346,7 @@ describe('QueueStore', () => {
       ).not.toThrow();
 
       const all = store.getMutationsForUser('user-1');
-      expect(all).toHaveLength(100);
+      expect(all).toHaveLength(500);
       expect(all.find(m => m.id === 'new-write')).toBeDefined();
       expect(all.find(m => m.id === 'auth-0')).toBeUndefined();
     });
@@ -170,7 +361,7 @@ describe('QueueStore', () => {
       store.addMutation(
         makeMutation({ id: 'done-0', status: QueueStatus.SUCCESS }),
       );
-      for (let i = 0; i < 98; i++) {
+      for (let i = 0; i < 498; i++) {
         store.addMutation(makeMutation({ id: `pending-${i}` }));
       }
 
@@ -182,7 +373,7 @@ describe('QueueStore', () => {
     });
 
     it('rejects the enqueue when the queue is full of un-synced PENDING work', () => {
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 500; i++) {
         store.addMutation(makeMutation({ id: `fill-${i}` }));
       }
 
@@ -192,7 +383,7 @@ describe('QueueStore', () => {
 
       // No PENDING op was dropped and the rejected op was not added.
       const all = store.getMutationsForUser('user-1');
-      expect(all).toHaveLength(100);
+      expect(all).toHaveLength(500);
       expect(all.find(m => m.id === 'fill-0')).toBeDefined();
       expect(all.find(m => m.id === 'overflow')).toBeUndefined();
     });
@@ -494,6 +685,27 @@ describe('QueueStore', () => {
       const m = store.getMutation('upd-2');
       expect(m?.id).toBe('upd-2');
       expect(m?.userId).toBe('user-1');
+    });
+  });
+
+  describe('getUndeliveredIds', () => {
+    it('holds back the order an undelivered write keeps', () => {
+      store.setCurrentUserId('user-1');
+      store.addMutation(makeMutation({ orderedBy: 'usualStores:home-1' }));
+
+      expect(store.getUndeliveredIds()).toEqual(
+        new Set(['usualStores:home-1']),
+      );
+    });
+
+    it('lets go of it once the write is delivered', () => {
+      store.setCurrentUserId('user-1');
+      const delivered = makeMutation({ orderedBy: 'usualStores:home-1' });
+      store.addMutation(delivered);
+
+      store.updateMutation(delivered.id, { status: QueueStatus.SUCCESS });
+
+      expect(store.getUndeliveredIds()).toEqual(new Set());
     });
   });
 
@@ -968,6 +1180,51 @@ describe('QueueStore', () => {
   // -------------------------------------------------------------------------
   // getPendingClientIds
   // -------------------------------------------------------------------------
+  describe('the pending writes it carries', () => {
+    const carrying = (id: string, overrides: Partial<QueuedMutation> = {}) =>
+      makeMutation({
+        id: `entry-${id}`,
+        variables: { input: { id } },
+        pendingWrite: { id, inputs: { name: id } },
+        ...overrides,
+      });
+
+    beforeEach(() => store.setCurrentUserId('user-1'));
+
+    it('lists them in replay order, with what a rebuild needs', () => {
+      store.addMutation(carrying('later', { createdAt: 2 }));
+      store.addMutation(carrying('earlier', { createdAt: 1 }));
+
+      expect(store.getPendingWrites()).toEqual([
+        expect.objectContaining({
+          id: 'earlier',
+          inputs: { name: 'earlier' },
+          variables: { input: { id: 'earlier' } },
+        }),
+        expect.objectContaining({ id: 'later' }),
+      ]);
+    });
+
+    it('keeps a write parked for re-auth and leaves out a settled one', () => {
+      store.addMutation(carrying('parked', { status: QueueStatus.AUTH_ERROR }));
+      store.addMutation(carrying('done', { status: QueueStatus.SUCCESS }));
+
+      expect(store.getPendingWrites().map(({ id }) => id)).toEqual(['parked']);
+    });
+
+    it('leaves out an entry with no local write', () => {
+      store.addMutation(makeMutation({ id: 'plain' }));
+
+      expect(store.getPendingWrites()).toEqual([]);
+    });
+
+    it('names every write the queue holds', () => {
+      store.addMutation(carrying('kept'));
+
+      expect(store.getQueuedWriteIds()).toEqual(new Set(['kept']));
+    });
+  });
+
   describe('getPendingClientIds', () => {
     it('collects the subject each pending write names, per its input type', () => {
       store.setCurrentUserId('user-1');

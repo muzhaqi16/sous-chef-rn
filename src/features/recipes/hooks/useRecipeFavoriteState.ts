@@ -6,13 +6,10 @@ import type { MaterializedRecipe } from '#features/recipes/hooks/useRecipeData';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { settleMutation } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
-import {
-  linkSavedFavorite,
-  writeLocalFavorite,
-  type SaveToFavoritesOptions,
-} from '#features/recipes/cache/favorites';
+import type { SaveToFavoritesOptions } from '#features/recipes/cache/favorites';
+import type { AddFavoriteInputs } from '#features/recipes/offline/localWrites';
 import { toastService } from '#/services/toastService';
 import { useTranslation } from '#/i18n';
 
@@ -46,20 +43,6 @@ export function useRecipeFavoriteState({
 
   const [favoriteRecipe] = useMutation(AddRecipeToFavoritesDocument, {
     context: { localFirst: true },
-    update: (cache, { data }, { variables }) => {
-      const payload = appliedPayload(data);
-      if (!payload) return;
-      const { savedRecipe } = payload;
-      linkSavedFavorite(
-        cache,
-        {
-          id: savedRecipe.id,
-          recipeId: savedRecipe.recipeId,
-          folder: savedRecipe.folder,
-        },
-        variables?.input.id,
-      );
-    },
   });
 
   const favorite = async (
@@ -69,35 +52,32 @@ export function useRecipeFavoriteState({
     // The SavedRecipe's permanent id is minted here, so an online create and a
     // queued replay converge on one row.
     const savedRecipeId = generateEntityId();
-    // Written before firing, so the heart fills offline and a queued favorite
-    // survives; `revert()` undoes it on a refusal.
-    const revert = writeLocalFavorite(
-      client.cache,
+    const inputs: AddFavoriteInputs = {
       savedRecipeId,
       recipeId,
-      saveOptions,
-    );
+      options: saveOptions,
+      now: new Date().toISOString(),
+    };
 
-    const settled = await settleMutation(
-      () =>
-        favoriteRecipe({
-          variables: {
-            input: {
-              id: savedRecipeId,
-              recipeId,
-              folder: saveOptions.folder,
-              tags: saveOptions.tags,
-              notes: saveOptions.notes,
-            },
-          },
-        }),
+    const settled = await pendingWritesOf(client.cache).send(
+      AddRecipeToFavoritesDocument,
       {
-        document: AddRecipeToFavoritesDocument,
-        fallback: t('recipes.saveRecipeFailed'),
-        onFailed: revert,
-        // Saving a recipe reports its outcome as a toast.
-        present: 'toast',
+        input: {
+          id: savedRecipeId,
+          recipeId,
+          folder: saveOptions.folder,
+          tags: saveOptions.tags,
+          notes: saveOptions.notes,
+        },
       },
+      write =>
+        settleMutation(() => favoriteRecipe(write), {
+          document: AddRecipeToFavoritesDocument,
+          fallback: t('recipes.saveRecipeFailed'),
+          // Saving a recipe reports its outcome as a toast.
+          present: 'toast',
+        }),
+      inputs,
     );
 
     if (settled.failure) return;

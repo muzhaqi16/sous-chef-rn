@@ -35,6 +35,8 @@ import { receiptsTestIDs } from '../testIDs';
 interface ReceiptLineFormProps {
   line: ReceiptReviewLine;
   choice: ReceiptLineChoice | undefined;
+  /** False for a line already left out, where leaving it out does nothing. */
+  canLeaveOut: boolean;
   /** Items the API proposes for the line, best first. */
   candidates: readonly ReceiptCandidate[];
   /** The shopping list line the product and unit being picked would tick off. */
@@ -50,6 +52,7 @@ interface ReceiptLineFormProps {
 const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   line,
   choice,
+  canLeaveOut,
   candidates,
   listItemNameFor,
   onPickItem,
@@ -60,7 +63,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
   const { t } = useTranslation();
   const money = useMoney();
   const { resolveUnitId } = useResolveUnit();
-  const { control, handleSubmit, setValue, setError } = useForm<
+  const { control, handleSubmit, getValues, setValue, setError } = useForm<
     ReceiptLineFormValues,
     ReceiptLineFormContext
   >({
@@ -205,7 +208,13 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
               title={t('receipts.review.notStockedTitle')}
               description={t('receipts.review.notStockedBody')}
               value={field.value}
-              onValueChange={field.onChange}
+              onValueChange={on => {
+                field.onChange(on);
+                // A purchase still names what was bought: what the receipt prints.
+                if (on && !getValues('itemName').trim()) {
+                  setValue('itemName', line.printed, { shouldValidate: true });
+                }
+              }}
               testID={receiptsTestIDs.lineNotStocked}
               containerStyle={styles.listToggle}
             />
@@ -268,7 +277,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
         </View>
       </DropdownStack>
 
-      {!!choice && (
+      {!!canLeaveOut && (
         <Button variant="ghost" icon="close-circle-outline" onPress={onRemove}>
           {t('receipts.review.dontAdd')}
         </Button>
@@ -339,6 +348,7 @@ const styles = StyleSheet.create(theme => ({
     flex: 0.4,
   },
   listToggle: {
+    paddingHorizontal: 0,
     marginBottom: theme.spacing.lg,
     borderBottomWidth: theme.borderWidth.none,
     borderRadius: theme.radii.md,

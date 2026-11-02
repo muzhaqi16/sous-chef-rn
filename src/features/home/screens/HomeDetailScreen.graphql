@@ -18,6 +18,7 @@ fragment HomeDetailScreen_home on Home {
   createdAt
   updatedAt
   myMembership {
+    version
     id
     role
     status
@@ -48,6 +49,7 @@ fragment HomeDetailScreen_home on Home {
   invitesConnection(first: 20) {
     edges {
       node {
+        version
         id
         status
         email
@@ -71,6 +73,7 @@ fragment HomeDetailScreen_home on Home {
   pantriesConnection(first: 20) {
     edges {
       node {
+        version
         id
         name
         isDefault

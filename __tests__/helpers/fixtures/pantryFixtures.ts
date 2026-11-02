@@ -1,6 +1,6 @@
 /**
  * Test fixture builders that match the production GraphQL document selection
- * for `GetPantry`. Use with `cache.writeQuery({ query: GetPantryDocument, ... })`
+ * for `GetPantry`. Use with `seedQuery(cache, { query: GetPantryDocument, ... })`
  * to seed the cache without losing fields to selection-set mismatches.
  *
  * Production code reads `normalizePantry(pantry).items`, but the document
@@ -10,6 +10,7 @@
 
 import type { Unmasked } from '@apollo/client/masking';
 import {
+  ItemCondition,
   StorageState,
   StorageType,
   UnitType,
@@ -102,6 +103,7 @@ function countHeld(value: number): PantryItemNode['held'] {
 function pantryItemNode(item: PantryItemFixture): PantryItemNode {
   return {
     __typename: 'PantryItem',
+    version: 1,
     id: item.id,
     itemId: `item-${item.id}`,
     itemName: item.itemName ?? `Item ${item.id}`,
@@ -136,6 +138,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     activeBatchCount: 0,
     item: {
       __typename: 'Item',
+      version: 1,
       id: `item-${item.id}`,
       imageUrl: null,
       images: [],
@@ -153,6 +156,14 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     storageLocation: null,
     packageBreakdown: null,
     quantityBreakdown: null,
+    pantryId: 'pantry-1',
+    minQuantity: null,
+    restockQuantity: null,
+    condition: ItemCondition.Good,
+    storageNotes: null,
+    tags: [],
+    brand: null,
+    packageSize: null,
   };
 }
 
@@ -173,7 +184,7 @@ function storageLocationNode(loc: StorageLocationFixture): StorageLocationNode {
 
 /**
  * Build the full `GetPantry` query result. Pass to
- * `cache.writeQuery({ query: GetPantryDocument, variables: { id }, data: ... })`.
+ * `seedQuery(cache, { query: GetPantryDocument, variables: { id }, data: ... })`.
  */
 export function pantryData(pantry: PantryFixture): Unmasked<GetPantryQuery> {
   const items = pantry.items ?? [];

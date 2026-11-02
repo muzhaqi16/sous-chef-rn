@@ -39,11 +39,17 @@ let fired: RecordedMock['fired'];
 function mountWith(
   state: {
     isOnline?: boolean;
+    apiReachable?: boolean | null;
     cachedUnits?: Array<(typeof HELD)[number] | typeof TABLESPOON_IT>;
   },
   answer: { id: string } | null = { id: 'from-api' },
 ) {
-  useStore.setState({ isOnline: true, cachedUnits: [], ...state });
+  useStore.setState({
+    isOnline: true,
+    apiReachable: null,
+    cachedUnits: [],
+    ...state,
+  });
   const unit = recordMock(GetUnitBySymbolDocument, {
     data: { unitBySymbol: answer && { id: answer.id } },
   });
@@ -127,6 +133,13 @@ describe('useResolveUnit device first', () => {
       expect(await result.current.resolveUnitId(null, 'tin')).toBe('from-api');
       expect(fired).toContainEqual({ symbol: 'tin' });
     });
+  });
+
+  it('asks the API nothing while it is down on working Wi-Fi', async () => {
+    mountWith({ cachedUnits: HELD, apiReachable: false });
+
+    expect(await result.current.resolveUnitId(null, 'tin')).toBeNull();
+    expect(fired).toEqual([]);
   });
 
   describe('offline', () => {

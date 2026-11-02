@@ -9,6 +9,7 @@ import { Button } from '#components/molecules/Button';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { ErrorState } from '#components/molecules/ErrorState';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useJoinHomeByCode } from '#features/home/hooks/useJoinHomeByCode';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -51,10 +52,11 @@ export const JoinHomeByCodeScreen: React.FC<
     setInputValue(initialCode);
   }
 
-  const { home, previewLoading, joinHome } = useJoinHomeByCode({
-    code,
-    skip: isLoggedOut,
-  });
+  const { home, previewLoading, previewState, retryPreview, joinHome } =
+    useJoinHomeByCode({
+      code,
+      skip: isLoggedOut,
+    });
 
   const { requireVerifiedEmail } = useVerifiedEmailGate();
 
@@ -150,6 +152,11 @@ export const JoinHomeByCodeScreen: React.FC<
           />
         </View>
       );
+    }
+
+    // No answer is not a code that matched nothing.
+    if (previewState === 'error' || previewState === 'offline') {
+      return <DataStateView state={previewState} onRetry={retryPreview} />;
     }
 
     // Code entered but no home matched it.

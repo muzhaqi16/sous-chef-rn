@@ -1,13 +1,10 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { ReceiptLineSheet } from '../ReceiptLineSheet';
+import { t } from '#/i18n';
 import { receiptsTestIDs } from '../../testIDs';
 import { lineChoice } from '../../__tests__/helpers/receiptFixtures';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#components/templates/Sheet', () => {
   const { View } = require('react-native');
@@ -125,13 +122,43 @@ const renderSheet = (line: typeof MILK & { discount?: number } = MILK) => {
       onClose={onClose}
       onSave={onSave}
       onRemove={jest.fn()}
+      canLeaveOut
     />,
   );
   return { onSave, onClose };
 };
 
+const renderUnchosenSheet = (canLeaveOut = true) => {
+  const onSave = jest.fn();
+  const onRemove = jest.fn();
+  render(
+    <ReceiptLineSheet
+      visible
+      line={MILK}
+      choice={undefined}
+      candidates={[]}
+      listItemNameFor={() => undefined}
+      onPickItem={jest.fn()}
+      opening={1}
+      onClose={jest.fn()}
+      onSave={onSave}
+      onRemove={onRemove}
+      canLeaveOut={canLeaveOut}
+    />,
+  );
+  return { onSave, onRemove };
+};
+
 const typeTotal = (text: string) =>
   fireEvent.changeText(screen.getByTestId('field-Total paid'), text);
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('the total paid on a receipt line', () => {
   it.each(['-3', '4,99x'])(
@@ -142,9 +169,10 @@ describe('the total paid on a receipt line', () => {
       typeTotal(typed);
       fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-      expect(
-        await screen.findByTestId('field-Total paid-error'),
-      ).toHaveTextContent(TOTAL_NEEDED);
+      await drainTimers();
+      expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+        TOTAL_NEEDED,
+      );
       expect(onSave).not.toHaveBeenCalled();
     },
   );
@@ -155,10 +183,9 @@ describe('the total paid on a receipt line', () => {
     typeTotal('3.49');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ price: 3.49 }),
-      ),
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ price: 3.49 }),
     );
     expect(onClose).toHaveBeenCalled();
   });
@@ -171,9 +198,10 @@ describe('the total paid on a receipt line', () => {
       typeTotal(typed);
       fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-      expect(
-        await screen.findByTestId('field-Total paid-error'),
-      ).toHaveTextContent(TOTAL_NEEDED);
+      await drainTimers();
+      expect(screen.getByTestId('field-Total paid-error')).toHaveTextContent(
+        TOTAL_NEEDED,
+      );
       expect(onSave).not.toHaveBeenCalled();
     },
   );
@@ -184,11 +212,8 @@ describe('the total paid on a receipt line', () => {
     typeTotal('0');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ price: 0 }),
-      ),
-    );
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ price: 0 }));
   });
 });
 
@@ -199,10 +224,9 @@ describe('the unit of a receipt line', () => {
     fireEvent.changeText(screen.getByTestId('field-unit'), 'lb');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ unitId: 'unit-lb', unitText: 'lb' }),
-      ),
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ unitId: 'unit-lb', unitText: 'lb' }),
     );
   });
 
@@ -212,7 +236,8 @@ describe('the unit of a receipt line', () => {
     fireEvent.changeText(screen.getByTestId('field-unit'), 'tin');
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    expect(await screen.findByTestId('field-unit-error')).toHaveTextContent(
+    await drainTimers();
+    expect(screen.getByTestId('field-unit-error')).toHaveTextContent(
       '"tin" isn\'t a unit we recognise. Pick one from the list.',
     );
     expect(onSave).not.toHaveBeenCalled();
@@ -230,10 +255,43 @@ describe('a receipt line not for the pantry', () => {
     );
     fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
 
-    await waitFor(() =>
-      expect(onSave).toHaveBeenCalledWith(
-        expect.objectContaining({ notStocked: true }),
-      ),
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ notStocked: true, itemName: 'Whole milk' }),
+    );
+  });
+
+  it('lets a line with no product be left out', () => {
+    const { onRemove } = renderUnchosenSheet();
+
+    fireEvent.press(screen.getByText(t('receipts.review.dontAdd')));
+
+    expect(onRemove).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not offer to leave out a line already left out', () => {
+    renderUnchosenSheet(false);
+
+    expect(screen.queryByText(t('receipts.review.dontAdd'))).toBeNull();
+  });
+
+  it('takes the printed name when nothing is chosen, so nothing need be typed', async () => {
+    const { onSave } = renderUnchosenSheet();
+
+    fireEvent(
+      screen.getByTestId(receiptsTestIDs.lineNotStocked),
+      'valueChange',
+      true,
+    );
+    fireEvent.press(screen.getByTestId(receiptsTestIDs.lineSave));
+
+    await drainTimers();
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({
+        notStocked: true,
+        itemId: null,
+        itemName: 'MILK 2%',
+      }),
     );
   });
 });

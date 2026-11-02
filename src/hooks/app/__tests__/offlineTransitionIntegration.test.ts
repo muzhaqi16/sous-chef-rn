@@ -22,7 +22,6 @@ import { createTestStore } from '#/test-utils/createTestStore';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { TransferHomeOwnershipDocument } from '#operations/home/home.generated';
 import {
-  blocksCacheMissQueries,
   isApiUnavailable,
   shouldTreatAsOffline,
 } from '#store/slices/networkSlice';
@@ -117,7 +116,6 @@ describe('offline transition (real store + real breaker)', () => {
     mockStore.setState({
       isOnline: true,
       apiReachable: true,
-      offlineModeEnabled: false,
     });
     apiReachabilityBreaker.reset();
     jest.clearAllMocks();
@@ -145,7 +143,7 @@ describe('offline transition (real store + real breaker)', () => {
   it('answers a cache-miss query through the offline path', () => {
     goOffline();
 
-    expect(blocksCacheMissQueries(mockStore.getState())).toBe(true);
+    expect(shouldTreatAsOffline(mockStore.getState())).toBe(true);
   });
 
   it('surfaces the offline indicator to the user', () => {

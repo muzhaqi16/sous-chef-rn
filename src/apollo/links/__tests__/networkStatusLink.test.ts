@@ -1,4 +1,5 @@
 import { Observable, gql } from '@apollo/client';
+import { ServerError } from '@apollo/client/errors';
 import type { ApolloClient, ApolloLink } from '@apollo/client';
 import { OperationTypeNode, type DocumentNode } from 'graphql';
 import { createNetworkStatusLink } from '../networkStatusLink';
@@ -28,7 +29,6 @@ jest.mock('#store', () => ({
 const REACHABLE = {
   isOnline: true,
   apiReachable: true,
-  offlineModeEnabled: false,
 };
 
 const QUERY = gql`
@@ -168,17 +168,6 @@ describe('createNetworkStatusLink', () => {
     );
   });
 
-  it('suppresses the network-error warning while offline mode is enabled', () => {
-    getState.mockReturnValue({ ...REACHABLE, offlineModeEnabled: true });
-    run(
-      forwardEmitting(o => {
-        o.error({ network: true, message: 'Network request failed' });
-      }),
-    );
-    expect(recordFailure).toHaveBeenCalledTimes(1);
-    expect(warn).not.toHaveBeenCalled();
-  });
-
   it('suppresses the network-error warning once the API is known-unavailable', () => {
     getState.mockReturnValue({ ...REACHABLE, apiReachable: false });
     run(
@@ -214,6 +203,42 @@ describe('createNetworkStatusLink', () => {
     expect(recordSuccess).not.toHaveBeenCalled();
     expect(isNetworkError).not.toHaveBeenCalled();
     expect(propagated).toBe(err);
+  });
+
+  describe('a fault from the server', () => {
+    const fault = (status: number) =>
+      new ServerError('HTTP', {
+        response: new Response('', { status }),
+        bodyText: '',
+      });
+
+    it.each([502, 503, 504])('counts a %i: the API is not there', status => {
+      run(forwardEmitting(o => o.error(fault(status))));
+
+      expect(recordFailure).toHaveBeenCalledTimes(1);
+    });
+
+    it('leaves the breaker alone for a 500: one request broke', () => {
+      run(forwardEmitting(o => o.error(fault(500))));
+
+      expect(recordFailure).not.toHaveBeenCalled();
+    });
+
+    it('counts a mutation queued on a gateway fault, not on a server fault', () => {
+      const queuedOn = (queuedReason: string) =>
+        forwardEmitting(o => {
+          o.next({
+            data: { addItem: null },
+            extensions: { queued: true, queuedReason },
+          });
+          o.complete();
+        });
+
+      run(queuedOn('gateway-fault'));
+      run(queuedOn('server-fault'));
+
+      expect(recordFailure).toHaveBeenCalledTimes(1);
+    });
   });
 
   it('ignores a non-network error (does not touch the breaker)', () => {

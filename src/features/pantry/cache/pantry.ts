@@ -8,7 +8,6 @@ import type { ApolloCache, Reference } from '@apollo/client';
 import { PAGE_SIZE } from '#features/pantry/constants/pagination';
 import { safeEvict, type ConnectionData } from '#/apollo/utils/cacheUpdaters';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { todayKey } from '#/utils/dateUtils';
 import { Pantry_RowFragmentDoc } from './pantry.generated';
 import {
   NEUTRAL_LOCAL_PANTRY,
@@ -25,6 +24,7 @@ export function writeLocalPantry(
     description?: string | null;
     isDefault?: boolean | null;
   },
+  today: string,
 ): void {
   writeLocalEntity(cache, {
     fragment: Pantry_RowFragmentDoc,
@@ -40,7 +40,7 @@ export function writeLocalPantry(
       isDefault: input.isDefault ?? false,
       version: 1,
     },
-    variables: { today: todayKey(), first: PAGE_SIZE.COMPACT },
+    variables: { today, first: PAGE_SIZE.COMPACT },
   });
 }
 
@@ -103,9 +103,8 @@ export function addPantryToHomeCache(
 }
 
 /**
- * Take a pantry out of its home's lists. Reversing a rejected CREATE evicts (the
- * entity only ever existed locally); a local-first DELETE passes
- * `evictEntity: false`, since a refusal has to put the row back.
+ * Take a pantry out of its home's lists. A layer passes `evictEntity: false`, as
+ * `evict` does nothing there; an answered delete drops the row.
  */
 export function removeOptimisticPantry(
   cache: ApolloCache,
@@ -146,53 +145,4 @@ export function removeOptimisticPantry(
   if (options.evictEntity !== false) {
     safeEvict(cache, 'Pantry', pantryId);
   }
-}
-
-/**
- * Mirror of {@link removeOptimisticPantry}'s non-evicting form: the entity is
- * still cached, so only the two membership fields need repairing. Idempotent.
- */
-export function restorePantryToHomeCache(
-  cache: ApolloCache,
-  homeId: string,
-  pantryId: string,
-): void {
-  const homeCacheId = cache.identify({ __typename: 'Home', id: homeId });
-  if (!homeCacheId) return;
-
-  cache.modify({
-    id: homeCacheId,
-    fields: {
-      pantries(
-        existingPantries: readonly Reference[] = [],
-        { readField, toReference },
-      ) {
-        if (existingPantries.some(ref => readField('id', ref) === pantryId)) {
-          return existingPantries;
-        }
-        const ref = toReference({ __typename: 'Pantry', id: pantryId });
-        return ref ? [...existingPantries, ref] : existingPantries;
-      },
-      pantriesConnection(
-        existingConnection: ConnectionData | null = null,
-        { readField, toReference },
-      ) {
-        if (!existingConnection) return existingConnection;
-        const edges = existingConnection.edges ?? [];
-        if (edges.some(edge => readField('id', edge.node) === pantryId)) {
-          return existingConnection;
-        }
-        const node = toReference({ __typename: 'Pantry', id: pantryId });
-        if (!node) return existingConnection;
-        return {
-          ...existingConnection,
-          edges: [
-            ...edges,
-            { __typename: 'PantryEdge', cursor: pantryId, node },
-          ],
-          totalCount: (existingConnection.totalCount ?? edges.length) + 1,
-        };
-      },
-    },
-  });
 }

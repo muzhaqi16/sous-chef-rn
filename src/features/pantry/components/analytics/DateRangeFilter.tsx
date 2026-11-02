@@ -34,10 +34,10 @@ function DateRangeChip({
   onPress: () => void;
 }) {
   const { t } = useTranslation();
-  styles.useVariants({ selected: isSelected });
+  const variantStyles = styles.useVariants({ selected: isSelected });
   return (
-    <AppPressable onPress={onPress} style={styles.chip}>
-      <Text role="label" style={styles.chipText}>
+    <AppPressable onPress={onPress} style={variantStyles.chip}>
+      <Text role="label" style={variantStyles.chipText}>
         {t(option.labelKey)}
       </Text>
     </AppPressable>

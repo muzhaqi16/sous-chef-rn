@@ -1,5 +1,14 @@
 jest.unmock('../toastService');
-import { _setToastDispatch, toastService } from '../toastService';
+jest.unmock('../alertService');
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { presentFailure } from '#/utils/errors/presentFailure';
+import { alertService } from '../alertService';
+import {
+  _resetToastMoments,
+  _setToastDispatch,
+  lastTroubleAt,
+  toastService,
+} from '../toastService';
 
 describe('toastService', () => {
   let dispatch: jest.Mock;
@@ -61,5 +70,60 @@ describe('toastService', () => {
       'orphaned',
     );
     warnSpy.mockRestore();
+  });
+});
+
+describe('the trouble a person has seen', () => {
+  beforeEach(() => {
+    _resetToastMoments();
+    _setToastDispatch(jest.fn());
+  });
+
+  it('is an error or a warning toast, never a success or info', () => {
+    toastService.success('Saved');
+    toastService.info('Synced');
+    expect(lastTroubleAt()).toBeNull();
+
+    toastService.warning('Offline');
+    expect(lastTroubleAt()).not.toBeNull();
+    _resetToastMoments();
+    toastService.error('Failed');
+    expect(lastTroubleAt()).not.toBeNull();
+  });
+
+  describe('in an alert', () => {
+    beforeEach(() => {
+      jest.spyOn(console, 'warn').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      jest.restoreAllMocks();
+    });
+
+    it('is one that only tells, which reports what went wrong', () => {
+      alertService.alert('Could not save');
+      expect(lastTroubleAt()).not.toBeNull();
+    });
+
+    it('is one with a lone button, which offers no choice', () => {
+      alertService.alert('Cannot leave', 'You own this home', [{ text: 'OK' }]);
+      expect(lastTroubleAt()).not.toBeNull();
+    });
+
+    it('is never a question: confirming a delete went right', () => {
+      alertService.alert('Delete this list?', undefined, [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive' },
+      ]);
+      expect(lastTroubleAt()).toBeNull();
+    });
+
+    it('is a version conflict, though it offers Refresh', () => {
+      presentFailure(
+        { code: ErrorCode.VersionConflict, title: 'Changed', body: 'Refresh' },
+        { onConflictRefresh: jest.fn() },
+      );
+      expect(lastTroubleAt()).not.toBeNull();
+    });
   });
 });

@@ -5,10 +5,18 @@ import React from 'react';
 import { makeCache } from '#/apollo/cache';
 import type { InMemoryCache } from '@apollo/client';
 import { screen, userEvent } from '@testing-library/react-native';
-import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  recordMock,
+  renderWithApollo,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetPantryDocument } from '#features/pantry/graphql/pantry.generated';
 import { PantryItemForEditDocument } from '../usePantryItemFormData.generated';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import { PantryItem_ListedFragmentDoc } from '#features/pantry/cache/pantryItemListed.generated';
 import { homeDetailNode } from '#/test-utils/fixtures/homeFixtures';
 import { pantryData } from '#/test-utils/fixtures/pantryFixtures';
 import { pantryItemData } from '#/test-utils/fixtures/pantryItemFixtures';
@@ -27,10 +35,20 @@ import {
   readingAsAbbreviation,
 } from '#/test-utils/fixtures/unitLabels';
 
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
+
 jest.mock('#store/useAppStore', () => ({
   useAppStore: jest.fn(() => null),
   useSelectedPantryId: jest.fn(() => 'p1'),
   useSelectedHomeId: jest.fn(() => 'h1'),
+}));
+
+const mockIsOffline = jest.fn(() => false);
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => mockIsOffline(),
 }));
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -144,11 +162,20 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => ({
 }));
 
 jest.mock('#components/organisms/Header', () => ({
-  Header: ({ title }: { title?: string }) => {
+  Header: ({
+    title,
+    rightActions,
+  }: {
+    title?: string;
+    rightActions?: Array<{ testID?: string }>;
+  }) => {
     const { Text, View } = require('react-native');
     return (
       <View testID="header">
         <Text>{title}</Text>
+        {rightActions?.map(action => (
+          <View key={action.testID} testID={action.testID} />
+        ))}
       </View>
     );
   },
@@ -299,6 +326,14 @@ jest.mock('../StorageDetailsSection', () => ({
 }));
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -317,7 +352,7 @@ function buildCache(opts: {
 }): InMemoryCache {
   const cache = makeCache();
 
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetHomeDocument,
     variables: { homeId: 'h1' },
     data: {
@@ -329,7 +364,7 @@ function buildCache(opts: {
     },
   });
 
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetPantryDocument,
     variables: {
       id: 'p1',
@@ -341,7 +376,7 @@ function buildCache(opts: {
   });
 
   if (opts.itemId) {
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PantryItemForEditDocument,
       variables: { id: opts.itemId },
       data: pantryItemData({
@@ -363,7 +398,8 @@ describe('PantryItemForm — sections', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     expect(screen.getByText('Item Information')).toBeTruthy();
   });
 
@@ -372,7 +408,8 @@ describe('PantryItemForm — sections', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Inventory'));
     expect(screen.getByText('Quantity')).toBeTruthy();
   });
@@ -382,7 +419,8 @@ describe('PantryItemForm — sections', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Storage'));
     expect(screen.getByText('Storage Details')).toBeTruthy();
   });
@@ -392,7 +430,8 @@ describe('PantryItemForm — sections', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Storage'));
     expect(screen.getByTestId('storage-state')).toHaveTextContent(
       'REFRIGERATED',
@@ -412,14 +451,16 @@ describe('PantryItemForm — edit mode', () => {
         itemFixture: { itemName: 'Flour' },
       }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
   });
 
   it('shows the edit modal testID when item exists', async () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByTestId('edit-pantry-item-modal');
+    await drainTimers();
+    expect(screen.getByTestId('edit-pantry-item-modal')).toBeTruthy();
   });
 
   it('shows "Item not found", still closable, when the item query returns null', async () => {
@@ -431,9 +472,54 @@ describe('PantryItemForm — edit mode', () => {
         }).mock,
       ],
     });
-    await screen.findByText('Item not found');
+    await drainTimers();
+    expect(screen.getByText('Item not found')).toBeTruthy();
     // The form's header — and so its close control — stays up.
     expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
+  });
+
+  describe('offline', () => {
+    const noServer = () =>
+      recordMock(PantryItemForEditDocument, {
+        error: new Error('This is not available offline yet'),
+      }).mock;
+
+    beforeEach(() => mockIsOffline.mockReturnValue(true));
+    afterEach(() => mockIsOffline.mockReturnValue(false));
+
+    it('opens a listed row on what the list holds, with Save', async () => {
+      const cache = buildCache({});
+      seedFragment(cache, {
+        fragment: PantryItem_ListedFragmentDoc,
+        fragmentName: 'pantryItem_listed',
+        data: { __typename: 'PantryItem', id: 'item-1', itemName: 'Flour' },
+      });
+
+      renderWithApollo(<PantryItemForm itemId="item-1" />, {
+        cache,
+        operationMocks: [noServer()],
+      });
+      await drainTimers();
+
+      expect(screen.getByText('name:Flour')).toBeTruthy();
+      expect(
+        screen.getByTestId(pantryTestIDs.editItemSubmitButton),
+      ).toBeTruthy();
+    });
+
+    it('says a stack the device does not hold is not available, with no Save', async () => {
+      renderWithApollo(<PantryItemForm itemId="not-held" />, {
+        cache: buildCache({}),
+        operationMocks: [noServer()],
+      });
+      await drainTimers();
+
+      expect(screen.getByTestId('state-offline')).toBeTruthy();
+      expect(screen.queryByText('Item not found')).toBeNull();
+      expect(
+        screen.queryByTestId(pantryTestIDs.editItemSubmitButton),
+      ).toBeNull();
+    });
   });
 
   // The form's fields are cached before the query is: it renders at once, then
@@ -441,22 +527,25 @@ describe('PantryItemForm — edit mode', () => {
   // mounted field subscriber mid-render, which React refuses.
   it('re-seeds from a late server answer without updating a field mid-render', async () => {
     const cache = buildCache({});
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: PantryItemForm_PantryItemFragmentDoc,
       fragmentName: 'PantryItemForm_pantryItem',
       data: pantryItemData({ id: 'item-1', itemName: 'Flour' }).pantryItem,
     });
+    const answer = recordMock(PantryItemForEditDocument, {
+      data: { pantryItem: { id: 'item-1', itemName: 'Bread flour' } },
+      held: true,
+    });
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache,
-      operationMocks: [
-        recordMock(PantryItemForEditDocument, {
-          data: { pantryItem: { id: 'item-1', itemName: 'Bread flour' } },
-        }).mock,
-      ],
+      operationMocks: [answer.mock],
     });
 
-    await screen.findByText('name:Flour');
-    await screen.findByText('name:Bread flour');
+    await drainTimers();
+    expect(screen.getByText('name:Flour')).toBeTruthy();
+    answer.release();
+    await drainTimers();
+    expect(screen.getByText('name:Bread flour')).toBeTruthy();
     const renderPhaseUpdates = jest
       .mocked(console.error)
       .mock.calls.filter(([message]) =>
@@ -476,7 +565,8 @@ describe('PantryItemForm — edit mode', () => {
         }).mock,
       ],
     });
-    await screen.findByText('Item Information');
+    await drainTimers();
+    expect(screen.getByText('Item Information')).toBeTruthy();
     expect(screen.queryByText('Item not found')).toBeNull();
   });
 
@@ -485,7 +575,8 @@ describe('PantryItemForm — edit mode', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Inventory'));
     expect(screen.getByText('Quantity')).toBeTruthy();
   });
@@ -504,7 +595,8 @@ describe('PantryItemForm — quantity seeds', () => {
         },
       }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Inventory'));
     expect(screen.getByText('seeded:1 1/3|0.333|177.441')).toBeTruthy();
   });
@@ -515,7 +607,8 @@ describe('PantryItemForm — page navigation', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     expect(screen.getByText('Basics')).toBeTruthy();
     expect(screen.getByText('Product')).toBeTruthy();
     expect(screen.getByText('Storage')).toBeTruthy();
@@ -529,12 +622,14 @@ describe('PantryItemForm — net weight', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, {
       cache: buildCache({ itemId: 'item-1' }),
     });
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Product'));
 
     await user.type(screen.getByPlaceholderText('e.g., 14.5'), '1');
+    await drainTimers();
     expect(
-      await screen.findByText('Please select a unit for the net weight.'),
+      screen.getByText('Please select a unit for the net weight.'),
     ).toBeTruthy();
 
     await user.press(screen.getByTestId('pick-unit'));
@@ -582,7 +677,7 @@ describe('PantryItemForm — package size in the user’s units', () => {
       imperial: reading(3, 'unit-lb', 'lb'),
     };
     if (trackingUnitId) stack.unit = { ...stack.unit, id: trackingUnitId };
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PantryItemForEditDocument,
       variables: { id: 'item-1' },
       data,
@@ -593,7 +688,8 @@ describe('PantryItemForm — package size in the user’s units', () => {
 
   const openProduct = async () => {
     const user = userEvent.setup();
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Product'));
   };
 
@@ -629,7 +725,7 @@ describe('PantryItemForm — the unit it is used in', () => {
       name: 'tablespoon',
       symbol: 'tbsp',
     });
-    cache.writeQuery({
+    seedQuery(cache, {
       query: PantryItemForEditDocument,
       variables: { id: 'item-1' },
       data,
@@ -637,7 +733,8 @@ describe('PantryItemForm — the unit it is used in', () => {
     renderWithApollo(<PantryItemForm itemId="item-1" />, { cache });
 
     const user = userEvent.setup();
-    await screen.findByText('Edit Pantry Item');
+    await drainTimers();
+    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
     await user.press(screen.getByText('Product'));
 
     expect(screen.getByText('Used in')).toBeTruthy();

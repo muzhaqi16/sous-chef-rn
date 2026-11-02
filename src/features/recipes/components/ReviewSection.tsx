@@ -11,6 +11,8 @@ import { WriteReviewSheet } from './WriteReviewSheet';
 import type { RecipeReviewFragment } from '#features/recipes/graphql/recipeFragments.generated';
 import { Text } from '#components/atoms/Text';
 import { SectionHeader } from '#components/atoms/SectionHeader';
+import { DataStateView } from '#components/organisms/DataStateView';
+import type { DataState } from '#hooks/data/useDataState';
 import { ModerationContentType } from '#/graphql/generated/schemaTypes';
 import {
   ReportContentSheet,
@@ -20,6 +22,8 @@ import { destructiveConfirm } from '#/services/destructiveConfirm';
 
 interface ReviewSectionProps {
   reviews: RecipeReviewFragment[];
+  reviewsState: DataState;
+  retryReviews: () => void;
   totalReviews: number;
   averageRating: number;
   rating1Count: number;
@@ -43,6 +47,8 @@ interface ReviewSectionProps {
 
 export const ReviewSection: React.FC<ReviewSectionProps> = ({
   reviews,
+  reviewsState,
+  retryReviews,
   totalReviews,
   averageRating,
   rating1Count,
@@ -63,6 +69,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
   const { t } = useTranslation();
   const [sheetVisible, setSheetVisible] = useState(false);
   const [reportTarget, setReportTarget] = useState<ReportTarget | null>(null);
+  const reviewsFailed = reviewsState === 'error' || reviewsState === 'offline';
 
   // Other reviews (excluding user's own)
   const otherReviews = userReview
@@ -105,8 +112,10 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
         rating4Count={rating4Count}
         rating5Count={rating5Count}
       />
-      {/* User's own review or Write button */}
-      {hasReviewed && userReview ? (
+      {/* Unread, the viewer's own review would read as never written. */}
+      {reviewsFailed ? (
+        <DataStateView state={reviewsState} onRetry={retryReviews} />
+      ) : hasReviewed && userReview ? (
         <View style={styles.ownReviewSection}>
           <Text role="label" tone="accent" style={styles.ownReviewLabel}>
             {t('recipes.yourReview')}
@@ -154,7 +163,7 @@ export const ReviewSection: React.FC<ReviewSectionProps> = ({
           ))}
         </View>
       )}
-      {totalReviews === 0 && !hasReviewed && (
+      {totalReviews === 0 && !hasReviewed && !reviewsFailed && (
         <Text
           role="caption"
           tone="secondary"

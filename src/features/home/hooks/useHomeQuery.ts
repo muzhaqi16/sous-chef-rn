@@ -4,18 +4,17 @@ import { useState } from 'react';
 import { useQuery } from '@apollo/client/react';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { usePreservedNodes } from '#/hooks/apollo/usePreservedConnection';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { getConnectionTotalCount } from '#/utils/connectionUtils';
 
 /**
- * `errorPolicy: 'ignore'` so a failed fetch yields the cached homes rather than
- * nothing; the client defaults supply the fetch policy. Returns connection-shape
- * nodes, so a consumer wanting a flat pantry array calls
+ * The client defaults supply the policies. Returns connection-shape nodes, so a
+ * consumer wanting a flat pantry array calls
  * `extractNodes(home.pantriesConnection)` itself.
  */
 export function useHomeQuery() {
-  const { data, loading, refetch } = useQuery(GetHomesDocument, {
-    errorPolicy: 'ignore',
-  });
+  const { data, loading, error, refetch } = useQuery(GetHomesDocument);
+  useApolloErrorLogger(GetHomesDocument, error);
 
   // Preserve homes data even when the query fails, to prevent cascade
   // failures. Each node carries `id` + `isDefault` directly.
@@ -67,8 +66,8 @@ export function useHomeQuery() {
     homes,
     remoteDefaultHomeId,
     loading,
-    // A defined `data` with zero homes is still an answer. `errorPolicy:
-    // 'ignore'` discards the error, so a settled read with neither is the failure.
+    // A defined `data` with zero homes is still an answer, so a settled read
+    // with neither is the failure.
     hasResult: data !== undefined || homes.length > 0,
     stats,
     refetch: memoizedRefetch,

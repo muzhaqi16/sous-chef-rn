@@ -19,3 +19,10 @@ fragment useUpdatePantryItemQuantity_pantryItem on PantryItem {
     }
   }
 }
+
+# What the write itself needs of the row, so a stack a list holds can be set
+# with nothing read first.
+fragment useUpdatePantryItemQuantity_row on PantryItem {
+  id
+  version
+}

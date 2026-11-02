@@ -22,7 +22,7 @@ import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 interface ItemCardProps {
   id: string;
   title: string;
-  subtitle: string;
+  subtitle: string | React.ReactNode;
   onPress: () => void;
   /** Revealed by swiping right. Actions flagged `removesRow` slide the row out. */
   leftActions?: SwipeAction[];
@@ -83,7 +83,11 @@ const SwipeableItemCard: React.FC<ItemCardProps> = ({
         <SwipeableItem
           accessibilityLabel={
             accessibilityLabel ??
-            accessibilityLabelOf(title, subtitle, badge?.text)
+            accessibilityLabelOf(
+              title,
+              typeof subtitle === 'string' ? subtitle : undefined,
+              badge?.text,
+            )
           }
           onPress={onPress}
           leftActions={withSlideOut(leftActions)}

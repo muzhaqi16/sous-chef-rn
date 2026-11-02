@@ -21,7 +21,7 @@ import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@react-native-vector-icons/ionicons';
-import { _setToastDispatch } from '#/services/toastService';
+import { _setToastDispatch, _setToastsShowing } from '#/services/toastService';
 import { HapticService } from '#services/haptic/HapticService';
 import { TOAST } from '#/constants/animations';
 import { Text } from '#components/atoms/Text';
@@ -144,7 +144,9 @@ const ToastCard = forwardRef<
   ref,
 ) {
   const iconName = TOAST_ICONS[type];
-  styles.useVariants({ type: type === 'default' ? undefined : type });
+  const variantStyles = styles.useVariants({
+    type: type === 'default' ? undefined : type,
+  });
 
   const animatedTheme = useAnimatedTheme();
   const surfaceStyle = useAnimatedStyle(() => {
@@ -185,17 +187,17 @@ const ToastCard = forwardRef<
       // Safe-area offset applied as layout, not animation — see the entry
       // effect. `marginTop` (spacing.md) is the gap below it.
       style={[
-        styles.toastContainer,
+        variantStyles.toastContainer,
         { top: topInset },
         surfaceStyle,
         animatedStyle,
       ]}
     >
-      <View style={styles.content}>
+      <View style={variantStyles.content}>
         {iconName ? (
           // One message line tall, so the icon centres on the first line of
           // a wrapped message or a message with a detail under it.
-          <View style={styles.iconSlot}>
+          <View style={variantStyles.iconSlot}>
             <ThemedToastIcon
               name={iconName}
               uniProps={t => ({
@@ -208,10 +210,10 @@ const ToastCard = forwardRef<
             />
           </View>
         ) : null}
-        <View style={styles.textColumn}>
+        <View style={variantStyles.textColumn}>
           <Text
             role="bodyStrong"
-            style={styles.toastText}
+            style={variantStyles.toastText}
             testID={kitTestIDs.toastMessage}
             numberOfLines={2}
           >
@@ -220,7 +222,7 @@ const ToastCard = forwardRef<
           {detail ? (
             <Text
               role="caption"
-              style={styles.toastText}
+              style={variantStyles.toastText}
               testID={kitTestIDs.toastDetail}
               numberOfLines={3}
             >
@@ -230,8 +232,8 @@ const ToastCard = forwardRef<
         </View>
       </View>
       {actionLabel ? (
-        <Pressable onPress={onActionPress} style={styles.actionButton}>
-          <Text role="bodyStrong" style={styles.actionText}>
+        <Pressable onPress={onActionPress} style={variantStyles.actionButton}>
+          <Text role="bodyStrong" style={variantStyles.actionText}>
             {actionLabel}
           </Text>
         </Pressable>
@@ -302,6 +304,11 @@ export const ToastProvider: React.FC<{ children?: ReactNode }> = ({
   useEffect(() => {
     _setToastDispatch(showToast);
   });
+
+  const showing = current !== null || queue.length > 0;
+  useEffect(() => {
+    _setToastsShowing(showing);
+  }, [showing]);
 
   // Re-running on an in-place replace resets the auto-dismiss timer, which
   // coalesces spam. translateY rests at 0 under a layout offset (`insets.top`),

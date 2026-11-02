@@ -1,11 +1,12 @@
 import { toastService } from '#/services/toastService';
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import {
   recordMock,
   renderWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateOutcome,
   ErrorCode,
@@ -56,6 +57,14 @@ const send = () =>
   fireEvent.press(screen.getByTestId(profileTestIDs.reportSendButton));
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -75,7 +84,8 @@ describe('ReportContentSheet', () => {
 
     send();
 
-    expect(await screen.findByText(t('reports.reasonRequired'))).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(t('reports.reasonRequired'))).toBeTruthy();
     expect(fired).toEqual([]);
     expect(onDismiss).not.toHaveBeenCalled();
   });
@@ -86,7 +96,8 @@ describe('ReportContentSheet', () => {
     pick(ReportType.Spam);
     send();
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
     expect(fired).toEqual([{ input: { ...TARGET, type: ReportType.Spam } }]);
     expect(mockToastSuccess).toHaveBeenCalledWith(t('reports.sent'));
   });
@@ -98,9 +109,8 @@ describe('ReportContentSheet', () => {
     describeIt('   ');
     send();
 
-    expect(
-      await screen.findByText(t('reports.descriptionRequired')),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(t('reports.descriptionRequired'))).toBeTruthy();
     expect(fired).toEqual([]);
     expect(onDismiss).not.toHaveBeenCalled();
   });
@@ -112,7 +122,8 @@ describe('ReportContentSheet', () => {
     describeIt('  Posted my address in the comments.  ');
     send();
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
     expect(fired).toEqual([
       {
         input: {
@@ -129,13 +140,13 @@ describe('ReportContentSheet', () => {
 
     pick(ReportType.Other);
     send();
-    await screen.findByText(t('reports.descriptionRequired'));
+    await drainTimers();
+    expect(screen.getByText(t('reports.descriptionRequired'))).toBeTruthy();
 
     pick(ReportType.Harassment);
 
-    await waitFor(() =>
-      expect(screen.queryByText(t('reports.descriptionRequired'))).toBeNull(),
-    );
+    await drainTimers();
+    expect(screen.queryByText(t('reports.descriptionRequired'))).toBeNull();
   });
 
   it('says a repeat is already under review instead of implying a second report', async () => {
@@ -144,7 +155,8 @@ describe('ReportContentSheet', () => {
     pick(ReportType.Spam);
     send();
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalledTimes(1));
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalledTimes(1);
     expect(mockToastInfo).toHaveBeenCalledWith(t('reports.alreadyOpen'));
     expect(mockToastSuccess).not.toHaveBeenCalled();
   });
@@ -160,9 +172,10 @@ describe('ReportContentSheet', () => {
     describeIt('They copied my recipe.');
     send();
 
-    expect(
-      await screen.findByTestId(profileTestIDs.reportFailure),
-    ).toHaveTextContent(t('errors.codes.forbidden'));
+    await drainTimers();
+    expect(screen.getByTestId(profileTestIDs.reportFailure)).toHaveTextContent(
+      t('errors.codes.forbidden'),
+    );
     expect(onDismiss).not.toHaveBeenCalled();
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(

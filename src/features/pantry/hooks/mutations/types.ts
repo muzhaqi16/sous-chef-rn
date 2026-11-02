@@ -39,7 +39,6 @@ export interface FormDataInput {
   location: string;
   expirationDate?: Date;
   notes: string;
-  category: string;
   tags?: string[];
   netWeight?: string;
   netWeightUnit?: string;
@@ -59,5 +58,4 @@ export interface CreatePantryItemParams<
   quantityValue: number;
   unitId: string | null;
   selectedLocationId: string | null;
-  selectedCategoryId: string | null;
 }

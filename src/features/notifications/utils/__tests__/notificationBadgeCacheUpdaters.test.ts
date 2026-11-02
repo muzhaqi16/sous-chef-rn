@@ -1,5 +1,5 @@
 import type { InMemoryCache } from '@apollo/client';
-import { seedCache } from '#/test-utils/apolloMockProvider';
+import { seedCache, seedQuery } from '#/test-utils/apolloMockProvider';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   adjustUnreadNotificationCount,
@@ -13,7 +13,7 @@ const seedBadge = (
   others: Parameters<typeof seedCache>[0] = [],
 ) => {
   const cache = seedCache(others);
-  cache.writeQuery({
+  seedQuery(cache, {
     query: NotificationSummaryDocument,
     data: {
       __typename: 'Query',

@@ -7,11 +7,7 @@ interface OfflineAwareError<E> {
   offline: boolean;
 }
 
-/**
- * Splits "the server is unreachable" from a real failure. Keyed on
- * `isApiUnavailable`, not `blocksCacheMissQueries` — that one asks whether the
- * LINK short-circuited the request, which is false with only the breaker open.
- */
+/** Splits "the server is unreachable" from a real failure. */
 export function useOfflineAwareError<E>(
   error: E | undefined,
   hasData: boolean,

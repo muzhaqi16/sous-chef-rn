@@ -4,6 +4,8 @@ import { Text } from '#components/atoms/Text';
 import { Pressable } from '#components/atoms/themedComponents';
 import { render, screen, fireEvent, act } from '@testing-library/react-native';
 import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
+import { t } from '#/i18n';
+import { useStore } from '#store';
 
 interface Row {
   id: string;
@@ -180,5 +182,80 @@ describe('InlineAutocomplete', () => {
       expect(screen.queryByText('kg')).toBeNull();
       expect(screen.queryByTestId('dropdown-spacer')).toBeNull();
     });
+  });
+});
+
+describe('InlineAutocomplete offline', () => {
+  const Picker: React.FC<{ holdsEverything?: boolean; items?: string[] }> = ({
+    holdsEverything,
+    items = [],
+  }) => {
+    const [value, setValue] = useState('');
+    return (
+      <InlineAutocomplete<string>
+        value={value}
+        onChangeText={setValue}
+        items={items}
+        renderItem={item => <Text>{item}</Text>}
+        keyExtractor={item => item}
+        onSelect={() => {}}
+        holdsEverything={holdsEverything}
+        testID="picker"
+      />
+    );
+  };
+
+  const typeAndSettle = (text: string) => {
+    fireEvent.changeText(screen.getByTestId('picker'), text);
+    act(() => {
+      jest.runOnlyPendingTimers();
+    });
+  };
+
+  beforeEach(() => {
+    jest.useFakeTimers();
+    useStore.setState({ isOnline: false, apiReachable: null });
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+    useStore.setState({ isOnline: true, apiReachable: null });
+  });
+
+  it('says a wider search needs a connection when nothing held matches', () => {
+    render(<Picker />);
+    typeAndSettle('kale');
+
+    expect(
+      screen.getByText(t('empty.noHeldMatchFor', { query: 'kale' })),
+    ).toBeTruthy();
+  });
+
+  it('waits for the parent to answer before saying so', () => {
+    render(<Picker />);
+    fireEvent.changeText(screen.getByTestId('picker'), 'kale');
+
+    expect(
+      screen.queryByText(t('empty.noHeldMatchFor', { query: 'kale' })),
+    ).toBeNull();
+  });
+
+  it('lists what matches, with no note', () => {
+    render(<Picker items={['Kale']} />);
+    typeAndSettle('kale');
+
+    expect(screen.getByText('Kale')).toBeTruthy();
+    expect(
+      screen.queryByText(t('empty.noHeldMatchFor', { query: 'kale' })),
+    ).toBeNull();
+  });
+
+  it('stays closed for a set the device holds whole', () => {
+    render(<Picker holdsEverything />);
+    typeAndSettle('kale');
+
+    expect(
+      screen.queryByText(t('empty.noHeldMatchFor', { query: 'kale' })),
+    ).toBeNull();
   });
 });

@@ -1,4 +1,5 @@
 import { skipToken, useFragment, useQuery } from '@apollo/client/react';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import {
   MoveToPantryModal_ShoppingListItemFragmentDoc,
   MoveToPantryPurchaseInfoDocument,
@@ -25,7 +26,7 @@ export function useMoveToPantryItem({
   // A query, not the fragment above: that gates the whole sheet on `complete`,
   // and on a cold start the list query holds only `{ isPurchased movedToPantryAt }`,
   // so missing amounts would blank the sheet rather than just the prefill.
-  const { data: purchaseData } = useQuery(
+  const { data: purchaseData, error: purchaseError } = useQuery(
     MoveToPantryPurchaseInfoDocument,
     !skip && shoppingListItemId
       ? {
@@ -38,6 +39,7 @@ export function useMoveToPantryItem({
         }
       : skipToken,
   );
+  useApolloErrorLogger(MoveToPantryPurchaseInfoDocument, purchaseError);
 
   const purchaseInfo = purchaseData?.shoppingListItem?.purchaseInfo ?? null;
 

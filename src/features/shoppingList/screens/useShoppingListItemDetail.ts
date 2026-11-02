@@ -3,6 +3,7 @@ import { GetShoppingListItemDocument } from './useShoppingListItemDetail.generat
 import { ItemDetail_ShoppingListItemFragmentDoc } from './ItemDetail.generated';
 import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { useDataState } from '#hooks/data/useDataState';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 
 /** The line a detail screen shows: what the cache holds now, the rest once fetched. */
 export function useShoppingListItemDetail(itemId: string) {
@@ -49,10 +50,14 @@ export function useShoppingListItemDetail(itemId: string) {
     void refetch();
   };
 
+  const isOffline = useIsApiUnavailable();
+
   return {
     item,
     // For a section made only of fields the list's row never caches.
     detail: live.complete ? live.data : null,
+    /** Offline with only the list's row, so the rest needs a connection. */
+    heldOnly: isOffline && item !== null && !live.complete,
     notFound,
     state,
     retry,

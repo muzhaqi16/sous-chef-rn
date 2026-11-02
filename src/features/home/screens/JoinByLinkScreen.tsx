@@ -4,6 +4,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { ErrorState } from '#components/molecules/ErrorState';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { SousChefLoader } from '#components/atoms/SousChefLoader';
 import { useResolveShareLink } from '#features/home/screens/useResolveShareLink';
 import { ShareLinkTargetType } from '#/graphql/generated/schemaTypes';
@@ -24,7 +25,7 @@ export const JoinByLinkScreen: React.FC<
     useAppNavigation();
   const code = route.params?.code ?? '';
 
-  const { link: result, loading } = useResolveShareLink(code);
+  const { link: result, loading, state, refetch } = useResolveShareLink(code);
 
   // Guard against double-dispatch if `result` re-emits (cache→network) before
   // this screen unmounts. A ref (mutated only in the effect, never read during
@@ -48,12 +49,20 @@ export const JoinByLinkScreen: React.FC<
     }
   }, [result, code, replaceWithJoinHomeByCode, replaceWithJoinByShareCode]);
 
+  const failed = state === 'error' || state === 'offline';
   // Code resolved to nothing — invalid or expired.
   const invalid = !!code && !loading && !result;
 
   return (
     <SubScreen title={t('joinLink.title')} scroll="none">
-      {invalid ? (
+      {failed ? (
+        <DataStateView
+          state={state}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      ) : invalid ? (
         <ErrorState
           icon="alert-circle-outline"
           title={t('joinLink.invalidTitle')}

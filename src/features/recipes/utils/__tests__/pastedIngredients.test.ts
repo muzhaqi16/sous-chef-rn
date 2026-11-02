@@ -53,7 +53,7 @@ describe('toPastedIngredient', () => {
     note: null,
     section: 'For the dough',
     isOptional: false,
-    item: { __typename: 'Item', id: 'item-flour' },
+    item: { __typename: 'Item', version: 1, id: 'item-flour' },
   };
 
   it('keeps the line as written beside its parts', () => {

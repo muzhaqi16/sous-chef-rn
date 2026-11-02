@@ -250,9 +250,11 @@ subscription MealPlanEvents($homeId: ID!) {
     node {
       __typename
       ... on MealPlan {
+        version
         id
       }
       ... on MealPlanItem {
+        version
         id
       }
       ... on MealTemplate {

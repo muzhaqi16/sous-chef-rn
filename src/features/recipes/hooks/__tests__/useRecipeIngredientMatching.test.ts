@@ -1,5 +1,5 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   ErrorCode,
   RecipeIngredientMatchKind,
@@ -11,6 +11,7 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   MarkRecipeAsCookedDocument,
   MatchRecipeIngredientsToPantryDocument,
@@ -75,6 +76,14 @@ const mockToastInfo = jest.mocked(toastService.info);
 jest.mock('#/utils/generateEntityId', () => ({
   generateEntityId: jest.fn(() => 'client-cooklog-1'),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -207,9 +216,7 @@ describe('useRecipeIngredientMatching', () => {
     );
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.loadMatches(4);
-    });
+    success = await drained(() => result.current.loadMatches(4));
 
     expect(success).toBe(false);
     expect(mockToastError).toHaveBeenCalledWith(
@@ -226,12 +233,11 @@ describe('useRecipeIngredientMatching', () => {
     );
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.loadMatches(4);
-    });
+    success = await drained(() => result.current.loadMatches(4));
 
     expect(success).toBe(true);
-    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
+    await drainTimers();
+    expect(result.current.editableMatches).toHaveLength(1);
     expect(result.current.editableMatches[0]!.adjustedQuantity).toBe(2);
     expect(result.current.isSheetVisible).toBe(true);
   });
@@ -244,9 +250,7 @@ describe('useRecipeIngredientMatching', () => {
     );
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.loadMatches(4);
-    });
+    success = await drained(() => result.current.loadMatches(4));
 
     expect(success).toBe(false);
     expect(mockToastInfo).toHaveBeenCalledWith('No ingredients to match');
@@ -263,9 +267,7 @@ describe('useRecipeIngredientMatching', () => {
     );
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.loadMatches(4);
-    });
+    success = await drained(() => result.current.loadMatches(4));
 
     expect(success).toBe(false);
     expect(mockToastInfo).not.toHaveBeenCalled();
@@ -280,9 +282,7 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock] },
     );
 
-    await act(async () => {
-      await result.current.loadMatches(2.5);
-    });
+    await drained(() => result.current.loadMatches(2.5));
 
     expect(m.fired).toEqual([
       { recipeId: 'recipe-1', pantryId: 'pantry-1', servings: 2.5 },
@@ -331,9 +331,7 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock] },
     );
 
-    await act(async () => {
-      await result.current.loadMatches(4);
-    });
+    await drained(() => result.current.loadMatches(4));
 
     expect(result.current.editableMatches).toHaveLength(0);
     expect(logger.warn).toHaveBeenCalledWith(
@@ -352,10 +350,8 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock], cache: seedIngredientCache(['ing-1']) },
     );
 
-    await act(async () => {
-      await result.current.loadMatches(4);
-    });
-    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
+    await drained(() => result.current.loadMatches(4));
+    expect(result.current.editableMatches).toHaveLength(1);
 
     act(() => {
       result.current.updateMatch(0, { adjustedQuantity: 10 });
@@ -374,11 +370,8 @@ describe('useRecipeIngredientMatching', () => {
       { operationMocks: [m.mock], cache: seedIngredientCache(['ing-1']) },
     );
 
-    await act(async () => {
-      await result.current.loadMatches(4);
-    });
-
-    await waitFor(() => expect(result.current.isSheetVisible).toBe(true));
+    await drained(() => result.current.loadMatches(4));
+    expect(result.current.isSheetVisible).toBe(true);
 
     act(() => {
       result.current.closeSheet();
@@ -418,20 +411,15 @@ describe('useRecipeIngredientMatching', () => {
       },
     );
 
-    await act(async () => {
-      await result.current.loadMatches(4);
+    await drained(() => result.current.loadMatches(4));
+    expect(result.current.matchSummary).toEqual({
+      total: 3,
+      available: 1,
+      partial: 0,
+      missing: 1,
+      unsure: 1,
+      included: 1,
     });
-
-    await waitFor(() =>
-      expect(result.current.matchSummary).toEqual({
-        total: 3,
-        available: 1,
-        partial: 0,
-        missing: 1,
-        unsure: 1,
-        included: 1,
-      }),
-    );
   });
 });
 
@@ -508,13 +496,9 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       },
     );
 
-    await act(async () => {
-      await rendered.result.current.loadMatches(4);
-    });
-    await waitFor(() =>
-      expect(rendered.result.current.editableMatches).toHaveLength(
-        matches.length,
-      ),
+    await drained(() => rendered.result.current.loadMatches(4));
+    expect(rendered.result.current.editableMatches).toHaveLength(
+      matches.length,
     );
     return rendered;
   }
@@ -526,9 +510,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     const cook = cookMock({ kind: 'success' });
     const { result } = await loadOneMatch(cook);
 
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     // The cooking-log id is minted here, so a replayed cook converges on it.
     expect(cook.fired).toEqual([
@@ -556,7 +538,8 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       'Deducted 1 ingredient from pantry',
     );
     expect(mockToastError).not.toHaveBeenCalled();
-    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+    await drainTimers();
+    expect(result.current.isSheetVisible).toBe(false);
     expect(result.current.editableMatches).toEqual([]);
   });
 
@@ -566,12 +549,12 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     const cook = cookMock({ kind: 'success' });
     const { result } = await loadOneMatch(cook);
 
-    await act(async () => {
-      await result.current.confirmConsumption({
+    await drained(() =>
+      result.current.confirmConsumption({
         servings: 2.5,
         notes: 'Halved it',
-      });
-    });
+      }),
+    );
 
     expect(cook.fired).toEqual([
       {
@@ -603,9 +586,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       cook,
     );
 
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
       {
@@ -633,9 +614,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     act(() => {
       result.current.updateMatch(0, { adjustedQuantity: 0 });
     });
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(cook.fired).toEqual([]);
     expect(mockToastInfo).toHaveBeenCalledWith(
@@ -650,9 +629,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     act(() => {
       result.current.updateMatch(0, { adjustedQuantity: 0 });
     });
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
       expect.objectContaining({ recipeIngredientId: 'ing-2' }),
@@ -673,9 +650,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     act(() => {
       result.current.updateMatch(0, { isIncluded: true });
     });
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
       expect.objectContaining({ pantryItemId: 'pi-1' }),
@@ -695,9 +670,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     act(() => {
       result.current.updateMatch(0, { isIncluded: true });
     });
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
       expect.objectContaining({ recipeIngredientId: 'ing-2' }),
@@ -725,10 +698,8 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         cache: seedIngredientCache(['ing-1']),
       },
     );
-    await act(async () => {
-      await result.current.loadMatches(4);
-    });
-    await waitFor(() => expect(result.current.editableMatches).toHaveLength(1));
+    await drained(() => result.current.loadMatches(4));
+    expect(result.current.editableMatches).toHaveLength(1);
 
     expect(result.current.editableMatches[0]!.isIncluded).toBe(false);
   });
@@ -808,13 +779,8 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         cache: seedIngredientCache(['ing-1', 'ing-2']),
       },
     );
-    await act(async () => {
-      await result.current.loadMatches(4);
-    });
-    // Asked fresh for the review's own pantry, once the sheet is open.
-    await waitFor(() =>
-      expect(result.current.editableMatches[1]?.substitutes).toHaveLength(1),
-    );
+    await drained(() => result.current.loadMatches(4));
+    expect(result.current.editableMatches[1]?.substitutes).toHaveLength(1);
     return { result, substitutes };
   }
 
@@ -828,9 +794,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         isIncluded: true,
       });
     });
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
   }
 
   it('cooks with a swap: draws its parts at the amount cooked, never the ingredient', async () => {
@@ -907,9 +871,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     act(() => {
       result.current.updateMatch(0, { selectedStack: picked });
     });
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(inputOf(cook.fired[0]!).ingredientsUsed).toEqual([
       {
@@ -946,15 +908,14 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         cook,
       );
 
-      await act(async () => {
-        await result.current.confirmConsumption();
-      });
+      await drained(() => result.current.confirmConsumption());
 
       expect(mockToastSuccess).toHaveBeenCalledTimes(1);
       expect(mockToastSuccess).toHaveBeenCalledWith(
         'Deducted 1 ingredient from pantry (1 not deducted)',
       );
-      await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+      await drainTimers();
+      expect(result.current.isSheetVisible).toBe(false);
     },
   );
 
@@ -992,9 +953,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         cook,
       );
 
-      await act(async () => {
-        await result.current.confirmConsumption();
-      });
+      await drained(() => result.current.confirmConsumption());
 
       expect(mockToastSuccess).toHaveBeenCalledWith(toast);
     },
@@ -1004,9 +963,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     const cook = cookMock({ kind: 'queued' });
     const { result } = await loadMatchesFor([includedMatch, secondMatch], cook);
 
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(cook.fired).toHaveLength(1);
     // No response to count: every entry replays on reconnect.
@@ -1014,7 +971,8 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
       'Deducted 2 ingredients from pantry',
     );
     expect(mockToastError).not.toHaveBeenCalled();
-    await waitFor(() => expect(result.current.isSheetVisible).toBe(false));
+    await drainTimers();
+    expect(result.current.isSheetVisible).toBe(false);
     expect(result.current.editableMatches).toEqual([]);
   });
 
@@ -1022,9 +980,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     const cook = cookMock({ kind: 'rejected' });
     const { result } = await loadOneMatch(cook);
 
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     // The app's copy for the code the refusal carries, never its `message`.
     expect(mockToastError).toHaveBeenCalledTimes(1);
@@ -1041,9 +997,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
     const cook = cookMock({ kind: 'transport' });
     const { result } = await loadOneMatch(cook);
 
-    await act(async () => {
-      await result.current.confirmConsumption();
-    });
+    await drained(() => result.current.confirmConsumption());
 
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(mockToastError).toHaveBeenCalledWith(

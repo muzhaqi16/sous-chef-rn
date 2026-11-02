@@ -23,25 +23,25 @@ export const PhotoCredit: React.FC<PhotoCreditProps> = ({
   overPhoto = false,
 }) => {
   const { t } = useTranslation();
-  styles.useVariants({ overPhoto });
+  const variantStyles = styles.useVariants({ overPhoto });
 
   return (
-    <View style={styles.row}>
+    <View style={variantStyles.row}>
       <Link
         variant="caption"
         href={credit.sourceUrl}
-        style={styles.onPhoto}
+        style={variantStyles.onPhoto}
         testID={catalogTestIDs.photoCreditSource}
       >
         {t('itemPhotos.credit', { source: credit.text })}
       </Link>
-      <Text role="caption" tone="secondary" style={styles.onPhoto}>
+      <Text role="caption" tone="secondary" style={variantStyles.onPhoto}>
         ·
       </Text>
       <Link
         variant="caption"
         href={credit.licenseUrl}
-        style={styles.onPhoto}
+        style={variantStyles.onPhoto}
         testID={catalogTestIDs.photoCreditLicense}
       >
         {credit.license}

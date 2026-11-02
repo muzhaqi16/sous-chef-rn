@@ -123,7 +123,7 @@ describe('a queued shopping-list delete, replayed', () => {
     expect(queued()).toEqual([]);
   });
 
-  it('is withdrawn and reported when the server refuses it', async () => {
+  it('is kept and reported when the server refuses it', async () => {
     const { asked, withdraw } = await drainQueuedDelete({
       __typename: 'ForbiddenError',
       code: ErrorCode.Forbidden,
@@ -141,10 +141,11 @@ describe('a queued shopping-list delete, replayed', () => {
     );
     // No list row is cached, as after the local delete: its input names it.
     expect(toastService.error).toHaveBeenCalledWith(
-      t('errors.queuedChangeRejectedResource', {
+      t('errors.queuedChangeKeptResource', {
         resource: t('errors.resourceNames.ShoppingList'),
       }),
+      undefined,
     );
-    expect(queued()).toEqual([]);
+    expect(queued()).toEqual([['delete-list-1', QueueStatus.REFUSED]]);
   });
 });

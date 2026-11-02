@@ -1,12 +1,8 @@
 'use no memo';
 import React from 'react';
-import {
-  render,
-  screen,
-  userEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import { PostLoginBiometricScreen } from '../PostLoginBiometricScreen';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#components/atoms/Icon', () => ({
   Icon: () => null,
@@ -74,6 +70,14 @@ jest.mock('#hooks/auth/useAuthPreferences', () => ({
   }),
 }));
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('PostLoginBiometricScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -81,22 +85,24 @@ describe('PostLoginBiometricScreen', () => {
 
   it('renders the post-login biometric gate as a screen', async () => {
     render(<PostLoginBiometricScreen />);
-    expect(
-      await screen.findByTestId('post-login-biometric-screen'),
-    ).toBeTruthy();
-    expect(await screen.findByText('Set up Face ID Login?')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByTestId('post-login-biometric-screen')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Set up Face ID Login?')).toBeTruthy();
   });
 
   it('renders Enable Now and Not now', async () => {
     render(<PostLoginBiometricScreen />);
-    expect(await screen.findByText('Enable Now')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Enable Now')).toBeTruthy();
     expect(screen.getByText('Not now')).toBeTruthy();
   });
 
   it('declines and enters the app when Not now is pressed', async () => {
     const user = userEvent.setup();
     render(<PostLoginBiometricScreen />);
-    await user.press(await screen.findByText('Not now'));
+    await drainTimers();
+    await user.press(screen.getByText('Not now'));
 
     expect(mockMarkDeclined).toHaveBeenCalled();
     expect(mockSetPostLoginCredentials).toHaveBeenCalledWith(null);
@@ -108,14 +114,14 @@ describe('PostLoginBiometricScreen', () => {
   it('enrols a device credential and enters the app when Enable Now succeeds', async () => {
     const user = userEvent.setup();
     render(<PostLoginBiometricScreen />);
-    await user.press(await screen.findByText('Enable Now'));
+    await drainTimers();
+    await user.press(screen.getByText('Enable Now'));
 
-    await waitFor(() => {
-      expect(mockBiometricService.enrolDeviceCredential).toHaveBeenCalledWith(
-        'test@example.com',
-      );
-      expect(mockMarkEnabled).toHaveBeenCalled();
-      expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
-    });
+    await drainTimers();
+    expect(mockBiometricService.enrolDeviceCredential).toHaveBeenCalledWith(
+      'test@example.com',
+    );
+    expect(mockMarkEnabled).toHaveBeenCalled();
+    expect(mockSetNavigationState).toHaveBeenCalledWith('main_app');
   });
 });

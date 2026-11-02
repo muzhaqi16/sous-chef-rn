@@ -186,6 +186,13 @@ export function createMemoryPlatform(): PlatformServices {
     imagePrefetch: { prefetch: () => {} },
     haptics: { selection: () => {}, warning: () => {} },
     reviewPrompt: { request: () => {} },
+    // A test host that has never been asked; a test that needs a place mocks it.
+    approximateLocation: {
+      access: () => Promise.resolve(null),
+      requestAccess: () => Promise.resolve('denied'),
+      currentPlace: () => Promise.resolve(null),
+      openSettings: () => {},
+    },
     fileParts: streamedFileParts,
     screen: createMemoryScreen(),
   };

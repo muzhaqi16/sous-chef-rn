@@ -9,13 +9,17 @@ import {
   safeEvict,
 } from '#/apollo/utils/cacheUpdaters';
 import { isRecord } from '#/utils/isRecord';
-import { evictLocalPantryItemSeeds } from './writeLocalPantryItem';
+import { hideEntity, isHeld } from '#/apollo/utils/writeLocalEntity';
+import {
+  writeLocalPantryItem,
+  type LocalPantryItem,
+} from './writeLocalPantryItem';
 
 /** The row's reference; the connection write identifies it by `__typename`. */
-export interface PantryItemRef {
+export type PantryItemRef = {
   __typename: 'PantryItem';
   id: string;
-}
+};
 
 export const addToPantryItemsCache =
   createAddToParentConnectionUpdater<PantryItemRef>(
@@ -30,28 +34,6 @@ export const removeFromPantryItemsCache =
     'itemsConnection',
     'PantryItem',
   );
-
-/**
- * Reconciles a local-first create with its answer: the server's row takes the
- * counted edge. A create resolved onto a held row (a restock) answers with that
- * row's id; the minted row goes with its edge and seeds, not the count.
- */
-export function reconcileCreatedPantryItem(
-  cache: ApolloCache,
-  pantryId: string,
-  pantryItem: PantryItemRef,
-  clientId: string | null | undefined,
-): void {
-  if (clientId && clientId !== pantryItem.id) {
-    // The held row is never added: the write reaches every cached variant, so
-    // it would land in, and count toward, the filtered ones it is not in.
-    removeFromPantryItemsCache(cache, pantryId, clientId, { evictItem: true });
-    evictLocalPantryItemSeeds(cache, clientId);
-    return;
-  }
-  // NOT the counting helper: the eager write already counted this row.
-  addToPantryItemsCache(cache, pantryId, pantryItem);
-}
 
 /**
  * Moves `Pantry.stats.totalItems` by `delta`: responses carry no parent
@@ -138,11 +120,59 @@ export function removePantryItemLocally(
   return removed;
 }
 
+/** A create as a layer shows it: the row, listed and counted. */
+export function showLocalPantryItem(
+  cache: ApolloCache,
+  stack: PantryItemRef,
+  row: LocalPantryItem,
+  now: string,
+): void {
+  if (!isHeld(cache, stack)) writeLocalPantryItem(cache, stack.id, row, now);
+  addPantryItemLocally(cache, row.pantryId, stack);
+}
+
 /**
- * Withdraw a refused optimistic row: edge first, so `cache.modify` still sees it
- * and takes both counters with it. Evicting alone strands `stats.totalItems`.
+ * Lists the row a create's answer kept. An answer naming a held stack joined
+ * that stack, so the minted row never reached the server's data. The held row
+ * is not added: the write reaches every cached variant, and it would land in,
+ * and count toward, the filtered ones it is not in.
  */
-export function revertOptimisticPantryItem(
+export function listAnsweredPantryItem(
+  cache: ApolloCache,
+  pantryId: string,
+  mintedId: string,
+  payload: unknown,
+): void {
+  if (!isRecord(payload) || !isRecord(payload.pantryItem)) return;
+  if (payload.pantryItem.id !== mintedId) return;
+  addPantryItemLocally(
+    cache,
+    pantryId,
+    { __typename: 'PantryItem', id: mintedId },
+    { countsSettled: carriesPantryCount(payload.pantry, pantryId) },
+  );
+}
+
+/**
+ * Takes a row out from a layer; a row already hidden counts nothing.
+ */
+export function hidePantryItem(
+  cache: ApolloCache,
+  pantryId: string,
+  itemId: string,
+): void {
+  const row = { __typename: 'PantryItem', id: itemId };
+  if (!isHeld(cache, row)) return;
+  removePantryItemLocally(cache, pantryId, itemId);
+  hideEntity(cache, row);
+}
+
+/**
+ * An answered row leaves the server's data. Edge first: an evict always reports
+ * a removal, so only the edge can tell whether a realtime event took the row,
+ * and its count, before this.
+ */
+export function dropPantryItem(
   cache: ApolloCache,
   pantryId: string,
   itemId: string,
@@ -150,5 +180,4 @@ export function revertOptimisticPantryItem(
 ): void {
   removePantryItemLocally(cache, pantryId, itemId, options);
   safeEvict(cache, 'PantryItem', itemId);
-  evictLocalPantryItemSeeds(cache, itemId);
 }

@@ -1,9 +1,9 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   StoreDepartment,
   StoreRouteSource,
@@ -49,38 +49,43 @@ function renderAisles(source = StoreRouteSource.Household) {
   return { ...hook, route };
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useAisleView', () => {
   it("groups the lines in the walking order of the list's store", async () => {
     const { result, route } = renderAisles();
 
-    await waitFor(() => {
-      expect(result.current.aisleEntries.map(entry => entry.id)).toEqual([
-        'aisle:DAIRY_EGGS',
-        'milk',
-        'aisle:PRODUCE',
-        'apples',
-      ]);
-    });
+    await drainTimers();
+    expect(result.current.aisleEntries.map(entry => entry.id)).toEqual([
+      'aisle:DAIRY_EGGS',
+      'milk',
+      'aisle:PRODUCE',
+      'apples',
+    ]);
     expect(route.fired).toEqual([{ id: 'list-1', storeId: 'store-1' }]);
   });
 
   it('says whose trips taught the order', async () => {
     const { result } = renderAisles();
 
-    await waitFor(() => {
-      expect(result.current.routeNote).toEqual({
-        ownTrips: true,
-        storeName: 'Costco',
-      });
+    await drainTimers();
+    expect(result.current.routeNote).toEqual({
+      ownTrips: true,
+      storeName: 'Costco',
     });
   });
 
   it('says nothing of the default walk', async () => {
     const { result } = renderAisles(StoreRouteSource.Default);
 
-    await waitFor(() => {
-      expect(result.current.aisleEntries[0]?.id).toBe('aisle:DAIRY_EGGS');
-    });
+    await drainTimers();
+    expect(result.current.aisleEntries[0]?.id).toBe('aisle:DAIRY_EGGS');
     expect(result.current.routeNote).toBeNull();
   });
 
@@ -89,9 +94,8 @@ describe('useAisleView', () => {
     jest.mocked(useFeatureFlag).mockReturnValue(false);
     const { result } = renderAisles(StoreRouteSource.Store);
 
-    await waitFor(() => {
-      expect(result.current.aisleEntries[0]?.id).toBe('aisle:DAIRY_EGGS');
-    });
+    await drainTimers();
+    expect(result.current.aisleEntries[0]?.id).toBe('aisle:DAIRY_EGGS');
     expect(result.current.routeNote).toBeNull();
   });
 });

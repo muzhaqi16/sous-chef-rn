@@ -19,6 +19,7 @@ fragment RecipeIngredientReaders on RecipeIngredient {
     id
     imageUrl
     name
+    version
   }
   name
   notes

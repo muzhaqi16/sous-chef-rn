@@ -11,7 +11,6 @@ interface UseShoppingListActionsOptions {
   purchasedItems: ShoppingListItemNode[];
   toggleItem: (itemId: string) => Promise<unknown>;
   removeItem: (itemId: string) => Promise<boolean>;
-  refetchItems: () => Promise<unknown>;
 }
 
 // Module-level: their try bodies would otherwise bail the hook out of the
@@ -74,7 +73,6 @@ export function useShoppingListActions({
   purchasedItems,
   toggleItem,
   removeItem,
-  refetchItems,
 }: UseShoppingListActionsOptions) {
   const handleTogglePurchase = async (itemId: string) => {
     Telemetry.trackEvent('toggle_item_purchase', { item_id: itemId });
@@ -90,7 +88,6 @@ export function useShoppingListActions({
     listId: currentListId,
     unpurchasedItems,
     purchasedItems,
-    refetch: refetchItems,
   });
 
   const handleClearAllPurchased = async () => {

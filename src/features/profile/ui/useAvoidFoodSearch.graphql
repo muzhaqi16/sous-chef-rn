@@ -1,0 +1,17 @@
+# Foods only: an avoid is stored as the item's root, which must be PUBLIC, so a
+# brand's product or a private item is never offered.
+query SearchAvoidableFoods($query: String!, $first: Int!) {
+  searchItems(
+    query: $query
+    first: $first
+    filters: { level: CONCEPT, visibility: PUBLIC }
+  ) {
+    edges {
+      node {
+        version
+        id
+        ...AvoidFoodRow_item
+      }
+    }
+  }
+}

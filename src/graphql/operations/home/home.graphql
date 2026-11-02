@@ -16,6 +16,7 @@ query GetHomes($first: Int, $after: String) {
         isDefault
         version
         myMembership {
+          version
           id
           role
           canManageHome
@@ -28,6 +29,7 @@ query GetHomes($first: Int, $after: String) {
         pantriesConnection(first: 10) {
           edges {
             node {
+              version
               id
               name
               isDefault
@@ -236,6 +238,7 @@ mutation InviteToHome($input: InviteToHomeInput!) {
     __typename
     ... on InviteToHomePayload {
       homeInvite {
+        version
         id
         ...HomeInviteReaders
       }
@@ -478,9 +481,11 @@ subscription HomeEvents($homeId: ID!) {
     node {
       __typename
       ... on Membership {
+        version
         id
       }
       ... on HomeInvite {
+        version
         id
       }
     }

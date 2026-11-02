@@ -5,7 +5,6 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { alertService } from '#/services/alertService';
 import { useItemReordering } from '../useItemReordering';
 
@@ -208,13 +207,10 @@ describe('useItemReordering', () => {
     });
 
     expect(alertService.alert).toHaveBeenCalledTimes(1);
-    expect(refetch).toHaveBeenCalled();
   });
 
   describe('a move queued offline', () => {
-    afterEach(() => optimisticDataPersistence.clearAll());
-
-    it('keeps the persisted sortOrder, with no refetch and no alert', async () => {
+    it('stays, with no refetch and no alert', async () => {
       const refetch = jest.fn();
       const queued = recordMock(MoveShoppingListItemDocument, {
         data: { moveShoppingListItem: null },
@@ -231,28 +227,15 @@ describe('useItemReordering', () => {
           'item-3',
         );
       });
-      optimisticDataPersistence.flush();
 
       expect(queued.fired).toHaveLength(1);
-      expect(
-        optimisticDataPersistence.get('ShoppingListItem', 'item-2'),
-      ).toEqual({ sortOrder: 'bbb' });
       expect(refetch).not.toHaveBeenCalled();
       expect(alertService.alert).not.toHaveBeenCalled();
     });
   });
 
   describe('a move that does not take effect', () => {
-    let clearPersisted: jest.SpyInstance;
-
-    beforeEach(() => {
-      clearPersisted = jest.spyOn(optimisticDataPersistence, 'clear');
-    });
-    afterEach(() => clearPersisted.mockRestore());
-
-    it('restores the server order and says so when the move is refused', async () => {
-      // A refusal resolves as data: the row would sit in its unsaved position
-      // with the hook logging it as a server update.
+    it('says so when the move is refused', async () => {
       const refetch = jest.fn();
       const refused = recordMock(MoveShoppingListItemDocument, {
         data: { moveShoppingListItem: { __typename: 'ForbiddenError' } },
@@ -270,16 +253,10 @@ describe('useItemReordering', () => {
         );
       });
 
-      expect(refetch).toHaveBeenCalledTimes(1);
       expect(alertService.alert).toHaveBeenCalledTimes(1);
-      expect(clearPersisted).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-2',
-        'sortOrder',
-      );
     });
 
-    it('restores the server order when the move fails', async () => {
+    it('says so when the move fails', async () => {
       const refetch = jest.fn();
       const failed = recordMock(MoveShoppingListItemDocument, {
         error: new Error('socket closed'),
@@ -297,13 +274,7 @@ describe('useItemReordering', () => {
         );
       });
 
-      expect(refetch).toHaveBeenCalledTimes(1);
       expect(alertService.alert).toHaveBeenCalledTimes(1);
-      expect(clearPersisted).toHaveBeenCalledWith(
-        'ShoppingListItem',
-        'item-2',
-        'sortOrder',
-      );
     });
   });
 });

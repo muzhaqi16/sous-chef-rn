@@ -7,6 +7,7 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreatePantryItemUsageDocument,
@@ -93,6 +94,7 @@ const seedPantryItems = (ids: string[] = ['item-1', 'item-2'], quantity = 5) =>
 
 const cachedItem = (cache: ReturnType<typeof seedPantryItems>, id = 'item-1') =>
   cache.readFragment<{ quantity: number }>({
+    optimistic: true,
     id: cache.identify({ __typename: 'PantryItem', id }),
     fragment: STOCK,
   });
@@ -576,7 +578,7 @@ describe('usePantryItemActions', () => {
       // refill — and offline there is no response, so the batch section stays
       // empty for the rest of the session and the emptied field persists.
       const cache = seedPantryItems();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: 'item-1' },
         data: {
@@ -594,6 +596,7 @@ describe('usePantryItemActions', () => {
         },
       });
       const before = cache.readQuery({
+        optimistic: true,
         query: GetPantryItemBatchesDocument,
         variables: { pantryItemId: 'item-1' },
       });
@@ -620,6 +623,7 @@ describe('usePantryItemActions', () => {
 
       expect(
         cache.readQuery({
+          optimistic: true,
           query: GetPantryItemBatchesDocument,
           variables: { pantryItemId: 'item-1' },
         }),

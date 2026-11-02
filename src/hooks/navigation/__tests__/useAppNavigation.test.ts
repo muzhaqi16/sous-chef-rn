@@ -104,18 +104,6 @@ describe('useAppNavigation', () => {
 
       expect(mockNavigate).toHaveBeenCalledWith('ImageCrop', { imageFile });
     });
-
-    it('toOnboardingImageCrop navigates to Onboarding > ImageCrop', () => {
-      const { result } = renderHook(() => useAppNavigation());
-      const imageFile = { uri: 'file://photo.jpg', fileName: 'photo.jpg' };
-
-      act(() => result.current.toOnboardingImageCrop({ imageFile }));
-
-      expect(mockNavigate).toHaveBeenCalledWith('Onboarding', {
-        screen: 'ImageCrop',
-        params: { imageFile },
-      });
-    });
   });
 
   describe('nested-stack helpers', () => {

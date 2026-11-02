@@ -21,7 +21,7 @@ export interface CaptureCandidate {
  */
 export function useCaptureReview(recipeId: string | undefined) {
   const { t } = useTranslation();
-  const capture = useFinishedCapture(useHeldCaptureId(recipeId));
+  const { capture } = useFinishedCapture(useHeldCaptureId(recipeId));
   if (!capture) return { review: null };
 
   const region = capture.measurementRegion;

@@ -84,7 +84,7 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
   // Dismiss a junk/unwanted suggestion from the PANTRY surface.
   const { dismissSuggestion } = useSuggestionDismissal(
     SuggestionSurface.Pantry,
-    { remove: removeSuggestion, restore: restoreSuggestion },
+    pantryId ? { __typename: 'Pantry', id: pantryId } : undefined,
   );
 
   // Storage locations read on-demand from cache (no active watcher)

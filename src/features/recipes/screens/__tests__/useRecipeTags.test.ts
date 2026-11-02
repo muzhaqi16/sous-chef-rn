@@ -1,10 +1,18 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MySavedRecipesDocument } from '#features/recipes/screens/useSavedRecipes.generated';
 import { useRecipeTags } from '../useRecipeTags';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -38,7 +46,8 @@ describe('useRecipeTags', () => {
       operationMocks: [server.mock],
     });
 
-    await waitFor(() => expect(result.current.tags.length).toBeGreaterThan(0));
+    await drainTimers();
+    expect(result.current.tags.length).toBeGreaterThan(0);
     expect(result.current.tags).toEqual([
       'Italian',
       'italian',
@@ -53,7 +62,8 @@ describe('useRecipeTags', () => {
       operationMocks: [server.mock],
     });
 
-    await waitFor(() => expect(server.fired).toHaveLength(1));
+    await drainTimers();
+    expect(server.fired).toHaveLength(1);
     expect(result.current.tags).toEqual([]);
   });
 });

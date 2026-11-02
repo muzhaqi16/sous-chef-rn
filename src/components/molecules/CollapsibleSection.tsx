@@ -27,10 +27,11 @@ export const CollapsibleSection: React.FC<CollapsibleSectionProps> = ({
   // The header's bottom border is a separator between it and the content, so it
   // only shows while expanded — collapsed, it's just the header (no stray
   // divider over an empty body).
-  styles.useVariants({ expanded, inset });
+  const variantStyles = styles.useVariants({ expanded, inset });
+
   return (
     <>
-      <AppPressable style={styles.header} onPress={onToggle}>
+      <AppPressable style={variantStyles.header} onPress={onToggle}>
         <Text role="bodyStrong">
           {title}
           {count != null ? ` (${count})` : ''}

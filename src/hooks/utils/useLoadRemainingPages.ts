@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import type { ConnectionData } from '#hooks/utils/useConnectionData';
 
 type PageState = Pick<
@@ -31,8 +32,7 @@ export function useLoadRemainingPages(
   { items, hasMore, isLoadingMore, loadMoreError, loadMore }: PageState,
   resetKey: string,
 ): RemainingPages {
-  // The cache answering a cursor fetch while offline settles without adding a
-  // row, forever; counting those stops the loop.
+  const offline = useIsApiUnavailable();
   const [emptyPages, setEmptyPages] = useState(0);
   const [requestedAt, setRequestedAt] = useState<number | null>(null);
   const [settled, setSettled] = useState(false);
@@ -63,9 +63,11 @@ export function useLoadRemainingPages(
   }
 
   // A failed page stops the loop; the local match keeps covering cached rows.
+  // Offline only pauses it, as the pages are still there to load.
   const isLoadingRemainingPages =
     enabled &&
     hasMore &&
+    !offline &&
     (!loadMoreError || rearmed) &&
     emptyPages < MAX_EMPTY_PAGES;
   const shouldLoadNextPage =

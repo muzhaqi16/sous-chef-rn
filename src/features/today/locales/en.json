@@ -10,6 +10,8 @@
     "householdHint": "Switch or manage households",
     "tutorialHouseholdTitle": "Tap to manage homes",
     "tutorialHouseholdSubtitle": "Switch between homes or manage home settings",
+    "tutorialYourHomeTitle": "Your home",
+    "tutorialYourHomeSubtitle": "Tap to rename it or invite the people you shop with",
     "householdFallback": "Your Home"
   }
 }

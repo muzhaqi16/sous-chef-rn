@@ -52,7 +52,9 @@ import {
   catalogFetchKey,
   recordCatalogFetch,
 } from '#features/recipes/store/catalogFetchTimes';
+import { useOpenedCatalogRecipesStore } from '#features/recipes/store/openedCatalogRecipes';
 import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
+import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
 
@@ -245,16 +247,26 @@ describe('a session end leaves no data belonging to the previous person', () => 
   });
 
   it("forgets what this account's onboarding did", async () => {
-    useOnboardingProgressStore.getState().recordPantryItemsAdded();
-    useOnboardingProgressStore.getState().recordInvitesSent();
+    useOnboardingProgressStore.getState().recordReceiptItems(5);
+    useOnboardingProgressStore.getState().recordCooksFor(4);
 
     await useStore.getState().endSession('signed_out');
 
     expect(useOnboardingProgressStore.getState()).toMatchObject({
-      pantryItemsAdded: false,
-      invitesSent: false,
+      receiptItems: 0,
+      cooksFor: null,
     });
     expect(registeredSessionScopedStores()).toContain('onboardingProgress');
+  });
+
+  it('forgets the zip code this account found stores near', async () => {
+    useStorePickerStore.getState().setLastZip('15220');
+    expect(useStorePickerStore.getState().lastZip).toBe('15220');
+
+    await useStore.getState().endSession('signed_out');
+
+    expect(useStorePickerStore.getState().lastZip).toBeNull();
+    expect(registeredSessionScopedStores()).toContain('storePicker');
   });
 
   it('forgets when this account fetched catalog recipes', async () => {
@@ -265,6 +277,15 @@ describe('a session end leaves no data belonging to the previous person', () => 
 
     expect(catalogFetchedAt(key)).toBeUndefined();
     expect(registeredSessionScopedStores()).toContain('catalogFetchTimes');
+  });
+
+  it('forgets which catalog recipes this account opened', async () => {
+    useOpenedCatalogRecipesStore.setState({ recipeIds: { 'a:1': 'r1' } });
+
+    await useStore.getState().endSession('signed_out');
+
+    expect(useOpenedCatalogRecipesStore.getState().recipeIds).toEqual({});
+    expect(registeredSessionScopedStores()).toContain('openedCatalogRecipes');
   });
 
   it('keeps the offline reference caches, which belong to no account', async () => {

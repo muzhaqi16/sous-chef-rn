@@ -304,14 +304,26 @@ describe('keychain storage', () => {
   });
 
   describe('getBiometricCapability', () => {
-    it('returns biometric availability info', async () => {
+    it('names Face ID as Apple spells it, so copy and the icon match', async () => {
       mockGetSupportedBiometryType.mockResolvedValue('FaceID');
 
       const result = await getBiometricCapability();
       expect(result).toEqual({
         isAvailable: true,
-        biometryType: 'FaceID',
+        biometryType: 'Face ID',
       });
+    });
+
+    it('names Touch ID as Apple spells it', async () => {
+      mockGetSupportedBiometryType.mockResolvedValue('TouchID');
+
+      expect((await getBiometricCapability()).biometryType).toBe('Touch ID');
+    });
+
+    it("keeps Android's sensor name", async () => {
+      mockGetSupportedBiometryType.mockResolvedValue('Fingerprint');
+
+      expect((await getBiometricCapability()).biometryType).toBe('Fingerprint');
     });
 
     it('returns unavailable when no biometry supported', async () => {

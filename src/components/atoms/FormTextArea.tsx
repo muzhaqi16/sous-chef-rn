@@ -36,7 +36,7 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
       ? ThemedBottomSheetTextInput
       : ThemedTextInput;
 
-  styles.useVariants({ error: !!error });
+  const variantStyles = styles.useVariants({ error: !!error });
 
   // Calculate height based on number of lines
   const inputHeight = numberOfLines * 24 + 24;
@@ -49,7 +49,7 @@ export const FormTextArea: React.FC<FormTextAreaProps> = ({
       containerStyle={containerStyle}
     >
       <InputComponent
-        style={[styles.input, { height: inputHeight }, inputStyle]}
+        style={[variantStyles.input, { height: inputHeight }, inputStyle]}
         multiline
         numberOfLines={numberOfLines}
         textAlignVertical="top"

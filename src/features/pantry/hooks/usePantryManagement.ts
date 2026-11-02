@@ -56,12 +56,7 @@ export function usePantryManagement(
     storageLocationCounts: stats?.storageLocationCounts ?? [],
   });
 
-  const { removeItem } = usePantryItemMutations({
-    pantryId,
-    refetch: () => {
-      void refetch();
-    },
-  });
+  const { removeItem } = usePantryItemMutations({ pantryId });
 
   return {
     state: {

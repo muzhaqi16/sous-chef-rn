@@ -1,7 +1,0 @@
-# Whether the removed row counted toward `completedItems`.
-fragment useRemoveShoppingItem_purchase on ShoppingListItem {
-  id
-  purchaseInfo {
-    isPurchased
-  }
-}

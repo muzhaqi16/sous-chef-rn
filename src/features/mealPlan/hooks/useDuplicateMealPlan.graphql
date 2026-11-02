@@ -4,6 +4,7 @@
 #
 # Spread by GetMealPlan only, beside the screen's own fragment.
 fragment useDuplicateMealPlan_mealPlan on MealPlan {
+  version
   id
   description
   planType
@@ -20,6 +21,7 @@ fragment useDuplicateMealPlan_mealPlan on MealPlan {
     totalCount
     edges {
       node {
+        version
         id
         date
         mealType
@@ -27,6 +29,7 @@ fragment useDuplicateMealPlan_mealPlan on MealPlan {
         notes
         customMealName
         recipe {
+          version
           id
         }
       }

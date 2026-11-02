@@ -1,15 +1,15 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { RestockPantryItemDocument } from '#features/pantry/graphql/pantry.generated';
-import { addToPantryItemsCache } from '#features/pantry/cache/items';
-import { bumpStock, inTrackingUnit } from '#features/pantry/cache/stock';
+import { inTrackingUnit } from '#features/pantry/cache/stock';
+import type { AddStockInputs } from '#features/pantry/offline/localWrites';
 import { readStackUnit } from '#features/pantry/utils/pantryCacheReaders';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { boughtAmountOf } from '#domain/stockAmount';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import {
   settleMutation,
   type SettleOptions,
 } from '#/apollo/utils/settleMutation';
-import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
 import { useTranslation } from '#/i18n';
@@ -82,31 +82,7 @@ export function usePantryRestock(pantryId: string | undefined) {
 
   const [restockPantryItem] = useMutation(RestockPantryItemDocument, {
     context: { localFirst: true },
-    update: (cache, { data }) => {
-      const payload = appliedPayload(data);
-      if (!payload || !pantryId) return;
-      const pantryItem = payload.pantryItemUsage.pantryItem;
-      if (!pantryItem) return;
-      // Forces the connection to broadcast: the row already exists, so the
-      // re-add returns the connection unchanged, but `cache.modify` still makes
-      // query watchers re-emit.
-      addToPantryItemsCache(cache, pantryId, pantryItem);
-    },
   });
-
-  const moveBatchCount = (pantryItemId: string, by: 1 | -1) => {
-    const id = client.cache.identify({
-      __typename: 'PantryItem',
-      id: pantryItemId,
-    });
-    if (!id) return;
-    client.cache.modify({
-      id,
-      fields: {
-        activeBatchCount: (existing: number = 0) => Math.max(0, existing + by),
-      },
-    });
-  };
 
   const restock = async (
     pantryItemId: string,
@@ -157,30 +133,23 @@ export function usePantryRestock(pantryId: string | undefined) {
           amount.measured.unitId,
         )
       : null;
-    const undoStock =
-      added === null ? () => {} : bumpStock(client.cache, pantryItemId, added);
-    // Every restock is a batch of its own.
-    moveBatchCount(pantryItemId, 1);
+    const inputs: AddStockInputs = {
+      delta: added,
+      now: new Date().toISOString(),
+      pantryId,
+    };
 
-    const settled = await settleMutation(
-      () =>
-        restockPantryItem({
-          variables: restockVariables({
-            id: pantryItemId,
-            amount,
-            ...details,
-          }),
+    const settled = await pendingWritesOf(client.cache).send(
+      RestockPantryItemDocument,
+      restockVariables({ id: pantryItemId, amount, ...details }),
+      write =>
+        settleMutation(() => restockPantryItem(write), {
+          document: RestockPantryItemDocument,
+          fallback: refusal,
+          on,
+          present,
         }),
-      {
-        document: RestockPantryItemDocument,
-        fallback: refusal,
-        onFailed: () => {
-          undoStock();
-          moveBatchCount(pantryItemId, -1);
-        },
-        on,
-        present,
-      },
+      inputs,
     );
     if (settled.status === 'failed') {
       // `amount.packages.size` is the input's one field named `size`.
@@ -191,16 +160,6 @@ export function usePantryRestock(pantryId: string | undefined) {
       };
     }
 
-    // The new batch row is the server's to build, so drop the connection and
-    // let the screen refetch it — but only once the server answered. A queued
-    // write has no response, and nothing would refill it.
-    if (settled.status === 'applied') {
-      client.cache.evict({
-        id: 'ROOT_QUERY',
-        fieldName: 'pantryItemBatchesConnection',
-        args: { pantryItemId },
-      });
-    }
     return { status: 'restocked' };
   };
 

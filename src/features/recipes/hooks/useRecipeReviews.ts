@@ -20,6 +20,8 @@ import {
 import type { MaterializedRecipe } from './useRecipeData';
 import { useUser } from '#store/useAppStore';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
+import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
+import { useDataState } from '#hooks/data/useDataState';
 import { toastService } from '#/services/toastService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -46,10 +48,11 @@ export function useRecipeReviews({
   const apolloClient = useApolloClient();
 
   // Fetch reviews separately to avoid exceeding query depth limit
-  const { data: reviewsData } = useQuery(
+  const { data, loading, error, refetch } = useQuery(
     GetRecipeReviewsDocument,
     recipeId ? { variables: { id: recipeId } } : skipToken,
   );
+  const reviewsData = usePreservedQueryData(data, undefined, recipeId);
 
   // Derived data from recipe
   const totalReviews = backendRecipe?.totalReviews ?? 0;
@@ -73,6 +76,13 @@ export function useRecipeReviews({
       if (b.helpful !== a.helpful) return b.helpful - a.helpful;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
+  const reviewsState = useDataState({
+    loading,
+    error,
+    hasResult: reviewsData !== undefined,
+    isEmpty: reviews.length === 0,
+    skipped: !recipeId,
+  });
 
   // Current user's review. `r.user` is null for reviews whose author deleted
   // their account, which can never be the signed-in viewer.
@@ -143,8 +153,8 @@ export function useRecipeReviews({
         createReviewMutation({
           variables: {
             // Client-minted id: a lost-response retry replays with the same id
-            // and surfaces as IDEMPOTENT_REPLAY (converged) instead of an
-            // indistinguishable "already reviewed" CONFLICT.
+            // and converges on the review instead of an indistinguishable
+            // "already reviewed" CONFLICT.
             input: {
               id: generateEntityId(),
               recipeId,
@@ -193,6 +203,7 @@ export function useRecipeReviews({
       fragment: RecipeReviewFragmentDoc,
       fragmentName: 'RecipeReviewFragment',
       from: { __typename: 'RecipeReview', id },
+      optimistic: true,
     });
     removeReviewFromRecipe(apolloClient.cache, recipeId, id);
 
@@ -243,6 +254,7 @@ export function useRecipeReviews({
   return {
     state: {
       reviews,
+      reviewsState,
       totalReviews,
       averageRating,
       rating1Count,
@@ -256,6 +268,9 @@ export function useRecipeReviews({
       submitting,
     },
     actions: {
+      retryReviews: () => {
+        void refetch();
+      },
       createReview,
       updateReview,
       deleteReview,

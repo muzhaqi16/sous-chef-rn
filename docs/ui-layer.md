@@ -77,6 +77,12 @@ optional:
 - **Trailing space.** `scroll | form | none` pad by the bottom inset plus
   `layout.pageBottom`; a `footer` takes the inset instead. A `list` child reads
   the same value from `useScreenListInset()`.
+- **A form's footer rides the keyboard.** In `scroll="form"` the footer sits in
+  a `KeyboardStickyView` (dropping the home-indicator inset while open, with a
+  `ThemeEpochSentinel` for its themed descendants), and the scroll view's
+  `bottomOffset` is the footer's measured height, so a focused field clears it.
+  A primary action that must stay reachable while typing belongs in the
+  footer, as `OnBoardingWrapper`'s does.
 - **Back or close.** A pushed screen shows back; one presented from the bottom
   (modal or `slide_from_bottom` card) shows close in the same slot.
 - **Presets.** `SubScreen` is a pushed screen whose back returns to the previous
@@ -124,6 +130,11 @@ core and have no React Native in them. A host registers what shows them:
   pairs each outcome type with its haptic (success, error, warning; `info` is
   silent). No caller fires a haptic beside a toast
   (`outcomeHapticHasOneOwner.test.ts`).
+- **An alert reports a failure or asks a question; news is a toast.** So one
+  that only tells is trouble, and no rating request follows it soon. An alert
+  offering a choice is a question, and a failure that offers one says so itself
+  (`presentFailure`). `alertsAreFailuresOrQuestions.test.ts` holds its copy to
+  that.
 - **Alerts:** `installNativePlatform` registers the OS alert at startup, so an
   alert raised before the app renders still shows. `AlertProvider` replaces it
   with the app's dialog once it mounts. A button whose action presents native UI
@@ -223,8 +234,9 @@ they read it.
 
 - **`StyleSheet.create(theme => …)`** pushes theme changes straight to native
   through the C++ ShadowTree, with no React re-render — as long as theme reads
-  happen inside the factory. `styles.useVariants({ … })` carries runtime flags
-  instead of conditional theme reads. One element takes one `styles.*` entry,
+  happen inside the factory. `const variantStyles = styles.useVariants({ … })`
+  carries runtime flags instead of conditional theme reads, and the variants are
+  read from what it returns: the sheet ignores them. One element takes one `styles.*` entry,
   merged with a caller style as `style={[styles.x, callerStyle]}`: Unistyles 3
   styles are proxies, and two of them spread through reanimated's
   `StyleSheet.flatten()` lose their native binding
@@ -259,8 +271,8 @@ they read it.
   ([Unistyles' useAnimatedTheme misses a theme change made while its screen is paused](verified-library-behaviour.md#unistyles-useanimatedtheme-misses-a-theme-change-made-while-its-screen-is-paused)).
 - **Never wrap `Pressable`/`TouchableX` with `withUnistyles`.** The wrapper
   copies a function-style `style={({ pressed }) => [...]}` into `{}`. RN's
-  `Pressable` needs no wrapper, because the Unistyles Babel plugin binds it to
-  the ShadowTree itself
+  `Pressable` needs no wrapper, because Unistyles binds it to the ShadowTree
+  itself
   ([withUnistyles drops function styles](verified-library-behaviour.md#unistyles-withunistyles-drops-function-styles)).
 - **`useUnistyles()` is for runtime metadata** (`rt.colorScheme`, `rt.themeName`,
   `rt.insets`). Reading `theme.*` through it re-renders the whole component on
@@ -277,16 +289,12 @@ they read it.
   - `SearchBar`, which offsets a measured rect by `theme.spacing.sm` in JS.
   - `FilteredPantryItems`' loading skeleton, which counts a screenful of rows
     from `theme.spacing` and `theme.type` in JS.
-- **Plugin order is Unistyles → React Compiler** (`babel.config.js`), as
-  Unistyles documents. With the compiler FIRST the file compiles, but the
-  variant-resolved style is cached on the wrong dependencies and freezes at its
-  first-render value — memoized, zero bailouts, and silently wrong.
-  `scripts/check-unistyles-variant-staleness.mjs` is the cover.
-- **A style returns object literals**, directly or through a ternary, `&&` or
-  `||`. The plugin attaches a style's dependencies only there; a style returned
-  from a `switch`, loop or `try`, or as a call result, gets none and keeps the
-  theme it first rendered with. `__tests__/ui/stylesCarryTheirDependencies.test.ts`
-  compiles every stylesheet with the plugin's `debug` warnings and fails on one.
+- **Unistyles runs through its Metro integration** (`withUnistylesConfig`,
+  outermost in `metro.config.js`), with no Babel plugin, so it has no order
+  against the React Compiler. A StyleSheet records its dependencies at runtime,
+  and `useVariants` returns a new object per call, so the compiler cannot freeze
+  a read from it. A bare call selects nothing
+  (`sous-chef/use-variants-return-is-read`).
 - **A host that mounts its children later than they were created wraps them in
   `CurrentThemeScope`.** A `styles.x` read is a snapshot, and the compiler caches
   an element against its other dependencies, so a parent that outlives a theme
@@ -376,9 +384,9 @@ they read it.
 ## Pressable & gestures
 
 - **Pick the `Pressable` by gesture system.** The default is `Pressable` from
-  `#components/atoms/themedComponents`: RN's Pressable re-exported, which the
-  Unistyles Babel plugin binds to the ShadowTree, so function-style styles and
-  theme switches work with no wrapper. RN's Pressable does not take part in
+  `#components/atoms/themedComponents`: RN's Pressable re-exported, which
+  Unistyles binds to the ShadowTree, so function-style styles and theme switches
+  work with no wrapper. RN's Pressable does not take part in
   RNGH's gesture system. So inside a `Swipeable`, a
   `GestureDetector`/`Gesture.X` chain, or `RectButton`-style coordination, the
   control imports `Pressable` from `react-native-gesture-handler`.

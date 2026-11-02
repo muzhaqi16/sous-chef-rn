@@ -381,11 +381,34 @@ describe('useRecipeSearch', () => {
     expect(result.current.loading).toBe(false);
   });
 
+  it('keeps the rows shown when a later search cannot reach the API, and waits', async () => {
+    const found = recordMock(SearchRecipesDocument, {
+      data: page([held('r-1', 'Tomato soup')]),
+      maxUsageCount: 1,
+    });
+    const failing = recordMock(SearchRecipesDocument, {
+      error: new Error('Network request failed'),
+    });
+    const { result } = renderSearch([found.mock, failing.mock]);
+    await act(async () => {
+      await result.current.search('soup', DEFAULT_FILTERS);
+    });
+
+    useStore.setState({ isOnline: true, apiReachable: false });
+    await act(async () => {
+      await result.current.search('stew', DEFAULT_FILTERS);
+    });
+
+    expect(result.current.rows).toHaveLength(1);
+    expect(result.current.hasMore).toBe(false);
+    expect(result.current.waitingForApi).toBe(true);
+  });
+
   it('says offline, not failed, when the API cannot be reached', async () => {
     const search = recordMock(SearchRecipesDocument, {
       error: new Error('Network request failed'),
     });
-    useStore.setState({ isOnline: false, apiReachable: false });
+    useStore.setState({ isOnline: true, apiReachable: false });
     const { result } = renderSearch([search.mock]);
 
     let outcome: SearchOutcome | undefined;

@@ -1,13 +1,16 @@
 'use no memo';
 
 import React from 'react';
-import { userEvent, waitFor } from '@testing-library/react-native';
+import { userEvent } from '@testing-library/react-native';
 import type { StaticScreenProps } from '@react-navigation/native';
 import {
   recordMock,
   renderWithApollo,
+  seedQuery,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateRecipeDocument,
   GetRecipeDocument,
@@ -134,6 +137,14 @@ jest.mock('#components/templates/FormScreen', () => ({
 }));
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.mocked(useFeatureFlag).mockReturnValue(true);
   jest.clearAllMocks();
 });
@@ -178,19 +189,18 @@ describe('RecipeFormScreen', () => {
   // and a dismissed alert cannot say which input it meant.
   it('reports an empty form on its fields, not through an alert', async () => {
     const user = userEvent.setup();
-    const { getByTestId, findByText } = renderWithApollo(
+    const { getByTestId, getByText } = renderWithApollo(
       <RecipeFormScreen {...defaultProps} />,
     );
 
     await user.press(getByTestId('save-button'));
 
-    expect(await findByText('Recipe name is required')).toBeTruthy();
-    expect(
-      await findByText('At least one ingredient is required'),
-    ).toBeTruthy();
-    expect(
-      await findByText('At least one instruction step is required'),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(getByText('Recipe name is required')).toBeTruthy();
+    await drainTimers();
+    expect(getByText('At least one ingredient is required')).toBeTruthy();
+    await drainTimers();
+    expect(getByText('At least one instruction step is required')).toBeTruthy();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -250,17 +260,15 @@ describe('RecipeFormScreen', () => {
       data: { createRecipe: { __typename: 'CreateRecipePayload' } },
     });
 
-    const { getByTestId, findByText } = renderWithApollo(
+    const { getByTestId, getByText } = renderWithApollo(
       <RecipeFormScreen route={{ params: { captureId: 'capture-1' } }} />,
       { operationMocks: [capture.mock, create.mock] },
     );
 
-    await waitFor(() =>
-      expect(getByTestId('ingredient-count')).toHaveTextContent('3'),
-    );
-    expect(
-      await findByText('At least one instruction step is required'),
-    ).toBeTruthy();
+    await drainTimers();
+    expect(getByTestId('ingredient-count')).toHaveTextContent('3');
+    await drainTimers();
+    expect(getByText('At least one instruction step is required')).toBeTruthy();
     expect(create.fired).toEqual([]);
   });
 
@@ -307,13 +315,13 @@ describe('RecipeFormScreen', () => {
       <RecipeFormScreen route={{ params: { captureId: 'capture-2' } }} />,
       { operationMocks: [capture.mock, create.mock] },
     );
-    await waitFor(() =>
-      expect(getByTestId('ingredient-count')).toHaveTextContent('1'),
-    );
+    await drainTimers();
+    expect(getByTestId('ingredient-count')).toHaveTextContent('1');
 
     await user.press(getByTestId('save-button'));
 
-    await waitFor(() => expect(create.fired).toHaveLength(1));
+    await drainTimers();
+    expect(create.fired).toHaveLength(1);
     expect(create.fired).toEqual([
       expect.objectContaining({
         input: expect.objectContaining({
@@ -365,6 +373,52 @@ describe('RecipeFormScreen', () => {
       },
     });
 
+    it('offers to read the recipe again in place of a blank form', async () => {
+      const failed = recordMock(GetRecipeDocument, {
+        error: new Error('network down'),
+        maxUsageCount: 1,
+      });
+      const read = recordMock(GetRecipeDocument, {
+        data: loadedRecipe(false),
+      });
+      const tree = renderWithApollo(<RecipeFormScreen {...editProps} />, {
+        operationMocks: [failed.mock, read.mock],
+      });
+
+      await drainTimers();
+      expect(tree.getByText(t('dataState.errorTitle'))).toBeTruthy();
+      expect(tree.queryByTestId('save-button')).toBeNull();
+
+      await userEvent.setup().press(tree.getByText(t('labels.tryAgain')));
+      await drainTimers();
+      expect(tree.getByTestId('save-button')).toBeTruthy();
+      expect(tree.getByTestId('ingredient-count')).toHaveTextContent('1');
+    });
+
+    it('keeps the form when a read fails over the recipe it holds', async () => {
+      const cache = makeCache();
+      seedQuery(cache, {
+        query: GetRecipeDocument,
+        variables: {
+          id: 'recipe-1',
+          ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+        },
+        data: loadedRecipe(false),
+      });
+      const failed = recordMock(GetRecipeDocument, {
+        error: new Error('network down'),
+      });
+      const tree = renderWithApollo(<RecipeFormScreen {...editProps} />, {
+        cache,
+        operationMocks: [failed.mock],
+      });
+
+      await drainTimers();
+      expect(failed.fired).toHaveLength(1);
+      expect(tree.getByTestId('ingredient-count')).toHaveTextContent('1');
+      expect(tree.queryByText(t('dataState.errorTitle'))).toBeNull();
+    });
+
     const renderEdit = async (hasNextPage: boolean) => {
       const update = recordMock(UpdateRecipeDocument, {
         data: {
@@ -382,9 +436,8 @@ describe('RecipeFormScreen', () => {
         ],
       });
       // The form is filled once the recipe has arrived.
-      await waitFor(() =>
-        expect(rendered.getByTestId('ingredient-count')).toHaveTextContent('1'),
-      );
+      await drainTimers();
+      expect(rendered.getByTestId('ingredient-count')).toHaveTextContent('1');
       return { ...rendered, sent: update.fired };
     };
 
@@ -394,7 +447,8 @@ describe('RecipeFormScreen', () => {
 
       await user.press(getByTestId('save-button'));
 
-      await waitFor(() => expect(sent).toHaveLength(1));
+      await drainTimers();
+      expect(sent).toHaveLength(1);
       expect(sent[0]).toEqual({
         input: expect.objectContaining({
           id: 'recipe-1',
@@ -432,7 +486,8 @@ describe('RecipeFormScreen', () => {
       await user.press(getByTestId('edit-description'));
       await user.press(getByTestId('save-button'));
 
-      await waitFor(() => expect(goBack).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(goBack).toHaveBeenCalledTimes(1);
       expect(sent).toHaveLength(1);
       expect(guardAtLeave).toEqual(['false']);
     });
@@ -445,7 +500,8 @@ describe('RecipeFormScreen', () => {
 
       await user.press(getByTestId('save-button'));
 
-      await waitFor(() => expect(alertService.alert).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(alertService.alert).toHaveBeenCalledTimes(1);
       expect(alertService.alert).toHaveBeenCalledWith(
         t('labels.error'),
         t('recipes.editIngredientsOverLimit', {
@@ -467,7 +523,7 @@ describe('RecipeFormScreen', () => {
         },
       });
       const proposedCount = MAX_RECIPE_INGREDIENTS + 1;
-      const { getByTestId, findByText } = renderWithApollo(
+      const { getByTestId, getByText } = renderWithApollo(
         <RecipeFormScreen {...editProps} />,
         {
           operationMocks: [
@@ -499,16 +555,16 @@ describe('RecipeFormScreen', () => {
           ],
         },
       );
-      await waitFor(() =>
-        expect(getByTestId('ingredient-count')).toHaveTextContent(
-          String(proposedCount),
-        ),
+      await drainTimers();
+      expect(getByTestId('ingredient-count')).toHaveTextContent(
+        String(proposedCount),
       );
 
       await user.press(getByTestId('save-button'));
 
+      await drainTimers();
       expect(
-        await findByText('A recipe can have at most 100 ingredients'),
+        getByText('A recipe can have at most 100 ingredients'),
       ).toBeTruthy();
       expect(alertService.alert).not.toHaveBeenCalled();
       expect(update.fired).toEqual([]);

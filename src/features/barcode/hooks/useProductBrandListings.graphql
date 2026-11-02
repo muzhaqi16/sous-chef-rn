@@ -6,28 +6,34 @@
 # switched off here drops out at once.
 query ProductBrandListings($itemId: ID!) {
   item(id: $itemId) {
+    version
     id
     ...useProductBrandListings_item
   }
 }
 
 fragment useProductBrandListings_item on Item {
+  version
   id
   listMatches {
     brandList {
+      version
       id
       name
       enabled
     }
     entry {
+      version
       id
       reason
       brand {
+        version
         id
         name
       }
     }
     brand {
+      version
       id
       name
     }

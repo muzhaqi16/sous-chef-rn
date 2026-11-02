@@ -4,12 +4,14 @@
 # lookup reads the fragment too, so a scan asks once.
 query ProductOrigin($itemId: ID!) {
   item(id: $itemId) {
+    version
     id
     ...useProductOrigin_item
   }
 }
 
 fragment useProductOrigin_item on Item {
+  version
   id
   origin {
     madeIn {

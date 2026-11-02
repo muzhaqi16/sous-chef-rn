@@ -25,10 +25,10 @@ import {
   addNotificationToFeed,
   applyNotificationRead,
   applyNotificationRemoved,
-  applyNotificationUnread,
   cachedUnreadNotificationIds,
   readNotificationStatus,
 } from '../notificationCacheWrites';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 const USER = 'me';
 
@@ -87,12 +87,20 @@ const seed = (
       },
     },
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetNotificationsDocument,
     variables: { filter: undefined, first: 30 },
     data,
   });
 };
+
+const feed = (cache: InMemoryCache) =>
+  cache
+    .readQuery({
+      query: GetNotificationsDocument,
+      variables: { filter: undefined, first: 30 },
+    })
+    ?.me?.notificationsConnection.edges.map(edge => edge.node.id);
 
 const badge = (cache: InMemoryCache): number =>
   cache.readQuery({ query: NotificationSummaryDocument })?.notificationSummary
@@ -121,15 +129,6 @@ describe('notification cache writes', () => {
     expect(badge(cache)).toBe(0);
   });
 
-  it('marks unread, and refuses when it was already unread', () => {
-    seed(cache, [['1', NotificationStatus.Read]], 0);
-
-    expect(applyNotificationUnread(cache, '1')).toBe(true);
-    expect(badge(cache)).toBe(1);
-    expect(applyNotificationUnread(cache, '1')).toBe(false);
-    expect(badge(cache)).toBe(1);
-  });
-
   it('removing an unread notification decrements; a read one does not', () => {
     seed(
       cache,
@@ -150,7 +149,7 @@ describe('notification cache writes', () => {
   it('a live arrival joins the feed without touching the badge', () => {
     seed(cache, [['1', NotificationStatus.Sent]], 1);
     // The subscription normalizes the entity; only the edge and badge are ours.
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Notification:2',
       fragment: UseNotificationsOnLaunch_NotificationFragmentDoc,
       fragmentName: 'useNotificationsOnLaunch_notification',
@@ -159,6 +158,7 @@ describe('notification cache writes', () => {
 
     addNotificationToFeed(cache, USER, '2', NotificationCategory.Pantry);
 
+    expect(feed(cache)).toEqual(['2', '1']);
     // The count is re-seeded from the server on this path — see
     // `useNotificationListener`. Applying a delta here as well would
     // double-count it.
@@ -178,9 +178,8 @@ describe('notification cache writes', () => {
 
     expect(cachedUnreadNotificationIds(cache).sort()).toEqual(['1', '3']);
 
-    const flipped = applyAllNotificationsRead(cache);
+    applyAllNotificationsRead(cache);
 
-    expect(flipped.sort()).toEqual(['1', '3']);
     expect(readNotificationStatus(cache, '1')).toBe(NotificationStatus.Read);
     expect(readNotificationStatus(cache, '3')).toBe(NotificationStatus.Read);
     expect(badge(cache)).toBe(0);

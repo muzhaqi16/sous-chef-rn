@@ -1,13 +1,8 @@
 /**
- * Settling a meal plan replay: a create the server resolved onto a row it
- * already held, a delete whose response names the removed row, and a delete
- * of a meal the server does not have.
+ * A meal replay the server answered with a row other than the one it named: the
+ * writes queued behind it move onto that row, and a delete of a meal the server
+ * does not have is settled. The rest is `commit`.
  */
-import { adoptServerMealPlanItem } from '#features/mealPlan/cache/mealPlanItem';
-import {
-  removeFromMealPlans,
-  removeFromMealTemplates,
-} from '#features/mealPlan/cache/removals';
 import { extractMutationPayload } from '#/utils/errors/mutationPayload';
 import type { ReplayReconcilerTable } from '#/apollo/offlineQueue/types';
 import { isRecord } from '#/utils/isRecord';
@@ -15,67 +10,32 @@ import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 
 /**
  * A replayed recipe meal converges on the (plan, date, meal type, recipe) key,
- * so one added elsewhere returns under its own id: the minted row is withdrawn,
- * the server's linked, and queued writes follow it.
+ * so one added elsewhere returns under its own id, and queued writes follow it.
  */
 export const reconcileCreateMealPlanItemReplay: ReplayReconcilerTable[string] =
-  (cache, variables, data, adopt) => {
+  (_cache, variables, data, adopt) => {
     const input: unknown = variables.input;
-    if (!isRecord(input)) return;
-    const { id: mintedId, mealPlanId } = input;
-    if (typeof mintedId !== 'string' || typeof mealPlanId !== 'string') return;
-
+    if (!isRecord(input) || typeof input.id !== 'string') return;
     const payload: unknown = extractMutationPayload(data);
     const item = isRecord(payload) ? payload.mealPlanItem : undefined;
     if (!isRecord(item) || typeof item.id !== 'string') return;
-    adoptServerMealPlanItem(cache, mealPlanId, item.id, mintedId);
-    if (item.id !== mintedId) {
-      // The surviving row's version: an edit queued behind the create stated
-      // the minted row's, which the kept row is past.
-      adopt?.({
-        mintedId,
-        survivingId: item.id,
-        version: typeof item.version === 'number' ? item.version : undefined,
-      });
-    }
+    if (item.id === input.id) return;
+    // The surviving row's version: an edit queued behind the create stated the
+    // minted row's, which the kept row is past.
+    adopt?.({
+      mintedId: input.id,
+      survivingId: item.id,
+      version: typeof item.version === 'number' ? item.version : undefined,
+    });
   };
 
-/** The id a delete's input names, or null. */
-const deletedId = (variables: { input?: unknown }): string | null => {
-  const { input } = variables;
-  return isRecord(input) && typeof input.id === 'string' ? input.id : null;
-};
-
-/**
- * An applied delete answers with its row's `{ id }`, which re-creates the
- * evicted entity; removing it again keeps the list readable. Shared by the
- * foreground `update` and the replay, which runs only for an applied write.
- */
-export const settleMealPlanDelete: ReplayReconcilerTable[string] = (
-  cache,
-  variables,
-) => {
-  const id = deletedId(variables);
-  if (!id) return;
-  removeFromMealPlans(cache, id, { evictItem: true });
-};
-
-/** {@link settleMealPlanDelete} for a meal template. */
-export const settleMealTemplateDelete: ReplayReconcilerTable[string] = (
-  cache,
-  variables,
-) => {
-  const id = deletedId(variables);
-  if (!id) return;
-  removeFromMealTemplates(cache, id, { evictItem: true });
-};
-
-/** A delete of a meal the server does not have: gone locally already, so only its record goes. */
+/** A delete of a meal the server does not have: only its record goes. */
 export const settleGoneMealPlanItem: ReplayReconcilerTable[string] = (
   cache,
   variables,
 ) => {
-  const id = deletedId(variables);
-  if (!id) return;
-  safeEvict(cache, 'MealPlanItem', id);
+  const input: unknown = variables.input;
+  if (isRecord(input) && typeof input.id === 'string') {
+    safeEvict(cache, 'MealPlanItem', input.id);
+  }
 };

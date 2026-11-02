@@ -24,6 +24,7 @@ const mockNav = {
   toDebugInfo: jest.fn(),
   toPerformanceDashboard: jest.fn(),
   toChangePassword: jest.fn(),
+  toChangesNotSaved: jest.fn(),
 };
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: jest.fn(() => mockNav),
@@ -121,6 +122,11 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
   }),
 }));
 
+let mockChangesNotSaved: { id: string }[] = [];
+jest.mock('#features/profile/hooks/useChangesNotSaved', () => ({
+  useChangesNotSaved: () => ({ changes: mockChangesNotSaved }),
+}));
+
 jest.mock('#hooks/performance/useScreenTransition');
 
 // Environment is auto-mocked via jest.setup.js. ProfileScreen tests want
@@ -208,6 +214,22 @@ describe('ProfileScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHasUnverifiedEmail = false;
+    mockChangesNotSaved = [];
+  });
+
+  it('shows no way to changes not saved while there are none', () => {
+    render(<ProfileScreen />);
+    expect(screen.queryByTestId('changes-not-saved-banner')).toBeNull();
+  });
+
+  it('opens changes not saved from the banner while it holds any', async () => {
+    mockChangesNotSaved = [{ id: 'change' }];
+    const user = userEvent.setup();
+    render(<ProfileScreen />);
+
+    await user.press(screen.getByTestId('changes-not-saved-banner'));
+
+    expect(mockNav.toChangesNotSaved).toHaveBeenCalledTimes(1);
   });
 
   it('hides the verify-email banner when the address is verified', () => {

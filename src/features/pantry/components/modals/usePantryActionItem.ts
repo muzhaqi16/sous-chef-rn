@@ -4,6 +4,7 @@ import {
   PantryActionModal_PantryItemFragmentDoc,
   type PantryActionModal_PantryItemFragment,
 } from '#features/pantry/components/modals/PantryActionModal.generated';
+import { useDataState, type DataState } from '#hooks/data/useDataState';
 
 /**
  * The item an open action modal acts on, read LIVE so a cache update reaches
@@ -14,8 +15,10 @@ import {
 export function usePantryActionItem(pantryItemId: string | null | undefined): {
   pantryItem: PantryActionModal_PantryItemFragment | null;
   loading: boolean;
+  state: DataState;
+  retry: () => void;
 } {
-  const { loading } = useQuery(
+  const { loading, error, refetch } = useQuery(
     GetPantryActionItemDocument,
     pantryItemId
       ? {
@@ -32,5 +35,21 @@ export function usePantryActionItem(pantryItemId: string | null | undefined): {
     from: pantryItemId ? { __typename: 'PantryItem', id: pantryItemId } : null,
   });
 
-  return { pantryItem: pantryItemId && complete ? data : null, loading };
+  const pantryItem = pantryItemId && complete ? data : null;
+  const state = useDataState({
+    loading,
+    error,
+    hasResult: !!pantryItem,
+    isEmpty: false,
+    skipped: !pantryItemId,
+  });
+
+  return {
+    pantryItem,
+    loading,
+    state,
+    retry: () => {
+      void refetch();
+    },
+  };
 }

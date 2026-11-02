@@ -3,6 +3,7 @@ import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateStorageLocationDocument,
@@ -31,18 +32,7 @@ function successMock() {
             id: input.id,
             name: input.name,
             type: StorageType.PantryShelf,
-            icon: null,
-            color: null,
-            temperature: null,
-            description: null,
-            isClimateControlled: false,
-            capacity: null,
-            capacityUnit: null,
-            sortOrder: 0,
-            isDefault: false,
-            currentItemCount: 0,
             homeId: HOME_ID,
-            parentLocation: null,
           },
         },
       };
@@ -102,7 +92,7 @@ describe('useCreateStorageLocation', () => {
   it("adds the new location to its own home's list only", async () => {
     const cache = makeCache();
     const seedEmpty = (homeId: string) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: GetStorageLocationsDocument,
         variables: { homeId },
         data: {
@@ -112,10 +102,7 @@ describe('useCreateStorageLocation', () => {
             edges: [],
             pageInfo: {
               __typename: 'PageInfo',
-              hasNextPage: false,
-              endCursor: null,
             },
-            totalCount: 0,
           },
         },
       });
@@ -147,7 +134,7 @@ describe('useCreateStorageLocation', () => {
 
   it('shows a queued location from its local row alone', async () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: GetStorageLocationsDocument,
       variables: { homeId: HOME_ID },
       data: {
@@ -157,10 +144,7 @@ describe('useCreateStorageLocation', () => {
           edges: [],
           pageInfo: {
             __typename: 'PageInfo',
-            hasNextPage: false,
-            endCursor: null,
           },
-          totalCount: 0,
         },
       },
     });
@@ -185,6 +169,7 @@ describe('useCreateStorageLocation', () => {
         .readQuery({
           query: GetStorageLocationsDocument,
           variables: { homeId: HOME_ID },
+          optimistic: true,
         })
         ?.storageLocations.edges.map(edge => edge.node.name),
     ).toEqual(['Spice Rack']);

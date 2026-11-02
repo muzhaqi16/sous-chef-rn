@@ -1,29 +1,19 @@
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
-import { storage } from '#/store/deviceStorage';
-
-const OFFLINE_MODE_KEY = 'user_offline_mode';
 
 /**
  * Why the banner is showing; `null` means it isn't. A cause rather than a
  * boolean: during the minimum-visible window the flags may already have
  * recovered, so re-deriving would swap the text mid-display.
  */
-export type OfflineBannerCause =
-  | 'device-offline'
-  | 'api-unreachable'
-  | 'offline-mode';
+export type OfflineBannerCause = 'device-offline' | 'api-unreachable';
 
 /**
- * How long each cause must hold before the user sees anything, so a passing
- * hiccup never shows the icon. Only the PRESENTATION waits: the offline policy
- * (`isApiUnavailable`) is instant. Offline mode is the user's own switch.
+ * How long a cause must hold before the user sees anything, so a passing hiccup
+ * never shows the icon. Only the PRESENTATION waits: the offline policy
+ * (`isApiUnavailable`) is instant.
  */
-const SHOW_DWELL_MS: Record<OfflineBannerCause, number> = {
-  'offline-mode': 0,
-  'device-offline': 30_000,
-  'api-unreachable': 30_000,
-};
+const SHOW_DWELL_MS = 30_000;
 
 /**
  * Minimum time on screen; without it an outage resolving just after the dwell
@@ -38,8 +28,6 @@ export interface NetworkState {
   lastOnlineTime: number | null;
   lastOfflineTime: number | null;
   needsTokenRefresh: boolean;
-  /** User-enabled offline mode (from app settings) */
-  offlineModeEnabled: boolean;
   /**
    * Whether the GraphQL API is reachable — distinct from `isOnline` (device
    * internet). Driven by `apiReachabilityBreaker`, NOT by NetInfo.
@@ -66,19 +54,15 @@ export interface NetworkState {
   setOnline: () => void;
   setOffline: () => void;
   setNeedsTokenRefresh: (value: boolean) => void;
-  /**
-   * `immediate` skips the banner's dwell/hold — pass it only from a control the
-   * user just operated; boot hydration and settings sync take the debounced path.
-   */
-  setOfflineModeEnabled: (enabled: boolean, immediate?: boolean) => void;
   setApiReachable: (reachable: boolean | null) => void;
   markClientUpgradeRequired: () => void;
   clearClientUpgradeRequired: () => void;
 }
 
 /**
- * The server cannot be reached: serve queries from cache, queue mutations.
- * Shared by `offlineModeLink`, `queueLink` and the queue manager.
+ * The app's one answer to "are we offline?": no connection, or the API proven
+ * down. Queries are served from the cache and mutations queue. Features read it
+ * through `useIsApiUnavailable`; raw `isOnline` belongs to transport.
  */
 export const isApiUnavailable = (
   state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
@@ -89,37 +73,22 @@ export const isApiUnavailable = (
  * First-hand `apiReachable` may veto generic-endpoint `isOnline`, but only as
  * proof — hence tri-state, `null` meaning untried since the link dropped. An
  * ASSUMED `true` surviving offline is a one-way door: no traffic, no breaker.
+ * Narrower than `isApiUnavailable`: with only the breaker open, `offlineReadLink`
+ * still forwards a cache miss as an organic probe.
  */
 export const shouldTreatAsOffline = (
   state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
 ): boolean => !state.isOnline && state.apiReachable !== true;
 
-/** No request should reach the server: it is unavailable, or offline mode is on. */
-export const isNetworkWithheld = (
-  state: Pick<NetworkState, 'isOnline' | 'apiReachable' | 'offlineModeEnabled'>,
-): boolean => state.offlineModeEnabled || isApiUnavailable(state);
-
-/**
- * Whether a cache-missing query is answered with an offline error rather than
- * reaching the network. Deliberately NARROWER than `isApiUnavailable`: with only
- * the breaker open, `offlineModeLink` still forwards a miss as an organic probe,
- * so a failure there is a real network error, not "we never tried".
- */
-export const blocksCacheMissQueries = (
-  state: Pick<NetworkState, 'isOnline' | 'apiReachable' | 'offlineModeEnabled'>,
-): boolean => state.offlineModeEnabled || shouldTreatAsOffline(state);
-
 /**
  * The undebounced reason to tell the user we are offline. Losing the device
- * connection explains everything else, so it outranks an unreachable API, which
- * outranks the user's own offline-mode switch.
+ * connection explains everything else, so it outranks an unreachable API.
  */
 const resolveOfflineCause = (
-  state: Pick<NetworkState, 'isOnline' | 'apiReachable' | 'offlineModeEnabled'>,
+  state: Pick<NetworkState, 'isOnline' | 'apiReachable'>,
 ): OfflineBannerCause | null => {
   if (shouldTreatAsOffline(state)) return 'device-offline';
   if (state.apiReachable === false) return 'api-unreachable';
-  if (state.offlineModeEnabled) return 'offline-mode';
   return null;
 };
 
@@ -130,7 +99,6 @@ const initialNetworkState = {
   lastOnlineTime: null,
   lastOfflineTime: null,
   needsTokenRefresh: false,
-  offlineModeEnabled: false,
   // UNKNOWN, not reachable. `shouldTreatAsOffline` lets a first-hand `true`
   // veto NetInfo's `isOnline: false`, so an assumed `true` here outranks the
   // platform saying there is no link — on a cold start with no network the app
@@ -162,10 +130,9 @@ export const createNetworkSlice: StateCreator<
   /**
    * Re-evaluate the banner. Every setter calls it and a pending transition is
    * cancelled first, so flapping that settles inside the dwell never reaches the
-   * screen. `immediate` skips both the dwell and the hold — a switch the user
-   * just flipped is not flapping, and holding it announces a state they left.
+   * screen.
    */
-  const syncOfflineBanner = (immediate = false): void => {
+  const syncOfflineBanner = (): void => {
     if (bannerTimer) {
       clearTimeout(bannerTimer);
       bannerTimer = null;
@@ -181,11 +148,10 @@ export const createNetworkSlice: StateCreator<
       return;
     }
 
-    const delay = immediate
-      ? 0
-      : cause !== null
-      ? SHOW_DWELL_MS[cause]
-      : Math.max(0, MIN_VISIBLE_MS - (Date.now() - bannerShownAt));
+    const delay =
+      cause !== null
+        ? SHOW_DWELL_MS
+        : Math.max(0, MIN_VISIBLE_MS - (Date.now() - bannerShownAt));
     if (delay === 0) {
       applyBannerCause(cause);
       return;
@@ -250,14 +216,6 @@ export const createNetworkSlice: StateCreator<
       });
     },
 
-    setOfflineModeEnabled: (enabled: boolean, immediate = false) => {
-      set(draft => {
-        draft.offlineModeEnabled = enabled;
-      });
-      storage.set(OFFLINE_MODE_KEY, enabled);
-      syncOfflineBanner(immediate);
-    },
-
     setApiReachable: (reachable: boolean | null) => {
       if (get().apiReachable === reachable) return;
       set(draft => {
@@ -280,18 +238,4 @@ export const createNetworkSlice: StateCreator<
       });
     },
   };
-};
-
-/**
- * Out of the slice's initial state because `storage` throws before it is
- * ready, and the slice is built at module load. The
- * persist `onRehydrateStorage` callback runs after init, so the read is safe.
- */
-export const hydrateOfflineModeFromStorage = (
-  setOfflineModeEnabled: (enabled: boolean) => void,
-) => {
-  const stored = storage.getBoolean(OFFLINE_MODE_KEY);
-  if (stored !== undefined) {
-    setOfflineModeEnabled(stored);
-  }
 };

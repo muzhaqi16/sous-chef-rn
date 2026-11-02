@@ -7,16 +7,17 @@ import type { RootState } from '#store/index';
 import { useCategoryAutocomplete } from '#features/catalog/hooks/useCategoryAutocomplete';
 
 let mockIsOnline = true;
+let mockApiReachable: boolean | null = null;
 let mockCachedCategories: RootState['cachedCategories'] = [];
 jest.mock('#store/useAppStore', () => {
   const getState = (): Partial<RootState> => ({
     isOnline: mockIsOnline,
+    apiReachable: mockApiReachable,
     cachedCategories: mockCachedCategories,
   });
   return {
     useAppStore: (selector: (state: RootState) => unknown) =>
       selector(getState() as RootState),
-    useIsOnline: () => getState().isOnline,
   };
 });
 
@@ -53,6 +54,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers();
   mockIsOnline = true;
+  mockApiReachable = null;
   mockCachedCategories = [];
 });
 
@@ -149,8 +151,12 @@ describe('useCategoryAutocomplete', () => {
     expect(result.current.shouldSearch).toBe(true);
   });
 
-  it('sets shouldSearch to false when offline', () => {
-    mockIsOnline = false;
+  it.each([
+    ['no connection', false, null],
+    ['the API down on working Wi-Fi', true, false],
+  ])('sends no search with %s', (_cause, isOnline, apiReachable) => {
+    mockIsOnline = isOnline;
+    mockApiReachable = apiReachable;
     const { result } = renderHookWithApollo(() => useCategoryAutocomplete());
 
     act(() => {

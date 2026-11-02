@@ -5,7 +5,7 @@
 export function shouldUseServerSort(
   totalCount: number,
   pageSize: number,
-  isOnline: boolean,
+  serverAvailable: boolean,
 ): boolean {
-  return isOnline && totalCount > pageSize;
+  return serverAvailable && totalCount > pageSize;
 }

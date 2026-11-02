@@ -11,7 +11,11 @@ import {
   useShoppingListTutorial,
   ShoppingListTutorialStep,
 } from '#features/shoppingList/context/ShoppingListTutorialContext';
-import { useAnyShoppingListSheetVisible } from '#features/shoppingList/context/ShoppingListModalsContext';
+import {
+  useAnyShoppingListSheetVisible,
+  useShoppingListModalActions,
+} from '#features/shoppingList/context/ShoppingListModalsContext';
+import { useShoppingListActions } from '#features/shoppingList/hooks/useShoppingListActions';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/utils/shoppingListPermissions';
@@ -142,10 +146,6 @@ jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
   };
 });
 
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: { clearType: jest.fn() },
-}));
-
 jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
   getShoppingListPermissionsWithOwner: jest.fn(() => ({
     canAddItems: true,
@@ -201,8 +201,19 @@ jest.mock(
   },
 );
 
+// Holds the row handlers the list renders with, so a test can tick a row.
+let mockListProps: {
+  onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
+} = {};
 jest.mock('#features/shoppingList/components/ListTemplate', () => ({
-  ListTemplate: () => null,
+  ListTemplate: ({
+    customListProps,
+  }: {
+    customListProps: typeof mockListProps;
+  }) => {
+    mockListProps = customListProps;
+    return null;
+  },
 }));
 
 jest.mock('#components/molecules/TabScreenHeader', () => ({
@@ -370,6 +381,53 @@ describe('ShoppingListMainContent', () => {
       />,
     );
     expect(getByTestId('shopping-list-screen')).toBeTruthy();
+  });
+
+  describe('ticking a line', () => {
+    const tickWithPricesOn = (opts?: { withDetails?: boolean }) => {
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
+      const toggle = jest.fn();
+      const openPurchaseAmount = jest.fn();
+      jest.mocked(useShoppingListActions).mockReturnValue({
+        handleTogglePurchase: toggle,
+        handleDeleteItem: jest.fn(),
+        handleClearAllPurchased: jest.fn(),
+        handleClearAllShopping: jest.fn(),
+      });
+      jest.mocked(useShoppingListModalActions).mockReturnValue({
+        ...jest.mocked(useShoppingListModalActions)(),
+        openPurchaseAmount,
+      });
+      const milk = { id: 'item-1', name: 'Milk', purchaseInfo: null };
+      render(
+        <ShoppingListMainContent
+          screenData={makeScreenData({
+            unpurchasedItems: [milk],
+            rawUnpurchasedItems: [milk],
+          })}
+        />,
+      );
+      mockListProps.onTogglePurchase?.('item-1', opts);
+      jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+      return { toggle, openPurchaseAmount };
+    };
+
+    // Prices are gathered by long-press only: a tick never asks for one.
+    it('marks the line bought with no sheet, with prices on', () => {
+      const { toggle, openPurchaseAmount } = tickWithPricesOn();
+
+      expect(toggle).toHaveBeenCalledWith('item-1');
+      expect(openPurchaseAmount).not.toHaveBeenCalled();
+    });
+
+    it('opens the purchase sheet on a long-press', () => {
+      const { toggle, openPurchaseAmount } = tickWithPricesOn({
+        withDetails: true,
+      });
+
+      expect(openPurchaseAmount).toHaveBeenCalledWith('item-1');
+      expect(toggle).not.toHaveBeenCalled();
+    });
   });
 
   describe('store mode', () => {

@@ -1,11 +1,5 @@
 import { StyleSheet } from 'react-native-unistyles';
 
-/**
- * One `StyleSheet.create` factory: the Unistyles babel plugin finds `theme.*`
- * reads in its body, and a read inside an imported helper freezes at its
- * initial value.
- */
-
 export const commonStyles = StyleSheet.create(theme => ({
   card: {
     backgroundColor: theme.colors.surface,

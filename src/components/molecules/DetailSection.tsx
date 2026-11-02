@@ -47,7 +47,11 @@ export const DetailSection: React.FC<DetailSectionProps> = ({
       {!!title && (
         <SectionHeader style={styles.sectionHeading}>{title}</SectionHeader>
       )}
-      {children}
+      {/* A row draws its own divider; the last one is clipped, so a divider
+          only ever separates two rows and never closes the card. */}
+      <View style={[styles.clipLastDivider, !!fill && styles.fill]}>
+        <View style={[styles.rows, !!fill && styles.fill]}>{children}</View>
+      </View>
     </Card>
   );
 
@@ -66,6 +70,12 @@ const styles = StyleSheet.create(theme => ({
   },
   fill: {
     flex: 1,
+  },
+  clipLastDivider: {
+    overflow: 'hidden',
+  },
+  rows: {
+    marginBottom: -theme.borderWidth.hairline,
   },
   sectionHeading: {
     color: theme.colors.textPrimary,

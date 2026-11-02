@@ -31,19 +31,23 @@ export interface DisplayItem {
 /** A card's content; its id is the row's key. */
 type CardContent = Omit<DisplayItem, 'id'>;
 
-const recipeTarget = (id: string): RecipeTarget => ({ recipeId: id });
-
 /** A recipe the API holds. Its "Saved" badge is the user's own mark. */
 const recipeDisplayItem = (
   recipe: FoundRecipe,
   translate: Translate,
-): CardContent => ({
-  ...recipeCardBasics(recipe, translate),
-  badge: recipe.isSaved
-    ? { text: translate('recipes.savedBadge'), variant: 'success' }
-    : undefined,
-  target: recipeTarget(recipe.id),
-});
+): CardContent => {
+  const basics = recipeCardBasics(recipe, translate);
+  return {
+    ...basics,
+    badge: recipe.isSaved
+      ? { text: translate('recipes.savedBadge'), variant: 'success' }
+      : undefined,
+    target: {
+      recipeId: recipe.id,
+      row: { name: basics.title, imageUrl: basics.imageUrl },
+    },
+  };
+};
 
 /** A catalog recipe from search, its popularity as the badge. */
 const catalogDisplayItem = (
@@ -142,12 +146,13 @@ function suggestionDisplayItem(
     );
   }
 
+  const imageUrl = node.imageUrl ?? undefined;
   return {
     title: node.name,
     subtitle: subtitleParts.join(' • '),
     badge: coverageBadge(coverage, translate),
-    imageUrl: node.imageUrl ?? undefined,
-    target: recipeTarget(node.id),
+    imageUrl,
+    target: { recipeId: node.id, row: { name: node.name, imageUrl } },
   };
 }
 

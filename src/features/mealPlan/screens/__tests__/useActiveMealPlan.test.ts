@@ -1,10 +1,10 @@
-import { waitFor } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetMealPlanDocument } from '#features/mealPlan/screens/useMealPlan.generated';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import { useStore } from '#store';
@@ -91,6 +91,14 @@ function forbiddenMock(id: string) {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   useStore.setState({ selectedMealPlanId: null });
 });
 
@@ -129,9 +137,8 @@ describe('useActiveMealPlan', () => {
       { operationMocks: [gone.mock, fallback.mock] },
     );
 
-    await waitFor(() =>
-      expect(result.current.activePlanId).toBe('plan-current'),
-    );
+    await drainTimers();
+    expect(result.current.activePlanId).toBe('plan-current');
     // The persisted pick is dropped, so the next cold start doesn't repeat it.
     expect(useStore.getState().selectedMealPlanId).toBeNull();
     expect(fallback.fired).toContainEqual({
@@ -157,9 +164,8 @@ describe('useActiveMealPlan', () => {
       { operationMocks: [denied.mock, fallback.mock] },
     );
 
-    await waitFor(() =>
-      expect(result.current.activePlanId).toBe('plan-current'),
-    );
+    await drainTimers();
+    expect(result.current.activePlanId).toBe('plan-current');
     expect(useStore.getState().selectedMealPlanId).toBeNull();
   });
 
@@ -173,7 +179,8 @@ describe('useActiveMealPlan', () => {
       { operationMocks: [gone.mock], cache },
     );
 
-    await waitFor(() => expect(result.current.activePlanId).toBeNull());
+    await drainTimers();
+    expect(result.current.activePlanId).toBeNull();
     expect(cache.extract()['MealPlan:plan-gone']).toBeUndefined();
   });
 
@@ -195,7 +202,8 @@ describe('useActiveMealPlan', () => {
       { operationMocks: [wouldMiss.mock], cache },
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(wouldMiss.fired).toHaveLength(0);
     expect(result.current.activePlanId).toBe('plan-unsynced');
     expect(useStore.getState().selectedMealPlanId).toBe('plan-unsynced');
@@ -220,13 +228,12 @@ describe('useActiveMealPlan', () => {
     );
 
     // Going offline must never read as a deletion.
-    await waitFor(() =>
-      expect(get.fired).toContainEqual({
-        id: 'plan-picked',
-        mealsFirst: MEALS_PAGE_SIZE,
-        ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
-      }),
-    );
+    await drainTimers();
+    expect(get.fired).toContainEqual({
+      id: 'plan-picked',
+      mealsFirst: MEALS_PAGE_SIZE,
+      ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE,
+    });
     expect(result.current.activePlanId).toBe('plan-picked');
     expect(useStore.getState().selectedMealPlanId).toBe('plan-picked');
   });

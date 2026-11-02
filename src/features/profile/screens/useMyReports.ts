@@ -17,7 +17,7 @@ export type MyReportNode =
  * time: their reports, suggested edits and photos awaiting moderation.
  */
 export function useMyReports() {
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     MyReviewSubmissionsDocument,
     { variables: { first: PAGE_SIZE } },
   );
@@ -27,7 +27,7 @@ export function useMyReports() {
     selector: result => result.myReviewSubmissions,
     key: 'MyReviewSubmissions',
     loading,
-    fetchMore,
+    observable,
     refetch,
   });
 

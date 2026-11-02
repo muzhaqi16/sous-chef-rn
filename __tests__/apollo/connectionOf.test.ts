@@ -1,8 +1,10 @@
-import { InMemoryCache, gql } from '@apollo/client';
+import { gql } from '@apollo/client';
 import {
   connectionOf,
   typedConnectionOf,
 } from '#/test-utils/fixtures/connectionOf';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
+import { makeCache } from '#/apollo/cache';
 
 const LISTS = gql`
   query Lists {
@@ -37,12 +39,12 @@ describe('connectionOf', () => {
   });
 
   it('round-trips through the cache when typed', () => {
-    const cache = new InMemoryCache();
+    const cache = makeCache();
     const shoppingLists = typedConnectionOf('ShoppingList', [weekly], {
       endCursor: 'c1',
     });
 
-    cache.writeQuery({ query: LISTS, data: { shoppingLists } });
+    seedQuery(cache, { query: LISTS, data: { shoppingLists } });
 
     expect(cache.readQuery({ query: LISTS })).toEqual({
       shoppingLists: {

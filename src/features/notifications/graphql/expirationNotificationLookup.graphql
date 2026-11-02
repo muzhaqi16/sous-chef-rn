@@ -20,8 +20,10 @@ query GetExpirationNotificationsForPantryItem($pantryItemId: ID!) {
           genericNotificationId
           expiresOn
           pantryItem {
+            version
             id
             item {
+              version
               id
               name
               imageUrl

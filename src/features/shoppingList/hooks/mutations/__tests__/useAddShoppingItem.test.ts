@@ -8,15 +8,13 @@ import {
   addLocalShoppingListItem,
   createLocalShoppingListItem,
 } from '#features/shoppingList/cache/items';
-import { withdrawShoppingListItems } from '#features/shoppingList/cache/withdraw';
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
 import { getDeviceDecimalSeparator } from '#/utils/deviceLocale';
 
 // The response mirrors the real batch payload the hook reads
-// (`addItemsToShoppingList.results[0].item`) so the real reconciler classifies
-// it as a success and keeps the optimistic row. `variables: () => true` because
+// (`addItemsToShoppingList.results[0].item`) so it settles as a success. `variables: () => true` because
 // the hook mints the row's cuid id itself.
 const addItemMock = () =>
   recordMock(AddItemToShoppingListDocument, {
@@ -32,10 +30,6 @@ const addItemMock = () =>
       },
     },
   });
-
-jest.mock('#features/shoppingList/cache/withdraw', () => ({
-  withdrawShoppingListItems: jest.fn(),
-}));
 
 jest.mock('#features/shoppingList/cache/connections', () => ({
   ...jest.requireActual('#features/shoppingList/cache/connections'),
@@ -72,11 +66,9 @@ beforeEach(() => {
 });
 
 describe('useAddShoppingItem', () => {
-  const mockRefetch = jest.fn().mockResolvedValue(undefined);
-
   it('returns addItem function', () => {
     const { result } = renderHookWithApollo(() =>
-      useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      useAddShoppingItem({ listId: 'list-1' }),
     );
 
     expect(typeof result.current.addItem).toBe('function');
@@ -85,7 +77,7 @@ describe('useAddShoppingItem', () => {
   it('writes the new item PERMANENTLY with a client-minted cuid id BEFORE firing the mutation (Pattern B / local-first)', async () => {
     const created = addItemMock();
     const { result } = renderHookWithApollo(
-      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useAddShoppingItem({ listId: 'list-1' }),
       { operationMocks: [created.mock] },
     );
 
@@ -109,7 +101,7 @@ describe('useAddShoppingItem', () => {
   it('sends the typed name inline under a minted item id, which the row names at once', async () => {
     const created = addItemMock();
     const { result } = renderHookWithApollo(
-      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useAddShoppingItem({ listId: 'list-1' }),
       { operationMocks: [created.mock] },
     );
 
@@ -134,7 +126,7 @@ describe('useAddShoppingItem', () => {
   it('gives the optimistic row the fraction the form typed, not its leading number', async () => {
     const created = addItemMock();
     const { result } = renderHookWithApollo(
-      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useAddShoppingItem({ listId: 'list-1' }),
       { operationMocks: [created.mock] },
     );
 
@@ -155,7 +147,7 @@ describe('useAddShoppingItem', () => {
     jest.mocked(getDeviceDecimalSeparator).mockReturnValue(',');
     const created = addItemMock();
     const { result } = renderHookWithApollo(
-      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useAddShoppingItem({ listId: 'list-1' }),
       { operationMocks: [created.mock] },
     );
 
@@ -177,7 +169,7 @@ describe('useAddShoppingItem', () => {
       data: { addItemsToShoppingList: null },
     });
     const { result } = renderHookWithApollo(
-      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useAddShoppingItem({ listId: 'list-1' }),
       { operationMocks: [queued.mock] },
     );
 
@@ -187,7 +179,6 @@ describe('useAddShoppingItem', () => {
     });
 
     expect(added).toBe(true);
-    expect(withdrawShoppingListItems).not.toHaveBeenCalled();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -201,7 +192,7 @@ describe('useAddShoppingItem', () => {
       },
     });
     const { result } = renderHookWithApollo(
-      () => useAddShoppingItem({ listId: 'list-1', refetch: mockRefetch }),
+      () => useAddShoppingItem({ listId: 'list-1' }),
       { operationMocks: [refused.mock] },
     );
 
@@ -211,18 +202,13 @@ describe('useAddShoppingItem', () => {
     });
 
     expect(added).toBe(false);
-    expect(withdrawShoppingListItems).toHaveBeenCalledWith(
-      expect.anything(),
-      'list-1',
-      [expect.any(String)],
-    );
     expect(alertService.alert).toHaveBeenCalledTimes(1);
   });
 
   it('does nothing when listId is missing', async () => {
     const created = addItemMock();
     const { result } = renderHookWithApollo(
-      () => useAddShoppingItem({ listId: null, refetch: mockRefetch }),
+      () => useAddShoppingItem({ listId: null }),
       { operationMocks: [created.mock] },
     );
 

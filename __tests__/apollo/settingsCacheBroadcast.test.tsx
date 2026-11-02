@@ -9,12 +9,21 @@
  * any remaining stuck switch is a native `Switch` issue, not an Apollo one.
  */
 import { useQuery } from '@apollo/client/react';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { GetNotificationPreferencesDocument } from '#operations/user/user.generated';
 import { GetUserSettingsDocument } from '#operations/auth/user.generated';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('settings cache broadcast', () => {
   it('a cache.modify on NotificationPreferences re-renders the query', async () => {
@@ -37,10 +46,9 @@ describe('settings cache broadcast', () => {
       },
     );
 
-    await waitFor(() =>
-      expect(
-        result.current.data?.me?.notificationPreferences?.pushEnabled,
-      ).toBe(false),
+    await drainTimers();
+    expect(result.current.data?.me?.notificationPreferences?.pushEnabled).toBe(
+      false,
     );
 
     act(() => {
@@ -51,10 +59,9 @@ describe('settings cache broadcast', () => {
       );
     });
 
-    await waitFor(() =>
-      expect(
-        result.current.data?.me?.notificationPreferences?.pushEnabled,
-      ).toBe(true),
+    await drainTimers();
+    expect(result.current.data?.me?.notificationPreferences?.pushEnabled).toBe(
+      true,
     );
   });
 
@@ -68,27 +75,25 @@ describe('settings cache broadcast', () => {
           Query: () => ({
             me: {
               id: 'user-1',
-              settings: { id: 'settings-1', offlineMode: false },
+              settings: { id: 'settings-1', compactMode: false },
             },
           }),
         },
       },
     );
 
-    await waitFor(() =>
-      expect(result.current.data?.me?.settings?.offlineMode).toBe(false),
-    );
+    await drainTimers();
+    expect(result.current.data?.me?.settings?.compactMode).toBe(false);
 
     act(() => {
       writeEntityFields(
         cache,
         { __typename: 'UserSettings', id: 'settings-1' },
-        { offlineMode: true },
+        { compactMode: true },
       );
     });
 
-    await waitFor(() =>
-      expect(result.current.data?.me?.settings?.offlineMode).toBe(true),
-    );
+    await drainTimers();
+    expect(result.current.data?.me?.settings?.compactMode).toBe(true);
   });
 });

@@ -1,4 +1,6 @@
 import { useMutation, useQuery } from '@apollo/client/react';
+import { useDataState } from '#hooks/data/useDataState';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import { GetCurrenciesDocument } from '#features/profile/graphql/currency.generated';
 import { useAppStore, useUpdateUser } from '#store/useAppStore';
@@ -21,10 +23,19 @@ export function useCurrencyPreference() {
   const { t } = useTranslation();
   const preferredCurrency = usePreferredCurrency();
   const setPreferredCurrency = useAppStore(state => state.setPreferredCurrency);
-  const { data } = useQuery(GetCurrenciesDocument);
+  const { data, loading, error, refetch } = useQuery(GetCurrenciesDocument, {
+    fetchPolicy: 'cache-first',
+  });
+  useApolloErrorLogger(GetCurrenciesDocument, error);
   const updateUser = useUpdateUser();
   const [updateSettings] = useMutation(UpdateUserPreferencesDocument);
 
+  const optionsState = useDataState({
+    loading,
+    error,
+    hasResult: !!data,
+    isEmpty: !data?.currencies.length,
+  });
   const options: CurrencyOption[] = (data?.currencies ?? []).map(currency => ({
     value: currency.code,
     // Deliberately unlocalized: a currency's name and symbol are its own, and
@@ -86,5 +97,14 @@ export function useCurrencyPreference() {
     );
   };
 
-  return { preferredCurrency, currentLabel, options, selectCurrency };
+  return {
+    preferredCurrency,
+    currentLabel,
+    options,
+    optionsState,
+    retryOptions: () => {
+      void refetch();
+    },
+    selectCurrency,
+  };
 }

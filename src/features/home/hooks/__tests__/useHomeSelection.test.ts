@@ -83,6 +83,7 @@ const createMockHomeNode = (
             __typename: 'PantryEdge',
             node: {
               __typename: 'Pantry',
+              version: 1,
               id: pantry.id,
               name: pantry.name ?? 'Test Pantry',
               isDefault: pantry.isDefault ?? false,
@@ -99,6 +100,7 @@ const createMockHomeNode = (
     version: 1,
     myMembership: {
       __typename: 'Membership',
+      version: 1,
       id: nextMockId(),
       role: MembershipRole.Member,
       canManageHome: true,
@@ -155,7 +157,7 @@ function setDefaultMock(defaultPantryId: string | null = null) {
         id: 'settings-1',
       },
       defaultPantry: defaultPantryId
-        ? { __typename: 'Pantry', id: defaultPantryId }
+        ? { __typename: 'Pantry', version: 1, id: defaultPantryId }
         : null,
     },
   };
@@ -331,6 +333,7 @@ describe('useHomeSelection', () => {
                 __typename: 'PantryEdge',
                 node: {
                   __typename: 'Pantry',
+                  version: 1,
                   id: 'pantry-a',
                   name: 'A',
                   isDefault: false,
@@ -340,6 +343,7 @@ describe('useHomeSelection', () => {
                 __typename: 'PantryEdge',
                 node: {
                   __typename: 'Pantry',
+                  version: 1,
                   id: 'pantry-b',
                   name: 'B',
                   isDefault: true,

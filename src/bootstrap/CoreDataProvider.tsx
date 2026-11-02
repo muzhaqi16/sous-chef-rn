@@ -1,13 +1,22 @@
 import React, { useEffect } from 'react';
 import { useDataPreloading } from '#/hooks/data/useDataPreloading';
-import { useOfflineTabPreloading } from './useOfflineTabPreloading';
+import {
+  useOfflineTabPreloading,
+  type WarmTarget,
+} from './useOfflineTabPreloading';
 import { useNotificationsOnLaunch } from '#features/notifications/hooks/useNotificationsOnLaunch';
 import { useUpdateUser, useUser } from '#store/useAppStore';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { GetUserProfileDocument } from '#operations/auth/user.generated';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useBudgetAndPricesCarryOver } from '#features/profile/hooks/useBudgetAndPricesCarryOver';
+import { usePricePrompt } from '#features/shoppingList/hooks/usePricePrompt';
+import { useSettingsMirror } from './useSettingsMirror';
 
 interface CoreDataProviderProps {
   children: React.ReactNode;
+  /** What the host adds to the warm-up, for reads its own screens own. */
+  warmTargets?: readonly WarmTarget[];
 }
 
 /**
@@ -18,6 +27,7 @@ interface CoreDataProviderProps {
  */
 export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   children,
+  warmTargets,
 }) => {
   const user = useUser();
   const updateUser = useUpdateUser();
@@ -29,19 +39,25 @@ export const CoreDataProvider: React.FC<CoreDataProviderProps> = ({
   // Warm the sibling tabs' first-screen queries so a tab the user has not
   // opened is still usable offline. `lazy: true` keeps them unmounted; only
   // their data is fetched, on the idle queue.
-  useOfflineTabPreloading();
+  useOfflineTabPreloading(warmTargets);
 
   // Load all unread notifications on startup via notificationsConnection
   // Re-queries on foreground to catch missed events (reconnect proxy)
   useNotificationsOnLaunch(user?.id);
 
+  // The account's settings, mirrored for the first paint of the next launch.
+  useSettingsMirror();
+  useBudgetAndPricesCarryOver();
+  usePricePrompt();
+
   // Fetch profile on every app load to keep Zustand store in sync
   // (e.g., profilePicture is only set at login/register and goes stale).
   // First mount fires the network once; subsequent re-renders read cache only.
-  const { data: profileData } = useQuery(
+  const { data: profileData, error: profileError } = useQuery(
     GetUserProfileDocument,
     !user ? skipToken : { notifyOnNetworkStatusChange: false },
   );
+  useApolloErrorLogger(GetUserProfileDocument, profileError);
 
   useEffect(() => {
     const profile = profileData?.me?.profile;

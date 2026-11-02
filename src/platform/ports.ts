@@ -157,6 +157,22 @@ export interface ReviewPrompt {
   request(): void;
 }
 
+/** Whether the device's place may be read; `null` until the person is asked. */
+export type LocationAccess = 'granted' | 'denied' | 'blocked' | 'unavailable';
+
+/**
+ * The device's place, about a kilometre wide: enough to find nearby stores.
+ * Asked for only when the person wants it, and never more precise.
+ */
+export interface ApproximateLocation {
+  access(): Promise<LocationAccess | null>;
+  /** The OS's own prompt; the answer it settles on. */
+  requestAccess(): Promise<LocationAccess>;
+  /** Null when the device cannot say where it is. */
+  currentPlace(): Promise<{ lat: number; lng: number } | null>;
+  openSettings(): void;
+}
+
 /** How a picked file joins a multipart body. */
 export interface FileParts {
   append(form: FormData, name: string, file: ImageFile, mimeType: string): void;
@@ -198,6 +214,7 @@ export interface PlatformServices {
   imagePrefetch: ImagePrefetch;
   haptics: Haptics;
   reviewPrompt: ReviewPrompt;
+  approximateLocation: ApproximateLocation;
   fileParts: FileParts;
   screen: ScreenHooks;
 }

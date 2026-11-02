@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { StyleSheet } from 'react-native-unistyles';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';
 import { SettingsSection } from '#components/organisms/SettingsSection';
@@ -49,14 +50,6 @@ export const AppSettingsScreen: React.FC = () => {
     hasResult: hasLoadedSettings,
     isEmpty: false,
   });
-
-  // Offline mode renders from the STORE, which `offlineModeLink` reads; the
-  // server copy is a cross-device mirror. So the flip is synchronous and needs
-  // no Apollo broadcast, exactly when the server can't be reached.
-  const offlineModeEnabled = useAppStore(state => state.offlineModeEnabled);
-  const setOfflineModeEnabled = useAppStore(
-    state => state.setOfflineModeEnabled,
-  );
 
   // PERFORMANCE: Use selective selectors instead of inline functions
   const hapticFeedbackEnabled = useAppStore(
@@ -111,20 +104,6 @@ export const AppSettingsScreen: React.FC = () => {
     );
   };
 
-  /**
-   * The LOCAL write drives the link policy and cannot wait on a round trip.
-   * `immediate`: the one caller that IS a user gesture, so not flapping, needs
-   * no dwell.
-   */
-  const handleOfflineModeChange = (value: boolean) => {
-    setOfflineModeEnabled(value, true);
-    setUpdating('offlineMode');
-    void executeAsyncWithCleanup(
-      () => updateAppSetting('offlineMode', value),
-      () => setUpdating(null),
-    );
-  };
-
   const handleResetToDefaults = () => {
     alertService.alert(
       t('settings.resetToDefaults'),
@@ -137,14 +116,9 @@ export const AppSettingsScreen: React.FC = () => {
             // Also reset feature hints/tutorials and per-user preferences
             resetAllFeatureHints();
             resetUserPreferences();
-            // Only the success path alerts — `resetToDefaults` already
+            // Only the success path speaks: `resetToDefaults` already
             // surfaces its own failure with `errors.resetSettingsFailed`.
-            if (success) {
-              alertService.alert(
-                t('labels.success'),
-                t('settings.resetSuccess'),
-              );
-            }
+            if (success) toastService.success(t('settings.resetSuccess'));
           },
           () => setUpdating(null),
         );
@@ -181,18 +155,6 @@ export const AppSettingsScreen: React.FC = () => {
           }}
           testID={profileTestIDs.settingsState}
         />
-        {/* Offline is exactly when someone reaches for this switch, and its
-            value lives in the store, not in the settings query. Behind the
-            gate it was unreachable in the state it exists for. */}
-        <SettingsSection variant="inset" title={t('settings.syncOffline')}>
-          <SettingSwitch
-            testID={profileTestIDs.settingsOfflineModeSwitch}
-            title={t('settings.offlineMode')}
-            description={t('settings.offlineModeDesc')}
-            value={offlineModeEnabled}
-            onValueChange={handleOfflineModeChange}
-          />
-        </SettingsSection>
       </SubScreen>
     );
   }
@@ -229,23 +191,6 @@ export const AppSettingsScreen: React.FC = () => {
             setUnitPickerVisible(false);
           }}
           onCancel={() => setUnitPickerVisible(false)}
-        />
-      </SettingsSection>
-
-      <SettingsSection variant="inset" title={t('settings.syncOffline')}>
-        <SettingSwitch
-          testID={profileTestIDs.settingsAutoSyncSwitch}
-          title={t('settings.autoSync')}
-          description={t('settings.autoSyncDesc')}
-          value={settings.autoSync}
-          onValueChange={value => handleSettingChange('autoSync', value)}
-        />
-        <SettingSwitch
-          testID={profileTestIDs.settingsOfflineModeSwitch}
-          title={t('settings.offlineMode')}
-          description={t('settings.offlineModeDesc')}
-          value={offlineModeEnabled}
-          onValueChange={handleOfflineModeChange}
         />
       </SettingsSection>
 
@@ -292,26 +237,6 @@ export const AppSettingsScreen: React.FC = () => {
             updatePreference({ showShoppingListImages: value })
           }
         />
-        {storeModeOffered ? (
-          <SettingSwitch
-            testID={profileTestIDs.settingsStoreModeSwitch}
-            title={t('settings.storeMode')}
-            description={t('settings.storeModeDesc')}
-            value={userPrefs.storeMode ?? false}
-            onValueChange={value => updatePreference({ storeMode: value })}
-          />
-        ) : null}
-        {budgetAndPricesOffered ? (
-          <SettingSwitch
-            testID={profileTestIDs.settingsBudgetAndPricesSwitch}
-            title={t('labels.budgetAndPrices')}
-            description={t('settings.budgetAndPricesDesc')}
-            value={userPrefs.budgetAndPrices ?? false}
-            onValueChange={value =>
-              updatePreference({ budgetAndPrices: value })
-            }
-          />
-        ) : null}
         <SettingSwitch
           testID={profileTestIDs.settingsShareUsageDataSwitch}
           title={t('settings.shareUsageData')}
@@ -320,6 +245,31 @@ export const AppSettingsScreen: React.FC = () => {
           onValueChange={handleConsentChange}
         />
       </SettingsSection>
+
+      {storeModeOffered || budgetAndPricesOffered ? (
+        <SettingsSection variant="inset" title={t('labels.shopping')}>
+          {storeModeOffered ? (
+            <SettingSwitch
+              testID={profileTestIDs.settingsStoreModeSwitch}
+              title={t('settings.storeMode')}
+              description={t('settings.storeModeDesc')}
+              value={settings.storeMode}
+              onValueChange={value => handleSettingChange('storeMode', value)}
+            />
+          ) : null}
+          {budgetAndPricesOffered ? (
+            <SettingSwitch
+              testID={profileTestIDs.settingsBudgetAndPricesSwitch}
+              title={t('labels.budgetAndPrices')}
+              description={t('settings.budgetAndPricesDesc')}
+              value={settings.budgetAndPrices === true}
+              onValueChange={value =>
+                handleSettingChange('budgetAndPrices', value)
+              }
+            />
+          ) : null}
+        </SettingsSection>
+      ) : null}
 
       <SettingsSection variant="inset" title={t('settings.resetSection')}>
         <SettingSwitch

@@ -23,6 +23,7 @@ import { PerUnitHint } from '#features/shoppingList/components/PerUnitHint';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { parseMoneyInput } from '#/utils/validation/common';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 interface PurchaseAmountSheetItem {
   id: string;
@@ -47,7 +48,7 @@ interface PurchaseAmountSheetProps {
   loading?: boolean;
   /** A line under the price on what a typed price per unit means, if any. */
   describePrice?: (unitPrice: number) => string | null;
-  /** False with budget and prices off: the sheet asks for the amount alone. */
+  /** False on a list that does not ask for prices: the amount alone. */
   askPrice?: boolean;
 }
 
@@ -104,10 +105,13 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   }
 
   // The estimate is the field's hint, never its value: confirmed unread, it
-  // would record a guess as the price paid, which the API never counts.
-  const estimatedTotal = item
-    ? totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity)
-    : null;
+  // would record a guess as the price paid, which the API never counts. With
+  // prices off the sheet suggests no price at all.
+  const showPrices = useBudgetAndPricesEnabled();
+  const estimatedTotal =
+    item && showPrices
+      ? totalFromUnitPrice(item.estimatedPrice, item.requestedQuantity)
+      : null;
 
   const parsedQty = parseQuantityInput(quantityInput);
   const parsedTotal = parseMoneyInput(priceInput);
@@ -125,7 +129,7 @@ export const PurchaseAmountSheet: React.FC<PurchaseAmountSheetProps> = ({
   const priceError =
     parsedTotal === undefined ? t('errors.invalidAmountPaid') : null;
   const priceNote =
-    describePrice && quantityIsUsable && parsedTotal != null
+    showPrices && describePrice && quantityIsUsable && parsedTotal != null
       ? describePrice(unitPriceFromTotal(parsedTotal, parsedQty) ?? parsedTotal)
       : null;
 

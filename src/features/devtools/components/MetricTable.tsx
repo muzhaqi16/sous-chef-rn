@@ -36,8 +36,8 @@ const ZebraTableRow: React.FC<{
   alt: boolean;
   children: React.ReactNode;
 }> = ({ alt, children }) => {
-  styles.useVariants({ alt });
-  return <View style={styles.tableRow}>{children}</View>;
+  const variantStyles = styles.useVariants({ alt });
+  return <View style={variantStyles.tableRow}>{children}</View>;
 };
 
 interface MetricTableProps<T> {

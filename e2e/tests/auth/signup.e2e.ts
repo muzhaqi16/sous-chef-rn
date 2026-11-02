@@ -12,7 +12,7 @@ import { launchAppWithFabricWorkaround } from '../../init';
 import { CodeVerificationScreen } from '../../screens/CodeVerificationScreen';
 import { LandingAuthScreen } from '../../screens/LandingAuthScreen';
 import { LoginScreen } from '../../screens/LoginScreen';
-import { CreateHomeScreen } from '../../screens/OnboardingScreens';
+import { HouseholdStepScreen } from '../../screens/OnboardingScreens';
 import { SignUpScreen } from '../../screens/SignUpScreen';
 import { TIMEOUTS } from '../../helpers/waitFor';
 import { generateTestEmail } from '../../helpers/data';
@@ -26,7 +26,8 @@ describe('Sign Up', () => {
   const loginScreen = new LoginScreen();
   const signUpScreen = new SignUpScreen();
   const codeVerificationScreen = new CodeVerificationScreen();
-  const createHomeScreen = new CreateHomeScreen();
+  // Setup runs on its own; the first question is where the flow waits.
+  const firstQuestionScreen = new HouseholdStepScreen();
 
   beforeAll(async () => {
     await launchAppWithFabricWorkaround({
@@ -147,7 +148,7 @@ describe('Sign Up', () => {
       await codeVerificationScreen.expectResendOffered();
 
       await codeVerificationScreen.skip();
-      await createHomeScreen.waitForScreen(TIMEOUTS.LONG);
+      await firstQuestionScreen.waitForScreen(TIMEOUTS.LONG);
     });
   });
 

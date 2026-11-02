@@ -106,6 +106,30 @@ export const INTOLERANCE_OPTIONS: readonly DietaryOption<Intolerance>[] = [
   { labelKey: 'recipes.intolerance.FISH', value: Intolerance.Fish },
 ];
 
+/** The nine major US food allergens, in the order an allergy picker leads with. */
+const MAJOR_US_ALLERGENS: readonly Intolerance[] = [
+  Intolerance.Dairy,
+  Intolerance.Egg,
+  Intolerance.Fish,
+  Intolerance.Shellfish,
+  Intolerance.TreeNut,
+  Intolerance.Peanut,
+  Intolerance.Wheat,
+  Intolerance.Soy,
+  Intolerance.Sesame,
+];
+
+/** Every allergy and intolerance option, the nine major US allergens first. */
+export const INTOLERANCE_OPTIONS_MAJOR_FIRST: readonly DietaryOption<Intolerance>[] =
+  [
+    ...MAJOR_US_ALLERGENS.flatMap(value =>
+      INTOLERANCE_OPTIONS.filter(option => option.value === value),
+    ),
+    ...INTOLERANCE_OPTIONS.filter(
+      option => !MAJOR_US_ALLERGENS.includes(option.value),
+    ),
+  ];
+
 // Nutritional objectives
 export const HEALTH_GOAL_OPTIONS: readonly DietaryOption<HealthGoal>[] = [
   { labelKey: 'recipes.healthGoal.LOW_CARB', value: HealthGoal.LowCarb },
@@ -211,6 +235,14 @@ export function toHouseholdAlert(
     isDiet: !!restriction.diet,
   };
 }
+
+/** Whether a restriction can flag a product or recipe: a health goal never does. */
+export const canAlert = (restriction: {
+  diet?: Diet | null;
+  intolerance?: Intolerance | null;
+  item?: { id: string } | null;
+}): boolean =>
+  !!restriction.diet || !!restriction.intolerance || !!restriction.item;
 
 /** An allergy or intolerance reads as a warning; a preference or goal, a note. */
 export const isStrictSeverity = (severity: RestrictionSeverity): boolean =>

@@ -12,12 +12,8 @@ import {
   UseShoppingListBudget_ListFragmentDoc,
   type UseShoppingListBudget_ListFragment,
 } from './useShoppingListBudget.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { toastService } from '#/services/toastService';
-import {
-  snapshotFields,
-  writeEntityFields,
-} from '#/apollo/utils/localFirstFields';
 import type { UpdateShoppingListInput } from '#/graphql/generated/schemaTypes';
 
 export function useShoppingListBudget() {
@@ -26,23 +22,6 @@ export function useShoppingListBudget() {
   const [mutate] = useMutation(UpdateShoppingListDocument, {
     context: { localFirst: true },
   });
-
-  /** Writes `patch` over the list and returns what restores the held values. */
-  const applyOptimistic = (
-    id: string,
-    patch: Partial<UseShoppingListBudget_ListFragment>,
-  ): (() => void) => {
-    const entity = { __typename: 'ShoppingList', id };
-    const held = client.cache.readFragment<UseShoppingListBudget_ListFragment>({
-      id: client.cache.identify(entity),
-      fragment: UseShoppingListBudget_ListFragmentDoc,
-      fragmentName: 'useShoppingListBudget_list',
-      returnPartialData: true,
-    });
-    const previous = snapshotFields(held, patch);
-    writeEntityFields(client.cache, entity, patch);
-    return () => writeEntityFields(client.cache, entity, previous);
-  };
 
   const runUpdate = async (
     id: string,
@@ -57,24 +36,23 @@ export function useShoppingListBudget() {
         id: client.cache.identify({ __typename: 'ShoppingList', id }),
         fragment: UseShoppingListBudget_ListFragmentDoc,
         fragmentName: 'useShoppingListBudget_list',
+        optimistic: true,
       });
     if (!current) {
       toastService.error(failureMessage);
       return false;
     }
 
-    const revert = applyOptimistic(id, patch);
-    const settled = await settleMutation(
-      () =>
-        mutate({
-          variables: { input: { id, ...input, version: current.version } },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: patch,
+      variables: { input: { id, ...input, version: current.version } },
+      mutate,
+      settle: {
         document: UpdateShoppingListDocument,
         fallback: failureMessage,
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 

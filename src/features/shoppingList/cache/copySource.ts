@@ -41,6 +41,7 @@ export function readCopyableList(
       fragment: CopyableShoppingListFragmentDoc,
       fragmentName: 'CopyableShoppingListFragment',
       variables: { copyableItemLimit: COPYABLE_ITEM_LIMIT },
+      optimistic: true,
     });
   } catch (error) {
     errorService.reportError(error, { operation: 'Read copyable list' });

@@ -8,6 +8,7 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { ListItem } from '#components/molecules/ListItem';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { Sheet } from '#components/templates/Sheet';
+import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { useBrandAutocomplete } from '#features/catalog/hooks/useBrandAutocomplete';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { commonStyles } from '#/styles/commonStyles';
@@ -57,6 +58,7 @@ export const AddBrandSheet: React.FC<AddBrandSheetProps> = ({
     ? autocomplete.displayItems.filter(brand => !heldBrandIds.has(brand.id))
     : [];
   const searched = searching && !autocomplete.isLoading;
+  const noMatch = useNoMatchCopy(autocomplete.searchTerm);
 
   const handlePick = async (brand: { id: string; name: string }) => {
     if (saving) return;
@@ -90,7 +92,6 @@ export const AddBrandSheet: React.FC<AddBrandSheetProps> = ({
           onChangeText={autocomplete.handleSearchTermChange}
           debounceMs={250}
           autoCapitalize="words"
-          autoCorrect={false}
           returnKeyType="search"
           isLoading={!!autocomplete.isLoading}
           containerStyle={styles.spaced}
@@ -112,9 +113,16 @@ export const AddBrandSheet: React.FC<AddBrandSheetProps> = ({
           </RowCard>
         ))}
         {!!searched && results.length === 0 && (
-          <Text role="body" tone="secondary" align="center">
-            {t('empty.noResultsFor', { query: autocomplete.searchTerm })}
-          </Text>
+          <>
+            <Text role="body" tone="secondary" align="center">
+              {noMatch.title}
+            </Text>
+            {noMatch.description ? (
+              <Text role="caption" tone="secondary" align="center">
+                {noMatch.description}
+              </Text>
+            ) : null}
+          </>
         )}
       </View>
     </Sheet>

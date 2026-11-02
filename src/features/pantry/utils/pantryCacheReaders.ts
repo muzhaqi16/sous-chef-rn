@@ -145,6 +145,7 @@ function cachedPantryItems(
       id: pantryCacheId,
       fragment: FindCachedPantryItemDuplicate_PantryFragmentDoc,
       variables: { itemsFilter: undefined, itemsOrderBy: undefined },
+      optimistic: true,
     });
   } catch (error) {
     logger.warn('Pantry duplicate pre-check could not read the cache:', error);
@@ -171,6 +172,7 @@ export function readStackUnit(
   const stack = cache.readFragment({
     id: cache.identify({ __typename: 'PantryItem', id: pantryItemId }),
     fragment: ReadStackUnit_PantryItemFragmentDoc,
+    optimistic: true,
   });
   return stack?.unit ?? null;
 }

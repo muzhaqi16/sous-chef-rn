@@ -13,7 +13,7 @@ import type {
   UpdateRecipeIngredientsInput,
   WastePantryItemBatchInput,
 } from '#/graphql/generated/schemaTypes';
-import type { QueuedMutation } from './types';
+import type { QueuedMutation, RowAdoption } from './types';
 import { isRecord } from '#/utils/isRecord';
 
 /** The input types whose subject is a field other than `id`. */
@@ -80,7 +80,10 @@ const ROW_SUBJECT_KEYS: Partial<Record<keyof SubjectInputs, string>> = {
 
 /** `id`-keyed inputs outside the `Create*` names whose `id` the device mints. */
 const MINTING_ID_INPUTS: ReadonlySet<string> = new Set([
+  'AddBrandToListInput',
   'AddRecipeToFavoritesInput',
+  'AddRestrictionInput',
+  'AddTemplateItemInput',
 ]);
 
 /**
@@ -167,4 +170,102 @@ export function queuedSubject({
   const mintedIds = mintsItsSubject(typeName ?? null, key) ? subjectIds : [];
 
   return { subjectIds, sourceIds, mintedIds };
+}
+
+/** What a later write waits on while this one is undelivered: its rows and its order. */
+export function holdsBack(
+  write: Pick<QueuedMutation, 'mutation' | 'variables' | 'orderedBy'>,
+): string[] {
+  const { subjectIds } = queuedSubject(write);
+  return write.orderedBy ? [...subjectIds, write.orderedBy] : subjectIds;
+}
+
+/**
+ * Input keys that name the PARENT a queued write attaches to. A deferred
+ * parent holds these children back; the keys stay out of a write's
+ * `subjectIds`, so a refused child never evicts its parent.
+ */
+export const PARENT_REFERENCE_KEYS: readonly string[] = [
+  'homeId',
+  'pantryId',
+  'shoppingListId',
+  'shoppingListItemId',
+  'afterItemId',
+  'beforeItemId',
+  'storageLocationId',
+  'parentLocationId',
+  'mealPlanId',
+  'mealPlanItemId',
+  'templateId',
+  'recipeIngredientId',
+  'cookingLogId',
+  'targetBatchId',
+  'purchaseId',
+  'recipeId',
+  // A store a queued createStore may have minted.
+  'storeId',
+  'targetStoreId',
+  'preferredStoreId',
+  // A brand list a queued createBrandList may have minted.
+  'brandListId',
+];
+
+/**
+ * What a write waits on: the parents it attaches to at any depth (a batch
+ * row, `meal.recipeId`, a purchase's `receipt.storeId`), and the entity it is
+ * derived from (a fork's source recipe).
+ */
+export function dependencyIdsOf(write: {
+  mutation: DocumentNode;
+  variables?: QueuedMutation['variables'];
+}): string[] {
+  const ids = new Set<string>(queuedSubject(write).sourceIds);
+  const collect = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      value.forEach(collect);
+      return;
+    }
+    if (!isRecord(value)) return;
+    for (const key of PARENT_REFERENCE_KEYS) {
+      const id = value[key];
+      if (typeof id === 'string' && id) ids.add(id);
+    }
+    Object.values(value).forEach(collect);
+  };
+  collect(write.variables?.input);
+  return [...ids];
+}
+
+function replaceId(value: unknown, from: string, to: string): unknown {
+  if (value === from) return to;
+  if (Array.isArray(value)) {
+    return value.map((element: unknown) => replaceId(element, from, to));
+  }
+  if (!isRecord(value)) return value;
+  return Object.fromEntries(
+    Object.entries(value).map(([key, field]) => [
+      key,
+      replaceId(field, from, to),
+    ]),
+  );
+}
+
+/** Whether `value` names the id anywhere. */
+export const mentionsId = (value: unknown, id: string): boolean =>
+  value === id ||
+  (Array.isArray(value)
+    ? value.some((element: unknown) => mentionsId(element, id))
+    : isRecord(value) &&
+      Object.values(value).some(field => mentionsId(field, id)));
+
+/** An input moved off a minted row, at the version the surviving row is at. */
+export function inputOnSurvivingRow(
+  input: Record<string, unknown>,
+  { mintedId, survivingId, version }: RowAdoption,
+): Record<string, unknown> {
+  const moved = replaceId(input, mintedId, survivingId);
+  if (!isRecord(moved)) return input;
+  return version !== undefined && typeof moved.version === 'number'
+    ? { ...moved, version }
+    : moved;
 }

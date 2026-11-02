@@ -7,7 +7,7 @@ import { RowCard } from '#components/atoms/RowCard';
 import { BaseSwitch } from '#components/atoms/BaseSwitch';
 import { Text } from '#components/atoms/Text';
 import { ListItem } from '#components/molecules/ListItem';
-import { EmptyState } from '#components/molecules/EmptyState';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { TextEditBottomSheet } from '#components/organisms/TextEditBottomSheet/TextEditBottomSheet';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useBrandLists } from '#features/profile/hooks/useBrandLists';
@@ -21,7 +21,7 @@ import { brandListNameSchema } from './brandListName';
 export const BrandListsScreen: React.FC = () => {
   const { t } = useTranslation();
   const { toBrandList } = useAppNavigation();
-  const { lists, loaded, createList, setEnabled } = useBrandLists();
+  const { lists, state, refetch, createList, setEnabled } = useBrandLists();
   const [naming, setNaming] = useState(false);
 
   return (
@@ -41,14 +41,20 @@ export const BrandListsScreen: React.FC = () => {
         <Text role="body" tone="secondary">
           {t('brandLists.intro')}
         </Text>
-        {loaded && lists.length === 0 ? (
-          <EmptyState
-            icon="list-outline"
-            title={t('brandLists.emptyTitle')}
-            description={t('brandLists.emptyBody')}
-            action={{
-              label: t('brandLists.newList'),
-              onPress: () => setNaming(true),
+        {state !== 'ready' ? (
+          <DataStateView
+            state={state}
+            onRetry={() => {
+              void refetch();
+            }}
+            empty={{
+              icon: 'list-outline',
+              title: t('brandLists.emptyTitle'),
+              description: t('brandLists.emptyBody'),
+              action: {
+                label: t('brandLists.newList'),
+                onPress: () => setNaming(true),
+              },
             }}
           />
         ) : (

@@ -37,7 +37,7 @@ function render(element: React.ReactElement<MealPlanSettingsSheetProps>) {
     React.cloneElement(element, {
       mealPlanRef: toFragmentRef<
         typeof MealPlanSettingsSheet_MealPlanFragmentDoc
-      >({ __typename: 'MealPlan', id: plan.id }),
+      >({ __typename: 'MealPlan', version: 1, id: plan.id }),
     }),
     { cache },
   );
@@ -104,7 +104,7 @@ const generatedLists = (
   __typename: 'ShoppingListConnection',
   edges: lists.map(list => ({
     __typename: 'ShoppingListEdge',
-    node: { __typename: 'ShoppingList', ...list },
+    node: { __typename: 'ShoppingList', version: 1, ...list },
   })),
   pageInfo: { __typename: 'PageInfo', hasNextPage: false, endCursor: null },
   totalCount: lists.length,
@@ -114,6 +114,7 @@ const makeMealPlan = (
   overrides?: Partial<MealPlanSettingsSheet_MealPlanFragment>,
 ): MealPlanSettingsSheet_MealPlanFragment => ({
   __typename: 'MealPlan',
+  version: 1,
   id: 'mp-1',
   name: 'Weekly Plan',
   description: 'My meal plan description',
@@ -122,7 +123,7 @@ const makeMealPlan = (
   budgetAmount: null,
   actualCost: null,
   dietaryProfile: null,
-  home: { __typename: 'Home', id: 'home-1', name: 'My Home' },
+  home: { __typename: 'Home', version: 1, id: 'home-1', name: 'My Home' },
   // A private profile reads null to housemates; the shared name still shows.
   createdBy: {
     __typename: 'User',
@@ -194,7 +195,7 @@ describe('MealPlanSettingsSheet', () => {
           {...defaultProps}
           mealPlanRef={toFragmentRef<
             typeof MealPlanSettingsSheet_MealPlanFragmentDoc
-          >({ __typename: 'MealPlan', id: 'mp-deleted' })}
+          >({ __typename: 'MealPlan', version: 1, id: 'mp-deleted' })}
         />,
       ),
     ).not.toThrow();

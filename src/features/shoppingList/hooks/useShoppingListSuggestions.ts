@@ -38,7 +38,7 @@ export function useShoppingListSuggestions({
 }: UseShoppingListSuggestionsOptions): SuggestionsHookResult<ShoppingListSuggestionItem> {
   const skipped = skip || !shoppingListId;
 
-  // Not skipped offline: `offlineModeLink` serves a cached read and answers a
+  // Not skipped offline: `offlineReadLink` serves a cached read and answers a
   // miss with an error, which `useDataState` classifies as offline.
   const { data, loading, error, refetch } = useQuery(
     GetShoppingListSuggestionsDocument,

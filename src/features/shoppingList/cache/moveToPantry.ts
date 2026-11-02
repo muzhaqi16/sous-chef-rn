@@ -7,16 +7,8 @@
 import type { ApolloCache } from '@apollo/client';
 import { type ConnectionData, safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { logger } from '#/utils/environment';
-import {
-  matchesFilter,
-  moveShoppingListItemToPurchased,
-  moveShoppingListItemToUnpurchased,
-  recordListCounters,
-  undoListCounters,
-  type ListCounterChange,
-} from './connections';
-import { readMovedToPantryAt, writePurchaseInfo } from './purchase';
-import { MoveToPantry_RestoreTargetFragmentDoc } from './moveToPantry.generated';
+import { matchesFilter, moveShoppingListItemToPurchased } from './connections';
+import { writePurchaseInfo } from './purchase';
 
 /**
  * Remove one item when moving it to the pantry. Unlike the generic remover this
@@ -29,194 +21,74 @@ export function removeItemFromShoppingListForMoveToPantry(
   itemId: string,
   wasPurchased: boolean,
   options: { evictEntity?: boolean } = {},
-): ListCounterChange | undefined {
+): void {
   try {
     const parentCacheId = cache.identify({
       __typename: 'ShoppingList',
       id: listId,
     });
 
-    if (!parentCacheId) return undefined;
+    if (!parentCacheId) return;
 
     // The edge write first, recording whether it changed anything; the counters
-    // follow from that. This helper runs TWICE for one online move (eager unlink,
-    // then the update callback) and `edges.filter` is idempotent while `-1` is not.
-    // Two passes because `cache.modify` visits fields in the STORE's order.
-    const change = recordListCounters(cache, listId, () => {
-      // `modify` reports true only when a modifier returned something other than
-      // `existing`, so every no-op path below must return `existing` itself.
-      const removed = cache.modify({
+    // follow from that. A layer and its commit each run this helper, and
+    // `edges.filter` is idempotent while `-1` is not. Two passes because
+    // `cache.modify` visits fields in the STORE's order.
+    // `modify` reports true only when a modifier returned something other than
+    // `existing`, so every no-op path below must return `existing` itself.
+    const removed = cache.modify({
+      id: parentCacheId,
+      fields: {
+        itemsConnection(
+          existing: ConnectionData | undefined,
+          { readField, storeFieldName },
+        ) {
+          if (
+            !matchesFilter(storeFieldName, 'isPurchased', wasPurchased) ||
+            !existing?.edges
+          )
+            return existing;
+
+          const edges = existing.edges.filter(
+            edge => readField<string>('id', edge.node) !== itemId,
+          );
+          if (edges.length === existing.edges.length) return existing;
+
+          return {
+            ...existing,
+            edges,
+            totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
+          };
+        },
+      },
+    });
+
+    if (removed) {
+      cache.modify({
         id: parentCacheId,
         fields: {
-          itemsConnection(
-            existing: ConnectionData | undefined,
-            { readField, storeFieldName },
-          ) {
-            if (
-              !matchesFilter(storeFieldName, 'isPurchased', wasPurchased) ||
-              !existing?.edges
-            )
-              return existing;
-
-            const edges = existing.edges.filter(
-              edge => readField<string>('id', edge.node) !== itemId,
-            );
-            if (edges.length === existing.edges.length) return existing;
-
-            return {
-              ...existing,
-              edges,
-              totalCount: Math.max(0, (existing.totalCount ?? 0) - 1),
-            };
+          ...(wasPurchased && {
+            completedItems(existing: number = 0) {
+              return Math.max(0, existing - 1);
+            },
+          }),
+          totalItems(existing: number = 0) {
+            return Math.max(0, existing - 1);
           },
         },
       });
+    }
 
-      if (removed) {
-        cache.modify({
-          id: parentCacheId,
-          fields: {
-            ...(wasPurchased && {
-              completedItems(existing: number = 0) {
-                return Math.max(0, existing - 1);
-              },
-            }),
-            totalItems(existing: number = 0) {
-              return Math.max(0, existing - 1);
-            },
-          },
-        });
-      }
-    });
-
-    // Evicting is for the CONFIRMED move. The eager (pre-fire) call keeps the
-    // entity, because a permanently-refused replay must put the row back and there
-    // is no snapshot to rebuild it from.
+    // Evicting is for the CONFIRMED move: a layer's evict leaves the row.
     if (options.evictEntity !== false) {
       safeEvict(cache, 'ShoppingListItem', itemId);
     }
-    return change;
   } catch (error) {
     logger.warn(
       'Failed to remove item from ShoppingList for move to pantry:',
       error,
     );
-    return undefined;
   }
-}
-
-/**
- * Put a shopping row back after a move to the pantry is permanently refused —
- * without it the item is in neither list. Reads the list id and purchase state from
- * the still-cached entity rather than arguments: the withdrawal runs long after the
- * call site is gone. A no-op when the entity is gone. Given the removal's
- * `change`, restores its counters exactly; false when they cannot be.
- */
-export function restoreItemToShoppingListAfterMoveToPantry(
-  cache: ApolloCache,
-  itemId: string,
-  change?: ListCounterChange,
-): boolean {
-  try {
-    const itemCacheId = cache.identify({
-      __typename: 'ShoppingListItem',
-      id: itemId,
-    });
-    if (!itemCacheId) return true;
-
-    const row = cache.readFragment({
-      id: itemCacheId,
-      fragment: MoveToPantry_RestoreTargetFragmentDoc,
-    });
-
-    const listId = row?.shoppingList.id;
-    if (!row || !listId) return true;
-
-    const wasPurchased = row.purchaseInfo.isPurchased;
-    const parentCacheId = cache.identify({
-      __typename: 'ShoppingList',
-      id: listId,
-    });
-    if (!parentCacheId) return true;
-
-    // Same two-pass shape as the remove: the counters follow the edge insert
-    // rather than assuming it, since this runs from the withdrawal AND the revert.
-    const restore = () => {
-      const restored = cache.modify({
-        id: parentCacheId,
-        fields: {
-          itemsConnection(
-            existing: ConnectionData | undefined,
-            { readField, storeFieldName, toReference },
-          ) {
-            if (
-              !matchesFilter(storeFieldName, 'isPurchased', wasPurchased) ||
-              !existing?.edges
-            )
-              return existing;
-
-            // Idempotent: a withdrawal that runs twice must not duplicate the row.
-            const alreadyThere = existing.edges.some(
-              edge => readField<string>('id', edge.node) === itemId,
-            );
-            if (alreadyThere) return existing;
-
-            const node = toReference({
-              __typename: 'ShoppingListItem',
-              id: itemId,
-            });
-            if (!node) return existing;
-
-            return {
-              ...existing,
-              edges: [
-                ...existing.edges,
-                { __typename: 'ShoppingListItemEdge', cursor: itemId, node },
-              ],
-              totalCount: (existing.totalCount ?? 0) + 1,
-            };
-          },
-        },
-      });
-
-      if (restored) {
-        cache.modify({
-          id: parentCacheId,
-          fields: {
-            ...(wasPurchased && {
-              completedItems(existing: number = 0) {
-                return existing + 1;
-              },
-            }),
-            totalItems(existing: number = 0) {
-              return existing + 1;
-            },
-          },
-        });
-      }
-    };
-
-    if (!change) {
-      restore();
-      return true;
-    }
-    return undoListCounters(cache, change, restore);
-  } catch (error) {
-    logger.warn(
-      'Failed to restore item to ShoppingList after refused move to pantry:',
-      error,
-    );
-    return false;
-  }
-}
-
-/** What {@link unstampItemKeptOnListAfterMoveToPantry} restores. */
-export interface KeptOnListStamp {
-  listId: string;
-  itemId: string;
-  wasPurchased: boolean;
-  previousMovedToPantryAt: string | null;
-  counterChange: ListCounterChange | undefined;
 }
 
 /**
@@ -228,21 +100,11 @@ export function stampItemBoughtOnList(
   listId: string,
   itemId: string,
   wasPurchased: boolean,
-): KeptOnListStamp {
-  const previousMovedToPantryAt = readMovedToPantryAt(cache, itemId);
+): void {
   writePurchaseInfo(cache, itemId, { isPurchased: true });
-  const counterChange = wasPurchased
-    ? undefined
-    : recordListCounters(cache, listId, () =>
-        moveShoppingListItemToPurchased(cache, listId, { id: itemId }),
-      );
-  return {
-    listId,
-    itemId,
-    wasPurchased,
-    previousMovedToPantryAt,
-    counterChange,
-  };
+  if (!wasPurchased) {
+    moveShoppingListItemToPurchased(cache, listId, { id: itemId });
+  }
 }
 
 /**
@@ -254,38 +116,11 @@ export function stampItemKeptOnListAfterMoveToPantry(
   listId: string,
   itemId: string,
   wasPurchased: boolean,
-): KeptOnListStamp {
-  const stamp = stampItemBoughtOnList(cache, listId, itemId, wasPurchased);
+  now: string,
+): void {
+  stampItemBoughtOnList(cache, listId, itemId, wasPurchased);
   // A second write: the writer clears the stamp on the flip itself.
-  writePurchaseInfo(cache, itemId, {
-    movedToPantryAt: new Date().toISOString(),
-  });
-  return stamp;
-}
-
-/**
- * Reverse {@link stampItemKeptOnListAfterMoveToPantry} for a refused move. False
- * when another write moved the list counters in between, so the caller re-reads.
- */
-export function unstampItemKeptOnListAfterMoveToPantry(
-  cache: ApolloCache,
-  stamp: KeptOnListStamp,
-): boolean {
-  writePurchaseInfo(
-    cache,
-    stamp.itemId,
-    {
-      isPurchased: stamp.wasPurchased,
-      movedToPantryAt: stamp.previousMovedToPantryAt,
-    },
-    { restoring: true },
-  );
-  if (!stamp.counterChange) return true;
-  return undoListCounters(cache, stamp.counterChange, () =>
-    moveShoppingListItemToUnpurchased(cache, stamp.listId, {
-      id: stamp.itemId,
-    }),
-  );
+  writePurchaseInfo(cache, itemId, { movedToPantryAt: now });
 }
 
 /**

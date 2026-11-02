@@ -322,6 +322,7 @@ export function useShoppingListSubscriptions(userId?: string) {
             fragment: UseShoppingListSubscriptions_ListRefFragmentDoc,
             fragmentName: 'useShoppingListSubscriptions_listRef',
             from: { __typename: 'ShoppingList', id: payload.listId },
+            optimistic: true,
           });
           if (cachedList) {
             void fetchEventEntity(

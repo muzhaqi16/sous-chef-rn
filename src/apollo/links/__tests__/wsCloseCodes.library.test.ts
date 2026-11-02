@@ -24,6 +24,11 @@ jest.unmock('graphql-ws');
 import { createClient } from 'graphql-ws';
 import { isLibraryFatalCloseCode, WS_CLOSE_TERMINATED } from '../wsCloseCodes';
 
+/** The clock only moves past a timer with a delay, so each socket step has one. */
+const SOCKET_STEP_MS = 1;
+/** Long enough for a retryable close to re-dial many times. */
+const SAMPLE_MS = 1500;
+
 /**
  * A socket that acks the handshake, then closes with `code` as soon as a
  * subscription is sent.
@@ -42,7 +47,7 @@ const fakeSocketClosingWith = (code: number) =>
     onerror: (() => void) | null = null;
 
     constructor() {
-      setTimeout(() => this.onopen?.(), 0);
+      setTimeout(() => this.onopen?.(), SOCKET_STEP_MS);
     }
 
     send(raw: string) {
@@ -53,14 +58,14 @@ const fakeSocketClosingWith = (code: number) =>
             this.onmessage?.({
               data: JSON.stringify({ type: 'connection_ack' }),
             }),
-          0,
+          SOCKET_STEP_MS,
         );
       }
       if (msg.type === 'subscribe') {
         setTimeout(() => {
           this.readyState = FakeWebSocket.CLOSED;
           this.onclose?.({ code, reason: 'probe' });
-        }, 0);
+        }, SOCKET_STEP_MS);
       }
     }
 
@@ -84,7 +89,7 @@ class HoldingSocket {
   onerror: (() => void) | null = null;
 
   constructor() {
-    setTimeout(() => this.onopen?.(), 0);
+    setTimeout(() => this.onopen?.(), SOCKET_STEP_MS);
   }
 
   send(raw: string) {
@@ -94,7 +99,7 @@ class HoldingSocket {
           this.onmessage?.({
             data: JSON.stringify({ type: 'connection_ack' }),
           }),
-        0,
+        SOCKET_STEP_MS,
       );
     }
   }
@@ -111,57 +116,60 @@ class HoldingSocket {
  *
  * @returns how the subscription ended, and how many connects it took.
  */
-const observeClose = (
+const observeClose = async (
   code: number,
   overrides: Partial<Parameters<typeof createClient>[0]> = {},
-) =>
-  new Promise<{ ended: 'error' | 'complete'; connects: number }>(resolve => {
-    let connects = 0;
+) => {
+  let connects = 0;
+  let ended: 'error' | 'complete' | 'still re-dialling' = 'still re-dialling';
 
-    const client = createClient({
-      url: 'ws://localhost:4000/graphql',
-      webSocketImpl: fakeSocketClosingWith(code),
-      lazy: true,
-      retryAttempts: Infinity,
-      // A macrotask, not `Promise.resolve()`: a microtask-only wait starves the
-      // fake socket's own timers and the retry loop never makes progress.
-      retryWait: () => new Promise<void>(r => setTimeout(r, 1)),
-      // Unconditionally retryable. Anything that still ends the subscription
-      // was refused by the library over our heads.
-      shouldRetry: () => true,
-      on: {
-        connected: () => {
-          connects++;
-        },
+  const client = createClient({
+    url: 'ws://localhost:4000/graphql',
+    webSocketImpl: fakeSocketClosingWith(code),
+    lazy: true,
+    retryAttempts: Infinity,
+    retryWait: () => Promise.resolve(),
+    // Unconditionally retryable. Anything that still ends the subscription
+    // was refused by the library over our heads.
+    shouldRetry: () => true,
+    on: {
+      connected: () => {
+        connects++;
       },
-      ...overrides,
-    });
-
-    let done = false;
-    const settle = (ended: 'error' | 'complete') => {
-      if (done) return;
-      done = true;
-      clearTimeout(window);
-      resolve({ ended, connects });
-      void client.dispose();
-    };
-    // A retryable close never settles on its own — sample a fixed window and
-    // report how many dials it took.
-    const window = setTimeout(() => settle('complete'), 1500);
-
-    client.subscribe(
-      { query: '{ __typename }' },
-      {
-        next: () => {},
-        error: () => settle('error'),
-        complete: () => settle('complete'),
-      },
-    );
+    },
+    ...overrides,
   });
 
-describe('isLibraryFatalCloseCode matches the installed graphql-ws', () => {
-  jest.setTimeout(20_000);
+  client.subscribe(
+    { query: '{ __typename }' },
+    {
+      next: () => {},
+      error: () => {
+        ended = 'error';
+      },
+      complete: () => {
+        ended = 'complete';
+      },
+    },
+  );
+  await jest.advanceTimersByTimeAsync(SAMPLE_MS);
+  // Waits for a dial in progress, which only the clock can finish.
+  const disposed = client.dispose();
+  await jest.runAllTimersAsync();
+  await disposed;
 
+  return { ended, connects };
+};
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+describe('isLibraryFatalCloseCode matches the installed graphql-ws', () => {
   it.each([
     ['internal server error', 4500],
     ['too many initialisation requests', 4429],
@@ -205,16 +213,17 @@ describe('isLibraryFatalCloseCode matches the installed graphql-ws', () => {
       webSocketImpl: HoldingSocket,
       lazy: true,
       retryAttempts: 0,
-      on: { closed: e => closes.push((e as { code: number }).code) },
+      on: {
+        connected: () => client.terminate(),
+        closed: e => closes.push((e as { code: number }).code),
+      },
     });
 
-    await new Promise<void>(resolve => {
-      client.subscribe(
-        { query: '{ __typename }' },
-        { next: () => {}, error: () => resolve(), complete: () => resolve() },
-      );
-      setTimeout(() => client.terminate(), 20);
-    });
+    client.subscribe(
+      { query: '{ __typename }' },
+      { next: () => {}, error: () => {}, complete: () => {} },
+    );
+    await jest.runAllTimersAsync();
 
     expect(closes).toContain(WS_CLOSE_TERMINATED);
   });
@@ -227,14 +236,12 @@ describe('isLibraryFatalCloseCode matches the installed graphql-ws', () => {
   // handshake and immediately closes therefore gets no backoff at all — which
   // is exactly how this server refuses a subscription over the per-user cap.
   describe('a server that accepts then immediately closes', () => {
-    const GATE_MS = 300;
-
     it('runs retryWait not once, so pacing put there would not apply', async () => {
       let retryWaits = 0;
       await observeClose(1000, {
         retryWait: () => {
           retryWaits++;
-          return new Promise<void>(r => setTimeout(r, GATE_MS));
+          return Promise.resolve();
         },
       });
 
@@ -243,22 +250,45 @@ describe('isLibraryFatalCloseCode matches the installed graphql-ws', () => {
 
     it('is paced by a wait inside url(), which every dial passes through', async () => {
       let urlCalls = 0;
-
-      // Both halves measured in the same run and compared, so the assertion
-      // does not depend on how fast this machine happens to be.
-      const unpaced = await observeClose(1000);
-      const paced = await observeClose(1000, {
+      let connects = 0;
+      let openGate = () => {};
+      const client = createClient({
         url: async () => {
           urlCalls++;
-          await new Promise<void>(r => setTimeout(r, GATE_MS));
+          await new Promise<void>(resolve => {
+            openGate = resolve;
+          });
           return 'ws://localhost:4000/graphql';
+        },
+        webSocketImpl: fakeSocketClosingWith(1000),
+        lazy: true,
+        retryAttempts: Infinity,
+        shouldRetry: () => true,
+        on: {
+          connected: () => {
+            connects++;
+          },
         },
       });
 
-      expect(urlCalls).toBeGreaterThan(0);
-      // url() is awaited before every dial, so the flap can only go as fast as
-      // the gate lets it — here an order of magnitude slower.
-      expect(paced.connects * 10).toBeLessThan(unpaced.connects);
+      client.subscribe(
+        { query: '{ __typename }' },
+        { next: () => {}, error: () => {}, complete: () => {} },
+      );
+      await jest.runAllTimersAsync();
+      expect([urlCalls, connects]).toEqual([1, 0]);
+
+      // Each dial waits at the gate, so one opening is one connect.
+      for (const dial of [1, 2, 3]) {
+        openGate();
+        await jest.runAllTimersAsync();
+        expect([urlCalls, connects]).toEqual([dial + 1, dial]);
+      }
+
+      const disposed = client.dispose();
+      openGate();
+      await jest.runAllTimersAsync();
+      await disposed;
     });
   });
 });

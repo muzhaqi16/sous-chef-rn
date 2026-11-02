@@ -6,6 +6,7 @@ import {
   recordMock,
   renderHookWithApollo,
   type QueryDataFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import {
   CreateMealTemplateDocument,
@@ -82,6 +83,7 @@ const template = (
             customMealName: null,
             recipe: {
               __typename: 'Recipe',
+              version: 1,
               id: 'recipe-1',
               name: 'Ragu',
               imageUrl: null,
@@ -111,7 +113,7 @@ const template = (
 /** A cache holding the template the way opening it leaves it. */
 const seeded = (data = template()): InMemoryCache => {
   const cache = makeCache();
-  cache.writeQuery({
+  seedQuery(cache, {
     query: GetMealTemplateDocument,
     variables: { id: TEMPLATE_ID, itemsFirst: MEALS_PAGE_SIZE },
     data,
@@ -125,9 +127,14 @@ const PLAN_ID = 'plan-1';
 const mealsOnScreen = (cache: InMemoryCache, planId: string | null) =>
   cache
     .readFragment({
-      id: cache.identify({ __typename: 'MealPlan', id: planId ?? '' }),
+      id: cache.identify({
+        __typename: 'MealPlan',
+        version: 1,
+        id: planId ?? '',
+      }),
       fragment: MealPlanMain_MealPlanFragmentDoc,
       fragmentName: 'MealPlanMain_mealPlan',
+      optimistic: true,
     })
     ?.mealPlanItemsConnection.edges.map(edge => edge.node.id) ?? null;
 
@@ -151,7 +158,7 @@ const createItemMock = () =>
     data: {
       createMealPlanItem: {
         __typename: 'CreateMealPlanItemPayload',
-        mealPlanItem: { __typename: 'MealPlanItem', id: 'meal-1' },
+        mealPlanItem: { __typename: 'MealPlanItem', version: 1, id: 'meal-1' },
       },
     },
     partial: true,
@@ -307,7 +314,7 @@ describe('useMealTemplateActions', () => {
         sentIds,
       );
       expect(
-        sentIds.map(id => cache.extract()[`MealPlanItem:${id}`]?.date),
+        sentIds.map(id => cache.extract(true)[`MealPlanItem:${id}`]?.date),
       ).toEqual(['2026-02-02', '2026-02-04']);
     });
   });
@@ -465,7 +472,7 @@ describe('useMealTemplateActions', () => {
 
       // The copy is in the cache before any server round trip, with its meals.
       expect(
-        cache.extract()[`MealTemplate:${response?.mealTemplateId}`],
+        cache.extract(true)[`MealTemplate:${response?.mealTemplateId}`],
       ).toMatchObject({ name: 'Weeknights (Copy)' });
       expect(
         readTemplateSource(cache, response?.mealTemplateId ?? '')?.items.map(
@@ -561,7 +568,7 @@ describe('useMealTemplateActions', () => {
         }
       `;
       const cache = makeCache();
-      cache.writeQuery({
+      seedQuery(cache, {
         query: TEMPLATES,
         data: {
           mealTemplates: {
@@ -595,7 +602,9 @@ describe('useMealTemplateActions', () => {
       expect(list?.mealTemplates.edges.map(({ node }) => node.id)).toEqual([
         'template-2',
       ]);
-      expect(cache.extract()[`MealTemplate:${TEMPLATE_ID}`]).toBeUndefined();
+      expect(
+        cache.extract(true)[`MealTemplate:${TEMPLATE_ID}`],
+      ).toBeUndefined();
     });
   });
 });

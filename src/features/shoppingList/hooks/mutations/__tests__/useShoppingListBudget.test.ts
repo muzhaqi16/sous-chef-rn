@@ -1,8 +1,8 @@
-import { act, waitFor } from '@testing-library/react-native';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { UpdateShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UseShoppingListBudget_ListFragmentDoc } from '../useShoppingListBudget.generated';
 import { useShoppingListBudget } from '../useShoppingListBudget';
@@ -22,11 +22,20 @@ const readBudget = (cache: ReturnType<typeof seedCache>) =>
     id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
     fragment: UseShoppingListBudget_ListFragmentDoc,
     fragmentName: 'useShoppingListBudget_list',
+    optimistic: true,
   });
 
 const okMock = () => ({
   request: { query: UpdateShoppingListDocument, variables: () => true },
   result: { data: { updateShoppingList: null } }, // queued signature
+});
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
 });
 
 describe('useShoppingListBudget', () => {
@@ -38,7 +47,7 @@ describe('useShoppingListBudget', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
+    await drained(async () => {
       const promise = result.current.setPriceTracking('list-1', true);
       expect(readBudget(cache)?.priceTracking).toBe(true);
       resolved = await promise;
@@ -72,13 +81,12 @@ describe('useShoppingListBudget', () => {
     });
 
     let resolved: boolean | undefined;
-    await act(async () => {
-      resolved = await result.current.setPriceTracking('list-1', true);
-    });
+    resolved = await drained(() =>
+      result.current.setPriceTracking('list-1', true),
+    );
 
     expect(resolved).toBe(false);
-    await waitFor(() => {
-      expect(readBudget(cache)?.priceTracking).toBe(false);
-    });
+    await drainTimers();
+    expect(readBudget(cache)?.priceTracking).toBe(false);
   });
 });

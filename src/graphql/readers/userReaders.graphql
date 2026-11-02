@@ -7,6 +7,7 @@ fragment UserReaders on User {
     calorieTarget
     carbsTarget
     cookingSkillLevel
+    cooksFor
     createdAt
     dislikedIngredients
     fatTarget
@@ -25,6 +26,7 @@ fragment UserReaders on User {
       item {
         id
         name
+        version
       }
       notes
       severity
@@ -74,18 +76,18 @@ fragment UserReaders on User {
   }
   settings {
     id
-    autoSync
+    budgetAndPrices
     compactMode
     createdAt
     deviceUnitSystem
     language
-    offlineMode
     personalizedAds
     preferredCurrency
     preferredUnitSystem
     shareUsageData
     shareWithPartners
     showTutorials
+    storeMode
     theme
     timezone
     updatedAt

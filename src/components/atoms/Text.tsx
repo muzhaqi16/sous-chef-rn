@@ -100,9 +100,16 @@ export const Text: React.FC<TextProps> = ({
   children,
   ...rest
 }) => {
-  styles.useVariants({ role, tone, align, size, weight, lineHeight });
+  const variantStyles = styles.useVariants({
+    role,
+    tone,
+    align,
+    size,
+    weight,
+    lineHeight,
+  });
   return (
-    <ScaledText {...rest} style={[styles.text, style]}>
+    <ScaledText {...rest} style={[variantStyles.text, style]}>
       {children}
     </ScaledText>
   );

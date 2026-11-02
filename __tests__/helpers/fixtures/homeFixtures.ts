@@ -1,7 +1,7 @@
 /**
  * Test fixture builders that mirror the production GraphQL document selection
  * for `GetHomes` (HomeListFragment). Tests must match the document selection
- * exactly when seeding via `cache.writeQuery`, otherwise Apollo silently drops
+ * exactly when seeding via `seedQuery`, otherwise Apollo silently drops
  * unselected fields and the production normalization path breaks.
  *
  * Use these helpers instead of writing flat `{ home: { pantries: [] } }`
@@ -95,6 +95,7 @@ export function homeNode(home: HomeFixture): HomeNode {
       'MembershipEdge',
       (home.members ?? []).map(m => ({
         __typename: 'Membership',
+        version: 1,
         id: m.id,
         homeId: home.id,
         userId: m.userId ?? `user-${m.id}`,
@@ -123,6 +124,7 @@ export function homeNode(home: HomeFixture): HomeNode {
       'HomeInviteEdge',
       (home.invites ?? []).map(i => ({
         __typename: 'HomeInvite',
+        version: 1,
         id: i.id,
         email: i.email ?? `invite-${i.id}@example.com`,
         recipientName: i.recipientName ?? null,
@@ -137,6 +139,7 @@ export function homeNode(home: HomeFixture): HomeNode {
       'PantryEdge',
       (home.pantries ?? []).map(p => ({
         __typename: 'Pantry',
+        version: 1,
         id: p.id,
         name: p.name ?? `Pantry ${p.id}`,
         isDefault: p.isDefault ?? false,
@@ -144,6 +147,7 @@ export function homeNode(home: HomeFixture): HomeNode {
     ),
     myMembership: {
       __typename: 'Membership',
+      version: 1,
       id: `mm-${home.id}`,
       role: MembershipRole.Owner,
       canManageHome: true,
@@ -190,7 +194,7 @@ export function homeDetailNode(home: HomeFixture): HomeDetailNode {
 }
 
 /**
- * Build the full GetHomes query result. Pass to `cache.writeQuery({ query: GetHomesDocument, data: ... })`
+ * Build the full GetHomes query result. Pass to `seedQuery(cache, { query: GetHomesDocument, data: ... })`
  * or to `recordMock(GetHomesDocument, { data: ... })`.
  */
 export function homesData(homes: HomeFixture[]): Unmasked<GetHomesQuery> {

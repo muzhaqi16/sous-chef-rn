@@ -57,10 +57,10 @@ function RoleCard({
   onSelect: () => void;
   children: React.ReactNode;
 }) {
-  styles.useVariants({ selected: isSelected });
+  const variantStyles = styles.useVariants({ selected: isSelected });
   return (
     <AppPressable
-      style={styles.roleCard}
+      style={variantStyles.roleCard}
       onPress={onSelect}
       disabled={isSubmitting}
     >
@@ -71,10 +71,10 @@ function RoleCard({
 
 /** Radio outer + inner circle, selected state via Unistyles variants. */
 function RadioMarker({ isSelected }: { isSelected: boolean }) {
-  styles.useVariants({ selected: isSelected });
+  const variantStyles2 = styles.useVariants({ selected: isSelected });
   return (
-    <View style={styles.radioOuter}>
-      {!!isSelected && <View style={styles.radioInner} />}
+    <View style={variantStyles2.radioOuter}>
+      {!!isSelected && <View style={variantStyles2.radioInner} />}
     </View>
   );
 }

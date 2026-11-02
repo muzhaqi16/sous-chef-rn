@@ -38,7 +38,7 @@ export const resetAllFeatureHints = (): void => {
   store.clearAllFeatureHints();
   // Set synchronously — the server sync is async, and the hooks re-read the
   // moment the generation below bumps.
-  store.setShowTutorials(true);
+  store.mirrorSettings({ showTutorials: true });
   store.bumpTutorialResetGeneration();
 };
 

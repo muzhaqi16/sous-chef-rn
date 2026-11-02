@@ -42,6 +42,7 @@ const checkPantryBelongsToHome = (
     cache.readFragment({
       id: cacheId,
       fragment: UseDefaultHome_HomeFragmentDoc,
+      optimistic: true,
     });
 
   const connection = home ? home.pantriesConnection : null;

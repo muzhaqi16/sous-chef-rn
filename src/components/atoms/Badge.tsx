@@ -7,6 +7,7 @@ import { Icon, type IconName, type IconTone } from '#components/atoms/Icon';
 
 export type BadgeVariant =
   | 'default'
+  | 'neutral'
   | 'primary'
   | 'success'
   | 'warning'
@@ -14,6 +15,7 @@ export type BadgeVariant =
 
 const BADGE_TEXT_TONE: Record<BadgeVariant, TextTone> = {
   default: 'primary',
+  neutral: 'secondary',
   primary: 'accent',
   success: 'success',
   warning: 'warning',
@@ -22,6 +24,7 @@ const BADGE_TEXT_TONE: Record<BadgeVariant, TextTone> = {
 
 const BADGE_ICON_TONE: Record<BadgeVariant, IconTone> = {
   default: 'textPrimary',
+  neutral: 'textSecondary',
   primary: 'primary',
   success: 'success',
   warning: 'warning',
@@ -58,7 +61,7 @@ export const Badge: React.FC<BadgeProps> = ({
   size = 'small',
   style,
 }) => {
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     variant: variant === 'default' ? undefined : variant,
     size,
   });
@@ -69,7 +72,7 @@ export const Badge: React.FC<BadgeProps> = ({
       accessible={typeof children === 'string'}
       accessibilityRole="text"
       accessibilityLabel={typeof children === 'string' ? children : undefined}
-      style={[styles.badge, !!icon && styles.withIcon, style]}
+      style={[variantStyles.badge, !!icon && variantStyles.withIcon, style]}
     >
       {!!icon && <Icon name={icon} size="xs" tone={BADGE_ICON_TONE[variant]} />}
       <Text role="footnoteStrong" tone={BADGE_TEXT_TONE[variant]}>
@@ -110,6 +113,8 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       variant: {
         default: { backgroundColor: theme.colors.surface },
+        // `default` is the card's own fill; this one shows on a card.
+        neutral: { backgroundColor: theme.colors.surfaceVariant },
         primary: { backgroundColor: theme.colors.primaryLight },
         success: { backgroundColor: theme.colors.successLight },
         warning: { backgroundColor: theme.colors.warningLight },

@@ -1,22 +1,20 @@
 /**
- * A meal plan item's local-first cache writes: the complete optimistic item and
- * its edge on the plan's `mealPlanItemsConnection`.
+ * A meal plan item's local-first cache writes: the complete row and its edge on
+ * the plan's `mealPlanItemsConnection`.
  */
 
 import type { ApolloCache } from '@apollo/client';
-import type { Unmasked } from '@apollo/client/masking';
-import { MealPlanItemActions_OptimisticFullItemFragmentDoc } from '#features/mealPlan/hooks/useMealPlanItemActions.generated';
 import type { CreateMealPlanItemInput } from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
 } from '#/apollo/utils/cacheUpdaters';
-import { isHeld, writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
-import { errorService } from '#/services/errorService';
 import {
-  MealPlanItem_RowFragmentDoc,
-  type MealPlanItem_RowFragment,
-} from './mealPlanItem.generated';
+  hideEntity,
+  isHeld,
+  writeLocalEntity,
+} from '#/apollo/utils/writeLocalEntity';
+import { MealPlanItem_RowFragmentDoc } from './mealPlanItem.generated';
 import {
   NEUTRAL_LOCAL_MEAL_PLAN_ITEM,
   NEUTRAL_LOCAL_MEAL_PLAN_ITEM_BY_TYPE,
@@ -25,9 +23,11 @@ import {
 /** The plan field its meals hang off; the pending-delete guard names it too. */
 export const MEAL_PLAN_ITEMS_FIELD = 'mealPlanItemsConnection';
 
-export const addToMealPlanItems = createAddToParentConnectionUpdater<{
-  id: string;
-}>('MealPlan', MEAL_PLAN_ITEMS_FIELD, 'MealPlanItem');
+export const addToMealPlanItems = createAddToParentConnectionUpdater(
+  'MealPlan',
+  MEAL_PLAN_ITEMS_FIELD,
+  'MealPlanItem',
+);
 export const removeFromMealPlanItems = createRemoveFromParentConnectionUpdater(
   'MealPlan',
   MEAL_PLAN_ITEMS_FIELD,
@@ -51,35 +51,6 @@ export function adoptServerMealPlanItem(
   const serverItem = { __typename: 'MealPlanItem', id: serverItemId };
   addToMealPlanItems(cache, mealPlanId, serverItem, { position: 'end' });
 }
-
-/** What every query reads on a meal (`MealPlanItemReaders`), flat. */
-export type OptimisticMealPlanItem = {
-  __typename: 'MealPlanItem';
-  id: string;
-  version: number;
-  date: string;
-  mealType: CreateMealPlanItemInput['mealType'];
-  customMealName: string | null;
-  servings: number | null;
-  calories: number | null;
-  usedPantryItems: Unmasked<MealPlanItem_RowFragment>['usedPantryItems'];
-  notes: string | null;
-  isCompleted: boolean;
-  completedAt: string | null;
-  recipe: Unmasked<MealPlanItem_RowFragment>['recipe'];
-};
-
-/** Writes a complete item under every display fragment that reads it. */
-export const writeMealPlanItem = (
-  cache: ApolloCache,
-  data: OptimisticMealPlanItem,
-) =>
-  cache.writeFragment({
-    id: cache.identify(data),
-    fragment: MealPlanItemActions_OptimisticFullItemFragmentDoc,
-    fragmentName: 'MealPlanItemActions_optimisticFullItem',
-    data,
-  });
 
 /**
  * Writes a local-first meal complete for every query reading one. Its recipe is
@@ -118,32 +89,27 @@ function writeMealPlanItemRow(
 }
 
 /**
- * Writes a local-first meal into the cache and onto its plan's list, and
- * returns the revert for a refusal. Only an input carrying its minted id is
- * written; without one there is nothing to revert.
+ * Shows a local-first meal on its plan. Only an input carrying its minted id is
+ * written.
  */
-export function writeLocalMealPlanItem(
+export function showLocalMealPlanItem(
   cache: ApolloCache,
   input: CreateMealPlanItemInput,
-): (() => void) | undefined {
+): void {
   const { id, mealPlanId } = input;
-  if (!id) return undefined;
-  try {
-    const item = writeMealPlanItemRow(cache, id, input);
-    addToMealPlanItems(cache, mealPlanId, item, { position: 'end' });
-  } catch (cacheError) {
-    errorService.reportError(cacheError, {
-      operation: 'Add Meal (optimistic)',
-    });
-  }
+  if (!id) return;
+  const item = writeMealPlanItemRow(cache, id, input);
+  addToMealPlanItems(cache, mealPlanId, item, { position: 'end' });
+}
 
-  return () => {
-    try {
-      removeFromMealPlanItems(cache, mealPlanId, id, { evictItem: true });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Revert rejected Meal Plan Item',
-      });
-    }
-  };
+/** Takes a meal out from a layer; a meal already hidden changes nothing. */
+export function hideMealPlanItem(
+  cache: ApolloCache,
+  mealPlanId: string,
+  itemId: string,
+): void {
+  const item = { __typename: 'MealPlanItem', id: itemId };
+  if (!isHeld(cache, item)) return;
+  removeFromMealPlanItems(cache, mealPlanId, itemId);
+  hideEntity(cache, item);
 }

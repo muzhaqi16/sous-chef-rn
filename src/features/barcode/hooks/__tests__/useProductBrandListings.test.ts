@@ -1,8 +1,8 @@
-import { waitFor } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ProductBrandListingsDocument } from '../useProductBrandListings.generated';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
 import { useProductBrandListings } from '../useProductBrandListings';
@@ -35,6 +35,14 @@ const list = (
   enabled: boolean,
   brands: ReturnType<typeof entry>[],
 ): BrandListView => ({ id, name, enabled, brands });
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useProductBrandListings', () => {
   it("names each switched-on list, the parent it went through, and the user's note", async () => {
@@ -69,7 +77,8 @@ describe('useProductBrandListings', () => {
       { operationMocks: [mock.mock] },
     );
 
-    await waitFor(() => expect(result.current.listings).toHaveLength(2));
+    await drainTimers();
+    expect(result.current.listings).toHaveLength(2);
     expect(result.current.listings).toEqual([
       {
         key: 'l-boycott:e-1',
@@ -130,7 +139,8 @@ describe('useProductBrandListings', () => {
       { operationMocks: [mock.mock] },
     );
 
-    await waitFor(() => expect(mock.fired).toHaveLength(1));
+    await drainTimers();
+    expect(mock.fired).toHaveLength(1);
     expect(result.current.listings).toEqual([
       {
         key: 'l-boycott:e-2',
@@ -175,7 +185,8 @@ describe('useProductBrandListings', () => {
 
     it('drops a match on a list the user deleted', async () => {
       const { result, rerender } = renderListings(null);
-      await waitFor(() => expect(result.current.listings).toHaveLength(1));
+      await drainTimers();
+      expect(result.current.listings).toHaveLength(1);
 
       rerender({ lists: [] });
 
@@ -184,7 +195,8 @@ describe('useProductBrandListings', () => {
 
     it('drops a match whose brand the user took off the list', async () => {
       const { result, rerender } = renderListings([AVOID_HOLDING_JIF]);
-      await waitFor(() => expect(result.current.listings).toHaveLength(1));
+      await drainTimers();
+      expect(result.current.listings).toHaveLength(1);
 
       rerender({
         lists: [
@@ -198,7 +210,8 @@ describe('useProductBrandListings', () => {
     it('keeps a match the list still holds', async () => {
       const { result } = renderListings([AVOID_HOLDING_JIF]);
 
-      await waitFor(() => expect(result.current.listings).toHaveLength(1));
+      await drainTimers();
+      expect(result.current.listings).toHaveLength(1);
       expect(result.current.listings).toEqual([
         {
           key: 'l-avoid:e-2',

@@ -8,6 +8,11 @@ import {
 } from '@testing-library/react-native';
 import { PurchaseAmountSheet } from '../PurchaseAmountSheet';
 import type { HeaderAction } from '#components/molecules/HeaderActionIcon';
+import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
+  useBudgetAndPricesEnabled: jest.fn(() => true),
+}));
 
 type PurchaseAmountSheetProps = React.ComponentProps<
   typeof PurchaseAmountSheet
@@ -98,6 +103,7 @@ const renderWithInit = (props: PurchaseAmountSheetProps) => {
 describe('PurchaseAmountSheet', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(true);
   });
 
   it('renders the static title and the item name inside the sheet', () => {
@@ -225,7 +231,22 @@ describe('PurchaseAmountSheet', () => {
     expect(onConfirm).toHaveBeenCalledWith(3, 7.5);
   });
 
-  // Budget & prices off: the amount bought, and nothing about money.
+  // Prices can be gathered before they are shown: the field, with no guess.
+  it('takes a price with prices off, suggesting none', () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    const describePrice = jest.fn(() => 'More than your usual');
+    renderWithInit(buildProps({ describePrice }));
+
+    const price = screen.getByTestId('purchase-price-input');
+    expect(price.props.value).toBe('');
+    expect(price.props.placeholder).toBe('0.00');
+    expect(screen.queryByText(/9\.98/)).toBeNull();
+
+    fireEvent.changeText(price, '9.98');
+    expect(screen.queryByTestId('purchase-price-note')).toBeNull();
+  });
+
+  // A list with "Ask for prices on this list" off: the amount bought alone.
   it('asks for the amount alone when it may not ask for a price', () => {
     const onConfirm = jest.fn();
     renderWithInit(buildProps({ onConfirm, askPrice: false }));

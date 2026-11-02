@@ -81,7 +81,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
   testID,
 }) => {
   const glyphSize = iconSize ?? (size === 'compact' ? 32 : 64);
-  styles.useVariants({ size });
+  const variantStyles = styles.useVariants({ size });
   // An entering animation is safe here: an empty state mounts once, never in a
   // recycled cell that would re-fire it on scroll.
   const containerEntering = FadeIn.duration(motion.timing.MODERATE);
@@ -103,9 +103,11 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
     // Name/emoji icons sit inside a soft tinted circular badge so the empty
     // state reads as a designed element rather than a lone floating glyph.
     return (
-      <Animated.View entering={badgeEntering} style={styles.iconBadge}>
+      <Animated.View entering={badgeEntering} style={variantStyles.iconBadge}>
         {isEmoji ? (
-          <Text style={[styles.emoji, { fontSize: glyphSize }]}>{icon}</Text>
+          <Text style={[variantStyles.emoji, { fontSize: glyphSize }]}>
+            {icon}
+          </Text>
         ) : (
           <Icon
             name={icon as IconName}
@@ -124,24 +126,29 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
       entering={containerEntering}
       testID={testID}
       accessibilityRole="summary"
-      style={[styles.container, { justifyContent: alignment }, style]}
+      style={[variantStyles.container, { justifyContent: alignment }, style]}
     >
       {renderIcon()}
       <Text
         role={size === 'compact' ? 'bodyStrong' : 'subheading'}
         align="center"
         tone="primary"
-        style={styles.title}
+        style={variantStyles.title}
       >
         {title}
       </Text>
       {!!description && (
-        <Text align="center" tone="secondary" style={styles.description}>
+        <Text align="center" tone="secondary" style={variantStyles.description}>
           {description}
         </Text>
       )}
       {!!hint && (
-        <Text role="caption" align="center" tone="tertiary" style={styles.hint}>
+        <Text
+          role="caption"
+          align="center"
+          tone="tertiary"
+          style={variantStyles.hint}
+        >
           {hint}
         </Text>
       )}
@@ -152,7 +159,7 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
           size="medium"
           icon={action.icon}
           disabled={action.disabled}
-          style={styles.actionButton}
+          style={variantStyles.actionButton}
         >
           {action.label}
         </Button>

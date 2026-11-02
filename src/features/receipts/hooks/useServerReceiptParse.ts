@@ -11,7 +11,8 @@ import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { getDeviceLocale } from '#/utils/deviceLocale';
 import { backoffDelay } from '#/utils/backoff';
-import { useIsOnline } from '#store/useAppStore';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Telemetry } from '#/services/telemetry';
 import {
   ReceiptParseReadersFragmentDoc,
@@ -85,7 +86,7 @@ export type ServerReadingStatus =
  */
 export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const { t } = useTranslation();
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
   const draft = useReceiptDraft();
   const { askServerParse, settleServerParse } = useReceiptDraftActions();
   // When this visit first asked for each parse.
@@ -132,7 +133,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       (asked.state === 'limited' && resendsWhenAllowed));
 
   useEffect(() => {
-    if (!waiting || !isOnline) return;
+    if (!waiting || isOffline) return;
     if (asked?.state === 'limited' && Date.now() < Date.parse(asked.retryAt)) {
       return;
     }
@@ -176,6 +177,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       const parse = client.cache.readFragment<ReceiptParseReadersFragment>({
         id: client.cache.identify({ __typename: 'ReceiptParse', id }),
         fragment: ReceiptParseReadersFragmentDoc,
+        optimistic: true,
       });
       const result = classifyCreateResult({
         accepted: !!appliedPayload(settled.data),
@@ -210,7 +212,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     void send();
   }, [
     waiting,
-    isOnline,
+    isOffline,
     asked,
     draft,
     resends,
@@ -237,7 +239,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
     return () => clearTimeout(limit);
   }, [polled, polling]);
   const channelOpen = useIsLiveChannelOpen();
-  const { data, refetch } = useQuery(
+  const { data, error, refetch } = useQuery(
     ReceiptParseDocument,
     polled
       ? {
@@ -254,6 +256,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
         }
       : skipToken,
   );
+  useApolloErrorLogger(ReceiptParseDocument, error);
 
   useEffect(() => {
     if (!polled) return;
@@ -284,7 +287,7 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
   const readingStatus = (): ServerReadingStatus => {
     if (!enabled || !draft || draft.parsed) return 'none';
     if (!asked || asked.state === 'pending') {
-      if (!isOnline) return 'offline';
+      if (isOffline) return 'offline';
       return gaveUp ? 'retryLater' : 'reading';
     }
     switch (asked.state) {

@@ -1,6 +1,7 @@
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { readDefaultPantryId } from '../homePantries';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 // The home as the homes query stores it: `pantriesConnection(first: 20)`.
 const STORED_HOME = gql`
@@ -20,7 +21,7 @@ const STORED_HOME = gql`
 describe('readDefaultPantryId', () => {
   it('reads the default pantry of a home the homes query stored', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Home:h-1',
       fragment: STORED_HOME,
       data: {

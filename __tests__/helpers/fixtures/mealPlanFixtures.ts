@@ -7,19 +7,21 @@ import {
   type UseDuplicateMealPlan_MealPlanFragment,
 } from '#features/mealPlan/hooks/useDuplicateMealPlan.generated';
 import { typedConnectionOf } from './connectionOf';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 type PlanMeal = PlanSource['mealPlanItems'][number];
 
 /** A recipe dinner on the plan's first day. */
 export const recipeDinner = (overrides: Partial<PlanMeal> = {}): PlanMeal => ({
   __typename: 'MealPlanItem',
+  version: 1,
   id: 'mpi-1',
   date: '2026-01-05',
   mealType: MealType.Dinner,
   servings: 2,
   notes: null,
   customMealName: null,
-  recipe: { __typename: 'Recipe', id: 'recipe-1' },
+  recipe: { __typename: 'Recipe', version: 1, id: 'recipe-1' },
   ...overrides,
 });
 
@@ -28,6 +30,7 @@ export const leftoversLunch = (
   overrides: Partial<PlanMeal> = {},
 ): PlanMeal => ({
   __typename: 'MealPlanItem',
+  version: 1,
   id: 'mpi-2',
   date: '2026-01-07',
   mealType: MealType.Lunch,
@@ -43,6 +46,7 @@ export const planSource = (
   overrides: Partial<PlanSource> = {},
 ): PlanSource => ({
   __typename: 'MealPlan',
+  version: 1,
   id: 'plan-1',
   description: 'A week of food',
   planType: MealPlanType.Weekly,
@@ -68,7 +72,7 @@ export const seedPlanSource = (
     }),
   };
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     id: cache.identify(data),
     fragment: UseDuplicateMealPlan_MealPlanFragmentDoc,
     fragmentName: 'useDuplicateMealPlan_mealPlan',

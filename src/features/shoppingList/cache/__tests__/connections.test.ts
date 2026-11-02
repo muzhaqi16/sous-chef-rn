@@ -6,7 +6,6 @@
 import {
   addNewItemToShoppingListCache,
   clearAllPurchasedItemsFromCache,
-  clearAllUnpurchasedItemsFromCache,
   moveShoppingListItemToPurchased,
   moveShoppingListItemToUnpurchased,
   removeFromShoppingListItemsConnection,
@@ -250,73 +249,6 @@ describe('clearAllPurchasedItemsFromCache', () => {
     clearAllPurchasedItemsFromCache(cache, 'sl-1', ['sli-1', 'sli-2']);
 
     expect(cache.gc).toHaveBeenCalledTimes(1);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// clearAllUnpurchasedItemsFromCache
-// ---------------------------------------------------------------------------
-
-describe('clearAllUnpurchasedItemsFromCache', () => {
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('clears edges for unpurchased connection variant', () => {
-    const cache = createMockCache();
-
-    clearAllUnpurchasedItemsFromCache(cache, 'sl-1', ['sli-1']);
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'itemsConnection:{"isPurchased":false}',
-    });
-    const existing = {
-      edges: [{ node: { __ref: 'ShoppingListItem:sli-1' } }],
-      totalCount: 1,
-    };
-    const result = invokeFieldModifier(
-      cache,
-      'itemsConnection',
-      existing,
-      helpers,
-    );
-
-    expect(result.edges).toEqual([]);
-    expect(result.totalCount).toBe(0);
-  });
-
-  it('does not reset completedItems for unpurchased clear', () => {
-    const cache = createMockCache();
-
-    clearAllUnpurchasedItemsFromCache(cache, 'sl-1', ['sli-1']);
-
-    const modifyCall = cache.modify.mock.calls[0];
-    const fields = modifyCall[0].fields;
-
-    // completedItems should not be defined for unpurchased clear
-    expect(fields.completedItems).toBeUndefined();
-  });
-
-  it('does not clear purchased connection variant', () => {
-    const cache = createMockCache();
-
-    clearAllUnpurchasedItemsFromCache(cache, 'sl-1', ['sli-1']);
-
-    const helpers = createFieldHelpers({
-      storeFieldName: 'itemsConnection:{"isPurchased":true}',
-    });
-    const existing = {
-      edges: [{ node: { __ref: 'ShoppingListItem:sli-2' } }],
-      totalCount: 1,
-    };
-    const result = invokeFieldModifier(
-      cache,
-      'itemsConnection',
-      existing,
-      helpers,
-    );
-
-    expect(result).toBe(existing);
   });
 });
 

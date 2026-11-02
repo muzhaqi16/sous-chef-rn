@@ -1,6 +1,7 @@
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateOutcome,
   ModerationContentType,
@@ -65,6 +66,14 @@ function renderCard(subject: RecipeReviewFragment) {
 }
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   useStore.setState({ user: VIEWER });
 });
 
@@ -111,6 +120,8 @@ describe('reporting a review from the recipe', () => {
     renderWithApollo(
       <ReviewSection
         reviews={[own, other]}
+        reviewsState="ready"
+        retryReviews={jest.fn()}
         totalReviews={2}
         averageRating={4}
         rating1Count={0}
@@ -136,22 +147,22 @@ describe('reporting a review from the recipe', () => {
     expect(button).toBeTruthy();
     if (button) fireEvent.press(button);
 
+    await drainTimers();
     fireEvent.press(
-      await screen.findByTestId(profileTestIDs.reportReason(ReportType.Spam)),
+      screen.getByTestId(profileTestIDs.reportReason(ReportType.Spam)),
     );
     fireEvent.press(screen.getByTestId(profileTestIDs.reportSendButton));
 
-    await waitFor(() =>
-      expect(mock.fired).toEqual([
-        {
-          input: {
-            reportedUserId: 'author',
-            contentType: ModerationContentType.RecipeReview,
-            contentId: 'review-2',
-            type: ReportType.Spam,
-          },
+    await drainTimers();
+    expect(mock.fired).toEqual([
+      {
+        input: {
+          reportedUserId: 'author',
+          contentType: ModerationContentType.RecipeReview,
+          contentId: 'review-2',
+          type: ReportType.Spam,
         },
-      ]),
-    );
+      },
+    ]);
   });
 });

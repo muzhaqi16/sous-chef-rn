@@ -1,9 +1,12 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { RelinkItemSheet } from '../RelinkItemSheet';
+import { t } from '#/i18n';
+import { useStore } from '#store';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
@@ -70,6 +73,14 @@ const renderSheet = () => {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockItems = [
     { id: 'baby-food', name: 'Banana baby food', category: null },
@@ -78,6 +89,17 @@ beforeEach(() => {
 });
 
 describe('RelinkItemSheet', () => {
+  it('says a wider search needs a connection when nothing held matches offline', () => {
+    useStore.setState({ isOnline: false, apiReachable: null });
+    mockItems = [];
+    renderSheet();
+
+    expect(
+      screen.getByText(t('empty.noHeldMatchFor', { query: 'Bananas' })),
+    ).toBeTruthy();
+    useStore.setState({ isOnline: true, apiReachable: null });
+  });
+
   it("opens searching the entry's own name", () => {
     renderSheet();
     expect(mockSearch).toHaveBeenCalledWith('Bananas');
@@ -102,7 +124,8 @@ describe('RelinkItemSheet', () => {
 
     fireEvent.press(screen.getByLabelText('Move to Bananas'));
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
     expect(mockMoveToItem).toHaveBeenCalledWith(
       STACK,
       'produce-bananas',
@@ -122,10 +145,9 @@ describe('RelinkItemSheet', () => {
 
     fireEvent.press(screen.getByLabelText('Move to Bananas'));
 
-    await waitFor(() =>
-      expect(toastService.success).toHaveBeenCalledWith(
-        "Done. It's now Bananas, and your next receipts will match it too.",
-      ),
+    await drainTimers();
+    expect(toastService.success).toHaveBeenCalledWith(
+      "Done. It's now Bananas, and your next receipts will match it too.",
     );
   });
 
@@ -138,12 +160,11 @@ describe('RelinkItemSheet', () => {
 
     fireEvent.press(screen.getByLabelText('Move to Bananas'));
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Item Already in Pantry',
-        expect.stringContaining('already has Bananas'),
-        expect.any(Array),
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Item Already in Pantry',
+      expect.stringContaining('already has Bananas'),
+      expect.any(Array),
     );
     const [, , buttons] = jest.mocked(alertService.alert).mock.calls[0] ?? [];
     buttons?.find(button => button.text === 'Open it')?.onPress?.();
@@ -156,7 +177,8 @@ describe('RelinkItemSheet', () => {
 
     fireEvent.press(screen.getByLabelText('Move to Bananas'));
 
-    await waitFor(() => expect(mockMoveToItem).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockMoveToItem).toHaveBeenCalled();
     expect(onDismiss).not.toHaveBeenCalled();
   });
 

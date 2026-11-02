@@ -1,13 +1,13 @@
 /**
  * The notification feed — the ONLY source; it projects the Apollo cache and
  * holds nothing. The category filter is server-side, so the screen must not
- * filter again. Each row is read live: `dataMasking` leaves `node` as
+ * filter again; offline, a category never loaded narrows the feed the device
+ * holds here. Each row is read live: `dataMasking` leaves `node` as
  * `{ __typename, id }`, and marking one read changes only its own fields.
  */
 
-import { loadPageWithCursorRecovery } from '#hooks/utils/cursorRecovery';
+import { usePagination } from '#hooks/utils/usePagination';
 import { useNotificationStore } from '#features/notifications/store/notificationStore';
-import { NetworkStatus } from '@apollo/client';
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useFragmentList } from '#hooks/apollo/useFragmentList';
 import { GetNotificationsDocument } from '#features/notifications/graphql/notifications.generated';
@@ -17,6 +17,7 @@ import {
 } from './useNotificationsOnLaunch.generated';
 import type { NotificationCategory } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import {
   toDisplayNotification,
   type DisplayNotification,
@@ -32,12 +33,15 @@ export function useNotificationHistory(
     state => state.pendingExpirationLinks,
   );
 
-  const { data, error, loading, fetchMore, networkStatus, refetch } = useQuery(
+  const narrowsHeldFeed = useIsApiUnavailable() && !!category;
+  const askedCategory = narrowsHeldFeed ? null : category;
+
+  const { data, error, loading, observable, refetch } = useQuery(
     GetNotificationsDocument,
     enabled
       ? {
           variables: {
-            filter: category ? { category } : undefined,
+            filter: askedCategory ? { category: askedCategory } : undefined,
             first: PAGE_SIZE,
           },
         }
@@ -57,34 +61,30 @@ export function useNotificationHistory(
     .filter(
       (n): n is UseNotificationsOnLaunch_NotificationFragment => n !== null,
     )
-    .map(n => toDisplayNotification(n, pendingExpirationLinks[n.id]));
+    .map(n => toDisplayNotification(n, pendingExpirationLinks[n.id]))
+    .filter(n => !narrowsHeldFeed || n.category === category);
 
-  const hasMore = connection?.pageInfo.hasNextPage ?? false;
-  const endCursor = connection?.pageInfo.endCursor ?? null;
-
-  const loadMore = () => {
-    if (!hasMore || !endCursor || loading) return;
-    // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
-    // oldest, so paging past it fetched rows that could never become visible;
-    // the cache has no such ceiling and the connection merges by node id.
-    void loadPageWithCursorRecovery({
-      fetchMore,
-      refetch,
-      variables: {
-        filter: category ? { category } : undefined,
-        first: PAGE_SIZE,
-        after: endCursor,
-      },
-      operation: 'NotificationHistory.loadMore',
-    });
-  };
+  // No local cap. The store capped at MAX_NOTIFICATIONS and evicted the
+  // oldest, so paging past it fetched rows that could never become visible;
+  // the cache has no such ceiling and the connection merges by node id.
+  const { hasMore, loadMore, isLoadingMore } = usePagination({
+    pageInfo: connection?.pageInfo,
+    loading,
+    itemCount: notifications.length,
+    observable,
+    cursorVariableName: 'after',
+    restart: refetch,
+  });
 
   return {
     notifications,
+    hasMore,
     loadMore,
-    loadingMore: networkStatus === NetworkStatus.fetchMore,
+    loadingMore: isLoadingMore,
     loading,
     error,
+    /** A category narrowed from the held feed, with pages the device never loaded. */
+    mayHoldMore: narrowsHeldFeed && !!connection?.pageInfo.hasNextPage,
     // `data !== undefined` — a response arrived, empty or not. Separates "no
     // notifications" from "the feed could not be loaded".
     hasResult: data !== undefined,

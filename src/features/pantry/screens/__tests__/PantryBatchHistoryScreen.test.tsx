@@ -3,9 +3,27 @@ import React from 'react';
 import { screen } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { PantryBatchHistoryScreen } from '../PantryBatchHistoryScreen';
+
+// Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
+jest.mock('#hooks/performance/useFlashListPerformance', () => {
+  const actual = jest.requireActual(
+    '#hooks/performance/useFlashListPerformance',
+  );
+  return {
+    ...actual,
+    useFlashListPerformance: (list: unknown, options: object) =>
+      actual.useFlashListPerformance(list, { ...options, reportInterval: 0 }),
+  };
+});
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -55,6 +73,14 @@ function historyMock(
   }).mock;
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('PantryBatchHistoryScreen', () => {
   it('counts the active batches, which a masked edge cannot answer', async () => {
     // `edge.node` arrives MASKED, so reading `.status` off it yields undefined
@@ -69,7 +95,8 @@ describe('PantryBatchHistoryScreen', () => {
       ],
     });
 
-    expect(await screen.findByText('2 active of 3')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('2 active of 3')).toBeTruthy();
   });
 
   it('does not report a loaded-window count against the whole total', async () => {
@@ -103,7 +130,8 @@ describe('PantryBatchHistoryScreen', () => {
       ],
     });
 
-    expect(await screen.findByText('40 batches')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('40 batches')).toBeTruthy();
     expect(screen.queryByText('2 active of 40')).toBeNull();
   });
 
@@ -131,7 +159,8 @@ describe('PantryBatchHistoryScreen', () => {
       ],
     });
 
-    await screen.findByText('2 active of 2');
+    await drainTimers();
+    expect(screen.getByText('2 active of 2')).toBeTruthy();
     const rows = screen.getAllByText(/Batch #/);
 
     // #2 expires first, so it leads despite the lower batch number on #1.
@@ -157,7 +186,8 @@ describe('PantryBatchHistoryScreen', () => {
     });
 
     // Date rendered in the runner's zone, so match the LABEL, not the day.
-    expect(await screen.findByText(/^Wasted \w+ \d+$/)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(/^Wasted \w+ \d+$/)).toBeTruthy();
     expect(screen.queryByText(/^Depleted /)).toBeNull();
   });
 
@@ -176,7 +206,8 @@ describe('PantryBatchHistoryScreen', () => {
       ],
     });
 
-    expect(await screen.findByText(/^Depleted \w+ \d+$/)).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText(/^Depleted \w+ \d+$/)).toBeTruthy();
   });
 
   it('shows the empty state when the item has no batches', async () => {
@@ -184,6 +215,7 @@ describe('PantryBatchHistoryScreen', () => {
       operationMocks: [historyMock([])],
     });
 
-    expect(await screen.findByText('No batches yet')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('No batches yet')).toBeTruthy();
   });
 });

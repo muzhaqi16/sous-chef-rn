@@ -151,7 +151,6 @@ jest.mock('#store/useAppStore', () => ({
   useUser: jest.fn(() => null),
   // The header's OfflineStatusPill reads online status; keep it online so the
   // pill stays hidden in these tests.
-  useIsOnline: jest.fn(() => true),
 }));
 
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({
@@ -321,6 +320,44 @@ describe('MealPlanMain', () => {
     const tree = renderWithApollo(<MealPlanMain />);
     fireEvent.press(tree.getByRole('button', { name: 'Try again' }));
     expect(refetchPlans).toHaveBeenCalledTimes(1);
+  });
+
+  it('says a plan listed but not held is not available offline, not empty', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
+    const { useAppStore } = jest.requireMock('#store/useAppStore');
+    useAppStore.mockImplementation(
+      (selector: (state: Record<string, unknown>) => unknown) =>
+        selector({ isOnline: false, apiReachable: null }),
+    );
+    const { useMealPlans } = jest.requireMock(
+      '#features/mealPlan/hooks/useMealPlans',
+    );
+    useMealPlans.mockReturnValue(
+      mockMealPlansState({
+        currentPlan: { id: 'mp1' },
+        mealPlans: [{ id: 'mp1' }],
+      }),
+    );
+    const { useMealPlan } = jest.requireMock(
+      '#features/mealPlan/screens/useMealPlan',
+    );
+    useMealPlan.mockReturnValueOnce({
+      mealPlan: null,
+      items: [],
+      nutritionSummary: null,
+      error: new Error('This is not available offline yet'),
+      refetch: jest.fn().mockResolvedValue({}),
+    });
+
+    dayMealListProps.length = 0;
+
+    const tree = renderWithApollo(<MealPlanMain />);
+    useAppStore.mockImplementation(() => null);
+
+    expect(tree.getByTestId('state-offline')).toBeTruthy();
+    expect(dayMealListProps).toEqual([]);
   });
 
   it('keeps the skeleton up while the first plan fetch is in flight', () => {

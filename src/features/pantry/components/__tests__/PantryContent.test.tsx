@@ -3,7 +3,10 @@ import React from 'react';
 import { pantryTestIDs } from '#features/pantry/testIDs';
 import { makeCache } from '#/apollo/cache';
 import { screen, act, fireEvent, within } from '@testing-library/react-native';
-import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import {
+  renderWithApollo,
+  seedFragment,
+} from '#/test-utils/apolloMockProvider';
 import { PantryContent } from '../PantryContent';
 import type { PantryItem } from '#/graphql/generated/schemaTypes';
 import { StorageState } from '#/graphql/generated/schemaTypes';
@@ -32,7 +35,7 @@ function renderContent(
 ) {
   const cache = makeCache();
   for (const item of items) {
-    cache.writeFragment({
+    seedFragment(cache, {
       id:
         cache.identify({ __typename: item.__typename, id: item.id }) ??
         `PantryItem:${item.id}`,
@@ -64,7 +67,6 @@ const countReading = (value: number, id = 'unit-piece', symbol = 'pc') =>
     value,
     unitId: id,
     symbol,
-    displayAsFraction: false,
     type: 'COUNT',
   });
 
@@ -81,7 +83,6 @@ function createMockPantryItem(overrides: DeepPartial<PantryItem> = {}) {
       __typename: 'DisplayAmount',
       quantity: held,
       localizedSymbol: overrides.unit?.symbol ?? 'pc',
-      fraction: null,
       unit: asAbbreviation({
         __typename: 'Unit',
         id: overrides.unit?.id ?? 'unit-piece',
@@ -97,86 +98,28 @@ function createMockPantryItem(overrides: DeepPartial<PantryItem> = {}) {
       imperial: countReading(held, overrides.unit?.id, overrides.unit?.symbol),
     },
     expiresOn: null,
-    createdAt: '2024-01-01',
-    updatedAt: null,
-    addedAt: '2024-01-01',
-    addedBy: null,
-    lastModifiedBy: null,
     storageState: 'AMBIENT',
     storageLocation: null,
-    storageNotes: null,
     item: {
       __typename: 'Item',
       id: 'item-1',
       name: 'Mock Item',
-      category: null,
-      brand: null,
-      upc: null,
-      imageUrl: null,
       images: [],
-      nutrition: null,
-      averageShelfLife: null,
-      defaultUnit: null,
-      displayUnit: null,
-      createdAt: '2024-01-01',
-      updatedAt: null,
-      isVerified: false,
-      verifiedAt: null,
       aliases: [],
-      netWeight: null,
-      netWeightUnit: null,
-      packageBreakdown: null,
     },
-    itemId: 'item-1',
     unit: asAbbreviation({
       __typename: 'Unit',
       id: overrides.unit?.id ?? 'unit-piece',
       symbol: overrides.unit?.symbol ?? 'pc',
     }),
-    unitId: null,
-    brand: null,
-    brandId: null,
-    itemUpc: null,
-    netWeight: null,
-    netWeightUnit: null,
-    remainingNetWeight: null,
-    portionUnitId: null,
-    portionUnit: null,
-    remainingPortions: null,
-    packageBreakdown: null,
-    quantityBreakdown: null,
-    costPerUnit: null,
-    totalCost: null,
-    store: null,
-    storeId: null,
-    purchase: null,
-    purchaseId: null,
-    condition: 'FRESH',
-    acquisitionMethod: 'PURCHASED',
-    isLowStock: false,
-    lowStockAlert: false,
-    expirationAlert: false,
-    minQuantity: null,
-    restockQuantity: null,
-    lastUsedAt: null,
-    wasteDate: null,
-    wasteReason: null,
-    isComposted: false,
-    isRecycled: false,
     tags: [],
     photos: [],
-    sourceShoppingListItemId: null,
-    activeBatchCount: 0,
     pantry: { __typename: 'Pantry', id: 'pantry-1' },
-    pantryId: 'pantry-1',
-    version: 1,
     changeHistory: {
       __typename: 'PantryItemChangeConnection',
       edges: [],
       pageInfo: {
         __typename: 'PageInfo',
-        hasNextPage: false,
-        hasPreviousPage: false,
       },
     },
     usageRecordsConnection: {
@@ -184,8 +127,6 @@ function createMockPantryItem(overrides: DeepPartial<PantryItem> = {}) {
       edges: [],
       pageInfo: {
         __typename: 'PageInfo',
-        hasNextPage: false,
-        hasPreviousPage: false,
       },
     },
     ledger: { __typename: 'LedgerSummary' },

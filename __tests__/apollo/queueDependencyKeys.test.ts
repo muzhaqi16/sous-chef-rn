@@ -11,7 +11,7 @@ import {
   type OperationDefinitionNode,
 } from 'graphql';
 import { REPLAY_PREPARATIONS } from '#/apollo/offlineQueue/preparationRegistry';
-import { PARENT_REFERENCE_KEYS } from '#/apollo/offlineQueue/queueManager';
+import { PARENT_REFERENCE_KEYS } from '#/apollo/offlineQueue/queuedSubject';
 import {
   SRC,
   authoredMutations,
@@ -53,6 +53,7 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   brandId: 'catalog rows are created online only',
   chainId: 'store chains are server-owned reference data',
   dietaryProfileId: 'one per user, minted by the server at sign-up',
+  appliesToHomeId: 'deprecated, and no caller sends it',
   notificationId: 'minted by the server, never by a queued write',
   externalSourceId: 'an external catalogue id',
   spoonacularIngredientId: 'an external catalogue id',
@@ -138,7 +139,7 @@ describe('every id an enqueueable input declares is classified for the drain', (
           ? true
           : `${name} declares ${unclassified.join(
               ', ',
-            )}: add each to SUBJECT_KEYS (the write's own row), PARENT_REFERENCE_KEYS in queueManager (a row an earlier queued write may have minted, so the drain waits for it) or NEVER_QUEUED_REFERENCE with the reason.`,
+            )}: add each to SUBJECT_KEYS (the write's own row), PARENT_REFERENCE_KEYS in queuedSubject (a row an earlier queued write may have minted, so the drain waits for it) or NEVER_QUEUED_REFERENCE with the reason.`,
       ).toBe(true);
     },
   );

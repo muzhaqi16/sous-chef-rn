@@ -48,18 +48,44 @@ on:
 
 jobs:
   # ─────────────────────────────────────────────────────────────
+  # Holds a release to what production serves. dev and stg builds are
+  # ahead of production by design, so they skip it, and a skip still builds.
+  # ─────────────────────────────────────────────────────────────
+  release-check:
+    name: Release Check
+    if: |
+      (github.event_name != 'workflow_dispatch' && !startsWith(github.ref_name, 'dev-v') && !startsWith(github.ref_name, 'stg-v')) ||
+      (github.event_name == 'workflow_dispatch' && (inputs.environment == 'prod' || inputs.build_type == 'playstore'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Check against production
+        uses: ./.github/actions/release-check
+
+  # ─────────────────────────────────────────────────────────────
   # Self-hosted runner build (Linux or macOS runner with 'android' label)
   # Toggle: set vars.ANDROID_SELF_HOSTED_ENABLED = 'true' to enable
   # ─────────────────────────────────────────────────────────────
   build-self-hosted:
     name: Build (Self-Hosted)
+    needs: release-check
     if: |
+      !cancelled() && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') && (
       (github.event_name != 'workflow_dispatch' && vars.ANDROID_SELF_HOSTED_ENABLED == 'true') ||
       (github.event_name == 'workflow_dispatch' && (
         inputs.runner_type == 'self-hosted' ||
         inputs.runner_type == 'both' ||
         (inputs.runner_type == 'default' && vars.ANDROID_SELF_HOSTED_ENABLED == 'true')
-      ))
+      )))
     runs-on: [self-hosted, android]
     timeout-minutes: 30
 
@@ -85,6 +111,18 @@ jobs:
         }}
 
     steps:
+      # The API holds its schema to shipped builds by reading store tags, so a
+      # bundle no tag names is held to nothing. A suffixed tag is no store
+      # version, so it is refused too.
+      - name: Refuse a store bundle without a store tag
+        if: env.IS_PLAYSTORE == 'true'
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/(playstore-|ios-|prod-)?v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$GITHUB_REF is not a store tag, and the API's release check finds builds by store tag. Run npm run tag:playstore, or dispatch this workflow from a store tag."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -401,13 +439,15 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   build-github-hosted:
     name: Build (GitHub-Hosted)
+    needs: release-check
     if: |
+      !cancelled() && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') && (
       (github.event_name != 'workflow_dispatch' && vars.ANDROID_GITHUB_HOSTED_ENABLED == 'true') ||
       (github.event_name == 'workflow_dispatch' && (
         inputs.runner_type == 'github-hosted' ||
         inputs.runner_type == 'both' ||
         (inputs.runner_type == 'default' && vars.ANDROID_GITHUB_HOSTED_ENABLED == 'true')
-      ))
+      )))
     runs-on: ubuntu-latest
     timeout-minutes: 60
 
@@ -433,6 +473,18 @@ jobs:
         }}
 
     steps:
+      # The API holds its schema to shipped builds by reading store tags, so a
+      # bundle no tag names is held to nothing. A suffixed tag is no store
+      # version, so it is refused too.
+      - name: Refuse a store bundle without a store tag
+        if: env.IS_PLAYSTORE == 'true'
+        shell: bash
+        run: |
+          if [[ ! "$GITHUB_REF" =~ ^refs/tags/(playstore-|ios-|prod-)?v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::$GITHUB_REF is not a store tag, and the API's release check finds builds by store tag. Run npm run tag:playstore, or dispatch this workflow from a store tag."
+            exit 1
+          fi
+
       - name: Checkout repository
         uses: actions/checkout@v4
 
@@ -696,7 +748,7 @@ jobs:
   build-summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [build-self-hosted, build-github-hosted]
+    needs: [release-check, build-self-hosted, build-github-hosted]
     if: always()
     steps:
       - name: Check results
@@ -704,6 +756,7 @@ jobs:
           echo "## Android Build Results" >> $GITHUB_STEP_SUMMARY
           echo "| Runner | Result |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Release Check | ${{ needs.release-check.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Self-Hosted | ${{ needs.build-self-hosted.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub-Hosted | ${{ needs.build-github-hosted.result }} |" >> $GITHUB_STEP_SUMMARY
 

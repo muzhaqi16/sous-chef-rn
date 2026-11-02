@@ -1,4 +1,3 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { useApolloClient, useQuery } from '@apollo/client/react';
 import type { MockDataFor, MockFor } from '#/test-utils/apolloMockProvider';
 import {
@@ -6,6 +5,7 @@ import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetHomesDocument,
   JoinHomeByCodeDocument,
@@ -62,6 +62,14 @@ const cachedHomeIds = (cache: ReturnType<typeof seedCache>) =>
     .readQuery({ query: GetHomesDocument })
     ?.homes.edges.map(edge => edge.node.id);
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useJoinHomeByCode', () => {
   // The join's own answer carries the home, so no second read can fail it.
   it('puts the joined home in the list from its own answer, with the list read failing', async () => {
@@ -77,16 +85,14 @@ describe('useJoinHomeByCode', () => {
         operationMocks: [homesMock(['home-1']), join.mock, failingHomesMock()],
       },
     );
-    await act(async () => {
-      await result.current.client.query({ query: GetHomesDocument });
-    });
+    await drained(() =>
+      result.current.client.query({ query: GetHomesDocument }),
+    );
 
     let outcome: Awaited<
       ReturnType<typeof result.current.join.joinHome>
     > | null = null;
-    await act(async () => {
-      outcome = await result.current.join.joinHome('ABCD');
-    });
+    outcome = await drained(() => result.current.join.joinHome('ABCD'));
 
     expect(outcome).toEqual({
       joined: true,
@@ -108,9 +114,7 @@ describe('useJoinHomeByCode', () => {
 
     let outcome: Awaited<ReturnType<typeof result.current.joinHome>> | null =
       null;
-    await act(async () => {
-      outcome = await result.current.joinHome('ABCD');
-    });
+    outcome = await drained(() => result.current.joinHome('ABCD'));
 
     expect(outcome).toEqual({
       joined: true,
@@ -140,10 +144,11 @@ describe('useJoinHomeByCode', () => {
         ],
       },
     );
-    await waitFor(() => expect(result.current.homeIds).toEqual(['home-1']));
+    await drainTimers();
+    expect(result.current.homeIds).toEqual(['home-1']);
 
     let cachedWhenJoined: string[] | undefined;
-    await act(async () => {
+    await drained(async () => {
       const outcome = await result.current.join.joinHome('ABCD');
       expect(outcome).toEqual({
         joined: true,
@@ -177,13 +182,11 @@ describe('useJoinHomeByCode', () => {
       },
     );
     // Cached by a one-off read, so no observer is left watching it.
-    await act(async () => {
-      await result.current.client.query({ query: GetHomesDocument });
-    });
+    await drained(() =>
+      result.current.client.query({ query: GetHomesDocument }),
+    );
 
-    await act(async () => {
-      await result.current.join.joinHome('ABCD');
-    });
+    await drained(() => result.current.join.joinHome('ABCD'));
 
     expect(cachedHomeIds(cache)).toEqual(['home-1', 'home-2']);
   });
@@ -207,9 +210,7 @@ it('tells a removed member to ask for an invite back', async () => {
   );
 
   let outcome: Awaited<ReturnType<typeof result.current.joinHome>> | undefined;
-  await act(async () => {
-    outcome = await result.current.joinHome('ABC123');
-  });
+  outcome = await drained(() => result.current.joinHome('ABC123'));
 
   expect(outcome).toEqual({
     joined: false,

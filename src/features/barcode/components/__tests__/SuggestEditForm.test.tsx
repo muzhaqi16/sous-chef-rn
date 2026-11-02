@@ -1,13 +1,14 @@
 'use no memo';
 
 import React from 'react';
-import { screen, waitFor, fireEvent } from '@testing-library/react-native';
+import { screen, fireEvent } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   renderWithApollo,
   recordMock,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { SuggestEditForm } from '../SuggestEditForm';
 import { GetItemForEditDocument } from '#features/catalog/hooks/useItemForEdit.generated';
 import {
@@ -89,6 +90,14 @@ const renderForm = (operationMocks: MockedResponse[]) =>
     operationMocks,
   });
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('SuggestEditForm', () => {
   it('renders the form once the snapshot loads', async () => {
     const { mock } = recordMock(GetItemForEditDocument, {
@@ -96,9 +105,8 @@ describe('SuggestEditForm', () => {
     });
     renderForm([mock]);
 
-    await waitFor(() =>
-      expect(screen.getByTestId('add-item-form')).toBeOnTheScreen(),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('add-item-form')).toBeOnTheScreen();
   });
 
   // Without the snapshot there is nothing to diff against, so a failed load has
@@ -111,9 +119,8 @@ describe('SuggestEditForm', () => {
       },
     ]);
 
-    await waitFor(() =>
-      expect(screen.getByText("Couldn't load this item")).toBeOnTheScreen(),
-    );
+    await drainTimers();
+    expect(screen.getByText("Couldn't load this item")).toBeOnTheScreen();
     expect(screen.getByText('Try again')).toBeOnTheScreen();
     expect(screen.queryByTestId('add-item-form')).not.toBeOnTheScreen();
   });
@@ -130,16 +137,12 @@ describe('SuggestEditForm', () => {
       },
     ]);
 
-    await waitFor(() =>
-      expect(
-        screen.getByRole('button', { name: 'Try again' }),
-      ).toBeOnTheScreen(),
-    );
+    await drainTimers();
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeOnTheScreen();
     fireEvent.press(screen.getByRole('button', { name: 'Try again' }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('add-item-form')).toBeOnTheScreen(),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('add-item-form')).toBeOnTheScreen();
   });
 
   it('words the form as a direct edit for the user’s own private item', async () => {
@@ -148,11 +151,8 @@ describe('SuggestEditForm', () => {
     });
     renderForm([mock]);
 
-    await waitFor(() =>
-      expect(screen.getByTestId('add-item-form')).toHaveTextContent(
-        'directEdit',
-      ),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('add-item-form')).toHaveTextContent('directEdit');
   });
 
   // An admin holds both rights on a public item; the app uses none of them.
@@ -162,9 +162,8 @@ describe('SuggestEditForm', () => {
     });
     renderForm([mock]);
 
-    await waitFor(() =>
-      expect(screen.getByTestId('add-item-form')).toHaveTextContent('edit'),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('add-item-form')).toHaveTextContent('edit');
     expect(screen.getByTestId('add-item-form')).not.toHaveTextContent(
       'directEdit',
     );
@@ -176,9 +175,8 @@ describe('SuggestEditForm', () => {
     });
     renderForm([mock]);
 
-    await waitFor(() =>
-      expect(screen.getByTestId('add-item-form')).toHaveTextContent('edit'),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('add-item-form')).toHaveTextContent('edit');
   });
 
   // Both paths closed — a PRIVATE item the user doesn't own. Rendering the form
@@ -198,9 +196,8 @@ describe('SuggestEditForm', () => {
       { operationMocks: [mock] },
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId('prefilled-size')).toHaveTextContent('500 g'),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('prefilled-size')).toHaveTextContent('500 g');
   });
 
   // A direct edit writes the item, so it stays on the item's own figure.
@@ -217,9 +214,8 @@ describe('SuggestEditForm', () => {
       { operationMocks: [mock] },
     );
 
-    await waitFor(() =>
-      expect(screen.getByTestId('prefilled-size')).toHaveTextContent('1000 g'),
-    );
+    await drainTimers();
+    expect(screen.getByTestId('prefilled-size')).toHaveTextContent('1000 g');
   });
 
   it('states the item is read-only when neither write path is open', async () => {
@@ -228,9 +224,8 @@ describe('SuggestEditForm', () => {
     });
     renderForm([mock]);
 
-    await waitFor(() =>
-      expect(screen.getByText("This item can't be edited")).toBeOnTheScreen(),
-    );
+    await drainTimers();
+    expect(screen.getByText("This item can't be edited")).toBeOnTheScreen();
     expect(screen.queryByTestId('add-item-form')).not.toBeOnTheScreen();
   });
 });

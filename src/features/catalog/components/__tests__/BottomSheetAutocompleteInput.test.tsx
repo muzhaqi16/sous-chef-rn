@@ -129,10 +129,9 @@ jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   BottomSheetModal: ({ children }: { children: React.ReactNode }) => children,
 }));
 
-// Mock useAppStore
-jest.mock('#store/useAppStore', () => ({
-  useAppStore: jest.fn(() => true), // isOnline = true
-  useIsOnline: jest.fn(() => true),
+const mockIsOffline = jest.fn(() => false);
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => mockIsOffline(),
 }));
 
 interface TestItem {
@@ -314,15 +313,14 @@ describe('BottomSheetAutocompleteInput', () => {
   });
 
   it('shows offline message when not online', () => {
-    const { useAppStore, useIsOnline } = require('#store/useAppStore');
-    useAppStore.mockReturnValue(false); // isOnline = false
-    useIsOnline.mockReturnValue(false);
+    mockIsOffline.mockReturnValue(true);
 
     render(<BottomSheetAutocompleteInput {...defaultProps} data={[]} />);
     expect(screen.getByText('Search unavailable offline')).toBeTruthy();
     expect(
       screen.getByText('You can still type a custom value and press done'),
     ).toBeTruthy();
+    mockIsOffline.mockReturnValue(false);
   });
 
   it('syncs searchTerm with external value when modal is closed', () => {

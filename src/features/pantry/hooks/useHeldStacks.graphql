@@ -3,10 +3,12 @@
 # are asked for by item.
 query HeldStacks($pantryId: ID!, $itemId: ID!, $stacksFirst: Int!) {
   pantry(id: $pantryId) {
+    version
     id
     itemsConnection(filters: { itemId: $itemId }, first: $stacksFirst) {
       edges {
         node {
+          version
           id
           ...useHeldStacks_pantryItem
         }
@@ -47,9 +49,11 @@ fragment useHeldStacks_pantry on Pantry {
 # A held stack's amount as its row reads it (formatHeldAmount), and when it was
 # opened: an add in no held stack's unit joins the oldest.
 fragment useHeldStacks_pantryItem on PantryItem {
+  version
   id
   createdAt
   item {
+    version
     id
   }
   unit {

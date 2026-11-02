@@ -1,9 +1,10 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, render, waitFor } from '@testing-library/react-native';
+import { fireEvent, render } from '@testing-library/react-native';
 import { CreateMealPlanScreen } from '../CreateMealPlanScreen';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 
@@ -104,7 +105,22 @@ jest.mock('#components/molecules/DatePickerField', () => ({
 }));
 
 jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: () => null,
+  EditableCounter: ({
+    value,
+    onChangeText,
+  }: {
+    value: string;
+    onChangeText: (text: string) => void;
+  }) => {
+    const { TextInput } = require('react-native');
+    return (
+      <TextInput
+        testID="servings-counter"
+        value={value}
+        onChangeText={onChangeText}
+      />
+    );
+  },
 }));
 
 jest.mock('#features/mealPlan/components/TemplateBrowserSheet', () => ({
@@ -114,6 +130,14 @@ jest.mock('#features/mealPlan/components/TemplateBrowserSheet', () => ({
 jest.mock('#features/mealPlan/components/TemplatePreviewSheet', () => ({
   TemplatePreviewSheet: () => null,
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('CreateMealPlanScreen', () => {
   beforeEach(() => {
@@ -170,7 +194,8 @@ describe('CreateMealPlanScreen', () => {
     fireEvent.press(getByTestId('start-date-pick'));
     fireEvent.press(getByTestId('form-save'));
 
-    await waitFor(() => expect(mockCreateMealPlan).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockCreateMealPlan).toHaveBeenCalled();
     // A weekly plan: the picked Monday through the Sunday, both days of it.
     expect(mockCreateMealPlan).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -179,5 +204,49 @@ describe('CreateMealPlanScreen', () => {
       }),
       expect.anything(),
     );
+  });
+
+  describe('servings', () => {
+    const servings = (tree: ReturnType<typeof render>) =>
+      tree.getByTestId('servings-counter').props.value;
+
+    afterEach(() => {
+      (useDietaryProfile as jest.Mock).mockReturnValue({ profile: null });
+    });
+
+    it('start at who the user cooks for', () => {
+      (useDietaryProfile as jest.Mock).mockReturnValue({
+        profile: { cooksFor: 4 },
+      });
+
+      expect(servings(render(<CreateMealPlanScreen />))).toBe('4');
+    });
+
+    it('start at two when that was not answered', () => {
+      expect(servings(render(<CreateMealPlanScreen />))).toBe('2');
+    });
+
+    it('take a late answer into an untouched field', () => {
+      const tree = render(<CreateMealPlanScreen />);
+
+      (useDietaryProfile as jest.Mock).mockReturnValue({
+        profile: { cooksFor: 5 },
+      });
+      tree.rerender(<CreateMealPlanScreen />);
+
+      expect(servings(tree)).toBe('5');
+    });
+
+    it('never take a late answer over the count the user chose', () => {
+      const tree = render(<CreateMealPlanScreen />);
+      fireEvent.changeText(tree.getByTestId('servings-counter'), '3');
+
+      (useDietaryProfile as jest.Mock).mockReturnValue({
+        profile: { cooksFor: 4 },
+      });
+      tree.rerender(<CreateMealPlanScreen />);
+
+      expect(servings(tree)).toBe('3');
+    });
   });
 });

@@ -32,33 +32,21 @@ describe('useOfflineStatus', () => {
       'api-unreachable',
       "Can't reach the server",
       "Changes will sync when it's back",
-      'cloud-offline-outline',
     ],
     [
       'device-offline',
       "You're offline",
       "Changes will sync when you're back online",
-      'cloud-offline-outline',
     ],
-    [
-      'offline-mode',
-      'Offline mode is on',
-      "Using what's on this device only",
-      'airplane-outline',
-    ],
-  ] as const)(
-    'gives %s a short title and a detail',
-    (cause, title, detail, iconName) => {
-      expect(statusFor(cause)).toEqual({
-        offline: true,
-        iconName,
-        title,
-        detail,
-        message: `${title}, ${detail}`,
-        pendingCount: 0,
-      });
-    },
-  );
+  ] as const)('gives %s a short title and a detail', (cause, title, detail) => {
+    expect(statusFor(cause)).toEqual({
+      offline: true,
+      title,
+      detail,
+      message: `${title}, ${detail}`,
+      pendingCount: 0,
+    });
+  });
 
   it.each([
     ['api-unreachable', 1, "1 change will sync when it's back"],
@@ -74,12 +62,6 @@ describe('useOfflineStatus', () => {
       expect(status.pendingCount).toBe(pending);
     },
   );
-
-  it('keeps offline mode about the device, whatever is pending', () => {
-    expect(statusFor('offline-mode', 2).detail).toBe(
-      "Using what's on this device only",
-    );
-  });
 
   it('reads the title and the detail as one label', () => {
     expect(statusFor('api-unreachable', 2).message).toBe(

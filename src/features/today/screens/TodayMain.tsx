@@ -9,6 +9,7 @@ import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { StatCard } from '#features/today/components/StatCard';
 import { ItemCard } from '#components/organisms/ItemCard';
+import { DataStateView } from '#components/organisms/DataStateView';
 import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 import { RowThumbnail } from '#components/atoms/RowThumbnail';
 import {
@@ -53,21 +54,30 @@ export const TodayMain: React.FC = () => {
   const { setSelectedShoppingListId } = useShoppingListState();
   const user = useUser();
 
-  // Pantry's old step, under its old id, so whoever saw it there is not shown it again.
   const [householdRect, setHouseholdRect] = useState<TargetRect | null>(null);
   const isFocused = useIsScreenFocused();
   const { isOverlayOpen } = useTabBarState();
+  // Switching homes is taught only to someone with two; one home learns where
+  // to rename it. Each has its own id, so the switching tip still shows once a
+  // second home arrives. Pantry's old step keeps its old id.
+  const homeStep =
+    overview.homeCount !== null && overview.homeCount > 1
+      ? {
+          featureId: 'pantry_tutorial_home',
+          title: t('today.tutorialHouseholdTitle'),
+          subtitle: t('today.tutorialHouseholdSubtitle'),
+          rectKey: 'household',
+        }
+      : {
+          featureId: 'today_tutorial_your_home',
+          title: t('today.tutorialYourHomeTitle'),
+          subtitle: t('today.tutorialYourHomeSubtitle'),
+          rectKey: 'household',
+        };
   const tutorial = useTutorialSequence({
-    steps: [
-      {
-        featureId: 'pantry_tutorial_home',
-        title: t('today.tutorialHouseholdTitle'),
-        subtitle: t('today.tutorialHouseholdSubtitle'),
-        rectKey: 'household',
-      },
-    ],
+    steps: [homeStep],
     targetRects: { household: householdRect },
-    canStart: overview.state === 'ready',
+    canStart: overview.state === 'ready' && overview.homeCount !== null,
     isPaused: !isFocused || isOverlayOpen,
   });
 
@@ -156,7 +166,7 @@ export const TodayMain: React.FC = () => {
         testID: todayTestIDs.firstRun,
       };
 
-  const { counts, meals, mealsLoading, suggestions, shopping } = overview;
+  const { counts, meals, mealsState, suggestions, shopping } = overview;
 
   return (
     <Screen
@@ -237,8 +247,10 @@ export const TodayMain: React.FC = () => {
                 />
               </View>
             ))
-          ) : mealsLoading ? (
+          ) : mealsState === 'loading' ? (
             <MealPlanItemCardSkeleton />
+          ) : mealsState === 'offline' || mealsState === 'error' ? (
+            <DataStateView state={mealsState} onRetry={overview.retryMeals} />
           ) : (
             <ItemCard
               id="nothing-planned"

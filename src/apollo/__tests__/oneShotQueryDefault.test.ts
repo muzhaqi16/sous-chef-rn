@@ -29,6 +29,10 @@ const walk = (dir: string, out: string[] = []): string[] => {
 
 /** Sites that deliberately go to the network, with why. */
 const NETWORK_ONLY_CALLERS: Record<string, string> = {
+  'apollo/pendingWrites/conflictRead.ts':
+    'a stale write is judged by the row as the server holds it now',
+  'hooks/utils/fetchPage.ts':
+    'a page is never answered from the list the cache already merged',
   'features/notifications/hooks/useNotificationActionData.ts':
     'reseeds an expiration link the cache may hold stale',
   'features/notifications/hooks/useNotifications.ts':
@@ -59,6 +63,11 @@ describe('the one-shot query default', () => {
   it('is cache-first', () => {
     expect(APOLLO_DEFAULT_OPTIONS.query?.fetchPolicy).toBe('cache-first');
     expect(APOLLO_DEFAULT_OPTIONS.query?.errorPolicy).toBe('all');
+  });
+
+  it('marks a read no watcher waits on', () => {
+    expect(APOLLO_DEFAULT_OPTIONS.query?.context).toEqual({ oneShot: true });
+    expect(APOLLO_DEFAULT_OPTIONS.watchQuery?.context).toBeUndefined();
   });
 
   it('is what a caller gets when it names no policy', () => {

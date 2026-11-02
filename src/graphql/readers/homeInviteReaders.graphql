@@ -6,6 +6,7 @@ fragment HomeInviteReaders on HomeInvite {
   home {
     id
     name
+    version
   }
   inviter {
     id
@@ -22,4 +23,5 @@ fragment HomeInviteReaders on HomeInvite {
   recipientName
   role
   status
+  version
 }

@@ -1,13 +1,14 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
 import type { Unmasked } from '@apollo/client/masking';
 import { makeCache } from '#/apollo/cache';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreatePantryItemDocument,
   DeletePantryItemDocument,
@@ -21,6 +22,11 @@ import {
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import { usePantryItemSelection } from '../usePantryItemSelection';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
 
 jest.mock('#/services/errorService');
 jest.mock('#/services/subscriptions/SubscriptionService', () => ({
@@ -56,11 +62,20 @@ const ONBOARDING_INPUT = {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
 function readPantry(cache: ReturnType<typeof makeCache>) {
   const pantry = cache.readQuery<Unmasked<GetPantryQuery>>({
+    optimistic: true,
     query: GetPantryDocument,
     variables: PANTRY_VARS,
   })?.pantry;
@@ -76,6 +91,50 @@ const catalogIds = (cache: ReturnType<typeof makeCache>) =>
 const rowIds = (cache: ReturnType<typeof makeCache>) =>
   readPantry(cache).rows.map(row => row.id);
 
+describe('usePantryItemSelection, a read that fails', () => {
+  it('reports it with nothing held', async () => {
+    const failed = recordMock(GetPantryDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSelection('p1'),
+      {
+        cache: makeCache(),
+        operationMocks: [failed.mock],
+      },
+    );
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+    expect(result.current.existingCatalogIds.size).toBe(0);
+  });
+
+  it('keeps what it held selected', async () => {
+    const cache = makeCache();
+    const today = jest.requireActual('#/utils/dateUtils').todayKey();
+    seedQuery(cache, {
+      query: GetPantryDocument,
+      variables: { ...PANTRY_VARS, today },
+      data: PANTRY,
+    });
+    const failed = recordMock(GetPantryDocument, {
+      error: new Error('network down'),
+    });
+    const { result } = renderHookWithApollo(
+      () => usePantryItemSelection('p1'),
+      {
+        cache,
+        operationMocks: [failed.mock],
+      },
+    );
+
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.state).toBe('ready');
+    expect(result.current.existingCatalogIds.has('cat-eggs')).toBe(true);
+  });
+});
+
 async function setup(
   cache: ReturnType<typeof makeCache>,
   mutationMock: ReturnType<typeof recordMock>,
@@ -86,8 +145,10 @@ async function setup(
     operationMocks: [getPantry.mock, mutationMock.mock],
   });
   // The pantry read lands before any write, so it cannot race one.
-  await waitFor(() => expect(rendered.result.current.hasLoaded).toBe(true));
-  await waitFor(() => expect(rendered.result.current.loading).toBe(false));
+  await drainTimers();
+  expect(rendered.result.current.hasLoaded).toBe(true);
+  await drainTimers();
+  expect(rendered.result.current.loading).toBe(false);
   expect(rowIds(cache)).toEqual(['pi-1']);
   return { ...rendered, getPantry };
 }
@@ -105,9 +166,9 @@ describe('usePantryItemSelection.addItem', () => {
     const { result } = await setup(cache, queued);
 
     let outcome: unknown;
-    await act(async () => {
-      outcome = await result.current.addItem('Milk', ONBOARDING_INPUT);
-    });
+    outcome = await drained(() =>
+      result.current.addItem('Milk', ONBOARDING_INPUT),
+    );
 
     expect(outcome).toEqual({ status: 'added' });
     expect(catalogIds(cache)).toContain('cat-milk');
@@ -142,7 +203,7 @@ describe('usePantryItemSelection.addItem', () => {
     const { result } = await setup(cache, refused);
 
     let outcome: unknown;
-    await act(async () => {
+    await drained(async () => {
       const pending = result.current.addItem('Milk', ONBOARDING_INPUT);
       expect(catalogIds(cache)).toContain('cat-milk');
       outcome = await pending;
@@ -171,9 +232,9 @@ describe('usePantryItemSelection.addItem', () => {
     const { result } = await setup(cache, joined);
 
     let outcome: unknown;
-    await act(async () => {
-      outcome = await result.current.addItem('Milk', ONBOARDING_INPUT);
-    });
+    outcome = await drained(() =>
+      result.current.addItem('Milk', ONBOARDING_INPUT),
+    );
 
     expect(outcome).toEqual({ status: 'added' });
     expect(joined.fired[0]).toMatchObject({ input: { forceAdd: true } });
@@ -194,7 +255,7 @@ describe('usePantryItemSelection.removeItem', () => {
     });
     const { result } = await setup(cache, queued);
 
-    await act(async () => {
+    await drained(async () => {
       const pending = result.current.removeItem('pi-1');
       expect(rowIds(cache)).not.toContain('pi-1');
       await pending;
@@ -207,7 +268,7 @@ describe('usePantryItemSelection.removeItem', () => {
     expect(readPantry(cache).totalItems).toBe(0);
   });
 
-  it('restores the row through a refetch when the server refuses the delete', async () => {
+  it('shows the row again when the server refuses the delete', async () => {
     const cache = makeCache();
     const data: MockDataFor<typeof DeletePantryItemDocument> = {
       deletePantryItem: {
@@ -218,14 +279,11 @@ describe('usePantryItemSelection.removeItem', () => {
     const refused = recordMock(DeletePantryItemDocument, {
       data,
     });
-    const { result, getPantry } = await setup(cache, refused);
+    const { result } = await setup(cache, refused);
 
-    await act(async () => {
-      await result.current.removeItem('pi-1');
-    });
+    await drained(() => result.current.removeItem('pi-1'));
 
-    await waitFor(() => expect(getPantry.fired).toHaveLength(2));
-    await waitFor(() => expect(rowIds(cache)).toContain('pi-1'));
+    expect(rowIds(cache)).toContain('pi-1');
     expect(readPantry(cache).totalItems).toBe(1);
   });
 });
@@ -240,18 +298,19 @@ describe('usePantryItemSelection index', () => {
       () => usePantryItemSelection('p1'),
       { cache, operationMocks: [getPantry.mock] },
     );
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect([...result.current.existingCatalogIds]).toEqual(['cat-eggs']);
 
     // The new catalog item carries every field the pantry query reads, so the
     // relink leaves that query complete rather than sending it to the network.
-    const { 'Item:cat-eggs': eggs, ...rest } = cache.extract();
+    const { 'Item:cat-eggs': eggs, ...rest } = cache.extract(true);
     cache.restore({
       ...rest,
       'Item:cat-eggs': eggs,
       'Item:cat-milk': { ...eggs, id: 'cat-milk' },
     });
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({ __typename: 'PantryItem', id: 'pi-1' }),
         fields: {
@@ -261,10 +320,7 @@ describe('usePantryItemSelection index', () => {
       });
       await Promise.resolve();
     });
-
-    await waitFor(() =>
-      expect([...result.current.existingCatalogIds]).toEqual(['cat-milk']),
-    );
+    expect([...result.current.existingCatalogIds]).toEqual(['cat-milk']);
     expect(result.current.existingItemMap.get('cat-milk')).toBe('pi-1');
   });
 });

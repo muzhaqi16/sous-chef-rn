@@ -4,6 +4,7 @@ import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
+import type { DataState } from '#hooks/data/useDataState';
 import { BrandListScreen } from '../BrandListScreen';
 
 jest.mock('#hooks/navigation/useAppNavigation');
@@ -95,8 +96,12 @@ const mockWrites = {
   addBrand: jest.fn(),
   removeBrand: jest.fn(),
 };
+const mockRead: { lists: BrandListView[]; state: DataState } = {
+  lists: [BOYCOTT],
+  state: 'ready',
+};
 jest.mock('#features/profile/hooks/useBrandLists', () => ({
-  useBrandLists: () => ({ lists: [BOYCOTT], ...mockWrites }),
+  useBrandLists: () => ({ ...mockRead, ...mockWrites }),
 }));
 
 const route = {
@@ -108,6 +113,16 @@ const route = {
 describe('BrandListScreen', () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockRead.lists = [BOYCOTT];
+    mockRead.state = 'ready';
+  });
+
+  it('says a list never loaded is not available offline', () => {
+    mockRead.lists = [];
+    mockRead.state = 'offline';
+    render(<BrandListScreen route={route} />);
+
+    expect(screen.getByText('Not available offline')).toBeTruthy();
   });
 
   it('shows each brand with its note, and removes one', () => {

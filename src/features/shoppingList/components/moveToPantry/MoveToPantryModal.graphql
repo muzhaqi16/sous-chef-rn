@@ -27,6 +27,7 @@ fragment MoveToPantryModal_shoppingListItem on ShoppingListItem {
 # reads. Kept complete by __tests__/graphql/purchaseInfoCompleteness.test.ts.
 query MoveToPantryPurchaseInfo($id: ID!) {
   shoppingListItem(id: $id) {
+    version
     id
     purchaseInfo {
       isPurchased
@@ -58,6 +59,7 @@ query MoveToPantryPurchaseInfo($id: ID!) {
       }
       edges {
         node {
+          version
           id
           unitSymbol
           unit {

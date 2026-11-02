@@ -12,6 +12,7 @@
  *
  *   node scripts/find-stale-cache-fields.mjs [--src <documents dir>]
  */
+import { createRequire } from 'node:module';
 import { relative } from 'node:path';
 import { REPO_ROOT, requireNonEmptyScan } from './lib/tooling.mjs';
 import {
@@ -52,13 +53,6 @@ const PARENT_FIELDS = {
   MealTemplateItem: ['template'],
 };
 
-/**
- * A removal, by its schema field name. It returns the removed entities' keys
- * (the client evicts them) and the collections they left in full: a returned
- * parent type is owed unless it is the type the noun names (`deleteShoppingList`).
- */
-const REMOVAL = /^(?:delete|remove|purge|decline|revoke|leave)([A-Z]\w*)$/;
-
 /** The payload types a mutation answers with on success. */
 function successPayloads(field) {
   const type = getNamedType(field.type);
@@ -67,6 +61,8 @@ function successPayloads(field) {
     .map(member => member.name)
     .filter(name => name.endsWith('Payload'));
 }
+
+const { REMOVAL } = createRequire(import.meta.url)('./lib/removalField.js');
 
 const roots = documentRoots();
 const [coreRoot] = roots;

@@ -1,11 +1,11 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetDietaryProfileDocument,
   UpdateDietaryProfileDocument,
@@ -37,20 +37,6 @@ jest.mock('#store/useAppStore', () => {
     useUserId: () => getState().user?.id,
   };
 });
-
-jest.mock('#/hooks/apollo/usePreservedQueryData', () => ({
-  usePreservedQueryData: <T>(data: T | undefined, fallback: T): T =>
-    data ?? fallback,
-}));
-
-jest.mock('#/apollo/utils/createOptimisticResponse', () => ({
-  enhanceWithVersion: jest.fn(
-    (obj: Record<string, unknown>, updates: Record<string, unknown>) => ({
-      ...obj,
-      ...updates,
-    }),
-  ),
-}));
 
 /** The profile the query itself selects, so the fixture is checked against it. */
 type DietaryProfile = NonNullable<
@@ -178,6 +164,18 @@ function buildRemoveRestrictionMock(): MockFor<
   };
 }
 
+jest.mock('#hooks/app/useIsApiUnavailable', () => ({
+  useIsApiUnavailable: () => false,
+}));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -189,9 +187,8 @@ describe('useDietaryProfile', () => {
     });
 
     // Wait for the query to settle
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     expect(result.current.profile).not.toBeNull();
     expect(result.current.profile?.id).toBe('dp-1');
@@ -213,9 +210,8 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(null)],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     expect(result.current.profile).toBeNull();
   });
@@ -225,9 +221,8 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(null)],
     });
 
-    await waitFor(() => {
-      expect(result.current.editableProfile).not.toBeNull();
-    });
+    await drainTimers();
+    expect(result.current.editableProfile).not.toBeNull();
 
     expect(result.current.profile).toBeNull();
     expect(result.current.editableProfile).toMatchObject({
@@ -237,6 +232,45 @@ describe('useDietaryProfile', () => {
       maxPrepTimeMinutes: 45,
       maxCookTimeMinutes: 60,
     });
+  });
+
+  it('reports a read that failed with nothing held, and a retry reads it', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [
+        {
+          request: { query: GetDietaryProfileDocument, variables: () => true },
+          error: new Error('network down'),
+        },
+        buildGetProfileMock(),
+      ],
+    });
+
+    await drainTimers();
+    expect(result.current.state).toBe('error');
+    expect(result.current.editableProfile).toBeNull();
+
+    await drained(() => result.current.refetch());
+    expect(result.current.state).toBe('ready');
+    expect(result.current.profile?.id).toBe('dp-1');
+  });
+
+  it('keeps the profile through a re-read that fails', async () => {
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [
+        buildGetProfileMock(),
+        {
+          request: { query: GetDietaryProfileDocument, variables: () => true },
+          error: new Error('network down'),
+        },
+      ],
+    });
+
+    await drainTimers();
+    expect(result.current.profile?.id).toBe('dp-1');
+
+    await drained(() => result.current.refetch());
+    expect(result.current.state).toBe('ready');
+    expect(result.current.profile?.id).toBe('dp-1');
   });
 
   it('has nothing to edit before the profile has been read', () => {
@@ -295,13 +329,12 @@ describe('useDietaryProfile', () => {
       ],
     });
 
-    await waitFor(() => {
-      expect(result.current.editableProfile).not.toBeNull();
-    });
+    await drainTimers();
+    expect(result.current.editableProfile).not.toBeNull();
 
     let outcomes: boolean[] = [];
-    await act(async () => {
-      outcomes = await Promise.all([
+    outcomes = await drained(() =>
+      Promise.all([
         result.current.addDietaryRestriction(
           { diet: Diet.Vegan },
           RestrictionSeverity.Allergy,
@@ -310,14 +343,13 @@ describe('useDietaryProfile', () => {
           { intolerance: Intolerance.Gluten },
           RestrictionSeverity.Allergy,
         ),
-      ]);
-    });
+      ]),
+    );
 
     expect(outcomes).toEqual([true, true]);
     expect(createMock.fired).toHaveLength(1);
-    await waitFor(() => {
-      expect(result.current.profile?.id).toBe('dp-new');
-    });
+    await drainTimers();
+    expect(result.current.profile?.id).toBe('dp-new');
     expect(result.current.profile?.restrictions.map(r => r.id).sort()).toEqual([
       'r-new',
       'r-second',
@@ -329,9 +361,8 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock()],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     const restriction = result.current.profile?.restrictions[0];
 
@@ -346,17 +377,16 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(), buildUpdateProfileMock()],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     let success: boolean = false;
-    await act(async () => {
-      success = await result.current.updateDietaryProfile({
+    success = await drained(() =>
+      result.current.updateDietaryProfile({
         mealsPerDay: 4,
         calorieTarget: null,
-      });
-    });
+      }),
+    );
 
     expect(success).toBe(true);
   });
@@ -381,14 +411,13 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(), refused],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     let success = true;
-    await act(async () => {
-      success = await result.current.updateDietaryProfile({ mealsPerDay: 5 });
-    });
+    success = await drained(() =>
+      result.current.updateDietaryProfile({ mealsPerDay: 5 }),
+    );
 
     expect(success).toBe(false);
     expect(alertService.alert).toHaveBeenCalledTimes(1);
@@ -397,7 +426,8 @@ describe('useDietaryProfile', () => {
       'SERVER PROSE',
     );
     // The permanent local write is reverted.
-    await waitFor(() => expect(result.current.profile?.mealsPerDay).toBe(3));
+    await drainTimers();
+    expect(result.current.profile?.mealsPerDay).toBe(3);
   });
 
   // Both callers alert on the false return, and a bulk add would stack one
@@ -420,20 +450,50 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(), refused],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     let success = true;
-    await act(async () => {
-      success = await result.current.addDietaryRestriction(
+    success = await drained(() =>
+      result.current.addDietaryRestriction(
         { diet: Diet.Vegan },
         RestrictionSeverity.Preference,
-      );
-    });
+      ),
+    );
 
     expect(success).toBe(false);
     expect(alertService.alert).not.toHaveBeenCalled();
+  });
+
+  // Offline the queue answers the local-first add with a null payload, and the
+  // onboarding dietary step's Continue still moves on.
+  it('addDietaryRestriction counts a queued add as saved', async () => {
+    const queued = recordMock(AddDietaryRestrictionDocument, {
+      data: { addRestriction: null },
+      partial: true,
+    });
+    const { result } = renderHookWithApollo(() => useDietaryProfile(), {
+      operationMocks: [buildGetProfileMock(), queued.mock],
+    });
+
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
+
+    let success = false;
+    success = await drained(() =>
+      result.current.addDietaryRestriction(
+        { intolerance: Intolerance.Peanut },
+        RestrictionSeverity.Allergy,
+      ),
+    );
+
+    expect(queued.fired).toHaveLength(1);
+    expect(success).toBe(true);
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(result.current.profile?.restrictions.at(-1)).toMatchObject({
+      intolerance: Intolerance.Peanut,
+      severity: RestrictionSeverity.Allergy,
+    });
   });
 
   // The API takes what a restriction restricts as a one-key `kind`.
@@ -454,22 +514,22 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(), recording],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     let success: boolean = false;
-    await act(async () => {
-      success = await result.current.addDietaryRestriction(
+    success = await drained(() =>
+      result.current.addDietaryRestriction(
         { diet: Diet.Vegan },
         RestrictionSeverity.Allergy,
         'No animal products',
-      );
-    });
+      ),
+    );
 
     expect(success).toBe(true);
     expect(fired).toContainEqual({
       input: expect.objectContaining({
+        id: expect.any(String),
         kind: { diet: Diet.Vegan },
         severity: RestrictionSeverity.Allergy,
       }),
@@ -499,16 +559,15 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(), add.mock],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
-    await act(async () => {
-      await result.current.addDietaryRestriction(
+    await drained(() =>
+      result.current.addDietaryRestriction(
         { item: 'product-smoked-bacon-16oz' },
         RestrictionSeverity.Preference,
-      );
-    });
+      ),
+    );
 
     expect(add.fired).toEqual([
       {
@@ -517,12 +576,10 @@ describe('useDietaryProfile', () => {
         }),
       },
     ]);
-    await waitFor(() =>
-      expect(
-        result.current.profile?.restrictions.find(r => r.id === 'r-bacon')
-          ?.item,
-      ).toMatchObject({ id: 'concept-bacon', name: 'Bacon' }),
-    );
+    await drainTimers();
+    expect(
+      result.current.profile?.restrictions.find(r => r.id === 'r-bacon')?.item,
+    ).toMatchObject({ id: 'concept-bacon', name: 'Bacon' });
   });
 
   it('removeDietaryRestriction calls mutation', async () => {
@@ -530,14 +587,13 @@ describe('useDietaryProfile', () => {
       operationMocks: [buildGetProfileMock(), buildRemoveRestrictionMock()],
     });
 
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
 
     let success: boolean = false;
-    await act(async () => {
-      success = await result.current.removeDietaryRestriction('r1');
-    });
+    success = await drained(() =>
+      result.current.removeDietaryRestriction('r1'),
+    );
 
     expect(success).toBe(true);
   });
@@ -583,19 +639,17 @@ describe('useDietaryProfile', () => {
       const { result: hook } = renderHookWithApollo(() => useDietaryProfile(), {
         operationMocks: [buildGetProfileMock(), gone],
       });
-      await waitFor(() => {
-        expect(hook.current.profile?.restrictions).toHaveLength(1);
-      });
+      await drainTimers();
+      expect(hook.current.profile?.restrictions).toHaveLength(1);
 
       let success = false;
-      await act(async () => {
-        success = await hook.current.removeDietaryRestriction('r1');
-      });
+      success = await drained(() =>
+        hook.current.removeDietaryRestriction('r1'),
+      );
 
       expect(success).toBe(true);
-      await waitFor(() => {
-        expect(hook.current.profile?.restrictions).toHaveLength(0);
-      });
+      await drainTimers();
+      expect(hook.current.profile?.restrictions).toHaveLength(0);
       expect(alertService.alert).not.toHaveBeenCalled();
     },
   );

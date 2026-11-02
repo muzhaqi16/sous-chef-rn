@@ -30,6 +30,8 @@ export interface GenericAutocompleteFieldProps<T> {
   maxResults?: number;
   /** See `InlineAutocomplete`: for hosts sized to their own content. */
   reserveDropdownSpace?: boolean;
+  /** See `InlineAutocomplete`: a set the device holds whole. */
+  holdsEverything?: boolean;
   // Modal-variant copy + tuning.
   modalTitle: string;
   modalSearchPlaceholder: string;
@@ -65,6 +67,7 @@ export function GenericAutocompleteField<T>({
   inlineMinSearchLength,
   maxResults,
   reserveDropdownSpace,
+  holdsEverything,
   modalTitle,
   modalSearchPlaceholder,
   modalEmptyText,
@@ -96,6 +99,7 @@ export function GenericAutocompleteField<T>({
         addNewLabel={addNewLabel}
         onAddNew={onAddNew}
         reserveDropdownSpace={reserveDropdownSpace}
+        holdsEverything={holdsEverything}
         onEndEditing={onEndEditing}
       />
     );

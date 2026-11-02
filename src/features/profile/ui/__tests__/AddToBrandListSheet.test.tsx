@@ -1,13 +1,9 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { profileTestIDs } from '#features/profile/testIDs';
 import { AddToBrandListSheet } from '../AddToBrandListSheet';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 const BRAND = { id: 'b-jif', name: 'Jif' };
 const LISTS = [
@@ -20,7 +16,32 @@ const LISTS = [
   { id: 'l-avoid', name: 'Avoid', enabled: true, brands: [] },
 ];
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('AddToBrandListSheet', () => {
+  it('does not call lists it never read none, and offers no new list', () => {
+    render(
+      <AddToBrandListSheet
+        visible
+        brand={BRAND}
+        lists={[]}
+        unavailable={{ state: 'offline', onRetry: jest.fn() }}
+        onDismiss={jest.fn()}
+        onPick={jest.fn()}
+        onMakeList={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByTestId('state-offline')).toBeTruthy();
+    expect(screen.queryByText(t('brandLists.emptyTitle'))).toBeNull();
+  });
+
   it('puts the brand on the list picked, with the note typed, then closes', async () => {
     const onPick = jest.fn().mockResolvedValue(true);
     const onDismiss = jest.fn();
@@ -41,7 +62,8 @@ describe('AddToBrandListSheet', () => {
     );
     fireEvent.press(screen.getByText('Avoid'));
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
     expect(onPick).toHaveBeenCalledWith('l-avoid', 'too sweet');
   });
 

@@ -1,5 +1,55 @@
 import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
-import { householdCheckOf, restrictionLabelKey } from '../dietary';
+import {
+  INTOLERANCE_OPTIONS,
+  INTOLERANCE_OPTIONS_MAJOR_FIRST,
+  canAlert,
+  householdCheckOf,
+  restrictionLabelKey,
+} from '../dietary';
+
+describe('INTOLERANCE_OPTIONS_MAJOR_FIRST', () => {
+  it('leads with the nine major US allergens, in order', () => {
+    expect(
+      INTOLERANCE_OPTIONS_MAJOR_FIRST.slice(0, 9).map(option => option.value),
+    ).toEqual([
+      Intolerance.Dairy,
+      Intolerance.Egg,
+      Intolerance.Fish,
+      Intolerance.Shellfish,
+      Intolerance.TreeNut,
+      Intolerance.Peanut,
+      Intolerance.Wheat,
+      Intolerance.Soy,
+      Intolerance.Sesame,
+    ]);
+  });
+
+  it('lists every option exactly once', () => {
+    const values = INTOLERANCE_OPTIONS_MAJOR_FIRST.map(option => option.value);
+    expect(new Set(values).size).toBe(values.length);
+    expect([...values].sort()).toEqual(
+      INTOLERANCE_OPTIONS.map(option => option.value).sort(),
+    );
+  });
+});
+
+describe('canAlert', () => {
+  it('lets a diet, an intolerance and an avoided item alert', () => {
+    expect(canAlert({ diet: Diet.Vegan })).toBe(true);
+    expect(canAlert({ intolerance: Intolerance.Peanut })).toBe(true);
+    expect(canAlert({ item: { id: 'bacon' } })).toBe(true);
+  });
+
+  it('never lets a health goal alert', () => {
+    const lowCarb = {
+      diet: null,
+      intolerance: null,
+      healthGoal: HealthGoal.LowCarb,
+      item: null,
+    };
+    expect(canAlert(lowCarb)).toBe(false);
+  });
+});
 
 describe('restrictionLabelKey', () => {
   it('names a diet, an intolerance and a health goal', () => {

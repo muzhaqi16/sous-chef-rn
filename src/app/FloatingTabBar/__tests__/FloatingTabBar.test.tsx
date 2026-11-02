@@ -23,13 +23,7 @@ import React from 'react';
 import { toastService } from '#/services/toastService';
 import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import {
-  act,
-  render,
-  screen,
-  userEvent,
-  waitFor,
-} from '@testing-library/react-native';
+import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
 import { NavigationContainer } from '@react-navigation/native';
 import {
@@ -42,6 +36,7 @@ import { useStore } from '#store';
 import { TAB_BAR_HEIGHT } from '#constants/layout';
 import { withTiming } from 'react-native-reanimated';
 import { SHEET } from '#/constants/animations';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 // Mock TabBarActionsContext
 const mockSetActiveTab = jest.fn();
@@ -232,6 +227,14 @@ const addButtonBottom = () => {
   throw new Error('no add button ancestor declares a bottom');
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('FloatingTabBar', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -355,7 +358,8 @@ describe('FloatingTabBar', () => {
     await user.press(screen.getByTestId('tab-ShoppingList'));
 
     // tabPress emits + (not prevented) navigates → the target screen mounts.
-    expect(await screen.findByText('ShoppingList screen')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('ShoppingList screen')).toBeTruthy();
   });
 
   it('navigates without stack reset when switching to unfocused tab', async () => {
@@ -366,7 +370,8 @@ describe('FloatingTabBar', () => {
     await user.press(screen.getByTestId('tab-Recipe'));
 
     // Switching tabs navigates by name only — no nested-screen reset payload.
-    await waitFor(() => expect(navigateSpy).toHaveBeenCalledWith('Recipe'));
+    await drainTimers();
+    expect(navigateSpy).toHaveBeenCalledWith('Recipe');
   });
 
   it('resets stack to root when re-tapping focused tab', async () => {
@@ -376,12 +381,11 @@ describe('FloatingTabBar', () => {
 
     await user.press(screen.getByTestId('tab-Recipe'));
 
-    await waitFor(() =>
-      expect(navigateSpy).toHaveBeenCalledWith('Recipe', {
-        screen: 'RecipeMain',
-        initial: false,
-      }),
-    );
+    await drainTimers();
+    expect(navigateSpy).toHaveBeenCalledWith('Recipe', {
+      screen: 'RecipeMain',
+      initial: false,
+    });
   });
 
   it('does not navigate when the tabPress event is prevented', async () => {
@@ -432,7 +436,8 @@ describe('FloatingTabBar', () => {
 
     await user.press(screen.getByTestId('tab-Profile'));
 
-    expect(await screen.findByText('Profile screen')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Profile screen')).toBeTruthy();
   });
 
   it('does not navigate to Profile when already focused', async () => {
@@ -446,9 +451,8 @@ describe('FloatingTabBar', () => {
     await user.press(screen.getByTestId('tab-Profile'));
 
     // Profile is focused and not in the mainScreen map → no navigation.
-    await waitFor(() =>
-      expect(mockSetActiveTab).toHaveBeenCalledWith('Profile'),
-    );
+    await drainTimers();
+    expect(mockSetActiveTab).toHaveBeenCalledWith('Profile');
     expect(navigateSpy).not.toHaveBeenCalled();
   });
 

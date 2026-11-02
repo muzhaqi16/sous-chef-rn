@@ -1,11 +1,11 @@
 'use no memo';
 
-import { act, waitFor } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   GetNotificationPreferencesDocument,
   UpdateNotificationPreferencesDocument,
@@ -64,6 +64,14 @@ jest.mock('#/services/errorService');
 jest.mock('#hooks/apollo/useApolloErrorLogger', () => ({
   useApolloErrorLogger: jest.fn(),
 }));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -148,9 +156,8 @@ describe('useNotificationSettings', () => {
       withPrefs(mockPreferencesData),
     );
 
-    await waitFor(() =>
-      expect(result.current.settings.expirationDaysThreshold).toBe(5),
-    );
+    await drainTimers();
+    expect(result.current.settings.expirationDaysThreshold).toBe(5);
     expect(result.current.settings.emailEnabled).toBe(true);
     expect(result.current.settings.pushEnabled).toBe(true);
   });
@@ -161,7 +168,8 @@ describe('useNotificationSettings', () => {
       withPrefs(null),
     );
 
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.settings.emailEnabled).toBe(true);
     expect(result.current.settings.pushEnabled).toBe(false);
     expect(result.current.settings.expirationDaysThreshold).toBe(3);
@@ -172,7 +180,8 @@ describe('useNotificationSettings', () => {
       () => useNotificationSettings(),
       withPrefs(mockPreferencesData),
     );
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.loading).toBe(false);
   });
 
@@ -189,17 +198,43 @@ describe('useNotificationSettings', () => {
     });
 
     let success: boolean = false;
-    await act(async () => {
-      success = await result.current.updateNotificationSetting(
-        'pushEnabled',
-        true,
-      );
-    });
+    success = await drained(() =>
+      result.current.updateNotificationSetting('pushEnabled', true),
+    );
 
     expect(update.fired).toContainEqual({
       input: { channels: { pushEnabled: true } },
     });
     expect(success).toBe(true);
+  });
+
+  it('writes push and expiry alerts together in one request', async () => {
+    const update = recordMock(UpdateNotificationPreferencesDocument, {
+      data: updatedPrefs({ pushEnabled: true, expirationNotifications: true }),
+    });
+
+    const { result } = renderHookWithApollo(() => useNotificationSettings(), {
+      operationMocks: [
+        ...withPrefs(mockPreferencesData).operationMocks,
+        update.mock,
+      ],
+    });
+
+    await drained(() =>
+      result.current.updateMultipleSettings({
+        pushEnabled: true,
+        expirationNotifications: true,
+      }),
+    );
+
+    expect(update.fired).toEqual([
+      {
+        input: {
+          channels: { pushEnabled: true },
+          expiration: { expirationNotifications: true },
+        },
+      },
+    ]);
   });
 
   it('reflects the server-confirmed value so the toggle stays put', async () => {
@@ -211,11 +246,12 @@ describe('useNotificationSettings', () => {
       operationMocks: [prefsQueryMock(), update.mock],
     });
 
-    await waitFor(() => expect(result.current.settings.pushEnabled).toBe(true));
+    await drainTimers();
+    expect(result.current.settings.pushEnabled).toBe(true);
 
-    await act(async () => {
-      await result.current.updateNotificationSetting('pushEnabled', false);
-    });
+    await drained(() =>
+      result.current.updateNotificationSetting('pushEnabled', false),
+    );
 
     expect(result.current.settings.pushEnabled).toBe(false);
   });
@@ -230,10 +266,11 @@ describe('useNotificationSettings', () => {
       operationMocks: [prefsQueryMock(), update.mock],
     });
 
-    await waitFor(() => expect(result.current.settings.pushEnabled).toBe(true));
+    await drainTimers();
+    expect(result.current.settings.pushEnabled).toBe(true);
 
     let pending: Promise<boolean> | undefined;
-    await act(async () => {
+    await drained(async () => {
       pending = result.current.updateNotificationSetting('pushEnabled', false);
       await Promise.resolve();
     });
@@ -243,7 +280,7 @@ describe('useNotificationSettings', () => {
     expect(update.fired).toHaveLength(1);
     expect(result.current.settings.pushEnabled).toBe(false);
 
-    await act(async () => {
+    await drained(async () => {
       update.release();
       await pending;
     });
@@ -264,17 +301,13 @@ describe('useNotificationSettings', () => {
       operationMocks: [prefsQueryMock({ pushEnabled: false }), update.mock],
     });
 
-    await waitFor(() =>
-      expect(result.current.settings.pushEnabled).toBe(false),
-    );
+    await drainTimers();
+    expect(result.current.settings.pushEnabled).toBe(false);
 
     let success: boolean = true;
-    await act(async () => {
-      success = await result.current.updateNotificationSetting(
-        'pushEnabled',
-        true,
-      );
-    });
+    success = await drained(() =>
+      result.current.updateNotificationSetting('pushEnabled', true),
+    );
 
     expect(success).toBe(false);
     expect(result.current.settings.pushEnabled).toBe(false);
@@ -292,9 +325,9 @@ describe('useNotificationSettings', () => {
       ],
     });
 
-    await act(async () => {
-      await result.current.updateNotificationSetting('lowStockAlerts', false);
-    });
+    await drained(() =>
+      result.current.updateNotificationSetting('lowStockAlerts', false),
+    );
 
     expect(update.fired).toContainEqual({
       input: { features: { lowStockAlerts: false } },
@@ -313,12 +346,9 @@ describe('useNotificationSettings', () => {
       ],
     });
 
-    await act(async () => {
-      await result.current.updateNotificationSetting(
-        'expirationDaysThreshold',
-        7,
-      );
-    });
+    await drained(() =>
+      result.current.updateNotificationSetting('expirationDaysThreshold', 7),
+    );
 
     expect(update.fired).toContainEqual({
       input: { expiration: { expirationDaysThreshold: 7 } },
@@ -338,9 +368,7 @@ describe('useNotificationSettings', () => {
     });
 
     let success: boolean = false;
-    await act(async () => {
-      success = await result.current.resetToDefaults();
-    });
+    success = await drained(() => result.current.resetToDefaults());
 
     expect(update.fired).toContainEqual({
       input: {
@@ -378,7 +406,8 @@ describe('useNotificationSettings', () => {
       () => useNotificationSettings(),
       withPrefs(mockPreferencesData),
     );
-    await waitFor(() => expect(result.current.loading).toBe(false));
+    await drainTimers();
+    expect(result.current.loading).toBe(false);
     expect(result.current.isQuietTime()).toBe(false);
   });
 
@@ -392,9 +421,8 @@ describe('useNotificationSettings', () => {
         quietHoursEnd: '23:59',
       }),
     );
-    await waitFor(() =>
-      expect(result.current.settings.quietHoursEnabled).toBe(true),
-    );
+    await drainTimers();
+    expect(result.current.settings.quietHoursEnabled).toBe(true);
     expect(result.current.isQuietTime()).toBe(true);
   });
 });

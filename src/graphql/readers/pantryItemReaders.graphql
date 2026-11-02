@@ -6,6 +6,7 @@ fragment PantryItemReaders on PantryItem {
   brand {
     id
     name
+    version
   }
   condition
   consumeUnit {
@@ -72,6 +73,7 @@ fragment PantryItemReaders on PantryItem {
       category {
         id
         name
+        version
       }
       isPrimary
     }
@@ -91,6 +93,7 @@ fragment PantryItemReaders on PantryItem {
     shownNutrition {
       ...ShownNutritionReaders
     }
+    version
   }
   itemId
   itemName
@@ -160,6 +163,7 @@ fragment PantryItemReaders on PantryItem {
     quantity
     totalPrice
     unitPrice
+    version
   }
   quantity
   quantityBreakdown {

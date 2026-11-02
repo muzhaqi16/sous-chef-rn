@@ -1,9 +1,9 @@
-import { act, waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetPantryItemBatchHistoryDocument } from '#features/pantry/graphql/pantry.generated';
 import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { usePantryBatchHistory } from '../usePantryBatchHistory';
@@ -40,9 +40,18 @@ async function loadHistory() {
     operationMocks: [get.mock],
     cache,
   });
-  await waitFor(() => expect(rendered.result.current.batches).toHaveLength(2));
+  await drainTimers();
+  expect(rendered.result.current.batches).toHaveLength(2);
   return { cache, ...rendered };
 }
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('usePantryBatchHistory', () => {
   // Wasting a batch edits only the batch, so the history query's result stays
@@ -52,15 +61,14 @@ describe('usePantryBatchHistory', () => {
     expect(result.current.activeCount).toBe(2);
     expect(result.current.batches.map(b => b.id)).toEqual(['b1', 'b2']);
 
-    await act(async () => {
+    await drained(async () => {
       cache.modify({
         id: cache.identify({ __typename: 'PantryItemBatch', id: 'b1' }),
         fields: { status: () => BatchStatus.Wasted },
       });
       await Promise.resolve();
     });
-
-    await waitFor(() => expect(result.current.activeCount).toBe(1));
+    expect(result.current.activeCount).toBe(1);
     expect(result.current.batches.map(b => b.id)).toEqual(['b2', 'b1']);
   });
 });

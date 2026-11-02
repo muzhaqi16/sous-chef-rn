@@ -16,14 +16,6 @@ const mockRevokeInvite = jest.fn();
 const mockLeaveHome = jest.fn().mockResolvedValue(true);
 const mockToggleJoinCode = jest.fn().mockResolvedValue(undefined);
 const mockRefetch = jest.fn();
-const mockHandleRoleSelect = jest.fn();
-const mockCloseRolePicker = jest.fn();
-const mockRolePickerState = {
-  visible: false,
-  membershipId: '',
-  currentRole: '',
-  memberName: '',
-};
 
 jest.mock('#features/home/screens/useHomeDetailManagement', () => ({
   useHomeDetailManagement: jest.fn(() => ({
@@ -44,9 +36,6 @@ jest.mock('#features/home/screens/useHomeDetailManagement', () => ({
     homeState: 'ready',
     leaving: false,
     refetch: mockRefetch,
-    rolePickerState: mockRolePickerState,
-    handleRoleSelect: mockHandleRoleSelect,
-    closeRolePicker: mockCloseRolePicker,
     saveName: mockSaveName,
     changeRole: mockChangeRole,
     removeMember: mockRemoveMember,
@@ -54,12 +43,6 @@ jest.mock('#features/home/screens/useHomeDetailManagement', () => ({
     leaveHome: mockLeaveHome,
     toggleJoinCode: mockToggleJoinCode,
   })),
-  ROLE_OPTIONS: [
-    { label: 'Owner', value: 'OWNER' },
-    { label: 'Admin', value: 'ADMIN' },
-    { label: 'Member', value: 'MEMBER' },
-    { label: 'Guest', value: 'GUEST' },
-  ],
 }));
 
 jest.mock('#store/useAppStore', () => ({
@@ -190,10 +173,6 @@ jest.mock('#components/molecules/Button', () => ({
   },
 }));
 
-jest.mock('#components/molecules/ModalPicker', () => ({
-  ModalPicker: () => null,
-}));
-
 jest.mock('#components/atoms/SousChefLoader', () => ({
   SousChefLoader: () => null,
 }));
@@ -226,9 +205,6 @@ beforeEach(() => {
     homeState: 'ready',
     leaving: false,
     refetch: mockRefetch,
-    rolePickerState: mockRolePickerState,
-    handleRoleSelect: mockHandleRoleSelect,
-    closeRolePicker: mockCloseRolePicker,
     saveName: mockSaveName,
     changeRole: mockChangeRole,
     removeMember: mockRemoveMember,
@@ -342,6 +318,17 @@ describe('HomeDetailScreen', () => {
     expect(getByText('Storage Locations')).toBeTruthy();
   });
 
+  // Reachable from Home settings with prices off, unlike Budget & prices.
+  it("opens the home's usual stores", () => {
+    const { getByText } = render(<HomeDetailScreen {...defaultProps} />);
+
+    fireEvent.press(getByText('Your stores'));
+
+    expect(useAppNavigation().toUsualStores).toHaveBeenCalledWith({
+      homeId: 'home-1',
+    });
+  });
+
   it('does not show leave home for owner', () => {
     const { queryByText } = render(<HomeDetailScreen {...defaultProps} />);
     expect(queryByText('Leave Home')).toBeNull();
@@ -356,9 +343,6 @@ describe('HomeDetailScreen', () => {
       homeState: 'loading',
       leaving: false,
       refetch: mockRefetch,
-      rolePickerState: mockRolePickerState,
-      handleRoleSelect: mockHandleRoleSelect,
-      closeRolePicker: mockCloseRolePicker,
       saveName: mockSaveName,
       changeRole: mockChangeRole,
       removeMember: mockRemoveMember,
@@ -415,9 +399,6 @@ describe('HomeDetailScreen', () => {
       homeState: 'ready',
       leaving: false,
       refetch: mockRefetch,
-      rolePickerState: mockRolePickerState,
-      handleRoleSelect: mockHandleRoleSelect,
-      closeRolePicker: mockCloseRolePicker,
       saveName: mockSaveName,
       changeRole: mockChangeRole,
       removeMember: mockRemoveMember,

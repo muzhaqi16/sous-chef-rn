@@ -8,8 +8,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
 import { MarkShoppingListAsDefaultDocument } from '#features/shoppingList/graphql/shoppingList.generated';
-import { settleMutation } from '#/apollo/utils/settleMutation';
-import { errorService } from '#/services/errorService';
+import { sendFields } from '#/apollo/pendingWrites/sendFields';
 
 export function useSetDefaultShoppingList() {
   const { t } = useTranslation();
@@ -19,51 +18,16 @@ export function useSetDefaultShoppingList() {
   });
 
   const setAsDefault = async (id: string): Promise<boolean> => {
-    const cacheId = client.cache.identify({ __typename: 'ShoppingList', id });
-    let previous: boolean | undefined;
-
-    try {
-      client.cache.modify({
-        id: cacheId,
-        fields: {
-          isDefault(existing: boolean) {
-            previous = existing;
-            return true;
-          },
-        },
-      });
-    } catch (cacheError) {
-      errorService.reportError(cacheError, {
-        operation: 'Set Default Shopping List (optimistic)',
-      });
-    }
-
-    const revert = () => {
-      if (previous !== undefined) {
-        try {
-          client.cache.modify({
-            id: cacheId,
-            fields: { isDefault: () => previous },
-          });
-        } catch (cacheError) {
-          errorService.reportError(cacheError, {
-            operation: 'Revert Set Default Shopping List',
-          });
-        }
-      }
-    };
-
-    const settled = await settleMutation(
-      () =>
-        mutate({
-          variables: { input: { id } },
-        }),
-      {
+    const settled = await sendFields(client.cache, {
+      entity: { __typename: 'ShoppingList', id },
+      fields: { isDefault: true },
+      variables: { input: { id } },
+      mutate,
+      settle: {
         document: MarkShoppingListAsDefaultDocument,
         fallback: t('shoppingListScreens.failedToSetDefault'),
-        onFailed: revert,
       },
-    );
+    });
     return settled.status !== 'failed';
   };
 

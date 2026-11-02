@@ -7,6 +7,9 @@ import { useIsCreateUnconfirmed } from '#hooks/offline/useIsCreateUnconfirmed';
 import { extractNodes } from '#/utils/connectionUtils';
 import { defaultPantryOf } from '#domain/homePantries';
 import { useToday } from '#hooks/app/useToday';
+import { useDataState } from '#hooks/data/useDataState';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { isResourceNotFoundError } from '#features/pantry/utils/notFound';
 
 interface UsePantryItemFormDataArgs {
   itemId: string | null | undefined;
@@ -22,17 +25,23 @@ export function usePantryItemFormData({
 }: UsePantryItemFormDataArgs) {
   const today = useToday();
 
-  const { data: homeData } = useQuery(
+  const { data: homeData, error: homeError } = useQuery(
     GetHomeDocument,
     selectedHomeId ? { variables: { homeId: selectedHomeId } } : skipToken,
   );
+  useApolloErrorLogger(GetHomeDocument, homeError);
 
   const isUnconfirmed = useIsCreateUnconfirmed(itemId);
   // A client-minted id is cached (and edit-swipeable) before the server has
   // the row; querying in that window can only return RESOURCE_NOT_FOUND,
   // which renders as the dead-end "item not found" state.
   const fetchedItemId = itemId && !isUnconfirmed ? itemId : null;
-  const { loading: itemLoading, refetch } = useQuery(
+  const {
+    data: fetchedItem,
+    loading: itemLoading,
+    error: itemError,
+    refetch,
+  } = useQuery(
     PantryItemForEditDocument,
     fetchedItemId ? { variables: { id: fetchedItemId } } : skipToken,
   );
@@ -49,11 +58,22 @@ export function usePantryItemFormData({
   });
   const existingPantryItem = liveItem.complete ? liveItem.data : null;
 
+  // The server saying the stack is gone is an answer, not a failed read.
+  const answeredNotFound =
+    (!!fetchedItem && fetchedItem.pantryItem === null) ||
+    isResourceNotFoundError(itemError);
+  const itemState = useDataState({
+    loading: itemLoading,
+    error: answeredNotFound ? undefined : itemError,
+    hasResult: !!existingPantryItem || answeredNotFound,
+    isEmpty: false,
+  });
+
   const pantry = defaultPantryOf(homeData?.home) ?? null;
   const currentPantryId =
     selectedPantryId ?? pantry?.id ?? existingPantryItem?.pantryId;
 
-  const { data: pantryData } = useQuery(
+  const { data: pantryData, error: pantryError } = useQuery(
     GetPantryDocument,
     currentPantryId
       ? {
@@ -62,6 +82,7 @@ export function usePantryItemFormData({
         }
       : skipToken,
   );
+  useApolloErrorLogger(GetPantryDocument, pantryError);
 
   const storageLocations = extractNodes(
     pantryData?.pantry?.storageLocationsConnection,
@@ -73,6 +94,7 @@ export function usePantryItemFormData({
     currentPantryId,
     storageLocations,
     itemLoading,
+    itemState,
     refetchItem,
   };
 }

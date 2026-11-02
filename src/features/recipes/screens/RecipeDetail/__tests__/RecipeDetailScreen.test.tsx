@@ -67,13 +67,13 @@ jest.mock('#features/recipes/hooks/useRecipeReviews', () => ({
 
 const mockHousehold: {
   check: string;
-  summary: unknown[];
+  flagged: boolean;
   rows: Record<string, unknown[]>;
-} = { check: 'none', summary: [], rows: {} };
+} = { check: 'none', flagged: false, rows: {} };
 jest.mock('#features/recipes/hooks/useRecipeDietaryAlerts', () => ({
   useRecipeDietaryAlerts: () => ({
     check: mockHousehold.check,
-    summary: mockHousehold.summary,
+    flagged: mockHousehold.flagged,
     alertsFor: (id: string) => mockHousehold.rows[id] ?? [],
   }),
 }));
@@ -145,8 +145,17 @@ jest.mock('#features/shoppingList/ui/ShoppingListPickerSheet', () => ({
   ShoppingListPickerSheet: () => null,
 }));
 
+let mockCookDialog: { defaultServings?: number } = {};
 jest.mock('#features/recipes/ui/MarkCookedModal', () => ({
-  MarkCookedModal: () => null,
+  MarkCookedModal: (props: { defaultServings: number }) => {
+    mockCookDialog = props;
+    return null;
+  },
+}));
+
+let mockCooksFor: number | null = null;
+jest.mock('#features/profile/hooks/useCooksFor', () => ({
+  useCooksFor: () => mockCooksFor,
 }));
 
 jest.mock(
@@ -485,6 +494,26 @@ describe('RecipeDetail', () => {
     expect(tree.getByText('View Original Recipe')).toBeTruthy();
   });
 
+  it('credits the author once, in the attribution at the foot', () => {
+    const tree = renderDetail({
+      displayData: {
+        dataAttributions: [],
+        details: 'complete',
+        title: 'Test',
+        image: null,
+        servings: null,
+        readyInMinutes: null,
+        healthScore: null,
+        ingredients: [],
+        instructions: [],
+        originalAuthor: 'Jen West',
+        sourceName: 'Pink When',
+      },
+    });
+    expect(tree.getAllByText('By Jen West')).toHaveLength(1);
+    expect(tree.getByText('Recipe from Pink When')).toBeTruthy();
+  });
+
   it('renders "Recipe not found" when no recipeId and no error', () => {
     const tree = renderDetail();
     expect(tree.getByText('Recipe not found')).toBeTruthy();
@@ -618,14 +647,6 @@ describe('RecipeDetail', () => {
     });
 
     describe('for the household', () => {
-      const SHRIMP = {
-        id: 'r-shellfish',
-        memberName: 'Tani',
-        what: 'Shellfish',
-        state: 'CONTAINS',
-        severity: 'ALLERGY',
-        isDiet: false,
-      };
       const BUTTER = {
         id: 'r-vegan',
         memberName: 'You',
@@ -636,7 +657,7 @@ describe('RecipeDetail', () => {
       };
       afterEach(() => {
         mockHousehold.check = 'none';
-        mockHousehold.summary = [];
+        mockHousehold.flagged = false;
         mockHousehold.rows = {};
         for (const id of Object.keys(mockSubstitutes)) {
           delete mockSubstitutes[id];
@@ -646,7 +667,7 @@ describe('RecipeDetail', () => {
 
       it('opens a flagged ingredient’s sheet, with its alerts and swaps, instead of adding it', () => {
         mockHousehold.check = 'checked';
-        mockHousehold.summary = [BUTTER];
+        mockHousehold.flagged = true;
         mockHousehold.rows = { i4: [BUTTER] };
         mockSubstitutes.i0 = [{ id: 's-flour' }];
         mockSubstitutes.i4 = [{ id: 's-oil' }, { id: 's-applesauce' }];
@@ -672,32 +693,18 @@ describe('RecipeDetail', () => {
         expect(mockSubstitutesWanted.at(-1)).toBe(false);
       });
 
-      it('leads with who the recipe affects and badges each flagged tile', () => {
+      it('says it once, on the flagged tile, with nothing above the ingredients', () => {
         mockHousehold.check = 'checked';
-        mockHousehold.summary = [SHRIMP, BUTTER];
+        mockHousehold.flagged = true;
         mockHousehold.rows = { i4: [BUTTER] };
         renderIngredients();
 
-        expect(screen.getByTestId('recipe-household-summary')).toBeTruthy();
-        expect(screen.getByText('Tani')).toBeTruthy();
-        expect(
-          screen.getByText(
-            t('dietaryAlerts.reason.contains', { what: 'Shellfish' }),
-          ),
-        ).toBeTruthy();
-        // The summary's line and the butter tile's badge both say it.
         expect(
           screen.getAllByText(
             t('dietaryAlerts.reason.notDiet', { what: 'Vegan' }),
           ),
-        ).toHaveLength(2);
-      });
-
-      it('shows no summary when nobody is affected', () => {
-        mockHousehold.check = 'checked';
-        renderIngredients();
-
-        expect(screen.queryByTestId('recipe-household-summary')).toBeNull();
+        ).toHaveLength(1);
+        expect(screen.queryByText(t('dietaryAlerts.title'))).toBeNull();
       });
     });
 
@@ -713,6 +720,40 @@ describe('RecipeDetail', () => {
       ).toBeDisabled();
       fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
       expect(handleAddSingleIngredient).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('the cook dialog', () => {
+    const cooking = {
+      recipeId: 'r1',
+      displayData: {
+        dataAttributions: [],
+        details: 'complete',
+        title: 'Cooking Recipe',
+        image: null,
+        servings: 6,
+        ingredients: [],
+        instructions: [],
+      },
+      backendRecipe: { createdBy: { id: 'user-1' } },
+      cookedModalVisible: true,
+    };
+
+    afterEach(() => {
+      mockCooksFor = null;
+    });
+
+    it('starts at who the user cooks for', () => {
+      mockCooksFor = 4;
+      renderDetail(cooking);
+
+      expect(mockCookDialog.defaultServings).toBe(4);
+    });
+
+    it("starts at the recipe's servings when that was not answered", () => {
+      renderDetail(cooking);
+
+      expect(mockCookDialog.defaultServings).toBe(6);
     });
   });
 

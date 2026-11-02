@@ -1,4 +1,4 @@
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
 import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
@@ -10,7 +10,9 @@ import {
   createApolloTestWrapper,
   recordMock,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { UseAdjustPantryItemQuantity_PantryItemFragmentDoc } from '../useAdjustPantryItemQuantity.generated';
 import { useAdjustPantryItemQuantity } from '../useAdjustPantryItemQuantity';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
@@ -32,11 +34,8 @@ const successMock = (variables: {
           __typename: 'PantryItem',
           id: variables.input.id,
           version: 1,
-          updatedAt: '2026-01-01T00:00:00.000Z',
           quantity: variables.input.newQuantity,
           remainingNetWeight: variables.input.remainingNetWeight ?? null,
-          lastUsedAt: null,
-          activeBatchCount: 0,
         },
       },
     },
@@ -75,6 +74,14 @@ const refusalMock = (
 });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
 });
 
@@ -99,14 +106,9 @@ describe('useAdjustPantryItemQuantity', () => {
     );
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity(
-        'item-1',
-        5,
-        'Physical count',
-        1,
-      );
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 5, 'Physical count', 1),
+    );
 
     expect(success).toBe(true);
     expect(onSuccess).toHaveBeenCalled();
@@ -123,9 +125,9 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 3, 'Counted', 7);
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 3, 'Counted', 7),
+    );
 
     expect(success).toBe(true);
   });
@@ -147,15 +149,9 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity(
-        'item-1',
-        2,
-        'Weighed',
-        5,
-        250,
-      );
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 2, 'Weighed', 5, 250),
+    );
 
     expect(success).toBe(true);
   });
@@ -171,9 +167,9 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 1, 'Adjusted', 2);
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 1, 'Adjusted', 2),
+    );
 
     expect(success).toBe(true);
   });
@@ -192,9 +188,9 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 5, 'Count', 1),
+    );
 
     expect(success).toBe(false);
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -211,18 +207,15 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 5, 'Count', 1),
+    );
 
     expect(success).toBe(false);
-    await waitFor(() =>
-      // Localized copy, not the error's own text. The raw message is
-      // unlocalizable English and belongs in the report, not the alert.
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Could not adjust the quantity.',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Could not adjust the quantity.',
     );
   });
 
@@ -234,9 +227,9 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 5, 'Count', 1),
+    );
 
     expect(success).toBe(false);
     // A union-error payload carries no transport error, so onError never fires —
@@ -262,9 +255,9 @@ describe('useAdjustPantryItemQuantity', () => {
     });
 
     let success: boolean | undefined;
-    await act(async () => {
-      success = await result.current.adjustQuantity('item-1', 5, 'Count', 1);
-    });
+    success = await drained(() =>
+      result.current.adjustQuantity('item-1', 5, 'Count', 1),
+    );
 
     expect(success).toBe(false);
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -280,20 +273,13 @@ describe('useAdjustPantryItemQuantity', () => {
       __typename: 'PantryItem',
       id: 'item-1',
       version: 1,
-      updatedAt: '2026-01-01T00:00:00.000Z',
       quantity: 1360.78,
-      heldQuantity: 1360.78,
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 1360.78,
-        localizedSymbol: 'g',
-        fraction: null,
         unit: asAbbreviation({ __typename: 'Unit', id: 'u-g', symbol: 'g' }),
       },
-      isLowStock: false,
       remainingNetWeight: null,
-      lastUsedAt: null,
-      activeBatchCount: 1,
     } as const;
 
     const refusedWhileHeld = () =>
@@ -309,6 +295,7 @@ describe('useAdjustPantryItemQuantity', () => {
       });
     const readStack = (cache: ReturnType<typeof seedCache>) =>
       cache.readFragment({
+        optimistic: true,
         id: 'PantryItem:item-1',
         fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
         fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
@@ -353,21 +340,20 @@ describe('useAdjustPantryItemQuantity', () => {
       const pending = recount(cache, refused, 2.5, {
         newQuantityUnitId: 'u-lb',
       });
-      await waitFor(() => expect(refused.fired).toHaveLength(1));
+      await drainTimers();
+      expect(refused.fired).toHaveLength(1);
 
       // Another member's use, read back over the socket.
-      cache.writeFragment({
+      seedFragment(cache, {
         fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
         fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
         data: {
           ...ITEM,
           version: 2,
-          updatedAt: '2026-01-02T00:00:00.000Z',
           quantity: 1000,
-          heldQuantity: 1000,
         },
       });
-      await act(async () => {
+      await drained(async () => {
         refused.release();
         await pending();
       });
@@ -379,10 +365,11 @@ describe('useAdjustPantryItemQuantity', () => {
       const cache = seeded();
       const refused = refusedWhileHeld();
       const pending = recount(cache, refused, 900);
-      await waitFor(() => expect(refused.fired).toHaveLength(1));
+      await drainTimers();
+      expect(refused.fired).toHaveLength(1);
       expect(readStack(cache)?.quantity).toBe(900);
 
-      await act(async () => {
+      await drained(async () => {
         refused.release();
         await pending();
       });
@@ -396,7 +383,7 @@ describe('useAdjustPantryItemQuantity', () => {
         data: {
           adjustPantryItemQuantity: {
             __typename: 'AdjustPantryItemQuantityPayload',
-            pantryItem: { ...ITEM, quantity: 1133.98, heldQuantity: 1133.98 },
+            pantryItem: { ...ITEM, quantity: 1133.98 },
           },
         },
       });
@@ -426,7 +413,8 @@ describe('useAdjustPantryItemQuantity', () => {
         );
       });
 
-      await waitFor(() => expect(held.fired).toHaveLength(1));
+      await drainTimers();
+      expect(held.fired).toHaveLength(1);
       expect(held.fired[0]).toEqual(
         expect.objectContaining({
           input: expect.objectContaining({
@@ -437,18 +425,20 @@ describe('useAdjustPantryItemQuantity', () => {
       );
       expect(
         cache.readFragment({
+          optimistic: true,
           id: 'PantryItem:item-1',
           fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useAdjustPantryItemQuantity_pantryItem',
         })?.quantity,
       ).toBe(1360.78);
 
-      await act(async () => {
+      await drained(async () => {
         held.release();
         await pending;
       });
       expect(
         cache.readFragment({
+          optimistic: true,
           id: 'PantryItem:item-1',
           fragment: UseAdjustPantryItemQuantity_PantryItemFragmentDoc,
           fragmentName: 'useAdjustPantryItemQuantity_pantryItem',

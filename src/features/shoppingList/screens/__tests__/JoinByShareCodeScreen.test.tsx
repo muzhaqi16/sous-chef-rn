@@ -1,6 +1,7 @@
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { JoinShoppingListByShareCodeDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
@@ -50,6 +51,14 @@ const pressJoin = async () => {
   await user.press(screen.getByText('Join List'));
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('JoinByShareCodeScreen', () => {
@@ -63,10 +72,9 @@ describe('JoinByShareCodeScreen', () => {
 
     await pressJoin();
 
-    await waitFor(() =>
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Too many requests. Please try again in 10 minutes.',
-      ),
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Too many requests. Please try again in 10 minutes.',
     );
     expect(fired).toEqual([{ input: { shareCode: CODE } }]);
     expect(mockGoBack).not.toHaveBeenCalled();
@@ -89,10 +97,9 @@ describe('JoinByShareCodeScreen', () => {
 
     await pressJoin();
 
-    await waitFor(() =>
-      expect(toastService.error).toHaveBeenCalledWith(
-        'Failed to join list. The code may be invalid or expired.',
-      ),
+    await drainTimers();
+    expect(toastService.error).toHaveBeenCalledWith(
+      'Failed to join list. The code may be invalid or expired.',
     );
     expect(mockToShoppingListMain).not.toHaveBeenCalled();
   });
@@ -115,7 +122,8 @@ describe('JoinByShareCodeScreen', () => {
 
     await pressJoin();
 
-    await waitFor(() => expect(mockToShoppingListMain).toHaveBeenCalled());
+    await drainTimers();
+    expect(mockToShoppingListMain).toHaveBeenCalled();
     expect(mockGoBack).toHaveBeenCalled();
     expect(toastService.error).not.toHaveBeenCalled();
     expect(toastService.success).toHaveBeenCalledWith(

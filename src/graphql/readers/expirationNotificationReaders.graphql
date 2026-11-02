@@ -10,6 +10,8 @@ fragment ExpirationNotificationReaders on ExpirationNotification {
       id
       imageUrl
       name
+      version
     }
+    version
   }
 }

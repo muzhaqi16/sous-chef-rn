@@ -4,6 +4,7 @@ import type {
   DefaultContext,
   OperationVariables,
 } from '@apollo/client';
+import type { LocalInputs } from '#/apollo/pendingWrites/types';
 
 export enum QueueStatus {
   PENDING = 'pending',
@@ -11,7 +12,12 @@ export enum QueueStatus {
   FAILED = 'failed',
   AUTH_ERROR = 'auth_error',
   SUCCESS = 'success', // Kept briefly after replay, for reconciliation.
+  /** The server would not take it. Kept, unsent, for the person to decide. */
+  REFUSED = 'refused',
 }
+
+/** A write the queue had no room for. */
+export const QUEUE_FULL_CODE = 'QUEUE_FULL';
 
 /**
  * The queue is at capacity with nothing terminal to evict — full of un-synced
@@ -46,6 +52,8 @@ export interface QueueError {
   retryable: boolean;
   /** Set on a rate-limit refusal: no drain runs until this much time passes. */
   retryAfterMs?: number;
+  /** A fault on the server's side that may be this write's own: it is counted. */
+  fault?: boolean;
 }
 
 /** Named cache values a replay reads, captured when queued (`unit:<id>` → symbol). */
@@ -64,14 +72,18 @@ export interface QueuedMutation {
    * leaves the cache stays replayable. Absent on entries queued before it.
    */
   replayInputs?: ReplayInputs;
+  /** The pending write it carries, for an operation with a local write. */
+  pendingWrite?: { id: string; inputs: LocalInputs };
+  /** What it stays in order behind, beyond the rows it names (`LocalWrite.orderedBy`). */
+  orderedBy?: string;
 
   status: QueueStatus;
   /** When this entry was queued. The drain replays in this order. */
   createdAt: number;
   /**
    * The age the 90-day horizon counts from, when it differs from `createdAt`:
-   * a coalesced move carries the first move's. Kept apart from `createdAt`
-   * because that one also decides delivery order.
+   * a coalesced move carries the first move's, a retried change its own. Kept
+   * apart from `createdAt` because that one also decides delivery order.
    */
   agedFrom?: number;
   updatedAt: number;
@@ -80,8 +92,24 @@ export interface QueuedMutation {
   retryCount: number;
   maxRetries: number;
   lastError?: QueueError;
+  /** The server faults it met across drains, one each however often retried. */
+  faults?: WriteFaults;
+  /** The entity a refused change was to, for the person's list. */
+  refusedResource?: string;
+  /** The refused entry whose row this needs, which it follows. */
+  heldBy?: string;
+  /** The person chose to send it again, so a conflict sends it at the row's version. */
+  overwrites?: boolean;
+  /** How often a conflict sent it again at the row's current version. */
+  conflictResends?: number;
 
   requiresAuth: boolean;
+}
+
+export interface WriteFaults {
+  count: number;
+  firstAt: number;
+  lastAt: number;
 }
 
 export interface QueueStats {
@@ -128,31 +156,12 @@ export interface FailedMutationInfo {
    * something needs its own withdrawal, which needs to know which row.
    */
   variables: OperationVariables;
+  /** Dropping it undoes the write; nothing else is withdrawn. */
+  pendingWriteId?: string;
   error: QueueError;
 }
 
 export type FailureHandler = (info: FailedMutationInfo) => void;
-
-/**
- * Withdraws the aggregate a queued write moved that an evict does not put back
- * — a count the mutation's own `update` callback never ran to adjust. Runs
- * BEFORE the evict, so it can still see the edge it is uncounting.
- */
-export type CountWithdrawal = (
-  cache: ApolloCache,
-  variables: OperationVariables,
-  entityId: string | null,
-) => void;
-
-/**
- * Puts back what a queued write UNLINKED. `safeEvict` withdraws what a write
- * created; an operation that also unlinked an existing entity leaves that half
- * standing, and no evict restores it. Runs AFTER the evict.
- */
-export type UnlinkWithdrawal = (
-  cache: ApolloCache,
-  variables: OperationVariables,
-) => void;
 
 /**
  * Told when a queued removal is dropped because the entry it named merged into
@@ -183,8 +192,5 @@ export type ReplayReconciler = (
   adopt?: (adoption: RowAdoption) => void,
 ) => void;
 
-/** Every table here is keyed by operation name, and every entry IDEMPOTENT: a
- * drain can re-run one already settled. */
-export type CountWithdrawalTable = Record<string, CountWithdrawal>;
-export type UnlinkWithdrawalTable = Record<string, UnlinkWithdrawal>;
+/** Keyed by operation name, every entry IDEMPOTENT: a drain can re-run one settled. */
 export type ReplayReconcilerTable = Record<string, ReplayReconciler>;

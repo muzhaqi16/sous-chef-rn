@@ -3,7 +3,11 @@ import { MockLink } from '@apollo/client/testing';
 import type { DocumentNode } from 'graphql';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
-import { completeMockedResponse } from '#/test-utils/apolloMockProvider';
+import {
+  completeMockedResponse,
+  seedFragment,
+  seedQuery,
+} from '#/test-utils/apolloMockProvider';
 import {
   makeQueuedMutation,
   queuedMutationFor,
@@ -84,7 +88,7 @@ describe('a queued notification delete', () => {
     mockClient = replayClient(DeleteMultipleNotificationsDocument, {
       deleteMultipleNotifications: {
         __typename: 'DeleteMultipleNotificationsPayload',
-        summary: { __typename: 'BulkSummary', total: 2 },
+        summary: { __typename: 'BulkSummary' },
       },
     });
 
@@ -105,12 +109,9 @@ describe('a queued mark-read of a notification deleted elsewhere', () => {
       markNotificationAsRead: {
         __typename: 'NotFoundError',
         code: ErrorCode.NotFound,
-        message: 'gone',
-        resource: 'Notification',
-        resourceId: 'n1',
       },
     });
-    mockClient.cache.writeFragment({
+    seedFragment(mockClient.cache, {
       id: 'Notification:n1',
       fragment: NOTIFICATION,
       data: {
@@ -150,7 +151,7 @@ describe('a queued mark-read replayed later', () => {
         },
       },
     });
-    mockClient.cache.writeQuery({
+    seedQuery(mockClient.cache, {
       query: NotificationSummaryDocument,
       data: {
         __typename: 'Query',

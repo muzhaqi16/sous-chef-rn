@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { RefreshControl, type TextInputProps } from 'react-native';
-import { act, fireEvent, screen, waitFor } from '@testing-library/react-native';
+import { act, fireEvent, screen } from '@testing-library/react-native';
 import { renderWithApollo, seedCache } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ShareList } from '../ShareList';
 import { kitTestIDs } from '#components/testIDs';
 import { t } from '#/i18n';
@@ -154,6 +155,7 @@ jest.mock('#features/shoppingList/hooks/useShoppingListDetails', () => ({
 }));
 
 jest.mock('#/apollo/utils/cacheUpdaters', () => ({
+  ...jest.requireActual('#/apollo/utils/cacheUpdaters'),
   createAddToParentConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromParentConnectionUpdater: jest.fn(() => jest.fn()),
 }));
@@ -219,6 +221,14 @@ jest.mock(
   },
 );
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('ShareList', () => {
   const route = { params: { listId: 'sl1' } };
 
@@ -258,7 +268,8 @@ describe('ShareList', () => {
     });
     expect(control().refreshing).toBe(true);
 
-    await waitFor(() => expect(control().refreshing).toBe(false));
+    await drainTimers();
+    expect(control().refreshing).toBe(false);
     expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 

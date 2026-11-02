@@ -21,11 +21,15 @@ import { hasNutritionData, toShownNutrition } from '#domain/nutrition';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { CachedImage } from '#components/atoms/CachedImage';
-import { useStoreShelfPrices } from '#features/catalog/hooks/useStoreShelfPrices';
+import {
+  hasShelfPrices,
+  useStoreShelfPrices,
+} from '#features/catalog/hooks/useStoreShelfPrices';
 import { StoreShelfPriceList } from '#features/catalog/ui/StoreShelfPriceList';
 import { Text } from '#components/atoms/Text';
 import { DetailSection } from '#components/molecules/DetailSection';
 import { DataStateView } from '#components/organisms/DataStateView';
+import { PartialDataNote } from '#components/molecules/PartialDataNote';
 import { InfoRow } from '#components/atoms/InfoRow';
 import { DetailTitleRow } from '#components/atoms/DetailTitleRow';
 import {
@@ -115,7 +119,7 @@ export const ShoppingListItemDetail: React.FC<
   // `item` may be only the list's row (offline, or before the fetch answers):
   // its detail-only reads are guarded, and a section made only of them waits
   // for `detail`.
-  const { item, detail, notFound, state, retry } =
+  const { item, detail, heldOnly, notFound, state, retry } =
     useShoppingListItemDetail(itemId);
   const shelfPrices = useStoreShelfPrices(item?.item?.id, listId);
 
@@ -293,6 +297,13 @@ export const ShoppingListItemDetail: React.FC<
           style={styles.titleRow}
         />
 
+        {heldOnly ? (
+          <PartialDataNote
+            onRetry={retry}
+            testID={shoppingListTestIDs.itemPartial}
+          />
+        ) : null}
+
         {!!purchaseInfo?.isPurchased && (
           <View style={styles.statusBadge}>
             <Icon name="checkmark-circle" size={18} tone="success" />
@@ -379,9 +390,9 @@ export const ShoppingListItemDetail: React.FC<
           )}
         </DetailSection>
 
-        {shelfPrices.rows.length > 0 && (
+        {hasShelfPrices(shelfPrices) && (
           <DetailSection title={t('storeShelfPrices.title')}>
-            <StoreShelfPriceList rows={shelfPrices.rows} />
+            <StoreShelfPriceList {...shelfPrices} />
           </DetailSection>
         )}
 

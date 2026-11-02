@@ -210,13 +210,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
   // silently rewriting the field.
   const decrementDisabled = stepDisabled || stepBase <= 0;
 
-  styles.useVariants({ editing: isEditing });
+  const variantStyles = styles.useVariants({ editing: isEditing });
 
   return (
     <BottomSheetModal ref={ref} {...modalProps}>
       {/* `BottomSheetView` reports its own height as the sheet's content
           height, so everything the sheet shows must sit inside this one. */}
-      <BottomSheetView style={[styles.content, contentContainerStyle]}>
+      <BottomSheetView style={[variantStyles.content, contentContainerStyle]}>
         <SheetHeader
           title={t('quantityEditSheet.title')}
           onClose={onClose}
@@ -229,16 +229,20 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
         />
         {/* The header spans the full width and only the fields are inset, so
           the padding lives here rather than on the measured view. */}
-        <View style={styles.sections}>
-          <View style={styles.section}>
-            <Text role="label" tone="secondary" style={styles.sectionLabel}>
+        <View style={variantStyles.sections}>
+          <View style={variantStyles.section}>
+            <Text
+              role="label"
+              tone="secondary"
+              style={variantStyles.sectionLabel}
+            >
               {t('labels.quantity')}
             </Text>
-            <View style={styles.counterContainer}>
+            <View style={variantStyles.counterContainer}>
               <AppPressable
                 testID={shoppingListTestIDs.quantityEditDecrement}
                 accessibilityLabel={t('editableCounter.decrease')}
-                style={styles.counterButton}
+                style={variantStyles.counterButton}
                 onPress={handleDecrement}
                 disabled={decrementDisabled}
               >
@@ -251,13 +255,13 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
 
               <AppPressable
                 testID={shoppingListTestIDs.quantityEditValue}
-                style={styles.quantityDisplay}
+                style={variantStyles.quantityDisplay}
                 onPress={handleQuantityPress}
               >
                 {isEditing ? (
                   <ThemedBottomSheetTextInput
                     ref={inputRef}
-                    style={styles.quantityInput}
+                    style={variantStyles.quantityInput}
                     value={quantityInput}
                     onChangeText={handleInputChange}
                     onBlur={handleInputBlur}
@@ -276,7 +280,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
               <AppPressable
                 testID={shoppingListTestIDs.quantityEditIncrement}
                 accessibilityLabel={t('editableCounter.increase')}
-                style={styles.incrementButton}
+                style={variantStyles.incrementButton}
                 onPress={handleIncrement}
                 disabled={stepDisabled}
               >
@@ -290,7 +294,7 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
                 role="error"
                 tone="error"
                 align="center"
-                style={styles.quantityHint}
+                style={variantStyles.quantityHint}
                 testID={shoppingListTestIDs.quantityEditFormatHint}
               >
                 {localizeNumericHint(t('fractionInput.formatsHint'))}
@@ -298,13 +302,16 @@ export const QuantityEditSheet: React.FC<QuantityEditSheetProps> = ({
             )}
           </View>
 
-          <View style={styles.section}>
-            <SectionHeader variant="overline" style={styles.sectionLabel}>
+          <View style={variantStyles.section}>
+            <SectionHeader
+              variant="overline"
+              style={variantStyles.sectionLabel}
+            >
               {t('labels.unit')}
             </SectionHeader>
 
             {itemUnits.length > 0 && (
-              <View style={styles.chipsContainer}>
+              <View style={variantStyles.chipsContainer}>
                 {itemUnits.map(chip => (
                   <Chip
                     key={chip.id}

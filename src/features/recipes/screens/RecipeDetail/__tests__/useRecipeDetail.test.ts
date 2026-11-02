@@ -1,5 +1,6 @@
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import type { useRecipeData } from '../../../hooks/useRecipeData';
 import type { useRecipeFavoriteState } from '../../../hooks/useRecipeFavoriteState';
 import type { useRecipeShoppingList } from '../../../hooks/useRecipeShoppingList';
@@ -12,6 +13,10 @@ import type {
 import { useRecipeDetail } from '../useRecipeDetail';
 import { memoryIntents } from '#/test-utils/memoryPlatform';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
+import {
+  recordOpenedCatalogRecipe,
+  useOpenedCatalogRecipesStore,
+} from '#features/recipes/store/openedCatalogRecipes';
 
 type RecipeData = ReturnType<typeof useRecipeData>;
 type BackendRecipe = RecipeData['backendRecipe'];
@@ -128,13 +133,33 @@ const lastOnSaved = () => {
 };
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   useRoute.mockReturnValue({ params: {} });
+  useOpenedCatalogRecipesStore.setState({ recipeIds: {} });
   mockUseRecipeData.mockImplementation(() => mockRecipeDataReturn);
 });
 
 describe('useRecipeDetail', () => {
   describe('a recipe opened by id', () => {
+    it('hands the data hook what its row showed', () => {
+      const row = { name: 'Lentil soup', imageUrl: 'https://img/soup.jpg' };
+      useRoute.mockReturnValue({ params: { recipeId: 'r1', row } });
+
+      renderHookWithApollo(() => useRecipeDetail());
+
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipeId: 'r1', hint: row }),
+      );
+    });
+
     it('loads it by that id and never opens a catalog recipe', () => {
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
 
@@ -188,13 +213,12 @@ describe('useRecipeDetail', () => {
         hint: HINT,
         openFailure: null,
       });
-      await waitFor(() =>
-        expect(mockUseRecipeData).toHaveBeenLastCalledWith({
-          recipeId: 'catalog-1',
-          hint: HINT,
-          openFailure: null,
-        }),
-      );
+      await drainTimers();
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith({
+        recipeId: 'catalog-1',
+        hint: HINT,
+        openFailure: null,
+      });
       expect(mockOpenCatalogRecipe).toHaveBeenCalledWith(HINT);
       expect(mockUseRecipeCookingActions).toHaveBeenLastCalledWith({
         recipeId: 'catalog-1',
@@ -210,10 +234,9 @@ describe('useRecipeDetail', () => {
       useRoute.mockReturnValue({ params: { catalog: HINT } });
 
       const { rerender } = renderHookWithApollo(() => useRecipeDetail());
-      await waitFor(() =>
-        expect(mockUseRecipeData).toHaveBeenLastCalledWith(
-          expect.objectContaining({ recipeId: 'catalog-1' }),
-        ),
+      await drainTimers();
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipeId: 'catalog-1' }),
       );
       rerender({});
       rerender({});
@@ -224,10 +247,9 @@ describe('useRecipeDetail', () => {
     it('carries no opened recipe over to another provider’s with the same id', async () => {
       useRoute.mockReturnValue({ params: { catalog: HINT } });
       const { rerender } = renderHookWithApollo(() => useRecipeDetail());
-      await waitFor(() =>
-        expect(mockUseRecipeData).toHaveBeenLastCalledWith(
-          expect.objectContaining({ recipeId: 'catalog-1' }),
-        ),
+      await drainTimers();
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipeId: 'catalog-1' }),
       );
 
       const otherProvider: CatalogRecipeHint = {
@@ -247,6 +269,25 @@ describe('useRecipeDetail', () => {
       });
     });
 
+    it('finds a recipe opened before when it cannot be opened now', async () => {
+      recordOpenedCatalogRecipe(
+        { provider: HINT.provider, externalId: HINT.externalId },
+        'held-recipe',
+      );
+      mockOpenCatalogRecipe.mockResolvedValueOnce({
+        opened: false,
+        failure: 'Not available offline',
+      });
+      useRoute.mockReturnValue({ params: { catalog: HINT } });
+
+      renderHookWithApollo(() => useRecipeDetail());
+      await drainTimers();
+
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipeId: 'held-recipe', openFailure: null }),
+      );
+    });
+
     it('hands the data hook the reason it could not be opened', async () => {
       mockOpenCatalogRecipe.mockResolvedValueOnce({
         opened: false,
@@ -256,25 +297,19 @@ describe('useRecipeDetail', () => {
 
       renderHookWithApollo(() => useRecipeDetail());
 
-      await waitFor(() =>
-        expect(mockUseRecipeData).toHaveBeenLastCalledWith({
-          recipeId: undefined,
-          hint: HINT,
-          openFailure: 'Recipe not found',
-        }),
-      );
+      await drainTimers();
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith({
+        recipeId: undefined,
+        hint: HINT,
+        openFailure: 'Recipe not found',
+      });
     });
   });
 
   describe('after a save', () => {
     beforeEach(() => {
-      jest.useFakeTimers();
       useRoute.mockReturnValue({ params: { recipeId: 'r1' } });
     });
-    afterEach(() => {
-      jest.useRealTimers();
-    });
-
     it('reads a catalog recipe again twice, since nothing announces the fetch', () => {
       mockUseRecipeData.mockReturnValue({
         ...mockRecipeDataReturn,
@@ -336,7 +371,6 @@ describe('useRecipeDetail', () => {
 
   describe('pull to refresh', () => {
     it('reads a loaded recipe again, spinning at least half a second', async () => {
-      jest.useFakeTimers();
       let settle: () => void = () => {};
       mockRefetch.mockReturnValueOnce(
         new Promise<void>(resolve => {
@@ -362,7 +396,6 @@ describe('useRecipeDetail', () => {
         jest.advanceTimersByTime(500);
       });
       expect(result.current.refreshing).toBe(false);
-      jest.useRealTimers();
     });
 
     it('asks again for a catalog recipe that could not be opened', async () => {
@@ -372,20 +405,18 @@ describe('useRecipeDetail', () => {
       });
       useRoute.mockReturnValue({ params: { catalog: HINT } });
       const { result } = renderHookWithApollo(() => useRecipeDetail());
-      await waitFor(() =>
-        expect(mockUseRecipeData).toHaveBeenLastCalledWith(
-          expect.objectContaining({ openFailure: 'Recipe not found' }),
-        ),
+      await drainTimers();
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ openFailure: 'Recipe not found' }),
       );
 
       await act(async () => {
         result.current.handleRefresh();
       });
 
-      await waitFor(() =>
-        expect(mockUseRecipeData).toHaveBeenLastCalledWith(
-          expect.objectContaining({ recipeId: 'catalog-1', openFailure: null }),
-        ),
+      await drainTimers();
+      expect(mockUseRecipeData).toHaveBeenLastCalledWith(
+        expect.objectContaining({ recipeId: 'catalog-1', openFailure: null }),
       );
       expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2);
       expect(mockRefetch).not.toHaveBeenCalled();
@@ -410,9 +441,8 @@ describe('useRecipeDetail', () => {
 
       const renderOpened = async () => {
         const rendered = renderHookWithApollo(() => useRecipeDetail());
-        await waitFor(() =>
-          expect(rendered.result.current.recipeId).toBe('catalog-1'),
-        );
+        await drainTimers();
+        expect(rendered.result.current.recipeId).toBe('catalog-1');
         return rendered;
       };
 
@@ -424,9 +454,8 @@ describe('useRecipeDetail', () => {
           result.current.handleRefresh();
         });
 
-        await waitFor(() =>
-          expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2),
-        );
+        await drainTimers();
+        expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2);
         expect(mockOpenCatalogRecipe).toHaveBeenLastCalledWith(HINT);
         expect(mockRefetch).not.toHaveBeenCalled();
       });
@@ -443,9 +472,8 @@ describe('useRecipeDetail', () => {
           result.current.handleRefresh();
         });
 
-        await waitFor(() =>
-          expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2),
-        );
+        await drainTimers();
+        expect(mockOpenCatalogRecipe).toHaveBeenCalledTimes(2);
         expect(result.current.recipeId).toBe('catalog-1');
         expect(mockUseRecipeData).toHaveBeenLastCalledWith(
           expect.objectContaining({ recipeId: 'catalog-1', openFailure: null }),

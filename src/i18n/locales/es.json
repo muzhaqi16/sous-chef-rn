@@ -136,6 +136,11 @@
     "queuedChangeOverwrittenResource": "Tu cambio en {{resource}} se sustituyó por uno más reciente y se ha deshecho.",
     "queuedChangeOverwritten": "Un cambio fue sustituido por uno más reciente y se ha deshecho.",
     "queuedRemovalKeptResource": "Tu eliminación en {{resource}} no se aplicó: se había combinado con una entrada que ya existía.",
+    "queueFull": "Hay demasiados cambios por sincronizar.",
+    "queuedChangeKept": "Un cambio no se guardó.",
+    "queuedChangeKeptResource": "Tu cambio en {{resource}} no se guardó.",
+    "queuedClashKept": "Otra persona cambió esto antes.",
+    "queuedClashKeptResource": "{{resource}}: otra persona hizo un cambio antes.",
     "queuedRemovalKept": "Una eliminación no se aplicó: se había combinado con una entrada que ya existía.",
     "itemNameRequired": "Introduce el nombre del artículo",
     "homeNameRequired": "Introduce el nombre del hogar",
@@ -321,7 +326,6 @@
     "continue": "Continuar",
     "cookingFail": "Fallo al cocinar",
     "cookingPreferences": "Preferencias de cocina",
-    "copied": "Copiado",
     "copy": "Copiar",
     "copyOfName": "{{name}} (Copia)",
     "nameWithDetail": "{{name}} ({{detail}})",
@@ -495,7 +499,6 @@
     "store": "Tienda",
     "storeSelectHint": "Elige una tienda de la lista para guardarla.",
     "submit": "Enviar",
-    "success": "Éxito",
     "suggestEdit": "Sugerir cambio",
     "suggested": "Sugerido",
     "system": "Sistema",
@@ -517,6 +520,13 @@
     "unknown": "Desconocido",
     "unknownHome": "Hogar desconocido",
     "unknownLoss": "Pérdida desconocida",
+    "undo": "Deshacer",
+    "anyStore": "{{chain}} (cualquier tienda)",
+    "storeNumber": "Tienda n.º {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Actualizar",
     "updated": "Actualizado",
     "usage": "Uso",
@@ -573,7 +583,8 @@
     "purchased": "Comprado",
     "vegan": "Vegana",
     "sulfite": "Sulfitos",
-    "budgetAndPrices": "Presupuesto y precios"
+    "budgetAndPrices": "Presupuesto y precios",
+    "shopping": "Compras"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",
@@ -590,8 +601,6 @@
     "syncing": "Sincronizando…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Modo sin conexión activado",
-    "offlineModeDetail": "Solo se usa lo guardado en este dispositivo",
     "deviceOfflineTitle": "Sin conexión",
     "deviceOfflineDetail": "Los cambios se sincronizarán cuando vuelvas a tener conexión",
     "deviceOfflinePendingDetail_one": "{{count}} cambio se sincronizará cuando vuelvas a tener conexión",
@@ -617,7 +626,9 @@
     "noPantryItems": "Tu despensa está vacía",
     "noShoppingListItems": "Tu lista de la compra está vacía",
     "noInvitations": "Sin invitaciones pendientes",
-    "noResultsFor": "No hay resultados para \"{{query}}\""
+    "noResultsFor": "No hay resultados para \"{{query}}\"",
+    "noHeldMatchFor": "Nada en este dispositivo coincide con \"{{query}}\"",
+    "widerSearchNeedsConnection": "Buscar en todo necesita conexión."
   },
   "settings": {
     "displayLanguage": "Idioma de visualización",
@@ -626,11 +637,6 @@
     "unitMetric": "Métrico (kg, g, L, mL)",
     "unitImperial": "Imperial (lb, oz, gal, fl oz)",
     "unitSystemDefault": "Predeterminado del sistema",
-    "syncOffline": "Sincronización y modo sin conexión",
-    "autoSync": "Sincronización automática",
-    "autoSyncDesc": "Sincroniza tus datos automáticamente cuando estés en línea",
-    "offlineMode": "Modo sin conexión",
-    "offlineModeDesc": "Usa solo datos almacenados. Desactiva búsqueda y compartir.",
     "features": "Funcionalidades",
     "showTutorials": "Mostrar tutoriales",
     "showTutorialsDesc": "Muestra consejos y tutoriales útiles",
@@ -643,7 +649,7 @@
     "shoppingListImagesDesc": "Mostrar imágenes de productos en las listas",
     "storeMode": "Modo tienda",
     "storeModeDesc": "Recorre una lista pasillo a pasillo desde el icono de tienda de la lista de la compra",
-    "budgetAndPricesDesc": "Precios, estimaciones y presupuestos en tus listas y en tu despensa, con el presupuesto de cada lista tras el icono de la cartera. Desactivado, nada te pregunta cuánto pagaste.",
+    "budgetAndPricesDesc": "Precios, estimaciones y presupuestos en tus listas y en tu despensa, con el presupuesto de cada lista tras el icono de la cartera. Desactivado, los precios quedan ocultos; una pulsación larga en un artículo de la lista sigue registrando cuánto pagaste.",
     "shareUsageData": "Compartir datos de uso",
     "shareUsageDataDesc": "Ayuda a mejorar {{appName}} compartiendo estadísticas anónimas",
     "resetSection": "Restablecer",
@@ -739,7 +745,9 @@
     "loading": "Cargando…",
     "errorTitle": "No se pudo cargar",
     "errorBody": "Algo salió mal al cargar. Comprueba tu conexión e inténtalo de nuevo.",
-    "offlineBody": "Estás sin conexión y esto aún no se ha descargado. Vuelve a conectarte para cargarlo."
+    "offlineBody": "Estás sin conexión y esto aún no se ha descargado. Vuelve a conectarte para cargarlo.",
+    "partialTitle": "El resto necesita conexión",
+    "partialBody": "Esto es lo que tu dispositivo tiene por ahora."
   },
   "tabBar": {
     "actionButton": "Botón de acción",

@@ -1,13 +1,9 @@
 import React from 'react';
 import Clipboard from '@react-native-clipboard/clipboard';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { appConfig } from '#/config/appConfig';
 import { recipesTestIDs } from '#features/recipes/testIDs';
@@ -36,6 +32,14 @@ const SheetSendingACapture = ({ onDismiss }: { onDismiss: () => void }) => {
     />
   );
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -69,7 +73,8 @@ describe('CaptureSheet: from a link', () => {
     type(recipesTestIDs.captureUrlInput, ' https://example-cooking.com/miso ');
     send();
 
-    await waitFor(() => expect(onDismiss).toHaveBeenCalled());
+    await drainTimers();
+    expect(onDismiss).toHaveBeenCalled();
     expect(mockStart).toHaveBeenCalledWith({
       source: 'url',
       url: 'https://example-cooking.com/miso',
@@ -88,8 +93,9 @@ describe('CaptureSheet: from a link', () => {
     type(recipesTestIDs.captureUrlInput, link);
     send();
 
+    await drainTimers();
     expect(
-      await screen.findByText(
+      screen.getByText(
         'Enter the full link, starting with http:// or https://',
       ),
     ).toBeTruthy();
@@ -104,10 +110,9 @@ describe('CaptureSheet: from a link', () => {
 
     fireEvent.press(screen.getByText('Paste link'));
 
-    await waitFor(() =>
-      expect(
-        screen.getByTestId(recipesTestIDs.captureUrlInput).props.value,
-      ).toBe('https://example-cooking.com/miso'),
+    await drainTimers();
+    expect(screen.getByTestId(recipesTestIDs.captureUrlInput).props.value).toBe(
+      'https://example-cooking.com/miso',
     );
   });
 
@@ -118,13 +123,12 @@ describe('CaptureSheet: from a link', () => {
     type(recipesTestIDs.captureUrlInput, 'https://www.tiktok.com/@chef/1');
     send();
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          "This link can't be read directly. Paste the post's text instead.",
-        ),
-      ).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(
+      screen.getByText(
+        "This link can't be read directly. Paste the post's text instead.",
+      ),
+    ).toBeTruthy();
     fireEvent.press(screen.getByTestId(recipesTestIDs.captureUseText));
 
     expect(screen.getByTestId(recipesTestIDs.captureTextInput)).toBeTruthy();
@@ -140,11 +144,8 @@ describe('CaptureSheet: from a link', () => {
     type(recipesTestIDs.captureUrlInput, 'https://www.tiktok.com/@chef/1');
     send();
 
-    await waitFor(() =>
-      expect(
-        screen.getByText("This link can't be read directly."),
-      ).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(screen.getByText("This link can't be read directly.")).toBeTruthy();
     expect(screen.queryByTestId(recipesTestIDs.captureUseText)).toBeNull();
   });
 
@@ -155,13 +156,12 @@ describe('CaptureSheet: from a link', () => {
     type(recipesTestIDs.captureUrlInput, 'https://example-cooking.com/miso');
     send();
 
-    await waitFor(() =>
-      expect(
-        screen.getByText(
-          "You've imported as many recipes as you can today. Try again tomorrow.",
-        ),
-      ).toBeTruthy(),
-    );
+    await drainTimers();
+    expect(
+      screen.getByText(
+        "You've imported as many recipes as you can today. Try again tomorrow.",
+      ),
+    ).toBeTruthy();
   });
 
   // The server's refusals read in the copy their codes have everywhere.
@@ -197,7 +197,8 @@ describe('CaptureSheet: from a link', () => {
       type(recipesTestIDs.captureUrlInput, 'https://example-cooking.com/miso');
       send();
 
-      expect(await screen.findByText(copy)).toBeTruthy();
+      await drainTimers();
+      expect(screen.getByText(copy)).toBeTruthy();
       expect(refused.fired).toHaveLength(1);
       expect(onDismiss).not.toHaveBeenCalled();
     },
@@ -212,13 +213,12 @@ describe('CaptureSheet: from text', () => {
     type(recipesTestIDs.captureSourceInput, 'https://www.instagram.com/p/1/');
     send();
 
-    await waitFor(() =>
-      expect(mockStart).toHaveBeenCalledWith({
-        source: 'text',
-        text: 'Miso salmon\n2 tbsp miso',
-        sourceUrl: 'https://www.instagram.com/p/1/',
-      }),
-    );
+    await drainTimers();
+    expect(mockStart).toHaveBeenCalledWith({
+      source: 'text',
+      text: 'Miso salmon\n2 tbsp miso',
+      sourceUrl: 'https://www.instagram.com/p/1/',
+    });
   });
 
   it('holds no more text than the server reads, and counts it', () => {

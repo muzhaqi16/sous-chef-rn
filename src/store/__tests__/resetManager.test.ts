@@ -330,15 +330,26 @@ describe('resetManager', () => {
       // `errorLink` / `wsLink` / `tokenRefreshFailed` all fire it unawaited. A
       // second teardown clears the flags the first is still running under.
       it('joins a teardown already in progress instead of starting another', async () => {
-        const step = jest.fn(
-          () => new Promise<void>(resolve => setTimeout(resolve, 10)),
-        );
+        let stepStarted = () => {};
+        let finishStep = () => {};
+        const started = new Promise<void>(resolve => {
+          stepStarted = resolve;
+        });
+        const step = jest.fn(() => {
+          stepStarted();
+          return new Promise<void>(resolve => {
+            finishStep = resolve;
+          });
+        });
         registerSessionTeardown('counted', step);
 
-        await Promise.all([
+        const ending = Promise.all([
           resetManager.endSession('account_inactive'),
           resetManager.endSession('session_revoked'),
         ]);
+        await started;
+        finishStep();
+        await ending;
 
         expect(step).toHaveBeenCalledTimes(1);
       });

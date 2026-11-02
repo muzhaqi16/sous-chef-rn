@@ -1,6 +1,6 @@
 'use no memo';
 
-import { renderHook, act, waitFor } from '@testing-library/react-native';
+import { renderHook, act } from '@testing-library/react-native';
 import {
   Cuisine,
   Difficulty,
@@ -17,6 +17,15 @@ import {
 } from '#/test-utils/fixtures/recipeFixtures';
 import { useRecipeForm } from '../useRecipeForm';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -149,9 +158,7 @@ describe('useRecipeForm', () => {
   const submit = async (result: {
     current: ReturnType<typeof useRecipeForm>;
   }) => {
-    await act(async () => {
-      await result.current.handleSubmit(async () => {})();
-    });
+    await drained(() => result.current.handleSubmit(async () => {})());
   };
 
   it('attaches the missing-name refusal to `name`', async () => {
@@ -217,26 +224,23 @@ describe('useRecipeForm', () => {
     it('reports the 101st ingredient as it is added, and clears on a removal', async () => {
       const { result } = renderHook(() => useRecipeForm());
       fill(result, MAX_RECIPE_INGREDIENTS);
-      await waitFor(() =>
-        expect(result.current.errors.ingredients).toBeUndefined(),
-      );
+      await drainTimers();
+      expect(result.current.errors.ingredients).toBeUndefined();
 
       act(() => {
         result.current.addIngredient({ name: 'One too many' });
       });
-      await waitFor(() =>
-        expect(result.current.errors.ingredients?.message).toBe(
-          'A recipe can have at most 100 ingredients',
-        ),
+      await drainTimers();
+      expect(result.current.errors.ingredients?.message).toBe(
+        'A recipe can have at most 100 ingredients',
       );
 
       const [first] = result.current.state.ingredients;
       act(() => {
         result.current.removeIngredient(first!.id);
       });
-      await waitFor(() =>
-        expect(result.current.errors.ingredients).toBeUndefined(),
-      );
+      await drainTimers();
+      expect(result.current.errors.ingredients).toBeUndefined();
     });
   });
 
@@ -519,6 +523,7 @@ describe('useRecipeForm', () => {
       ingredientsPage: OVER_THE_LIMIT,
       pendingRevision: {
         __typename: 'RecipeRevision',
+        version: 1,
         id: 'rev-1',
         proposed: {
           __typename: 'RecipeContent',
@@ -548,6 +553,7 @@ describe('useRecipeForm', () => {
               quantity: 2,
               item: {
                 __typename: 'Item',
+                version: 1,
                 id: 'item-oil',
                 name: 'Olive oil',
                 imageUrl: null,

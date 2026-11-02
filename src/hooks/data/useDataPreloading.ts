@@ -10,17 +10,14 @@ import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { selectUnitsFetchedAt } from '#store/slices/appSlice';
 import { fromServer } from '#/apollo/utils/fromServer';
-import {
-  useAppStore,
-  useIsOnline,
-  useIsPantryQueryComplete,
-} from '#store/useAppStore';
+import { useAppStore, useIsPantryQueryComplete } from '#store/useAppStore';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { errorService } from '#/services/errorService';
 import { scheduleIdle } from '#/utils/scheduleIdle';
 
 /**
  * Warms reference data into Zustand so autocomplete serves offline matches.
- * Gated on core data (after first paint) and `isOnline`, by the home signal
+ * Gated on core data (after first paint) and the API, by the home signal
  * rather than the pantry one, so any landing tab warms the caches.
  */
 const REFERENCE_DATA_TTL = 24 * 60 * 60 * 1000; // 24h
@@ -45,7 +42,7 @@ function commitWarm<T>(
 }
 
 export function useDataPreloading() {
-  const isOnline = useIsOnline();
+  const isOffline = useIsApiUnavailable();
   // Either signal means core data has loaded; the home signal is app-wide so
   // warming isn't limited to users who open the pantry tab.
   const hasInitializedHomeData = useAppStore(
@@ -67,7 +64,7 @@ export function useDataPreloading() {
   const inFlightRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (!isReady || !isOnline) return;
+    if (!isReady || isOffline) return;
 
     const now = Date.now();
     const inFlight = inFlightRef.current;
@@ -166,7 +163,7 @@ export function useDataPreloading() {
     });
   }, [
     isReady,
-    isOnline,
+    isOffline,
     lastUnitsFetchedAt,
     lastCategoriesFetchedAt,
     lastBrandsFetchedAt,

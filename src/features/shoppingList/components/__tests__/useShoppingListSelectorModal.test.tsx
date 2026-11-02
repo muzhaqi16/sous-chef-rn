@@ -27,6 +27,7 @@ const makeList = (
   overrides: Partial<ShoppingListSelectorItem>,
 ): ShoppingListSelectorItem => ({
   __typename: 'ShoppingList',
+  version: 1,
   id: 'list-x',
   name: 'List',
   isDefault: false,
@@ -42,6 +43,7 @@ const makeList = (
 
 const makeHome = (name: string): ShoppingListSelectorItem['home'] => ({
   __typename: 'Home',
+  version: 1,
   id: 'home-1',
   name,
   myMembership: null,

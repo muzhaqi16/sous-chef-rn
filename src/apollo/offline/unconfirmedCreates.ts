@@ -9,7 +9,7 @@ import { queueStore } from '#/apollo/offlineQueue/queueStore';
  */
 
 // The in-flight window. The queued window belongs to
-// `queueStore.getPendingClientIds`, and the hand-off has no gap: `queueLink`
+// `queueStore.getUnconfirmedCreateIds`, and the hand-off has no gap: `queueLink`
 // enqueues before completing the observable, so `confirm()` on a queued create
 // runs with the id already in the pending set.
 const inFlight = new Set<string>();

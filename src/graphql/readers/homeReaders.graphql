@@ -24,6 +24,7 @@ fragment HomeReaders on Home {
     role
     sharesDietaryNeeds
     status
+    version
   }
   name
   timezone

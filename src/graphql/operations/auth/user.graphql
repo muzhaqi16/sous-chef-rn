@@ -9,8 +9,6 @@ query GetUserSettings {
       theme
       compactMode
       showTutorials
-      autoSync
-      offlineMode
       shareUsageData
       shareWithPartners
       personalizedAds
@@ -20,6 +18,9 @@ query GetUserSettings {
       language
       timezone
       preferredCurrency
+      # Store mode and Budget & prices, mirrored for the first paint.
+      storeMode
+      budgetAndPrices
       createdAt
       updatedAt
     }

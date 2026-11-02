@@ -6,6 +6,7 @@ import {
   screen,
   within,
 } from '@testing-library/react-native';
+import { t } from '#/i18n';
 import { useStore } from '#store';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { kitTestIDs } from '#components/testIDs';
@@ -97,13 +98,15 @@ type Overview = ReturnType<typeof useTodayOverview>;
 const overviewOf = (overrides: Partial<Overview> = {}): Overview => ({
   householdName: 'Test Home',
   selectedHomeId: 'h1',
+  homeCount: 2,
   unreadCount: 0,
   state: 'ready',
   needsHousehold: false,
   retry: jest.fn(),
   counts: { expired: 6, expiring: 3, lowStock: 0 },
   meals: [],
-  mealsLoading: false,
+  mealsState: 'ready',
+  retryMeals: jest.fn(),
   suggestions: { items: [], loading: false, fromPantry: true },
   refreshing: false,
   refresh: jest.fn(),
@@ -250,11 +253,24 @@ describe("today's meals", () => {
   });
 
   it('holds a meal row’s place until the plans answer, never "nothing planned"', () => {
-    renderToday({ meals: [], mealsLoading: true });
+    renderToday({ meals: [], mealsState: 'loading' });
 
     expect(screen.getByTestId('meal-skeleton')).toBeTruthy();
     expect(screen.queryByText('Nothing planned for today')).toBeNull();
   });
+
+  it.each([
+    ['offline', 'Not available offline'],
+    ['error', "Couldn't load this"],
+  ] as const)(
+    'says so when the meals are %s, never "nothing planned"',
+    (mealsState, title) => {
+      renderToday({ meals: [], mealsState });
+
+      expect(screen.getByText(title)).toBeTruthy();
+      expect(screen.queryByText('Nothing planned for today')).toBeNull();
+    },
+  );
 
   it('says nothing is planned, and opens Meal Plan from there', () => {
     renderToday({ meals: [] });
@@ -414,8 +430,8 @@ describe("Today's +", () => {
 });
 
 describe('tutorial', () => {
-  it("points Pantry's household step, under its old id, at the title", () => {
-    renderToday();
+  it("points Pantry's household step, under its old id, at the title, for a user in two homes", () => {
+    renderToday({ homeCount: 2 });
 
     // The measured view is the title row inside the pressable title.
     const [titleRow] = screen.getByTestId(todayTestIDs.householdTitle).children;
@@ -428,6 +444,24 @@ describe('tutorial', () => {
     ]);
     expect(options?.targetRects.household).toEqual(TITLE_RECT);
     expect(options?.canStart).toBe(true);
+  });
+
+  it('never teaches switching homes to a user with one home', () => {
+    renderToday({ homeCount: 1 });
+
+    const [options] = mockedTutorial.mock.lastCall ?? [];
+    expect(options?.steps.map(step => [step.featureId, step.rectKey])).toEqual([
+      ['today_tutorial_your_home', 'household'],
+    ]);
+    expect(options?.steps[0]?.title).toBe(t('today.tutorialYourHomeTitle'));
+    expect(options?.canStart).toBe(true);
+  });
+
+  it('does not start while the number of homes is unknown', () => {
+    renderToday({ homeCount: null });
+
+    const [options] = mockedTutorial.mock.lastCall ?? [];
+    expect(options?.canStart).toBe(false);
   });
 
   it('waits for the overview before starting', () => {

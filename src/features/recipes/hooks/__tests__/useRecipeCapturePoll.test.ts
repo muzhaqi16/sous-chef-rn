@@ -1,8 +1,9 @@
 import { toastService } from '#/services/toastService';
-import { act, waitFor } from '@testing-library/react-native';
+import { act } from '@testing-library/react-native';
 import {
   recordMock,
   renderHookWithApollo,
+  type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { RecipeCaptureStatus } from '#/graphql/generated/schemaTypes';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
@@ -47,6 +48,14 @@ const answering = (
   });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   jest.mocked(useIsApiUnavailable).mockReturnValue(false);
   useRecipeCaptureStore.getState().reset();
@@ -54,18 +63,25 @@ beforeEach(() => {
   useRecipeCaptureStore.getState().addReading({ id, source, label, createdAt });
 });
 
+const answerAtOnce = (mocks: MockedResponse[]) =>
+  mocks.map(mock => ({ ...mock, delay: 0 }));
+
+// Stops where an answer lands: a mounted poll would never drain.
+const settle = () => act(() => jest.advanceTimersByTimeAsync(0));
+
 describe('useRecipeCapturePoll', () => {
   it('tells a saved capture and holds its recipe for review', async () => {
     renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
-      operationMocks: [
+      operationMocks: answerAtOnce([
         answering({
           status: RecipeCaptureStatus.Saved,
           recipe: { id: 'recipe-1', name: 'Miso salmon' },
         }).mock,
-      ],
+      ]),
     });
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    await settle();
+    expect(mockToastSuccess).toHaveBeenCalled();
     expect(useRecipeCaptureStore.getState()).toMatchObject({
       entries: [],
       held: [expect.objectContaining({ recipeId: 'recipe-1' })],
@@ -91,27 +107,30 @@ describe('useRecipeCapturePoll', () => {
       recipe: { id: 'recipe-1', name: 'Miso salmon' },
     });
     renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
-      operationMocks: [inFlight.mock, settled.mock],
+      operationMocks: answerAtOnce([inFlight.mock, settled.mock]),
     });
-    await waitFor(() => expect(inFlight.fired).toHaveLength(1));
+    await settle();
+    expect(inFlight.fired).toHaveLength(1);
 
     act(() => {
       announceWorkSettled({ kind: 'recipeCapture', id: 'capture-1' });
     });
 
-    await waitFor(() => expect(mockToastSuccess).toHaveBeenCalled());
+    await settle();
+    expect(mockToastSuccess).toHaveBeenCalled();
     expect(settled.fired).toHaveLength(1);
     inFlight.release();
   });
 
   it('keeps a partial read as a row to finish', async () => {
     renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
-      operationMocks: [
+      operationMocks: answerAtOnce([
         answering({ status: RecipeCaptureStatus.Incomplete }).mock,
-      ],
+      ]),
     });
 
-    await waitFor(() => expect(mockToastInfo).toHaveBeenCalled());
+    await settle();
+    expect(mockToastInfo).toHaveBeenCalled();
     expect(useRecipeCaptureStore.getState().entries).toEqual([
       expect.objectContaining({ id: 'capture-1', state: 'incomplete' }),
     ]);
@@ -123,7 +142,7 @@ describe('useRecipeCapturePoll', () => {
     const poll = answering(null);
 
     renderHookWithApollo(() => useRecipeCapturePoll(entry(Date.now(), false)), {
-      operationMocks: [poll.mock],
+      operationMocks: answerAtOnce([poll.mock]),
     });
 
     expect(poll.fired).toEqual([]);
@@ -132,13 +151,12 @@ describe('useRecipeCapturePoll', () => {
 
   it('says a capture the server does not know could not be read', async () => {
     renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
-      operationMocks: [answering(null).mock],
+      operationMocks: answerAtOnce([answering(null).mock]),
     });
 
-    await waitFor(() =>
-      expect(mockToastError).toHaveBeenCalledWith(
-        "Recipe import isn't available right now. Try again later.",
-      ),
+    await settle();
+    expect(mockToastError).toHaveBeenCalledWith(
+      "Recipe import isn't available right now. Try again later.",
     );
     expect(useRecipeCaptureStore.getState().entries).toEqual([]);
   });
@@ -148,17 +166,16 @@ describe('useRecipeCapturePoll', () => {
     const poll = answering({ status: RecipeCaptureStatus.Pending });
 
     renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
-      operationMocks: [poll.mock],
+      operationMocks: answerAtOnce([poll.mock]),
     });
 
     expect(poll.fired).toEqual([]);
   });
 
   it('gives up at the deadline the server keeps', () => {
-    jest.useFakeTimers();
     jest.mocked(useIsApiUnavailable).mockReturnValue(true);
     renderHookWithApollo(() => useRecipeCapturePoll(entry()), {
-      operationMocks: [],
+      operationMocks: answerAtOnce([]),
     });
 
     act(() => {
@@ -167,6 +184,5 @@ describe('useRecipeCapturePoll', () => {
 
     expect(mockToastError).toHaveBeenCalledTimes(1);
     expect(useRecipeCaptureStore.getState().entries).toEqual([]);
-    jest.useRealTimers();
   });
 });

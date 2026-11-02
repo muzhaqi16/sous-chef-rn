@@ -95,24 +95,41 @@ describe('safeParseDate', () => {
   });
 });
 
+const zoneCases: { timeZone: string; body: string }[] = [];
+let zoneResults: unknown[] = [];
+
 /**
  * Jest's sandboxed `process.env` never reaches the zone the runtime reads, so
- * each zone runs the real module in its own Node process. `body` is the source
- * of a function taking the module's exports; its JSON-able return comes back.
+ * the real module runs in a Node process, which follows `process.env.TZ` as it
+ * changes; one process serves every zone. `body` is the source of a function
+ * taking the module's exports. Called while the suite is collected, this returns
+ * a reader of that function's JSON-able result, for use inside a test.
  */
-function inZone<T>(timeZone: string, body: string): T {
+function inZone<T>(timeZone: string, body: string): () => T {
+  const index = zoneCases.push({ timeZone, body }) - 1;
+  return () => zoneResults[index] as T;
+}
+
+beforeAll(() => {
+  const cases = zoneCases.map(
+    ({ timeZone, body }) => `[${JSON.stringify(timeZone)}, ${body}]`,
+  );
   const script = `
     const dateUtils = await import(${JSON.stringify(
       require.resolve('../dateUtils.ts'),
     )});
-    console.log(JSON.stringify((${body})(dateUtils)));`;
+    const results = [${cases.join(',')}].map(([timeZone, read]) => {
+      process.env.TZ = timeZone;
+      return read(dateUtils);
+    });
+    console.log(JSON.stringify(results));`;
   const run = spawnSync(
     process.execPath,
     ['--no-warnings', '--input-type=module', '-e', script],
-    { env: { ...process.env, TZ: timeZone }, encoding: 'utf8' },
+    { encoding: 'utf8' },
   );
-  return JSON.parse(run.stdout) as T;
-}
+  zoneResults = JSON.parse(run.stdout) as unknown[];
+});
 
 describe('toDateKey', () => {
   // A plan's first and last local day, as the calendar strip hands them over.
@@ -126,31 +143,35 @@ describe('toDateKey', () => {
         })`,
     );
 
-  it.each([
-    'Asia/Tokyo',
-    'Pacific/Honolulu',
-    'Pacific/Pago_Pago',
-    'Pacific/Kiritimati',
-    'Pacific/Fiji',
-    'UTC',
-  ])(
+  it.each(
+    [
+      'Asia/Tokyo',
+      'Pacific/Honolulu',
+      'Pacific/Pago_Pago',
+      'Pacific/Kiritimati',
+      'Pacific/Fiji',
+      'UTC',
+    ].map(timeZone => [timeZone, sendAndReadBack(timeZone)] as const),
+  )(
     'sends the picked local day as its own key, and reads it back on it, in %s',
-    timeZone => {
-      const [first, last] = sendAndReadBack(timeZone);
+    (_timeZone, sentAndRead) => {
+      const [first, last] = sentAndRead();
       // The API holds a plan's days and a meal's day as `LocalDate`s.
       expect(first).toEqual(['2026-09-21', 21]);
       expect(last).toEqual(['2026-09-27', 27]);
     },
   );
 
+  const eastOfUtc = inZone<[string, string]>(
+    'Asia/Tokyo',
+    `({ toDateKey }) => {
+      const picked = new Date(2026, 8, 21);
+      return [picked.toISOString().slice(0, 10), toDateKey(picked)];
+    }`,
+  );
+
   it('is not the ISO prefix east of UTC, where local midnight is the previous UTC day', () => {
-    const [isoPrefix, key] = inZone<[string, string]>(
-      'Asia/Tokyo',
-      `({ toDateKey }) => {
-        const picked = new Date(2026, 8, 21);
-        return [picked.toISOString().slice(0, 10), toDateKey(picked)];
-      }`,
-    );
+    const [isoPrefix, key] = eastOfUtc();
 
     expect(isoPrefix).toBe('2026-09-20');
     expect(key).toBe('2026-09-21');
@@ -158,28 +179,32 @@ describe('toDateKey', () => {
 });
 
 describe('fromDateKey', () => {
+  const westOfUtc = inZone<[number, number]>(
+    'Pacific/Honolulu',
+    `({ fromDateKey }) => [
+      new Date('2026-09-21').getDate(),
+      fromDateKey('2026-09-21').getDate(),
+    ]`,
+  );
+
   it('reads a key as that local day west of UTC, where `new Date(key)` is the day before', () => {
-    const [asUtcMidnight, asLocalDay] = inZone<[number, number]>(
-      'Pacific/Honolulu',
-      `({ fromDateKey }) => [
-        new Date('2026-09-21').getDate(),
-        fromDateKey('2026-09-21').getDate(),
-      ]`,
-    );
+    const [asUtcMidnight, asLocalDay] = westOfUtc();
 
     expect(asUtcMidnight).toBe(20);
     expect(asLocalDay).toBe(21);
   });
 
+  // Chile's clocks go from 24:00 on the 5th straight to 01:00 on the 6th.
+  const skippedMidnight = inZone<[number, string]>(
+    'America/Santiago',
+    `({ fromDateKey, toDateKey }) => {
+      const day = fromDateKey('2026-09-06');
+      return [day.getHours(), toDateKey(day)];
+    }`,
+  );
+
   it('reads a day whose midnight a DST change skips as that same day', () => {
-    // Chile's clocks go from 24:00 on the 5th straight to 01:00 on the 6th.
-    const [hour, key] = inZone<[number, string]>(
-      'America/Santiago',
-      `({ fromDateKey, toDateKey }) => {
-        const day = fromDateKey('2026-09-06');
-        return [day.getHours(), toDateKey(day)];
-      }`,
-    );
+    const [hour, key] = skippedMidnight();
 
     expect(hour).toBe(1);
     expect(key).toBe('2026-09-06');
@@ -187,15 +212,17 @@ describe('fromDateKey', () => {
 });
 
 describe('purchaseDay', () => {
+  const westOfUtc = inZone<[string, string, string]>(
+    'America/Los_Angeles',
+    `({ purchaseDay, toDateKey }) => [
+      toDateKey(purchaseDay('2026-10-17T00:00:00Z')),
+      toDateKey(purchaseDay('2026-10-17T00:00:00.000Z')),
+      toDateKey(purchaseDay('2026-10-17T03:00:00Z')),
+    ]`,
+  );
+
   it("reads a receipt's printed day as that day west of UTC, and a real instant as its local day", () => {
-    const [receipt, withMillis, instant] = inZone<[string, string, string]>(
-      'America/Los_Angeles',
-      `({ purchaseDay, toDateKey }) => [
-        toDateKey(purchaseDay('2026-10-17T00:00:00Z')),
-        toDateKey(purchaseDay('2026-10-17T00:00:00.000Z')),
-        toDateKey(purchaseDay('2026-10-17T03:00:00Z')),
-      ]`,
-    );
+    const [receipt, withMillis, instant] = westOfUtc();
 
     expect(receipt).toBe('2026-10-17');
     expect(withMillis).toBe('2026-10-17');
@@ -209,14 +236,20 @@ describe('dayAsInstant', () => {
   const dayIn = (timeZone: string, instant: string) =>
     new Intl.DateTimeFormat('en-CA', { timeZone }).format(new Date(instant));
 
+  const pickedDay = inZone<[string, string]>(
+    'Europe/Paris',
+    `({ dayAsInstant, fromDateKey }) => {
+      const picked = fromDateKey('2026-10-20');
+      return [picked.toISOString(), dayAsInstant(picked)];
+    }`,
+  );
+  const dayWithTime = inZone<string>(
+    'Europe/Paris',
+    `({ dayAsInstant }) => dayAsInstant(new Date(2026, 9, 20, 23, 30))`,
+  );
+
   it('sends a picked day as an instant that is that day west of the phone too', () => {
-    const [midnight, sent] = inZone<[string, string]>(
-      'Europe/Paris',
-      `({ dayAsInstant, fromDateKey }) => {
-        const picked = fromDateKey('2026-10-20');
-        return [picked.toISOString(), dayAsInstant(picked)];
-      }`,
-    );
+    const [midnight, sent] = pickedDay();
 
     expect(dayIn('America/New_York', midnight)).toBe('2026-10-19');
     expect(dayIn('America/New_York', sent)).toBe('2026-10-20');
@@ -225,10 +258,7 @@ describe('dayAsInstant', () => {
   });
 
   it('keeps the day of a date that carries a time', () => {
-    const sent = inZone<string>(
-      'Europe/Paris',
-      `({ dayAsInstant }) => dayAsInstant(new Date(2026, 9, 20, 23, 30))`,
-    );
+    const sent = dayWithTime();
 
     expect(dayIn('Europe/Paris', sent)).toBe('2026-10-20');
     expect(dayIn('America/New_York', sent)).toBe('2026-10-20');
@@ -309,20 +339,26 @@ describe('keepDayInsidePlan', () => {
     ).toBe('2026-09-30');
   });
 
-  it.each(['Pacific/Pago_Pago', 'Pacific/Kiritimati'])(
+  it.each(
+    ['Pacific/Pago_Pago', 'Pacific/Kiritimati'].map(
+      timeZone =>
+        [
+          timeZone,
+          inZone<string[]>(
+            timeZone,
+            `({ keepDayInsidePlan }) => {
+              const week = { startDate: '2026-09-21', endDate: '2026-09-27' };
+              return ['2026-09-20', '2026-09-21', '2026-09-27', '2026-09-28'].map(
+                day => keepDayInsidePlan(day, week),
+              );
+            }`,
+          ),
+        ] as const,
+    ),
+  )(
     'keeps the first and last day on themselves in %s: no key is read as an instant',
-    timeZone => {
-      const days = inZone<string[]>(
-        timeZone,
-        `({ keepDayInsidePlan }) => {
-          const week = { startDate: '2026-09-21', endDate: '2026-09-27' };
-          return ['2026-09-20', '2026-09-21', '2026-09-27', '2026-09-28'].map(
-            day => keepDayInsidePlan(day, week),
-          );
-        }`,
-      );
-
-      expect(days).toEqual([
+    (_timeZone, kept) => {
+      expect(kept()).toEqual([
         '2026-09-21',
         '2026-09-21',
         '2026-09-27',
@@ -367,26 +403,32 @@ describe('daysBetweenKeys', () => {
     expect(daysBetweenKeys('2026-02-02', '2026-01-30')).toBe(-3);
   });
 
-  it.each(DST_ZONES)(
+  it.each(
+    DST_ZONES.map(
+      ([timeZone, [beforeLost, afterLost], [beforeGained, afterGained]]) =>
+        [
+          timeZone,
+          inZone<number[]>(
+            timeZone,
+            `({ daysBetweenKeys }) => [
+              daysBetweenKeys(${JSON.stringify(beforeLost)}, ${JSON.stringify(
+              afterLost,
+            )}),
+              daysBetweenKeys(${JSON.stringify(beforeGained)}, ${JSON.stringify(
+              afterGained,
+            )}),
+              daysBetweenKeys(${JSON.stringify(afterLost)}, ${JSON.stringify(
+              beforeLost,
+            )}),
+              daysBetweenKeys('2026-01-01', '2027-01-01'),
+            ]`,
+          ),
+        ] as const,
+    ),
+  )(
     'counts a 23-hour and a 25-hour day as one day each in %s',
-    (timeZone, [beforeLost, afterLost], [beforeGained, afterGained]) => {
-      const spans = inZone<number[]>(
-        timeZone,
-        `({ daysBetweenKeys }) => [
-          daysBetweenKeys(${JSON.stringify(beforeLost)}, ${JSON.stringify(
-          afterLost,
-        )}),
-          daysBetweenKeys(${JSON.stringify(beforeGained)}, ${JSON.stringify(
-          afterGained,
-        )}),
-          daysBetweenKeys(${JSON.stringify(afterLost)}, ${JSON.stringify(
-          beforeLost,
-        )}),
-          daysBetweenKeys('2026-01-01', '2027-01-01'),
-        ]`,
-      );
-
-      expect(spans).toEqual([2, 2, -2, 365]);
+    (_timeZone, spans) => {
+      expect(spans()).toEqual([2, 2, -2, 365]);
     },
   );
 });
@@ -406,21 +448,29 @@ describe('addDaysToKey', () => {
     expect(addDaysToKey('2026-09-21', 0)).toBe('2026-09-21');
   });
 
-  it.each(DST_ZONES)(
+  it.each(
+    DST_ZONES.map(
+      ([timeZone, [beforeLost, afterLost], [beforeGained, afterGained]]) =>
+        [
+          timeZone,
+          [beforeLost, afterLost],
+          [beforeGained, afterGained],
+          inZone<string[]>(
+            timeZone,
+            `({ addDaysToKey, daysBetweenKeys }) => [
+              addDaysToKey(${JSON.stringify(beforeLost)}, 2),
+              addDaysToKey(${JSON.stringify(beforeGained)}, 2),
+              addDaysToKey(${JSON.stringify(afterLost)}, -2),
+              addDaysToKey(addDaysToKey(${JSON.stringify(beforeLost)}, 1), 1),
+              addDaysToKey('2026-01-01', daysBetweenKeys('2026-01-01', '2026-12-31')),
+            ]`,
+          ),
+        ] as const,
+    ),
+  )(
     'steps one calendar day over a 23-hour and a 25-hour day in %s',
-    (timeZone, [beforeLost, afterLost], [beforeGained, afterGained]) => {
-      const days = inZone<string[]>(
-        timeZone,
-        `({ addDaysToKey, daysBetweenKeys }) => [
-          addDaysToKey(${JSON.stringify(beforeLost)}, 2),
-          addDaysToKey(${JSON.stringify(beforeGained)}, 2),
-          addDaysToKey(${JSON.stringify(afterLost)}, -2),
-          addDaysToKey(addDaysToKey(${JSON.stringify(beforeLost)}, 1), 1),
-          addDaysToKey('2026-01-01', daysBetweenKeys('2026-01-01', '2026-12-31')),
-        ]`,
-      );
-
-      expect(days).toEqual([
+    (_timeZone, [beforeLost, afterLost], [, afterGained], stepped) => {
+      expect(stepped()).toEqual([
         afterLost,
         afterGained,
         beforeLost,

@@ -6,6 +6,7 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
 
 import { gql } from '@apollo/client';
 import { makeCache } from '../cache';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 
 // ---------------------------------------------------------------------------
 // Local result types for untyped (raw gql) cache reads
@@ -115,7 +116,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1', ...vars },
         data: {
@@ -292,7 +293,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1', ...vars },
         data: {
@@ -430,7 +431,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'list-1', ...vars },
         data: {
@@ -548,7 +549,7 @@ describe('cache pagination integration', () => {
       });
 
       // Write to filtered entry
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY_WITH_FILTER,
         variables: { id: 'list-1', filters: { purchased: true } },
         data: {
@@ -636,11 +637,11 @@ describe('cache pagination integration', () => {
   });
 
   // =========================================================================
-  // Section C.2: itemsConnectionFieldPolicy — bounded edge window
-  //   Verifies MAX_WINDOW_EDGES eviction behavior
+  // Section C.2: itemsConnectionFieldPolicy — a long list
+  //   Forward-only paging can never bring an evicted row back
   // =========================================================================
 
-  describe('itemsConnectionFieldPolicy bounded edge window', () => {
+  describe('itemsConnectionFieldPolicy on a long list', () => {
     const QUERY = gql`
       query GetList($id: ID!, $after: String) {
         shoppingList(id: $id) {
@@ -672,7 +673,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'list-1', ...vars },
         data: {
@@ -698,7 +699,7 @@ describe('cache pagination integration', () => {
       return result?.shoppingList?.itemsConnection?.edges ?? [];
     };
 
-    it('initial load within window limit retains all edges', () => {
+    it('initial load retains all edges', () => {
       const cache = makeCache();
 
       const edges = Array.from({ length: 50 }, (_, i) =>
@@ -715,45 +716,31 @@ describe('cache pagination integration', () => {
       expect(readEdges(cache)).toHaveLength(50);
     });
 
-    it('evicts oldest edges when exceeding window limit', () => {
+    it('keeps every row a 130-row list loaded, in order', () => {
       const cache = makeCache();
+      const PAGE = 25;
 
-      // Write 80 edges as page 1
-      const page1 = Array.from({ length: 80 }, (_, i) =>
-        itemEdge(`si-${i}`, `Item ${i}`),
-      );
-      writeConn(
-        cache,
-        page1,
-        { hasNextPage: true, endCursor: 'c80' },
-        undefined,
-        300,
-      );
+      for (let page = 0; page * PAGE < 130; page++) {
+        const start = page * PAGE;
+        const count = Math.min(PAGE, 130 - start);
+        writeConn(
+          cache,
+          Array.from({ length: count }, (_, i) =>
+            itemEdge(`si-${start + i}`, `Item ${start + i}`),
+          ),
+          { hasNextPage: start + count < 130, endCursor: `c${start + count}` },
+          page === 0 ? undefined : { after: `c${start}` },
+          130,
+        );
+      }
 
-      // Write 40 more edges as page 2 (total would be 120, exceeding 100)
-      const page2 = Array.from({ length: 40 }, (_, i) =>
-        itemEdge(`si-${80 + i}`, `Item ${80 + i}`),
-      );
-      writeConn(
-        cache,
-        page2,
-        { hasNextPage: true, endCursor: 'c120' },
-        { after: 'c80' },
-        300,
-      );
-
-      const edges = readEdges(cache);
-      // Should be capped at 100 (MAX_WINDOW_EDGES)
-      expect(edges).toHaveLength(100);
-      // Oldest 20 edges (si-0 through si-19) should be evicted
-      const ids = edges.map(e => e.node.id);
-      expect(ids).not.toContain('si-0');
-      expect(ids).not.toContain('si-19');
-      expect(ids).toContain('si-20');
-      expect(ids).toContain('si-119');
+      const ids = readEdges(cache).map(e => e.node.id);
+      expect(ids).toHaveLength(130);
+      expect(ids[0]).toBe('si-0');
+      expect(ids[129]).toBe('si-129');
     });
 
-    it('background refetch within window limit does not evict', () => {
+    it('background refetch keeps the rows past its page', () => {
       const cache = makeCache();
 
       // Write 100 edges
@@ -780,7 +767,7 @@ describe('cache pagination integration', () => {
         200,
       );
 
-      // All 100 should still be there (deduped, within limit)
+      // All 100 should still be there (deduped)
       expect(readEdges(cache)).toHaveLength(100);
     });
   });
@@ -842,7 +829,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'p-1', ...vars },
         data: {
@@ -892,6 +879,48 @@ describe('cache pagination integration', () => {
       expect(ids).toEqual(expect.arrayContaining(['pi-1', 'pi-2', 'pi-3']));
     });
 
+    describe('past one page', () => {
+      const loadAll = (cache: ReturnType<typeof makeCache>) => {
+        const PAGE = 100;
+        for (let page = 0; page * PAGE < 250; page++) {
+          const start = page * PAGE;
+          const count = Math.min(PAGE, 250 - start);
+          writeConn(
+            cache,
+            Array.from({ length: count }, (_, i) =>
+              piEdge(`pi-${start + i}`, `Item ${start + i}`),
+            ),
+            {
+              hasNextPage: start + count < 250,
+              endCursor: `c${start + count}`,
+            },
+            page === 0 ? undefined : { after: `c${start}` },
+          );
+        }
+      };
+
+      it('keeps the first page at the top through later pages', () => {
+        const cache = makeCache();
+
+        loadAll(cache);
+
+        const ids = readEdges(cache).map(e => e.node.id);
+        expect(ids).toHaveLength(250);
+        expect(ids[0]).toBe('pi-0');
+        expect(ids[249]).toBe('pi-249');
+      });
+
+      it('holds every row through a persist and a restore', () => {
+        const cache = makeCache();
+        loadAll(cache);
+
+        const reopened = makeCache();
+        reopened.restore(cache.extract());
+
+        expect(readEdges(reopened)).toHaveLength(250);
+      });
+    });
+
     it('shrinkage: hasNextPage:false clears stale items', () => {
       const cache = makeCache();
 
@@ -921,7 +950,7 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Write with orderBy: NAME_ASC
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY_WITH_ORDER,
         variables: { id: 'p-1', orderBy: 'NAME_ASC' },
         data: {
@@ -938,7 +967,7 @@ describe('cache pagination integration', () => {
       });
 
       // Write with orderBy: NAME_DESC
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY_WITH_ORDER,
         variables: { id: 'p-1', orderBy: 'NAME_DESC' },
         data: {
@@ -1009,7 +1038,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: vars ?? {},
         data: {
@@ -1170,7 +1199,7 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Page 1: server says totalCount=5
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1194,7 +1223,7 @@ describe('cache pagination integration', () => {
       expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
 
       // Page 2: server says totalCount=5 still
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1', after: 'c2' },
         data: {
@@ -1219,7 +1248,7 @@ describe('cache pagination integration', () => {
       expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
 
       // Refetch: totalCount changed to 3 (items were deleted)
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1284,7 +1313,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) => {
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'p-1', ...vars },
         data: {
@@ -1424,7 +1453,7 @@ describe('cache pagination integration', () => {
       const cache = makeCache();
 
       // Initial write
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1448,7 +1477,7 @@ describe('cache pagination integration', () => {
       const conn1 = result1?.home?.shoppingListsConnection;
 
       // Refetch with same edges, same pageInfo, same totalCount
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1478,7 +1507,7 @@ describe('cache pagination integration', () => {
     it('returns new reference when totalCount changes', () => {
       const cache = makeCache();
 
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1502,7 +1531,7 @@ describe('cache pagination integration', () => {
       const conn1 = result1?.home?.shoppingListsConnection;
 
       // Refetch with same edges but different totalCount
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'home-1' },
         data: {
@@ -1692,7 +1721,7 @@ describe('cache pagination integration', () => {
       vars?: Record<string, unknown>,
       totalCount?: number,
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query: QUERY,
         variables: { id: 'pi-1', first: 30, ...vars },
         data: {
@@ -1831,7 +1860,7 @@ describe('cache pagination integration', () => {
       pageInfo: { hasNextPage: boolean; endCursor: string | null },
       vars?: Record<string, unknown>,
     ) =>
-      cache.writeQuery({
+      seedQuery(cache, {
         query,
         variables: { pantryItemId: 'pi-1', ...vars },
         data: {
@@ -1920,6 +1949,140 @@ describe('cache pagination integration', () => {
       ).map(e => e.node.id);
 
       expect(ids).toEqual(['b-1', 'b-2', 'b-3']);
+    });
+  });
+
+  // =========================================================================
+  // A page of rows that select their parent, which Apollo stores before them
+  // =========================================================================
+
+  describe('a page of rows the device has never held, each selecting its parent', () => {
+    const pageInfo = (hasNextPage: boolean, endCursor: string) => ({
+      __typename: 'PageInfo',
+      hasNextPage,
+      endCursor,
+    });
+
+    it('appends them on a list (itemsConnectionFieldPolicy)', () => {
+      const QUERY = gql`
+        query ListRows($after: String) {
+          shoppingList(id: "list-1") {
+            id
+            itemsConnection(first: 2, after: $after) {
+              totalCount
+              edges {
+                cursor
+                node {
+                  id
+                  shoppingList {
+                    id
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        }
+      `;
+      const list = { __typename: 'ShoppingList', id: 'list-1' };
+      const answer = (ids: string[], hasNextPage: boolean) => ({
+        shoppingList: {
+          ...list,
+          itemsConnection: {
+            __typename: 'ShoppingListItemConnection',
+            totalCount: 4,
+            edges: ids.map(id => ({
+              __typename: 'ShoppingListItemEdge',
+              cursor: `c-${id}`,
+              node: {
+                __typename: 'ShoppingListItem',
+                id,
+                shoppingList: list,
+              },
+            })),
+            pageInfo: pageInfo(hasNextPage, `c-${ids.at(-1)}`),
+          },
+        },
+      });
+      const cache = makeCache();
+
+      seedQuery(cache, { query: QUERY, data: answer(['a', 'b'], true) });
+      seedQuery(cache, {
+        query: QUERY,
+        variables: { after: 'c-b' },
+        data: answer(['c', 'd'], false),
+      });
+
+      const read = cache.readQuery<ShoppingListItemsResult>({ query: QUERY });
+      const connection = read?.shoppingList?.itemsConnection;
+      expect(connection?.edges.map(e => e.node.id)).toEqual([
+        'a',
+        'b',
+        'c',
+        'd',
+      ]);
+      expect(connection?.pageInfo.hasNextPage).toBe(false);
+    });
+
+    it('appends them on a home (mergeConnectionByNodeId)', () => {
+      const QUERY = gql`
+        query HomeRows($after: String) {
+          home(id: "home-1") {
+            id
+            membersConnection(first: 2, after: $after) {
+              totalCount
+              edges {
+                cursor
+                node {
+                  id
+                  home {
+                    id
+                  }
+                }
+              }
+              pageInfo {
+                hasNextPage
+                endCursor
+              }
+            }
+          }
+        }
+      `;
+      const home = { __typename: 'Home', id: 'home-1' };
+      const answer = (ids: string[], hasNextPage: boolean) => ({
+        home: {
+          ...home,
+          membersConnection: {
+            __typename: 'MembershipConnection',
+            totalCount: 4,
+            edges: ids.map(id => ({
+              __typename: 'MembershipEdge',
+              cursor: `c-${id}`,
+              node: { __typename: 'Membership', id, home },
+            })),
+            pageInfo: pageInfo(hasNextPage, `c-${ids.at(-1)}`),
+          },
+        },
+      });
+      const cache = makeCache();
+
+      seedQuery(cache, { query: QUERY, data: answer(['a', 'b'], true) });
+      seedQuery(cache, {
+        query: QUERY,
+        variables: { after: 'c-b' },
+        data: answer(['c', 'd'], false),
+      });
+
+      const read = cache.readQuery<HomeMembersResult>({ query: QUERY });
+      expect(read?.home?.membersConnection?.edges.map(e => e.node.id)).toEqual([
+        'a',
+        'b',
+        'c',
+        'd',
+      ]);
     });
   });
 });

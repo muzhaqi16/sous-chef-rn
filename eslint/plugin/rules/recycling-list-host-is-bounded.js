@@ -1,3 +1,5 @@
+const { sheetNameOf } = require('../variantSheets');
+
 /** A `View` that sizes to its children offers no height for a list to claim. */
 const BOUNDING_PROPERTIES = new Set([
   'height',
@@ -109,7 +111,7 @@ module.exports = {
           } else if (
             expression.type === 'MemberExpression' &&
             expression.object.type === 'Identifier' &&
-            expression.object.name === 'styles' &&
+            sheetNameOf(expression.object, context.sourceCode) === 'styles' &&
             expression.property.type === 'Identifier'
           ) {
             applied.push(styles.get(expression.property.name));

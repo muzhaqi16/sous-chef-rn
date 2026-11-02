@@ -56,6 +56,8 @@ interface MoveToPantryModalProps {
   visible: boolean;
   shoppingListItemId: string | null;
   pantries: readonly MoveTarget[];
+  /** Stands in for the pantry choice when the read behind it failed. */
+  pantriesUnavailable?: React.ReactNode;
   selectedPantryId: string | null;
   onClose: () => void;
   /** Resolves true once the move is applied or queued; a refusal keeps the sheet open. */
@@ -70,6 +72,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
   visible,
   shoppingListItemId,
   pantries,
+  pantriesUnavailable,
   selectedPantryId,
   onClose,
   onConfirm,
@@ -450,6 +453,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           </View>
 
           {/* Pantry Selector */}
+          {pantriesUnavailable}
           <PantrySelector
             pantries={pantries}
             selectedPantryId={pantryId}

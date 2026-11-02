@@ -68,7 +68,7 @@ therefore parks the refresh token (plus the access token, which `/revoke`
 denylists) in the platform's secure store and then `POST /revoke`s it. Parking comes first, so
 a process kill mid-request loses nothing. A 2xx or a 4xx settles the entry; the
 network, a 5xx or a 429 leaves it parked. `usePendingRevocationDrain` drains the
-parked list on launch and whenever `isNetworkWithheld` clears, one entry at a
+parked list on launch and whenever `isApiUnavailable` clears, one entry at a
 time, stopping at the first unanswered request. The step is fire-and-forget: a
 sign-out never waits on the network. `/revoke` needs no access token and is
 idempotent, so it runs on server-ended sessions too. An `AUTH_TOKEN_EXPIRED`
@@ -137,7 +137,7 @@ primary: `docs/subscriptions-echo-and-budget.md` § The device identity.
 
 **A session end mints nothing.** A credential landing after the teardown cleared
 storage is written back and re-arms the refresh, leaving a signed-out device a
-live session — and `client.stop()` does not cancel an in-flight refresh
+live session — and `clearStore` does not cancel an in-flight refresh
 mutation. So `setTokens` refuses a pair while the scope is held, the refresh
 opens no rotation inside it, and a rotation that completes after its session
 was cleared or replaced (the stored refresh token is no longer the one it

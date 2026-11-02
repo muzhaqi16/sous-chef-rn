@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { Text as SaveButton } from '#components/atoms/Text';
 import { QuantitySection } from '../QuantitySection';
 import type { PantryItemFormData } from '../PantryItemForm';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#components/atoms/FormInput', () => {
   const { View, Text } = require('react-native');
@@ -123,6 +124,14 @@ function Reporting() {
   );
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('QuantitySection', () => {
   // The `add` variant is gone with the form's unreachable add mode.
   it('renders the section title', () => {
@@ -156,7 +165,8 @@ describe('QuantitySection', () => {
 
     fireEvent.press(screen.getByText('save'));
 
-    expect(await screen.findByText('Already tracked in carton.')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Already tracked in carton.')).toBeTruthy();
     expect(screen.getByText('Enter how much you have.')).toBeTruthy();
   });
 

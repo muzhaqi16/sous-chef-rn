@@ -45,7 +45,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
 }) => {
   const animatedTheme = useAnimatedTheme();
   const isPressed = useSharedValue(false);
-  styles.useVariants({ disabled });
+  const variantStyles = styles.useVariants({ disabled });
 
   // useRecyclingState auto-resets on itemId change; onReset clears the shared
   // value synchronously during render, before paint.
@@ -130,7 +130,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled}
-      style={styles.pressable}
+      style={variantStyles.pressable}
       accessibilityRole="checkbox"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: !!visuallyChecked, disabled }}
@@ -138,7 +138,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
     >
       <Animated.View
         style={[
-          styles.container,
+          variantStyles.container,
           { width: size, height: size },
           boxShapeStyle,
           animatedStyle,

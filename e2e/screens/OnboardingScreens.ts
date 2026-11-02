@@ -4,28 +4,58 @@ import { BaseScreen } from './BaseScreen';
 import { onboardingTestIDs } from '../../src/features/onboarding/testIDs';
 import { kitTestIDs } from '../../src/components/testIDs';
 
-/** Step 1: create or join a home. It renders no back button. */
-export class CreateHomeScreen extends BaseScreen {
-  protected screenID = onboardingTestIDs.createHomeScreen;
+/**
+ * Setup: selects or creates the home, pantry and list, then replaces itself
+ * with the first question. It stops only when invitations are pending.
+ */
+export class OnboardingSetupScreen extends BaseScreen {
+  protected screenID = onboardingTestIDs.setupScreen;
+
+  async tapCreateHome() {
+    await this.tapByID(onboardingTestIDs.setupCreateHome);
+  }
+
+  async tapSkipHome() {
+    await this.tapByID(onboardingTestIDs.setupSkipHome);
+  }
+}
+
+/** The household question: who the user cooks for. */
+export class HouseholdStepScreen extends BaseScreen {
+  protected screenID = onboardingTestIDs.householdScreen;
+
+  async tapSkip() {
+    await this.tapByID(onboardingTestIDs.skipButton(this.screenID));
+  }
+}
+
+/** The dietary step: allergies, a diet and foods to avoid. */
+export class DietaryStepScreen extends BaseScreen {
+  protected screenID = onboardingTestIDs.dietaryScreen;
+
+  async tapSkip() {
+    await this.tapByID(onboardingTestIDs.skipButton(this.screenID));
+  }
+}
+
+/** The receipt step: scan a receipt, or pick staples instead. */
+export class ReceiptStepScreen extends BaseScreen {
+  protected screenID = onboardingTestIDs.receiptScreen;
 
   async tapSkip() {
     await this.tapByID(onboardingTestIDs.skipButton(this.screenID));
   }
 
-  // No submit helper: the screen submits its own form, so a test drives the
-  // fields directly or waits for the navigation.
-}
+  async tapScan() {
+    await this.tapByID(onboardingTestIDs.receiptScan);
+  }
 
-/** Step 2: create a shopping list. It renders no back button. */
-export class CreateShoppingListScreen extends BaseScreen {
-  protected screenID = onboardingTestIDs.createShoppingListScreen;
-
-  async tapSkip() {
-    await this.tapByID(onboardingTestIDs.skipButton(this.screenID));
+  async tapPickStaples() {
+    await this.tapByID(onboardingTestIDs.receiptStaples);
   }
 }
 
-/** Step 3: select initial pantry items. */
+/** Staples, the receipt step's alternative: foods grouped by where they are kept. */
 export class SelectPantryItemsScreen extends BaseScreen {
   protected screenID = onboardingTestIDs.selectPantryItemsScreen;
 
@@ -41,24 +71,7 @@ export class SelectPantryItemsScreen extends BaseScreen {
   // assert the screen is present and skip.
 }
 
-/** Step 6 of 7: optional biometric authentication setup. */
-export class BiometricSetupScreen extends BaseScreen {
-  protected screenID = onboardingTestIDs.biometricSetupScreen;
-
-  async tapSkip() {
-    await this.tapByID(
-      kitTestIDs.biometricSkip(onboardingTestIDs.biometricSetupView),
-    );
-  }
-
-  async tapEnable() {
-    await this.tapByID(
-      kitTestIDs.biometricEnable(onboardingTestIDs.biometricSetupView),
-    );
-  }
-}
-
-/** Step 7 of 7, the last. */
+/** The completion screen, the last. */
 export class OnboardingCompleteScreen extends BaseScreen {
   protected screenID = onboardingTestIDs.completeScreen;
 

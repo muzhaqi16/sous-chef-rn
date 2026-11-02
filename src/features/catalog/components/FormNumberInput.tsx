@@ -24,7 +24,7 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
   onChangeText,
   ...textInputProps
 }) => {
-  styles.useVariants({ error: !!error });
+  const variantStyles = styles.useVariants({ error: !!error });
 
   const handleChangeText = (text: string) => {
     if (keyboardType === 'decimal-pad') {
@@ -53,7 +53,7 @@ export const FormNumberInput: React.FC<FormNumberInputProps> = ({
       containerStyle={containerStyle}
     >
       <ThemedTextInput
-        style={[styles.input, inputStyle]}
+        style={[variantStyles.input, inputStyle]}
         keyboardType={keyboardType}
         onChangeText={handleChangeText}
         {...textInputProps}

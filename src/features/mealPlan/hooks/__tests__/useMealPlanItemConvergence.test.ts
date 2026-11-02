@@ -4,6 +4,7 @@ import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { CreateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { MealType } from '#/graphql/generated/schemaTypes';
@@ -42,7 +43,7 @@ describe('adding a recipe meal the plan already holds', () => {
   it('withdraws the minted meal and shows only the held one', async () => {
     const cache = makeCache();
     const planCacheId = cache.identify({ __typename: 'MealPlan', id: PLAN_ID });
-    cache.writeFragment({
+    seedFragment(cache, {
       id: planCacheId,
       fragment: PLAN_MEALS,
       data: {

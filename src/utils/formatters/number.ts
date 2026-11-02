@@ -4,6 +4,8 @@
  * its keypad does not offer. Both follow the DEVICE, because the keypad does
  * (see `deviceLocale`). `Intl` is treated as possibly-absent throughout.
  */
+import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import type { Translate } from '#/i18n/types';
 import { getDeviceDecimalSeparator } from '../deviceLocale';
 
 /**
@@ -89,8 +91,12 @@ export const DEFAULT_CURRENCY = 'USD';
 
 const currencyFormatters = new Map<string, Intl.NumberFormat | null>();
 
-function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
-  const cached = currencyFormatters.get(currency);
+function getCurrencyFormatter(
+  currency: string,
+  wholeUnits = false,
+): Intl.NumberFormat | null {
+  const key = wholeUnits ? `${currency}:whole` : currency;
+  const cached = currencyFormatters.get(key);
   if (cached !== undefined) return cached;
 
   let formatter: Intl.NumberFormat | null = null;
@@ -98,11 +104,12 @@ function getCurrencyFormatter(currency: string): Intl.NumberFormat | null {
     formatter = new Intl.NumberFormat(undefined, {
       style: 'currency',
       currency,
+      ...(wholeUnits && { maximumFractionDigits: 0, minimumFractionDigits: 0 }),
     });
   } catch {
     formatter = null;
   }
-  currencyFormatters.set(currency, formatter);
+  currencyFormatters.set(key, formatter);
   return formatter;
 }
 
@@ -142,6 +149,20 @@ export function formatCurrency(
   return formatter.format(value);
 }
 
+/** A rough amount ("about $8"), in the currency's whole units. */
+export function formatApproximateCurrency(
+  value: number,
+  currency: string,
+): string {
+  const rounded = Math.round(value);
+  const formatter = getCurrencyFormatter(currency, true);
+  if (formatter) return formatter.format(rounded);
+  return `${currency} ${formatDecimal(rounded, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
+}
+
 /**
  * The currency's symbol as the device's locale writes it ("$", "€"), read back
  * from `format` as the decimal separator is; the code when Intl knows none.
@@ -161,6 +182,28 @@ export function localizeNumericHint(text: string): string {
   const separator = getDeviceDecimalSeparator();
   if (separator === '.') return text;
   return text.replace(/(\d)\.(\d)/g, `$1${separator}$2`);
+}
+
+const KM_PER_MILE = 1.609344;
+
+/**
+ * A distance in the reader's units: miles for imperial, else kilometres, whole
+ * from 1 up and to one decimal below it, so a nearby store never reads "0 mi".
+ */
+export function formatDistance(
+  km: number,
+  readingSystem: UnitSystem,
+  t: Translate,
+): string {
+  const imperial = readingSystem === UnitSystem.Imperial;
+  // A tenth is the least shown: one decimal would round a closer store to 0.
+  const value = Math.max(imperial ? km / KM_PER_MILE : km, 0.1);
+  const distance = formatDecimal(value, {
+    maximumFractionDigits: value < 1 ? 1 : 0,
+  });
+  return imperial
+    ? t('labels.distance.mi', { distance })
+    : t('labels.distance.km', { distance });
 }
 
 /**

@@ -10,6 +10,8 @@
     "householdHint": "Cambia o gestisci le tue case",
     "tutorialHouseholdTitle": "Tocca per gestire le case",
     "tutorialHouseholdSubtitle": "Passa da una casa all'altra o gestisci le impostazioni della casa",
+    "tutorialYourHomeTitle": "La tua casa",
+    "tutorialYourHomeSubtitle": "Tocca per rinominarla o invitare le persone con cui fai la spesa",
     "householdFallback": "La tua casa"
   }
 }

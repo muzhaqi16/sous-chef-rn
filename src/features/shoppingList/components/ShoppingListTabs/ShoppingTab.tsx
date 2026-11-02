@@ -9,6 +9,7 @@ import { ShoppingListItemSkeleton } from '#features/shoppingList/components/skel
 import { EmptyState } from '#components/molecules/EmptyState';
 import { ShoppingEmptyIllustration } from '#features/shoppingList/components/ShoppingEmptyIllustration';
 import { useDeferredRender } from '#hooks/performance/useDeferredRender';
+import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { useMinimumVisible } from '#features/shoppingList/hooks/useMinimumVisible';
 import { StaggeredTabContent } from './StaggeredTabContent';
 import { useShoppingListTabsActions } from './ShoppingListTabsActionsContext';
@@ -83,14 +84,15 @@ const ShoppingTabComponent: React.FC = () => {
 
   const displayQuery =
     searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
+  const noMatch = useNoMatchCopy(displayQuery, !hasMore);
 
   const emptyComponent = searchQuery.trim() ? (
     <EmptyState
       icon="search-outline"
-      title={t('empty.noResultsFor', {
-        query: displayQuery,
-      })}
-      description={t('shoppingListScreens.searchAddPrompt')}
+      title={noMatch.title}
+      description={
+        noMatch.description ?? t('shoppingListScreens.searchAddPrompt')
+      }
       action={{
         label: t('labels.addItem'),
         onPress: openAddItemSheet,

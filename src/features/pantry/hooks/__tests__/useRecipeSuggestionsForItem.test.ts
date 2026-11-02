@@ -1,11 +1,12 @@
-import { waitFor } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import {
   recordMock,
   renderHookWithApollo,
   type MockDataFor,
   type MockedResponse,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { ExternalSource } from '#/graphql/generated/schemaTypes';
 import {
   catalogFetchKey,
@@ -83,13 +84,21 @@ const cacheHoldingMilk = (
       })),
     },
   };
-  cache.writeQuery({
+  seedQuery(cache, {
     query: CatalogRecipesForItemDocument,
     variables: { ingredients: ['milk'], first: 5 },
     data,
   });
   return cache;
 };
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
 
 describe('useRecipeSuggestionsForItem', () => {
   it('lists catalog recipes that use the item, five at most', async () => {
@@ -99,9 +108,8 @@ describe('useRecipeSuggestionsForItem', () => {
     ]);
     const { result } = renderSuggestions('tomatoes', [suggestions.mock]);
 
-    await waitFor(() =>
-      expect(result.current.suggestedRecipes).toHaveLength(2),
-    );
+    await drainTimers();
+    expect(result.current.suggestedRecipes).toHaveLength(2);
 
     expect(suggestions.fired).toEqual([
       { ingredients: ['tomatoes'], first: 5 },
@@ -111,6 +119,45 @@ describe('useRecipeSuggestionsForItem', () => {
       'Bruschetta',
     ]);
     expect(result.current.loadingRecipes).toBe(false);
+  });
+
+  it('reports a read that failed, and a retry reads it', async () => {
+    const failed = recordMock(CatalogRecipesForItemDocument, {
+      error: new Error('network down'),
+      maxUsageCount: 1,
+    });
+    const { result } = renderSuggestions('tomatoes', [
+      failed.mock,
+      suggestionsMock([edge('1', 'Tomato soup')]).mock,
+    ]);
+
+    await drainTimers();
+    expect(result.current.recipesState).toBe('error');
+    expect(result.current.suggestedRecipes).toEqual([]);
+
+    result.current.retryRecipes();
+    await drainTimers();
+    expect(result.current.recipesState).toBe('ready');
+    expect(result.current.suggestedRecipes).toHaveLength(1);
+  });
+
+  it('keeps the suggestions it holds when a refresh fails', async () => {
+    const failed = recordMock(CatalogRecipesForItemDocument, {
+      error: new Error('network down'),
+    });
+    // No recorded arrival, so it shows the held page and asks again.
+    const { result } = renderSuggestions(
+      'milk',
+      [failed.mock],
+      cacheHoldingMilk(['Rice pudding'], true),
+    );
+
+    await drainTimers();
+    expect(failed.fired).toHaveLength(1);
+    expect(result.current.recipesState).toBe('ready');
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Rice pudding',
+    ]);
   });
 
   it('asks for nothing, and suggests nothing, without an item name', () => {
@@ -126,9 +173,8 @@ describe('useRecipeSuggestionsForItem', () => {
     const suggestions = suggestionsMock([edge('1', 'Bean salad')]);
     const { result } = renderSuggestions('  Beans, Black ', [suggestions.mock]);
 
-    await waitFor(() =>
-      expect(result.current.suggestedRecipes).toHaveLength(1),
-    );
+    await drainTimers();
+    expect(result.current.suggestedRecipes).toHaveLength(1);
     expect(suggestions.fired).toEqual([
       { ingredients: ['beans', 'black'], first: 5 },
     ]);
@@ -151,27 +197,23 @@ describe('useRecipeSuggestionsForItem', () => {
       cacheHoldingMilk([], false),
     );
 
-    await waitFor(() =>
-      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
-        'Milkshake',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Milkshake',
+    ]);
     expect(suggestions.fired).toHaveLength(1);
   });
 
   it('answers from the cache when it holds a whole answer', async () => {
     const suggestions = suggestionsMock([edge('1', 'Milkshake')]);
-    const { result } = renderSuggestions(
-      'milk',
-      [suggestions.mock],
-      cacheHoldingMilk(['Rice pudding'], true),
-    );
+    const cache = cacheHoldingMilk(['Rice pudding'], true);
+    milkFetched(0);
+    const { result } = renderSuggestions('milk', [suggestions.mock], cache);
 
-    await waitFor(() =>
-      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
-        'Rice pudding',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Rice pudding',
+    ]);
     expect(suggestions.fired).toEqual([]);
   });
 
@@ -193,14 +235,14 @@ describe('useRecipeSuggestionsForItem', () => {
       'Rice pudding',
     ]);
     expect(result.current.loadingRecipes).toBe(false);
-    await waitFor(() => expect(suggestions.fired).toHaveLength(1));
+    await drainTimers();
+    expect(suggestions.fired).toHaveLength(1);
 
     suggestions.release();
-    await waitFor(() =>
-      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
-        'Milkshake',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Milkshake',
+    ]);
   });
 
   it('answers from the cache for suggestions fetched yesterday', async () => {
@@ -209,11 +251,10 @@ describe('useRecipeSuggestionsForItem', () => {
     const suggestions = suggestionsMock([edge('1', 'Milkshake')]);
     const { result } = renderSuggestions('milk', [suggestions.mock], cache);
 
-    await waitFor(() =>
-      expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
-        'Rice pudding',
-      ]),
-    );
+    await drainTimers();
+    expect(result.current.suggestedRecipes.map(r => r.name)).toEqual([
+      'Rice pudding',
+    ]);
     expect(suggestions.fired).toEqual([]);
   });
 
@@ -227,7 +268,8 @@ describe('useRecipeSuggestionsForItem', () => {
     expect(result.current.loadingRecipes).toBe(true);
 
     suggestions.release();
-    await waitFor(() => expect(result.current.loadingRecipes).toBe(false));
+    await drainTimers();
+    expect(result.current.loadingRecipes).toBe(false);
     expect(result.current.suggestedRecipes).toHaveLength(1);
   });
 
@@ -237,8 +279,10 @@ describe('useRecipeSuggestionsForItem', () => {
     });
     const { result } = renderSuggestions('tomatoes', [suggestions.mock]);
 
-    await waitFor(() => expect(suggestions.fired).toHaveLength(1));
-    await waitFor(() => expect(result.current.loadingRecipes).toBe(false));
+    await drainTimers();
+    expect(suggestions.fired).toHaveLength(1);
+    await drainTimers();
+    expect(result.current.loadingRecipes).toBe(false);
     expect(result.current.suggestedRecipes).toEqual([]);
   });
 });

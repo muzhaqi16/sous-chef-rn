@@ -71,7 +71,7 @@ export function useHomeSelection({
     const homeFromProps = homes?.find(home => home.id === homeId);
     const cachedHomes = homeFromProps
       ? null
-      : client.cache.readQuery({ query: GetHomesDocument });
+      : client.cache.readQuery({ query: GetHomesDocument, optimistic: true });
     const targetHome =
       homeFromProps ??
       extractNodes(cachedHomes?.homes).find(home => home.id === homeId);

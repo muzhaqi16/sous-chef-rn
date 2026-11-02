@@ -1,10 +1,6 @@
 import { createTestStore } from '#/test-utils/createTestStore';
-import {
-  blocksCacheMissQueries,
-  isApiUnavailable,
-  isNetworkWithheld,
-  shouldTreatAsOffline,
-} from '../networkSlice';
+import { storage } from '#/store/deviceStorage';
+import { isApiUnavailable, shouldTreatAsOffline } from '../networkSlice';
 
 describe('networkSlice', () => {
   // Nearly every action here runs `syncOfflineBanner`, which schedules a real
@@ -166,7 +162,15 @@ describe('networkSlice', () => {
       });
 
       expect(shouldTreatAsOffline(store.getState())).toBe(true);
-      expect(blocksCacheMissQueries(store.getState())).toBe(true);
+    });
+
+    it('ignores the offline switch an older build stored', () => {
+      storage.set('user_offline_mode', true);
+      const store = createTestStore();
+
+      expect(isApiUnavailable(store.getState())).toBe(false);
+      jest.runOnlyPendingTimers();
+      expect(store.getState().offlineBannerCause).toBeNull();
     });
 
     it('setApiReachable toggles the flag', () => {
@@ -246,12 +250,6 @@ describe('networkSlice', () => {
       expect(store.getState().offlineBannerCause).toBe('device-offline');
     });
 
-    it('shows offline mode immediately — the user just flipped the switch', () => {
-      const store = createTestStore();
-      store.getState().setOfflineModeEnabled(true);
-      expect(store.getState().offlineBannerCause).toBe('offline-mode');
-    });
-
     it('stays visible for the minimum duration after recovery', () => {
       const store = createTestStore();
       goOffline(store);
@@ -328,7 +326,7 @@ describe('networkSlice', () => {
     });
 
     it("says nothing about an online device — that is the breaker's job", () => {
-      // Online with the breaker open must stay FALSE here: `offlineModeLink`
+      // Online with the breaker open must stay FALSE here: `offlineReadLink`
       // forwards that cache miss as an organic probe, which is how the
       // API-down case recovers. Folding it in would remove that.
       expect(
@@ -366,40 +364,6 @@ describe('networkSlice', () => {
       expect(isApiUnavailable({ isOnline: true, apiReachable: true })).toBe(
         false,
       );
-    });
-  });
-
-  describe('isNetworkWithheld', () => {
-    it('is true with offline mode on while the API is reachable', () => {
-      // offlineModeLink errors a cache miss here, so a screen must call it
-      // offline rather than a failed load.
-      expect(
-        isNetworkWithheld({
-          isOnline: true,
-          apiReachable: true,
-          offlineModeEnabled: true,
-        }),
-      ).toBe(true);
-    });
-
-    it('is true when the API is unavailable with offline mode off', () => {
-      expect(
-        isNetworkWithheld({
-          isOnline: true,
-          apiReachable: false,
-          offlineModeEnabled: false,
-        }),
-      ).toBe(true);
-    });
-
-    it('is false when online, reachable and offline mode is off', () => {
-      expect(
-        isNetworkWithheld({
-          isOnline: true,
-          apiReachable: true,
-          offlineModeEnabled: false,
-        }),
-      ).toBe(false);
     });
   });
 });

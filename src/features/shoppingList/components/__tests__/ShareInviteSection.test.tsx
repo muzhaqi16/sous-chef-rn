@@ -1,6 +1,7 @@
 import React from 'react';
-import { screen, userEvent, waitFor } from '@testing-library/react-native';
+import { screen, userEvent } from '@testing-library/react-native';
 import { recordMock, renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { AddCollaboratorDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { CollaboratorRole } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
@@ -32,6 +33,14 @@ const sendInvite = async () => {
   await user.press(screen.getByLabelText('Invite Members'));
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('ShareInviteSection', () => {
@@ -48,11 +57,10 @@ describe('ShareInviteSection', () => {
 
     await sendInvite();
 
-    await waitFor(() =>
-      expect(alertService.alert).toHaveBeenCalledWith(
-        'Error',
-        'Too many requests. Please try again in 10 minutes.',
-      ),
+    await drainTimers();
+    expect(alertService.alert).toHaveBeenCalledWith(
+      'Error',
+      'Too many requests. Please try again in 10 minutes.',
     );
     expect(fired).toEqual([
       {
@@ -84,7 +92,8 @@ describe('ShareInviteSection', () => {
 
     await sendInvite();
 
-    await waitFor(() => expect(screen.queryByDisplayValue(EMAIL)).toBeNull());
+    await drainTimers();
+    expect(screen.queryByDisplayValue(EMAIL)).toBeNull();
     expect(alertService.alert).not.toHaveBeenCalled();
   });
 
@@ -110,16 +119,15 @@ describe('ShareInviteSection', () => {
     expect(screen.queryByText('Editor')).toBeNull();
     await sendInvite();
 
-    await waitFor(() =>
-      expect(fired).toEqual([
-        {
-          input: {
-            shoppingListId: 'list-1',
-            email: EMAIL,
-            role: CollaboratorRole.Viewer,
-          },
+    await drainTimers();
+    expect(fired).toEqual([
+      {
+        input: {
+          shoppingListId: 'list-1',
+          email: EMAIL,
+          role: CollaboratorRole.Viewer,
         },
-      ]),
-    );
+      },
+    ]);
   });
 });

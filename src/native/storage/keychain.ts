@@ -1,5 +1,6 @@
 import {
   ACCESS_CONTROL,
+  BIOMETRY_TYPE,
   SECURITY_LEVEL,
   ACCESSIBLE,
   resetGenericPassword,
@@ -341,8 +342,16 @@ export async function clearCredentials(email: string): Promise<void> {
   }
 }
 
+/** Apple's names, which copy must use; the library reports them without the space. */
+const APPLE_BIOMETRY_NAMES: Partial<Record<BIOMETRY_TYPE, string>> = {
+  [BIOMETRY_TYPE.FACE_ID]: 'Face ID',
+  [BIOMETRY_TYPE.TOUCH_ID]: 'Touch ID',
+  [BIOMETRY_TYPE.OPTIC_ID]: 'Optic ID',
+};
+
 /**
- * Get available biometric authentication capabilities
+ * Get available biometric authentication capabilities, the type as copy names
+ * it ("Face ID", "Touch ID", or Android's sensor name).
  */
 export async function getBiometricCapability(): Promise<{
   isAvailable: boolean;
@@ -352,7 +361,10 @@ export async function getBiometricCapability(): Promise<{
     const biometryType = await getSupportedBiometryType();
     return {
       isAvailable: biometryType !== null,
-      biometryType: biometryType,
+      biometryType:
+        biometryType === null
+          ? null
+          : APPLE_BIOMETRY_NAMES[biometryType] ?? biometryType,
     };
   } catch (error) {
     logger.error('Failed to get biometric capability:', error);

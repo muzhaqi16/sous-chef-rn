@@ -29,6 +29,7 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
   # the written row reads incomplete and the whole list blanks, which no
   # refetch repairs while the screen stays mounted.
   shoppingList {
+    version
     id
   }
   itemName
@@ -82,6 +83,7 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
     catalogImageId
   }
   item {
+    version
     id
     imageUrl
     images {
@@ -90,6 +92,29 @@ fragment useShoppingListSubscriptions_item on ShoppingListItem {
       kind
     }
     storeDepartment
+  }
+  # What the edit form reads off a listed line.
+  priority
+  netWeight
+  netWeightUnit {
+    id
+    name
+    symbol
+    localizedSymbolForms {
+      one
+      other
+    }
+  }
+  storeInfo {
+    preferredStore {
+      id
+      name
+    }
+  }
+  brand {
+    version
+    id
+    name
   }
 }
 
@@ -112,6 +137,7 @@ query ShoppingListItemsForEvents($ids: [ID!]!) {
 
 query ShoppingListSummaryForEvent($id: ID!) {
   shoppingList(id: $id) {
+    version
     id
     name
     isCompleted

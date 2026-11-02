@@ -29,6 +29,7 @@ interface MealTemplatesState {
    */
   hasResult: boolean;
   hasMore: boolean;
+  isLoadingMore: boolean;
   searchQuery: string;
   selectedCategory: TemplateCategory | undefined;
 }
@@ -58,7 +59,7 @@ export function useMealTemplates(
   // Each keystroke would otherwise be its own query and cache entry.
   const search = useDebouncedValue(searchQuery.trim(), SEARCH_DEBOUNCE_MS);
 
-  const { data, loading, error, refetch, fetchMore } = useQuery(
+  const { data, loading, error, refetch, observable } = useQuery(
     GetMealTemplatesDocument,
     {
       variables: {
@@ -76,7 +77,7 @@ export function useMealTemplates(
     selector: d => d.mealTemplates,
     key: JSON.stringify([selectedCategory ?? null, search]),
     loading,
-    fetchMore,
+    observable,
     refetch,
   });
 
@@ -90,6 +91,7 @@ export function useMealTemplates(
       // `data !== undefined` — a response arrived, empty or not.
       hasResult: data !== undefined,
       hasMore: connectionData.hasMore,
+      isLoadingMore: connectionData.isLoadingMore,
       searchQuery,
       selectedCategory,
     },

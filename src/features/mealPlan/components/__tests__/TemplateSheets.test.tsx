@@ -115,10 +115,12 @@ describe('TemplateSheets', () => {
         user: { __typename: 'User', id: 'someone-else' },
         home: {
           __typename: 'Home',
+          version: 1,
           id: 'home-1',
           name: 'Family',
           myMembership: {
             __typename: 'Membership',
+            version: 1,
             id: 'mem-1',
             role: MembershipRole.Guest,
           },

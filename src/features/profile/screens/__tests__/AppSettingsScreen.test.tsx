@@ -1,6 +1,11 @@
 'use no memo';
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react-native';
+import {
+  render,
+  screen,
+  fireEvent,
+  within,
+} from '@testing-library/react-native';
 import { AppSettingsScreen } from '../AppSettingsScreen';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -17,9 +22,9 @@ const noError = (): Error | undefined => undefined;
 const mockAppSettings = jest.fn(() => ({
   settings: {
     preferredUnitSystem: 'METRIC',
-    autoSync: true,
-    offlineMode: false,
     showTutorials: true,
+    storeMode: false,
+    budgetAndPrices: null,
   },
   loading: false,
   hasLoadedSettings: true,
@@ -185,16 +190,13 @@ describe('AppSettingsScreen', () => {
     jest.clearAllMocks();
   });
 
-  // Offline is exactly when someone reaches for this switch, and its value
-  // lives in the store, not in the settings query. Behind the server-data gate
-  // it was unreachable in the state it exists for.
-  it('offers the offline switch when the settings query has nothing', () => {
+  it('shows only the data state when the settings query has nothing', () => {
     mockAppSettings.mockReturnValueOnce({
       settings: {
         preferredUnitSystem: 'METRIC',
-        autoSync: true,
-        offlineMode: false,
         showTutorials: true,
+        storeMode: false,
+        budgetAndPrices: null,
       },
       loading: false,
       hasLoadedSettings: false,
@@ -204,8 +206,20 @@ describe('AppSettingsScreen', () => {
       resetToDefaults: mockResetToDefaults,
     });
 
-    const { getByTestId } = render(<AppSettingsScreen />);
-    expect(getByTestId('settings-offline-mode-switch')).toBeTruthy();
+    render(<AppSettingsScreen />);
+
+    expect(screen.getByTestId(profileTestIDs.settingsState)).toBeTruthy();
+    expect(
+      screen.queryByTestId(profileTestIDs.settingsShowTutorialsSwitch),
+    ).toBeNull();
+  });
+
+  it('offers no offline or sync setting', () => {
+    render(<AppSettingsScreen />);
+
+    expect(screen.queryByText('Sync & Offline')).toBeNull();
+    expect(screen.queryByText('Offline Mode')).toBeNull();
+    expect(screen.queryByText('Auto Sync')).toBeNull();
   });
 
   it('renders the settings screen', () => {
@@ -213,8 +227,8 @@ describe('AppSettingsScreen', () => {
     expect(screen.getByTestId('settings-screen')).toBeTruthy();
   });
 
-  // Opt-in, and saved per user on the device.
-  it('turns store mode on for this user', () => {
+  // Kept with the account, so every device shows the same switch.
+  it('turns store mode on for the account', () => {
     render(<AppSettingsScreen />);
 
     expect(
@@ -222,7 +236,7 @@ describe('AppSettingsScreen', () => {
     ).toBeTruthy();
     fireEvent.press(screen.getByTestId('toggle-Store mode'));
 
-    expect(mockUpdatePreference).toHaveBeenCalledWith({ storeMode: true });
+    expect(mockUpdateAppSetting).toHaveBeenCalledWith('storeMode', true);
   });
 
   it('offers no store mode switch where the build leaves it out', () => {
@@ -235,8 +249,8 @@ describe('AppSettingsScreen', () => {
     jest.mocked(useFeatureFlag).mockReturnValue(true);
   });
 
-  // A plain list by default; a person who budgets turns the money on.
-  it('turns budget and prices on for this user', () => {
+  // Off until answered; turning it on by hand shows prices at once.
+  it('turns budget and prices on for the account', () => {
     render(<AppSettingsScreen />);
 
     expect(
@@ -244,9 +258,7 @@ describe('AppSettingsScreen', () => {
     ).toBeTruthy();
     fireEvent.press(screen.getByTestId('toggle-Budget & prices'));
 
-    expect(mockUpdatePreference).toHaveBeenCalledWith({
-      budgetAndPrices: true,
-    });
+    expect(mockUpdateAppSetting).toHaveBeenCalledWith('budgetAndPrices', true);
   });
 
   it('offers no budget and prices switch where the build leaves it out', () => {
@@ -269,25 +281,46 @@ describe('AppSettingsScreen', () => {
     expect(screen.getByText('Units & Measurements')).toBeTruthy();
   });
 
-  it('renders Sync & Offline section', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Sync & Offline')).toBeTruthy();
-  });
-
   it('renders Features section', () => {
     render(<AppSettingsScreen />);
     expect(screen.getByText('Features')).toBeTruthy();
+  });
+
+  it('keeps store mode and budget and prices together under Shopping', () => {
+    render(<AppSettingsScreen />);
+
+    const shopping = within(screen.getByTestId('section-Shopping'));
+    expect(
+      shopping.getByTestId(profileTestIDs.settingsStoreModeSwitch),
+    ).toBeTruthy();
+    expect(
+      shopping.getByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
+    ).toBeTruthy();
+
+    const experience = within(screen.getByTestId('section-Experience'));
+    expect(
+      experience.getByTestId(profileTestIDs.settingsHapticFeedbackSwitch),
+    ).toBeTruthy();
+    expect(
+      experience.queryByTestId(profileTestIDs.settingsStoreModeSwitch),
+    ).toBeNull();
+    expect(
+      experience.queryByTestId(profileTestIDs.settingsBudgetAndPricesSwitch),
+    ).toBeNull();
+  });
+
+  it('shows no Shopping section where the build offers neither switch', () => {
+    jest.mocked(useFeatureFlag).mockReturnValue(false);
+    render(<AppSettingsScreen />);
+
+    expect(screen.queryByTestId('section-Shopping')).toBeNull();
+    jest.mocked(useFeatureFlag).mockReturnValue(true);
   });
 
   it('renders Experience section with haptic feedback toggle', () => {
     render(<AppSettingsScreen />);
     expect(screen.getByText('Experience')).toBeTruthy();
     expect(screen.getByText('Haptic Feedback')).toBeTruthy();
-  });
-
-  it('renders Auto Sync toggle', () => {
-    render(<AppSettingsScreen />);
-    expect(screen.getByText('Auto Sync')).toBeTruthy();
   });
 
   it('renders Navigation Labels toggle', () => {
@@ -352,9 +385,9 @@ describe('AppSettingsScreen - loading state', () => {
       .mockReturnValue({
         settings: {
           preferredUnitSystem: 'METRIC',
-          autoSync: true,
-          offlineMode: false,
           showTutorials: true,
+          storeMode: false,
+          budgetAndPrices: null,
         },
         loading: true,
         hasLoadedSettings: false,
@@ -387,9 +420,9 @@ describe('AppSettingsScreen - loading state', () => {
       .mockReturnValue({
         settings: {
           preferredUnitSystem: 'METRIC',
-          autoSync: true,
-          offlineMode: false,
           showTutorials: true,
+          storeMode: false,
+          budgetAndPrices: null,
         },
         loading: true,
         hasLoadedSettings: true,
@@ -401,6 +434,8 @@ describe('AppSettingsScreen - loading state', () => {
 
     expect(screen.queryByText('Loading settings...')).toBeNull();
     expect(screen.getByTestId('settings-screen')).toBeTruthy();
-    expect(screen.getByText('Auto Sync')).toBeTruthy();
+    expect(
+      screen.getByTestId(profileTestIDs.settingsShowTutorialsSwitch),
+    ).toBeTruthy();
   });
 });

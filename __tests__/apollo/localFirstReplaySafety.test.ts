@@ -58,7 +58,6 @@ const REPLAY_SAFETY_BASELINE: Record<
   string,
   'absolute-update' | 'bulk-create'
 > = {
-  AddDietaryRestriction: 'absolute-update',
   // Takes NO input at all: it sets one boolean on the CALLER's own user row.
   // A replay writes the value already there, and there is no id for
   // `hasIdempotentInput` to find because the operation names no row.
@@ -80,6 +79,13 @@ const REPLAY_SAFETY_BASELINE: Record<
   UpdateNotificationPreferences: 'absolute-update',
   UpdateUserPreferences: 'absolute-update',
   UpdateUserProfile: 'absolute-update',
+  // A household's usual stores: each sets one row, named by the household and
+  // an existing store or chain (`target`), to added, pinned or removed. The SDL
+  // calls each "Safe to repeat", and the queue replays a household's writes in
+  // the order they were made, so a replay never outlasts a later tap.
+  AddUsualStore: 'absolute-update',
+  RemoveUsualStore: 'absolute-update',
+  UpdateUsualStore: 'absolute-update',
 };
 
 /**

@@ -1,6 +1,7 @@
 'use no memo';
 import React from 'react';
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
+import { t } from '#/i18n';
 import { DietaryProfileScreen } from '../DietaryProfileScreen';
 import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 
@@ -9,6 +10,7 @@ import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 const mockUpdateDietaryProfile = jest.fn().mockResolvedValue(true);
 const mockAddDietaryRestriction = jest.fn().mockResolvedValue(true);
 const mockRemoveDietaryRestriction = jest.fn().mockResolvedValue(true);
+const mockRefetch = jest.fn().mockResolvedValue({});
 
 jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
   useDietaryProfile: () => ({
@@ -340,15 +342,20 @@ describe('DietaryProfileScreen - profile never read', () => {
       .mockReturnValue({
         editableProfile: null,
         loading: false,
+        state: 'error',
+        refetch: mockRefetch,
         updateDietaryProfile: mockUpdateDietaryProfile,
         addDietaryRestriction: mockAddDietaryRestriction,
         removeDietaryRestriction: mockRemoveDietaryRestriction,
       });
   });
 
-  it('says the profile could not be loaded when nothing was read', () => {
+  it('says the profile could not be loaded and offers to read it again', async () => {
     render(<DietaryProfileScreen />);
-    expect(screen.getByText("Couldn't load your dietary profile")).toBeTruthy();
+    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    expect(mockRefetch).toHaveBeenCalledTimes(1);
   });
 });
 

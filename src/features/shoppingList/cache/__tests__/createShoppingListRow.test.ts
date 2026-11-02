@@ -7,7 +7,9 @@ import {
 import { AddItemToShoppingListDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { errorService } from '#/services/errorService';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { createShoppingListRow } from '../createShoppingListRow';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 jest.mock('#/services/errorService');
 
@@ -23,7 +25,7 @@ const LIST = gql`
 
 function seededCache() {
   const cache = makeCache();
-  cache.writeFragment({
+  seedFragment(cache, {
     fragment: LIST,
     data: {
       __typename: 'ShoppingList',
@@ -41,10 +43,11 @@ const listCounts = (cache: ReturnType<typeof makeCache>) =>
   cache.readFragment<{ totalItems: number; remainingItems: number }>({
     id: 'ShoppingList:list-1',
     fragment: LIST,
+    optimistic: true,
   });
 
 const rowIds = (cache: ReturnType<typeof makeCache>) =>
-  Object.keys(cache.extract()).filter(key =>
+  Object.keys(cache.extract(true)).filter(key =>
     key.startsWith('ShoppingListItem:'),
   );
 
@@ -75,31 +78,33 @@ describe('createShoppingListRow', () => {
   it('sends the minted line local-first under the id it wrote', async () => {
     const cache = seededCache();
     const { created, send } = create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     });
 
     await created;
 
     const [minted] = rowIds(cache);
-    expect(send).toHaveBeenCalledWith({
-      variables: {
-        input: {
-          shoppingListId: 'list-1',
-          items: [{ item: TYPED_MILK, id: minted?.split(':')[1] }],
+    expect(send).toHaveBeenCalledWith(
+      expect.objectContaining({
+        variables: {
+          input: {
+            shoppingListId: 'list-1',
+            items: [{ item: TYPED_MILK, id: minted?.split(':')[1] }],
+          },
         },
-      },
-      context: { localFirst: true },
-    });
+        context: expect.objectContaining({ localFirst: true }),
+      }),
+    );
   });
 
   it('names the typed item on the row before the API answers', async () => {
     const cache = seededCache();
 
     const { created } = create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     });
     const [minted] = rowIds(cache);
-    const named = cache.extract()[minted ?? '']?.item;
+    const named = cache.extract(true)[minted ?? '']?.item;
     await created;
 
     expect(named).toEqual({ __ref: 'Item:item-minted' });
@@ -109,7 +114,7 @@ describe('createShoppingListRow', () => {
     const cache = seededCache();
 
     const outcome = await create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     }).created;
 
     expect(outcome).toMatchObject({ outcome: 'kept', failure: null });
@@ -124,7 +129,7 @@ describe('createShoppingListRow', () => {
     const cache = seededCache();
 
     const outcome = await create(cache, {
-      data: { addItemsToShoppingList: null },
+      data: {},
     }).created;
 
     const [minted] = rowIds(cache);
@@ -138,7 +143,7 @@ describe('createShoppingListRow', () => {
       data: {
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
-          results: [{ index: 0, success: true, item: { id: 'line-held' } }],
+          results: [{ item: { id: 'line-held' } }],
         },
       },
     }).created;
@@ -157,8 +162,6 @@ describe('createShoppingListRow', () => {
               __typename: 'AddItemsToShoppingListPayload',
               results: [
                 {
-                  index: 0,
-                  success: true,
                   item: { id: variables.input.items[0]?.id },
                 },
               ],
@@ -189,7 +192,6 @@ describe('createShoppingListRow', () => {
         addItemsToShoppingList: {
           __typename: 'ForbiddenError',
           code: ErrorCode.Forbidden,
-          message: 'no',
         },
       },
     }).created;
@@ -210,10 +212,11 @@ describe('createShoppingListRow', () => {
       data: {
         addItemsToShoppingList: {
           __typename: 'AddItemsToShoppingListPayload',
-          results: [{ index: 0, success: false, item: null }],
+          results: [{ item: null }],
         },
       },
     }).created;
+    pendingWritesOf(cache).rebuild();
 
     expect(outcome).toMatchObject({
       outcome: 'reverted',

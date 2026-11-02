@@ -2,6 +2,7 @@
 
 import { renderHook, act } from '@testing-library/react-native';
 import { usePantrySorting } from '../usePantrySorting';
+import { sortOptionToOrderBy } from '#features/pantry/utils/pantryFilters';
 import {
   PantrySortOption,
   PantrySortDirection,
@@ -147,7 +148,23 @@ describe('usePantrySorting', () => {
     expect(sorted.map(i => i.id)).toEqual(['3', '2', '1']);
   });
 
-  it('sorts items by recent (createdAt) ascending shows most recent first', () => {
+  it('lists the most recent first by default, as the server does', () => {
+    const { result } = renderHook(() => usePantrySorting<TestItem>());
+
+    const items: TestItem[] = [
+      makeItem({ id: '1', createdAt: '2024-01-01', quantity: 1 }),
+      makeItem({ id: '2', createdAt: '2024-06-01', quantity: 1 }),
+      makeItem({ id: '3', createdAt: '2024-03-01', quantity: 1 }),
+    ];
+
+    expect(result.current.sortItems(items).map(i => i.id)).toEqual([
+      '2',
+      '3',
+      '1',
+    ]);
+  });
+
+  it('lists the oldest first when Recently Added is ascending', () => {
     const { result } = renderHook(() =>
       usePantrySorting<TestItem>({
         initialSortOption: PantrySortOption.RECENT,
@@ -161,9 +178,82 @@ describe('usePantrySorting', () => {
       makeItem({ id: '3', createdAt: '2024-03-01', quantity: 1 }),
     ];
 
-    // 'recent' sort base comparison is b - a (most recent first)
-    // with 'asc' direction, comparison is kept as-is
     const sorted = result.current.sortItems(items);
-    expect(sorted.map(i => i.id)).toEqual(['2', '3', '1']);
+    expect(sorted.map(i => i.id)).toEqual(['1', '3', '2']);
+  });
+
+  it('starts Recently Added newest first when picked, and reverses it when picked again', () => {
+    const onSortChange = jest.fn();
+    const { result } = renderHook(() =>
+      usePantrySorting({
+        initialSortOption: PantrySortOption.NAME,
+        initialSortDirection: PantrySortDirection.ASC,
+        onSortChange,
+      }),
+    );
+
+    act(() => {
+      result.current.handleSortSelect(PantrySortOption.RECENT);
+    });
+    expect(result.current.sortDirection).toBe(PantrySortDirection.DESC);
+    expect(onSortChange).toHaveBeenLastCalledWith('recent', 'desc');
+
+    act(() => {
+      result.current.handleSortSelect(PantrySortOption.RECENT);
+    });
+    expect(result.current.sortDirection).toBe(PantrySortDirection.ASC);
+    expect(onSortChange).toHaveBeenLastCalledWith('recent', 'asc');
+  });
+
+  // What server mode asks for: pantries past one page must not reverse.
+  describe.each([
+    [PantrySortOption.NAME, 'itemName', ['a', 'b', 'c']],
+    [PantrySortOption.EXPIRY, 'expiresOn', ['a', 'b', 'c']],
+    [PantrySortOption.QUANTITY, 'currentQuantity', ['a', 'b', 'c']],
+    [PantrySortOption.RECENT, 'addedAt', ['a', 'b', 'c']],
+  ] as const)('%s, as the server orders it', (option, field, ascending) => {
+    const items: TestItem[] = [
+      {
+        id: 'b',
+        itemName: 'B',
+        expiresOn: '2024-02-01',
+        quantity: 2,
+        createdAt: '2024-02-01',
+      },
+      {
+        id: 'c',
+        itemName: 'C',
+        expiresOn: '2024-03-01',
+        quantity: 3,
+        createdAt: '2024-03-01',
+      },
+      {
+        id: 'a',
+        itemName: 'A',
+        expiresOn: '2024-01-01',
+        quantity: 1,
+        createdAt: '2024-01-01',
+      },
+    ];
+
+    it.each([PantrySortDirection.ASC, PantrySortDirection.DESC])(
+      '%s',
+      direction => {
+        const { result } = renderHook(() =>
+          usePantrySorting<TestItem>({
+            initialSortOption: option,
+            initialSortDirection: direction,
+          }),
+        );
+
+        const order = sortOptionToOrderBy(option, direction);
+        expect(Object.keys(order)).toEqual([field]);
+        expect(result.current.sortItems([...items]).map(i => i.id)).toEqual(
+          direction === PantrySortDirection.ASC
+            ? [...ascending]
+            : [...ascending].reverse(),
+        );
+      },
+    );
   });
 });

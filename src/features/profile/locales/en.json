@@ -89,8 +89,6 @@
     "protein": "Protein",
     "fat": "Fat",
     "loadingProfile": "Loading dietary profile...",
-    "loadFailedTitle": "Couldn't load your dietary profile",
-    "loadFailedSubtitle": "Check your connection and try again.",
     "sharedWith": "Shared with",
     "sharedWithShown": "Members of these homes see your restrictions by name when they scan or cook. Your notes stay private.",
     "sharedWithNone": "Turn on a home to let its members see what you can't eat when they scan or cook.",
@@ -365,6 +363,21 @@
     "emptyDescription": "Reports, suggested edits and photos you send for review appear here, with where each one stands.",
     "sentOn": "Sent {{date}}",
     "reviewNote": "Reviewer's note: {{note}}"
+  },
+  "changesNotSaved": {
+    "title": "Changes not saved",
+    "bannerSubtitle_one": "{{count}} change needs your decision",
+    "bannerSubtitle_other": "{{count}} changes need your decision",
+    "intro": "These changes weren't saved. Each one says why, and what you can do.",
+    "aChange": "A change",
+    "reasonConflict": "Someone else changed the same thing first.",
+    "reasonGone": "This no longer exists, so it can only be discarded.",
+    "reasonExpired": "This change is too old to send safely, so it can only be discarded.",
+    "reasonRefused": "The server wouldn't accept this change.",
+    "discardTitle": "Discard this change?",
+    "discardBody": "Your change to {{name}} will be gone for good.",
+    "emptyTitle": "Nothing waiting",
+    "emptyBody": "Every change you made has been saved."
   },
   "brandLists": {
     "title": "Brand lists",

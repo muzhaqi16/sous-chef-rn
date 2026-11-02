@@ -90,6 +90,23 @@ describe('the stored queue', () => {
     expect(reloaded?.variables).toEqual(variables);
   });
 
+  it('keeps a pending write’s id and inputs, which a restart rebuilds it from', () => {
+    const store = new QueueStore();
+    store.setCurrentUserId('user-1');
+    const pendingWrite = { id: 'write-1', inputs: { name: 'Milk' } };
+    store.addMutation(
+      makeQueuedMutation({
+        id: 'create-1',
+        ...queuedMutationFor(NARROWER_CREATE_PANTRY_ITEM),
+        pendingWrite,
+      }),
+    );
+
+    store.invalidateCache();
+
+    expect(store.getMutation('create-1')?.pendingWrite).toEqual(pendingWrite);
+  });
+
   it('reads the stored queue once storage opens, after a read before it did', () => {
     const store = new QueueStore();
     store.addMutation(

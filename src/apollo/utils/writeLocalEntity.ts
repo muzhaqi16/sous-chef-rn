@@ -183,8 +183,23 @@ function readField(
     fragment: doc,
     fragmentName,
     variables,
+    optimistic: true,
   });
   return read && key in read ? read[key] : undefined;
+}
+
+/**
+ * Takes a row out from a layer, where `evict` leaves what the server holds:
+ * deleting its fields hides it.
+ */
+export function hideEntity(
+  cache: ApolloCache,
+  ref: { __typename: string; id: string },
+): void {
+  cache.modify({
+    id: cache.identify(ref),
+    fields: (_value, { DELETE }) => DELETE,
+  });
 }
 
 const idOnlyDocs = new Map<string, DocumentNode>();
@@ -219,5 +234,8 @@ export function isHeld(
     };
     idOnlyDocs.set(ref.__typename, doc);
   }
-  return cache.readFragment({ id: cacheId, fragment: doc }) !== null;
+  return (
+    cache.readFragment({ id: cacheId, fragment: doc, optimistic: true }) !==
+    null
+  );
 }

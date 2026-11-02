@@ -5,7 +5,6 @@ import {
   seedCache,
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { StoreDepartment } from '#/graphql/generated/schemaTypes';
 import {
@@ -22,6 +21,7 @@ const LINE: UseMoveToAisleModal_ItemFragment = {
   storeDepartmentOverride: null,
   item: {
     __typename: 'Item',
+    version: 1,
     id: 'item-1',
     storeDepartment: StoreDepartment.Other,
   },
@@ -48,15 +48,16 @@ function setup(
     act(() => result.current.moveTo(department));
   const readLine = () =>
     cache.readFragment({
-      id: cache.identify({ __typename: 'ShoppingListItem', id: 'line-1' }),
+      id: cache.identify({
+        __typename: 'ShoppingListItem',
+        version: 1,
+        id: 'line-1',
+      }),
       fragment: UseMoveToAisleModal_ItemFragmentDoc,
       fragmentName: 'useMoveToAisleModal_item',
+      optimistic: true,
     });
-  const readPersisted = () => {
-    optimisticDataPersistence.flush();
-    return optimisticDataPersistence.get('ShoppingListItem', 'line-1');
-  };
-  return { result, update, moveTo, readLine, readPersisted };
+  return { result, update, moveTo, readLine };
 }
 
 const queued: MockDataFor<typeof UpdateShoppingListItemDocument> = {
@@ -65,7 +66,6 @@ const queued: MockDataFor<typeof UpdateShoppingListItemDocument> = {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  optimisticDataPersistence.clearAll();
 });
 
 describe('useMoveToAisleModal', () => {
@@ -81,7 +81,7 @@ describe('useMoveToAisleModal', () => {
 
   // Queued offline, the line must stay in its new aisle through a restart.
   it('moves the line at once, and sends its own aisle on the line update', async () => {
-    const { result, update, moveTo, readLine, readPersisted } = setup(queued);
+    const { result, update, moveTo, readLine } = setup(queued);
 
     await moveTo(StoreDepartment.Frozen);
 
@@ -90,13 +90,10 @@ describe('useMoveToAisleModal', () => {
       storeDepartment: StoreDepartment.Frozen,
       storeDepartmentOverride: StoreDepartment.Frozen,
     });
-    expect(readPersisted()).toEqual({
-      storeDepartment: StoreDepartment.Frozen,
-      storeDepartmentOverride: StoreDepartment.Frozen,
-    });
     expect(update.fired).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'line-1',
           version: 4,
           storePrefs: { storeDepartmentOverride: StoreDepartment.Frozen },
@@ -111,6 +108,7 @@ describe('useMoveToAisleModal', () => {
       storeDepartmentOverride: StoreDepartment.Frozen,
       item: {
         __typename: 'Item',
+        version: 1,
         id: 'item-1',
         storeDepartment: StoreDepartment.DairyEggs,
       },
@@ -126,6 +124,7 @@ describe('useMoveToAisleModal', () => {
     expect(update.fired).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'line-1',
           version: 4,
           storePrefs: { storeDepartmentOverride: null },
@@ -135,7 +134,7 @@ describe('useMoveToAisleModal', () => {
   });
 
   it('returns the line to its aisle when the server refuses the move', async () => {
-    const { moveTo, readLine, readPersisted } = setup({
+    const { moveTo, readLine } = setup({
       updateShoppingListItem: { __typename: 'ValidationError' },
     });
 
@@ -146,6 +145,5 @@ describe('useMoveToAisleModal', () => {
       storeDepartmentOverride: null,
     });
     // Both fields it kept for a restart are let go.
-    expect(readPersisted()).toEqual({});
   });
 });

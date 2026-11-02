@@ -1,4 +1,3 @@
-import { act, waitFor } from '@testing-library/react-native';
 import type { InMemoryCache } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import {
@@ -11,14 +10,18 @@ import {
 import {
   recordMock,
   renderHookWithApollo,
+  seedFragment,
   statesFutureSchemaValues,
   type MockDataFor,
   type MockedResponse,
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import { GetRecipeDocument } from '#features/recipes/graphql/recipe.generated';
 import { writeLocalFavorite } from '#features/recipes/cache/favorites';
 import { RECIPE_INGREDIENTS_PAGE_SIZE } from '#domain/recipeIngredientsPaging';
+import { UseRecipeData_HeldRecipeFragmentDoc } from '../useRecipeData.generated';
+import { useStore } from '#store';
 import { useRecipeData, type UseRecipeDataParams } from '../useRecipeData';
 import type { CatalogRecipeHint } from '../useOpenCatalogRecipe';
 
@@ -88,6 +91,14 @@ function renderData(
   );
 }
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('useRecipeData', () => {
   describe('a recipe opened by id', () => {
     it('shows the API recipe', async () => {
@@ -103,7 +114,8 @@ describe('useRecipeData', () => {
         ),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
@@ -134,7 +146,8 @@ describe('useRecipeData', () => {
           }),
         ),
       ]);
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
           hasPendingRevision: true,
@@ -156,7 +169,8 @@ describe('useRecipeData', () => {
           }),
         ),
       ]);
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
           hasPendingRevision: false,
@@ -172,7 +186,8 @@ describe('useRecipeData', () => {
         ),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
@@ -196,7 +211,8 @@ describe('useRecipeData', () => {
         ),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData).toEqual(
         expect.objectContaining({
@@ -223,10 +239,77 @@ describe('useRecipeData', () => {
         recipeMock(catalogRecipe(ExternalSyncStatus.Synced, { name: 'API' })),
       ]);
 
-      await waitFor(() =>
-        expect(result.current.displayData?.title).toBe('API'),
-      );
+      await drainTimers();
+      expect(result.current.displayData?.title).toBe('API');
       expect(result.current.loading).toBe(false);
+    });
+  });
+
+  describe('a recipe never opened on this device', () => {
+    const cacheHoldingRow = () => {
+      const cache = makeCache();
+      seedFragment(cache, {
+        fragment: UseRecipeData_HeldRecipeFragmentDoc,
+        fragmentName: 'useRecipeData_heldRecipe',
+        data: {
+          __typename: 'Recipe',
+          id: 'r1',
+          name: 'Tomato soup',
+          imageUrl: 'https://img/soup.jpg',
+        },
+      });
+      return cache;
+    };
+    const unreadable = () =>
+      recordMock(GetRecipeDocument, {
+        error: new Error('Network request failed'),
+      }).mock;
+
+    afterEach(() => {
+      useStore.setState({ isOnline: true, apiReachable: null });
+    });
+
+    it('shows the name and image its row holds, offline', async () => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+      const { result } = renderData(
+        { recipeId: 'r1' },
+        [unreadable()],
+        cacheHoldingRow(),
+      );
+      await drainTimers();
+
+      expect(result.current.displayData).toMatchObject({
+        title: 'Tomato soup',
+        image: 'https://img/soup.jpg',
+        details: 'held',
+      });
+      expect(result.current.error).toBeNull();
+    });
+
+    it('shows what a catalog row named, offline', async () => {
+      useStore.setState({ isOnline: false, apiReachable: null });
+      const { result } = renderData({
+        hint: { name: 'Lentil dal', imageUrl: 'https://img/dal.jpg' },
+        openFailure: 'Not available offline',
+      });
+      await drainTimers();
+
+      expect(result.current.displayData).toMatchObject({
+        title: 'Lentil dal',
+        details: 'held',
+      });
+    });
+
+    it('reports a failed read online, whatever the row holds', async () => {
+      const { result } = renderData(
+        { recipeId: 'r1' },
+        [unreadable()],
+        cacheHoldingRow(),
+      );
+      await drainTimers();
+
+      expect(result.current.displayData).toBeNull();
+      expect(result.current.error).not.toBeNull();
     });
   });
 
@@ -244,7 +327,8 @@ describe('useRecipeData', () => {
       });
       const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
 
-      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
+      await drainTimers();
+      expect(shownIds(result)).toEqual(['i1', 'i2']);
       expect(get.fired).toEqual([
         { id: 'r1', ingredientsFirst: RECIPE_INGREDIENTS_PAGE_SIZE },
       ]);
@@ -266,16 +350,15 @@ describe('useRecipeData', () => {
       });
       const { result } = renderData({ recipeId: 'r1' }, [get.mock]);
 
-      await waitFor(() => expect(shownIds(result)).toEqual(['i1', 'i2']));
+      await drainTimers();
+      expect(shownIds(result)).toEqual(['i1', 'i2']);
       expect(
         result.current.backendRecipe?.ingredientsConnection.pageInfo
           .hasNextPage,
       ).toBe(true);
 
       // A pull reads the same one page again: nothing follows the cursor.
-      await act(async () => {
-        await result.current.refetch();
-      });
+      await drained(() => result.current.refetch());
 
       const onePage = {
         id: 'r1',
@@ -301,7 +384,8 @@ describe('useRecipeData', () => {
         recipeMock(catalogRecipe(syncStatus)),
       ]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData?.details).toBe(details);
     });
@@ -329,9 +413,49 @@ describe('useRecipeData', () => {
 
       const { result } = renderData({ recipeId: 'r1' }, [future]);
 
-      await waitFor(() => expect(result.current.displayData).not.toBeNull());
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
 
       expect(result.current.displayData?.details).toBe('complete');
+    });
+  });
+
+  describe('the author beside the source line', () => {
+    const openedWith = async (
+      originalAuthor: string,
+      source: string | null,
+    ) => {
+      const { result } = renderData({ recipeId: 'r1' }, [
+        recipeMock(
+          catalogRecipe(ExternalSyncStatus.Synced, { originalAuthor, source }),
+        ),
+      ]);
+      await drainTimers();
+      expect(result.current.displayData).not.toBeNull();
+      return result.current.displayData;
+    };
+
+    it.each([
+      ['Foodista.com – The Cooking Encyclopedia Everyone Can Edit', 'Foodista'],
+      ['Saveur', 'Saveur'],
+      ['foodista', 'Foodista.com'],
+      ['foodnetwork.com', 'Food Network'],
+    ])(
+      'leaves out "%s", which "%s" already credits',
+      async (author, source) => {
+        const displayData = await openedWith(author, source);
+
+        expect(displayData?.originalAuthor).toBeUndefined();
+        expect(displayData?.sourceName).toBe(source);
+      },
+    );
+
+    it.each([
+      ['Jen West', 'Pink When'],
+      ['Nonna', null],
+      ['Nonna', '—'],
+    ])('keeps "%s" beside a source of %s', async (author, source) => {
+      expect((await openedWith(author, source))?.originalAuthor).toBe(author);
     });
   });
 
@@ -353,7 +477,7 @@ describe('useRecipeData', () => {
 
     it('waits without a title when the row gave none', () => {
       const { result } = renderData({
-        hint: { provider: ExternalSource.Spoonacular, externalId: '716429' },
+        hint: {},
       });
 
       expect(result.current.displayData).toBeNull();
@@ -390,7 +514,8 @@ describe('useRecipeData', () => {
         (params: UseRecipeDataParams) => useRecipeData(params),
         { operationMocks: [mock], cache: makeCache(), initialProps },
       );
-      await waitFor(() => expect(rendered.result.current.loading).toBe(false));
+      await drainTimers();
+      expect(rendered.result.current.loading).toBe(false);
       return rendered;
     };
 
@@ -444,9 +569,8 @@ describe('useRecipeData', () => {
         [recipeMock(recipe)],
         cache,
       );
-      await waitFor(() =>
-        expect(rendered.result.current.backendRecipe).toBeDefined(),
-      );
+      await drainTimers();
+      expect(rendered.result.current.backendRecipe).toBeDefined();
       return { cache, ...rendered };
     };
 
@@ -456,27 +580,29 @@ describe('useRecipeData', () => {
       );
       expect(result.current.backendRecipe?.savedDetails).toBeNull();
 
-      await act(async () => {
-        writeLocalFavorite(cache, 'saved-1', 'r1', { notes: 'Less salt' });
+      await drained(async () => {
+        writeLocalFavorite(
+          cache,
+          'saved-1',
+          'r1',
+          { notes: 'Less salt' },
+          '2026-10-30T10:00:00.000Z',
+        );
         await Promise.resolve();
       });
-      await waitFor(() =>
-        expect(result.current.backendRecipe?.savedDetails?.notes).toBe(
-          'Less salt',
-        ),
+      expect(result.current.backendRecipe?.savedDetails?.notes).toBe(
+        'Less salt',
       );
 
-      await act(async () => {
+      await drained(async () => {
         cache.modify({
           id: cache.identify({ __typename: 'SavedRecipe', id: 'saved-1' }),
           fields: { personalRating: () => 4 },
         });
         await Promise.resolve();
       });
-      await waitFor(() =>
-        expect(result.current.backendRecipe?.savedDetails?.personalRating).toBe(
-          4,
-        ),
+      expect(result.current.backendRecipe?.savedDetails?.personalRating).toBe(
+        4,
       );
     });
 
@@ -486,17 +612,14 @@ describe('useRecipeData', () => {
       );
       expect(result.current.displayData?.details).toBe('pending');
 
-      await act(async () => {
+      await drained(async () => {
         cache.modify({
           id: cache.identify({ __typename: 'RecipeSourceMapping', id: 'sm-1' }),
           fields: { syncStatus: () => ExternalSyncStatus.Synced },
         });
         await Promise.resolve();
       });
-
-      await waitFor(() =>
-        expect(result.current.displayData?.details).toBe('complete'),
-      );
+      expect(result.current.displayData?.details).toBe('complete');
     });
   });
 });

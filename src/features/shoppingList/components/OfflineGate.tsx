@@ -2,7 +2,7 @@ import React from 'react';
 import type { StyleProp, ViewStyle } from 'react-native';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useIsEffectivelyOffline } from '#hooks/settings/useOfflineMode';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import { useTranslation } from '#/i18n';
@@ -18,7 +18,7 @@ interface OfflineGateProps {
   style?: StyleProp<ViewStyle>;
 }
 
-/** Gates network-dependent content on `useIsEffectivelyOffline` (device offline OR offline mode on). */
+/** Gates network-dependent content on the server being reachable. */
 export const OfflineGate: React.FC<OfflineGateProps> = ({
   children,
   message,
@@ -28,7 +28,7 @@ export const OfflineGate: React.FC<OfflineGateProps> = ({
   style,
 }) => {
   const { t } = useTranslation();
-  const isOffline = useIsEffectivelyOffline();
+  const isOffline = useIsApiUnavailable();
 
   if (!isOffline) {
     return <>{children}</>;

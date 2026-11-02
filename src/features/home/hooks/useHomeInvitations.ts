@@ -1,6 +1,7 @@
 /** Invite, preview-by-code, and join-by-code mutations. */
 
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { useLazyQuery, useMutation } from '@apollo/client/react';
 import {
   InviteToHomeDocument,
@@ -144,7 +145,7 @@ export function useHomeInvitations({
       setSelectedHomeId(homeId);
     }
 
-    alertService.alert(t('labels.success'), t('home.joinSuccessBody'));
+    toastService.success(t('home.joinSuccessBody'));
     return payload.membership;
   };
 

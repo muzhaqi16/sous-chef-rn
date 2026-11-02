@@ -12,6 +12,7 @@ import {
   adoptServerEntityId,
 } from '../cacheUpdaters';
 import { logger } from '#/utils/environment';
+import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 
 /** Mock Apollo cache exposing the methods the updaters touch as jest mocks. */
 type MockedCache = ApolloCache & {
@@ -408,7 +409,7 @@ describe('createAddToParentConnectionUpdater', () => {
   // and ignored it, so any parent connection with keyArgs got the new ref
   // written into every filtered variant.
   it('skips variants the caller opts out of', () => {
-    const add = createAddToParentConnectionUpdater<{ id: string }>(
+    const add = createAddToParentConnectionUpdater(
       'User',
       'notificationsConnection',
       'Notification',
@@ -439,7 +440,7 @@ describe('createAddToParentConnectionUpdater', () => {
     add(
       cache,
       'me',
-      { id: 'n1' },
+      { __typename: 'Notification', id: 'n1' },
       {
         skipStoreField: name => name.includes('RECIPES'),
       },
@@ -648,7 +649,7 @@ describe('adding an entity the cache already holds', () => {
   };
   const cacheWithPantry = () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Pantry:p-1',
       fragment: LIST,
       data: {
@@ -665,7 +666,7 @@ describe('adding an entity the cache already holds', () => {
   // longer reached the row.
   it('links the row it holds, leaving its nested entities as references', () => {
     const cache = cacheWithPantry();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'PantryItem:pi-1',
       fragment: ROW,
       data: created,
@@ -675,7 +676,7 @@ describe('adding an entity the cache already holds', () => {
 
     const row = cache.extract()['PantryItem:pi-1'];
     expect(row?.item).toEqual({ __ref: 'Item:item-milk' });
-    cache.writeFragment({
+    seedFragment(cache, {
       id: 'Item:item-milk',
       fragment: gql`
         fragment _RenamedItemProbe on Item {
@@ -919,7 +920,7 @@ describe('skipUnmatchedFilterVariants', () => {
 
   it('sees the storeFieldName Apollo writes for a real keyArgs field', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: gql`
         query FilterVariantProbe($filters: MealTemplateFilters) {
           mealTemplates(filters: $filters) {
@@ -1035,7 +1036,7 @@ describe('direct cache helpers', () => {
     id: string,
     name = 'Freezer',
   ): void => {
-    cache.writeFragment({
+    seedFragment(cache, {
       id: `StorageLocation:${id}`,
       fragment: STORAGE_LOCATION,
       fragmentName: 'ProbeStorageLocation',
@@ -1183,7 +1184,7 @@ describe('an evicting removal', () => {
 
   it('drops the edge too, so the response stub cannot bring the row back', () => {
     const cache = makeCache();
-    cache.writeQuery({
+    seedQuery(cache, {
       query: LOCATIONS,
       data: {
         storageLocations: {
@@ -1201,7 +1202,7 @@ describe('an evicting removal', () => {
       'storageLocations',
       'StorageLocation',
     )(cache, 'loc-2', { evictItem: true });
-    cache.writeFragment({
+    seedFragment(cache, {
       fragment: STUB,
       data: { __typename: 'StorageLocation', id: 'loc-2' },
     });

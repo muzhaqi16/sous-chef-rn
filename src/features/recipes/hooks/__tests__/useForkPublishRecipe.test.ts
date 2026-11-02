@@ -84,7 +84,7 @@ describe('useForkRecipe', () => {
     });
 
     // The copy is readable before any server answer.
-    expect(cache.extract()[`Recipe:${id!}`]).toBeDefined();
+    expect(cache.extract(true)[`Recipe:${id!}`]).toBeDefined();
   });
 
   it('refuses when the source recipe is not cached, without firing', async () => {
@@ -232,6 +232,7 @@ describe('usePublishRecipe', () => {
       id: cache.identify({ __typename: 'Recipe', id: 'recipe-1' }),
       fragment: UseRecipeFormWrites_RecipeFragmentDoc,
       fragmentName: 'useRecipeFormWrites_recipe',
+      optimistic: true,
     });
     expect(recipe?.status).toBe('PENDING_REVIEW');
   });

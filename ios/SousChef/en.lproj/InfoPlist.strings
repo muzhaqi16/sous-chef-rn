@@ -1,6 +1,7 @@
 "CFBundleDisplayName" = "Sous Chef";
 "NSCameraUsageDescription" = "Take photos of your pantry items, and scan barcodes and receipts to quickly add products to your inventory.";
 "NSFaceIDUsageDescription" = "Use Face ID to securely access your saved login credentials";
+"NSLocationWhenInUseUsageDescription" = "Find the stores near you. Your approximate location is enough, and a zip code works too.";
 "NSPhotoLibraryAddUsageDescription" = "Save photos of your items to your photo library.";
 "NSPhotoLibraryUsageDescription" = "Choose photos from your library to add images to your pantry items and recipes.";
 "NSUserNotificationsUsageDescription" = "Receive notifications for pantry expiration reminders, shopping list updates, and home invitation alerts.";

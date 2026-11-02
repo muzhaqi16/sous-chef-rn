@@ -136,6 +136,11 @@
     "queuedChangeOverwrittenResource": "{{resource}}: ndryshimi juaj u zëvendësua nga një më i ri dhe u zhbë.",
     "queuedChangeOverwritten": "Një ndryshim u zëvendësua nga një më i ri dhe u zhbë.",
     "queuedRemovalKeptResource": "{{resource}}: heqja nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
+    "queueFull": "Shumë ndryshime presin sinkronizimin.",
+    "queuedChangeKept": "Një ndryshim nuk u ruajt.",
+    "queuedChangeKeptResource": "{{resource}}: ndryshimi juaj nuk u ruajt.",
+    "queuedClashKept": "Dikush tjetër e ndryshoi këtë më parë.",
+    "queuedClashKeptResource": "{{resource}}: dikush tjetër bëri një ndryshim më parë.",
     "queuedRemovalKept": "Një heqje nuk u zbatua, sepse hyrja ishte bashkuar me një që ekzistonte tashmë.",
     "itemNameRequired": "Ju lutemi shkruani emrin e artikullit",
     "homeNameRequired": "Ju lutemi shkruani emrin e shtëpisë",
@@ -321,7 +326,6 @@
     "continue": "Vazhdo",
     "cookingFail": "Dështim gatimi",
     "cookingPreferences": "Preferencat e gatimit",
-    "copied": "U kopjua",
     "copy": "Kopjo",
     "copyOfName": "{{name}} (Kopje)",
     "nameWithDetail": "{{name}} ({{detail}})",
@@ -495,7 +499,6 @@
     "store": "Dyqani",
     "storeSelectHint": "Zgjidh një dyqan nga lista për ta ruajtur.",
     "submit": "Dërgo",
-    "success": "Sukses",
     "suggestEdit": "Sugjero ndryshim",
     "suggested": "Sugjeruar",
     "system": "Sistemi",
@@ -517,6 +520,13 @@
     "unknown": "I panjohur",
     "unknownHome": "Shtëpi e panjohur",
     "unknownLoss": "Humbje e panjohur",
+    "undo": "Zhbëj",
+    "anyStore": "{{chain}} (çdo dyqan)",
+    "storeNumber": "Dyqani nr. {{number}}",
+    "distance": {
+      "mi": "{{distance}} mi",
+      "km": "{{distance}} km"
+    },
     "update": "Përditëso",
     "updated": "Përditësuar",
     "usage": "Përdorimi",
@@ -573,7 +583,8 @@
     "purchased": "Blerë",
     "vegan": "Vegane",
     "sulfite": "Sulfite",
-    "budgetAndPrices": "Buxheti dhe çmimet"
+    "budgetAndPrices": "Buxheti dhe çmimet",
+    "shopping": "Blerjet"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",
@@ -590,8 +601,6 @@
     "syncing": "Po sinkronizohet…"
   },
   "offlineBanner": {
-    "offlineModeTitle": "Modaliteti offline është aktiv",
-    "offlineModeDetail": "Përdoren vetëm të dhënat në këtë pajisje",
     "deviceOfflineTitle": "Je offline",
     "deviceOfflineDetail": "Ndryshimet do të sinkronizohen kur të jesh sërish online",
     "deviceOfflinePendingDetail_one": "{{count}} ndryshim do të sinkronizohet kur të jesh sërish online",
@@ -617,7 +626,9 @@
     "noPantryItems": "Qilari yt është bosh",
     "noShoppingListItems": "Lista jote e blerjeve është bosh",
     "noInvitations": "Asnjë ftesë në pritje",
-    "noResultsFor": "Asnjë rezultat për \"{{query}}\""
+    "noResultsFor": "Asnjë rezultat për \"{{query}}\"",
+    "noHeldMatchFor": "Asgjë në këtë pajisje nuk përputhet me \"{{query}}\"",
+    "widerSearchNeedsConnection": "Kërkimi i plotë kërkon lidhje."
   },
   "settings": {
     "displayLanguage": "Gjuha e shfaqjes",
@@ -626,11 +637,6 @@
     "unitMetric": "Metrik (kg, g, L, mL)",
     "unitImperial": "Imperial (lb, oz, gal, fl oz)",
     "unitSystemDefault": "I parazgjedhur i sistemit",
-    "syncOffline": "Sinkronizimi & offline",
-    "autoSync": "Sinkronizim automatik",
-    "autoSyncDesc": "Sinkronizo automatikisht të dhënat kur je online",
-    "offlineMode": "Modaliteti offline",
-    "offlineModeDesc": "Përdor vetëm të dhënat lokale. Çaktivizon kërkimin dhe ndarjen.",
     "features": "Veçoritë",
     "showTutorials": "Shfaq udhëzuesit",
     "showTutorialsDesc": "Shfaq këshilla dhe udhëzues të dobishëm",
@@ -643,7 +649,7 @@
     "shoppingListImagesDesc": "Shfaq imazhet e produkteve në lista",
     "storeMode": "Mënyra e dyqanit",
     "storeModeDesc": "Bëni pazarin e një liste korridor pas korridori nga ikona e dyqanit te lista e blerjeve",
-    "budgetAndPricesDesc": "Çmimet, vlerësimet dhe buxhetet në listat dhe në qilarin tuaj, me buxhetin e çdo liste te ikona e portofolit. Joaktiv, asgjë nuk ju pyet sa paguat.",
+    "budgetAndPricesDesc": "Çmimet, vlerësimet dhe buxhetet në listat dhe në qilarin tuaj, me buxhetin e çdo liste te ikona e portofolit. Joaktiv, çmimet fshihen; një shtypje e gjatë mbi një artikull të listës regjistron prapë sa paguat.",
     "shareUsageData": "Ndaj të dhënat e përdorimit",
     "shareUsageDataDesc": "Ndihmo të përmirësojmë {{appName}} duke ndarë statistika anonime",
     "resetSection": "Rivendos",
@@ -739,7 +745,9 @@
     "loading": "Duke u ngarkuar…",
     "errorTitle": "Nuk u ngarkua dot",
     "errorBody": "Diçka shkoi keq gjatë ngarkimit. Kontrollo lidhjen dhe provo sërish.",
-    "offlineBody": "Je pa internet dhe kjo nuk është shkarkuar ende. Rilidhu për ta ngarkuar."
+    "offlineBody": "Je pa internet dhe kjo nuk është shkarkuar ende. Rilidhu për ta ngarkuar.",
+    "partialTitle": "Pjesa tjetër kërkon lidhje",
+    "partialBody": "Kaq ka pajisja jote për momentin."
   },
   "tabBar": {
     "actionButton": "Butoni i veprimit",

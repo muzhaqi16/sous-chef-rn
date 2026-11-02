@@ -4,6 +4,7 @@ import {
   renderHookWithApollo,
   seedCache,
   type MockFor,
+  seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { MarkExpirationActionDocument } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
@@ -22,22 +23,10 @@ function seedFeed(unreadCount: number): InMemoryCache {
       __typename: 'Notification',
       id: 'n1',
       status: NotificationStatus.Sent,
-      title: 'Seeded',
-      message: 'Seeded message',
       type: NotificationType.ExpiryReminder,
-      category: 'PANTRY',
-      priority: 'NORMAL',
-      payload: null,
-      actionUrl: null,
-      sourceId: null,
-      sourceType: null,
-      sentAt: '2026-01-01T00:00:00.000Z',
-      readAt: null,
-      expiresAt: null,
-      isAuthoredContent: false,
     },
   ]);
-  cache.writeQuery({
+  seedQuery(cache, {
     query: NotificationSummaryDocument,
     data: {
       __typename: 'Query',
@@ -45,7 +34,6 @@ function seedFeed(unreadCount: number): InMemoryCache {
         __typename: 'NotificationSummary',
         id: 'user-1',
         unreadCount,
-        hasUrgent: false,
       },
     },
   });

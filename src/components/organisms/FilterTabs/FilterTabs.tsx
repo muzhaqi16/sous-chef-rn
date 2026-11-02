@@ -59,19 +59,19 @@ function FilterTabsComponent<T extends string = string>({
 
   const isCompact = variant === 'compact';
 
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     compact: isCompact,
     actionDisabled: actionButton?.disabled ?? false,
   });
 
   return (
-    <View style={styles.container}>
+    <View style={variantStyles.container}>
       <Animated.ScrollView
         ref={animatedRef}
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        style={styles.scrollView}
+        contentContainerStyle={variantStyles.scrollContent}
+        style={variantStyles.scrollView}
         onLayout={handleScrollViewLayout}
         onScroll={onScroll}
         onContentSizeChange={onContentSizeChange}
@@ -100,7 +100,7 @@ function FilterTabsComponent<T extends string = string>({
             testID={
               actionButton.testID ?? kitTestIDs.filterTabAction(testIDPrefix)
             }
-            style={styles.tab}
+            style={variantStyles.tab}
             disabled={actionButton.disabled}
             accessibilityRole="button"
             accessibilityLabel={
@@ -117,7 +117,7 @@ function FilterTabsComponent<T extends string = string>({
               />
             )}
             {!!actionButton.label && (
-              <Text role="label" style={styles.tabLabel}>
+              <Text role="label" style={variantStyles.tabLabel}>
                 {actionButton.label}
               </Text>
             )}

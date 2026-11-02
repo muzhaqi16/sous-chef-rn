@@ -57,7 +57,7 @@ export function usePantryItemSuggestions({
   const today = useToday();
   const skipped = skip || !pantryId;
 
-  // Not skipped offline: `offlineModeLink` serves a cached read and answers a
+  // Not skipped offline: `offlineReadLink` serves a cached read and answers a
   // miss with an error, which `useDataState` classifies as offline.
   const { data, loading, error, refetch } = useQuery(
     GetPantryItemSuggestionsDocument,

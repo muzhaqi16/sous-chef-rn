@@ -11,6 +11,7 @@ import { useBottomSheetScrollableCreator } from '@gorhom/bottom-sheet';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
+import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
 import { TemplateCard } from './TemplateCard';
 import {
@@ -107,6 +108,7 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
       searchQuery,
       selectedCategory,
       hasMore,
+      isLoadingMore,
     },
     actions: { setSearchQuery, setSelectedCategory, loadMore, refetch },
   } = useMealTemplates();
@@ -188,6 +190,13 @@ export const TemplateBrowserSheet: React.FC<TemplateBrowserSheetProps> = ({
               style={styles.list}
               showsVerticalScrollIndicator={false}
               onEndReached={hasMore ? loadMore : undefined}
+              ListFooterComponent={
+                <PaginationFooter
+                  hasMore={hasMore}
+                  isFetchingMore={isLoadingMore}
+                  itemCount={templates.length}
+                />
+              }
             />
           </TemplateBrowserProvider>
         )}

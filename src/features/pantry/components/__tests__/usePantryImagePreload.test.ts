@@ -1,9 +1,9 @@
-import { waitFor } from '@testing-library/react-native';
 import { requirePlatform } from '#platform/install';
 import {
   renderHookWithApollo,
   seedCache,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { EntryImageSource } from '#/graphql/generated/schemaTypes';
 import type { PantryListNode } from '#features/pantry/components/pantryDisplay/renderItem';
 import { usePantryImagePreload } from '../usePantryImagePreload';
@@ -32,6 +32,14 @@ const NODES = [
 ] as unknown as PantryListNode[];
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   prefetch.mockClear();
 });
 
@@ -49,7 +57,8 @@ describe('usePantryImagePreload', () => {
 
     renderHookWithApollo(() => usePantryImagePreload(NODES), { cache });
 
-    await waitFor(() => expect(prefetch).toHaveBeenCalledWith([HOUSEHOLD]));
+    await drainTimers();
+    expect(prefetch).toHaveBeenCalledWith([HOUSEHOLD]);
   });
 
   it("warms the catalog's photo when the household chose none", async () => {
@@ -57,6 +66,7 @@ describe('usePantryImagePreload', () => {
 
     renderHookWithApollo(() => usePantryImagePreload(NODES), { cache });
 
-    await waitFor(() => expect(prefetch).toHaveBeenCalledWith([CATALOG]));
+    await drainTimers();
+    expect(prefetch).toHaveBeenCalledWith([CATALOG]);
   });
 });

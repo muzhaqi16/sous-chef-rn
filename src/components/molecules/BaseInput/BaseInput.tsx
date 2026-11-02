@@ -76,7 +76,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   const isSheetInput = useIsBottomSheetInput();
 
   // Use variants for theme-aware styling
-  styles.useVariants({
+  const variantStyles = styles.useVariants({
     focused: isFocused,
     error: hasError,
     visible: hasError,
@@ -94,19 +94,19 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   };
 
   return (
-    <View style={[styles.container, containerStyle]}>
-      {label != null && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.inputContainer}>
+    <View style={[variantStyles.container, containerStyle]}>
+      {label != null && <Text style={variantStyles.label}>{label}</Text>}
+      <View style={variantStyles.inputContainer}>
         {leftIcon != null && (
-          <View style={styles.leftIconWrapper}>{leftIcon}</View>
+          <View style={variantStyles.leftIconWrapper}>{leftIcon}</View>
         )}
         {isSheetInput ? (
           <ThemedBottomSheetTextInput
             ref={sheetRef}
             style={[
-              styles.input,
-              multiline && styles.inputMultiline,
-              rightIcon != null && styles.inputWithRightIcon,
+              variantStyles.input,
+              multiline && variantStyles.inputMultiline,
+              rightIcon != null && variantStyles.inputWithRightIcon,
               style,
             ]}
             onFocus={handleFocus}
@@ -119,9 +119,9 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           <ThemedTextInput
             ref={ref}
             style={[
-              styles.input,
-              multiline && styles.inputMultiline,
-              rightIcon != null && styles.inputWithRightIcon,
+              variantStyles.input,
+              multiline && variantStyles.inputMultiline,
+              rightIcon != null && variantStyles.inputWithRightIcon,
               style,
             ]}
             onFocus={handleFocus}
@@ -134,12 +134,12 @@ export const BaseInput: React.FC<BaseInputProps> = ({
         {!!isLoading && (
           <ThemedActivityIndicator
             size="small"
-            style={styles.leftIconWrapper}
+            style={variantStyles.leftIconWrapper}
           />
         )}
         {!isLoading && !!showClear && (
           <AppPressable
-            style={styles.leftIconWrapper}
+            style={variantStyles.leftIconWrapper}
             onPress={onClear}
             hitSlop={hitSlop.lg}
             accessibilityRole="button"
@@ -149,7 +149,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
           </AppPressable>
         )}
         {rightIcon != null && (
-          <View style={styles.rightIconWrapper}>{rightIcon}</View>
+          <View style={variantStyles.rightIconWrapper}>{rightIcon}</View>
         )}
       </View>
       {!!hasError && (
@@ -165,7 +165,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
                 ? kitTestIDs.inputError(textInputProps.testID)
                 : undefined
             }
-            style={styles.errorText}
+            style={variantStyles.errorText}
           >
             {errorMessage}
           </Text>

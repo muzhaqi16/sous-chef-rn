@@ -1,12 +1,11 @@
-# What Budget & prices reads on a list: its totals, budget, store and tracking,
+# What Budget & prices reads on a list: its spend, budget, store and tracking,
 # and who may edit it, which decides whether the screen offers its controls.
 fragment useListBudget_list on ShoppingList {
+  version
   id
   currency
   budgetAmount
   totalCost
-  estimatedTotal
-  unpricedItems
   priceTracking
   targetStore {
     id
@@ -14,8 +13,10 @@ fragment useListBudget_list on ShoppingList {
   }
   homeId
   home {
+    version
     id
     myMembership {
+      version
       id
       role
     }
@@ -48,6 +49,7 @@ query ListBudget($id: ID!) {
   shoppingList(id: $id) {
     id
     ...useListBudget_list
+    ...useListCostToGo_list
     ...useUpdateShoppingList_list
     ...useShoppingListBudget_list
   }

@@ -8,6 +8,7 @@ fragment mealTemplateItem_row on MealTemplateItem {
 # The recipe fields an item edit writes onto the row, read off the cached Recipe.
 fragment mealTemplateItem_recipeRef on Recipe {
   id
+  version
   name
   imageUrl
   servings

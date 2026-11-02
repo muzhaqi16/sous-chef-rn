@@ -69,6 +69,18 @@ describe('FolderPicker', () => {
     expect(screen.getByText('No Folder')).toBeTruthy();
   });
 
+  it('says folders that could not be read are not available offline', () => {
+    render(
+      <FolderPicker
+        {...defaultProps}
+        folders={[]}
+        unavailable={{ state: 'offline', onRetry: jest.fn() }}
+      />,
+    );
+
+    expect(screen.getByText('Not available offline')).toBeTruthy();
+  });
+
   it('renders Create New Folder button when allowCreate is true', () => {
     render(<FolderPicker {...defaultProps} />);
     expect(screen.getByText('Create New Folder')).toBeTruthy();

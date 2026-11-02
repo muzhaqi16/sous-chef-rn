@@ -1,3 +1,5 @@
+const { sheetNameOf } = require('../variantSheets');
+
 /**
  * An animated style reaches a node as a `useAnimatedStyle` binding, or through a
  * prop or hook return that keeps the `…animated…Style` name.
@@ -73,14 +75,17 @@ function entries(expression, into) {
 }
 
 /** `sheet.key` or `sheet.key(args)` → { sheet, key }. */
-function sheetMember(entry) {
+function sheetMember(entry, sourceCode) {
   const member = entry.type === 'CallExpression' ? entry.callee : entry;
   if (
     member.type === 'MemberExpression' &&
     member.object.type === 'Identifier' &&
     member.property.type === 'Identifier'
   ) {
-    return { sheet: member.object.name, key: member.property.name };
+    return {
+      sheet: sheetNameOf(member.object, sourceCode),
+      key: member.property.name,
+    };
   }
   return undefined;
 }
@@ -150,7 +155,7 @@ module.exports = {
           if (!takesAnimatedStyle) continue;
 
           for (const entry of applied) {
-            const member = sheetMember(entry);
+            const member = sheetMember(entry, context.sourceCode);
             if (!member) continue;
             const keys = sheets.get(member.sheet);
             if (keys?.get(member.key)) {

@@ -32,13 +32,13 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
   showChevron,
   testID,
 }) => {
-  styles.useVariants({ variant });
+  const variantStyles = styles.useVariants({ variant });
 
   const shouldShowChevron = showChevron ?? !!onPress;
 
   const content = (
-    <View style={styles.container} testID={testID}>
-      <View style={styles.iconContainer}>
+    <View style={variantStyles.container} testID={testID}>
+      <View style={variantStyles.iconContainer}>
         {iconLibrary ? (
           <ThemedIcon
             name={icon}
@@ -51,12 +51,12 @@ export const AlertBanner: React.FC<AlertBannerProps> = ({
         )}
       </View>
 
-      <View style={styles.content}>
-        <Text role="label" style={styles.title}>
+      <View style={variantStyles.content}>
+        <Text role="label" style={variantStyles.title}>
           {title}
         </Text>
         {!!subtitle && (
-          <Text role="caption" style={styles.subtitle}>
+          <Text role="caption" style={variantStyles.subtitle}>
             {subtitle}
           </Text>
         )}

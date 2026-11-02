@@ -62,7 +62,6 @@ export interface UsePantryItemFormSubmitParams {
   netWeightUnitId: string | null;
   selectedLocationId: string | null;
   selectedBrandId: string | null;
-  selectedCategoryId: string | null;
   selectedStorageLocation: {
     id: string;
     name: string;

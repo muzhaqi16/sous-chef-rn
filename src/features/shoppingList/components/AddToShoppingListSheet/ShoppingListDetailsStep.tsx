@@ -35,7 +35,6 @@ interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
   prefilledItemName?: string;
   /** Refetch used by the add hook's cache-update fallback (suggestions list). */
-  refetch: () => Promise<unknown>;
   /** Return to the search step of the parent sheet. */
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
@@ -49,13 +48,7 @@ interface ShoppingListDetailsStepProps {
  */
 export const ShoppingListDetailsStep: React.FC<
   ShoppingListDetailsStepProps
-> = ({
-  shoppingListId,
-  prefilledItemName = '',
-  refetch,
-  onClose,
-  onSuccess,
-}) => {
+> = ({ shoppingListId, prefilledItemName = '', onClose, onSuccess }) => {
   const { t } = useTranslation();
   // Off, the line is added with no price.
   const showPrices = useBudgetAndPricesEnabled();
@@ -87,7 +80,7 @@ export const ShoppingListDetailsStep: React.FC<
     parseNetWeightInput,
   } = useShoppingListItemForm({ itemName: prefilledItemName });
 
-  const { addItem } = useAddShoppingItem({ listId: shoppingListId, refetch });
+  const { addItem } = useAddShoppingItem({ listId: shoppingListId });
   const [saving, setSaving] = useState(false);
 
   const handleUnitSelect = (unitId: string | null) => {

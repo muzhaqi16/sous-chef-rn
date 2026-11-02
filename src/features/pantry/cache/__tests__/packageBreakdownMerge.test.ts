@@ -1,5 +1,6 @@
 import { gql } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 /**
  * Only the detail reads a breakdown's `perUnit` and `total`. Every list and
@@ -44,7 +45,7 @@ interface Read {
 describe('a pantry stack’s package breakdown', () => {
   it('keeps the detail’s readings through a list’s narrower write', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ID,
       fragment: DETAIL,
       data: {
@@ -60,7 +61,7 @@ describe('a pantry stack’s package breakdown', () => {
       },
     });
 
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ID,
       fragment: LISTED,
       data: {
@@ -87,7 +88,7 @@ describe('a pantry stack’s package breakdown', () => {
 
   it('still goes away when the stack stops being packaged', () => {
     const cache = makeCache();
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ID,
       fragment: LISTED,
       data: {
@@ -101,7 +102,7 @@ describe('a pantry stack’s package breakdown', () => {
       },
     });
 
-    cache.writeFragment({
+    seedFragment(cache, {
       id: ID,
       fragment: LISTED,
       data: { __typename: 'PantryItem', id: 'p1', packageBreakdown: null },

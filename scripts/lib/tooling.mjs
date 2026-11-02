@@ -67,25 +67,6 @@ export function requireNonEmptyScan({ count, what, check, hint, minimum = 1 }) {
 }
 
 /**
- * Refuse to re-baseline from a scan that found nothing: a broken check finds
- * zero, reports an improvement, and tells you to run `--update`, writing the
- * empty result over the record. The second lock after `requireNonEmptyScan`,
- * for a check whose update path can be reached without a full scan.
- */
-export function refuseEmptyBaselineUpdate({ count, baselineCount, check }) {
-  if (count > 0 || baselineCount === 0) return;
-
-  console.error(
-    `\n✗ ${check} will not write an empty baseline over a non-empty one ` +
-      `(${baselineCount} recorded).\n\n` +
-      `  Finding zero after recording ${baselineCount} is far more likely to be\n` +
-      `  a broken scan than a fixed codebase. Confirm the scan still matches\n` +
-      `  before re-baselining.\n`,
-  );
-  process.exit(2);
-}
-
-/**
  * Baseline plumbing. Only the plumbing is shared — what a baseline MEANS differs
  * per check, and each keeps its own comparison.
  *
@@ -169,43 +150,6 @@ export function parseFlags(options) {
     return parseArgs({ options, strict: true }).values;
   } catch (error) {
     console.error(`\n✗ ${error.message}\n`);
-    process.exit(2);
-  }
-}
-
-/**
- * Fail unless `babel.config.js` runs Unistyles → compiler in that order:
- * `check-unistyles-variant-staleness` rebuilds that pipeline, and this is
- * what ties it to the real config. Read as TEXT — executing the config needs an
- * `api` stub, and `api.env()` differs per branch, so a stub changes the answer.
- */
-export function assertMatchesBabelConfig() {
-  const config = readFileSync(fromRoot('babel.config.js'), 'utf8');
-  const ORDER = [
-    'react-native-unistyles/plugin',
-    'babel-plugin-react-compiler',
-  ];
-
-  const positions = ORDER.map(name => ({
-    name,
-    at: config.indexOf(`'${name}'`),
-  }));
-  const missing = positions.filter(p => p.at === -1);
-  const outOfOrder = positions.some(
-    (p, i) => i > 0 && p.at < positions[i - 1].at,
-  );
-
-  if (missing.length || outOfOrder) {
-    console.error(
-      `\n✗ babel.config.js no longer declares the expected plugin order.\n\n` +
-        `  Expected, in this order:\n` +
-        ORDER.map(n => `    ${n}`).join('\n') +
-        (missing.length
-          ? `\n\n  Not found: ${missing.map(m => m.name).join(', ')}`
-          : '\n\n  Found, but out of order.') +
-        `\n\n  The checks that rebuild this pipeline are now measuring something\n` +
-        `  the app is not compiled with. Reconcile them before trusting either.\n`,
-    );
     process.exit(2);
   }
 }

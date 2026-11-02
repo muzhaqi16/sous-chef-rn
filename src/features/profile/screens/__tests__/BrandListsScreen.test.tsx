@@ -1,15 +1,12 @@
 import React from 'react';
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react-native';
+import { fireEvent, render, screen } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { profileTestIDs } from '#features/profile/testIDs';
 import type { BrandListView } from '#features/profile/hooks/useBrandLists';
+import type { DataState } from '#hooks/data/useDataState';
 import { BrandListsScreen } from '../BrandListsScreen';
+import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#components/templates/SubScreen', () => {
@@ -59,9 +56,9 @@ jest.mock(
   },
 );
 
-const mockLists: { lists: BrandListView[]; loaded: boolean } = {
+const mockLists: { lists: BrandListView[]; state: DataState } = {
   lists: [],
-  loaded: true,
+  state: 'empty',
 };
 const mockCreateList = jest.fn();
 const mockSetEnabled = jest.fn();
@@ -83,14 +80,32 @@ const BOYCOTT: BrandListView = {
   ],
 };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('BrandListsScreen', () => {
+  it('says lists never loaded are not available offline, not that there are none', () => {
+    mockLists.state = 'offline';
+    render(<BrandListsScreen />);
+
+    expect(screen.getByText('Not available offline')).toBeTruthy();
+    expect(screen.queryByText(t('brandLists.emptyTitle'))).toBeNull();
+  });
+
   beforeEach(() => {
     jest.clearAllMocks();
     mockLists.lists = [];
+    mockLists.state = 'empty';
   });
 
   it('shows each list with its brand count and its own switch', () => {
     mockLists.lists = [BOYCOTT];
+    mockLists.state = 'ready';
     render(<BrandListsScreen />);
 
     expect(screen.getByText('Boycott')).toBeTruthy();
@@ -121,10 +136,9 @@ describe('BrandListsScreen', () => {
     fireEvent.press(screen.getByTestId('name-sheet'));
 
     expect(mockCreateList).toHaveBeenCalledWith('Snacks');
-    await waitFor(() =>
-      expect(jest.mocked(useAppNavigation)().toBrandList).toHaveBeenCalledWith({
-        listId: 'l-new',
-      }),
-    );
+    await drainTimers();
+    expect(jest.mocked(useAppNavigation)().toBrandList).toHaveBeenCalledWith({
+      listId: 'l-new',
+    });
   });
 });

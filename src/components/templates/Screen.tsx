@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   ScrollView,
@@ -7,6 +7,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Animated, { type ScrollHandlerProcessed } from 'react-native-reanimated';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet } from 'react-native-unistyles';
 import {
@@ -19,6 +20,7 @@ import {
   type TitleSwitch,
 } from '#components/molecules/TabScreenHeader';
 import { ExpandChevron } from '#components/atoms/ExpandChevron';
+import { ThemeEpochSentinel } from '#components/atoms/ThemeEpochSentinel';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import type { BarAction } from '#components/molecules/BarActions';
@@ -69,7 +71,10 @@ interface ScreenBaseProps {
    * implement three of the four and leave a failed fetch reading "nothing yet".
    */
   state?: { value: DataState; onRetry: () => void; empty?: EmptyStateProps };
-  /** Fixed below the scroll host; it takes the bottom inset instead of the content. */
+  /**
+   * Fixed below the scroll host; it takes the bottom inset instead of the
+   * content. In `scroll="form"` it rides above the keyboard.
+   */
   footer?: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   testID?: string;
@@ -119,6 +124,8 @@ export const Screen: React.FC<ScreenProps> = props => {
       ? props.scrollTestID
       : undefined;
   const insets = useSafeAreaInsets();
+  // A form's footer rides above the keyboard, so a focused field must clear it.
+  const [footerHeight, setFooterHeight] = useState(0);
   const variant = header?.variant ?? (header ? 'standard' : 'none');
   // With a footer the footer clears the home indicator, so the content only
   // needs its own trailing space. A tab root's content scrolls out from under
@@ -128,7 +135,10 @@ export const Screen: React.FC<ScreenProps> = props => {
     : variant === 'tab'
     ? getScrollClearancePadding(insets.bottom)
     : insets.bottom;
-  styles.useVariants({ gutter, chrome: variant === 'tab' ? 'tab' : 'other' });
+  const variantStyles = styles.useVariants({
+    gutter,
+    chrome: variant === 'tab' ? 'tab' : 'other',
+  });
 
   const chrome =
     variant === 'standard' ? (
@@ -179,14 +189,14 @@ export const Screen: React.FC<ScreenProps> = props => {
       // The list is the child; it takes the RNGH control because an RNGH
       // scrollable only routes its scroll gesture into a control from
       // `createNativeWrapper`.
-      return <View style={styles.body}>{body}</View>;
+      return <View style={variantStyles.body}>{body}</View>;
     }
     if (scroll === 'form') {
       return (
         <ThemedKeyboardAwareScrollView
           contentContainerStyle={[
-            styles.scrollContent,
-            styles.contentBottom(contentBottom),
+            variantStyles.scrollContent,
+            variantStyles.contentBottom(contentBottom),
           ]}
           showsVerticalScrollIndicator={false}
           // Stated, not inherited: KeyboardAwareScrollView supplies no default
@@ -195,6 +205,13 @@ export const Screen: React.FC<ScreenProps> = props => {
           keyboardShouldPersistTaps={KEYBOARD_PERSIST_TAPS}
           keyboardDismissMode={KEYBOARD_DISMISS_MODE}
           refreshControl={plainRefresh}
+          // Open, the keyboard covers the footer's bottom inset; a focused
+          // field keeps the usual gap above the part that still shows.
+          uniProps={theme => ({
+            bottomOffset:
+              theme.spacing.md +
+              (footer ? Math.max(footerHeight - insets.bottom, 0) : 0),
+          })}
         >
           {body}
         </ThemedKeyboardAwareScrollView>
@@ -202,10 +219,10 @@ export const Screen: React.FC<ScreenProps> = props => {
     }
     if (scroll === 'scroll') {
       const hostProps = {
-        style: styles.body,
+        style: variantStyles.body,
         contentContainerStyle: [
-          styles.scrollContent,
-          styles.contentBottom(contentBottom),
+          variantStyles.scrollContent,
+          variantStyles.contentBottom(contentBottom),
         ],
         contentInsetAdjustmentBehavior: NO_AUTOMATIC_INSET,
         showsVerticalScrollIndicator: false,
@@ -227,18 +244,42 @@ export const Screen: React.FC<ScreenProps> = props => {
       );
     }
     return (
-      <View style={[styles.fixed, styles.contentBottom(contentBottom)]}>
+      <View
+        style={[
+          variantStyles.fixed,
+          variantStyles.contentBottom(contentBottom),
+        ]}
+      >
         {body}
       </View>
     );
   })();
 
   return (
-    <View style={[styles.container, style]} testID={testID}>
-      <View style={styles.chromeInset}>{chrome}</View>
+    <View style={[variantStyles.container, style]} testID={testID}>
+      <View style={variantStyles.chromeInset}>{chrome}</View>
       {content}
-      {footer ? (
-        <View style={[styles.footer, styles.footerBottom(insets.bottom)]}>
+      {footer && scroll === 'form' ? (
+        // Open, the keyboard covers the home indicator, so its inset drops.
+        <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
+          <View
+            style={[
+              variantStyles.footer,
+              variantStyles.footerBottom(insets.bottom),
+            ]}
+            onLayout={event => setFooterHeight(event.nativeEvent.layout.height)}
+          >
+            {footer}
+          </View>
+          <ThemeEpochSentinel />
+        </KeyboardStickyView>
+      ) : footer ? (
+        <View
+          style={[
+            variantStyles.footer,
+            variantStyles.footerBottom(insets.bottom),
+          ]}
+        >
           {footer}
         </View>
       ) : null}
@@ -285,9 +326,11 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: bottomInset + theme.layout.pageBottom,
   }),
   // Fixed chrome, not content: it takes the gutter whatever the body does.
+  // Opaque: a form's footer rides over the scrolled content above the keyboard.
   footer: {
     paddingTop: theme.spacing.sm,
     paddingHorizontal: theme.layout.pageGutter,
+    backgroundColor: theme.colors.background,
   },
   footerBottom: (bottomInset: number) => ({
     paddingBottom: bottomInset + theme.spacing.sm,

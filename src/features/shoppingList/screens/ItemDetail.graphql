@@ -4,6 +4,7 @@
 # nutrition/image data from the catalog item, audit fields (addedBy,
 # createdAt, updatedAt), and the auto-add/meal-plan source flags.
 fragment ItemDetail_shoppingListItem on ShoppingListItem {
+  version
   id
   itemName
   quantity
@@ -25,6 +26,7 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     }
   }
   brand {
+    version
     id
     name
   }
@@ -91,6 +93,7 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
     catalogImageId
   }
   item {
+    version
     id
     # With canSuggest, gates the photo viewer's "set as main photo" action
     # (`writesItemDirectly`: never on a public item). Viewer-scoped, but it
@@ -134,6 +137,7 @@ fragment ItemDetail_shoppingListItem on ShoppingListItem {
         servingUnit
       }
       typicalOf {
+        version
         id
         name
       }

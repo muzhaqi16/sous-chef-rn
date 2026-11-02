@@ -1,4 +1,5 @@
-'use no memo';
+import { t } from '#/i18n';
+('use no memo');
 
 import { act } from '@testing-library/react-native';
 import { Platform } from 'react-native';
@@ -10,6 +11,7 @@ import {
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { itemByKey } from '#/test-utils/itemByKey';
 import { UpdateUserPreferencesDocument } from '#operations/auth/user.generated';
 import type { RootState } from '#store/index';
@@ -162,8 +164,12 @@ jest.mock('#features/profile/components/BiometricSetupModal', () => ({
 }));
 
 const mockPendingCount = jest.fn(() => 0);
+const mockRefusedCount = jest.fn(() => 0);
 jest.mock('#/apollo/offlineQueue/queueStore', () => ({
-  queueStore: { getPendingCount: () => mockPendingCount() },
+  queueStore: {
+    getPendingCount: () => mockPendingCount(),
+    getRefusedCount: () => mockRefusedCount(),
+  },
 }));
 
 /**
@@ -184,8 +190,6 @@ function buildMocks() {
           theme: AppTheme.Light,
           compactMode: false,
           showTutorials: true,
-          autoSync: true,
-          offlineMode: false,
           shareUsageData: false,
           shareWithPartners: false,
           personalizedAds: false,
@@ -223,11 +227,16 @@ const sectionById = (
 
 describe('useConfigurableSettings', () => {
   beforeEach(() => {
+    jest.useFakeTimers();
     jest.clearAllMocks();
     // The keychain delete succeeds unless a case says otherwise: it reports
     // failure by returning false, so an unset default would put every case on
     // the failure path.
     mockForgetStoredSignIn.mockResolvedValue(true);
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('gives a navigation row its own destination', () => {
@@ -359,6 +368,42 @@ describe('useConfigurableSettings', () => {
     mockPendingCount.mockReturnValue(0);
   });
 
+  it('counts changes not saved in the warning, which signing out also loses', () => {
+    mockPendingCount.mockReturnValue(1);
+    mockRefusedCount.mockReturnValue(2);
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(alertService.alert).toHaveBeenCalledWith(
+      expect.anything(),
+      t('confirmations.logoutWithPending', { count: 3 }),
+      expect.anything(),
+    );
+    mockPendingCount.mockReturnValue(0);
+    mockRefusedCount.mockReturnValue(0);
+  });
+
+  it('warns on changes not saved alone', () => {
+    mockRefusedCount.mockReturnValue(1);
+    const { settings } = buildMocks();
+    const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
+      operationMocks: [settings.mock],
+    });
+
+    act(() => {
+      result.current.logout();
+    });
+
+    expect(mockLogout).not.toHaveBeenCalled();
+    mockRefusedCount.mockReturnValue(0);
+  });
+
   // Signing back in after a deliberate sign-out is the case biometric sign-in
   // exists for, so the sign-out keeps the enrolment that makes it possible.
   // Clearing it here leaves the login screen with no biometric button at all.
@@ -437,10 +482,7 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(),
       { operationMocks: [settings.mock] },
     );
-    // Wait for biometric info to load
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    await drainTimers();
     rerender(undefined);
 
     const biometricItem = itemByKey(
@@ -467,9 +509,7 @@ describe('useConfigurableSettings', () => {
       () => useConfigurableSettings(),
       { operationMocks: [settings.mock] },
     );
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    await drainTimers();
     rerender(undefined);
 
     const biometricItem = itemByKey(
@@ -508,9 +548,7 @@ describe('useConfigurableSettings', () => {
     const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
       operationMocks: [settings.mock],
     });
-    await act(async () => {
-      await new Promise(resolve => setTimeout(resolve, 0));
-    });
+    await drainTimers();
 
     const biometricItem = itemByKey(
       sectionById(result.current.sections, 'security').items,
@@ -613,9 +651,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
@@ -641,9 +677,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
@@ -669,9 +703,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
@@ -700,9 +732,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
@@ -720,10 +750,10 @@ describe('useConfigurableSettings', () => {
       const disableButton = buttons.find(b => b.text === 'Disable');
 
       // The button starts the disable and returns; one tick lets it settle.
-      await act(async () => {
+      act(() => {
         disableButton?.onPress?.();
-        await new Promise(resolve => setTimeout(resolve, 0));
       });
+      await drainTimers();
 
       expect(mockForgetStoredSignIn).toHaveBeenCalledWith('test@example.com');
     });
@@ -743,9 +773,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
@@ -759,10 +787,10 @@ describe('useConfigurableSettings', () => {
       const buttons = alertCalls[alertCalls.length - 1]![2] as AlertButton[];
       (alertService.alert as jest.Mock).mockClear();
 
-      await act(async () => {
+      act(() => {
         buttons.find(button => button.text === 'Disable')?.onPress?.();
-        await new Promise(resolve => setTimeout(resolve, 0));
       });
+      await drainTimers();
 
       expect(alertService.alert).toHaveBeenCalledWith(
         'Error',
@@ -786,9 +814,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       const biometricItem = itemByKey(
         sectionById(result.current.sections, 'security').items,
@@ -868,9 +894,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       // Trigger the modal open
       const biometricItem = itemByKey(
@@ -904,9 +928,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       const modal = result.current.BiometricModal;
       await act(async () => {
@@ -929,9 +951,7 @@ describe('useConfigurableSettings', () => {
       const { result } = renderHookWithApollo(() => useConfigurableSettings(), {
         operationMocks: [settings.mock],
       });
-      await act(async () => {
-        await new Promise(resolve => setTimeout(resolve, 0));
-      });
+      await drainTimers();
 
       // An unreadable keychain must not present biometrics as set up. The row
       // is the observable surface: off, and not togglable.

@@ -60,7 +60,8 @@ const fillOfOnToken = (token: string): string =>
  * A shared fill overridden locally, under a shared foreground naming the
  * original. Split across two files, so neither half reads as wrong alone.
  */
-const COMPOSED_FILL = /style=\{\[commonStyles\.(\w+),\s*styles\.(\w+)\]\}/g;
+const COMPOSED_FILL =
+  /style=\{\[commonStyles\.(\w+),\s*\w*[sS]tyles\d*\.(\w+)\]\}/g;
 
 const sharedBlocks = styleBlocks(
   readFileSync('src/styles/commonStyles.ts', 'utf8'),
@@ -85,7 +86,7 @@ const overriddenSharedFills = FILES.flatMap(file => {
     // At the POINT OF USE: a `styles.<name>Text` left behind after the JSX
     // stopped composing it would otherwise keep this quiet.
     const composedForeground = new RegExp(
-      `style=\\{\\[\\s*commonStyles\\.${shared}Text\\s*,\\s*styles\\.(\\w+)`,
+      `style=\\{\\[\\s*commonStyles\\.${shared}Text\\s*,\\s*\\w*[sS]tyles\\d*\\.(\\w+)`,
     ).exec(source)?.[1];
     const corrected = composedForeground
       ? /\bcolor:\s*theme\.colors\.(on[A-Z]\w*)/.exec(

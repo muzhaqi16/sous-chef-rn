@@ -72,12 +72,12 @@ const SegmentedTab = <T extends string>({
     ...animatedTheme.get().type.label,
   }));
 
-  styles.useVariants({ compact: isCompact });
+  const variantStyles = styles.useVariants({ compact: isCompact });
 
   return (
-    <AppPressable style={styles.segment} onPress={onPress}>
+    <AppPressable style={variantStyles.segment} onPress={onPress}>
       <Animated.Text
-        style={[styles.segmentText, labelTypeStyle, textAnimatedStyle]}
+        style={[variantStyles.segmentText, labelTypeStyle, textAnimatedStyle]}
         numberOfLines={2}
       >
         {formatLabel(option)}
@@ -141,13 +141,15 @@ export const SegmentedControl = <T extends string>({
     setContentWidth(event.nativeEvent.layout.width - 2);
   };
 
-  styles.useVariants({ compact: isCompact });
+  const variantStyles2 = styles.useVariants({ compact: isCompact });
 
   return (
-    <View style={styles.container} testID={testID}>
+    <View style={variantStyles2.container} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
-      <View style={styles.segmentedControl} onLayout={handleLayout}>
-        <Animated.View style={[styles.indicator, indicatorAnimatedStyle]} />
+      <View style={variantStyles2.segmentedControl} onLayout={handleLayout}>
+        <Animated.View
+          style={[variantStyles2.indicator, indicatorAnimatedStyle]}
+        />
         {options.map((option, index) => (
           <SegmentedTab
             key={option}

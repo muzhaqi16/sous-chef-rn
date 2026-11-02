@@ -18,7 +18,7 @@ type NetWeightSiblings = Partial<
 // Drives the per-tab error indicators on PageIndicator. Tags lives inside the
 // Inventory "More options" expander.
 export const TAB_FIELDS: Record<PageName, readonly FieldName[]> = {
-  Basics: ['itemName', 'brand', 'category'],
+  Basics: ['itemName', 'brand'],
   Product: ['netWeight', 'netWeightUnit', 'consumeUnit'],
   Storage: ['storageState', 'condition', 'location', 'expirationDate', 'notes'],
   Inventory: ['quantityInput', 'unit', 'minQuantity', 'restockQuantity'],
@@ -72,6 +72,5 @@ export const editItemSchema = object({
   condition: string().oneOf(Object.values(ItemCondition)),
   location: string(),
   notes: string(),
-  category: string(),
   brand: string(),
 });

@@ -22,7 +22,9 @@ import { execSync } from 'child_process';
  * and `MealPlanEvents` had the identical shape and were still cached.
  */
 
-const IDENTITY_FIELDS = new Set(['id', '__typename']);
+// `version` is metadata, not data a screen reads: every network read of a
+// versioned row selects it (`sous-chef/network-read-selects-version`).
+const IDENTITY_FIELDS = new Set(['id', '__typename', 'version']);
 
 /** Selection body of `node { ... }` within a subscription, or null. */
 function nodeSelection(doc: string): string | null {

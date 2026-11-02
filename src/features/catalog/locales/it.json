@@ -78,7 +78,6 @@
     "allAdded": "Tutto aggiunto",
     "dismiss": "Ignora suggerimento",
     "dismissed": "{{name}} rimosso",
-    "undo": "Annulla",
     "dismissFailed": "Impossibile rimuovere il suggerimento",
     "undoFailed": "Impossibile annullare",
     "sections": {
@@ -91,7 +90,7 @@
     "noListTitle": "Nessuna lista selezionata",
     "noListBody": "Seleziona o crea prima una lista della spesa.",
     "createList": "Crea lista",
-    "searchPlaceholder": "Cerca o scansiona un articolo...",
+    "searchPlaceholder": "Cerca un articolo...",
     "added": "{{name}} aggiunto",
     "emptyTitle": "Ancora nessun suggerimento",
     "emptyPantrySubtext": "Aggiungi articoli alla tua dispensa per ricevere suggerimenti personalizzati",
@@ -105,9 +104,7 @@
     "addTitle": "Aggiungi posizione di conservazione"
   },
   "suggestItemEdit": {
-    "sentTitle": "Suggerimento inviato",
     "sentBody": "Grazie: un amministratore esaminerà le tue modifiche. La scheda resta invariata finché non vengono approvate.",
-    "duplicateTitle": "Già suggerito",
     "duplicateBody": "Hai già suggerito esattamente queste modifiche e sono ancora in attesa di revisione, quindi abbiamo mantenuto l'originale.",
     "pendingCapTitle": "5 suggerimenti in attesa",
     "pendingCapBody": "Hai 5 suggerimenti di modifica in attesa di revisione: è il limite. Quando un amministratore ne esaminerà uno, potrai inviarne un altro.",
@@ -117,11 +114,8 @@
     "readOnlyBody": "Non fa parte del catalogo pubblico, quindi non c’è nulla da correggere qui. Solo gli articoli del catalogo pubblico possono essere modificati o proposti per la revisione.",
     "noChangesTitle": "Niente da suggerire",
     "noChangesBody": "Modifica il campo che vuoi correggere, poi invia. La tua nota da sola non può essere esaminata.",
-    "photosOnlyTitle": "Foto aggiunta",
     "photosOnlyBody": "La tua foto è ora sull'articolo. Modifica anche un campo se c'è altro da correggere.",
-    "photosForReviewTitle": "Foto inviata per la revisione",
     "photosForReviewBody": "Un amministratore la controlla prima che tutti la vedano. Fino ad allora la vedi solo tu. Modifica anche un campo se c'è altro da correggere.",
-    "updatedTitle": "Articolo aggiornato",
     "updatedBody": "Le tue modifiche sono online.",
     "failedBody": "Si è verificato un problema durante l'invio del suggerimento. Riprova.",
     "photoNotice": "Un amministratore esamina le foto e le altre modifiche prima che tutti le vedano."
@@ -134,10 +128,8 @@
     "reasonPlaceholder": "es. il marchio è sbagliato, la foto è di un altro prodotto",
     "reasonTooShort": "Aggiungi almeno {{count}} caratteri, così un amministratore sa cosa controllare.",
     "submit": "Invia",
-    "sentTitle": "Segnalazione inviata",
     "sentBody": "Grazie: un amministratore esaminerà questo articolo.",
     "failedBody": "Si è verificato un problema durante l'invio della segnalazione. Riprova.",
-    "alreadyReportedTitle": "Già segnalato",
     "alreadyReportedBody": "Questo articolo è già stato segnalato ed è in attesa che un amministratore lo esamini, quindi non abbiamo inviato un duplicato.",
     "wrongPhotoAction": "Segnala foto errata",
     "wrongPhotoConfirmTitle": "Segnalare questa foto?",
@@ -320,7 +312,6 @@
     "updateFailed": "Impossibile aggiornare l'articolo. Riprova.",
     "brandOptional": "Marca (opzionale)",
     "placeholderItemName": "es. riso, pasta",
-    "placeholderCategory": "es. cereali, latticini",
     "tagsPlaceholder": "Inserisci i tag separati da virgola",
     "location": "Posizione",
     "locationPlaceholder": "es. ripiano alto, cassetto 2",
@@ -451,9 +442,6 @@
     "selectedCount_one": "{{count}} elemento selezionato",
     "selectedCount_other": "{{count}} elementi selezionati"
   },
-  "storeBranch": {
-    "number": "Punto vendita n. {{number}}"
-  },
   "storeShelfPrices": {
     "title": "Prezzi nei negozi",
     "cheapest": "Il più economico",
@@ -467,6 +455,46 @@
     "lowestIn_other": "Prezzo più basso in {{count}} giorni",
     "lastSeen": "Visto l’ultima volta il {{date}}",
     "showMore_one": "Mostra {{count}} altro",
-    "showMore_other": "Mostra altri {{count}}"
+    "showMore_other": "Mostra altri {{count}}",
+    "similarTitle": "Prodotti simili",
+    "mightBeCheaper": "Potrebbe costare meno"
+  },
+  "usualStores": {
+    "title": "I tuoi negozi",
+    "addStore": "Aggiungi un negozio",
+    "pinned": "Fissato",
+    "pin": "Fissa",
+    "unpin": "Non fissare",
+    "addedViaReceipt": "Da uno scontrino",
+    "addedViaPurchase": "Da un acquisto",
+    "addedViaListStore": "Negozio di una lista",
+    "addedViaPicked": "Aggiunto dalla tua casa",
+    "lastUsed": "Ultimo uso: {{date}}",
+    "notCompared": "Non confrontato: inutilizzato da 90 giorni",
+    "removed": "Rimosso: {{name}}",
+    "emptyTitle": "Ancora nessun negozio",
+    "emptyBody": "I negozi compaiono qui quando scansioni uno scontrino, fai la spesa in modalità negozio o scegli il negozio di una lista.",
+    "limitTitle": "Troppi negozi",
+    "limitBody": "Puoi tenere fino a 20 negozi. Rimuovine uno o smetti di fissarlo, poi riprova.",
+    "saveFailed": "Impossibile salvare i tuoi negozi"
+  },
+  "storePicker": {
+    "searchPlaceholder": "Cerca per nome o indirizzo del negozio",
+    "zipLabel": "CAP",
+    "zipRefused": "Non conosciamo ancora questo CAP. Provane un altro o cerca per nome.",
+    "notListed": "Non c'è? Aggiungi «{{name}}»",
+    "addedToStores": "Aggiunto ai tuoi negozi",
+    "needsConnectionTitle": "Per trovare negozi serve una connessione",
+    "needsConnectionBody": "Questi sono i negozi dove fai la spesa. Connettiti per trovarne altri.",
+    "nothingNear": "Nessun negozio trovato qui vicino.",
+    "nothingNamed": "Nessun negozio corrisponde a «{{term}}».",
+    "hint": "Cerca per nome o inserisci un CAP per vedere i negozi vicini.",
+    "nearMe": "Negozi vicino a me",
+    "nearMeTitle": "Trova negozi vicino a te",
+    "nearMeBody": "{{appName}} usa la tua posizione approssimativa per mostrarti i negozi della zona. Non serve la posizione esatta, e va bene anche un CAP.",
+    "locating": "Ricerca dei negozi vicini…",
+    "locationOff": "La posizione è disattivata per {{appName}}. Attivala in Impostazioni o inserisci un CAP.",
+    "locationFailed": "Impossibile capire dove ti trovi. Inserisci un CAP.",
+    "hasPrices": "Prezzi disponibili"
   }
 }

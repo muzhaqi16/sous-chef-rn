@@ -1,7 +1,10 @@
 'use no memo';
 import React from 'react';
-import { act, screen, userEvent, waitFor } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { t } from '#/i18n';
+import type { DataState } from '#hooks/data/useDataState';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { MealType } from '#/graphql/generated/schemaTypes';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { MealTemplateBuilderScreen } from '../MealTemplateBuilderScreen';
@@ -35,10 +38,14 @@ jest.mock('react-hook-form', () => {
 // of its meals as a flat list — however many pages they were read in.
 let mockLoadedTemplate: Record<string, unknown> | null = null;
 let mockLoadedItems: Record<string, unknown>[] = [];
+let mockLoadState: DataState = 'ready';
+const mockReloadTemplate = jest.fn();
 jest.mock('#features/mealPlan/hooks/useMealTemplateForEdit', () => ({
   useMealTemplateForEdit: () => ({
     template: mockLoadedTemplate,
     items: mockLoadedItems,
+    state: mockLoadState,
+    refetch: mockReloadTemplate,
   }),
 }));
 
@@ -109,9 +116,64 @@ jest.mock('#components/atoms/FormTextArea', () => ({
 jest.mock('#components/molecules/FormSelect', () => ({
   FormSelect: () => null,
 }));
+// Each counter's value, by its label: the servings fields under test.
+const mockCounters: Record<string, string> = {};
 jest.mock('#components/molecules/EditableCounter', () => ({
-  EditableCounter: () => null,
+  EditableCounter: ({ label, value }: { label: string; value: string }) => {
+    mockCounters[label] = value;
+    return null;
+  },
 }));
+
+let mockCooksFor: number | null = null;
+jest.mock('#features/profile/hooks/useCooksFor', () => ({
+  useCooksFor: () => mockCooksFor,
+}));
+
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+describe('MealTemplateBuilderScreen, a template it could not read', () => {
+  afterEach(() => {
+    mockLoadState = 'ready';
+    mockLoadedTemplate = null;
+  });
+
+  it('offers to read it again in place of a blank form', async () => {
+    mockLoadState = 'error';
+    renderWithApollo(
+      <MealTemplateBuilderScreen route={{ params: { templateId: 't1' } }} />,
+    );
+
+    expect(screen.getByText(t('dataState.errorTitle'))).toBeTruthy();
+    expect(screen.queryByTestId(mealPlanTestIDs.templateNameInput)).toBeNull();
+
+    await userEvent.setup().press(screen.getByText(t('labels.tryAgain')));
+    expect(mockReloadTemplate).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the form while it holds the template', () => {
+    mockLoadedTemplate = {
+      id: 't1',
+      name: 'Week A',
+      category: 'WEEKLY',
+      description: null,
+      defaultServings: 2,
+      tags: [],
+    };
+    renderWithApollo(
+      <MealTemplateBuilderScreen route={{ params: { templateId: 't1' } }} />,
+    );
+
+    expect(screen.getByTestId(mealPlanTestIDs.templateNameInput)).toBeTruthy();
+    expect(screen.queryByText(t('dataState.errorTitle'))).toBeNull();
+  });
+});
 
 describe('MealTemplateBuilderScreen', () => {
   it('renders the create form with a "New Template" title', () => {
@@ -277,7 +339,8 @@ describe('MealTemplateBuilderScreen', () => {
         screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
       );
 
-      await waitFor(() => expect(mockUpdateItem).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(mockUpdateItem).toHaveBeenCalledTimes(1);
       expect(mockUpdateItem).toHaveBeenCalledWith({
         id: 'item-1',
         dayOffset: 0,
@@ -303,7 +366,8 @@ describe('MealTemplateBuilderScreen', () => {
         screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
       );
 
-      await waitFor(() => expect(mockAddItem).toHaveBeenCalledTimes(1));
+      await drainTimers();
+      expect(mockAddItem).toHaveBeenCalledTimes(1);
       expect(mockAddItem).toHaveBeenCalledWith(
         expect.objectContaining({
           templateId: 'tmpl-r',
@@ -324,13 +388,58 @@ describe('MealTemplateBuilderScreen', () => {
         screen.getByTestId(mealPlanTestIDs.templateSubmitItemButton),
       );
 
-      await waitFor(() =>
-        expect(screen.queryByText('No meals added yet')).toBeNull(),
-      );
+      await drainTimers();
+      expect(screen.queryByText('No meals added yet')).toBeNull();
       expect(screen.getByText('Pesto Pasta')).toBeTruthy();
       expect(
         screen.queryByTestId(mealPlanTestIDs.templateItemRecipe),
       ).toBeNull();
+    });
+  });
+
+  describe('where servings start', () => {
+    afterEach(() => {
+      mockCooksFor = null;
+      mockLoadedTemplate = null;
+      mockLoadedItems = [];
+    });
+
+    it('starts a new template and its meals at who the user cooks for', () => {
+      mockCooksFor = 4;
+      renderWithApollo(
+        <MealTemplateBuilderScreen route={{ params: undefined }} />,
+      );
+
+      expect(mockCounters['Default Servings']).toBe('4');
+      expect(mockCounters.Servings).toBe('4');
+    });
+
+    it('starts at two when that was not answered', () => {
+      renderWithApollo(
+        <MealTemplateBuilderScreen route={{ params: undefined }} />,
+      );
+
+      expect(mockCounters['Default Servings']).toBe('2');
+    });
+
+    it('keeps the servings an edited template already has', async () => {
+      mockCooksFor = 4;
+      mockLoadedTemplate = {
+        id: 'tmpl-s',
+        name: 'Summer Week',
+        category: 'WEEKLY',
+        description: '',
+        defaultServings: 6,
+        tags: [],
+      };
+      renderWithApollo(
+        <MealTemplateBuilderScreen
+          route={{ params: { templateId: 'tmpl-s' } }}
+        />,
+      );
+
+      await drainTimers();
+      expect(mockCounters['Default Servings']).toBe('6');
     });
   });
 });

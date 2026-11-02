@@ -78,7 +78,6 @@
     "allAdded": "All added",
     "dismiss": "Dismiss suggestion",
     "dismissed": "Removed {{name}}",
-    "undo": "Undo",
     "dismissFailed": "Couldn't remove suggestion",
     "undoFailed": "Couldn't undo",
     "sections": {
@@ -91,7 +90,7 @@
     "noListTitle": "No List Selected",
     "noListBody": "Please select or create a shopping list first.",
     "createList": "Create List",
-    "searchPlaceholder": "Search or scan item...",
+    "searchPlaceholder": "Search for an item...",
     "added": "Added {{name}}",
     "emptyTitle": "No suggestions yet",
     "emptyPantrySubtext": "Add items to your pantry to get personalized suggestions",
@@ -105,9 +104,7 @@
     "addTitle": "Add Storage Location"
   },
   "suggestItemEdit": {
-    "sentTitle": "Suggestion sent",
     "sentBody": "Thanks — an admin will review your changes. The listing stays as it is until they're approved.",
-    "duplicateTitle": "Already suggested",
     "duplicateBody": "You've already suggested these exact changes and they're still waiting for review, so we kept your original one.",
     "pendingCapTitle": "5 suggestions pending",
     "pendingCapBody": "You have 5 edit suggestions waiting for review — that's the limit. Once an admin reviews one, you can send another.",
@@ -117,11 +114,8 @@
     "readOnlyBody": "It isn't part of the public catalog, so there's nothing to correct here. Only public catalog items can be edited or suggested for review.",
     "noChangesTitle": "Nothing to suggest",
     "noChangesBody": "Change a field you want corrected, then submit. Your note alone can't be reviewed.",
-    "photosOnlyTitle": "Photo added",
     "photosOnlyBody": "Your photo is on the item now. Change a field too if something else needs fixing.",
-    "photosForReviewTitle": "Photo sent for review",
     "photosForReviewBody": "An admin checks it before everyone sees it. Until then only you can see it. Change a field too if something else needs fixing.",
-    "updatedTitle": "Item updated",
     "updatedBody": "Your changes are live.",
     "failedBody": "Something went wrong sending your suggestion. Please try again.",
     "photoNotice": "An admin reviews photos and other changes before everyone sees them."
@@ -134,10 +128,8 @@
     "reasonPlaceholder": "e.g. the brand is wrong, the photo is a different product",
     "reasonTooShort": "Please add at least {{count}} characters so an admin knows what to look at.",
     "submit": "Send",
-    "sentTitle": "Report sent",
     "sentBody": "Thanks — an admin will take a look at this item.",
     "failedBody": "Something went wrong sending your report. Please try again.",
-    "alreadyReportedTitle": "Already reported",
     "alreadyReportedBody": "This item is already flagged and waiting for an admin to look at it, so we didn't send a duplicate.",
     "wrongPhotoAction": "Report wrong photo",
     "wrongPhotoConfirmTitle": "Report this photo?",
@@ -320,7 +312,6 @@
     "updateFailed": "Failed to update pantry item. Please try again.",
     "brandOptional": "Brand (optional)",
     "placeholderItemName": "e.g., Rice, Pasta",
-    "placeholderCategory": "e.g., Grains, Dairy",
     "tagsPlaceholder": "Enter tags separated by commas",
     "location": "Location",
     "locationPlaceholder": "e.g., Top shelf, Drawer 2",
@@ -451,9 +442,6 @@
     "selectedCount_one": "{{count}} item selected",
     "selectedCount_other": "{{count}} items selected"
   },
-  "storeBranch": {
-    "number": "Store #{{number}}"
-  },
   "storeShelfPrices": {
     "title": "Prices at stores",
     "cheapest": "Cheapest",
@@ -467,6 +455,46 @@
     "lowestIn_other": "Lowest in {{count}} days",
     "lastSeen": "Last seen {{date}}",
     "showMore_one": "Show {{count}} more",
-    "showMore_other": "Show {{count}} more"
+    "showMore_other": "Show {{count}} more",
+    "similarTitle": "Similar products",
+    "mightBeCheaper": "Might be cheaper"
+  },
+  "usualStores": {
+    "title": "Your stores",
+    "addStore": "Add a store",
+    "pinned": "Pinned",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "addedViaReceipt": "From a receipt",
+    "addedViaPurchase": "From a purchase",
+    "addedViaListStore": "A list's store",
+    "addedViaPicked": "Added by your household",
+    "lastUsed": "Last used {{date}}",
+    "notCompared": "Not compared: unused for 90 days",
+    "removed": "Removed {{name}}",
+    "emptyTitle": "No stores yet",
+    "emptyBody": "Stores show here once you scan a receipt, shop in store mode or set a list's store.",
+    "limitTitle": "Too many stores",
+    "limitBody": "You can keep up to 20 stores. Remove or unpin one, then try again.",
+    "saveFailed": "Couldn't save your stores"
+  },
+  "storePicker": {
+    "searchPlaceholder": "Search by store name or address",
+    "zipLabel": "Zip code",
+    "zipRefused": "That zip code isn't one we know yet. Try another, or search by name.",
+    "notListed": "Not listed? Add “{{name}}”",
+    "addedToStores": "Added to your stores",
+    "needsConnectionTitle": "Finding stores needs a connection",
+    "needsConnectionBody": "These are the stores you shop at. Connect to find others.",
+    "nothingNear": "No stores found near here.",
+    "nothingNamed": "No stores match “{{term}}”.",
+    "hint": "Search by name, or enter a zip code to see the stores near it.",
+    "nearMe": "Stores near me",
+    "nearMeTitle": "Find stores near you",
+    "nearMeBody": "{{appName}} uses your approximate location to list the stores around you. Precise location isn't needed, and a zip code works too.",
+    "locating": "Finding stores near you…",
+    "locationOff": "Location is off for {{appName}}. Turn it on in Settings, or enter a zip code.",
+    "locationFailed": "Couldn't tell where you are. Enter a zip code instead.",
+    "hasPrices": "Has prices"
   }
 }

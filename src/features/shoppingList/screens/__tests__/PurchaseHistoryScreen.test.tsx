@@ -1,16 +1,34 @@
 'use no memo';
 import React from 'react';
 import { makeCache } from '#/apollo/cache';
-import { screen, waitFor } from '@testing-library/react-native';
+import { screen } from '@testing-library/react-native';
 import { GraphQLError } from 'graphql';
 import { t } from '#/i18n';
 import { UNKNOWN_AMOUNT } from '#/utils/formatters/number';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { drainTimers } from '#/test-utils/drainTimers';
 import { GetItemPurchaseHistoryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { PurchaseHistoryScreen } from '../PurchaseHistoryScreen';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+
+// Its midnight timer re-arms itself, so a mounted watch never drains.
+jest.mock('#hooks/app/useToday', () => ({
+  useToday: () => jest.requireActual('#/utils/dateUtils').todayKey(),
+}));
+
+// Its repeating diagnostics timer never drains: 0 is the hook's own off switch.
+jest.mock('#hooks/performance/useFlashListPerformance', () => {
+  const actual = jest.requireActual(
+    '#hooks/performance/useFlashListPerformance',
+  );
+  return {
+    ...actual,
+    useFlashListPerformance: (list: unknown, options: object) =>
+      actual.useFlashListPerformance(list, { ...options, reportInterval: 0 }),
+  };
+});
 
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: jest.fn(() => true),
@@ -120,6 +138,14 @@ const failingMock: MockFor<typeof GetItemPurchaseHistoryDocument> = {
 
 const route = { params: { itemId: '1', itemName: 'Milk' } };
 
+beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 describe('PurchaseHistoryScreen', () => {
   beforeEach(() => {
     jest.mocked(useIsApiUnavailable).mockReturnValue(false);
@@ -131,7 +157,8 @@ describe('PurchaseHistoryScreen', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([purchase], true)],
     });
-    expect(await screen.findByText('2 kg')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('2 kg')).toBeTruthy();
     expect(screen.getByText(/nothing more to load/)).toBeTruthy();
   });
 
@@ -148,7 +175,8 @@ describe('PurchaseHistoryScreen', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([purchase])],
     });
-    expect(await screen.findByText('2 kg')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('2 kg')).toBeTruthy();
   });
 
   // UTC midnight with no time of day; local time reads it as the day before
@@ -159,7 +187,8 @@ describe('PurchaseHistoryScreen', () => {
         historyMock([{ ...purchase, purchaseDate: '2026-10-17T00:00:00Z' }]),
       ],
     });
-    expect(await screen.findByText('Oct 17, 2026')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Oct 17, 2026')).toBeTruthy();
   });
 
   it('renders the per-purchase price and spending summary', async () => {
@@ -168,9 +197,8 @@ describe('PurchaseHistoryScreen', () => {
     });
     // Per-row total price and the header total/average (one priced purchase, so
     // total and average are both $5.00).
-    await waitFor(() =>
-      expect(screen.getAllByText('$5.00').length).toBeGreaterThan(0),
-    );
+    await drainTimers();
+    expect(screen.getAllByText('$5.00').length).toBeGreaterThan(0);
   });
 
   it('lists when and how much, with no price or spend, with prices turned off', async () => {
@@ -179,7 +207,8 @@ describe('PurchaseHistoryScreen', () => {
       operationMocks: [historyMock([purchase])],
     });
 
-    expect(await screen.findByText('2 kg')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('2 kg')).toBeTruthy();
     expect(screen.queryByText('$5.00')).toBeNull();
     expect(screen.queryByText('$2.50 per kg')).toBeNull();
     expect(screen.queryByText('Total Spent:', { exact: false })).toBeNull();
@@ -190,7 +219,8 @@ describe('PurchaseHistoryScreen', () => {
       operationMocks: [historyMock([purchase])],
     });
     // 2 kg for $5.00 total; the API stores the $2.50 per unit.
-    await waitFor(() => expect(screen.getByText('$2.50 per kg')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('$2.50 per kg')).toBeTruthy();
   });
 
   it('renders a fractional purchase quantity as a cooking fraction', async () => {
@@ -202,7 +232,8 @@ describe('PurchaseHistoryScreen', () => {
         ]),
       ],
     });
-    await waitFor(() => expect(screen.getByText('1 1/4 kg')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('1 1/4 kg')).toBeTruthy();
     expect(screen.getByText('177.441 kg')).toBeTruthy();
   });
 
@@ -217,7 +248,8 @@ describe('PurchaseHistoryScreen', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([single])],
     });
-    await waitFor(() => expect(screen.getByText('1 kg')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('1 kg')).toBeTruthy();
     expect(screen.queryByText('$5.00 per kg')).toBeNull();
   });
 
@@ -238,7 +270,8 @@ describe('PurchaseHistoryScreen', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([unpriced])],
     });
-    await waitFor(() => expect(screen.getByText('1 kg')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('1 kg')).toBeTruthy();
     expect(screen.queryByText('Price:')).toBeNull();
   });
 
@@ -259,7 +292,8 @@ describe('PurchaseHistoryScreen', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([free])],
     });
-    await waitFor(() => expect(screen.getByText('1 kg')).toBeTruthy());
+    await drainTimers();
+    expect(screen.getByText('1 kg')).toBeTruthy();
     // The row AND the spend summary: the aggregate counts a recorded zero, so
     // the row that produced it must not go blank.
     expect(screen.getAllByText('$0.00').length).toBeGreaterThan(1);
@@ -278,8 +312,9 @@ describe('PurchaseHistoryScreen', () => {
       ],
     });
 
+    await drainTimers();
     expect(
-      await screen.findByText(
+      screen.getByText(
         summaryLine('purchaseHistory.totalSpent', UNKNOWN_AMOUNT),
       ),
     ).toBeTruthy();
@@ -296,7 +331,8 @@ describe('PurchaseHistoryScreen', () => {
       operationMocks: [historyMock([purchase], true)],
     });
 
-    expect(await screen.findByText('2 kg')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('2 kg')).toBeTruthy();
     expect(
       screen.getByText(
         summaryLine('purchaseHistory.totalSpent', UNKNOWN_AMOUNT),
@@ -333,8 +369,9 @@ describe('PurchaseHistoryScreen', () => {
       ],
     });
 
+    await drainTimers();
     expect(
-      await screen.findByText(
+      screen.getByText(
         summaryLine('purchaseHistory.totalSpent', '$8.00 · €4.00'),
       ),
     ).toBeTruthy();
@@ -351,7 +388,8 @@ describe('PurchaseHistoryScreen', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([purchase])],
     });
-    expect(await screen.findByText('Sam')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('Sam')).toBeTruthy();
   });
 
   it('falls back through email to "Someone" when there is no display name', async () => {
@@ -372,7 +410,8 @@ describe('PurchaseHistoryScreen', () => {
       operationMocks: [historyMock([noProfile, anonymous])],
     });
 
-    expect(await screen.findByText('sam@example.com')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('sam@example.com')).toBeTruthy();
     expect(screen.getByText('Someone')).toBeTruthy();
   });
 
@@ -380,7 +419,8 @@ describe('PurchaseHistoryScreen', () => {
     renderWithApollo(<PurchaseHistoryScreen route={route} />, {
       operationMocks: [historyMock([])],
     });
-    expect(await screen.findByText('No purchase history')).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText('No purchase history')).toBeTruthy();
   });
 
   it('renders an error state, not an empty history, when the query fails', async () => {
@@ -388,7 +428,8 @@ describe('PurchaseHistoryScreen', () => {
       operationMocks: [failingMock],
     });
 
-    expect(await screen.findByText("Couldn't load this")).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText("Couldn't load this")).toBeTruthy();
     // "Mark this item as purchased to start tracking history" is advice to buy
     // something the person may already have bought — wrong precisely when the
     // app doesn't know what the history holds.
@@ -408,7 +449,8 @@ describe('PurchaseHistoryScreen', () => {
       cache,
     });
 
-    expect(await screen.findByText("Couldn't load this")).toBeTruthy();
+    await drainTimers();
+    expect(screen.getByText("Couldn't load this")).toBeTruthy();
 
     const rootQuery = cache.extract().ROOT_QUERY ?? {};
     const itemFields = Object.keys(rootQuery).filter(field =>

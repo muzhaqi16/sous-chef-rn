@@ -119,6 +119,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     catalogImageId
   }
   item {
+    version
     id
     # With canSuggest, gates the photo viewer's "set as main photo" action
     # (`writesItemDirectly`: never on a public item). Viewer-scoped, but it
@@ -163,6 +164,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
         servingUnit
       }
       typicalOf {
+        version
         id
         name
       }
@@ -171,6 +173,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       id
       isPrimary
       category {
+        version
         id
         name
       }
@@ -290,6 +293,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     }
   }
   brand {
+    version
     id
     name
   }
@@ -313,6 +317,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
     code
   }
   purchase {
+    version
     id
     purchaseDate
     totalPrice

@@ -13,7 +13,7 @@ import {
   DeclineHomeInviteDocument,
   GetHomesDocument,
 } from '#operations/home/home.generated';
-import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/createHome/useCreateHomeFlow.generated';
+import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/useOnboardingInvites.generated';
 import type { InvitationData } from '#features/notifications/types';
 import { useInvitationActions } from '../useInvitationActions';
 

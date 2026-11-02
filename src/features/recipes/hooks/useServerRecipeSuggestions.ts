@@ -3,10 +3,8 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { executeRefreshWithFinally } from '#/utils/finallyHelpers';
 import { useToday } from '#hooks/app/useToday';
 import { usePreservedQueryData } from '#hooks/apollo/usePreservedQueryData';
-import {
-  heldFetchPolicy,
-  type StandDownOptions,
-} from '#hooks/apollo/standDownOptions';
+import type { StandDownOptions } from '#hooks/apollo/standDownOptions';
+import { useDayConfirmedRead } from '#hooks/apollo/useDayConfirmedRead';
 import type { RecipeRow } from '#features/recipes/utils/recipeRows';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { RecipeSuggestionsDocument } from './useServerRecipeSuggestions.generated';
@@ -17,22 +15,42 @@ const SUGGESTION_COUNT = 20;
 /**
  * The server's suggestions from what the selected home holds (every pantry the
  * user may view when none is selected), screened by its dietary profile, in its
- * order. Not `enabled`, it asks for nothing.
+ * order. Not `enabled`, it asks for nothing. `excludeDietaryConflicts` also
+ * leaves out every recipe whose page would show a dietary alert.
  */
 export function useServerRecipeSuggestions(
   enabled: boolean,
-  { fetchPolicy }: Pick<StandDownOptions, 'fetchPolicy'> = {},
+  {
+    fetchPolicy,
+    excludeDietaryConflicts,
+  }: Pick<StandDownOptions, 'fetchPolicy'> & {
+    excludeDietaryConflicts?: true;
+  } = {},
 ) {
   const today = useToday();
   const homeId = useSelectedHomeId() ?? undefined;
-  const { data, loading, error, refetch } = useQuery(
+  const dayRead = useDayConfirmedRead(
+    enabled ? `${today}:${homeId ?? ''}` : null,
+    fetchPolicy,
+  );
+  const { data, loading, error, refetch, variables } = useQuery(
     RecipeSuggestionsDocument,
     enabled
       ? {
-          variables: { first: SUGGESTION_COUNT, today, homeId },
-          ...heldFetchPolicy(fetchPolicy),
+          variables: {
+            first: SUGGESTION_COUNT,
+            today,
+            homeId,
+            excludeDietaryConflicts,
+          },
+          ...dayRead.policy,
         }
       : skipToken,
+  );
+  dayRead.markAnswered(
+    data && !loading && !error
+      ? `${variables.today}:${variables.homeId ?? ''}`
+      : null,
   );
   // A failed ask answers `undefined`: the last answer for this day and home
   // stands until a new one, and never stands in for another home's.

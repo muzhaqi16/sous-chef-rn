@@ -1,0 +1,42 @@
+# The line a stale edit is compared with: what it held and what the server holds now.
+query ShoppingListItemForConflict($id: ID!) {
+  shoppingListItem(id: $id) {
+    version
+    id
+    ...ShoppingListItemConflict_shoppingListItem
+  }
+}
+
+fragment ShoppingListItemConflict_shoppingListItem on ShoppingListItem {
+  version
+  id
+  itemName
+  quantity
+  notes
+  category
+  priority
+  sortOrder
+  unitName
+  unit {
+    id
+  }
+  netWeight
+  netWeightUnit {
+    id
+  }
+  priceEstimate {
+    estimated
+  }
+  storeInfo {
+    preferredStore {
+      id
+    }
+  }
+  brand {
+    version
+    id
+  }
+  purchaseInfo {
+    isPurchased
+  }
+}

@@ -59,7 +59,7 @@ async function deviceCredentialIsLive(
     const listed = await requireApolloClient().query({
       query: MyDeviceCredentialsDocument,
       fetchPolicy: 'no-cache',
-      context: { signInToken, skipRetryLink: true },
+      context: { signInToken, skipRetryLink: true, oneShot: true },
     });
     if (!listed.data) return null;
     return listed.data.deviceCredentials.some(
@@ -87,13 +87,6 @@ async function shouldShowPostLoginBiometricPrompt(
 
   const store = useStore.getState();
   const navState = store.getUserNavigationState(targetUser.id);
-
-  if (navState?.isNewUser && !navState.hasCompletedOnboarding) {
-    return {
-      shouldShow: false,
-      reason: 'New user - biometric setup handled during onboarding',
-    };
-  }
 
   try {
     const biometricInfo = await getBiometricCapability();
@@ -259,7 +252,7 @@ async function revokeDeviceCredentialForThisDevice(): Promise<boolean> {
     const listed = await requireApolloClient().query({
       query: MyDeviceCredentialsDocument,
       fetchPolicy: 'network-only',
-      context: { allowDuringLogout: true },
+      context: { allowDuringLogout: true, oneShot: true },
     });
     // A failed listing resolves with no data; it is not "nothing to revoke".
     if (!listed.data) return false;

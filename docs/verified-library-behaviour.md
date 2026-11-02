@@ -194,12 +194,12 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.7.0` (2026-10-28, in source).**
+**Verified against `react-native-unistyles@3.8.0` (2026-11-02, in source).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
-properties. RN's `Pressable` needs no wrapper: the Unistyles babel plugin
-auto-binds it.
+properties. RN's `Pressable` needs no wrapper: Unistyles' Metro resolver swaps
+in a bound one.
 
 Re-check:
 
@@ -214,20 +214,26 @@ React, and the next React commit can put the old values back on a view that a
 Reanimated animated style has registered, and on everything under it.
 Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.5.3` +
-`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator; first measured on 3.5.0 on an iOS simulator; the skip below is
-unchanged in 3.7.0, 2026-10-28),** by running
-`UnistylesShadowRegistry.verify()` after every commit. Right after the
-Unistyles theme commit there were 0 mismatches; the next React commit put
-`CollapsingHeroDetail`'s hero back on the old theme. With a
-`ThemeEpochSentinel` in both of the template's Reanimated containers: 0 (on
-Android 0 of 564 views, against 1 of 563 without the hero's sentinel).
+**Verified against `react-native-unistyles@3.8.0` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-11-02, iOS
+simulator; first measured on 3.5.0, and on Android on 3.5.3),** by running
+`UnistylesShadowRegistry.verify()` after every commit. On a freshly mounted
+four-photo `PantryItemDetail` with every `ThemeEpochSentinel` rendering nothing,
+the first theme change left 3 or 4 views (`dot`, `heroInner`) on the old theme
+through 3 s, on 3.7.0 and on 3.8.0, and a screenshot showed the same. With the
+sentinels, 3.8.0 gave 0 of 165 in both directions, and 0 mismatches in a paused
+stack, on the list rows, under a toast and an open sheet, for density, high
+contrast and primary colour, and for a change made during a rotation. The Metro
+integration behaves the same: with the sentinel's key held still, 3 or 4 views
+stayed stale through 3 s; with it re-keying, none did, here or on the paused
+stack, list rows, toast, open swipe row or rotation.
 
 The mechanism: `ReanimatedCommitHook` clones each registered view and its
 ancestors without a runtime shadow node reference, so React's own instance of
-those views is never mounted. Unistyles' `refreshReactNodes` skips any node
-never mounted, and React re-attaches the pre-theme subtree on its next commit.
+those views is never mounted, and React can re-attach the pre-theme subtree on
+its next commit. Since 3.8.0 (#1353) `refreshReactNodes` also refreshes those
+nodes, and the hero still reverts, for a reason not found. A store write is not
+it: the views stay stale with no store write, and with one a task later.
 
 The fixes: themed values on the animated view itself go in a theme-only
 `useAnimatedStyle` over `useAnimatedTheme()` (enforced by
@@ -238,8 +244,9 @@ re-keyed on each theme commit. Upstream:
 [unistyles#1170](https://github.com/jpudysz/react-native-unistyles/issues/1170),
 [unistyles#1007](https://github.com/jpudysz/react-native-unistyles/issues/1007).
 
-Re-check: remove the sentinel from `CollapsingHeroDetail`'s hero, then open a
-fresh `PantryItemDetail`, `setTheme('DARK')`, and navigate away and back.
+Re-check: make `ThemeEpochSentinel` render nothing, reload, open a fresh
+`PantryItemDetail` for an item with several photos (one photo has no dots and
+passes either way), and `setTheme('DARK')`.
 `UnistylesShadowRegistry.verify()` (module
 `react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
 then reports `dot` / `heroInner` mismatches. In source:
@@ -255,7 +262,7 @@ grep -n -B 3 "getHasBeenPromoted" node_modules/react-native-unistyles/cxx/hybrid
 not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
 A view styled by `StyleSheet.create` is updated natively and does follow.
 
-**Verified against `react-native-unistyles@3.7.0` (2026-10-28, in source; on
+**Verified against `react-native-unistyles@3.8.0` (2026-11-02, in source; on
 an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
 with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
 `scopedTheme` is the scope's name.
@@ -279,7 +286,7 @@ values. `useUnistyles` and `withUnistyles` catch up on their own.
 
 **Verified against `react-native-unistyles@3.5.3` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator); the hook's source is unchanged in 3.7.0 (2026-10-28).** With Profile two levels down the stack, the theme went from dark to
+emulator); the hook's source is unchanged in 3.8.0 (2026-11-02).** With Profile two levels down the stack, the theme went from dark to
 light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
 avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
 the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports
@@ -310,6 +317,35 @@ sed -n '/useEffect(() => {/,/}, \[scopedTheme\])/p' node_modules/react-native-un
 The effect reads `getTheme()` only inside the listener. On a device: point
 `ProfileHero` at the library hook, open Profile, push two more screens,
 `setTheme` to the other theme, and go back twice.
+
+### A style on the iOS window hides the OS's theme from the app
+
+**Claim:** while the window has an `overrideUserInterfaceStyle`, iOS sends the
+app no change of appearance, and Unistyles reads the override as the OS's colour
+scheme. A style set while following the system pins the app to that style until
+it relaunches.
+
+**Verified against `react-native-unistyles@3.8.0` + `react-native@0.86.3`
+(2026-11-02, iOS 27 simulator).** With a style on the window, on the System
+preference, `rt.colorScheme` stayed on the launch value through a change of OS
+appearance. With `.unspecified`, the app followed the OS in both directions: 0
+of 609 views stale across the tabs. `getColorScheme` in
+`NativePlatform+ios.swift` reads `RCTKeyWindow()?.traitCollection`.
+
+The fix: `WindowBackground` calls the iOS module's `followSystem` on the System
+preference. Android has no such method and keeps `setTheme`, because its
+navigation bar needs the resolved theme. Guarded by
+`src/components/atoms/__tests__/ThemedStatusBar.test.tsx`.
+
+That flip lands natively, a moment after the tap's React render, so a render
+that straddles it can put old values back. `AppearanceScreen`'s selected swatch
+did on the first Dark then System of a session, 3 runs of 3; with a
+`ThemeEpochSentinel` beside it, 0 of 2. Timing decides it, so a probe recording
+every commit hides it.
+
+Re-check: on System, relaunch and run `xcrun simctl ui <udid> appearance dark`;
+`rt.colorScheme` follows. For the swatch: OS dark, relaunch, open Appearance,
+OS light, tap Dark, tap System, then read `verify()` with nothing else attached.
 
 ### react-compiler try shapes
 
@@ -706,6 +742,148 @@ and sends nothing.
 **What depends on it:** the language catch-up in `src/apollo/refetchEvents.ts`.
 After a switch, every navigation refetches only the active queries not answered
 since it, because a refetch at the switch cannot reach a paused screen.
+
+### Apollo: a read in flight hides a newer write, then overwrites it
+
+Verified 2026-10-29 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/inflightReadVsLocalWrite.test.ts`.
+
+**Claim:** while a `cache-and-network` watcher's network read is in flight, the
+watcher delivers no cache change. That includes a local write and the
+mutation's answer to it. When the read answers, its data (from before the
+write) is written last, and that is what the watcher shows. In the source, the
+write reaches the watcher as `notify()` → `reobserveCacheFirst()`, and
+`_reobserve` keeps the in-flight link subscription, so the cache's answer waits
+behind it.
+
+Answering the in-flight read from the cache releases the watcher at once:
+
+- The link emits the cache's complete read while its subscriber is still open.
+- The network's late answer is then dropped.
+- Closing the network subscription first closes the subscriber, and the
+  watcher never hears the answer.
+
+**What depends on it:** `src/apollo/links/localWritePrecedenceLink.ts` and the
+`sync/local-write-precedence` spec. A local-first write answers every watched read in
+flight from the cache, so the person's change shows at once and an older
+answer cannot undo it.
+
+### Apollo: a type merge never sees a normalized row's fields
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** a type-level `merge` on a type with an `id` receives references,
+never the row's fields. That holds for a plain `InMemoryCache` and for
+`makeCache()`, for a row under a root field and in a list.
+- It runs for the parent field that holds the row (`getMergeFunction(parent,
+  field, childTypename)`).
+- The row's own fields are collected in `incomingById` and stored with
+  `store.merge(dataId, …)`, which no policy sees.
+- A field-level `merge` can't read the incoming row's other fields.
+
+So nothing in the cache can compare a row's old and new copies. With nothing
+guarding it, a copy with a lower `version` simply replaces a newer one.
+
+**What depends on it:** the `sync/answer-ordering` guard runs in the link
+chain, before Apollo stores an answer, and not as a type policy.
+
+### Apollo: a watcher hears no cache change while an operation is out
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check: `notify` in
+`core/ObservableQuery.js`, and
+`npx jest src/features/shoppingList/hooks/__tests__/usePaginatedShoppingItems.pageDuringTick.test.ts`.
+
+**Claim:** `notify` delivers a cache change only with `activeOperations` empty,
+unless the policy is `cache-only` or `cache-and-network`. A `fetchMore` is an
+operation, and a list settles on `cache-first` after its first read, so a write
+made while a page is out renders when the page lands. A root write and a layer
+are held back alike. `fetchPage` reads a page beside the watcher for this reason.
+
+A watcher hears of a write on a zero timer (`scheduleNotify`), so a `client.query`
+resolves before its list shows the page: the next turn is the first it has.
+
+### Apollo: a link must emit, and a result's `extensions` reach the write
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/offlineMissThroughLayer.test.ts`.
+
+**Claim:** a link chain that completes with no value fails the read ("The link
+chain completed without emitting a value"), so a link cannot simply decline to
+answer. `markQueryResult` passes `result.extensions` to `cache.writeQuery`, which
+passes them to `write`, and then reads the result back from an optimistic diff.
+So an answer `AppCache.write` declines still reaches the watcher, complete, from
+the layers, and stores nothing.
+
+### Apollo: an optimistic layer copies the whole entity
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/pendingLayerProbe.test.ts`.
+
+**Claim:** a layer's write merges with what it sees below and stores the whole
+entity, so it hides the root's later change to any field it copied, and to a
+whole list it touched, until it is removed and added again. A field it never
+copied falls through. Over the same root:
+
+- The layer's value survives a root write of the same field.
+- `extract()` holds the root only; `extract(true)` holds the layer too.
+- `gc()` keeps a row only a layer names.
+- Removing a layer replays the layers above it, in order. Every layer sharing
+  an id is removed together.
+
+**A layer can't be changed inside `cache.batch({ update })`.** `batch` restores
+`optimisticData` as `update` returns, so a layer added or removed there is
+silently undone. Apollo writes every answer inside a batch, so this holds
+inside `cache.write` too. The one way to change layers with one notification is
+`cache.batch({ optimistic: next, removeOptimistic: current, update })`: `update`
+runs over the old layers, then again over the root as they are removed, and a
+watcher hears once.
+
+**Removing a row inside a layer is not `evict`.** `evict` deletes only from a
+layer that owns the row and stops at the layer the transaction runs in, so a row
+in the root stays. `cache.modify` with `DELETE` hides it and leaves the root's
+copy, and a list filtered in a layer leaves the root's list whole.
+
+**What depends on it:** `src/apollo/pendingWrites/` and the
+`sync/pending-writes` spec: pending writes share one generation id, a rebuild
+swaps the generation, and it runs after the answer's batch, not inside it.
+
+### Apollo: a merge cannot read a row that selects its parent
+
+Verified 2026-10-30 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** in a field `merge`, `readField('id', ref)` on an incoming row returns
+`undefined` when the row selects the object that holds the field. Apollo stores
+nothing until it has walked the whole answer, then stores entities in the order
+it first met them. A row's own entry goes in after its children, so a row that
+selects its parent puts the parent ahead of itself, and the parent's `merge`
+runs while the row is not in the store.
+
+So a merge that filters rows by `readField` drops every row the device has never
+held. A later answer stores them fine, which hides it: the same page asked for
+twice lands the second time.
+
+**What depends on it:** `readEdgeNodeId` in `src/apollo/cacheFieldPolicies.ts`
+reads a row's id from its reference, never through the store.
+
+### Apollo: one answer stores a row once, its first copy
+
+Verified 2026-10-31 vs `@apollo/client@4.2.12` — re-check:
+`npx jest __tests__/apollo/normalizedRowMergeProbe.test.ts`.
+
+**Claim:** when one answer holds two copies of a row under the same selection
+set, the store keeps the first. `processSelectionSet` in `writeToStore.js` tracks
+`context.written[dataId]` and returns early on a selection set it has seen, so a
+later copy is never read, whatever its `version`. Two copies in separate answers
+land as usual. `data` handed to an `update` or a `commit` is then re-read from the
+cache, so both positions show the first copy, and a capture of `data` looks like
+the server sent it twice. Only the raw response body shows what was sent.
+
+**What depends on it:** a payload with one result per line, like
+`createReceiptCheckIn`, states a row as committed in every result, never as it
+stood after that line. The check-in's two lines of one product showed 1 pc until
+the API did this.
 
 ### Google ML Kit's iOS pods have no arm64-simulator slice
 

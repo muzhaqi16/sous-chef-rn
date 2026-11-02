@@ -2,6 +2,7 @@
 # each (list, store) pair keeps its own cached answer for offline use.
 query AisleViewRoute($id: ID!, $storeId: ID) {
   shoppingList(id: $id) {
+    version
     id
     storeRoute(storeId: $storeId) {
       departments

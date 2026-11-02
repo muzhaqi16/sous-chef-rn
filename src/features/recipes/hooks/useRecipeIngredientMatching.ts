@@ -322,6 +322,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
           fragment: RecipeIngredientFragmentDoc,
           fragmentName: 'RecipeIngredientFragment',
           from: match.ingredient,
+          optimistic: true,
         });
         if (!ingredient) {
           logger.warn(

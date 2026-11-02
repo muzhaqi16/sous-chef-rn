@@ -89,8 +89,6 @@
     "protein": "Proteine",
     "fat": "Grassi",
     "loadingProfile": "Caricamento profilo alimentare...",
-    "loadFailedTitle": "Impossibile caricare il tuo profilo alimentare",
-    "loadFailedSubtitle": "Controlla la connessione e riprova.",
     "sharedWith": "Condiviso con",
     "sharedWithShown": "I membri di queste case vedono le tue restrizioni con il tuo nome quando scansionano o cucinano. Le tue note restano private.",
     "sharedWithNone": "Attiva una casa perché i suoi membri vedano ciò che non puoi mangiare quando scansionano o cucinano.",
@@ -365,6 +363,21 @@
     "emptyDescription": "Le segnalazioni, le modifiche suggerite e le foto che invii per l'esame compaiono qui, con lo stato di ciascuna.",
     "sentOn": "Inviata il {{date}}",
     "reviewNote": "Nota della revisione: {{note}}"
+  },
+  "changesNotSaved": {
+    "title": "Modifiche non salvate",
+    "bannerSubtitle_one": "{{count}} modifica richiede una tua decisione",
+    "bannerSubtitle_other": "{{count}} modifiche richiedono una tua decisione",
+    "intro": "Queste modifiche non sono state salvate. Ognuna indica il motivo e cosa puoi fare.",
+    "aChange": "Una modifica",
+    "reasonConflict": "Qualcun altro ha cambiato la stessa cosa prima.",
+    "reasonGone": "Non esiste più, quindi si può solo scartare.",
+    "reasonExpired": "Questa modifica è troppo vecchia per inviarla in sicurezza, quindi si può solo scartare.",
+    "reasonRefused": "Il server non ha accettato questa modifica.",
+    "discardTitle": "Scartare questa modifica?",
+    "discardBody": "La tua modifica a {{name}} andrà persa definitivamente.",
+    "emptyTitle": "Niente in sospeso",
+    "emptyBody": "Tutte le tue modifiche sono state salvate."
   },
   "brandLists": {
     "title": "Liste di marchi",

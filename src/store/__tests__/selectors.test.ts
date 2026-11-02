@@ -233,6 +233,6 @@ describe('grouped hooks', () => {
     expect(result.current.getUserNavigationState).toBe(
       mockState.getUserNavigationState,
     );
-    expect(result.current.setOnBoardingStep).toBe(mockState.setOnBoardingStep);
+    expect(result.current.setOnboarded).toBe(mockState.setOnboarded);
   });
 });

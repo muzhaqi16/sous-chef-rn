@@ -1,9 +1,10 @@
 import { useTranslation } from '#/i18n';
 import { useMutation } from '@apollo/client/react';
 import { MarkItemForReviewDocument } from '#operations/item/item.generated';
-import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
+import { presentFailure } from '#/utils/errors/presentFailure';
 import { ErrorCode } from '#/graphql/generated/schemaTypes';
 
 /**
@@ -32,11 +33,6 @@ export function useReportItem() {
         fallback: t('reportItem.failedBody'),
         title: t('labels.couldnTSendThat'),
         copy: {
-          // A server without `alreadyReported` answers a repeat this way.
-          [ErrorCode.Conflict]: {
-            title: t('reportItem.alreadyReportedTitle'),
-            body: t('reportItem.alreadyReportedBody'),
-          },
           [ErrorCode.NotFound]: {
             title: t('errors.itemNotFound'),
             body: t(
@@ -44,22 +40,24 @@ export function useReportItem() {
             ),
           },
         },
+        present: 'none',
       },
     );
 
-    if (settled.status === 'failed') {
-      return settled.failure?.code === ErrorCode.Conflict;
-    }
     // Already reported and waiting on an admin: it landed, so a retry cannot
-    // improve on it.
-    if (appliedPayload(settled.data)?.alreadyReported) {
-      alertService.alert(
-        t('reportItem.alreadyReportedTitle'),
-        t('reportItem.alreadyReportedBody'),
-      );
-    } else {
-      alertService.alert(t('reportItem.sentTitle'), t('reportItem.sentBody'));
+    // improve on it. A server without `alreadyReported` answers with a Conflict.
+    const repeated =
+      settled.failure?.code === ErrorCode.Conflict ||
+      appliedPayload(settled.data)?.alreadyReported === true;
+    if (repeated) {
+      toastService.info(t('reportItem.alreadyReportedBody'));
+      return true;
     }
+    if (settled.status === 'failed') {
+      if (settled.failure) presentFailure(settled.failure);
+      return false;
+    }
+    toastService.success(t('reportItem.sentBody'));
     return true;
   };
 

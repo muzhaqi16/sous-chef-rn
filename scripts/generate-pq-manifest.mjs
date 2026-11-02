@@ -12,6 +12,9 @@
  * — the same value `persistedQueryLink` computes at runtime via
  * `generatePersistedQueryIdsAtRuntime`, so ids match the wire by construction.
  * The API's safelist plugin reads `operations[].id` from this file.
+ *
+ * `--check` compares instead of writing: the API's CI validates this file at
+ * every store tag and trusts what it holds, so a stale one goes unchecked.
  */
 
 import { createRequire } from 'node:module';
@@ -35,6 +38,7 @@ const {
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const OUTPUT = join(repoRoot, 'persisted-query-manifest.json');
+const check = process.argv.includes('--check');
 
 // `exclude` is called with both bare directory names and repo-relative paths,
 // so the pattern has to be anchored on a path segment: a `startsWith('src/...')`
@@ -100,10 +104,22 @@ try {
     documents: [join(tmp, '*.graphql')],
   });
 
-  writeFileSync(OUTPUT, `${JSON.stringify(manifest, null, 2)}\n`);
-  console.log(
-    `✓ persisted-query-manifest.json written with ${manifest.operations.length} operations`,
-  );
+  const generated = `${JSON.stringify(manifest, null, 2)}\n`;
+  if (!check) {
+    writeFileSync(OUTPUT, generated);
+    console.log(
+      `✓ persisted-query-manifest.json written with ${manifest.operations.length} operations`,
+    );
+  } else if (readFileSync(OUTPUT, 'utf8') === generated) {
+    console.log(
+      `✓ persisted-query-manifest.json is current with ${manifest.operations.length} operations`,
+    );
+  } else {
+    console.error(
+      '✗ persisted-query-manifest.json is stale: run `npm run codegen:manifest` and commit it.',
+    );
+    process.exitCode = 1;
+  }
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }

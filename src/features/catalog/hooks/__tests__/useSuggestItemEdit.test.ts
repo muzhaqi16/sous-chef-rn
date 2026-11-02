@@ -1,10 +1,10 @@
-import { waitFor } from '@testing-library/react-native';
 import type { MockDataFor } from '#/test-utils/apolloMockProvider';
 import {
   recordMock,
   renderHookWithApollo,
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
+import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateItemSuggestionDocument,
   UpdateItemDocument,
@@ -19,6 +19,7 @@ import {
 import type { EditableItemSnapshot } from '#utils/items/suggestItemChanges';
 import type { AddItemSubmitPayload } from '#features/catalog/types';
 import { alertService } from '#/services/alertService';
+import { toastService } from '#/services/toastService';
 
 const mockUploadItemImages = jest
   .fn()
@@ -83,6 +84,14 @@ const renderHook = (operationMocks: MockedResponse[]) =>
   renderHookWithApollo(() => useSuggestItemEdit(), { operationMocks });
 
 beforeEach(() => {
+  jest.useFakeTimers();
+});
+
+afterEach(() => {
+  jest.useRealTimers();
+});
+
+beforeEach(() => {
   jest.clearAllMocks();
   mockUploading = false;
 });
@@ -109,14 +118,15 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(snapshot(), form());
+    const outcome = await drained(() =>
+      result.current.submitEdit(snapshot(), form()),
+    );
 
     expect(outcome).toEqual({ status: 'suggested' });
-    await waitFor(() =>
-      expect(fired).toContainEqual({
-        input: { itemId: 'item-1', note: NOTE, changes: { name: 'Skim Milk' } },
-      }),
-    );
+    await drainTimers();
+    expect(fired).toContainEqual({
+      input: { itemId: 'item-1', note: NOTE, changes: { name: 'Skim Milk' } },
+    });
   });
 
   // A scan returns the product holding the barcode, so a pack correction is an
@@ -127,28 +137,33 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(
-      snapshot({ netWeight: 5, displayUnitId: 'unit-g', displayUnitName: 'g' }),
-      form({
-        netWeights: [{ value: 500, unitName: 'g', unitId: 'unit-g' }],
-      }),
+    const outcome = await drained(() =>
+      result.current.submitEdit(
+        snapshot({
+          netWeight: 5,
+          displayUnitId: 'unit-g',
+          displayUnitName: 'g',
+        }),
+        form({
+          netWeights: [{ value: 500, unitName: 'g', unitId: 'unit-g' }],
+        }),
+      ),
     );
 
     expect(outcome).toEqual({ status: 'suggested' });
-    await waitFor(() =>
-      expect(fired).toEqual([
-        {
-          input: {
-            itemId: 'item-1',
-            note: NOTE,
-            changes: {
-              name: 'Skim Milk',
-              packageInfo: { netWeight: 500, netWeightKind: 'PACKAGE' },
-            },
+    await drainTimers();
+    expect(fired).toEqual([
+      {
+        input: {
+          itemId: 'item-1',
+          note: NOTE,
+          changes: {
+            name: 'Skim Milk',
+            packageInfo: { netWeight: 500, netWeightKind: 'PACKAGE' },
           },
         },
-      ]),
-    );
+      },
+    ]);
   });
 
   // The server collapses a byte-identical pending suggestion onto the existing
@@ -159,7 +174,9 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(snapshot(), form());
+    const outcome = await drained(() =>
+      result.current.submitEdit(snapshot(), form()),
+    );
 
     expect(outcome).toEqual({ status: 'duplicate' });
   });
@@ -170,9 +187,8 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(
-      snapshot({ name: 'Skim Milk' }),
-      form(),
+    const outcome = await drained(() =>
+      result.current.submitEdit(snapshot({ name: 'Skim Milk' }), form()),
     );
 
     expect(outcome).toEqual({ status: 'noChanges' });
@@ -185,17 +201,20 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(
-      snapshot({ name: 'Skim Milk' }),
-      form({ selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }] }),
+    const outcome = await drained(() =>
+      result.current.submitEdit(
+        snapshot({ name: 'Skim Milk' }),
+        form({
+          selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }],
+        }),
+      ),
     );
 
     expect(outcome).toEqual({ status: 'imagesOnly' });
     expect(fired).toHaveLength(0);
     expect(mockUploadItemImages).toHaveBeenCalled();
     // A suggester's photo lands PENDING: saying it is on the item is untrue.
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Photo sent for review',
+    expect(toastService.success).toHaveBeenCalledWith(
       expect.stringContaining('only you can see it'),
     );
   });
@@ -203,14 +222,17 @@ describe('useSuggestItemEdit', () => {
   it("says the owner's photo is on their own item", async () => {
     const { result } = renderHook([]);
 
-    const outcome = await result.current.submitEdit(
-      snapshot({ name: 'Skim Milk', canEdit: true, canSuggest: false }),
-      form({ selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }] }),
+    const outcome = await drained(() =>
+      result.current.submitEdit(
+        snapshot({ name: 'Skim Milk', canEdit: true, canSuggest: false }),
+        form({
+          selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }],
+        }),
+      ),
     );
 
     expect(outcome).toEqual({ status: 'imagesOnly' });
-    expect(alertService.alert).toHaveBeenCalledWith(
-      'Photo added',
+    expect(toastService.success).toHaveBeenCalledWith(
       expect.stringContaining('on the item now'),
     );
   });
@@ -224,9 +246,13 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(
-      snapshot({ name: 'Skim Milk' }),
-      form({ selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }] }),
+    const outcome = await drained(() =>
+      result.current.submitEdit(
+        snapshot({ name: 'Skim Milk' }),
+        form({
+          selectedImages: [{ uri: 'file://a.jpg', perspective: 'front' }],
+        }),
+      ),
     );
 
     expect(outcome).toEqual({ status: 'failed' });
@@ -244,7 +270,9 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(snapshot(), form());
+    const outcome = await drained(() =>
+      result.current.submitEdit(snapshot(), form()),
+    );
 
     expect(outcome).toEqual({ status: 'failed' });
     // Distinct from the rate limit: a state you can clear, not a clock to wait out.
@@ -268,7 +296,9 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(snapshot(), form());
+    const outcome = await drained(() =>
+      result.current.submitEdit(snapshot(), form()),
+    );
 
     expect(outcome).toEqual({ status: 'failed' });
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -296,7 +326,9 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(snapshot(), form());
+    const outcome = await drained(() =>
+      result.current.submitEdit(snapshot(), form()),
+    );
 
     expect(outcome).toEqual({ status: 'failed' });
     expect(alertService.alert).toHaveBeenCalledWith(
@@ -311,9 +343,11 @@ describe('useSuggestItemEdit', () => {
     });
     const { result } = renderHook([mock]);
 
-    const outcome = await result.current.submitEdit(
-      snapshot({ canEdit: true, canSuggest: false }),
-      form(),
+    const outcome = await drained(() =>
+      result.current.submitEdit(
+        snapshot({ canEdit: true, canSuggest: false }),
+        form(),
+      ),
     );
 
     expect(outcome).toEqual({ status: 'failed' });
@@ -339,7 +373,9 @@ describe('useSuggestItemEdit', () => {
       },
     ]);
 
-    const outcome = await result.current.submitEdit(snapshot(), form());
+    const outcome = await drained(() =>
+      result.current.submitEdit(snapshot(), form()),
+    );
 
     expect(outcome).toEqual({ status: 'failed' });
     // Proves OPERATION_RATE_LIMITED is in RATE_LIMIT_CODES — without it this
@@ -379,18 +415,19 @@ describe('useSuggestItemEdit', () => {
       });
       const { result } = renderHook([mock]);
 
-      const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true, canSuggest: false }),
-        form(),
+      const outcome = await drained(() =>
+        result.current.submitEdit(
+          snapshot({ canEdit: true, canSuggest: false }),
+          form(),
+        ),
       );
 
       expect(outcome).toEqual({ status: 'updated' });
       // With the version the form opened on, so an edit made since is refused.
-      await waitFor(() =>
-        expect(fired).toContainEqual({
-          input: { id: 'item-1', version: 1, name: 'Skim Milk' },
-        }),
-      );
+      await drainTimers();
+      expect(fired).toContainEqual({
+        input: { id: 'item-1', version: 1, name: 'Skim Milk' },
+      });
     });
 
     it('hands a write refused as changed elsewhere back to the form, unalerted', async () => {
@@ -405,9 +442,11 @@ describe('useSuggestItemEdit', () => {
       });
       const { result } = renderHook([mock]);
 
-      const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true, canSuggest: false }),
-        form(),
+      const outcome = await drained(() =>
+        result.current.submitEdit(
+          snapshot({ canEdit: true, canSuggest: false }),
+          form(),
+        ),
       );
 
       expect(outcome).toMatchObject({
@@ -427,9 +466,11 @@ describe('useSuggestItemEdit', () => {
       });
       const { result } = renderHook([suggest.mock]);
 
-      const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: false, canSuggest: false }),
-        form(),
+      const outcome = await drained(() =>
+        result.current.submitEdit(
+          snapshot({ canEdit: false, canSuggest: false }),
+          form(),
+        ),
       );
 
       expect(outcome).toEqual({ status: 'readOnly' });
@@ -458,13 +499,16 @@ describe('useSuggestItemEdit', () => {
       });
       const { result } = renderHook([update.mock, suggest.mock]);
 
-      const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true, canSuggest: false }),
-        form(),
+      const outcome = await drained(() =>
+        result.current.submitEdit(
+          snapshot({ canEdit: true, canSuggest: false }),
+          form(),
+        ),
       );
 
       expect(outcome).toEqual({ status: 'readOnly' });
-      await waitFor(() => expect(update.fired).toHaveLength(1));
+      await drainTimers();
+      expect(update.fired).toHaveLength(1);
       expect(suggest.fired).toHaveLength(0);
     });
 
@@ -503,13 +547,16 @@ describe('useSuggestItemEdit', () => {
       });
       const { result } = renderHook([update.mock, suggest.mock]);
 
-      const outcome = await result.current.submitEdit(
-        snapshot({ canEdit: true, canSuggest: true }),
-        form(),
+      const outcome = await drained(() =>
+        result.current.submitEdit(
+          snapshot({ canEdit: true, canSuggest: true }),
+          form(),
+        ),
       );
 
       expect(outcome).toEqual({ status: 'suggested' });
-      await waitFor(() => expect(suggest.fired).toHaveLength(1));
+      await drainTimers();
+      expect(suggest.fired).toHaveLength(1);
       expect(update.fired).toHaveLength(0);
     });
   });

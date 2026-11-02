@@ -96,6 +96,8 @@ const mobile = {
     '/\\.claude/worktrees/',
     // The core-portability project's own suites.
     '/__tests__/core-portability/',
+    // Specs `__tests__/lint/typedRules.test.ts` runs in one suite.
+    '/__tests__/lint/typedRules/',
   ],
   modulePathIgnorePatterns,
   transformIgnorePatterns,

@@ -28,6 +28,8 @@ export const receiptsTestIDs = {
   reviewDate: 'receipt-review-date',
   /** The banner that asks the API again after a failed match. */
   reviewMatchRetry: 'receipt-review-match-retry',
+  /** Ends the review with lines still open, once nothing is left to add. */
+  reviewFinish: 'receipt-review-finish',
   /** Prefix of each line's row: `receipt-review-line-<index>`. */
   reviewLine: 'receipt-review-line',
   lineProduct: 'receipt-line-product',

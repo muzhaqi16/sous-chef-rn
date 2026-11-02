@@ -390,7 +390,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
         />
 
         <StorePriceSection {...prices} />
-        <StoreShelfPriceSection rows={shelfPrices.rows} />
+        <StoreShelfPriceSection prices={shelfPrices} />
       </View>
 
       {!!scannedBrand && (
@@ -398,6 +398,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
           visible={isAddingToList}
           brand={scannedBrand}
           lists={brandLists.lists}
+          unavailable={
+            brandLists.state === 'offline' || brandLists.state === 'error'
+              ? {
+                  state: brandLists.state,
+                  onRetry: () => {
+                    void brandLists.refetch();
+                  },
+                }
+              : undefined
+          }
           onDismiss={() => setIsAddingToList(false)}
           onPick={(listId, reason) =>
             brandLists.addBrand(listId, scannedBrand, reason)

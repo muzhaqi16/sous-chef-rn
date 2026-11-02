@@ -1,12 +1,10 @@
 import {
   handleQueueFailure,
   registerQueueFailureHandler,
+  setChangesNotSavedOpener,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
-import { optimisticDataPersistence } from '#/apollo/offline/OptimisticDataPersistence';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
-import { restoreItemToShoppingListAfterMoveToPantry } from '#features/shoppingList/cache/moveToPantry';
-import { writePurchaseInfo } from '#features/shoppingList/cache/purchase';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import { queueStore } from '../queueStore';
@@ -16,18 +14,12 @@ import { subjectTypeOf } from '../queuedSubject';
 import { CombinedGraphQLErrors } from '@apollo/client/errors';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import type { ApolloClient } from '@apollo/client';
+import type { LocalWriteTable } from '#/apollo/pendingWrites/types';
 import { registerApolloClient } from '#/apollo/clientRegistry';
-import { errorService } from '#/services/errorService';
-import { removePantryItemLocally } from '#features/pantry/cache/items';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
-import {
-  CreatePantryItemDocument,
-  UpdatePantryItemDocument,
-} from '#features/pantry/graphql/pantry.generated';
-import {
-  MoveShoppingItemToPantryDocument,
-  UpdateShoppingListItemDocument,
-} from '#features/shoppingList/graphql/shoppingList.generated';
+import { UpdatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { CreateReceiptCheckInDocument } from '#features/receipts/hooks/useReceiptCheckIn.generated';
+import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { UpdateMealPlanItemDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 
 const client = {
@@ -38,9 +30,10 @@ registerApolloClient(client);
 jest.mock('#/services/errorService', () => ({
   errorService: { reportError: jest.fn() },
 }));
-jest.mock('#features/pantry/cache/items', () => ({
-  ...jest.requireActual('#features/pantry/cache/items'),
-  removePantryItemLocally: jest.fn(),
+jest.mock('#features/receipts/offline/receiptCheckIn', () => ({
+  ...jest.requireActual('#features/receipts/offline/receiptCheckIn'),
+  restoreReceiptCheckInListLines: jest.fn(),
+  withdrawReceiptCheckIn: jest.fn(),
 }));
 // These factories are called at MODULE scope by the pantry and home cache
 // updaters, which `queueManager` reaches through `queueReplayReconcilers`. A
@@ -56,21 +49,25 @@ jest.mock('#/apollo/utils/cacheUpdaters', () => ({
   createAddToQueryConnectionUpdater: jest.fn(() => jest.fn()),
   createRemoveFromQueryConnectionUpdater: jest.fn(() => jest.fn()),
 }));
-jest.mock('#features/shoppingList/cache/moveToPantry', () => ({
-  restoreItemToShoppingListAfterMoveToPantry: jest.fn(),
-}));
 jest.mock('#features/shoppingList/cache/purchase', () => ({
   writePurchaseInfo: jest.fn(),
 }));
-jest.mock('#/apollo/offline/OptimisticDataPersistence', () => ({
-  optimisticDataPersistence: {
-    clearEntity: jest.fn(),
-    clearEntityById: jest.fn(),
-  },
+const mockRefuse = jest.fn();
+jest.mock('#/apollo/pendingWrites/pendingWrites', () => ({
+  pendingWritesOf: () => ({
+    refuse: mockRefuse,
+    keepsRefusal: (operationName: string) => {
+      const { LOCAL_WRITES } = jest.requireActual<{
+        LOCAL_WRITES: LocalWriteTable;
+      }>('#/apollo/pendingWrites/localWriteRegistry');
+      return LOCAL_WRITES[operationName]?.recoverable !== false;
+    },
+  }),
 }));
 jest.mock('../queueStore', () => ({
   queueStore: {
     removeMutation: jest.fn(),
+    markRefused: jest.fn(),
     // No signed-in queue, so nothing is pending and the reread runs.
     getCurrentUserId: jest.fn(() => null),
     getQueueStats: jest.fn(() => ({
@@ -150,6 +147,40 @@ describe('queue failure handler', () => {
     });
   });
 
+  describe('a write with a local write', () => {
+    const withLocalWrite = () =>
+      failure({
+        operationName: operationNameOf(CreateReceiptCheckInDocument),
+        pendingWriteId: 'write-1',
+      });
+
+    it('drops its layer, and evicts nothing', () => {
+      handleQueueFailure(withLocalWrite());
+
+      expect(mockRefuse).toHaveBeenCalledWith('write-1');
+      expect(safeEvict).not.toHaveBeenCalled();
+    });
+
+    it('still tells the person and leaves the queue', () => {
+      handleQueueFailure(withLocalWrite());
+
+      expect(toastService.error).toHaveBeenCalledTimes(1);
+      expect(queueStore.removeMutation).toHaveBeenCalledWith('q1');
+    });
+
+    it('stays out of the list when its lines go back to the receipt', () => {
+      setChangesNotSavedOpener(jest.fn());
+
+      handleQueueFailure(withLocalWrite());
+
+      expect(queueStore.markRefused).not.toHaveBeenCalled();
+      expect(toastService.error).toHaveBeenCalledWith(
+        expect.any(String),
+        undefined,
+      );
+    });
+  });
+
   it('withdraws the locally-applied change from the cache', () => {
     handleQueueFailure(failure());
     expect(safeEvict).toHaveBeenCalledWith(
@@ -157,79 +188,6 @@ describe('queue failure handler', () => {
       'PantryItem',
       'item-1',
     );
-  });
-
-  it('clears the persisted optimistic value so it cannot come back', () => {
-    // Restoration replays persisted optimistic fields on the next launch; a
-    // withdrawn change left behind there would reappear over server data.
-    handleQueueFailure(failure());
-    expect(optimisticDataPersistence.clearEntity).toHaveBeenCalledWith(
-      'PantryItem',
-      'item-1',
-    );
-  });
-
-  describe('withdrawing an unlink', () => {
-    const movedItem = failure({
-      operationName: operationNameOf(MoveShoppingItemToPantryDocument),
-      entityType: 'PantryItem',
-      entityId: 'pantry-1',
-      variables: {
-        input: { shoppingListItemId: 'sli-1', removeFromList: true },
-      },
-    });
-
-    it('puts the shopping row back when a move is permanently refused', () => {
-      // The evict withdraws the pantry row the move CREATED. Nothing else can
-      // restore the shopping row it UNLINKED, and without this the item is in
-      // neither list — observed on device on a move that timed out, retried and
-      // came back NotFound.
-      handleQueueFailure(movedItem);
-
-      expect(restoreItemToShoppingListAfterMoveToPantry).toHaveBeenCalledWith(
-        expect.anything(),
-        'sli-1',
-      );
-    });
-
-    it('only un-stamps the row when the move kept it on the list', () => {
-      handleQueueFailure(
-        failure({
-          operationName: operationNameOf(MoveShoppingItemToPantryDocument),
-          variables: {
-            input: { shoppingListItemId: 'sli-1', removeFromList: false },
-          },
-        }),
-      );
-
-      expect(restoreItemToShoppingListAfterMoveToPantry).not.toHaveBeenCalled();
-      expect(writePurchaseInfo).toHaveBeenCalledWith(
-        expect.anything(),
-        'sli-1',
-        { movedToPantryAt: null },
-      );
-    });
-
-    it('has no unlink to withdraw for an ordinary create', () => {
-      handleQueueFailure(failure());
-      expect(restoreItemToShoppingListAfterMoveToPantry).not.toHaveBeenCalled();
-    });
-
-    it('still tells the person when the withdrawal throws', () => {
-      (
-        restoreItemToShoppingListAfterMoveToPantry as jest.Mock
-      ).mockImplementationOnce(() => {
-        throw new Error('cache gone');
-      });
-
-      expect(() => handleQueueFailure(movedItem)).not.toThrow();
-      expect(toastService.error).toHaveBeenCalledTimes(1);
-    });
-  });
-
-  it('tells the person', () => {
-    handleQueueFailure(failure());
-    expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 
   it('shows the app’s own words, never the server’s', () => {
@@ -249,7 +207,7 @@ describe('queue failure handler', () => {
 
     it('names the entity a refused change was to', () => {
       expect(toldAfter({})).toBe(
-        t('errors.queuedChangeRejectedResource', {
+        t('errors.queuedChangeKeptResource', {
           resource: t('errors.resourceNames.PantryItem'),
         }),
       );
@@ -265,7 +223,7 @@ describe('queue failure handler', () => {
       });
 
       expect(message).toBe(
-        t('errors.queuedChangeRejectedResource', {
+        t('errors.queuedChangeKeptResource', {
           resource: t('errors.resourceNames.MealPlanItem'),
         }),
       );
@@ -276,7 +234,7 @@ describe('queue failure handler', () => {
       'says a change was not saved when nothing names it (%s)',
       subjectType => {
         expect(toldAfter({ entityType: null, subjectType })).toBe(
-          t('errors.queuedChangeRejected'),
+          t('errors.queuedChangeKept'),
         );
       },
     );
@@ -299,7 +257,7 @@ describe('queue failure handler', () => {
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
     expect(message).toContain('pantry item');
-    expect(message).not.toBe(t('errors.queuedChangeRejected'));
+    expect(message).not.toBe(t('errors.queuedChangeKept'));
     expect(safeEvict).toHaveBeenCalledWith(
       expect.anything(),
       'PantryItem',
@@ -324,7 +282,7 @@ describe('queue failure handler', () => {
     );
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
-    expect(message).toBe(t('errors.queuedChangeOverwritten'));
+    expect(message).toBe(t('errors.queuedClashKept'));
   });
 
   it('gives a RESOURCE_VERSION_CONFLICT refusal the overwrite copy', () => {
@@ -344,18 +302,7 @@ describe('queue failure handler', () => {
     );
 
     const [message] = (toastService.error as jest.Mock).mock.calls[0];
-    expect(message).toBe(t('errors.queuedChangeOverwritten'));
-  });
-
-  it('clears what the withdrawn write persisted even with no typename', () => {
-    // The cache was purged, so the typename cannot be read back — but the id
-    // came off the queue entry. Left behind, the optimistic value is re-applied
-    // over the server's on the next restoration pass.
-    handleQueueFailure(failure({ entityType: null, entityId: 'item-7' }));
-
-    expect(optimisticDataPersistence.clearEntityById).toHaveBeenCalledWith(
-      'item-7',
-    );
+    expect(message).toBe(t('errors.queuedClashKept'));
   });
 
   it('still tells the person when the entity cannot be identified', () => {
@@ -364,20 +311,39 @@ describe('queue failure handler', () => {
     handleQueueFailure(failure({ entityType: null, entityId: null }));
 
     expect(safeEvict).not.toHaveBeenCalled();
-    expect(optimisticDataPersistence.clearEntity).not.toHaveBeenCalled();
     expect(toastService.error).toHaveBeenCalledTimes(1);
   });
 });
 
-describe('queue failure handler — dequeue and sole ownership', () => {
-  it('removes the withdrawn entry from the queue', () => {
-    // Left behind, it sits as FAILED until `cleanupTerminal` ages it out a day
-    // later, padding every drain scan and persisted write until then.
-    handleQueueFailure(failure({ mutationId: 'q-42' }));
-    expect(queueStore.removeMutation).toHaveBeenCalledWith('q-42');
+describe('queue failure handler — what is kept and sole ownership', () => {
+  it('keeps a refused change for the person', () => {
+    const refused = failure({ mutationId: 'q-42' });
+    handleQueueFailure(refused);
+
+    expect(queueStore.markRefused).toHaveBeenCalledWith('q-42', refused.error, {
+      resource: 'PantryItem',
+    });
+    expect(queueStore.removeMutation).not.toHaveBeenCalled();
   });
 
-  it('dequeues even when the entity cannot be identified', () => {
+  it('keeps a refused add, whose row leaves the screen', () => {
+    handleQueueFailure(
+      failure({
+        mutationId: 'q-44',
+        operationName: operationNameOf(UpdateShoppingListItemDocument),
+        pendingWriteId: 'write-44',
+      }),
+    );
+
+    expect(mockRefuse).toHaveBeenCalledWith('write-44');
+    expect(queueStore.markRefused).toHaveBeenCalledWith(
+      'q-44',
+      expect.anything(),
+      expect.anything(),
+    );
+  });
+
+  it('keeps a change even when the entity cannot be identified', () => {
     handleQueueFailure(
       failure({
         mutationId: 'q-43',
@@ -386,7 +352,11 @@ describe('queue failure handler — dequeue and sole ownership', () => {
       }),
     );
     expect(safeEvict).not.toHaveBeenCalled();
-    expect(queueStore.removeMutation).toHaveBeenCalledWith('q-43');
+    expect(queueStore.markRefused).toHaveBeenCalledWith(
+      'q-43',
+      expect.anything(),
+      expect.anything(),
+    );
   });
 
   it('is the only thing in the app that registers a failure handler', () => {
@@ -442,25 +412,5 @@ describe('queue failure handler — a withdrawn row is read back', () => {
     await settle();
 
     expect(client.refetchQueries).toHaveBeenCalledTimes(1);
-  });
-
-  it('reports a withdrawal step that throws', () => {
-    (removePantryItemLocally as jest.Mock).mockImplementationOnce(() => {
-      throw new Error('cache gone');
-    });
-
-    handleQueueFailure(
-      failure({
-        operationName: operationNameOf(CreatePantryItemDocument),
-        variables: { input: { pantryId: 'pantry-1' } },
-      }),
-    );
-
-    expect(errorService.reportError).toHaveBeenCalledWith(
-      expect.any(Error),
-      expect.objectContaining({
-        operation: expect.stringContaining('CreatePantryItem'),
-      }),
-    );
   });
 });

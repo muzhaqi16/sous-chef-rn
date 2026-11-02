@@ -32,7 +32,10 @@ import { useRecipeReviews } from '#features/recipes/hooks/useRecipeReviews';
 import { ReviewSection } from '#features/recipes/components/ReviewSection';
 
 import { useRecipeDetail } from './useRecipeDetail';
-import type { CatalogRecipeHint } from '#features/recipes/hooks/useOpenCatalogRecipe';
+import type {
+  CatalogRecipeHint,
+  RecipeRowHint,
+} from '#features/recipes/hooks/useOpenCatalogRecipe';
 import type { RecipeDetails } from '#features/recipes/hooks/useRecipeData';
 import { AlertBanner } from '#components/molecules/AlertBanner';
 import { DataAttributionNotices } from '#features/recipes/components/DataAttributionNotices';
@@ -45,8 +48,11 @@ import { IngredientAlertsSheet } from '#features/recipes/components/recipeDetail
 import { HorizontalRail } from '#components/molecules/HorizontalRail';
 import type { DisplayIngredient } from '#features/recipes/hooks/useRecipeData';
 import { useRecipeSubstitutes } from '#features/recipes/hooks/useRecipeSubstitutes';
-import { HouseholdRecipeSummary } from '#features/recipes/components/recipeDetail/HouseholdRecipeSummary';
+import { DietaryCheckNote } from '#features/recipes/components/recipeDetail/DietaryCheckNote';
+import { RecipeCredit } from '#features/recipes/components/recipeDetail/RecipeCredit';
 import { useRecipeDietaryAlerts } from '#features/recipes/hooks/useRecipeDietaryAlerts';
+import { useCooksFor } from '#features/profile/hooks/useCooksFor';
+import { startingServings } from '#domain/servings';
 import { CaptureReviewBanner } from '#features/recipes/components/capture/CaptureReviewBanner';
 import { useCaptureSources } from '#features/recipes/hooks/useCaptureSources';
 import { RecipeHeroImage } from '#features/recipes/components/recipeDetail/RecipeHeroImage';
@@ -64,7 +70,6 @@ import { useOfflineAwareError } from '#hooks/app/useOfflineAwareError';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { firstNonBlank } from '#/utils/firstNonBlank';
 import {
   ReportContentSheet,
   type ReportTarget,
@@ -112,6 +117,11 @@ const DETAILS_NOTICE: Readonly<
   unavailable: {
     title: 'recipes.catalogUnavailableTitle',
     subtitle: 'recipes.catalogUnavailableSubtitle',
+    icon: 'cloud-offline-outline',
+  },
+  held: {
+    title: 'dataState.partialTitle',
+    subtitle: 'dataState.partialBody',
     icon: 'cloud-offline-outline',
   },
 };
@@ -166,6 +176,8 @@ const RecipeDetailScreen: React.FC = () => {
     isSaved,
     handleSaveRecipe,
     shoppingLists,
+    shoppingListsState,
+    retryShoppingLists,
     addingToList,
     addedIngredients,
     handleAddSingleIngredient,
@@ -202,7 +214,7 @@ const RecipeDetailScreen: React.FC = () => {
   // Scroll component for FlashList instances rendered inside bottom sheets.
 
   // Get available folders and tags for picker and autocomplete
-  const { folders } = useRecipeFolders();
+  const { folders, unavailable: foldersUnavailable } = useRecipeFolders();
   const { tags: availableTags } = useRecipeTags();
 
   // Recipe reviews
@@ -269,11 +281,9 @@ const RecipeDetailScreen: React.FC = () => {
   const [showReportSheet, setShowReportSheet] = useState(false);
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
+  const cooksFor = useCooksFor();
   // Swaps are offered where the household flags an ingredient.
-  const substitutes = useRecipeSubstitutes(
-    recipeId,
-    household.summary.length > 0,
-  );
+  const substitutes = useRecipeSubstitutes(recipeId, household.flagged);
   // The flagged ingredient whose sheet is open.
   const [openIngredient, setOpenIngredient] =
     useState<DisplayIngredient | null>(null);
@@ -557,7 +567,6 @@ const RecipeDetailScreen: React.FC = () => {
           tips={displayData.tips}
           videoUrl={displayData.videoUrl}
           forkedFromName={displayData.forkedFromName}
-          originalAuthor={displayData.originalAuthor}
           tags={displayData.tags}
           status={displayData.status}
           reviewNote={displayData.reviewNote}
@@ -617,9 +626,10 @@ const RecipeDetailScreen: React.FC = () => {
           </View>
         )}
 
-        <HouseholdRecipeSummary
+        <DietaryCheckNote
           check={household.check}
-          alerts={household.summary}
+          flagged={household.flagged}
+          restrictionsApply={household.restrictionsApply}
         />
 
         {/* Description */}
@@ -706,33 +716,12 @@ const RecipeDetailScreen: React.FC = () => {
           <ReviewSection {...reviewState} {...reviewActions} />
         )}
 
-        {/* Source Attribution */}
-        {!!firstNonBlank(displayData.sourceName, displayData.sourceUrl) && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.attribution,
-              displayData.sourceUrl && pressed && { opacity: 0.7 },
-            ]}
-            onPress={handleOpenSource}
-            disabled={!displayData.sourceUrl}
-          >
-            <Text role="caption" style={styles.attributionText}>
-              {t('recipes.recipeFrom', {
-                source:
-                  firstNonBlank(displayData.sourceName) ??
-                  t('recipes.externalSource'),
-              })}
-            </Text>
-            {!!displayData.sourceUrl && (
-              <View style={styles.viewOriginalLink}>
-                <Text role="label" style={styles.viewOriginalText}>
-                  {t('recipes.viewOriginalRecipe')}
-                </Text>
-                <Icon name="open-outline" size={14} tone="primary" />
-              </View>
-            )}
-          </Pressable>
-        )}
+        <RecipeCredit
+          author={displayData.originalAuthor}
+          sourceName={displayData.sourceName}
+          sourceUrl={displayData.sourceUrl}
+          onOpenSource={handleOpenSource}
+        />
 
         {displayData.dataAttributions.length > 0 && (
           <View style={styles.dataAttributions}>
@@ -747,6 +736,8 @@ const RecipeDetailScreen: React.FC = () => {
       <ShoppingListPickerSheet
         visible={listPickerVisible}
         shoppingLists={shoppingLists}
+        listsState={shoppingListsState}
+        onRetryLists={retryShoppingLists}
         defaultNewListName={displayData.title}
         creatingList={creatingList}
         onListSelected={handleListSelected}
@@ -758,9 +749,10 @@ const RecipeDetailScreen: React.FC = () => {
       <MarkCookedModal
         visible={cookedModalVisible}
         recipeName={displayData.title}
-        defaultServings={
-          displayData.servings === 0 ? 1 : displayData.servings ?? 1
-        }
+        defaultServings={startingServings(
+          cooksFor,
+          displayData.servings === 0 ? 1 : displayData.servings ?? 1,
+        )}
         onClose={() => setCookedModalVisible(false)}
         onConfirm={handleMarkAsCooked}
         hasPantry={ingredientMatching.hasPantry}
@@ -782,6 +774,7 @@ const RecipeDetailScreen: React.FC = () => {
       <FolderPicker
         visible={showFolderPicker}
         folders={folders}
+        unavailable={foldersUnavailable}
         selectedFolder={savedFolder}
         onSelect={handleUpdateFolder}
         onCancel={() => setShowFolderPicker(false)}
@@ -837,6 +830,8 @@ const RecipeDetailScreen: React.FC = () => {
 export const RecipeDetail: React.FC<
   StaticScreenProps<{
     recipeId?: string;
+    /** What the row showed, for a recipe the device does not hold. */
+    row?: RecipeRowHint;
     /** A catalog recipe the screen opens itself, shown as the row was. */
     catalog?: CatalogRecipeHint;
   }>
@@ -900,29 +895,8 @@ const styles = StyleSheet.create(theme => ({
   description: {
     color: theme.colors.textSecondary,
   },
-  attribution: {
-    paddingTop: theme.spacing.md,
-    borderTopWidth: theme.borderWidth.hairline,
-    borderTopColor: theme.colors.border,
-    marginTop: theme.spacing.xl,
-  },
   dataAttributions: {
     marginTop: theme.spacing.md,
-  },
-  attributionText: {
-    color: theme.colors.textSecondary,
-    fontStyle: 'italic',
-    textAlign: 'center',
-  },
-  viewOriginalLink: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.xs,
-    marginTop: theme.spacing.sm,
-  },
-  viewOriginalText: {
-    color: theme.colors.primary,
   },
   sectionTitleSpacing: {
     marginBottom: theme.spacing.sm,

@@ -5,10 +5,8 @@ import { apolloCachePersistence } from '../ApolloCachePersistence';
 const storageSet = jest.spyOn(storage, 'set');
 
 /**
- * Every queued write flushes the persisted cache so a kill cannot lose the row
- * its replay reads. Each flush is a full extract + stringify + write, so a bulk
- * offline add — the low-stock "add all", onboarding's up-to-100 items — paid it
- * once per row on the JS thread.
+ * Each flush is a full extract + stringify + write, so a burst of them, as a
+ * bulk write makes, pays that once per row on the JS thread.
  */
 
 /** A store of roughly the size the persist telemetry reports (~165 KB). */
