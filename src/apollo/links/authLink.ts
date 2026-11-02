@@ -50,7 +50,7 @@ const isHeaderRecord = (value: unknown): value is Record<string, unknown> =>
 // token, so it cannot point a live session's request elsewhere.
 export const authLink = new SetContextLink(
   async (
-    { headers: contextHeaders, allowDuringLogout, signInToken },
+    { headers: contextHeaders, allowDuringLogout, signInToken, pendingWriteId },
     operation,
   ) => {
     const headers = isHeaderRecord(contextHeaders) ? contextHeaders : undefined;
@@ -147,6 +147,10 @@ export const authLink = new SetContextLink(
         ...(token && { authorization: `Bearer ${token}` }),
         // Omitted rather than substituted when storage has not opened yet
         ...(deviceId && { 'x-device-id': deviceId }),
+        // Stable across replays, so a pull can confirm the write reached a row.
+        ...(typeof pendingWriteId === 'string' && {
+          'x-operation-id': pendingWriteId,
+        }),
       },
     };
   },

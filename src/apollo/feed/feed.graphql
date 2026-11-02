@@ -1,0 +1,31 @@
+# The scopes a person reaches, each at its latest position. Read to the end: a
+# held scope missing from a complete answer is one they no longer reach.
+query FeedScopes($first: Int, $after: String) {
+  syncScopes(first: $first, after: $after) {
+    edges {
+      node {
+        kind
+        id
+        cursor
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}
+
+# A signal to pull, holding no row.
+subscription FeedPokes {
+  mySyncPokes {
+    kind
+    scope {
+      kind
+      id
+      cursor
+    }
+    originDeviceId
+    originOperationId
+  }
+}

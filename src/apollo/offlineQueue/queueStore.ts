@@ -3,7 +3,12 @@ import { storage } from '#/store/deviceStorage';
 import type { QueuedMutation, QueueError, QueueStats } from './types';
 import { QueueCapacityError, QueueStatus } from './types';
 import { logger } from '#/utils/environment';
-import { deletesItsSubject, holdsBack, queuedSubject } from './queuedSubject';
+import {
+  deletesItsSubject,
+  dependencyIdsOf,
+  holdsBack,
+  queuedSubject,
+} from './queuedSubject';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { MUTATION_DOCUMENTS } from '#/graphql/generated/mutationDocuments.generated';
 import { MoveShoppingListItemDocument } from '#features/shoppingList/graphql/shoppingList.generated';
@@ -408,6 +413,18 @@ export class QueueStore {
       );
     }
     return reset;
+  }
+
+  /** Whether an undelivered write creates `id`, or a row under it. */
+  holdsCreateFor(id: string): boolean {
+    return this.loadQueue().some(m => {
+      if (!UNDELIVERED.includes(m.status)) return false;
+      const { mintedIds } = queuedSubject(m);
+      return (
+        mintedIds.length > 0 &&
+        (mintedIds.includes(id) || dependencyIdsOf(m).includes(id))
+      );
+    });
   }
 
   /**

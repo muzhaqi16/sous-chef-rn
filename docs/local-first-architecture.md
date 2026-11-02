@@ -23,7 +23,9 @@ the queue is written: the queue then lives in memory for the session.
 
 ## 1. Read path — local-first
 
-- Apollo `InMemoryCache` is persisted to MMKV as one blob (`ApolloCachePersistence.ts`):
+- **Shopping lists catch up from the server's change feed** (`src/apollo/feed/`), and every other
+  domain by re-reading; §1a. Apart from a held list's lines, which load on demand (§6),
+  Apollo `InMemoryCache` is persisted to MMKV as one blob (`ApolloCachePersistence.ts`):
   `cache.extract()` / `cache.restore()`, so connection wrappers (`edges`, `pageInfo`) survive across
   launches. The only changes on the way are pruning `__META.extraRootIds` whose entity is gone, and
   skipping a save when no entity changed. The blob is stored with its shape (`apollo-cache-version`,
@@ -48,6 +50,44 @@ the queue is written: the queue then lives in memory for the session.
 - A first-page background refetch that lands **before** the queue replays an offline create cannot
   lose that item: the row is in its pending layer (§2), over the page, so the merge takes the page as it
   stands. A genuinely **server-deleted** item has no pending write holding it and drops.
+
+## 1a. The change feed
+
+The API answers what changed in a scope since a cursor; one shopping list is one scope. The contract is
+`docs/api/offline-sync.md` in `sous-chef-api`. `FeedEngine` runs one pass at a time, and what arrives
+during a pass joins it.
+
+- **Triggers.** A resync, once the queue is idle (`refetchEvents.ts`), a drained queue, and
+  `mySyncPokes` (`useChangeFeed`), which holds no row, so a lost poke only delays a pull. A poke for the
+  position held, or naming only this device's own write, pulls nothing.
+- **A pass.** `syncScopes` read to its last page, then a pull of what moved, at most 25 scopes a request
+  until `offlineLimits` reaches production. `RESYNC_REQUIRED` reads the scope in full and pulls from the
+  first page's cursor, once a pass: a server stuck answering it must not become a snapshot loop.
+- **A page lands through Apollo**, `network-only` as a one-shot read, so the ordering and precedence
+  links hold it like any read and a pending layer stays on top. Masking leaves the engine only what the
+  document selects directly, which is all it needs: it then moves edges, drops removals and keeps the
+  cursor last, in one `cache.batch`. `Query.syncChanges` and `syncSnapshot` are evicted after, or a page
+  would pin its rows and answer a read made offline. Rows spread the Readers, so a row is complete for
+  every reader; a collaborator's `status` is aliased (`ShoppingListCollaboratorFeedRow`), as it collides
+  with `ShoppingList.status` in the `SyncEntity` union.
+- **Totals.** The page's list row states them, so edges move through writers that count nothing.
+- **A full read** writes each `itemsConnection` variant with `overwrite: true`, past the merge that keeps
+  a cached tail, and a row it does not hold leaves.
+- **Eviction takes one of two answers**: `UNAVAILABLE`, or a held list missing from a `syncScopes` read
+  to its end. A fault, a partial answer or an unacknowledged create removes nothing, and only a list
+  with a position counts as held, so a stale cached row is never a candidate. Queued writes stay, and
+  reach the changes not saved when their replay is refused.
+- **A list with an unacknowledged create is not pulled** (`queueStore.holdsCreateFor`): its rows would
+  race the pending copy. A drained queue catches it up.
+- **A held list reads from the device**: `useListReadPolicy` answers `cache-first` with `refetchOn: false`,
+  and any other list reads as before. The feed omits what a list shows from outside itself, so a held
+  list last read in full a day ago reads again, without holding the screen.
+- **`X-Operation-Id` is `pendingWrite.id`**, stable across replays. A pull's `applied` settles a waiting
+  write only when its `LocalWrite` sets `settlesFromFeed` and it names that one row, dropping the layer
+  without `commit`, as the page has placed the row; writes behind it move to the version it reached.
+  Any other write replays and converges, so a miss costs a send. `applied` speaks for a row, not a write.
+- **`myShoppingListsEvents` stays** until a later change moves off it. Both write through the same
+  connection writers. `listChangeFeed` switches the feed off, and with it every list reads as before.
 
 ## 2. Write path — the implemented pattern
 
@@ -436,9 +476,20 @@ the reference data offline reads use:
    brings back, never a write, so this store may be slow, late or lost without harm, which is what lets
    an asynchronous storage port carry it.
 
+3. **List shards** (`apollo-shard:<listId>`, `scopeStorage`; `listShards.ts`). A list the feed holds
+   stores its lines and collaborators apart, answer-shaped, as a live cache takes entities only through
+   a write: `restore` re-creates the stores, layers included. The list's own row stays in the blob, or
+   the list picker reads incomplete after a restart. The open list hydrates at restore, every list while
+   a write is queued, and any other when `useListReadPolicy` first sees it. Only a hydrated list is
+   written: a read of a cold list holds a first page, which must not replace the whole list on disk, and
+   a full read marks the list hydrated, so opening it cannot put the older copy back. A read that comes
+   back incomplete keeps the last copy and drops the position. Positions sit in one small key, written
+   after the shards and restored only with their shard, so a position never outruns its rows. The budget
+   is 5 MB restored at launch at a 300 ms p95 restore; a miss reopens the SQLite decision.
+
 **What is warmed ahead** (`src/bootstrap/useOfflineTabPreloading.ts`, idle and `cache-first`, so a held
 read costs nothing): the pantry, the shopping lists and the meal plans (`WARM_TARGETS`); then what those
-name: the active list with both tabs of its items, and what the host adds through `warmTargets`, for
+name: the active list with both tabs of its items, unless the feed holds it, and what the host adds through `warmTargets`, for
 reads its own screens own. The mobile host adds the plan covering today, the next to start and the
 recipes planned for the coming seven days, 14 at most, one at a time (`warmPlannedMeals`).
 A warm runs once a session, and what failed runs again when the API comes back.
@@ -748,6 +799,8 @@ replay only after their parent has landed — the drain reads the parent referen
 | Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Shared shopping writers                            | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Replay reconcilers                                 | `src/apollo/offlineQueue/replayRegistry.ts` (`REPLAY_RECONCILERS`), `queueReplayReconcilers.ts`, each feature's `offline/replayReconcilers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Change feed engine and scope adapters              | `src/apollo/feed/feedEngine.ts`, `feedRegistry.ts`; `src/features/shoppingList/offline/listFeed.ts` |
+| List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts` |
 | Resync after foreground / reconnect                | `src/apollo/refetchEvents.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Local row writers (`writeLocalEntity`)             | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
 | Field-edit write                                   | `src/apollo/pendingWrites/entityFields.ts`, `sendFields.ts`; `src/apollo/utils/localFirstFields.ts` (`writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

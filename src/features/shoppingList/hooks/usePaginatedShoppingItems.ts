@@ -15,6 +15,7 @@ import { errorService } from '#/services/errorService';
 import { isAbortError } from '#features/shoppingList/utils/abort';
 import type { HookReturn } from '#hooks/utils/types';
 import { scheduleIdle } from '#/utils/scheduleIdle';
+import { useListReadPolicy } from './useListReadPolicy';
 
 /**
  * Carries inline meta fields for direct hook-layer access plus the masked
@@ -61,6 +62,7 @@ export function usePaginatedShoppingItems({
 
   const hasValidListId = !!listId && !isLoggedOut;
   const shouldSkip = skip || !hasValidListId;
+  const readPolicy = useListReadPolicy(hasValidListId ? listId : null);
 
   // Defer purchased query until JS thread is idle — it's for the non-default
   // tab. Recorded per list, so a switch defers the new list's read again.
@@ -93,6 +95,7 @@ export function usePaginatedShoppingItems({
             first: PAGINATION.ITEMS_PAGE_SIZE,
             isPurchased: false,
           },
+          ...readPolicy,
         }
       : skipToken,
   );
@@ -113,6 +116,7 @@ export function usePaginatedShoppingItems({
             first: PAGINATION.ITEMS_PAGE_SIZE,
             isPurchased: true,
           },
+          ...readPolicy,
         }
       : skipToken,
   );

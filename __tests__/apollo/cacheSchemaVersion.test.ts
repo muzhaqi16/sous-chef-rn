@@ -29,7 +29,7 @@ import { createHash } from 'crypto';
  *
  * Re-record by running this test: the failure message prints the new hash.
  */
-const REVIEWED_CACHE_POLICY_HASH = 'c7b162847a50a59b';
+const REVIEWED_CACHE_POLICY_HASH = '24843d14a72d604c';
 
 const FEATURES = join('src', 'features');
 
@@ -43,6 +43,7 @@ const shapeFiles = (): string[] => {
   return [
     join('src', 'apollo', 'cache.ts'),
     join('src', 'apollo', 'cacheFieldPolicies.ts'),
+    join('src', 'apollo', 'feed', 'feedTypePolicies.ts'),
     // The assembly, not just the parts: dropping a feature from
     // `FEATURE_TYPE_POLICIES` uninstalls every policy it declares while the
     // file holding them is untouched, so the hash would not move.

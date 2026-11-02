@@ -1,4 +1,5 @@
 import { requireApolloClient } from '#/apollo/clientRegistry';
+import { feedEngine } from '#/apollo/feed/feedEngine';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
@@ -130,6 +131,7 @@ function scheduleReread(): void {
 /** A later pass emptied the queue: run the reread a withdrawal left owed. */
 function onQueueDrained(): void {
   if (rereadOwed && !hasQueuedWork()) void reread();
+  feedEngine.catchUp();
 }
 
 /** Resolves the withdrawal toast, naming the entity where the map knows it. */

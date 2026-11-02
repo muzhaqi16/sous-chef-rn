@@ -376,6 +376,8 @@ All performance data is reported to the Telemetry system:
 - `app_js_bundle_load_ms` - JS bundle load time
 - `app_content_appeared_ms` - Time to first content visible
 - `http_request_duration_ms` - HTTP request duration by host
+- `offline_queue_drain_ms` - One drain that had writes to send
+- `feed_pull_ms` - One change feed pull, sent to applied
 - `component_commit_gap_ms` - Distribution of wall time between a component's
   consecutive commits. NOT render cost (includes idle time): React's
   `<Profiler onRender>` would give true `actualDuration`, but

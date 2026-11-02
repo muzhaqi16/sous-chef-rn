@@ -8,6 +8,7 @@ export type FeatureFlag =
   | 'deviceReceiptModel'
   | 'deviceReceiptReading'
   | 'ingredientPaste'
+  | 'listChangeFeed'
   | 'pantrySuggestions'
   | 'receiptParsing'
   | 'recipeCapturePhoto'
@@ -32,6 +33,9 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   deviceReceiptReading: true,
   // Pasted ingredient lines read by the API's `parseIngredientLines`.
   ingredientPaste: true,
+  // A shopping list kept current by the API's change feed; off, its screens
+  // refresh through their own reads and no feed request is sent.
+  listChangeFeed: true,
   // Discovery ranked by the API's `recipeSuggestions`; off, the catalog's discovery.
   pantrySuggestions: true,
   // A receipt read by the API's `createReceiptParse`; off, only the phone reads it.

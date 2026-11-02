@@ -19,6 +19,7 @@ import {
   type RowAdoption,
 } from './types';
 import { prepareReplay } from './prepareReplay';
+import type { FeedApplied } from '#/apollo/feed/types';
 import { lastCleanAnswerAt } from './serverAnswers';
 import {
   overwritesMergedQuantity,
@@ -298,6 +299,7 @@ export class QueueManager {
     });
 
     logger.info(`📊 Queue: Found ${mutations.length} pending mutations`);
+    const drainStartedAt = performance.now();
 
     let succeeded = 0;
     let failed = 0;
@@ -384,6 +386,10 @@ export class QueueManager {
 
     logger.info(
       `📦 Queue: Drain complete — ${succeeded} succeeded, ${failed} failed`,
+    );
+    Telemetry.histogram(
+      'offline_queue_drain_ms',
+      performance.now() - drainStartedAt,
     );
     if (queueStore.getPendingMutationsForUser(userId).length === 0) {
       this.drainedHandler?.(userId);
@@ -932,6 +938,52 @@ export class QueueManager {
           !overwritesMergedQuantity(write),
       );
     });
+  }
+
+  /**
+   * Settles a waiting write a pull confirmed reached its one row. A write being
+   * sent is left to its answer, and any other replays and converges, so the
+   * worst a miss costs is a send.
+   */
+  settleFromFeed(applied: readonly FeedApplied[]): void {
+    const userId = queueStore.getCurrentUserId();
+    if (!userId) return;
+    const confirmed = new Map(applied.map(row => [row.operationId, row]));
+    const pendingWrites = pendingWritesOf(requireApolloClient().cache);
+    for (const entry of queueStore.getPendingMutationsForUser(userId)) {
+      const write = entry.pendingWrite;
+      const row = write && confirmed.get(write.id);
+      const { subjectIds } = queuedSubject(entry);
+      if (
+        !write ||
+        !row ||
+        !pendingWrites.settlesFromFeed(entry.operationName) ||
+        subjectIds.length !== 1 ||
+        subjectIds[0] !== row.entityId
+      ) {
+        continue;
+      }
+      if (row.version !== null) {
+        this.moveFollowersTo(entry, row.entityId, row.version);
+      }
+      pendingWrites.drop(write.id);
+      queueStore.removeMutation(entry.id);
+      logger.info(`✅ Queue: ${entry.operationName} confirmed by a pull`);
+    }
+  }
+
+  /** Writes built on a settled write's version go on from the one it reached. */
+  private moveFollowersTo(
+    settled: QueuedMutation,
+    rowId: string,
+    version: number,
+  ): void {
+    const base = versionOf(settled.variables.input);
+    this.rewritePending(
+      settled,
+      pending => queuedSubject(pending).subjectIds.includes(rowId),
+      input => (input.version === base ? { ...input, version } : input),
+    );
   }
 
   /** Rewrites the input of each other pending write `affects` picks. */

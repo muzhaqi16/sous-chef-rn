@@ -4,6 +4,7 @@ import {
   setChangesNotSavedOpener,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
+import { feedEngine } from '#/apollo/feed/feedEngine';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
@@ -109,6 +110,19 @@ describe('queue failure handler', () => {
     // handler that was always null, so a rejected local change stayed on screen.
     expect(spy).toHaveBeenCalledWith(handleQueueFailure);
     spy.mockRestore();
+  });
+
+  it('catches the change feed up once the queue has drained', () => {
+    const spy = jest.spyOn(queueManager, 'setDrainedHandler');
+    registerQueueFailureHandler();
+    const [[drained]] = spy.mock.calls as [[(userId: string) => void]];
+    spy.mockRestore();
+    const catchUp = jest.spyOn(feedEngine, 'catchUp');
+
+    drained('user-1');
+
+    expect(catchUp).toHaveBeenCalledTimes(1);
+    catchUp.mockRestore();
   });
 
   describe('a removal the queue kept because its entry merged', () => {

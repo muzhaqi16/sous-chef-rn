@@ -141,6 +141,22 @@ describe('authLink', () => {
       expect(headers['x-device-id']).toBe('test-device-id');
     });
 
+    it('names the write, the same on a first send and a replay', async () => {
+      const first = await run(GetPantryDocument, { pendingWriteId: 'write-1' });
+      const replay = await run(GetPantryDocument, {
+        pendingWriteId: 'write-1',
+      });
+
+      expect(first['x-operation-id']).toBe('write-1');
+      expect(replay['x-operation-id']).toBe('write-1');
+    });
+
+    it('sends no operation id with no pending write', async () => {
+      const headers = await run(GetPantryDocument);
+
+      expect(headers).not.toHaveProperty('x-operation-id');
+    });
+
     // Storage has not opened yet. The header is omitted rather than filled with
     // a freshly generated value, which the server would read as a NEW device on
     // every launch; absent is not an error, it is an unattributed request.

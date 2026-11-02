@@ -264,11 +264,11 @@ describe('errorService', () => {
       );
     });
 
-    it('detects query complexity errors first', () => {
-      const error = new Error('query too complex');
+    it('detects a page limit refusal first', () => {
+      const error = new Error('page limit');
       (isQueryComplexityError as jest.Mock).mockReturnValue(true);
       (describeQueryComplexity as jest.Mock).mockReturnValue(
-        'Query too complex message',
+        'Page limit message',
       );
 
       const result = errorService.parseApolloError(error, {
@@ -276,7 +276,7 @@ describe('errorService', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error?.code).toBe('QUERY_TOO_COMPLEX');
+      expect(result.error?.code).toBe('PAGINATION_LIMIT_EXCEEDED');
     });
 
     it('detects version conflict errors', () => {

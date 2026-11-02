@@ -1,13 +1,12 @@
 /**
- * The API's query complexity limits: depth 10, 150 fields per query, 100 items
- * per page.
+ * The API's page-size refusal. Its query limits (cost, depth, tokens, length,
+ * aliases, directives) refuse a document before execution, so a build meets
+ * them only by shipping one over a limit; nothing counts fields.
  */
 
-// PAGINATION_LIMIT_EXCEEDED is a TopLevelErrorCode member, repeated literally
-// because a TS string enum rejects a computed initializer. QUERY_TOO_COMPLEX is
-// in neither generated enum — the API's registry has no such code.
+// A TopLevelErrorCode member, repeated literally because a TS string enum
+// rejects a computed initializer.
 export enum QueryComplexityErrorType {
-  TOO_COMPLEX = 'QUERY_TOO_COMPLEX',
   PAGINATION_LIMIT_EXCEEDED = 'PAGINATION_LIMIT_EXCEEDED',
 }
 
@@ -16,10 +15,6 @@ export enum QueryComplexityErrorType {
  */
 export interface QueryComplexityDetails {
   errorType: QueryComplexityErrorType;
-  maxDepth?: number;
-  actualDepth?: number;
-  maxFields?: number;
-  actualFields?: number;
   maxPagination?: number;
   requestedPagination?: number;
 }
@@ -29,10 +24,6 @@ export interface QueryComplexityDetails {
  */
 interface QueryComplexityExtensions {
   code?: string;
-  maxDepth?: number;
-  actualDepth?: number;
-  maxFields?: number;
-  actualFields?: number;
   maxPagination?: number;
   requestedPagination?: number;
 }
@@ -67,15 +58,13 @@ export function isQueryComplexityError(error: unknown): boolean {
   if (err.graphQLErrors) {
     return err.graphQLErrors.some(
       e =>
-        e.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
         e.extensions?.code ===
-          QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
+        QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
     );
   }
 
   if (err.extensions) {
     return (
-      err.extensions.code === QueryComplexityErrorType.TOO_COMPLEX ||
       err.extensions.code === QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED
     );
   }
@@ -100,9 +89,8 @@ export function getQueryComplexityDetails(
   if (err.graphQLErrors) {
     complexityError = err.graphQLErrors.find(
       e =>
-        e.extensions?.code === QueryComplexityErrorType.TOO_COMPLEX ||
         e.extensions?.code ===
-          QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
+        QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
     );
   } else if (err.extensions) {
     complexityError = err;
@@ -120,31 +108,11 @@ export function getQueryComplexityDetails(
   };
 }
 
-/** What the complexity limit refused, for the log; the user sees `errors.codes.*`. */
+/** What the page limit refused, for the log; the user sees `errors.codes.*`. */
 export function describeQueryComplexity(error: unknown): string {
   const details = getQueryComplexityDetails(error);
-
-  if (!details) {
-    return 'The request was too complex. Please try again with less data.';
+  if (details?.requestedPagination && details.maxPagination) {
+    return `Cannot request ${details.requestedPagination} items. Maximum is ${details.maxPagination}.`;
   }
-
-  switch (details.errorType) {
-    case QueryComplexityErrorType.TOO_COMPLEX:
-      if (details.actualDepth && details.maxDepth) {
-        return `Query is too complex (depth: ${details.actualDepth}, max: ${details.maxDepth}). Please simplify your request.`;
-      }
-      if (details.actualFields && details.maxFields) {
-        return `Query requests too many fields (${details.actualFields}, max: ${details.maxFields}). Please reduce the number of fields.`;
-      }
-      return 'Query is too complex. Please simplify your request.';
-
-    case QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED:
-      if (details.requestedPagination && details.maxPagination) {
-        return `Cannot request ${details.requestedPagination} items. Maximum is ${details.maxPagination} items per request.`;
-      }
-      return 'Pagination limit exceeded. Please request fewer items.';
-
-    default:
-      return 'Query complexity limit exceeded. Please simplify your request.';
-  }
+  return 'Pagination limit exceeded. Please request fewer items.';
 }

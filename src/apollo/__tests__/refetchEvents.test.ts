@@ -12,6 +12,7 @@ import { Telemetry } from '#/services/telemetry';
 import type { StoreApi } from 'zustand';
 import { resetSessionEndingGate, whileSessionEnds } from '#store/sessionEnding';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import { feedEngine } from '#/apollo/feed/feedEngine';
 import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
 import { changeLanguage, getResolvedLanguage } from '#/i18n';
 import { languageLink } from '../links/languageLink';
@@ -37,6 +38,9 @@ jest.mock('#/apollo/links/wsLink', () => ({
 }));
 jest.mock('#/apollo/offlineQueue/queueManager', () => ({
   queueManager: { whenIdle: jest.fn(async () => {}) },
+}));
+jest.mock('#/apollo/feed/feedEngine', () => ({
+  feedEngine: { catchUp: jest.fn() },
 }));
 interface MockSessionState {
   user: { id: string } | null;
@@ -299,6 +303,20 @@ describe('resync', () => {
       );
     },
   );
+
+  it('catches the feed up once the queue is idle, not before', async () => {
+    const idle = deferred();
+    jest.mocked(queueManager.whenIdle).mockReturnValueOnce(idle.promise);
+
+    triggers.appForeground();
+    await pastTheWindow();
+    expect(feedEngine.catchUp).not.toHaveBeenCalled();
+
+    idle.resolve();
+    await pastTheWindow();
+
+    expect(feedEngine.catchUp).toHaveBeenCalledTimes(1);
+  });
 
   it('refetches once for triggers that arrive while a resync is pending', async () => {
     const idle = deferred();

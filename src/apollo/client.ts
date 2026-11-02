@@ -12,6 +12,7 @@ import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { registerApolloResetBridge } from '#store/apolloResetBridge';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
+import { listShards } from '#features/shoppingList/offline/listShards';
 import { queueStore } from './offlineQueue/queueStore';
 import { pendingWritesOf } from './pendingWrites/pendingWrites';
 import { onCacheWrite } from './utils/onCacheWrite';
@@ -74,6 +75,7 @@ export function restorePersistedCache(): void {
     );
     cacheInstance.restore(persistedCache);
   }
+  apolloCachePersistence.restoreShards();
   // From the queue, not the cache: losing the cache costs a refetch, never a change.
   pendingWritesOf(cacheInstance).restore(queueStore.getPendingWrites());
 
@@ -107,6 +109,7 @@ export function createApolloClient(
   const cache = makeCache();
 
   cacheInstance = cache;
+  apolloCachePersistence.attachShards(listShards, cache);
 
   // Fast path only: storage is usually still initializing at this point, so
   // this is normally a no-op and App retries at the hydration boundary.
