@@ -194,7 +194,7 @@ grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/Scr
 silently discards a function-style `style={({ pressed }) => [...]}` callback —
 the child receives `{}`.
 
-**Verified against `react-native-unistyles@3.7.0` (2026-10-28, in source).**
+**Verified against `react-native-unistyles@3.8.0` (2026-11-02, in source).**
 `withUnistyles.native.tsx` builds the forwarded style with
 `Object.assign(acc, secret.uni__getStyles())`. For a function-valued `style`
 that is the function itself, and an arrow function has no own enumerable
@@ -214,20 +214,23 @@ React, and the next React commit can put the old values back on a view that a
 Reanimated animated style has registered, and on everything under it.
 Reanimated re-applies only the props it owns.
 
-**Verified against `react-native-unistyles@3.5.3` +
-`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator; first measured on 3.5.0 on an iOS simulator; the skip below is
-unchanged in 3.7.0, 2026-10-28),** by running
-`UnistylesShadowRegistry.verify()` after every commit. Right after the
-Unistyles theme commit there were 0 mismatches; the next React commit put
-`CollapsingHeroDetail`'s hero back on the old theme. With a
-`ThemeEpochSentinel` in both of the template's Reanimated containers: 0 (on
-Android 0 of 564 views, against 1 of 563 without the hero's sentinel).
+**Verified against `react-native-unistyles@3.8.0` +
+`react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-11-02, iOS
+simulator; first measured on 3.5.0, and on Android on 3.5.3),** by running
+`UnistylesShadowRegistry.verify()` after every commit. On a freshly mounted
+four-photo `PantryItemDetail` with every `ThemeEpochSentinel` rendering nothing,
+the first theme change left 3 or 4 views (`dot`, `heroInner`) on the old theme
+through 3 s, on 3.7.0 and on 3.8.0, and a screenshot showed the same. With the
+sentinels, 3.8.0 gave 0 of 165 in both directions, and 0 mismatches in a paused
+stack, on the list rows, under a toast and an open sheet, for density, high
+contrast and primary colour, and for a change made during a rotation.
 
 The mechanism: `ReanimatedCommitHook` clones each registered view and its
 ancestors without a runtime shadow node reference, so React's own instance of
-those views is never mounted. Unistyles' `refreshReactNodes` skips any node
-never mounted, and React re-attaches the pre-theme subtree on its next commit.
+those views is never mounted, and React can re-attach the pre-theme subtree on
+its next commit. Since 3.8.0 (#1353) `refreshReactNodes` also refreshes those
+nodes, and the hero still reverts, for a reason not found. A store write is not
+it: the views stay stale with no store write, and with one a task later.
 
 The fixes: themed values on the animated view itself go in a theme-only
 `useAnimatedStyle` over `useAnimatedTheme()` (enforced by
@@ -238,8 +241,9 @@ re-keyed on each theme commit. Upstream:
 [unistyles#1170](https://github.com/jpudysz/react-native-unistyles/issues/1170),
 [unistyles#1007](https://github.com/jpudysz/react-native-unistyles/issues/1007).
 
-Re-check: remove the sentinel from `CollapsingHeroDetail`'s hero, then open a
-fresh `PantryItemDetail`, `setTheme('DARK')`, and navigate away and back.
+Re-check: make `ThemeEpochSentinel` render nothing, reload, open a fresh
+`PantryItemDetail` for an item with several photos (one photo has no dots and
+passes either way), and `setTheme('DARK')`.
 `UnistylesShadowRegistry.verify()` (module
 `react-native-unistyles/src/specs/ShadowRegistry`) through `debugger-evaluate`
 then reports `dot` / `heroInner` mismatches. In source:
@@ -255,7 +259,7 @@ grep -n -B 3 "getHasBeenPromoted" node_modules/react-native-unistyles/cxx/hybrid
 not `UnistylesRuntime.updateTheme` giving the scoped theme itself new values.
 A view styled by `StyleSheet.create` is updated natively and does follow.
 
-**Verified against `react-native-unistyles@3.7.0` (2026-10-28, in source; on
+**Verified against `react-native-unistyles@3.8.0` (2026-11-02, in source; on
 an Android emulator on 3.5.2).** `useProxifiedUnistyles` builds its listener
 with `updateTheme: () => { if (scopedTheme) return; … }`, and inside a scope
 `scopedTheme` is the scope's name.
@@ -279,7 +283,7 @@ values. `useUnistyles` and `withUnistyles` catch up on their own.
 
 **Verified against `react-native-unistyles@3.5.3` +
 `react-native-reanimated@4.7.1` + `react-native@0.86.3` (2026-10-13, Android
-emulator); the hook's source is unchanged in 3.7.0 (2026-10-28).** With Profile two levels down the stack, the theme went from dark to
+emulator); the hook's source is unchanged in 3.8.0 (2026-11-02).** With Profile two levels down the stack, the theme went from dark to
 light. Back on Profile the page, text and icons were light, and `ProfileHero`'s
 avatar fill, which a `useAnimatedStyle` reads from the animated theme, was still
 the dark surface `rgb(54, 51, 44)`. `UnistylesShadowRegistry.verify()` reports

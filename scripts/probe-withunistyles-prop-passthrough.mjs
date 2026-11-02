@@ -20,7 +20,7 @@ const source = readFileSync(SRC, 'utf8');
 
 // The package ships TS; lift the one function out rather than adding a build step.
 const start = source.indexOf('export const deepMergeObjects');
-const end = source.indexOf('export const copyComponentProperties');
+const end = source.indexOf('\n}\n', start) + 3;
 const body = source
   .slice(start, end)
   .replace('export const deepMergeObjects', 'const deepMergeObjects')
