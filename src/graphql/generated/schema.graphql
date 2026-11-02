@@ -631,6 +631,7 @@ same value on both channels for the same condition.
 """
 type AuthenticationError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -781,6 +782,8 @@ type BatchElementFailure {
   not on the reason text.
   """
   code: ErrorCode!
+  """What to do with this element, as on any other error."""
+  disposition: ErrorDisposition!
   """Set only when the reason was masked."""
   errorId: String
   """
@@ -1931,6 +1934,11 @@ invariant. Includes both `CONFLICT` (logical) and `VERSION_CONFLICT`
 """
 type ConflictError implements Error {
   code: ErrorCode!
+  """
+  The version the row holds, when the write lost a version check; otherwise null.
+  """
+  currentVersion: Int
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -4987,6 +4995,7 @@ user to restock the existing stack, or resend with `forceAdd`. The `code` is
 """
 type DuplicatePantryItemError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   """
   Active pantry items already stocking this catalog item — offer a one-tap restock.
   """
@@ -5079,6 +5088,8 @@ type implements this so clients can write a generic
 """
 interface Error {
   code: ErrorCode!
+  """What to do with the write, whether or not this build knows the code."""
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -5189,6 +5200,20 @@ enum ErrorCode {
   UNSTATED_AMOUNT
   VALIDATION_FAILED
   VERSION_CONFLICT
+}
+
+"""What a client does with a write this error answered."""
+enum ErrorDisposition {
+  """It already landed, so nothing is left to send."""
+  APPLIED
+  """It can't succeed as sent, so stop retrying it."""
+  FAIL
+  """
+  It can succeed once something else changes: a new sign-in, an app update or a newer read.
+  """
+  RESOLVE
+  """Transient. The same request can succeed later, with backoff."""
+  RETRY
 }
 
 input ExchangeDeviceCredentialInput {
@@ -5585,6 +5610,7 @@ authentication failure — the caller is not identified at all — is
 """
 type ForbiddenError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -6494,6 +6520,7 @@ type InsufficientQuantityError implements Error {
   available: Float
   availableUnitSymbol: String
   code: ErrorCode!
+  disposition: ErrorDisposition!
   field: String
   message: String!
 }
@@ -11120,6 +11147,7 @@ A referenced resource does not exist (or is not visible to the caller).
 """
 type NotFoundError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   message: String!
   """Logical resource type, e.g. `MealPlan`."""
   resource: String
@@ -11807,6 +11835,18 @@ enum NutritionSource {
   AUTO
   MANUAL
   PARTIAL
+}
+
+"""
+The limits a client shares with the server, so its queue and pulls follow them.
+"""
+type OfflineLimits {
+  """The most scopes one syncChanges may name."""
+  maxSyncScopes: Int!
+  """
+  Days a queued write stays safe to replay. A client's own limit never exceeds it.
+  """
+  replayWindowDays: Int!
 }
 
 """Input for opening a specific batch"""
@@ -14605,6 +14645,8 @@ type Query {
   returns it too.
   """
   notificationSummary: NotificationSummary!
+  """What a client's queue and pulls have to keep to. It needs no session."""
+  offlineLimits: OfflineLimits!
   """
   Fetch a single pantry by its ID: null when there is none, FORBIDDEN for a
   caller who may not view it — not a member of its home, or a member whose
@@ -15099,7 +15141,7 @@ type Query {
     """
     orderBy: StoreOrderBy
   ): StoreConnection!
-  """What changed in up to 25 scopes, each from its own cursor."""
+  """What changed in up to maxSyncScopes scopes, each from its own cursor."""
   syncChanges(input: SyncChangesInput!): [SyncPage!]!
   """
   Every scope the caller can reach. Read it on connect and on a REACH_CHANGED
@@ -18742,6 +18784,8 @@ type SkippedRecipeIngredient {
   error. Branch on this, not on the reason text.
   """
   code: ErrorCode!
+  """What to do with this item, as on any other error."""
+  disposition: ErrorDisposition!
   """
   Set only when the reason was masked. Names the log entry holding the real
   error, so support can look it up.
@@ -19900,7 +19944,7 @@ type SyncApplied {
 input SyncChangesInput {
   """Entities per scope, at most 100. The list's own row is not counted"""
   first: Int
-  """The scopes to pull, at most 25"""
+  """The scopes to pull, at most offlineLimits.maxSyncScopes"""
   scopes: [SyncScopeCursorInput!]!
 }
 
@@ -20465,6 +20509,7 @@ which are not listed.
 type UnitEligibilityError implements Error {
   code: ErrorCode!
   denial: UnitDenial
+  disposition: ErrorDisposition!
   field: String
   message: String!
   validUnits: [String!]!
@@ -22837,6 +22882,7 @@ specific field failed validation (carried in `field`).
 """
 type ValidationError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   """
   Dotted path to the first offending field, when the error is field-specific.
   """
