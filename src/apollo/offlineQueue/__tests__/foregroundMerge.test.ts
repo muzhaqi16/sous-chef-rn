@@ -164,7 +164,12 @@ it('sends an edit made before the answer against the surviving row', async () =>
 
   expect(edit.fired).toEqual([
     expect.objectContaining({
-      input: { id: SURVIVOR, version: 7, notes: 'oat' },
+      input: {
+        id: SURVIVOR,
+        version: 7,
+        notes: 'oat',
+        idempotencyKey: expect.any(String),
+      },
     }),
   ]);
 });

@@ -621,6 +621,7 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
   updatePantryItem(input: $input) {
     __typename
     ... on UpdatePantryItemPayload {
+      converged
       storageLocation {
         id
         ...StorageLocationReaders

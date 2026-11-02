@@ -293,6 +293,7 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired).toContainEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         quantity: '5',
         unit: { id: 'unit-1' },
@@ -320,7 +321,14 @@ describe('useQuantityEditModal', () => {
     });
 
     expect(m.fired).toEqual([
-      { input: { id: 'item-1', quantity: '5', version: 3 } },
+      {
+        input: {
+          id: 'item-1',
+          quantity: '5',
+          version: 3,
+          idempotencyKey: expect.any(String),
+        },
+      },
     ]);
   });
 
@@ -350,6 +358,7 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired[0]).toEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         quantity: '1.5',
         unit: { id: 'unit-1' },
@@ -403,6 +412,7 @@ describe('useQuantityEditModal', () => {
     expect(shown).toBeCloseTo(1.125, 3);
     expect(m.fired[0]).toEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         quantity: '1.125',
         unit: { id: 'unit-1' },
@@ -437,6 +447,7 @@ describe('useQuantityEditModal', () => {
 
     expect(m.fired[0]).toEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         quantity: '2 1/3',
         unit: { id: 'unit-1' },
@@ -774,6 +785,7 @@ describe('useQuantityEditModal — the amount as the row reads it', () => {
     expect(ahead).toBe(2);
     expect(m.fired[0]).toEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         quantity: '1',
         unit: { id: 'unit-kg' },

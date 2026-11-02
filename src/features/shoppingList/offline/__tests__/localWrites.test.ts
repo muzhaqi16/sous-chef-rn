@@ -442,6 +442,27 @@ describe('with a list of both kinds of row', () => {
       });
     });
 
+    it('files the row where the answer leaves it, when a resend finds it unticked since', () => {
+      const list = bothKinds();
+      const { id } = tick(list, 'held', true);
+
+      list.writes.confirm(id, {
+        updateShoppingListItem: {
+          __typename: 'UpdateShoppingListItemPayload',
+          converged: true,
+          shoppingListItem: {
+            __typename: 'ShoppingListItem',
+            id: 'held',
+            purchaseInfo: { isPurchased: false },
+          },
+        },
+      });
+      list.writes.rebuild();
+
+      expect(shownIds(list)).toEqual(['held']);
+      expect(boughtIds(list)).toEqual(['bought']);
+    });
+
     describe('answered with a read in flight', () => {
       const ticked = {
         updateShoppingListItem: {

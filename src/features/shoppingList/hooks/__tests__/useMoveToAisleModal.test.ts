@@ -93,6 +93,7 @@ describe('useMoveToAisleModal', () => {
     expect(update.fired).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'line-1',
           version: 4,
           storePrefs: { storeDepartmentOverride: StoreDepartment.Frozen },
@@ -123,6 +124,7 @@ describe('useMoveToAisleModal', () => {
     expect(update.fired).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'line-1',
           version: 4,
           storePrefs: { storeDepartmentOverride: null },

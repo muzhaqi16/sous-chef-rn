@@ -134,7 +134,17 @@ const rowConflict: ConflictRead<UpdateRowInputs> = {
   }),
 };
 
+/** Whether an answer leaves its row ticked, when it says. */
+function answeredIsPurchased(data: unknown): boolean | undefined {
+  const payload: unknown = appliedPayload(data);
+  const row: unknown = isRecord(payload) ? payload.shoppingListItem : undefined;
+  const info: unknown = isRecord(row) ? row.purchaseInfo : undefined;
+  const isPurchased: unknown = isRecord(info) ? info.isPurchased : undefined;
+  return typeof isPurchased === 'boolean' ? isPurchased : undefined;
+}
+
 export const updateRow: LocalWrite<UpdateRowInputs> = {
+  keyed: true,
   conflict: rowConflict,
   capture: (cache, variables) => ({
     baseline: rowBaseline(cache, rowConflict, variables),
@@ -152,11 +162,16 @@ export const updateRow: LocalWrite<UpdateRowInputs> = {
       move(cache, listId, row);
     }
   },
-  commit(cache, { variables, inputs: { purchase } }) {
+  // A converged answer is the row as it stands, which another tick may have moved.
+  commit(cache, { variables, inputs: { purchase } }, data) {
     const row = rowOf(variables);
     if (!row || !purchase) return;
-    const { listId, isPurchased } = purchase;
-    moveAnsweredShoppingListItem(cache, listId, row.id, isPurchased);
+    moveAnsweredShoppingListItem(
+      cache,
+      purchase.listId,
+      row.id,
+      answeredIsPurchased(data) ?? purchase.isPurchased,
+    );
   },
 };
 

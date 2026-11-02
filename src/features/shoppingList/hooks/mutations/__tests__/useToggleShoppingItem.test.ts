@@ -321,6 +321,7 @@ describe('useToggleShoppingItem — toggleItem', () => {
     expect(recorded).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'item-1',
           version: 3,
           purchaseTracking: { isPurchased: true },
@@ -362,6 +363,7 @@ describe('useToggleShoppingItem — toggleItem', () => {
     expect(recorded).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'item-1',
           version: 3,
           purchaseTracking: { isPurchased: false },
@@ -392,6 +394,7 @@ describe('useToggleShoppingItem — toggleItem', () => {
     expect(ticked).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'item-1',
           version: 3,
           purchaseTracking: {
@@ -417,6 +420,7 @@ describe('useToggleShoppingItem — toggleItem', () => {
     expect(unticked).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'item-1',
           version: 3,
           purchaseTracking: { isPurchased: false },
@@ -459,6 +463,7 @@ describe('useToggleShoppingItem — claimPurchased', () => {
     expect(recorded).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'item-1',
           version: 3,
           purchaseTracking: {
@@ -483,6 +488,7 @@ describe('useToggleShoppingItem — claimPurchased', () => {
     expect(recorded).toEqual([
       {
         input: {
+          idempotencyKey: expect.any(String),
           id: 'item-1',
           version: 3,
           purchaseTracking: { isPurchased: true },
@@ -543,6 +549,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     // The mutation carried the cached snapshot version + entered amounts.
     expect(recorded).toContainEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         version: 3,
         purchaseTracking: {
@@ -575,6 +582,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
 
     expect(recorded).toContainEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         version: 3,
         purchaseTracking: {
@@ -642,6 +650,7 @@ describe('useToggleShoppingItem — recordPurchase', () => {
     // A null price is dropped so the server auto-derives it.
     expect(recorded[0]).toEqual({
       input: {
+        idempotencyKey: expect.any(String),
         id: 'item-1',
         version: 3,
         purchaseTracking: { isPurchased: true, purchasedQuantity: 2 },

@@ -729,6 +729,7 @@ mutation UpdateShoppingListItem($input: UpdateShoppingListItemInput!) {
   updateShoppingListItem(input: $input) {
     __typename
     ... on UpdateShoppingListItemPayload {
+      converged
       shoppingListItem {
         id
         ...ShoppingListItemReaders

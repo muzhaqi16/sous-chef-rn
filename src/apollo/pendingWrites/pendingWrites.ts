@@ -11,6 +11,7 @@ import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { returnedVersionOf, versionOf } from '#/apollo/utils/returnedVersion';
 import type { Settled } from '#/apollo/utils/settleMutation';
 import { errorService } from '#/services/errorService';
+import { generateEntityId } from '#/utils/generateEntityId';
 import { generateId } from '#/utils/generateId';
 import { isRecord } from '#/utils/isRecord';
 import { LOCAL_WRITES } from './localWriteRegistry';
@@ -96,7 +97,7 @@ export class PendingWrites {
       id: generateId(),
       operationName,
       document,
-      variables,
+      variables: local.keyed ? withIdempotencyKey(variables) : variables,
       inputs: { ...given, ...local.capture?.(this.cache, variables) },
     };
     this.writes.push(write);
@@ -481,6 +482,13 @@ export class PendingWrites {
     this.remove(write.id);
     this.scheduleRebuild();
   }
+}
+
+function withIdempotencyKey(variables: OperationVariables): OperationVariables {
+  const { input } = variables;
+  return isRecord(input)
+    ? { ...variables, input: { ...input, idempotencyKey: generateEntityId() } }
+    : variables;
 }
 
 /**

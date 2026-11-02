@@ -1,4 +1,9 @@
-import { ApolloClient, ApolloLink, Observable } from '@apollo/client';
+import {
+  ApolloClient,
+  ApolloLink,
+  Observable,
+  type OperationVariables,
+} from '@apollo/client';
 import { MockLink } from '@apollo/client/testing';
 import { makeCache } from '#/apollo/cache';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
@@ -62,14 +67,14 @@ const ROW = {
 
 /** A link no request gets past, as a connection the app dies on. */
 function lostConnection() {
-  let arrive = () => {};
-  const reached = new Promise<void>(resolve => {
+  let arrive: (sent: OperationVariables) => void = () => undefined;
+  const reached = new Promise<OperationVariables>(resolve => {
     arrive = resolve;
   });
   const link = new ApolloLink(
-    () =>
+    operation =>
       new Observable(() => {
-        arrive();
+        arrive(operation.variables);
       }),
   );
   return { link, reached };
@@ -123,12 +128,16 @@ function restart(link: ApolloLink): ApolloClient {
   return client;
 }
 
-const shownRow = (client: ApolloClient) =>
+const readRow = (client: ApolloClient, optimistic: boolean) =>
   client.cache.readFragment<PantryItemConflict_PantryItemFragment>({
     id: client.cache.identify({ __typename: 'PantryItem', id: ITEM_ID }),
     fragment: PantryItemConflict_PantryItemFragmentDoc,
-    optimistic: true,
+    optimistic,
   });
+
+const shownRow = (client: ApolloClient) => readRow(client, true);
+
+const serverRow = (client: ApolloClient) => readRow(client, false);
 
 let toastError: jest.SpyInstance;
 
@@ -159,7 +168,7 @@ describe('the app killed while a write is on its way', () => {
   const killedMidSend = async () => {
     const lost = lostConnection();
     void editNotes(clientOver(lost.link));
-    await lost.reached;
+    return await lost.reached;
   };
 
   it('shows the change on the first read after the restart', async () => {
@@ -215,6 +224,42 @@ describe('the app killed while a write is on its way', () => {
     expect(toastError).not.toHaveBeenCalled();
     expect(queueStore.getRefusedCount()).toBe(0);
     expect(shownRow(client)).toMatchObject({
+      version: 4,
+      storageNotes: 'my notes',
+    });
+  });
+
+  it('converges on its key, with no re-read, when the server had already taken an update', async () => {
+    const firstSend = await killedMidSend();
+    const update = recordMock(UpdatePantryItemDocument, {
+      data: {
+        updatePantryItem: {
+          __typename: 'UpdatePantryItemPayload',
+          converged: true,
+          pantryItem: { ...ROW, version: 4, storageNotes: 'my notes' },
+        },
+      },
+      maxUsageCount: 1,
+    });
+    const row = recordMock(PantryItemForConflictDocument, {
+      data: { pantryItem: ROW },
+      maxUsageCount: 1,
+    });
+    const client = restart(answering(update, row));
+
+    await queueManager.processQueue();
+
+    expect(firstSend).toMatchObject({
+      input: { idempotencyKey: expect.any(String) },
+    });
+    expect(update.fired).toEqual([
+      expect.objectContaining({ input: firstSend.input }),
+    ]);
+    expect(row.fired).toEqual([]);
+    expect(toastError).not.toHaveBeenCalled();
+    expect(queueStore.getRefusedCount()).toBe(0);
+    expect(queueStore.getPendingMutationsForUser('user-1')).toEqual([]);
+    expect(serverRow(client)).toMatchObject({
       version: 4,
       storageNotes: 'my notes',
     });

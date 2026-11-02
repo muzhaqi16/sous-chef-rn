@@ -356,8 +356,8 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   network failure or a 5xx, `handBack` turns it `PENDING` and the drain carries it. The drain's reset
   leaves an entry this run is still sending, by an in-memory set, and writes on its row wait behind it.
   Killed mid-send, the entry is still `PROCESSING` at the next launch: `restore` shows its layer, and the
-  first drain returns it to `PENDING` and replays it. A create resolves to the same row, a delta
-  converges on its key, and an update that landed settles from the row. A write that cannot be stored,
+  first drain returns it to `PENDING` and replays it. A create resolves to the same row, and a delta or
+  a `keyed` update converges on its key. A write that cannot be stored,
   with storage or the queue full, goes anyway, and `offline_queue_journal_failed_total` counts it.
 - **Onboarding's setup waits for the account to be read.** Offline with nothing held, it cannot tell a
   new account from one that holds a home or an invitation, and a local-first create cannot be merged
@@ -387,7 +387,7 @@ A queued write replays as the canonical mutation it was queued as — the API's 
 | Queued write                                                            | Why a re-send is safe                                                                                         |
 | ----------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | Create with a client-minted id (`CreatePantryItem`, the batch adds, …)  | the id is the row's PK: a re-send converges and returns the row, or answers `IDEMPOTENT_REPLAY` if it is gone |
-| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | version-checked: a stale version applies nothing (`VERSION_CONFLICT`, § 5)                                    |
+| Update (`UpdatePantryItem`, `UpdateShoppingListItem`, quantity, toggle) | `keyed`: a re-send converges on its key; a new key at a stale version is `VERSION_CONFLICT` (§ 5)            |
 | Delete (`DeletePantryItem`, `RemoveItemFromShoppingList`)               | converges: `converged: true`, the entity `null`                                                               |
 | Reorder (`MoveShoppingListItem`)                                        | repeats to the same order; a line removed since is `NotFoundError`                                            |
 | Cumulative change (the pantry deltas)                                   | at-most-once by `input.idempotencyKey`: a re-send converges and returns the row                               |
@@ -449,6 +449,13 @@ survives a restart) and recipe captures (`sous-chef-recipe-captures`).
 
 - **By PK.** The cuid is `input.id` on create and on its replay; the server keys the row by it, so
   online success and queued replay converge on one row.
+- **By key.** A `LocalWrite` that sets `keyed` gets its `input.idempotencyKey` in `begin`, once, so it
+  travels with the write through the queue. A resend under a spent key writes nothing and answers the
+  row as it stands with `converged: true`, whatever version it names. So `rebasePending` moves the
+  writes behind it only past this write's own step, and `updateRow.commit` files a tick by the answer.
+  A conflict rolls the claim back, so a merge resends under the same key. An entry an older build
+  queued has no key and settles through § 5's re-read. `keyedWritesConverge.test.ts` holds that the
+  input takes the key and the document reads `converged`.
 - **Shopping catalog-merge.** `addItemToShoppingList` is `@@unique([shoppingListId, itemId])` — if a
   client-created item resolves to a catalog item already on the list, the server keeps the **canonical
   row's PK** and increments quantity, so the returned `serverId` may differ from the client cuid. The

@@ -55,6 +55,7 @@ mutation UpdateBrandList($input: UpdateBrandListInput!) {
   updateBrandList(input: $input) {
     __typename
     ... on UpdateBrandListPayload {
+      converged
       brandList {
         id
         ...BrandListReaders

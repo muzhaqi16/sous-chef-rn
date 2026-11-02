@@ -63,6 +63,9 @@ import { useToggleShoppingItem } from '#features/shoppingList/hooks/mutations/us
 jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
+jest.mock('#/utils/generateEntityId', () => ({
+  generateEntityId: () => 'tick-key',
+}));
 
 const LIST_ID = 'list-1';
 const ITEM_ID = 'item-1';
@@ -151,6 +154,7 @@ function buildClient(opts: {
             id: ITEM_ID,
             version: ITEM_VERSION,
             purchaseTracking: { isPurchased: newPurchased },
+            idempotencyKey: 'tick-key',
           },
         }),
     },

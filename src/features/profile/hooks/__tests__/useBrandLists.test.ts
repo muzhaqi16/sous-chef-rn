@@ -164,7 +164,13 @@ describe('useBrandLists', () => {
 
     expect(listOf(result.current.lists, 'list-avoid')?.enabled).toBe(true);
     expect(update.fired).toEqual([
-      { input: { id: 'list-avoid', enabled: true } },
+      {
+        input: {
+          id: 'list-avoid',
+          enabled: true,
+          idempotencyKey: 'minted-1',
+        },
+      },
     ]);
   });
 

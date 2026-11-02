@@ -279,6 +279,7 @@ const pantryRowConflict: ConflictRead<EntityFieldsInputs> = {
 
 export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
   ...entityFields,
+  keyed: true,
   conflict: pantryRowConflict,
   capture: (cache, variables) => ({
     baseline: rowBaseline(cache, pantryRowConflict, variables),

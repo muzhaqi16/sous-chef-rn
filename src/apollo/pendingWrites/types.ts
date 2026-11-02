@@ -47,6 +47,11 @@ export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
   recoverable?: false;
   /** How a stale write learns what became of it; absent, the person decides. */
   conflict?: ConflictRead<TInputs>;
+  /**
+   * Gets its `input.idempotencyKey` here, once, as the write is made, so a
+   * resend of an edit the server took writes nothing and answers `converged`.
+   */
+  keyed?: true;
 }
 
 /** The row a stale write is compared with, on the device and on the server. */

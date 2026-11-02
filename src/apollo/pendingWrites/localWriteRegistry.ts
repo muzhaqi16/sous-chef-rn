@@ -269,7 +269,7 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [RemoveDietaryRestrictionDocument, removeRestriction],
   [UpdateDietarySharingDocument, entityFields],
   [CreateBrandListDocument, createBrandList],
-  [UpdateBrandListDocument, entityFields],
+  [UpdateBrandListDocument, { ...entityFields, keyed: true }],
   [DeleteBrandListDocument, removeBrandList],
   [AddBrandToListDocument, addBrand],
   [RemoveBrandFromListDocument, removeBrand],
