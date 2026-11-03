@@ -32,8 +32,8 @@ Android SIGSEGV in `MountingCoordinator::pullTransaction` that is still open.
   rebuild iOS and Android.
 - **Run the Babel gate:** `npm run check:compiler-bailouts`. It compiles through the Worklets
   Babel plugin, which has to stay last.
-- **Re-run the probes:** `node scripts/probe-reanimated-reduce-motion.mjs`, plus the
-  re-checks under the Reanimated entries in
+- **Run the library test:** `npx jest src/theme/__tests__/reanimatedReduceMotion.library.test.ts`,
+  plus the re-checks under the Reanimated entries in
   [verified library behaviour](verified-library-behaviour.md).
 - **Check the deep imports into Reanimated.** `react-native-gesture-handler` imports
   `react-native-reanimated/src/createAnimatedComponent/NativeEventsManager`, and

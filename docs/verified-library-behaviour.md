@@ -3,7 +3,9 @@
 The probe record behind CLAUDE.md's one-line verification stamps. Each entry
 pins a rule to what the INSTALLED package actually does: the claim, the
 version it was verified against, what in the repo depends on it, and a command
-that re-derives it. **If a rule changes, re-run its probe and update the entry
+that re-derives it. Where Node can reach the behaviour, that command is a
+`*.library.test.ts`, which runs with the suite, so an upgrade that changes it
+fails a test. **If a rule changes, re-run its probe and update the entry
 — a rule without a live check is a hypothesis.** Entries are last verified
 2026-08-23 unless the entry names a later date. An entry stays only while a
 rule, a doc or code in the repo points at it; the investigation behind it is
@@ -147,7 +149,7 @@ and `dragOffsetFromRight` throws in `__DEV__` unless non-positive.
 Re-check:
 
 ```
-node scripts/probe-rngh-nested-scroll.mjs
+npx jest src/components/atoms/__tests__/rnghNestedScroll.library.test.ts
 grep -n "fun cancelHandlersOnNativeTouchGrab" -A 8 node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/GestureHandlerOrchestrator.kt
 ```
 
@@ -176,7 +178,7 @@ Guarded by `sous-chef/rngh-refresh-control-matches-host`.
 Re-check:
 
 ```
-node scripts/probe-withunistyles-prop-passthrough.mjs
+npx jest src/components/atoms/__tests__/withUnistylesPropPassthrough.library.test.ts
 grep -n "cloneElement" -A 8 node_modules/react-native-gesture-handler/src/v3/components/GestureComponents.tsx
 grep -n -A 14 "const refreshControl = useMemo" node_modules/@shopify/flash-list/src/recyclerview/hooks/useSecondaryProps.tsx
 ```
@@ -206,7 +208,7 @@ stays.
 Re-check:
 
 ```
-node scripts/probe-rngh-nested-scroll.mjs
+npx jest src/components/atoms/__tests__/rnghNestedScroll.library.test.ts
 grep -n -A 4 "private class ScrollViewHook" node_modules/react-native-gesture-handler/android/src/main/java/com/swmansion/gesturehandler/core/NativeViewGestureHandler.kt
 grep -n "nestedScrollEnabled" node_modules/react-native/Libraries/Components/ScrollView/ScrollView.js
 ```
@@ -400,7 +402,7 @@ is the only detector of that shape.
 Re-check (compiles one fixture per shape and prints the diagnostic):
 
 ```
-node scripts/probe-compiler-try-forms.mjs
+npx jest __tests__/architecture/compilerTryShapes.library.test.ts
 ```
 
 ### i18next plural category fallback
@@ -491,7 +493,7 @@ grep -n "onCommitLayoutEffect" node_modules/@shopify/flash-list/src/recyclerview
 ### cache.modify cannot add a field
 
 **Verified 2026-08-29 vs `@apollo/client@4.2.12`.** Re-check:
-`node scripts/probe-cache-modify-field-addition.mjs`.
+`npx jest src/apollo/utils/__tests__/cacheModifyFieldAddition.library.test.ts`.
 
 **Claim:** `cache.modify` runs a modifier only for a field the store object
 ALREADY holds. Name a field the cached entity has never carried and the
@@ -515,7 +517,7 @@ field-wise instead of clearing it.
 ### Apollo storeFieldName has two serialized forms
 
 Verified 2026-08-29 vs `@apollo/client@4.2.12` — re-check:
-`node scripts/probe-apollo-cache-shapes.mjs`.
+`npx jest src/apollo/utils/__tests__/cacheShapes.library.test.ts`.
 
 A `cache.modify` modifier receives the field's store key, and Apollo writes it
 two different ways depending on how the field is keyed:
@@ -539,7 +541,7 @@ if a later version does, prefer it over the hand-rolled split.
 ### Apollo reports `loading: true` on every mount, warm cache or not
 
 Verified 2026-08-30 vs `@apollo/client@4.2.12` — re-check:
-`node scripts/probe-apollo-loading-on-mount.mjs`.
+`npx jest src/apollo/__tests__/loadingOnMount.library.test.ts`.
 
 **Claim:** under the app-wide `cache-and-network` -> `cache-first` pair
 (`src/apollo/defaultOptions.ts`), `loading` is `true` on a screen's first render
@@ -581,7 +583,7 @@ the single `useReducedMotion` read, for the loop cases and CSS transitions
 Re-check:
 
 ```
-node scripts/probe-reanimated-reduce-motion.mjs
+npx jest src/theme/__tests__/reanimatedReduceMotion.library.test.ts
 ```
 
 ### Reanimated springs default to mass 4
@@ -685,7 +687,7 @@ Re-check: time both forms in the app's Hermes runtime through
 ### Apollo gc needs no result-cache reset to drop evicted entities
 
 Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
-`node scripts/probe-apollo-gc-result-cache.mjs`.
+`npx jest src/apollo/__tests__/gcResultCache.library.test.ts`.
 
 **Claim:** after `cache.evict` + `cache.gc()`, a watched query and a fresh
 read see exactly the same result with or without `resetResultCache: true`: a
@@ -703,7 +705,7 @@ session end.
 ### Apollo masked results keep identity when only masked fields change
 
 Verified 2026-09-29 vs `@apollo/client@4.2.12` — re-check:
-`node scripts/probe-apollo-masked-result-identity.mjs`.
+`npx jest src/apollo/__tests__/maskedResultIdentity.library.test.ts`.
 
 **Claim:** with `dataMasking: true`, a query does not re-emit when the only
 field that changed sits behind a fragment spread, and its `data` keeps the

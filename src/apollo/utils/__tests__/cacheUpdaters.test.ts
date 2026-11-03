@@ -973,7 +973,7 @@ describe('skipUnmatchedFilterVariants', () => {
  * guard that locates the arguments by searching for `(` sees nothing at all on
  * the colon form. See
  * `docs/verified-library-behaviour.md#apollo-storefieldname-has-two-serialized-forms`;
- * re-derive with `node scripts/probe-apollo-cache-shapes.mjs`.
+ * `cacheShapes.library.test.ts` pins both forms to the installed Apollo.
  */
 describe('skipUnmatchedArgVariants', () => {
   const skip = (storeFieldName: string) =>
