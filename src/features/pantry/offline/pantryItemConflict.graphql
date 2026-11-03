@@ -20,6 +20,7 @@ fragment PantryItemConflict_pantryItem on PantryItem {
   netWeight
   storageNotes
   storageLocation {
+    version
     id
   }
   brand {

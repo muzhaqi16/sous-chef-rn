@@ -12,9 +12,11 @@ import {
   type UseUpdatePantryItem_RowFragment,
 } from './useUpdatePantryItem.generated';
 import { alertService } from '#/services/alertService';
-import { StorageType } from '#/graphql/generated/schemaTypes';
-import { localBrand } from '#features/catalog/cache/localRefs';
-import { generateEntityId } from '#/utils/generateEntityId';
+import type { StorageType } from '#/graphql/generated/schemaTypes';
+import {
+  localBrand,
+  localStorageLocation,
+} from '#features/catalog/cache/localRefs';
 import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { useTranslation } from '#/i18n';
 import { buildDirtyUpdateInput } from './utils';
@@ -125,16 +127,14 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
       // A typed name shows under an id of its own until the server finds or
       // creates the location.
       const typedLocation = input.location.trim();
-      optimisticUpdate.storageLocation = selectedStorageLocation
-        ? { __typename: 'StorageLocation', ...selectedStorageLocation }
-        : typedLocation
-        ? {
-            __typename: 'StorageLocation',
-            id: generateEntityId(),
-            name: typedLocation,
-            type: StorageType.Custom,
-          }
-        : null;
+      optimisticUpdate.storageLocation =
+        selectedStorageLocation || typedLocation
+          ? localStorageLocation(
+              client.cache,
+              selectedStorageLocation,
+              typedLocation,
+            )
+          : null;
     }
     if (dirtyFields.notes) optimisticUpdate.storageNotes = input.notes;
     if (dirtyFields.brand) {

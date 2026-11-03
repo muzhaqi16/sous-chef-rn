@@ -18,6 +18,7 @@ mutation ChangePantryItemItem(
         ...PantryReaders
       }
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }

@@ -176,6 +176,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
 function storageLocationNode(loc: StorageLocationFixture): StorageLocationNode {
   return {
     __typename: 'StorageLocation',
+    version: 1,
     id: loc.id,
     name: loc.name ?? `Location ${loc.id}`,
     type: loc.type ?? StorageType.PantryShelf,

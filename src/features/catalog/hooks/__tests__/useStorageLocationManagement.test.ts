@@ -94,6 +94,7 @@ function buildLocationNode(
 ): StorageLocationNode {
   return {
     __typename: 'StorageLocation',
+    version: 1,
     id: 'loc-1',
     name: 'Fridge',
     type: StorageType.Refrigerator,
@@ -351,6 +352,33 @@ describe('useStorageLocationManagement', () => {
     await drainTimers();
     expect(result.current.locations.find(l => l.id === 'loc-1')?.name).toBe(
       'Updated Fridge',
+    );
+  });
+
+  it('sends the version it read, so an edit that crossed another conflicts', async () => {
+    const sent: unknown[] = [];
+    const update: MockFor<typeof UpdateStorageLocationDocument> = {
+      ...buildUpdateLocationMock(),
+      request: {
+        query: UpdateStorageLocationDocument,
+        variables: variables => {
+          sent.push(variables.input);
+          return true;
+        },
+      },
+    };
+    const { result } = renderHookWithApollo(
+      () => useStorageLocationManagement('home-1'),
+      { operationMocks: [buildGetLocationsMock(), update] },
+    );
+    await drainTimers();
+
+    await drained(() =>
+      result.current.updateLocation('loc-1', { name: 'Updated Fridge' }),
+    );
+
+    expect(sent).toContainEqual(
+      expect.objectContaining({ id: 'loc-1', version: 1 }),
     );
   });
 

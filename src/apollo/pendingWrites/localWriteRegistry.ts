@@ -47,6 +47,7 @@ import {
   removeLocation,
   removeUsualStore,
   undoDismissal,
+  updateLocation,
 } from '#features/catalog/offline/localWrites';
 import {
   AdjustPantryItemQuantityDocument,
@@ -230,7 +231,7 @@ export const LOCAL_WRITES: LocalWriteTable = byOperation<LocalWrite>([
   [DeletePantryDocument, removePantry],
   [MarkPantryAsDefaultDocument, entityFields],
   [CreateStorageLocationDocument, createLocation],
-  [UpdateStorageLocationDocument, locationFields],
+  [UpdateStorageLocationDocument, updateLocation],
   [MarkStorageLocationAsDefaultDocument, locationFields],
   [DeleteStorageLocationDocument, removeLocation],
   [CreateStoreDocument, createStore],

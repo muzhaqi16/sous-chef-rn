@@ -1,8 +1,8 @@
 # A pantry's rows as the feed answers them, complete for every reader. What the
 # adapter reads itself is selected directly, as masking hides the spreads.
 # `stats` is computed on read, so a pull leaves it out and the summary is read
-# again. Usage rows are history the detail screen reads for itself, so neither
-# document selects them, and their removals are the only part applied.
+# again. Usage rows are history, which no scope holds: the detail screen reads
+# them online through `usageRecordsConnection`.
 query PantryFeedChanges($input: SyncChangesInput!) {
   syncChanges(input: $input) {
     scope {
@@ -28,6 +28,7 @@ query PantryFeedChanges($input: SyncChangesInput!) {
         itemId
         storageState
         storageLocation {
+          version
           id
         }
         ...PantryItemReaders
@@ -71,6 +72,7 @@ query PantryFeedSnapshot($input: SyncSnapshotInput!, $today: LocalDate!) {
         storageLocationsConnection(first: 20) {
           edges {
             node {
+              version
               id
               name
               type
@@ -80,6 +82,7 @@ query PantryFeedSnapshot($input: SyncSnapshotInput!, $today: LocalDate!) {
               isDefault
               currentItemCount
               parentLocation {
+                version
                 id
                 name
               }
@@ -100,6 +103,7 @@ query PantryFeedSnapshot($input: SyncSnapshotInput!, $today: LocalDate!) {
         itemId
         storageState
         storageLocation {
+          version
           id
         }
         ...PantryItemReaders

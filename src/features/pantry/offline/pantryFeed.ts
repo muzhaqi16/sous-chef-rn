@@ -3,7 +3,6 @@ import type { FeedAdapter, FeedPage, FeedSnapshot } from '#/apollo/feed/types';
 import { readWholeScope } from '#/apollo/feed/readWholeScope';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { todayKey } from '#/utils/dateUtils';
 import { logger } from '#/utils/environment';
@@ -53,9 +52,6 @@ function applyChanges(
     } else if (entityType === 'PantryItemBatch') {
       dropPantryBatch(cache, id);
       moved = true;
-    } else if (entityType === 'PantryItemUsage') {
-      // Left out of the pull, so only one a read placed is here to go.
-      safeEvict(cache, 'PantryItemUsage', id);
     }
   }
   if (moved) dropServerLists(cache, pantryId);
@@ -106,13 +102,17 @@ function replacing(
           stacks.push(row.id);
           break;
         // A batch is written by the read, and its page read again. This feed
-        // asks for pantries, so a list's rows reach only its own.
+        // asks for pantries, so another kind's rows reach only its own.
         case 'PantryItemBatch':
         case 'Pantry':
         case 'PantryItemUsage':
         case 'ShoppingList':
         case 'ShoppingListItem':
         case 'ShoppingListCollaborator':
+        case 'Home':
+        case 'HomeInvite':
+        case 'Membership':
+        case 'StorageLocation':
         default:
           // A row type a newer server added.
           break;

@@ -13,8 +13,10 @@ fragment StorageLocationReaders on StorageLocation {
   parentLocation {
     id
     name
+    version
   }
   sortOrder
   temperature
   type
+  version
 }

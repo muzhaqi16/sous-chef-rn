@@ -1,10 +1,12 @@
 import type { ApolloCache } from '@apollo/client';
-import { UnitType } from '#/graphql/generated/schemaTypes';
+import { StorageType, UnitType } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 import {
   LocalRefs_BrandFragmentDoc,
+  LocalRefs_StorageLocationFragmentDoc,
   LocalRefs_UnitFragmentDoc,
   type LocalRefs_BrandFragment,
+  type LocalRefs_StorageLocationFragment,
   type LocalRefs_UnitFragment,
 } from './localRefs.generated';
 
@@ -61,4 +63,26 @@ export function localUnit(
       },
     }
   );
+}
+
+/** A picked location as held, else a typed name the server will find or create. */
+export function localStorageLocation(
+  cache: ApolloCache,
+  picked: { id: string; name: string; type: StorageType } | null | undefined,
+  name: string,
+): LocalRefs_StorageLocationFragment {
+  const id = picked?.id ?? generateEntityId();
+  const held = cache.readFragment({
+    id: cache.identify({ __typename: 'StorageLocation', id }),
+    fragment: LocalRefs_StorageLocationFragmentDoc,
+    fragmentName: 'localRefs_storageLocation',
+    optimistic: true,
+  });
+  return {
+    __typename: 'StorageLocation',
+    id,
+    name: picked?.name ?? name,
+    type: picked?.type ?? StorageType.Custom,
+    version: held?.version ?? 0,
+  };
 }

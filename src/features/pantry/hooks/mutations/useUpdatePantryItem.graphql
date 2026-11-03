@@ -70,6 +70,7 @@ fragment useUpdatePantryItem_pantryItem on PantryItem {
     }
   }
   storageLocation {
+    version
     id
     name
     type

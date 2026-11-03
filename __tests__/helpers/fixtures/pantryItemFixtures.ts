@@ -214,6 +214,7 @@ export function pantryItemData(
       storageLocation: fixture.storageLocationName
         ? {
             __typename: 'StorageLocation',
+            version: 1,
             id: 'loc1',
             name: fixture.storageLocationName,
             type: StorageType.PantryShelf,

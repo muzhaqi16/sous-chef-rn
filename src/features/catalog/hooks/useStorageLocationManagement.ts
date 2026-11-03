@@ -184,9 +184,11 @@ export function useStorageLocationManagement(
       fields,
       displacedId: displaced?.id,
     };
+    // The lock: an edit that crossed another answers VERSION_CONFLICT.
+    const version = locations.find(location => location.id === id)?.version;
     const settled = await pendingWritesOf(client.cache).send(
       UpdateStorageLocationDocument,
-      { input: { ...input, id } },
+      { input: { ...input, id, ...(version !== undefined && { version }) } },
       write =>
         settleMutation(() => updateMutation(write), {
           document: UpdateStorageLocationDocument,
