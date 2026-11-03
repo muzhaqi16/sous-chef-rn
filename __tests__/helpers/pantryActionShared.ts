@@ -32,11 +32,12 @@ export function pantryActionShared(
     activeUnitId: 'u1',
     isConvertedUnit: false,
     exactFactor: 1,
-    showStock: held => ({
-      quantity: held,
+    leftAfter: drawn => ({
+      quantity: state.trackingQuantity - drawn,
       unit: state.trackingUnit,
       displayAsFraction: state.displayAsFractionOf(state.trackingUnitId),
     }),
+    packagesOfNetWeight: () => null,
     pantryItemId: 'pi1',
     defaultUnit: null,
     defaultIncrement: null,
@@ -69,8 +70,8 @@ export function eggsShared(
     activeUnitId: unit,
     isConvertedUnit: unit === 'doz',
     exactFactor: unit === 'doz' ? 12 : 1,
-    showStock: held => {
-      const shown = shownStock(held, PIECE, DOZEN);
+    leftAfter: drawn => {
+      const shown = shownStock(pieces - drawn, PIECE, DOZEN);
       return {
         quantity: shown.quantity,
         unit: shown.unit,

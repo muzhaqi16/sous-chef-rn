@@ -270,41 +270,45 @@ const RestockActionFields: React.FC<{
     actionConversionOptions(addAmount, shared),
   );
 
-  // For dual-tracked items, show new total in net weight
-  const currentInUnit =
-    shared.isDualTracked && shared.isConvertedUnit
-      ? shared.remainingNetWeight
-      : shared.isConvertedUnit
-      ? shared.availableInSelectedUnit
-      : shared.trackingQuantity;
-
-  const newQuantityUnit =
-    shared.isDualTracked &&
-    shared.isConvertedUnit &&
-    shared.netWeightUnit !== undefined
-      ? shared.netWeightUnit
-      : shared.activeUnit;
-
+  // The new total reads as the row will, whatever unit it was typed in. With no
+  // package size to count by, it stays in the unit the amount converted to.
   let newQuantity: ShownQuantity | null = null;
   if (addAmount !== null && !isNaN(addAmount)) {
+    const converted = conversion.convertedValue;
+    const inUnit = (quantity: number, unit: ShownQuantity['unit']) => ({
+      quantity,
+      unit,
+      displayAsFraction: null,
+    });
     if (shared.exactFactor !== null) {
-      // The tracking unit or a dozen of it: the total reads as the stack will.
-      newQuantity = shared.showStock(
-        shared.trackingQuantity + inCountedUnit(addAmount, shared.exactFactor),
+      // The tracking unit or a dozen of it: no conversion.
+      newQuantity = shared.leftAfter(
+        -inCountedUnit(addAmount, shared.exactFactor),
       );
-    } else if (
-      currentInUnit != null &&
-      (shared.isDualTracked ? conversion.convertedValue != null : true)
-    ) {
-      newQuantity = {
-        quantity:
-          currentInUnit +
-          (shared.isDualTracked && conversion.convertedValue != null
-            ? conversion.convertedValue
-            : addAmount),
-        unit: newQuantityUnit,
-        displayAsFraction: null,
-      };
+    } else if (!shared.isConvertedUnit) {
+      newQuantity = shared.leftAfter(-addAmount);
+    } else if (shared.isDualTracked) {
+      const added =
+        converted == null ? null : shared.packagesOfNetWeight(converted);
+      if (added !== null) {
+        newQuantity = shared.leftAfter(-added);
+      } else if (
+        converted != null &&
+        shared.remainingNetWeight != null &&
+        shared.netWeightUnit !== undefined
+      ) {
+        newQuantity = inUnit(
+          shared.remainingNetWeight + converted,
+          shared.netWeightUnit,
+        );
+      }
+    } else if (shared.availableInSelectedUnit) {
+      // What is available was converted from the tracking quantity.
+      newQuantity = shared.leftAfter(
+        -(addAmount / shared.availableInSelectedUnit) * shared.trackingQuantity,
+      );
+    } else if (shared.availableInSelectedUnit === 0) {
+      newQuantity = inUnit(addAmount, shared.activeUnit);
     }
   }
 

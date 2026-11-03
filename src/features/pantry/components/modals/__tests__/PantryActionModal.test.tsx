@@ -139,6 +139,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         itemId: 'item-1',
         itemName: 'Flour',
         quantity: 5,
+        heldQuantity: 5,
         stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 5 },
         displayAmount: {
           __typename: 'DisplayAmount',
@@ -459,17 +460,18 @@ describe('PantryActionModal', () => {
     });
 
     const shared = mockRenderActionFields.mock.calls.at(-1)![0];
-    expect(shared.showStock(2.6)).toMatchObject({
+    expect(shared.leftAfter(-1)).toMatchObject({
       quantity: 26,
       unit: { symbol: 'cans' },
     });
   });
 
-  it('previews two half-used cases by the can, never as a whole case', () => {
+  it('previews what two opened cases hold by the can, never as a whole case', () => {
+    // 0.7 and 0.8 of a case: half a case drawn leaves one case's worth.
     renderWithApollo(<PantryActionModal {...defaultProps} />, {
       cache: makeCache({
         quantity: 2,
-        heldQuantity: 1,
+        heldQuantity: 1.5,
         stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 0 },
         unit: asAbbreviation({
           __typename: 'Unit',
@@ -488,14 +490,74 @@ describe('PantryActionModal', () => {
           symbol: 'cans',
         }),
         portionsPerTrackingUnit: 10,
-        remainingPortions: 10,
+        remainingPortions: 15,
       }),
     });
 
     const shared = mockRenderActionFields.mock.calls.at(-1)![0];
-    expect(shared.showStock(1)).toMatchObject({
-      quantity: 0,
+    expect(shared.leftAfter(0.5)).toMatchObject({
+      quantity: 10,
       unit: { symbol: 'cans' },
+    });
+  });
+
+  describe('on a stack stating what a package holds', () => {
+    const counted = (id: string) =>
+      asAbbreviation({
+        __typename: 'Unit',
+        id,
+        name: id,
+        symbol: id,
+        type: UnitType.Count,
+        displayAsFraction: false,
+        commonFractions: null,
+      });
+    const measured = (id: string, symbol: string) =>
+      asAbbreviation({ __typename: 'Unit', id, name: symbol, symbol });
+
+    it('previews a can drawn from a pack that states its volume by the can', () => {
+      renderWithApollo(<PantryActionModal {...defaultProps} />, {
+        cache: makeCache({
+          quantity: 1,
+          heldQuantity: 1,
+          stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 1 },
+          unit: counted('pack'),
+          portionUnitId: 'can',
+          portionUnit: measured('can', 'cans'),
+          portionsPerTrackingUnit: 10,
+          remainingPortions: 10,
+          netWeight: 2000,
+          remainingNetWeight: 2000,
+          netWeightUnit: measured('ml', 'mL'),
+        }),
+      });
+
+      const shared = mockRenderActionFields.mock.calls.at(-1)![0];
+      expect(shared.packagesOfNetWeight(200)).toBe(0.1);
+      expect(shared.leftAfter(0.1)).toMatchObject({
+        quantity: 9,
+        unit: { symbol: 'cans' },
+      });
+    });
+
+    it('previews what a bag drawn by weight leaves in the weight, not a part of a bag', () => {
+      renderWithApollo(<PantryActionModal {...defaultProps} />, {
+        cache: makeCache({
+          quantity: 1,
+          heldQuantity: 1,
+          stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 1 },
+          unit: counted('bag'),
+          netWeight: 5,
+          remainingNetWeight: 5,
+          netWeightUnit: measured('lb', 'lb'),
+        }),
+      });
+
+      const shared = mockRenderActionFields.mock.calls.at(-1)![0];
+      expect(shared.leftAfter(0.8)).toMatchObject({
+        quantity: 1,
+        unit: { symbol: 'lb' },
+      });
     });
   });
 
@@ -503,6 +565,7 @@ describe('PantryActionModal', () => {
     const eggs = {
       itemName: 'Eggs',
       quantity: 36,
+      heldQuantity: 36,
       stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 36 },
       displayAmount: {
         __typename: 'DisplayAmount',
@@ -549,12 +612,12 @@ describe('PantryActionModal', () => {
 
     it('shows a held amount as the stack does', () => {
       const shared = renderedState();
-      expect(shared.showStock(24)).toEqual({
+      expect(shared.leftAfter(12)).toEqual({
         quantity: 2,
         unit: expect.objectContaining({ symbol: 'doz' }),
         displayAsFraction: null,
       });
-      expect(shared.showStock(11)).toEqual({
+      expect(shared.leftAfter(25)).toEqual({
         quantity: 11,
         unit: expect.objectContaining({ symbol: 'pc' }),
         displayAsFraction: false,

@@ -50,8 +50,13 @@ export interface PantryActionSharedState {
    * dual-tracked stack, whose count moves by whole packages.
    */
   exactFactor: number | null;
-  /** A tracking-unit amount as the stack shows it: "2 doz", "11 pc". */
-  showStock: (held: number) => ShownQuantity;
+  /**
+   * What is left once `drawn` tracking units go, as the row will read it ("2
+   * doz", "9 cans", "1 lb"); a restock draws a negative amount.
+   */
+  leftAfter: (drawn: number) => ShownQuantity;
+  /** The packages an amount in the net-weight unit makes; null with no size. */
+  packagesOfNetWeight: (amount: number) => number | null;
   pantryItemId: string | undefined;
   /** Resolved from the ranked-units API, along with the two below. */
   defaultUnit: PickableUnit | null;

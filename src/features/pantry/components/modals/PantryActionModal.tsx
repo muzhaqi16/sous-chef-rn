@@ -150,21 +150,33 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     ? 1
     : countFactor;
 
-  const showStock = (held: number): ShownQuantity => {
+  // What is left once `drawn` packages go, as the row will read it; a restock
+  // draws a negative amount. The stack's figures move by its own per-package
+  // ones, so nothing converts.
+  const leftAfter = (drawn: number): ShownQuantity => {
     if (!pantryItem) {
       return {
-        quantity: held,
+        quantity: trackingQuantity - drawn,
         unit: trackingUnit,
         displayAsFraction: null,
       };
     }
-    const { unit, portionUnit, portionsPerTrackingUnit, remainingPortions } =
-      pantryItem;
+    const {
+      unit,
+      heldQuantity,
+      portionUnit,
+      portionsPerTrackingUnit,
+      remainingPortions,
+      netWeight,
+      remainingNetWeight,
+      netWeightUnit,
+    } = pantryItem;
+    const held = heldQuantity - drawn;
     const left = amountLeftOf({
       held,
       fullPackages: fullPackagesAfter(
         pantryItem.stockBreakdown.fullPackages,
-        trackingQuantity,
+        heldQuantity,
         held,
       ),
       shown: shownStock(held, unit, pantryItem.displayUnit),
@@ -173,10 +185,15 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       portions:
         portionUnit && remainingPortions != null && portionsPerTrackingUnit
           ? {
-              left:
-                remainingPortions +
-                (held - trackingQuantity) * portionsPerTrackingUnit,
+              left: remainingPortions - drawn * portionsPerTrackingUnit,
               unit: portionUnit,
+            }
+          : null,
+      netWeight:
+        netWeightUnit && remainingNetWeight != null && netWeight
+          ? {
+              left: remainingNetWeight - drawn * netWeight,
+              unit: netWeightUnit,
             }
           : null,
     });
@@ -187,6 +204,9 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       displayAsFraction: left.unit === unit ? unit.displayAsFraction : null,
     };
   };
+
+  const packagesOfNetWeight = (amount: number) =>
+    pantryItem?.netWeight ? amount / pantryItem.netWeight : null;
 
   const { availableInSelectedUnit, availableLoading } =
     useConvertAvailableQuantity({
@@ -249,7 +269,8 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     activeUnitId,
     isConvertedUnit,
     exactFactor,
-    showStock,
+    leftAfter,
+    packagesOfNetWeight,
     pantryItemId: pantryItem?.id,
     defaultUnit,
     defaultIncrement: selectedRankedUnit?.defaultIncrement ?? defaultIncrement,

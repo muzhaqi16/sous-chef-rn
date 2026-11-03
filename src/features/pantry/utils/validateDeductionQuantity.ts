@@ -61,7 +61,7 @@ export function validateDeductionQuantity(
     const cap = shared.trackingQuantity;
     const deduction = snapDeductionToCap(value, cap / factor);
     if (inCountedUnit(deduction, factor) > cap) {
-      alertExceeds(actionVerb, shared.showStock(cap));
+      alertExceeds(actionVerb, shared.leftAfter(0));
       return null;
     }
     return deduction;
