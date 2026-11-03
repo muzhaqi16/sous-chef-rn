@@ -391,8 +391,6 @@
   },
   "pantryItemCard": {
     "remainingAmount": "{{amount}} remaining",
-    "portionsLeft_one": "{{count}} {{unit}} left",
-    "portionsLeft_other": "{{count}} {{unit}} left",
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} total)"

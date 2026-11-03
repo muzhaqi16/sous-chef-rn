@@ -391,8 +391,6 @@
   },
   "pantryItemCard": {
     "remainingAmount": "Quedan {{amount}}",
-    "portionsLeft_one": "Queda {{count}} {{unit}}",
-    "portionsLeft_other": "Quedan {{count}} {{unit}}",
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} en total)"

@@ -297,7 +297,6 @@ jest.mock('#features/pantry/hooks/usePantryItemTransformation', () => ({
   })),
   formatPackageBreakdown: jest.fn(() => null),
   formatRemainingNetWeight: jest.fn(() => null),
-  formatQuantityBreakdown: jest.fn(() => null),
 }));
 
 jest.mock('#/utils/formatQuantity', () => ({

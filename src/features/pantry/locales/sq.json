@@ -391,8 +391,6 @@
   },
   "pantryItemCard": {
     "remainingAmount": "Mbeten {{amount}}",
-    "portionsLeft_one": "Mbetet {{count}} {{unit}}",
-    "portionsLeft_other": "Mbeten {{count}} {{unit}}",
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} gjithsej)"

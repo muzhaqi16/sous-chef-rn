@@ -28,13 +28,12 @@ import { resolveImageUrl } from '#utils/imageUtils';
 import {
   formatAmountLeft,
   formatPackageBreakdownFull,
-  formatQuantityBreakdown,
   formatStorageState,
   getExpiryInfo,
   getDaysInPantry,
   formatDaysInPantry,
 } from '#features/pantry/hooks/usePantryItemTransformation';
-import { formatNetWeightDisplay, unitLabel } from '#utils/formatQuantity';
+import { formatNetWeightDisplay } from '#utils/formatQuantity';
 import { currentReading, formatReading } from '#domain/measure';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import {
@@ -220,27 +219,6 @@ export const PantryItemDetail: React.FC<
   const netWeightText = packageSizeReading
     ? formatReading(packageSizeReading)
     : formatNetWeightDisplay(item?.netWeight, item?.netWeightUnit);
-  const remainingReading = currentReading(
-    item?.remaining,
-    { value: item?.remainingNetWeight, unitId: netWeightUnitId },
-    readingSystem,
-  );
-  const remainingNetWeightText = remainingReading
-    ? formatReading(remainingReading)
-    : formatNetWeightDisplay(item?.remainingNetWeight, item?.netWeightUnit);
-  const quantityBreakdownText = formatQuantityBreakdown(
-    item?.quantityBreakdown,
-    t,
-  );
-  const portionsLeftText =
-    item?.remainingPortions != null && item.portionUnit
-      ? t('pantryItemCard.portionsLeft', {
-          count: item.remainingPortions,
-          unit: unitLabel(item.portionUnit, {
-            quantity: item.remainingPortions,
-          }),
-        })
-      : null;
 
   // Classified so an offline cache miss reports itself instead of spinning
   // forever on a bare loader.
@@ -519,9 +497,6 @@ export const PantryItemDetail: React.FC<
             brandName={brandName}
             quantityText={quantityText}
             netWeightText={netWeightText}
-            remainingNetWeightText={remainingNetWeightText}
-            quantityBreakdownText={quantityBreakdownText}
-            portionsLeftText={portionsLeftText}
             packageBreakdownText={packageBreakdownText}
             shelfLifeDays={item.item.shelfLifeDays}
             shelfLifeOpenedDays={item.item.shelfLifeOpenedDays}

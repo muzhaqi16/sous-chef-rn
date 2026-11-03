@@ -38,9 +38,6 @@ interface PantryDetailInfoProps {
   /** What is left, as the header shows it: the user's unit system where read. */
   quantityText: string;
   netWeightText: string | null;
-  remainingNetWeightText: string | null;
-  quantityBreakdownText: string | null;
-  portionsLeftText: string | null;
   packageBreakdownText: string | null;
   shelfLifeDays: number | null | undefined;
   shelfLifeOpenedDays: number | null | undefined;
@@ -58,9 +55,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
   brandName,
   quantityText,
   netWeightText,
-  remainingNetWeightText,
-  quantityBreakdownText,
-  portionsLeftText,
   packageBreakdownText,
   shelfLifeDays,
   shelfLifeOpenedDays,
@@ -175,41 +169,6 @@ export const PantryDetailInfo: React.FC<PantryDetailInfoProps> = ({
             </AppPressable>
           )}
         </InfoRow>
-      )}
-      {/* Remaining Weight Row */}
-      {!!remainingNetWeightText && (
-        <InfoRow
-          label={t('labels.remainingWeight')}
-          value={remainingNetWeightText}
-          icon="scale-outline"
-          showColon={false}
-          labelTone="secondary"
-          valueTone="primary"
-          containerStyle={styles.rowContainer}
-        />
-      )}
-      {/* Inventory Breakdown Row */}
-      {!!quantityBreakdownText && (
-        <InfoRow
-          label={t('labels.inventory')}
-          value={quantityBreakdownText}
-          icon="layers-outline"
-          showColon={false}
-          labelTone="secondary"
-          valueTone="primary"
-          containerStyle={styles.rowContainer}
-        />
-      )}
-      {!!portionsLeftText && (
-        <InfoRow
-          label={t('labels.portions')}
-          value={portionsLeftText}
-          icon="pie-chart-outline"
-          showColon={false}
-          labelTone="secondary"
-          valueTone="primary"
-          containerStyle={styles.rowContainer}
-        />
       )}
       {/* Package Details Row */}
       {!!packageBreakdownText && (

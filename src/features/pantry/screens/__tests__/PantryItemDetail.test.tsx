@@ -950,11 +950,7 @@ describe('PantryItemDetail (integration)', () => {
     });
 
     /** A stack whose package size is stored as `value` `stored`. */
-    const weighed = (
-      value: number,
-      stored: ReadingUnit,
-      remaining?: number,
-    ) => {
+    const weighed = (value: number, stored: ReadingUnit) => {
       const data = pantryItemData(fullItem);
       const item = data.pantryItem;
       if (!item) throw new Error('fixture has no item');
@@ -966,10 +962,6 @@ describe('PantryItemDetail (integration)', () => {
         symbol: stored.symbol,
       });
       item.packageSize = measure(value, stored, [1.36, kg], [3, lb]);
-      if (remaining !== undefined) {
-        item.remainingNetWeight = remaining;
-        item.remaining = measure(remaining, stored, [940, g], [2.07, lb]);
-      }
       return recordMock(GetPantryItemDocument, { data }).mock;
     };
 
@@ -1030,14 +1022,6 @@ describe('PantryItemDetail (integration)', () => {
 
       await drainTimers();
       expect(screen.getByText('1.36 kg')).toBeTruthy();
-    });
-
-    it('reads what remains in the same system', async () => {
-      renderWithApollo(<PantryItemDetail route={route} />, {
-        operationMocks: [weighed(1360.78, g, 940), settings(UnitSystem.System)],
-      });
-      await drainTimers();
-      expect(screen.getByText('2.07 lb')).toBeTruthy();
     });
 
     it('reads what it holds as the row does, not in stored grams', async () => {

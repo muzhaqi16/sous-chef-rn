@@ -6,7 +6,6 @@ import {
   formatAmountLeft,
   formatPackageBreakdown,
   formatPackageBreakdownFull,
-  formatQuantityBreakdown,
 } from '../usePantryItemTransformation';
 import { getI18n } from '#/i18n/config';
 import {
@@ -227,55 +226,5 @@ describe('formatAmountLeft', () => {
       localizedSymbol: 'lattine',
     };
     expect(formatAmountLeft(left(cans), UnitSystem.Metric)).toBe('9 lattine');
-  });
-});
-
-describe('formatQuantityBreakdown', () => {
-  it('returns null for null breakdown', () => {
-    expect(formatQuantityBreakdown(null, t)).toBeNull();
-  });
-  it('returns null when total is 0', () => {
-    const result = formatQuantityBreakdown(
-      {
-        fullPackages: 0,
-        looseContentUnits: 0,
-        totalContentUnits: 0,
-      },
-      t,
-    );
-    expect(result).toBeNull();
-  });
-  it('renders the unit label the server gave, without pluralising it', () => {
-    // Appending a literal "s" for any count but 1 is English pluralisation
-    // applied to a label that is not English — "2 lattinas" in Italian — and it
-    // is wrong even in English the moment the unit is a symbol: "15 kgs".
-    //
-    // `Unit.symbol` is non-null in the schema and is preferred here, so the
-    // symbol is what renders in practice, and symbols are not pluralised
-    // ("15 kg"). Pluralising the `name` fallback correctly would need a plural
-    // form per unit per language, which the API does not expose — see the note
-    // in `formatQuantityBreakdown`.
-    const result = formatQuantityBreakdown(
-      {
-        fullPackages: 1,
-        looseContentUnits: 3,
-        contentUnit: { name: 'can', symbol: 'can' },
-        totalContentUnits: 15,
-      },
-      t,
-    );
-    expect(result).toBe('15 can');
-  });
-  it('handles singular unit', () => {
-    const result = formatQuantityBreakdown(
-      {
-        fullPackages: 0,
-        looseContentUnits: 1,
-        contentUnit: { name: 'bottle' },
-        totalContentUnits: 1,
-      },
-      t,
-    );
-    expect(result).toBe('1 bottle');
   });
 });

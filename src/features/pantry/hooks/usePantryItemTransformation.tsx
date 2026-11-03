@@ -177,33 +177,6 @@ export const formatPackageBreakdownFull = (
   return short;
 };
 
-// Helper to format live quantity breakdown (e.g., "1 full case + 9 loose cans")
-export const formatQuantityBreakdown = (
-  breakdown:
-    | {
-        fullPackages: number;
-        looseContentUnits: number;
-        contentUnit?: UnitLabelSource | null;
-        totalContentUnits: number;
-        remainingWeight?: number | null;
-        remainingWeightUnit?: UnitLabelSource | null;
-      }
-    | null
-    | undefined,
-  translate: Translate,
-): string | null => {
-  if (!breakdown) return null;
-  const total = Math.floor(breakdown.totalContentUnits);
-  if (total <= 0) return null;
-  // The count/unit order lives in the key so a locale can change it.
-  const contentLabel = unitLabel(breakdown.contentUnit, { quantity: total });
-  if (!contentLabel) return null;
-  return translate('itemSubtitle.contentUnitCount', {
-    count: total,
-    unit: contentLabel,
-  });
-};
-
 // Helper function to calculate expiry info for detail views
 export const getExpiryInfo = (
   expiresOn: string | null | undefined,
