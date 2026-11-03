@@ -196,14 +196,6 @@
       "baseDimension": {
         "label": "Dimensión base"
       },
-      "consumeIncrement": {
-        "label": "Incremento de consumo predeterminado",
-        "placeholder": "p. ej., 1"
-      },
-      "consumeUnit": {
-        "label": "Unidad de consumo predeterminada",
-        "placeholder": "cdta., taza, etc."
-      },
       "tags": {
         "placeholder": "Etiquetas separadas por comas (p. ej., orgánico, sin gluten)"
       },

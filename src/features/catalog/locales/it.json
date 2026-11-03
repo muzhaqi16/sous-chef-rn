@@ -196,14 +196,6 @@
       "baseDimension": {
         "label": "Dimensione di base"
       },
-      "consumeIncrement": {
-        "label": "Incremento di consumo predefinito",
-        "placeholder": "es. 1"
-      },
-      "consumeUnit": {
-        "label": "Unità di consumo predefinita",
-        "placeholder": "cucchiaino, tazza, ecc."
-      },
       "tags": {
         "placeholder": "Tag separati da virgole (es. biologico, senza glutine)"
       },

@@ -263,20 +263,6 @@ describe('buildSuggestibleItemChanges', () => {
     expect(diff.changedFields).toEqual(['name']);
   });
 
-  // The unit field holds typed text rather than the id packageInfo expects, so
-  // there is no round-trippable surface to diff these against.
-  it('never includes the consume packageInfo fields', () => {
-    const diff = buildSuggestibleItemChanges(
-      snapshot(),
-      unchangedForm({
-        defaultConsumeIncrement: 2,
-        defaultConsumeUnitId: 'unit-cup',
-      }),
-    );
-
-    expect(diff.hasChanges).toBe(false);
-  });
-
   it('collects several changes across groups in one diff', () => {
     const diff = buildSuggestibleItemChanges(
       snapshot(),

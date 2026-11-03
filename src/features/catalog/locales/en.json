@@ -196,14 +196,6 @@
       "baseDimension": {
         "label": "Base Dimension"
       },
-      "consumeIncrement": {
-        "label": "Default Consume Increment",
-        "placeholder": "e.g., 1"
-      },
-      "consumeUnit": {
-        "label": "Default Consume Unit",
-        "placeholder": "tsp, cup, etc."
-      },
       "tags": {
         "placeholder": "Comma-separated tags (e.g., organic, gluten-free)"
       },

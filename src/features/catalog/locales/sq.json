@@ -196,14 +196,6 @@
       "baseDimension": {
         "label": "Dimensioni bazë"
       },
-      "consumeIncrement": {
-        "label": "Rritja e parazgjedhur e konsumit",
-        "placeholder": "p.sh. 1"
-      },
-      "consumeUnit": {
-        "label": "Njësia e parazgjedhur e konsumit",
-        "placeholder": "lugë çaji, filxhan, etj."
-      },
       "tags": {
         "placeholder": "Etiketa të ndara me presje (p.sh. organike, pa gluten)"
       },

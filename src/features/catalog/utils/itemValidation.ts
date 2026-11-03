@@ -222,12 +222,6 @@ export const createItemSchema = object({
     .oneOf([...Object.values(BaseDimension), ''])
     .nullable()
     .optional(),
-  defaultConsumeIncrement: number()
-    .transform(decimalText)
-    .typeError(msg('greaterThanZero'))
-    .min(0.001, msg('greaterThanZero'))
-    .optional(),
-  defaultConsumeUnitId: string().optional(),
 
   // Images
   imageUrl: urlRule,
