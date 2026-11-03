@@ -20,95 +20,102 @@ import com.facebook.react.bridge.ReactMethod
 import java.util.concurrent.TimeUnit
 
 /**
- * The device's approximate place. A town is enough, so a place Android already
- * holds answers at once; only with none recent does this ask for a new reading,
- * fused before network. The app holds only the coarse permission, so Android
- * itself keeps the reading approximate. The permission is asked for in JS.
+ * The device's approximate place, in the parts `findPlace` (JS) orders: a place
+ * Android already holds, and one new reading, fused before network, that can be
+ * given up. The app holds only the coarse permission, so Android itself keeps
+ * the reading approximate. The permission is asked for in JS.
  */
 class ApproximateLocationModule(reactContext: ReactApplicationContext) :
   ReactContextBaseJavaModule(reactContext) {
 
+  private class Reading(val promise: Promise, val cancel: CancellationSignal, val source: String)
+
+  // Touched on the main thread only, where the reading also answers.
+  private var pending: Reading? = null
+  private val mainThread = Handler(Looper.getMainLooper())
+
   override fun getName(): String = NAME
 
+  /** The newest place any provider holds, or null when older than `maxAgeMillis`. */
   @ReactMethod
-  fun getCurrentPosition(promise: Promise) {
+  fun heldPosition(maxAgeMillis: Double, promise: Promise) {
+    mainThread.post {
+      val manager = usableManager(promise) ?: return@post
+      promise.resolve(heldPlace(manager, maxAgeMillis.toLong())?.let { placeOf(it) })
+    }
+  }
+
+  /** One new reading; `cancelRead` gives it up. */
+  @ReactMethod
+  fun readPosition(promise: Promise) {
+    mainThread.post {
+      if (pending != null) {
+        promise.reject(BUSY, "A reading is already under way")
+        return@post
+      }
+      val manager = usableManager(promise) ?: return@post
+      val source = readingSource(manager)
+      if (source == null) {
+        promise.reject(FAILED, "No provider is enabled")
+        return@post
+      }
+      val reading = Reading(promise, CancellationSignal(), source)
+      pending = reading
+      try {
+        LocationManagerCompat.getCurrentLocation(
+          manager,
+          source,
+          reading.cancel,
+          ContextCompat.getMainExecutor(reactApplicationContext),
+        ) { location ->
+          settle(reading) {
+            if (location == null) {
+              it.reject(FAILED, "Tried $source")
+            } else {
+              it.resolve(placeOf(location))
+            }
+          }
+        }
+      } catch (error: SecurityException) {
+        // Revoked between the check and the read.
+        settle(reading) { it.reject(UNAVAILABLE, error.message, error) }
+      }
+    }
+  }
+
+  /** Gives up the reading under way, as timed out; nothing when none is. */
+  @ReactMethod
+  fun cancelRead() {
+    mainThread.post {
+      val reading = pending ?: return@post
+      reading.cancel.cancel()
+      settle(reading) { it.reject(TIMEOUT, "Tried ${reading.source}") }
+    }
+  }
+
+  private fun settle(reading: Reading, answer: (Promise) -> Unit) {
+    if (pending !== reading) return
+    pending = null
+    answer(reading.promise)
+  }
+
+  private fun usableManager(promise: Promise): LocationManager? {
     val context = reactApplicationContext
     val allowed = ContextCompat.checkSelfPermission(
       context,
       Manifest.permission.ACCESS_COARSE_LOCATION,
     ) == PackageManager.PERMISSION_GRANTED
     val manager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
-    if (!allowed) {
-      promise.reject(UNAVAILABLE, "Not allowed")
-      return
-    }
-    if (manager == null || !LocationManagerCompat.isLocationEnabled(manager)) {
-      promise.reject(UNAVAILABLE, "Location is off")
-      return
-    }
-    val recent = heldPlace(manager, RECENT_MILLIS)
-    if (recent != null) {
-      promise.resolve(placeOf(recent))
-      return
-    }
-    val source = readingSource(manager)
-    if (source == null) {
-      settleWithHeld(manager, promise, FAILED, "No provider is enabled")
-      return
-    }
-    read(manager, source, promise)
-  }
-
-  private fun read(manager: LocationManager, source: String, promise: Promise) {
-    val context = reactApplicationContext
-    val mainThread = Handler(Looper.getMainLooper())
-    val cancel = CancellationSignal()
-    // The reading and the time limit race on the main thread: the first wins.
-    var settled = false
-    val giveUp = Runnable {
-      if (!settled) {
-        settled = true
-        cancel.cancel()
-        settleWithHeld(manager, promise, TIMEOUT, "Tried $source")
+    return when {
+      !allowed -> {
+        promise.reject(UNAVAILABLE, "Not allowed")
+        null
       }
-    }
-    mainThread.postDelayed(giveUp, READING_MILLIS)
-    try {
-      LocationManagerCompat.getCurrentLocation(
-        manager,
-        source,
-        cancel,
-        ContextCompat.getMainExecutor(context),
-      ) { location ->
-        if (!settled) {
-          settled = true
-          mainThread.removeCallbacks(giveUp)
-          if (location == null) {
-            settleWithHeld(manager, promise, FAILED, "Tried $source")
-          } else {
-            promise.resolve(placeOf(location))
-          }
-        }
+      manager == null || !LocationManagerCompat.isLocationEnabled(manager) -> {
+        promise.reject(UNAVAILABLE, "Location is off")
+        null
       }
-    } catch (error: SecurityException) {
-      // Revoked between the check and the read.
-      settled = true
-      mainThread.removeCallbacks(giveUp)
-      promise.reject(UNAVAILABLE, error.message, error)
-    }
-  }
-
-  private fun settleWithHeld(
-    manager: LocationManager,
-    promise: Promise,
-    code: String,
-    tried: String,
-  ) {
-    val held = heldPlace(manager, DAY_MILLIS)
-    if (held != null) {
-      promise.resolve(placeOf(held))
-    } else {
-      promise.reject(code, tried)
+      else -> manager
     }
   }
 
@@ -121,7 +128,6 @@ class ApproximateLocationModule(reactContext: ReactApplicationContext) :
     else -> null
   }
 
-  /** The newest place any provider holds, no older than `maxAgeMillis`. */
   private fun heldPlace(manager: LocationManager, maxAgeMillis: Long): Location? =
     manager.allProviders
       .mapNotNull { provider -> lastKnown(manager, provider) }
@@ -155,8 +161,6 @@ class ApproximateLocationModule(reactContext: ReactApplicationContext) :
     private const val UNAVAILABLE = "location_unavailable"
     private const val FAILED = "location_failed"
     private const val TIMEOUT = "location_timeout"
-    private const val READING_MILLIS = 10_000L
-    private val RECENT_MILLIS = TimeUnit.MINUTES.toMillis(10)
-    private val DAY_MILLIS = TimeUnit.HOURS.toMillis(24)
+    private const val BUSY = "location_busy"
   }
 }

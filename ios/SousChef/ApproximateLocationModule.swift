@@ -1,30 +1,46 @@
 import CoreLocation
 import React
 
-/// The device's approximate place. A town is enough, so a place Core Location
-/// already holds answers at once; only with none recent does this ask for a new
-/// reading, giving up after 10 seconds. It asks for reduced accuracy only, and
-/// `NSLocationDefaultAccuracyReduced` keeps the system prompt from offering
-/// more. Permission is asked for in JS.
+/// The device's approximate place, in the parts `findPlace` (JS) orders: a place
+/// Core Location already holds, and one new reading that can be given up. It
+/// asks for reduced accuracy only, and `NSLocationDefaultAccuracyReduced` keeps
+/// the system prompt from offering more. Permission is asked for in JS.
 @objc(ApproximateLocationModule)
 class ApproximateLocationModule: NSObject, CLLocationManagerDelegate {
-
-  private static let recentSeconds: TimeInterval = 10 * 60
-  private static let daySeconds: TimeInterval = 24 * 60 * 60
-  private static let readingSeconds: TimeInterval = 10
 
   private var manager: CLLocationManager?
   private var resolve: RCTPromiseResolveBlock?
   private var reject: RCTPromiseRejectBlock?
-  private var giveUp: DispatchWorkItem?
 
   @objc static func requiresMainQueueSetup() -> Bool { false }
 
-  @objc func getCurrentPosition(
-    _ resolve: @escaping RCTPromiseResolveBlock,
+  /// The place Core Location holds, or null when it is older than `maxAgeMillis`.
+  @objc func heldPosition(
+    _ maxAgeMillis: Double,
+    resolver resolve: @escaping RCTPromiseResolveBlock,
     rejecter reject: @escaping RCTPromiseRejectBlock
   ) {
     // Core Location calls back on the thread that made the manager.
+    DispatchQueue.main.async {
+      guard CLLocationManager.locationServicesEnabled() else {
+        reject("location_unavailable", "Location is off", nil)
+        return
+      }
+      guard let location = CLLocationManager().location,
+        -location.timestamp.timeIntervalSinceNow * 1000 <= maxAgeMillis
+      else {
+        resolve(nil)
+        return
+      }
+      resolve(Self.place(of: location))
+    }
+  }
+
+  /// One new reading; `cancelRead` gives it up.
+  @objc func readPosition(
+    _ resolve: @escaping RCTPromiseResolveBlock,
+    rejecter reject: @escaping RCTPromiseRejectBlock
+  ) {
     DispatchQueue.main.async {
       if self.resolve != nil {
         reject("location_busy", "A reading is already under way", nil)
@@ -35,21 +51,21 @@ class ApproximateLocationModule: NSObject, CLLocationManagerDelegate {
         return
       }
       let manager = CLLocationManager()
-      if let held = self.held(by: manager, within: Self.recentSeconds) {
-        resolve(Self.place(of: held))
-        return
-      }
       manager.delegate = self
       manager.desiredAccuracy = kCLLocationAccuracyReduced
       self.manager = manager
       self.resolve = resolve
       self.reject = reject
-      let giveUp = DispatchWorkItem { [weak self] in
-        self?.settleWithHeld(code: "location_timeout", message: "Tried Core Location")
-      }
-      self.giveUp = giveUp
-      DispatchQueue.main.asyncAfter(deadline: .now() + Self.readingSeconds, execute: giveUp)
       manager.requestLocation()
+    }
+  }
+
+  /// Gives up the reading under way, as timed out; nothing when none is.
+  @objc func cancelRead() {
+    DispatchQueue.main.async {
+      self.settle { _, reject in
+        reject("location_timeout", "Tried Core Location", nil)
+      }
     }
   }
 
@@ -62,25 +78,9 @@ class ApproximateLocationModule: NSObject, CLLocationManagerDelegate {
   }
 
   func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-    settleWithHeld(code: "location_failed", message: error.localizedDescription)
-  }
-
-  private func settleWithHeld(code: String, message: String) {
-    let held = manager.flatMap { self.held(by: $0, within: Self.daySeconds) }
-    settle { resolve, reject in
-      if let held = held {
-        resolve(Self.place(of: held))
-      } else {
-        reject(code, message, nil)
-      }
+    settle { _, reject in
+      reject("location_failed", error.localizedDescription, nil)
     }
-  }
-
-  private func held(by manager: CLLocationManager, within seconds: TimeInterval) -> CLLocation? {
-    guard let location = manager.location,
-      -location.timestamp.timeIntervalSinceNow <= seconds
-    else { return nil }
-    return location
   }
 
   private static func place(of location: CLLocation) -> [String: Double] {
@@ -91,13 +91,11 @@ class ApproximateLocationModule: NSObject, CLLocationManagerDelegate {
     ]
   }
 
-  /// Answers the one pending call and lets the manager go.
+  /// Answers the one pending reading and lets the manager go.
   private func settle(_ answer: (RCTPromiseResolveBlock, RCTPromiseRejectBlock) -> Void) {
     guard let resolve = resolve, let reject = reject else { return }
     self.resolve = nil
     self.reject = nil
-    giveUp?.cancel()
-    giveUp = nil
     manager?.delegate = nil
     manager = nil
     answer(resolve, reject)
