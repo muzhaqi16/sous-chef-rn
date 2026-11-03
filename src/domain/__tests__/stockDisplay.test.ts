@@ -169,6 +169,17 @@ describe('amountLeftOf', () => {
     ).toStrictEqual({ quantity: 5, unit: LB });
   });
 
+  it('reads two half-used bags with nothing inside stated as one bag, as the API does', () => {
+    expect(read(1, { fullPackages: 0 })).toStrictEqual({
+      quantity: 1,
+      unit: BAG,
+    });
+    expect(read(0.1 + 0.2 + 0.7, { fullPackages: 0 })).toStrictEqual({
+      quantity: 1,
+      unit: BAG,
+    });
+  });
+
   it('reads a whole bag as a bag when the server counts it unopened', () => {
     expect(
       read(1, { fullPackages: 1, netWeight: { left: 5, unit: LB } }),

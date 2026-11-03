@@ -23,6 +23,8 @@ const FRACTION_WINDOW = 0.002;
 /** How far a held count may sit from a whole one and still be it. */
 const WHOLE_WINDOW = 1e-6;
 
+const STOCK_NOISE_SCALE = 1e9;
+
 /** A typed fraction of a multiple is exact to three decimals: 0.333 doz is 4 pc. */
 const ENTRY_STEP = 0.001;
 
@@ -140,13 +142,22 @@ export function fullPackagesAfter(
     : Math.min(full, Math.floor(after + WHOLE_WINDOW));
 }
 
-/** The API's `nearestCommonFraction`: never 0 and never a whole. */
+/** The API's `snapStock`: a stored amount without float noise below the ninth decimal. */
+const snapStock = (value: number): number =>
+  Math.round(value * STOCK_NOISE_SCALE) / STOCK_NOISE_SCALE + 0;
+
+/**
+ * The API's `nearestCommonFraction`: a part never rounds to 0 or up to a whole,
+ * and part-used packages that come to whole ones (two halves) read as that.
+ */
 function nearestCommonFraction(
   held: number,
   listed: readonly number[] | null | undefined,
 ): number {
-  const whole = Math.floor(held);
-  const part = held - whole;
+  const snapped = snapStock(held);
+  const whole = Math.floor(snapped);
+  const part = snapStock(snapped - whole);
+  if (part === 0) return whole;
   const fractions =
     listed && listed.length > 0 ? listed : DEFAULT_COMMON_FRACTIONS;
   return (
