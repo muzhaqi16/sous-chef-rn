@@ -110,23 +110,5 @@ export const DetailsPage: React.FC<DetailsPageProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
-  // The hint below carries the rest of the gap.
-  netWeightRow: {
-    marginBottom: theme.spacing.xs,
-  },
   ...detailsPageBaseStyles(theme),
-  sectionDescription: {
-    marginBottom: theme.spacing.md,
-  },
-  toggleButton: {
-    paddingVertical: theme.spacing.sm,
-    alignItems: 'center',
-  },
-  packageDetailsContainer: {
-    marginTop: theme.spacing.sm,
-  },
-  netWeightHint: {
-    fontStyle: 'italic',
-    marginBottom: theme.spacing.sm,
-  },
 }));
