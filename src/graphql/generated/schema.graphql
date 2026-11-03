@@ -3287,8 +3287,17 @@ Always include a __typename so the variant can be discriminated.
 union CreateStorageLocationResult = ConflictError | CreateStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateStoreFromPlaceInput {
+  """
+  The chain the store belongs to, when known: a receipt's ProposedStore.chain
+  """
+  chainId: ID
   """StorePlace.placeId, as a search answered it"""
   placeId: ID!
+  """
+  The store's number in its chain, as its receipts print it: a receipt's
+  ProposedStore.storeNumber. Needs chainId
+  """
+  storeNumber: String
 }
 
 input CreateStoreInput {
@@ -13795,7 +13804,8 @@ enum ProfileVisibility {
 
 """
 A store the receipt names that is not on file: send it to createStore when the
-user confirms, or to createStoreFromPlace when placeId is set.
+user confirms, or to createStoreFromPlace when placeId is set, with its chain's
+id and its storeNumber either way, so the branch's next receipt finds it.
 """
 type ProposedStore {
   """As printed, else OpenStreetMap's when placeId is set"""
@@ -19183,6 +19193,11 @@ type StorageLocation {
   type: StorageType!
   """When this storage location was last updated"""
   updatedAt: DateTime!
+  """
+  The location's revision, advanced by every write. Send it back as version on
+  updateStorageLocation; a stale value is refused as a conflict.
+  """
+  version: Int!
 }
 
 """
@@ -20062,7 +20077,7 @@ input SyncChangesInput {
 }
 
 """A row a sync page can carry."""
-union SyncEntity = Pantry | PantryItem | PantryItemBatch | PantryItemUsage | ShoppingList | ShoppingListCollaborator | ShoppingListItem
+union SyncEntity = Home | HomeInvite | Membership | Pantry | PantryItem | PantryItemBatch | PantryItemUsage | ShoppingList | ShoppingListCollaborator | ShoppingListItem | StorageLocation
 
 """What changed in one scope since a cursor."""
 type SyncPage {
@@ -20189,6 +20204,10 @@ type SyncScopeEdge implements Edge {
 What a sync scope covers. One list is one scope. A kind appears here once a pull, a snapshot and a poke all serve it.
 """
 enum SyncScopeKind {
+  """
+  One home, with its active memberships, pending invites and live storage locations
+  """
+  HOME
   """One pantry, with its stacks, their batches and their usage"""
   PANTRY
   SHOPPING_LIST
@@ -21936,6 +21955,10 @@ input UpdateStorageLocationInput {
   temperature: StorageState
   """New storage type"""
   type: StorageType
+  """
+  The version read; an older one refuses the update (VERSION_CONFLICT). Omitted, the update applies whatever the version.
+  """
+  version: Int
 }
 
 type UpdateStorageLocationPayload {
