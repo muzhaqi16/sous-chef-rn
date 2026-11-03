@@ -57,13 +57,21 @@ export async function findPlace(
   const cancel = nativeMethod(MODULE, 'cancelRead');
   if (!held || !read || !cancel) return null;
   let refusal: unknown;
+  // The cancel gives up whatever reading is under way: once this one has
+  // answered, that is a later call's.
+  let reading = false;
   try {
     const recent = placeOf(await held(RECENT_MS));
     if (recent) return recent;
-    void giveUp().then(() => cancel());
+    reading = true;
+    void giveUp().then(() => {
+      if (reading) cancel();
+    });
     const fresh = placeOf(await read());
+    reading = false;
     if (fresh) return fresh;
   } catch (error) {
+    reading = false;
     refusal = error;
   }
   if (codeOf(refusal) === UNAVAILABLE) return reportFailedRead(refusal);
