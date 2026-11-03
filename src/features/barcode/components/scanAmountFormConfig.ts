@@ -1,34 +1,31 @@
-import { boolean, mixed, object, string, type ObjectSchema } from 'yup';
+import { mixed, object, string, type ObjectSchema } from 'yup';
 import { NetWeightKind, UnitType } from '#/graphql/generated/schemaTypes';
-import {
-  lazyMessage,
-  positiveDecimalRule,
-  quantityRule,
-} from '#/utils/validation/common';
+import { lazyMessage, quantityRule } from '#/utils/validation/common';
 import { parseFractionalInput } from '#/utils/fractionUtils';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatQuantityForInput,
   type QuantityDisplayOptions,
   unitLabel,
 } from '#utils/formatQuantity';
-import type { HeldUnit } from '#domain/stockAmount';
+import {
+  statedContents,
+  takesContents,
+  type HeldUnit,
+  type PackageContentsValues,
+} from '#domain/stockAmount';
 import type { ScanAmount, ScannedItem } from '#features/barcode/types';
 import { readingOf, type ReadingSystem } from '#domain/measure';
+import {
+  isPickedWhenSized,
+  isWholeWhenSized,
+  packageContentsFields,
+} from '#features/pantry/ui/packageContentsRules';
 
-export interface ScanAmountFormValues {
-  packaged: boolean;
+export interface ScanAmountFormValues extends PackageContentsValues {
   quantityInput: string;
   /** The unit as its field shows it; `unitId` is the unit picked. */
   unitDisplay: string;
   unitId: string | null;
-  unitType: UnitType | null;
-  sizeInput: string;
-  sizeUnitDisplay: string;
-  sizeUnitId: string | null;
-  /** The unit the household uses it in (tbsp for honey); empty for none. */
-  consumeUnitDisplay: string;
-  consumeUnitId: string | null;
 }
 
 interface UnitChoice {
@@ -42,19 +39,16 @@ const PIECE_SYMBOL = 'pc';
 
 const AS_DECIMAL: QuantityDisplayOptions = { notation: 'decimal' };
 
-const packagedOnly =
-  (test: (value: ScanAmountFormValues) => boolean) =>
-  (_: unknown, context: { parent: ScanAmountFormValues }) =>
-    !context.parent.packaged || test(context.parent);
-
 export const scanAmountSchema: ObjectSchema<ScanAmountFormValues> = object({
-  packaged: boolean().defined(),
   quantityInput: quantityRule('barcode.amount.quantityInvalid').test(
     'whole-packages',
-    lazyMessage('barcode.amount.wholePackages'),
-    packagedOnly(({ quantityInput }) =>
-      Number.isInteger(parseFractionalInput(quantityInput)),
-    ),
+    lazyMessage('packageSize.wholePackages'),
+    (value, context: { parent: ScanAmountFormValues }) =>
+      isWholeWhenSized(
+        value,
+        context.parent.unitType,
+        context.parent.sizeInput,
+      ),
   ),
   unitDisplay: string().defined(),
   // Picked from the list, not typed: the amount is recorded in that unit's id.
@@ -65,39 +59,24 @@ export const scanAmountSchema: ObjectSchema<ScanAmountFormValues> = object({
       'unit-picked',
       lazyMessage('barcode.amount.unitRequired'),
       value => !!value,
-    )
-    .test(
-      'count-unit',
-      lazyMessage('barcode.amount.countUnit'),
-      packagedOnly(({ unitType }) => unitType === UnitType.Count),
     ),
   unitType: mixed<UnitType>()
     .oneOf(Object.values(UnitType))
     .nullable()
     .defined(),
-  sizeInput: positiveDecimalRule('barcode.amount.sizeInvalid', {
-    optional: true,
-  }),
-  sizeUnitDisplay: string().defined(),
+  ...packageContentsFields,
   sizeUnitId: string()
     .nullable()
     .defined()
     .test(
       'size-unit-picked',
-      lazyMessage('barcode.amount.sizeUnitRequired'),
-      packagedOnly(
-        ({ sizeInput, sizeUnitId }) => !sizeInput.trim() || !!sizeUnitId,
-      ),
-    ),
-  consumeUnitDisplay: string().defined(),
-  consumeUnitId: string()
-    .nullable()
-    .defined()
-    .test(
-      'consume-unit-picked',
-      lazyMessage('barcode.amount.unitRequired'),
+      lazyMessage('packageSize.unitRequired'),
       (value, context: { parent: ScanAmountFormValues }) =>
-        !context.parent.consumeUnitDisplay.trim() || !!value,
+        isPickedWhenSized(
+          value,
+          context.parent.unitType,
+          context.parent.sizeInput,
+        ),
     ),
 });
 
@@ -180,7 +159,6 @@ export function scanAmountDefaults(
 ): ScanAmountFormValues {
   const size = packSizeOf(item, system);
   return {
-    packaged: true,
     quantityInput: String(
       item.packs && isMultipack(item) ? item.packs.count : 1,
     ),
@@ -188,15 +166,16 @@ export function scanAmountDefaults(
     sizeInput: size ? formatQuantityForInput(size.value, AS_DECIMAL) : '',
     sizeUnitDisplay: unitLabel(size?.unit),
     sizeUnitId: size?.unit.id ?? null,
-    consumeUnitDisplay: '',
-    consumeUnitId: null,
+    sizeUnitType: null,
   };
 }
 
 /**
- * What a valid form records. A size still as prefilled is the record's, which
- * the API applies itself, so only one the user changed is sent. A multipack's
- * prefill is one piece's size, never the record's total, so it always goes.
+ * What a valid form records. The unit decides what it is: a measure is an
+ * amount, and so is a part of a count; a whole count is packages. A size still
+ * as prefilled is the record's, which the API applies itself, so only one the
+ * user changed is sent. A multipack's prefill is one piece's size, never the
+ * record's total, so it always goes.
  */
 export function scanAmountOf(
   values: ScanAmountFormValues,
@@ -206,22 +185,17 @@ export function scanAmountOf(
   const quantity = parseFractionalInput(values.quantityInput);
   const { unitId } = values;
   if (quantity === null || !unitId) return null;
-  const consumeUnitId = values.consumeUnitDisplay.trim()
-    ? values.consumeUnitId
-    : null;
-  if (!values.packaged) {
-    return { packaged: false, quantity, unitId, consumeUnitId };
+  if (!takesContents(values.unitType) || !Number.isInteger(quantity)) {
+    return { packaged: false, quantity, unitId };
   }
   const sizeChanged =
     piecesPrefilled ||
     values.sizeInput !== prefilled.sizeInput ||
     values.sizeUnitId !== prefilled.sizeUnitId;
-  const size =
-    sizeChanged && values.sizeInput.trim() && values.sizeUnitId
-      ? {
-          netWeight: parseDecimalInput(values.sizeInput),
-          netWeightUnitId: values.sizeUnitId,
-        }
-      : null;
-  return { packaged: true, count: quantity, unitId, size, consumeUnitId };
+  return {
+    packaged: true,
+    count: quantity,
+    unitId,
+    contents: sizeChanged ? statedContents(values) : null,
+  };
 }

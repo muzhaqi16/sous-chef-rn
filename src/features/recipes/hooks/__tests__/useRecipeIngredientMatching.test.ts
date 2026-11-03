@@ -137,7 +137,7 @@ describe('getAvailabilityStatus', () => {
       read: {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.Concept,
-        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
+        matchedPantryItem: { id: 'pi-1', amountLeft: { value: 1 } },
         availableQuantity: 1,
       },
       status: 'partial',
@@ -149,7 +149,7 @@ describe('getAvailabilityStatus', () => {
       read: {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.Item,
-        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 1 } },
+        matchedPantryItem: { id: 'pi-1', amountLeft: { value: 1 } },
         availableQuantity: null,
       },
       status: 'partial',
@@ -159,7 +159,7 @@ describe('getAvailabilityStatus', () => {
       read: {
         isAvailable: false,
         matchKind: RecipeIngredientMatchKind.Item,
-        matchedPantryItem: { id: 'pi-1', displayAmount: { quantity: 0 } },
+        matchedPantryItem: { id: 'pi-1', amountLeft: { value: 0 } },
         availableQuantity: 0,
       },
       status: 'missing',
@@ -687,7 +687,7 @@ describe('useRecipeIngredientMatching — confirmConsumption', () => {
         availableQuantity: 0,
         matchedPantryItem: {
           ...includedMatch.matchedPantryItem,
-          displayAmount: { quantity: 0 },
+          amountLeft: { value: 0 },
         },
       },
     ]);

@@ -288,22 +288,6 @@ export function formatQuantityDisplay(
   return displayPhrase(quantity, unit?.symbol, unitLabel(unit, { quantity }));
 }
 
-/**
- * A held amount, as `formatQuantityDisplay` shows it, written as the server
- * shows it (a fraction only where it states one) in the short form it agreed
- * with that: "3 lattine", "0.5 lattine", "1/2 dozzina". A blank short form (an
- * optimistic amount) reads its unit.
- */
-export function formatAmountDisplay(amount: HeldAmount): string {
-  const notation = heldNotation(amount);
-  return displayPhrase(
-    amount.quantity,
-    amount.unit?.symbol,
-    amountLabel(amount, notation),
-    notation,
-  );
-}
-
 interface HeldAmount {
   quantity: number;
   localizedSymbol?: string | null;

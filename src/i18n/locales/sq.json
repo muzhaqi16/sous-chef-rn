@@ -417,7 +417,6 @@
     "mold": "Myk",
     "moreOptions": "Më shumë opsione",
     "netWeight": "Pesha neto",
-    "netWeightIsUsedForConsumptionTrackingAndIsOptional": "Pesha neto përdoret për gjurmimin e konsumit dhe është opsionale.",
     "never": "Asnjëherë",
     "newTemplate": "Model i ri",
     "next": "Tjetri",
@@ -559,9 +558,6 @@
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
     },
-    "usedIn": "Përdoret në",
-    "tbspCup": "tbsp, filxhan",
-    "usedInHint": "Me çfarë e mat kur e përdor, si tbsp për mjaltin.",
     "member": "Anëtar",
     "member_one": "Anëtar",
     "member_other": "Anëtarë",
@@ -584,7 +580,8 @@
     "vegan": "Vegane",
     "sulfite": "Sulfite",
     "budgetAndPrices": "Buxheti dhe çmimet",
-    "shopping": "Blerjet"
+    "shopping": "Blerjet",
+    "more": "Më shumë"
   },
   "instructions": {
     "pointCamera": "Drejtoje kamerën nga një barkod",

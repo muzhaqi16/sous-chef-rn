@@ -26,8 +26,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       }
     }
   }
-  # displayAmount read in each unit system, as the row reads it.
-  held {
+  amountLeft {
     value
     unitId
     metric {

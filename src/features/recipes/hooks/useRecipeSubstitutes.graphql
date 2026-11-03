@@ -67,13 +67,24 @@ query RecipeSubstitutes(
                     other
                   }
                 }
-                displayAmount {
-                  quantity
-                  localizedSymbol
-                  fraction
-                  unit {
-                    id
+                amountLeft {
+                  value
+                  unitId
+                  metric {
+                    value
+                    unitId
                     symbol
+                    localizedSymbol
+                    displayAsFraction
+                    type
+                  }
+                  imperial {
+                    value
+                    unitId
+                    symbol
+                    localizedSymbol
+                    displayAsFraction
+                    type
                   }
                 }
               }

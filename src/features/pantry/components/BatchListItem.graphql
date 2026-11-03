@@ -7,6 +7,7 @@ fragment BatchListItem_pantryItem on PantryItem {
   unit {
     id
     symbol
+    type
     localizedSymbolForms {
       one
       other

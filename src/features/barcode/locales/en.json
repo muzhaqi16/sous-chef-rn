@@ -20,18 +20,10 @@
     "referenceAmount": "Nutrition per {{amount}}",
     "amount": {
       "title": "Adding to your pantry",
-      "eachPackage": "{{amount}} · {{size}} each",
+      "ofSize": "{{amount}} of {{size}}",
       "joinsHeld": "Adds {{amount}} to your {{held}}",
-      "packaged": "Packaged",
-      "packagedHint": "Counted by the package. Turn it off to add an amount, like 500 g.",
-      "sizeLabel": "Size of one package",
       "quantityInvalid": "Enter an amount greater than 0.",
-      "wholePackages": "Packages are counted whole: 1, 2, 3…",
-      "countUnit": "Count packages in a counting unit like jar, can or pc.",
-      "unitRequired": "Pick a unit from the list.",
-      "sizeInvalid": "Enter a size greater than 0.",
-      "sizeUnitRequired": "Pick the size’s unit from the list.",
-      "usedInSummary": "Used in {{unit}}"
+      "unitRequired": "Pick a unit from the list."
     },
     "nutrition": {
       "title": "Nutrition facts",

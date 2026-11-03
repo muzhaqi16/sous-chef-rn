@@ -10,9 +10,8 @@ export const barcodeTestIDs = {
   scanAmountSummary: 'scan-amount-summary',
   scanAmountQuantity: 'scan-amount-quantity',
   scanAmountUnit: 'scan-amount-unit',
-  scanAmountPackaged: 'scan-amount-packaged',
   scanAmountSize: 'scan-amount-size',
-  scanAmountUsedIn: 'scan-amount-used-in',
+  scanAmountSizeUnit: 'scan-amount-size-unit',
   /** The scanned product's nutrition card. */
   productNutrition: 'product-nutrition',
   /** The household's dietary alerts on a scan, and its offline note. */

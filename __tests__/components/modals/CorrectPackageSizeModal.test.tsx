@@ -109,6 +109,7 @@ const ounces: CorrectPackageSizeModal_PantryItemFragment = {
   __typename: 'PantryItem',
   id: PANTRY_ITEM_ID,
   itemName: 'Pasta sauce',
+  portionUnitId: null,
   netWeightUnit: asAbbreviation({
     __typename: 'Unit',
     id: 'u-oz',
@@ -182,7 +183,7 @@ afterEach(() => {
 });
 
 describe('CorrectPackageSizeModal', () => {
-  const onConfirm = jest.fn().mockResolvedValue(true);
+  const onConfirm = jest.fn().mockResolvedValue(null);
   const defaultProps = {
     visible: true,
     pantryItemId: PANTRY_ITEM_ID,
@@ -219,7 +220,7 @@ describe('CorrectPackageSizeModal', () => {
 
   it('asks for the actual size and a reason', () => {
     renderModal();
-    expect(screen.getByText('Actual package size')).toBeTruthy();
+    expect(screen.getByText('Each holds')).toBeTruthy();
     expect(screen.getByText('Reason')).toBeTruthy();
   });
 
@@ -237,7 +238,7 @@ describe('CorrectPackageSizeModal', () => {
       await drainTimers();
       expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
       expect(screen.getByText('Remaining: 1.5 lb')).toBeTruthy();
-      expect(screen.getByLabelText('Actual package size').props.value).toBe(
+      expect(screen.getByLabelText('Each holds').props.value).toBe(
         '3',
       );
       expect(screen.getByTestId('unit-field')).toHaveTextContent('lb');
@@ -247,7 +248,7 @@ describe('CorrectPackageSizeModal', () => {
       renderModal(grams, honeyJar, UnitSystem.Metric);
       await drainTimers();
       expect(screen.getByText('Package size: 1.36 kg')).toBeTruthy();
-      expect(screen.getByLabelText('Actual package size').props.value).toBe(
+      expect(screen.getByLabelText('Each holds').props.value).toBe(
         '1.36',
       );
     });
@@ -257,14 +258,15 @@ describe('CorrectPackageSizeModal', () => {
       await drainTimers();
       expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
 
-      fireEvent.changeText(screen.getByLabelText('Actual package size'), '2.5');
+      fireEvent.changeText(screen.getByLabelText('Each holds'), '2.5');
       fireEvent.changeText(screen.getByLabelText('Reason'), 'Misread label');
       fireEvent.press(screen.getByLabelText('confirm'));
 
       await drainTimers();
       expect(onConfirm).toHaveBeenCalledWith({
-        netWeight: 2.5,
-        netWeightUnitId: 'u-lb',
+        amount: 2.5,
+        unitId: 'u-lb',
+        unitType: null,
         reason: 'Misread label',
       });
     });
@@ -286,7 +288,7 @@ describe('CorrectPackageSizeModal', () => {
       );
       await drainTimers();
       expect(screen.getByText('Package size: 2.5 lb')).toBeTruthy();
-      expect(screen.getByLabelText('Actual package size').props.value).toBe(
+      expect(screen.getByLabelText('Each holds').props.value).toBe(
         '2.5',
       );
     });
@@ -299,7 +301,7 @@ describe('CorrectPackageSizeModal', () => {
       );
       await drainTimers();
       expect(screen.getByText('Package size: 3 lb')).toBeTruthy();
-      expect(screen.getByLabelText('Actual package size').props.value).toBe(
+      expect(screen.getByLabelText('Each holds').props.value).toBe(
         '1360.78',
       );
       expect(screen.getByTestId('unit-field')).toHaveTextContent('g');

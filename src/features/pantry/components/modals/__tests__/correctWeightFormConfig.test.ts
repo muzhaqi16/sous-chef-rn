@@ -1,4 +1,5 @@
 import type { ValidationError } from 'yup';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   correctWeightDefaults,
   correctWeightSchema,
@@ -41,6 +42,25 @@ describe('the correct-weight schema', () => {
     const values = { ...filled, weightInput: '1,5' };
     await expect(correctWeightSchema.validate(values)).resolves.toBeTruthy();
     expect(parseWeight(values)).toBe(1.5);
+  });
+
+  it('asks no reason for a first count of what a package holds', async () => {
+    await expect(
+      correctWeightSchema.validate({
+        ...filled,
+        reason: '',
+        selectedUnitType: UnitType.Count,
+        definesCount: true,
+      }),
+    ).resolves.toBeTruthy();
+  });
+
+  it('asks a reason when correcting a count already defined', async () => {
+    const error = await correctWeightSchema
+      .validate({ ...filled, reason: '', selectedUnitType: UnitType.Count })
+      .catch((e: ValidationError) => e);
+
+    expect((error as ValidationError).path).toBe('reason');
   });
 
   it('leaves the unit optional — a weight can keep the one it had', async () => {

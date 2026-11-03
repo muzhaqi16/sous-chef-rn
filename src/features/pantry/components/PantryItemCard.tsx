@@ -26,11 +26,12 @@ import {
 } from './PantryActionsContext';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
-import { getExpirationStatus } from '#features/pantry/hooks/usePantryItemTransformation';
+import {
+  formatAmountLeft,
+  getExpirationStatus,
+} from '#features/pantry/hooks/usePantryItemTransformation';
 import { daysUntilExpiry } from '#domain/expiry';
 import { useToday } from '#hooks/app/useToday';
-import { formatAmountDisplay } from '#/utils/formatQuantity';
-import { currentReading, formatReading } from '#domain/measure';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
 import { PantryItemCard_PantryItemFragmentDoc } from './PantryItemCard.generated';
 import { motion } from '#/theme/motion';
@@ -187,18 +188,7 @@ export const PantryItemCard: React.FC<PantryItemCardProps> = ({
   const expirationText = showExpiration ? expStatus.text : null;
   const expiryStatusKey: ExpiryStatus = showExpiration ? variant : 'normal';
 
-  // What is left, as the stack is shown ("1 doz" for 12 pc), in the user's
-  // unit system while `held` still describes it; after a local use, as stored
-  // until the server answers.
-  const { displayAmount } = pantryItem;
-  const heldReading = currentReading(
-    pantryItem.held,
-    { value: displayAmount.quantity, unitId: displayAmount.unit.id },
-    readingSystem,
-  );
-  const quantity = heldReading
-    ? formatReading(heldReading)
-    : formatAmountDisplay(displayAmount);
+  const quantity = formatAmountLeft(pantryItem, readingSystem);
   // Custom names only; the default locations are the filter tabs.
   const location = pantryItem.storageLocation?.name ?? null;
   // Each of the row's four text slots has ONE owner, and an absent value leaves

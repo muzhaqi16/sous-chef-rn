@@ -36,6 +36,7 @@ function sourceName(source: ExternalSource, t: Translate): string | null {
     case ExternalSource.BarcodeLookup:
     case ExternalSource.Edamam:
     case ExternalSource.GiantEagle:
+    case ExternalSource.Openstreetmap:
     case ExternalSource.Spoonacular:
     case ExternalSource.Tasty:
     case ExternalSource.UserCreated:

@@ -75,41 +75,41 @@ jest.mock('../MainDetailsPage', () => ({
 }));
 
 jest.mock('../DetailsPage', () => ({
-  // Exposes the net-weight pair: the all-or-nothing rule reports on the UNIT
-  // while reading the weight and the resolved unit id, so only a test that
-  // writes both halves can see it clear.
+  // Exposes what one package holds: the rule on its unit reads the size and
+  // the resolved unit id, so only a test that writes both can see it clear.
   DetailsPage: ({
-    setPantryNetWeight,
-    handlePantryNetWeightUnitSelected,
-    pantryNetWeightUnitError,
+    setSizeInput,
+    handleSizeUnitSelected,
+    sizeUnitError,
   }: {
-    setPantryNetWeight: (value: string) => void;
-    handlePantryNetWeightUnitSelected: (
+    setSizeInput: (value: string) => void;
+    handleSizeUnitSelected: (
       unitId: string | null,
       unitName: string | null,
     ) => void;
-    pantryNetWeightUnitError?: string;
+    sizeUnitError?: string;
   }) => {
     const { View, Text, Pressable } = require('react-native');
     return (
       <View testID="details-page">
         <Text>Details Page</Text>
-        <Pressable
-          testID="type-net-weight"
-          onPress={() => setPantryNetWeight('500')}
-        >
-          <Text>Type weight</Text>
+        <Pressable testID="type-size" onPress={() => setSizeInput('500')}>
+          <Text>Type size</Text>
         </Pressable>
         <Pressable
-          testID="pick-net-weight-unit"
-          onPress={() => handlePantryNetWeightUnitSelected('unit-g', 'g')}
+          testID="pick-size-unit"
+          onPress={() => handleSizeUnitSelected('unit-g', 'g')}
         >
           <Text>Pick unit</Text>
         </Pressable>
-        {pantryNetWeightUnitError ? (
-          <Text testID="details-page-unit-error">
-            {pantryNetWeightUnitError}
-          </Text>
+        <Pressable
+          testID="type-size-unit"
+          onPress={() => handleSizeUnitSelected(null, 'ca')}
+        >
+          <Text>Type unit</Text>
+        </Pressable>
+        {sizeUnitError ? (
+          <Text testID="details-page-unit-error">{sizeUnitError}</Text>
         ) : null}
       </View>
     );
@@ -284,28 +284,51 @@ describe('AddDetailsSheet', () => {
   });
 });
 
-describe('AddDetailsSheet — the net-weight pair', () => {
-  it('reports a weight typed with no unit on the UNIT field', async () => {
+describe('AddDetailsSheet — what one package holds', () => {
+  it('reports a size typed with no unit on the unit field', async () => {
     const user = userEvent.setup();
     render(<AddDetailsSheet {...defaultProps} />);
 
-    await user.press(screen.getByTestId('type-net-weight'));
+    await user.press(screen.getByTestId('type-size'));
+    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
 
     await drainTimers();
     expect(screen.getByTestId('details-page-unit-error')).toHaveTextContent(
-      'Please select a unit for the net weight.',
+      'Pick the size’s unit from the list.',
     );
+  });
+
+  it('says nothing while the unit is still to come', async () => {
+    const user = userEvent.setup();
+    render(<AddDetailsSheet {...defaultProps} />);
+
+    await user.press(screen.getByTestId('type-size'));
+
+    await drainTimers();
+    expect(screen.queryByTestId('details-page-unit-error')).toBeNull();
+  });
+
+  it('says nothing while the unit is being typed', async () => {
+    const user = userEvent.setup();
+    render(<AddDetailsSheet {...defaultProps} />);
+
+    await user.press(screen.getByTestId('type-size'));
+    await user.press(screen.getByTestId('type-size-unit'));
+
+    await drainTimers();
+    expect(screen.queryByTestId('details-page-unit-error')).toBeNull();
   });
 
   it('clears that message once a unit is picked', async () => {
     const user = userEvent.setup();
     render(<AddDetailsSheet {...defaultProps} />);
 
-    await user.press(screen.getByTestId('type-net-weight'));
+    await user.press(screen.getByTestId('type-size'));
+    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
     await drainTimers();
     expect(screen.getByTestId('details-page-unit-error')).toBeTruthy();
 
-    await user.press(screen.getByTestId('pick-net-weight-unit'));
+    await user.press(screen.getByTestId('pick-size-unit'));
 
     await drainTimers();
     expect(screen.queryByTestId('details-page-unit-error')).toBeNull();

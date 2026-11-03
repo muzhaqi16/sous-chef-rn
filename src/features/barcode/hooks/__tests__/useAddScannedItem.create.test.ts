@@ -4,6 +4,8 @@ import {
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
 import { CreatePantryItemDocument } from '#features/pantry/graphql/pantry.generated';
+import { UnitType } from '#/graphql/generated/schemaTypes';
+import type { PackageContents } from '#domain/stockAmount';
 import type { ScanAmount, ScannedItem } from '../../types';
 import { useAddScannedItem } from '../useAddScannedItem';
 
@@ -16,12 +18,11 @@ const HONEY: ScannedItem = {
   canSuggest: true,
 };
 
-const oneJar = (consumeUnitId: string | null): ScanAmount => ({
+const oneJar = (contents: PackageContents | null = null): ScanAmount => ({
   packaged: true,
   count: 1,
   unitId: 'unit-jar',
-  size: null,
-  consumeUnitId,
+  contents,
 });
 
 const createSent = async (amount: ScanAmount) => {
@@ -38,14 +39,45 @@ const createSent = async (amount: ScanAmount) => {
   return (create.fired[0] as { input: Record<string, unknown> }).input;
 };
 
-describe('a scan that creates a stack', () => {
-  it('sets the unit the household uses it in', async () => {
-    expect(await createSent(oneJar('unit-tbsp'))).toMatchObject({
-      consumeUnit: { id: 'unit-tbsp' },
+describe('what a scan states one package holds', () => {
+  it('states a measure as the package size', async () => {
+    const sent = await createSent(
+      oneJar({ amount: 5, unitId: 'unit-lb', unitType: UnitType.Weight }),
+    );
+
+    expect(sent).toMatchObject({
+      amount: {
+        packages: {
+          count: 1,
+          unitId: 'unit-jar',
+          size: { netWeight: 5, netWeightUnitId: 'unit-lb' },
+        },
+      },
+    });
+    expect(sent.measurementProfile).toBeUndefined();
+  });
+
+  it('states a count as what the package is used by', async () => {
+    const sent = await createSent(
+      oneJar({ amount: 10, unitId: 'unit-can', unitType: UnitType.Count }),
+    );
+
+    expect(sent).toMatchObject({
+      amount: { packages: { count: 1, unitId: 'unit-jar' } },
+      measurementProfile: {
+        portionUnitId: 'unit-can',
+        portionsPerTrackingUnit: 10,
+      },
     });
   });
 
-  it('names none when none was picked', async () => {
-    expect(await createSent(oneJar(null))).not.toHaveProperty('consumeUnit');
+  it('states nothing of its own when the record sizes it', async () => {
+    const sent = await createSent(oneJar());
+
+    expect(sent).toMatchObject({
+      amount: { packages: { count: 1, unitId: 'unit-jar' } },
+    });
+    expect(sent.measurementProfile).toBeUndefined();
+    expect(sent).not.toHaveProperty('consumeUnit');
   });
 });

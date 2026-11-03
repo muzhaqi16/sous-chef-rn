@@ -712,32 +712,3 @@ describe('PantryItemForm — package size in the user’s units', () => {
     expect(screen.getByText('unit:g')).toBeTruthy();
   });
 });
-
-describe('PantryItemForm — the unit it is used in', () => {
-  it('opens on the stack’s, so it can be changed or cleared', async () => {
-    const cache = buildCache({});
-    const data = pantryItemData({ id: 'item-1' });
-    const stack = data.pantryItem;
-    if (!stack) throw new Error('fixture has no item');
-    stack.consumeUnit = asAbbreviation({
-      __typename: 'Unit',
-      id: 'unit-tbsp',
-      name: 'tablespoon',
-      symbol: 'tbsp',
-    });
-    seedQuery(cache, {
-      query: PantryItemForEditDocument,
-      variables: { id: 'item-1' },
-      data,
-    });
-    renderWithApollo(<PantryItemForm itemId="item-1" />, { cache });
-
-    const user = userEvent.setup();
-    await drainTimers();
-    expect(screen.getByText('Edit Pantry Item')).toBeTruthy();
-    await user.press(screen.getByText('Product'));
-
-    expect(screen.getByText('Used in')).toBeTruthy();
-    expect(screen.getByText('unit:tbsp')).toBeTruthy();
-  });
-});

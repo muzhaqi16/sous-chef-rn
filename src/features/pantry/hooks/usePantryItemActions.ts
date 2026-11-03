@@ -24,7 +24,7 @@ import { UsePantryItemActions_IdFragmentDoc } from './usePantryItemActions.gener
 import { toDateKey, todayKey } from '#/utils/dateUtils';
 import { inTrackingUnit } from '#features/pantry/cache/stock';
 import type { DrawStockInputs } from '#features/pantry/offline/localWrites';
-import { stockAmountOf } from '#domain/stockAmount';
+import { stockAmountOf, type RestockContents } from '#domain/stockAmount';
 import { usePantryRestock } from '#features/pantry/hooks/usePantryRestock';
 
 interface UsePantryItemActionsOptions {
@@ -43,6 +43,14 @@ type ActiveModal =
   | { type: ModalType; itemId: string; reason?: string };
 
 const CLOSED_MODAL: ActiveModal = { type: null };
+
+/** The uses whose unit the server remembers: not waste, a transfer or a gift. */
+const REMEMBERS_ITS_UNIT: ReadonlySet<UsagePurpose> = new Set([
+  UsagePurpose.Cooking,
+  UsagePurpose.Snack,
+  UsagePurpose.MealPrep,
+  UsagePurpose.General,
+]);
 
 /**
  * A unit refusal makes the cached ranked lists wrong, so they are dropped and
@@ -98,6 +106,8 @@ export function usePantryItemActions({
     const used = inTrackingUnit(client.cache, itemId, quantity, usageUnitId);
     const inputs: DrawStockInputs = {
       delta: used === null ? null : -used,
+      stated: usageUnitId ? { amount: quantity, unitId: usageUnitId } : null,
+      usedUnitId: REMEMBERS_ITS_UNIT.has(usage.purpose) ? usageUnitId : null,
       now: new Date().toISOString(),
     };
 
@@ -172,21 +182,35 @@ export function usePantryItemActions({
     costPerUnit?: number,
     totalCost?: number,
     expiresAt?: Date | null,
-  ) => {
-    if (activeModal.type !== 'restock') return;
+    contents: RestockContents | null = null,
+  ): Promise<string | null> => {
+    if (activeModal.type !== 'restock') return null;
 
+    const { packageSize = null, ...stated } = contents ?? {};
     const settled = await restock(activeModal.itemId, {
-      amount: stockAmountOf(quantity, { unitId }),
+      amount: stockAmountOf(quantity, {
+        asPackages: packageSize !== null,
+        packageSize,
+        unitId,
+      }),
+      ...stated,
       notes: notes || undefined,
       costPerUnit,
       totalCost,
       expiresOn: expiresAt ? toDateKey(expiresAt) : null,
-      present: 'alert',
+      present: contents ? 'none' : 'alert',
       on: { [TopLevelErrorCode.UnitInvalid]: refetchRankedUnits },
     });
-    if (settled.status === 'rejected') return;
+    if (settled.status === 'rejected') {
+      if (!contents) return null;
+      // The size was stated, so a refusal of it is about its kind of unit.
+      return settled.sizeRefusal === null
+        ? t('errors.restockFailedRetry')
+        : t('errors.field.packageSize');
+    }
 
     closeModal();
+    return null;
   };
 
   // Opens the modal only when the cache holds the item.

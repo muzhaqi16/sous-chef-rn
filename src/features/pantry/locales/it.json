@@ -189,6 +189,7 @@
     "restockBy": "Rifornisci per",
     "currentLabel": "Attuale:",
     "quantityToAdd": "Quantità da aggiungere",
+    "differentSize": "Un formato diverso?",
     "newQuantityPrefix": "Nuova quantità: ",
     "costPerUnit": "Costo per unità",
     "notesPlaceholder": "Aggiungi note su questo rifornimento...",
@@ -239,10 +240,7 @@
   },
   "pantryAction": {
     "useByDefault": "Da consumare entro",
-    "availableDefault": "Disponibile:",
-    "remainingAmount": "({{amount}} rimanenti)",
-    "quantityBreakdown": "{{packages}} da aprire + {{loose}} {{unit}} sfusi",
-    "amountWithUnit": "{{amount}} {{unit}}"
+    "availableDefault": "Disponibile:"
   },
   "correctWeight": {
     "invalidWeight": "Inserisci una dimensione valida",
@@ -250,7 +248,6 @@
     "title": "Correggi dimensione della confezione",
     "correct": "Correggi",
     "netWeightPrefix": "Dimensione della confezione: ",
-    "newNetWeight": "Dimensione reale della confezione",
     "reasonPlaceholder": "Perché stai correggendo la dimensione?"
   },
   "addToPantry": {
@@ -261,14 +258,6 @@
     "lowStockHint": "Ricevi una notifica quando questo articolo sta per finire.",
     "emptyHint": "Lascia vuoto per disattivare gli avvisi di scorte basse per questo articolo.",
     "quantityPlaceholder": "1",
-    "hidePackageDetails": "Nascondi dettagli confezione",
-    "addPackageDetails": "Aggiungi dettagli confezione",
-    "packageHint": "Definisci il contenuto di una confezione (es., 12 lattine da 335ml ciascuna).",
-    "qtyPerPackage": "Qtà per confezione",
-    "contentUnit": "Unità contenuto",
-    "weightPerUnit": "Peso per unità",
-    "weightPerUnitPlaceholder": "es., 335",
-    "contentWeightUnitPlaceholder": "mL, g, oz",
     "itemNamePlaceholder": "es., Latte, Uova, Pane...",
     "brandPlaceholder": "es., Whole Foods, Organic Valley",
     "restockFailed": "Impossibile rifornire l'articolo.",
@@ -440,6 +429,11 @@
   },
   "packageSize": {
     "defaultTitle": "Dimensione predefinita della confezione",
-    "defaultHint": "Le nuove scorte prendono questa dimensione se non ne viene indicata un'altra. Per correggere una confezione che hai già, usa Correggi dimensione della confezione nella pagina dell'articolo."
+    "defaultHint": "Le nuove scorte prendono questa dimensione se non ne viene indicata un'altra. Per correggere una confezione che hai già, usa Correggi dimensione della confezione nella pagina dell'articolo.",
+    "eachHolds": "Ognuno contiene",
+    "unitPlaceholder": "lb, lattina",
+    "sizeInvalid": "Inserisci una dimensione maggiore di 0.",
+    "unitRequired": "Scegli dall’elenco l’unità della dimensione.",
+    "wholePackages": "Le confezioni si contano intere: 1, 2, 3…"
   }
 }

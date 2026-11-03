@@ -1,14 +1,22 @@
 'use no memo';
 import React from 'react';
 import { t } from '#/i18n';
-import { RecipeIngredientMatchKind } from '#/graphql/generated/schemaTypes';
+import {
+  RecipeIngredientMatchKind,
+  UnitSystem,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+import type { ReadingSystem } from '#domain/measure';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import {
   getAvailabilityStatus,
   type EditableMatch,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { IngredientMatchRow } from '../IngredientMatchRow';
-import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
+import {
+  asAbbreviation,
+  readingAsAbbreviation,
+} from '#/test-utils/fixtures/unitLabels';
 
 jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
   getAvailabilityStatus: jest.fn(
@@ -19,21 +27,31 @@ jest.mock('#features/recipes/hooks/useRecipeIngredientMatching', () => ({
   ),
 }));
 
-type ShownAmount = NonNullable<
+type AmountLeft = NonNullable<
   EditableMatch['match']['matchedPantryItem']
->['displayAmount'];
+>['amountLeft'];
 
-const shown = (
-  quantity: number,
+const left = (
+  value: number,
   symbol: string,
-  fraction: string | null = null,
-): ShownAmount => ({
-  __typename: 'DisplayAmount',
-  quantity,
-  localizedSymbol: symbol,
-  fraction,
-  unit: { __typename: 'Unit', id: symbol, symbol },
-});
+  displayAsFraction = false,
+): AmountLeft => {
+  const reading = readingAsAbbreviation({
+    __typename: 'MeasureReading',
+    value,
+    unitId: symbol,
+    symbol,
+    displayAsFraction,
+    type: UnitType.Volume,
+  });
+  return {
+    __typename: 'Measure',
+    value,
+    unitId: symbol,
+    metric: reading,
+    imperial: reading,
+  };
+};
 
 describe('IngredientMatchRow', () => {
   // Minimal structural fixtures: the strict `EditableMatch` type requires
@@ -99,10 +117,12 @@ describe('IngredientMatchRow', () => {
   const defaultProps: {
     editableMatch: EditableMatch;
     index: number;
+    readingSystem: ReadingSystem;
     onUpdate: jest.Mock;
   } = {
     editableMatch: makeMatch('Sugar'),
     index: 0,
+    readingSystem: UnitSystem.Metric,
     onUpdate: jest.fn(),
   };
 
@@ -153,7 +173,7 @@ describe('IngredientMatchRow', () => {
       name: 'milliliter',
       symbol: 'mL',
     }),
-    displayAmount: shown(amount, 'mL'),
+    amountLeft: left(amount, 'mL'),
   });
 
   // A name-only match ("olives" finding "Kalamata Olives") is offered, not
@@ -374,7 +394,7 @@ describe('IngredientMatchRow', () => {
           name: 'cup',
           symbol: 'cups',
         }),
-        displayAmount: shown(5, 'cups'),
+        amountLeft: left(5, 'cups'),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
@@ -394,7 +414,7 @@ describe('IngredientMatchRow', () => {
           name: 'cup',
           symbol: 'cups',
         }),
-        displayAmount: shown(1.25, 'cups', '¼'),
+        amountLeft: left(1.25, 'cups', true),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
@@ -414,7 +434,7 @@ describe('IngredientMatchRow', () => {
           name: 'millilitre',
           symbol: 'mL',
         }),
-        displayAmount: shown(177.4412, 'mL'),
+        amountLeft: left(177.4412, 'mL'),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
@@ -434,7 +454,7 @@ describe('IngredientMatchRow', () => {
           name: 'piece',
           symbol: 'pc',
         }),
-        displayAmount: shown(3, 'doz'),
+        amountLeft: left(3, 'doz'),
       },
     });
     render(<IngredientMatchRow {...defaultProps} editableMatch={matched} />);
@@ -489,6 +509,7 @@ describe('IngredientMatchRow', () => {
         <IngredientMatchRow
           editableMatch={editableMatch}
           index={0}
+          readingSystem={UnitSystem.Metric}
           onUpdate={(index, updates) => {
             onUpdate(index, updates);
             setEditableMatch(current => ({ ...current, ...updates }));

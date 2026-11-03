@@ -17,7 +17,6 @@ import {
 import { formatCurrency as formatMoney } from '#/utils/formatters/number';
 import { formatMonthDayYear } from '#/utils/formatters/date';
 import {
-  formatAmountWithUnit,
   formatQuantityForDisplay,
   unitLabel,
   type UnitLabelSource,
@@ -26,6 +25,7 @@ import {
   currentReading,
   formatReading,
   readingNotation,
+  readingOf,
   type MeasureShape,
   type ReadingSystem,
 } from '#domain/measure';
@@ -118,33 +118,11 @@ function breakdownWeight(
       };
 }
 
-interface HeldAmountSource {
-  displayAmount: {
-    quantity: number;
-    localizedSymbol?: string | null;
-    fraction?: string | null;
-    unit: UnitLabelSource & { id: string; symbol: string };
-  };
-  held: BreakdownMeasure;
-}
-
-/**
- * What a stack holds, as its row shows it ("1 doz" for 12 pc): in the user's
- * unit system while `held` still describes it; else as the server shows it.
- */
-export function formatHeldAmount(
-  item: HeldAmountSource,
+/** What is left of a stack in the user's unit system: what every screen shows. */
+export const formatAmountLeft = (
+  item: { amountLeft: MeasureShape },
   system: ReadingSystem,
-): string {
-  const shown = item.displayAmount;
-  const reading = currentReading(
-    item.held,
-    { value: shown.quantity, unitId: shown.unit.id },
-    system,
-  );
-  if (reading) return formatReading(reading);
-  return formatAmountWithUnit(shown);
-}
+): string => formatReading(readingOf(item.amountLeft, system));
 
 export const formatPackageBreakdown = (
   breakdown: PackageBreakdown | null | undefined,

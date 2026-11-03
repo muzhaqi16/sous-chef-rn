@@ -37,6 +37,7 @@ fragment useCorrectPackageSize_pantryItem on PantryItem {
 fragment useCorrectPackageSize_stack on PantryItem {
   id
   version
+  portionUnitId
   netWeightUnit {
     id
   }

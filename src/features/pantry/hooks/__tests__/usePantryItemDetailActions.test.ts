@@ -1,6 +1,6 @@
 import { act } from '@testing-library/react-native';
 import { t } from '#/i18n';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
 import { ApolloClient } from '@apollo/client';
 import {
   recordMock,
@@ -50,7 +50,7 @@ jest.mock('#features/shoppingList/cache/items', () => ({
 
 const mockConvertExpiredToWaste = jest.fn();
 const mockAdjustQuantity = jest.fn();
-const mockCorrectPackageSize = jest.fn().mockResolvedValue(true);
+const mockCorrectPackageSize = jest.fn().mockResolvedValue(null);
 
 interface MockWasted {
   hasBatches: boolean;
@@ -807,8 +807,9 @@ describe('usePantryItemDetailActions', () => {
 
   describe('handleCorrectPackageSize', () => {
     const correction = {
-      netWeight: 22,
-      netWeightUnitId: 'unit-oz',
+      amount: 22,
+      unitId: 'unit-oz',
+      unitType: UnitType.Weight,
       reason: 'label misread',
     };
 
@@ -816,12 +817,11 @@ describe('usePantryItemDetailActions', () => {
       const { result } = setup();
       act(() => result.current.setCorrectingBatchId('batch-1'));
 
-      let corrected: boolean | undefined;
-      corrected = await drained(() =>
+      const refused = await drained(() =>
         result.current.handleCorrectPackageSize(correction),
       );
 
-      expect(corrected).toBe(true);
+      expect(refused).toBeNull();
       expect(mockCorrectPackageSize).toHaveBeenCalledWith({
         ...correction,
         pantryItemId: 'item-1',
@@ -832,12 +832,8 @@ describe('usePantryItemDetailActions', () => {
     it('does nothing when no batch is being corrected', async () => {
       const { result } = setup();
 
-      let corrected: boolean | undefined;
-      corrected = await drained(() =>
-        result.current.handleCorrectPackageSize(correction),
-      );
+      await drained(() => result.current.handleCorrectPackageSize(correction));
 
-      expect(corrected).toBe(false);
       expect(mockCorrectPackageSize).not.toHaveBeenCalled();
     });
   });

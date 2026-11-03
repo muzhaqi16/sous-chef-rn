@@ -3,7 +3,7 @@
 import {
   formatStorageState,
   getExpirationStatus,
-  formatHeldAmount,
+  formatAmountLeft,
   formatPackageBreakdown,
   formatPackageBreakdownFull,
   formatQuantityBreakdown,
@@ -186,95 +186,47 @@ describe('formatPackageBreakdownFull', () => {
   });
 });
 
-describe('formatHeldAmount', () => {
-  const NO_READING = {
-    value: 0,
-    unitId: 'unit-none',
-    metric: { value: 0, unitId: 'unit-none', symbol: '' },
-    imperial: { value: 0, unitId: 'unit-none', symbol: '' },
-  };
-  const liters = (quantity: number, fraction: string | null = null) => ({
-    displayAmount: { quantity, fraction, unit: { id: 'u-l', symbol: 'L' } },
-    held: NO_READING,
+describe('formatAmountLeft', () => {
+  const reading = (
+    value: number,
+    symbol: string,
+    type: UnitType = UnitType.Count,
+    displayAsFraction = false,
+  ) => ({ value, unitId: `u-${symbol}`, symbol, type, displayAsFraction });
+  const left = (metric: ReturnType<typeof reading>, imperial = metric) => ({
+    amountLeft: { metric, imperial },
   });
 
-  it('reads it in the user’s system while the reading describes it', () => {
-    const weighed = {
-      displayAmount: { quantity: 100, unit: { id: 'u-g', symbol: 'g' } },
-      held: {
-        value: 100,
-        unitId: 'u-g',
-        metric: {
-          value: 100,
-          unitId: 'u-g',
-          symbol: 'g',
-          displayAsFraction: false,
-          type: UnitType.Weight,
-        },
-        imperial: {
-          value: 3.5,
-          unitId: 'u-oz',
-          symbol: 'oz',
-          displayAsFraction: false,
-          type: UnitType.Weight,
-        },
-      },
-    };
-    expect(formatHeldAmount(weighed, UnitSystem.Imperial)).toBe('3.5 oz');
-  });
-
-  it('shows a stack as the server shows it: 12 pc as 1 doz', () => {
-    expect(
-      formatHeldAmount(
-        {
-          displayAmount: { quantity: 1, unit: { id: 'u-doz', symbol: 'doz' } },
-          held: NO_READING,
-        },
-        UnitSystem.Metric,
-      ),
-    ).toBe('1 doz');
-  });
-
-  it('writes a fraction where the server shows one, else a number', () => {
-    expect(formatHeldAmount(liters(1.25, '¼'), UnitSystem.Metric)).toBe(
-      '1 1/4 L',
+  it('reads it in the user’s system', () => {
+    const honey = left(
+      reading(100, 'g', UnitType.Weight),
+      reading(3.5, 'oz', UnitType.Weight),
     );
-    expect(formatHeldAmount(liters(1.25), UnitSystem.Metric)).toBe('1.25 L');
+    expect(formatAmountLeft(honey, UnitSystem.Imperial)).toBe('3.5 oz');
+    expect(formatAmountLeft(honey, UnitSystem.Metric)).toBe('100 g');
+  });
+
+  it.each([
+    ['2 bags', reading(2, 'bags')],
+    ['1 doz', reading(1, 'doz')],
+    ['9 cans', reading(9, 'cans')],
+    ['1 lb', reading(1, 'lb', UnitType.Weight)],
+    ['1/2 box', reading(0.5, 'box')],
+    ['2 1/4 box', reading(2.25, 'box')],
+    ['1 1/4 L', reading(1.25, 'L', UnitType.Volume, true)],
+    ['1.25 L', reading(1.25, 'L', UnitType.Volume)],
+    ['177.441 L', reading(177.4412, 'L', UnitType.Volume)],
+  ])('reads %s', (text, amount) => {
+    expect(formatAmountLeft(left(amount), UnitSystem.Metric)).toBe(text);
   });
 
   // The short form an Italian reader sees is a name, and agrees with the count.
-  it('shows the unit in the app language, singular or plural by the amount', () => {
-    const cans = (quantity: number) => ({
-      displayAmount: {
-        quantity,
-        fraction: null,
-        unit: {
-          id: 'u-can',
-          symbol: 'can',
-          localizedSymbolForms: { one: 'lattina', other: 'lattine' },
-        },
-      },
-      held: NO_READING,
-    });
-    expect(formatHeldAmount(cans(3), UnitSystem.Metric)).toBe('3 lattine');
-    expect(formatHeldAmount(cans(1), UnitSystem.Metric)).toBe('1 lattina');
-    // A part of one reads singular only as a fraction.
-    expect(formatHeldAmount(cans(0.5), UnitSystem.Metric)).toBe('0.5 lattine');
-    expect(
-      formatHeldAmount(
-        {
-          ...cans(0.5),
-          displayAmount: { ...cans(0.5).displayAmount, fraction: '½' },
-        },
-        UnitSystem.Metric,
-      ),
-    ).toBe('1/2 lattina');
-  });
-
-  it('rounds to three decimals for a unit that does not', () => {
-    expect(formatHeldAmount(liters(177.4412), UnitSystem.Metric)).toBe(
-      '177.441 L',
-    );
+  it('takes the unit in the app language from the reading', () => {
+    const cans = {
+      ...reading(9, 'can'),
+      localizedSymbol: 'lattine',
+    };
+    expect(formatAmountLeft(left(cans), UnitSystem.Metric)).toBe('9 lattine');
   });
 });
 

@@ -236,6 +236,17 @@ fully-offline create. Two shared writers keep this DRY:
   `writeLocalEntity`: what the create knows, else what the cache holds per field, else the SDL-derived
   neutral value. An incomplete row makes a list cell report `complete: false` and blank it.
 
+**A pantry use moves the amount a person reads.** `amountLeft` is the server's, and `amountLeftOf`
+(`src/domain/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
+`writeHeldStock` writes it beside `displayAmount` and a screen never computes one. A use goes in by
+same-unit subtraction: the tracking unit, a dozen of it, the portion unit, or the net-weight unit on a
+stack with no portions. A use in any other unit keeps the row where it is until the server answers, the
+write queued as usual, because only the server converts. A whole package moves what is inside by the
+stack's own per-package figures. A use remembers its unit in the same layer; waste, a transfer and a
+gift do not. Batches are the server's, so a whole held count reads as unopened until it answers: two
+half-used bags read 1 bag for that moment. Every answer replaces the layer, so a mutation that moves
+stock returns `amountLeft`, or the row falls back to the old read when the layer drops.
+
 **An optimistic entity is COMPLETE for every query that reads it.** With
 `returnPartialData: false`, one missing field makes the whole cache read
 incomplete and `useQuery` returns nothing; online a refetch hides it, offline

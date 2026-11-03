@@ -151,6 +151,11 @@ function replacing(
             });
           }
           break;
+        // This feed asks for lists, so the pantry's rows reach only its own.
+        case 'Pantry':
+        case 'PantryItem':
+        case 'PantryItemBatch':
+        case 'PantryItemUsage':
         default:
           // A row type a newer server added.
           break;

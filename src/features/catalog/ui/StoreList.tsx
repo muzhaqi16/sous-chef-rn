@@ -5,13 +5,13 @@ import { StyleSheet } from 'react-native-unistyles';
 import { SwipeAwareScrollComponent } from '#components/atoms/SwipeAwareScrollComponent';
 import { useScreenListInset } from '#components/templates/useScreenListInset';
 import { FLASHLIST_DEFAULTS } from '#constants/flashListDefaults';
-import type { StoreOption } from '#domain/stores';
+import type { FoundOption } from '#domain/stores';
 
 // A pin moves a row to the top and an answer replaces the rows: anchoring the
 // rows in view would scroll the first one away.
 const MVCP_DISABLED = { disabled: true };
 
-type StoreListProps<T extends StoreOption> = Pick<
+type StoreListProps<T extends FoundOption> = Pick<
   FlashListProps<T>,
   'data' | 'renderItem' | 'ListEmptyComponent' | 'ListFooterComponent'
 > & {
@@ -23,7 +23,7 @@ type StoreListProps<T extends StoreOption> = Pick<
  * A screen's list of stores, filling the rest of it: the page, so it insets
  * its header and rows on the page gutter.
  */
-export function StoreList<T extends StoreOption>({
+export function StoreList<T extends FoundOption>({
   header,
   ...props
 }: StoreListProps<T>) {

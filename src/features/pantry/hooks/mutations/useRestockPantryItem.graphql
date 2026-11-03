@@ -20,9 +20,43 @@ fragment useRestockPantryItem_pantryItem on PantryItem {
       }
     }
   }
+  amountLeft {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+  }
   isLowStock
   netWeight
   remainingNetWeight
+  remainingPortions
+  portionUnitId
+  portionsPerTrackingUnit
+  portionUnit {
+    id
+    name
+    symbol
+    localizedSymbolForms {
+      one
+      other
+    }
+    type
+    displayAsFraction
+  }
   expiresOn
   activeBatchCount
   earliestBatchExpiresOn

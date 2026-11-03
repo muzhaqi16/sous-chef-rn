@@ -3,7 +3,6 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { BottomSheetModal } from '#hooks/ui/useStandardBottomSheet';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
-import { FormattedItemSubtitle } from '#components/molecules/FormattedItemSubtitle';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { BottomSheetFormScrollView } from '#components/atoms/BottomSheetFormScrollView';
 import { UnitPicker } from '#features/pantry/components/UnitPicker';
@@ -15,16 +14,14 @@ import {
 import { useConvertAvailableQuantity } from '#features/pantry/hooks/useConvertAvailableQuantity';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
-import {
-  formatQuantityForDisplay,
-  unitLabel,
-  type UnitLabelSource,
-} from '#/utils/formatQuantity';
+import type { UnitLabelSource } from '#/utils/formatQuantity';
 import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { usePantryActionItem } from '#features/pantry/components/modals/usePantryActionItem';
-import { shownStock } from '#domain/stockDisplay';
+import { amountLeftOf, shownStock } from '#domain/stockDisplay';
+import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import type {
   PantryActionSharedState,
   ShownQuantity,
@@ -76,6 +73,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   renderActionFields,
 }) => {
   const { t } = useTranslation();
+  const readingSystem = useReadingSystem();
   const resolvedUnitToggleLabel =
     unitToggleLabel ?? t('pantryAction.useByDefault');
   const resolvedCurrentQuantityLabel =
@@ -114,7 +112,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     pantryItemId: pantryItem?.id,
     trackingUnitId,
     trackingUnitType: pantryItem?.unit.type,
-    netWeightUnitId: pantryItem?.netWeightUnit?.id,
     consumeUnitId: pantryItem?.consumeUnit?.id,
     operation,
   });
@@ -127,19 +124,6 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       : null);
   const isDualTracked =
     effectiveNetWeight != null && pantryItem?.netWeightUnit != null;
-  // Same unit both sides makes the tracking count redundant ("1 g (100 g
-  // remaining)") — collapse to the net weight alone.
-  const isSingleUnitDualTracked =
-    isDualTracked && pantryItem.unit.id === pantryItem.netWeightUnit?.id;
-  const contentBreakdown = isDualTracked ? pantryItem.packageBreakdown : null;
-  const perUnitNetWeight = contentBreakdown?.perUnitNetWeight ?? null;
-  const hasContentUnit = perUnitNetWeight != null && perUnitNetWeight > 0;
-  const contentUnitCount =
-    pantryItem?.quantityBreakdown?.totalContentUnits != null
-      ? Math.floor(pantryItem.quantityBreakdown.totalContentUnits)
-      : hasContentUnit && pantryItem?.remainingNetWeight != null
-      ? Math.floor(pantryItem.remainingNetWeight / perUnitNetWeight)
-      : 0;
 
   const trackingQuantity = pantryItem?.quantity ?? 0;
   const trackingUnit: UnitLabelSource = pantryItem?.unit ?? {};
@@ -170,13 +154,28 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
         displayAsFraction: null,
       };
     }
-    const { unit } = pantryItem;
-    const shown = shownStock(held, unit, pantryItem.displayUnit);
+    const { unit, portionUnit, portionsPerTrackingUnit, remainingPortions } =
+      pantryItem;
+    const left = amountLeftOf({
+      held,
+      shown: shownStock(held, unit, pantryItem.displayUnit),
+      trackingType: unit.type,
+      commonFractions: unit.commonFractions,
+      portions:
+        portionUnit && remainingPortions != null && portionsPerTrackingUnit
+          ? {
+              left:
+                remainingPortions +
+                (held - trackingQuantity) * portionsPerTrackingUnit,
+              unit: portionUnit,
+            }
+          : null,
+    });
     return {
-      quantity: shown.quantity,
-      unit: shown.unit,
+      quantity: left.quantity,
+      unit: left.unit,
       // A dozen reads in fractions; the stack's own unit in its own notation.
-      displayAsFraction: shown.unit === unit ? unit.displayAsFraction : null,
+      displayAsFraction: left.unit === unit ? unit.displayAsFraction : null,
     };
   };
 
@@ -207,9 +206,10 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
   }
 
   // Also picks up the default unit once it loads, if nothing is selected yet.
-  const [prevDefaultUnitId, setPrevDefaultUnitId] = useState(
-    defaultUnit?.unitId,
-  );
+  // Starts unset: a sheet opening over cached units sees no change otherwise.
+  const [prevDefaultUnitId, setPrevDefaultUnitId] = useState<
+    string | undefined
+  >(undefined);
   if (defaultUnit?.unitId !== prevDefaultUnitId) {
     setPrevDefaultUnitId(defaultUnit?.unitId);
     if (
@@ -252,6 +252,7 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
     netWeightUnit: pantryItem?.netWeightUnit ?? undefined,
     netWeightUnitId: pantryItem?.netWeightUnit?.id,
     isDualTracked,
+    portionUnitId: pantryItem?.portionUnitId ?? null,
   };
 
   return (
@@ -284,68 +285,16 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
                 <Text role="body" tone="secondary">
                   {resolvedCurrentQuantityLabel}{' '}
                 </Text>
-                <FormattedItemSubtitle
-                  quantity={
-                    isSingleUnitDualTracked
-                      ? effectiveNetWeight
-                      : pantryItem.displayAmount.quantity
-                  }
-                  displayAsFraction={
-                    isSingleUnitDualTracked ||
-                    pantryItem.displayAmount.unit.id !== pantryItem.unit.id
-                      ? undefined
-                      : pantryItem.unit.displayAsFraction
-                  }
-                  unit={
-                    isSingleUnitDualTracked
-                      ? pantryItem.netWeightUnit
-                      : pantryItem.displayAmount.unit
-                  }
-                />
-                {!!isDualTracked && !isSingleUnitDualTracked && (
-                  <Text role="body" tone="secondary">
-                    {' '}
-                    {t('pantryAction.remainingAmount', {
-                      amount: pantryItem.quantityBreakdown
-                        ? t('pantryAction.quantityBreakdown', {
-                            packages: pantryItem.quantityBreakdown.fullPackages,
-                            loose: Math.floor(
-                              pantryItem.quantityBreakdown.looseContentUnits,
-                            ),
-                            unit: unitLabel(
-                              pantryItem.quantityBreakdown.contentUnit,
-                              {
-                                quantity:
-                                  pantryItem.quantityBreakdown
-                                    .looseContentUnits,
-                              },
-                            ),
-                          })
-                        : contentBreakdown && hasContentUnit
-                        ? t('pantryAction.amountWithUnit', {
-                            amount: contentUnitCount,
-                            unit: unitLabel(contentBreakdown.contentUnit, {
-                              quantity: contentUnitCount,
-                            }),
-                          })
-                        : t('pantryAction.amountWithUnit', {
-                            amount: formatQuantityForDisplay(
-                              effectiveNetWeight,
-                              { notation: 'decimal' },
-                            ),
-                            unit: unitLabel(pantryItem.netWeightUnit, {
-                              quantity: effectiveNetWeight,
-                            }),
-                          }),
-                    })}
-                  </Text>
-                )}
+                <Text role="bodyStrong">
+                  {formatAmountLeft(pantryItem, readingSystem)}
+                </Text>
               </View>
             </View>
 
             {/* Unit Picker */}
             <UnitPicker
               label={resolvedUnitToggleLabel}
+              ranked={allUnits}
               groups={groups}
               selectedUnitId={selectedUnitInfo?.unitId}
               onSelect={setSelectedUnitInfo}

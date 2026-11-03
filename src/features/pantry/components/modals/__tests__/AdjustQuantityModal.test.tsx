@@ -213,7 +213,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
             symbol: 'cups',
           }),
         },
-        held: NO_READING,
+        amountLeft: NO_READING,
         remaining: null,
         ...overrides,
       },
@@ -239,7 +239,7 @@ function honeyCache() {
       fraction: null,
       unit: asAbbreviation({ __typename: 'Unit', id: 'u-g', symbol: 'g' }),
     },
-    held: measure(
+    amountLeft: measure(
       1360.78,
       'u-g',
       reading(1.36, 'u-kg', 'kg'),

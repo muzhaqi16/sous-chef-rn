@@ -44,6 +44,9 @@ export const pantryTestIDs = {
   addDetailsNameInput: 'add-pantry-item-name-input',
   addDetailsQuantityInput: 'add-pantry-item-quantity-input',
   addDetailsUnitPicker: 'add-pantry-item-unit-picker',
+  addDetailsSizeInput: 'add-pantry-item-size-input',
+  addDetailsSizeUnitPicker: 'add-pantry-item-size-unit-picker',
+  restockDifferentSize: 'restock-different-size',
   addDetailsSubmitButton: 'add-pantry-item-submit-button',
   addDetailsCancelButton: 'add-pantry-item-cancel-button',
 
@@ -51,7 +54,6 @@ export const pantryTestIDs = {
   editItemSubmitButton: 'edit-pantry-item-submit-button',
   editItemQuantityInput: 'edit-pantry-item-quantity-input',
   editItemUnitPicker: 'edit-pantry-item-unit-picker',
-  editItemUsedInPicker: 'edit-pantry-item-used-in-picker',
 
   sortOption: (key: string) => `pantry-sort-option-${key}`,
   /** The add-details sheet's page indicator, by page index. */

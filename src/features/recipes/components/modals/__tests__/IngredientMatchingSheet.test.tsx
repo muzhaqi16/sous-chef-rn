@@ -8,6 +8,10 @@ import type {
   MatchSummary,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 
+jest.mock('#hooks/settings/useReadingSystem', () => ({
+  useReadingSystem: () => 'METRIC',
+}));
+
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
   useStandardBottomSheet: jest.fn(() => ({
     ref: { current: { present: jest.fn(), dismiss: jest.fn() } },

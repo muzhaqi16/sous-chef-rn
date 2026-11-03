@@ -2,6 +2,7 @@ import { useTranslation } from '#/i18n';
 import { AcquisitionMethod } from '#/graphql/generated/schemaTypes';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { contentsOf, statedContents } from '#domain/stockAmount';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { refByIdOrName } from '#/utils/refInput';
@@ -24,15 +25,12 @@ export function usePantryItemSubmission({
     quantityInput,
     unit,
     unitId,
+    unitType,
+    sizeInput,
+    sizeUnitDisplay,
+    sizeUnitId,
+    sizeUnitType,
     storageState,
-    showPackageDetails,
-    packageSize,
-    contentUnit,
-    contentUnitId,
-    itemNetWeight,
-    weightUnitId,
-    pantryNetWeight,
-    pantryNetWeightUnitId,
     expirationDate,
     selectedStorageLocationId,
     storageLocation,
@@ -55,48 +53,15 @@ export function usePantryItemSubmission({
     const quantity = parseFractionalInput(quantityInput);
     if (quantity === null) return;
 
-    // Build itemUnits array if package details are provided
-    let itemUnits;
-    let netWeight;
-    let displayUnitId;
-    let totalPackageNetWeight: number | undefined;
-    if (showPackageDetails && packageSize && contentUnit) {
-      const pkgSize = parseDecimalInput(packageSize);
-      if (!isNaN(pkgSize) && pkgSize > 0) {
-        const packageUnit = refByIdOrName(unitId, unit);
-        const packageContentUnit = refByIdOrName(contentUnitId, contentUnit);
-        if (packageUnit && packageContentUnit) {
-          itemUnits = [
-            {
-              unit: packageUnit,
-              packageSize: pkgSize,
-              contentUnit: packageContentUnit,
-              retailUnit: true,
-            },
-            { unit: packageContentUnit, isDefault: true },
-          ];
-        }
-      }
-      // Per-container net weight is all-or-nothing too: `item.netWeight`
-      // without `displayUnitId` means nothing to the server. The form's
-      // `item-net-weight-needs-unit` rule reports it on the field first.
-      if (itemNetWeight && weightUnitId) {
-        const nw = parseDecimalInput(itemNetWeight);
-        if (!isNaN(nw) && nw > 0) {
-          netWeight = nw;
-          displayUnitId = weightUnitId;
-          totalPackageNetWeight = pkgSize * nw;
-        }
-      }
-    }
-
-    // Compute the effective pantry-level net weight
-    const effectivePantryNetWeight = pantryNetWeight
-      ? parseDecimalInput(pantryNetWeight) || undefined
-      : totalPackageNetWeight;
-    const effectiveNetWeightUnitId =
-      pantryNetWeightUnitId ??
-      (totalPackageNetWeight ? displayUnitId : undefined);
+    const { packageSize, measurementProfile } = contentsOf(
+      statedContents({
+        unitType,
+        sizeInput,
+        sizeUnitDisplay,
+        sizeUnitId,
+        sizeUnitType,
+      }),
+    );
 
     // Sent only when the user gave some: `storeId` comes from a picked store
     // (no free-text store name), and `acquisitionMethod` rides along with any
@@ -128,16 +93,6 @@ export function usePantryItemSubmission({
           .map(tag => tag.trim())
           .filter(Boolean)
       : undefined;
-    // NetWeightInput is all-or-nothing: the API rejects a partial input (value
-    // without unit, or unit without value) with a ValidationError(field:
-    // "netWeight"). Only send it when BOTH are present.
-    const statedNetWeight =
-      effectivePantryNetWeight && effectiveNetWeightUnitId
-        ? {
-            netWeight: effectivePantryNetWeight,
-            netWeightUnitId: effectiveNetWeightUnitId,
-          }
-        : null;
     const input = {
       quantity,
       unit: refByIdOrName(unitId, unit),
@@ -161,15 +116,13 @@ export function usePantryItemSubmission({
                 : undefined,
             }
           : undefined,
-      netWeight: statedNetWeight ?? undefined,
+      netWeight: packageSize ?? undefined,
+      measurementProfile,
       item: {
         inline: {
           name: itemName.trim(),
           brand: brand.trim() || undefined,
           category: refByIdOrName(null, category),
-          units: itemUnits,
-          netWeight: netWeight,
-          displayUnitId: displayUnitId,
         },
       },
     };

@@ -26,7 +26,7 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { resolveImageUrl } from '#utils/imageUtils';
 import {
-  formatHeldAmount,
+  formatAmountLeft,
   formatPackageBreakdownFull,
   formatQuantityBreakdown,
   formatStorageState,
@@ -310,7 +310,7 @@ export const PantryItemDetail: React.FC<
     );
   }
 
-  const quantityText = formatHeldAmount(item, readingSystem);
+  const quantityText = formatAmountLeft(item, readingSystem);
 
   // The EXPIRED flag can land a day late east of UTC, so the date decides too.
   // The batches' date, not the item's: an edit moves only the item's, and the
@@ -513,7 +513,7 @@ export const PantryItemDetail: React.FC<
           </DetailSection>
         )}
 
-        <DetailSection>
+        <DetailSection dividedRows>
           <PantryDetailInfo
             itemRef={item}
             brandName={brandName}

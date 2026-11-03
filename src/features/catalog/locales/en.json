@@ -74,7 +74,6 @@
     "hintText": "You can edit details later in Settings > Storage Locations"
   },
   "addItemSheet": {
-    "more": "More",
     "allAdded": "All added",
     "dismiss": "Dismiss suggestion",
     "dismissed": "Removed {{name}}",
@@ -483,6 +482,7 @@
     "zipLabel": "Zip code",
     "zipRefused": "That zip code isn't one we know yet. Try another, or search by name.",
     "notListed": "Not listed? Add “{{name}}”",
+    "typeToAdd": "Not on the list? Type its name to add it.",
     "addedToStores": "Added to your stores",
     "needsConnectionTitle": "Finding stores needs a connection",
     "needsConnectionBody": "These are the stores you shop at. Connect to find others.",

@@ -189,6 +189,7 @@
     "restockBy": "Restock by",
     "currentLabel": "Current:",
     "quantityToAdd": "Quantity to Add",
+    "differentSize": "A different size?",
     "newQuantityPrefix": "New quantity: ",
     "costPerUnit": "Cost per Unit",
     "notesPlaceholder": "Add any notes about this restock...",
@@ -239,10 +240,7 @@
   },
   "pantryAction": {
     "useByDefault": "Use by",
-    "availableDefault": "Available:",
-    "remainingAmount": "({{amount}} remaining)",
-    "quantityBreakdown": "{{packages}} full + {{loose}} loose {{unit}}",
-    "amountWithUnit": "{{amount}} {{unit}}"
+    "availableDefault": "Available:"
   },
   "correctWeight": {
     "invalidWeight": "Please enter a valid size",
@@ -250,7 +248,6 @@
     "title": "Correct package size",
     "correct": "Correct",
     "netWeightPrefix": "Package size: ",
-    "newNetWeight": "Actual package size",
     "reasonPlaceholder": "Why is the size being corrected?"
   },
   "addToPantry": {
@@ -261,14 +258,6 @@
     "lowStockHint": "Get notified when this item is running low.",
     "emptyHint": "Leave empty to disable low stock alerts for this item.",
     "quantityPlaceholder": "1",
-    "hidePackageDetails": "Hide Package Details",
-    "addPackageDetails": "Add Package Details",
-    "packageHint": "Define what's inside a package (e.g., 12 cans of 335ml each).",
-    "qtyPerPackage": "Qty per Package",
-    "contentUnit": "Content Unit",
-    "weightPerUnit": "Weight per Unit",
-    "weightPerUnitPlaceholder": "e.g., 335",
-    "contentWeightUnitPlaceholder": "mL, g, oz",
     "itemNamePlaceholder": "e.g., Milk, Eggs, Bread...",
     "brandPlaceholder": "e.g., Whole Foods, Organic Valley",
     "restockFailed": "Failed to restock item.",
@@ -440,6 +429,11 @@
   },
   "packageSize": {
     "defaultTitle": "Default package size",
-    "defaultHint": "New stock takes this size when none is given. To fix a package you already have, use Correct package size on the item's page."
+    "defaultHint": "New stock takes this size when none is given. To fix a package you already have, use Correct package size on the item's page.",
+    "eachHolds": "Each holds",
+    "unitPlaceholder": "lb, can",
+    "sizeInvalid": "Enter a size greater than 0.",
+    "unitRequired": "Pick the size’s unit from the list.",
+    "wholePackages": "Packages are counted whole: 1, 2, 3…"
   }
 }

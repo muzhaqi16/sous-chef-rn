@@ -417,7 +417,6 @@
     "mold": "Muffa",
     "moreOptions": "Altre opzioni",
     "netWeight": "Peso netto",
-    "netWeightIsUsedForConsumptionTrackingAndIsOptional": "Il peso netto viene usato per monitorare il consumo ed è opzionale.",
     "never": "Mai",
     "newTemplate": "Nuovo modello",
     "next": "Avanti",
@@ -559,9 +558,6 @@
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
     },
-    "usedIn": "Si usa in",
-    "tbspCup": "tbsp, tazza",
-    "usedInHint": "Con cosa lo misuri quando lo usi, come tbsp per il miele.",
     "member": "Membro",
     "member_one": "Membro",
     "member_other": "Membri",
@@ -584,7 +580,8 @@
     "vegan": "Vegana",
     "sulfite": "Solfiti",
     "budgetAndPrices": "Budget e prezzi",
-    "shopping": "Spesa"
+    "shopping": "Spesa",
+    "more": "Altro"
   },
   "instructions": {
     "pointCamera": "Punta la fotocamera su un codice a barre",

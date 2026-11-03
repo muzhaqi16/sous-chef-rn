@@ -22,6 +22,8 @@ import { StockSettingsPage } from './StockSettingsPage';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
+import { takesContents } from '#domain/stockAmount';
+import type { UnitType } from '#/graphql/generated/schemaTypes';
 import { logValidationErrors } from '#/utils/validation/common';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
@@ -88,13 +90,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     unit,
     storageState,
     category,
-    showPackageDetails,
-    packageSize,
-    contentUnit,
-    itemNetWeight,
-    weightUnit,
-    pantryNetWeight,
-    pantryNetWeightUnit,
+    unitType,
+    sizeInput,
+    sizeUnitDisplay,
     expirationDate,
     storageLocation,
     storageNotes,
@@ -118,20 +116,12 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     value: PathValue<AddPantryItemFormData, K>,
   ) => {
     setValue(field, value, { shouldDirty: true, shouldValidate: true });
-    // `shouldValidate` re-runs only THIS field, but the net-weight rule reports
-    // each direction on a different field, so both halves are re-run.
-    if (field === 'pantryNetWeight' || field === 'pantryNetWeightUnitId') {
-      void trigger(['pantryNetWeightUnit', 'pantryNetWeight']);
-    }
-    // Same shape one level down, for the package-details per-container weight.
-    // Toggling the section off has to re-run them too — both rules are scoped
-    // to `showPackageDetails`, so collapsing it must clear a standing message.
-    if (
-      field === 'itemNetWeight' ||
-      field === 'weightUnitId' ||
-      field === 'showPackageDetails'
-    ) {
-      void trigger(['weightUnit', 'itemNetWeight']);
+    // `shouldValidate` re-runs only THIS field, but what a package holds decides
+    // these others too. Only a message already showing is re-checked: a size
+    // typed a moment before its unit is not yet a mistake.
+    const contentsReported = errors.quantityInput ?? errors.sizeUnitId;
+    if (contentsReported && (field === 'sizeInput' || field === 'unitType')) {
+      void trigger(['quantityInput', 'sizeUnitId']);
     }
   };
 
@@ -143,19 +133,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const setUnitId = (v: string | null) => setField('unitId', v);
   const setStorageState = (v: StorageState) => setField('storageState', v);
   const setCategory = (v: string) => setField('category', v);
-  const setShowPackageDetails = (v: boolean) =>
-    setField('showPackageDetails', v);
-  const setPackageSize = (v: string) => setField('packageSize', v);
-  const setContentUnit = (v: string) => setField('contentUnit', v);
-  const setContentUnitId = (v: string | null) => setField('contentUnitId', v);
-  const setItemNetWeight = (v: string) => setField('itemNetWeight', v);
-  const setWeightUnit = (v: string) => setField('weightUnit', v);
-  const setWeightUnitId = (v: string | null) => setField('weightUnitId', v);
-  const setPantryNetWeight = (v: string) => setField('pantryNetWeight', v);
-  const setPantryNetWeightUnit = (v: string) =>
-    setField('pantryNetWeightUnit', v);
-  const setPantryNetWeightUnitId = (v: string | null) =>
-    setField('pantryNetWeightUnitId', v);
+  const setSizeInput = (v: string) => setField('sizeInput', v);
+  const setSizeUnit = (v: string) => setField('sizeUnitDisplay', v);
   const setExpirationDate = (v: Date | null) => setField('expirationDate', v);
   const setStorageLocation = (v: string) => setField('storageLocation', v);
   const setSelectedStorageLocationId = (v: string | null) =>
@@ -174,19 +153,32 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Store selection (PurchaseInfoInput stores by id; free text isn't sent)
   const handleStoreSelected = makeIdNameHandler(setStoreId, setStoreName);
-  const handleUnitSelected = makeIdNameHandler(setUnitId, setUnit);
-  const handleContentUnitSelected = makeIdNameHandler(
-    setContentUnitId,
-    setContentUnit,
+  const pickUnit = makeIdNameHandler(setUnitId, setUnit);
+  const handleUnitSelected = (
+    id: string | null,
+    name: string | null,
+    type?: UnitType | null,
+  ) => {
+    pickUnit(id, name);
+    setField('unitType', type ?? null);
+  };
+  // Each keystroke clears the pick, and a half-typed unit is not yet a mistake.
+  const pickSizeUnit = makeIdNameHandler(
+    (v: string | null) =>
+      setValue('sizeUnitId', v, {
+        shouldDirty: true,
+        shouldValidate: v !== null,
+      }),
+    setSizeUnit,
   );
-  const handlePantryNetWeightUnitSelected = makeIdNameHandler(
-    setPantryNetWeightUnitId,
-    setPantryNetWeightUnit,
-  );
-  const handleWeightUnitSelected = makeIdNameHandler(
-    setWeightUnitId,
-    setWeightUnit,
-  );
+  const handleSizeUnitSelected = (
+    id: string | null,
+    name: string | null,
+    type?: UnitType | null,
+  ) => {
+    pickSizeUnit(id, name);
+    setField('sizeUnitType', type ?? null);
+  };
 
   const handleStorageLocationSelected = (
     locationId: string | null,
@@ -279,30 +271,17 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           quantityInput={quantityInput}
           setQuantityInput={setQuantityInput}
           quantityError={errors.quantityInput?.message}
-          pantryNetWeightError={errors.pantryNetWeight?.message}
-          pantryNetWeightUnitError={errors.pantryNetWeightUnit?.message}
-          itemNetWeightError={errors.itemNetWeight?.message}
-          weightUnitError={errors.weightUnit?.message}
           unit={unit}
           setUnit={setUnit}
           handleUnitSelected={handleUnitSelected}
-          pantryNetWeight={pantryNetWeight}
-          setPantryNetWeight={setPantryNetWeight}
-          pantryNetWeightUnit={pantryNetWeightUnit}
-          setPantryNetWeightUnit={setPantryNetWeightUnit}
-          handlePantryNetWeightUnitSelected={handlePantryNetWeightUnitSelected}
-          showPackageDetails={showPackageDetails}
-          setShowPackageDetails={setShowPackageDetails}
-          packageSize={packageSize}
-          setPackageSize={setPackageSize}
-          contentUnit={contentUnit}
-          setContentUnit={setContentUnit}
-          handleContentUnitSelected={handleContentUnitSelected}
-          itemNetWeight={itemNetWeight}
-          setItemNetWeight={setItemNetWeight}
-          weightUnit={weightUnit}
-          setWeightUnit={setWeightUnit}
-          handleWeightUnitSelected={handleWeightUnitSelected}
+          holdsContents={takesContents(unitType)}
+          sizeInput={sizeInput}
+          setSizeInput={setSizeInput}
+          sizeError={errors.sizeInput?.message}
+          sizeUnit={sizeUnitDisplay}
+          setSizeUnit={setSizeUnit}
+          handleSizeUnitSelected={handleSizeUnitSelected}
+          sizeUnitError={errors.sizeUnitId?.message}
           insets={insets}
         />
 

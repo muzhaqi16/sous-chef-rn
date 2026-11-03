@@ -101,3 +101,64 @@ export function shownStock<
   if (rest !== 0 && !wholeParts(displayUnit, factor).has(rest)) return own;
   return { quantity: count / factor, unit: displayUnit };
 }
+
+/** What a stack holds inside, in the unit it states it in. */
+export interface HeldInside<Unit> {
+  left: number;
+  unit: Unit;
+}
+
+interface AmountLeftSource<Shown, Inside> {
+  held: number;
+  /** `held` as the stack shows it: `shownStock`, or an amount stated in that form. */
+  shown: { quantity: number; unit: Shown };
+  trackingType: UnitType | null | undefined;
+  commonFractions?: readonly number[] | null;
+  portions?: HeldInside<Inside> | null;
+  netWeight?: HeldInside<Inside> | null;
+}
+
+/** The API's `nearestCommonFraction`: never 0 and never a whole. */
+function nearestCommonFraction(
+  held: number,
+  listed: readonly number[] | null | undefined,
+): number {
+  const whole = Math.floor(held);
+  const part = held - whole;
+  const fractions =
+    listed && listed.length > 0 ? listed : DEFAULT_COMMON_FRACTIONS;
+  return (
+    whole +
+    fractions.reduce((best, fraction) =>
+      Math.abs(fraction - part) < Math.abs(best - part) ? fraction : best,
+    )
+  );
+}
+
+/**
+ * What a person reads as left, by the API's rule (`amountLeftBasis`): whole
+ * packages as the stack shows them, a part-used one in what is inside, portions
+ * before a net weight, else a fraction of the package. A stack counted by weight
+ * or volume has no package to part-use. Batches are the server's, so a whole
+ * count reads as unopened until it answers.
+ */
+export function amountLeftOf<Shown, Inside>({
+  held,
+  shown,
+  trackingType,
+  commonFractions,
+  portions,
+  netWeight,
+}: AmountLeftSource<Shown, Inside>):
+  | { quantity: number; unit: Shown }
+  | { quantity: number; unit: Inside } {
+  const isMeasure =
+    trackingType === UnitType.Weight || trackingType === UnitType.Volume;
+  if (isMeasure || wholeWithin(held, WHOLE_WINDOW) !== null) return shown;
+  if (portions) return { quantity: portions.left, unit: portions.unit };
+  if (netWeight) return { quantity: netWeight.left, unit: netWeight.unit };
+  return {
+    quantity: nearestCommonFraction(held, commonFractions),
+    unit: shown.unit,
+  };
+}

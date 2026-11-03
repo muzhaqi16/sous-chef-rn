@@ -1,22 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { View } from 'react-native';
-import { Controller, useForm } from 'react-hook-form';
+import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
 import { useFragment } from '@apollo/client/react';
 import { FormInput } from '#components/atoms/FormInput';
-import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
+import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
 import { commonStyles } from '#/styles/commonStyles';
 import { Text } from '#components/atoms/Text';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   CorrectPackageSizeModal_BatchFragmentDoc,
   CorrectPackageSizeModal_PantryItemFragmentDoc,
 } from './CorrectPackageSizeModal.generated';
-import {
-  formatNumberForInput,
-  localizeNumericHint,
-} from '#/utils/formatters/number';
+import { formatNumberForInput } from '#/utils/formatters/number';
 import { formatNetWeightDisplay, unitLabel } from '#/utils/formatQuantity';
 import { Sheet } from '#components/templates/Sheet';
 import {
@@ -35,11 +33,14 @@ interface CorrectPackageSizeModalProps {
   pantryItemId: string;
   batchId: string | null;
   onClose: () => void;
-  /** Resolves true once the correction stands; a refusal keeps the sheet open. */
-  onConfirm: (input: PackageSizeCorrectionInput) => Promise<boolean>;
+  /** Resolves null once it stands; a refusal's reason keeps the sheet open. */
+  onConfirm: (input: PackageSizeCorrectionInput) => Promise<string | null>;
 }
 
-/** Corrects ONE batch's package size; the stack's default is edited elsewhere. */
+/**
+ * Corrects what a package holds: ONE batch's size, or the count a stack is used
+ * by. The stack's default size is edited elsewhere.
+ */
 export const CorrectPackageSizeModal: React.FC<
   CorrectPackageSizeModalProps
 > = ({ visible, pantryItemId, batchId, onClose, onConfirm }) => {
@@ -75,11 +76,12 @@ export const CorrectPackageSizeModal: React.FC<
       ? sizeReading
       : null;
 
-  const { control, handleSubmit, setValue, reset, getValues } =
+  const { control, handleSubmit, setValue, setError, reset, getValues } =
     useForm<CorrectWeightFormValues>({
       resolver: yupResolver(correctWeightSchema),
       defaultValues: correctWeightDefaults(),
     });
+  const definesCount = useWatch({ control, name: 'definesCount' });
 
   // `reset` notifies mounted `Controller`s synchronously, so the seed is
   // computed during render and applied from an effect. Keyed on the batch id so
@@ -99,6 +101,8 @@ export const CorrectPackageSizeModal: React.FC<
             unitDisplay: unitLabel(seedReading ?? pantryItem.netWeightUnit),
             selectedUnitId:
               seedReading?.unitId ?? pantryItem.netWeightUnit?.id ?? null,
+            selectedUnitType: null,
+            definesCount: false,
             reason: '',
           }
         : null,
@@ -112,8 +116,14 @@ export const CorrectPackageSizeModal: React.FC<
   const handleUnitSelected = (
     unitId: string | null,
     unitName: string | null,
+    unitType?: UnitType | null,
   ) => {
     setValue('selectedUnitId', unitId, { shouldDirty: true });
+    setValue('selectedUnitType', unitType ?? null);
+    setValue(
+      'definesCount',
+      unitType === UnitType.Count && unitId !== pantryItem?.portionUnitId,
+    );
     if (unitName) setValue('unitDisplay', unitName, { shouldDirty: true });
   };
 
@@ -121,15 +131,23 @@ export const CorrectPackageSizeModal: React.FC<
   // Reaching here means the schema passed; a refusal renders under its field.
   const submit = handleSubmit(async values => {
     const typedUnitId = getValues().selectedUnitId ?? netWeightUnitId;
-    if (!typedUnitId) return;
+    if (!typedUnitId) {
+      setError('unitDisplay', { message: t('packageSize.unitRequired') });
+      return;
+    }
     setIsSaving(true);
-    const corrected = await onConfirm({
-      netWeight: parseWeight(values),
-      netWeightUnitId: typedUnitId,
+    const refused = await onConfirm({
+      amount: parseWeight(values),
+      unitId: typedUnitId,
+      unitType: values.selectedUnitType,
       reason: values.reason.trim(),
     });
     setIsSaving(false);
-    if (corrected) onClose();
+    if (refused) {
+      setError('weightInput', { type: 'server', message: refused });
+      return;
+    }
+    onClose();
   }, logValidationErrors);
   const handleConfirm = () => {
     void submit();
@@ -197,55 +215,47 @@ export const CorrectPackageSizeModal: React.FC<
             <Controller
               control={control}
               name="weightInput"
-              render={({ field, fieldState }) => (
-                <FormInput
-                  label={t('correctWeight.newNetWeight')}
-                  required
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={fieldState.error?.message}
-                  placeholder={localizeNumericHint(t('labels.eG145'))}
-                  keyboardType="decimal-pad"
-                  useBottomSheetInput
+              render={({ field: size, fieldState: sizeState }) => (
+                <Controller
+                  control={control}
+                  name="unitDisplay"
+                  render={({ field: unit, fieldState: unitState }) => (
+                    <PackageContentsFields
+                      variant="modal"
+                      useBottomSheetInput
+                      size={size.value}
+                      onSizeChange={size.onChange}
+                      sizeError={sizeState.error?.message}
+                      unit={unit.value}
+                      onUnitChange={unit.onChange}
+                      onUnitSelected={handleUnitSelected}
+                      unitError={unitState.error?.message}
+                    />
+                  )}
                 />
               )}
             />
           </View>
 
-          <View style={commonStyles.bottomSheetSection}>
-            <Controller
-              control={control}
-              name="unitDisplay"
-              render={({ field }) => (
-                <UnitAutocompleteField
-                  variant="modal"
-                  label={t('labels.unit')}
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  onUnitSelected={handleUnitSelected}
-                  placeholder={t('labels.ozGMl')}
-                />
-              )}
-            />
-          </View>
-
-          <View style={commonStyles.bottomSheetSection}>
-            <Controller
-              control={control}
-              name="reason"
-              render={({ field, fieldState }) => (
-                <FormInput
-                  label={t('labels.reason')}
-                  required
-                  value={field.value}
-                  onChangeText={field.onChange}
-                  error={fieldState.error?.message}
-                  placeholder={t('correctWeight.reasonPlaceholder')}
-                  useBottomSheetInput
-                />
-              )}
-            />
-          </View>
+          {definesCount ? null : (
+            <View style={commonStyles.bottomSheetSection}>
+              <Controller
+                control={control}
+                name="reason"
+                render={({ field, fieldState }) => (
+                  <FormInput
+                    label={t('labels.reason')}
+                    required
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    error={fieldState.error?.message}
+                    placeholder={t('correctWeight.reasonPlaceholder')}
+                    useBottomSheetInput
+                  />
+                )}
+              />
+            </View>
+          )}
         </>
       )}
     </Sheet>

@@ -77,7 +77,7 @@ export interface UsePantryItemDetailActionsResult {
   ) => void;
   handleCorrectPackageSize: (
     input: PackageSizeCorrectionInput,
-  ) => Promise<boolean>;
+  ) => Promise<string | null>;
 }
 
 /**
@@ -256,8 +256,8 @@ export function usePantryItemDetailActions({
 
   const handleCorrectPackageSize = async (
     input: PackageSizeCorrectionInput,
-  ): Promise<boolean> => {
-    if (!correctingBatchId) return false;
+  ): Promise<string | null> => {
+    if (!correctingBatchId) return null;
     return correctPackageSize({
       ...input,
       pantryItemId: itemId,

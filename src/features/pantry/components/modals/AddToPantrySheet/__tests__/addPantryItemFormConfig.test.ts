@@ -1,4 +1,5 @@
 import { ValidationError } from 'yup';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   addPantryItemSchema,
@@ -117,120 +118,67 @@ describe('addPantryItemSchema', () => {
     });
   });
 
-  describe('net weight is all-or-nothing', () => {
+  describe('what one package holds', () => {
     const valid = { ...base, itemName: 'Milk' };
 
-    it('needs a unit once a weight is typed', async () => {
-      // The API rejects a weight with no unit, so this asks for the unit
-      // rather than silently dropping the value the user entered.
+    it('asks for a unit once a size is typed', async () => {
       expect(
-        await messageFor(
-          { ...valid, pantryNetWeight: '500' },
-          'pantryNetWeightUnit',
-        ),
-      ).toBe('Please select a unit for the net weight.');
+        await messageFor({ ...valid, sizeInput: '500' }, 'sizeUnitId'),
+      ).toBe('Pick the size’s unit from the list.');
     });
 
     it('passes once a unit is picked', async () => {
       expect(
         await messageFor(
-          {
-            ...valid,
-            pantryNetWeight: '500',
-            pantryNetWeightUnitId: 'unit-g',
-          },
-          'pantryNetWeightUnit',
+          { ...valid, sizeInput: '500', sizeUnitId: 'unit-g' },
+          'sizeUnitId',
         ),
       ).toBeUndefined();
     });
 
-    it('does not ask for a unit when no weight was typed', async () => {
-      expect(
-        await messageFor({ ...valid }, 'pantryNetWeightUnit'),
-      ).toBeUndefined();
+    it('asks for no unit when no size was typed', async () => {
+      expect(await messageFor(valid, 'sizeUnitId')).toBeUndefined();
     });
 
-    // The other direction, and the unconditional one: "a netWeightUnitId with
-    // no netWeight is always rejected — a unit with nothing to measure means
-    // nothing." Reported on the weight, the field the user has to fill.
-    it('needs a weight once a unit is picked', async () => {
+    it('refuses a size that is not a positive number', async () => {
       expect(
         await messageFor(
-          { ...valid, pantryNetWeightUnitId: 'unit-g' },
-          'pantryNetWeight',
+          { ...valid, sizeInput: '0', sizeUnitId: 'unit-g' },
+          'sizeInput',
         ),
-      ).toBe('Enter both a package size and its unit, or leave both empty.');
+      ).toBe('Enter a size greater than 0.');
     });
 
-    it('passes once the weight is entered', async () => {
+    it('counts packages whole once something is stated inside', async () => {
       expect(
         await messageFor(
           {
             ...valid,
-            pantryNetWeight: '500',
-            pantryNetWeightUnitId: 'unit-g',
+            quantityInput: '1.5',
+            sizeInput: '5',
+            sizeUnitId: 'unit-lb',
           },
-          'pantryNetWeight',
+          'quantityInput',
         ),
+      ).toBe('Packages are counted whole: 1, 2, 3…');
+    });
+
+    it('takes a part of a package with nothing stated inside', async () => {
+      expect(
+        await messageFor({ ...valid, quantityInput: '1.5' }, 'quantityInput'),
       ).toBeUndefined();
     });
 
-    it('does not ask for a weight when no unit was picked', async () => {
-      expect(await messageFor({ ...valid }, 'pantryNetWeight')).toBeUndefined();
-    });
-  });
-
-  // The same rule one level down, on the package-details per-container weight.
-  // It had none: the submit path resolved `displayUnitId` to undefined, the
-  // both-or-neither guard then dropped the pantry-level NetWeightInput, and the
-  // number the user typed was still sent inline as a unitless `item.netWeight`.
-  // The weight disappeared with nothing reported anywhere.
-  describe('package-details net weight is all-or-nothing', () => {
-    const open = {
-      ...base,
-      itemName: 'Oat Milk',
-      showPackageDetails: true,
-      packageSize: '6',
-      contentUnit: 'carton',
-    };
-
-    it('needs a unit once a per-container weight is typed', async () => {
-      expect(
-        await messageFor({ ...open, itemNetWeight: '1.89' }, 'weightUnit'),
-      ).toBe('Please select a unit for the net weight.');
-    });
-
-    it('passes once a unit is picked', async () => {
-      expect(
-        await messageFor(
-          { ...open, itemNetWeight: '1.89', weightUnitId: 'unit-l' },
-          'weightUnit',
-        ),
-      ).toBeUndefined();
-    });
-
-    it('needs a weight once a unit is picked', async () => {
-      expect(
-        await messageFor({ ...open, weightUnitId: 'unit-l' }, 'itemNetWeight'),
-      ).toBe('Enter both a package size and its unit, or leave both empty.');
-    });
-
-    it('asks for neither when both are empty', async () => {
-      expect(await messageFor(open, 'weightUnit')).toBeUndefined();
-      expect(await messageFor(open, 'itemNetWeight')).toBeUndefined();
-    });
-
-    // Scoped to `showPackageDetails` on purpose: a value left behind in a
-    // collapsed section is never read by the submit path, so blocking Save on
-    // it would refuse the form over an input the user cannot see.
-    it('stays silent while the package section is collapsed', async () => {
-      const collapsed = {
-        ...open,
-        showPackageDetails: false,
-        itemNetWeight: '1.89',
+    // A measure offers no "each holds": what is left in it was never seen.
+    it('ignores a size left behind once the unit is a measure', async () => {
+      const left = {
+        ...valid,
+        quantityInput: '1.5',
+        unitType: UnitType.Weight,
+        sizeInput: '5',
       };
-      expect(await messageFor(collapsed, 'weightUnit')).toBeUndefined();
-      expect(await messageFor(collapsed, 'itemNetWeight')).toBeUndefined();
+      expect(await messageFor(left, 'quantityInput')).toBeUndefined();
+      expect(await messageFor(left, 'sizeUnitId')).toBeUndefined();
     });
   });
 
@@ -241,7 +189,7 @@ describe('addPantryItemSchema', () => {
       let inner: string[] = [];
       try {
         await addPantryItemSchema.validate(
-          { ...base, itemName: '', quantityInput: '', pantryNetWeight: '5' },
+          { ...base, itemName: '', quantityInput: '', sizeInput: '5' },
           { abortEarly: false },
         );
       } catch (error) {

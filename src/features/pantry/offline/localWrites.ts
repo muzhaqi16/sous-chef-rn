@@ -42,6 +42,8 @@ import {
 import {
   bumpStock,
   countNewBatch,
+  drawInside,
+  rememberConsumeUnit,
   writeHeldStock,
 } from '#features/pantry/cache/stock';
 import type { LocalPantryItem } from '#features/pantry/cache/writeLocalPantryItem';
@@ -131,16 +133,29 @@ export const setStock: LocalWrite<SetStockInputs> = {
   },
 };
 
-export type DrawStockInputs = {
+type StockDeltaInputs = {
   /** In tracking units; null when only the server can convert the amount. */
   delta: number | null;
   now: string;
 };
 
+export type DrawStockInputs = StockDeltaInputs & {
+  /** The amount as stated, which may be in what a package holds. */
+  stated?: { amount: number; unitId: string } | null;
+  /** The unit a use remembers; waste leaves the stack's alone. */
+  usedUnitId?: string | null;
+};
+
 export const drawStock: LocalWrite<DrawStockInputs> = {
-  apply(cache, { variables, inputs: { delta, now } }) {
+  apply(cache, { variables, inputs: { delta, stated, usedUnitId, now } }) {
     const stack = stackOf(variables);
-    if (stack && delta !== null) bumpStock(cache, stack.id, delta, now);
+    if (!stack) return;
+    if (delta !== null) {
+      bumpStock(cache, stack.id, delta, now);
+    } else if (stated) {
+      drawInside(cache, stack.id, stated.amount, stated.unitId, now);
+    }
+    if (usedUnitId) rememberConsumeUnit(cache, stack.id, usedUnitId);
   },
   commit(cache, { variables }, data) {
     const stack = stackOf(variables);
@@ -148,7 +163,7 @@ export const drawStock: LocalWrite<DrawStockInputs> = {
   },
 };
 
-export type AddStockInputs = DrawStockInputs & { pantryId?: string };
+export type AddStockInputs = StockDeltaInputs & { pantryId?: string };
 
 export const addStock: LocalWrite<AddStockInputs> = {
   apply(cache, { variables, inputs: { delta, now } }) {

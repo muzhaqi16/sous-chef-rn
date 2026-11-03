@@ -122,7 +122,7 @@ export function getAvailabilityStatus(
   if (match.isAvailable) return 'available';
   // `availableQuantity` is null when the recipe's unit cannot express the
   // stack (a loaf against a pound), so what the stack holds decides these two.
-  if (stack.displayAmount.quantity > 0) return 'partial';
+  if (stack.amountLeft.value > 0) return 'partial';
   return 'missing';
 }
 

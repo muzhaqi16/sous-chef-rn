@@ -47,6 +47,7 @@ export function pantryActionShared(
     netWeightUnit: undefined,
     netWeightUnitId: undefined,
     isDualTracked: false,
+    portionUnitId: null,
     ...overrides,
   };
   return state;

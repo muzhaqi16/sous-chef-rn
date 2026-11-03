@@ -1050,8 +1050,8 @@ describe('PantryItemDetail (integration)', () => {
       });
       const item = data.pantryItem;
       if (!item) throw new Error('fixture has no item');
-      item.held = measure(907.18, g, [907.18, g], [2, lb]);
-      item.held.unitId = item.unit.id;
+      item.amountLeft = measure(907.18, g, [907.18, g], [2, lb]);
+      item.amountLeft.unitId = item.unit.id;
       renderWithApollo(<PantryItemDetail route={route} />, {
         operationMocks: [
           recordMock(GetPantryItemDocument, { data }).mock,

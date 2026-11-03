@@ -1,8 +1,11 @@
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   boughtAmountOf,
+  contentsOf,
+  restockContentsOf,
   localQuantity,
   stockAmountOf,
+  takesContents,
 } from '#domain/stockAmount';
 
 const JAR = { netWeight: 500, netWeightUnitId: 'g' };
@@ -160,5 +163,75 @@ describe('localQuantity', () => {
     expect(
       localQuantity({ packages: { count: 1 } }, { quantity: 2, unit: null }),
     ).toBe(1);
+  });
+});
+
+describe('contentsOf', () => {
+  it('states nothing when nothing was stated', () => {
+    expect(contentsOf(null)).toStrictEqual({ packageSize: null });
+  });
+
+  it('states a measure as the package size', () => {
+    expect(
+      contentsOf({ amount: 5, unitId: 'lb', unitType: UnitType.Weight }),
+    ).toStrictEqual({
+      packageSize: { netWeight: 5, netWeightUnitId: 'lb' },
+    });
+  });
+
+  it('reads a unit of unknown kind as a measure, which the server can refuse', () => {
+    expect(
+      contentsOf({ amount: 5, unitId: 'x', unitType: null }),
+    ).toStrictEqual({ packageSize: { netWeight: 5, netWeightUnitId: 'x' } });
+  });
+
+  it('states a count as a portion definition', () => {
+    expect(
+      contentsOf({ amount: 10, unitId: 'can', unitType: UnitType.Count }),
+    ).toStrictEqual({
+      packageSize: null,
+      measurementProfile: { portionUnitId: 'can', portionsPerTrackingUnit: 10 },
+    });
+  });
+});
+
+describe('restockContentsOf', () => {
+  const CAN = { amount: 12, unitId: 'can', unitType: UnitType.Count };
+
+  it('sizes the new packages with a measure', () => {
+    expect(
+      restockContentsOf(
+        { amount: 3, unitId: 'lb', unitType: UnitType.Weight },
+        null,
+      ),
+    ).toStrictEqual({
+      packageSize: { netWeight: 3, netWeightUnitId: 'lb' },
+    });
+  });
+
+  it('keeps a count in the stack’s own portion unit on the batch', () => {
+    expect(restockContentsOf(CAN, 'can')).toStrictEqual({
+      packageSize: null,
+      packagePortions: 12,
+    });
+  });
+
+  it('defines the stack with a count it has no portion unit for', () => {
+    expect(restockContentsOf(CAN, null)).toStrictEqual({
+      packageSize: null,
+      measurementProfile: { portionUnitId: 'can', portionsPerTrackingUnit: 12 },
+    });
+  });
+});
+
+describe('takesContents', () => {
+  it('holds for a count, and for a unit not yet known', () => {
+    expect(takesContents(UnitType.Count)).toBe(true);
+    expect(takesContents(null)).toBe(true);
+  });
+
+  it('never holds for a measure', () => {
+    expect(takesContents(UnitType.Weight)).toBe(false);
+    expect(takesContents(UnitType.Volume)).toBe(false);
   });
 });

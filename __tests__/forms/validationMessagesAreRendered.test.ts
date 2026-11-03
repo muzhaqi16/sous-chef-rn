@@ -106,29 +106,14 @@ const CASES = [
     feature: 'pantry',
     inputs: [
       { ...pantryBase, itemName: '', quantityInput: '' },
-      { ...pantryBase, itemName: 'Milk', pantryNetWeight: '500' },
+      { ...pantryBase, itemName: 'Milk', sizeInput: '500' },
+      { ...pantryBase, itemName: 'Milk', sizeInput: '0' },
       {
         ...pantryBase,
         itemName: 'Milk',
-        quantityInput: '1',
-        pantryNetWeightUnitId: 'unit-1',
-      },
-      // The package-details pair. Every case above leaves `showPackageDetails`
-      // at its default of `false`, and both rules return early on that — so the
-      // suite could not see two blocking rules with no consumer at all.
-      {
-        ...pantryBase,
-        itemName: 'Milk',
-        quantityInput: '1',
-        showPackageDetails: true,
-        itemNetWeight: '500',
-      },
-      {
-        ...pantryBase,
-        itemName: 'Milk',
-        quantityInput: '1',
-        showPackageDetails: true,
-        weightUnitId: 'unit-1',
+        quantityInput: '1.5',
+        sizeInput: '5',
+        sizeUnitId: 'unit-1',
       },
     ],
   },

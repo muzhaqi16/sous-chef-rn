@@ -1,5 +1,5 @@
 import React from 'react';
-import { TextInput } from 'react-native';
+import { Linking, TextInput } from 'react-native';
 import { GraphQLError } from 'graphql';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
@@ -12,6 +12,7 @@ import {
   inputOf,
   recordMock,
   renderWithApollo,
+  seedQuery,
   type MockDataFor,
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
@@ -27,8 +28,9 @@ import {
   type UsualStoreEntry,
 } from '#features/catalog/cache/usualStores';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
+import { CreateStoreFromPlaceDocument } from '#features/catalog/hooks/useCreateStoreFromPlace.generated';
 import { AddUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
-import { NearbyStoresDocument } from '#features/catalog/hooks/useStoreSearch.generated';
+import { StorePlacesDocument } from '#features/catalog/hooks/useStoreSearch.generated';
 import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 import { StorePickerScreen } from '../StorePickerScreen';
@@ -53,8 +55,12 @@ const banksville: NonNullable<UsualStoreEntry['store']> = {
   chain: { __typename: 'StoreChain', id: 'chain-ge', name: 'Giant Eagle' },
 };
 
-const renderPicker = (mocks: ReturnType<typeof recordMock>['mock'][]) => {
+const renderPicker = (
+  mocks: ReturnType<typeof recordMock>['mock'][],
+  seed?: (cache: ReturnType<typeof makeCache>) => void,
+) => {
   const cache = makeCache();
+  seed?.(cache);
   writeUsualStores(cache, 'home-1', [
     {
       __typename: 'UsualStore',
@@ -93,6 +99,10 @@ const type = (text: string) => {
   });
 };
 
+const typeZip = (zip: string) => {
+  fireEvent.changeText(screen.getByTestId(catalogTestIDs.storePickerZip), zip);
+};
+
 beforeEach(() => {
   jest.useFakeTimers();
   jest.clearAllMocks();
@@ -107,6 +117,135 @@ afterEach(() => {
 });
 
 describe('StorePickerScreen', () => {
+  describe('a place the search found', () => {
+    const CREDIT = '© OpenStreetMap contributors';
+    const listed = () =>
+      recordMock(StorePlacesDocument, {
+        data: {
+          storePlaces: [
+            {
+              placeId: 'osm:node/7',
+              store: null,
+              name: 'Save-A-Lot',
+              address: 'Stoner Way',
+              distanceKm: 1.8,
+              credit: CREDIT,
+            },
+          ],
+        },
+      });
+
+    it('names OpenStreetMap beside the list', async () => {
+      renderPicker([listed().mock]);
+
+      typeZip('15221');
+
+      await drainTimers();
+      expect(screen.getByText('Save-A-Lot')).toBeTruthy();
+      expect(screen.getByText(CREDIT)).toBeTruthy();
+    });
+
+    it('opens the data licence from that credit', async () => {
+      const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+      renderPicker([listed().mock]);
+
+      typeZip('15221');
+
+      await drainTimers();
+      fireEvent.press(screen.getByText(CREDIT));
+      expect(openURL).toHaveBeenCalledWith(
+        'https://www.openstreetmap.org/copyright',
+      );
+      openURL.mockRestore();
+    });
+
+    it('reads a place picked since the list was kept as added', async () => {
+      const place = {
+        name: banksville.name,
+        address: banksville.address,
+        distanceKm: 1.8,
+        credit: CREDIT,
+      };
+      const answered = recordMock(StorePlacesDocument, {
+        data: { storePlaces: [{ ...place, placeId: null, store: banksville }] },
+      });
+      renderPicker([answered.mock], cache => {
+        seedQuery(cache, {
+          query: StorePlacesDocument,
+          variables: { input: { near: { zip: '15221' } }, withPrices: false },
+          data: {
+            storePlaces: [{ ...place, placeId: 'osm:way/9', store: null }],
+          },
+        });
+      });
+
+      typeZip('15221');
+
+      await drainTimers();
+      expect(screen.getByText('Added')).toBeTruthy();
+    });
+
+    it('becomes a store when picked, and joins the household’s', async () => {
+      const create = recordMock(CreateStoreFromPlaceDocument, {
+        data: {
+          createStoreFromPlace: {
+            __typename: 'CreateStorePayload',
+            outcome: CreateOutcome.Created,
+            store: { id: 's-new', name: 'Save-A-Lot' },
+          },
+        },
+      });
+      const add = adding();
+      renderPicker([listed().mock, create.mock, add.mock]);
+      typeZip('15221');
+      await drainTimers();
+
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+
+      await drainTimers();
+      expect(inputOf(create.fired[0] ?? {})).toEqual({
+        placeId: 'osm:node/7',
+      });
+      expect(inputOf(add.fired[0] ?? {})).toMatchObject({
+        target: { storeId: 's-new' },
+      });
+    });
+
+    it('is added by its name when the search has lost it', async () => {
+      const refused = recordMock(CreateStoreFromPlaceDocument, {
+        data: {
+          createStoreFromPlace: {
+            __typename: 'ValidationError',
+            code: ErrorCode.ValidationFailed,
+            field: 'placeId',
+          },
+        },
+      });
+      const create = recordMock(CreateStoreDocument, {
+        dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
+          createStore: {
+            __typename: 'CreateStorePayload',
+            outcome: CreateOutcome.Created,
+            store: { id: String(inputOf(vars).id), name: 'Save-A-Lot' },
+          },
+        }),
+      });
+      const add = adding();
+      renderPicker([listed().mock, refused.mock, create.mock, add.mock]);
+      typeZip('15221');
+      await drainTimers();
+
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+
+      await drainTimers();
+      expect(inputOf(create.fired[0] ?? {})).toMatchObject({
+        name: 'Save-A-Lot',
+        homeId: 'home-1',
+      });
+      expect(add.fired).toHaveLength(1);
+    });
+  });
+
   it("adds a store the app doesn't know as the household's own, by its name", async () => {
     const create = recordMock(CreateStoreDocument, {
       dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => ({
@@ -204,16 +343,9 @@ describe('StorePickerScreen', () => {
   });
 
   describe('the zip code', () => {
-    const typeZip = (zip: string) => {
-      fireEvent.changeText(
-        screen.getByTestId(catalogTestIDs.storePickerZip),
-        zip,
-      );
-    };
-
     it('is remembered once stores near it are listed', async () => {
-      const near = recordMock(NearbyStoresDocument, {
-        data: { nearbyStores: [] },
+      const near = recordMock(StorePlacesDocument, {
+        data: { storePlaces: [] },
       });
       renderPicker([near.mock]);
 
@@ -223,9 +355,56 @@ describe('StorePickerScreen', () => {
       expect(useStorePickerStore.getState().lastZip).toBe('15220');
     });
 
+    it('says a missing store can be added by typing its name', async () => {
+      const near = recordMock(StorePlacesDocument, {
+        data: {
+          storePlaces: [
+            {
+              placeId: null,
+              name: 'Corner Market',
+              address: '2 Penn Ave',
+              credit: null,
+              distanceKm: 1,
+              store: {
+                id: 's-near',
+                name: 'Corner Market',
+                address: '2 Penn Ave',
+                storeNumber: null,
+                chain: null,
+              },
+            },
+          ],
+        },
+      });
+      renderPicker([near.mock]);
+
+      typeZip('15220');
+
+      await drainTimers();
+      expect(screen.getByText('Corner Market')).toBeTruthy();
+      expect(
+        screen.getByText('Not on the list? Type its name to add it.'),
+      ).toBeTruthy();
+    });
+
+    it('says so too when nothing is found nearby', async () => {
+      const near = recordMock(StorePlacesDocument, {
+        data: { storePlaces: [] },
+      });
+      renderPicker([near.mock]);
+
+      typeZip('15220');
+
+      await drainTimers();
+      expect(screen.getByText('No stores found near here.')).toBeTruthy();
+      expect(
+        screen.getByText('Not on the list? Type its name to add it.'),
+      ).toBeTruthy();
+    });
+
     it('is refused on its field alone, and never remembered', async () => {
-      const refused: MockFor<typeof NearbyStoresDocument> = {
-        request: { query: NearbyStoresDocument, variables: () => true },
+      const refused: MockFor<typeof StorePlacesDocument> = {
+        request: { query: StorePlacesDocument, variables: () => true },
         result: {
           errors: [
             new GraphQLError('That is not a US zip code on file', {
@@ -260,16 +439,20 @@ describe('StorePickerScreen', () => {
     // Mt. Lebanon has shelf prices of its own, Dormont a nearby branch's, and
     // Kroger Banksville neither. Asked without prices, the answer has none.
     const nearby = () =>
-      recordMock(NearbyStoresDocument, {
-        dataFor: (vars): MockDataFor<typeof NearbyStoresDocument> => {
+      recordMock(StorePlacesDocument, {
+        dataFor: (vars): MockDataFor<typeof StorePlacesDocument> => {
           const row = (
             id: string,
             name: string,
             own: boolean,
             standIn: boolean,
           ): NonNullable<
-            MockDataFor<typeof NearbyStoresDocument>['nearbyStores']
+            MockDataFor<typeof StorePlacesDocument>['storePlaces']
           >[number] => ({
+            placeId: null,
+            name,
+            address: null,
+            credit: null,
             distanceKm: 1,
             store: {
               id,
@@ -288,7 +471,7 @@ describe('StorePickerScreen', () => {
             },
           });
           return {
-            nearbyStores: [
+            storePlaces: [
               row('s-ge-ml', 'Giant Eagle Mt. Lebanon', true, false),
               row('s-ge-d', 'Giant Eagle Dormont', false, true),
               row('s-kr-b', 'Kroger Banksville', false, false),
@@ -390,6 +573,39 @@ describe('StorePickerScreen', () => {
       expect(focus.mock.contexts).toContainEqual(zipField);
       expect(screen.queryByText('Stores near me')).toBeNull();
       expect(requestAccess).toHaveBeenCalledTimes(1);
+    });
+
+    const nothingNear = () =>
+      recordMock(StorePlacesDocument, { data: { storePlaces: [] } }).mock;
+
+    it('keeps a typed zip when the device cannot say where it is', async () => {
+      jest.spyOn(location(), 'access').mockResolvedValue('granted');
+      jest.spyOn(location(), 'currentPlace').mockResolvedValue(null);
+      renderPicker([nothingNear()]);
+      typeZip('15221');
+
+      fireEvent.press(screen.getByText('Stores near me'));
+
+      await drainTimers();
+      expect(
+        screen.getByTestId(catalogTestIDs.storePickerZip),
+      ).toHaveDisplayValue('15221');
+    });
+
+    it('lists stores near the device in place of the zip once it is found', async () => {
+      jest.spyOn(location(), 'access').mockResolvedValue('granted');
+      jest
+        .spyOn(location(), 'currentPlace')
+        .mockResolvedValue({ lat: 40.44, lng: -79.88 });
+      renderPicker([nothingNear(), nothingNear()]);
+      typeZip('15221');
+
+      fireEvent.press(screen.getByText('Stores near me'));
+
+      await drainTimers();
+      expect(
+        screen.getByTestId(catalogTestIDs.storePickerZip),
+      ).toHaveDisplayValue('');
     });
   });
 });

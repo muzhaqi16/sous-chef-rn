@@ -37,7 +37,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       }
     }
   }
-  held {
+  amountLeft {
     value
     unitId
     metric {
@@ -69,6 +69,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
   netWeight
   remainingNetWeight
   portionUnitId
+  portionsPerTrackingUnit
   portionUnit {
     id
     name
@@ -77,6 +78,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       one
       other
     }
+    type
+    displayAsFraction
   }
   remainingPortions
   activeBatchCount
@@ -115,6 +118,7 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
     }
     type
     displayAsFraction
+    commonFractions
   }
   displayUnit {
     id
@@ -139,6 +143,8 @@ fragment usePantrySubscriptions_pantryItem on PantryItem {
       one
       other
     }
+    type
+    displayAsFraction
   }
   consumeUnit {
     id

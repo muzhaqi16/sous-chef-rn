@@ -28,7 +28,7 @@ const reading = (
   value: number,
   unitId: string,
   type: UnitType,
-): HeldStack['held']['metric'] =>
+): HeldStack['amountLeft']['metric'] =>
   readingAsAbbreviation({
     __typename: 'MeasureReading',
     value,
@@ -57,7 +57,7 @@ const stack = (
     fraction: null,
     unit: asAbbreviation({ __typename: 'Unit', id: unit.id, symbol: unit.id }),
   },
-  held: {
+  amountLeft: {
     __typename: 'Measure',
     value: 2,
     unitId: unit.id,

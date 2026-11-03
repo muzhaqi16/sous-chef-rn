@@ -11,6 +11,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { t } from '#/i18n';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { GetPantryActionItemDocument } from '#features/pantry/components/modals/PantryActionModal.generated';
 import { PantryActionModal_PantryItemFragmentDoc } from '#features/pantry/components/modals/PantryActionModal.generated';
 import type { PantryActionSharedState } from '#features/pantry/types';
@@ -72,24 +73,6 @@ jest.mock('#components/molecules/BottomSheetHeader', () => {
           { onPress: onConfirm, testID: 'confirm-button' },
           R.createElement(RN.Text, null, confirmLabel),
         ),
-      ),
-  };
-});
-
-jest.mock('#components/molecules/FormattedItemSubtitle', () => {
-  const RN = require('react-native');
-  return {
-    FormattedItemSubtitle: ({
-      quantity,
-      unit,
-    }: {
-      quantity?: number | null;
-      unit?: { symbol?: string | null } | null;
-    }) =>
-      require('react').createElement(
-        RN.Text,
-        null,
-        `${quantity} ${unit?.symbol || ''}`,
       ),
   };
 });
@@ -420,6 +403,66 @@ describe('PantryActionModal', () => {
     expect(onReset).toHaveBeenCalledWith(expect.any(Object), null, null);
   });
 
+  it('says what is left as the row does, with nothing beside it', () => {
+    const reading = {
+      __typename: 'MeasureReading',
+      value: 9,
+      unitId: 'can',
+      symbol: 'cans',
+      localizedSymbol: 'cans',
+      displayAsFraction: false,
+      type: 'COUNT',
+    };
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache({
+        remainingNetWeight: 67.5,
+        amountLeft: {
+          __typename: 'Measure',
+          value: 9,
+          unitId: 'can',
+          metric: reading,
+          imperial: reading,
+        },
+      }),
+    });
+
+    expect(screen.getByText('9 cans')).toBeTruthy();
+    expect(screen.queryByText(/remaining/)).toBeNull();
+  });
+
+  it('reads what a part-used case comes to by the can', () => {
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache({
+        quantity: 1.6,
+        heldQuantity: 1.6,
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'case',
+          name: 'case',
+          symbol: 'case',
+          type: UnitType.Count,
+          displayAsFraction: false,
+          commonFractions: null,
+        }),
+        portionUnitId: 'can',
+        portionUnit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'can',
+          name: 'can',
+          symbol: 'cans',
+        }),
+        portionsPerTrackingUnit: 10,
+        remainingPortions: 16,
+      }),
+    });
+
+    const shared = mockRenderActionFields.mock.calls.at(-1)![0];
+    expect(shared.showStock(2.6)).toMatchObject({
+      quantity: 26,
+      unit: { symbol: 'cans' },
+    });
+  });
+
   describe('on a stack of pieces shown in dozens', () => {
     const eggs = {
       itemName: 'Eggs',
@@ -498,6 +541,21 @@ describe('PantryActionModal', () => {
       } as never);
       rerender(<PantryActionModal {...defaultProps} />);
       expect(mockRenderActionFields.mock.calls.at(-1)![0].exactFactor).toBe(12);
+    });
+
+    it('selects the default unit when it opens over cached units', () => {
+      mockUseOperationUnits.mockReturnValue({
+        ...mockNoUnits,
+        allUnits: [dozen],
+        defaultUnit: dozen,
+      } as never);
+      renderWithApollo(<PantryActionModal {...defaultProps} />, {
+        cache: makeCache(eggs),
+      });
+
+      const shared = mockRenderActionFields.mock.calls.at(-1)![0];
+      expect(shared.selectedUnitInfo).toBe(dozen);
+      expect(shared.activeUnitId).toBe('doz');
     });
 
     it('converts on a dual-tracked stack, whose count moves by whole packages', () => {

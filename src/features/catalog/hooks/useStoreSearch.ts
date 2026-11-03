@@ -4,14 +4,20 @@ import { useAppStore } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useDebouncedValue } from '#hooks/utils/useDebouncedValue';
 import { filterByTerm, matchesTerm } from '#hooks/search/useLocalSearch';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, StorePlaceCategory } from '#/graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { getTopLevelGraphQLError } from '#/utils/errors/graphqlErrors';
-import { chainOption, storeOption, type StoreOption } from '#domain/stores';
+import {
+  chainOption,
+  placeOption,
+  storeOption,
+  type FoundOption,
+  type StoreOption,
+} from '#domain/stores';
 import { filterByName } from '#features/catalog/utils/arrayUtils';
 import { useAutocompleteSearch } from './useAutocompleteSearch';
 import { useUsualStores } from './useUsualStores';
-import { NearbyStoresDocument } from './useStoreSearch.generated';
+import { StorePlacesDocument } from './useStoreSearch.generated';
 
 /** Where nearby stores are found from: a typed zip, or the device's place. */
 export type StoreSearchPlace =
@@ -30,6 +36,7 @@ interface FoundStore {
 
 const MIN_TERM = 2;
 const DEBOUNCE_MS = 300;
+const EVERY_KIND_OF_SHOP = Object.values(StorePlaceCategory);
 
 interface StoreSearchOptions {
   /** The household whose stores read as added, and stand in offline. */
@@ -96,44 +103,55 @@ export function useStoreSearch({
   const typed = useDebouncedValue(byName.searchTerm.trim(), DEBOUNCE_MS);
   const search = typed.length >= MIN_TERM ? typed : null;
   const nearby = useQuery(
-    NearbyStoresDocument,
+    StorePlacesDocument,
     place && !isOffline
       ? {
           variables: {
             input: {
               near: place.point ? { point: place.point } : { zip: place.zip },
-              ...(search && { search }),
+              // Unnamed, the server lists what groceries come from; a typed
+              // name says what is wanted, whatever kind of shop it is.
+              ...(search && { search, categories: EVERY_KIND_OF_SHOP }),
             },
             withPrices: markPrices,
           },
-          fetchPolicy: 'cache-first',
-          // A search: the resync would re-ask for a list nobody is reading.
+          // The default policy asks again on each visit, since a place picked
+          // after the persisted answer is a held store now. No resync: it would
+          // re-ask for a list nobody is reading.
           refetchOn: false,
         }
       : skipToken,
   );
 
   const added = new Set(usualStores?.map(row => row.key));
-  // A skipped query keeps its last answer, so only the active one is read.
-  const found: { store: FoundStore; distanceKm: number | null }[] | null =
-    isOffline && usualStores
-      ? null
-      : place
-      ? nearby.data?.nearbyStores ?? null
-      : search || listBeforeTyping
-      ? byName.displayItems.map(store => ({ store, distanceKm: null }))
-      : null;
-
-  const stores = found?.map(({ store, distanceKm }) => {
+  const storeFound = (store: FoundStore, distanceKm: number | null) => {
     const option = storeOption(store, {
       distanceKm,
       hasPrices: !!store.hasCollectedPrices || !!store.priceStandIn,
     });
     return { ...option, added: added.has(option.key) };
-  });
+  };
+
+  // A skipped query keeps its last answer, so only the active one is read.
+  const showsUsual = isOffline && !!usualStores;
+  const places = place && !showsUsual ? nearby.data?.storePlaces ?? null : null;
+  const heldByName: FoundStore[] =
+    !place && !showsUsual && (search || listBeforeTyping)
+      ? byName.displayItems
+      : [];
+  const stores: FoundOption[] = places
+    ? places.flatMap(({ store, placeId, name, address, distanceKm }) => {
+        if (store) return [storeFound(store, distanceKm)];
+        return placeId
+          ? [placeOption({ placeId, name, address, distanceKm })]
+          : [];
+      })
+    : heldByName.map(store => storeFound(store, null));
   const chainsNamed = new Map<string, StoreOption>();
-  for (const { store } of chains && search ? found ?? [] : []) {
-    const { chain } = store;
+  const heldFound: FoundStore[] = places
+    ? places.flatMap(({ store }) => store ?? [])
+    : heldByName;
+  for (const { chain } of chains && search ? heldFound : []) {
     if (chain && search && matchesTerm(chain, search, ['name'])) {
       const option = chainOption(chain);
       chainsNamed.set(option.key, { ...option, added: added.has(option.key) });
@@ -148,9 +166,9 @@ export function useStoreSearch({
         ])
       : null;
 
-  const options: StoreOption[] = heldStores
+  const options: FoundOption[] = heldStores
     ? [...heldStores]
-    : [...chainsNamed.values(), ...(stores ?? [])];
+    : [...chainsNamed.values(), ...stores];
   const pending = place ? nearby.loading : byName.searchPending;
   const term = byName.searchTerm.trim();
   const refusal = place?.zip ? getTopLevelGraphQLError(nearby.error) : null;
@@ -161,8 +179,10 @@ export function useStoreSearch({
     clearTerm: () => {
       byName.setSearchTerm('');
     },
-    /** Chains first, then stores; offline, the household's stores. */
+    /** Chains first, then stores and places; offline, the household's stores. */
     options,
+    /** The attribution a listed place carries; shown while one is listed. */
+    credit: places?.find(row => row.credit)?.credit ?? null,
     /** A list has answered: nearby stores, or a search of two letters or more. */
     answered: place ? !!nearby.data && !nearby.loading : !!search && !pending,
     loading: place ? nearby.loading && !nearby.data : byName.isLoading,

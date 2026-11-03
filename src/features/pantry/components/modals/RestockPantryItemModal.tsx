@@ -4,10 +4,18 @@ import { useTranslation, type TranslationKey } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FractionInput } from '#components/molecules/FractionInput';
 import { FormInput } from '#components/atoms/FormInput';
+import { Link } from '#components/atoms/Link';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { ConversionPreview } from '#features/pantry/components/ConversionPreview';
 import { FractionQuickSelect } from '#features/pantry/components/FractionQuickSelect';
+import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
+import {
+  isPickedWhenSized,
+  isWholeWhenSized,
+} from '#features/pantry/ui/packageContentsRules';
+import { pantryTestIDs } from '#features/pantry/testIDs';
 import { parseFractionalInput } from '#/utils/fractionUtils';
+import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import {
   formatQuantityForInput,
   formatQuantityWithUnit,
@@ -15,6 +23,13 @@ import {
 import { useConversionPreview } from '#features/pantry/hooks/useConversionPreview';
 import { actionConversionOptions } from '#features/pantry/hooks/useQuantityFeedback';
 import { inCountedUnit } from '#domain/stockDisplay';
+import {
+  restockContentsOf,
+  statedContents,
+  type PackageContentsValues,
+  type RestockContents,
+} from '#domain/stockAmount';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { PantryOperation } from '#features/pantry/hooks/useOperationUnits';
 import { PantryActionModal } from '#features/pantry/components/modals/PantryActionModal';
@@ -41,8 +56,23 @@ interface RestockPantryItemModalProps {
     costPerUnit?: number,
     totalCost?: number,
     expiresAt?: Date | null,
-  ) => void;
+    contents?: RestockContents | null,
+  ) => Promise<string | null>;
 }
+
+type StatedSize = Omit<PackageContentsValues, 'unitType'>;
+
+const NO_SIZE: StatedSize = {
+  sizeInput: '',
+  sizeUnitDisplay: '',
+  sizeUnitId: null,
+  sizeUnitType: null,
+};
+
+/** The server sizes only packages counted in the stack's own unit. */
+const countedInOwnUnit = ({ selectedUnitInfo }: PantryActionSharedState) =>
+  selectedUnitInfo?.isTrackingUnit === true &&
+  selectedUnitInfo.unitType === UnitType.Count;
 
 export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   visible,
@@ -60,6 +90,10 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const [totalCostInput, setTotalCostInput] = useState('');
   const [expiresAt, setExpiresAt] = useState<Date | null>(null);
   const [confirmRefused, setConfirmRefused] = useState(false);
+  const [askingSize, setAskingSize] = useState(false);
+  const [statedSize, setStatedSize] = useState(NO_SIZE);
+  const [sizeRefusal, setSizeRefusal] = useState<string | null>(null);
+  const [awaitingAnswer, setAwaitingAnswer] = useState(false);
 
   const handleReset = () => {
     setQuantityInput('1');
@@ -67,6 +101,14 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
     setTotalCostInput('');
     setExpiresAt(null);
     setConfirmRefused(false);
+    setAskingSize(false);
+    setStatedSize(NO_SIZE);
+    setSizeRefusal(null);
+  };
+
+  const editSize = (edit: Partial<StatedSize>) => {
+    setSizeRefusal(null);
+    setStatedSize(stated => ({ ...stated, ...edit }));
   };
 
   const quantityValue = parseFractionalInput(quantityInput);
@@ -75,6 +117,19 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   // Off, the cost fields are hidden: they neither block a restock nor send one.
   const costPerUnit = asksCost ? parseMoneyInput(costPerUnitInput) : null;
   const totalCost = asksCost ? parseMoneyInput(totalCostInput) : null;
+  const { sizeInput, sizeUnitId } = statedSize;
+  const size = parseDecimalInput(sizeInput);
+  const sizeIsUsable = !sizeInput.trim() || (!Number.isNaN(size) && size > 0);
+  const countIsWhole = isWholeWhenSized(
+    quantityInput,
+    UnitType.Count,
+    sizeInput,
+  );
+  const sizeUnitIsPicked = isPickedWhenSized(
+    sizeUnitId,
+    UnitType.Count,
+    sizeInput,
+  );
   // On the fields once a confirm is refused, then live; until then the
   // quantity field's own format hint speaks.
   const errorOn = (refused: boolean, key: TranslationKey) =>
@@ -82,24 +137,35 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   const errors = {
     quantity:
       errorOn(!quantityIsUsable, 'errors.invalidQuantity') ??
+      errorOn(!countIsWhole, 'packageSize.wholePackages') ??
       (quantityEdited ? undefined : reason),
     costPerUnit: errorOn(costPerUnit === undefined, 'errors.invalidAmountPaid'),
     totalCost: errorOn(totalCost === undefined, 'errors.invalidAmountPaid'),
+    size:
+      errorOn(!sizeIsUsable, 'packageSize.sizeInvalid') ??
+      sizeRefusal ??
+      undefined,
+    sizeUnit: errorOn(!sizeUnitIsPicked, 'packageSize.unitRequired'),
   };
 
-  const handleConfirm = (shared: PantryActionSharedState) => {
-    if (!pantryItemId) return;
+  const handleConfirm = async (shared: PantryActionSharedState) => {
+    if (!pantryItemId || awaitingAnswer) return;
+    const sized = countedInOwnUnit(shared);
     if (
       !quantityIsUsable ||
       costPerUnit === undefined ||
-      totalCost === undefined
+      totalCost === undefined ||
+      (sized && !(sizeIsUsable && countIsWhole && sizeUnitIsPicked))
     ) {
       setConfirmRefused(true);
       return;
     }
 
+    const contents = sized
+      ? statedContents({ ...statedSize, unitType: UnitType.Count })
+      : null;
     // Pass the quantity and unit directly — the backend handles conversion
-    onConfirm(
+    const answer = onConfirm(
       quantityValue,
       quantityInput,
       shared.notes,
@@ -107,8 +173,16 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       costPerUnit ?? undefined,
       totalCost ?? undefined,
       expiresAt,
+      contents && restockContentsOf(contents, shared.portionUnitId),
     );
-    onClose();
+    if (!contents) {
+      onClose();
+      return;
+    }
+    // The sheet closes on success; a refusal stays to say why on the field.
+    setAwaitingAnswer(true);
+    setSizeRefusal(await answer);
+    setAwaitingAnswer(false);
   };
 
   return (
@@ -122,7 +196,9 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       unitToggleLabel={t('restockItem.restockBy')}
       currentQuantityLabel={t('restockItem.currentLabel')}
       operation={PantryOperation.Restock}
-      onConfirm={handleConfirm}
+      onConfirm={shared => {
+        void handleConfirm(shared);
+      }}
       onReset={handleReset}
       renderActionFields={shared => (
         <RestockActionFields
@@ -140,6 +216,10 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
           setExpiresAt={setExpiresAt}
           errors={errors}
           shared={shared}
+          askingSize={askingSize}
+          onAskSize={() => setAskingSize(true)}
+          statedSize={statedSize}
+          onSizeEdit={editSize}
         />
       )}
     />
@@ -156,8 +236,15 @@ const RestockActionFields: React.FC<{
   asksCost: boolean;
   expiresAt: Date | null;
   setExpiresAt: (v: Date | null) => void;
-  errors: Record<'quantity' | 'costPerUnit' | 'totalCost', string | undefined>;
+  errors: Record<
+    'quantity' | 'costPerUnit' | 'totalCost' | 'size' | 'sizeUnit',
+    string | undefined
+  >;
   shared: PantryActionSharedState;
+  askingSize: boolean;
+  onAskSize: () => void;
+  statedSize: StatedSize;
+  onSizeEdit: (edit: Partial<StatedSize>) => void;
 }> = ({
   quantityInput,
   setQuantityInput,
@@ -170,6 +257,10 @@ const RestockActionFields: React.FC<{
   setExpiresAt,
   errors,
   shared,
+  askingSize,
+  onAskSize,
+  statedSize,
+  onSizeEdit,
 }) => {
   const { t } = useTranslation();
   const addAmount = parseFractionalInput(quantityInput);
@@ -257,6 +348,33 @@ const RestockActionFields: React.FC<{
           />
         ) : null}
       </View>
+
+      {countedInOwnUnit(shared) ? (
+        <View style={commonStyles.bottomSheetSection}>
+          {askingSize ? (
+            <PackageContentsFields
+              variant="modal"
+              useBottomSheetInput
+              size={statedSize.sizeInput}
+              onSizeChange={sizeInput => onSizeEdit({ sizeInput })}
+              sizeError={errors.size}
+              unit={statedSize.sizeUnitDisplay}
+              onUnitChange={sizeUnitDisplay => onSizeEdit({ sizeUnitDisplay })}
+              onUnitSelected={(sizeUnitId, _name, sizeUnitType = null) =>
+                onSizeEdit({ sizeUnitId, sizeUnitType })
+              }
+              unitError={errors.sizeUnit}
+            />
+          ) : (
+            <Link
+              testID={pantryTestIDs.restockDifferentSize}
+              onPress={onAskSize}
+            >
+              {t('restockItem.differentSize')}
+            </Link>
+          )}
+        </View>
+      ) : null}
 
       {/* Cost Tracking */}
       {asksCost ? (

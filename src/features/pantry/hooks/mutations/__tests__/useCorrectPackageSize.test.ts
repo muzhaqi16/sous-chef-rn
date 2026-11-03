@@ -4,11 +4,15 @@ import {
   recordMock,
   renderHookWithApollo,
   seedCache,
+  seedFragment,
 } from '#/test-utils/apolloMockProvider';
 import { alertService } from '#/services/alertService';
-import { ErrorCode } from '#/graphql/generated/schemaTypes';
+import { ErrorCode, UnitType } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
-import { CorrectPantryItemPackageSizeDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CorrectPantryItemPackageSizeDocument,
+  UpdatePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import { useCorrectPackageSize } from '../useCorrectPackageSize';
 
 jest.mock('#/services/errorService');
@@ -32,6 +36,7 @@ function seed() {
       __typename: 'PantryItem',
       id: 'pi-1',
       version: 4,
+      portionUnitId: null,
       netWeightUnit: { __typename: 'Unit', id: 'u-oz' },
     },
     {
@@ -53,8 +58,9 @@ const readBatch = (cache: ReturnType<typeof seed>) =>
 const correction = {
   pantryItemId: 'pi-1',
   batchId: 'b-1',
-  netWeight: 22,
-  netWeightUnitId: 'u-oz',
+  amount: 22,
+  unitId: 'u-oz',
+  unitType: UnitType.Weight,
   reason: 'label misread',
 };
 
@@ -71,12 +77,12 @@ it('sends the batch, its size, the stack version and an idempotency key', async 
     operationMocks: [m.mock],
   });
 
-  let corrected: boolean | undefined;
+  let refused: string | null | undefined;
   await act(async () => {
-    corrected = await result.current.correctPackageSize(correction);
+    refused = await result.current.correctPackageSize(correction);
   });
 
-  expect(corrected).toBe(true);
+  expect(refused).toBeNull();
   expect(m.fired).toEqual([
     {
       input: {
@@ -124,8 +130,8 @@ it('waits for the server when the size is stated in another unit', async () => {
   await act(async () => {
     await result.current.correctPackageSize({
       ...correction,
-      netWeight: 624,
-      netWeightUnitId: 'u-g',
+      amount: 624,
+      unitId: 'u-g',
     });
   });
 
@@ -152,17 +158,113 @@ it('restores the batch and says why when the correction is refused', async () =>
     operationMocks: [m.mock],
   });
 
-  let corrected: boolean | undefined;
+  let refused: string | null | undefined;
   await act(async () => {
-    corrected = await result.current.correctPackageSize(correction);
+    refused = await result.current.correctPackageSize(correction);
   });
 
-  expect(corrected).toBe(false);
+  expect(refused).toBe(t('errors.field.packageSize'));
   expect(readBatch(cache)).toEqual(
     expect.objectContaining({ netWeight: 32, remainingNetWeight: 16 }),
   );
-  expect(alertService.alert).toHaveBeenCalledWith(
-    'Error',
-    t('errors.field.packageSize'),
-  );
+  expect(alertService.alert).not.toHaveBeenCalled();
+});
+
+describe('a count of what a package holds', () => {
+  const tenCans = {
+    ...correction,
+    amount: 10,
+    unitId: 'u-can',
+    unitType: UnitType.Count,
+  };
+
+  it('defines what the stack is used by, and leaves its size alone', async () => {
+    const cache = seed();
+    const update = recordMock(UpdatePantryItemDocument, {
+      data: { updatePantryItem: null },
+    });
+    const { result } = renderHookWithApollo(() => useCorrectPackageSize(), {
+      cache,
+      operationMocks: [update.mock],
+    });
+
+    await act(async () => {
+      await result.current.correctPackageSize(tenCans);
+    });
+
+    expect(update.fired).toEqual([
+      {
+        input: {
+          id: 'pi-1',
+          version: 4,
+          idempotencyKey: expect.any(String),
+          measurementProfile: {
+            portionUnitId: 'u-can',
+            portionsPerTrackingUnit: 10,
+          },
+        },
+        today: expect.any(String),
+      },
+    ]);
+    expect(readBatch(cache)).toEqual(
+      expect.objectContaining({ netWeight: 32, remainingNetWeight: 16 }),
+    );
+  });
+
+  it('corrects the batch when the stack is already used by that unit', async () => {
+    const cache = seed();
+    seedFragment(cache, {
+      fragment: gql`
+        fragment TestPortion on PantryItem {
+          id
+          portionUnitId
+        }
+      `,
+      data: { __typename: 'PantryItem', id: 'pi-1', portionUnitId: 'u-can' },
+    });
+    const correct = recordMock(CorrectPantryItemPackageSizeDocument, {
+      data: { correctPantryItemPackageSize: null },
+    });
+    const { result } = renderHookWithApollo(() => useCorrectPackageSize(), {
+      cache,
+      operationMocks: [correct.mock],
+    });
+
+    await act(async () => {
+      await result.current.correctPackageSize(tenCans);
+    });
+
+    expect(correct.fired[0]).toMatchObject({
+      input: {
+        batchId: 'b-1',
+        correction: { portionsPerTrackingUnit: 10 },
+      },
+    });
+  });
+
+  it('says why when the stack refuses it', async () => {
+    const update = recordMock(UpdatePantryItemDocument, {
+      data: {
+        updatePantryItem: {
+          __typename: 'ValidationError',
+          code: ErrorCode.ValidationFailed,
+          message: 'raw server words',
+          field: 'measurementProfile',
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(() => useCorrectPackageSize(), {
+      cache: seed(),
+      operationMocks: [update.mock],
+    });
+
+    let refused: string | null | undefined;
+    await act(async () => {
+      refused = await result.current.correctPackageSize(tenCans);
+    });
+
+    expect(refused).toEqual(expect.any(String));
+    expect(refused).not.toContain('raw server words');
+    expect(alertService.alert).not.toHaveBeenCalled();
+  });
 });

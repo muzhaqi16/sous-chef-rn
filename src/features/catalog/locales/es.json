@@ -74,7 +74,6 @@
     "hintText": "Puedes editar los detalles más tarde en Ajustes > Ubicaciones de almacenamiento"
   },
   "addItemSheet": {
-    "more": "Más",
     "allAdded": "Todo añadido",
     "dismiss": "Descartar sugerencia",
     "dismissed": "Se eliminó {{name}}",
@@ -483,6 +482,7 @@
     "zipLabel": "Código postal",
     "zipRefused": "Aún no conocemos ese código postal. Prueba otro o busca por nombre.",
     "notListed": "¿No aparece? Añadir «{{name}}»",
+    "typeToAdd": "¿No aparece? Escribe su nombre para añadirla.",
     "addedToStores": "Añadida a tus tiendas",
     "needsConnectionTitle": "Buscar tiendas requiere conexión",
     "needsConnectionBody": "Estas son las tiendas donde compras. Conéctate para encontrar otras.",

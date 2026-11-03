@@ -9,7 +9,7 @@ import {
   type RestockUnitsForPantryItemQuery,
 } from '#features/pantry/graphql/pantry.generated';
 import type { UnitRole } from '#/graphql/generated/schemaTypes';
-import { UnitSource, UnitType } from '#/graphql/generated/schemaTypes';
+import { UnitType, type UnitSource } from '#/graphql/generated/schemaTypes';
 import { countFactorOver } from '#domain/stockDisplay';
 import type { PickableUnit } from '#features/pantry/types';
 import type { UnitLabelSource } from '#/utils/formatQuantity';
@@ -53,7 +53,6 @@ interface UseOperationUnitsOptions {
   trackingUnitId: string | undefined;
   trackingUnitType: UnitType | undefined;
   /** Preferred as the default unit for a dual-tracked stack; not a query input. */
-  netWeightUnitId?: string | null;
   /** The unit the household uses the stack in: a use opens on it. */
   consumeUnitId?: string | null;
   operation: PantryOperation;
@@ -153,7 +152,6 @@ export function useOperationUnits({
   pantryItemId,
   trackingUnitId,
   trackingUnitType,
-  netWeightUnitId,
   consumeUnitId,
   operation,
 }: UseOperationUnitsOptions): UseOperationUnitsResult {
@@ -193,25 +191,14 @@ export function useOperationUnits({
   const allUnits = rawUnits.map(ru => toRankedUnitInfo(ru, trackingUnitId));
   const groups = buildGroups(allUnits, trackingUnitType, t);
 
-  // A use opens on the household's unit, else a unit the server ranks first as
-  // curated for use (the one households use it in, a portion), else the net
-  // weight unit of a dual-tracked stack, else the first ranked; each only while
-  // the stack takes it.
+  // Sheets open on the server's first rank. A use's last unit leads that rank
+  // once the server has it, so this only covers a use it has not answered yet.
   const [firstRanked] = [...allUnits].sort((a, b) => a.rank - b.rank);
-  const curatedLead =
-    firstRanked?.source === UnitSource.Curated ? firstRanked.unitId : null;
-  const isUse = operation === PantryOperation.Consume;
-  const preferredIds = [
-    isUse ? consumeUnitId : null,
-    isUse ? curatedLead : null,
-    netWeightUnitId,
-  ];
-  const defaultRankedUnit =
-    preferredIds
-      .map(id => (id == null ? undefined : allUnits.find(u => u.unitId === id)))
-      .find(unit => unit !== undefined) ??
-    allUnits[0] ??
-    null;
+  const lastUsed =
+    operation === PantryOperation.Consume
+      ? allUnits.find(unit => unit.unitId === consumeUnitId)
+      : undefined;
+  const defaultRankedUnit = lastUsed ?? firstRanked ?? null;
   const defaultUnit = defaultRankedUnit
     ? toSelectedUnitInfo(defaultRankedUnit)
     : null;

@@ -65,6 +65,7 @@ export interface PantryActionSharedState {
   netWeightUnit: UnitLabelSource | undefined;
   netWeightUnitId: string | undefined;
   isDualTracked: boolean;
+  portionUnitId: string | null;
 }
 
 export interface UsageRecord {
@@ -88,8 +89,10 @@ export interface RecountUnits {
 }
 
 export interface PackageSizeCorrectionInput {
-  netWeight: number;
-  netWeightUnitId: string;
+  amount: number;
+  unitId: string;
+  /** A count states what the package is used by; anything else, its size. */
+  unitType: UnitType | null;
   reason: string;
 }
 
@@ -104,16 +107,11 @@ export type AddPantryItemFormData = {
   quantityInput: string;
   unit: string;
   unitId: string | null;
-  pantryNetWeight: string;
-  pantryNetWeightUnit: string;
-  pantryNetWeightUnitId: string | null;
-  showPackageDetails: boolean;
-  packageSize: string;
-  contentUnit: string;
-  contentUnitId: string | null;
-  itemNetWeight: string;
-  weightUnit: string;
-  weightUnitId: string | null;
+  unitType: UnitType | null;
+  sizeInput: string;
+  sizeUnitDisplay: string;
+  sizeUnitId: string | null;
+  sizeUnitType: UnitType | null;
   // Page 3 — Storage
   storageLocation: string;
   selectedStorageLocationId: string | null;

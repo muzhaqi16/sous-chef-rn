@@ -168,8 +168,8 @@ export interface ApproximateLocation {
   access(): Promise<LocationAccess | null>;
   /** The OS's own prompt; the answer it settles on. */
   requestAccess(): Promise<LocationAccess>;
-  /** Null when the device cannot say where it is. */
-  currentPlace(): Promise<{ lat: number; lng: number } | null>;
+  /** `off` when location is switched off; null when the device cannot say. */
+  currentPlace(): Promise<{ lat: number; lng: number } | 'off' | null>;
   openSettings(): void;
 }
 

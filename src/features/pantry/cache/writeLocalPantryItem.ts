@@ -8,6 +8,7 @@ import {
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { localAmountLeft } from './stock';
 import { WriteLocalPantryItem_RowFragmentDoc } from './writeLocalPantryItem.generated';
 import {
   NEUTRAL_LOCAL_PANTRY_ITEM,
@@ -34,6 +35,8 @@ export interface LocalPantryItem {
   tags?: string[] | null;
   storageNotes?: string | null;
   costPerUnit?: number | null;
+  /** What one package holds as a count: 10 cans to the case. */
+  portions?: { unitId: string; perPackage: number } | null;
   brand?: { id: string; name: string } | null;
   store?: { id: string; name: string } | null;
 }
@@ -87,6 +90,13 @@ export function writeLocalPantryItem(
       heldQuantity: quantity,
       unit,
       displayAmount: { __typename: 'DisplayAmount', quantity, unit },
+      amountLeft: localAmountLeft(cache, quantity, unit.id),
+      ...(row.portions && {
+        portionUnitId: row.portions.unitId,
+        portionUnit: { __typename: 'Unit', id: row.portions.unitId },
+        portionsPerTrackingUnit: row.portions.perPackage,
+        remainingPortions: quantity * row.portions.perPackage,
+      }),
       storageLocation: row.location
         ? {
             __typename: 'StorageLocation',

@@ -1,5 +1,4 @@
 import {
-  formatAmountDisplay,
   formatAmountWithUnit,
   formatQuantity,
   formatQuantityDisplay,
@@ -119,58 +118,6 @@ describe('formatNetWeightDisplay', () => {
         formatQuantityDisplay(amount, { symbol }),
       );
     }
-  });
-});
-
-describe('formatAmountDisplay', () => {
-  const can = {
-    symbol: 'can',
-    localizedSymbolForms: { one: 'lata', other: 'latas' },
-  };
-
-  it('shows the label the server agreed with the amount', () => {
-    expect(
-      formatAmountDisplay({
-        quantity: 3,
-        localizedSymbol: 'lattine',
-        unit: can,
-      }),
-    ).toBe('3 lattine');
-  });
-
-  it('reads its unit when the label is blank, as an optimistic amount leaves it', () => {
-    expect(
-      formatAmountDisplay({ quantity: 3, localizedSymbol: '', unit: can }),
-    ).toBe('3 latas');
-  });
-
-  it("writes a number where the server shows one, as the server's label reads", () => {
-    expect(
-      formatAmountDisplay({
-        quantity: 0.5,
-        localizedSymbol: 'lattine',
-        fraction: null,
-        unit: can,
-      }),
-    ).toBe('0.5 lattine');
-    expect(
-      formatAmountDisplay({
-        quantity: 0.5,
-        localizedSymbol: 'lattina',
-        fraction: '½',
-        unit: can,
-      }),
-    ).toBe('1/2 lattina');
-  });
-
-  it('upscales grams and millilitres as every quantity does', () => {
-    expect(
-      formatAmountDisplay({
-        quantity: 1500,
-        localizedSymbol: 'g',
-        unit: { symbol: 'g' },
-      }),
-    ).toBe('1.5 kg');
   });
 });
 

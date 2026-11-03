@@ -6,6 +6,16 @@ import React, {
   type ReactNode,
 } from 'react';
 import type { MatchUpdate } from '#features/recipes/hooks/useRecipeIngredientMatching';
+import { createValueContext } from '#hooks/utils/createValueContext';
+import type { ReadingSystem } from '#domain/measure';
+
+const readingSystemContext = createValueContext<ReadingSystem>(
+  'MatchReadingSystemProvider',
+);
+
+/** The one read of the unit system, for the rows below. */
+export const MatchReadingSystemProvider = readingSystemContext.Provider;
+export const useMatchReadingSystem = readingSystemContext.useValue;
 
 interface IngredientMatchingContextValue {
   onUpdate: (index: number, updates: MatchUpdate) => void;

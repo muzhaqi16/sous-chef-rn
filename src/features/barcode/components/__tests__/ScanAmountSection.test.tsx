@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
@@ -18,7 +18,6 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () =>
 );
 
 const oneJar: ScanAmountFormValues = {
-  packaged: true,
   quantityInput: '1',
   unitDisplay: 'jar',
   unitId: 'unit-jar',
@@ -26,39 +25,35 @@ const oneJar: ScanAmountFormValues = {
   sizeInput: '3',
   sizeUnitDisplay: 'lb',
   sizeUnitId: 'unit-lb',
-  consumeUnitDisplay: '',
-  consumeUnitId: null,
-};
-
-const usedInTbsp: ScanAmountFormValues = {
-  ...oneJar,
-  consumeUnitDisplay: 'tbsp',
-  consumeUnitId: 'unit-tbsp',
+  sizeUnitType: UnitType.Weight,
 };
 
 const Harness = ({
   values,
   editing = false,
   onEdit = () => {},
-  createsStack = true,
   joins = null,
+  checkOnMount = false,
 }: {
   values: ScanAmountFormValues;
   editing?: boolean;
   onEdit?: () => void;
-  createsStack?: boolean;
   joins?: { amount: string; unitId: string } | null;
+  checkOnMount?: boolean;
 }) => {
   const form = useForm<ScanAmountFormValues>({
     resolver: yupResolver(scanAmountSchema),
     defaultValues: values,
   });
+  const { trigger } = form;
+  useEffect(() => {
+    if (checkOnMount) void trigger();
+  }, [checkOnMount, trigger]);
   return (
     <ScanAmountSection
       form={form}
       editing={editing}
       onEdit={onEdit}
-      createsStack={createsStack}
       joins={joins}
     />
   );
@@ -75,7 +70,7 @@ afterEach(() => {
 describe('ScanAmountSection', () => {
   it('reads the add as text: the package, then what each one holds', () => {
     render(<Harness values={oneJar} />);
-    expect(screen.getByText('1 jar · 3 lb each')).toBeTruthy();
+    expect(screen.getByText('1 jar of 3 lb')).toBeTruthy();
   });
 
   // USM-2: a held product joins its stack, and the summary says which.
@@ -83,14 +78,13 @@ describe('ScanAmountSection', () => {
     render(
       <Harness
         values={oneJar}
-        createsStack={false}
         joins={{ amount: '2 jar', unitId: 'unit-jar' }}
       />,
     );
     expect(
       screen.getByText(
         t('barcode.amount.joinsHeld', {
-          amount: '1 jar · 3 lb each',
+          amount: '1 jar of 3 lb',
           held: '2 jar',
         }),
       ),
@@ -103,11 +97,10 @@ describe('ScanAmountSection', () => {
     render(
       <Harness
         values={oneJar}
-        createsStack={false}
         joins={{ amount: '2 can', unitId: 'unit-can' }}
       />,
     );
-    expect(screen.getByText('1 jar · 3 lb each')).toBeTruthy();
+    expect(screen.getByText('1 jar of 3 lb')).toBeTruthy();
   });
 
   it('reads a package of no known size as the count alone', () => {
@@ -131,19 +124,20 @@ describe('ScanAmountSection', () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
-  it('asks for the size of one package only while packaged', () => {
-    render(<Harness values={oneJar} editing />);
+  it('asks what each one holds for a count, and not for a measure', () => {
+    const { unmount } = render(<Harness values={oneJar} editing />);
     expect(screen.getByTestId(barcodeTestIDs.scanAmountSize)).toBeTruthy();
-    expect(screen.getByText(t('labels.package'))).toBeTruthy();
+    unmount();
 
-    fireEvent(
-      screen.getByTestId(barcodeTestIDs.scanAmountPackaged),
-      'valueChange',
-      false,
+    render(
+      <Harness values={{ ...oneJar, unitType: UnitType.Weight }} editing />,
     );
-
     expect(screen.queryByTestId(barcodeTestIDs.scanAmountSize)).toBeNull();
-    expect(screen.getByText(t('labels.unit'))).toBeTruthy();
+  });
+
+  it('asks nothing about the unit it is used in', () => {
+    render(<Harness values={oneJar} editing />);
+    expect(screen.queryByText('Used in')).toBeNull();
   });
 
   it('drops the size-unit error once the size is cleared', async () => {
@@ -151,13 +145,10 @@ describe('ScanAmountSection', () => {
       <Harness
         values={{ ...oneJar, sizeUnitDisplay: '', sizeUnitId: null }}
         editing
+        checkOnMount
       />,
     );
-    const unitRequired = t('barcode.amount.sizeUnitRequired');
-    // Turning packages on checks the size's unit.
-    const packaged = screen.getByTestId(barcodeTestIDs.scanAmountPackaged);
-    fireEvent(packaged, 'valueChange', false);
-    fireEvent(packaged, 'valueChange', true);
+    const unitRequired = t('packageSize.unitRequired');
     await drainTimers();
     expect(screen.getByText(unitRequired)).toBeTruthy();
 
@@ -165,29 +156,5 @@ describe('ScanAmountSection', () => {
 
     await drainTimers();
     expect(screen.queryByText(unitRequired)).toBeNull();
-  });
-
-  describe('the unit it is used in', () => {
-    it('reads on the summary once picked', () => {
-      render(<Harness values={usedInTbsp} />);
-      expect(screen.getByText('Used in tbsp')).toBeTruthy();
-    });
-
-    it('leaves the summary line out until one is picked', () => {
-      render(<Harness values={oneJar} />);
-      expect(screen.queryByText(/^Used in/)).toBeNull();
-    });
-
-    it('is asked for when the add creates the stack', () => {
-      render(<Harness values={oneJar} editing />);
-      expect(screen.getByText(t('labels.usedIn'))).toBeTruthy();
-      expect(screen.getByText(t('labels.usedInHint'))).toBeTruthy();
-    });
-
-    // The add restocks a held stack, which keeps its own; the edit form sets it.
-    it('is not asked for a product the pantry already holds', () => {
-      render(<Harness values={usedInTbsp} editing createsStack={false} />);
-      expect(screen.queryByText(t('labels.usedIn'))).toBeNull();
-    });
   });
 });

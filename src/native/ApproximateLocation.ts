@@ -1,12 +1,30 @@
 import type { ApproximateLocation as ApproximateLocationPort } from '#/platform/ports';
 import { PermissionService } from '#/services/permissions/PermissionService';
+import { Telemetry } from '#/services/telemetry';
 import { isRecord } from '#/utils/isRecord';
 import { nativeMethod } from './nativeModule';
 
+/** Location off, or not allowed: a read that nothing but Settings can change. */
+const UNAVAILABLE = 'location_unavailable';
+
+/** A failed read names what it tried; a place never reaches a log. */
+function reportFailedRead(error: unknown) {
+  const { code, message } = isRecord(error)
+    ? error
+    : { code: undefined, message: undefined };
+  const reason = typeof code === 'string' ? code : 'unknown';
+  Telemetry.warn('Location read failed', {
+    reason,
+    tried: typeof message === 'string' ? message : 'unknown',
+  });
+  return reason === UNAVAILABLE ? 'off' : null;
+}
+
 /**
- * The device's approximate place: `ApproximateLocationModule` reads it at
- * reduced accuracy, behind the when-in-use (iOS) or coarse (Android)
- * permission. A build without the module cannot say where it is.
+ * The device's approximate place: `ApproximateLocationModule` answers with one
+ * it already holds, else reads at reduced accuracy, behind the when-in-use (iOS)
+ * or coarse (Android) permission. A build without the module cannot say where
+ * it is.
  */
 export const ApproximateLocation: ApproximateLocationPort = {
   async access() {
@@ -31,8 +49,8 @@ export const ApproximateLocation: ApproximateLocationPort = {
       return typeof lat === 'number' && typeof lng === 'number'
         ? { lat, lng }
         : null;
-    } catch {
-      return null;
+    } catch (error) {
+      return reportFailedRead(error);
     }
   },
   openSettings() {

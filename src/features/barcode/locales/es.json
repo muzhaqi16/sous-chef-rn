@@ -20,18 +20,10 @@
     "referenceAmount": "Información nutricional por {{amount}}",
     "amount": {
       "title": "Se añade a tu despensa",
-      "eachPackage": "{{amount}} · {{size}} por envase",
+      "ofSize": "{{amount}} de {{size}}",
       "joinsHeld": "Añade {{amount}} a lo que ya tienes ({{held}})",
-      "packaged": "Por envase",
-      "packagedHint": "Se cuenta por envase. Desactívalo para añadir una cantidad, como 500 g.",
-      "sizeLabel": "Tamaño de un paquete",
       "quantityInvalid": "Introduce una cantidad mayor que 0.",
-      "wholePackages": "Los envases se cuentan enteros: 1, 2, 3…",
-      "countUnit": "Cuenta los envases en una unidad de recuento, como pc.",
-      "unitRequired": "Elige una unidad de la lista.",
-      "sizeInvalid": "Introduce un tamaño mayor que 0.",
-      "sizeUnitRequired": "Elige de la lista la unidad del tamaño.",
-      "usedInSummary": "Se usa en {{unit}}"
+      "unitRequired": "Elige una unidad de la lista."
     },
     "nutrition": {
       "title": "Información nutricional",
