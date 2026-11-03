@@ -10377,8 +10377,10 @@ type Mutation {
   other household sees (see CreateStoreInput.homeId). A store already on
   file (the same chain and store number, else the same name and address
   compared by their letters and digits, among shared stores or the owner's
-  own) is returned instead, with outcome MERGED. Each user has a per-minute
-  number of store creations.
+  own) is returned instead, with outcome MERGED. A store with an address the
+  OpenStreetMap search knows is written as OpenStreetMap spells it, with its
+  point, and answers the store already made of that place where there is one.
+  Each user has a per-minute number of store creations.
   """
   createStore(input: CreateStoreInput!): CreateStoreResult!
   """
@@ -13792,14 +13794,24 @@ enum ProfileVisibility {
 }
 
 """
-A store the receipt names that is not on file: send it to createStore when the user confirms.
+A store the receipt names that is not on file: send it to createStore when the
+user confirms, or to createStoreFromPlace when placeId is set.
 """
 type ProposedStore {
+  """As printed, else OpenStreetMap's when placeId is set"""
   address: String
   """The chain the header names"""
   chain: StoreChain
-  """The merchant's printed name, else the header's chain name"""
+  """
+  The merchant's printed name, else the header's chain name; OpenStreetMap's when placeId is set
+  """
   name: String!
+  """
+  The OpenStreetMap place the receipt's shop is, when the search knows it: name
+  and address are then its spelling, so the receipt and a store picker agree.
+  Null when the search doesn't know the shop, or is down.
+  """
+  placeId: ID
   """
   The store number the receipt prints, without padding; null when no chain is named
   """
