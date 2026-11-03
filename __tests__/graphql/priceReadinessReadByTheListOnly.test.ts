@@ -1,8 +1,8 @@
 /**
  * `ShoppingList.priceReadiness` costs the API about ten reads per list, unbatched,
- * so only the shown list's read selects it. No write returns it, so a write
- * waiting offline cannot set off the price prompt: it asks on the list's next
- * read (`usePricePrompt`).
+ * so only the price prompt's own read of the shown list selects it, while its
+ * question is open. No list read or feed read carries it, and no write returns
+ * it, so a write waiting offline cannot set off the prompt (`usePricePrompt`).
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
@@ -72,6 +72,6 @@ describe('ShoppingList.priceReadiness', () => {
           `${operation.operation} ${operation.name?.value ?? '(anonymous)'}`,
       );
 
-    expect(readers).toEqual(['query GetShoppingListDetails']);
+    expect(readers).toEqual(['query PricePromptReadiness']);
   });
 });

@@ -56,11 +56,6 @@ query ListFeedSnapshot($input: SyncSnapshotInput!) {
         homeId
         isTemplate
         ...ShoppingListReaders
-        # A view the Readers leave out, which the list's details read. Computed
-        # on read, so it goes here, on one list, and never on a pull of 25.
-        priceReadiness {
-          enough
-        }
       }
       ... on ShoppingListItem {
         id
