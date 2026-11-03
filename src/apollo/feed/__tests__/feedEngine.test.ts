@@ -7,6 +7,7 @@ import {
   SyncScopeKind,
 } from '#/graphql/generated/schemaTypes';
 import { getDeviceId } from '#/services/auth/deviceId';
+import { Telemetry } from '#/services/telemetry';
 import {
   clientOver,
   fault,
@@ -387,6 +388,188 @@ describe('what holds a pull back', () => {
     await run(() => engine.catchUp());
 
     expect(scopes).toHaveBeenCalledTimes(asked);
+  });
+});
+
+describe('a full read for what the feed omits', () => {
+  const heldAtLatest = async (server: Partial<Server> = {}) => {
+    hold(LIST, 'same');
+    mockClient = clientOver({
+      scopes: () => listed([{ id: LIST, cursor: 'same' }]),
+      snapshot: () => wholeList([line('row-1')], { cursor: 'same' }),
+      ...server,
+    });
+    await run();
+  };
+
+  it('waits for the list’s own create, then reads it', async () => {
+    await heldAtLatest();
+    const creating = jest
+      .spyOn(queueStore, 'holdsCreateFor')
+      .mockReturnValue(true);
+
+    await run(() => engine.refresh(KIND, LIST));
+    expect(snapshots).toEqual([]);
+
+    creating.mockReturnValue(false);
+    await run(() => engine.catchUp());
+
+    expect(snapshots).toHaveLength(1);
+  });
+
+  it('sends nothing while the API is unavailable, and reads once it is back', async () => {
+    await heldAtLatest();
+    useStore.setState({ apiReachable: false });
+
+    await run(() => engine.refresh(KIND, LIST));
+    expect(snapshots).toEqual([]);
+
+    useStore.setState({ apiReachable: true });
+    await run(() => engine.catchUp());
+
+    expect(snapshots).toHaveLength(1);
+  });
+
+  it('waits as a refusal says', async () => {
+    await heldAtLatest({
+      scopes: () => fault('RATE_LIMIT_EXCEEDED', { retryAfter: 30 }),
+    });
+
+    await run(() => engine.refresh(KIND, LIST));
+
+    expect(snapshots).toEqual([]);
+  });
+
+  it('reads one list at a time, inside the pass', async () => {
+    hold('list-a', 'same');
+    hold('list-b', 'same');
+    let firstReadWhenSecondAsked: number | undefined;
+    mockClient = clientOver({
+      scopes: () =>
+        listed([
+          { id: 'list-a', cursor: 'same' },
+          { id: 'list-b', cursor: 'same' },
+        ]),
+      snapshot: ({ id }) => {
+        if (id === 'list-b') {
+          firstReadWhenSecondAsked = positionOf('list-a')?.snapshotAt;
+        }
+        return wholeList([line(`${id}-row`, false, id)], { cursor: 'same' });
+      },
+    });
+    await run();
+
+    engine.refresh(KIND, 'list-a');
+    engine.refresh(KIND, 'list-b');
+    await engine.whenSettled();
+
+    expect(snapshots.map(({ id }) => id)).toEqual(['list-a', 'list-b']);
+    expect(firstReadWhenSecondAsked).toBeGreaterThan(0);
+  });
+
+  it('is asked again by the next pass after a read that failed', async () => {
+    let answers = 0;
+    await heldAtLatest({
+      snapshot: () => {
+        answers += 1;
+        return answers === 1
+          ? fault()
+          : wholeList([line('row-1')], { cursor: 'same' });
+      },
+    });
+
+    await run(() => engine.refresh(KIND, LIST));
+    expect(positionOf(LIST)?.snapshotAt).toBe(0);
+
+    await run(() => engine.catchUp());
+
+    expect(snapshots).toHaveLength(2);
+    expect(positionOf(LIST)?.snapshotAt).toBeGreaterThan(0);
+  });
+});
+
+describe('what it reports', () => {
+  beforeEach(() => {
+    jest.mocked(Telemetry.increment).mockClear();
+    jest.mocked(Telemetry.histogram).mockClear();
+  });
+
+  const resyncs = () =>
+    jest
+      .mocked(Telemetry.increment)
+      .mock.calls.filter(([name]) => name === 'feed_resync_total');
+
+  it('times a pull', async () => {
+    hold(LIST, 'old');
+    mockClient = clientOver({
+      scopes: () => listed([{ id: LIST, cursor: 'new' }]),
+      pull: () => pulled([page(LIST, { cursor: 'new' })]),
+    });
+
+    await run();
+
+    expect(Telemetry.histogram).toHaveBeenCalledWith(
+      'feed_pull_ms',
+      expect.any(Number),
+    );
+  });
+
+  it('counts a position the server no longer serves, and the full read it costs', async () => {
+    hold(LIST, 'old');
+    mockClient = clientOver({
+      scopes: () => listed([{ id: LIST, cursor: 'new' }]),
+      pull: ({ scopes }) =>
+        pulled([
+          scopes[0]?.cursor === 'old'
+            ? page(LIST, {
+                status: SyncPageStatus.ResyncRequired,
+                cursor: null,
+              })
+            : page(LIST, { cursor: 'new' }),
+        ]),
+      snapshot: () => wholeList([line('row-1')], { cursor: 'kept' }),
+    });
+
+    await run();
+
+    expect(resyncs()).toEqual([['feed_resync_total', 1, { kind: KIND }]]);
+    expect(Telemetry.increment).toHaveBeenCalledWith('feed_snapshot_total', 1, {
+      kind: KIND,
+    });
+  });
+
+  it('counts a first full read as no resync', async () => {
+    mockClient = clientOver({
+      scopes: () => listed([{ id: LIST, cursor: 'c-1' }]),
+      pull: ({ scopes }) =>
+        pulled([
+          scopes[0]?.cursor === null
+            ? page(LIST, {
+                status: SyncPageStatus.ResyncRequired,
+                cursor: null,
+              })
+            : page(LIST, { cursor: 'c-1' }),
+        ]),
+      snapshot: () => wholeList([line('row-1')], { cursor: 'kept' }),
+    });
+
+    await run();
+
+    expect(resyncs()).toEqual([]);
+    expect(Telemetry.increment).toHaveBeenCalledWith('feed_snapshot_total', 1, {
+      kind: KIND,
+    });
+  });
+
+  it('counts a list that leaves', async () => {
+    hold(LIST, 'old');
+    mockClient = clientOver({ scopes: () => listed([]) });
+
+    await run();
+
+    expect(Telemetry.increment).toHaveBeenCalledWith('feed_evicted_total', 1, {
+      kind: KIND,
+    });
   });
 });
 

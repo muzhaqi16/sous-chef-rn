@@ -372,6 +372,29 @@ describe('QueueManager', () => {
         );
       });
 
+      it('times a drain that had writes to send, and no idle one', async () => {
+        authedOnline();
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+          [],
+        );
+        await manager.processQueue();
+        expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+          'offline_queue_drain_ms',
+          expect.anything(),
+        );
+
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+          makeMutation({ id: 'm1' }),
+        ]);
+        mockClient.mutate.mockResolvedValue({ data: {} });
+        await manager.processQueue();
+
+        expect(Telemetry.histogram).toHaveBeenCalledWith(
+          'offline_queue_drain_ms',
+          expect.any(Number),
+        );
+      });
+
       it('keeps a signed-out drain below warn', async () => {
         mockedGetState.mockReturnValue({
           user: null,

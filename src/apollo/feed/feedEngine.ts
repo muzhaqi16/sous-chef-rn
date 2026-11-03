@@ -70,6 +70,8 @@ export class FeedEngine {
   private draining = false;
   private scopesOwed = false;
   private readonly owed = new Map<string, string>();
+  /** Full reads asked for what the feed omits, kept until one is answered. */
+  private readonly fullReadsOwed = new Map<string, string>();
   private notBefore = 0;
   private wakeTimer: ReturnType<typeof setTimeout> | undefined;
   private pass: Promise<void> = Promise.resolve();
@@ -92,6 +94,7 @@ export class FeedEngine {
     this.session += 1;
     this.scopesOwed = false;
     this.owed.clear();
+    this.fullReadsOwed.clear();
     this.notBefore = 0;
     clearTimeout(this.wakeTimer);
   }
@@ -117,10 +120,27 @@ export class FeedEngine {
     this.drain();
   }
 
-  /** Reads a held scope in full, for what the feed does not report. */
+  /**
+   * Reads a held scope in full, for what the feed does not report. It joins the
+   * pass, so it waits as any read does: for the API, a refusal's wait and the
+   * scope's own create.
+   */
   refresh(kind: string, scopeId: string): void {
-    if (!this.enabled) return;
-    void this.snapshotOf(kind, scopeId, this.session);
+    if (!this.enabled || !this.adapterFor(kind)) return;
+    this.fullReadsOwed.set(scopeId, kind);
+    this.drain();
+  }
+
+  /** Owed full reads not waiting on the scope's own create. */
+  private fullReadsReady(adapter?: FeedAdapter): string[] {
+    return [...this.fullReadsOwed].flatMap(([id, kind]) => {
+      const owner = this.adapterFor(kind);
+      return owner &&
+        (!adapter || owner === adapter) &&
+        !owner.holdsUnacknowledgedCreate(id)
+        ? [id]
+        : [];
+    });
   }
 
   private drain(): void {
@@ -150,7 +170,9 @@ export class FeedEngine {
     const readInFull = new Set<string>();
     while (
       this.isCurrent(session) &&
-      (this.scopesOwed || this.owed.size > 0) &&
+      (this.scopesOwed ||
+        this.owed.size > 0 ||
+        this.fullReadsReady().length > 0) &&
       this.mayAsk()
     ) {
       const reached = !this.scopesOwed || (await this.readReachable(session));
@@ -245,6 +267,7 @@ export class FeedEngine {
 
   private evict(adapter: FeedAdapter, cache: ApolloCache, id: string): void {
     this.owed.delete(id);
+    this.fullReadsOwed.delete(id);
     adapter.evict(cache, id);
     forgetPosition(id);
     Telemetry.increment('feed_evicted_total', 1, { kind: adapter.kind });
@@ -271,11 +294,17 @@ export class FeedEngine {
         const pulled = await this.pullBatch(adapter, batch, unread, session);
         if (!pulled) return false;
       }
+      for (const id of this.fullReadsReady(adapter)) {
+        if (!unread.includes(id)) unread.push(id);
+      }
       unread.sort(
         (a, b) => Number(adapter.isOnScreen(b)) - Number(adapter.isOnScreen(a)),
       );
       for (const id of unread) {
-        if (readInFull.has(id)) continue;
+        if (readInFull.has(id)) {
+          this.fullReadsOwed.delete(id);
+          continue;
+        }
         readInFull.add(id);
         const read = await this.snapshotOf(adapter.kind, id, session);
         if (!read) return false;
@@ -339,6 +368,9 @@ export class FeedEngine {
       return;
     }
     if (status === SyncPageStatus.ResyncRequired || !cursor) {
+      if (status === SyncPageStatus.ResyncRequired && positionOf(scopeId)) {
+        Telemetry.increment('feed_resync_total', 1, { kind: adapter.kind });
+      }
       unread.push(scopeId);
       return;
     }
@@ -366,6 +398,7 @@ export class FeedEngine {
       if (answer.data === undefined) this.paceAfter(answer.error);
       return false;
     }
+    this.fullReadsOwed.delete(id);
     const { status, cursor, replace } = answer.data;
     client.cache.batch({
       optimistic: false,
@@ -383,7 +416,6 @@ export class FeedEngine {
     });
     pendingWritesOf(client.cache).scheduleRebuild();
     Telemetry.increment('feed_snapshot_total', 1, { kind });
-    this.drain();
     return true;
   }
 }

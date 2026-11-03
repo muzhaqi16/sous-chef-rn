@@ -2,7 +2,12 @@ import { gql, type ApolloClient } from '@apollo/client';
 import { FeedEngine } from '#/apollo/feed/feedEngine';
 import { clearPositions, positionOf } from '#/apollo/feed/feedPositions';
 import { scopesNamedBy } from '#/apollo/feed/feedRegistry';
-import { SyncPageStatus } from '#/graphql/generated/schemaTypes';
+import {
+  SyncPageStatus,
+  SyncPokeKind,
+  SyncScopeKind,
+} from '#/graphql/generated/schemaTypes';
+import { seedQuery } from '#/test-utils/apolloMockProvider';
 import {
   clientOver,
   itemsOf,
@@ -15,8 +20,12 @@ import {
   snapshots,
   wholeList,
 } from '#/test-utils/feedServer';
-import { GetShoppingListDetailsDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  GetShoppingListDetailsDocument,
+  GetShoppingListsLiteDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { useStore } from '#store';
+import { ListFeed_CollaboratorsFragmentDoc } from '../listFeed.generated';
 
 jest.mock('#/services/auth/deviceId');
 
@@ -50,7 +59,23 @@ const collaborator = (id: string) => ({
   shoppingList: { id: LIST },
 });
 
+const membersOf = (client: ApolloClient) =>
+  client.cache
+    .readFragment({
+      id: client.cache.identify({ __typename: 'ShoppingList', id: LIST }),
+      fragment: ListFeed_CollaboratorsFragmentDoc,
+      fragmentName: 'listFeed_collaborators',
+    })
+    ?.collaboratorsConnection.edges.map(edge => edge.node.id);
+
 let engine: FeedEngine;
+
+/** The same device, its cache kept, answered by another server. */
+function answeredBy(client: ApolloClient, next: ApolloClient): ApolloClient {
+  Object.defineProperty(next, 'cache', { value: client.cache });
+  mockClient = next;
+  return next;
+}
 
 /** A list held at `kept`, from a full read of `rows`, then one pull's `changed`. */
 async function pullAfter(
@@ -159,21 +184,22 @@ describe('a full read of a held list', () => {
     expect(itemsOf(client, false)).toEqual(['row-1']);
 
     clearPositions();
-    const reread = clientOver({
-      scopes: () => listed([{ id: LIST, cursor: 'latest' }]),
-      pull: ({ scopes }) =>
-        pulled([
-          scopes[0]?.cursor === null
-            ? page(LIST, {
-                status: SyncPageStatus.ResyncRequired,
-                cursor: null,
-              })
-            : page(LIST, { cursor: 'latest' }),
-        ]),
-      snapshot: () => wholeList([list(1), line('row-2')], { cursor: 'kept' }),
-    });
-    Object.defineProperty(reread, 'cache', { value: client.cache });
-    mockClient = reread;
+    const reread = answeredBy(
+      client,
+      clientOver({
+        scopes: () => listed([{ id: LIST, cursor: 'latest' }]),
+        pull: ({ scopes }) =>
+          pulled([
+            scopes[0]?.cursor === null
+              ? page(LIST, {
+                  status: SyncPageStatus.ResyncRequired,
+                  cursor: null,
+                })
+              : page(LIST, { cursor: 'latest' }),
+          ]),
+        snapshot: () => wholeList([list(1), line('row-2')], { cursor: 'kept' }),
+      }),
+    );
     engine.catchUp();
     await engine.whenSettled();
 
@@ -204,6 +230,94 @@ describe('a full read of a held list', () => {
     expect(client.cache.extract()).toHaveProperty(
       'ShoppingListCollaborator:person-2',
     );
+  });
+});
+
+describe('a collaborator', () => {
+  it('leaves the members when removed, and returns when invited back', async () => {
+    mockClient = clientOver({
+      scopes: () => listed([{ id: LIST, cursor: 'removed' }]),
+      pull: ({ scopes }) => {
+        const [{ cursor } = { cursor: null }] = scopes;
+        if (cursor === null) {
+          return pulled([
+            page(LIST, { status: SyncPageStatus.ResyncRequired, cursor: null }),
+          ]);
+        }
+        return pulled([
+          cursor === 'kept'
+            ? page(LIST, {
+                cursor: 'removed',
+                removed: [
+                  { entityType: 'ShoppingListCollaborator', id: 'person-1' },
+                ],
+              })
+            : page(LIST, {
+                cursor: 'invited',
+                changed: [collaborator('person-1')],
+              }),
+        ]);
+      },
+      snapshot: () =>
+        wholeList(
+          [list(0), collaborator('person-1'), collaborator('person-2')],
+          { cursor: 'kept' },
+        ),
+    });
+    engine.start();
+    await engine.whenSettled();
+    expect(membersOf(mockClient)).toEqual(['person-2']);
+
+    engine.receivePoke({
+      __typename: 'SyncPoke',
+      kind: SyncPokeKind.ScopeChanged,
+      scope: {
+        __typename: 'SyncScope',
+        kind: SyncScopeKind.ShoppingList,
+        id: LIST,
+        cursor: 'invited',
+      },
+      originDeviceId: null,
+      originOperationId: null,
+    });
+    await engine.whenSettled();
+
+    expect(membersOf(mockClient)).toEqual(['person-2', 'person-1']);
+  });
+});
+
+describe('a list the person no longer reaches', () => {
+  it('leaves the lists the picker reads, which moves the screen to another', async () => {
+    const client = await pullAfter([list(1), line('row-1')], {});
+    seedQuery(client.cache, {
+      query: GetShoppingListsLiteDocument,
+      variables: { first: 50 },
+      data: {
+        shoppingLists: {
+          edges: [
+            { node: { __typename: 'ShoppingList', id: LIST } },
+            { node: { __typename: 'ShoppingList', id: 'list-2' } },
+          ],
+        },
+      },
+    });
+
+    answeredBy(
+      client,
+      clientOver({ scopes: () => listed([{ id: 'list-2', cursor: 'c' }]) }),
+    );
+    engine.catchUp();
+    await engine.whenSettled();
+
+    expect(positionOf(LIST)).toBeUndefined();
+    expect(
+      client.cache
+        .readQuery({
+          query: GetShoppingListsLiteDocument,
+          variables: { first: 50 },
+        })
+        ?.shoppingLists.edges.map(edge => edge.node.id),
+    ).toEqual(['list-2']);
   });
 });
 

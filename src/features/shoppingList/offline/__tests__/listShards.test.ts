@@ -10,7 +10,9 @@ import { feedStorage } from '#/apollo/feed/feedStorage';
 import { heldScopes, positionOf } from '#/apollo/feed/feedPositions';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
+import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { SyncPageStatus } from '#/graphql/generated/schemaTypes';
+import { Telemetry } from '#/services/telemetry';
 import { storage } from '#/store/deviceStorage';
 import {
   clientOver,
@@ -21,7 +23,14 @@ import {
   wholeList,
   LIST,
 } from '#/test-utils/feedServer';
-import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
+import {
+  makeQueuedMutation,
+  queuedMutationFor,
+} from '#/test-utils/queuedMutation';
+import {
+  GetShoppingListItemsFilteredDocument,
+  UpdateShoppingListItemDocument,
+} from '#features/shoppingList/graphql/shoppingList.generated';
 import { useStore } from '#store';
 import { forgetShardMemory, hydrateListShard } from '../listShards';
 
@@ -37,6 +46,10 @@ jest.mock('#/apollo/clientRegistry', () => ({
 
 const OTHER = 'list-2';
 const EAGER_KEY = 'apollo-cache-v1';
+const POSITIONS_KEY = 'apollo-shard-positions';
+const VERSION_KEY = 'apollo-cache-version';
+/** The persisted shape the last build before shards wrote. */
+const PRE_SHARD_VERSION = 'shape-8';
 const shardKey = (id: string) => `apollo-shard:${id}`;
 
 const row = (id: string) => ({
@@ -67,6 +80,13 @@ const LIST_NAME = gql`
   fragment ShardListRow on ShoppingList {
     id
     version
+  }
+`;
+
+const LINE_NOTES = gql`
+  fragment ShardLineNotes on ShoppingListItem {
+    id
+    notes
   }
 `;
 
@@ -231,6 +251,15 @@ describe('after a restart', () => {
     expect(lines(cache, OTHER)).toEqual([`${OTHER}-a`]);
   });
 
+  it('holds nothing for a list it never stored, so a read misses rather than reading empty', async () => {
+    save(await deviceHolding());
+    const cache = restart();
+
+    hydrateListShard(cache, 'never-read');
+
+    expect(lines(cache, 'never-read')).toBeUndefined();
+  });
+
   it('keeps the list picker’s rows with every list cold', async () => {
     save(await deviceHolding());
 
@@ -297,5 +326,90 @@ describe('leaving', () => {
       storage.getAllKeys().filter(key => key.startsWith('apollo-shard')),
     ).toEqual([]);
     expect(heldScopes().size).toBe(0);
+  });
+
+  it('leaves nothing of a list the person lost, after a restart too', async () => {
+    const cache = await deviceHolding();
+    save(cache);
+    const lost = clientOver({
+      scopes: () => listed([{ id: OTHER, cursor: 'latest' }]),
+    });
+    Object.defineProperty(lost, 'cache', { value: cache });
+    mockClient = lost;
+    const engine = new FeedEngine();
+    engine.start();
+    await engine.whenSettled();
+    engine.stop();
+    save(cache);
+
+    const restarted = restart();
+    hydrateListShard(restarted, LIST);
+
+    expect(storage.contains(shardKey(LIST))).toBe(false);
+    expect(eager()).not.toHaveProperty(`ShoppingList:${LIST}`);
+    expect(positionOf(LIST)).toBeUndefined();
+    expect(lines(restarted, LIST)).toBeUndefined();
+    expect(positionOf(OTHER)?.cursor).toBe('latest');
+  });
+});
+
+describe('an upgraded device', () => {
+  afterEach(() => queueStore.removeMutation('queued-edit'));
+
+  it('keeps its lists and a queued change from before lists were stored apart', async () => {
+    const cache = await deviceHolding();
+    // What a build before shards left: every line in the blob, and no positions.
+    forgetShardMemory();
+    save(cache);
+    storage.set(VERSION_KEY, PRE_SHARD_VERSION);
+    storage.remove(POSITIONS_KEY);
+    queueStore.setCurrentUserId('user-1');
+    queueStore.addMutation(
+      makeQueuedMutation({
+        id: 'queued-edit',
+        ...queuedMutationFor(UpdateShoppingListItemDocument),
+        variables: { input: { id: `${LIST}-a`, version: 1, notes: 'Two' } },
+        pendingWrite: { id: 'write-1', inputs: { fields: { notes: 'Two' } } },
+      }),
+    );
+
+    forgetShardMemory();
+    const restarted = makeCache();
+    restarted.restore(apolloCachePersistence.load() ?? {});
+    apolloCachePersistence.attachShards(feedStorage, restarted);
+    apolloCachePersistence.restoreShards();
+    pendingWritesOf(restarted).restore(queueStore.getPendingWrites());
+
+    expect(heldScopes().size).toBe(0);
+    expect(lines(restarted, LIST)).toEqual([`${LIST}-a`]);
+    expect(
+      restarted.readFragment<{ notes: string | null }>({
+        id: `ShoppingListItem:${LIST}-a`,
+        fragment: LINE_NOTES,
+        optimistic: true,
+      })?.notes,
+    ).toBe('Two');
+    expect(queueStore.getMutation('queued-edit')).toBeTruthy();
+  });
+});
+
+describe('what it reports', () => {
+  it('states the size of the lists stored apart', async () => {
+    jest.mocked(Telemetry.gauge).mockClear();
+
+    save(await deviceHolding());
+
+    const bytes = [LIST, OTHER].reduce(
+      (sum, id) => sum + (storage.getString(shardKey(id))?.length ?? 0),
+      0,
+    );
+    const reported = jest
+      .mocked(Telemetry.gauge)
+      .mock.calls.filter(([name]) => name === 'cache_persist_shard_kb');
+    expect(bytes).toBeGreaterThan(0);
+    expect(reported.at(-1)).toEqual([
+      'cache_persist_shard_kb',
+      Math.round(bytes / 1024),
+    ]);
   });
 });
