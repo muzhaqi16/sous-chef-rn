@@ -106,8 +106,8 @@ flags start it with (`useChangeFeed`), since an unnamed kind is lists alone.
   so a page that moves a stack drops them and they are read again online.
 - **Counts are the server's.** `stats` is computed on read, so a pull leaves it out and the page's
   `afterApply` reads the summary again within the pass; a full read selects it.
-- **A batch page's order is the server's**, so a batch it does not list drops the page, and a full read
-  drops the pantry's pages. Usage rows are history the detail screen reads for itself: neither document
+- **A batch page's order is the server's**, so a batch it does not list drops the page, as does a
+  removed batch it lists, whose count it held. A full read drops the pantry's pages. Usage rows are history the detail screen reads for itself: neither document
   selects them, and only their removals apply.
 - **`pantryEvents` stands down** for another device's change to a held pantry, as its writers count.
   A self-echo still re-reads the summary: the feed ignores this device's own pokes.

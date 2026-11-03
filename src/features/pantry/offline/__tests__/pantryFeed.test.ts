@@ -124,6 +124,38 @@ const stacksOf = (client: ApolloClient) =>
     })
     ?.itemsConnection.edges.map(edge => edge.node.id);
 
+const batchPageOf = (client: ApolloClient, pantryItemId: string) =>
+  client.cache.readQuery({
+    query: GetPantryItemBatchesDocument,
+    variables: { pantryItemId },
+  });
+
+/** Each stack's batch page, listing the one batch named for it. */
+function seedBatchPages(
+  client: ApolloClient,
+  pages: readonly (readonly [stackId: string, batchId: string])[],
+): void {
+  for (const [stackId, batchId] of pages) {
+    seedQuery(client.cache, {
+      query: GetPantryItemBatchesDocument,
+      variables: { pantryItemId: stackId },
+      data: {
+        pantryItemBatchesConnection: {
+          edges: [
+            {
+              node: {
+                __typename: 'PantryItemBatch',
+                id: batchId,
+                pantryItemId: stackId,
+              },
+            },
+          ],
+        },
+      },
+    });
+  }
+}
+
 beforeEach(() => {
   pantryPulls.length = 0;
   summaries.length = 0;
@@ -236,11 +268,6 @@ describe('a page on a held pantry', () => {
   });
 
   it('keeps a batch page that lists the batch, and reads one again that does not', async () => {
-    const pageOf = (client: ApolloClient, pantryItemId: string) =>
-      client.cache.readQuery({
-        query: GetPantryItemBatchesDocument,
-        variables: { pantryItemId },
-      });
     const client = await pullAfter(
       [pantry(), stack('stack-1'), stack('stack-2')],
       {
@@ -250,34 +277,36 @@ describe('a page on a held pantry', () => {
           batch('batch-9', 'stack-2'),
         ],
       },
-      seeded => {
-        for (const [stackId, batchId] of [
+      seeded =>
+        seedBatchPages(seeded, [
           ['stack-1', 'batch-1'],
           ['stack-2', 'batch-2'],
-        ] as const) {
-          seedQuery(seeded.cache, {
-            query: GetPantryItemBatchesDocument,
-            variables: { pantryItemId: stackId },
-            data: {
-              pantryItemBatchesConnection: {
-                edges: [
-                  {
-                    node: {
-                      __typename: 'PantryItemBatch',
-                      id: batchId,
-                      pantryItemId: stackId,
-                    },
-                  },
-                ],
-              },
-            },
-          });
-        }
-      },
+        ]),
     );
 
-    expect(pageOf(client, 'stack-1')).not.toBeNull();
-    expect(pageOf(client, 'stack-2')).toBeNull();
+    expect(batchPageOf(client, 'stack-1')).not.toBeNull();
+    expect(batchPageOf(client, 'stack-2')).toBeNull();
+  });
+
+  it('reads a batch page again when another member removed a batch it lists', async () => {
+    const client = await pullAfter(
+      [pantry(), stack('stack-1'), stack('stack-2')],
+      {
+        changed: [pantry()],
+        removed: [{ entityType: 'PantryItemBatch', id: 'batch-1' }],
+      },
+      seeded =>
+        seedBatchPages(seeded, [
+          ['stack-1', 'batch-1'],
+          ['stack-2', 'batch-2'],
+        ]),
+    );
+
+    expect(batchPageOf(client, 'stack-1')).toBeNull();
+    expect(batchPageOf(client, 'stack-2')).not.toBeNull();
+    expect(client.cache.extract()).not.toHaveProperty(
+      'PantryItemBatch:batch-1',
+    );
   });
 });
 

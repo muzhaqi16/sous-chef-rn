@@ -101,6 +101,26 @@ export function placePantryBatch(
   });
 }
 
+/** A batch another device removed, and the page that listed it, whose count it moved. */
+export function dropPantryBatch(cache: ApolloCache, batchId: string): void {
+  cache.modify({
+    id: 'ROOT_QUERY',
+    fields: {
+      pantryItemBatchesConnection(
+        existing: ConnectionData | undefined,
+        { readField, DELETE },
+      ) {
+        if (!existing) return existing;
+        const listed = (existing.edges ?? []).some(
+          edge => readField<string>('id', edge.node) === batchId,
+        );
+        return listed ? DELETE : existing;
+      },
+    },
+  });
+  safeEvict(cache, BATCH, batchId);
+}
+
 /** The pantry's stacks and their batches as the cache holds them, by scan. */
 function pantryRowsHeld(
   cache: ApolloCache,

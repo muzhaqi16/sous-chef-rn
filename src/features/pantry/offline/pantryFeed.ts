@@ -13,6 +13,7 @@ import { todayKey } from '#/utils/dateUtils';
 import { logger } from '#/utils/environment';
 import { useStore } from '#store';
 import {
+  dropPantryBatch,
   dropPantryStack,
   dropServerLists,
   evictPantryRows,
@@ -54,7 +55,7 @@ function applyChanges(
       dropPantryStack(cache, pantryId, id);
       moved = true;
     } else if (entityType === 'PantryItemBatch') {
-      safeEvict(cache, 'PantryItemBatch', id);
+      dropPantryBatch(cache, id);
       moved = true;
     } else if (entityType === 'PantryItemUsage') {
       // Left out of the pull, so only one a read placed is here to go.
