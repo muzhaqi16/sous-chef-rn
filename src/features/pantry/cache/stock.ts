@@ -3,6 +3,7 @@ import type { DeepPartial } from '@apollo/client/utilities';
 import {
   amountLeftOf,
   countFactorOver,
+  fullPackagesAfter,
   inCountedUnit,
   shownStock,
 } from '#domain/stockDisplay';
@@ -11,6 +12,7 @@ import {
   InTrackingUnit_EnteredUnitFragmentDoc,
   InTrackingUnit_PantryItemFragmentDoc,
   WriteHeldStock_AmountLeftFragmentDoc,
+  WriteHeldStock_FullPackagesFragmentDoc,
   WriteHeldStock_InsideFragmentDoc,
   WriteHeldStock_NotationFragmentDoc,
   WriteHeldStock_PantryItemFragmentDoc,
@@ -182,8 +184,26 @@ export function writeHeldStock(
     },
   });
   const inside = readInside(cache, id);
+  const fullPackages = fullPackagesAfter(
+    inside?.stockBreakdown?.fullPackages,
+    held,
+    heldQuantity,
+  );
+  if (fullPackages != null) {
+    cache.writeFragment({
+      id,
+      fragment: WriteHeldStock_FullPackagesFragmentDoc,
+      fragmentName: 'writeHeldStock_fullPackages',
+      data: {
+        __typename: 'PantryItem',
+        id: pantryItemId,
+        stockBreakdown: { __typename: 'StockBreakdown', fullPackages },
+      },
+    });
+  }
   const left = amountLeftOf({
     held: heldQuantity,
+    fullPackages,
     shown: { quantity: displayAmount.quantity, unit: displayAmount.unit.id },
     trackingType: inside?.unit?.type,
     commonFractions: inside?.unit?.commonFractions,

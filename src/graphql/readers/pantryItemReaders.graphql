@@ -201,6 +201,9 @@ fragment PantryItemReaders on PantryItem {
   remainingNetWeight
   remainingPortions
   restockQuantity
+  stockBreakdown {
+    fullPackages
+  }
   storageLocation {
     id
     name

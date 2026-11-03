@@ -8,6 +8,9 @@ fragment pantryItem_listed on PantryItem {
   itemName
   quantity
   heldQuantity
+  stockBreakdown {
+    fullPackages
+  }
   isLowStock
   displayAmount {
     quantity

@@ -2,6 +2,7 @@ import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
   amountLeftOf,
   countFactorOver,
+  fullPackagesAfter,
   inCountedUnit,
   shownStock,
   type DisplayUnitShape,
@@ -162,6 +163,18 @@ describe('amountLeftOf', () => {
     });
   });
 
+  it('reads two half-used bags by what is in them, though they add up to one', () => {
+    expect(
+      read(1, { fullPackages: 0, netWeight: { left: 5, unit: LB } }),
+    ).toStrictEqual({ quantity: 5, unit: LB });
+  });
+
+  it('reads a whole bag as a bag when the server counts it unopened', () => {
+    expect(
+      read(1, { fullPackages: 1, netWeight: { left: 5, unit: LB } }),
+    ).toStrictEqual({ quantity: 1, unit: BAG });
+  });
+
   it('takes portions over a net weight', () => {
     expect(
       read(0.9, {
@@ -199,4 +212,20 @@ describe('amountLeftOf', () => {
       ).toStrictEqual({ quantity: 380.5, unit: LB });
     },
   );
+});
+
+describe('fullPackagesAfter', () => {
+  it.each([
+    ['a use inside the part-used bags', 0, 1.3, 1, 0],
+    ['a use that finishes the part-used bag', 3, 3.5, 3, 3],
+    ['a use that opens a whole bag', 2, 2.5, 1.5, 1],
+    ['a restock of a whole bag', 1, 1, 2, 2],
+    ['a restock beside an opened bag', 1, 1.5, 2.5, 2],
+  ])('counts %s', (_case, full, before, after, expected) => {
+    expect(fullPackagesAfter(full, before, after)).toBe(expected);
+  });
+
+  it('stays unknown while the server has not counted', () => {
+    expect(fullPackagesAfter(null, 2, 1)).toBeNull();
+  });
 });

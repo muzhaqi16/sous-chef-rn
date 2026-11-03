@@ -119,6 +119,10 @@ export function pantryItemData(
       itemName: fixture.itemName ?? 'Milk',
       quantity: fixture.quantity ?? 2,
       heldQuantity: held,
+      stockBreakdown: {
+        __typename: 'StockBreakdown',
+        fullPackages: Math.floor(held),
+      },
       // Shown in the unit it counts in.
       displayAmount: {
         __typename: 'DisplayAmount',

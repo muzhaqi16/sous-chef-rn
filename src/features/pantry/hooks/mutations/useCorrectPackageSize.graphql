@@ -6,6 +6,9 @@ fragment useCorrectPackageSize_pantryItem on PantryItem {
   updatedAt
   remainingNetWeight
   heldQuantity
+  stockBreakdown {
+    fullPackages
+  }
   displayAmount {
     quantity
     localizedSymbol

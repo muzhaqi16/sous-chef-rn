@@ -110,12 +110,34 @@ export interface HeldInside<Unit> {
 
 interface AmountLeftSource<Shown, Inside> {
   held: number;
+  /**
+   * The unopened packages among `held` (`stockBreakdown.fullPackages`), so two
+   * half-used bags read as part-used though they add up to one. Unknown, a
+   * whole `held` reads as unopened.
+   */
+  fullPackages?: number | null;
   /** `held` as the stack shows it: `shownStock`, or an amount stated in that form. */
   shown: { quantity: number; unit: Shown };
   trackingType: UnitType | null | undefined;
   commonFractions?: readonly number[] | null;
   portions?: HeldInside<Inside> | null;
   netWeight?: HeldInside<Inside> | null;
+}
+
+/**
+ * The unopened packages once a local write moves `held` from `before` to
+ * `after`. The server draws part-used packages first, so a use takes whole ones
+ * only once none is left; packages added arrive whole. Null while unknown.
+ */
+export function fullPackagesAfter(
+  full: number | null | undefined,
+  before: number,
+  after: number,
+): number | null {
+  if (full == null) return null;
+  return after >= before
+    ? full + Math.floor(after - before + WHOLE_WINDOW)
+    : Math.min(full, Math.floor(after + WHOLE_WINDOW));
 }
 
 /** The API's `nearestCommonFraction`: never 0 and never a whole. */
@@ -139,11 +161,11 @@ function nearestCommonFraction(
  * What a person reads as left, by the API's rule (`amountLeftBasis`): whole
  * packages as the stack shows them, a part-used one in what is inside, portions
  * before a net weight, else a fraction of the package. A stack counted by weight
- * or volume has no package to part-use. Batches are the server's, so a whole
- * count reads as unopened until it answers.
+ * or volume has no package to part-use.
  */
 export function amountLeftOf<Shown, Inside>({
   held,
+  fullPackages,
   shown,
   trackingType,
   commonFractions,
@@ -154,7 +176,10 @@ export function amountLeftOf<Shown, Inside>({
   | { quantity: number; unit: Inside } {
   const isMeasure =
     trackingType === UnitType.Weight || trackingType === UnitType.Volume;
-  if (isMeasure || wholeWithin(held, WHOLE_WINDOW) !== null) return shown;
+  const partUsed =
+    wholeWithin(held, WHOLE_WINDOW) === null ||
+    (fullPackages != null && held > fullPackages + WHOLE_WINDOW);
+  if (isMeasure || !partUsed) return shown;
   if (portions) return { quantity: portions.left, unit: portions.unit };
   if (netWeight) return { quantity: netWeight.left, unit: netWeight.unit };
   return {

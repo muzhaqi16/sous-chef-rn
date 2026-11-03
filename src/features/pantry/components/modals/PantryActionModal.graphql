@@ -65,6 +65,9 @@ fragment PantryActionModal_pantryItem on PantryItem {
     }
   }
   remainingPortions
+  stockBreakdown {
+    fullPackages
+  }
   lastUsedAt
   unit {
     id

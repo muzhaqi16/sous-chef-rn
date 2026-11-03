@@ -139,6 +139,7 @@ function makeCache(overrides: Record<string, unknown> = {}) {
         itemId: 'item-1',
         itemName: 'Flour',
         quantity: 5,
+        stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 5 },
         displayAmount: {
           __typename: 'DisplayAmount',
           quantity: 5,
@@ -435,6 +436,7 @@ describe('PantryActionModal', () => {
       cache: makeCache({
         quantity: 1.6,
         heldQuantity: 1.6,
+        stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 1 },
         unit: asAbbreviation({
           __typename: 'Unit',
           id: 'case',
@@ -463,10 +465,45 @@ describe('PantryActionModal', () => {
     });
   });
 
+  it('previews two half-used cases by the can, never as a whole case', () => {
+    renderWithApollo(<PantryActionModal {...defaultProps} />, {
+      cache: makeCache({
+        quantity: 2,
+        heldQuantity: 1,
+        stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 0 },
+        unit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'case',
+          name: 'case',
+          symbol: 'case',
+          type: UnitType.Count,
+          displayAsFraction: false,
+          commonFractions: null,
+        }),
+        portionUnitId: 'can',
+        portionUnit: asAbbreviation({
+          __typename: 'Unit',
+          id: 'can',
+          name: 'can',
+          symbol: 'cans',
+        }),
+        portionsPerTrackingUnit: 10,
+        remainingPortions: 10,
+      }),
+    });
+
+    const shared = mockRenderActionFields.mock.calls.at(-1)![0];
+    expect(shared.showStock(1)).toMatchObject({
+      quantity: 0,
+      unit: { symbol: 'cans' },
+    });
+  });
+
   describe('on a stack of pieces shown in dozens', () => {
     const eggs = {
       itemName: 'Eggs',
       quantity: 36,
+      stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 36 },
       displayAmount: {
         __typename: 'DisplayAmount',
         quantity: 3,

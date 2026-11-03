@@ -261,9 +261,12 @@ same-unit subtraction: the tracking unit, a dozen of it, the portion unit, or th
 stack with no portions. A use in any other unit keeps the row where it is until the server answers, the
 write queued as usual, because only the server converts. A whole package moves what is inside by the
 stack's own per-package figures. A use remembers its unit in the same layer; waste, a transfer and a
-gift do not. Batches are the server's, so a whole held count reads as unopened until it answers: two
-half-used bags read 1 bag for that moment. Every answer replaces the layer, so a mutation that moves
-stock returns `amountLeft`, or the row falls back to the old read when the layer drops.
+gift do not. Batches are the server's, so a stack is part-used when it holds more than the unopened
+packages the server last counted (`stockBreakdown.fullPackages`): two half-used bags read 5 lb, not
+1 bag. `writeHeldStock` keeps that count between answers: a use lowers it only once no part-used
+package is left, since the server draws those first, and a restock adds its whole packages. Every
+answer replaces the layer, so a mutation that moves stock returns `amountLeft` and `fullPackages`, or
+the row falls back to the old read when the layer drops.
 
 **An optimistic entity is COMPLETE for every query that reads it.** With
 `returnPartialData: false`, one missing field makes the whole cache read

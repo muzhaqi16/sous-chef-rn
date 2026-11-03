@@ -83,6 +83,19 @@ fragment writeHeldStock_inside on PantryItem {
     type
     commonFractions
   }
+  stockBreakdown {
+    fullPackages
+  }
+}
+
+# The unopened packages, kept by the same writer between answers. Every document
+# selects only `fullPackages` here: a writer stating part of a nested object
+# replaces the rest.
+fragment writeHeldStock_fullPackages on PantryItem {
+  id
+  stockBreakdown {
+    fullPackages
+  }
 }
 
 # The dozen a stack may be shown in, read (never written) to state

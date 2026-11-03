@@ -54,6 +54,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   itemName: 'Milk',
   quantity: 5,
   heldQuantity: 5,
+  stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 5 },
   displayAmount: {
     __typename: 'DisplayAmount',
     quantity: 5,

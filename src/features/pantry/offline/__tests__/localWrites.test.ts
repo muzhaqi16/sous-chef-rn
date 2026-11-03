@@ -425,6 +425,9 @@ describe('what a stack reads after a use', () => {
       displayAmount {
         quantity
       }
+      stockBreakdown {
+        fullPackages
+      }
       amountLeft {
         value
         unitId
@@ -458,6 +461,7 @@ describe('what a stack reads after a use', () => {
     remainingPortions: number | null;
     remainingNetWeight: number | null;
     consumeUnit: { id: string } | null;
+    stockBreakdown: { fullPackages: number };
     amountLeft: {
       value: number;
       unitId: string;
@@ -492,6 +496,11 @@ describe('what a stack reads after a use', () => {
         portionsPerTrackingUnit: null,
         remainingPortions: null,
         portionUnit: null,
+        // As the server counts them: the whole part of every batch.
+        stockBreakdown: {
+          __typename: 'StockBreakdown',
+          fullPackages: Math.floor(Number(fields.heldQuantity ?? 0)),
+        },
         ...fields,
       },
     });
@@ -646,6 +655,40 @@ describe('what a stack reads after a use', () => {
     expect(read(pantry)?.amountLeft).toMatchObject({
       value: 19,
       unitId: 'can',
+    });
+  });
+
+  it('reads two part-used bags by what is in them when a use leaves a whole count', () => {
+    // 0.7 and 0.8 of a bag: half a bag drawn from the first leaves one bag's
+    // worth across two opened bags.
+    const pantry = stack({
+      ...BAG,
+      quantity: 2,
+      heldQuantity: 1.5,
+      remainingNetWeight: 7.5,
+      stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 0 },
+    });
+
+    pantry.writes.begin(
+      CreatePantryItemUsageDocument,
+      { input: { pantryItemId: 'held' } },
+      { delta: -0.5, now: NOW } satisfies DrawStockInputs,
+    );
+
+    expect(read(pantry)).toMatchObject({
+      stockBreakdown: { fullPackages: 0 },
+      amountLeft: { value: 5, unitId: 'lb' },
+    });
+  });
+
+  it('keeps a restocked bag whole beside a whole one', () => {
+    const pantry = oneBag();
+
+    restock(pantry, 1);
+
+    expect(read(pantry)).toMatchObject({
+      stockBreakdown: { fullPackages: 2 },
+      amountLeft: { value: 2, unitId: 'bag' },
     });
   });
 

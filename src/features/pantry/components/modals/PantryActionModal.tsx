@@ -19,7 +19,11 @@ import { ThemedActivityIndicator } from '#components/atoms/themedComponents';
 import { DataStateView } from '#components/organisms/DataStateView';
 import type { PantryActionModal_PantryItemFragment } from './PantryActionModal.generated';
 import { usePantryActionItem } from '#features/pantry/components/modals/usePantryActionItem';
-import { amountLeftOf, shownStock } from '#domain/stockDisplay';
+import {
+  amountLeftOf,
+  fullPackagesAfter,
+  shownStock,
+} from '#domain/stockDisplay';
 import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import type {
@@ -158,6 +162,11 @@ export const PantryActionModal: React.FC<PantryActionModalProps> = ({
       pantryItem;
     const left = amountLeftOf({
       held,
+      fullPackages: fullPackagesAfter(
+        pantryItem.stockBreakdown.fullPackages,
+        trackingQuantity,
+        held,
+      ),
       shown: shownStock(held, unit, pantryItem.displayUnit),
       trackingType: unit.type,
       commonFractions: unit.commonFractions,

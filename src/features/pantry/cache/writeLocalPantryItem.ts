@@ -88,6 +88,10 @@ export function writeLocalPantryItem(
       quantity,
       // Fresh stock: every package is whole, so what is held is the count.
       heldQuantity: quantity,
+      stockBreakdown: {
+        __typename: 'StockBreakdown',
+        fullPackages: Math.floor(quantity),
+      },
       unit,
       displayAmount: { __typename: 'DisplayAmount', quantity, unit },
       amountLeft: localAmountLeft(cache, quantity, unit.id),
