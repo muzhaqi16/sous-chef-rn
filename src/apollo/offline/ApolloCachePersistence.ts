@@ -1,4 +1,4 @@
-import type { NormalizedCacheObject } from '@apollo/client';
+import type { ApolloCache, NormalizedCacheObject } from '@apollo/client';
 import { storage } from '#/store/deviceStorage';
 import { Telemetry } from '#/services/telemetry';
 import { getResolvedLanguage } from '#/i18n';
@@ -20,6 +20,21 @@ const META_KEY = '__META';
 const DEBOUNCE_MS = 3000;
 
 type Extractor = () => NormalizedCacheObject;
+
+/** What a host stores apart from what loads at launch. */
+export interface CacheShards {
+  /** Stores what changed since `previous`, and answers what loads at launch. */
+  save(
+    cache: ApolloCache,
+    stored: NormalizedCacheObject,
+    previous: NormalizedCacheObject | null,
+  ): NormalizedCacheObject;
+  /** After what loads at launch is written: what must never outrun it. */
+  saved?(): void;
+  /** After the eager cache is restored, ahead of the pending writes. */
+  restore(cache: ApolloCache): void;
+  clear(): void;
+}
 
 /**
  * Identity per top-level key, as `extract()` returns the store's own objects.
@@ -70,6 +85,35 @@ function pruneExtraRootIds(cache: NormalizedCacheObject): void {
   cache[META_KEY] = { extraRootIds: live };
 }
 
+const SHARD_PREFIX = 'apollo-shard:';
+const POSITIONS_KEY = 'apollo-shard-positions';
+
+const shardKey = (scopeId: string): string => `${SHARD_PREFIX}${scopeId}`;
+
+/** A scope's rows on disk, apart from what loads at launch. */
+export const scopeStorage = {
+  read: (scopeId: string): string | undefined =>
+    storage.getString(shardKey(scopeId)),
+  write: (scopeId: string, text: string): void => {
+    storage.set(shardKey(scopeId), text);
+  },
+  has: (scopeId: string): boolean => storage.contains(shardKey(scopeId)),
+  remove: (scopeId: string): void => {
+    storage.remove(shardKey(scopeId));
+  },
+  /** Apart from the rows: reading a position must not mean parsing every list. */
+  readPositions: (): string | undefined => storage.getString(POSITIONS_KEY),
+  writePositions: (text: string): void => {
+    storage.set(POSITIONS_KEY, text);
+  },
+  clear: (): void => {
+    for (const key of storage.getAllKeys()) {
+      if (key.startsWith(SHARD_PREFIX)) storage.remove(key);
+    }
+    storage.remove(POSITIONS_KEY);
+  },
+};
+
 class ApolloCachePersistence {
   private burstOpen = false;
   private burstOwed = false;
@@ -78,6 +122,16 @@ class ApolloCachePersistence {
   /** Non-null exactly while a write is owed; `persist` and `cancel` clear it. */
   private pendingExtractor: Extractor | null = null;
   private lastPersistedSnapshot: NormalizedCacheObject | null = null;
+  private shards: { store: CacheShards; cache: ApolloCache } | null = null;
+
+  /** Set once, by the composition root, ahead of the first restore. */
+  attachShards(store: CacheShards, cache: ApolloCache): void {
+    this.shards = { store, cache };
+  }
+
+  restoreShards(): void {
+    this.shards?.store.restore(this.shards.cache);
+  }
 
   /** Null when nothing is stored or the stored blob is not this shape. */
   load(): NormalizedCacheObject | null {
@@ -182,6 +236,7 @@ class ApolloCachePersistence {
       ]) {
         storage.remove(key);
       }
+      this.shards?.store.clear();
       this.lastPersistedSnapshot = null;
       if (__DEV__) {
         logger.debug('🧹 Cache: Cleared persisted cache');
@@ -223,13 +278,21 @@ class ApolloCachePersistence {
         return;
       }
 
-      const cacheString = JSON.stringify(cache);
+      const eager = this.shards
+        ? this.shards.store.save(
+            this.shards.cache,
+            cache,
+            this.lastPersistedSnapshot,
+          )
+        : cache;
+      const cacheString = JSON.stringify(eager);
       const tStringify = performance.now();
       const sizeKB = Math.round(cacheString.length / 1024);
 
       storage.set(CACHE_STORAGE_KEY, cacheString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
       storage.set(CACHE_LANGUAGE_KEY, getResolvedLanguage());
+      this.shards?.store.saved?.();
       const tWrite = performance.now();
       this.lastPersistedSnapshot = cache;
 

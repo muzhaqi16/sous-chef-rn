@@ -3,7 +3,7 @@ import React from 'react';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { describeStoreOption, type StoreOption } from '#domain/stores';
+import { describeStoreOption, type FoundOption } from '#domain/stores';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
@@ -56,7 +56,7 @@ export const StoreAutocompleteField: React.FC<StoreAutocompleteFieldProps> = ({
 
   return (
     <>
-      <GenericAutocompleteField<StoreOption>
+      <GenericAutocompleteField<FoundOption>
         variant={variant}
         label={label}
         value={value}

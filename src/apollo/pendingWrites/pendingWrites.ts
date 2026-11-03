@@ -222,6 +222,11 @@ export class PendingWrites {
     this.rebuild();
   }
 
+  /** A pull confirming its row settles the write (`LocalWrite.settlesFromFeed`). */
+  settlesFromFeed(operationName: string): boolean {
+    return this.table[operationName]?.settlesFromFeed === true;
+  }
+
   /** A refusal keeps the write for the person, unless it has a retry of its own. */
   keepsRefusal(operationName: string): boolean {
     return this.table[operationName]?.recoverable !== false;

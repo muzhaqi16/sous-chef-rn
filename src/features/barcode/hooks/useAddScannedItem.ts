@@ -8,7 +8,7 @@ import {
 import { createShoppingListRow } from '#features/shoppingList/cache/createShoppingListRow';
 import { usePantryIntake } from '#features/pantry/hooks/usePantryIntake';
 import { refByIdOrName } from '#/utils/refInput';
-import { stockAmountOf } from '#domain/stockAmount';
+import { contentsOf, stockAmountOf } from '#domain/stockAmount';
 import { useTranslation } from '#/i18n';
 
 /** A list line from a scan is one container: the per-container weight is separate. */
@@ -35,10 +35,13 @@ const scannedAmountOf = (amount: ScanAmount): StockAmountInput =>
   amount.packaged
     ? stockAmountOf(amount.count, {
         asPackages: true,
-        packageSize: amount.size,
+        packageSize: contentsOf(amount.contents).packageSize,
         unitId: amount.unitId,
       })
     : stockAmountOf(amount.quantity, { unitId: amount.unitId });
+
+const scannedProfileOf = (amount: ScanAmount) =>
+  amount.packaged ? contentsOf(amount.contents).measurementProfile : undefined;
 
 /** Whether the shopping-list row survived the create, and its id if it did. */
 export type ScannedListOutcome =
@@ -76,9 +79,7 @@ export function useAddScannedItem({
       {
         item: scannedPantrySource(item),
         amount: scannedAmountOf(amount),
-        ...(amount.consumeUnitId && {
-          consumeUnit: { id: amount.consumeUnitId },
-        }),
+        measurementProfile: scannedProfileOf(amount),
       },
       {
         local: {

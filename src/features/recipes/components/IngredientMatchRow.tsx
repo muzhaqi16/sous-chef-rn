@@ -16,15 +16,14 @@ import { Badge, type BadgeVariant } from '#components/atoms/Badge';
 import { ChipScrollRow } from '#components/molecules/ChipScrollRow';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import {
-  formatAmountDisplay,
-  formatQuantityForInput,
-  unitLabel,
-} from '#/utils/formatQuantity';
+import { formatQuantityForInput, unitLabel } from '#/utils/formatQuantity';
+import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
+import type { ReadingSystem } from '#domain/measure';
 
 interface IngredientMatchRowProps {
   editableMatch: EditableMatch;
   index: number;
+  readingSystem: ReadingSystem;
   onUpdate: (index: number, updates: MatchUpdate) => void;
 }
 
@@ -39,15 +38,15 @@ const BADGE_CONFIG: Record<
   unsure: { labelKey: 'labels.check', variant: 'warning' },
 };
 
-const stackAmount = (stack: PantryStackOption) =>
-  formatAmountDisplay(stack.displayAmount);
-
 const IngredientMatchRowComponent: React.FC<IngredientMatchRowProps> = ({
   editableMatch,
   index,
+  readingSystem,
   onUpdate,
 }) => {
   const { t } = useTranslation();
+  const stackAmount = (stack: PantryStackOption) =>
+    formatAmountLeft(stack, readingSystem);
   const {
     match,
     ingredient,

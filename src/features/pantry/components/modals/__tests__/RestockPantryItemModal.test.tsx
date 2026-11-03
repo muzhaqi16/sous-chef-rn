@@ -1,9 +1,14 @@
 'use no memo';
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { RestockPantryItemModal } from '#features/pantry/components/modals/RestockPantryItemModal';
 import { eggsShared } from '#/test-utils/pantryActionShared';
-import type { PantryActionSharedState } from '#features/pantry/types';
+import type {
+  PantryActionSharedState,
+  PickableUnit,
+} from '#features/pantry/types';
+import { pantryTestIDs } from '#features/pantry/testIDs';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
@@ -21,7 +26,7 @@ type RestockMockSharedState = {
   displayAsFractionOf: () => boolean | null;
   isConvertedUnit: boolean;
   exactFactor: number | null;
-  showStock: (held: number) => {
+  leftAfter: (drawn: number) => {
     quantity: number;
     unitSymbol: string;
     displayAsFraction: boolean | null;
@@ -66,6 +71,42 @@ const mockField = ({ label, value, onChangeText, error }: MockFieldProps) => {
     </View>
   );
 };
+jest.mock('#features/pantry/ui/PackageContentsFields', () => ({
+  PackageContentsFields: ({
+    size,
+    onSizeChange,
+    sizeError,
+    onUnitSelected,
+    unitError,
+  }: {
+    size: string;
+    onSizeChange: (text: string) => void;
+    sizeError?: string;
+    onUnitSelected: (id: string, name: string, type: string) => void;
+    unitError?: string;
+  }) => {
+    const { Pressable, Text, View } = require('react-native');
+    return (
+      <View>
+        {mockField({
+          label: 'Each holds',
+          value: size,
+          onChangeText: onSizeChange,
+          error: sizeError,
+        })}
+        <Pressable
+          testID="pick-lb"
+          onPress={() => onUnitSelected('lb', 'lb', 'WEIGHT')}
+        />
+        <Pressable
+          testID="pick-can"
+          onPress={() => onUnitSelected('can', 'can', 'COUNT')}
+        />
+        {unitError ? <Text testID="size-unit-error">{unitError}</Text> : null}
+      </View>
+    );
+  },
+}));
 jest.mock('#components/molecules/FractionInput', () => ({
   FractionInput: (props: MockFieldProps) => mockField(props),
 }));
@@ -106,8 +147,8 @@ jest.mock('#features/pantry/components/modals/PantryActionModal', () => ({
       displayAsFractionOf: () => null,
       isConvertedUnit: false,
       exactFactor: 1,
-      showStock: held => ({
-        quantity: held,
+      leftAfter: drawn => ({
+        quantity: 5 - drawn,
         unitSymbol: 'oz',
         displayAsFraction: null,
       }),
@@ -196,7 +237,9 @@ describe('RestockPantryItemModal', () => {
       render(<RestockPantryItemModal {...defaultProps} reason={REASON} />);
       fireEvent.changeText(screen.getByTestId('field-Quantity to Add'), '2');
 
-      expect(screen.queryByTestId('field-Quantity to Add-error')).toBeNull();
+      expect(
+        screen.queryByTestId('field-Quantity to Add-error')?.props.children,
+      ).toBeUndefined();
     });
   });
 
@@ -268,6 +311,7 @@ describe('RestockPantryItemModal', () => {
         undefined,
         3.49,
         null,
+        null,
       );
       expect(defaultProps.onClose).toHaveBeenCalled();
     });
@@ -302,8 +346,193 @@ describe('RestockPantryItemModal', () => {
         undefined,
         undefined,
         null,
+        null,
       );
       expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+  });
+
+  describe('a package of a different size', () => {
+    const CASE: PickableUnit = {
+      unitId: 'case',
+      unit: { symbol: 'case' },
+      unitType: UnitType.Count,
+      isTrackingUnit: true,
+      conversionRatio: null,
+      conversionConfidence: null,
+    };
+    const askSize = () =>
+      fireEvent.press(screen.getByTestId(pantryTestIDs.restockDifferentSize));
+    const typeSize = (text: string) =>
+      fireEvent.changeText(screen.getByTestId('field-Each holds'), text);
+    const confirm = () =>
+      fireEvent.press(screen.getByTestId('restock-confirm'));
+
+    beforeEach(() => {
+      mockSharedOverride = { selectedUnitInfo: CASE, activeUnitId: 'case' };
+    });
+    afterEach(() => {
+      mockSharedOverride = {};
+    });
+
+    it('is not offered on a stack held in a measure', () => {
+      mockSharedOverride = {};
+      render(<RestockPantryItemModal {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId(pantryTestIDs.restockDifferentSize),
+      ).toBeNull();
+    });
+
+    it('is not offered while another unit is selected', () => {
+      mockSharedOverride = {
+        selectedUnitInfo: { ...CASE, unitId: 'can', isTrackingUnit: false },
+      };
+      render(<RestockPantryItemModal {...defaultProps} />);
+
+      expect(
+        screen.queryByTestId(pantryTestIDs.restockDifferentSize),
+      ).toBeNull();
+    });
+
+    it('asks nothing until it is pressed', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+
+      expect(screen.queryByTestId('field-Each holds')).toBeNull();
+    });
+
+    it('stays the stack’s own restock when no size is typed', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      confirm();
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledWith(
+        1,
+        '1',
+        '',
+        'case',
+        undefined,
+        undefined,
+        null,
+        null,
+      );
+      expect(defaultProps.onClose).toHaveBeenCalled();
+    });
+
+    it('sends a measure as the new package’s size', async () => {
+      defaultProps.onConfirm.mockResolvedValueOnce(null);
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('3');
+      fireEvent.press(screen.getByTestId('pick-lb'));
+      await act(async () => confirm());
+
+      expect(defaultProps.onConfirm.mock.calls[0]?.[7]).toStrictEqual({
+        packageSize: { netWeight: 3, netWeightUnitId: 'lb' },
+      });
+    });
+
+    it('keeps a count in the stack’s portion unit on the batch', async () => {
+      mockSharedOverride = {
+        selectedUnitInfo: CASE,
+        activeUnitId: 'case',
+        portionUnitId: 'can',
+      };
+      defaultProps.onConfirm.mockResolvedValueOnce(null);
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('12');
+      fireEvent.press(screen.getByTestId('pick-can'));
+      await act(async () => confirm());
+
+      expect(defaultProps.onConfirm.mock.calls[0]?.[7]).toStrictEqual({
+        packageSize: null,
+        packagePortions: 12,
+      });
+    });
+
+    it('stays open on a refused size and says why on the field', async () => {
+      defaultProps.onConfirm.mockResolvedValueOnce('Use a weight here.');
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('3');
+      fireEvent.press(screen.getByTestId('pick-lb'));
+      await act(async () => confirm());
+
+      expect(screen.getByTestId('field-Each holds-error')).toHaveTextContent(
+        'Use a weight here.',
+      );
+      expect(defaultProps.onClose).not.toHaveBeenCalled();
+
+      typeSize('4');
+      expect(screen.queryByTestId('field-Each holds-error')).toBeNull();
+    });
+
+    it('sends one restock while the answer is on its way', async () => {
+      let answer: (refusal: string | null) => void = () => undefined;
+      defaultProps.onConfirm.mockReturnValueOnce(
+        new Promise(resolve => {
+          answer = resolve;
+        }),
+      );
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('3');
+      fireEvent.press(screen.getByTestId('pick-lb'));
+      await act(async () => confirm());
+      await act(async () => confirm());
+
+      expect(defaultProps.onConfirm).toHaveBeenCalledTimes(1);
+      await act(async () => answer(null));
+    });
+
+    it('takes whole packages once a size is stated', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('3');
+      fireEvent.press(screen.getByTestId('pick-lb'));
+      fireEvent.changeText(screen.getByTestId('field-Quantity to Add'), '1.5');
+      confirm();
+
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(
+        screen.getByTestId('field-Quantity to Add-error'),
+      ).toHaveTextContent('Packages are counted whole: 1, 2, 3…');
+    });
+
+    it('drops the whole-package reason once another unit is picked', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('3');
+      fireEvent.press(screen.getByTestId('pick-lb'));
+      const quantity = screen.getByTestId('field-Quantity to Add');
+      fireEvent.changeText(quantity, '1.5');
+      confirm();
+      expect(
+        screen.getByTestId('field-Quantity to Add-error'),
+      ).toHaveTextContent('Packages are counted whole: 1, 2, 3…');
+
+      // A restock in another unit states no size, so its count need not be
+      // whole. The shell hands the sheet the new unit on its next render.
+      mockSharedOverride = {
+        selectedUnitInfo: { ...CASE, unitId: 'can', isTrackingUnit: false },
+        activeUnitId: 'can',
+      };
+      fireEvent.changeText(quantity, '1.25');
+
+      expect(screen.queryByTestId('field-Quantity to Add-error')).toBeNull();
+    });
+
+    it('asks for the size’s unit on its field', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('3');
+      confirm();
+
+      expect(defaultProps.onConfirm).not.toHaveBeenCalled();
+      expect(screen.getByTestId('size-unit-error')).toHaveTextContent(
+        'Pick the size’s unit from the list.',
+      );
     });
   });
 

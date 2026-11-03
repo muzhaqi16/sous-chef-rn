@@ -61,12 +61,13 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
   });
   const pantryItem = pantryItemId && complete ? data : null;
   const readingSystem = useReadingSystem();
-  // The count as the row reads it ("3 lb" for 1360.78 g) while `held` still
-  // describes the stack; after a local write, as stored. Only the server
-  // converts, so a figure typed in the reading's unit goes with that unit.
+  // The count as the row reads it ("3 lb" for 1360.78 g) while the row reads
+  // the count: an opened stack reads what is inside, so this keeps its own unit.
+  // Only the server converts, so a figure typed in the reading's unit goes with
+  // that unit.
   const heldReading = pantryItem
     ? currentReading(
-        pantryItem.held,
+        pantryItem.amountLeft,
         {
           value: pantryItem.displayAmount.quantity,
           unitId: pantryItem.displayAmount.unit.id,

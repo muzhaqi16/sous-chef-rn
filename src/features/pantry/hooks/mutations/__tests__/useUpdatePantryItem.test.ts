@@ -31,9 +31,6 @@ jest.mock('../utils', () => ({
       if (dirtyFields.notes) input.storageNotes = data.notes;
       if (dirtyFields.brand) input.brand = { name: data.brand };
       if (dirtyFields.location) input.storage = { location: null };
-      if (dirtyFields.consumeUnitId) {
-        input.consumeUnit = { id: data.consumeUnitId };
-      }
       if (dirtyFields.netWeight) {
         input.netWeight = {
           netWeight: Number(data.netWeight),
@@ -57,6 +54,7 @@ const buildPantryItem = (overrides: Record<string, unknown> = {}) => ({
   itemName: 'Milk',
   quantity: 5,
   heldQuantity: 5,
+  stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 5 },
   displayAmount: {
     __typename: 'DisplayAmount',
     quantity: 5,
@@ -390,17 +388,6 @@ describe('useUpdatePantryItem — what shows at once', () => {
     expect(
       await shownWhilePending({ brand: ' ' }, { brand: true }),
     ).toMatchObject({ brand: null });
-  });
-
-  it('shows the unit a stack is used in', async () => {
-    const shown = await shownWhilePending(
-      { consumeUnit: 'cup', consumeUnitId: 'unit-cup' },
-      { consumeUnitId: true },
-    );
-
-    expect(shown).toMatchObject({
-      consumeUnit: { id: 'unit-cup', symbol: 'cup' },
-    });
   });
 
   it('shows a typed location and clears an emptied one', async () => {

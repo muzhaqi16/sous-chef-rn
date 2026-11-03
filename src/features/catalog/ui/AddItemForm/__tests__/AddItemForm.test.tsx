@@ -468,8 +468,6 @@ describe('AddItemForm', () => {
       // Inventory tab — expand its "More options" to reach the advanced fields
       await user.press(screen.getByText('Inventory'));
       await user.press(screen.getByText('More options'));
-      expect(screen.getByText('Default Consume Increment')).toBeTruthy();
-      expect(screen.getByText('Default Consume Unit')).toBeTruthy();
       expect(screen.getByText('Tags')).toBeTruthy();
       expect(screen.getByText('Food Stamp Eligible')).toBeTruthy();
       expect(screen.getByText('FSA Eligible')).toBeTruthy();

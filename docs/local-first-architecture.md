@@ -23,7 +23,9 @@ the queue is written: the queue then lives in memory for the session.
 
 ## 1. Read path — local-first
 
-- Apollo `InMemoryCache` is persisted to MMKV as one blob (`ApolloCachePersistence.ts`):
+- **Shopping lists and pantries catch up from the server's change feed** (`src/apollo/feed/`), and
+  every other domain by re-reading; §1a. Apart from a held list's lines, which load on demand (§6),
+  Apollo `InMemoryCache` is persisted to MMKV as one blob (`ApolloCachePersistence.ts`):
   `cache.extract()` / `cache.restore()`, so connection wrappers (`edges`, `pageInfo`) survive across
   launches. The only changes on the way are pruning `__META.extraRootIds` whose entity is gone, and
   skipping a save when no entity changed. The blob is stored with its shape (`apollo-cache-version`,
@@ -48,6 +50,67 @@ the queue is written: the queue then lives in memory for the session.
 - A first-page background refetch that lands **before** the queue replays an offline create cannot
   lose that item: the row is in its pending layer (§2), over the page, so the merge takes the page as it
   stands. A genuinely **server-deleted** item has no pending write holding it and drops.
+
+## 1a. The change feed
+
+The API answers what changed in a scope since a cursor; one shopping list is one scope, and one pantry
+another. The contract is `docs/api/offline-sync.md` in `sous-chef-api`. `FeedEngine` runs one pass at a
+time, and what arrives during a pass joins it. It asks `syncScopes` and `mySyncPokes` for the kinds its
+flags start it with (`useChangeFeed`), since an unnamed kind is lists alone.
+
+- **Triggers.** A resync, once the queue is idle (`refetchEvents.ts`), a drained queue, and
+  `mySyncPokes` (`useChangeFeed`), which holds no row, so a lost poke only delays a pull. A poke for the
+  position held, or naming only this device's own write, pulls nothing.
+- **A pass.** `syncScopes` read to its last page, then a pull of what moved, at most 25 scopes a request
+  until `offlineLimits` reaches production. `RESYNC_REQUIRED` reads the scope in full and pulls from the
+  first page's cursor, once a pass: a server stuck answering it must not become a snapshot loop.
+- **A page lands through Apollo**, `network-only` as a one-shot read, so the ordering and precedence
+  links hold it like any read and a pending layer stays on top. Masking leaves the engine only what the
+  document selects directly, which is all it needs: it then moves edges, drops removals and keeps the
+  cursor last, in one `cache.batch`. `Query.syncChanges` and `syncSnapshot` are evicted after, or a page
+  would pin its rows and answer a read made offline. Rows spread the Readers, so a row is complete for
+  every reader; a collaborator's `status` is aliased (`ShoppingListCollaboratorFeedRow`), as it collides
+  with `ShoppingList.status` in the `SyncEntity` union.
+- **Totals.** The page's list row states them, so edges move through writers that count nothing.
+- **A full read** writes each `itemsConnection` variant with `overwrite: true`, past the merge that keeps
+  a cached tail, and a row it does not hold leaves.
+- **Eviction takes one of two answers**: `UNAVAILABLE`, or a held list missing from a `syncScopes` read
+  to its end. A fault, a partial answer or an unacknowledged create removes nothing, and only a list
+  with a position counts as held, so a stale cached row is never a candidate. Queued writes stay, and
+  reach the changes not saved when their replay is refused.
+- **A list with an unacknowledged create is not pulled** (`queueStore.holdsCreateFor`): its rows would
+  race the pending copy. A drained queue catches it up.
+- **A held list reads from the device**: `useListReadPolicy` answers `cache-first` with `refetchOn: false`,
+  and any other list reads as before. The feed omits what a list shows from outside itself, so a held
+  list last read in full a day ago reads again, without holding the screen.
+- **`X-Operation-Id` is `pendingWrite.id`**, stable across replays. A pull's `applied` settles a waiting
+  write only when its `LocalWrite` sets `settlesFromFeed` and it names that one row, dropping the layer
+  without `commit`, as the page has placed the row; writes behind it move to the version it reached.
+  Any other write replays and converges, so a miss costs a send. `applied` speaks for a row, not a write.
+- **`myShoppingListsEvents` stays** until a later change moves off it, for what the feed does not
+  hold. For a held list its line and collaborator events do nothing: those writers count, and the pull
+  that follows states the totals, so applying both counts a row twice. `listChangeFeed` switches the
+  feed off, and with it every list reads as before.
+- **A signal is taken up before its request is sent**, so one landing during a pull or a scopes read
+  costs another, and a failed request puts it back. Cleared after the answer, a poke landing while a
+  pull was out was lost until the next trigger.
+- **Positions are written after the launch blob** (`feedStorage.saved`), and each kind says on restore
+  whether its rows came back: a list by its shard, a pantry by its row in the blob.
+
+**Pantries** (`src/features/pantry/offline/pantryFeed.ts`, flag `pantryChangeFeed`):
+
+- **Rows stay in the launch blob**, not in shards: a shard costs about six times the blob per KB to
+  restore (measured 2026-11-03), and the pantry on screen would hydrate at launch anyway.
+- **Only the unfiltered `itemsConnection` is kept whole.** It is what every offline read uses. The
+  server's filtered and sorted lists are paged, where a stack missing from a page may only be past it,
+  so a page that moves a stack drops them and they are read again online.
+- **Counts are the server's.** `stats` is computed on read, so a pull leaves it out and the page's
+  `afterApply` reads the summary again within the pass; a full read selects it.
+- **A batch page's order is the server's**, so a batch it does not list drops the page, as does a
+  removed batch it lists, whose count it held. A full read drops the pantry's pages. Usage rows are history the detail screen reads for itself: neither document
+  selects them, and only their removals apply.
+- **`pantryEvents` stands down** for another device's change to a held pantry, as its writers count.
+  A self-echo still re-reads the summary: the feed ignores this device's own pokes.
 
 ## 2. Write path — the implemented pattern
 
@@ -191,6 +254,20 @@ fully-offline create. Two shared writers keep this DRY:
   `writeLocalEntity`: what the create knows, else what the cache holds per field, else the SDL-derived
   neutral value. An incomplete row makes a list cell report `complete: false` and blank it.
 
+**A pantry use moves the amount a person reads.** `amountLeft` is the server's, and `amountLeftOf`
+(`src/domain/stockDisplay.ts`) is the client's copy of its rule for the moments before an answer, so
+`writeHeldStock` writes it beside `displayAmount` and a screen never computes one. A use goes in by
+same-unit subtraction: the tracking unit, a dozen of it, the portion unit, or the net-weight unit on a
+stack with no portions. A use in any other unit keeps the row where it is until the server answers, the
+write queued as usual, because only the server converts. A whole package moves what is inside by the
+stack's own per-package figures. A use remembers its unit in the same layer; waste, a transfer and a
+gift do not. Batches are the server's, so a stack is part-used when it holds more than the unopened
+packages the server last counted (`stockBreakdown.fullPackages`): two half-used bags read 5 lb, not
+1 bag. `writeHeldStock` keeps that count between answers: a use lowers it only once no part-used
+package is left, since the server draws those first, and a restock adds its whole packages. Every
+answer replaces the layer, so a mutation that moves stock returns `amountLeft` and `fullPackages`, or
+the row falls back to the old read when the layer drops.
+
 **An optimistic entity is COMPLETE for every query that reads it.** With
 `returnPartialData: false`, one missing field makes the whole cache read
 incomplete and `useQuery` returns nothing; online a refetch hides it, offline
@@ -276,20 +353,35 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   (`PARENT_REFERENCE_KEYS`: the home a pantry joins, the pantry or list an item joins, …) while
   unrelated entries continue. A transport-class deferral (unreachable, 5xx, `INTERNAL_SERVER_ERROR`,
   pacing, `CLIENT_UPGRADE_REQUIRED`) pauses the pass instead, since every later entry would meet it too;
-  only a row-scoped one (DEADLOCK, an unbuildable replay, a batch row that failed transiently) lets
-  the rest replay. An entry parked for re-authentication still holds its dependents, and a session
-  token that revives parked entries during a pass triggers one more pass.
+  only a row-scoped one (`QueueError.entryScoped`: a union member or batch row answering `RETRY`, an
+  unbuildable replay, a `RESOLVE`) lets the rest replay. An entry parked for re-authentication still
+  holds its dependents, and a session token that revives parked entries during a pass triggers one
+  more pass.
+- **The server's `disposition` decides.** Every refusal states one (a union error's field, a batch
+  row's `failure.disposition`, `extensions.disposition` on a top-level error), so a code newer than
+  the build still settles; `classifyError` reads a code only where the client has a recovery of its
+  own. `RETRY` defers, honouring `retryAfter`. `APPLIED` is done: the layer drops and the entry
+  dequeues. `FAIL` goes to the changes not saved, and takes precedence over a 5xx status. `RESOLVE`
+  depends on the channel. A union member goes to the changes not saved, which is the choice it waits
+  for; a version conflict settles from the row first. At top level the auth family refreshes,
+  `CLIENT_UPGRADE_REQUIRED` pauses the pass, and anything else defers for that entry and is counted
+  as a fault below: a queue resends its stored variables, so an update cannot cure a
+  `BAD_USER_INPUT`, and nothing else would tell the person. `AUTH_ACCOUNT_SUSPENDED` is `RESOLVE` on
+  the wire and refused here, as no refresh clears it.
 - **A fault the server cannot name.** A resolver crash answers HTTP 200, `data: null`,
   `INTERNAL_SERVER_ERROR`. Masking hides a crash on one input from an outage, and a fault after a commit
   reads the same, so the write defers and `QueuedMutation.faults` counts it once per drain. Met again
   once the server has answered something else cleanly, the fault is scoped to the entry, so the rest of
   the pass runs. After 5 faults over at least an hour with the server answering, the write gives up
-  (`serverAnswers.ts`). `GRAPHQL_VALIDATION_FAILED` defers too, scoped to the entry: a build sends its
-  own document, so an API deploy or an app update cures it, and its dependents hold behind it.
-  Otherwise the bound on a pending entry is `expireStalePending`'s 90-day age
-  horizon. Either way the entry goes through the failure handler to the changes not saved.
-  The horizon is the API's: its daily `idempotency-key-cleanup` job deletes keys older than 90 days,
-  after which `claim` takes the same key as new and the write applies again, and a retry's
+  (`serverAnswers.ts`). `GRAPHQL_VALIDATION_FAILED` defers too, scoped to the entry and not counted: a
+  build sends its own document, so an API deploy or an app update cures it, and its dependents hold
+  behind it. Otherwise the bound on a pending entry is `expireStalePending`'s age horizon, the
+  replay window. Either way the entry goes through the failure handler to the changes not saved.
+  The horizon is the API's: its daily `idempotency-key-cleanup` job deletes keys past
+  `offlineLimits.replayWindowDays`, after which `claim` takes the same key as new and the write
+  applies again. `replayWindow.ts` follows a shorter window and never exceeds this build's 90 days.
+  It reads the window only when a pending entry is past the API's 30-day offline promise, so an
+  ordinary drain spends no round trip, and an unanswered read keeps the limit. A retry's
   `overwrites` carries a versioned write past its lock too. So past it the list offers only Discard
   (`isPastSyncWindow`), and a retry keeps the entry's age in `agedFrom`, as it renews nothing on the
   server. A create or a plain edit could replay safely; one rule covers every change.
@@ -329,14 +421,18 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   keep a change the server refused. A rejected payload routes through the permanent-failure pipeline
   (drop + toast + dequeue, via `ReplayRejectedError` → the registered failure handler). A write
   that already committed answers its success payload with `converged: true` and the row as it stands,
-  so it is treated as applied. A `ConflictError` whose `code` is `IDEMPOTENT_REPLAY` is **converged**
-  too: this exact op committed once, but its row is gone or the caller can no longer read it, so there
-  is no row to commit: the layer is dropped, the entry dequeues as success, and the resync after the
-  drain shows what the server holds. Matched on the **code**, never the message; a generic
+  so it is treated as applied. A refusal stating `APPLIED` is **converged** too (`IDEMPOTENT_REPLAY`
+  today): this exact op committed once, but its row is gone or the caller can no longer read it, so
+  there is no row to commit: the layer is dropped, the entry dequeues as success, and the resync after
+  the drain shows what the server holds. Matched on the **disposition**, never the message; a generic
   `ConflictError` is a real version/uniqueness conflict → rejected.
-  A batch that applies with a row refused as `INTERNAL_SERVER_ERROR` or `DEADLOCK` is deferred whole
-  (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while dropping that
-  row would discard a write the server never refused.
+  A batch settles row by row from `failure.disposition`. A row answering `RETRY` defers the entry
+  whole (`BatchRowDeferredError`): each row converges on its id, so the re-send is safe, while
+  dropping that row would discard a write the server never refused. A row answering `APPLIED` has
+  landed. Any other row is refused (`BatchRowRefusedError`), after the rows that landed are confirmed:
+  the entry goes to the changes not saved whole, and a retry resends it all, as the landed rows
+  converge. A retry never trims the input: a batch keyed at the top would then send other input under
+  a spent key, which the API counts and will refuse.
 - **A replay refused because its row is gone can settle silently.** An operation listed in
   `GONE_REPLAYS` (`replayRegistry.ts`: notification mark-read and delete, meal-plan item delete) treats a replayed
   `NotFoundError` as settled: its reconciler removes the row locally and the entry dequeues with no
@@ -436,9 +532,23 @@ the reference data offline reads use:
    brings back, never a write, so this store may be slow, late or lost without harm, which is what lets
    an asynchronous storage port carry it.
 
+3. **List shards** (`apollo-shard:<listId>`, `scopeStorage`; `listShards.ts`). A list the feed holds
+   stores its lines and collaborators apart, answer-shaped, as a live cache takes entities only through
+   a write: `restore` re-creates the stores, layers included. The list's own row stays in the blob, or
+   the list picker reads incomplete after a restart. The open list hydrates at restore, with each list
+   an undelivered write's layer reads (`scopeIds`, recorded when the write is queued from every id it
+   names; an entry without them hydrates every list), and any other when `useListReadPolicy` first sees
+   it. A shard costs about six times the blob per KB to restore (measured 2026-11-03), so one hydrated
+   for nothing is the expensive mistake. Only a hydrated list is
+   written: a read of a cold list holds a first page, which must not replace the whole list on disk, and
+   a full read marks the list hydrated, so opening it cannot put the older copy back. A read that comes
+   back incomplete keeps the last copy and drops the position. Positions sit in one small key, written
+   after the shards and restored only with their shard, so a position never outruns its rows. The budget
+   is 5 MB restored at launch at a 300 ms p95 restore; a miss reopens the SQLite decision.
+
 **What is warmed ahead** (`src/bootstrap/useOfflineTabPreloading.ts`, idle and `cache-first`, so a held
 read costs nothing): the pantry, the shopping lists and the meal plans (`WARM_TARGETS`); then what those
-name: the active list with both tabs of its items, and what the host adds through `warmTargets`, for
+name: the active list with both tabs of its items, unless the feed holds it, and what the host adds through `warmTargets`, for
 reads its own screens own. The mobile host adds the plan covering today, the next to start and the
 recipes planned for the coming seven days, 14 at most, one at a time (`warmPlannedMeals`).
 A warm runs once a session, and what failed runs again when the API comes back.
@@ -748,6 +858,8 @@ replay only after their parent has landed — the drain reads the parent referen
 | Background flush trigger                           | `src/hooks/app/useAppStateLifecycle.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | Shared shopping writers                            | `src/features/shoppingList/cache/items.ts` (`createLocalShoppingListItem`, `addLocalShoppingListItem`), `createShoppingListRow.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | Replay reconcilers                                 | `src/apollo/offlineQueue/replayRegistry.ts` (`REPLAY_RECONCILERS`), `queueReplayReconcilers.ts`, each feature's `offline/replayReconcilers.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Change feed engine and scope adapters              | `src/apollo/feed/feedEngine.ts`, `feedRegistry.ts`, `feedStorage.ts`; `src/features/shoppingList/offline/listFeed.ts`, `src/features/pantry/offline/pantryFeed.ts` |
+| List shards                                        | `src/features/shoppingList/offline/listShards.ts`, `scopeStorage` in `ApolloCachePersistence.ts` |
 | Resync after foreground / reconnect                | `src/apollo/refetchEvents.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | Local row writers (`writeLocalEntity`)             | `src/apollo/utils/writeLocalEntity.ts`; `writeLocalPantryItem`, `writeLocalPantry` (`src/features/pantry/cache/`), `writeLocalHome` (`src/features/home/cache/optimisticHome.ts`), `writeLocalStorageLocation` (`src/features/catalog/hooks/useCreateStorageLocation.ts`), `writeLocalShoppingList` and `addLocalShoppingListItem` (`src/features/shoppingList/cache/`), `writeLocalRecipe` (`src/features/recipes/utils/recipeCacheWriters.ts`), `writeLocalFavorite` (`src/features/recipes/cache/favorites.ts`), `writeLocalMealPlan` (`src/features/mealPlan/cache/`), `writeLocalMealTemplate` and `addTemplateItemToCache` (`src/features/mealPlan/cache/`) |
 | Field-edit write                                   | `src/apollo/pendingWrites/entityFields.ts`, `sendFields.ts`; `src/apollo/utils/localFirstFields.ts` (`writeEntityFields`)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |

@@ -9,7 +9,7 @@ import {
   seedQuery,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { ItemCondition } from '#/graphql/generated/schemaTypes';
+import { ItemCondition, UnitType } from '#/graphql/generated/schemaTypes';
 import {
   ConvertExpiredToWasteDocument,
   CreatePantryDocument,
@@ -379,6 +379,370 @@ describe('stock changes', () => {
     jest.useRealTimers();
 
     expect(pantry.cache.extract()).not.toHaveProperty(['PantryItem:held']);
+  });
+});
+
+describe('what a stack reads after a use', () => {
+  const INSIDE = gql`
+    fragment LocalWritesInside on PantryItem {
+      quantity
+      heldQuantity
+      netWeight
+      remainingNetWeight
+      netWeightUnit {
+        id
+        symbol
+        type
+        displayAsFraction
+        localizedSymbolForms {
+          one
+          other
+        }
+      }
+      portionsPerTrackingUnit
+      remainingPortions
+      portionUnit {
+        id
+        symbol
+        type
+        displayAsFraction
+        localizedSymbolForms {
+          one
+          other
+        }
+      }
+      unit {
+        id
+        symbol
+        type
+        displayAsFraction
+        commonFractions
+        localizedSymbolForms {
+          one
+          other
+        }
+      }
+      displayAmount {
+        quantity
+      }
+      stockBreakdown {
+        fullPackages
+      }
+      amountLeft {
+        value
+        unitId
+        metric {
+          value
+          symbol
+        }
+        imperial {
+          value
+          symbol
+        }
+      }
+      consumeUnit {
+        id
+      }
+    }
+  `;
+  const UNIT = gql`
+    fragment LocalWritesUnit on Unit {
+      id
+      symbol
+      type
+      displayAsFraction
+      localizedSymbolForms {
+        one
+        other
+      }
+    }
+  `;
+  type Read = {
+    remainingPortions: number | null;
+    remainingNetWeight: number | null;
+    consumeUnit: { id: string } | null;
+    stockBreakdown: { fullPackages: number };
+    amountLeft: {
+      value: number;
+      unitId: string;
+      imperial: { symbol: string };
+    };
+  };
+
+  const unit = (id: string, type: UnitType) => ({
+    __typename: 'Unit',
+    id,
+    symbol: id,
+    type,
+    displayAsFraction: false,
+    localizedSymbolForms: { __typename: 'PluralForms', one: id, other: id },
+  });
+
+  function stack(fields: Record<string, unknown>) {
+    const pantry = setup();
+    seedFragment(pantry.cache, {
+      fragment: UNIT,
+      data: unit('oz', UnitType.Weight),
+    });
+    seedFragment(pantry.cache, {
+      fragment: INSIDE,
+      data: {
+        __typename: 'PantryItem',
+        id: 'held',
+        consumeUnit: null,
+        netWeight: null,
+        remainingNetWeight: null,
+        netWeightUnit: null,
+        portionsPerTrackingUnit: null,
+        remainingPortions: null,
+        portionUnit: null,
+        // As the server counts them: the whole part of every batch.
+        stockBreakdown: {
+          __typename: 'StockBreakdown',
+          fullPackages: Math.floor(Number(fields.heldQuantity ?? 0)),
+        },
+        ...fields,
+      },
+    });
+    return pantry;
+  }
+
+  const CASE = {
+    unit: { ...unit('case', UnitType.Count), commonFractions: null },
+    portionUnit: unit('can', UnitType.Count),
+    portionsPerTrackingUnit: 10,
+  };
+  const oneCase = () =>
+    stack({ ...CASE, quantity: 1, heldQuantity: 1, remainingPortions: 10 });
+  const BAG = {
+    unit: { ...unit('bag', UnitType.Count), commonFractions: null },
+    netWeightUnit: unit('lb', UnitType.Weight),
+    netWeight: 5,
+  };
+  const oneBag = () =>
+    stack({ ...BAG, quantity: 1, heldQuantity: 1, remainingNetWeight: 5 });
+
+  const read = ({ cache }: Setup, optimistic = true) =>
+    cache.readFragment<Read>({
+      id: 'PantryItem:held',
+      fragment: INSIDE,
+      optimistic,
+    });
+
+  const drawn = (
+    { writes }: Setup,
+    amount: number,
+    unitId: string,
+    extra: Partial<DrawStockInputs> = {},
+  ) => {
+    const inputs: DrawStockInputs = {
+      delta: null,
+      stated: { amount, unitId },
+      now: NOW,
+      ...extra,
+    };
+    return writes.begin(
+      CreatePantryItemUsageDocument,
+      { input: { pantryItemId: 'held' } },
+      inputs,
+    );
+  };
+
+  it('reads 9 cans at once when a can is used, offline included', () => {
+    const pantry = oneCase();
+
+    drawn(pantry, 1, 'can');
+
+    expect(read(pantry)).toMatchObject({
+      remainingPortions: 9,
+      amountLeft: { value: 9, unitId: 'can', imperial: { symbol: 'can' } },
+    });
+  });
+
+  it('reads 4 lb at once when a pound is used from a 5 lb bag', () => {
+    const pantry = oneBag();
+
+    drawn(pantry, 1, 'lb');
+
+    expect(read(pantry)).toMatchObject({
+      remainingNetWeight: 4,
+      amountLeft: { value: 4, unitId: 'lb' },
+    });
+  });
+
+  it('leaves the row for a unit only the server can convert', () => {
+    const pantry = oneBag();
+    const before = read(pantry)?.amountLeft;
+
+    drawn(pantry, 4, 'oz');
+
+    expect(read(pantry)).toMatchObject({
+      remainingNetWeight: 5,
+      amountLeft: before,
+    });
+  });
+
+  it('waits for the server on a net weight when the stack reads portions', () => {
+    const pantry = stack({
+      ...CASE,
+      ...BAG,
+      unit: CASE.unit,
+      quantity: 1,
+      heldQuantity: 1,
+      remainingPortions: 10,
+      remainingNetWeight: 75,
+    });
+    const before = read(pantry)?.amountLeft;
+
+    drawn(pantry, 1, 'lb');
+
+    expect(read(pantry)?.amountLeft).toStrictEqual(before);
+  });
+
+  it('holds the use as a layer: the root stays, and a refusal drops it', () => {
+    const pantry = oneCase();
+    const before = read(pantry, false);
+
+    const write = drawn(pantry, 1, 'can');
+    expect(read(pantry, false)).toStrictEqual(before);
+
+    pantry.writes.drop(write.id);
+    expect(read(pantry)).toStrictEqual(before);
+  });
+
+  it('adds two uses up, through a restart', () => {
+    const pantry = oneCase();
+    const writes = [drawn(pantry, 1, 'can'), drawn(pantry, 2, 'can')];
+    expect(read(pantry)?.amountLeft.value).toBe(7);
+
+    const restarted = new PendingWrites(pantry.cache, pantry.table);
+    pantry.writes.clear();
+    restarted.restore(JSON.parse(JSON.stringify(writes)));
+
+    expect(read(pantry)?.amountLeft.value).toBe(7);
+  });
+
+  it('takes what a whole package holds with it', () => {
+    const pantry = stack({
+      ...CASE,
+      quantity: 2,
+      heldQuantity: 1.9,
+      remainingPortions: 19,
+    });
+
+    pantry.writes.begin(
+      CreatePantryItemUsageDocument,
+      { input: { pantryItemId: 'held' } },
+      { delta: -1, now: NOW } satisfies DrawStockInputs,
+    );
+
+    expect(read(pantry)).toMatchObject({
+      remainingPortions: 9,
+      amountLeft: { value: 9, unitId: 'can' },
+    });
+  });
+
+  it('reads 19 cans after a case joins 9 cans', () => {
+    const pantry = stack({
+      ...CASE,
+      quantity: 1,
+      heldQuantity: 0.9,
+      remainingPortions: 9,
+    });
+
+    restock(pantry, 1);
+
+    expect(read(pantry)?.amountLeft).toMatchObject({
+      value: 19,
+      unitId: 'can',
+    });
+  });
+
+  it('reads two part-used bags by what is in them when a use leaves a whole count', () => {
+    // 0.7 and 0.8 of a bag: half a bag drawn from the first leaves one bag's
+    // worth across two opened bags.
+    const pantry = stack({
+      ...BAG,
+      quantity: 2,
+      heldQuantity: 1.5,
+      remainingNetWeight: 7.5,
+      stockBreakdown: { __typename: 'StockBreakdown', fullPackages: 0 },
+    });
+
+    pantry.writes.begin(
+      CreatePantryItemUsageDocument,
+      { input: { pantryItemId: 'held' } },
+      { delta: -0.5, now: NOW } satisfies DrawStockInputs,
+    );
+
+    expect(read(pantry)).toMatchObject({
+      stockBreakdown: { fullPackages: 0 },
+      amountLeft: { value: 5, unitId: 'lb' },
+    });
+  });
+
+  it('keeps a restocked bag whole beside a whole one', () => {
+    const pantry = oneBag();
+
+    restock(pantry, 1);
+
+    expect(read(pantry)).toMatchObject({
+      stockBreakdown: { fullPackages: 2 },
+      amountLeft: { value: 2, unitId: 'bag' },
+    });
+  });
+
+  it('reads whole packages as packages after a whole one is used', () => {
+    const pantry = stack({
+      ...BAG,
+      quantity: 2,
+      heldQuantity: 2,
+      remainingNetWeight: 10,
+    });
+
+    pantry.writes.begin(
+      CreatePantryItemUsageDocument,
+      { input: { pantryItemId: 'held' } },
+      { delta: -1, now: NOW } satisfies DrawStockInputs,
+    );
+
+    expect(read(pantry)?.amountLeft).toMatchObject({ value: 1, unitId: 'bag' });
+  });
+
+  it('reads part of a box of nothing stated as a fraction', () => {
+    const pantry = stack({
+      unit: { ...unit('box', UnitType.Count), commonFractions: null },
+      quantity: 1,
+      heldQuantity: 1,
+    });
+
+    pantry.writes.begin(
+      CreatePantryItemUsageDocument,
+      { input: { pantryItemId: 'held' } },
+      { delta: -0.5, now: NOW } satisfies DrawStockInputs,
+    );
+
+    expect(read(pantry)?.amountLeft).toMatchObject({
+      value: 0.5,
+      unitId: 'box',
+    });
+  });
+
+  it('remembers the unit a use states', () => {
+    const pantry = oneBag();
+
+    drawn(pantry, 4, 'oz', { usedUnitId: 'oz' });
+
+    expect(read(pantry)?.consumeUnit).toMatchObject({ id: 'oz' });
+    expect(read(pantry, false)?.consumeUnit).toBeNull();
+  });
+
+  it('leaves the unit alone for waste', () => {
+    const pantry = oneBag();
+
+    drawn(pantry, 1, 'lb', { usedUnitId: null });
+
+    expect(read(pantry)?.consumeUnit).toBeNull();
   });
 });
 

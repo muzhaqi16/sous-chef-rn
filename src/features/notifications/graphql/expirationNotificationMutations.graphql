@@ -25,6 +25,7 @@ mutation MarkExpirationAction(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

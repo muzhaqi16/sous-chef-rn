@@ -71,8 +71,8 @@ export const useConfigurableSettings = () => {
       setBiometricLoading(true);
 
       // The try body stays plain statements — a `&&`/`?.`/ternary inside a try
-      // makes the React Compiler bail out of this whole hook. See
-      // scripts/probe-compiler-try-forms.mjs.
+      // makes the React Compiler bail out of this whole hook.
+      // Verified: #react-compiler-try-shapes
       const email = user.email;
       let loaded:
         | [Awaited<ReturnType<typeof getBiometricInfo>>, boolean]

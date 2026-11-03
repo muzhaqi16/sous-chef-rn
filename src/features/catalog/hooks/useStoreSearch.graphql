@@ -1,9 +1,14 @@
-# Stores near a zip or a point, nearest first, narrowed by a typed term; with
-# `withPrices`, whether each is priced from shelf prices, its own or a nearby
-# branch's. Consumer: useStoreSearch.
-query NearbyStores($input: NearbyStoresInput!, $withPrices: Boolean = false) {
-  nearbyStores(input: $input) {
+# What to shop at near a zip or a point, nearest first, narrowed by a typed term:
+# a store on file, or a place nobody has picked yet; with `withPrices`, whether a
+# store is priced from shelf prices, its own or a nearby branch's. Consumer:
+# useStoreSearch.
+query StorePlaces($input: StorePlacesInput!, $withPrices: Boolean = false) {
+  storePlaces(input: $input) {
+    placeId
+    name
+    address
     distanceKm
+    credit
     store {
       id
       name

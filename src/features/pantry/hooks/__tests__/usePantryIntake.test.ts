@@ -168,6 +168,51 @@ describe('usePantryIntake', () => {
     });
   });
 
+  it('shows what a package holds as a count until the server answers', async () => {
+    const cache = makeCache();
+    const create = createAnswering();
+    const { result } = renderHookWithApollo(() => usePantryIntake(PANTRY_ID), {
+      cache,
+      operationMocks: [create.mock],
+    });
+
+    let row;
+    await act(async () => {
+      const added = result.current.addItem('Diet Coke Mini', {
+        item: { id: 'item-soda' },
+        amount: { packages: { count: 1, unitId: 'unit-case' } },
+        measurementProfile: {
+          portionUnitId: 'unit-can',
+          portionsPerTrackingUnit: 10,
+        },
+      });
+      const [published] = Object.keys(cache.extract(true)).filter(key =>
+        key.startsWith('PantryItem:'),
+      );
+      row = published
+        ? cache.readFragment<{
+            portionUnitId: string;
+            remainingPortions: number;
+          }>({
+            optimistic: true,
+            id: published,
+            fragment: gql`
+              fragment IntakePortions on PantryItem {
+                portionUnitId
+                remainingPortions
+              }
+            `,
+          })
+        : undefined;
+      await added;
+    });
+
+    expect(row).toMatchObject({
+      portionUnitId: 'unit-can',
+      remainingPortions: 10,
+    });
+  });
+
   it('sends a typed item under a minted id, which the row names at once', async () => {
     const cache = makeCache();
     const create = createAnswering();

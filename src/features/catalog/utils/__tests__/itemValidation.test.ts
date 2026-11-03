@@ -37,27 +37,11 @@ describe('unitsRule messages', () => {
  * decimal parser, so either separator validates and yields the number.
  */
 describe('comma-decimal input', () => {
-  it('accepts 0,5 as the consume increment and yields 0.5', async () => {
-    await expect(
-      createItemSchema.validateAt('defaultConsumeIncrement', {
-        defaultConsumeIncrement: '0,5',
-      }),
-    ).resolves.toBe(0.5);
-  });
-
   it('accepts 1,5 as a net weight value', async () => {
     await expect(
       createItemSchema.validateAt('netWeights', {
         netWeights: [{ value: '1,5', unitName: 'kg' }],
       }),
     ).resolves.toEqual([{ value: 1.5, unitName: 'kg' }]);
-  });
-
-  it('still treats a blank increment as absent', async () => {
-    await expect(
-      createItemSchema.validateAt('defaultConsumeIncrement', {
-        defaultConsumeIncrement: '',
-      }),
-    ).resolves.toBeUndefined();
   });
 });

@@ -12,6 +12,7 @@ mutation RegisterDevice($input: RegisterDeviceInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -32,6 +33,7 @@ mutation UpdateDevice($input: UpdateDeviceInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

@@ -85,8 +85,6 @@ export interface AddItemFormData {
   shelfLifeDays?: number;
   shelfLifeOpenedDays?: number;
   baseDimension?: BaseDimension;
-  defaultConsumeIncrement?: number;
-  defaultConsumeUnitId?: string;
   netWeights?: NetWeightRow[];
   units?: ItemUnitRow[];
   imageUrl?: string;
@@ -125,16 +123,9 @@ export function mapFormToCreateItemInput(
             shelfLifeOpenedDays: data.shelfLifeOpenedDays ?? undefined,
           }
         : undefined,
-    packageInfo:
-      data.baseDimension ||
-      data.defaultConsumeIncrement ||
-      data.defaultConsumeUnitId
-        ? {
-            baseDimension: data.baseDimension,
-            defaultConsumeIncrement: data.defaultConsumeIncrement ?? undefined,
-            defaultConsumeUnitId: firstNonBlank(data.defaultConsumeUnitId),
-          }
-        : undefined,
+    packageInfo: data.baseDimension
+      ? { baseDimension: data.baseDimension }
+      : undefined,
     netWeights: data.netWeights?.length
       ? data.netWeights.flatMap(toNetWeightInput)
       : undefined,

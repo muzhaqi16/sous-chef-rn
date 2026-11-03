@@ -4,6 +4,7 @@ import {
   setChangesNotSavedOpener,
 } from '../queueFailureHandler';
 import { queueManager } from '../queueManager';
+import { feedEngine } from '#/apollo/feed/feedEngine';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
@@ -110,6 +111,27 @@ describe('queue failure handler', () => {
     expect(spy).toHaveBeenCalledWith(handleQueueFailure);
     spy.mockRestore();
   });
+
+  it.each([
+    ['a replay pass', 'replay', 1],
+    ['a pull, which already holds what the writes changed,', 'pull', 0],
+  ] as const)(
+    'catches the change feed up once %s drains the queue',
+    (_by, by, catchUps) => {
+      const spy = jest.spyOn(queueManager, 'setDrainedHandler');
+      registerQueueFailureHandler();
+      const [[drained]] = spy.mock.calls as [
+        Parameters<typeof queueManager.setDrainedHandler>,
+      ];
+      spy.mockRestore();
+      const catchUp = jest.spyOn(feedEngine, 'catchUp');
+
+      drained(by);
+
+      expect(catchUp).toHaveBeenCalledTimes(catchUps);
+      catchUp.mockRestore();
+    },
+  );
 
   describe('a removal the queue kept because its entry merged', () => {
     const registeredNotice = () => {

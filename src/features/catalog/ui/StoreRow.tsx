@@ -9,10 +9,10 @@ import { SwipeableItem } from '#components/organisms/SwipeableItem/SwipeableItem
 import type { SwipeAction } from '#components/organisms/SwipeableItem/types';
 import { rowType } from '#/theme/foundations/type';
 import { accessibilityLabelOf } from '#/utils/accessibilityLabel';
-import { describeStoreOption, type StoreOption } from '#domain/stores';
+import { describeStoreOption, type FoundOption } from '#domain/stores';
 
 interface StoreRowProps {
-  option: StoreOption;
+  option: FoundOption;
   /** Read once per list (`useReadingSystem`), for the distance. */
   readingSystem: UnitSystem;
   /** A line under the branch, such as where its prices come from. */

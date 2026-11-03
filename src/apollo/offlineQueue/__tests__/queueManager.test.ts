@@ -114,6 +114,7 @@ jest.mock('../queueStore', () => ({
     getPendingWrites: jest.fn(() => []),
     resetProcessingToPending: jest.fn(() => 0),
     expireStalePending: jest.fn(() => []),
+    hasPendingOlderThan: jest.fn(() => false),
     updateMutation: jest.fn(() => true),
     removeMutation: jest.fn(() => true),
     incrementRetry: jest.fn(() => true),
@@ -368,6 +369,29 @@ describe('QueueManager', () => {
         expect(Telemetry.warn).toHaveBeenCalledWith(
           'Queue drain replaying pending mutations',
           { count: 2 },
+        );
+      });
+
+      it('times a drain that had writes to send, and no idle one', async () => {
+        authedOnline();
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue(
+          [],
+        );
+        await manager.processQueue();
+        expect(Telemetry.histogram).not.toHaveBeenCalledWith(
+          'offline_queue_drain_ms',
+          expect.anything(),
+        );
+
+        (queueStore.getPendingMutationsForUser as jest.Mock).mockReturnValue([
+          makeMutation({ id: 'm1' }),
+        ]);
+        mockClient.mutate.mockResolvedValue({ data: {} });
+        await manager.processQueue();
+
+        expect(Telemetry.histogram).toHaveBeenCalledWith(
+          'offline_queue_drain_ms',
+          expect.any(Number),
         );
       });
 
@@ -1196,7 +1220,10 @@ describe('QueueManager', () => {
         'SERVICE_UNAVAILABLE',
         new CombinedGraphQLErrors({
           errors: [
-            { message: 'Refused', extensions: { code: 'SERVICE_UNAVAILABLE' } },
+            {
+              message: 'Refused',
+              extensions: { code: 'SERVICE_UNAVAILABLE', disposition: 'RETRY' },
+            },
           ],
         }),
         'transport',
@@ -1207,7 +1234,10 @@ describe('QueueManager', () => {
           errors: [
             {
               message: 'Update required',
-              extensions: { code: 'CLIENT_UPGRADE_REQUIRED' },
+              extensions: {
+                code: 'CLIENT_UPGRADE_REQUIRED',
+                disposition: 'RESOLVE',
+              },
             },
           ],
         }),
@@ -1215,7 +1245,13 @@ describe('QueueManager', () => {
       ],
       [
         'DEADLOCK',
-        new ReplayRejectedError('ConflictError', 'deadlock', 'DEADLOCK'),
+        new ReplayRejectedError(
+          'ConflictError',
+          'deadlock',
+          'DEADLOCK',
+          null,
+          'RETRY',
+        ),
         'entry',
       ],
     ])('scopes the deferral for %s', async (_label, error, scope) => {
@@ -1274,7 +1310,9 @@ describe('QueueManager', () => {
       const result = await handleMutationError(
         mutation,
         new CombinedGraphQLErrors({
-          errors: [{ message: 'Refused', extensions: { code } }],
+          errors: [
+            { message: 'Refused', extensions: { code, disposition: 'RETRY' } },
+          ],
         }),
       );
 
@@ -1306,7 +1344,10 @@ describe('QueueManager', () => {
         errors: [
           {
             message: 'Internal server error',
-            extensions: { code: ErrorCode.InternalServerError },
+            extensions: {
+              code: ErrorCode.InternalServerError,
+              disposition: 'RETRY',
+            },
           },
         ],
       });
@@ -1343,7 +1384,10 @@ describe('QueueManager', () => {
         errors: [
           {
             message: 'Cannot query field',
-            extensions: { code: 'GRAPHQL_VALIDATION_FAILED' },
+            extensions: {
+              code: 'GRAPHQL_VALIDATION_FAILED',
+              disposition: 'RESOLVE',
+            },
           },
         ],
       });
@@ -1455,7 +1499,11 @@ describe('QueueManager', () => {
         errors: [
           {
             message: 'Rate limit exceeded',
-            extensions: { code: 'OPERATION_RATE_LIMITED', retryAfter },
+            extensions: {
+              code: 'OPERATION_RATE_LIMITED',
+              disposition: 'RETRY',
+              retryAfter,
+            },
           },
         ],
       }),
@@ -1754,6 +1802,7 @@ describe('QueueManager', () => {
             createShoppingList: {
               __typename: 'ConflictError',
               code: 'IDEMPOTENT_REPLAY',
+              disposition: 'APPLIED',
               message: 'A shopping list with this id already exists',
             },
           },
@@ -1807,6 +1856,7 @@ describe('QueueManager', () => {
               createShoppingList: {
                 __typename: 'ConflictError',
                 code: 'IDEMPOTENT_REPLAY',
+                disposition: 'APPLIED',
                 message: 'A shopping list with this id already exists',
               },
             },
@@ -2122,7 +2172,11 @@ describe('QueueManager', () => {
                   __typename: 'BatchAddShoppingListItemResult',
                   index: 1,
                   success: false,
-                  failure: { __typename: 'BatchElementFailure', code },
+                  failure: {
+                    __typename: 'BatchElementFailure',
+                    code,
+                    disposition: 'RETRY',
+                  },
                   item: null,
                 },
               ],
@@ -2149,6 +2203,93 @@ describe('QueueManager', () => {
         expect(failureHandler).not.toHaveBeenCalled();
       },
     );
+
+    const answerWithRow = (disposition: string) => ({
+      data: {
+        batchAddShoppingListItems: {
+          __typename: 'BatchAddShoppingListItemsPayload',
+          results: [
+            { index: 0, success: true, failure: null },
+            {
+              index: 1,
+              success: false,
+              failure: { code: 'VALIDATION_FAILED', disposition },
+            },
+          ],
+        },
+      },
+    });
+    const batchEntry = (id: string) =>
+      makeMutation({
+        id,
+        ...queuedMutationFor(AddItemToShoppingListDocument),
+        variables: {
+          input: {
+            shoppingListId: 'list-1',
+            items: [{ id: 'row-1' }, { id: 'row-2' }],
+          },
+        },
+      });
+
+    it('reports a batch whose row the server refused, not as a success', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      mockClient.mutate.mockResolvedValue(answerWithRow('FAIL'));
+
+      jest.useRealTimers();
+      const result = await manager['processMutation'](batchEntry('batch-row'));
+      jest.useFakeTimers();
+
+      expect(result).toMatchObject({ success: false });
+      expect(result.deferred).toBeUndefined();
+      expect(failureHandler).toHaveBeenCalledWith(
+        expect.objectContaining({
+          error: expect.objectContaining({ code: 'VALIDATION_FAILED' }),
+        }),
+      );
+    });
+
+    it('settles a batch whose failed row had already landed', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      mockClient.mutate.mockResolvedValue(answerWithRow('APPLIED'));
+
+      jest.useRealTimers();
+      const result = await manager['processMutation'](batchEntry('batch-done'));
+      jest.useFakeTimers();
+
+      expect(result).toMatchObject({ success: true });
+      expect(failureHandler).not.toHaveBeenCalled();
+    });
+
+    it('drops a write a top-level refusal says already landed', async () => {
+      const failureHandler = jest.fn();
+      manager.setFailureHandler(failureHandler);
+      mockClient.mutate.mockResolvedValue({
+        data: null,
+        error: new CombinedGraphQLErrors({
+          errors: [
+            {
+              message: 'Already applied',
+              extensions: { code: 'IDEMPOTENT_REPLAY', disposition: 'APPLIED' },
+            },
+          ],
+        }),
+      });
+
+      jest.useRealTimers();
+      const result = await manager['processMutation'](
+        makeMutation({
+          id: 'landed-top-level',
+          ...queuedMutationFor(CreatePantryItemDocument),
+          variables: { input: { id: 'item-1', pantryId: 'pan-1' } },
+        }),
+      );
+      jest.useFakeTimers();
+
+      expect(result).toMatchObject({ success: true });
+      expect(failureHandler).not.toHaveBeenCalled();
+    });
 
     it('throws when mutate returns an error', async () => {
       mockClient.mutate.mockResolvedValue({

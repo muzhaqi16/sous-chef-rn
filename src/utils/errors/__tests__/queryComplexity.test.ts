@@ -6,15 +6,6 @@ import {
 } from '../queryComplexity';
 
 describe('isQueryComplexityError', () => {
-  it('returns true for graphQLErrors with TOO_COMPLEX code', () => {
-    const error = {
-      graphQLErrors: [
-        { extensions: { code: QueryComplexityErrorType.TOO_COMPLEX } },
-      ],
-    };
-    expect(isQueryComplexityError(error)).toBe(true);
-  });
-
   it('returns true for graphQLErrors with PAGINATION_LIMIT_EXCEEDED code', () => {
     const error = {
       graphQLErrors: [
@@ -30,7 +21,7 @@ describe('isQueryComplexityError', () => {
 
   it('returns true for error with extensions directly', () => {
     const error = {
-      extensions: { code: QueryComplexityErrorType.TOO_COMPLEX },
+      extensions: { code: QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED },
     };
     expect(isQueryComplexityError(error)).toBe(true);
   });
@@ -53,20 +44,22 @@ describe('getQueryComplexityDetails', () => {
     const error = {
       graphQLErrors: [
         {
-          message: 'Query too complex',
+          message: 'Pagination limit',
           extensions: {
-            code: QueryComplexityErrorType.TOO_COMPLEX,
-            maxDepth: 10,
-            actualDepth: 15,
+            code: QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
+            maxPagination: 100,
+            requestedPagination: 500,
           },
         },
       ],
     };
     const details = getQueryComplexityDetails(error);
     expect(details).not.toBeNull();
-    expect(details!.errorType).toBe(QueryComplexityErrorType.TOO_COMPLEX);
-    expect(details!.maxDepth).toBe(10);
-    expect(details!.actualDepth).toBe(15);
+    expect(details!.errorType).toBe(
+      QueryComplexityErrorType.PAGINATION_LIMIT_EXCEEDED,
+    );
+    expect(details!.maxPagination).toBe(100);
+    expect(details!.requestedPagination).toBe(500);
   });
 
   it('extracts details from error with extensions directly', () => {
@@ -92,43 +85,6 @@ describe('getQueryComplexityDetails', () => {
 });
 
 describe('describeQueryComplexity', () => {
-  it('returns depth-specific message', () => {
-    const error = {
-      graphQLErrors: [
-        {
-          message: 'too complex',
-          extensions: {
-            code: QueryComplexityErrorType.TOO_COMPLEX,
-            maxDepth: 10,
-            actualDepth: 15,
-          },
-        },
-      ],
-    };
-    const message = describeQueryComplexity(error);
-    expect(message).toContain('depth');
-    expect(message).toContain('15');
-    expect(message).toContain('10');
-  });
-
-  it('returns fields-specific message', () => {
-    const error = {
-      graphQLErrors: [
-        {
-          message: 'too complex',
-          extensions: {
-            code: QueryComplexityErrorType.TOO_COMPLEX,
-            maxFields: 150,
-            actualFields: 200,
-          },
-        },
-      ],
-    };
-    const message = describeQueryComplexity(error);
-    expect(message).toContain('fields');
-    expect(message).toContain('200');
-  });
-
   it('returns pagination-specific message', () => {
     const error = {
       graphQLErrors: [
@@ -149,6 +105,6 @@ describe('describeQueryComplexity', () => {
 
   it('returns default message for non-complexity error', () => {
     const message = describeQueryComplexity({ message: 'other' });
-    expect(message).toContain('too complex');
+    expect(message).toContain('fewer items');
   });
 });

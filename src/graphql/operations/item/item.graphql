@@ -250,6 +250,7 @@ mutation CreateItem($input: CreateItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -272,6 +273,7 @@ mutation MarkSuggestionDismissed($input: MarkSuggestionDismissedInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -290,6 +292,7 @@ mutation MarkSuggestionActive($input: MarkSuggestionActiveInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -320,6 +323,7 @@ mutation MarkItemForReview($input: MarkItemForReviewInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

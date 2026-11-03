@@ -8,7 +8,7 @@ import { useFragment } from '@apollo/client/react';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 import { Icon } from '#components/atoms/Icon';
-import { BatchStatus } from '#/graphql/generated/schemaTypes';
+import { BatchStatus, UnitType } from '#/graphql/generated/schemaTypes';
 import {
   PantryItemBatchFragmentDoc,
   type PantryItemBatchFragment,
@@ -32,7 +32,7 @@ interface BatchListItemProps {
   batch: PantryItemBatchFragment;
   onOpen?: (batchId: string) => void;
   onWaste?: (batchId: string) => void;
-  /** Offered on a weighed batch: its package size can be corrected. */
+  /** Offered where a package can hold something: a weighed or counted stack. */
   onCorrectSize?: (batchId: string) => void;
 }
 
@@ -93,6 +93,9 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
     ? shownStock(batch.quantity, stack.data.unit, stack.data.displayUnit)
     : null;
   const netWeightUnit = stack.complete ? stack.data.netWeightUnit : null;
+  const holdsContents =
+    batch.netWeight != null ||
+    (stack.complete && stack.data.unit.type === UnitType.Count);
 
   // In the user's unit system while the reading still describes the stored
   // size; after a local correction, as stored until the server answers.
@@ -206,7 +209,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
               <Icon name="open-outline" size={18} tone="primary" />
             </AppPressable>
           )}
-          {batch.netWeight != null && !!onCorrectSize && (
+          {onCorrectSize && holdsContents ? (
             <AppPressable
               onPress={() => onCorrectSize(batch.id)}
               accessibilityLabel={t('correctWeight.title')}
@@ -215,7 +218,7 @@ const BatchListItemComponent: React.FC<BatchListItemProps> = ({
             >
               <Icon name="scale-outline" size={18} tone="primary" />
             </AppPressable>
-          )}
+          ) : null}
           {!!onWaste && (
             <AppPressable
               onPress={() => onWaste(batch.id)}

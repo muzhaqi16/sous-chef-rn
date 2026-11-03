@@ -18,6 +18,7 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
         itemName
         failure {
           code
+          disposition
           errorId
         }
       }
@@ -30,6 +31,7 @@ mutation MovePurchasedItemsToPantry($input: MovePurchasedItemsToPantryInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

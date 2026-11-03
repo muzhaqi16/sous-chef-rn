@@ -20,6 +20,7 @@ mutation MarkNotificationAsRead($input: MarkNotificationAsReadInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {
@@ -47,6 +48,7 @@ mutation DeleteNotification($input: DeleteNotificationInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

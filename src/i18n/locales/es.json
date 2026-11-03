@@ -390,7 +390,6 @@
     "invalidImage": "Imagen no válida",
     "invalidInput": "Entrada no válida",
     "inventory": "Inventario",
-    "portions": "Porciones",
     "inviteMemberToHome": "Invitar miembro al hogar",
     "inviteMembers": "Invitar miembros",
     "invitedBy": "Invitado por {{name}}",
@@ -417,7 +416,6 @@
     "mold": "Moho",
     "moreOptions": "Más opciones",
     "netWeight": "Peso neto",
-    "netWeightIsUsedForConsumptionTrackingAndIsOptional": "El peso neto se usa para el seguimiento del consumo y es opcional.",
     "never": "Nunca",
     "newTemplate": "Nueva plantilla",
     "next": "Siguiente",
@@ -559,9 +557,6 @@
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
     },
-    "usedIn": "Se usa en",
-    "tbspCup": "tbsp, taza",
-    "usedInHint": "Con qué lo mides al usarlo, como tbsp para la miel.",
     "member": "Miembro",
     "member_one": "Miembro",
     "member_other": "Miembros",
@@ -584,7 +579,8 @@
     "vegan": "Vegana",
     "sulfite": "Sulfitos",
     "budgetAndPrices": "Presupuesto y precios",
-    "shopping": "Compras"
+    "shopping": "Compras",
+    "more": "Más"
   },
   "instructions": {
     "pointCamera": "Apunta la cámara a un código de barras",

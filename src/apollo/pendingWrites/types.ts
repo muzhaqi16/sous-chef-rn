@@ -48,6 +48,12 @@ export interface LocalWrite<TInputs extends LocalInputs = LocalInputs> {
   /** How a stale write learns what became of it; absent, the person decides. */
   conflict?: ConflictRead<TInputs>;
   /**
+   * Changes one row and needs nothing from its answer, so a pull confirming
+   * that row settles it: the page has already put the row where the server has
+   * it. Off, a confirmed write replays and converges, which costs only a send.
+   */
+  settlesFromFeed?: true;
+  /**
    * Gets its `input.idempotencyKey` here, once, as the write is made, so a
    * resend of an edit the server took writes nothing and answers `converged`.
    */

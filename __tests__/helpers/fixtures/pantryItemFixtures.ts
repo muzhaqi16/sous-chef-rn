@@ -80,7 +80,7 @@ function unit(
 
 type HeldReading = NonNullable<
   UnmaskedGetPantryItemQuery['pantryItem']
->['held']['metric'];
+>['amountLeft']['metric'];
 
 function heldReading(
   value: number,
@@ -119,6 +119,10 @@ export function pantryItemData(
       itemName: fixture.itemName ?? 'Milk',
       quantity: fixture.quantity ?? 2,
       heldQuantity: held,
+      stockBreakdown: {
+        __typename: 'StockBreakdown',
+        fullPackages: Math.floor(held),
+      },
       // Shown in the unit it counts in.
       displayAmount: {
         __typename: 'DisplayAmount',
@@ -132,7 +136,7 @@ export function pantryItemData(
         }),
       },
       // The same figure in both systems: what the screen showed before readings.
-      held: {
+      amountLeft: {
         __typename: 'Measure',
         value: held,
         unitId: trackingUnit.id,
@@ -207,7 +211,6 @@ export function pantryItemData(
       unit: trackingUnit,
       displayUnit: null,
       netWeightUnit: null,
-      consumeUnit: null,
       storageLocation: fixture.storageLocationName
         ? {
             __typename: 'StorageLocation',

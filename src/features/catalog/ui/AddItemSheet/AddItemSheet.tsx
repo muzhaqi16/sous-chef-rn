@@ -207,10 +207,10 @@ export function AddItemSheet<
               style={styles.moreButton}
               hitSlop={hitSlop.md}
               accessibilityRole="button"
-              accessibilityLabel={`${t('addItemSheet.more')} ${sectionTitle}`}
+              accessibilityLabel={`${t('labels.more')} ${sectionTitle}`}
             >
               <Text role="label" tone="accent">
-                {t('addItemSheet.more')}
+                {t('labels.more')}
               </Text>
               <Icon name="chevron-forward" size={16} tone="primary" />
             </AppPressable>

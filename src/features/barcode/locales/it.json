@@ -20,18 +20,10 @@
     "referenceAmount": "Valori nutrizionali per {{amount}}",
     "amount": {
       "title": "Si aggiunge alla dispensa",
-      "eachPackage": "{{amount}} · {{size}} a confezione",
+      "ofSize": "{{amount}} da {{size}}",
       "joinsHeld": "Aggiunge {{amount}} a quello che hai già ({{held}})",
-      "packaged": "A confezioni",
-      "packagedHint": "Si conta per confezione. Disattivalo per aggiungere una quantità, come 500 g.",
-      "sizeLabel": "Dimensione di una confezione",
       "quantityInvalid": "Inserisci una quantità maggiore di 0.",
-      "wholePackages": "Le confezioni si contano intere: 1, 2, 3…",
-      "countUnit": "Conta le confezioni in un’unità di conteggio, come pc.",
-      "unitRequired": "Scegli un’unità dall’elenco.",
-      "sizeInvalid": "Inserisci una dimensione maggiore di 0.",
-      "sizeUnitRequired": "Scegli dall’elenco l’unità della dimensione.",
-      "usedInSummary": "Si usa in {{unit}}"
+      "unitRequired": "Scegli un’unità dall’elenco."
     },
     "nutrition": {
       "title": "Valori nutrizionali",

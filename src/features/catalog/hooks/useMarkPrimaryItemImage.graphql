@@ -23,6 +23,7 @@ mutation MarkPrimaryItemImage($input: MarkPrimaryItemImageInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

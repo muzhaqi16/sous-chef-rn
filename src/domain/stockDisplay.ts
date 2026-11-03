@@ -23,6 +23,8 @@ const FRACTION_WINDOW = 0.002;
 /** How far a held count may sit from a whole one and still be it. */
 const WHOLE_WINDOW = 1e-6;
 
+const STOCK_NOISE_SCALE = 1e9;
+
 /** A typed fraction of a multiple is exact to three decimals: 0.333 doz is 4 pc. */
 const ENTRY_STEP = 0.001;
 
@@ -100,4 +102,99 @@ export function shownStock<
   const rest = count % factor;
   if (rest !== 0 && !wholeParts(displayUnit, factor).has(rest)) return own;
   return { quantity: count / factor, unit: displayUnit };
+}
+
+/** What a stack holds inside, in the unit it states it in. */
+export interface HeldInside<Unit> {
+  left: number;
+  unit: Unit;
+}
+
+interface AmountLeftSource<Shown, Inside> {
+  held: number;
+  /**
+   * The unopened packages among `held` (`stockBreakdown.fullPackages`), so two
+   * half-used bags read as part-used though they add up to one. Unknown, a
+   * whole `held` reads as unopened.
+   */
+  fullPackages?: number | null;
+  /** `held` as the stack shows it: `shownStock`, or an amount stated in that form. */
+  shown: { quantity: number; unit: Shown };
+  trackingType: UnitType | null | undefined;
+  commonFractions?: readonly number[] | null;
+  portions?: HeldInside<Inside> | null;
+  netWeight?: HeldInside<Inside> | null;
+}
+
+/**
+ * The unopened packages once a local write moves `held` from `before` to
+ * `after`. The server draws part-used packages first, so a use takes whole ones
+ * only once none is left; packages added arrive whole. Null while unknown.
+ */
+export function fullPackagesAfter(
+  full: number | null | undefined,
+  before: number,
+  after: number,
+): number | null {
+  if (full == null) return null;
+  return after >= before
+    ? full + Math.floor(after - before + WHOLE_WINDOW)
+    : Math.min(full, Math.floor(after + WHOLE_WINDOW));
+}
+
+/** The API's `snapStock`: a stored amount without float noise below the ninth decimal. */
+const snapStock = (value: number): number =>
+  Math.round(value * STOCK_NOISE_SCALE) / STOCK_NOISE_SCALE + 0;
+
+/**
+ * The API's `nearestCommonFraction`: a part never rounds to 0 or up to a whole,
+ * and part-used packages that come to whole ones (two halves) read as that.
+ */
+function nearestCommonFraction(
+  held: number,
+  listed: readonly number[] | null | undefined,
+): number {
+  const snapped = snapStock(held);
+  const whole = Math.floor(snapped);
+  const part = snapStock(snapped - whole);
+  if (part === 0) return whole;
+  const fractions =
+    listed && listed.length > 0 ? listed : DEFAULT_COMMON_FRACTIONS;
+  return (
+    whole +
+    fractions.reduce((best, fraction) =>
+      Math.abs(fraction - part) < Math.abs(best - part) ? fraction : best,
+    )
+  );
+}
+
+/**
+ * What a person reads as left, by the API's rule (`amountLeftBasis`): whole
+ * packages as the stack shows them, a part-used one in what is inside, portions
+ * before a net weight, else a fraction of the package. A stack counted by weight
+ * or volume has no package to part-use.
+ */
+export function amountLeftOf<Shown, Inside>({
+  held,
+  fullPackages,
+  shown,
+  trackingType,
+  commonFractions,
+  portions,
+  netWeight,
+}: AmountLeftSource<Shown, Inside>):
+  | { quantity: number; unit: Shown }
+  | { quantity: number; unit: Inside } {
+  const isMeasure =
+    trackingType === UnitType.Weight || trackingType === UnitType.Volume;
+  const partUsed =
+    wholeWithin(held, WHOLE_WINDOW) === null ||
+    (fullPackages != null && held > fullPackages + WHOLE_WINDOW);
+  if (isMeasure || !partUsed) return shown;
+  if (portions) return { quantity: portions.left, unit: portions.unit };
+  if (netWeight) return { quantity: netWeight.left, unit: netWeight.unit };
+  return {
+    quantity: nearestCommonFraction(held, commonFractions),
+    unit: shown.unit,
+  };
 }

@@ -334,7 +334,7 @@ describe('SearchResults', () => {
     );
 
     // No settings cached: the API's own fallback, metric.
-    expect(screen.getByText('1 pc · 1.36 kg each')).toBeTruthy();
+    expect(screen.getByText('1 pc of 1.36 kg')).toBeTruthy();
     fireEvent.press(screen.getByTestId(barcodeTestIDs.scanAmountSummary));
     fireEvent.changeText(
       screen.getByTestId(barcodeTestIDs.scanAmountSize),
@@ -418,7 +418,7 @@ describe('SearchResults', () => {
       { operationMocks: [rec.mock] },
     );
 
-    expect(screen.getByText('6 can · 250 ml each')).toBeTruthy();
+    expect(screen.getByText('6 can of 250 ml')).toBeTruthy();
     fireEvent.press(screen.getByTestId('primary-btn'));
 
     await drainTimers();
@@ -456,10 +456,14 @@ describe('SearchResults', () => {
       screen.getByTestId(barcodeTestIDs.scanAmountQuantity),
       '1 1/2',
     );
+    fireEvent.changeText(
+      screen.getByTestId(barcodeTestIDs.scanAmountSize),
+      '5',
+    );
     fireEvent.press(screen.getByTestId('primary-btn'));
 
     await drainTimers();
-    expect(screen.getByText(t('barcode.amount.wholePackages'))).toBeTruthy();
+    expect(screen.getByText(t('packageSize.wholePackages'))).toBeTruthy();
     expect(rec.fired).toHaveLength(0);
   });
 
@@ -729,10 +733,7 @@ describe('SearchResults', () => {
       screen.getByTestId(barcodeTestIDs.scanAmountQuantity),
       '3',
     );
-    // No stack known: the add opens one, which alone takes a consume unit.
-    expect(screen.getByText(t('labels.usedIn'))).toBeTruthy();
-
-    const reading: HeldStack['held']['metric'] = readingAsAbbreviation({
+    const reading: HeldStack['amountLeft']['metric'] = readingAsAbbreviation({
       __typename: 'MeasureReading',
       value: 2,
       unitId: 'unit-pc',
@@ -767,7 +768,7 @@ describe('SearchResults', () => {
               symbol: 'pc',
             }),
           },
-          held: {
+          amountLeft: {
             __typename: 'Measure',
             value: 2,
             unitId: 'unit-pc',
@@ -811,7 +812,6 @@ describe('SearchResults', () => {
     });
 
     await drainTimers();
-    expect(screen.queryByText(t('labels.usedIn'))).toBeNull();
     expect(
       screen.getByTestId(barcodeTestIDs.scanAmountQuantity).props.value,
     ).toBe('3');

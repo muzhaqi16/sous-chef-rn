@@ -14,6 +14,9 @@ fragment useMoveToPantry_pantryItem on PantryItem {
   itemName
   quantity
   heldQuantity
+  stockBreakdown {
+    fullPackages
+  }
   displayAmount {
     quantity
     localizedSymbol

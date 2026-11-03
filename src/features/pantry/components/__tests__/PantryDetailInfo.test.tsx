@@ -84,9 +84,6 @@ describe('PantryDetailInfo', () => {
     brandName: null as string | null,
     quantityText: '2 L',
     netWeightText: null as string | null,
-    remainingNetWeightText: null as string | null,
-    quantityBreakdownText: null as string | null,
-    portionsLeftText: null as string | null,
     packageBreakdownText: null as string | null,
     shelfLifeDays: null as number | null | undefined,
     shelfLifeOpenedDays: null as number | null | undefined,
@@ -230,19 +227,19 @@ describe('PantryDetailInfo', () => {
     expect(screen.queryByText('Default package size')).toBeNull();
   });
 
-  it('renders Remaining Weight row when provided', () => {
+  it('states what is left once, never again by weight, portions or packages', () => {
     render(
-      <PantryDetailInfo {...defaultProps} remainingNetWeightText="350g" />,
+      <PantryDetailInfo
+        {...defaultProps}
+        quantityText="9 cans"
+        netWeightText="75 fl oz"
+      />,
     );
-    expect(screen.getByText('Remaining Weight')).toBeTruthy();
-  });
 
-  it('renders Inventory row when quantityBreakdownText is provided', () => {
-    render(
-      <PantryDetailInfo {...defaultProps} quantityBreakdownText="6 cans" />,
-    );
-    expect(screen.getByText('Inventory')).toBeTruthy();
-    expect(screen.getByText('6 cans')).toBeTruthy();
+    expect(screen.getAllByText('9 cans')).toHaveLength(1);
+    expect(screen.queryByText('Remaining Weight')).toBeNull();
+    expect(screen.queryByText('Inventory')).toBeNull();
+    expect(screen.queryByText('Portions')).toBeNull();
   });
 
   it('renders Package row when packageBreakdownText is provided', () => {

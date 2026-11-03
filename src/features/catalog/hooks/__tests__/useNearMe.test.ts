@@ -66,6 +66,17 @@ describe('useNearMe', () => {
     expect(access).toHaveBeenCalledTimes(1);
   });
 
+  it('points to Settings when location is switched off on the device', async () => {
+    jest.spyOn(port(), 'access').mockResolvedValue('granted');
+    jest.spyOn(port(), 'currentPlace').mockResolvedValue('off');
+    const { result } = renderHook(() => useNearMe());
+
+    await act(() => result.current.ask());
+
+    expect(result.current.state).toBe('blocked');
+    expect(result.current.place).toBeNull();
+  });
+
   it('points to Settings when location is off for the app', async () => {
     jest.spyOn(port(), 'access').mockResolvedValue('blocked');
     const openSettings = jest.spyOn(port(), 'openSettings');

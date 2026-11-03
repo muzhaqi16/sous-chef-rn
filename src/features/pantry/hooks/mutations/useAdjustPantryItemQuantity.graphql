@@ -9,6 +9,9 @@ fragment useAdjustPantryItemQuantity_pantryItem on PantryItem {
   updatedAt
   quantity
   heldQuantity
+  stockBreakdown {
+    fullPackages
+  }
   displayAmount {
     quantity
     localizedSymbol

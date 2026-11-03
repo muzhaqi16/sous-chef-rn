@@ -39,6 +39,8 @@ jest.mock('../offline/ApolloCachePersistence', () => ({
     scheduleExtractAndSave: mockScheduleExtractAndSave,
     cancel: mockCancel,
     clear: mockClear,
+    attachShards: jest.fn(),
+    restoreShards: jest.fn(),
   },
 }));
 

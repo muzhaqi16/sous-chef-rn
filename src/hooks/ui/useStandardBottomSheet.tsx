@@ -34,6 +34,10 @@ const ThemedBottomSheetModal = ({
   ...props
 }: ThemedBottomSheetModalProps) => (
   <ThemedModalShell
+    // gorhom makes the content one accessible element by default, which hides
+    // every row and button inside it from VoiceOver.
+    // Verified: #gorhom-sheet-content-hides-its-children-from-voiceover
+    accessible={false}
     {...props}
     // Android hands the focus of an input unmounted with the sheet to the first
     // field on the screen beneath, keyboard and all; blurred as the close

@@ -41,7 +41,13 @@ export type PantryRestockOutcome =
 
 type RestockDetails = Pick<
   RestockPantryItemInput,
-  'costPerUnit' | 'totalCost' | 'storeId' | 'expiresOn' | 'notes'
+  | 'costPerUnit'
+  | 'totalCost'
+  | 'storeId'
+  | 'expiresOn'
+  | 'notes'
+  | 'measurementProfile'
+  | 'packagePortions'
 >;
 
 /** A count of the product bought, in the buyer's unit or else the stack's own. */

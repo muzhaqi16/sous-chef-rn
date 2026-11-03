@@ -1,11 +1,11 @@
 import type {
   ItemType,
   NetWeightKind,
-  PackageSizeInput,
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import type { PhotoCreditValue } from '#/types/attribution';
 import type { ShownNutritionValues } from '#domain/nutrition';
+import type { PackageContents } from '#domain/stockAmount';
 import type { ItemByLookupQuery } from './hooks/useSearchResults.generated';
 
 /**
@@ -86,17 +86,14 @@ export interface ScannedItem
 
 /**
  * What a pantry add from a scan records: whole packages counted in a COUNT unit
- * (a `size` only when the user gave one; else the record's), or a measured amount.
+ * (`contents` only when the user gave them; else the record's size), or a
+ * measured amount.
  */
-export type ScanAmount = (
+export type ScanAmount =
   | {
       packaged: true;
       count: number;
       unitId: string;
-      size: PackageSizeInput | null;
+      contents: PackageContents | null;
     }
-  | { packaged: false; quantity: number; unitId: string }
-) & {
-  /** The unit the household uses it in, set on the stack the add creates. */
-  consumeUnitId: string | null;
-};
+  | { packaged: false; quantity: number; unitId: string };

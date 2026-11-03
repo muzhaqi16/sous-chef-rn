@@ -20,6 +20,7 @@ import { useAppStore, useIsPantryQueryComplete } from '#store/useAppStore';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { errorService } from '#/services/errorService';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { positionOf } from '#/apollo/feed/feedPositions';
 
 /**
  * Warms sibling tabs' queries into the cache. `HomeTabs` is lazy, so an
@@ -103,7 +104,8 @@ async function warmActiveList(client: ApolloClient): Promise<void> {
     held?.shoppingLists.edges.map(edge => edge.node) ?? [],
     useStore.getState().selectedShoppingListId,
   );
-  if (!id) return;
+  // The feed keeps a held list whole, and its rows are read from the device.
+  if (!id || positionOf(id)) return;
   await Promise.all([
     client.query({
       query: GetShoppingListDetailsDocument,

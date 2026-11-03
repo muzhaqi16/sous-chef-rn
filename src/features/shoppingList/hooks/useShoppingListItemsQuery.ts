@@ -7,6 +7,7 @@ import { useIsLoggedOut } from '#hooks/auth/useIsLoggedOut';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { errorService } from '#/services/errorService';
 import { isAbortError } from '#features/shoppingList/utils/abort';
+import { useListReadPolicy } from './useListReadPolicy';
 
 export type ShoppingListDetail = NonNullable<
   GetShoppingListDetailsQuery['shoppingList']
@@ -23,6 +24,7 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
 
   // Client defaults apply: cache-and-network with errorPolicy 'all', so cached
   // data still renders when the network leg fails.
+  const readPolicy = useListReadPolicy(isLoggedOut ? null : listId);
   const {
     data: result,
     variables,
@@ -32,7 +34,9 @@ export function useShoppingListItemsQuery(listId: string | null | undefined) {
     refetch,
   } = useQuery(
     GetShoppingListDetailsDocument,
-    listId && !isLoggedOut ? { variables: { id: listId } } : skipToken,
+    listId && !isLoggedOut
+      ? { variables: { id: listId }, ...readPolicy }
+      : skipToken,
   );
   // `skipToken` keeps the last run's variables AND data, so a result for a
   // previous list is dropped.

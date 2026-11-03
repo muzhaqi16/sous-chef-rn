@@ -10,6 +10,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SheetHeader } from '#components/templates/SheetHeader';
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
+import { PackageContentsFields } from '#features/pantry/ui/PackageContentsFields';
 import { parseFractionalInput } from '#/utils/fractionUtils';
 import {
   formatQuantityForDisplay,
@@ -18,7 +19,7 @@ import {
 } from '#/utils/formatQuantity';
 import { Text } from '#components/atoms/Text';
 import { StorageState, type UnitType } from '#/graphql/generated/schemaTypes';
-import { stockAmountOf } from '#domain/stockAmount';
+import { contentsOf, stockAmountOf } from '#domain/stockAmount';
 import type { MoveToPantryInput } from '#features/shoppingList/hooks/useMoveToPantry';
 import { useMoveToPantryItem } from '#features/shoppingList/components/moveToPantry/useMoveToPantryItem';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
@@ -353,6 +354,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
       notes,
       packageSizeInput,
       packageSizeUnitId,
+      packageSizeUnitType,
     } = values;
     const quantityValue = parseFractionalInput(confirmedQuantity);
     if (quantityValue === null) return;
@@ -360,28 +362,33 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     // The schema passed, so a stated size carries its unit and goes with a
     // whole count in a counted unit: that many packages of the picked unit,
     // which the server records. Without one, the amount as typed.
-    const packageSize =
+    const contents =
       packageSizeInput.trim() && packageSizeUnitId
         ? {
-            netWeight: parseDecimalInput(packageSizeInput),
-            netWeightUnitId: packageSizeUnitId,
+            amount: parseDecimalInput(packageSizeInput),
+            unitId: packageSizeUnitId,
+            unitType: packageSizeUnitType,
           }
         : null;
-    const amount =
-      packageSize && confirmedUnitId && statesPackagesAsSize(values)
-        ? stockAmountOf(packageSize.netWeight, {
-            asPackages: true,
-            packageSize: {
-              netWeight: quantityValue,
-              netWeightUnitId: confirmedUnitId,
-            },
-            unitId: packageSize.netWeightUnitId,
-          })
-        : stockAmountOf(quantityValue, {
-            asPackages: packageSize !== null,
-            packageSize,
-            unitId: confirmedUnitId,
-          });
+    const statedTheOtherWay =
+      contents !== null && !!confirmedUnitId && statesPackagesAsSize(values);
+    const { packageSize, measurementProfile } = contentsOf(
+      statedTheOtherWay ? null : contents,
+    );
+    const amount = statedTheOtherWay
+      ? stockAmountOf(contents.amount, {
+          asPackages: true,
+          packageSize: {
+            netWeight: quantityValue,
+            netWeightUnitId: confirmedUnitId,
+          },
+          unitId: contents.unitId,
+        })
+      : stockAmountOf(quantityValue, {
+          asPackages: contents !== null,
+          packageSize,
+          unitId: confirmedUnitId,
+        });
 
     // The field asks for the TOTAL paid, as Mark Purchased does; the server
     // records it exactly and derives the unit price.
@@ -393,6 +400,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
     const moved = await onConfirm({
       pantryId: confirmedPantryId ?? '',
       amount,
+      measurementProfile,
       storageState,
       expiresOn: confirmedExpiry ? toDateKey(confirmedExpiry) : undefined,
       removeFromList,
@@ -512,47 +520,36 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
 
             {/* Package size (Optional) */}
             <View style={styles.section}>
-              <View style={styles.quantityUnitRow}>
-                <View style={styles.quantityField}>
-                  <Controller
-                    control={control}
-                    name="packageSizeInput"
-                    render={({ field, fieldState }) => (
-                      <FormInput
-                        label={t('labels.packageSize')}
-                        value={field.value}
-                        onChangeText={text => {
-                          field.onChange(text);
-                          void trigger('packageSizeUnitValue');
-                        }}
-                        placeholder={localizeNumericHint(t('labels.eG145'))}
-                        keyboardType="decimal-pad"
-                        error={fieldState.error?.message}
-                      />
-                    )}
-                  />
-                </View>
-                <View style={styles.unitField}>
+              <Controller
+                control={control}
+                name="packageSizeInput"
+                render={({ field: size, fieldState: sizeState }) => (
                   <Controller
                     control={control}
                     name="packageSizeUnitValue"
-                    render={({ field, fieldState }) => (
-                      <UnitAutocompleteField
+                    render={({ field: unit, fieldState: unitState }) => (
+                      <PackageContentsFields
                         variant="inline"
-                        label={t('labels.unit')}
-                        value={field.value}
-                        onChangeText={field.onChange}
-                        placeholder={t('labels.ozGMl')}
-                        error={fieldState.error?.message}
-                        testID={shoppingListTestIDs.moveToPantryPackageSizeUnit}
+                        size={size.value}
+                        onSizeChange={text => {
+                          size.onChange(text);
+                          void trigger('packageSizeUnitValue');
+                        }}
+                        sizeError={sizeState.error?.message}
+                        unit={unit.value}
+                        onUnitChange={unit.onChange}
+                        unitError={unitState.error?.message}
+                        unitTestID={
+                          shoppingListTestIDs.moveToPantryPackageSizeUnit
+                        }
                         onUnitSelected={(picked, _name, pickedType) => {
-                          const unit = pickedOrHeld(
+                          const held = pickedOrHeld(
                             picked,
                             pickedType,
                             getValues('packageSizeUnitValue'),
                           );
-                          setValue('packageSizeUnitId', unit.id);
-                          setValue('packageSizeUnitType', unit.type);
+                          setValue('packageSizeUnitId', held.id);
+                          setValue('packageSizeUnitType', held.type);
                           void trigger('packageSizeUnitValue');
                           // The size's count rule reads the size's unit too.
                           if (getFieldState('packageSizeInput').invalid) {
@@ -562,8 +559,8 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
                       />
                     )}
                   />
-                </View>
-              </View>
+                )}
+              />
               <Text role="caption" tone="secondary" style={styles.perUnitHint}>
                 {t('moveToPantry.packageSizeHint')}
               </Text>

@@ -1,6 +1,7 @@
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { MoveShoppingItemToPantryDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import type {
+  MeasurementProfileInput,
   PriceSource,
   ReceiptRefInput,
   StockAmountInput,
@@ -21,6 +22,8 @@ export interface MoveToPantryInput {
   pantryId: string;
   /** What was bought, as stated: the server does any package arithmetic. */
   amount: StockAmountInput;
+  /** What one package holds as a count: 10 cans to the case. */
+  measurementProfile?: MeasurementProfileInput;
   storageState?: StorageState;
   /** YYYY-MM-DD. */
   expiresOn?: string;
@@ -87,6 +90,7 @@ export function useMoveToPantry({
           pantryItemId,
           idempotencyKey: generateEntityId(),
           amount: input.amount,
+          measurementProfile: input.measurementProfile,
           storageState: input.storageState,
           expiresOn: input.expiresOn,
           today,

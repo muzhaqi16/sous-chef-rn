@@ -2,24 +2,13 @@ import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { t } from '#/i18n';
 import { refusalEnvelopeOf } from './graphqlErrors';
 
-// Exact codes, never a `RATE_` prefix, which OPERATION_RATE_LIMITED lacks.
-// Only two are in the published enum; the rest are registry-only literals.
+// The only two budgets the API refuses with; exact codes, never a `RATE_` prefix.
 const RATE_LIMIT_CODES: string[] = [
-  'RATE_LIMITED',
   // The global budget, refused before execution: its code and `retryAfter`
   // arrive in the body of a 429, read through `refusalEnvelopeOf`.
   TopLevelErrorCode.RateLimitExceeded,
-  'RATE_LIMIT_IP_BLOCKED',
-  'RATE_LIMIT_USER_BLOCKED',
-  'RATE_LIMIT_API_KEY_BLOCKED',
-  // Two more rate-limit conditions that live outside the RATE_ family — one in
-  // the API_ family, one in EXTERNAL_. Without them a throttled request skips
-  // rate-limit classification entirely and loses its `retryAfter`.
-  'API_KEY_RATE_LIMITED',
-  'EXTERNAL_API_RATE_LIMITED',
-  // A single operation's own budget, stricter than and separate from the global
-  // one — ~30 operations have one (createItemSuggestion: 10/hour), so this fires
-  // while well under RATE_LIMIT_EXCEEDED. Both must be handled.
+  // A single operation's own budget (createItemSuggestion: 10/hour), which
+  // fires while well under the global one.
   TopLevelErrorCode.OperationRateLimited,
 ];
 

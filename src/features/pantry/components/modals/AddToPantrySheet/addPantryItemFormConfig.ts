@@ -1,4 +1,4 @@
-import { object, string, boolean, date, mixed, type ObjectSchema } from 'yup';
+import { object, string, date, mixed, type ObjectSchema } from 'yup';
 import {
   itemNameText,
   lazyMessage,
@@ -8,38 +8,29 @@ import {
   StorageState,
   ItemCondition,
   AcquisitionMethod,
+  UnitType,
 } from '#/graphql/generated/schemaTypes';
 import {
   ACQUISITION_METHOD_OPTIONS,
   type OfferedAcquisitionMethod,
 } from '#features/pantry/utils/itemEnumLabels';
+import {
+  isPickedWhenSized,
+  isWholeWhenSized,
+  packageContentsFields,
+} from '#features/pantry/ui/packageContentsRules';
 import type { AddPantryItemFormData } from '#features/pantry/types';
 
 // Shape, defaults and validation for the four-page Add-to-Pantry sheet.
 // Validation renders ON the field; `usePantryItemSubmission` only submits.
-
-// yup types a test's sibling values as `any`; these are the ones the rules read.
-type NetWeightSiblings = Partial<
-  Pick<
-    AddPantryItemFormData,
-    | 'pantryNetWeight'
-    | 'pantryNetWeightUnitId'
-    | 'showPackageDetails'
-    | 'itemNetWeight'
-    | 'weightUnitId'
-  >
->;
 
 /** Which page each validated field lives on, so a failure can navigate to it. */
 export const FIELD_PAGE: Partial<Record<keyof AddPantryItemFormData, number>> =
   {
     itemName: 0,
     quantityInput: 1,
-    pantryNetWeight: 1,
-    pantryNetWeightUnit: 1,
-    // Package details live on the Details page too.
-    itemNetWeight: 1,
-    weightUnit: 1,
+    sizeInput: 1,
+    sizeUnitId: 1,
   };
 
 export const addPantryItemDefaults = (
@@ -53,16 +44,11 @@ export const addPantryItemDefaults = (
   quantityInput: '1',
   unit: '',
   unitId: null,
-  pantryNetWeight: '',
-  pantryNetWeightUnit: '',
-  pantryNetWeightUnitId: null,
-  showPackageDetails: false,
-  packageSize: '',
-  contentUnit: '',
-  contentUnitId: null,
-  itemNetWeight: '',
-  weightUnit: '',
-  weightUnitId: null,
+  unitType: null,
+  sizeInput: '',
+  sizeUnitDisplay: '',
+  sizeUnitId: null,
+  sizeUnitType: null,
   storageLocation: '',
   selectedStorageLocationId: null,
   storageNotes: '',
@@ -78,56 +64,31 @@ export const addPantryItemDefaults = (
 
 export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
   itemName: itemNameText(lazyMessage('errors.itemNameRequired')),
-  quantityInput: quantityRule('errors.invalidQuantity').trim(),
-  // ALL-OR-NOTHING in BOTH directions: the create contract rejects a unit id
-  // with no weight, and the submit path drops a weight with no resolved unit
-  // id. Each direction reports on the field the user has to fill.
-  pantryNetWeight: string()
+  quantityInput: quantityRule('errors.invalidQuantity')
+    .trim()
     .test(
-      'net-weight-needs-value',
-      lazyMessage('errors.field.netWeight'),
-      (value, context: { parent: NetWeightSiblings }) => {
-        if ((value ?? '').trim()) return true;
-        return !context.parent.pantryNetWeightUnitId;
-      },
-    )
-    .defined(),
-  pantryNetWeightUnit: string()
-    .defined()
-    .test(
-      'net-weight-needs-unit',
-      lazyMessage('labels.pleaseSelectAUnitForTheNetWeight'),
-      (_value, context: { parent: NetWeightSiblings }) => {
-        const weight = (context.parent.pantryNetWeight ?? '').trim();
-        if (!weight) return true;
-        return Boolean(context.parent.pantryNetWeightUnitId);
-      },
+      'whole-packages',
+      lazyMessage('packageSize.wholePackages'),
+      (value, context: { parent: AddPantryItemFormData }) =>
+        isWholeWhenSized(
+          value,
+          context.parent.unitType,
+          context.parent.sizeInput,
+        ),
     ),
-  // The all-or-nothing rule on the per-container weight (`item.netWeight` +
-  // `item.displayUnitId`), where a unitless weight is silently dropped. Scoped
-  // to `showPackageDetails` so a collapsed section never blocks Save.
-  itemNetWeight: string()
-    .test(
-      'item-net-weight-needs-value',
-      lazyMessage('errors.field.netWeight'),
-      (value, context: { parent: NetWeightSiblings }) => {
-        if (!context.parent.showPackageDetails) return true;
-        if ((value ?? '').trim()) return true;
-        return !context.parent.weightUnitId;
-      },
-    )
-    .defined(),
-  weightUnit: string()
+  ...packageContentsFields,
+  sizeUnitId: string()
+    .nullable()
     .defined()
     .test(
-      'item-net-weight-needs-unit',
-      lazyMessage('labels.pleaseSelectAUnitForTheNetWeight'),
-      (_value, context: { parent: NetWeightSiblings }) => {
-        if (!context.parent.showPackageDetails) return true;
-        const weight = (context.parent.itemNetWeight ?? '').trim();
-        if (!weight) return true;
-        return Boolean(context.parent.weightUnitId);
-      },
+      'size-unit-picked',
+      lazyMessage('packageSize.unitRequired'),
+      (value, context: { parent: AddPantryItemFormData }) =>
+        isPickedWhenSized(
+          value,
+          context.parent.unitType,
+          context.parent.sizeInput,
+        ),
     ),
   // Everything else is free-form; the mutation input builder handles shaping.
   brand: string().defined(),
@@ -138,12 +99,10 @@ export const addPantryItemSchema: ObjectSchema<AddPantryItemFormData> = object({
     .defined(),
   unit: string().defined(),
   unitId: string().nullable().defined(),
-  pantryNetWeightUnitId: string().nullable().defined(),
-  showPackageDetails: boolean().defined(),
-  packageSize: string().defined(),
-  contentUnit: string().defined(),
-  contentUnitId: string().nullable().defined(),
-  weightUnitId: string().nullable().defined(),
+  unitType: mixed<UnitType>()
+    .oneOf(Object.values(UnitType))
+    .nullable()
+    .defined(),
   storageLocation: string().defined(),
   selectedStorageLocationId: string().nullable().defined(),
   storageNotes: string().defined(),

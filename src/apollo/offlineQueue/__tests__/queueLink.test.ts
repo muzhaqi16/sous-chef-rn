@@ -1,5 +1,5 @@
 import { ServerError } from '@apollo/client/errors';
-import { type InMemoryCache, Observable } from '@apollo/client';
+import { gql, type InMemoryCache, Observable } from '@apollo/client';
 import type {
   ApolloClient,
   OperationVariables,
@@ -19,7 +19,6 @@ import {
 } from '../OfflineRejectedError';
 import { useStore } from '#store';
 import { isNetworkError } from '#/utils/isNetworkError';
-import { gql } from '@apollo/client';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import {
   LoginDocument,
@@ -33,8 +32,8 @@ import { UpdateShoppingListItemDocument } from '#features/shoppingList/graphql/s
 import { CreateRecipeReviewDocument } from '#features/recipes/graphql/recipeReview.generated';
 import { NetworkRequestError } from '#/utils/errors/networkRequestError';
 import { asAbbreviation } from '#/test-utils/fixtures/unitLabels';
-import { seedFragment } from '#/test-utils/apolloMockProvider';
 import { makeCache } from '#/apollo/cache';
+import { seedFragment } from '#/test-utils/apolloMockProvider';
 
 // Mock the store module
 jest.mock('#store', () => ({
@@ -622,6 +621,39 @@ describe('createQueueLink', () => {
         expect.objectContaining({
           pendingWrite: { id: write.id, inputs: {} },
         }),
+      );
+    });
+
+    it('queues the write with the stored lists its layer reads', () => {
+      offline();
+      const cache = makeCache();
+      seedFragment(cache, {
+        fragment: gql`
+          fragment QueuedList on ShoppingList {
+            id
+          }
+        `,
+        data: { __typename: 'ShoppingList', id: 'list-1' },
+      });
+      const write = pendingWritesOf(cache).begin(MOCK_MUTATION, {
+        input: { name: 'Apple' },
+      });
+
+      link
+        .request(
+          makeOperation({
+            query: MOCK_MUTATION,
+            operationName: 'AddItem',
+            variables: { input: { name: 'Apple', shoppingListId: 'list-1' } },
+            context: { localFirst: true, pendingWriteId: write.id },
+            cache,
+          }),
+          makeForward(),
+        )
+        .subscribe();
+
+      expect(queueStore.addMutation).toHaveBeenCalledWith(
+        expect.objectContaining({ scopeIds: ['list-1'] }),
       );
     });
 

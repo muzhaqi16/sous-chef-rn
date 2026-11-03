@@ -171,6 +171,17 @@ jest.mock('#features/catalog/ui/autocomplete/UnitAutocompleteField', () => {
         R.createElement(
           RN.Pressable,
           {
+            testID: `${prefix}pick-can`,
+            onPress: () => {
+              onChangeText('can');
+              onUnitSelected?.('unit-can', 'can', 'COUNT');
+            },
+          },
+          R.createElement(RN.Text, null, 'Pick can'),
+        ),
+        R.createElement(
+          RN.Pressable,
+          {
             testID: `${prefix}pick-box`,
             onPress: () => {
               onChangeText('box');
@@ -292,12 +303,15 @@ const quantity = () =>
 const totalPaid = () =>
   screen.getByTestId('move-to-pantry-field-Total paid').props.value;
 const packageSize = () =>
-  screen.getByTestId('move-to-pantry-field-Package size').props.value;
+  screen.getByTestId('move-to-pantry-field-Each holds').props.value;
 
 /** Types one package's size, then picks its unit (`kg`, `box`) or types one. */
-function typeSize(size: string, unit?: 'kg' | 'box' | { typed: string }) {
+function typeSize(
+  size: string,
+  unit?: 'kg' | 'box' | 'can' | { typed: string },
+) {
   fireEvent.changeText(
-    screen.getByTestId('move-to-pantry-field-Package size'),
+    screen.getByTestId('move-to-pantry-field-Each holds'),
     size,
   );
   if (unit === undefined) return;
@@ -310,7 +324,7 @@ function typeSize(size: string, unit?: 'kg' | 'box' | { typed: string }) {
   }
   fireEvent.press(
     screen.getByTestId(
-      `${SIZE_UNIT}-${unit === 'kg' ? 'pick-unit' : 'pick-box'}`,
+      `${SIZE_UNIT}-${unit === 'kg' ? 'pick-unit' : `pick-${unit}`}`,
     ),
   );
 }
@@ -667,6 +681,27 @@ describe('MoveToPantryModal', () => {
               size: { netWeight: 22, netWeightUnitId: 'unit-kg' },
               unitId: 'u-jar',
             },
+          },
+        }),
+      );
+    });
+
+    it('sends a count of cans in a case as what the case holds', async () => {
+      const { onConfirm } = await openWithPurchase({
+        line: JAR_LINE,
+        header: 'Purchased: 5 jar',
+      });
+
+      typeSize('10', 'can');
+      confirm();
+
+      await drainTimers();
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({
+          amount: { packages: { count: 5, unitId: 'u-jar' } },
+          measurementProfile: {
+            portionUnitId: 'unit-can',
+            portionsPerTrackingUnit: 10,
           },
         }),
       );

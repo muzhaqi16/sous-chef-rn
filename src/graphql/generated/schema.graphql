@@ -631,6 +631,7 @@ same value on both channels for the same condition.
 """
 type AuthenticationError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -781,6 +782,8 @@ type BatchElementFailure {
   not on the reason text.
   """
   code: ErrorCode!
+  """What to do with this element, as on any other error."""
+  disposition: ErrorDisposition!
   """Set only when the reason was masked."""
   errorId: String
   """
@@ -1931,6 +1934,11 @@ invariant. Includes both `CONFLICT` (logical) and `VERSION_CONFLICT`
 """
 type ConflictError implements Error {
   code: ErrorCode!
+  """
+  The version the row holds, when the write lost a version check; otherwise null.
+  """
+  currentVersion: Int
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -3277,6 +3285,11 @@ success case; every other member is a business error carrying a message.
 Always include a __typename so the variant can be discriminated.
 """
 union CreateStorageLocationResult = ConflictError | CreateStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError
+
+input CreateStoreFromPlaceInput {
+  """StorePlace.placeId, as a search answered it"""
+  placeId: ID!
+}
 
 input CreateStoreInput {
   address: String
@@ -4987,6 +5000,7 @@ user to restock the existing stack, or resend with `forceAdd`. The `code` is
 """
 type DuplicatePantryItemError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   """
   Active pantry items already stocking this catalog item — offer a one-tap restock.
   """
@@ -5079,6 +5093,8 @@ type implements this so clients can write a generic
 """
 interface Error {
   code: ErrorCode!
+  """What to do with the write, whether or not this build knows the code."""
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -5189,6 +5205,20 @@ enum ErrorCode {
   UNSTATED_AMOUNT
   VALIDATION_FAILED
   VERSION_CONFLICT
+}
+
+"""What a client does with a write this error answered."""
+enum ErrorDisposition {
+  """It already landed, so nothing is left to send."""
+  APPLIED
+  """It can't succeed as sent, so stop retrying it."""
+  FAIL
+  """
+  It can succeed once something else changes: a new sign-in, an app update or a newer read.
+  """
+  RESOLVE
+  """Transient. The same request can succeed later, with backoff."""
+  RETRY
 }
 
 input ExchangeDeviceCredentialInput {
@@ -5355,6 +5385,7 @@ enum ExternalSource {
   GIANT_EAGLE
   KROGER
   OPENFOODFACTS
+  OPENSTREETMAP
   SPOONACULAR
   TASTY
   USDA
@@ -5585,6 +5616,7 @@ authentication failure — the caller is not identified at all — is
 """
 type ForbiddenError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   message: String!
 }
 
@@ -6494,6 +6526,7 @@ type InsufficientQuantityError implements Error {
   available: Float
   availableUnitSymbol: String
   code: ErrorCode!
+  disposition: ErrorDisposition!
   field: String
   message: String!
 }
@@ -9946,6 +9979,12 @@ input MoveShoppingItemToPantryInput {
   """
   expiresOn: LocalDate
   idempotencyKey: ID
+  """
+  How this stack is measured, as createPantryItem and restockPantryItem take
+  it: one case holds 10 cans. It defines a stack this move creates, and it is
+  applied to a held stack this move joins and persisted with the stock.
+  """
+  measurementProfile: MeasurementProfileInput
   """Additional notes"""
   notes: String
   """ID of the target pantry"""
@@ -10338,10 +10377,20 @@ type Mutation {
   other household sees (see CreateStoreInput.homeId). A store already on
   file (the same chain and store number, else the same name and address
   compared by their letters and digits, among shared stores or the owner's
-  own) is returned instead, with outcome MERGED. Each user has a per-minute
-  number of store creations.
+  own) is returned instead, with outcome MERGED. A store with an address the
+  OpenStreetMap search knows is written as OpenStreetMap spells it, with its
+  point, and answers the store already made of that place where there is one.
+  Each user has a per-minute number of store creations.
   """
   createStore(input: CreateStoreInput!): CreateStoreResult!
+  """
+  Make a store of a place a search listed, once per place, so two households
+  share it: another pick answers the same store, with outcome MERGED. Its name
+  and address are read from the search again, so a client can't restate them.
+  A place the search no longer holds, or a search that's down, is refused on
+  placeId; adding the store by name with createStore still works.
+  """
+  createStoreFromPlace(input: CreateStoreFromPlaceInput!): CreateStoreResult!
   """
   Report another user, optionally about one piece of their content. A repeat
   while the caller's earlier report on the same user and content is still open
@@ -11120,6 +11169,7 @@ A referenced resource does not exist (or is not visible to the caller).
 """
 type NotFoundError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   message: String!
   """Logical resource type, e.g. `MealPlan`."""
   resource: String
@@ -11809,6 +11859,18 @@ enum NutritionSource {
   PARTIAL
 }
 
+"""
+The limits a client shares with the server, so its queue and pulls follow them.
+"""
+type OfflineLimits {
+  """The most scopes one syncChanges may name."""
+  maxSyncScopes: Int!
+  """
+  Days a queued write stays safe to replay. A client's own limit never exceeds it.
+  """
+  replayWindowDays: Int!
+}
+
 """Input for opening a specific batch"""
 input OpenPantryItemBatchInput {
   batchId: ID!
@@ -12154,6 +12216,15 @@ type PantryItem {
   """The user who added this stack; null when unknown"""
   addedBy: User
   """
+  The amount a person reads as left. Whole packages read as held does (2 bags,
+  1 doz). Once any batch's package is part used it reads in what is inside: the
+  portions left where the stack defines them (9 cans), else the net weight left
+  (1 lb), else the nearest common fraction of its unit, never 0 and never a
+  whole (½ box). A stack counted by weight or volume reads as held. Show this,
+  and keep displayAmount for seeding an edit, which is in the stack's own unit.
+  """
+  amountLeft: Measure!
+  """
   This stack's own brand, independent of the catalog item's brands; null when none is set
   """
   brand: Brand
@@ -12180,9 +12251,10 @@ type PantryItem {
   condition: ItemCondition!
   """
   The unit this household uses the stack in (a jar of honey, by the
-  tablespoon), as a member set it. consumptionUnitsForPantryItem leads with it
-  while the stack can be consumed in it. A consumption naming no unit still
-  uses the tracking unit. Null until set.
+  tablespoon), as a member set it or as they last stated it on a use. Waste
+  leaves it alone. consumptionUnitsForPantryItem leads with it while the stack
+  can be consumed in it. A consumption naming no unit still uses the tracking
+  unit. Null until set.
   """
   consumeUnit: Unit
   """
@@ -13722,14 +13794,24 @@ enum ProfileVisibility {
 }
 
 """
-A store the receipt names that is not on file: send it to createStore when the user confirms.
+A store the receipt names that is not on file: send it to createStore when the
+user confirms, or to createStoreFromPlace when placeId is set.
 """
 type ProposedStore {
+  """As printed, else OpenStreetMap's when placeId is set"""
   address: String
   """The chain the header names"""
   chain: StoreChain
-  """The merchant's printed name, else the header's chain name"""
+  """
+  The merchant's printed name, else the header's chain name; OpenStreetMap's when placeId is set
+  """
   name: String!
+  """
+  The OpenStreetMap place the receipt's shop is, when the search knows it: name
+  and address are then its spelling, so the receipt and a store picker agree.
+  Null when the search doesn't know the shop, or is down.
+  """
+  placeId: ID
   """
   The store number the receipt prints, without padding; null when no chain is named
   """
@@ -14217,11 +14299,11 @@ type Query {
     trackingUnitId: ID!
   ): [RankedUnit!]!
   """
-  Ranked units this pantry stack can be consumed in, best first. A stack
-  counted in a universal count (piece) leads with it; then its own portion
-  unit → the item's default consume unit → units curated for cooking or
-  serving → the net-weight unit → its measured family → the tracking unit →
-  every other unit the stack converts.
+  Ranked units this pantry stack can be consumed in, best first: its
+  consumeUnit, then a universal count (piece) it is counted in → its portion
+  unit → its net-weight unit → its tracking unit → the unit households use the
+  product in → the item's default consume unit → units curated for cooking or
+  serving → its measured family → every other unit the stack converts.
   
   Every unit listed is one createPantryItemUsage accepts, with one unit per
   count factor (piece, not also its synonym item). Curation only ranks: a unit
@@ -14605,6 +14687,8 @@ type Query {
   returns it too.
   """
   notificationSummary: NotificationSummary!
+  """What a client's queue and pulls have to keep to. It needs no session."""
+  offlineLimits: OfflineLimits!
   """
   Fetch a single pantry by its ID: null when there is none, FORBIDDEN for a
   caller who may not view it — not a member of its home, or a member whose
@@ -15082,6 +15166,13 @@ type Query {
     """The id of the Store to read"""
     id: ID!
   ): Store
+  """
+  The places to shop near a zip or a point, nearest first, one row per place:
+  the stores on file, and the OpenStreetMap places around them. A store row is
+  made only when someone picks a place. With the search down this answers the
+  stores on file alone, and never an error.
+  """
+  storePlaces(input: StorePlacesInput!): [StorePlace!]!
   """List stores with filtering, sorting, and Relay-style pagination."""
   stores(
     """Resume after this cursor: a previous page's endCursor"""
@@ -15099,7 +15190,7 @@ type Query {
     """
     orderBy: StoreOrderBy
   ): StoreConnection!
-  """What changed in up to 25 scopes, each from its own cursor."""
+  """What changed in up to maxSyncScopes scopes, each from its own cursor."""
   syncChanges(input: SyncChangesInput!): [SyncPage!]!
   """
   Every scope the caller can reach. Read it on connect and on a REACH_CHANGED
@@ -15112,6 +15203,10 @@ type Query {
     before: String
     """Page size, reading forward: default 20, at most 100"""
     first: Int
+    """
+    The kinds to list. A client that sends none stays on shopping lists, whichever kinds the server adds
+    """
+    kinds: [SyncScopeKind!] = [SHOPPING_LIST]
     """Page size, reading backward: default 20, at most 100"""
     last: Int
   ): SyncScopeConnection!
@@ -18742,6 +18837,8 @@ type SkippedRecipeIngredient {
   error. Branch on this, not on the reason text.
   """
   code: ErrorCode!
+  """What to do with this item, as on any other error."""
+  disposition: ErrorDisposition!
   """
   Set only when the reason was masked. Names the log entry holding the real
   error, so support can look it up.
@@ -19490,6 +19587,61 @@ input StoreOrderBy {
   popularity: SortOrder
 }
 
+"""
+One place to shop near a search: a store on file, or an OpenStreetMap place
+nobody has picked yet. Exactly one of store and placeId is set.
+"""
+type StorePlace {
+  address: String
+  """The kind of shop, for a place that came from OpenStreetMap"""
+  category: StorePlaceCategory
+  """
+  The credit to show beside this place. Null for one not from OpenStreetMap.
+  """
+  credit: String
+  """In kilometres, to one decimal"""
+  distanceKm: Float!
+  lat: Float!
+  lng: Float!
+  name: String!
+  """Pick it with createStoreFromPlace. Null once the place is a store."""
+  placeId: ID
+  """The store this place is. Null until someone picks it."""
+  store: Store
+}
+
+"""What kind of shop an OpenStreetMap place is."""
+enum StorePlaceCategory {
+  CONVENIENCE
+  """A drugstore or pharmacy"""
+  DRUGSTORE
+  """A grocer, greengrocer or health food shop"""
+  GROCERY
+  """A butcher, bakery, fishmonger, deli, cheese or dairy shop"""
+  SPECIALTY
+  SUPERMARKET
+  """A dollar, variety or department store"""
+  VARIETY
+  WHOLESALE
+}
+
+input StorePlacesInput {
+  """
+  The kinds of OpenStreetMap place to list: SUPERMARKET, GROCERY and WHOLESALE
+  when omitted. A held store is listed whatever its kind.
+  """
+  categories: [StorePlaceCategory!]
+  """How many: 20 when omitted, at most 50"""
+  first: Int
+  near: StoreNearInput!
+  """How far to reach, in kilometres: 15 when omitted, at most 100"""
+  radiusKm: Float
+  """
+  Only places whose name or address holds this text, at least 2 characters
+  """
+  search: String
+}
+
 """Sub-input for store preferences"""
 input StorePreferencesInput {
   aisle: String
@@ -19719,7 +19871,12 @@ type Subscription {
   syncScopes, and arrives even after your access ended. Delivery is
   best-effort, and pulling on connect covers anything missed.
   """
-  mySyncPokes: SyncPoke!
+  mySyncPokes(
+    """
+    The kinds to hear of. A client that sends none stays on shopping lists. REACH_CHANGED names no scope, so it arrives whichever kinds you name
+    """
+    kinds: [SyncScopeKind!] = [SHOPPING_LIST]
+  ): SyncPoke!
   """
   Notification event stream for the current user (created,
   updated, read, dismissed). Subscribe once and branch on subtype. Always
@@ -19900,12 +20057,12 @@ type SyncApplied {
 input SyncChangesInput {
   """Entities per scope, at most 100. The list's own row is not counted"""
   first: Int
-  """The scopes to pull, at most 25"""
+  """The scopes to pull, at most offlineLimits.maxSyncScopes"""
   scopes: [SyncScopeCursorInput!]!
 }
 
 """A row a sync page can carry."""
-union SyncEntity = ShoppingList | ShoppingListCollaborator | ShoppingListItem
+union SyncEntity = Pantry | PantryItem | PantryItemBatch | PantryItemUsage | ShoppingList | ShoppingListCollaborator | ShoppingListItem
 
 """What changed in one scope since a cursor."""
 type SyncPage {
@@ -20028,8 +20185,12 @@ type SyncScopeEdge implements Edge {
   node: SyncScope!
 }
 
-"""What a sync scope covers. One list is one scope."""
+"""
+What a sync scope covers. One list is one scope. A kind appears here once a pull, a snapshot and a poke all serve it.
+"""
 enum SyncScopeKind {
+  """One pantry, with its stacks, their batches and their usage"""
+  PANTRY
   SHOPPING_LIST
 }
 
@@ -20465,6 +20626,7 @@ which are not listed.
 type UnitEligibilityError implements Error {
   code: ErrorCode!
   denial: UnitDenial
+  disposition: ErrorDisposition!
   field: String
   message: String!
   validUnits: [String!]!
@@ -22837,6 +22999,7 @@ specific field failed validation (carried in `field`).
 """
 type ValidationError implements Error {
   code: ErrorCode!
+  disposition: ErrorDisposition!
   """
   Dotted path to the first offending field, when the error is field-specific.
   """

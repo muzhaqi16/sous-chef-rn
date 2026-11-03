@@ -57,6 +57,10 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
     'a time-to-live refresh; a cached answer must not be stamped fresh',
   'apollo/utils/unitSystemAnswers.ts':
     'what SYSTEM means after a locale change; the cached answer is the old one',
+  'features/shoppingList/offline/listFeed.ts':
+    "a feed pull or full read is the server's answer; a cached one replays the last page",
+  'features/pantry/offline/pantryFeed.ts':
+    'a feed pull or full read, and the summary re-read for counts a pull never carries',
 };
 
 describe('the one-shot query default', () => {

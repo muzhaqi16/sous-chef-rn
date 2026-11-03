@@ -1,7 +1,20 @@
 import { CombinedGraphQLErrors, ServerError } from '@apollo/client/errors';
 import { isRecord } from '#/utils/isRecord';
 import { describeValue } from '#/utils/errorSerialization';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ErrorDisposition,
+  TopLevelErrorCode,
+} from '#/graphql/generated/schemaTypes';
+
+const DISPOSITIONS: readonly string[] = Object.values(ErrorDisposition);
+
+const isDisposition = (value: unknown): value is ErrorDisposition =>
+  typeof value === 'string' && DISPOSITIONS.includes(value);
+
+/** A disposition read off an untyped channel; undefined for one this build lacks. */
+export const asDisposition = (value: unknown): ErrorDisposition | undefined =>
+  isDisposition(value) ? value : undefined;
 
 /** A write that never reached a verdict, told apart from a generic Error. */
 export class GraphQLNetworkError extends Error {
@@ -19,6 +32,7 @@ export interface TopLevelGraphQLError {
   field: string | null;
   /** The API's fault class; `infrastructure` is a store it could not reach. */
   category: string | null;
+  disposition: ErrorDisposition | undefined;
 }
 
 /** Reads the first top-level GraphQL error's code + message from an Apollo
@@ -39,6 +53,7 @@ export function getTopLevelGraphQLError(
     message: first.message,
     field: typeof field === 'string' && field ? field : null,
     category: typeof category === 'string' ? category : null,
+    disposition: asDisposition(first.extensions?.disposition),
   };
 }
 
@@ -47,6 +62,7 @@ export interface RefusalEnvelope {
   code: string;
   /** Seconds the server asks the caller to wait; null when it states none. */
   retryAfter: number | null;
+  disposition: ErrorDisposition | undefined;
 }
 
 const positiveSeconds = (value: unknown): number | null => {
@@ -80,6 +96,7 @@ export function refusalEnvelopeOf(error: unknown): RefusalEnvelope | null {
     retryAfter:
       positiveSeconds(extensions.retryAfter) ??
       positiveSeconds(error.response.headers.get('retry-after')),
+    disposition: asDisposition(extensions.disposition),
   };
 }
 

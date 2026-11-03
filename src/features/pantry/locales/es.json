@@ -189,6 +189,7 @@
     "restockBy": "Reponer por",
     "currentLabel": "Actual:",
     "quantityToAdd": "Cantidad a añadir",
+    "differentSize": "¿Otro tamaño?",
     "newQuantityPrefix": "Nueva cantidad: ",
     "costPerUnit": "Coste por unidad",
     "notesPlaceholder": "Añade notas sobre esta reposición...",
@@ -239,10 +240,7 @@
   },
   "pantryAction": {
     "useByDefault": "Consumir antes de",
-    "availableDefault": "Disponible:",
-    "remainingAmount": "(restante: {{amount}})",
-    "quantityBreakdown": "{{packages}} sin abrir + {{loose}} {{unit}} sueltos",
-    "amountWithUnit": "{{amount}} {{unit}}"
+    "availableDefault": "Disponible:"
   },
   "correctWeight": {
     "invalidWeight": "Introduce un tamaño válido",
@@ -250,7 +248,6 @@
     "title": "Corregir tamaño del paquete",
     "correct": "Corregir",
     "netWeightPrefix": "Tamaño del paquete: ",
-    "newNetWeight": "Tamaño real del paquete",
     "reasonPlaceholder": "¿Por qué se corrige el tamaño?"
   },
   "addToPantry": {
@@ -261,14 +258,6 @@
     "lowStockHint": "Recibe una notificación cuando este artículo se esté agotando.",
     "emptyHint": "Déjalo vacío para desactivar las alertas de stock bajo de este artículo.",
     "quantityPlaceholder": "1",
-    "hidePackageDetails": "Ocultar detalles del envase",
-    "addPackageDetails": "Añadir detalles del envase",
-    "packageHint": "Define qué hay dentro de un envase (p. ej., 12 latas de 335ml cada una).",
-    "qtyPerPackage": "Cant. por envase",
-    "contentUnit": "Unidad del contenido",
-    "weightPerUnit": "Peso por unidad",
-    "weightPerUnitPlaceholder": "p. ej., 335",
-    "contentWeightUnitPlaceholder": "mL, g, oz",
     "itemNamePlaceholder": "p. ej., Leche, Huevos, Pan...",
     "brandPlaceholder": "p. ej., Whole Foods, Organic Valley",
     "restockFailed": "No se pudo reponer el artículo.",
@@ -402,8 +391,6 @@
   },
   "pantryItemCard": {
     "remainingAmount": "Quedan {{amount}}",
-    "portionsLeft_one": "Queda {{count}} {{unit}}",
-    "portionsLeft_other": "Quedan {{count}} {{unit}}",
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} en total)"
@@ -440,6 +427,11 @@
   },
   "packageSize": {
     "defaultTitle": "Tamaño de paquete predeterminado",
-    "defaultHint": "Las nuevas existencias toman este tamaño si no se indica otro. Para corregir un paquete que ya tienes, usa Corregir tamaño del paquete en la página del artículo."
+    "defaultHint": "Las nuevas existencias toman este tamaño si no se indica otro. Para corregir un paquete que ya tienes, usa Corregir tamaño del paquete en la página del artículo.",
+    "eachHolds": "Cada uno contiene",
+    "unitPlaceholder": "lb, lata",
+    "sizeInvalid": "Introduce un tamaño mayor que 0.",
+    "unitRequired": "Elige de la lista la unidad del tamaño.",
+    "wholePackages": "Los envases se cuentan enteros: 1, 2, 3…"
   }
 }

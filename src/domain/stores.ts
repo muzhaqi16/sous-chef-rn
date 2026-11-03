@@ -52,10 +52,17 @@ export const storeBranchLabel = (
     : undefined;
 };
 
+/** A place a search found that is no store yet: a pick makes it one. */
+export interface PlaceChoice {
+  place: { id: string; name: string };
+  store?: undefined;
+  chain?: undefined;
+}
+
 /** A store, or a whole chain, as a list offers it. */
-export interface StoreOption {
+export interface StoreOption<Choice = StoreChoice> {
   key: string;
-  choice: StoreChoice;
+  choice: Choice;
   address: string | null;
   storeNumber: string | null;
   /** From the place searched near; null without one, and for a chain. */
@@ -93,6 +100,31 @@ export const storeOption = (
   };
 };
 
+/** Any row a store search lists: a store, a chain, or a place to pick. */
+export type FoundOption = StoreOption<StoreChoice | PlaceChoice>;
+
+interface PlaceRecord {
+  placeId: string;
+  name: string;
+  address?: string | null;
+  distanceKm: number;
+}
+
+export const placeOption = ({
+  placeId,
+  name,
+  address,
+  distanceKm,
+}: PlaceRecord): FoundOption => ({
+  key: `place:${placeId}`,
+  choice: { place: { id: placeId, name } },
+  address: address ?? null,
+  storeNumber: null,
+  distanceKm,
+  added: false,
+  hasPrices: false,
+});
+
 export const chainOption = (
   chain: { id: string; name: string },
   added = false,
@@ -117,7 +149,7 @@ export const storeChoiceName = (choice: StoreChoice, t: Translate): string =>
 
 /** What a store's row reads: its name, then its branch and distance. */
 export const describeStoreOption = (
-  option: StoreOption,
+  option: FoundOption,
   t: Translate,
   readingSystem: UnitSystem,
 ): { title: string; subtitle: string | undefined } => {
@@ -128,7 +160,10 @@ export const describeStoreOption = (
       : formatDistance(option.distanceKm, readingSystem, t),
   ].filter(part => part !== undefined);
   return {
-    title: storeChoiceName(option.choice, t),
+    title:
+      'place' in option.choice
+        ? option.choice.place.name
+        : storeChoiceName(option.choice, t),
     subtitle: parts.length > 0 ? parts.join(' · ') : undefined,
   };
 };

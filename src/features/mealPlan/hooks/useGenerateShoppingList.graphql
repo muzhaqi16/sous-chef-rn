@@ -79,6 +79,7 @@ mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
         success
         failure {
           code
+          disposition
           reason
           errorId
         }
@@ -91,6 +92,7 @@ mutation AddDerivedItemsToShoppingList($input: AddItemsToShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

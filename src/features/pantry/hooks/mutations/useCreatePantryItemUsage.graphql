@@ -6,6 +6,9 @@ fragment useCreatePantryItemUsage_pantryItem on PantryItem {
   version
   quantity
   heldQuantity
+  stockBreakdown {
+    fullPackages
+  }
   displayAmount {
     quantity
     localizedSymbol
@@ -19,9 +22,39 @@ fragment useCreatePantryItemUsage_pantryItem on PantryItem {
       }
     }
   }
+  amountLeft {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+  }
   isLowStock
   lastUsedAt
   remainingNetWeight
+  remainingPortions
+  consumeUnit {
+    id
+    name
+    symbol
+    localizedSymbolForms {
+      one
+      other
+    }
+  }
   activeBatchCount
   earliestBatchExpiresOn
 }

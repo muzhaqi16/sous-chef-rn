@@ -8,6 +8,7 @@ import {
 import { requirePlatform } from '#platform/install';
 import { useStore } from '#store';
 import { isApiUnavailable } from '#store/slices/networkSlice';
+import { feedEngine } from './feed/feedEngine';
 import { queueManager } from './offlineQueue/queueManager';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
 import { LogoutCleanup } from './logoutCleanup';
@@ -300,6 +301,7 @@ export const createRefetchEventManager = (): RefetchEventManager => {
     // Replay first: a refetch racing the queue would paint the server's older
     // values over writes that have not landed yet.
     await queueManager.whenIdle().catch(() => {});
+    feedEngine.catchUp();
     const batch = takePending();
     // A throw must still end the run, or every later trigger waits on it.
     if (batch) await refetchActive(client, batch).catch(() => {});

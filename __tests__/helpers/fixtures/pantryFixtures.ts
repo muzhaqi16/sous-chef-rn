@@ -81,8 +81,8 @@ function connection<TN extends string, ET extends string, T>(
 }
 
 // A count reads as stored in both systems.
-function countHeld(value: number): PantryItemNode['held'] {
-  const reading: PantryItemNode['held']['metric'] = readingAsAbbreviation({
+function countHeld(value: number): PantryItemNode['amountLeft'] {
+  const reading: PantryItemNode['amountLeft']['metric'] = readingAsAbbreviation({
     __typename: 'MeasureReading',
     value,
     unitId: 'unit-piece',
@@ -109,6 +109,10 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
     itemName: item.itemName ?? `Item ${item.id}`,
     quantity: item.quantity ?? 1,
     heldQuantity: item.heldQuantity ?? item.quantity ?? 1,
+    stockBreakdown: {
+      __typename: 'StockBreakdown',
+      fullPackages: Math.floor(item.heldQuantity ?? item.quantity ?? 1),
+    },
     image: null,
     // Shown in the unit it counts in, as the server shows a stack of pieces.
     displayAmount: {
@@ -122,7 +126,8 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
         symbol: 'pc',
       }),
     },
-    held: countHeld(item.heldQuantity ?? item.quantity ?? 1),
+    amountLeft: countHeld(item.heldQuantity ?? item.quantity ?? 1),
+    portionsPerTrackingUnit: null,
     consumeUnit: null,
     createdAt: '2026-01-01',
     updatedAt: '2026-01-01',
@@ -150,6 +155,7 @@ function pantryItemNode(item: PantryItemFixture): PantryItemNode {
       symbol: 'pc',
       type: UnitType.Count,
       displayAsFraction: false,
+      commonFractions: null,
     }),
     displayUnit: null,
     netWeightUnit: null,

@@ -13,8 +13,7 @@ import {
 } from './useUpdatePantryItem.generated';
 import { alertService } from '#/services/alertService';
 import { StorageType } from '#/graphql/generated/schemaTypes';
-import { localBrand, localUnit } from '#features/catalog/cache/localRefs';
-import { firstNonBlank } from '#/utils/firstNonBlank';
+import { localBrand } from '#features/catalog/cache/localRefs';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { sendFields } from '#/apollo/pendingWrites/sendFields';
 import { useTranslation } from '#/i18n';
@@ -87,9 +86,7 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
     }
 
     // Build optimistic update from form data (PantryItem-shaped, not mutation-input-shaped)
-    const optimisticUpdate: Partial<UseUpdatePantryItem_PantryItemFragment> & {
-      consumeUnit?: ReturnType<typeof localUnit> | null;
-    } = {
+    const optimisticUpdate: Partial<UseUpdatePantryItem_PantryItemFragment> = {
       updatedAt: new Date().toISOString(),
     };
     if (dirtyFields.itemName) optimisticUpdate.itemName = input.itemName;
@@ -144,12 +141,6 @@ export function useUpdatePantryItem({ refetch }: UseUpdatePantryItemOptions) {
       const typedBrand = input.brand?.trim();
       optimisticUpdate.brand = typedBrand
         ? localBrand(client.cache, selectedBrandId, typedBrand)
-        : null;
-    }
-    if (dirtyFields.consumeUnit || dirtyFields.consumeUnitId) {
-      const consumeUnitId = firstNonBlank(input.consumeUnitId);
-      optimisticUpdate.consumeUnit = consumeUnitId
-        ? localUnit(client.cache, consumeUnitId, input.consumeUnit ?? '')
         : null;
     }
 

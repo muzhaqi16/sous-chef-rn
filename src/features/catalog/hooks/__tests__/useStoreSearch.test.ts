@@ -8,14 +8,18 @@ import {
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import {
+  StorePlaceCategory,
+  ErrorCode,
+  UsualStoreSource,
+} from '#/graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
 import { writeUsualStores } from '#features/catalog/cache/usualStores';
 import {
   useStoreSearch,
   type StoreSearchPlace,
 } from '#features/catalog/hooks/useStoreSearch';
-import { NearbyStoresDocument } from '#features/catalog/hooks/useStoreSearch.generated';
+import { StorePlacesDocument } from '#features/catalog/hooks/useStoreSearch.generated';
 
 const aldiChain = { id: 'chain-aldi', name: 'ALDI' };
 const wilkinsburg = {
@@ -57,6 +61,19 @@ const withUsualStores = () => {
   return cache;
 };
 
+/** A store on file, as the search lists one. */
+const heldAt = (
+  distanceKm: number,
+  store: { name: string; address?: string | null },
+) => ({
+  placeId: null,
+  name: store.name,
+  address: store.address ?? null,
+  credit: null,
+  distanceKm,
+  store,
+});
+
 const render = (
   place: StoreSearchPlace | null,
   mocks: ReturnType<typeof recordMock>['mock'][],
@@ -90,12 +107,9 @@ afterEach(() => {
 
 describe('useStoreSearch', () => {
   it('lists the stores near a zip, nearest first, the new ones included', async () => {
-    const nearby = recordMock(NearbyStoresDocument, {
+    const nearby = recordMock(StorePlacesDocument, {
       data: {
-        nearbyStores: [
-          { distanceKm: 1.2, store: banksville },
-          { distanceKm: 6.4, store: wilkinsburg },
-        ],
+        storePlaces: [heldAt(1.2, banksville), heldAt(6.4, wilkinsburg)],
       },
     });
     const { result } = render({ zip: '15220' }, [nearby.mock]);
@@ -146,8 +160,8 @@ describe('useStoreSearch', () => {
   });
 
   it('narrows the nearby stores by a term, with no name search besides', async () => {
-    const nearby = recordMock(NearbyStoresDocument, {
-      data: { nearbyStores: [{ distanceKm: 6.4, store: wilkinsburg }] },
+    const nearby = recordMock(StorePlacesDocument, {
+      data: { storePlaces: [heldAt(6.4, wilkinsburg)] },
     });
     const search = recordMock(SearchStoresDocument, {
       data: { stores: { edges: [] } },
@@ -160,7 +174,11 @@ describe('useStoreSearch', () => {
 
     await drainTimers();
     expect(nearby.fired).toContainEqual({
-      input: { near: { point: { lat: 40.44, lng: -79.99 } }, search: 'aldi' },
+      input: {
+        near: { point: { lat: 40.44, lng: -79.99 } },
+        search: 'aldi',
+        categories: Object.values(StorePlaceCategory),
+      },
       withPrices: false,
     });
     expect(search.fired).toEqual([]);
@@ -197,10 +215,60 @@ describe('useStoreSearch', () => {
     expect(result.current.unlistedName).toBeNull();
   });
 
+  describe('a place nobody has picked', () => {
+    const place = {
+      placeId: 'osm:node/7',
+      store: null,
+      name: 'Save-A-Lot',
+      address: 'Stoner Way',
+      distanceKm: 1.8,
+      credit: '© OpenStreetMap contributors',
+    };
+
+    it('lists it among the stores, in the order the search gave', async () => {
+      const nearby = recordMock(StorePlacesDocument, {
+        data: { storePlaces: [place, heldAt(2.5, banksville)] },
+      });
+      const { result } = render({ zip: '15221' }, [nearby.mock]);
+
+      await drainTimers();
+      expect(result.current.options).toEqual([
+        expect.objectContaining({
+          key: 'place:osm:node/7',
+          choice: { place: { id: 'osm:node/7', name: 'Save-A-Lot' } },
+          address: 'Stoner Way',
+          distanceKm: 1.8,
+          added: false,
+        }),
+        expect.objectContaining({ key: 'store:s-ge-b', added: true }),
+      ]);
+    });
+
+    it('carries its credit while one is listed', async () => {
+      const nearby = recordMock(StorePlacesDocument, {
+        data: { storePlaces: [place] },
+      });
+      const { result } = render({ zip: '15221' }, [nearby.mock]);
+
+      await drainTimers();
+      expect(result.current.credit).toBe('© OpenStreetMap contributors');
+    });
+
+    it('has no credit over stores on file alone', async () => {
+      const nearby = recordMock(StorePlacesDocument, {
+        data: { storePlaces: [heldAt(2.5, banksville)] },
+      });
+      const { result } = render({ zip: '15221' }, [nearby.mock]);
+
+      await drainTimers();
+      expect(result.current.credit).toBeNull();
+    });
+  });
+
   it("asks nothing offline, and lists the household's stores", () => {
     useStore.setState({ isOnline: false });
-    const nearby = recordMock(NearbyStoresDocument, {
-      data: { nearbyStores: [] },
+    const nearby = recordMock(StorePlacesDocument, {
+      data: { storePlaces: [] },
     });
     const { result } = render({ zip: '15220' }, [nearby.mock]);
 
@@ -212,8 +280,8 @@ describe('useStoreSearch', () => {
   });
 
   it('reports a zip the API has no record of', async () => {
-    const refused: MockFor<typeof NearbyStoresDocument> = {
-      request: { query: NearbyStoresDocument, variables: () => true },
+    const refused: MockFor<typeof StorePlacesDocument> = {
+      request: { query: StorePlacesDocument, variables: () => true },
       result: {
         errors: [
           new GraphQLError('That is not a US zip code on file', {

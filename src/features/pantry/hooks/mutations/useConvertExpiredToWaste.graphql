@@ -6,6 +6,9 @@ fragment useConvertExpiredToWaste_pantryItem on PantryItem {
   version
   quantity
   heldQuantity
+  stockBreakdown {
+    fullPackages
+  }
   displayAmount {
     quantity
     localizedSymbol

@@ -27,6 +27,7 @@ mutation CreateReceiptCheckIn(
         # `reason` is a server string never shown.
         failure {
           code
+          disposition
           errorId
         }
         item {
@@ -60,6 +61,7 @@ mutation CreateReceiptCheckIn(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

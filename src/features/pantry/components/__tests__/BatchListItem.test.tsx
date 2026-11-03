@@ -58,7 +58,11 @@ const unitOf = (symbol: string) =>
 
 /** The batch's stack, where its row reads the stack's units from. */
 const stackCache = (
-  { unit = 'pc', netWeightUnit }: { unit?: string; netWeightUnit?: string },
+  {
+    unit = 'pc',
+    unitType = UnitType.Count,
+    netWeightUnit,
+  }: { unit?: string; unitType?: UnitType; netWeightUnit?: string },
   cache = makeCache(),
 ) => {
   seedFragment(cache, {
@@ -68,7 +72,7 @@ const stackCache = (
       __typename: 'PantryItem',
       version: 1,
       id: 'pi1',
-      unit: unitOf(unit),
+      unit: { ...unitOf(unit), type: unitType },
       displayUnit: null,
       netWeightUnit: netWeightUnit ? unitOf(netWeightUnit) : null,
     },
@@ -116,14 +120,9 @@ describe('BatchListItem', () => {
     expect(screen.getByText('Package: 22 oz')).toBeTruthy();
   });
 
-  it('offers a size correction on a weighed batch only', () => {
+  it('offers a correction on a weighed batch', () => {
     const onCorrectSize = jest.fn();
-    const { rerender } = renderWithApollo(
-      <BatchListItem batch={batch(1)} onCorrectSize={onCorrectSize} />,
-    );
-    expect(screen.queryByLabelText('Correct package size')).toBeNull();
-
-    rerender(
+    renderWithApollo(
       <BatchListItem
         batch={{ ...batch(1), netWeight: 32 }}
         onCorrectSize={onCorrectSize}
@@ -131,6 +130,23 @@ describe('BatchListItem', () => {
     );
     fireEvent.press(screen.getByLabelText('Correct package size'));
     expect(onCorrectSize).toHaveBeenCalledWith('b1');
+  });
+
+  // A case with no size yet still has to be able to say it holds 10 cans.
+  it('offers a correction on a counted stack, and not on a measured one', () => {
+    const onCorrectSize = jest.fn();
+    const counted = renderWithApollo(
+      <BatchListItem batch={batch(1)} onCorrectSize={onCorrectSize} />,
+      { cache: stackCache({ unit: 'case' }) },
+    );
+    expect(screen.getByLabelText('Correct package size')).toBeTruthy();
+    counted.unmount();
+
+    renderWithApollo(
+      <BatchListItem batch={batch(1)} onCorrectSize={onCorrectSize} />,
+      { cache: stackCache({ unit: 'mL', unitType: UnitType.Volume }) },
+    );
+    expect(screen.queryByLabelText('Correct package size')).toBeNull();
   });
 
   it('rounds a batch quantity no fraction fits to three decimals', () => {

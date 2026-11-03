@@ -6,6 +6,7 @@ import { useTranslation } from '#/i18n';
 import { SubScreen } from '#components/templates/SubScreen';
 import { Dialog, DialogBody, DialogFooter } from '#components/templates/Dialog';
 import { FormInput } from '#components/atoms/FormInput';
+import { Link } from '#components/atoms/Link';
 import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
 import { RowCard } from '#components/atoms/RowCard';
 import { Text } from '#components/atoms/Text';
@@ -19,8 +20,9 @@ import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEna
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { toastService } from '#/services/toastService';
 import { scheduleIdle } from '#/utils/scheduleIdle';
-import type { StoreChoice } from '#domain/stores';
+import type { FoundOption, StoreChoice } from '#domain/stores';
 import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
+import { useCreateStoreFromPlace } from '#features/catalog/hooks/useCreateStoreFromPlace';
 import { useNearMe } from '#features/catalog/hooks/useNearMe';
 import { useStoreSearch } from '#features/catalog/hooks/useStoreSearch';
 import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
@@ -30,6 +32,7 @@ import { StoreRow } from '#features/catalog/ui/StoreRow';
 import { catalogTestIDs } from '#features/catalog/testIDs';
 
 const US_ZIP = /^\d{5}$/;
+const OPENSTREETMAP_COPYRIGHT = 'https://www.openstreetmap.org/copyright';
 
 /**
  * Finds a store to add to the household's: near a zip code, by name or
@@ -51,6 +54,12 @@ export const StorePickerScreen: React.FC<
   const zip = typedZip ?? lastZip ?? '';
   const zipInput = useRef<ThemedTextInputRef>(null);
   const nearMe = useNearMe();
+  // A found place takes over from the zip; a read that fails leaves it.
+  const [prevPlace, setPrevPlace] = useState(nearMe.place);
+  if (nearMe.place !== prevPlace) {
+    setPrevPlace(nearMe.place);
+    if (nearMe.place) setTypedZip('');
+  }
   const pricesShown = useBudgetAndPricesEnabled();
   // A decline offers the zip code instead, once the dialog or the OS prompt
   // has gone: a field under a closing window may not take the keyboard.
@@ -78,6 +87,7 @@ export const StorePickerScreen: React.FC<
   }, [zipListed, zip, setLastZip]);
   const writes = useUsualStoreWrites(homeId);
   const { createStore } = useCreateStore();
+  const { createStoreFromPlace } = useCreateStoreFromPlace();
 
   const add = async (choice: StoreChoice) => {
     if (!(await writes.add(choice))) return;
@@ -90,6 +100,16 @@ export const StorePickerScreen: React.FC<
   const addUnlisted = async (name: string) => {
     const created = await createStore({ name, homeId });
     if (created) await add({ store: created });
+  };
+
+  // The search may have lost the place, or be down; its name still adds it.
+  const addPlace = async ({ id, name }: { id: string; name: string }) => {
+    const created = await createStoreFromPlace(id);
+    await (created ? add({ store: created }) : addUnlisted(name));
+  };
+
+  const pick = ({ choice }: FoundOption) => {
+    void ('place' in choice ? addPlace(choice.place) : add(choice));
   };
 
   const term = search.term.trim();
@@ -107,6 +127,9 @@ export const StorePickerScreen: React.FC<
       </Text>
     );
   const unlisted = search.isOffline ? null : search.unlistedName;
+  // The row that adds a store needs a typed name, so a list near a place says so.
+  const canTypeToAdd =
+    search.answered && !term && !search.isOffline && !search.zipRefused;
 
   return (
     <SubScreen
@@ -169,13 +192,17 @@ export const StorePickerScreen: React.FC<
                       title={t('storePicker.nearMe')}
                       loading={nearMe.state === 'locating'}
                       onPress={() => {
-                        setTypedZip('');
                         void nearMe.ask();
                       }}
                       testID={catalogTestIDs.storePickerNearMe}
                     />
                   </>
                 )}
+                {search.credit ? (
+                  <Link variant="caption" href={OPENSTREETMAP_COPYRIGHT}>
+                    {search.credit}
+                  </Link>
+                ) : null}
               </>
             ) : (
               <View style={styles.offline}>
@@ -203,6 +230,10 @@ export const StorePickerScreen: React.FC<
                 }}
               />
             </RowCard>
+          ) : canTypeToAdd ? (
+            <Text role="body" tone="secondary" style={styles.note}>
+              {t('storePicker.typeToAdd')}
+            </Text>
           ) : null
         }
         renderItem={({ item }) => (
@@ -219,7 +250,7 @@ export const StorePickerScreen: React.FC<
               item.added
                 ? undefined
                 : () => {
-                    void add(item.choice);
+                    pick(item);
                   }
             }
             testID={catalogTestIDs.storePickerRow(item.key)}

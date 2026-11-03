@@ -65,7 +65,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: package.json
           cache: 'npm'
 
       - name: Check against production
@@ -134,7 +134,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: package.json
 
       # A bundle built by hand from a branch tags its own commit, moving the tag
       # as `npm run tag:playstore` does. The job's token starts no second build.
@@ -507,7 +507,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: package.json
           cache: 'npm'
 
       # A bundle built by hand from a branch tags its own commit, moving the tag

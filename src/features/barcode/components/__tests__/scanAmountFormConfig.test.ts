@@ -134,7 +134,6 @@ describe('the package a scan is counted in', () => {
 describe('the amount a scan prefills', () => {
   it('is one package holding the pack size in the user’s unit system', () => {
     expect(scanAmountDefaults(honey, jar, UnitSystem.Imperial)).toEqual({
-      packaged: true,
       quantityInput: '1',
       unitDisplay: 'jar',
       unitId: 'unit-jar',
@@ -142,9 +141,7 @@ describe('the amount a scan prefills', () => {
       sizeInput: '3',
       sizeUnitDisplay: 'lb',
       sizeUnitId: 'unit-lb',
-      // Nothing suggests one yet, so it starts empty.
-      consumeUnitDisplay: '',
-      consumeUnitId: null,
+      sizeUnitType: null,
     });
     expect(scanAmountDefaults(honey, jar, UnitSystem.Metric)).toMatchObject({
       sizeInput: '1.36',
@@ -183,10 +180,8 @@ describe('the amount schema', () => {
     ['quantityInput', { quantityInput: '0' }],
     ['quantityInput', { quantityInput: '1 1/2' }],
     ['unitId', { unitId: null }],
-    ['unitId', { unitId: 'unit-cup', unitType: UnitType.Volume }],
     ['sizeInput', { sizeInput: '0' }],
     ['sizeUnitId', { sizeUnitId: null }],
-    ['consumeUnitId', { consumeUnitDisplay: 'tbs', consumeUnitId: null }],
   ])('reports a bad %s on that field', async (path, override) => {
     expect(await pathOf({ ...filled, ...override })).toBe(path);
   });
@@ -202,12 +197,11 @@ describe('the amount schema', () => {
     ).resolves.toBeTruthy();
   });
 
-  // Not packaged, it is an amount: any unit, and any part of one.
-  it('takes a fraction of a measure when not packaged', async () => {
+  // A measure holds nothing, so any part of one is an amount.
+  it('takes a fraction of a measure', async () => {
     await expect(
       scanAmountSchema.validate({
         ...filled,
-        packaged: false,
         quantityInput: '1 1/2',
         unitId: 'unit-cup',
         unitType: UnitType.Volume,
@@ -224,49 +218,55 @@ describe('what a scan records', () => {
       packaged: true,
       count: 1,
       unitId: 'unit-jar',
-      size: null,
-      consumeUnitId: null,
+      contents: null,
     });
-  });
-
-  it('records the unit it is used in', () => {
-    expect(
-      scanAmountOf(
-        {
-          ...prefilled,
-          consumeUnitDisplay: 'tbsp',
-          consumeUnitId: 'unit-tbsp',
-        },
-        prefilled,
-      ),
-    ).toMatchObject({ consumeUnitId: 'unit-tbsp' });
   });
 
   it('sends a size the user changed', () => {
     expect(
       scanAmountOf({ ...prefilled, sizeInput: '2.5' }, prefilled),
     ).toMatchObject({
-      size: { netWeight: 2.5, netWeightUnitId: 'unit-lb' },
+      contents: { amount: 2.5, unitId: 'unit-lb' },
     });
   });
 
-  it('records a measured amount when not packaged', () => {
+  it('records a count of what is inside', () => {
     expect(
       scanAmountOf(
         {
           ...prefilled,
-          packaged: false,
-          quantityInput: '3',
-          unitId: 'unit-lb',
+          sizeInput: '10',
+          sizeUnitId: 'unit-can',
+          sizeUnitType: UnitType.Count,
         },
         prefilled,
       ),
-    ).toEqual({
-      packaged: false,
-      quantity: 3,
-      unitId: 'unit-lb',
-      consumeUnitId: null,
+    ).toMatchObject({
+      contents: { amount: 10, unitId: 'unit-can', unitType: UnitType.Count },
     });
+  });
+
+  it('records a measured amount when the unit is a measure', () => {
+    expect(
+      scanAmountOf(
+        {
+          ...prefilled,
+          quantityInput: '3',
+          unitId: 'unit-lb',
+          unitType: UnitType.Weight,
+        },
+        prefilled,
+      ),
+    ).toEqual({ packaged: false, quantity: 3, unitId: 'unit-lb' });
+  });
+
+  it('records a part of a count, with nothing stated inside, as an amount', () => {
+    expect(
+      scanAmountOf(
+        { ...prefilled, quantityInput: '1 1/2', sizeInput: '' },
+        prefilled,
+      ),
+    ).toEqual({ packaged: false, quantity: 1.5, unitId: 'unit-jar' });
   });
 });
 
@@ -366,8 +366,7 @@ describe('a multipack', () => {
       packaged: true,
       count: 6,
       unitId: 'unit-can',
-      size: { netWeight: 250, netWeightUnitId: 'unit-ml' },
-      consumeUnitId: null,
+      contents: { amount: 250, unitId: 'unit-ml', unitType: null },
     });
   });
 

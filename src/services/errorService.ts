@@ -158,7 +158,6 @@ export class ErrorService {
     EMAIL_ALREADY_EXISTS: 'emailAlreadyExists',
 
     // Query Complexity Errors
-    QUERY_TOO_COMPLEX: 'genericRetry',
     PAGINATION_LIMIT_EXCEEDED: 'genericRetry',
 
     // Version Control Errors
@@ -375,7 +374,7 @@ export class ErrorService {
 
     // Check for query complexity errors first
     if (isQueryComplexityError(error)) {
-      errorCode = 'QUERY_TOO_COMPLEX';
+      errorCode = TopLevelErrorCode.PaginationLimitExceeded;
       diagnostic = describeQueryComplexity(error);
     }
     // Check for version conflict errors

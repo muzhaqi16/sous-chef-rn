@@ -9,7 +9,11 @@ import {
   isSupersededRefreshCode,
 } from '#/utils/authErrorCodes';
 import { SessionError } from '#/utils/errors/sessionError';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ErrorDisposition,
+  TopLevelErrorCode,
+} from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { isSessionEnding } from '#store/sessionEnding';
 import {
@@ -171,6 +175,7 @@ const deferredRefreshError = () =>
   new SessionError(
     TopLevelErrorCode.ServiceUnavailable,
     'Token refresh deferred',
+    ErrorDisposition.Retry,
   );
 
 /**

@@ -17,6 +17,7 @@ fragment PantryActionModal_pantryItem on PantryItem {
   itemId
   itemName
   quantity
+  heldQuantity
   displayAmount {
     quantity
     localizedSymbol
@@ -30,10 +31,31 @@ fragment PantryActionModal_pantryItem on PantryItem {
       }
     }
   }
+  amountLeft {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+  }
   activeBatchCount
   netWeight
   remainingNetWeight
   portionUnitId
+  portionsPerTrackingUnit
   portionUnit {
     id
     name
@@ -44,6 +66,9 @@ fragment PantryActionModal_pantryItem on PantryItem {
     }
   }
   remainingPortions
+  stockBreakdown {
+    fullPackages
+  }
   lastUsedAt
   unit {
     id
@@ -55,6 +80,7 @@ fragment PantryActionModal_pantryItem on PantryItem {
     }
     type
     displayAsFraction
+    commonFractions
   }
   displayUnit {
     id

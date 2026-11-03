@@ -31,6 +31,10 @@ export function useNearMe() {
   const locate = async () => {
     setState('locating');
     const found = await requirePlatform('approximateLocation').currentPlace();
+    if (found === 'off') {
+      setState('blocked');
+      return;
+    }
     if (!found) {
       setState('failed');
       return;

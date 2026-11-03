@@ -390,7 +390,6 @@
     "invalidImage": "Invalid Image",
     "invalidInput": "Invalid Input",
     "inventory": "Inventory",
-    "portions": "Portions",
     "inviteMemberToHome": "Invite Member to Home",
     "inviteMembers": "Invite Members",
     "invitedBy": "Invited by {{name}}",
@@ -417,7 +416,6 @@
     "mold": "Mold",
     "moreOptions": "More options",
     "netWeight": "Net Weight",
-    "netWeightIsUsedForConsumptionTrackingAndIsOptional": "Net weight is used for consumption tracking and is optional.",
     "never": "Never",
     "newTemplate": "New Template",
     "next": "Next",
@@ -559,9 +557,6 @@
       "openFoodFacts": "Open Food Facts",
       "usdaFoodDataCentral": "USDA FoodData Central"
     },
-    "usedIn": "Used in",
-    "tbspCup": "tbsp, cup",
-    "usedInHint": "What you measure it out in, like tbsp for honey.",
     "member": "Member",
     "member_one": "Member",
     "member_other": "Members",
@@ -584,7 +579,8 @@
     "vegan": "Vegan",
     "sulfite": "Sulfite",
     "budgetAndPrices": "Budget & prices",
-    "shopping": "Shopping"
+    "shopping": "Shopping",
+    "more": "More"
   },
   "instructions": {
     "pointCamera": "Point your camera at a barcode",

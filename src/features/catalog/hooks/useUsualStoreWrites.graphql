@@ -13,6 +13,7 @@ mutation AddUsualStore($input: AddUsualStoreInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -32,6 +33,7 @@ mutation UpdateUsualStore($input: UpdateUsualStoreInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -50,6 +52,7 @@ mutation RemoveUsualStore($input: RemoveUsualStoreInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

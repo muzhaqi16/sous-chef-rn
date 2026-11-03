@@ -582,6 +582,10 @@ for it, and none is remounted.
 Evicting the names instead would blank every screen offline, and
 `include: 'all'` does not reach a paused screen's torn-down query.
 
+**A list the change feed holds opts out too**: `useListReadPolicy` reads it from
+the device, and a resync reaches it through `feedEngine.catchUp()` once the queue
+is idle (`docs/local-first-architecture.md` § 1a).
+
 **A transient query opts out** with `refetchOn: false`: searches,
 autocompletes, analytics, conversion and join-code previews, barcode lookups,
 `CanDeleteAccount`. `__tests__/apollo/transientQueriesDeclineResync.test.ts`

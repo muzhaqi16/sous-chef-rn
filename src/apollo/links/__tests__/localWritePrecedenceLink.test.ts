@@ -8,7 +8,11 @@ import {
   type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { ErrorCode, UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ErrorDisposition,
+  UsualStoreSource,
+} from '#/graphql/generated/schemaTypes';
 import {
   readUsualStores,
   writeUsualStores,
@@ -229,6 +233,7 @@ describe('localWritePrecedenceLink', () => {
         updateUsualStore: {
           __typename: 'ValidationError',
           code: ErrorCode.ValidationFailed,
+          disposition: ErrorDisposition.Fail,
           message: 'Too many stores',
           field: 'pinned',
         },

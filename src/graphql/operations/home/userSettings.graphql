@@ -16,6 +16,7 @@ mutation MarkHomeAsDefault(
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

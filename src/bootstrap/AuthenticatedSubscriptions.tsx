@@ -4,6 +4,7 @@ import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscrip
 import { useHomeSubscriptions } from '#features/home/hooks/useHomeSubscriptions';
 import { useMealPlanSubscriptions } from '#features/mealPlan/hooks/useMealPlanSubscriptions';
 
+import { useChangeFeed } from '#/hooks/subscriptions/useChangeFeed';
 import { useUserSubscriptions } from '#/hooks/subscriptions/useUserSubscriptions';
 import { useDeviceTimezoneSync } from '#features/notifications/hooks/useDeviceTimezoneSync';
 import { useAccountCurrencySync } from '#features/profile/hooks/useAccountCurrencySync';
@@ -24,6 +25,7 @@ export const AuthenticatedSubscriptions: React.FC<
   // These hooks register their subscriptions with the SubscriptionService
   // and automatically handle cleanup when unmounted or when dependencies change
   useShoppingListSubscriptions(userId);
+  useChangeFeed(userId);
   usePantrySubscriptions(userId);
   useHomeSubscriptions(userId);
   useMealPlanSubscriptions(userId);

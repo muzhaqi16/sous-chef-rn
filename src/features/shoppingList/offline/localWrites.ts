@@ -145,6 +145,8 @@ function answeredIsPurchased(data: unknown): boolean | undefined {
 
 export const updateRow: LocalWrite<UpdateRowInputs> = {
   keyed: true,
+  // Its `commit` only places the row, which a page has done by then.
+  settlesFromFeed: true,
   conflict: rowConflict,
   capture: (cache, variables) => ({
     baseline: rowBaseline(cache, rowConflict, variables),
@@ -203,6 +205,8 @@ export const removeRows: LocalWrite<RemoveRowsInputs> = {
 };
 
 export const reorderRow: LocalWrite<ReorderRowInputs> = {
+  // Its `commit` only sorts, which a page has done by then.
+  settlesFromFeed: true,
   apply(cache, { variables, inputs: { listId, sortOrder, now } }) {
     const row = rowOf(variables);
     if (!row || !isHeld(cache, row)) return;

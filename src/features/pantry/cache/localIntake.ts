@@ -5,7 +5,13 @@ import type { LocalPantryItem } from './writeLocalPantryItem';
 /** What an add states, as the row it shows before the server answers reads it. */
 export type IntakeStatement = Pick<
   CreatePantryItemInput,
-  'item' | 'quantity' | 'unit' | 'amount' | 'storage' | 'purchase'
+  | 'item'
+  | 'quantity'
+  | 'unit'
+  | 'amount'
+  | 'storage'
+  | 'purchase'
+  | 'measurementProfile'
 >;
 
 /**
@@ -19,6 +25,8 @@ export function localIntakeRow(
   input: IntakeStatement,
   local?: Omit<LocalPantryItem, 'pantryId' | 'itemName'>,
 ): LocalPantryItem {
+  const { portionUnitId, portionsPerTrackingUnit } =
+    input.measurementProfile ?? {};
   return {
     pantryId,
     itemName,
@@ -32,6 +40,10 @@ export function localIntakeRow(
       input.amount?.packages?.unitId,
     storageState: input.storage?.storageState,
     acquisitionMethod: input.purchase?.acquisitionMethod,
+    portions:
+      portionUnitId && portionsPerTrackingUnit
+        ? { unitId: portionUnitId, perPackage: portionsPerTrackingUnit }
+        : null,
     ...local,
   };
 }

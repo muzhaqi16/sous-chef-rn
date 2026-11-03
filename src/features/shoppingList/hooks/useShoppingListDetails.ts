@@ -9,8 +9,10 @@ import {
   type ShoppingListOwnershipFragment,
 } from '#features/shoppingList/graphql/shoppingListFragments.generated';
 import { usePreservedQueryData } from '#/hooks/apollo/usePreservedQueryData';
+import { useListReadPolicy } from './useListReadPolicy';
 
 export function useShoppingListDetails(listId: string | undefined) {
+  const readPolicy = useListReadPolicy(listId);
   const {
     data: result,
     variables,
@@ -19,7 +21,7 @@ export function useShoppingListDetails(listId: string | undefined) {
     refetch,
   } = useQuery(
     GetShoppingListDetailsDocument,
-    listId ? { variables: { id: listId } } : skipToken,
+    listId ? { variables: { id: listId }, ...readPolicy } : skipToken,
   );
   useApolloErrorLogger(GetShoppingListDetailsDocument, error);
   // `skipToken` keeps the last run's variables AND data, so a result for a

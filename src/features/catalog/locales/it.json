@@ -74,7 +74,6 @@
     "hintText": "Puoi modificare i dettagli in seguito in Impostazioni > Posizioni di conservazione"
   },
   "addItemSheet": {
-    "more": "Altro",
     "allAdded": "Tutto aggiunto",
     "dismiss": "Ignora suggerimento",
     "dismissed": "{{name}} rimosso",
@@ -196,14 +195,6 @@
       },
       "baseDimension": {
         "label": "Dimensione di base"
-      },
-      "consumeIncrement": {
-        "label": "Incremento di consumo predefinito",
-        "placeholder": "es. 1"
-      },
-      "consumeUnit": {
-        "label": "Unità di consumo predefinita",
-        "placeholder": "cucchiaino, tazza, ecc."
       },
       "tags": {
         "placeholder": "Tag separati da virgole (es. biologico, senza glutine)"
@@ -483,6 +474,7 @@
     "zipLabel": "CAP",
     "zipRefused": "Non conosciamo ancora questo CAP. Provane un altro o cerca per nome.",
     "notListed": "Non c'è? Aggiungi «{{name}}»",
+    "typeToAdd": "Non c'è? Scrivi il nome per aggiungerlo.",
     "addedToStores": "Aggiunto ai tuoi negozi",
     "needsConnectionTitle": "Per trovare negozi serve una connessione",
     "needsConnectionBody": "Questi sono i negozi dove fai la spesa. Connettiti per trovarne altri.",

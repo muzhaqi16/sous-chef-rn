@@ -16,6 +16,7 @@ import {
   StorageState,
 } from '#/graphql/generated/schemaTypes';
 import { alertService } from '#/services/alertService';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { addPantryItemDefaults } from '#features/pantry/components/modals/AddToPantrySheet/addPantryItemFormConfig';
 import { usePantryItemSubmission } from '../usePantryItemSubmission';
 import type { AddPantryItemFormData } from '#features/pantry/types';
@@ -331,15 +332,18 @@ describe('usePantryItemSubmission', () => {
     });
   });
 
-  it('handles package details with valid packageSize and contentUnit', async () => {
+  it('states a count inside as what the package is used by', async () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
         useSubmission({
-          showPackageDetails: true,
-          packageSize: '12',
-          contentUnit: 'oz',
-          contentUnitId: 'cu-1',
+          unit: 'case',
+          unitId: 'unit-case',
+          unitType: UnitType.Count,
+          sizeInput: '10',
+          sizeUnitDisplay: 'can',
+          sizeUnitId: 'unit-can',
+          sizeUnitType: UnitType.Count,
         }),
       { operationMocks: [m.mock] },
     );
@@ -351,12 +355,9 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: {
-          inline: expect.objectContaining({
-            units: expect.arrayContaining([
-              expect.objectContaining({ packageSize: 12 }),
-            ]),
-          }),
+        measurementProfile: {
+          portionUnitId: 'unit-can',
+          portionsPerTrackingUnit: 10,
         },
       }),
     });
@@ -377,17 +378,15 @@ describe('usePantryItemSubmission', () => {
     );
   });
 
-  it('includes net weight when packageDetails and itemNetWeight provided', async () => {
+  it('states a measure inside as the package size', async () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
         useSubmission({
-          showPackageDetails: true,
-          packageSize: '6',
-          contentUnit: 'oz',
-          contentUnitId: 'cu-1',
-          itemNetWeight: '16',
-          weightUnitId: 'wu-1',
+          sizeInput: '500',
+          sizeUnitDisplay: 'g',
+          sizeUnitId: 'g-unit',
+          sizeUnitType: UnitType.Weight,
         }),
       { operationMocks: [m.mock] },
     );
@@ -399,23 +398,21 @@ describe('usePantryItemSubmission', () => {
     expect(m.fired).toContainEqual({
       today: expect.any(String),
       input: expect.objectContaining({
-        item: {
-          inline: expect.objectContaining({
-            netWeight: 16,
-            displayUnitId: 'wu-1',
-          }),
-        },
+        netWeight: { netWeight: 500, netWeightUnitId: 'g-unit' },
       }),
     });
   });
 
-  it('uses pantryNetWeight when explicitly provided', async () => {
+  it('states nothing inside for an amount in a measure', async () => {
     const m = createMock();
     const { result } = renderHookWithApollo(
       () =>
         useSubmission({
-          pantryNetWeight: '500',
-          pantryNetWeightUnitId: 'g-unit',
+          unit: 'g',
+          unitId: 'g-unit',
+          unitType: UnitType.Weight,
+          sizeInput: '5',
+          sizeUnitId: 'lb-unit',
         }),
       { operationMocks: [m.mock] },
     );
@@ -426,11 +423,8 @@ describe('usePantryItemSubmission', () => {
 
     expect(m.fired).toContainEqual({
       today: expect.any(String),
-      input: expect.objectContaining({
-        netWeight: expect.objectContaining({
-          netWeight: 500,
-          netWeightUnitId: 'g-unit',
-        }),
+      input: expect.not.objectContaining({
+        netWeight: expect.anything(),
       }),
     });
   });

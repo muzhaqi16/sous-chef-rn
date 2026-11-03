@@ -12,7 +12,7 @@ import { useToday } from '#hooks/app/useToday';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import type { PantryItem_ListedFragment } from '#features/pantry/cache/pantryItemListed.generated';
 import {
-  formatHeldAmount,
+  formatAmountLeft,
   formatStorageState,
   getExpiryInfo,
 } from '#features/pantry/hooks/usePantryItemTransformation';
@@ -62,7 +62,7 @@ export const PantryItemHeldDetail: React.FC<PantryItemHeldDetailProps> = ({
         numberOfLines={2}
         trailing={
           <Text role="heading" style={styles.amount}>
-            {formatHeldAmount(item, readingSystem)}
+            {formatAmountLeft(item, readingSystem)}
           </Text>
         }
       />

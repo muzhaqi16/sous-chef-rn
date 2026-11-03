@@ -47,6 +47,7 @@ mutation UpdateDietarySharing($input: UpdateDietarySharingInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

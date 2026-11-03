@@ -1,30 +1,33 @@
 /**
- * Corrects a misread batch package size; the same fraction remains, so the
- * remaining weight scales. `input.idempotencyKey` keeps a replay from writing
- * the history twice.
+ * Corrects what a package holds. A measure restates one batch's size: the same
+ * fraction remains, so the remaining weight scales, and `input.idempotencyKey`
+ * keeps a replay from writing the history twice. A count is what the stack is
+ * used by: a new one defines it, and the one it has corrects the batch's.
  */
 
 import { useApolloClient, useMutation } from '@apollo/client/react';
-import { CorrectPantryItemPackageSizeDocument } from '#features/pantry/graphql/pantry.generated';
+import {
+  CorrectPantryItemPackageSizeDocument,
+  UpdatePantryItemDocument,
+} from '#features/pantry/graphql/pantry.generated';
 import {
   UseCorrectPackageSize_BatchFragmentDoc,
   UseCorrectPackageSize_StackFragmentDoc,
   type UseCorrectPackageSize_BatchFragment,
   type UseCorrectPackageSize_StackFragment,
 } from './useCorrectPackageSize.generated';
-import { alertService } from '#/services/alertService';
 import { sendFields } from '#/apollo/pendingWrites/sendFields';
+import { localUnit } from '#features/catalog/cache/localRefs';
+import { UnitType } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { errorService } from '#/services/errorService';
 import { useTranslation } from '#/i18n';
 import { todayKey } from '#/utils/dateUtils';
+import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 
-export interface PackageSizeCorrection {
+export interface PackageSizeCorrection extends PackageSizeCorrectionInput {
   pantryItemId: string;
   batchId: string;
-  netWeight: number;
-  netWeightUnitId: string;
-  reason: string;
 }
 
 function scaledRemaining(
@@ -42,15 +45,20 @@ export function useCorrectPackageSize() {
   const [correctMutation] = useMutation(CorrectPantryItemPackageSizeDocument, {
     context: { localFirst: true },
   });
+  const [updateMutation] = useMutation(UpdatePantryItemDocument, {
+    context: { localFirst: true },
+  });
 
-  /** Resolves false on a refusal, which has been alerted. */
+  /** Resolves null once it stands, else why it was refused, for its field. */
   const correctPackageSize = async ({
     pantryItemId,
     batchId,
-    netWeight,
-    netWeightUnitId,
+    amount,
+    unitId,
+    unitType,
     reason,
-  }: PackageSizeCorrection): Promise<boolean> => {
+  }: PackageSizeCorrection): Promise<string | null> => {
+    const fallback = t('errors.correctWeightFailed');
     const item = client.cache.readFragment<UseCorrectPackageSize_StackFragment>(
       {
         id: client.cache.identify({
@@ -66,8 +74,37 @@ export function useCorrectPackageSize() {
       errorService.reportError(new Error('Pantry item not in cache'), {
         operation: 'Correct package size',
       });
-      alertService.alert(t('labels.error'), t('errors.correctWeightFailed'));
-      return false;
+      return fallback;
+    }
+
+    if (unitType === UnitType.Count && item.portionUnitId !== unitId) {
+      const settled = await sendFields(client.cache, {
+        entity: { __typename: 'PantryItem', id: pantryItemId },
+        fields: {
+          portionUnitId: unitId,
+          portionUnit: localUnit(client.cache, unitId, ''),
+        },
+        variables: {
+          today: todayKey(),
+          input: {
+            id: pantryItemId,
+            version: item.version,
+            measurementProfile: {
+              portionUnitId: unitId,
+              portionsPerTrackingUnit: amount,
+            },
+          },
+        },
+        mutate: updateMutation,
+        settle: {
+          document: UpdatePantryItemDocument,
+          fallback,
+          present: 'none',
+        },
+      });
+      return settled.status === 'failed'
+        ? settled.failure?.body ?? fallback
+        : null;
     }
 
     const batch =
@@ -83,10 +120,14 @@ export function useCorrectPackageSize() {
 
     // A batch's size is recorded in the stack's net-weight unit; a size stated
     // in another unit is converted by the server, so only its answer is shown.
-    const sameUnit = item.netWeightUnit?.id === netWeightUnitId;
+    const sameUnit =
+      unitType !== UnitType.Count && item.netWeightUnit?.id === unitId;
     const corrected =
       batch && sameUnit
-        ? { netWeight, remainingNetWeight: scaledRemaining(batch, netWeight) }
+        ? {
+            netWeight: amount,
+            remainingNetWeight: scaledRemaining(batch, amount),
+          }
         : {};
 
     const settled = await sendFields(client.cache, {
@@ -96,7 +137,10 @@ export function useCorrectPackageSize() {
         today: todayKey(),
         input: {
           batchId,
-          correction: { packageSize: { netWeight, netWeightUnitId } },
+          correction:
+            unitType === UnitType.Count
+              ? { portionsPerTrackingUnit: amount }
+              : { packageSize: { netWeight: amount, netWeightUnitId: unitId } },
           reason,
           version: item.version,
           idempotencyKey: generateEntityId(),
@@ -105,11 +149,13 @@ export function useCorrectPackageSize() {
       mutate: correctMutation,
       settle: {
         document: CorrectPantryItemPackageSizeDocument,
-        fallback: t('errors.correctWeightFailed'),
+        fallback,
+        present: 'none',
       },
     });
-    if (settled.status === 'failed') return false;
-    return true;
+    return settled.status === 'failed'
+      ? settled.failure?.body ?? fallback
+      : null;
   };
 
   return { correctPackageSize };

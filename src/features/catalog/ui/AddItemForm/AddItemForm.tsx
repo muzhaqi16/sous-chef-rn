@@ -199,8 +199,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       shelfLifeDays: undefined,
       shelfLifeOpenedDays: undefined,
       baseDimension: '',
-      defaultConsumeIncrement: undefined,
-      defaultConsumeUnitId: '',
       vendor: '',
       storeName: '',
       isFoodStampItem: false,
@@ -365,8 +363,6 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
       storeId: selectedStoreId ?? undefined,
       baseDimension:
         data.baseDimension === '' ? undefined : data.baseDimension ?? undefined,
-      defaultConsumeIncrement: data.defaultConsumeIncrement ?? undefined,
-      defaultConsumeUnitId: firstNonBlank(data.defaultConsumeUnitId),
       editReason: firstNonBlank(data.editReason),
       selectedImages,
     };

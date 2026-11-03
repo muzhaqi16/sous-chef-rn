@@ -17,6 +17,7 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
         success
         failure {
           code
+          disposition
           reason
           errorId
         }
@@ -30,6 +31,7 @@ mutation BarcodeAddItemToShoppingList($input: AddItemsToShoppingListInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

@@ -48,6 +48,7 @@ jest.mock('../queueStore', () => ({
     getRefusedRows: jest.fn(() => new Map<string, string>()),
     revivePendingAuthErrors: jest.fn(() => 0),
     expireStalePending: jest.fn(() => []),
+    hasPendingOlderThan: jest.fn(() => false),
     getQueueStats: jest.fn(() => ({
       total: 0,
       pending: 0,

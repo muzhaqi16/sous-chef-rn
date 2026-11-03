@@ -1,6 +1,8 @@
 fragment CorrectPackageSizeModal_pantryItem on PantryItem {
   id
   itemName
+  # A count in this unit corrects a batch, which records why.
+  portionUnitId
   netWeightUnit {
     id
     name

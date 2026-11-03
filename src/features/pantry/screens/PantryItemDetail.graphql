@@ -13,6 +13,9 @@ fragment PantryItemDetail_pantryItem on PantryItem {
   itemName
   quantity
   heldQuantity
+  stockBreakdown {
+    fullPackages
+  }
   displayAmount {
     quantity
     localizedSymbol
@@ -26,8 +29,7 @@ fragment PantryItemDetail_pantryItem on PantryItem {
       }
     }
   }
-  # displayAmount read in each unit system, as the row reads it.
-  held {
+  amountLeft {
     value
     unitId
     metric {

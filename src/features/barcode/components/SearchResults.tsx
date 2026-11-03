@@ -17,7 +17,7 @@ import { View } from 'react-native';
 import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useCachedUnits } from '#store/useAppStore';
-import { formatHeldAmount } from '#features/pantry/hooks/usePantryItemTransformation';
+import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useHeldStacks } from '#features/pantry/hooks/useHeldStacks';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { logValidationErrors } from '#/utils/validation/common';
@@ -52,10 +52,15 @@ import { AddToBrandListSheet } from '#features/profile/ui/AddToBrandListSheet';
 /** The amount field a refusal names, so it is shown there and not alerted. */
 const amountFieldOf = (
   field: string | undefined,
-): 'quantityInput' | 'unitId' | 'sizeInput' | 'consumeUnitId' | null => {
+): 'quantityInput' | 'unitId' | 'sizeInput' | null => {
   if (!field) return null;
-  if (field === 'consumeUnit') return 'consumeUnitId';
-  if (field === 'netWeight' || field.endsWith('.size')) return 'sizeInput';
+  if (
+    field === 'netWeight' ||
+    field.endsWith('.size') ||
+    field.startsWith('measurementProfile')
+  ) {
+    return 'sizeInput';
+  }
   if (field.endsWith('unitId')) return 'unitId';
   if (field.endsWith('.count') || field.endsWith('.quantity')) {
     return 'quantityInput';
@@ -125,8 +130,6 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
   const joinedStack = held.joinedIn(
     useWatch({ control: amountForm.control, name: 'unitId' }),
   );
-  // Unread stacks count as none: the API ignores a consume unit on a join.
-  const createsStack = held.seedUnit === null;
   // The device's units hydrate after mount: a unit field still empty takes
   // the package unit once they do.
   useEffect(() => {
@@ -354,11 +357,10 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             form={amountForm}
             editing={isEditingAmount}
             onEdit={() => setIsEditingAmount(true)}
-            createsStack={createsStack}
             joins={
               joinedStack
                 ? {
-                    amount: formatHeldAmount(joinedStack, readingSystem),
+                    amount: formatAmountLeft(joinedStack, readingSystem),
                     unitId: joinedStack.unit.id,
                   }
                 : null

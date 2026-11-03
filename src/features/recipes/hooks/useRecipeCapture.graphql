@@ -80,6 +80,7 @@ mutation CreateRecipeCapture($input: CreateRecipeCaptureInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

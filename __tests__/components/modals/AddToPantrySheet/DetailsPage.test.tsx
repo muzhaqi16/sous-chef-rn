@@ -43,23 +43,12 @@ describe('DetailsPage', () => {
     unit: '',
     setUnit: jest.fn(),
     handleUnitSelected: jest.fn(),
-    pantryNetWeight: '',
-    setPantryNetWeight: jest.fn(),
-    pantryNetWeightUnit: '',
-    setPantryNetWeightUnit: jest.fn(),
-    handlePantryNetWeightUnitSelected: jest.fn(),
-    showPackageDetails: false,
-    setShowPackageDetails: jest.fn(),
-    packageSize: '',
-    setPackageSize: jest.fn(),
-    contentUnit: '',
-    setContentUnit: jest.fn(),
-    handleContentUnitSelected: jest.fn(),
-    itemNetWeight: '',
-    setItemNetWeight: jest.fn(),
-    weightUnit: '',
-    setWeightUnit: jest.fn(),
-    handleWeightUnitSelected: jest.fn(),
+    holdsContents: true,
+    sizeInput: '',
+    setSizeInput: jest.fn(),
+    sizeUnit: '',
+    setSizeUnit: jest.fn(),
+    handleSizeUnitSelected: jest.fn(),
     insets: { bottom: 0 },
   };
 
@@ -73,20 +62,15 @@ describe('DetailsPage', () => {
     expect(getByText('Quantity')).toBeTruthy();
   });
 
-  it('renders Net Weight field', () => {
+  it('asks what each one holds', () => {
     const { getByText } = render(<DetailsPage {...defaultProps} />);
-    expect(getByText('Net Weight')).toBeTruthy();
+    expect(getByText('Each holds')).toBeTruthy();
   });
 
-  it('shows Add Package Details toggle', () => {
-    const { getByText } = render(<DetailsPage {...defaultProps} />);
-    expect(getByText('Add Package Details')).toBeTruthy();
-  });
-
-  it('shows package details fields when expanded', () => {
-    const { getByText } = render(
-      <DetailsPage {...defaultProps} showPackageDetails={true} />,
+  it('asks nothing of the kind for a measure', () => {
+    const { queryByText } = render(
+      <DetailsPage {...defaultProps} holdsContents={false} />,
     );
-    expect(getByText('Qty per Package')).toBeTruthy();
+    expect(queryByText('Each holds')).toBeNull();
   });
 });

@@ -281,6 +281,19 @@ describe('QueueStore', () => {
       ]);
     });
 
+    it('counts a reopened change as old as it was, not from its retry', () => {
+      const dayMs = 24 * 60 * 60 * 1000;
+      store.addMutation(
+        refused({ id: 'old', createdAt: Date.now() - 40 * dayMs }),
+      );
+      expect(store.hasPendingOlderThan('user-1', 30 * dayMs)).toBe(false);
+
+      store.reopen('old');
+
+      expect(store.hasPendingOlderThan('user-1', 30 * dayMs)).toBe(true);
+      expect(store.hasPendingOlderThan('user-1', 50 * dayMs)).toBe(false);
+    });
+
     it('discards with its followers', () => {
       store.addMutation(refused({ id: 'parent' }));
       store.addMutation(refused({ id: 'follower', heldBy: 'parent' }));
@@ -1222,6 +1235,29 @@ describe('QueueStore', () => {
       store.addMutation(carrying('kept'));
 
       expect(store.getQueuedWriteIds()).toEqual(new Set(['kept']));
+    });
+
+    it('names the scopes their layers read, and none a settled write did', () => {
+      store.addMutation(carrying('tick', { scopeIds: ['list-1'] }));
+      store.addMutation(carrying('add', { scopeIds: ['list-1', 'list-2'] }));
+      store.addMutation(
+        carrying('done', {
+          status: QueueStatus.SUCCESS,
+          scopeIds: ['list-3'],
+        }),
+      );
+      store.addMutation(makeMutation({ id: 'plain' }));
+
+      expect(store.getPendingWriteScopes()).toEqual(
+        new Set(['list-1', 'list-2']),
+      );
+    });
+
+    it('cannot name the scopes while a write recorded none', () => {
+      store.addMutation(carrying('tick', { scopeIds: ['list-1'] }));
+      store.addMutation(carrying('older'));
+
+      expect(store.getPendingWriteScopes()).toBeNull();
     });
   });
 

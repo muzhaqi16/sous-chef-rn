@@ -177,8 +177,8 @@ interface BuildItemOverrides {
   activeBatchCount?: number;
   remainingPortions?: number | null;
   portionUnit?: { id: string; name: string; symbol: string } | null;
-  /** The server's readings of the shown amount; none unless a test states them. */
-  held?: PantryItemCard_PantryItemFragment['held'];
+  /** The server's readings; the shown amount in both systems unless stated. */
+  amountLeft?: PantryItemCard_PantryItemFragment['amountLeft'];
 }
 
 const unitRead = (id: string, symbol: string) =>
@@ -189,14 +189,25 @@ const unitRead = (id: string, symbol: string) =>
     type: UnitType.Weight,
   });
 
-/** What a local row holds before the server reads it: no reading of its amount. */
-const NO_READING: PantryItemCard_PantryItemFragment['held'] = {
-  __typename: 'Measure',
-  value: 0,
-  unitId: '',
-  metric: { __typename: 'MeasureReading', value: 0, ...unitRead('', '') },
-  imperial: { __typename: 'MeasureReading', value: 0, ...unitRead('', '') },
-};
+/** A count that reads the same in both systems. */
+function readsAs(
+  value: number,
+  symbol: string,
+): PantryItemCard_PantryItemFragment['amountLeft'] {
+  const reading = {
+    __typename: 'MeasureReading',
+    value,
+    ...unitRead(`unit-${symbol}`, symbol),
+    type: UnitType.Count,
+  } as const;
+  return {
+    __typename: 'Measure',
+    value,
+    unitId: reading.unitId,
+    metric: reading,
+    imperial: reading,
+  };
+}
 
 function buildItem(
   overrides: BuildItemOverrides = {},
@@ -224,7 +235,15 @@ function buildItem(
         symbol: overrides.shown?.symbol ?? overrides.unitSymbol ?? 'gal',
       }),
     },
-    held: overrides.held ?? NO_READING,
+    amountLeft:
+      overrides.amountLeft ??
+      readsAs(
+        overrides.shown?.quantity ??
+          overrides.heldQuantity ??
+          overrides.quantity ??
+          2,
+        overrides.shown?.symbol ?? overrides.unitSymbol ?? 'gal',
+      ),
     portionUnitId: overrides.portionUnit?.id ?? null,
     portionUnit: overrides.portionUnit
       ? asAbbreviation({ __typename: 'Unit', ...overrides.portionUnit })
@@ -548,12 +567,11 @@ describe('PantryItemCard', () => {
     });
   });
 
-  // The server reads what is held in each unit system; the row shows the
-  // user's while that reading still describes the stack.
+  // The server reads what is left in each unit system; the row shows the user's.
   describe('the held amount in the user\u2019s unit system', () => {
     const honey = {
       shown: { quantity: 1360.78, symbol: 'g' },
-      held: {
+      amountLeft: {
         __typename: 'Measure',
         value: 1360.78,
         unitId: 'unit-shown',
@@ -586,8 +604,6 @@ describe('PantryItemCard', () => {
       expect(screen.getByText('1.36 kg')).toBeTruthy();
     });
 
-    // A local use moved the stack to 1000 g: only the server can say what that
-    // reads in pounds, so the row shows it as stored until it answers.
     // The settings screen writes the change to the cache at once, offline
     // too; the row follows it with nothing fetched.
     it('follows a change of setting at once, with no request', async () => {
@@ -611,15 +627,6 @@ describe('PantryItemCard', () => {
 
       await drainTimers();
       expect(screen.getByText('1.36 kg')).toBeTruthy();
-    });
-
-    it('shows it as stored once a local use has moved it', () => {
-      renderCard(
-        { ...honey, shown: { quantity: 1000, symbol: 'g' } },
-        defaultActions,
-        { preferred: UnitSystem.Imperial, device: UnitSystem.Imperial },
-      );
-      expect(screen.getByText('1 kg')).toBeTruthy();
     });
   });
 });

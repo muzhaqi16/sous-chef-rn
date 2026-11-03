@@ -33,6 +33,7 @@ mutation CreateItemSuggestion($input: CreateItemSuggestionInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -62,6 +63,7 @@ mutation UpdateItem($input: UpdateItemInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

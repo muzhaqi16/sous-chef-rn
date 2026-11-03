@@ -38,6 +38,11 @@ export const SelectorItemContainer: React.FC<SelectorItemContainerProps> = ({
       onPress={onPress}
       onLongPress={onLongPress}
       disabled={disabled}
+      accessibilityRole="button"
+      accessibilityState={{
+        selected: state === 'selected' || state === 'delete-selected',
+        disabled: disabled === true || state === 'disabled',
+      }}
     >
       {children}
     </Pressable>

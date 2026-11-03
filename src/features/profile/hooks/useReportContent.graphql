@@ -10,6 +10,7 @@ mutation CreateUserReport($input: CreateUserReportInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on NotFoundError {

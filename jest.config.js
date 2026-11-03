@@ -191,5 +191,6 @@ module.exports = {
       statements: 72,
     },
   },
+  reporters: ['<rootDir>/__tests__/setup/quietPassingFiles.js', 'default'],
   projects: [mobile, corePortability],
 };

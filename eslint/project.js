@@ -275,11 +275,6 @@ const overrides = [
     },
   },
   {
-    // Evaluating the installed package's own source IS this probe's method.
-    files: ['scripts/probe-withunistyles-prop-passthrough.mjs'],
-    rules: { 'no-new-func': 'off' },
-  },
-  {
     // Node tooling, not RN source (the parser is set in eslint.config.js). It
     // may only import packages package.json declares: a hoisted transitive
     // dependency resolves until a dedupe moves it, and never under pnpm.

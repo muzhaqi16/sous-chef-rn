@@ -14,7 +14,9 @@ import { Badge } from '#components/atoms/Badge';
 import { IngredientMatchRow } from '#features/recipes/components/IngredientMatchRow';
 import {
   IngredientMatchingProvider,
+  MatchReadingSystemProvider,
   useIngredientMatchingActions,
+  useMatchReadingSystem,
 } from '#features/recipes/components/modals/IngredientMatchingContext';
 import type {
   EditableMatch,
@@ -22,6 +24,7 @@ import type {
   MatchUpdate,
 } from '#features/recipes/hooks/useRecipeIngredientMatching';
 import { Text } from '#components/atoms/Text';
+import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 
 const keyExtractor = (item: EditableMatch) => item.ingredient.id;
 
@@ -33,10 +36,12 @@ const IngredientMatchRenderItemComponent = ({
   index: number;
 }) => {
   const { onUpdate } = useIngredientMatchingActions();
+  const readingSystem = useMatchReadingSystem();
   return (
     <IngredientMatchRow
       editableMatch={item}
       index={index}
+      readingSystem={readingSystem}
       onUpdate={onUpdate}
     />
   );
@@ -77,6 +82,7 @@ export const IngredientMatchingSheet: React.FC<
   confirmLoading,
 }) => {
   const { t } = useTranslation();
+  const readingSystem = useReadingSystem();
   const { ref, modalProps, contentContainerStyle } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
@@ -135,18 +141,20 @@ export const IngredientMatchingSheet: React.FC<
         </View>
 
         {/* Ingredient list */}
-        <IngredientMatchingProvider onUpdate={onUpdate}>
-          <FlashList
-            renderScrollComponent={BottomSheetScrollable}
-            data={editableMatches}
-            renderItem={renderItem}
-            keyExtractor={keyExtractor}
-            getItemType={getMatchItemType}
-            {...FLASHLIST_DEFAULTS.bottomSheet}
-            style={styles.list}
-            showsVerticalScrollIndicator={false}
-          />
-        </IngredientMatchingProvider>
+        <MatchReadingSystemProvider value={readingSystem}>
+          <IngredientMatchingProvider onUpdate={onUpdate}>
+            <FlashList
+              renderScrollComponent={BottomSheetScrollable}
+              data={editableMatches}
+              renderItem={renderItem}
+              keyExtractor={keyExtractor}
+              getItemType={getMatchItemType}
+              {...FLASHLIST_DEFAULTS.bottomSheet}
+              style={styles.list}
+              showsVerticalScrollIndicator={false}
+            />
+          </IngredientMatchingProvider>
+        </MatchReadingSystemProvider>
 
         <View style={styles.bottomActions}>
           <Button

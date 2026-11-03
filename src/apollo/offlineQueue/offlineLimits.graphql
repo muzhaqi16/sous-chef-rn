@@ -1,0 +1,6 @@
+# The window a queued write stays safe to replay. It needs no session.
+query OfflineLimits {
+  offlineLimits {
+    replayWindowDays
+  }
+}

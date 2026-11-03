@@ -6,9 +6,16 @@ import {
 import {
   classifyError,
   classifyReplayResult,
+  refusedBatchRowCode,
   ReplayRejectedError,
+  transientBatchRowCode,
 } from '../queueErrorPolicy';
-import { ErrorCode, TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
+import {
+  ErrorCode,
+  ErrorDisposition,
+  TopLevelErrorCode,
+} from '#/graphql/generated/schemaTypes';
+import { SessionError } from '#/utils/errors/sessionError';
 
 describe('classifyReplayResult', () => {
   it('returns applied for a success payload', () => {
@@ -53,6 +60,7 @@ describe('classifyReplayResult', () => {
       classifyReplayResult({
         __typename: 'ConflictError',
         code: 'IDEMPOTENT_REPLAY',
+        disposition: 'APPLIED',
         message: 'already applied',
       }),
     ).toEqual({ status: 'converged' });
@@ -132,6 +140,8 @@ describe('classifyError — ReplayRejectedError', () => {
       'ConflictError',
       'Transient lock conflict, safe to retry',
       'DEADLOCK',
+      null,
+      'RETRY',
     );
 
     const queueError = classifyError(error);
@@ -322,22 +332,24 @@ describe('classifyError — auth codes', () => {
 // Each of these clears without the client doing anything. Withdrawing the write
 // over one discards a change the server never refused.
 describe('classifyError — load shedding and rate limits', () => {
-  const combined = (code: string): CombinedGraphQLErrors =>
+  const combined = (code: string, disposition: string): CombinedGraphQLErrors =>
     new CombinedGraphQLErrors({
-      errors: [{ message: 'Refused', extensions: { code } }],
+      errors: [{ message: 'Refused', extensions: { code, disposition } }],
     });
 
   // A build sends its own document, so an API deploy or an app update can cure
   // a write the schema does not validate; only the age horizon ends it.
   it('defers a write the schema does not validate, with no in-run retry', () => {
-    const queueError = classifyError(combined('GRAPHQL_VALIDATION_FAILED'));
+    const queueError = classifyError(
+      combined('GRAPHQL_VALIDATION_FAILED', 'RESOLVE'),
+    );
 
     expect(queueError.type).toBe('server');
     expect(queueError.retryable).toBe(false);
   });
 
   it('defers SERVICE_UNAVAILABLE and retries it in-run', () => {
-    const queueError = classifyError(combined('SERVICE_UNAVAILABLE'));
+    const queueError = classifyError(combined('SERVICE_UNAVAILABLE', 'RETRY'));
 
     expect(queueError.type).toBe('server');
     expect(queueError.retryable).toBe(true);
@@ -351,7 +363,10 @@ describe('classifyError — load shedding and rate limits', () => {
       const queueError = classifyError(
         new CombinedGraphQLErrors({
           errors: [
-            { message: 'Refused', extensions: { code, retryAfter: 42 } },
+            {
+              message: 'Refused',
+              extensions: { code, disposition: 'RETRY', retryAfter: 42 },
+            },
           ],
         }),
       );
@@ -364,7 +379,7 @@ describe('classifyError — load shedding and rate limits', () => {
   );
 
   it('holds for the per-operation window when no retryAfter is named', () => {
-    const queueError = classifyError(combined('RATE_LIMIT_EXCEEDED'));
+    const queueError = classifyError(combined('RATE_LIMIT_EXCEEDED', 'RETRY'));
 
     expect(queueError.retryAfterMs).toBe(60_000);
   });
@@ -473,6 +488,7 @@ describe('classifyError — real Apollo error shapes', () => {
     const queueError = classifyError(
       refusedBeforeExecution(429, {
         code: 'RATE_LIMIT_EXCEEDED',
+        disposition: 'RETRY',
         retryAfter: 30,
       }),
     );
@@ -489,7 +505,7 @@ describe('classifyError — real Apollo error shapes', () => {
     const queueError = classifyError(
       refusedBeforeExecution(
         429,
-        { code: 'RATE_LIMIT_EXCEEDED' },
+        { code: 'RATE_LIMIT_EXCEEDED', disposition: 'RETRY' },
         { 'retry-after': '45' },
       ),
     );
@@ -499,7 +515,10 @@ describe('classifyError — real Apollo error shapes', () => {
 
   it('defers a write the server timed out on', () => {
     const queueError = classifyError(
-      refusedBeforeExecution(503, { code: 'SERVICE_UNAVAILABLE' }),
+      refusedBeforeExecution(503, {
+        code: 'SERVICE_UNAVAILABLE',
+        disposition: 'RETRY',
+      }),
     );
 
     expect(queueError).toMatchObject({
@@ -509,18 +528,36 @@ describe('classifyError — real Apollo error shapes', () => {
     });
   });
 
-  it.each(['PAYLOAD_TOO_LARGE', 'OPERATION_NOT_ALLOWED'])(
-    'fails a write refused as %s once, with its code',
-    code => {
-      const queueError = classifyError(refusedBeforeExecution(413, { code }));
+  it('fails a write refused as PAYLOAD_TOO_LARGE once, with its code', () => {
+    const queueError = classifyError(
+      refusedBeforeExecution(413, {
+        code: 'PAYLOAD_TOO_LARGE',
+        disposition: 'FAIL',
+      }),
+    );
 
-      expect(queueError).toMatchObject({
-        type: 'unknown',
-        code,
-        retryable: false,
-      });
-    },
-  );
+    expect(queueError).toMatchObject({
+      type: 'unknown',
+      code: 'PAYLOAD_TOO_LARGE',
+      retryable: false,
+    });
+  });
+
+  it('keeps a write refused as OPERATION_NOT_ALLOWED, this build having drifted', () => {
+    const queueError = classifyError(
+      refusedBeforeExecution(403, {
+        code: 'OPERATION_NOT_ALLOWED',
+        disposition: 'RESOLVE',
+      }),
+    );
+
+    expect(queueError).toMatchObject({
+      type: 'server',
+      retryable: false,
+      entryScoped: true,
+      fault: true,
+    });
+  });
 
   // The session path's errors carry their code on the error itself.
   it('reads a code carried flat on the error', () => {
@@ -542,6 +579,139 @@ describe('classifyError — real Apollo error shapes', () => {
 // Dropping the entry would lose work over a condition they can actually fix, so
 // it stays queued — without burning the in-run retries on attempts that send
 // the same version and are refused identically.
+describe('classifyError — a disposition decides what the code does not', () => {
+  const refused = (code: string, disposition: string) =>
+    new CombinedGraphQLErrors({
+      errors: [{ message: 'Refused', extensions: { code, disposition } }],
+    });
+  const NEWER_THAN_THIS_BUILD = 'A_CODE_FROM_A_LATER_API';
+
+  it('defers a code it has never seen when the server says RETRY', () => {
+    expect(
+      classifyError(refused(NEWER_THAN_THIS_BUILD, 'RETRY')),
+    ).toMatchObject({ type: 'server', retryable: true });
+  });
+
+  it('keeps a code it has never seen when the server says RESOLVE, and counts it', () => {
+    expect(
+      classifyError(refused(NEWER_THAN_THIS_BUILD, 'RESOLVE')),
+    ).toMatchObject({
+      type: 'server',
+      retryable: false,
+      entryScoped: true,
+      fault: true,
+    });
+  });
+
+  it('refuses a code it has never seen when the server says FAIL', () => {
+    expect(classifyError(refused(NEWER_THAN_THIS_BUILD, 'FAIL'))).toMatchObject(
+      { type: 'unknown', retryable: false },
+    );
+  });
+
+  it('defers a union member the server says to retry, for that row alone', () => {
+    expect(
+      classifyError(
+        new ReplayRejectedError(
+          'ConflictError',
+          'Refused',
+          NEWER_THAN_THIS_BUILD,
+          null,
+          'RETRY',
+        ),
+      ),
+    ).toMatchObject({ type: 'server', retryable: true, entryScoped: true });
+  });
+
+  it('takes FAIL over a 5xx status, which alone would retry', () => {
+    const queueError = classifyError(
+      new ServerError('Internal Server Error', {
+        response: new Response(null, { status: 500 }),
+        bodyText: JSON.stringify({
+          errors: [
+            {
+              message: 'refused',
+              extensions: {
+                code: 'DB_CONSTRAINT_VIOLATION',
+                disposition: 'FAIL',
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    expect(queueError).toMatchObject({ type: 'unknown', retryable: false });
+  });
+
+  it('waits for an update without counting, on a document this build sent', () => {
+    expect(
+      classifyError(refused('GRAPHQL_VALIDATION_FAILED', 'RESOLVE')),
+    ).toMatchObject({ entryScoped: true, fault: false });
+  });
+
+  it('pauses every write on an upgrade, without counting', () => {
+    expect(
+      classifyError(refused('CLIENT_UPGRADE_REQUIRED', 'RESOLVE')),
+    ).toMatchObject({ entryScoped: false, fault: false });
+  });
+
+  it('refuses a suspended account, which no sign-in here can clear', () => {
+    expect(
+      classifyError(refused(ErrorCode.AuthAccountSuspended, 'RESOLVE')).type,
+    ).toBe('unknown');
+  });
+
+  it('defers a refresh that failed on no credential, which no server answered', () => {
+    expect(
+      classifyError(
+        new SessionError(
+          TopLevelErrorCode.ServiceUnavailable,
+          'Token refresh deferred',
+          ErrorDisposition.Retry,
+        ),
+      ),
+    ).toMatchObject({ type: 'server', retryable: true });
+  });
+
+  it('converges on a top-level refusal that says the write landed', () => {
+    expect(
+      classifyReplayResult(undefined, refused('IDEMPOTENT_REPLAY', 'APPLIED')),
+    ).toEqual({ status: 'converged' });
+  });
+});
+
+describe('a batch answer, row by row', () => {
+  const answer = (...dispositions: string[]) => ({
+    results: [
+      { success: true, failure: null },
+      ...dispositions.map((disposition, index) => ({
+        success: false,
+        failure: { code: `ROW_${index}`, disposition },
+      })),
+    ],
+  });
+
+  it('finds nothing to settle when every row landed', () => {
+    expect(transientBatchRowCode(answer())).toBeNull();
+    expect(refusedBatchRowCode(answer())).toBeNull();
+  });
+
+  it('counts a row that already landed as landed', () => {
+    expect(transientBatchRowCode(answer('APPLIED'))).toBeNull();
+    expect(refusedBatchRowCode(answer('APPLIED'))).toBeNull();
+  });
+
+  it('tells a row to retry from one refused', () => {
+    expect(transientBatchRowCode(answer('FAIL', 'RETRY'))).toBe('ROW_1');
+    expect(refusedBatchRowCode(answer('RETRY', 'RESOLVE'))).toBe('ROW_1');
+  });
+
+  it('refuses a row that states nothing this build knows', () => {
+    expect(refusedBatchRowCode(answer('A_LATER_DISPOSITION'))).toBe('ROW_0');
+  });
+});
+
 describe('classifyError — CLIENT_UPGRADE_REQUIRED', () => {
   it('defers the entry instead of reverting and dequeuing it', () => {
     const queueError = classifyError(
@@ -551,6 +721,7 @@ describe('classifyError — CLIENT_UPGRADE_REQUIRED', () => {
             message: 'This app version is no longer supported.',
             extensions: {
               code: 'CLIENT_UPGRADE_REQUIRED',
+              disposition: 'RESOLVE',
               minimumVersion: '5.0.0',
             },
           },

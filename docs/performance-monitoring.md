@@ -369,6 +369,9 @@ All performance data is reported to the Telemetry system:
 - `slow_screen_transitions_total` - Count of slow transitions
 - `app_memory_warnings_total` - Memory warning events
 - `app_memory_critical_total` - Critical memory events
+- `feed_snapshot_total` - A change feed scope read in full, by `kind`
+- `feed_resync_total` - A held position the server no longer serves, by `kind`
+- `feed_evicted_total` - A scope removed on the server's say-so, by `kind`
 
 **Histograms:**
 
@@ -376,6 +379,8 @@ All performance data is reported to the Telemetry system:
 - `app_js_bundle_load_ms` - JS bundle load time
 - `app_content_appeared_ms` - Time to first content visible
 - `http_request_duration_ms` - HTTP request duration by host
+- `offline_queue_drain_ms` - One drain that had writes to send
+- `feed_pull_ms` - One change feed pull, sent to applied
 - `component_commit_gap_ms` - Distribution of wall time between a component's
   consecutive commits. NOT render cost (includes idle time): React's
   `<Profiler onRender>` would give true `actualDuration`, but
@@ -390,6 +395,7 @@ All performance data is reported to the Telemetry system:
 - `app_memory_used_bytes` - Current memory usage
 - `app_memory_limit_bytes` - Memory limit
 - `app_memory_usage_percent` - Memory usage percentage
+- `cache_persist_shard_kb` - Lists stored apart from the launch blob
 
 ## Performance Considerations
 

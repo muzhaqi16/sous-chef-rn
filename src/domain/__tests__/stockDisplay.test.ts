@@ -1,6 +1,8 @@
 import { UnitType } from '#/graphql/generated/schemaTypes';
 import {
+  amountLeftOf,
   countFactorOver,
+  fullPackagesAfter,
   inCountedUnit,
   shownStock,
   type DisplayUnitShape,
@@ -104,5 +106,137 @@ describe('inCountedUnit', () => {
 
   it('keeps a count off a whole by more than a typed step as meant', () => {
     expect(inCountedUnit(0.08, 12)).toBeCloseTo(0.96);
+  });
+});
+
+describe('amountLeftOf', () => {
+  const BAG = { id: 'bag', symbol: 'bag' };
+  const CAN = { id: 'can', symbol: 'can' };
+  const LB = { id: 'lb', symbol: 'lb' };
+  const read = (
+    held: number,
+    contents: Partial<Parameters<typeof amountLeftOf>[0]> = {},
+  ) =>
+    amountLeftOf({
+      held,
+      shown: { quantity: held, unit: BAG },
+      trackingType: UnitType.Count,
+      ...contents,
+    });
+
+  it('reads whole packages as the stack shows them', () => {
+    expect(read(2)).toStrictEqual({ quantity: 2, unit: BAG });
+  });
+
+  it('reads whole pieces in the dozen the stack shows', () => {
+    expect(
+      amountLeftOf({
+        held: 24,
+        shown: shownStock(24, PIECE, DOZEN),
+        trackingType: UnitType.Count,
+      }),
+    ).toStrictEqual({ quantity: 2, unit: DOZEN });
+  });
+
+  it('keeps a whole case a case, whatever is inside', () => {
+    expect(read(1, { portions: { left: 10, unit: CAN } })).toMatchObject({
+      quantity: 1,
+      unit: BAG,
+    });
+  });
+
+  it('reads an opened bag by what is left in it', () => {
+    expect(read(0.2, { netWeight: { left: 1, unit: LB } })).toStrictEqual({
+      quantity: 1,
+      unit: LB,
+    });
+  });
+
+  it.each([
+    [0.9, 9],
+    [1.7, 17],
+    [0.95, 9.5],
+  ])('reads %d cases of 10 as %d cans', (held, left) => {
+    expect(read(held, { portions: { left, unit: CAN } })).toStrictEqual({
+      quantity: left,
+      unit: CAN,
+    });
+  });
+
+  it('reads two half-used bags by what is in them, though they add up to one', () => {
+    expect(
+      read(1, { fullPackages: 0, netWeight: { left: 5, unit: LB } }),
+    ).toStrictEqual({ quantity: 5, unit: LB });
+  });
+
+  it('reads two half-used bags with nothing inside stated as one bag, as the API does', () => {
+    expect(read(1, { fullPackages: 0 })).toStrictEqual({
+      quantity: 1,
+      unit: BAG,
+    });
+    expect(read(0.1 + 0.2 + 0.7, { fullPackages: 0 })).toStrictEqual({
+      quantity: 1,
+      unit: BAG,
+    });
+  });
+
+  it('reads a whole bag as a bag when the server counts it unopened', () => {
+    expect(
+      read(1, { fullPackages: 1, netWeight: { left: 5, unit: LB } }),
+    ).toStrictEqual({ quantity: 1, unit: BAG });
+  });
+
+  it('takes portions over a net weight', () => {
+    expect(
+      read(0.9, {
+        portions: { left: 9, unit: CAN },
+        netWeight: { left: 67.5, unit: LB },
+      }),
+    ).toMatchObject({ unit: CAN });
+  });
+
+  it.each([
+    [0.5, 0.5],
+    [0.37, 1 / 3],
+    [0.02, 0.125],
+    [0.99, 0.75],
+    [2.26, 2.25],
+  ])('reads %d of a box of nothing stated as %d', (held, quantity) => {
+    expect(read(held)).toStrictEqual({ quantity, unit: BAG });
+  });
+
+  it('reads the fractions a unit states', () => {
+    expect(read(0.4, { commonFractions: [0.25, 0.75] })).toMatchObject({
+      quantity: 0.25,
+    });
+  });
+
+  it.each([UnitType.Weight, UnitType.Volume])(
+    'reads a stack counted in %s as held: it has no package to part-use',
+    trackingType => {
+      expect(
+        amountLeftOf({
+          held: 380.5,
+          shown: { quantity: 380.5, unit: LB },
+          trackingType,
+        }),
+      ).toStrictEqual({ quantity: 380.5, unit: LB });
+    },
+  );
+});
+
+describe('fullPackagesAfter', () => {
+  it.each([
+    ['a use inside the part-used bags', 0, 1.3, 1, 0],
+    ['a use that finishes the part-used bag', 3, 3.5, 3, 3],
+    ['a use that opens a whole bag', 2, 2.5, 1.5, 1],
+    ['a restock of a whole bag', 1, 1, 2, 2],
+    ['a restock beside an opened bag', 1, 1.5, 2.5, 2],
+  ])('counts %s', (_case, full, before, after, expected) => {
+    expect(fullPackagesAfter(full, before, after)).toBe(expected);
+  });
+
+  it('stays unknown while the server has not counted', () => {
+    expect(fullPackagesAfter(null, 2, 1)).toBeNull();
   });
 });

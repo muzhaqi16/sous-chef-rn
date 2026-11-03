@@ -26,6 +26,78 @@ fragment writeHeldStock_pantryItem on PantryItem {
   }
 }
 
+# The amount a person reads, written beside `displayAmount` by the same writer.
+fragment writeHeldStock_amountLeft on PantryItem {
+  id
+  amountLeft {
+    value
+    unitId
+    metric {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+    imperial {
+      value
+      unitId
+      symbol
+      localizedSymbol
+      displayAsFraction
+      type
+    }
+  }
+}
+
+# A unit as a local reading of `amountLeft` states it.
+fragment writeHeldStock_readingUnit on Unit {
+  id
+  symbol
+  localizedSymbolForms {
+    one
+    other
+  }
+  type
+  displayAsFraction
+}
+
+# What a stack holds inside, read (never written, partial allowed) to state
+# `amountLeft` by the server's rule. `netWeight` and `portionsPerTrackingUnit`
+# are the stack's own, so a whole package moves these figures with no conversion.
+fragment writeHeldStock_inside on PantryItem {
+  id
+  netWeight
+  remainingNetWeight
+  netWeightUnit {
+    id
+  }
+  portionsPerTrackingUnit
+  remainingPortions
+  portionUnit {
+    id
+  }
+  unit {
+    id
+    type
+    commonFractions
+  }
+  stockBreakdown {
+    fullPackages
+  }
+}
+
+# The unopened packages, kept by the same writer between answers. Every document
+# selects only `fullPackages` here: a writer stating part of a nested object
+# replaces the rest.
+fragment writeHeldStock_fullPackages on PantryItem {
+  id
+  stockBreakdown {
+    fullPackages
+  }
+}
+
 # The dozen a stack may be shown in, read (never written) to state
 # `displayAmount` by the server's rule.
 fragment writeHeldStock_shownIn on PantryItem {

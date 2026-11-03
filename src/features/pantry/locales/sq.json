@@ -189,6 +189,7 @@
     "restockBy": "Riplotësuar nga",
     "currentLabel": "Aktualisht:",
     "quantityToAdd": "Sasia për t'u shtuar",
+    "differentSize": "Madhësi tjetër?",
     "newQuantityPrefix": "Sasia e re: ",
     "costPerUnit": "Kostoja për njësi",
     "notesPlaceholder": "Shto shënime për këtë riplotësim...",
@@ -239,10 +240,7 @@
   },
   "pantryAction": {
     "useByDefault": "Përdor deri më",
-    "availableDefault": "I disponueshëm:",
-    "remainingAmount": "({{amount}} të mbetura)",
-    "quantityBreakdown": "{{packages}} pa hapur + {{loose}} {{unit}} të lira",
-    "amountWithUnit": "{{amount}} {{unit}}"
+    "availableDefault": "I disponueshëm:"
   },
   "correctWeight": {
     "invalidWeight": "Shkruaj një madhësi të vlefshme",
@@ -250,7 +248,6 @@
     "title": "Korrigjo madhësinë e paketimit",
     "correct": "Korrigjo",
     "netWeightPrefix": "Madhësia e paketimit: ",
-    "newNetWeight": "Madhësia e vërtetë e paketimit",
     "reasonPlaceholder": "Pse po korrigjohet madhësia?"
   },
   "addToPantry": {
@@ -261,14 +258,6 @@
     "lowStockHint": "Merr njoftim kur ky artikull po mbaron.",
     "emptyHint": "Lëre bosh për të çaktivizuar sinjalizimet e stokut të ulët për këtë artikull.",
     "quantityPlaceholder": "1",
-    "hidePackageDetails": "Fshih detajet e paketimit",
-    "addPackageDetails": "Shto detajet e paketimit",
-    "packageHint": "Përcakto se ç'ka brenda një pakete (p.sh. 12 kanaçe nga 335ml secila).",
-    "qtyPerPackage": "Sasia për paketë",
-    "contentUnit": "Njësia e përmbajtjes",
-    "weightPerUnit": "Pesha për njësi",
-    "weightPerUnitPlaceholder": "p.sh. 335",
-    "contentWeightUnitPlaceholder": "mL, g, oz",
     "itemNamePlaceholder": "p.sh. Qumësht, vezë, bukë...",
     "brandPlaceholder": "p.sh. Whole Foods, Organic Valley",
     "restockFailed": "Nuk u riplotësua dot artikulli.",
@@ -402,8 +391,6 @@
   },
   "pantryItemCard": {
     "remainingAmount": "Mbeten {{amount}}",
-    "portionsLeft_one": "Mbetet {{count}} {{unit}}",
-    "portionsLeft_other": "Mbeten {{count}} {{unit}}",
     "packageContents_one": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageContents_other": "{{count}} x {{weight}} {{weightUnit}} {{unit}}",
     "packageWithTotal": "{{breakdown}} ({{total}} {{weightUnit}} gjithsej)"
@@ -440,6 +427,11 @@
   },
   "packageSize": {
     "defaultTitle": "Madhësia e paracaktuar e paketimit",
-    "defaultHint": "Stoku i ri merr këtë madhësi kur nuk jepet tjetër. Për të korrigjuar një paketim që e keni tashmë, përdorni Korrigjo madhësinë e paketimit në faqen e artikullit."
+    "defaultHint": "Stoku i ri merr këtë madhësi kur nuk jepet tjetër. Për të korrigjuar një paketim që e keni tashmë, përdorni Korrigjo madhësinë e paketimit në faqen e artikullit.",
+    "eachHolds": "Secili përmban",
+    "unitPlaceholder": "lb, kanoçe",
+    "sizeInvalid": "Vendos një madhësi më të madhe se 0.",
+    "unitRequired": "Zgjidh nga lista njësinë e madhësisë.",
+    "wholePackages": "Paketat numërohen të plota: 1, 2, 3…"
   }
 }

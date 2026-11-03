@@ -3,6 +3,9 @@ fragment PantryItemReaders on PantryItem {
   id
   acquisitionMethod
   activeBatchCount
+  amountLeft {
+    ...MeasureReaders
+  }
   brand {
     id
     name
@@ -54,9 +57,6 @@ fragment PantryItemReaders on PantryItem {
   }
   earliestBatchExpiresOn
   expiresOn
-  held {
-    ...MeasureReaders
-  }
   heldQuantity
   image {
     catalogImageId
@@ -103,12 +103,14 @@ fragment PantryItemReaders on PantryItem {
   netWeight
   netWeightUnit {
     id
+    displayAsFraction
     localizedSymbolForms {
       one
       other
     }
     name
     symbol
+    type
   }
   packageBreakdown {
     contentUnit {
@@ -143,14 +145,17 @@ fragment PantryItemReaders on PantryItem {
     ...MeasureReaders
   }
   pantryId
+  portionsPerTrackingUnit
   portionUnit {
     id
+    displayAsFraction
     localizedSymbolForms {
       one
       other
     }
     name
     symbol
+    type
   }
   portionUnitId
   purchase {
@@ -196,6 +201,9 @@ fragment PantryItemReaders on PantryItem {
   remainingNetWeight
   remainingPortions
   restockQuantity
+  stockBreakdown {
+    fullPackages
+  }
   storageLocation {
     id
     name
@@ -211,6 +219,7 @@ fragment PantryItemReaders on PantryItem {
   totalCost
   unit {
     id
+    commonFractions
     displayAsFraction
     localizedSymbolForms {
       one

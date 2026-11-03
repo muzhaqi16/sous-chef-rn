@@ -14,6 +14,7 @@ import {
   RestockPantryItemDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
+  ErrorCode,
   UnitType,
   UsagePurpose,
   WasteReason,
@@ -393,6 +394,124 @@ describe('usePantryItemActions', () => {
     });
   });
 
+  // A local write is a layer the answer replaces, so a figure the answer leaves
+  // out goes back to the old read.
+  describe('what the answer leaves on the row', () => {
+    const ANSWERED = gql`
+      fragment UsePantryItemActionsAnswered on PantryItem {
+        remainingPortions
+        amountLeft {
+          value
+        }
+        consumeUnit {
+          id
+        }
+      }
+    `;
+    const reading = {
+      __typename: 'MeasureReading',
+      value: 18,
+      unitId: 'can',
+      symbol: 'can',
+      localizedSymbol: 'cans',
+      displayAsFraction: false,
+      type: UnitType.Count,
+    };
+    const stack = {
+      __typename: 'PantryItem',
+      id: 'item-1',
+      remainingPortions: 18,
+      amountLeft: {
+        __typename: 'Measure',
+        value: 18,
+        unitId: 'can',
+        metric: reading,
+        imperial: reading,
+      },
+    };
+    const answered = (cache: ReturnType<typeof seedPantryItems>) =>
+      cache.readFragment<{
+        remainingPortions: number;
+        amountLeft: { value: number };
+        consumeUnit: { id: string } | null;
+      }>({
+        id: 'PantryItem:item-1',
+        fragment: ANSWERED,
+        returnPartialData: true,
+      });
+
+    it('takes the amount and the last unit from a use', async () => {
+      const cache = seedPantryItems();
+      const m = consumeMock({
+        __typename: 'CreatePantryItemUsagePayload',
+        pantryItemUsage: {
+          __typename: 'PantryItemUsage',
+          id: 'usage-1',
+          pantryItem: {
+            ...stack,
+            consumeUnit: asAbbreviation({
+              __typename: 'Unit',
+              id: 'can',
+              name: 'can',
+              symbol: 'can',
+            }),
+          },
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock], cache },
+      );
+      act(() => {
+        result.current.handleConsumeItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmConsume(
+          1,
+          '1',
+          UsagePurpose.General,
+          '',
+          'can',
+        );
+      });
+
+      expect(answered(cache)).toMatchObject({
+        remainingPortions: 18,
+        amountLeft: { value: 18 },
+        consumeUnit: { id: 'can' },
+      });
+    });
+
+    it('takes the amount from a restock', async () => {
+      const cache = seedPantryItems();
+      const m = restockMock({
+        __typename: 'RestockPantryItemPayload',
+        pantryItemUsage: {
+          __typename: 'PantryItemUsage',
+          id: 'usage-1',
+          pantryItem: stack,
+        },
+      });
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock], cache },
+      );
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmRestock(1, '1', '');
+      });
+
+      expect(answered(cache)).toMatchObject({
+        remainingPortions: 18,
+        amountLeft: { value: 18 },
+      });
+    });
+  });
+
   describe('handleConfirmConsume', () => {
     it('calls createPantryItemUsage mutation and closes modal', async () => {
       const m = consumeMock();
@@ -570,6 +689,111 @@ describe('usePantryItemActions', () => {
       expect(fired?.input).toMatchObject({ today: fired?.today });
 
       expect(result.current.restockModal.visible).toBe(false);
+    });
+
+    it('sends a stated size as packages of it', async () => {
+      const m = restockMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock], cache: seedPantryItems() },
+      );
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmRestock(
+          2,
+          '2',
+          '',
+          'case',
+          undefined,
+          undefined,
+          null,
+          { packageSize: { netWeight: 3, netWeightUnitId: 'lb' } },
+        );
+      });
+
+      expect(m.fired[0]?.input).toMatchObject({
+        amount: {
+          packages: {
+            count: 2,
+            unitId: 'case',
+            size: { netWeight: 3, netWeightUnitId: 'lb' },
+          },
+        },
+      });
+      expect(result.current.restockModal.visible).toBe(false);
+    });
+
+    it('sends portions stated for this batch with its amount', async () => {
+      const m = restockMock();
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        { operationMocks: [m.mock], cache: seedPantryItems() },
+      );
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+
+      await act(async () => {
+        await result.current.handleConfirmRestock(
+          1,
+          '1',
+          '',
+          'case',
+          undefined,
+          undefined,
+          null,
+          { packageSize: null, packagePortions: 12 },
+        );
+      });
+
+      expect(m.fired[0]?.input).toMatchObject({
+        amount: { measured: { quantity: 1, unitId: 'case' } },
+        packagePortions: 12,
+      });
+    });
+
+    it('answers a refused size for its field, with no alert', async () => {
+      const { result } = renderHookWithApollo(
+        () => usePantryItemActions(createOptions()),
+        {
+          operationMocks: [
+            recordMock(RestockPantryItemDocument, {
+              data: {
+                restockPantryItem: {
+                  __typename: 'ValidationError',
+                  code: ErrorCode.ValidationFailed,
+                  field: 'amount.packages.size',
+                },
+              },
+            }).mock,
+          ],
+          cache: seedPantryItems(),
+        },
+      );
+      act(() => {
+        result.current.handleRestockItem('item-1');
+      });
+
+      let refusal;
+      await act(async () => {
+        refusal = await result.current.handleConfirmRestock(
+          1,
+          '1',
+          '',
+          'case',
+          undefined,
+          undefined,
+          null,
+          { packageSize: { netWeight: 500, netWeightUnitId: 'g' } },
+        );
+      });
+
+      expect(refusal).toBe(t('errors.field.packageSize'));
+      expect(alertService.alert).not.toHaveBeenCalled();
+      expect(result.current.restockModal.visible).toBe(true);
     });
 
     it('keeps the cached batches when the restock is queued offline', async () => {

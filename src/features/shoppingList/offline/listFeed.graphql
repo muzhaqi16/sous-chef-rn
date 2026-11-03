@@ -1,0 +1,173 @@
+# A list's rows as the feed answers them, complete for every reader. What the
+# adapter reads itself is selected directly, as masking hides the spreads.
+query ListFeedChanges($input: SyncChangesInput!) {
+  syncChanges(input: $input) {
+    scope {
+      id
+    }
+    status
+    cursor
+    hasMore
+    changed {
+      __typename
+      ... on ShoppingList {
+        id
+        version
+        ...ShoppingListReaders
+      }
+      ... on ShoppingListItem {
+        id
+        version
+        purchaseInfo {
+          isPurchased
+        }
+        ...ShoppingListItemReaders
+        ...shoppingListItem_listed
+      }
+      ... on ShoppingListCollaborator {
+        id
+        ...ShoppingListCollaboratorFeedRow
+      }
+    }
+    removed {
+      entityType
+      id
+    }
+    applied {
+      operationId
+      entityType
+      entityId
+      version
+    }
+  }
+}
+
+query ListFeedSnapshot($input: SyncSnapshotInput!) {
+  syncSnapshot(input: $input) {
+    status
+    cursor
+    endCursor
+    hasMore
+    rows {
+      __typename
+      ... on ShoppingList {
+        id
+        version
+        homeId
+        isTemplate
+        ...ShoppingListReaders
+      }
+      ... on ShoppingListItem {
+        id
+        version
+        purchaseInfo {
+          isPurchased
+        }
+        ...ShoppingListItemReaders
+        ...shoppingListItem_listed
+      }
+      ... on ShoppingListCollaborator {
+        id
+        ...ShoppingListCollaboratorFeedRow
+      }
+    }
+  }
+}
+
+# The list a queued write's line belongs to, which its layer needs in memory.
+fragment listFeed_lineList on ShoppingListItem {
+  id
+  shoppingList {
+    id
+  }
+}
+
+# One filtered `itemsConnection` variant, whole: the keyArgs the items screen
+# queries with, written past the merge that keeps a cached tail.
+fragment listFeed_items on ShoppingList {
+  id
+  itemsConnection(filters: { isPurchased: $isPurchased }) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+      }
+    }
+  }
+}
+
+# `first: 20` is part of the cache key `GetShoppingListDetails` reads.
+fragment listFeed_collaborators on ShoppingList {
+  id
+  collaboratorsConnection(first: 20) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+      }
+    }
+  }
+}
+
+# A list's lines and collaborators as the device stores them, apart from what
+# loads at launch. Never sent: read from the cache and written back to it, as a
+# live cache takes entities only through a write.
+fragment listFeed_shard on ShoppingList {
+  id
+  open: itemsConnection(filters: { isPurchased: false }) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        version
+        ...ShoppingListItemReaders
+        ...shoppingListItem_listed
+      }
+    }
+  }
+  purchased: itemsConnection(filters: { isPurchased: true }) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        version
+        ...ShoppingListItemReaders
+        ...shoppingListItem_listed
+      }
+    }
+  }
+  collaboratorsConnection(first: 20) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        ...ShoppingListCollaboratorReaders
+      }
+    }
+  }
+}

@@ -1,0 +1,144 @@
+# A pantry's rows as the feed answers them, complete for every reader. What the
+# adapter reads itself is selected directly, as masking hides the spreads.
+# `stats` is computed on read, so a pull leaves it out and the summary is read
+# again. Usage rows are history the detail screen reads for itself, so neither
+# document selects them, and their removals are the only part applied.
+query PantryFeedChanges($input: SyncChangesInput!) {
+  syncChanges(input: $input) {
+    scope {
+      id
+    }
+    status
+    cursor
+    hasMore
+    changed {
+      __typename
+      ... on Pantry {
+        id
+        version
+        name
+        description
+        homeId
+        isDefault
+      }
+      ... on PantryItem {
+        id
+        version
+        pantryId
+        itemId
+        storageState
+        storageLocation {
+          id
+        }
+        ...PantryItemReaders
+        ...pantryItem_listed
+      }
+      ... on PantryItemBatch {
+        id
+        version
+        pantryItemId
+        ...PantryItemBatchReaders
+      }
+    }
+    removed {
+      entityType
+      id
+    }
+    applied {
+      operationId
+      entityType
+      entityId
+      version
+    }
+  }
+}
+
+query PantryFeedSnapshot($input: SyncSnapshotInput!, $today: LocalDate!) {
+  syncSnapshot(input: $input) {
+    status
+    cursor
+    endCursor
+    hasMore
+    rows {
+      __typename
+      ... on Pantry {
+        id
+        version
+        homeId
+        ...PantryReaders
+        # A view the Readers leave out, which the pantry screen reads. Not a
+        # feed row, so it goes here, on one pantry, and never on a pull.
+        storageLocationsConnection(first: 20) {
+          edges {
+            node {
+              id
+              name
+              type
+              icon
+              color
+              temperature
+              isDefault
+              currentItemCount
+              parentLocation {
+                id
+                name
+              }
+            }
+            cursor
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
+          totalCount
+        }
+      }
+      ... on PantryItem {
+        id
+        version
+        pantryId
+        itemId
+        storageState
+        storageLocation {
+          id
+        }
+        ...PantryItemReaders
+        ...pantryItem_listed
+      }
+      ... on PantryItemBatch {
+        id
+        version
+        pantryItemId
+        ...PantryItemBatchReaders
+      }
+    }
+  }
+}
+
+# The counts a pull leaves out, after it changed the pantry.
+query PantryFeedSummary($id: ID!, $today: LocalDate!) {
+  pantry(id: $id) {
+    id
+    version
+    ...PantryReaders
+  }
+}
+
+# The unfiltered list of a pantry's stacks, which a full read writes whole.
+# `first` gives the `{}` key every unfiltered reader shares.
+fragment pantryFeed_items on Pantry {
+  id
+  itemsConnection(first: 50) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+      }
+    }
+  }
+}

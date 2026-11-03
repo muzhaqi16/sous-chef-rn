@@ -19,6 +19,7 @@ mutation Login($input: LoginInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
   }
@@ -36,6 +37,7 @@ mutation Register($input: RegisterInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
   }
@@ -53,6 +55,7 @@ mutation RefreshToken($input: RefreshInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
   }
@@ -74,6 +77,7 @@ mutation VerifyEmail($input: VerifyEmailInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -90,6 +94,7 @@ mutation RequestPasswordReset($input: RequestPasswordResetInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -110,6 +115,7 @@ mutation ValidatePasswordResetToken($input: ValidatePasswordResetTokenInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -126,6 +132,7 @@ mutation ResetPassword($input: ResetPasswordInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -145,6 +152,7 @@ mutation ResendVerificationEmail($input: ResendVerificationEmailInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -166,6 +174,7 @@ mutation ChangePassword($input: ChangePasswordInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {
@@ -199,6 +208,7 @@ mutation IssueDeviceCredential($input: IssueDeviceCredentialInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
   }
@@ -225,6 +235,7 @@ mutation ExchangeDeviceCredential($input: ExchangeDeviceCredentialInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
   }
@@ -250,6 +261,7 @@ mutation RevokeDeviceCredential($input: RevokeDeviceCredentialInput!) {
     }
     ... on Error {
       code
+      disposition
       message
     }
     ... on ValidationError {

@@ -5,14 +5,20 @@ import {
 } from '#/test-utils/pantryActionShared';
 import { useQuantityFeedback } from '../useQuantityFeedback';
 
+/** What the API converts the typed amount to, in the net-weight unit. */
+let mockConvertedValue: number | null = null;
 jest.mock('../useConversionPreview', () => ({
   useConversionPreview: () => ({
     previewText: null,
     previewLoading: false,
-    convertedValue: null,
+    convertedValue: mockConvertedValue,
     confidence: null,
   }),
 }));
+
+afterEach(() => {
+  mockConvertedValue = null;
+});
 
 const feedback = (
   input: number | null,
@@ -68,6 +74,50 @@ describe('useQuantityFeedback', () => {
         remaining: '-1 pc',
         available: '11 pc',
       });
+    });
+  });
+
+  describe('on a pack of 10 cans that states 2000 mL', () => {
+    const PACK_ML = 2000;
+    const pack = (packagesOfNetWeight: (ml: number) => number | null) =>
+      pantryActionShared(1, {
+        activeUnit: { symbol: 'can' },
+        activeUnitId: 'can',
+        isConvertedUnit: true,
+        exactFactor: null,
+        isDualTracked: true,
+        remainingNetWeight: PACK_ML,
+        netWeightUnit: { symbol: 'mL' },
+        netWeightUnitId: 'ml',
+        packagesOfNetWeight,
+        // The row reads an opened pack by the can.
+        leftAfter: drawn => ({
+          quantity: Math.round((1 - drawn) * 10 * 1000) / 1000,
+          unit: { symbol: 'cans' },
+          displayAsFraction: null,
+        }),
+      });
+
+    it('reads what a can leaves by the can, as the row will', () => {
+      mockConvertedValue = 200;
+
+      expect(
+        feedback(
+          1,
+          pack(ml => ml / PACK_ML),
+        ).remaining,
+      ).toBe('9 cans');
+    });
+
+    it('stays in the net-weight unit with no package size to count by', () => {
+      mockConvertedValue = 200;
+
+      expect(
+        feedback(
+          1,
+          pack(() => null),
+        ).remaining,
+      ).toBe('1800 mL');
     });
   });
 });

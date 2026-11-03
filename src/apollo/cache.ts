@@ -9,6 +9,7 @@ import type {
 // Import generated fragment matcher for proper interface/union type handling
 import fragmentMatcherData from '#/graphql/generated/fragmentMatcher.json';
 import { FEATURE_TYPE_POLICIES } from '#features/registry.cache';
+import { feedTypePolicies } from './feed/feedTypePolicies';
 import { HELD_BY_LAYER } from './utils/heldByLayer';
 
 /**
@@ -20,7 +21,10 @@ export function makeCache(): InMemoryCache {
     // Configure possibleTypes for proper fragment matching on interfaces
     // This ensures Apollo can correctly normalize types implementing Node, Connection, Edge
     possibleTypes: fragmentMatcherData.possibleTypes,
-    typePolicies: mergeTypePolicies(FEATURE_TYPE_POLICIES),
+    typePolicies: mergeTypePolicies([
+      ...FEATURE_TYPE_POLICIES,
+      feedTypePolicies,
+    ]),
   });
 }
 

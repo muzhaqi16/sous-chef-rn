@@ -1,8 +1,12 @@
-# Whether the list's household has price data enough to offer prices.
-fragment usePricePrompt_list on ShoppingList {
-  version
-  id
-  priceReadiness {
-    enough
+# Whether the shown list's household has price data enough to offer prices. It
+# is computed on read at about ten API reads, so only the prompt asks for it,
+# and only while its question is open.
+query PricePromptReadiness($id: ID!) {
+  shoppingList(id: $id) {
+    id
+    version
+    priceReadiness {
+      enough
+    }
   }
 }

@@ -215,23 +215,6 @@ export const buildTabFieldGroups = (
     ],
   };
 
-  const consumeIncrementField: FieldDef<CreateItemFormData> = {
-    name: 'defaultConsumeIncrement',
-    label: t('addItemForm.fields.consumeIncrement.label'),
-    placeholder: t('addItemForm.fields.consumeIncrement.placeholder'),
-    component: FormNumberInput,
-    props: { componentType: 'number', keyboardType: 'decimal-pad' },
-  };
-  const consumeUnitField: FieldDef<CreateItemFormData> = {
-    name: 'defaultConsumeUnitId',
-    label: t('addItemForm.fields.consumeUnit.label'),
-    placeholder: t('addItemForm.fields.consumeUnit.placeholder'),
-    component: 'unitAutocomplete',
-    props: {
-      componentType: 'autocomplete',
-      onUnitSelected: () => {},
-    },
-  };
   const tagsField: FieldDef<CreateItemFormData> = {
     name: 'tags',
     label: t('labels.tags'),
@@ -284,12 +267,6 @@ export const buildTabFieldGroups = (
     foodStampField,
     fsaField,
   ];
-  // Consume increment/unit are hidden while editing: the unit field's form
-  // value is the text the user typed, not the id `packageInfo.defaultConsumeUnitId`
-  // expects, so there is nothing to diff a saved item against.
-  if (!editing) {
-    inventoryAdvanced.unshift(consumeIncrementField, consumeUnitField);
-  }
 
   return {
     Basics: {

@@ -191,10 +191,9 @@ describe('errorLink — API key refusals', () => {
     },
   );
 
-  // The rate-limit check runs first, so this one never reaches the key branch.
-  it('reads API_KEY_RATE_LIMITED as a rate limit, and neither refreshes nor signs out', async () => {
+  it('reads OPERATION_RATE_LIMITED as a rate limit, and neither refreshes nor signs out', async () => {
     await runWithError([
-      { message: 'Slow down', extensions: { code: 'API_KEY_RATE_LIMITED' } },
+      { message: 'Slow down', extensions: { code: 'OPERATION_RATE_LIMITED' } },
     ]).catch(settle);
 
     expect(logger.warn).toHaveBeenCalledWith(

@@ -19,7 +19,7 @@ type NetWeightSiblings = Partial<
 // Inventory "More options" expander.
 export const TAB_FIELDS: Record<PageName, readonly FieldName[]> = {
   Basics: ['itemName', 'brand'],
-  Product: ['netWeight', 'netWeightUnit', 'consumeUnit'],
+  Product: ['netWeight', 'netWeightUnit'],
   Storage: ['storageState', 'condition', 'location', 'expirationDate', 'notes'],
   Inventory: ['quantityInput', 'unit', 'minQuantity', 'restockQuantity'],
 };
@@ -65,9 +65,6 @@ export const editItemSchema = object({
     },
   ),
   netWeightUnitId: string(),
-  // Typed text passes: the submit resolves it, and reports here when it can't.
-  consumeUnit: string(),
-  consumeUnitId: string(),
   storageState: string().oneOf(Object.values(StorageState)),
   condition: string().oneOf(Object.values(ItemCondition)),
   location: string(),

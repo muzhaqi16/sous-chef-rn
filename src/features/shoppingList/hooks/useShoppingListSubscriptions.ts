@@ -8,6 +8,7 @@
 import type { ApolloCache, Reference } from '@apollo/client';
 import type { ModifierDetails } from '@apollo/client/cache';
 import type { ConnectionData } from '#/apollo/utils/cacheUpdaters';
+import { useFeedKeeps } from '#/hooks/subscriptions/useChangeFeed';
 import { useSelectedShoppingListId } from '#store/useAppStore';
 import { useSubscription } from '@apollo/client/react';
 import {
@@ -18,6 +19,7 @@ import {
 import {
   MutationType,
   ShoppingListSubtype,
+  SyncScopeKind,
 } from '#/graphql/generated/schemaTypes';
 import {
   ShoppingListItemsForEventsDocument,
@@ -166,6 +168,7 @@ const readListItems = batchedEventRead(async (client, ids) => {
 
 export function useShoppingListSubscriptions(userId?: string) {
   const selectedShoppingListId = useSelectedShoppingListId() ?? undefined;
+  const feedKeeps = useFeedKeeps(SyncScopeKind.ShoppingList);
   const rejected = useSubscriptionRejected(MyShoppingListsEventsDocument);
 
   /**
@@ -340,6 +343,10 @@ export function useShoppingListSubscriptions(userId?: string) {
         if (payload.listId !== selectedShoppingListId) return;
         if (subscriptionService.isParentDeleting(selectedShoppingListId))
           return;
+
+        // Its next pull brings these with the totals that settle them, and these
+        // writers count, so applying both would count a row twice.
+        if (feedKeeps(selectedShoppingListId)) return;
 
         // Self-echo skip — this device's own mutation already updated the
         // cache optimistically. Keyed on the originating DEVICE, so the same

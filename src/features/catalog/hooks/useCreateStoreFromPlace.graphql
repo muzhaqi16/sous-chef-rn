@@ -1,0 +1,23 @@
+# A place a search listed, made a store once so two households share it. Online
+# only: the server reads the name and address from the search again.
+mutation CreateStoreFromPlace($input: CreateStoreFromPlaceInput!) {
+  createStoreFromPlace(input: $input) {
+    __typename
+    ... on CreateStorePayload {
+      outcome
+      store {
+        id
+        name
+        ...StoreReaders
+      }
+    }
+    ... on Error {
+      code
+      disposition
+      message
+    }
+    ... on ValidationError {
+      field
+    }
+  }
+}

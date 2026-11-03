@@ -74,7 +74,6 @@
     "hintText": "Mund t'i modifikosh detajet më vonë te Cilësimet > Vendndodhjet e ruajtjes"
   },
   "addItemSheet": {
-    "more": "Më shumë",
     "allAdded": "Të gjitha u shtuan",
     "dismiss": "Hiq sugjerimin",
     "dismissed": "U hoq {{name}}",
@@ -196,14 +195,6 @@
       },
       "baseDimension": {
         "label": "Dimensioni bazë"
-      },
-      "consumeIncrement": {
-        "label": "Rritja e parazgjedhur e konsumit",
-        "placeholder": "p.sh. 1"
-      },
-      "consumeUnit": {
-        "label": "Njësia e parazgjedhur e konsumit",
-        "placeholder": "lugë çaji, filxhan, etj."
       },
       "tags": {
         "placeholder": "Etiketa të ndara me presje (p.sh. organike, pa gluten)"
@@ -483,6 +474,7 @@
     "zipLabel": "Kodi postar",
     "zipRefused": "Ende nuk e njohim këtë kod postar. Provo një tjetër ose kërko sipas emrit.",
     "notListed": "Nuk është në listë? Shto “{{name}}”",
+    "typeToAdd": "Nuk është në listë? Shkruaj emrin për ta shtuar.",
     "addedToStores": "U shtua te dyqanet e tua",
     "needsConnectionTitle": "Për të gjetur dyqane duhet lidhje",
     "needsConnectionBody": "Këto janë dyqanet ku blen. Lidhu për të gjetur të tjera.",

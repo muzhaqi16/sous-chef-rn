@@ -13,8 +13,8 @@
  * outcome. A close the library considers fatal ERRORS the subscription's sink
  * even though `shouldRetry` says retry; a retryable one is re-dialled instead.
  *
- * Same intent as `scripts/probe-compiler-try-forms.mjs`: keep the claim
- * falsifiable against whatever is in node_modules.
+ * Like every `*.library.test.ts`, it keeps the claim falsifiable against
+ * whatever is in node_modules.
  */
 
 // This suite needs the REAL library, not the module mock the other wsLink tests

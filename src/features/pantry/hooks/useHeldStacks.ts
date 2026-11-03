@@ -9,7 +9,7 @@ import {
   type UseHeldStacks_PantryItemFragment,
 } from './useHeldStacks.generated';
 
-/** A held stack's amount as its row reads it: what `formatHeldAmount` takes. */
+/** A held stack's amount as its row reads it: what `formatAmountLeft` takes. */
 export type HeldStack = UseHeldStacks_PantryItemFragment;
 
 // More stacks of one item than any pantry holds.
