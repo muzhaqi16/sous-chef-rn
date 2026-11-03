@@ -313,7 +313,7 @@ export const ShoppingListItemDetail: React.FC<
           </View>
         )}
 
-        <DetailSection title={t('labels.information')}>
+        <DetailSection dividedRows title={t('labels.information')}>
           <DetailRow label={t('labels.quantity')}>
             <FormattedItemSubtitle
               quantity={item.quantity}
@@ -424,7 +424,10 @@ export const ShoppingListItemDetail: React.FC<
         )}
 
         {!!detail && (
-          <DetailSection title={t('shoppingListScreens.additionalDetails')}>
+          <DetailSection
+            dividedRows
+            title={t('shoppingListScreens.additionalDetails')}
+          >
             {!!detail.addedBy && (
               <DetailRow label={t('shoppingListScreens.addedBy')}>
                 <Text role="label">

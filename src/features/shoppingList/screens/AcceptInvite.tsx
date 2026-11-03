@@ -166,7 +166,7 @@ export const AcceptInvite: React.FC = () => {
         </Text>
       </View>
 
-      <DetailSection>
+      <DetailSection dividedRows>
         <DetailTitleRow
           title={entityName}
           flush

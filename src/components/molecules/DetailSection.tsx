@@ -12,6 +12,12 @@ interface DetailSectionProps {
   transparent?: boolean;
   /** Expands to fill available vertical space (useful for empty states). */
   fill?: boolean;
+  /**
+   * Its rows each draw a divider below them, so the last one is clipped and a
+   * divider only ever separates two rows. Never over a child with a shadow,
+   * which the clip would cut to a box.
+   */
+  dividedRows?: boolean;
   children: React.ReactNode;
 }
 
@@ -26,6 +32,7 @@ export const DetailSection: React.FC<DetailSectionProps> = ({
   flush,
   transparent,
   fill,
+  dividedRows,
   children,
 }) =>
   transparent ? (
@@ -47,11 +54,13 @@ export const DetailSection: React.FC<DetailSectionProps> = ({
       {!!title && (
         <SectionHeader style={styles.sectionHeading}>{title}</SectionHeader>
       )}
-      {/* A row draws its own divider; the last one is clipped, so a divider
-          only ever separates two rows and never closes the card. */}
-      <View style={[styles.clipLastDivider, !!fill && styles.fill]}>
-        <View style={[styles.rows, !!fill && styles.fill]}>{children}</View>
-      </View>
+      {dividedRows ? (
+        <View style={[styles.clipLastDivider, !!fill && styles.fill]}>
+          <View style={[styles.rows, !!fill && styles.fill]}>{children}</View>
+        </View>
+      ) : (
+        children
+      )}
     </Card>
   );
 
