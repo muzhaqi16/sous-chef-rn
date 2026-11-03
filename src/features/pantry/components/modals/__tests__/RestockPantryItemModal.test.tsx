@@ -237,7 +237,9 @@ describe('RestockPantryItemModal', () => {
       render(<RestockPantryItemModal {...defaultProps} reason={REASON} />);
       fireEvent.changeText(screen.getByTestId('field-Quantity to Add'), '2');
 
-      expect(screen.queryByTestId('field-Quantity to Add-error')).toBeNull();
+      expect(
+        screen.queryByTestId('field-Quantity to Add-error')?.props.children,
+      ).toBeUndefined();
     });
   });
 
@@ -496,6 +498,29 @@ describe('RestockPantryItemModal', () => {
       expect(
         screen.getByTestId('field-Quantity to Add-error'),
       ).toHaveTextContent('Packages are counted whole: 1, 2, 3…');
+    });
+
+    it('drops the whole-package reason once another unit is picked', () => {
+      render(<RestockPantryItemModal {...defaultProps} />);
+      askSize();
+      typeSize('3');
+      fireEvent.press(screen.getByTestId('pick-lb'));
+      const quantity = screen.getByTestId('field-Quantity to Add');
+      fireEvent.changeText(quantity, '1.5');
+      confirm();
+      expect(
+        screen.getByTestId('field-Quantity to Add-error'),
+      ).toHaveTextContent('Packages are counted whole: 1, 2, 3…');
+
+      // A restock in another unit states no size, so its count need not be
+      // whole. The shell hands the sheet the new unit on its next render.
+      mockSharedOverride = {
+        selectedUnitInfo: { ...CASE, unitId: 'can', isTrackingUnit: false },
+        activeUnitId: 'can',
+      };
+      fireEvent.changeText(quantity, '1.25');
+
+      expect(screen.queryByTestId('field-Quantity to Add-error')).toBeNull();
     });
 
     it('asks for the size’s unit on its field', () => {

@@ -134,10 +134,11 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
   // quantity field's own format hint speaks.
   const errorOn = (refused: boolean, key: TranslationKey) =>
     confirmRefused && refused ? t(key) : undefined;
-  const errors = {
+  // A count need be whole only on a sized restock, as handleConfirm checks it.
+  const errorsFor = (sized: boolean) => ({
     quantity:
       errorOn(!quantityIsUsable, 'errors.invalidQuantity') ??
-      errorOn(!countIsWhole, 'packageSize.wholePackages') ??
+      errorOn(sized && !countIsWhole, 'packageSize.wholePackages') ??
       (quantityEdited ? undefined : reason),
     costPerUnit: errorOn(costPerUnit === undefined, 'errors.invalidAmountPaid'),
     totalCost: errorOn(totalCost === undefined, 'errors.invalidAmountPaid'),
@@ -146,7 +147,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
       sizeRefusal ??
       undefined,
     sizeUnit: errorOn(!sizeUnitIsPicked, 'packageSize.unitRequired'),
-  };
+  });
 
   const handleConfirm = async (shared: PantryActionSharedState) => {
     if (!pantryItemId || awaitingAnswer) return;
@@ -214,7 +215,7 @@ export const RestockPantryItemModal: React.FC<RestockPantryItemModalProps> = ({
           asksCost={asksCost}
           expiresAt={expiresAt}
           setExpiresAt={setExpiresAt}
-          errors={errors}
+          errors={errorsFor(countedInOwnUnit(shared))}
           shared={shared}
           askingSize={askingSize}
           onAskSize={() => setAskingSize(true)}
