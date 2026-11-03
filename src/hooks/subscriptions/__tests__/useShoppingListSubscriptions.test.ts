@@ -39,6 +39,8 @@ jest.mock('#store/useAppStore', () => {
       <T>(selector: (state: RootState) => T): T => selector(getState()),
     ),
     useSelectedShoppingListId: jest.fn(() => getState().selectedShoppingListId),
+    // The change feed's flag reads the user; none skips the server's flags.
+    useUser: jest.fn(() => null),
     // Transport recovery reads connectivity; a partial factory here would
     // otherwise make every subscription in this suite throw on mount.
     useIsOnline: jest.fn(() => true),

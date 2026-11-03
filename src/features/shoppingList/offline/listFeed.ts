@@ -1,14 +1,14 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
 import type {
   FeedAdapter,
-  FeedAnswer,
   FeedPage,
   FeedScopeCursor,
   FeedSnapshot,
 } from '#/apollo/feed/types';
+import { readWholeScope } from '#/apollo/feed/readWholeScope';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { SyncPageStatus, SyncScopeKind } from '#/graphql/generated/schemaTypes';
+import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { useStore } from '#store';
 import { removeCollaboratorFromShoppingListCache } from '../cache/collaborators';
 import {
@@ -95,39 +95,6 @@ const readSnapshotPage = (
     fetchPolicy: 'network-only',
   });
 
-interface FullRead {
-  status: SyncPageStatus;
-  cursor: string | null;
-  rows: SnapshotRow[];
-}
-
-async function readAllRows(
-  client: ApolloClient,
-  id: string,
-): Promise<FeedAnswer<FullRead>> {
-  const rows: SnapshotRow[] = [];
-  let cursor: string | null = null;
-  let after: string | null = null;
-  let hasMore = true;
-  while (hasMore) {
-    const { data, error }: Awaited<ReturnType<typeof readSnapshotPage>> =
-      await readSnapshotPage(client, id, after);
-    if (error || !data) return { error };
-    const page = data.syncSnapshot;
-    if (page.status !== SyncPageStatus.Current) {
-      return { data: { status: page.status, cursor: null, rows: [] } };
-    }
-    // Later pages answer none: the first page's was taken before any row.
-    cursor ??= page.cursor ?? null;
-    rows.push(...page.rows);
-    ({ hasMore } = page);
-    after = page.endCursor ?? null;
-    if (hasMore && !after)
-      return { error: new Error('Snapshot lost its place') };
-  }
-  return { data: { status: SyncPageStatus.Current, cursor, rows } };
-}
-
 function replacing(
   listId: string,
   rows: readonly SnapshotRow[],
@@ -200,7 +167,9 @@ export const listFeedAdapter: FeedAdapter = {
 
   async snapshot(client, id) {
     const gained = !isHeld(client.cache, { __typename: 'ShoppingList', id });
-    const answer = await readAllRows(client, id);
+    const answer = await readWholeScope(after =>
+      readSnapshotPage(client, id, after),
+    );
     if (answer.data === undefined) return answer;
     const { status, cursor, rows } = answer.data;
     return { data: { status, cursor, replace: replacing(id, rows, gained) } };

@@ -125,9 +125,15 @@ export function dropPantryBatch(cache: ApolloCache, batchId: string): void {
 function pantryRowsHeld(
   cache: ApolloCache,
   pantryId: string,
-): { stacks: string[]; batchesOf: (stacks: ReadonlySet<string>) => string[] } {
+): {
+  stacks: string[];
+  batchesOf: (stacks: ReadonlySet<string>) => string[];
+  homeId: unknown;
+} {
   const stored: unknown = cache.extract(false);
   const entities = isRecord(stored) ? Object.values(stored) : [];
+  const pantry = isRecord(stored) ? stored[`Pantry:${pantryId}`] : undefined;
+  const homeId = isRecord(pantry) ? pantry.homeId : undefined;
   const stacks = entities.flatMap((entity: unknown) =>
     isRecord(entity) &&
     entity.__typename === STACK &&
@@ -146,7 +152,7 @@ function pantryRowsHeld(
         ? [entity.id]
         : [],
     );
-  return { stacks, batchesOf };
+  return { stacks, batchesOf, homeId };
 }
 
 const asRows = (typename: string, ids: readonly string[]) =>
@@ -213,7 +219,7 @@ export function replacePantryStacks(
 
 /** A pantry and everything in it, a row scan finding what by-id fields pin. */
 export function evictPantryRows(cache: ApolloCache, pantryId: string): void {
-  const { stacks, batchesOf } = pantryRowsHeld(cache, pantryId);
+  const { stacks, batchesOf, homeId } = pantryRowsHeld(cache, pantryId);
   for (const id of stacks) {
     pantryItemRoot(cache, id);
     dropBatchesPage(cache, id);
@@ -222,9 +228,6 @@ export function evictPantryRows(cache: ApolloCache, pantryId: string): void {
     ...asRows(STACK, stacks),
     ...asRows(BATCH, batchesOf(new Set(stacks))),
   ]);
-  const stored: unknown = cache.extract(false);
-  const pantry = isRecord(stored) ? stored[`Pantry:${pantryId}`] : undefined;
-  const homeId = isRecord(pantry) ? pantry.homeId : undefined;
   if (typeof homeId === 'string') {
     removeOptimisticPantry(cache, homeId, pantryId, { evictEntity: false });
   }

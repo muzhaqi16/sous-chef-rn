@@ -123,10 +123,11 @@ export class FeedEngine {
   /**
    * Reads a held scope in full, for what the feed does not report. It joins the
    * pass, so it waits as any read does: for the API, a refusal's wait and the
-   * scope's own create.
+   * scope's own create. Asked before `start` (which runs after launch), it waits
+   * for the start.
    */
   refresh(kind: string, scopeId: string): void {
-    if (!this.enabled || !this.adapterFor(kind)) return;
+    if (!adapterOfKind(kind)) return;
     this.fullReadsOwed.set(scopeId, kind);
     this.drain();
   }
@@ -146,12 +147,15 @@ export class FeedEngine {
   private drain(): void {
     if (!this.enabled || this.draining) return;
     this.draining = true;
-    this.pass = this.runOwed(this.session)
+    const { session } = this;
+    this.pass = this.runOwed(session)
       .catch((error: unknown) => {
         logger.warn('Feed: a pass stopped', error);
       })
       .finally(() => {
         this.draining = false;
+        // A stop and start while it ran left the new session's work waiting on it.
+        if (session !== this.session) this.drain();
       });
   }
 
@@ -371,6 +375,8 @@ export class FeedEngine {
       if (status === SyncPageStatus.ResyncRequired && positionOf(scopeId)) {
         Telemetry.increment('feed_resync_total', 1, { kind: adapter.kind });
       }
+      // Owed as well, so a pass that stops before reading it leaves it to the next.
+      this.fullReadsOwed.set(scopeId, adapter.kind);
       unread.push(scopeId);
       return;
     }

@@ -8,7 +8,7 @@
 import { useLinkExpirationData } from '#features/notifications/hooks/useLinkExpirationData';
 import { useSubscription } from '@apollo/client/react';
 import { useSelectedPantryId } from '#store/useAppStore';
-import { positionOf } from '#/apollo/feed/feedPositions';
+import { useFeedKeeps } from '#/hooks/subscriptions/useChangeFeed';
 import {
   PantryEventsDocument,
   type PantryEventsSubscription,
@@ -31,7 +31,11 @@ import {
   CacheStrategy,
   type SubscriptionApolloClient,
 } from '#/services/subscriptions/types';
-import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
+import {
+  MutationType,
+  PantrySubtype,
+  SyncScopeKind,
+} from '#/graphql/generated/schemaTypes';
 import {
   createAddToParentConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
@@ -211,6 +215,7 @@ async function handleItemChanged(
  */
 export function usePantrySubscriptions(userId?: string) {
   const selectedPantryId = useSelectedPantryId() ?? undefined;
+  const feedKeeps = useFeedKeeps(SyncScopeKind.Pantry);
   const linkExpirationData = useLinkExpirationData();
   const pantrySkip = useEntitySubscriptionSkip(
     PantryEventsDocument,
@@ -295,7 +300,7 @@ export function usePantrySubscriptions(userId?: string) {
 
       // Its next pull brings these rows and reads the counts again, and the
       // event writers count, so applying both would count a stack twice.
-      if (positionOf(payload.pantryId)) return;
+      if (feedKeeps(payload.pantryId)) return;
 
       switch (payload.subtype) {
         case PantrySubtype.ItemChanged:

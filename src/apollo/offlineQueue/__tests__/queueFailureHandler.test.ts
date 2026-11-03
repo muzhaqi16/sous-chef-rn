@@ -112,18 +112,26 @@ describe('queue failure handler', () => {
     spy.mockRestore();
   });
 
-  it('catches the change feed up once the queue has drained', () => {
-    const spy = jest.spyOn(queueManager, 'setDrainedHandler');
-    registerQueueFailureHandler();
-    const [[drained]] = spy.mock.calls as [[(userId: string) => void]];
-    spy.mockRestore();
-    const catchUp = jest.spyOn(feedEngine, 'catchUp');
+  it.each([
+    ['a replay pass', 'replay', 1],
+    ['a pull, which already holds what the writes changed,', 'pull', 0],
+  ] as const)(
+    'catches the change feed up once %s drains the queue',
+    (_by, by, catchUps) => {
+      const spy = jest.spyOn(queueManager, 'setDrainedHandler');
+      registerQueueFailureHandler();
+      const [[drained]] = spy.mock.calls as [
+        Parameters<typeof queueManager.setDrainedHandler>,
+      ];
+      spy.mockRestore();
+      const catchUp = jest.spyOn(feedEngine, 'catchUp');
 
-    drained('user-1');
+      drained(by);
 
-    expect(catchUp).toHaveBeenCalledTimes(1);
-    catchUp.mockRestore();
-  });
+      expect(catchUp).toHaveBeenCalledTimes(catchUps);
+      catchUp.mockRestore();
+    },
+  );
 
   describe('a removal the queue kept because its entry merged', () => {
     const registeredNotice = () => {

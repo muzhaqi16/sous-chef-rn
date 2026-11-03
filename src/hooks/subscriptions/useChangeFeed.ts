@@ -5,6 +5,7 @@ import {
   type FeedPokesSubscription,
 } from '#/apollo/feed/feed.generated';
 import { feedEngine } from '#/apollo/feed/feedEngine';
+import { positionOf } from '#/apollo/feed/feedPositions';
 import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
@@ -41,4 +42,18 @@ export function useChangeFeed(userId: string): void {
     },
   });
   useSubscriptionTransportRecovery(FeedPokesDocument, pokes, skip);
+}
+
+/**
+ * Whether the feed keeps a scope of this kind current, so an event for it is
+ * the feed's to apply. With the kind switched off, a position a launch restored
+ * claims nothing, and the events apply as they always have.
+ */
+export function useFeedKeeps(
+  kind: SyncScopeKind,
+): (scopeId: string) => boolean {
+  const lists = useFeatureFlag('listChangeFeed');
+  const pantries = useFeatureFlag('pantryChangeFeed');
+  const on = kind === SyncScopeKind.Pantry ? pantries : lists;
+  return scopeId => on && positionOf(scopeId) !== undefined;
 }

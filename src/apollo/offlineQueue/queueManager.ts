@@ -104,6 +104,9 @@ const outlastedAnOutage = (faults: WriteFaults): boolean =>
   faults.count >= MAX_WRITE_FAULTS &&
   faults.lastAt - faults.firstAt >= MIN_FAULT_SPAN_MS;
 
+/** What emptied the queue: a replay pass, or a pull confirming its last writes. */
+export type DrainedBy = 'replay' | 'pull';
+
 /** The fields a replay reads off whichever union member the server returned. */
 interface ReplayPayload {
   __typename?: string;
@@ -125,7 +128,7 @@ export class QueueManager {
   private processingPromise: Promise<void> | null = null;
   private failureHandler: FailureHandler | null = null;
   private removalKeptHandler: RemovalKeptHandler | null = null;
-  private drainedHandler: ((userId: string) => void) | null = null;
+  private drainedHandler: ((by: DrainedBy) => void) | null = null;
   private drainTimer: ReturnType<typeof setTimeout> | null = null;
   /** Epoch ms before which no drain replays: the server's rate-limit window. */
   private drainNotBefore = 0;
@@ -154,8 +157,8 @@ export class QueueManager {
     this.removalKeptHandler = handler;
   }
 
-  /** Invoked when a pass ends with nothing left pending for the user. */
-  setDrainedHandler(handler: (userId: string) => void): void {
+  /** Invoked when a pass or a pull leaves nothing pending for the user. */
+  setDrainedHandler(handler: (by: DrainedBy) => void): void {
     this.drainedHandler = handler;
   }
 
@@ -388,7 +391,7 @@ export class QueueManager {
       performance.now() - drainStartedAt,
     );
     if (queueStore.getPendingMutationsForUser(userId).length === 0) {
-      this.drainedHandler?.(userId);
+      this.drainedHandler?.('replay');
     }
   }
 
@@ -951,6 +954,7 @@ export class QueueManager {
     if (!userId) return;
     const confirmed = new Map(applied.map(row => [row.operationId, row]));
     const pendingWrites = pendingWritesOf(requireApolloClient().cache);
+    let settledAny = false;
     for (const entry of queueStore.getPendingMutationsForUser(userId)) {
       const write = entry.pendingWrite;
       const row = write && confirmed.get(write.id);
@@ -964,27 +968,27 @@ export class QueueManager {
       ) {
         continue;
       }
-      if (row.version !== null) {
-        this.moveFollowersTo(entry, row.entityId, row.version);
-      }
+      // As a replay's answer would: a write that sent no version (a reorder)
+      // still moves the writes built on it, and never adds one to theirs.
+      this.rebasePending(
+        entry,
+        row.entityId,
+        versionOf(entry.variables.input),
+        { id: row.entityId, version: row.version },
+      );
       pendingWrites.drop(write.id);
       queueStore.removeMutation(entry.id);
+      settledAny = true;
       logger.info(`✅ Queue: ${entry.operationName} confirmed by a pull`);
     }
-  }
-
-  /** Writes built on a settled write's version go on from the one it reached. */
-  private moveFollowersTo(
-    settled: QueuedMutation,
-    rowId: string,
-    version: number,
-  ): void {
-    const base = versionOf(settled.variables.input);
-    this.rewritePending(
-      settled,
-      pending => queuedSubject(pending).subjectIds.includes(rowId),
-      input => (input.version === base ? { ...input, version } : input),
-    );
+    // A running pass reports its own end, and an empty drain reports nothing.
+    if (
+      settledAny &&
+      !this.isProcessing &&
+      queueStore.getPendingMutationsForUser(userId).length === 0
+    ) {
+      this.drainedHandler?.('pull');
+    }
   }
 
   /** Rewrites the input of each other pending write `affects` picks. */

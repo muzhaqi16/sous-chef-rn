@@ -162,7 +162,7 @@ describe('withdrawing a refused queued update', () => {
       expect(list.fired.length).toBe(readsBefore);
 
       queueStore.removeMutation('still-queued');
-      queueManager['drainedHandler']?.('user-1');
+      queueManager['drainedHandler']?.('replay');
 
       await drainTimers();
       expect(list.fired.length).toBeGreaterThan(readsBefore);

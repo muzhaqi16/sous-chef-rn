@@ -1,6 +1,9 @@
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import { feedEngine } from '#/apollo/feed/feedEngine';
-import { queueManager } from '#/apollo/offlineQueue/queueManager';
+import {
+  queueManager,
+  type DrainedBy,
+} from '#/apollo/offlineQueue/queueManager';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { safeEvict } from '#/apollo/utils/cacheUpdaters';
@@ -128,10 +131,11 @@ function scheduleReread(): void {
     });
 }
 
-/** A later pass emptied the queue: run the reread a withdrawal left owed. */
-function onQueueDrained(): void {
+/** The queue emptied: run the reread a withdrawal left owed. */
+function onQueueDrained(by: DrainedBy): void {
   if (rereadOwed && !hasQueuedWork()) void reread();
-  feedEngine.catchUp();
+  // A pull that settled the last writes is mid-pass and holds what they changed.
+  if (by === 'replay') feedEngine.catchUp();
 }
 
 /** Resolves the withdrawal toast, naming the entity where the map knows it. */
