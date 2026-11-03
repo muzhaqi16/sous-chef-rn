@@ -12,7 +12,7 @@ import { registerTokenRefreshBridge } from '#store/tokenRefreshBridge';
 import { registerApolloResetBridge } from '#store/apolloResetBridge';
 import { makeCache } from './cache';
 import { apolloCachePersistence } from './offline/ApolloCachePersistence';
-import { listShards } from '#features/shoppingList/offline/listShards';
+import { feedStorage } from '#/apollo/feed/feedStorage';
 import { queueStore } from './offlineQueue/queueStore';
 import { pendingWritesOf } from './pendingWrites/pendingWrites';
 import { onCacheWrite } from './utils/onCacheWrite';
@@ -109,7 +109,7 @@ export function createApolloClient(
   const cache = makeCache();
 
   cacheInstance = cache;
-  apolloCachePersistence.attachShards(listShards, cache);
+  apolloCachePersistence.attachShards(feedStorage, cache);
 
   // Fast path only: storage is usually still initializing at this point, so
   // this is normally a no-op and App retries at the hydration boundary.

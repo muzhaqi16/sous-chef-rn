@@ -516,6 +516,24 @@ export class QueueStore {
       .flatMap(pendingWriteOf);
   }
 
+  /**
+   * The stored scopes those pending writes' layers read, or null when one of
+   * them recorded none, so a launch restores every stored scope.
+   */
+  getPendingWriteScopes(): Set<string> | null {
+    const userId = this.getCurrentUserId();
+    const scopes = new Set<string>();
+    if (!userId) return scopes;
+    for (const { status, pendingWrite, scopeIds } of this.getMutationsForUser(
+      userId,
+    )) {
+      if (!pendingWrite || !UNDELIVERED.includes(status)) continue;
+      if (!scopeIds) return null;
+      for (const id of scopeIds) scopes.add(id);
+    }
+    return scopes;
+  }
+
   /** The ids of the pending writes the queue carries, whatever their status. */
   getQueuedWriteIds(): Set<string> {
     return new Set(

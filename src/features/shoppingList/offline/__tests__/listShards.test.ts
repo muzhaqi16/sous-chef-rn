@@ -6,6 +6,7 @@ import {
 } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { FeedEngine } from '#/apollo/feed/feedEngine';
+import { feedStorage } from '#/apollo/feed/feedStorage';
 import { heldScopes, positionOf } from '#/apollo/feed/feedPositions';
 import { apolloCachePersistence } from '#/apollo/offline/ApolloCachePersistence';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
@@ -22,7 +23,7 @@ import {
 } from '#/test-utils/feedServer';
 import { GetShoppingListItemsFilteredDocument } from '#features/shoppingList/graphql/shoppingList.generated';
 import { useStore } from '#store';
-import { forgetShardMemory, hydrateListShard, listShards } from '../listShards';
+import { forgetShardMemory, hydrateListShard } from '../listShards';
 
 jest.mock('#/services/auth/deviceId');
 
@@ -53,8 +54,9 @@ const save = (cache: InMemoryCache) => {
   const stored = cache.extract();
   storage.set(
     EAGER_KEY,
-    JSON.stringify(listShards.save(cache, stored, lastSaved)),
+    JSON.stringify(feedStorage.save(cache, stored, lastSaved)),
   );
+  feedStorage.saved?.();
   lastSaved = stored;
 };
 
@@ -101,7 +103,7 @@ async function deviceHolding(): Promise<InMemoryCache> {
   await engine.whenSettled();
   engine.stop();
   const cache = client.cache as InMemoryCache;
-  apolloCachePersistence.attachShards(listShards, cache);
+  apolloCachePersistence.attachShards(feedStorage, cache);
   return cache;
 }
 
@@ -110,7 +112,7 @@ function restart(): InMemoryCache {
   forgetShardMemory();
   const cache = makeCache();
   cache.restore(eager() as never);
-  apolloCachePersistence.attachShards(listShards, cache);
+  apolloCachePersistence.attachShards(feedStorage, cache);
   apolloCachePersistence.restoreShards();
   return cache;
 }
@@ -118,7 +120,7 @@ function restart(): InMemoryCache {
 beforeEach(() => {
   lastSaved = null;
   storage.clearAll();
-  listShards.clear();
+  feedStorage.clear();
   useStore.setState({
     isOnline: true,
     apiReachable: true,
@@ -207,11 +209,21 @@ describe('after a restart', () => {
     expect(lines(cache, OTHER)).toBeUndefined();
   });
 
-  it('has every stored list in memory while a write is queued', async () => {
+  it('has the lists a queued write names in memory, and no other', async () => {
     save(await deviceHolding());
     jest
-      .spyOn(queueStore, 'getPendingWrites')
-      .mockReturnValue([{ id: 'write-1' } as never]);
+      .spyOn(queueStore, 'getPendingWriteScopes')
+      .mockReturnValue(new Set([OTHER]));
+
+    const cache = restart();
+
+    expect(lines(cache, OTHER)).toEqual([`${OTHER}-a`]);
+    expect(lines(cache, LIST)).toBeUndefined();
+  });
+
+  it('has every stored list in memory while a queued write names none it knows', async () => {
+    save(await deviceHolding());
+    jest.spyOn(queueStore, 'getPendingWriteScopes').mockReturnValue(null);
 
     const cache = restart();
 

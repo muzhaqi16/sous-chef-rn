@@ -2,7 +2,11 @@ import type { ApolloCache, ApolloClient } from '@apollo/client';
 import { requireApolloClient } from '#/apollo/clientRegistry';
 import { queueManager } from '#/apollo/offlineQueue/queueManager';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
-import { SyncPageStatus, SyncPokeKind } from '#/graphql/generated/schemaTypes';
+import {
+  SyncPageStatus,
+  SyncPokeKind,
+  type SyncScopeKind,
+} from '#/graphql/generated/schemaTypes';
 import { getDeviceId } from '#/services/auth/deviceId';
 import { Telemetry } from '#/services/telemetry';
 import { registerSessionTeardown } from '#/store/sessionTeardown';
@@ -19,7 +23,7 @@ import {
   holdPosition,
   positionOf,
 } from './feedPositions';
-import { FEED_ADAPTERS } from './feedRegistry';
+import { adapterOfKind, FEED_ADAPTERS } from './feedRegistry';
 import type { FeedAdapter, FeedPage } from './types';
 
 /** The API refuses a pull naming more; `offlineLimits` states it once on production. */
@@ -29,13 +33,18 @@ const RATE_LIMIT_FALLBACK_MS = 60_000;
 
 type Poke = FeedPokesSubscription['mySyncPokes'];
 
-const adapterFor = (kind: string): FeedAdapter | undefined =>
-  FEED_ADAPTERS.find(adapter => adapter.kind === kind);
+const ALL_KINDS: readonly SyncScopeKind[] = FEED_ADAPTERS.map(
+  ({ kind }) => kind,
+);
 
-const readScopesPage = (client: ApolloClient, after: string | null) =>
+const readScopesPage = (
+  client: ApolloClient,
+  after: string | null,
+  kinds: SyncScopeKind[],
+) =>
   client.query({
     query: FeedScopesDocument,
-    variables: { first: SCOPES_PAGE_SIZE, after },
+    variables: { first: SCOPES_PAGE_SIZE, after, kinds },
     fetchPolicy: 'no-cache',
   });
 
@@ -56,6 +65,8 @@ function forgetAnswers(cache: ApolloCache): void {
  */
 export class FeedEngine {
   private enabled = false;
+  /** Asked of the server by name: one it is not asked for, it never lists. */
+  private kinds: SyncScopeKind[] = [];
   private draining = false;
   private scopesOwed = false;
   private readonly owed = new Map<string, string>();
@@ -65,9 +76,15 @@ export class FeedEngine {
   /** Moves on at each stop, so a pass outlived by its session writes nothing. */
   private session = 0;
 
-  start(): void {
+  start(kinds: readonly SyncScopeKind[] = ALL_KINDS): void {
+    this.kinds = [...kinds];
     this.enabled = true;
     this.catchUp();
+  }
+
+  private adapterFor(kind: string): FeedAdapter | undefined {
+    const adapter = adapterOfKind(kind);
+    return adapter && this.kinds.includes(adapter.kind) ? adapter : undefined;
   }
 
   stop(): void {
@@ -92,7 +109,7 @@ export class FeedEngine {
       this.catchUp();
       return;
     }
-    if (!scope || !adapterFor(scope.kind)) return;
+    if (!scope || !this.adapterFor(scope.kind)) return;
     if (positionOf(scope.id)?.cursor === scope.cursor) return;
     // The origin is null unless one write of this person's made the whole range.
     if (originDeviceId && originDeviceId === getDeviceId()) return;
@@ -174,7 +191,7 @@ export class FeedEngine {
     this.scopesOwed = false;
     while (hasNextPage) {
       const { data, error }: Awaited<ReturnType<typeof readScopesPage>> =
-        await readScopesPage(client, after);
+        await readScopesPage(client, after, this.kinds);
       if (!this.isCurrent(session)) return false;
       if (error || !data) {
         this.scopesOwed = true;
@@ -194,7 +211,7 @@ export class FeedEngine {
 
     this.evictMissing(client, reached);
     for (const [id, { kind, cursor }] of reached) {
-      if (adapterFor(kind) && positionOf(id)?.cursor !== cursor) {
+      if (this.adapterFor(kind) && positionOf(id)?.cursor !== cursor) {
         this.owed.set(id, kind);
       }
     }
@@ -206,7 +223,7 @@ export class FeedEngine {
     reached: ReadonlyMap<string, unknown>,
   ): void {
     const gone = [...heldScopes()].filter(([id, { kind }]) => {
-      const adapter = adapterFor(kind);
+      const adapter = this.adapterFor(kind);
       return (
         !reached.has(id) &&
         adapter !== undefined &&
@@ -218,7 +235,7 @@ export class FeedEngine {
       optimistic: false,
       update: cache => {
         for (const [id, { kind }] of gone) {
-          const adapter = adapterFor(kind);
+          const adapter = this.adapterFor(kind);
           if (adapter) this.evict(adapter, cache, id);
         }
       },
@@ -238,8 +255,9 @@ export class FeedEngine {
     readInFull: Set<string>,
   ): Promise<boolean> {
     for (const adapter of FEED_ADAPTERS) {
+      if (!this.kinds.includes(adapter.kind)) continue;
       const ready = [...this.owed]
-        .filter(([, kind]) => kind === adapter.kind)
+        .filter(([, kind]) => this.adapterFor(kind) === adapter)
         .map(([id]) => id)
         .filter(id => {
           const waits = adapter.holdsUnacknowledgedCreate(id);
@@ -303,7 +321,10 @@ export class FeedEngine {
     Telemetry.histogram('feed_pull_ms', performance.now() - startedAt);
     const applied = pages.flatMap(page => page.applied);
     if (applied.length > 0) queueManager.settleFromFeed(applied);
-    return true;
+    await Promise.all(
+      pages.flatMap(page => (page.afterApply ? [page.afterApply()] : [])),
+    );
+    return this.isCurrent(session);
   }
 
   private settle(
@@ -336,7 +357,7 @@ export class FeedEngine {
     id: string,
     session: number,
   ): Promise<boolean> {
-    const adapter = adapterFor(kind);
+    const adapter = this.adapterFor(kind);
     if (!adapter) return true;
     const client = requireApolloClient();
     const answer = await adapter.snapshot(client, id);

@@ -79,6 +79,14 @@ query ListFeedSnapshot($input: SyncSnapshotInput!) {
   }
 }
 
+# The list a queued write's line belongs to, which its layer needs in memory.
+fragment listFeed_lineList on ShoppingListItem {
+  id
+  shoppingList {
+    id
+  }
+}
+
 # One filtered `itemsConnection` variant, whole: the keyArgs the items screen
 # queries with, written past the merge that keeps a cached tail.
 fragment listFeed_items on ShoppingList {

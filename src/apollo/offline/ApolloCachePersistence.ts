@@ -29,6 +29,8 @@ export interface CacheShards {
     stored: NormalizedCacheObject,
     previous: NormalizedCacheObject | null,
   ): NormalizedCacheObject;
+  /** After what loads at launch is written: what must never outrun it. */
+  saved?(): void;
   /** After the eager cache is restored, ahead of the pending writes. */
   restore(cache: ApolloCache): void;
   clear(): void;
@@ -290,6 +292,7 @@ class ApolloCachePersistence {
       storage.set(CACHE_STORAGE_KEY, cacheString);
       storage.set(CACHE_VERSION_KEY, CURRENT_CACHE_VERSION);
       storage.set(CACHE_LANGUAGE_KEY, getResolvedLanguage());
+      this.shards?.store.saved?.();
       const tWrite = performance.now();
       this.lastPersistedSnapshot = cache;
 

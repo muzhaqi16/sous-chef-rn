@@ -10,6 +10,11 @@ import {
   ListFeedChangesDocument,
   ListFeedSnapshotDocument,
 } from '#features/shoppingList/offline/listFeed.generated';
+import {
+  PantryFeedChangesDocument,
+  PantryFeedSnapshotDocument,
+  PantryFeedSummaryDocument,
+} from '#features/pantry/offline/pantryFeed.generated';
 import { completeMockedResponse } from './apolloMockProvider';
 
 /**
@@ -61,6 +66,8 @@ export interface Server {
   scopes: (after: string | null) => unknown;
   pull: (input: PullInput['input']) => unknown;
   snapshot: (input: SnapshotInput['input']) => unknown;
+  pantryPull: (input: PullInput['input']) => unknown;
+  pantrySnapshot: (input: SnapshotInput['input']) => unknown;
 }
 
 export const listed = (scopes: readonly Scope[], hasNextPage = false) => ({
@@ -91,6 +98,9 @@ export const wholeList = (
 });
 
 export const pulls: PullInput['input'][] = [];
+export const pantryPulls: PullInput['input'][] = [];
+export const summaries: string[] = [];
+export const scopeReads: { kinds?: string[] | null }[] = [];
 export const snapshots: SnapshotInput['input'][] = [];
 
 /** Answers from the schema, so a row is as complete as the server's. */
@@ -106,8 +116,12 @@ export function clientOver(server: Partial<Server>): ApolloClient {
     dataMasking: true,
     defaultOptions: APOLLO_DEFAULT_OPTIONS,
     link: new MockLink([
-      mock(FeedScopesDocument as never, ({ after }: { after: string | null }) =>
-        (server.scopes ?? (() => listed([])))(after ?? null),
+      mock(
+        FeedScopesDocument as never,
+        ({ after, kinds }: { after: string | null; kinds?: string[] | null }) => {
+          scopeReads.push({ kinds });
+          return (server.scopes ?? (() => listed([])))(after ?? null);
+        },
       ),
       mock(ListFeedChangesDocument as never, ({ input }: PullInput) => {
         pulls.push(input);
@@ -116,6 +130,18 @@ export function clientOver(server: Partial<Server>): ApolloClient {
       mock(ListFeedSnapshotDocument as never, ({ input }: SnapshotInput) => {
         snapshots.push(input);
         return (server.snapshot ?? (() => wholeList([])))(input);
+      }),
+      mock(PantryFeedChangesDocument as never, ({ input }: PullInput) => {
+        pantryPulls.push(input);
+        return (server.pantryPull ?? (() => pulled([])))(input);
+      }),
+      mock(PantryFeedSnapshotDocument as never, ({ input }: SnapshotInput) => {
+        snapshots.push(input);
+        return (server.pantrySnapshot ?? (() => wholeList([])))(input);
+      }),
+      mock(PantryFeedSummaryDocument as never, ({ id }: { id: string }) => {
+        summaries.push(id);
+        return { data: { pantry: { __typename: 'Pantry', id } } };
       }),
     ]),
   });

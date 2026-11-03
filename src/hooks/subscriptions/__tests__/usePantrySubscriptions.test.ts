@@ -21,7 +21,12 @@ import {
 import { drainTimers } from '#/test-utils/drainTimers';
 import { unconfirmedCreates } from '#/apollo/offline/unconfirmedCreates';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
-import { MutationType, PantrySubtype } from '#/graphql/generated/schemaTypes';
+import {
+  MutationType,
+  PantrySubtype,
+  SyncScopeKind,
+} from '#/graphql/generated/schemaTypes';
+import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
 import { useStore } from '#store/index';
 import { usePantrySubscriptions } from '#features/pantry/hooks/usePantrySubscriptions';
 import { PantryEventsDocument } from '#features/pantry/graphql/pantry.generated';
@@ -156,6 +161,24 @@ describe('usePantrySubscriptions', () => {
     await flushSummaryRead();
     expect(client.query).toHaveBeenCalledTimes(1);
     expect(summaryReads(client.query)).toHaveLength(1);
+  });
+
+  it('leaves a change made elsewhere to the feed, for a pantry it holds', async () => {
+    holdPosition('pantry-1', {
+      kind: SyncScopeKind.Pantry,
+      cursor: 'kept',
+      snapshotAt: 0,
+    });
+    const getOnData = captureOnData(mockRegister);
+    renderHookWithApollo(() => usePantrySubscriptions('user-1'));
+    const client = makeClient();
+
+    await deliver(getOnData(), itemEvent(MutationType.ItemRemoved), client);
+    await flushSummaryRead();
+
+    expect(mockRemoveFromConnection).not.toHaveBeenCalled();
+    expect(client.query).not.toHaveBeenCalled();
+    clearPositions();
   });
 
   it('reads an item added elsewhere back before adding it', async () => {

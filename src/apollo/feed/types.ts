@@ -1,5 +1,9 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
-import type { SyncPageStatus } from '#/graphql/generated/schemaTypes';
+import type { CacheShards } from '#/apollo/offline/ApolloCachePersistence';
+import type {
+  SyncPageStatus,
+  SyncScopeKind,
+} from '#/graphql/generated/schemaTypes';
 
 export interface FeedScopeCursor {
   id: string;
@@ -24,6 +28,8 @@ export interface FeedPage {
   applied: readonly FeedApplied[];
   /** Places the rows in every view of the scope, and takes out the removed. */
   apply(cache: ApolloCache): void;
+  /** Reads what the page leaves out, once applied, before the pass moves on. */
+  afterApply?(): Promise<void>;
 }
 
 /** A scope read in full. `cursor` is the first page's, taken before any row. */
@@ -40,8 +46,7 @@ export type FeedAnswer<T> =
 
 /** What one scope kind supplies; a kind with none is ignored. */
 export interface FeedAdapter {
-  /** A string: a newer server can name a kind this build's enum does not hold. */
-  readonly kind: string;
+  readonly kind: SyncScopeKind;
   pull(
     client: ApolloClient,
     scopes: readonly FeedScopeCursor[],
@@ -56,4 +61,14 @@ export interface FeedAdapter {
   holdsUnacknowledgedCreate(scopeId: string): boolean;
   /** The scope on screen, which reads in full ahead of the rest. */
   isOnScreen(scopeId: string): boolean;
+  /** Whether a restart brought back the rows a stored position claims. */
+  holdsStoredRows(cache: ApolloCache, scopeId: string): boolean;
+  /** The kind's rows kept apart from what loads at launch, if any. */
+  readonly storage?: CacheShards;
+  /**
+   * The stored scopes holding the rows these ids name, which a queued write's
+   * layer needs in memory; null when one of them cannot be placed. A kind that
+   * stores nothing apart from what loads at launch leaves it out.
+   */
+  scopesNamedBy?(cache: ApolloCache, ids: readonly string[]): string[] | null;
 }

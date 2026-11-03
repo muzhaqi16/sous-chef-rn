@@ -18,6 +18,10 @@ import {
   ListFeedChangesDocument,
   ListFeedSnapshotDocument,
 } from '#features/shoppingList/offline/listFeed.generated';
+import {
+  PantryFeedChangesDocument,
+  PantryFeedSnapshotDocument,
+} from '#features/pantry/offline/pantryFeed.generated';
 
 /**
  * The feed's rows carry every field a list cell reads, so these documents grow
@@ -116,8 +120,10 @@ function countOf(document: DocumentNode, count: 'alias' | 'directive'): number {
 }
 
 describe.each([
-  ['a pull', ListFeedChangesDocument],
-  ['a full read', ListFeedSnapshotDocument],
+  ['a list pull', ListFeedChangesDocument],
+  ['a list full read', ListFeedSnapshotDocument],
+  ['a pantry pull', PantryFeedChangesDocument],
+  ['a pantry full read', PantryFeedSnapshotDocument],
 ])('%s', (_name, document) => {
   const text = print(document);
 

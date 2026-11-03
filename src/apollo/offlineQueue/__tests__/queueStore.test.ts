@@ -1236,6 +1236,29 @@ describe('QueueStore', () => {
 
       expect(store.getQueuedWriteIds()).toEqual(new Set(['kept']));
     });
+
+    it('names the scopes their layers read, and none a settled write did', () => {
+      store.addMutation(carrying('tick', { scopeIds: ['list-1'] }));
+      store.addMutation(carrying('add', { scopeIds: ['list-1', 'list-2'] }));
+      store.addMutation(
+        carrying('done', {
+          status: QueueStatus.SUCCESS,
+          scopeIds: ['list-3'],
+        }),
+      );
+      store.addMutation(makeMutation({ id: 'plain' }));
+
+      expect(store.getPendingWriteScopes()).toEqual(
+        new Set(['list-1', 'list-2']),
+      );
+    });
+
+    it('cannot name the scopes while a write recorded none', () => {
+      store.addMutation(carrying('tick', { scopeIds: ['list-1'] }));
+      store.addMutation(carrying('older'));
+
+      expect(store.getPendingWriteScopes()).toBeNull();
+    });
   });
 
   describe('getPendingClientIds', () => {

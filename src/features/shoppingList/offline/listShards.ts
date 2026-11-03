@@ -7,8 +7,6 @@ import {
   clearPositions,
   forgetPosition,
   heldScopes,
-  holdPosition,
-  type FeedPosition,
 } from '#/apollo/feed/feedPositions';
 import { getApolloClient } from '#/apollo/clientRegistry';
 import {
@@ -17,6 +15,7 @@ import {
 } from '#/apollo/offline/ApolloCachePersistence';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
+import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { Telemetry } from '#/services/telemetry';
 import { logger } from '#/utils/environment';
 import { isRecord } from '#/utils/isRecord';
@@ -30,6 +29,8 @@ const MEMBER_FIELDS = /^(itemsConnection|collaboratorsConnection)\b/;
 const MEMBER_ROWS = /^(ShoppingListItem|ShoppingListCollaborator):/;
 
 const listKey = (listId: string): string => `ShoppingList:${listId}`;
+/** A position's kind is a string, as a newer server can name one this build lacks. */
+const LIST_KIND: string = SyncScopeKind.ShoppingList;
 
 /** Lists whose stored copy is in memory, or has been replaced by a newer one. */
 const hydrated = new Set<string>();
@@ -54,9 +55,15 @@ function changedLists(
   return changed;
 }
 
+/** The lists the feed holds, of every scope it holds. */
+const heldLists = (): string[] =>
+  [...heldScopes()].flatMap(([id, { kind }]) =>
+    kind === LIST_KIND ? [id] : [],
+  );
+
 /** What loads at launch: every list's own row, and no held list's members. */
 function eagerPart(stored: NormalizedCacheObject): NormalizedCacheObject {
-  const held = new Set([...heldScopes().keys()].map(listKey));
+  const held = new Set(heldLists().map(listKey));
   const eager: NormalizedCacheObject = {};
   for (const [key, entity] of Object.entries(stored)) {
     if (MEMBER_ROWS.test(key) && held.has(String(parentOf(entity)))) continue;
@@ -87,21 +94,6 @@ function writeShard(cache: ApolloCache, listId: string): void {
   const text = JSON.stringify(data);
   scopeStorage.write(listId, text);
   shardBytes.set(listId, text.length);
-}
-
-function restorePositions(): void {
-  const text = scopeStorage.readPositions();
-  if (!text) return;
-  try {
-    const stored = JSON.parse(text) as [string, FeedPosition][];
-    for (const [listId, position] of stored) {
-      // A position never outlives its rows: lost with them, the list reads in full.
-      if (scopeStorage.has(listId)) holdPosition(listId, position);
-    }
-  } catch (error) {
-    logger.warn('Lists: stored positions were unreadable', error);
-    scopeStorage.writePositions('[]');
-  }
 }
 
 /** Puts a stored list back in memory. A second call does nothing. */
@@ -157,34 +149,32 @@ export function forgetShardMemory(): void {
 export const listShards: CacheShards = {
   save(cache, stored, previous) {
     const changed = changedLists(stored, previous);
-    for (const listId of heldScopes().keys()) {
+    for (const listId of heldLists()) {
       // Only a list whose stored copy is in: a read of a cold list holds a
       // first page, which must not replace the whole list on disk.
       if (changed.has(listKey(listId)) && hydrated.has(listId)) {
         writeShard(cache, listId);
       }
     }
-    // Last, so a position never reaches the disk ahead of its rows.
-    scopeStorage.writePositions(JSON.stringify([...heldScopes()]));
     const bytes = [...shardBytes.values()].reduce((sum, n) => sum + n, 0);
     Telemetry.gauge('cache_persist_shard_kb', Math.round(bytes / 1024));
     return eagerPart(stored);
   },
 
+  // After the feed's storage restores positions: a held list is one with its shard.
   restore(cache) {
-    restorePositions();
-    const held = [...heldScopes().keys()];
     const { selectedShoppingListId: open } = useStore.getState();
-    // A queued write can name a line of any list, and none says which.
-    const hot =
-      queueStore.getPendingWrites().length > 0
-        ? held
-        : held.filter(listId => listId === open);
-    hot.forEach(listId => hydrateListShard(cache, listId));
+    // The pending writes' layers are rebuilt next, over the rows they name.
+    const named = queueStore.getPendingWriteScopes();
+    for (const listId of heldLists()) {
+      if (listId === open || !named || named.has(listId)) {
+        hydrateListShard(cache, listId);
+      }
+    }
   },
 
+  // The feed's storage removes the stored lists with every other scope.
   clear() {
-    scopeStorage.clear();
     forgetShardMemory();
   },
 };

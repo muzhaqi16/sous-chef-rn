@@ -195,6 +195,17 @@ export function skipUnmatchedFilterVariants(
   };
 }
 
+/** A variant read with no filter and no order: every row, in the client's order. */
+export function isUnfilteredVariant(storeFieldName: string): boolean {
+  const parsed = parseStoreFieldArgs(storeFieldName);
+  if (!parsed) return true;
+  if ('unparseable' in parsed) return false;
+  const { filters, orderBy } = parsed.args;
+  const filtered =
+    isRecord(filters) && Object.values(filters).some(isActiveFilter);
+  return !filtered && !isActiveFilter(orderBy);
+}
+
 /**
  * The entity as the cache holds it: merging a response object over it stores
  * nested entities inline, cut off from their records. Only an entity the cache

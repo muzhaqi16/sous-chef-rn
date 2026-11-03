@@ -17,6 +17,7 @@ import { QUEUE_FULL_CODE, QueueCapacityError } from './types';
 import type { QueuedMutation } from './types';
 import { QueueStatus } from './types';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
+import { scopesNamedBy } from '#/apollo/feed/feedRegistry';
 import {
   pendingWritesOf,
   type PendingWrites,
@@ -211,6 +212,11 @@ function entryFor(
   const write = pendingWriteOf(operationContext, pendingWrites);
   if (write) {
     queuedMutation.pendingWrite = { id: write.id, inputs: write.inputs };
+    const scopeIds = scopesNamedBy(operation.client.cache, [
+      operation.variables,
+      write.inputs,
+    ]);
+    if (scopeIds) queuedMutation.scopeIds = scopeIds;
     const orderedBy = orderOf(operation);
     if (orderedBy) queuedMutation.orderedBy = orderedBy;
   }

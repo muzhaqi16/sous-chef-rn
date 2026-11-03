@@ -8,6 +8,7 @@
 import { useLinkExpirationData } from '#features/notifications/hooks/useLinkExpirationData';
 import { useSubscription } from '@apollo/client/react';
 import { useSelectedPantryId } from '#store/useAppStore';
+import { positionOf } from '#/apollo/feed/feedPositions';
 import {
   PantryEventsDocument,
   type PantryEventsSubscription,
@@ -291,6 +292,10 @@ export function usePantrySubscriptions(userId?: string) {
         }
         return;
       }
+
+      // Its next pull brings these rows and reads the counts again, and the
+      // event writers count, so applying both would count a stack twice.
+      if (positionOf(payload.pantryId)) return;
 
       switch (payload.subtype) {
         case PantrySubtype.ItemChanged:

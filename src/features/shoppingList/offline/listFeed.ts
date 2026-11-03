@@ -25,12 +25,15 @@ import {
   addShoppingListToQueryCache,
   removeShoppingListFromCache,
 } from '../cache/list';
+import { scopeStorage } from '#/apollo/offline/ApolloCachePersistence';
 import {
   discardListShard,
   hydrateListShard,
+  listShards,
   markListHydrated,
 } from './listShards';
 import {
+  ListFeed_LineListFragmentDoc,
   ListFeedChangesDocument,
   ListFeedSnapshotDocument,
   type ListFeedChangesQuery,
@@ -212,4 +215,25 @@ export const listFeedAdapter: FeedAdapter = {
   holdsUnacknowledgedCreate: id => queueStore.holdsCreateFor(id),
 
   isOnScreen: id => useStore.getState().selectedShoppingListId === id,
+
+  holdsStoredRows: (_cache, id) => scopeStorage.has(id),
+
+  storage: listShards,
+
+  scopesNamedBy(cache, ids) {
+    const lists = new Set<string>();
+    for (const id of ids) {
+      if (isHeld(cache, { __typename: 'ShoppingList', id })) lists.add(id);
+      if (!isHeld(cache, { __typename: 'ShoppingListItem', id })) continue;
+      const line = cache.readFragment({
+        id: cache.identify({ __typename: 'ShoppingListItem', id }),
+        fragment: ListFeed_LineListFragmentDoc,
+        fragmentName: 'listFeed_lineList',
+        optimistic: true,
+      });
+      if (!line) return null;
+      lists.add(line.shoppingList.id);
+    }
+    return [...lists];
+  },
 };

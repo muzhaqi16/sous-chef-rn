@@ -1,7 +1,7 @@
 # The scopes a person reaches, each at its latest position. Read to the end: a
 # held scope missing from a complete answer is one they no longer reach.
-query FeedScopes($first: Int, $after: String) {
-  syncScopes(first: $first, after: $after) {
+query FeedScopes($first: Int, $after: String, $kinds: [SyncScopeKind!]) {
+  syncScopes(first: $first, after: $after, kinds: $kinds) {
     edges {
       node {
         kind
@@ -16,9 +16,9 @@ query FeedScopes($first: Int, $after: String) {
   }
 }
 
-# A signal to pull, holding no row.
-subscription FeedPokes {
-  mySyncPokes {
+# A signal to pull, holding no row. Unnamed, the kinds are lists alone.
+subscription FeedPokes($kinds: [SyncScopeKind!]) {
+  mySyncPokes(kinds: $kinds) {
     kind
     scope {
       kind

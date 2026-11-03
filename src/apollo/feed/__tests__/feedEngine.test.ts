@@ -1,7 +1,11 @@
 import type { ApolloClient } from '@apollo/client';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
-import { SyncPageStatus, SyncPokeKind } from '#/graphql/generated/schemaTypes';
+import {
+  SyncPageStatus,
+  SyncPokeKind,
+  SyncScopeKind,
+} from '#/graphql/generated/schemaTypes';
 import { getDeviceId } from '#/services/auth/deviceId';
 import {
   clientOver,
@@ -14,6 +18,7 @@ import {
   page,
   pulled,
   pulls,
+  scopeReads,
   snapshots,
   wholeList,
   type Server,
@@ -136,7 +141,15 @@ describe('catching up', () => {
     expect(positionOf(LIST)?.cursor).toBe('end');
   });
 
-  it('skips a scope kind it has no adapter for', async () => {
+  it('asks the server for the kinds it was started with', async () => {
+    mockClient = clientOver({});
+
+    await run(() => engine.start([SyncScopeKind.ShoppingList]));
+
+    expect(scopeReads.at(-1)?.kinds).toEqual([SyncScopeKind.ShoppingList]);
+  });
+
+  it('skips a scope of a kind it was not started for', async () => {
     mockClient = clientOver({
       scopes: () => ({
         data: {
@@ -162,7 +175,7 @@ describe('catching up', () => {
         }),
     } as unknown as ApolloClient;
 
-    await run();
+    await run(() => engine.start([SyncScopeKind.ShoppingList]));
 
     expect(pulls).toEqual([]);
     expect(heldScopes().size).toBe(0);

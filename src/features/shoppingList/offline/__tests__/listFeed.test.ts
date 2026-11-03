@@ -1,6 +1,7 @@
 import { gql, type ApolloClient } from '@apollo/client';
 import { FeedEngine } from '#/apollo/feed/feedEngine';
 import { clearPositions, positionOf } from '#/apollo/feed/feedPositions';
+import { scopesNamedBy } from '#/apollo/feed/feedRegistry';
 import { SyncPageStatus } from '#/graphql/generated/schemaTypes';
 import {
   clientOver,
@@ -203,5 +204,26 @@ describe('a full read of a held list', () => {
     expect(client.cache.extract()).toHaveProperty(
       'ShoppingListCollaborator:person-2',
     );
+  });
+});
+
+describe('the lists a queued write names', () => {
+  it('places a line by its list, a list by itself, and ignores the rest', async () => {
+    const client = await pullAfter([list(1), line('row-1')], {});
+
+    expect(
+      scopesNamedBy(client.cache, [
+        { input: { id: 'row-1', itemName: 'Oat milk' } },
+        { listId: LIST, now: '2026-11-03T00:00:00.000Z' },
+      ]),
+    ).toEqual([LIST]);
+  });
+
+  it('names no list for a write that touches none', async () => {
+    const client = await pullAfter([list(1), line('row-1')], {});
+
+    expect(
+      scopesNamedBy(client.cache, [{ input: { pantryItemId: 'stack-1' } }]),
+    ).toEqual([]);
   });
 });
