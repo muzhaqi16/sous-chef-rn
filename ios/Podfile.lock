@@ -2668,7 +2668,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - Unistyles (3.8.0):
+  - Unistyles (3.8.1):
     - hermes-engine
     - NitroModules
     - RCTRequired
@@ -3165,10 +3165,10 @@ SPEC CHECKSUMS:
   RNScreens: de068bbd7d91b820fedac25c597d4b14830de74b
   RNSVG: 6cae8d4082913be2eb43eaec2a456222c42195ed
   RNWorklets: 3da8f468c848547646f4e6b12fb46ad93a2cdee2
-  Unistyles: fce15933ac637074b73b028c27aa45a6484d43d8
+  Unistyles: befd57e9173fd8202ab772de43f6aa7b54b17cad
   VisionCamera: f84550cffbbf23f3cac7a3d1d2e66e5098a4e8eb
   Yoga: 18b74b3ade30bebc1904004dfaceae1dd02a330a
 
-PODFILE CHECKSUM: 53fadeddfe238d5e179e5915d2023cee6bf87478
+PODFILE CHECKSUM: c90f7594ca504cca1ffcb600ee06688bb6f4dada
 
 COCOAPODS: 1.16.2
