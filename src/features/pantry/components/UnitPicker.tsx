@@ -33,16 +33,24 @@ interface UnitPickerProps {
 /** How many units lead; the rest wait behind More. */
 const LEADING_UNITS = 3;
 
-/** The leading units, holding a unit picked from More in the last place. */
+/**
+ * The leading units, in the server's order. The package stays among them, so a
+ * whole one is used without More, however far a last-used unit pushes it, and
+ * so does a unit picked from More.
+ */
 function leadingUnits(
   ranked: PickableUnit[],
   selectedUnitId: string | undefined,
 ): PickableUnit[] {
-  const leading = ranked.slice(0, LEADING_UNITS);
-  const selected = ranked.find(unit => unit.unitId === selectedUnitId);
-  return !selected || leading.includes(selected)
-    ? leading
-    : [...leading.slice(0, LEADING_UNITS - 1), selected];
+  const isKept = (unit: PickableUnit) =>
+    unit.isTrackingUnit || unit.unitId === selectedUnitId;
+  const shown = new Set(
+    [...ranked.filter(isKept), ...ranked.filter(unit => !isKept(unit))].slice(
+      0,
+      LEADING_UNITS,
+    ),
+  );
+  return ranked.filter(unit => shown.has(unit));
 }
 
 export const UnitPicker: React.FC<UnitPickerProps> = ({

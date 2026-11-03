@@ -27,6 +27,16 @@ const soda = [
   unitOf('cup'),
   unitOf('pinch'),
 ];
+// The same case last used in tbsp: the server ranks that unit first, which
+// pushes the case past three.
+const sodaLastUsedInTbsp = [
+  unitOf('tbsp'),
+  unitOf('can', UnitType.Count),
+  unitOf('fl oz'),
+  unitOf('case', UnitType.Count, true),
+  unitOf('cup'),
+  unitOf('pinch'),
+];
 const sodaGroups: PickableUnitGroup[] = [
   { type: UnitType.Count, label: 'Count', units: soda.slice(0, 2) },
   { type: UnitType.Volume, label: 'Volume', units: soda.slice(2) },
@@ -91,6 +101,36 @@ describe('UnitPicker', () => {
     rerender(<UnitPicker {...pickerProps} selectedUnitId="cup" />);
     expect(screen.getByText('cup')).toBeTruthy();
     expect(screen.queryByText('pinch')).toBeNull();
+  });
+
+  it('keeps the package in view when a last-used unit pushes it past three', () => {
+    render(
+      <UnitPicker
+        {...pickerProps}
+        ranked={sodaLastUsedInTbsp}
+        selectedUnitId="tbsp"
+      />,
+    );
+
+    expect(screen.getByText('tbsp')).toBeTruthy();
+    expect(screen.getByText('can')).toBeTruthy();
+    expect(screen.getByText('case')).toBeTruthy();
+    expect(screen.queryByText('fl oz')).toBeNull();
+  });
+
+  it('keeps both the package and a unit picked from More in view', () => {
+    render(
+      <UnitPicker
+        {...pickerProps}
+        ranked={sodaLastUsedInTbsp}
+        selectedUnitId="cup"
+      />,
+    );
+
+    expect(screen.getByText('tbsp')).toBeTruthy();
+    expect(screen.getByText('case')).toBeTruthy();
+    expect(screen.getByText('cup')).toBeTruthy();
+    expect(screen.queryByText('can')).toBeNull();
   });
 
   it('shows no More at three units or fewer', () => {
