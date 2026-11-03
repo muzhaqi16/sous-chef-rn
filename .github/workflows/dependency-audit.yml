@@ -34,7 +34,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version-file: package.json
 
       # `npm audit` exits 1 when it finds something, which is the signal, not an
       # error — the step must continue so the issue below can be filed. An
