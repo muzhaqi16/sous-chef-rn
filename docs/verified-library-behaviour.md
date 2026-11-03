@@ -26,6 +26,29 @@ Re-check:
 cat node_modules/@gorhom/bottom-sheet/src/components/bottomSheetView/styles.ts
 ```
 
+### gorhom sheet content hides its children from VoiceOver
+
+**Claim:** with gorhom's defaults, a sheet's content is one accessibility
+element (`accessible: true`, label "Bottom Sheet", role `adjustable`). iOS then
+reports none of the rows or buttons inside it, so VoiceOver cannot reach them.
+
+**Verified against `@gorhom/bottom-sheet@5.2.14` on 2026-11-03.**
+`DEFAULT_ACCESSIBLE = true` reaches the content view in `BottomSheet.tsx`.
+On an iOS 27 simulator, the list picker's accessibility tree held only the
+"Bottom Sheet" element and the handle; with `accessible={false}` on the
+`BottomSheetModal` wrapper (`src/hooks/ui/useStandardBottomSheet.tsx`), every
+list row and the Create, Share and Settings buttons appear.
+
+Re-check:
+
+```
+grep -n "DEFAULT_ACCESSIBLE\b" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/constants.ts
+grep -n "accessible={_providedAccessible" node_modules/@gorhom/bottom-sheet/src/components/bottomSheet/BottomSheet.tsx
+```
+
+Then open any sheet on a simulator and read argent `describe`: its rows must be
+listed.
+
 ### gorhom keyboard handling requires BottomSheetTextInput
 
 **Claim:** a plain RN `TextInput` inside a sheet leaves the sheet blind to the
