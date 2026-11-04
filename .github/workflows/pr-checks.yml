@@ -533,7 +533,9 @@ jobs:
         dependency-audit,
         whole-tree-gates,
       ]
-    if: always()
+    # A failed or timed-out gate still reports here. A run a newer push
+    # cancelled has no verdict, so it reports nothing rather than a failure.
+    if: ${{ !cancelled() }}
 
     steps:
       - name: Check all jobs
