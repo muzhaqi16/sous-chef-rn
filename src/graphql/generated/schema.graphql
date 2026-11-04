@@ -13456,6 +13456,13 @@ type ParsedReceiptLine {
   localizedName; null when it names none. unit stays as printed.
   """
   measureUnit: Unit
+  """
+  The food an ITEM bought, in plain words as a catalog lists it ("organic
+  russet potatoes" for "A-POTATO RUSSET ORG 3 LB"); null on any other line,
+  or when no model named it. Send it as ReceiptLineInput.name, which search
+  ranks; product stays what the receipt prints.
+  """
+  name: String
   """The product name as printed, on an ITEM"""
   product: String
   """
@@ -15441,6 +15448,12 @@ input ReceiptLineInput {
   The code printed on the line: a barcode (often without its check digit) or the store's item number
   """
   code: String
+  """
+  The line's plain name as ParsedReceiptLine.name gave it ("organic russet
+  potatoes"): search ranks it in place of text, and it names an item exactly
+  as text does. A remembered match still keys on text. Blank is none.
+  """
+  name: String
   """The line's product text as printed, e.g. GV WHL MLK 1G"""
   text: String!
 }
