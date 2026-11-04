@@ -3,14 +3,13 @@ import { makeCache } from '#/apollo/cache';
 import { seedFragment, seedQuery } from '#/test-utils/apolloMockProvider';
 import { GetStorageLocationsDocument } from '#features/catalog/graphql/storageLocation.generated';
 import {
-  dropInvite,
-  dropLocation,
-  dropMember,
+  dropHomeRows,
   dropOrderedMembers,
   evictHomeRows,
   homeRowsHeld,
-  keepHomeRows,
   listInHeldPantries,
+  replaceHomeRows,
+  type HomeRows,
 } from '../feedRows';
 
 const HOME = 'home-1';
@@ -173,6 +172,13 @@ const pantryLocationsOf = (cache: ApolloCache) =>
 const placed = (cache: ApolloCache, write: (cache: ApolloCache) => void) =>
   cache.batch({ optimistic: false, update: write });
 
+const rows = (named: Partial<HomeRows> = {}): HomeRows => ({
+  members: [],
+  invites: [],
+  locations: [],
+  ...named,
+});
+
 describe('the rows a home lists', () => {
   it('names its members, invites and locations, and no other home’s', () => {
     const cache = makeCache();
@@ -214,7 +220,7 @@ describe('a member another device added', () => {
     const cache = makeCache();
     seedHome(cache, { members: ['member-1', 'member-2'] });
 
-    placed(cache, c => dropMember(c, HOME, 'member-2'));
+    placed(cache, c => dropHomeRows(c, HOME, rows({ members: ['member-2'] })));
 
     expect(idsIn(membersOf(cache))).toEqual(['member-1']);
     expect(membersOf(cache)?.totalCount).toBe(1);
@@ -227,7 +233,7 @@ describe('an invite another device made', () => {
     const cache = makeCache();
     seedHome(cache, { invites: ['invite-1'] });
 
-    placed(cache, c => dropInvite(c, HOME, 'invite-1'));
+    placed(cache, c => dropHomeRows(c, HOME, rows({ invites: ['invite-1'] })));
 
     expect(invitesOf(cache)).toEqual([]);
     expect(cache.extract()).not.toHaveProperty('HomeInvite:invite-1');
@@ -262,7 +268,7 @@ describe('a location another device made', () => {
     seedLocations(cache, HOME, ['loc-1', 'loc-2']);
     seedPantryLocations(cache, ['loc-1', 'loc-2']);
 
-    placed(cache, c => dropLocation(c, HOME, 'loc-2'));
+    placed(cache, c => dropHomeRows(c, HOME, rows({ locations: ['loc-2'] })));
 
     expect(idsIn(locationsOf(cache))).toEqual(['loc-1']);
     expect(locationsOf(cache)?.totalCount).toBe(1);
@@ -283,12 +289,72 @@ describe('a home read in full', () => {
     const before = homeRowsHeld(cache, HOME);
 
     placed(cache, c =>
-      keepHomeRows(c, HOME, new Set(['member-1', 'loc-2']), before),
+      replaceHomeRows(c, HOME, {
+        read: rows({ members: ['member-1'], locations: ['loc-2'] }),
+        listed: rows(),
+        before,
+      }),
     );
 
     expect(idsIn(membersOf(cache))).toEqual(['member-1']);
     expect(invitesOf(cache)).toEqual([]);
     expect(idsIn(locationsOf(cache))).toEqual(['loc-2']);
+    expect(cache.extract()).not.toHaveProperty('Membership:member-2');
+  });
+
+  // It came after the read, and the next pull brings it.
+  it('keeps a row only the summary after it names', () => {
+    const cache = makeCache();
+    seedHome(cache, { members: ['member-1', 'member-2'] });
+
+    const before = homeRowsHeld(cache, HOME);
+
+    placed(cache, c =>
+      replaceHomeRows(c, HOME, {
+        read: rows({ members: ['member-1'] }),
+        listed: rows({ members: ['member-1', 'member-2'] }),
+        before,
+      }),
+    );
+
+    expect(idsIn(membersOf(cache))).toEqual(['member-1', 'member-2']);
+  });
+
+  it('takes a location only a held pantry listed out of it and the cache', () => {
+    const cache = makeCache();
+    seedLocations(cache, HOME, ['loc-1']);
+    seedPantryLocations(cache, ['loc-1', 'loc-2']);
+
+    const before = homeRowsHeld(cache, HOME);
+
+    placed(cache, c =>
+      replaceHomeRows(c, HOME, {
+        read: rows({ locations: ['loc-1'] }),
+        listed: rows({ locations: ['loc-1'] }),
+        before,
+      }),
+    );
+
+    expect(pantryLocationsOf(cache)).toEqual(['loc-1']);
+    expect(cache.extract()).not.toHaveProperty('StorageLocation:loc-2');
+  });
+
+  it('lists what the summary listed in each held pantry', () => {
+    const cache = makeCache();
+    seedLocations(cache, HOME, ['loc-1', 'loc-2']);
+    seedPantryLocations(cache, ['loc-1']);
+
+    const before = homeRowsHeld(cache, HOME);
+
+    placed(cache, c =>
+      replaceHomeRows(c, HOME, {
+        read: rows({ locations: ['loc-1', 'loc-2', 'loc-3'] }),
+        listed: rows({ locations: ['loc-1', 'loc-2'] }),
+        before,
+      }),
+    );
+
+    expect(pantryLocationsOf(cache)).toEqual(['loc-1', 'loc-2']);
   });
 });
 
@@ -298,6 +364,7 @@ describe('a home the person has lost', () => {
     seedHome(cache, { members: ['member-1'], invites: ['invite-1'] });
     seedLocations(cache, HOME, ['loc-1']);
     seedLocations(cache, OTHER_HOME, ['loc-9']);
+    seedPantryLocations(cache, ['loc-1', 'loc-2']);
 
     placed(cache, c => evictHomeRows(c, HOME));
 
@@ -305,6 +372,7 @@ describe('a home the person has lost', () => {
     expect(stored).not.toHaveProperty('Membership:member-1');
     expect(stored).not.toHaveProperty('HomeInvite:invite-1');
     expect(stored).not.toHaveProperty('StorageLocation:loc-1');
+    expect(stored).not.toHaveProperty('StorageLocation:loc-2');
     expect(locationsOf(cache)).toBeUndefined();
     expect(idsIn(locationsOf(cache, OTHER_HOME))).toEqual(['loc-9']);
   });

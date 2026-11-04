@@ -123,15 +123,22 @@ members, PENDING invites and live storage locations.
   `HomeInvite.status`.
 - **A new row is listed by the summary, never by the pull.** A location without `currentItemCount`, or
   a member without a person, would leave `GetPantry`, `GetStorageLocations` or `GetHome` incomplete.
-  `HomeFeedSummary` reads the home's Readers, its members and invites with their people, and
-  `storageLocations(homeId)`. Its first-page and whole-list reads replace those lists. New locations
-  then join each held pantry's location list, which is never dropped: the pantry screen reads it
-  offline. It runs after any page holding a member, an invite or a location, not after a rename.
-- **A failed summary forgets the home's position**, so the next pass reads it in full. The engine has
-  saved the position by then, so nothing else would retry it. A full read is its snapshot, then its
-  summary, then the replace, and a failed summary fails the full read.
-- **Removals apply from the page**: a member or invite leaves its list and the cache, and a location
-  leaves the home's list and every held pantry's.
+  `HomeFeedSummary` reads the home's Readers, its members and invites with their people,
+  `pantriesConnection(first: 10)` (what `GetHomes` reads besides) and `storageLocations(homeId)`. Its
+  first-page and whole-list reads replace those lists. New locations the summary listed then join
+  each held pantry's location list, which is never dropped: the pantry screen reads it offline. It
+  runs after any page holding a member, an invite or a location, and after a page that moves a held
+  home's `joinCode` or `allowJoinCode`, which the server makes `joinLink` of. A rename reads nothing.
+- **A failed summary leaves the home owed a full read.** `afterApply` answers the error, and the
+  engine owes the scope a full read and paces on the error, as for a failed pull. The position stays
+  held, so a home lost meanwhile still leaves on the next reach read. A full read is its snapshot,
+  then its summary, then the replace, and a failed summary fails the full read.
+- **A full read keeps what the snapshot or the summary names.** A row only the summary names came
+  after the snapshot, and the next pull brings it. A location only a held pantry's list names is
+  judged too. The home then joins `homes`, complete, which is how a home gained elsewhere (an invite
+  accepted on another device) appears, though an invite card already cached the `Home`.
+- **Removals apply from the page**: a member or invite leaves its list, and a location leaves the
+  home's list and every held pantry's; then they leave the cache in one sweep (one `gc()`).
 - **Eviction is `dropHome`** (`src/domain/dropHome.ts`): the Home and the selection, with no
   announcement. `forgetHome` adds the announcement through `refetchEvents`, which imports the engine,
   so the adapter can't use it. `userEvents` REMOVED_FROM_HOME still runs `forgetHome`, and a reconnect

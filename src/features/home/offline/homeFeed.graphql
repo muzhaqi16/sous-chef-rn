@@ -153,12 +153,29 @@ query HomeFeedSnapshot($input: SyncSnapshotInput!) {
 }
 
 # What a pull leaves out: the home's computed values and the people its rows
-# name, read after a page that added or removed one of them, and after a full read.
+# name, read after a page that added or removed one of them or moved what the
+# join link is made of, and after a full read. It also reads what the homes
+# list reads on a home, as a full read is how a home joins that list.
 query HomeFeedSummary($id: ID!) {
   home(id: $id) {
     id
     version
     ...HomeReaders
+    pantriesConnection(first: 10) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+          version
+          name
+          isDefault
+        }
+      }
+    }
     membersConnection(first: 20) {
       totalCount
       pageInfo {
@@ -205,4 +222,12 @@ query HomeFeedSummary($id: ID!) {
       }
     }
   }
+}
+
+# What the server makes the home's join link of: a pull that moves either
+# leaves the link the summary read last.
+fragment homeFeed_join on Home {
+  id
+  joinCode
+  allowJoinCode
 }

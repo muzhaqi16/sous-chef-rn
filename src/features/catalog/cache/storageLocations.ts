@@ -131,8 +131,8 @@ export function placeStorageLocation(
   }
 }
 
-/** A location the feed removed, out of every list that names it and the cache. */
-export function dropStorageLocation(
+/** A location the feed removed, out of every list that names it; the caller evicts it. */
+export function unplaceStorageLocation(
   cache: ApolloCache,
   id: string,
   pantryIds: readonly string[],
@@ -140,5 +140,5 @@ export function dropStorageLocation(
   for (const pantryId of pantryIds) {
     removeFromPantryLocations(cache, pantryId, id);
   }
-  removeFromStorageLocationsCache(cache, id, { evictItem: true });
+  removeFromStorageLocationsCache(cache, id);
 }

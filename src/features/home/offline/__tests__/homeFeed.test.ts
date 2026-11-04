@@ -15,6 +15,7 @@ import {
   homeSummaries,
   page,
   pulled,
+  snapshots,
   wholeList,
   type Server,
 } from '#/test-utils/feedServer';
@@ -103,6 +104,26 @@ const PANTRY_LOCATIONS = gql`
   }
 `;
 
+const JOIN_LINK = gql`
+  fragment TestFeedJoinLink on Home {
+    id
+    joinCode
+    allowJoinCode
+    joinLink {
+      universal
+    }
+  }
+`;
+
+// What an invite card caches of the home it names.
+const INVITED_HOME = gql`
+  fragment TestFeedInvitedHome on Home {
+    id
+    version
+    name
+  }
+`;
+
 const HOMES = gql`
   query TestFeedHomes {
     homes(first: 20) {
@@ -154,14 +175,16 @@ const summary = ({
   members = [],
   locations = [],
   mine,
+  homeFields = {},
 }: {
   members?: Record<string, unknown>[];
   locations?: Record<string, unknown>[];
   mine?: Record<string, unknown>;
+  homeFields?: Record<string, unknown>;
 }) => ({
   data: {
     home: {
-      ...home(),
+      ...home(homeFields),
       membersConnection: edgesOf(members),
       invitesConnection: edgesOf([]),
       ...(mine && { myMembership: mine }),
@@ -169,6 +192,32 @@ const summary = ({
     storageLocations: edgesOf(locations),
   },
 });
+
+const joinLinkOf = (code: string) => ({
+  __typename: 'ShareLink',
+  universal: `https://example.com/join/${code}`,
+});
+
+/** The join code, switch and link a held home was last read with. */
+function holdJoin(client: ApolloClient, code: string): void {
+  seedFragment(client.cache, {
+    id: `Home:${HOME}`,
+    fragment: JOIN_LINK,
+    data: {
+      __typename: 'Home',
+      id: HOME,
+      joinCode: code,
+      allowJoinCode: true,
+      joinLink: joinLinkOf(code),
+    },
+  });
+}
+
+const joinLinkHeld = (client: ApolloClient) =>
+  client.cache.readFragment<{ joinLink: { universal: string } | null }>({
+    id: `Home:${HOME}`,
+    fragment: JOIN_LINK,
+  })?.joinLink?.universal;
 
 const listedHome = (cursor: string, ids: readonly string[] = [HOME]) => ({
   data: {
@@ -250,6 +299,7 @@ const myMembershipOf = (client: ApolloClient) =>
 beforeEach(() => {
   homePulls.length = 0;
   homeSummaries.length = 0;
+  snapshots.length = 0;
   clearPositions();
   useStore.setState({ isOnline: true, apiReachable: true });
   engine = new FeedEngine();
@@ -278,13 +328,72 @@ describe('a page on a held home', () => {
 
   it('reads no summary for a rename', async () => {
     const client = await pullOnce(
-      { changed: [home({ name: 'Our Place' })] },
+      {
+        changed: [
+          home({ name: 'Our Place', joinCode: 'ABC123', allowJoinCode: true }),
+        ],
+      },
       {},
-      seeded => holdHome(seeded, ['member-1']),
+      seeded => {
+        holdHome(seeded, ['member-1']);
+        holdJoin(seeded, 'ABC123');
+      },
     );
 
     expect(homeSummaries).toEqual([]);
     expect(membersOf(client)).toEqual(['member-1']);
+  });
+
+  it('reads the join link again when another device changes the code', async () => {
+    const client = await pullOnce(
+      {
+        changed: [home({ joinCode: 'XYZ789', allowJoinCode: true })],
+      },
+      {
+        homeSummary: () =>
+          summary({
+            members: [member('member-1')],
+            homeFields: {
+              joinCode: 'XYZ789',
+              allowJoinCode: true,
+              joinLink: joinLinkOf('XYZ789'),
+            },
+          }),
+      },
+      seeded => {
+        holdHome(seeded, ['member-1']);
+        holdJoin(seeded, 'ABC123');
+      },
+    );
+
+    expect(homeSummaries).toEqual([HOME]);
+    expect(joinLinkHeld(client)).toBe('https://example.com/join/XYZ789');
+  });
+
+  it('reads the join link again when another device turns joining off', async () => {
+    const client = await pullOnce(
+      {
+        changed: [home({ joinCode: 'ABC123', allowJoinCode: false })],
+      },
+      {
+        homeSummary: () =>
+          summary({
+            members: [member('member-1')],
+            homeFields: {
+              joinCode: 'ABC123',
+              allowJoinCode: false,
+              joinLink: null,
+            },
+          }),
+      },
+      seeded => {
+        holdHome(seeded, ['member-1']);
+        holdJoin(seeded, 'ABC123');
+      },
+    );
+
+    expect(homeSummaries).toEqual([HOME]);
+    expect(joinLinkHeld(client)).toBeUndefined();
   });
 
   it('ignores a row of another kind', async () => {
@@ -347,14 +456,30 @@ describe('a page on a held home', () => {
   });
 
   it('leaves a new member unlisted and reads the home in full next, when the summary fails', async () => {
+    let summaryFails = true;
     const client = await pullOnce(
       { changed: [member('member-2')] },
-      { homeSummary: () => fault() },
+      {
+        homeSnapshot: () =>
+          wholeList([home(), member('member-1'), member('member-2')]),
+        homeSummary: () =>
+          summaryFails
+            ? fault()
+            : summary({ members: [member('member-1'), member('member-2')] }),
+      },
       seeded => holdHome(seeded, ['member-1']),
     );
 
     expect(membersOf(client)).toEqual(['member-1']);
-    expect(positionOf(HOME)).toBeUndefined();
+    expect(positionOf(HOME)?.cursor).toBe('latest');
+    expect(snapshots).toEqual([]);
+
+    summaryFails = false;
+    engine.catchUp();
+    await engine.whenSettled();
+
+    expect(snapshots).toEqual([expect.objectContaining({ id: HOME })]);
+    expect(membersOf(client)).toEqual(['member-1', 'member-2']);
   });
 
   // Even with no summary, the row the home names as the person's moves.
@@ -574,6 +699,58 @@ describe('a full read of a home', () => {
         })
         ?.homes.edges.map(edge => edge.node.id),
     ).toEqual([OTHER_HOME, HOME]);
+  });
+
+  it('lists a home whose invite the person accepted elsewhere, complete', async () => {
+    const client = await fullRead(
+      {
+        homeSnapshot: () => wholeList([home(), member('member-1')]),
+        homeSummary: () => summary({ members: [member('member-1')] }),
+      },
+      seeded => {
+        seedFragment(seeded.cache, {
+          id: `Home:${HOME}`,
+          fragment: INVITED_HOME,
+          data: { __typename: 'Home', id: HOME, version: 1, name: 'Theirs' },
+        });
+        seedQuery(seeded.cache, {
+          query: GetHomesDocument,
+          variables: { first: 20 },
+          data: {
+            homes: edgesOf([{ __typename: 'Home', id: OTHER_HOME }]),
+          },
+        });
+      },
+    );
+
+    expect(
+      client.cache
+        .readQuery({ query: GetHomesDocument, variables: { first: 20 } })
+        ?.homes.edges.map(edge => edge.node.id),
+    ).toEqual([OTHER_HOME, HOME]);
+  });
+
+  it('keeps a member who joined between the read and its summary', async () => {
+    const client = await fullRead(
+      {
+        homeSnapshot: () => wholeList([home(), member('member-1')]),
+        homeSummary: () =>
+          summary({ members: [member('member-1'), member('member-2')] }),
+      },
+      seeded =>
+        seedFragment(seeded.cache, {
+          id: `Home:${HOME}`,
+          fragment: MEMBERS,
+          data: {
+            __typename: 'Home',
+            id: HOME,
+            membersConnection: edgesOf([member('member-1')]),
+          },
+        }),
+    );
+
+    expect(membersOf(client)).toEqual(['member-1', 'member-2']);
+    expect(client.cache.extract()).toHaveProperty('Membership:member-2');
   });
 
   it('evicts a location the read does not hold', async () => {

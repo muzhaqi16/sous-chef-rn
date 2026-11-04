@@ -9,8 +9,8 @@ import {
 import type { Pantry } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import {
-  dropStorageLocation,
   placeStorageLocation,
+  unplaceStorageLocation,
 } from '#features/catalog/cache/storageLocations';
 import type { HomeFeedSnapshotQuery } from '../offline/homeFeed.generated';
 
@@ -18,6 +18,7 @@ type RowTypename =
   HomeFeedSnapshotQuery['syncSnapshot']['rows'][number]['__typename'];
 const MEMBER: Extract<RowTypename, 'Membership'> = 'Membership';
 const INVITE: Extract<RowTypename, 'HomeInvite'> = 'HomeInvite';
+const LOCATION: Extract<RowTypename, 'StorageLocation'> = 'StorageLocation';
 const PANTRY: NonNullable<Pantry['__typename']> = 'Pantry';
 
 const removeMember = createRemoveFromParentConnectionUpdater(
@@ -115,84 +116,122 @@ export function dropOrderedMembers(cache: ApolloCache, homeId: string): void {
   });
 }
 
+/** The locations the held pantries list, whichever variant lists them. */
+function locationsInPantries(
+  cache: ApolloCache,
+  pantryIds: readonly string[],
+): string[] {
+  return pantryIds.flatMap(id =>
+    idsListed(
+      cache,
+      cache.identify({ __typename: PANTRY, id }),
+      'storageLocationsConnection',
+    ),
+  );
+}
+
 /**
- * Locations the summary read listed for the home, into each held pantry of
- * it. A pantry's list is never dropped: the pantry screen reads it offline.
+ * Locations the summary listed for the home, into each held pantry of it. A
+ * pantry's list is never dropped: the pantry screen reads it offline.
  */
 export function listInHeldPantries(
   cache: ApolloCache,
   homeId: string,
   locationIds: readonly string[],
 ): void {
+  if (locationIds.length === 0) return;
   const pantries = heldPantriesOf(cache, homeId);
   for (const id of locationIds) {
     placeStorageLocation(cache, id, homeId, pantries);
   }
 }
 
-/** A member who left, out of every list of the home's members and the cache. */
-export function dropMember(
+const asRows = (typename: string, ids: readonly string[]) =>
+  ids.map(id => ({ typename, id }));
+
+/** Rows out of every list of the home that names them, then the cache in one sweep. */
+function dropRows(
   cache: ApolloCache,
   homeId: string,
-  membershipId: string,
+  pantryIds: readonly string[],
+  { members, invites, locations }: HomeRows,
 ): void {
-  removeMember(cache, homeId, membershipId, { evictItem: true });
+  for (const id of members) removeMember(cache, homeId, id);
+  for (const id of invites) removeInvite(cache, homeId, id);
+  for (const id of locations) unplaceStorageLocation(cache, id, pantryIds);
+  const rows = [
+    ...asRows(MEMBER, members),
+    ...asRows(INVITE, invites),
+    ...asRows(LOCATION, locations),
+  ];
+  if (rows.length > 0) safeEvictMany(cache, rows);
 }
 
-/** An invite that stopped pending, out of the home's invites and the cache. */
-export function dropInvite(
+/** Members who left, invites that stopped pending and deleted locations. */
+export function dropHomeRows(
   cache: ApolloCache,
   homeId: string,
-  inviteId: string,
+  rows: HomeRows,
 ): void {
-  removeInvite(cache, homeId, inviteId, { evictItem: true });
+  const pantries =
+    rows.locations.length > 0 ? heldPantriesOf(cache, homeId) : [];
+  dropRows(cache, homeId, pantries, rows);
 }
 
-export function dropLocation(
-  cache: ApolloCache,
-  homeId: string,
-  locationId: string,
-): void {
-  dropStorageLocation(cache, locationId, heldPantriesOf(cache, homeId));
-}
+export const homeRowIds = ({ members, invites, locations }: HomeRows) => [
+  ...members,
+  ...invites,
+  ...locations,
+];
 
 /**
- * Makes a home's members, invites and locations no more than a full read
- * holds: what it does not hold leaves. The summary read rewrote the lists
- * first, so what they named before it is passed in as `before`.
+ * Makes a home's rows the server's after a full read. What neither the read
+ * nor the summary after it names leaves; a row only the summary names came
+ * after the read, and the next pull brings it. `before` is what the lists
+ * named before the summary rewrote them.
  */
-export function keepHomeRows(
+export function replaceHomeRows(
   cache: ApolloCache,
   homeId: string,
-  read: ReadonlySet<string>,
-  before: HomeRows,
+  {
+    read,
+    listed,
+    before,
+  }: { read: HomeRows; listed: HomeRows; before: HomeRows },
 ): void {
+  const pantries = heldPantriesOf(cache, homeId);
   const now = homeRowsHeld(cache, homeId);
-  const gone = (ids: readonly string[], more: readonly string[]) =>
-    [...new Set([...ids, ...more])].filter(id => !read.has(id));
-  for (const id of gone(before.members, now.members)) {
-    dropMember(cache, homeId, id);
-  }
-  for (const id of gone(before.invites, now.invites)) {
-    dropInvite(cache, homeId, id);
-  }
-  for (const id of gone(before.locations, now.locations)) {
-    dropLocation(cache, homeId, id);
+  const kept = new Set([...homeRowIds(read), ...homeRowIds(listed)]);
+  const gone = (...lists: (readonly string[])[]) =>
+    [...new Set(lists.flat())].filter(id => !kept.has(id));
+  dropRows(cache, homeId, pantries, {
+    members: gone(before.members, now.members),
+    invites: gone(before.invites, now.invites),
+    locations: gone(
+      before.locations,
+      now.locations,
+      locationsInPantries(cache, pantries),
+    ),
+  });
+  for (const id of listed.locations) {
+    placeStorageLocation(cache, id, homeId, pantries);
   }
 }
 
 /** Every row of a home the person has lost, and its location list. */
 export function evictHomeRows(cache: ApolloCache, homeId: string): void {
-  const { members, invites, locations } = homeRowsHeld(cache, homeId);
   const pantries = heldPantriesOf(cache, homeId);
-  for (const id of locations) dropStorageLocation(cache, id, pantries);
+  const { members, invites, locations } = homeRowsHeld(cache, homeId);
   cache.evict({
     id: 'ROOT_QUERY',
     fieldName: 'storageLocations',
     args: { homeId },
   });
-  safeEvictMany(cache, [
-    ...members.map(id => ({ typename: MEMBER, id })),
-    ...invites.map(id => ({ typename: INVITE, id })),
-  ]);
+  dropRows(cache, homeId, pantries, {
+    members,
+    invites,
+    locations: [
+      ...new Set([...locations, ...locationsInPantries(cache, pantries)]),
+    ],
+  });
 }

@@ -28,8 +28,11 @@ export interface FeedPage {
   applied: readonly FeedApplied[];
   /** Places the rows in every view of the scope, and takes out the removed. */
   apply(cache: ApolloCache): void;
-  /** Reads what the page leaves out, once applied, before the pass moves on. */
-  afterApply?(): Promise<void>;
+  /**
+   * Reads what the page leaves out, once applied, before the pass moves on.
+   * Unread, the scope's rows are not complete, so it is owed a full read.
+   */
+  afterApply?(): Promise<FeedAnswer<true>>;
 }
 
 /** A scope read in full. `cursor` is the first page's, taken before any row. */

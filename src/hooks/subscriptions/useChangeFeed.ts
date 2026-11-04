@@ -10,11 +10,6 @@ import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useSubscriptionTransportRecovery } from './useSubscriptionTransportRecovery';
 
-/**
- * Runs the change feed for the signed-in person. A poke holds no row and a lost
- * one only delays a pull, so it stays uncached and the connection is what
- * guarantees a catch-up.
- */
 interface KindSwitches {
   lists: boolean;
   pantries: boolean;
@@ -36,6 +31,11 @@ function useKindSwitches(): KindSwitches {
   };
 }
 
+/**
+ * Runs the change feed for the signed-in person. A poke holds no row and a lost
+ * one only delays a pull, so it stays uncached and the connection is what
+ * guarantees a catch-up.
+ */
 export function useChangeFeed(userId: string): void {
   const { lists, pantries, homes } = useKindSwitches();
 
