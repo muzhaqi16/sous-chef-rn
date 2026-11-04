@@ -17,7 +17,11 @@ describe('checkInLineOf', () => {
         choice: lineChoice({ itemId: 'item-mayo', price: 6.49 }),
         ids: IDS,
         heldUnit: null,
-        proposed: { itemId: 'item-mayo', method: ReceiptMatchMethod.Search },
+        proposed: {
+          itemId: 'item-mayo',
+          method: ReceiptMatchMethod.Search,
+          preselected: true,
+        },
       }),
     ).toEqual({
       input: {
@@ -95,7 +99,29 @@ describe('checkInLineOf', () => {
       choice: lineChoice({ itemId: 'item-sausage', price: 6.49 }),
       ids: IDS,
       heldUnit: null,
-      proposed: { itemId: 'item-pesto', method: ReceiptMatchMethod.Search },
+      proposed: {
+        itemId: 'item-pesto',
+        method: ReceiptMatchMethod.Search,
+        preselected: true,
+      },
+    });
+
+    expect(result).toMatchObject({
+      input: { resolvedBy: ReceiptMatchMethod.Search, edited: true },
+    });
+  });
+
+  it('marks a suggestion the user picked as their choice, so the API learns it', () => {
+    const result = checkInLineOf({
+      line: { index: 1, printed: 'A-POTATO RUSSET ORG 3 LB' },
+      choice: lineChoice({ itemId: 'item-potatoes', price: 3.99 }),
+      ids: IDS,
+      heldUnit: null,
+      proposed: {
+        itemId: 'item-potatoes',
+        method: ReceiptMatchMethod.Search,
+        preselected: false,
+      },
     });
 
     expect(result).toMatchObject({

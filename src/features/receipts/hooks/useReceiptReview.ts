@@ -430,7 +430,9 @@ export function useReceiptReview() {
         ids,
         listLine,
         heldUnit: itemId ? heldUnitOf(itemId) : null,
-        proposed: match?.preselect ?? match?.guess,
+        proposed: match?.preselect
+          ? { ...match.preselect, preselected: true }
+          : match?.guess && { ...match.guess, preselected: false },
       });
       if ('needs' in built) {
         lacking[entry.index] = built.needs;

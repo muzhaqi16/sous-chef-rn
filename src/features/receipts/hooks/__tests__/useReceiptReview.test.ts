@@ -1027,6 +1027,32 @@ describe('useReceiptReview', () => {
       ]);
     });
 
+    it('tells the API a suggestion the user picked was their choice', async () => {
+      const { checkIn, result, addChosen } = await setup({
+        resolve: resolved(),
+      });
+      await drainTimers();
+      const suggestion = result.current.review.rows[1]?.suggestion;
+      // The user takes the API's unsure guess as it stands.
+      await act(async () => {
+        result.current.review.chooseLine(3, {
+          ...BANANAS,
+          itemId: suggestion?.itemId ?? null,
+          itemName: suggestion?.itemName ?? '',
+        });
+      });
+
+      await addChosen();
+
+      expect(sentLinesOf(checkIn.fired[0] ?? {})).toContainEqual(
+        expect.objectContaining({
+          item: { id: 'cat-bananas' },
+          resolvedBy: ReceiptMatchMethod.Search,
+          edited: true,
+        }),
+      );
+    });
+
     it('keeps the store field and the proposals while the picked store is asked', async () => {
       const draft = useReceiptDraftStore.getState().draft;
       if (draft?.parsed) {

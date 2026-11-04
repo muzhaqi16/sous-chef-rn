@@ -26,8 +26,10 @@ interface CheckInLineSource {
   /** The open list line it ticks off. */
   listLine?: ListLineAmount & { id: string };
   heldUnit: HeldUnit;
-  /** What the API proposed for the line, which the user kept or changed. */
-  proposed?: Pick<ReceiptCandidate, 'itemId' | 'method'>;
+  /** What the API proposed for the line: its product, else only a suggestion. */
+  proposed?: Pick<ReceiptCandidate, 'itemId' | 'method'> & {
+    preselected: boolean;
+  };
 }
 
 // A typed name is created, or matched, under the line's minted item id.
@@ -80,7 +82,9 @@ export function checkInLineOf({
       ...(listLine ? { shoppingListItemId: listLine.id } : {}),
       rawText: line.printed,
       resolvedBy: proposed?.method ?? null,
-      edited: proposed?.itemId !== choice.itemId,
+      // Only a preselected product is accepted; a pick among suggestions is a
+      // choice, which the API learns from.
+      edited: !proposed?.preselected || proposed.itemId !== choice.itemId,
     },
   };
 }
