@@ -75,6 +75,7 @@ export type ServerReadingStatus =
   | 'offline'
   | 'retryLater'
   | 'unreadable'
+  | 'failed'
   | 'unavailable'
   | 'tooLong'
   | 'limited';
@@ -294,10 +295,9 @@ export function useServerReceiptParse({ enabled }: { enabled: boolean }) {
       case 'limited':
       case 'unreadable':
       case 'tooLong':
-        return asked.state;
-      case 'unavailable':
       case 'failed':
-        return 'unavailable';
+      case 'unavailable':
+        return asked.state;
     }
   };
 

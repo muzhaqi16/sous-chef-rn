@@ -332,6 +332,14 @@ describe('useServerReceiptParse', () => {
     expect(useReceiptDraftStore.getState().draft?.parsed).toBeUndefined();
   });
 
+  it('tells a reading that found no items apart from one nothing could take', async () => {
+    seedMilkDraft();
+    const { result } = render([created(ReceiptParseStatus.Failed).mock]);
+
+    await settle();
+    expect(result.current.readingStatus).toBe('failed');
+  });
+
   const overTheLimit = (
     retryAfter?: number,
   ): MockFor<typeof CreateReceiptParseDocument> => ({
