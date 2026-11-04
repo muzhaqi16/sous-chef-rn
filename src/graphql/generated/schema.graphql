@@ -20225,7 +20225,7 @@ enum SyncScopeKind {
   One home, with its active memberships, pending invites and live storage locations
   """
   HOME
-  """One pantry, with its stacks, their batches and their usage"""
+  """One pantry, with its stacks and their batches"""
   PANTRY
   SHOPPING_LIST
 }
