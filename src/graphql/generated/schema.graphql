@@ -12703,7 +12703,7 @@ input PantryItemBatchOrderBy {
 type PantryItemChange {
   changeType: ChangeType!
   """
-  Null when the actor's account was permanently deleted. The audit entry is retained for the home.
+  Null for a catalog act no member made (a stack moved onto a product receipt intake adopted), or when the actor's account was permanently deleted. The audit entry is retained for the home.
   """
   changedBy: User
   changedById: ID
