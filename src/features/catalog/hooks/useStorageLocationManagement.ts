@@ -194,6 +194,12 @@ export function useStorageLocationManagement(
           document: UpdateStorageLocationDocument,
           fallback: t('errors.codes.genericRetry'),
           present: 'toast',
+          // Else the stale version stays held and every retry conflicts again.
+          onVersionConflict: () => {
+            refetch().catch(() => {
+              // The screen's own refresh asks again.
+            });
+          },
         }),
       inputs,
     );
