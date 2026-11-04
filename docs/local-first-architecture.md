@@ -29,7 +29,7 @@ the queue is written: the queue then lives in memory for the session.
   `cache.extract()` / `cache.restore()`, so connection wrappers (`edges`, `pageInfo`) survive across
   launches. The only changes on the way are pruning `__META.extraRootIds` whose entity is gone, and
   skipping a save when no entity changed. The blob is stored with its shape (`apollo-cache-version`,
-  `shape-8`; a mismatch wipes it) and the language it was answered in (`apollo-cache-language`, which
+  `shape-9`; a mismatch wipes it) and the language it was answered in (`apollo-cache-language`, which
   the `languageChanged` resync reads). `cache.write/modify/evict/gc` are wrapped in `client.ts` to
   re-persist (debounced 3 s, then saved when idle). Cold start paints from disk. On app **background**,
   `useAppStateLifecycle` calls `flushCachePersistence()` (`ApolloCachePersistence.flushPending`) to write
