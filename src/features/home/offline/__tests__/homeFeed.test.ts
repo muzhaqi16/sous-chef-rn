@@ -66,6 +66,29 @@ const MY_MEMBERSHIP = gql`
   }
 `;
 
+const MY_PANTRY_ACCESS = gql`
+  fragment TestFeedMyPantryAccess on Home {
+    id
+    myMembership {
+      id
+      canViewPantry
+    }
+  }
+`;
+
+const INVITES = gql`
+  fragment TestFeedHomeInvites on Home {
+    id
+    invitesConnection(first: 20) {
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+`;
+
 const PANTRY_LOCATIONS = gql`
   fragment TestFeedPantryLocations on Pantry {
     id
@@ -107,11 +130,20 @@ const member = (id: string, overrides: Record<string, unknown> = {}) => ({
   role: 'MEMBER',
   ...overrides,
 });
-const location = (id: string) => ({
+const location = (id: string, parentId: string | null = null) => ({
   __typename: 'StorageLocation',
   id,
   version: 1,
   name: `Shelf ${id}`,
+  parentLocation: parentId
+    ? { __typename: 'StorageLocation', id: parentId, version: 1 }
+    : null,
+});
+const invite = (id: string) => ({
+  __typename: 'HomeInvite',
+  id,
+  version: 1,
+  email: `${id}@example.com`,
 });
 const edgesOf = (rows: readonly Record<string, unknown>[]) => ({
   edges: rows.map(node => ({ node })),
@@ -337,6 +369,107 @@ describe('a page on a held home', () => {
       id: 'member-1',
       role: 'OWNER',
     });
+  });
+
+  it('shows the person’s pantry access turned off, from the pull', async () => {
+    const client = await pullOnce(
+      { changed: [member('member-1', { canViewPantry: false })] },
+      { homeSummary: () => fault() },
+      seeded => {
+        holdHome(seeded, ['member-1']);
+        seedFragment(seeded.cache, {
+          id: `Home:${HOME}`,
+          fragment: MY_PANTRY_ACCESS,
+          data: {
+            __typename: 'Home',
+            id: HOME,
+            myMembership: {
+              __typename: 'Membership',
+              id: 'member-1',
+              canViewPantry: true,
+            },
+          },
+        });
+      },
+    );
+
+    expect(
+      client.cache.readFragment<{
+        myMembership: { id: string; canViewPantry: boolean };
+      }>({ id: `Home:${HOME}`, fragment: MY_PANTRY_ACCESS })?.myMembership,
+    ).toEqual({
+      __typename: 'Membership',
+      id: 'member-1',
+      canViewPantry: false,
+    });
+  });
+
+  // The tree is drawn from each location's parent, so the row alone moves it.
+  it('moves a location under the parent another device gave it', async () => {
+    const client = await pullOnce(
+      { changed: [location('loc-2', 'loc-1')] },
+      { homeSummary: () => fault() },
+      seeded => {
+        holdHome(seeded, []);
+        seedQuery(seeded.cache, {
+          query: GetStorageLocationsDocument,
+          variables: { homeId: HOME },
+          data: {
+            storageLocations: edgesOf([location('loc-1'), location('loc-2')]),
+          },
+        });
+      },
+    );
+
+    expect(
+      client.cache
+        .readQuery({
+          query: GetStorageLocationsDocument,
+          variables: { homeId: HOME },
+        })
+        ?.storageLocations.edges.map(({ node }) => [
+          node.id,
+          node.parentLocation?.id ?? null,
+        ]),
+    ).toEqual([
+      ['loc-1', null],
+      ['loc-2', 'loc-1'],
+    ]);
+  });
+
+  it('takes an accepted invite out and lists the member it made', async () => {
+    const client = await pullOnce(
+      {
+        changed: [member('member-2')],
+        removed: [{ entityType: 'HomeInvite', id: 'invite-1' }],
+      },
+      {
+        homeSummary: () =>
+          summary({ members: [member('member-1'), member('member-2')] }),
+      },
+      seeded => {
+        holdHome(seeded, ['member-1']);
+        seedFragment(seeded.cache, {
+          id: `Home:${HOME}`,
+          fragment: INVITES,
+          data: {
+            __typename: 'Home',
+            id: HOME,
+            invitesConnection: edgesOf([invite('invite-1')]),
+          },
+        });
+      },
+    );
+
+    expect(
+      client.cache
+        .readFragment<{
+          invitesConnection: { edges: { node: { id: string } }[] };
+        }>({ id: `Home:${HOME}`, fragment: INVITES })
+        ?.invitesConnection.edges.map(edge => edge.node.id),
+    ).toEqual([]);
+    expect(client.cache.extract()).not.toHaveProperty('HomeInvite:invite-1');
+    expect(membersOf(client)).toEqual(['member-1', 'member-2']);
   });
 
   it('is not pulled while a create in it waits for the server', async () => {
