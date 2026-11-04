@@ -198,7 +198,8 @@ describe('useReceiptScan', () => {
     expect(draft?.pages).toEqual([
       'WALMART\nGV WHOLE MILK  3.48 N\nCHANGE DUE  0.00',
     ]);
-    const { purchaseTime, ...rest } = draft ?? {};
+    // The scan's own time is the device clock's, which can read 14:22 too.
+    const { purchaseTime, scannedAt, ...rest } = draft ?? {};
     expect(purchaseTime).toBe('14:22');
     expect(JSON.stringify(rest)).not.toMatch(/TC#|14:22/);
   });
