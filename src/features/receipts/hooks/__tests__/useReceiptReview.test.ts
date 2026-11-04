@@ -734,6 +734,35 @@ describe('useReceiptReview', () => {
       ]);
     });
 
+    it('sends a line its plain name, which the API searches by', async () => {
+      const draft = useReceiptDraftStore.getState().draft!;
+      useReceiptDraftStore.setState({
+        draft: {
+          ...draft,
+          parsed: {
+            ...draft.parsed!,
+            lines: draft.parsed!.lines.map(line =>
+              line.product === 'BANANAS' ? { ...line, name: 'bananas' } : line,
+            ),
+          },
+        },
+      });
+      const resolve = resolved();
+      await setup({ resolve });
+      await drainTimers();
+
+      expect(resolve.fired).toEqual([
+        {
+          input: expect.objectContaining({
+            lines: [
+              { clientId: '1', text: 'KRO WHL MILK' },
+              { clientId: '3', text: 'BANANAS', name: 'bananas' },
+            ],
+          }),
+        },
+      ]);
+    });
+
     it('reads its matches from the cache on a return, and drops them once finished', async () => {
       useStore.getState().setSelectedShoppingListId('list-1');
       const resolve = recordMock(ResolveReceiptLinesDocument, {

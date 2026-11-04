@@ -42,6 +42,8 @@ query ReceiptParse($id: ID!) {
         text
         kind
         product
+        # The food in plain words, which the line's match searches by.
+        name
         code
         quantity
         unit

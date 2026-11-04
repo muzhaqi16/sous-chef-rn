@@ -19,11 +19,12 @@ interface ApiReceipt {
   merchant: Pick<ServerReceipt['merchant'], 'name'>;
   lines: readonly (Omit<
     ServerReceiptLine,
-    '__typename' | 'kind' | 'measureUnit'
+    '__typename' | 'kind' | 'measureUnit' | 'name'
   > & {
     kind: `${ReceiptLineKind}`;
-    // The phone's own reading names none.
+    // The phone's own reading names neither.
     measureUnit?: ServerReceiptLine['measureUnit'];
+    name?: ServerReceiptLine['name'];
   })[];
 }
 type ApiReceiptLine = ApiReceipt['lines'][number];
@@ -48,6 +49,7 @@ const toLine = (line: ApiReceiptLine, index: number): ParsedReceiptLine => ({
   rawText: line.text,
   kind: KIND_OF[line.kind],
   ...(line.product ? { product: line.product } : {}),
+  ...(line.name ? { name: line.name } : {}),
   ...(line.code ? { code: line.code } : {}),
   ...(line.quantity == null ? {} : { quantity: line.quantity }),
   ...(line.unit ? { unit: line.unit } : {}),

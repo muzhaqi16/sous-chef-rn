@@ -8,6 +8,8 @@ export interface ReceiptReviewLine {
   index: number;
   /** The product words as printed, else the whole line. */
   printed: string;
+  /** What the line bought in plain words, which its match searches by. */
+  name?: string;
   /** The barcode or store item number printed on the line. */
   code?: string;
   quantity?: number;
@@ -58,6 +60,7 @@ export function receiptReviewLines(
         index: line.index,
         printed: line.product ?? line.rawText,
       };
+      if (line.name) review.name = line.name;
       if (line.code) review.code = line.code;
       if (line.quantity !== undefined) review.quantity = line.quantity;
       if (line.unit) review.unit = line.unit;
