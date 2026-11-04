@@ -95,12 +95,6 @@ const STATUS_LOOK: Record<ReceiptRowStatus, StatusLook> = {
     icon: 'hourglass-outline',
     tone: 'iconTertiary',
   },
-  guess: {
-    section: 'toAdd',
-    icon: 'help-circle',
-    tone: 'warning',
-    badge: { text: 'labels.check', variant: 'warning' },
-  },
   unmatched: {
     section: 'toCheck',
     icon: 'ellipse-outline',
@@ -202,11 +196,14 @@ export const ReceiptReviewScreen: React.FC = () => {
           ? t('receipts.review.notMatchedYet')
           : t('receipts.review.findingMatch');
       case 'unmatched':
-        return t('receipts.review.choose');
+        return row.suggestion
+          ? t('receipts.review.chooseSuggested', {
+              name: row.suggestion.itemName,
+            })
+          : t('receipts.review.choose');
       case 'skipped':
         return t('receipts.review.leftOut');
       case 'add':
-      case 'guess':
       case 'added': {
         if (!choice) return row.printed;
         return t(

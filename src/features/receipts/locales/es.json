@@ -67,6 +67,7 @@
       "intro": "Revisa el producto de cada línea. Solo se añaden a tu despensa las líneas con un producto.",
       "introTo": "Revisa el producto de cada línea. Solo se añaden a {{pantry}} las líneas con un producto.",
       "choose": "Sin coincidencia. Toca para elegir el producto.",
+      "chooseSuggested": "Sugerencia: {{name}}. Toca para elegir el producto.",
       "chosenDetail": "{{printed}} · {{amount}}",
       "chosenDetailNotStocked": "{{printed}} · {{amount}} · no va a la despensa",
       "discountOff": "{{amount}} de descuento",

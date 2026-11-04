@@ -67,6 +67,7 @@
       "intro": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte alla dispensa.",
       "introTo": "Controlla il prodotto di ogni riga. Solo le righe con un prodotto vengono aggiunte a {{pantry}}.",
       "choose": "Nessuna corrispondenza. Tocca per scegliere il prodotto.",
+      "chooseSuggested": "Suggerimento: {{name}}. Tocca per scegliere il prodotto.",
       "chosenDetail": "{{printed}} · {{amount}}",
       "chosenDetailNotStocked": "{{printed}} · {{amount}} · non va in dispensa",
       "discountOff": "{{amount}} di sconto",

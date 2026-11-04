@@ -67,6 +67,7 @@
       "intro": "Check the product on each line. Only lines with a product are added to your pantry.",
       "introTo": "Check the product on each line. Only lines with a product are added to {{pantry}}.",
       "choose": "No match. Tap to choose the product.",
+      "chooseSuggested": "Suggestion: {{name}}. Tap to choose the product.",
       "chosenDetail": "{{printed}} · {{amount}}",
       "chosenDetailNotStocked": "{{printed}} · {{amount}} · not for the pantry",
       "discountOff": "{{amount}} off",

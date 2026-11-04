@@ -4,7 +4,10 @@ import { act, userEvent } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { writeUnitSystemSettings } from '#/test-utils/fixtures/userSettingsFixtures';
 import { makeCache } from '#/apollo/cache';
-import { UnitSystem } from '#/graphql/generated/schemaTypes';
+import {
+  ReceiptMatchMethod,
+  UnitSystem,
+} from '#/graphql/generated/schemaTypes';
 import { toastService } from '#/services/toastService';
 import { t } from '#/i18n';
 import type { ReceiptReviewRow } from '../../hooks/useReceiptReview';
@@ -394,6 +397,32 @@ describe('ReceiptReviewScreen Add', () => {
     expect(mockToPantryMain).not.toHaveBeenCalled();
     screen.unmount();
     expect(mockFinish).not.toHaveBeenCalled();
+  });
+
+  it("names the API's guess on a line it leaves to choose, and counts it out", () => {
+    mockRows = [
+      row({ printed: 'MILK', choice: lineChoice({ price: 2.79 }) }),
+      row({
+        index: 1,
+        printed: 'A-POTATO RUSSET ORG 3 LB',
+        status: 'unmatched',
+        suggestion: {
+          itemId: 'cat-potatoes',
+          itemName: 'Russet potatoes',
+          detail: null,
+          method: ReceiptMatchMethod.Search,
+        },
+      }),
+    ];
+    const screen = renderWithApollo(<ReceiptReviewScreen />);
+
+    expect(
+      screen.getByText(
+        'Suggestion: Russet potatoes. Tap to choose the product.',
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText('A-POTATO RUSSET ORG 3 LB')).toBeTruthy();
+    expect(screen.getByText('Add 1 item to the pantry')).toBeTruthy();
   });
 
   it('says apart what went to the pantry and what was only recorded', async () => {

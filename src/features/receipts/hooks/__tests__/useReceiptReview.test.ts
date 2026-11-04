@@ -827,11 +827,11 @@ describe('useReceiptReview', () => {
       expect(result.current.review.matchState).toBe('done');
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'add',
-        'guess',
+        'unmatched',
       ]);
     });
 
-    it('adds the item it is sure of, and the one it guesses unless the user picks another', async () => {
+    it('adds the item it is sure of, and only suggests the one it guesses', async () => {
       const { result } = await setup({ resolve: resolved() });
 
       await drainTimers();
@@ -839,14 +839,15 @@ describe('useReceiptReview', () => {
       const [milk, bananas] = result.current.review.rows;
       expect(milk?.choice).toEqual(MILK);
       expect(milk?.status).toBe('add');
-      // The guess is the line's product, flagged to check, with no input.
-      expect(bananas?.choice).toEqual({ ...BANANAS, itemId: 'cat-bananas' });
-      expect(bananas?.status).toBe('guess');
+      // A guess is named, never the line's product, until the user picks it.
+      expect(bananas?.choice).toBeUndefined();
+      expect(bananas?.status).toBe('unmatched');
+      expect(bananas?.suggestion?.itemName).toBe('Bananas');
       expect(bananas?.candidates.map(candidate => candidate.itemName)).toEqual([
         'Bananas',
         'Plantains',
       ]);
-      expect(result.current.review.pendingCount).toBe(2);
+      expect(result.current.review.pendingCount).toBe(1);
 
       await act(async () => {
         result.current.review.chooseLine(
@@ -1071,7 +1072,7 @@ describe('useReceiptReview', () => {
       expect(resolveAgain.fired).toHaveLength(1);
       expect(result.current.review.rows.map(row => row.status)).toEqual([
         'add',
-        'guess',
+        'unmatched',
       ]);
 
       await drained(() => resolveAgain.release());
@@ -1180,10 +1181,10 @@ describe('useReceiptReview', () => {
       expect(fired(checkIn)).toEqual([
         expect.objectContaining({ storeId: 'store-99' }),
       ]);
-      // The bananas go in as the API guessed them: nothing left to choose.
+      // The bananas, only guessed at, wait for the user to choose them.
       expect(
         sentLinesOf(checkIn.fired[0] ?? {}).map(line => line.item),
-      ).toEqual([{ id: 'cat-milk' }, { id: 'cat-bananas' }]);
+      ).toEqual([{ id: 'cat-milk' }]);
     });
 
     it('adds the shop the receipt names but nobody has, then the lines at it', async () => {
@@ -1268,7 +1269,7 @@ describe('useReceiptReview', () => {
       // The lines show while the store is still being added.
       expect(storeCreate.fired).toHaveLength(1);
       expect(checkIn.fired).toHaveLength(0);
-      expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
+      expect(pantryItemNames(cache)).toEqual(['Whole milk']);
       // A second tap sends nothing, and adds no second store.
       expect(await confirm()).toMatchObject({ sent: 0, held: 0 });
 
