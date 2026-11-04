@@ -13,7 +13,7 @@ import {
   HomeEventsDocument,
   type HomeEventsSubscription,
 } from '#operations/home/home.generated';
-import { HomeSubtype } from '#/graphql/generated/schemaTypes';
+import { HomeSubtype, SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { subscriptionService } from '#/services/subscriptions/SubscriptionService';
 import { fetchEventEntity } from '#/services/subscriptions/fetchEventEntity';
 import { isSelfEcho } from '#/services/subscriptions/isSelfEcho';
@@ -29,6 +29,7 @@ import {
   HomeInvitesForEventDocument,
   UseHomeSubscriptions_HomeFragmentDoc,
 } from './useHomeSubscriptions.generated';
+import { useFeedKeeps } from '#/hooks/subscriptions/useChangeFeed';
 
 type HomeEventsPayload = HomeEventsSubscription['homeEvents'];
 
@@ -67,6 +68,7 @@ function concernsViewer(
  */
 export function useHomeSubscriptions(userId?: string) {
   const selectedHomeId = useSelectedHomeId() ?? undefined;
+  const feedKeeps = useFeedKeeps(SyncScopeKind.Home);
   const homeSkip = useEntitySubscriptionSkip(
     HomeEventsDocument,
     selectedHomeId,
@@ -93,6 +95,9 @@ export function useHomeSubscriptions(userId?: string) {
         }
         return;
       }
+
+      // Its next pull brings these rows, and its summary their people.
+      if (feedKeeps(payload.homeId)) return;
 
       switch (payload.subtype) {
         // A membership change is a change to the member list, which no

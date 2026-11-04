@@ -1,4 +1,5 @@
 import type { ApolloCache } from '@apollo/client';
+import { homeFeedAdapter } from '#features/home/offline/homeFeed';
 import { pantryFeedAdapter } from '#features/pantry/offline/pantryFeed';
 import { listFeedAdapter } from '#features/shoppingList/offline/listFeed';
 import { isRecord } from '#/utils/isRecord';
@@ -8,6 +9,7 @@ import type { FeedAdapter } from './types';
 export const FEED_ADAPTERS: readonly FeedAdapter[] = [
   listFeedAdapter,
   pantryFeedAdapter,
+  homeFeedAdapter,
 ];
 
 const BY_KIND: ReadonlyMap<string, FeedAdapter> = new Map(

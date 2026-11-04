@@ -15,23 +15,38 @@ import { useSubscriptionTransportRecovery } from './useSubscriptionTransportReco
  * one only delays a pull, so it stays uncached and the connection is what
  * guarantees a catch-up.
  */
-const kindsOf = (lists: boolean, pantries: boolean): SyncScopeKind[] => [
+interface KindSwitches {
+  lists: boolean;
+  pantries: boolean;
+  homes: boolean;
+}
+
+/** The one place a kind meets its flag. */
+const kindsOf = ({ lists, pantries, homes }: KindSwitches): SyncScopeKind[] => [
   ...(lists ? [SyncScopeKind.ShoppingList] : []),
   ...(pantries ? [SyncScopeKind.Pantry] : []),
+  ...(homes ? [SyncScopeKind.Home] : []),
 ];
 
+function useKindSwitches(): KindSwitches {
+  return {
+    lists: useFeatureFlag('listChangeFeed'),
+    pantries: useFeatureFlag('pantryChangeFeed'),
+    homes: useFeatureFlag('homeChangeFeed'),
+  };
+}
+
 export function useChangeFeed(userId: string): void {
-  const lists = useFeatureFlag('listChangeFeed');
-  const pantries = useFeatureFlag('pantryChangeFeed');
+  const { lists, pantries, homes } = useKindSwitches();
 
   useEffect(() => {
-    const started = kindsOf(lists, pantries);
+    const started = kindsOf({ lists, pantries, homes });
     if (started.length === 0) return;
     feedEngine.start(started);
     return () => feedEngine.stop();
-  }, [lists, pantries, userId]);
+  }, [lists, pantries, homes, userId]);
 
-  const kinds = kindsOf(lists, pantries);
+  const kinds = kindsOf({ lists, pantries, homes });
   const skip = kinds.length === 0;
   const pokes = useSubscription<FeedPokesSubscription>(FeedPokesDocument, {
     skip,
@@ -52,8 +67,6 @@ export function useChangeFeed(userId: string): void {
 export function useFeedKeeps(
   kind: SyncScopeKind,
 ): (scopeId: string) => boolean {
-  const lists = useFeatureFlag('listChangeFeed');
-  const pantries = useFeatureFlag('pantryChangeFeed');
-  const on = kind === SyncScopeKind.Pantry ? pantries : lists;
+  const on = kindsOf(useKindSwitches()).includes(kind);
   return scopeId => on && positionOf(scopeId) !== undefined;
 }

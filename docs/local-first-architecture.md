@@ -53,8 +53,10 @@ the queue is written: the queue then lives in memory for the session.
 
 ## 1a. The change feed
 
-The API answers what changed in a scope since a cursor; one shopping list is one scope, and one pantry
-another. The contract is `docs/api/offline-sync.md` in `sous-chef-api`. `FeedEngine` runs one pass at a
+The API answers what changed in a scope since a cursor. One shopping list is one scope, one pantry
+another, and one home a third, and the feed stops there. Account data, meal plans and recipes read
+through the persisted cache and refetch on resync. The contract is `docs/api/offline-sync.md` in
+`sous-chef-api`. `FeedEngine` runs one pass at a
 time, and what arrives during a pass joins it. It asks `syncScopes` and `mySyncPokes` for the kinds its
 flags start it with (`useChangeFeed`), since an unnamed kind is lists alone.
 
@@ -107,10 +109,35 @@ flags start it with (`useChangeFeed`), since an unnamed kind is lists alone.
 - **Counts are the server's.** `stats` is computed on read, so a pull leaves it out and the page's
   `afterApply` reads the summary again within the pass; a full read selects it.
 - **A batch page's order is the server's**, so a batch it does not list drops the page, as does a
-  removed batch it lists, whose count it held. A full read drops the pantry's pages. Usage rows are history the detail screen reads for itself: neither document
-  selects them, and only their removals apply.
+  removed batch it lists, whose count it held. A full read drops the pantry's pages. Usage rows are
+  history, which no scope holds: the detail screen reads them online (`usageRecordsConnection`).
 - **`pantryEvents` stands down** for another device's change to a held pantry, as its writers count.
   A self-echo still re-reads the summary: the feed ignores this device's own pokes.
+
+**Homes** (`src/features/home/offline/homeFeed.ts`, flag `homeChangeFeed`): a home with its ACTIVE
+members, PENDING invites and live storage locations.
+
+- **A pull selects the stored columns its readers read**, not the Readers. `HomeReaders` carries
+  computed values (`isDefault`, `joinLink`, `myMembership`), and the member and invite Readers carry
+  people, which the API keeps out of every scope. `Membership.status` is aliased, as it collides with
+  `HomeInvite.status`.
+- **A new row is listed by the summary, never by the pull.** A location without `currentItemCount`, or
+  a member without a person, would leave `GetPantry`, `GetStorageLocations` or `GetHome` incomplete.
+  `HomeFeedSummary` reads the home's Readers, its members and invites with their people, and
+  `storageLocations(homeId)`. Its first-page and whole-list reads replace those lists. New locations
+  then join each held pantry's location list, which is never dropped: the pantry screen reads it
+  offline. It runs after any page holding a member, an invite or a location, not after a rename.
+- **A failed summary forgets the home's position**, so the next pass reads it in full. The engine has
+  saved the position by then, so nothing else would retry it. A full read is its snapshot, then its
+  summary, then the replace, and a failed summary fails the full read.
+- **Removals apply from the page**: a member or invite leaves its list and the cache, and a location
+  leaves the home's list and every held pantry's.
+- **Eviction is `dropHome`** (`src/domain/dropHome.ts`): the Home and the selection, with no
+  announcement. `forgetHome` adds the announcement through `refetchEvents`, which imports the engine,
+  so the adapter can't use it. `userEvents` REMOVED_FROM_HOME still runs `forgetHome`, and a reconnect
+  resyncs anyway.
+- **`homeEvents` stands down** for a held home; `myMembership` follows the person's row by
+  normalization.
 
 ## 2. Write path — the implemented pattern
 

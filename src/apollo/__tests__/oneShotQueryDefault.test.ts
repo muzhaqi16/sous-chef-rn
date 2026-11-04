@@ -61,6 +61,8 @@ const NETWORK_ONLY_CALLERS: Record<string, string> = {
     "a feed pull or full read is the server's answer; a cached one replays the last page",
   'features/pantry/offline/pantryFeed.ts':
     'a feed pull or full read, and the summary re-read for counts a pull never carries',
+  'features/home/offline/homeFeed.ts':
+    'a feed pull or full read, and the summary that lists new rows with the values and people a pull never carries',
 };
 
 describe('the one-shot query default', () => {
