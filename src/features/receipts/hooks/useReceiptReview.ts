@@ -170,6 +170,7 @@ export function useReceiptReview() {
     lines.map(line => ({
       index: line.index,
       text: line.printed,
+      name: line.name,
       code: line.code,
     })),
     merchantHeader,

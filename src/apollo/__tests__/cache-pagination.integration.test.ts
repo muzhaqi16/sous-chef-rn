@@ -4,2085 +4,670 @@ jest.mock('#/graphql/generated/fragmentMatcher.json', () => ({
   possibleTypes: {},
 }));
 
-import { gql } from '@apollo/client';
+import { ApolloClient, gql, type DocumentNode } from '@apollo/client';
 import { makeCache } from '../cache';
-import { seedQuery } from '#/test-utils/apolloMockProvider';
+import { APOLLO_DEFAULT_OPTIONS } from '../defaultOptions';
+import { seedQuery, testMockLink } from '#/test-utils/apolloMockProvider';
 
-// ---------------------------------------------------------------------------
-// Local result types for untyped (raw gql) cache reads
-// ---------------------------------------------------------------------------
-
-interface TestNode {
+type Cache = ReturnType<typeof makeCache>;
+type Vars = Record<string, unknown>;
+interface Node {
   id: string;
-  [key: string]: unknown;
+  [field: string]: unknown;
 }
-interface TestEdge {
-  node: TestNode;
-  [key: string]: unknown;
+interface Entity {
+  __typename: string;
+  id: string;
 }
-interface TestPageInfo {
-  hasNextPage: boolean;
-  endCursor: string | null;
-}
-interface TestConnection {
-  edges: TestEdge[];
-  pageInfo: TestPageInfo;
+interface Connection {
+  edges: { node: Node }[];
+  pageInfo: { hasNextPage: boolean; endCursor: string | null };
   totalCount: number;
 }
-interface HomeShoppingListsResult {
-  home?: { shoppingListsConnection?: TestConnection };
-}
-interface HomeMembersResult {
-  home?: { membersConnection?: TestConnection };
-}
-interface ShoppingListItemsResult {
-  shoppingList?: { itemsConnection?: TestConnection };
-}
-interface PantryItemsResult {
-  pantry?: { itemsConnection?: TestConnection };
-}
-interface RecipesResult {
-  recipes?: TestConnection;
+interface Page {
+  /** The `fetchMore` cursor; without one the write is a cursorless (re)fetch. */
+  after?: string;
+  hasNextPage?: boolean;
+  totalCount?: number;
+  variables?: Vars;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+const HOME: Entity = { __typename: 'Home', id: 'home-1' };
+const LIST: Entity = { __typename: 'ShoppingList', id: 'list-1' };
 
-function buildEdge(
-  nodeTypeName: string,
-  edgeTypeName: string,
-  nodeFields: Record<string, unknown>,
+/** A `<type>Connection` page whose end cursor is `after-<its last id>`. */
+function connection(
+  type: string,
+  nodes: (string | Node)[],
+  { hasNextPage = false, totalCount = nodes.length }: Page = {},
 ) {
+  const rows = nodes.map(node =>
+    typeof node === 'string' ? { id: node } : node,
+  );
   return {
-    __typename: edgeTypeName,
-    node: { __typename: nodeTypeName, ...nodeFields },
+    __typename: `${type}Connection`,
+    edges: rows.map(node => ({
+      __typename: `${type}Edge`,
+      node: { __typename: type, ...node },
+    })),
+    pageInfo: {
+      __typename: 'PageInfo',
+      hasNextPage,
+      endCursor: `after-${rows.at(-1)?.id ?? ''}`,
+    },
+    totalCount,
   };
 }
 
-function buildConnection(
-  connectionTypeName: string,
-  edges: ReturnType<typeof buildEdge>[],
-  pageInfo: { hasNextPage: boolean; endCursor: string | null },
-  totalCount?: number,
-) {
-  return {
-    __typename: connectionTypeName,
-    edges,
-    pageInfo: { __typename: 'PageInfo', ...pageInfo },
-    totalCount: totalCount ?? edges.length,
-  };
+interface ConnectionSpec {
+  query: DocumentNode;
+  variables: Vars;
+  /** The root field the connection hangs off, and the entity it answers. */
+  parent?: [root: string, entity: Entity];
+  field: string;
+  /** The node typename; edge and connection typenames derive from it. */
+  type: string;
 }
 
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
+/** Binds `spec`'s connection to a cache: writes pages and reads them back. */
+const connectionOn =
+  (spec: ConnectionSpec) =>
+  (cache: Cache = makeCache()) => {
+    const answer = (nodes: (string | Node)[], page: Page = {}) => {
+      const conn = connection(spec.type, nodes, page);
+      if (!spec.parent) return { [spec.field]: conn };
+      const [root, entity] = spec.parent;
+      return { [root]: { ...entity, [spec.field]: conn } };
+    };
+    const read = (variables?: Vars) => {
+      const options = {
+        query: spec.query,
+        variables: { ...spec.variables, ...variables },
+      };
+      if (!spec.parent) {
+        return cache.readQuery<Record<string, Connection | undefined>>(
+          options,
+        )?.[spec.field];
+      }
+      return cache.readQuery<
+        Record<string, Record<string, Connection | undefined> | undefined>
+      >(options)?.[spec.parent[0]]?.[spec.field];
+    };
+    /** What a reader sees: the rows, and where `fetchMore` resumes. */
+    const state = (variables?: Vars) => {
+      const conn = read(variables);
+      return (
+        conn && {
+          ids: conn.edges.map(edge => edge.node.id),
+          hasNextPage: conn.pageInfo.hasNextPage,
+          endCursor: conn.pageInfo.endCursor,
+        }
+      );
+    };
+    return {
+      cache,
+      answer,
+      read,
+      state,
+      ids: (variables?: Vars) => state(variables)?.ids,
+      write: (nodes: (string | Node)[], page: Page = {}) =>
+        seedQuery(cache, {
+          query: spec.query,
+          variables: {
+            ...spec.variables,
+            ...page.variables,
+            after: page.after,
+          },
+          data: answer(nodes, page),
+        }),
+    };
+  };
+
+const HOME_LISTS = gql`
+  query HomeLists($id: ID!, $after: String) {
+    home(id: $id) {
+      id
+      shoppingListsConnection(after: $after) {
+        edges {
+          node {
+            id
+            name
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        totalCount
+      }
+    }
+  }
+`;
+
+const HOME_MEMBERS = gql`
+  query HomeMembers($id: ID!, $after: String) {
+    home(id: $id) {
+      id
+      membersConnection(after: $after) {
+        edges {
+          node {
+            id
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        totalCount
+      }
+    }
+  }
+`;
+
+const LIST_ITEMS = gql`
+  query ListItems($id: ID!, $after: String, $filters: ShoppingListItemFilters) {
+    shoppingList(id: $id) {
+      id
+      itemsConnection(after: $after, filters: $filters) {
+        edges {
+          node {
+            id
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        totalCount
+      }
+    }
+  }
+`;
+
+const PANTRY_ITEMS = gql`
+  query PantryItems($id: ID!, $after: String, $orderBy: PantryItemOrderBy) {
+    pantry(id: $id) {
+      id
+      itemsConnection(after: $after, orderBy: $orderBy) {
+        edges {
+          node {
+            id
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        totalCount
+      }
+    }
+  }
+`;
+
+const RECIPES = gql`
+  query Recipes($after: String, $filters: RecipeFilters) {
+    recipes(after: $after, filters: $filters) {
+      edges {
+        node {
+          id
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      totalCount
+    }
+  }
+`;
+
+const USAGE_RECORDS = gql`
+  query UsageRecords($id: ID!, $first: Int, $after: String) {
+    pantryItem(id: $id) {
+      id
+      usageRecordsConnection(
+        first: $first
+        after: $after
+        orderBy: { usedAt: DESC }
+      ) {
+        edges {
+          node {
+            id
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+        totalCount
+      }
+    }
+  }
+`;
+
+// The detail screen reads a 100-edge window with no cursor; the history screen
+// pages. Both key to pantryItemBatchesConnection({pantryItemId}), so each write
+// has to leave the field able to satisfy the other's read.
+const BATCH_DETAIL = gql`
+  query BatchDetail($pantryItemId: ID!) {
+    pantryItemBatchesConnection(pantryItemId: $pantryItemId, first: 100) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+`;
+
+const BATCH_HISTORY = gql`
+  query BatchHistory($pantryItemId: ID!, $first: Int, $after: String) {
+    pantryItemBatchesConnection(
+      pantryItemId: $pantryItemId
+      first: $first
+      after: $after
+    ) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+`;
+
+const LIST_ROWS_SELECTING_LIST = gql`
+  query ListRows($after: String) {
+    shoppingList(id: "list-1") {
+      id
+      itemsConnection(first: 2, after: $after) {
+        totalCount
+        edges {
+          cursor
+          node {
+            id
+            shoppingList {
+              id
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+`;
+
+const HOME_ROWS_SELECTING_HOME = gql`
+  query HomeRows($after: String) {
+    home(id: "home-1") {
+      id
+      membersConnection(first: 2, after: $after) {
+        totalCount
+        edges {
+          cursor
+          node {
+            id
+            home {
+              id
+            }
+          }
+        }
+        pageInfo {
+          hasNextPage
+          endCursor
+        }
+      }
+    }
+  }
+`;
+
+const homeLists = connectionOn({
+  query: HOME_LISTS,
+  variables: { id: HOME.id },
+  parent: ['home', HOME],
+  field: 'shoppingListsConnection',
+  type: 'ShoppingList',
+});
+const homeMembers = connectionOn({
+  query: HOME_MEMBERS,
+  variables: { id: HOME.id },
+  parent: ['home', HOME],
+  field: 'membersConnection',
+  type: 'Membership',
+});
+const listItems = connectionOn({
+  query: LIST_ITEMS,
+  variables: { id: LIST.id },
+  parent: ['shoppingList', LIST],
+  field: 'itemsConnection',
+  type: 'ShoppingListItem',
+});
+const pantryItems = connectionOn({
+  query: PANTRY_ITEMS,
+  variables: { id: 'p-1' },
+  parent: ['pantry', { __typename: 'Pantry', id: 'p-1' }],
+  field: 'itemsConnection',
+  type: 'PantryItem',
+});
+const recipes = connectionOn({
+  query: RECIPES,
+  variables: {},
+  field: 'recipes',
+  type: 'Recipe',
+});
+const usageRecords = connectionOn({
+  query: USAGE_RECORDS,
+  variables: { id: 'pi-1', first: 30 },
+  parent: ['pantryItem', { __typename: 'PantryItem', id: 'pi-1' }],
+  field: 'usageRecordsConnection',
+  type: 'PantryItemUsage',
+});
+const batchDetail = connectionOn({
+  query: BATCH_DETAIL,
+  variables: { pantryItemId: 'pi-1' },
+  field: 'pantryItemBatchesConnection',
+  type: 'PantryItemBatch',
+});
+const batchHistory = connectionOn({
+  query: BATCH_HISTORY,
+  variables: { pantryItemId: 'pi-1', first: 30 },
+  field: 'pantryItemBatchesConnection',
+  type: 'PantryItemBatch',
+});
+const listRows = connectionOn({
+  query: LIST_ROWS_SELECTING_LIST,
+  variables: {},
+  parent: ['shoppingList', LIST],
+  field: 'itemsConnection',
+  type: 'ShoppingListItem',
+});
+const homeRows = connectionOn({
+  query: HOME_ROWS_SELECTING_HOME,
+  variables: {},
+  parent: ['home', HOME],
+  field: 'membersConnection',
+  type: 'Membership',
+});
+
+/** Page `[a, b]`, then the last page `[c]`: every row held. */
+const ABC_LOADED = {
+  ids: ['a', 'b', 'c'],
+  hasNextPage: false,
+  endCursor: 'after-c',
+};
 
 describe('cache pagination integration', () => {
-  // =========================================================================
-  // Section A: mergeConnectionByNodeId via Home.shoppingListsConnection
-  //   cursorArg = 'after', keyArgs = ['filters']
-  // =========================================================================
+  describe.each([
+    ['Home.shoppingListsConnection (mergeConnectionByNodeId)', homeLists],
+    ['Home.membersConnection (mergeConnectionByNodeId)', homeMembers],
+    ['Query.recipes (mergeConnectionByNodeId)', recipes],
+    [
+      'PantryItem.usageRecordsConnection (mergeConnectionByNodeId)',
+      usageRecords,
+    ],
+    ['ShoppingList.itemsConnection (itemsConnectionFieldPolicy)', listItems],
+    ['Pantry.itemsConnection (itemsConnectionFieldPolicy)', pantryItems],
+  ])('%s', (_name, open) => {
+    it('appends a fetchMore page and keeps it, and its cursor, through a cursorless refetch of page one', () => {
+      const conn = open();
+      conn.write(['a', 'b'], { hasNextPage: true });
+      conn.write(['c'], { after: 'after-b' });
+      expect(conn.state()).toEqual(ABC_LOADED);
 
-  describe('mergeConnectionByNodeId (Home.shoppingListsConnection, cursor=after)', () => {
-    const QUERY = gql`
-      query GetHome($id: ID!, $after: String) {
-        home(id: $id) {
-          id
-          shoppingListsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const slEdge = (id: string, name: string) =>
-      buildEdge('ShoppingList', 'ShoppingListEdge', { id, name });
-
-    const writeConn = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-      totalCount?: number,
-    ) => {
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1', ...vars },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              edges,
-              pageInfo,
-              totalCount,
-            ),
-          },
-        },
-      });
-    };
-
-    const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      return result?.home?.shoppingListsConnection?.edges ?? [];
-    };
-
-    it('full lifecycle: page 1 → page 2 → refetch preserves all items', () => {
-      const cache = makeCache();
-
-      // Page 1 (3 items, hasNextPage:true)
-      writeConn(
-        cache,
-        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B'), slEdge('sl-3', 'C')],
-        { hasNextPage: true, endCursor: 'c3' },
-      );
-      expect(readEdges(cache)).toHaveLength(3);
-
-      // Page 2 (2 items with cursor)
-      writeConn(
-        cache,
-        [slEdge('sl-4', 'D'), slEdge('sl-5', 'E')],
-        { hasNextPage: false, endCursor: 'c5' },
-        { after: 'c3' },
-      );
-      expect(readEdges(cache)).toHaveLength(5);
-
-      // Refetch page 1 without cursor (hasNextPage:true) — must preserve page 2
-      writeConn(
-        cache,
-        [slEdge('sl-1', 'A'), slEdge('sl-2', 'B'), slEdge('sl-3', 'C')],
-        { hasNextPage: true, endCursor: 'c3' },
-      );
-
-      const edges = readEdges(cache);
-      expect(edges).toHaveLength(5);
-      const ids = edges.map(e => e.node.id);
-      expect(ids).toEqual(
-        expect.arrayContaining(['sl-1', 'sl-2', 'sl-3', 'sl-4', 'sl-5']),
-      );
+      conn.write(['a', 'b'], { hasNextPage: true });
+      expect(conn.state()).toEqual(ABC_LOADED);
     });
 
-    it('shrinkage: refetch with hasNextPage:false removes stale items', () => {
-      const cache = makeCache();
+    it('keeps one copy of a row a fetchMore page restates, in its first place', () => {
+      const conn = open();
+      conn.write(['a', 'b'], { hasNextPage: true });
+      conn.write(['b', 'c'], { after: 'after-b' });
 
-      writeConn(cache, [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-      writeConn(
-        cache,
-        [slEdge('sl-3', 'C')],
-        { hasNextPage: false, endCursor: 'c3' },
-        { after: 'c2' },
-      );
-      expect(readEdges(cache)).toHaveLength(3);
+      expect(conn.state()).toEqual(ABC_LOADED);
+    });
 
-      // Refetch — all items fit in one page now (sl-2 was deleted server-side)
-      writeConn(cache, [slEdge('sl-1', 'A'), slEdge('sl-3', 'C')], {
+    it('takes a cursorless refetch with no next page as the whole list', () => {
+      const conn = open();
+      conn.write(['a', 'b'], { hasNextPage: true });
+      conn.write(['c'], { after: 'after-b' });
+      conn.write(['a']);
+
+      expect(conn.state()).toEqual({
+        ids: ['a'],
         hasNextPage: false,
-        endCursor: 'c3',
+        endCursor: 'after-a',
       });
-
-      const edges = readEdges(cache);
-      expect(edges).toHaveLength(2);
-      const ids = edges.map(e => e.node.id);
-      expect(ids).toContain('sl-1');
-      expect(ids).toContain('sl-3');
-      expect(ids).not.toContain('sl-2');
-    });
-
-    it('updated items: refetch replaces page 1 items with updated data', () => {
-      const cache = makeCache();
-
-      writeConn(cache, [slEdge('sl-1', 'Old Name')], {
-        hasNextPage: true,
-        endCursor: 'c1',
-      });
-      writeConn(
-        cache,
-        [slEdge('sl-2', 'B')],
-        { hasNextPage: false, endCursor: 'c2' },
-        { after: 'c1' },
-      );
-
-      // Refetch with updated page 1 item
-      writeConn(cache, [slEdge('sl-1', 'New Name')], {
-        hasNextPage: true,
-        endCursor: 'c1',
-      });
-
-      const edges = readEdges(cache);
-      expect(edges).toHaveLength(2);
-      // Incoming edges replace existing for same id in mergeConnectionByNodeId
-      const sl1 = edges.find(e => e.node.id === 'sl-1');
-      expect(sl1?.node.name).toBe('New Name');
-      // Page 2 preserved
-      expect(edges.find(e => e.node.id === 'sl-2')).toBeTruthy();
-    });
-
-    it('overlap deduplication: page 2 overlapping with page 1 produces no duplicates', () => {
-      const cache = makeCache();
-
-      writeConn(cache, [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-      // Page 2 — sl-2 overlaps with page 1
-      writeConn(
-        cache,
-        [slEdge('sl-2', 'B-updated'), slEdge('sl-3', 'C')],
-        { hasNextPage: false, endCursor: 'c3' },
-        { after: 'c2' },
-      );
-
-      const edges = readEdges(cache);
-      expect(edges).toHaveLength(3);
-      const ids = edges.map(e => e.node.id);
-      expect(ids.filter((id: string) => id === 'sl-2')).toHaveLength(1);
     });
   });
 
-  // =========================================================================
-  // Section B: mergeConnectionByNodeId via Home.membersConnection
-  //   cursorArg = 'after', keyArgs = ['filters']
-  // =========================================================================
+  it.each([
+    [
+      'ShoppingList.itemsConnection',
+      listItems,
+      {},
+      { filters: { purchased: true } },
+    ],
+    [
+      'Pantry.itemsConnection',
+      pantryItems,
+      { orderBy: 'NAME_ASC' },
+      { orderBy: 'NAME_DESC' },
+    ],
+    ['Query.recipes', recipes, {}, { filters: { category: 'DESSERT' } }],
+  ])(
+    'keeps each key argument of %s in its own entry',
+    (_name, open, one, other) => {
+      const conn = open();
+      conn.write(['a', 'b'], { variables: one });
+      conn.write(['b', 'a'], { variables: other });
 
-  describe('mergeConnectionByNodeId (Home.membersConnection, cursor=after)', () => {
-    const QUERY = gql`
-      query GetHome($id: ID!, $after: String) {
-        home(id: $id) {
-          id
-          membersConnection(after: $after) {
-            edges {
-              node {
-                id
-                displayName
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
+      expect(conn.ids(one)).toEqual(['a', 'b']);
+      expect(conn.ids(other)).toEqual(['b', 'a']);
+    },
+  );
+
+  // Forward-only paging can never bring a dropped row back.
+  describe.each([
+    ['ShoppingList.itemsConnection', listItems, 130, 25],
+    ['Pantry.itemsConnection', pantryItems, 250, 100],
+  ])('%s past one page', (_name, open, total, pageSize) => {
+    const all = Array.from({ length: total }, (_, i) => `r${i}`);
+    const loadAll = () => {
+      const conn = open();
+      for (let start = 0; start < total; start += pageSize) {
+        conn.write(all.slice(start, start + pageSize), {
+          after: start === 0 ? undefined : `after-r${start - 1}`,
+          hasNextPage: start + pageSize < total,
+          totalCount: total,
+        });
       }
-    `;
-
-    const memberEdge = (id: string, displayName: string) =>
-      buildEdge('Membership', 'MembershipEdge', { id, displayName });
-
-    const writeConn = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-    ) => {
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1', ...vars },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            membersConnection: buildConnection(
-              'MembershipConnection',
-              edges,
-              pageInfo,
-            ),
-          },
-        },
-      });
+      return conn;
     };
 
-    const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result = cache.readQuery<HomeMembersResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      return result?.home?.membersConnection?.edges ?? [];
-    };
+    it('keeps every row in order, through a refetch of its first page', () => {
+      const conn = loadAll();
+      expect(conn.ids()).toEqual(all);
 
-    it('full lifecycle with after arg', () => {
-      const cache = makeCache();
-
-      writeConn(cache, [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')], {
+      conn.write(all.slice(0, pageSize), {
         hasNextPage: true,
-        endCursor: 'mc2',
+        totalCount: total,
       });
-      writeConn(
-        cache,
-        [memberEdge('m-3', 'Charlie')],
-        { hasNextPage: false, endCursor: 'mc3' },
-        { after: 'mc2' },
-      );
-      expect(readEdges(cache)).toHaveLength(3);
-
-      // Refetch without cursor (hasNextPage:true) — preserve page 2
-      writeConn(cache, [memberEdge('m-1', 'Alice'), memberEdge('m-2', 'Bob')], {
-        hasNextPage: true,
-        endCursor: 'mc2',
-      });
-
-      const ids = readEdges(cache).map(e => e.node.id);
-      expect(ids).toEqual(expect.arrayContaining(['m-1', 'm-2', 'm-3']));
+      expect(conn.ids()).toEqual(all);
     });
 
-    it('shrinkage with after', () => {
-      const cache = makeCache();
+    it('holds every row through a persist and a restore', () => {
+      const reopened = open();
+      reopened.cache.restore(loadAll().cache.extract());
 
-      writeConn(cache, [memberEdge('m-1', 'Alice')], {
-        hasNextPage: true,
-        endCursor: 'mc1',
-      });
-      writeConn(
-        cache,
-        [memberEdge('m-2', 'Bob')],
-        { hasNextPage: false, endCursor: 'mc2' },
-        { after: 'mc1' },
-      );
-      expect(readEdges(cache)).toHaveLength(2);
-
-      // Refetch — member removed, all fit in one page
-      writeConn(cache, [memberEdge('m-1', 'Alice')], {
-        hasNextPage: false,
-        endCursor: 'mc1',
-      });
-
-      expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0]!.node.id).toBe('m-1');
+      expect(reopened.ids()).toEqual(all);
     });
   });
 
-  // =========================================================================
-  // Section C: itemsConnectionFieldPolicy (ShoppingList.itemsConnection)
-  //   Append-only merge, keyArgs = ['filters']
-  // =========================================================================
+  describe('Home.shoppingListsConnection', () => {
+    it("takes a refetched row's new fields and keeps the page after it", () => {
+      const lists = homeLists();
+      lists.write(['a'], { hasNextPage: true });
+      lists.write(['b'], { after: 'after-a' });
+      lists.write([{ id: 'a', name: 'Renamed' }], { hasNextPage: true });
 
-  describe('itemsConnectionFieldPolicy (ShoppingList.itemsConnection)', () => {
-    const QUERY = gql`
-      query GetList($id: ID!, $after: String) {
-        shoppingList(id: $id) {
-          id
-          itemsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const QUERY_WITH_FILTER = gql`
-      query GetList(
-        $id: ID!
-        $after: String
-        $filters: ShoppingListItemFilters
-      ) {
-        shoppingList(id: $id) {
-          id
-          itemsConnection(after: $after, filters: $filters) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const itemEdge = (id: string, name: string) =>
-      buildEdge('ShoppingListItem', 'ShoppingListItemEdge', { id, name });
-
-    const writeConn = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-      totalCount?: number,
-    ) => {
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'list-1', ...vars },
-        data: {
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            itemsConnection: buildConnection(
-              'ShoppingListItemConnection',
-              edges,
-              pageInfo,
-              totalCount,
-            ),
-          },
-        },
-      });
-    };
-
-    const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result = cache.readQuery<ShoppingListItemsResult>({
-        query: QUERY,
-        variables: { id: 'list-1' },
-      });
-      return result?.shoppingList?.itemsConnection?.edges ?? [];
-    };
-
-    it('full lifecycle: append order preserved after pagination + refetch', () => {
-      const cache = makeCache();
-
-      // Page 1
-      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-
-      // Page 2
-      writeConn(
-        cache,
-        [itemEdge('si-3', 'Eggs')],
-        { hasNextPage: false, endCursor: 'c3' },
-        { after: 'c2' },
-      );
-
-      let edges = readEdges(cache);
-      expect(edges).toHaveLength(3);
-      // Append-only: page 1 edges come first, then page 2
-      expect(edges.map(e => e.node.id)).toEqual(['si-1', 'si-2', 'si-3']);
-
-      // Refetch page 1 (no cursor, hasNextPage:true) — must preserve page 2
-      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-
-      edges = readEdges(cache);
-      expect(edges).toHaveLength(3);
-      expect(edges.map(e => e.node.id)).toEqual(['si-1', 'si-2', 'si-3']);
+      expect(lists.ids()).toEqual(['a', 'b']);
+      expect(lists.read()?.edges[0]?.node.name).toBe('Renamed');
     });
 
-    it('overlap deduplication: existing position kept', () => {
-      const cache = makeCache();
+    it('reads the totalCount of the latest answer', () => {
+      const lists = homeLists();
+      lists.write(['a', 'b'], { hasNextPage: true, totalCount: 5 });
+      expect(lists.read()?.totalCount).toBe(5);
 
-      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-      // Page 2 — si-2 overlaps with page 1
-      writeConn(
-        cache,
-        [itemEdge('si-2', 'Bread-updated'), itemEdge('si-3', 'Eggs')],
-        { hasNextPage: false, endCursor: 'c3' },
-        { after: 'c2' },
-      );
+      lists.write(['c'], { after: 'after-b', totalCount: 5 });
+      expect(lists.read()?.totalCount).toBe(5);
 
-      const edges = readEdges(cache);
-      // Append-only: si-2 already exists at position 1, not appended again
-      expect(edges).toHaveLength(3);
-      const ids = edges.map(e => e.node.id);
-      expect(ids.filter((id: string) => id === 'si-2')).toHaveLength(1);
-      // Existing position preserved (si-2 stays at index 1)
-      expect(ids[1]).toBe('si-2');
+      lists.write(['a', 'b'], { hasNextPage: true, totalCount: 3 });
+      expect(lists.read()?.totalCount).toBe(3);
     });
 
-    it('shrinkage: hasNextPage:false replaces all', () => {
-      const cache = makeCache();
+    it('reads the same object after a refetch that changes nothing', () => {
+      const lists = homeLists();
+      lists.write(['a', 'b'], { hasNextPage: true, totalCount: 5 });
+      const before = lists.read();
 
-      writeConn(cache, [itemEdge('si-1', 'Milk')], {
-        hasNextPage: true,
-        endCursor: 'c1',
-      });
-      writeConn(
-        cache,
-        [itemEdge('si-2', 'Bread')],
-        { hasNextPage: false, endCursor: 'c2' },
-        { after: 'c1' },
-      );
-      expect(readEdges(cache)).toHaveLength(2);
-
-      // Refetch — items removed, all fit in one page
-      writeConn(cache, [itemEdge('si-1', 'Milk')], {
-        hasNextPage: false,
-        endCursor: 'c1',
-      });
-
-      expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0]!.node.id).toBe('si-1');
+      lists.write(['a', 'b'], { hasNextPage: true, totalCount: 5 });
+      expect(lists.read()).toBe(before);
     });
 
-    it('filter separation: different filters create independent cache entries', () => {
-      const cache = makeCache();
+    it('reads a new object after a refetch that changes only totalCount', () => {
+      const lists = homeLists();
+      lists.write(['a'], { hasNextPage: true, totalCount: 3 });
+      const before = lists.read();
 
-      // Write to default (no filter) entry
-      writeConn(cache, [itemEdge('si-1', 'Milk')], {
-        hasNextPage: false,
-        endCursor: 'c1',
-      });
-
-      // Write to filtered entry
-      seedQuery(cache, {
-        query: QUERY_WITH_FILTER,
-        variables: { id: 'list-1', filters: { purchased: true } },
-        data: {
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            itemsConnection: buildConnection(
-              'ShoppingListItemConnection',
-              [itemEdge('si-2', 'Bread')],
-              { hasNextPage: false, endCursor: 'c1' },
-            ),
-          },
-        },
-      });
-
-      // Read default — should only have si-1
-      const defaultEdges = readEdges(cache);
-      expect(defaultEdges).toHaveLength(1);
-      expect(defaultEdges[0]!.node.id).toBe('si-1');
-
-      // Read filtered — should only have si-2
-      const filteredResult = cache.readQuery<ShoppingListItemsResult>({
-        query: QUERY_WITH_FILTER,
-        variables: { id: 'list-1', filters: { purchased: true } },
-      });
-      const filteredEdges =
-        filteredResult?.shoppingList?.itemsConnection?.edges ?? [];
-      expect(filteredEdges).toHaveLength(1);
-      expect(filteredEdges[0]!.node.id).toBe('si-2');
-    });
-
-    it('cursor-based fetchMore with all-duplicate edges preserves existing pageInfo', () => {
-      const cache = makeCache();
-
-      // Page 1
-      writeConn(cache, [itemEdge('si-1', 'Milk'), itemEdge('si-2', 'Bread')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-
-      // Page 2 (final page)
-      writeConn(
-        cache,
-        [itemEdge('si-3', 'Eggs')],
-        { hasNextPage: false, endCursor: 'c3' },
-        { after: 'c2' },
-      );
-
-      // Verify final state: 3 edges, hasNextPage=false
-      let result = cache.readQuery<ShoppingListItemsResult>({
-        query: QUERY,
-        variables: { id: 'list-1' },
-      });
-      expect(result?.shoppingList?.itemsConnection?.edges).toHaveLength(3);
-      expect(result?.shoppingList?.itemsConnection?.pageInfo.hasNextPage).toBe(
-        false,
-      );
-      expect(result?.shoppingList?.itemsConnection?.pageInfo.endCursor).toBe(
-        'c3',
-      );
-
-      // Duplicate cursor request: same cursor c2 sent again due to race condition.
-      // Server returns items after c2 with hasNextPage=true (correct from c2's perspective).
-      // All edges are duplicates — must NOT overwrite hasNextPage=false with true.
-      writeConn(
-        cache,
-        [itemEdge('si-3', 'Eggs')],
-        { hasNextPage: true, endCursor: 'c3' },
-        { after: 'c2' },
-      );
-
-      result = cache.readQuery<ShoppingListItemsResult>({
-        query: QUERY,
-        variables: { id: 'list-1' },
-      });
-      expect(result?.shoppingList?.itemsConnection?.edges).toHaveLength(3);
-      // Existing pageInfo preserved — hasNextPage stays false
-      expect(result?.shoppingList?.itemsConnection?.pageInfo.hasNextPage).toBe(
-        false,
-      );
-      expect(result?.shoppingList?.itemsConnection?.pageInfo.endCursor).toBe(
-        'c3',
-      );
+      lists.write(['a'], { hasNextPage: true, totalCount: 5 });
+      expect(lists.read()).not.toBe(before);
+      expect(lists.read()).toEqual({ ...before, totalCount: 5 });
     });
   });
 
-  // =========================================================================
-  // Section C.2: itemsConnectionFieldPolicy — a long list
-  //   Forward-only paging can never bring an evicted row back
-  // =========================================================================
+  describe('ShoppingList.itemsConnection', () => {
+    it('keeps its cursor when a repeated fetchMore answers only rows it holds', () => {
+      const items = listItems();
+      items.write(['a', 'b'], { hasNextPage: true });
+      items.write(['c'], { after: 'after-b' });
+      // A race resends `after-b`; answered from there, more pages do follow.
+      items.write(['c'], { after: 'after-b', hasNextPage: true });
 
-  describe('itemsConnectionFieldPolicy on a long list', () => {
-    const QUERY = gql`
-      query GetList($id: ID!, $after: String) {
-        shoppingList(id: $id) {
-          id
-          itemsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const itemEdge = (id: string, name: string) =>
-      buildEdge('ShoppingListItem', 'ShoppingListItemEdge', { id, name });
-
-    const writeConn = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-      totalCount?: number,
-    ) => {
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'list-1', ...vars },
-        data: {
-          shoppingList: {
-            __typename: 'ShoppingList',
-            id: 'list-1',
-            itemsConnection: buildConnection(
-              'ShoppingListItemConnection',
-              edges,
-              pageInfo,
-              totalCount,
-            ),
-          },
-        },
-      });
-    };
-
-    const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result = cache.readQuery<ShoppingListItemsResult>({
-        query: QUERY,
-        variables: { id: 'list-1' },
-      });
-      return result?.shoppingList?.itemsConnection?.edges ?? [];
-    };
-
-    it('initial load retains all edges', () => {
-      const cache = makeCache();
-
-      const edges = Array.from({ length: 50 }, (_, i) =>
-        itemEdge(`si-${i}`, `Item ${i}`),
-      );
-      writeConn(
-        cache,
-        edges,
-        { hasNextPage: true, endCursor: 'c50' },
-        undefined,
-        200,
-      );
-
-      expect(readEdges(cache)).toHaveLength(50);
+      expect(items.state()).toEqual(ABC_LOADED);
     });
 
-    it('keeps every row a 130-row list loaded, in order', () => {
-      const cache = makeCache();
-      const PAGE = 25;
-
-      for (let page = 0; page * PAGE < 130; page++) {
-        const start = page * PAGE;
-        const count = Math.min(PAGE, 130 - start);
-        writeConn(
-          cache,
-          Array.from({ length: count }, (_, i) =>
-            itemEdge(`si-${start + i}`, `Item ${start + i}`),
-          ),
-          { hasNextPage: start + count < 130, endCursor: `c${start + count}` },
-          page === 0 ? undefined : { after: `c${start}` },
-          130,
-        );
-      }
-
-      const ids = readEdges(cache).map(e => e.node.id);
-      expect(ids).toHaveLength(130);
-      expect(ids[0]).toBe('si-0');
-      expect(ids[129]).toBe('si-129');
-    });
-
-    it('background refetch keeps the rows past its page', () => {
-      const cache = makeCache();
-
-      // Write 100 edges
-      const page1 = Array.from({ length: 100 }, (_, i) =>
-        itemEdge(`si-${i}`, `Item ${i}`),
-      );
-      writeConn(
-        cache,
-        page1,
-        { hasNextPage: true, endCursor: 'c100' },
-        undefined,
-        200,
-      );
-
-      // Background refetch returns first 50 (no cursor, hasNextPage:true)
-      const refetch = Array.from({ length: 50 }, (_, i) =>
-        itemEdge(`si-${i}`, `Item ${i}`),
-      );
-      writeConn(
-        cache,
-        refetch,
-        { hasNextPage: true, endCursor: 'c50' },
-        undefined,
-        200,
-      );
-
-      // All 100 should still be there (deduped)
-      expect(readEdges(cache)).toHaveLength(100);
-    });
-  });
-
-  // =========================================================================
-  // Section D: Pantry.itemsConnection (shared policy)
-  //   keyArgs = ['filters', 'orderBy']
-  // =========================================================================
-
-  describe('Pantry.itemsConnection', () => {
-    const QUERY = gql`
-      query GetPantry($id: ID!, $after: String) {
-        pantry(id: $id) {
-          id
-          itemsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const QUERY_WITH_ORDER = gql`
-      query GetPantry($id: ID!, $after: String, $orderBy: PantryItemOrderBy) {
-        pantry(id: $id) {
-          id
-          itemsConnection(after: $after, orderBy: $orderBy) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const piEdge = (id: string, name: string) =>
-      buildEdge('PantryItem', 'PantryItemEdge', { id, name });
-
-    const writeConn = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-    ) => {
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'p-1', ...vars },
-        data: {
-          pantry: {
-            __typename: 'Pantry',
-            id: 'p-1',
-            itemsConnection: buildConnection(
-              'PantryItemConnection',
-              edges,
-              pageInfo,
-            ),
-          },
-        },
-      });
-    };
-
-    const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result = cache.readQuery<PantryItemsResult>({
-        query: QUERY,
-        variables: { id: 'p-1' },
-      });
-      return result?.pantry?.itemsConnection?.edges ?? [];
-    };
-
-    it('full lifecycle: pagination + refetch preservation', () => {
-      const cache = makeCache();
-
-      writeConn(cache, [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-      writeConn(
-        cache,
-        [piEdge('pi-3', 'Salt')],
-        { hasNextPage: false, endCursor: 'c3' },
-        { after: 'c2' },
-      );
-      expect(readEdges(cache)).toHaveLength(3);
-
-      // Refetch page 1 (no cursor, hasNextPage:true)
-      writeConn(cache, [piEdge('pi-1', 'Flour'), piEdge('pi-2', 'Sugar')], {
-        hasNextPage: true,
-        endCursor: 'c2',
-      });
-
-      const ids = readEdges(cache).map(e => e.node.id);
-      expect(ids).toEqual(expect.arrayContaining(['pi-1', 'pi-2', 'pi-3']));
-    });
-
-    describe('past one page', () => {
-      const loadAll = (cache: ReturnType<typeof makeCache>) => {
-        const PAGE = 100;
-        for (let page = 0; page * PAGE < 250; page++) {
-          const start = page * PAGE;
-          const count = Math.min(PAGE, 250 - start);
-          writeConn(
-            cache,
-            Array.from({ length: count }, (_, i) =>
-              piEdge(`pi-${start + i}`, `Item ${start + i}`),
-            ),
-            {
-              hasNextPage: start + count < 250,
-              endCursor: `c${start + count}`,
-            },
-            page === 0 ? undefined : { after: `c${start}` },
-          );
-        }
-      };
-
-      it('keeps the first page at the top through later pages', () => {
-        const cache = makeCache();
-
-        loadAll(cache);
-
-        const ids = readEdges(cache).map(e => e.node.id);
-        expect(ids).toHaveLength(250);
-        expect(ids[0]).toBe('pi-0');
-        expect(ids[249]).toBe('pi-249');
-      });
-
-      it('holds every row through a persist and a restore', () => {
-        const cache = makeCache();
-        loadAll(cache);
-
-        const reopened = makeCache();
-        reopened.restore(cache.extract());
-
-        expect(readEdges(reopened)).toHaveLength(250);
-      });
-    });
-
-    it('shrinkage: hasNextPage:false clears stale items', () => {
-      const cache = makeCache();
-
-      writeConn(cache, [piEdge('pi-1', 'Flour')], {
-        hasNextPage: true,
-        endCursor: 'c1',
-      });
-      writeConn(
-        cache,
-        [piEdge('pi-2', 'Sugar')],
-        { hasNextPage: false, endCursor: 'c2' },
-        { after: 'c1' },
-      );
-      expect(readEdges(cache)).toHaveLength(2);
-
-      // Refetch — all fit in one page
-      writeConn(cache, [piEdge('pi-1', 'Flour')], {
-        hasNextPage: false,
-        endCursor: 'c1',
-      });
-
-      expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0]!.node.id).toBe('pi-1');
-    });
-
-    it('orderBy separation: different orderBy create separate cache entries', () => {
-      const cache = makeCache();
-
-      // Write with orderBy: NAME_ASC
-      seedQuery(cache, {
-        query: QUERY_WITH_ORDER,
-        variables: { id: 'p-1', orderBy: 'NAME_ASC' },
-        data: {
-          pantry: {
-            __typename: 'Pantry',
-            id: 'p-1',
-            itemsConnection: buildConnection(
-              'PantryItemConnection',
-              [piEdge('pi-1', 'Apple'), piEdge('pi-2', 'Banana')],
-              { hasNextPage: false, endCursor: 'c2' },
-            ),
-          },
-        },
-      });
-
-      // Write with orderBy: NAME_DESC
-      seedQuery(cache, {
-        query: QUERY_WITH_ORDER,
-        variables: { id: 'p-1', orderBy: 'NAME_DESC' },
-        data: {
-          pantry: {
-            __typename: 'Pantry',
-            id: 'p-1',
-            itemsConnection: buildConnection(
-              'PantryItemConnection',
-              [piEdge('pi-2', 'Banana'), piEdge('pi-1', 'Apple')],
-              { hasNextPage: false, endCursor: 'c2' },
-            ),
-          },
-        },
-      });
-
-      // Read NAME_ASC — order should be [Apple, Banana]
-      const ascResult = cache.readQuery<PantryItemsResult>({
-        query: QUERY_WITH_ORDER,
-        variables: { id: 'p-1', orderBy: 'NAME_ASC' },
-      });
-      const ascIds = ascResult?.pantry?.itemsConnection?.edges?.map(
-        e => e.node.id,
-      );
-      expect(ascIds).toEqual(['pi-1', 'pi-2']);
-
-      // Read NAME_DESC — order should be [Banana, Apple]
-      const descResult = cache.readQuery<PantryItemsResult>({
-        query: QUERY_WITH_ORDER,
-        variables: { id: 'p-1', orderBy: 'NAME_DESC' },
-      });
-      const descIds = descResult?.pantry?.itemsConnection?.edges?.map(
-        e => e.node.id,
-      );
-      expect(descIds).toEqual(['pi-2', 'pi-1']);
-    });
-  });
-
-  // =========================================================================
-  // Section E: Query.recipes via mergeConnectionByNodeId()
-  //   keyArgs = ['filters'], cursor arg = 'after'
-  // =========================================================================
-
-  describe('Query.recipes (after arg)', () => {
-    const QUERY = gql`
-      query GetRecipes($after: String, $filters: RecipeFilters) {
-        recipes(after: $after, filters: $filters) {
-          edges {
-            node {
-              id
-              name
-            }
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-          totalCount
-        }
-      }
-    `;
-
-    const recipeEdge = (id: string, name: string) =>
-      buildEdge('Recipe', 'RecipeEdge', { id, name });
-
-    const writeRecipes = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-    ) => {
-      seedQuery(cache, {
-        query: QUERY,
-        variables: vars ?? {},
-        data: {
-          recipes: buildConnection('RecipeConnection', edges, pageInfo),
-        },
-      });
-    };
-
-    const readEdges = (cache: ReturnType<typeof makeCache>) => {
-      const result = cache.readQuery<RecipesResult>({
-        query: QUERY,
-        variables: {},
-      });
-      return result?.recipes?.edges ?? [];
-    };
-
-    it('full lifecycle with after arg', () => {
-      const cache = makeCache();
-
-      writeRecipes(
-        cache,
-        [recipeEdge('r-1', 'Pasta'), recipeEdge('r-2', 'Salad')],
-        { hasNextPage: true, endCursor: 'rc2' },
-      );
-      writeRecipes(
-        cache,
-        [recipeEdge('r-3', 'Soup')],
-        { hasNextPage: false, endCursor: 'rc3' },
-        { after: 'rc2' },
-      );
-      expect(readEdges(cache)).toHaveLength(3);
-
-      // Refetch (no cursor, hasNextPage:true)
-      writeRecipes(
-        cache,
-        [recipeEdge('r-1', 'Pasta'), recipeEdge('r-2', 'Salad')],
-        { hasNextPage: true, endCursor: 'rc2' },
-      );
-
-      const ids = readEdges(cache).map(e => e.node.id);
-      expect(ids).toEqual(expect.arrayContaining(['r-1', 'r-2', 'r-3']));
-    });
-
-    it('shrinkage', () => {
-      const cache = makeCache();
-
-      writeRecipes(cache, [recipeEdge('r-1', 'Pasta')], {
-        hasNextPage: true,
-        endCursor: 'rc1',
-      });
-      writeRecipes(
-        cache,
-        [recipeEdge('r-2', 'Salad')],
-        { hasNextPage: false, endCursor: 'rc2' },
-        { after: 'rc1' },
-      );
-      expect(readEdges(cache)).toHaveLength(2);
-
-      // Refetch — only 1 recipe now
-      writeRecipes(cache, [recipeEdge('r-1', 'Pasta')], {
-        hasNextPage: false,
-        endCursor: 'rc1',
-      });
-
-      expect(readEdges(cache)).toHaveLength(1);
-      expect(readEdges(cache)[0]!.node.id).toBe('r-1');
-    });
-
-    it('keeps different filter sets in distinct cache entries', () => {
-      const cache = makeCache();
-
-      // Unfiltered list
-      writeRecipes(
-        cache,
-        [recipeEdge('r-1', 'Pasta'), recipeEdge('r-2', 'Salad')],
-        { hasNextPage: false, endCursor: 'rc2' },
-      );
-      // Filtered list — must not touch the unfiltered entry
-      writeRecipes(
-        cache,
-        [recipeEdge('r-9', 'Tiramisu')],
-        { hasNextPage: false, endCursor: 'rc9' },
-        { filters: { category: 'DESSERT' } },
-      );
-
-      const unfiltered = readEdges(cache).map(e => e.node.id);
-      expect(unfiltered).toEqual(['r-1', 'r-2']);
-
-      const filtered = cache.readQuery<RecipesResult>({
-        query: QUERY,
-        variables: { filters: { category: 'DESSERT' } },
-      });
-      expect(filtered?.recipes?.edges.map(e => e.node.id)).toEqual(['r-9']);
-    });
-
-    it('variable-less writes and reads resolve the same entry (writer symmetry)', () => {
-      const cache = makeCache();
-
-      writeRecipes(cache, [recipeEdge('r-1', 'Pasta')], {
-        hasNextPage: false,
-        endCursor: 'rc1',
-      });
-
-      // cache.updateQuery({ query }) with no variables — the
-      // recipeCacheWriters pattern — must land on the entry the
-      // variable-less read resolves.
-      cache.updateQuery<RecipesResult>({ query: QUERY }, data =>
-        data?.recipes
-          ? {
-              recipes: {
-                ...data.recipes,
-                edges: [
-                  ...data.recipes.edges,
-                  {
-                    __typename: 'RecipeEdge',
-                    node: { __typename: 'Recipe', id: 'r-2', name: 'Salad' },
-                  },
-                ],
-              },
-            }
-          : data,
-      );
-
-      expect(readEdges(cache).map(e => e.node.id)).toEqual(['r-1', 'r-2']);
-    });
-  });
-
-  // =========================================================================
-  // Section F: totalCount consistency
-  // =========================================================================
-
-  describe('totalCount consistency', () => {
-    const QUERY = gql`
-      query GetHome($id: ID!, $after: String) {
-        home(id: $id) {
-          id
-          shoppingListsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const slEdge = (id: string, name: string) =>
-      buildEdge('ShoppingList', 'ShoppingListEdge', { id, name });
-
-    it('totalCount reflects server value at each pagination stage', () => {
-      const cache = makeCache();
-
-      // Page 1: server says totalCount=5
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1' },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
-              { hasNextPage: true, endCursor: 'c2' },
-              5,
-            ),
-          },
-        },
-      });
-
-      let result = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
-
-      // Page 2: server says totalCount=5 still
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1', after: 'c2' },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              [slEdge('sl-3', 'C')],
-              { hasNextPage: false, endCursor: 'c3' },
-              5,
-            ),
-          },
-        },
-      });
-
-      result = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      // After merge, totalCount comes from ...incoming spread
-      expect(result?.home?.shoppingListsConnection?.totalCount).toBe(5);
-
-      // Refetch: totalCount changed to 3 (items were deleted)
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1' },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
-              { hasNextPage: true, endCursor: 'c2' },
-              3,
-            ),
-          },
-        },
-      });
-
-      result = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      expect(result?.home?.shoppingListsConnection?.totalCount).toBe(3);
-    });
-  });
-
-  // =========================================================================
-  // Section G: pageInfo preservation on background refetch
-  //
-  // Verifies that when cache has accumulated pages 1+2 (hasNextPage:false),
-  // a background refetch returning page 1 only (hasNextPage:true) does NOT
-  // overwrite the accumulated pageInfo.
-  // =========================================================================
-
-  describe('pageInfo preservation on background refetch', () => {
-    const QUERY = gql`
-      query GetPantry($id: ID!, $after: String) {
-        pantry(id: $id) {
-          id
-          itemsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const piEdge = (id: string, name: string) =>
-      buildEdge('PantryItem', 'PantryItemEdge', { id, name });
-
-    const writeConn = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-      totalCount?: number,
-    ) => {
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'p-1', ...vars },
-        data: {
-          pantry: {
-            __typename: 'Pantry',
-            id: 'p-1',
-            itemsConnection: buildConnection(
-              'PantryItemConnection',
-              edges,
-              pageInfo,
-              totalCount,
-            ),
-          },
-        },
-      });
-    };
-
-    const readConnection = (cache: ReturnType<typeof makeCache>) => {
-      const result = cache.readQuery<PantryItemsResult>({
-        query: QUERY,
-        variables: { id: 'p-1' },
-      });
-      return result?.pantry?.itemsConnection;
-    };
-
-    it('preserves hasNextPage:false after background refetch returns hasNextPage:true', () => {
-      const cache = makeCache();
-
-      // Page 1 (3 items, hasNextPage:true)
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'A'), piEdge('pi-2', 'B'), piEdge('pi-3', 'C')],
-        { hasNextPage: true, endCursor: 'c3' },
-        undefined,
-        5,
-      );
-
-      // Page 2 (2 items, hasNextPage:false — all loaded)
-      writeConn(
-        cache,
-        [piEdge('pi-4', 'D'), piEdge('pi-5', 'E')],
-        { hasNextPage: false, endCursor: 'c5' },
-        { after: 'c3' },
-        5,
-      );
-
-      let conn = readConnection(cache);
-      expect(conn?.edges).toHaveLength(5);
-      expect(conn?.pageInfo.hasNextPage).toBe(false);
-      expect(conn?.pageInfo.endCursor).toBe('c5');
-
-      // Background refetch: page 1 only (hasNextPage:true)
-      // This simulates cache-and-network re-fetching the initial query
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'A'), piEdge('pi-2', 'B'), piEdge('pi-3', 'C')],
-        { hasNextPage: true, endCursor: 'c3' },
-        undefined,
-        5,
-      );
-
-      conn = readConnection(cache);
-      // Edges must be preserved
-      expect(conn?.edges).toHaveLength(5);
-      // pageInfo must NOT be overwritten — hasNextPage should remain false
-      expect(conn?.pageInfo.hasNextPage).toBe(false);
-      expect(conn?.pageInfo.endCursor).toBe('c5');
-    });
-
-    it('does NOT preserve pageInfo when refetch has hasNextPage:false (shrinkage)', () => {
-      const cache = makeCache();
-
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'A'), piEdge('pi-2', 'B')],
-        { hasNextPage: true, endCursor: 'c2' },
-        undefined,
-        3,
-      );
-      writeConn(
-        cache,
-        [piEdge('pi-3', 'C')],
-        { hasNextPage: false, endCursor: 'c3' },
-        { after: 'c2' },
-        3,
-      );
-
-      // Refetch with fewer items and hasNextPage:false — replaces entirely
-      writeConn(
-        cache,
-        [piEdge('pi-1', 'A')],
-        { hasNextPage: false, endCursor: 'c1' },
-        undefined,
-        1,
-      );
-
-      const conn = readConnection(cache);
-      expect(conn?.edges).toHaveLength(1);
-      expect(conn?.pageInfo.hasNextPage).toBe(false);
-      expect(conn?.pageInfo.endCursor).toBe('c1');
-    });
-  });
-
-  // =========================================================================
-  // Section H: Stable reference on no-change merge
-  //
-  // Verifies that when edges, pageInfo, and totalCount are all unchanged,
-  // the merge returns the exact same object reference to prevent re-renders.
-  // =========================================================================
-
-  describe('stable reference on no-change merge', () => {
-    const QUERY = gql`
-      query GetHome($id: ID!, $after: String) {
-        home(id: $id) {
-          id
-          shoppingListsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const slEdge = (id: string, name: string) =>
-      buildEdge('ShoppingList', 'ShoppingListEdge', { id, name });
-
-    it('returns same reference when refetch has identical data', () => {
-      const cache = makeCache();
-
-      // Initial write
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1' },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
-              { hasNextPage: true, endCursor: 'c2' },
-              5,
-            ),
-          },
-        },
-      });
-
-      const result1 = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      const conn1 = result1?.home?.shoppingListsConnection;
-
-      // Refetch with same edges, same pageInfo, same totalCount
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1' },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              [slEdge('sl-1', 'A'), slEdge('sl-2', 'B')],
-              { hasNextPage: true, endCursor: 'c2' },
-              5,
-            ),
-          },
-        },
-      });
-
-      const result2 = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      const conn2 = result2?.home?.shoppingListsConnection;
-
-      // Should be the exact same object reference (stable)
-      expect(conn2).toBe(conn1);
-    });
-
-    it('returns new reference when totalCount changes', () => {
-      const cache = makeCache();
-
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1' },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              [slEdge('sl-1', 'A')],
-              { hasNextPage: true, endCursor: 'c1' },
-              3,
-            ),
-          },
-        },
-      });
-
-      const result1 = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      const conn1 = result1?.home?.shoppingListsConnection;
-
-      // Refetch with same edges but different totalCount
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'home-1' },
-        data: {
-          home: {
-            __typename: 'Home',
-            id: 'home-1',
-            shoppingListsConnection: buildConnection(
-              'ShoppingListConnection',
-              [slEdge('sl-1', 'A')],
-              { hasNextPage: true, endCursor: 'c1' },
-              5,
-            ),
-          },
-        },
-      });
-
-      const result2 = cache.readQuery<HomeShoppingListsResult>({
-        query: QUERY,
-        variables: { id: 'home-1' },
-      });
-      const conn2 = result2?.home?.shoppingListsConnection;
-
-      // Should be a new reference since totalCount changed
-      expect(conn2).not.toBe(conn1);
-      expect(conn2?.totalCount).toBe(5);
-    });
-  });
-
-  // =========================================================================
-  // Section I: ApolloClient-level integration with MockLink
-  //
-  // Proves merge functions work through the full Apollo Client pipeline
-  // (variable normalization, field policy matching, fetchMore).
-  // =========================================================================
-
-  describe('ApolloClient-level integration with MockLink', () => {
-    const QUERY = gql`
-      query GetList($id: ID!, $after: String) {
-        shoppingList(id: $id) {
-          id
-          itemsConnection(after: $after) {
-            edges {
-              node {
-                id
-                name
-              }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    const itemEdge = (id: string, name: string) =>
-      buildEdge('ShoppingListItem', 'ShoppingListItemEdge', { id, name });
-
-    it('query + fetchMore accumulates pages through merge functions', async () => {
-      const { ApolloClient } = require('@apollo/client');
-      const { MockLink } = require('@apollo/client/testing');
-
-      const cache = makeCache();
-
-      const page1Data = {
-        shoppingList: {
-          __typename: 'ShoppingList',
-          id: 'list-1',
-          itemsConnection: buildConnection(
-            'ShoppingListItemConnection',
-            [itemEdge('si-1', 'Milk')],
-            { hasNextPage: true, endCursor: 'c1' },
-            2,
-          ),
-        },
-      };
-
-      const page2Data = {
-        shoppingList: {
-          __typename: 'ShoppingList',
-          id: 'list-1',
-          itemsConnection: buildConnection(
-            'ShoppingListItemConnection',
-            [itemEdge('si-2', 'Bread')],
-            { hasNextPage: false, endCursor: 'c2' },
-            2,
-          ),
-        },
-      };
-
-      const mocks = [
-        {
-          request: { query: QUERY, variables: { id: 'list-1' } },
-          result: { data: page1Data },
-        },
-        {
-          request: { query: QUERY, variables: { id: 'list-1', after: 'c1' } },
-          result: { data: page2Data },
-        },
-      ];
-
+    it('accumulates a fetchMore page through a client', async () => {
+      const items = listItems();
       const client = new ApolloClient({
-        cache,
-        link: new MockLink(mocks, { addTypename: false }),
+        cache: items.cache,
+        defaultOptions: APOLLO_DEFAULT_OPTIONS,
+        link: testMockLink([
+          {
+            request: { query: LIST_ITEMS, variables: { id: LIST.id } },
+            result: { data: items.answer(['a'], { hasNextPage: true }) },
+          },
+          {
+            request: {
+              query: LIST_ITEMS,
+              variables: { id: LIST.id, after: 'after-a' },
+            },
+            result: { data: items.answer(['b']) },
+          },
+        ]),
       });
 
-      // Initial query
-      const { data: page1 } = await client.query({
-        query: QUERY,
-        variables: { id: 'list-1' },
-      });
+      await client.query({ query: LIST_ITEMS, variables: { id: LIST.id } });
+      expect(items.ids()).toEqual(['a']);
 
-      expect(page1.shoppingList.itemsConnection.edges).toHaveLength(1);
-      expect(page1.shoppingList.itemsConnection.edges[0].node.id).toBe('si-1');
-
-      // fetchMore for page 2
-      const observable = client.watchQuery({
-        query: QUERY,
-        variables: { id: 'list-1' },
-      });
-
-      await observable.fetchMore({ variables: { after: 'c1' } });
-
-      // Read accumulated result from cache
-      const result = cache.readQuery<ShoppingListItemsResult>({
-        query: QUERY,
-        variables: { id: 'list-1' },
-      });
-
-      const edges = result?.shoppingList?.itemsConnection?.edges ?? [];
-      expect(edges).toHaveLength(2);
-
-      const ids = edges.map(e => e.node.id);
-      expect(ids).toContain('si-1');
-      expect(ids).toContain('si-2');
+      await client
+        .watchQuery({ query: LIST_ITEMS, variables: { id: LIST.id } })
+        .fetchMore({ variables: { after: 'after-a' } });
+      expect(items.ids()).toEqual(['a', 'b']);
     });
   });
 
-  // =========================================================================
-  // Section F: the two pantry-item history connections added with the history
-  // screens. Both are shared by more than one operation, which is what makes
-  // the merge policy and the selection compatibility load-bearing.
-  // =========================================================================
+  describe('Query.recipes', () => {
+    it('lets a variable-less updateQuery reach the entry a variable-less read resolves', () => {
+      const list = recipes();
+      list.write(['a']);
 
-  describe('PantryItem.usageRecordsConnection (keyArgs = orderBy)', () => {
-    const QUERY = gql`
-      query GetUsage($id: ID!, $first: Int, $after: String) {
-        pantryItem(id: $id) {
-          id
-          usageRecordsConnection(
-            first: $first
-            after: $after
-            orderBy: { usedAt: DESC }
-          ) {
-            edges {
-              node {
-                id
-                usedAt
+      // recipeCacheWriters' pattern: cache.updateQuery({ query }), no variables.
+      list.cache.updateQuery<{ recipes?: Connection }>(
+        { query: RECIPES },
+        data =>
+          data?.recipes
+            ? {
+                recipes: {
+                  ...data.recipes,
+                  edges: [
+                    ...data.recipes.edges,
+                    ...connection('Recipe', ['b']).edges,
+                  ],
+                },
               }
-            }
-            pageInfo {
-              hasNextPage
-              endCursor
-            }
-            totalCount
-          }
-        }
-      }
-    `;
-
-    interface UsageResult {
-      pantryItem?: { usageRecordsConnection?: TestConnection };
-    }
-
-    const usageEdge = (id: string) =>
-      buildEdge('PantryItemUsage', 'PantryItemUsageEdge', {
-        id,
-        usedAt: `2026-08-${id.slice(-2)}T00:00:00Z`,
-      });
-
-    const writeUsage = (
-      cache: ReturnType<typeof makeCache>,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-      totalCount?: number,
-    ) =>
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { id: 'pi-1', first: 30, ...vars },
-        data: {
-          pantryItem: {
-            __typename: 'PantryItem',
-            id: 'pi-1',
-            usageRecordsConnection: buildConnection(
-              'PantryItemUsageConnection',
-              edges,
-              pageInfo,
-              totalCount,
-            ),
-          },
-        },
-      });
-
-    it('accumulates a further page instead of storing it separately', () => {
-      // Without a field policy the default keyArgs is EVERY argument, so page
-      // two lands under its own `after` cursor: the watching query keeps
-      // reading page one and the list can never grow.
-      const cache = makeCache();
-      writeUsage(
-        cache,
-        [usageEdge('u-01')],
-        {
-          hasNextPage: true,
-          endCursor: 'c1',
-        },
-        undefined,
-        2,
-      );
-      writeUsage(
-        cache,
-        [usageEdge('u-02')],
-        {
-          hasNextPage: false,
-          endCursor: 'c2',
-        },
-        { after: 'c1' },
-        2,
+            : data,
       );
 
-      const result = cache.readQuery<UsageResult>({
-        query: QUERY,
-        variables: { id: 'pi-1', first: 30 },
-      });
-      const ids = (result?.pantryItem?.usageRecordsConnection?.edges ?? []).map(
-        e => e.node.id,
-      );
-
-      expect(ids).toEqual(['u-01', 'u-02']);
-    });
-
-    it('advances the cursor, so the end-of-list trigger cannot re-fire', () => {
-      const cache = makeCache();
-      writeUsage(cache, [usageEdge('u-01')], {
-        hasNextPage: true,
-        endCursor: 'c1',
-      });
-      writeUsage(
-        cache,
-        [usageEdge('u-02')],
-        {
-          hasNextPage: false,
-          endCursor: 'c2',
-        },
-        { after: 'c1' },
-      );
-
-      const after = cache.readQuery<UsageResult>({
-        query: QUERY,
-        variables: { id: 'pi-1', first: 30 },
-      });
-
-      expect(after?.pantryItem?.usageRecordsConnection?.pageInfo).toEqual({
-        __typename: 'PageInfo',
-        hasNextPage: false,
-        endCursor: 'c2',
-      });
+      expect(list.ids()).toEqual(['a', 'b']);
     });
   });
 
   describe('pantryItemBatchesConnection shared by two operations', () => {
-    // The detail screen reads a 100-edge window with no cursor; the history
-    // screen pages. Both key to pantryItemBatchesConnection({pantryItemId}),
-    // so each write has to leave the field able to satisfy the other's read.
-    const DETAIL = gql`
-      query GetBatches($pantryItemId: ID!) {
-        pantryItemBatchesConnection(pantryItemId: $pantryItemId, first: 100) {
-          totalCount
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-          edges {
-            node {
-              id
-            }
-          }
-        }
-      }
-    `;
+    // A detail write selecting no pageInfo strips it off the shared field, and
+    // the history read goes permanently incomplete: offline it renders empty
+    // over a cache holding every batch.
+    it.each(['history', 'detail'])(
+      'keeps the history read complete when the %s query writes first',
+      first => {
+        const cache = makeCache();
+        const history = batchHistory(cache);
+        const detail = batchDetail(cache);
+        if (first === 'detail') detail.write(['a']);
+        history.write(['a'], { hasNextPage: true });
+        if (first === 'history') detail.write(['a']);
 
-    const HISTORY = gql`
-      query GetBatchHistory($pantryItemId: ID!, $first: Int, $after: String) {
-        pantryItemBatchesConnection(
-          pantryItemId: $pantryItemId
-          first: $first
-          after: $after
-        ) {
-          totalCount
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-          edges {
-            node {
-              id
-            }
-          }
-        }
-      }
-    `;
-
-    interface BatchResult {
-      pantryItemBatchesConnection?: TestConnection;
-    }
-
-    const batchEdge = (id: string) =>
-      buildEdge('PantryItemBatch', 'PantryItemBatchEdge', { id });
-
-    const write = (
-      cache: ReturnType<typeof makeCache>,
-      query: typeof DETAIL,
-      edges: ReturnType<typeof buildEdge>[],
-      pageInfo: { hasNextPage: boolean; endCursor: string | null },
-      vars?: Record<string, unknown>,
-    ) =>
-      seedQuery(cache, {
-        query,
-        variables: { pantryItemId: 'pi-1', ...vars },
-        data: {
-          pantryItemBatchesConnection: buildConnection(
-            'PantryItemBatchConnection',
-            edges,
-            pageInfo,
-          ),
-        },
-      });
-
-    const readHistory = (cache: ReturnType<typeof makeCache>) =>
-      cache.readQuery<BatchResult>({
-        query: HISTORY,
-        variables: { pantryItemId: 'pi-1', first: 30 },
-      });
-
-    it('keeps the history read complete after the detail query writes', () => {
-      // A detail write selecting no pageInfo strips it off the shared field,
-      // and the history screen's read then goes permanently incomplete —
-      // offline it renders empty over a cache holding every batch.
-      const cache = makeCache();
-      write(
-        cache,
-        HISTORY,
-        [batchEdge('b-1')],
-        {
-          hasNextPage: true,
-          endCursor: 'c1',
-        },
-        { first: 30 },
-      );
-      write(cache, DETAIL, [batchEdge('b-1')], {
-        hasNextPage: false,
-        endCursor: 'c1',
-      });
-
-      expect(readHistory(cache)).not.toBeNull();
-    });
-
-    it('keeps the history read complete in the other write order', () => {
-      const cache = makeCache();
-      write(cache, DETAIL, [batchEdge('b-1')], {
-        hasNextPage: false,
-        endCursor: 'c1',
-      });
-      write(
-        cache,
-        HISTORY,
-        [batchEdge('b-1')],
-        {
-          hasNextPage: true,
-          endCursor: 'c1',
-        },
-        { first: 30 },
-      );
-
-      expect(readHistory(cache)).not.toBeNull();
-    });
+        expect(history.ids()).toEqual(['a']);
+      },
+    );
 
     it("does not let the history's narrower page truncate the detail window", () => {
       const cache = makeCache();
-      write(
-        cache,
-        DETAIL,
-        [batchEdge('b-1'), batchEdge('b-2'), batchEdge('b-3')],
-        { hasNextPage: false, endCursor: 'c3' },
-      );
-      // Page one of the history screen: fewer edges, and more to come.
-      write(
-        cache,
-        HISTORY,
-        [batchEdge('b-1')],
-        {
-          hasNextPage: true,
-          endCursor: 'c1',
-        },
-        { first: 30 },
-      );
+      batchDetail(cache).write(['a', 'b', 'c']);
+      batchHistory(cache).write(['a'], { hasNextPage: true });
 
-      const ids = (
-        cache.readQuery<BatchResult>({
-          query: DETAIL,
-          variables: { pantryItemId: 'pi-1' },
-        })?.pantryItemBatchesConnection?.edges ?? []
-      ).map(e => e.node.id);
-
-      expect(ids).toEqual(['b-1', 'b-2', 'b-3']);
+      expect(batchDetail(cache).ids()).toEqual(['a', 'b', 'c']);
     });
   });
 
-  // =========================================================================
-  // A page of rows that select their parent, which Apollo stores before them
-  // =========================================================================
-
   describe('a page of rows the device has never held, each selecting its parent', () => {
-    const pageInfo = (hasNextPage: boolean, endCursor: string) => ({
-      __typename: 'PageInfo',
-      hasNextPage,
-      endCursor,
-    });
+    it.each([
+      ['a list (itemsConnectionFieldPolicy)', listRows, { shoppingList: LIST }],
+      ['a home (mergeConnectionByNodeId)', homeRows, { home: HOME }],
+    ])('appends them on %s', (_name, open, parent) => {
+      const conn = open();
+      const rows = (ids: string[]) => ids.map(id => ({ id, ...parent }));
+      conn.write(rows(['a', 'b']), { hasNextPage: true, totalCount: 4 });
+      conn.write(rows(['c', 'd']), { after: 'after-b', totalCount: 4 });
 
-    it('appends them on a list (itemsConnectionFieldPolicy)', () => {
-      const QUERY = gql`
-        query ListRows($after: String) {
-          shoppingList(id: "list-1") {
-            id
-            itemsConnection(first: 2, after: $after) {
-              totalCount
-              edges {
-                cursor
-                node {
-                  id
-                  shoppingList {
-                    id
-                  }
-                }
-              }
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-            }
-          }
-        }
-      `;
-      const list = { __typename: 'ShoppingList', id: 'list-1' };
-      const answer = (ids: string[], hasNextPage: boolean) => ({
-        shoppingList: {
-          ...list,
-          itemsConnection: {
-            __typename: 'ShoppingListItemConnection',
-            totalCount: 4,
-            edges: ids.map(id => ({
-              __typename: 'ShoppingListItemEdge',
-              cursor: `c-${id}`,
-              node: {
-                __typename: 'ShoppingListItem',
-                id,
-                shoppingList: list,
-              },
-            })),
-            pageInfo: pageInfo(hasNextPage, `c-${ids.at(-1)}`),
-          },
-        },
+      expect(conn.state()).toEqual({
+        ids: ['a', 'b', 'c', 'd'],
+        hasNextPage: false,
+        endCursor: 'after-d',
       });
-      const cache = makeCache();
-
-      seedQuery(cache, { query: QUERY, data: answer(['a', 'b'], true) });
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { after: 'c-b' },
-        data: answer(['c', 'd'], false),
-      });
-
-      const read = cache.readQuery<ShoppingListItemsResult>({ query: QUERY });
-      const connection = read?.shoppingList?.itemsConnection;
-      expect(connection?.edges.map(e => e.node.id)).toEqual([
-        'a',
-        'b',
-        'c',
-        'd',
-      ]);
-      expect(connection?.pageInfo.hasNextPage).toBe(false);
-    });
-
-    it('appends them on a home (mergeConnectionByNodeId)', () => {
-      const QUERY = gql`
-        query HomeRows($after: String) {
-          home(id: "home-1") {
-            id
-            membersConnection(first: 2, after: $after) {
-              totalCount
-              edges {
-                cursor
-                node {
-                  id
-                  home {
-                    id
-                  }
-                }
-              }
-              pageInfo {
-                hasNextPage
-                endCursor
-              }
-            }
-          }
-        }
-      `;
-      const home = { __typename: 'Home', id: 'home-1' };
-      const answer = (ids: string[], hasNextPage: boolean) => ({
-        home: {
-          ...home,
-          membersConnection: {
-            __typename: 'MembershipConnection',
-            totalCount: 4,
-            edges: ids.map(id => ({
-              __typename: 'MembershipEdge',
-              cursor: `c-${id}`,
-              node: { __typename: 'Membership', id, home },
-            })),
-            pageInfo: pageInfo(hasNextPage, `c-${ids.at(-1)}`),
-          },
-        },
-      });
-      const cache = makeCache();
-
-      seedQuery(cache, { query: QUERY, data: answer(['a', 'b'], true) });
-      seedQuery(cache, {
-        query: QUERY,
-        variables: { after: 'c-b' },
-        data: answer(['c', 'd'], false),
-      });
-
-      const read = cache.readQuery<HomeMembersResult>({ query: QUERY });
-      expect(read?.home?.membersConnection?.edges.map(e => e.node.id)).toEqual([
-        'a',
-        'b',
-        'c',
-        'd',
-      ]);
     });
   });
 });

@@ -15,6 +15,8 @@ export interface ParsedReceiptLine {
   rawText: string;
   kind: ParsedLineKind;
   product?: string;
+  /** The food an item bought in plain words, as the server's reading names it. */
+  name?: string;
   code?: string;
   quantity?: number;
   unit?: string;

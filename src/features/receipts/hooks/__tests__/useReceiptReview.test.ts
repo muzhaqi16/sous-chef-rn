@@ -49,9 +49,10 @@ import {
   parsedReceipt,
   seedDraft,
   sentLinesOf,
+  type SentCheckInLine,
 } from '../../__tests__/helpers/receiptFixtures';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
-import { useReceiptReview, type LearnedStore } from '../useReceiptReview';
+import { useReceiptReview } from '../useReceiptReview';
 import { UseReceiptReview_StoreFragmentDoc } from '../useReceiptReview.generated';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { RemoveUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
@@ -91,10 +92,10 @@ globalThis.requestIdleCallback = jest.fn((cb: IdleRequestCallback) => {
 });
 globalThis.cancelIdleCallback = jest.fn();
 
-const PANTRY_VARS = { id: 'p1', itemsFirst: 100 };
-const PANTRY: MockDataFor<typeof GetPantryDocument> = {
-  pantry: { id: 'p1', itemsConnection: connectionOf([]) },
-};
+type Cache = ReturnType<typeof makeCache>;
+type Recorded = ReturnType<typeof recordMock>;
+type Review = ReturnType<typeof useReceiptReview>;
+type PrintedLine = Parameters<typeof parsedReceipt>[0][number];
 
 const MILK = lineChoice({ price: 2.79 });
 const BANANAS = lineChoice({
@@ -104,54 +105,67 @@ const BANANAS = lineChoice({
   unitText: 'lb',
   price: 1.26,
 });
+const PICKED_BANANAS = { ...BANANAS, itemId: 'cat-bananas' };
+const KROGER_87 = { id: 'store-99', name: 'Kroger #87' };
+const CO_OP = { name: 'East End Food Co-Op', address: '7516 Meade Street' };
+const SCANNED_AT = '2026-09-30T10:00:00.000Z';
+const SLI_MILK = 'ShoppingListItem:sli-milk';
 
-const seedKrogerDraft = () =>
+const KROGER_LINES: PrintedLine[] = [
+  { rawText: 'KROGER', kind: 'other' },
+  {
+    rawText: 'KRO WHL MILK 3.29',
+    kind: 'item',
+    product: 'KRO WHL MILK',
+    lineTotal: 3.29,
+  },
+  {
+    rawText: 'SC KROGER SAVINGS 0.50-',
+    kind: 'discount',
+    lineTotal: -0.5,
+    appliesToIndex: 1,
+  },
+  {
+    rawText: 'BANANAS',
+    kind: 'item',
+    product: 'BANANAS',
+    quantity: 2.14,
+    unit: 'lb',
+    lineTotal: 1.26,
+  },
+  { rawText: 'BALANCE 4.05', kind: 'total', lineTotal: 4.05 },
+];
+const krogerWith = (at: number, line: PrintedLine) => [
+  ...KROGER_LINES.slice(0, at),
+  line,
+  ...KROGER_LINES.slice(at),
+];
+
+const seedKroger = (
+  draft: Partial<ReceiptDraft> = {},
+  lines: PrintedLine[] = KROGER_LINES,
+) =>
   seedDraft({
     pages: ['KROGER'],
-    scannedAt: '2026-09-30T10:00:00.000Z',
+    scannedAt: SCANNED_AT,
     purchasedOn: '2026-09-28',
-    parsed: parsedReceipt(
-      [
-        { rawText: 'KROGER', kind: 'other' },
-        {
-          rawText: 'KRO WHL MILK 3.29',
-          kind: 'item',
-          product: 'KRO WHL MILK',
-          lineTotal: 3.29,
-        },
-        {
-          rawText: 'SC KROGER SAVINGS 0.50-',
-          kind: 'discount',
-          lineTotal: -0.5,
-          appliesToIndex: 1,
-        },
-        {
-          rawText: 'BANANAS',
-          kind: 'item',
-          product: 'BANANAS',
-          quantity: 2.14,
-          unit: 'lb',
-          lineTotal: 1.26,
-        },
-        { rawText: 'BALANCE 4.05', kind: 'total', lineTotal: 4.05 },
-      ],
-      'KROGER',
-    ),
+    parsed: parsedReceipt(lines, 'KROGER'),
+    ...draft,
   });
+const unnamedKroger = () => seedKroger({ parsed: parsedReceipt(KROGER_LINES) });
 
-const readPantry = (cache: ReturnType<typeof makeCache>) =>
-  cache.readQuery<Unmasked<GetPantryQuery>>({
-    query: GetPantryDocument,
-    variables: PANTRY_VARS,
-    optimistic: true,
-  })?.pantry;
-
-function pantryItemNames(cache: ReturnType<typeof makeCache>) {
-  return (
-    readPantry(cache)?.itemsConnection.edges.map(edge => edge.node.itemName) ??
-    []
-  );
-}
+const draft = () => useReceiptDraftStore.getState().draft;
+const record = (cache: Cache, id: string) => cache.extract(true)[id];
+const pantryItems = (cache: Cache) =>
+  cache
+    .readQuery<Unmasked<GetPantryQuery>>({
+      query: GetPantryDocument,
+      variables: { id: 'p1', itemsFirst: 100 },
+      optimistic: true,
+    })
+    ?.pantry?.itemsConnection.edges.map(edge => edge.node) ?? [];
+const pantryItemNames = (cache: Cache) =>
+  pantryItems(cache).map(node => node.itemName);
 
 // Milk is open on the active list; nothing has been bought from it yet. The
 // API answers only the lines naming `itemIds`.
@@ -175,8 +189,16 @@ const listItems = (
   };
 };
 
-const fired = (checkIn: ReturnType<typeof recordMock>) =>
-  checkIn.fired.map(vars => inputOf(vars));
+const fired = (checkIn: Recorded) => checkIn.fired.map(vars => inputOf(vars));
+const sent = (checkIn: Recorded) => sentLinesOf(checkIn.fired[0] ?? {});
+const refusing = (
+  refuses: (line: SentCheckInLine) => boolean,
+  options: { held?: boolean; maxUsageCount?: number } = {},
+) =>
+  recordMock(CreateReceiptCheckInDocument, {
+    dataFor: checkInAnswer({ refuses }),
+    ...options,
+  });
 
 // The API is sure of the milk by its code and only guesses at the bananas.
 const RESOLVED: MockDataFor<typeof ResolveReceiptLinesDocument> = {
@@ -207,6 +229,13 @@ const RESOLVED: MockDataFor<typeof ResolveReceiptLinesDocument> = {
     ],
   },
 };
+const resolved = () =>
+  recordMock(ResolveReceiptLinesDocument, { data: RESOLVED });
+const offline = (maxUsageCount?: number) =>
+  recordMock(ResolveReceiptLinesDocument, {
+    error: new Error('Network request failed'),
+    maxUsageCount,
+  });
 
 // The API places no store, proposing the receipt's shop to add on confirm
 // and the household's unlocated store a check-in would locate.
@@ -241,43 +270,35 @@ const creating = (
     }),
   });
 
+interface Options {
+  /** What the check-in answers; it records every line by default. */
+  checkIn?: Recorded;
+  /** The matcher's first answer, landed before the test goes on. */
+  resolve?: Recorded;
+  /** Answers asked for later: a second match, a store's create or removal. */
+  mocks?: Recorded[];
+  /** What the pantry holds before the receipt is added. */
+  held?: MockDataFor<typeof GetPantryDocument>;
+  listFor?: typeof listItems;
+  /** The list answers only once the test calls `list.release()`. */
+  listHeld?: boolean;
+  listFails?: boolean;
+  /** The cache to render with, to see what one visit leaves the next. */
+  cache?: Cache;
+}
+
 async function setup({
   checkIn = recordMock(CreateReceiptCheckInDocument, {
     dataFor: checkInAnswer(),
   }),
   resolve,
-  resolveAgain,
-  storeCreate,
-  storeRemove,
-  held = PANTRY,
-  listHeld = false,
+  mocks = [],
+  held = { pantry: { id: 'p1', itemsConnection: connectionOf([]) } },
   listFor = listItems,
+  listHeld = false,
   listFails = false,
   cache = makeCache(),
-}: {
-  /** The lookup of the list's lines is refused by the network. */
-  listFails?: boolean;
-  /** The cache to render with, to see what one visit leaves the next. */
-  cache?: ReturnType<typeof makeCache>;
-  /** The list's pages as the API answers them. */
-  listFor?: (
-    vars: Record<string, unknown>,
-  ) => MockDataFor<typeof GetShoppingListItemsFilteredDocument>;
-  /** The list answers only once the test calls `list.release()`. */
-  listHeld?: boolean;
-  /** What the check-in answers; it records every line by default. */
-  checkIn?: ReturnType<typeof recordMock>;
-  resolve?: ReturnType<typeof recordMock>;
-  /** What the matcher answers when it is asked again. */
-  resolveAgain?: ReturnType<typeof recordMock>;
-  /** The store a confirm adds when the receipt's shop is not on file. */
-  storeCreate?: ReturnType<typeof recordMock>;
-  /** The removal an Undo of a learned store sends. */
-  storeRemove?: ReturnType<typeof recordMock>;
-  /** What the pantry holds before the receipt is added. */
-  held?: MockDataFor<typeof GetPantryDocument>;
-} = {}) {
-  const getPantry = recordMock(GetPantryDocument, { data: held });
+}: Options = {}) {
   const list = recordMock(
     GetShoppingListItemsFilteredDocument,
     listFails
@@ -295,73 +316,69 @@ async function setup({
     }),
   });
   const rendered = renderHookWithApollo(
-    () => {
-      const pantry = usePantryItemSelection('p1');
-      return { pantry, review: useReceiptReview() };
-    },
+    () => ({
+      pantry: usePantryItemSelection('p1'),
+      review: useReceiptReview(),
+    }),
     {
       cache,
       operationMocks: [
-        getPantry.mock,
+        recordMock(GetPantryDocument, { data: held }).mock,
         lists.mock,
         list.mock,
         checkIn.mock,
-        ...(resolve ? [resolve.mock] : []),
-        ...(resolveAgain ? [resolveAgain.mock] : []),
-        ...(storeCreate ? [storeCreate.mock] : []),
-        ...(storeRemove ? [storeRemove.mock] : []),
+        ...[...(resolve ? [resolve] : []), ...mocks].map(({ mock }) => mock),
       ],
     },
   );
   await drainTimers();
   expect(rendered.result.current.pantry.hasLoaded).toBe(true);
-  // Adds the chosen lines, and waits for the API to answer the check-in.
-  const addChosen = async () => {
-    let outcome: unknown;
-    outcome = await drained(() => rendered.result.current.review.addChosen());
-    await drainTimers();
-    expect(useReceiptDraftStore.getState().draft?.checkIn?.state).not.toBe(
-      'sending',
-    );
-    return outcome;
-  };
-  // Chooses a line, waits for it to match its list line, and adds the choices.
-  const chooseOnListAndAdd = async (
-    index: number,
-    choice: ReceiptLineChoice,
-  ) => {
-    await act(async () => {
-      rendered.result.current.review.chooseLine(index, choice);
+  if (resolve) await drainTimers();
+
+  const review = () => rendered.result.current.review;
+  const run = (does: (current: Review) => void) =>
+    act(async () => {
+      does(review());
     });
+  const choose = (choices: Record<number, ReceiptLineChoice | null>) =>
+    run(current => {
+      for (const [index, choice] of Object.entries(choices)) {
+        current.chooseLine(Number(index), choice);
+      }
+    });
+  const confirm = () => drained(() => review().addChosen());
+  /** Confirms, and waits for the API to answer the check-in. */
+  const addChosen = async () => {
+    const outcome = await confirm();
     await drainTimers();
-    expect(
-      rendered.result.current.review.rows.find(row => row.index === index)
-        ?.onList,
-    ).toBe(true);
-    await addChosen();
+    expect(draft()?.checkIn?.state).not.toBe('sending');
+    return outcome;
   };
   return {
     ...rendered,
     cache,
     checkIn,
     list,
+    review,
+    run,
+    choose,
+    statuses: () => review().rows.map(row => row.status),
+    /** Chooses lines, and waits for the milk to match its list line. */
+    chooseOnList: async (choices: Record<number, ReceiptLineChoice | null>) => {
+      await choose(choices);
+      await drainTimers();
+      expect(review().rows[0]?.onList).toBe(true);
+    },
+    confirm,
     addChosen,
-    chooseOnListAndAdd,
   };
 }
 
 beforeEach(() => {
   jest.useFakeTimers();
-});
-
-afterEach(() => {
-  jest.useRealTimers();
-});
-
-beforeEach(() => {
   jest.clearAllMocks();
   mockCurrentPantry.mockReturnValue(KITCHEN);
-  seedKrogerDraft();
+  seedKroger();
   // The units the device warmed: a typed unit resolves without the API.
   useStore.getState().setCachedUnits([
     { id: 'unit-lb', name: 'pound', symbol: 'lb' },
@@ -369,89 +386,77 @@ beforeEach(() => {
   ]);
 });
 
+afterEach(() => {
+  jest.useRealTimers();
+  useStore.getState().setCachedStores([]);
+  useStore.getState().setSelectedShoppingListId(null);
+});
+
 describe('useReceiptReview', () => {
   it('lists the item lines priced after their discounts, none chosen yet', async () => {
-    const { result } = await setup();
+    const { review } = await setup();
 
-    const { rows, merchant, pendingCount } = result.current.review;
-    expect(merchant).toBe('KROGER');
+    expect(review().merchant).toBe('KROGER');
     // No answer from the matcher: the lines wait for it rather than read as unmatched.
-    expect(rows.map(row => [row.printed, row.price, row.status])).toEqual([
+    expect(
+      review().rows.map(row => [row.printed, row.price, row.status]),
+    ).toEqual([
       ['KRO WHL MILK', 2.79, 'pending'],
       ['BANANAS', 1.26, 'pending'],
     ]);
-    expect(pendingCount).toBe(0);
+    expect(review().pendingCount).toBe(0);
   });
 
   it('asks for the store only when neither the receipt nor the API names the shop', async () => {
-    const { result, unmount } = await setup();
-    // The receipt names KROGER: nothing to ask.
-    expect(result.current.review.storeUnrecognized).toBe(false);
-    unmount();
+    const named = await setup();
+    expect(named.review().storeUnrecognized).toBe(false);
+    named.unmount();
 
-    const draft = useReceiptDraftStore.getState().draft;
-    if (draft?.parsed) {
-      const { merchant: _named, ...unnamed } = draft.parsed;
-      useReceiptDraftStore.setState({ draft: { ...draft, parsed: unnamed } });
-    }
-    const unnamed = await setup();
-    expect(unnamed.result.current.review.storeUnrecognized).toBe(true);
+    unnamedKroger();
+    const { review } = await setup();
+    expect(review().storeUnrecognized).toBe(true);
   });
 
-  it.each<[string, Partial<ReceiptDraft>, unknown]>([
+  // A markdown the API found was never taken off reads as OTHER, which a sum
+  // of the lines counts as a fee: only the reader's verdict is shown.
+  it.each([
     [
       'shows the mismatch the server found in its reading',
-      { parsedBy: 'server', totalsGap: { counted: 3.55, printed: 4.05 } },
       { counted: 3.55, printed: 4.05 },
     ],
-    [
-      'shows none when the server found its reading adds up',
-      { parsedBy: 'server' },
-      null,
-    ],
-  ])('%s', async (_name, readBy, totalsGap) => {
-    const draft = useReceiptDraftStore.getState().draft!;
-    const lines = draft.parsed!.lines.map(({ index: _index, ...line }) => line);
-    // A markdown the API found was never taken off reads as OTHER, which a sum
-    // of the lines counts as a fee: only the reader's verdict is shown.
-    lines.splice(3, 0, {
-      rawText: 'Markdown: $1.70',
-      kind: 'other',
-      lineTotal: 1.7,
-    });
-    useReceiptDraftStore.setState({
-      draft: { ...draft, parsed: parsedReceipt(lines, 'KROGER'), ...readBy },
-    });
+    ['shows none when the server found its reading adds up', undefined],
+  ])('%s', async (_name, totalsGap) => {
+    seedKroger(
+      { parsedBy: 'server', totalsGap },
+      krogerWith(3, {
+        rawText: 'Markdown: $1.70',
+        kind: 'other',
+        lineTotal: 1.7,
+      }),
+    );
+    const { review } = await setup();
 
-    const { result } = await setup();
-
-    expect(result.current.review.totalsGap).toEqual(totalsGap);
+    expect(review().totalsGap).toEqual(totalsGap ?? null);
   });
 
   it('checks the chosen lines in at once, keeps what landed, and names why the rest failed', async () => {
-    const checkIn = recordMock(CreateReceiptCheckInDocument, {
-      // The typed bananas are refused.
-      dataFor: checkInAnswer({ refuses: line => !!line.item.inline }),
-      maxUsageCount: 2,
+    // The typed bananas are refused.
+    const checkIn = refusing(line => !!line.item.inline, { maxUsageCount: 2 });
+    const { review, choose, statuses, cache, addChosen } = await setup({
+      checkIn,
     });
-    const { result, cache, addChosen } = await setup({ checkIn });
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-      result.current.review.chooseLine(3, BANANAS);
-    });
-    expect(result.current.review.pendingCount).toBe(2);
+    await choose({ 1: MILK, 3: BANANAS });
+    expect(review().pendingCount).toBe(2);
 
-    let shownBefore: string[] = [];
-    let outcome: unknown;
-    await drained(async () => {
-      outcome = await result.current.review.addChosen();
-      shownBefore = pantryItemNames(cache);
+    const [outcome, shownBefore] = await drained(async () => {
+      const sentOutcome = await review().addChosen();
+      return [sentOutcome, pantryItemNames(cache)] as const;
     });
     // Both show in the pantry before the API is asked.
     expect(outcome).toMatchObject({ sent: 2, held: 0 });
     expect(shownBefore.sort()).toEqual(['Bananas', 'Whole milk']);
 
-    const ids = useReceiptDraftStore.getState().draft?.checkIn;
+    const ids = draft()?.checkIn;
     const [milkIds, bananaIds] = [ids?.lines[1], ids?.lines[3]];
     expect(fired(checkIn)).toEqual([
       {
@@ -494,13 +499,10 @@ describe('useReceiptReview', () => {
       },
     ]);
     expect(pantryItemNames(cache)).toEqual(['Whole milk']);
-
-    const [milk, bananas] = result.current.review.rows;
-    expect(milk?.status).toBe('added');
-    expect(bananas?.status).toBe('failed');
-    expect(bananas?.failure).toEqual(expect.any(String));
-    expect(result.current.review.pendingCount).toBe(1);
-    expect(useReceiptDraftStore.getState().draft?.added).toEqual([1]);
+    expect(statuses()).toEqual(['added', 'failed']);
+    expect(review().rows[1]?.failure).toEqual(expect.any(String));
+    expect(review().pendingCount).toBe(1);
+    expect(draft()?.added).toEqual([1]);
 
     // A retry sends the line that failed alone, under the ids it was given.
     await addChosen();
@@ -511,20 +513,20 @@ describe('useReceiptReview', () => {
   it('shows two lines of one product as one row, at the total the answer states', async () => {
     const checkIn = recordMock(CreateReceiptCheckInDocument, {
       dataFor: (vars): MockDataFor<typeof CreateReceiptCheckInDocument> => {
-        const sent = sentLinesOf(vars);
+        const lines = sentLinesOf(vars);
         return {
           createReceiptCheckIn: {
             __typename: 'CreateReceiptCheckInPayload',
             // Every result states the row as committed: Apollo stores a row once
             // per answer, the first copy, so a running total would show its first.
-            results: sent.map((line, index) => ({
+            results: lines.map((line, index) => ({
               index,
               clientId: line.clientId,
               success: true,
               failure: null,
               item: { id: 'cat-milk' },
               pantryItem: {
-                id: sent[0]?.pantryItemId ?? '',
+                id: lines[0]?.pantryItemId ?? '',
                 itemName: 'Whole milk',
                 item: { id: 'cat-milk' },
                 quantity: 2,
@@ -536,47 +538,32 @@ describe('useReceiptReview', () => {
         };
       },
     });
-    const { result, cache, addChosen } = await setup({ checkIn });
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-      result.current.review.chooseLine(3, MILK);
-    });
+    const { choose, cache, addChosen } = await setup({ checkIn });
+    await choose({ 1: MILK, 3: MILK });
 
     expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
 
-    const edges = readPantry(cache)?.itemsConnection.edges ?? [];
     expect(pantryItemNames(cache)).toEqual(['Whole milk']);
     expect(
-      cache.extract(true)[`PantryItem:${edges[0]?.node.id}`],
+      record(cache, `PantryItem:${pantryItems(cache)[0]?.id}`),
     ).toMatchObject({ quantity: 2 });
   });
 
   it('counts a check-in queued offline as added and shows it at once', async () => {
-    // The offline queue completes a queued write with null data.
-    const data: MockDataFor<typeof CreateReceiptCheckInDocument> = {
-      createReceiptCheckIn: null,
-    };
-    const { result, cache, addChosen } = await setup({
+    const { review, choose, cache, addChosen } = await setup({
+      // The offline queue completes a queued write with null data.
       checkIn: recordMock(CreateReceiptCheckInDocument, {
-        data,
+        data: { createReceiptCheckIn: null },
         partial: true,
       }),
     });
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-      result.current.review.chooseLine(3, {
-        ...BANANAS,
-        itemId: 'cat-bananas',
-      });
-    });
+    await choose({ 1: MILK, 3: PICKED_BANANAS });
 
     expect(await addChosen()).toMatchObject({ sent: 2, held: 0 });
 
     expect(pantryItemNames(cache).sort()).toEqual(['Bananas', 'Whole milk']);
-    expect(result.current.review.pendingCount).toBe(0);
-    expect(useReceiptDraftStore.getState().draft?.checkIn?.state).toBe(
-      'queued',
-    );
+    expect(review().pendingCount).toBe(0);
+    expect(draft()?.checkIn?.state).toBe('queued');
   });
 
   it.each<[string, Partial<ReceiptLineChoice>, string]>([
@@ -598,62 +585,48 @@ describe('useReceiptReview', () => {
   ])(
     'holds a line back, saying why, when %s, and sends the rest',
     async (_case, lacking, why) => {
-      const { result, checkIn, addChosen } = await setup();
-      await act(async () => {
-        result.current.review.chooseLine(1, { ...MILK, ...lacking });
-        result.current.review.chooseLine(3, {
-          ...BANANAS,
-          itemId: 'cat-bananas',
-        });
-      });
+      const { review, choose, checkIn, addChosen } = await setup();
+      await choose({ 1: { ...MILK, ...lacking }, 3: PICKED_BANANAS });
 
       expect(await addChosen()).toMatchObject({ sent: 1, held: 1 });
 
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
+      expect(sent(checkIn)).toEqual([
         expect.objectContaining({ clientId: '3' }),
       ]);
-      const [milk] = result.current.review.rows;
-      expect(milk?.status).toBe('failed');
-      expect(milk?.failure).toContain(why);
-      expect(result.current.review.pendingCount).toBe(1);
+      expect(review().rows[0]).toMatchObject({
+        status: 'failed',
+        failure: expect.stringContaining(why),
+      });
+      expect(review().pendingCount).toBe(1);
     },
   );
 
   it('says a line refused with no code this build knows was not added', async () => {
-    const { result } = await setup();
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-      const { draft } = useReceiptDraftStore.getState();
-      useReceiptDraftStore.setState({
-        draft: draft && { ...draft, failed: { 1: null } },
-      });
+    const { review, run } = await setup();
+    await run(current => {
+      current.chooseLine(1, MILK);
+      useReceiptDraftStore.setState(state => ({
+        draft: state.draft && { ...state.draft, failed: { 1: null } },
+      }));
     });
 
-    const [milk] = result.current.review.rows;
-    expect(milk?.status).toBe('failed');
-    expect(milk?.failure).toBe(t('errors.addItemFailedRetry'));
+    expect(review().rows[0]).toMatchObject({
+      status: 'failed',
+      failure: t('errors.addItemFailedRetry'),
+    });
   });
 
   it('sends the server reading it was confirmed from, and a saving off the whole order', async () => {
-    const draft = useReceiptDraftStore.getState().draft!;
-    const lines = draft.parsed!.lines.map(({ index: _index, ...line }) => line);
-    lines.splice(4, 0, {
-      rawText: '$5 OFF $50 2.00-',
-      kind: 'discount',
-      lineTotal: -2,
-    });
-    useReceiptDraftStore.setState({
-      draft: {
-        ...draft,
-        parsed: parsedReceipt(lines, 'KROGER'),
-        parsedBy: 'server',
-        parseId: 'parse-1',
-      },
-    });
-    const { result, checkIn, addChosen } = await setup();
-    await act(async () => {
-      result.current.review.chooseLine(1, MILK);
-    });
+    seedKroger(
+      { parsedBy: 'server', parseId: 'parse-1' },
+      krogerWith(4, {
+        rawText: '$5 OFF $50 2.00-',
+        kind: 'discount',
+        lineTotal: -2,
+      }),
+    );
+    const { choose, checkIn, addChosen } = await setup();
+    await choose({ 1: MILK });
 
     await addChosen();
 
@@ -662,43 +635,19 @@ describe('useReceiptReview', () => {
     );
   });
 
-  it('adds on the scan day when the receipt printed none, and on the day the user sets', async () => {
-    const seeded = useReceiptDraftStore.getState().draft;
-    if (!seeded) throw new Error('no draft');
-    const { purchasedOn: _read, ...unread } = seeded;
-    useReceiptDraftStore.setState({ draft: unread });
-    const { result, checkIn, addChosen } = await setup();
+  it('adds on the scan day when the receipt printed none, and at its printed time on the day the user sets', async () => {
+    seedKroger({ purchasedOn: undefined, purchaseTime: '18:42' });
+    const { review, run, checkIn, addChosen } = await setup();
 
-    expect(result.current.review.purchasedOn).toBe(
-      toDateKey(new Date(seeded.scannedAt)),
-    );
-    expect(result.current.review.dayIsScanDay).toBe(true);
+    expect(review().purchasedOn).toBe(toDateKey(new Date(SCANNED_AT)));
+    expect(review().dayIsScanDay).toBe(true);
 
-    await act(async () => {
-      result.current.review.setPurchasedOn('2026-09-26');
-      result.current.review.chooseLine(1, MILK);
+    await run(current => {
+      current.setPurchasedOn('2026-09-26');
+      current.chooseLine(1, MILK);
     });
-    expect(result.current.review.dayIsScanDay).toBe(false);
+    expect(review().dayIsScanDay).toBe(false);
 
-    await addChosen();
-
-    expect(fired(checkIn)).toEqual([
-      expect.objectContaining({ purchasedOn: '2026-09-26' }),
-    ]);
-  });
-
-  it("sends the receipt's printed time on the day, also a day the user sets", async () => {
-    const seeded = useReceiptDraftStore.getState().draft;
-    if (!seeded) throw new Error('no draft');
-    useReceiptDraftStore.setState({
-      draft: { ...seeded, purchaseTime: '18:42' },
-    });
-    const { result, checkIn, addChosen } = await setup();
-
-    await act(async () => {
-      result.current.review.setPurchasedOn('2026-09-26');
-      result.current.review.chooseLine(1, MILK);
-    });
     await addChosen();
 
     expect(fired(checkIn)).toEqual([
@@ -710,29 +659,37 @@ describe('useReceiptReview', () => {
   });
 
   describe('with the API proposing items', () => {
-    const resolved = () =>
-      recordMock(ResolveReceiptLinesDocument, { data: RESOLVED });
+    it.each([
+      ['the phone', undefined, ReceiptParser.Device],
+      ['the server', 'server', ReceiptParser.Server],
+    ] as const)(
+      'asks once for the item lines %s read, with the header, the pantry and each plain name',
+      async (_reader, parsedBy, parser) => {
+        seedKroger(
+          { parsedBy },
+          KROGER_LINES.map(line =>
+            line.product === 'BANANAS' ? { ...line, name: 'bananas' } : line,
+          ),
+        );
+        const resolve = resolved();
+        const { review } = await setup({ resolve });
+        expect(review().matchState).toBe('done');
 
-    it('asks once for the item lines, with the header and the pantry', async () => {
-      const resolve = resolved();
-      const { result } = await setup({ resolve });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
-
-      expect(resolve.fired).toEqual([
-        {
-          input: {
-            merchantHeader: 'KROGER',
-            pantryId: 'p1',
-            parsedBy: ReceiptParser.Device,
-            lines: [
-              { clientId: '1', text: 'KRO WHL MILK' },
-              { clientId: '3', text: 'BANANAS' },
-            ],
+        expect(resolve.fired).toEqual([
+          {
+            input: {
+              merchantHeader: 'KROGER',
+              pantryId: 'p1',
+              parsedBy: parser,
+              lines: [
+                { clientId: '1', text: 'KRO WHL MILK' },
+                { clientId: '3', text: 'BANANAS', name: 'bananas' },
+              ],
+            },
           },
-        },
-      ]);
-    });
+        ]);
+      },
+    );
 
     it('reads its matches from the cache on a return, and drops them once finished', async () => {
       useStore.getState().setSelectedShoppingListId('list-1');
@@ -742,25 +699,20 @@ describe('useReceiptReview', () => {
       });
       const cache = makeCache();
       const askedByItem = () =>
-        Object.keys(cache.extract(true)['ShoppingList:list-1'] ?? {}).some(
-          key => key.includes('"itemIds"'),
+        Object.keys(record(cache, 'ShoppingList:list-1') ?? {}).some(key =>
+          key.includes('"itemIds"'),
         );
       const first = await setup({ resolve, cache });
-      await drainTimers();
-      expect(first.result.current.review.matchState).toBe('done');
+      expect(first.review().matchState).toBe('done');
       first.unmount();
 
-      const second = await setup({ resolve, cache });
-      await drainTimers();
-      expect(second.result.current.review.matchState).toBe('done');
+      const { review, run } = await setup({ resolve, cache });
+      expect(review().matchState).toBe('done');
       expect(resolve.fired).toHaveLength(1);
-
       await drainTimers();
       expect(askedByItem()).toBe(true);
 
-      act(() => {
-        second.result.current.review.finish();
-      });
+      await run(current => current.finish());
       expect(
         Object.keys(cache.extract().ROOT_QUERY ?? {}).some(key =>
           key.startsWith('resolveReceiptLines'),
@@ -768,302 +720,197 @@ describe('useReceiptReview', () => {
       ).toBe(false);
       // The list lines it asked for by item go too.
       expect(askedByItem()).toBe(false);
-      useStore.getState().setSelectedShoppingListId(null);
     });
 
     it('waits for the pantry to be known rather than asking twice', async () => {
       mockCurrentPantry.mockReturnValue({ pantry: null, currentHome: null });
       const resolve = resolved();
-      const { result, rerender } = await setup({ resolve });
+      const { review, rerender } = await setup({ resolve });
       expect(resolve.fired).toHaveLength(0);
-      expect(result.current.review.matchState).toBe('matching');
+      expect(review().matchState).toBe('matching');
 
       mockCurrentPantry.mockReturnValue(KITCHEN);
       rerender({});
       await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
+      expect(review().matchState).toBe('done');
       expect(resolve.fired).toEqual([
         { input: expect.objectContaining({ pantryId: 'p1' }) },
       ]);
     });
 
-    it('tells the matcher the server read a receipt it read', async () => {
-      const draft = useReceiptDraftStore.getState().draft;
-      if (draft) {
-        useReceiptDraftStore.setState({
-          draft: { ...draft, parsedBy: 'server' },
-        });
-      }
-      const resolve = resolved();
-      const { result } = await setup({ resolve });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
-
-      expect(resolve.fired[0]).toEqual({
-        input: expect.objectContaining({ parsedBy: ReceiptParser.Server }),
-      });
-    });
-
     it('keeps the lines waiting when the lookup fails, and matches them on a retry', async () => {
-      const { result } = await setup({
-        resolve: recordMock(ResolveReceiptLinesDocument, {
-          error: new Error('Network request failed'),
-          maxUsageCount: 1,
-        }),
-        resolveAgain: resolved(),
+      const { review, run, statuses } = await setup({
+        resolve: offline(1),
+        mocks: [resolved()],
       });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('failed');
-      expect(result.current.review.rows.map(row => row.status)).toEqual([
-        'pending',
-        'pending',
-      ]);
+      expect(review().matchState).toBe('failed');
+      expect(statuses()).toEqual(['pending', 'pending']);
 
-      await act(async () => {
-        result.current.review.retryMatching();
-      });
+      await run(current => current.retryMatching());
 
       await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
-      expect(result.current.review.rows.map(row => row.status)).toEqual([
-        'add',
-        'unmatched',
-      ]);
+      expect(review().matchState).toBe('done');
+      expect(statuses()).toEqual(['add', 'unmatched']);
     });
 
     it('adds the item it is sure of, and only suggests the one it guesses', async () => {
-      const { result } = await setup({ resolve: resolved() });
+      const { review, choose, statuses } = await setup({ resolve: resolved() });
 
-      await drainTimers();
-      expect(result.current.review.rows[0]?.status).toBe('add');
-      const [milk, bananas] = result.current.review.rows;
+      const [milk, bananas] = review().rows;
+      expect(statuses()).toEqual(['add', 'unmatched']);
       expect(milk?.choice).toEqual(MILK);
-      expect(milk?.status).toBe('add');
       // A guess is named, never the line's product, until the user picks it.
       expect(bananas?.choice).toBeUndefined();
-      expect(bananas?.status).toBe('unmatched');
       expect(bananas?.suggestion?.itemName).toBe('Bananas');
       expect(bananas?.candidates.map(candidate => candidate.itemName)).toEqual([
         'Bananas',
         'Plantains',
       ]);
-      expect(result.current.review.pendingCount).toBe(1);
+      expect(review().pendingCount).toBe(1);
 
-      await act(async () => {
-        result.current.review.chooseLine(
-          3,
-          lineChoice({ itemId: 'cat-plantains', itemName: 'Plantains' }),
-        );
+      await choose({
+        3: lineChoice({ itemId: 'cat-plantains', itemName: 'Plantains' }),
       });
-      expect(result.current.review.rows[1]?.status).toBe('add');
+      expect(review().rows[1]?.status).toBe('add');
     });
 
-    it('tells candidates of one name apart by their one brand, else their pack size', async () => {
-      const resolve = recordMock(ResolveReceiptLinesDocument, {
-        data: {
-          resolveReceiptLines: {
-            lines: [
-              {
-                clientId: '3',
-                best: null,
-                candidates: [
-                  {
-                    item: {
-                      id: 'milk-kirkland',
-                      name: 'Whole milk',
-                      brands: [{ brand: { name: 'Kirkland' } }],
-                    },
-                  },
-                  {
-                    item: {
-                      id: 'milk-gallon',
-                      name: 'Whole milk',
-                      netWeight: 1,
-                      netWeightKind: NetWeightKind.Package,
-                      displayUnit: { symbol: 'gal', name: 'gallon' },
-                    },
-                  },
-                  {
-                    item: {
-                      id: 'milk-label',
-                      name: 'Whole milk',
-                      netWeight: 100,
-                      netWeightKind: NetWeightKind.Reference,
-                      displayUnit: { symbol: 'g', name: 'gram' },
-                    },
-                  },
-                  {
-                    item: {
-                      id: 'bananas-dole',
-                      name: 'Bananas',
-                      brands: [{ brand: { name: 'Dole' } }],
-                    },
-                  },
-                ],
-              },
-            ],
+    // No brand and no pack size: nothing the sheet could show sets them apart.
+    const spinach = (id: string) => ({
+      id,
+      name: 'Baby Spinach',
+      brands: [],
+      netWeightKind: NetWeightKind.Reference,
+    });
+    it.each([
+      [
+        'tells candidates of one name apart by their one brand, else their pack size',
+        [
+          {
+            id: 'milk-kirkland',
+            name: 'Whole milk',
+            brands: [{ brand: { name: 'Kirkland' } }],
           },
-        },
+          {
+            id: 'milk-gallon',
+            name: 'Whole milk',
+            netWeight: 1,
+            netWeightKind: NetWeightKind.Package,
+            displayUnit: { symbol: 'gal', name: 'gallon' },
+          },
+          {
+            id: 'milk-label',
+            name: 'Whole milk',
+            netWeight: 100,
+            netWeightKind: NetWeightKind.Reference,
+            displayUnit: { symbol: 'g', name: 'gram' },
+          },
+          {
+            id: 'bananas-dole',
+            name: 'Bananas',
+            brands: [{ brand: { name: 'Dole' } }],
+          },
+        ],
+        [
+          { itemId: 'milk-kirkland', detail: 'Kirkland' },
+          { itemId: 'milk-gallon', detail: '1 gal' },
+          // A 100 g nutrition basis is no pack size.
+          { itemId: 'milk-label', detail: null },
+          // No other candidate shares its name: nothing to tell apart.
+          { itemId: 'bananas-dole', detail: null },
+        ],
+      ],
+      [
+        'offers one choice for candidates nothing tells apart: the first',
+        [spinach('spinach-1'), spinach('spinach-2'), spinach('spinach-3')],
+        [{ itemId: 'spinach-1', detail: null }],
+      ],
+    ])('%s', async (_name, items, expected) => {
+      const { review } = await setup({
+        resolve: recordMock(ResolveReceiptLinesDocument, {
+          data: {
+            resolveReceiptLines: {
+              lines: [
+                {
+                  clientId: '3',
+                  best: null,
+                  candidates: items.map(item => ({ item })),
+                },
+              ],
+            },
+          },
+        }),
       });
-      const { result } = await setup({ resolve });
 
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
+      expect(review().matchState).toBe('done');
       expect(
-        result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
+        review().rows[1]?.candidates.map(({ itemId, detail }) => ({
           itemId,
           detail,
         })),
-      ).toEqual([
-        { itemId: 'milk-kirkland', detail: 'Kirkland' },
-        { itemId: 'milk-gallon', detail: '1 gal' },
-        // A 100 g nutrition basis is no pack size.
-        { itemId: 'milk-label', detail: null },
-        // No other candidate shares its name: nothing to tell apart.
-        { itemId: 'bananas-dole', detail: null },
-      ]);
-    });
-
-    it('offers one choice for candidates nothing tells apart: the first', async () => {
-      // No brand and no pack size: nothing the sheet could show sets them apart.
-      const spinach = (id: string) => ({
-        item: {
-          id,
-          name: 'Baby Spinach',
-          brands: [],
-          netWeightKind: NetWeightKind.Reference,
-        },
-      });
-      const resolve = recordMock(ResolveReceiptLinesDocument, {
-        data: {
-          resolveReceiptLines: {
-            lines: [
-              {
-                clientId: '3',
-                best: null,
-                candidates: [
-                  spinach('spinach-1'),
-                  spinach('spinach-2'),
-                  spinach('spinach-3'),
-                ],
-              },
-            ],
-          },
-        },
-      });
-      const { result } = await setup({ resolve });
-
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
-      expect(
-        result.current.review.rows[1]?.candidates.map(({ itemId, detail }) => ({
-          itemId,
-          detail,
-        })),
-      ).toEqual([{ itemId: 'spinach-1', detail: null }]);
+      ).toEqual(expected);
     });
 
     it('keeps a line the user left out, out, whatever the API proposes', async () => {
-      const { result } = await setup({ resolve: resolved() });
-      await drainTimers();
-      expect(result.current.review.rows[0]?.status).toBe('add');
+      const { review, choose, statuses } = await setup({ resolve: resolved() });
+      expect(statuses()[0]).toBe('add');
 
-      await act(async () => {
-        result.current.review.chooseLine(1, null);
-        result.current.review.chooseLine(3, null);
-      });
+      await choose({ 1: null, 3: null });
 
       // A sure match and an unsure guess alike stay out once left out.
-      expect(result.current.review.rows.map(row => row.choice)).toEqual([
+      expect(review().rows.map(row => row.choice)).toEqual([
         undefined,
         undefined,
       ]);
-      expect(result.current.review.rows.map(row => row.status)).toEqual([
-        'skipped',
-        'skipped',
-      ]);
-      expect(result.current.review.pendingCount).toBe(0);
+      expect(statuses()).toEqual(['skipped', 'skipped']);
+      expect(review().pendingCount).toBe(0);
     });
 
-    it('adds at the receipt store, and tells the API what the household confirmed', async () => {
-      const { result, checkIn, addChosen } = await setup({
-        resolve: resolved(),
-      });
-      await drainTimers();
-      expect(result.current.review.rows[0]?.status).toBe('add');
-      // The guess was wrong: the user picks the second candidate.
-      await act(async () => {
-        result.current.review.chooseLine(3, {
-          ...BANANAS,
-          itemId: 'cat-plantains',
-          itemName: 'Plantains',
+    it.each([
+      ['a candidate it did not guess', 'cat-plantains', 'Plantains'],
+      ['its suggestion as it stands', 'cat-bananas', 'Bananas'],
+    ])(
+      'adds at the receipt store, sending its sure match as kept and %s as the user picked it',
+      async (_pick, itemId, itemName) => {
+        const { choose, checkIn, addChosen } = await setup({
+          resolve: resolved(),
         });
-      });
+        await choose({ 3: { ...BANANAS, itemId, itemName } });
 
-      await addChosen();
+        await addChosen();
 
-      const [input] = fired(checkIn);
-      expect(input).toEqual(
-        expect.objectContaining({
-          storeId: 'store-27',
-          purchasedOn: '2026-09-28',
-        }),
-      );
-      // The store is known, so its header is not sent to place it.
-      expect(input).not.toHaveProperty('merchantHeader');
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
-        expect.objectContaining({
-          item: { id: 'cat-milk' },
-          rawText: 'KRO WHL MILK',
-          resolvedBy: ReceiptMatchMethod.Code,
-          edited: false,
-        }),
-        expect.objectContaining({
-          item: { id: 'cat-plantains' },
-          rawText: 'BANANAS',
-          resolvedBy: ReceiptMatchMethod.Search,
-          edited: true,
-        }),
-      ]);
-    });
-
-    it('tells the API a suggestion the user picked was their choice', async () => {
-      const { checkIn, result, addChosen } = await setup({
-        resolve: resolved(),
-      });
-      await drainTimers();
-      const suggestion = result.current.review.rows[1]?.suggestion;
-      // The user takes the API's unsure guess as it stands.
-      await act(async () => {
-        result.current.review.chooseLine(3, {
-          ...BANANAS,
-          itemId: suggestion?.itemId ?? null,
-          itemName: suggestion?.itemName ?? '',
-        });
-      });
-
-      await addChosen();
-
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toContainEqual(
-        expect.objectContaining({
-          item: { id: 'cat-bananas' },
-          resolvedBy: ReceiptMatchMethod.Search,
-          edited: true,
-        }),
-      );
-    });
+        const [input] = fired(checkIn);
+        expect(input).toEqual(
+          expect.objectContaining({
+            storeId: 'store-27',
+            purchasedOn: '2026-09-28',
+          }),
+        );
+        // The store is known, so its header is not sent to place it.
+        expect(input).not.toHaveProperty('merchantHeader');
+        expect(sent(checkIn)).toEqual([
+          expect.objectContaining({
+            item: { id: 'cat-milk' },
+            rawText: 'KRO WHL MILK',
+            resolvedBy: ReceiptMatchMethod.Code,
+            edited: false,
+          }),
+          expect.objectContaining({
+            item: { id: itemId },
+            rawText: 'BANANAS',
+            resolvedBy: ReceiptMatchMethod.Search,
+            edited: true,
+          }),
+        ]);
+      },
+    );
 
     it('keeps the store field and the proposals while the picked store is asked', async () => {
-      const draft = useReceiptDraftStore.getState().draft;
-      if (draft?.parsed) {
-        const { merchant: _named, ...unnamed } = draft.parsed;
-        useReceiptDraftStore.setState({ draft: { ...draft, parsed: unnamed } });
-      }
+      unnamedKroger();
       const resolveAgain = recordMock(ResolveReceiptLinesDocument, {
         // The API echoes the picked store, and is sure of the bananas there.
         data: {
           resolveReceiptLines: {
-            store: { id: 'store-99', name: 'Kroger #87' },
+            store: KROGER_87,
             lines: RESOLVED.resolveReceiptLines?.lines?.map(line => ({
               ...line,
               confidence: ReceiptMatchConfidence.High,
@@ -1072,7 +919,7 @@ describe('useReceiptReview', () => {
         },
         held: true,
       });
-      const { result } = await setup({
+      const { review, run, statuses } = await setup({
         resolve: recordMock(ResolveReceiptLinesDocument, {
           data: {
             resolveReceiptLines: {
@@ -1082,39 +929,46 @@ describe('useReceiptReview', () => {
           },
           maxUsageCount: 1,
         }),
-        resolveAgain,
+        mocks: [resolveAgain],
       });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
-      expect(result.current.review.storeUnrecognized).toBe(true);
+      expect(review().matchState).toBe('done');
+      expect(review().storeUnrecognized).toBe(true);
 
-      await act(async () => {
-        result.current.review.chooseStore({
-          id: 'store-99',
-          name: 'Kroger #87',
-        });
-      });
+      await run(current => current.chooseStore(KROGER_87));
       await drainTimers();
       expect(resolveAgain.fired).toHaveLength(1);
-      expect(result.current.review.rows.map(row => row.status)).toEqual([
-        'add',
-        'unmatched',
-      ]);
+      expect(statuses()).toEqual(['add', 'unmatched']);
 
       await drained(() => resolveAgain.release());
-      expect(result.current.review.rows.map(row => row.status)).toEqual([
-        'add',
-        'add',
-      ]);
+      expect(statuses()).toEqual(['add', 'add']);
       // The pick stays open to change.
-      expect(result.current.review.storeUnrecognized).toBe(true);
-      expect(result.current.review.store).toEqual({
-        id: 'store-99',
-        name: 'Kroger #87',
-      });
+      expect(review().storeUnrecognized).toBe(true);
+      expect(review().store).toEqual(KROGER_87);
     });
 
-    it('says where the store the header names is, and where the one the user picks is', async () => {
+    it('shows the store the header names and where it is, then the one the user picks, and adds there', async () => {
+      const cache = makeCache();
+      // A store the user picks was read with its address by the picker.
+      seedQuery(cache, {
+        query: SearchStoresDocument,
+        variables: { search: 'kroger', limit: 20 },
+        data: {
+          stores: {
+            totalCount: 1,
+            edges: [
+              {
+                node: {
+                  __typename: 'Store',
+                  ...KROGER_87,
+                  address: '200 Side St',
+                  storeNumber: '87',
+                  chain: null,
+                },
+              },
+            ],
+          },
+        },
+      });
       const resolve = recordMock(ResolveReceiptLinesDocument, {
         data: {
           resolveReceiptLines: {
@@ -1128,71 +982,22 @@ describe('useReceiptReview', () => {
           },
         },
       });
-      const cache = makeCache();
-      // A store the user picks was read with its address by the picker.
-      seedQuery(cache, {
-        query: SearchStoresDocument,
-        variables: { search: 'kroger', limit: 20 },
-        data: {
-          __typename: 'Query',
-          stores: {
-            __typename: 'StoreConnection',
-            totalCount: 1,
-            edges: [
-              {
-                __typename: 'StoreEdge',
-                node: {
-                  __typename: 'Store',
-                  id: 'store-99',
-                  name: 'Kroger #87',
-                  address: '200 Side St',
-                  storeNumber: '87',
-                  chain: null,
-                },
-              },
-            ],
-          },
-        },
+      const { review, run, checkIn, addChosen } = await setup({
+        resolve,
+        cache,
       });
-      const { result } = await setup({ resolve, cache });
-      await drainTimers();
-      expect(result.current.review.storeLocation).toEqual({
+      expect(review().store).toEqual({ id: 'store-27', name: 'Kroger #412' });
+      expect(review().storeLocation).toEqual({
         address: '100 Main St',
         storeNumber: '412',
       });
 
-      await act(async () => {
-        result.current.review.chooseStore({
-          id: 'store-99',
-          name: 'Kroger #87',
-        });
-      });
+      await run(current => current.chooseStore(KROGER_87));
 
-      expect(result.current.review.storeLocation).toEqual({
+      expect(review().store).toEqual(KROGER_87);
+      expect(review().storeLocation).toEqual({
         address: '200 Side St',
         storeNumber: '87',
-      });
-    });
-
-    it('shows the store the header names, and adds at the one the user picks', async () => {
-      const resolve = resolved();
-      const { result, checkIn, addChosen } = await setup({ resolve });
-      await drainTimers();
-      expect(result.current.review.store).toEqual({
-        id: 'store-27',
-        name: 'Kroger #412',
-      });
-
-      await act(async () => {
-        result.current.review.chooseStore({
-          id: 'store-99',
-          name: 'Kroger #87',
-        });
-      });
-
-      expect(result.current.review.store).toEqual({
-        id: 'store-99',
-        name: 'Kroger #87',
       });
       // The matcher is asked again, at the store the user named.
       await drainTimers();
@@ -1200,7 +1005,7 @@ describe('useReceiptReview', () => {
         input: expect.objectContaining({ storeId: 'store-99' }),
       });
       await drainTimers();
-      expect(result.current.review.rows[0]?.status).toBe('add');
+      expect(review().rows[0]?.status).toBe('add');
 
       await addChosen();
 
@@ -1208,87 +1013,53 @@ describe('useReceiptReview', () => {
         expect.objectContaining({ storeId: 'store-99' }),
       ]);
       // The bananas, only guessed at, wait for the user to choose them.
-      expect(
-        sentLinesOf(checkIn.fired[0] ?? {}).map(line => line.item),
-      ).toEqual([{ id: 'cat-milk' }]);
+      expect(sent(checkIn).map(line => line.item)).toEqual([
+        { id: 'cat-milk' },
+      ]);
+    });
+
+    it('says where the shop it proposes to add is', async () => {
+      const { review } = await setup({ resolve: proposing(CO_OP) });
+
+      expect(review().storeLocation).toEqual({
+        address: CO_OP.address,
+        storeNumber: null,
+      });
     });
 
     it('adds the shop the receipt names but nobody has, then the lines at it', async () => {
-      const draft = useReceiptDraftStore.getState().draft!;
-      useReceiptDraftStore.setState({
-        draft: {
-          ...draft,
-          parsedBy: 'server',
-          printedStore: {
-            name: 'East End Food Co-Op',
-            address: '7516 Meade Street',
-          },
-        },
-      });
-      const coOp = {
-        name: 'East End Food Co-Op',
-        address: '7516 Meade Street',
-      };
-      const resolve = proposing(coOp);
-      const storeCreate = creating(coOp);
-      const { result, checkIn, addChosen } = await setup({
+      seedKroger({ parsedBy: 'server', printedStore: CO_OP });
+      const resolve = proposing(CO_OP);
+      const storeCreate = creating(CO_OP);
+      const { review, checkIn, addChosen } = await setup({
         resolve,
-        storeCreate,
+        mocks: [storeCreate],
       });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
+      expect(review().matchState).toBe('done');
       expect(resolve.fired[0]).toEqual({
-        input: expect.objectContaining({
-          merchant: {
-            name: 'East End Food Co-Op',
-            address: '7516 Meade Street',
-          },
-        }),
+        input: expect.objectContaining({ merchant: CO_OP }),
       });
-      expect(result.current.review.proposedStoreName).toBe(
-        'East End Food Co-Op',
-      );
+      expect(review().proposedStoreName).toBe(CO_OP.name);
 
       await addChosen();
 
       // Added on confirm, under an id the client minted, before the lines.
       expect(storeCreate.fired).toEqual([
-        {
-          input: {
-            id: expect.any(String),
-            name: 'East End Food Co-Op',
-            address: '7516 Meade Street',
-          },
-        },
+        { input: { id: expect.any(String), ...CO_OP } },
       ]);
-      const [created] = storeCreate.fired;
-      const storeId = String(inputOf(created ?? {}).id);
+      const storeId = String(inputOf(storeCreate.fired[0] ?? {}).id);
       expect(fired(checkIn)).toEqual([expect.objectContaining({ storeId })]);
       // Kept as the pick, so a retry adds no second store.
-      expect(useReceiptDraftStore.getState().draft?.store).toEqual({
-        id: storeId,
-        name: 'East End Food Co-Op',
-      });
+      expect(draft()?.store).toEqual({ id: storeId, name: CO_OP.name });
     });
 
     it('shows the lines while the shop is added, and checks them in once it is', async () => {
-      const draft = useReceiptDraftStore.getState().draft!;
-      useReceiptDraftStore.setState({
-        draft: { ...draft, printedStore: { name: 'Corner Deli' } },
-      });
-      const resolve = proposing({ name: 'Corner Deli' });
+      seedKroger({ printedStore: { name: 'Corner Deli' } });
       const storeCreate = creating({ name: 'Corner Deli' }, { held: true });
-      const { result, cache, checkIn } = await setup({
-        resolve,
-        storeCreate,
+      const { cache, checkIn, confirm } = await setup({
+        resolve: proposing({ name: 'Corner Deli' }),
+        mocks: [storeCreate],
       });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
-      const confirm = async () => {
-        let outcome: unknown;
-        outcome = await drained(() => result.current.review.addChosen());
-        return outcome;
-      };
 
       await confirm();
 
@@ -1302,20 +1073,6 @@ describe('useReceiptReview', () => {
       await drained(() => storeCreate.release());
       expect(checkIn.fired).toHaveLength(1);
       expect(storeCreate.fired).toHaveLength(1);
-    });
-  });
-
-  it('says where the shop it proposes to add is', async () => {
-    const resolve = proposing({
-      name: 'East End Food Co-Op',
-      address: '7516 Meade Street',
-    });
-    const { result } = await setup({ resolve });
-
-    await drainTimers();
-    expect(result.current.review.storeLocation).toEqual({
-      address: '7516 Meade Street',
-      storeNumber: null,
     });
   });
 
@@ -1334,47 +1091,32 @@ describe('useReceiptReview', () => {
       address: '412 Main St',
     };
     const OFFER = { id: 'store-label', name: 'Kroger' };
+    const PRINTED = { name: 'Kroger', address: '412 Main St' };
 
     // Read by the server: the check-in sends the parse that locates a store.
-    const readByServer = (readBy: Partial<ReceiptDraft> = {}) => {
-      const draft = useReceiptDraftStore.getState().draft!;
-      useReceiptDraftStore.setState({
-        draft: { ...draft, parsedBy: 'server', parseId: 'parse-1', ...readBy },
-      });
-    };
-    // Offline: the lookup cannot be asked.
-    const offline = () =>
-      recordMock(ResolveReceiptLinesDocument, {
-        error: new Error('Network request failed'),
-      });
-    // The API places no store, proposes the receipt's, and names `completable`.
-    const unplaced = (completable: { id: string; name: string } | null) =>
-      proposing({ name: 'Kroger', address: '412 Main St' }, completable);
-
-    afterEach(() => {
-      useStore.getState().setCachedStores([]);
-      useStore.getState().setSelectedShoppingListId(null);
-    });
+    const readByServer = (readBy: Partial<ReceiptDraft> = {}) =>
+      seedKroger({ parsedBy: 'server', parseId: 'parse-1', ...readBy });
+    // The API places no store, proposes the receipt's, and names the offer.
+    const unplaced = () => proposing(PRINTED, OFFER);
 
     it('offers the unlocated store the device holds, offline, and checks in there once picked', async () => {
       readByServer();
       useStore.getState().setCachedStores([KROGER_BRANCH, KROGER_LABEL]);
-      const { result, checkIn, addChosen } = await setup({
+      const { review, run, checkIn, addChosen } = await setup({
         resolve: offline(),
       });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('failed');
+      expect(review().matchState).toBe('failed');
 
-      expect(result.current.review.storeOffer).toEqual(OFFER);
+      expect(review().storeOffer).toEqual(OFFER);
       // Offered, never placed.
-      expect(result.current.review.store).toBeNull();
+      expect(review().store).toBeNull();
 
-      await act(async () => {
-        result.current.review.chooseStore(result.current.review.storeOffer!);
-        result.current.review.chooseLine(1, MILK);
+      await run(current => {
+        current.chooseStore(OFFER);
+        current.chooseLine(1, MILK);
       });
-      expect(result.current.review.store).toEqual(OFFER);
-      expect(result.current.review.storeOffer).toBeNull();
+      expect(review().store).toEqual(OFFER);
+      expect(review().storeOffer).toBeNull();
 
       await addChosen();
 
@@ -1397,175 +1139,120 @@ describe('useReceiptReview', () => {
         fragmentName: 'useHeldStores_list',
         id: cache.identify({ __typename: 'ShoppingList', id: 'list-1' }),
         data: {
-          __typename: 'ShoppingList',
           id: 'list-1',
-          targetStore: {
-            __typename: 'Store',
-            id: 'store-label',
-            name: 'Kroger',
-          },
+          targetStore: OFFER,
         },
       });
       const known = await setup({ resolve: offline(), cache });
-      await drainTimers();
-      expect(known.result.current.review.matchState).toBe('failed');
+      expect(known.review().matchState).toBe('failed');
       // Its name alone: an address the cache never held is not none.
-      expect(known.result.current.review.storeOffer).toBeNull();
+      expect(known.review().storeOffer).toBeNull();
       known.unmount();
 
       seedFragment(cache, {
         fragment: UseHeldStores_StoreFragmentDoc,
         fragmentName: 'useHeldStores_store',
         id: cache.identify({ __typename: 'Store', id: 'store-label' }),
-        data: { __typename: 'Store', ...KROGER_LABEL },
+        data: KROGER_LABEL,
       });
-      const { result } = await setup({ resolve: offline(), cache });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('failed');
+      const { review } = await setup({ resolve: offline(), cache });
+      expect(review().matchState).toBe('failed');
 
-      expect(result.current.review.storeOffer).toEqual(OFFER);
+      expect(review().storeOffer).toEqual(OFFER);
     });
 
     it("offers the API's unlocated store when the device holds none, and never places it", async () => {
       readByServer();
-      const { result } = await setup({ resolve: unplaced(OFFER) });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
+      const { review } = await setup({ resolve: unplaced() });
+      expect(review().matchState).toBe('done');
 
-      expect(result.current.review.storeOffer).toEqual(OFFER);
-      expect(result.current.review.store).toBeNull();
-      expect(useReceiptDraftStore.getState().draft?.store).toBeUndefined();
-      expect(result.current.review.proposedStoreName).toBe('Kroger');
+      expect(review().storeOffer).toEqual(OFFER);
+      expect(review().store).toBeNull();
+      expect(draft()?.store).toBeUndefined();
+      expect(review().proposedStoreName).toBe('Kroger');
     });
 
     // The check-in places a store with no place of its own where the receipt
     // says, so the line keeps saying it once the offer is taken.
     it("keeps the receipt's place on the line once the offered store is picked", async () => {
-      readByServer({
-        printedStore: { name: 'Kroger', address: '412 Main St' },
-      });
+      readByServer({ printedStore: PRINTED });
       const cache = makeCache();
       seedFragment(cache, {
         fragment: UseReceiptReview_StoreFragmentDoc,
         fragmentName: 'useReceiptReview_store',
         id: cache.identify({ __typename: 'Store', id: 'store-label' }),
-        data: {
-          __typename: 'Store',
-          id: 'store-label',
-          address: null,
-          storeNumber: null,
-        },
+        data: { id: 'store-label', address: null, storeNumber: null },
       });
-      const { result } = await setup({ resolve: unplaced(OFFER), cache });
-      await drainTimers();
-      expect(result.current.review.storeOffer).toEqual(OFFER);
-      expect(result.current.review.storeLocation).toEqual({
-        address: '412 Main St',
-        storeNumber: null,
-      });
+      const { review, run } = await setup({ resolve: unplaced(), cache });
+      const printedPlace = { address: PRINTED.address, storeNumber: null };
+      expect(review().storeOffer).toEqual(OFFER);
+      expect(review().storeLocation).toEqual(printedPlace);
 
-      await act(async () => {
-        result.current.review.chooseStore(OFFER);
-      });
+      await run(current => current.chooseStore(OFFER));
 
-      expect(result.current.review.store).toEqual(OFFER);
-      expect(result.current.review.storeLocation).toEqual({
-        address: '412 Main St',
-        storeNumber: null,
-      });
+      expect(review().store).toEqual(OFFER);
+      expect(review().storeLocation).toEqual(printedPlace);
     });
 
     it('offers none for a receipt read on the phone that names no place', async () => {
       readByServer({ parsedBy: 'device' });
       useStore.getState().setCachedStores([KROGER_LABEL]);
-      const { result } = await setup({ resolve: unplaced(OFFER) });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
+      const { review } = await setup({ resolve: unplaced() });
+      expect(review().matchState).toBe('done');
 
-      expect(result.current.review.storeOffer).toBeNull();
+      expect(review().storeOffer).toBeNull();
     });
 
     // The API takes the merchant the phone read as read, so a check-in at the
     // household's own store places it at that address.
     it('offers it for a receipt read on the phone that names its address, and sends what the phone read', async () => {
-      readByServer({
-        parsedBy: 'device',
-        printedStore: { name: 'Kroger', address: '412 Main St' },
+      readByServer({ parsedBy: 'device', printedStore: PRINTED });
+      const { review, run, checkIn, addChosen } = await setup({
+        resolve: unplaced(),
       });
-      const { result, checkIn, addChosen } = await setup({
-        resolve: unplaced(OFFER),
-      });
-      await drainTimers();
-      expect(result.current.review.storeOffer).toEqual(OFFER);
+      expect(review().storeOffer).toEqual(OFFER);
 
-      await act(async () => {
-        result.current.review.chooseStore(OFFER);
-        result.current.review.chooseLine(1, MILK);
+      await run(current => {
+        current.chooseStore(OFFER);
+        current.chooseLine(1, MILK);
       });
       await addChosen();
 
       expect(fired(checkIn)).toEqual([
-        expect.objectContaining({
-          storeId: 'store-label',
-          merchant: { name: 'Kroger', address: '412 Main St' },
-        }),
+        expect.objectContaining({ storeId: 'store-label', merchant: PRINTED }),
       ]);
       expect(fired(checkIn)[0]).not.toHaveProperty('receiptParseId');
     });
   });
 
   describe('with the milk open on the shopping list', () => {
-    it('offers the list line for a product as it is picked, before it is saved', async () => {
-      const { result } = await setup();
-      act(() => {
-        result.current.review.pickItem('cat-milk');
-      });
-
-      await drainTimers();
-      expect(
-        result.current.review.listItemNameFor(1, {
-          itemId: 'cat-milk',
-          unitId: null,
-          unitText: '',
-        }),
-      ).toBe('Milk');
-      expect(
-        result.current.review.listItemNameFor(1, {
-          itemId: 'cat-milk',
-          unitId: null,
-          unitText: 'kg',
-        }),
-      ).toBeUndefined();
-      expect(result.current.review.rows[0]?.onList).toBe(false);
-    });
-
     beforeEach(() => {
       useStore.getState().setSelectedShoppingListId('list-1');
     });
-    afterEach(() => {
-      useStore.getState().setSelectedShoppingListId(null);
+
+    it('offers the list line for a product as it is picked, before it is saved', async () => {
+      const { review, run } = await setup();
+      await run(current => current.pickItem('cat-milk'));
+
+      await drainTimers();
+      expect(review().listItemNameFor(1, MILK)).toBe('Milk');
+      expect(
+        review().listItemNameFor(1, { ...MILK, unitText: 'kg' }),
+      ).toBeUndefined();
+      expect(review().rows[0]?.onList).toBe(false);
     });
 
     it('ticks the list line off instead of adding the milk again', async () => {
-      const { result, cache, checkIn, addChosen } = await setup();
-      await act(async () => {
-        result.current.review.chooseLine(1, MILK);
-        result.current.review.chooseLine(3, {
-          ...BANANAS,
-          itemId: 'cat-bananas',
-        });
-      });
-      await drainTimers();
-      expect(result.current.review.rows[0]?.onList).toBe(true);
-      expect(result.current.review.rows[1]?.onList).toBe(false);
+      const { review, cache, checkIn, chooseOnList, addChosen } = await setup();
+      await chooseOnList({ 1: MILK, 3: PICKED_BANANAS });
+      expect(review().rows[1]?.onList).toBe(false);
       // The milk's list line is taken, so no other line is offered it.
-      expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk');
-      expect(result.current.review.listItemNameFor(3, MILK)).toBeUndefined();
+      expect(review().listItemNameFor(1, MILK)).toBe('Milk');
+      expect(review().listItemNameFor(3, MILK)).toBeUndefined();
 
-      let movedBefore: unknown;
-      await drained(async () => {
-        await result.current.review.addChosen();
-        movedBefore = cache.extract(true)['ShoppingListItem:sli-milk'];
+      const movedBefore = await drained(async () => {
+        await review().addChosen();
+        return record(cache, SLI_MILK);
       });
       // Stamped moved on the device before the API answers.
       expect(movedBefore).toMatchObject({
@@ -1578,7 +1265,7 @@ describe('useReceiptReview', () => {
       ]);
       // Neither line names a unit and the pantry holds no milk: one package,
       // for the API to size, never 1 of a unit nobody named.
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
+      expect(sent(checkIn)).toEqual([
         expect.objectContaining({
           shoppingListItemId: 'sli-milk',
           amount: { packages: { count: 1 } },
@@ -1586,79 +1273,76 @@ describe('useReceiptReview', () => {
         }),
         expect.not.objectContaining({ shoppingListItemId: expect.anything() }),
       ]);
-      expect(useReceiptDraftStore.getState().draft?.added).toEqual([1, 3]);
+      expect(draft()?.added).toEqual([1, 3]);
     });
 
     it('holds the add until the list lines have loaded', async () => {
-      const { result, list } = await setup({ listHeld: true });
-      await act(async () => {
-        result.current.review.chooseLine(1, MILK);
-      });
+      const { review, choose, list } = await setup({ listHeld: true });
+      await choose({ 1: MILK });
 
       await drainTimers();
-      expect(result.current.review.listLoading).toBe(true);
+      expect(review().listLoading).toBe(true);
       await drained(() => list.release());
-      expect(result.current.review.listLoading).toBe(false);
+      expect(review().listLoading).toBe(false);
     });
 
-    it('matches against the list the user still has when the selected one is gone', async () => {
-      useStore.getState().setSelectedShoppingListId('list-gone');
-      const { result } = await setup();
-      await act(async () => {
-        result.current.review.chooseLine(1, MILK);
-      });
-
-      await drainTimers();
-      expect(result.current.review.rows[0]?.onList).toBe(true);
-    });
-
-    it('says when the list could not be read', async () => {
-      const { result } = await setup({ listFails: true });
-      await act(async () => {
-        result.current.review.chooseLine(1, MILK);
-      });
-
-      await drainTimers();
-      expect(result.current.review.listState).toBe('error');
-      expect(result.current.review.rows[0]?.onList).toBe(false);
-    });
-
-    it('says when the list is longer than the review can see', async () => {
-      // Another page follows the one the review reads.
-      const longer = (): MockDataFor<
-        typeof GetShoppingListItemsFilteredDocument
-      > => ({
-        shoppingList: {
-          id: 'list-1',
-          itemsConnection: connectionOf([], { hasNextPage: true }),
+    it.each([
+      {
+        name: 'matches against the list the user still has when the selected one is gone',
+        selected: 'list-gone',
+        expected: { onList: true },
+      },
+      {
+        name: 'says when the list could not be read',
+        options: { listFails: true },
+        expected: { listState: 'error', onList: false },
+      },
+      {
+        name: 'says when the list is longer than the review can see',
+        // Another page follows the one the review reads.
+        options: {
+          listFor: () => ({
+            shoppingList: {
+              id: 'list-1',
+              itemsConnection: connectionOf([], { hasNextPage: true }),
+            },
+          }),
         },
-      });
-      const { result } = await setup({ listFor: longer });
-      await act(async () => {
-        result.current.review.chooseLine(1, MILK);
-      });
+        expected: { listIncomplete: true, listLoading: false },
+      },
+    ])('$name', async ({ selected, options, expected }) => {
+      if (selected) useStore.getState().setSelectedShoppingListId(selected);
+      const { review, choose } = await setup(options);
+      await choose({ 1: MILK });
 
       await drainTimers();
-      expect(result.current.review.listIncomplete).toBe(true);
-      expect(result.current.review.listLoading).toBe(false);
+      const { listState, listIncomplete, listLoading, rows } = review();
+      expect({
+        listState,
+        listIncomplete,
+        listLoading,
+        onList: rows[0]?.onList,
+      }).toMatchObject(expected);
     });
 
     it('counts a line no unit names in the counted stack the pantry holds', async () => {
-      const held: MockDataFor<typeof GetPantryDocument> = {
-        pantry: {
-          id: 'p1',
-          itemsConnection: connectionOf([
-            {
-              item: { id: 'cat-milk' },
-              unit: { id: 'unit-carton', type: UnitType.Count },
-            },
-          ]),
+      const { checkIn, chooseOnList, addChosen } = await setup({
+        held: {
+          pantry: {
+            id: 'p1',
+            itemsConnection: connectionOf([
+              {
+                item: { id: 'cat-milk' },
+                unit: { id: 'unit-carton', type: UnitType.Count },
+              },
+            ]),
+          },
         },
-      };
-      const { checkIn, chooseOnListAndAdd } = await setup({ held });
-      await chooseOnListAndAdd(1, MILK);
+      });
+      await chooseOnList({ 1: MILK });
+      await addChosen();
 
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
+      expect(sent(checkIn)).toEqual([
         expect.objectContaining({
           amount: { measured: { quantity: 1, unitId: 'unit-carton' } },
         }),
@@ -1666,31 +1350,19 @@ describe('useReceiptReview', () => {
     });
 
     it('names a line the API cannot size, puts it back on the list, and adds the rest', async () => {
-      const checkIn = recordMock(CreateReceiptCheckInDocument, {
-        dataFor: checkInAnswer({ refuses: line => !!line.shoppingListItemId }),
+      const { review, cache, statuses, chooseOnList, addChosen } = await setup({
+        checkIn: refusing(line => !!line.shoppingListItemId),
       });
-      const { result, cache, addChosen } = await setup({ checkIn });
-      await act(async () => {
-        result.current.review.chooseLine(1, MILK);
-        result.current.review.chooseLine(3, {
-          ...BANANAS,
-          itemId: 'cat-bananas',
-        });
-      });
-      await drainTimers();
-      expect(result.current.review.rows[0]?.onList).toBe(true);
+      await chooseOnList({ 1: MILK, 3: PICKED_BANANAS });
 
       await addChosen();
 
       expect(pantryItemNames(cache)).toEqual(['Bananas']);
-      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(record(cache, SLI_MILK)).toMatchObject({
         purchaseInfo: { movedToPantryAt: null },
       });
-      expect(result.current.review.rows.map(row => row.status)).toEqual([
-        'failed',
-        'added',
-      ]);
-      expect(result.current.review.pendingCount).toBe(1);
+      expect(statuses()).toEqual(['failed', 'added']);
+      expect(review().pendingCount).toBe(1);
     });
 
     it('leaves a ticked list line at the version the API answers', async () => {
@@ -1713,84 +1385,63 @@ describe('useReceiptReview', () => {
           },
         }),
       });
-      const { cache, chooseOnListAndAdd } = await setup({ checkIn });
-      await chooseOnListAndAdd(1, MILK);
+      const { cache, chooseOnList, addChosen } = await setup({ checkIn });
+      await chooseOnList({ 1: MILK });
+      await addChosen();
 
-      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
-        version: 7,
-      });
+      expect(record(cache, SLI_MILK)).toMatchObject({ version: 7 });
     });
 
     it('counts a line kept out of the pantry as recorded, apart from the rest', async () => {
-      const checkIn = recordMock(CreateReceiptCheckInDocument, {
-        dataFor: checkInAnswer(),
-      });
-      const { result } = await setup({ checkIn });
-      await act(async () => {
-        result.current.review.chooseLine(1, { ...MILK, notStocked: true });
-      });
+      const { review, choose, confirm } = await setup();
+      await choose({ 1: { ...MILK, notStocked: true } });
       await drainTimers();
-      expect(result.current.review.recordedCount).toBe(1);
+      expect(review().recordedCount).toBe(1);
 
-      expect(
-        await drained(() => result.current.review.addChosen()),
-      ).toMatchObject({ sent: 1, recorded: 1, held: 0 });
+      expect(await confirm()).toMatchObject({ sent: 1, recorded: 1, held: 0 });
     });
 
     it('ticks the list line of a line kept out of the pantry at once, and puts it back when refused', async () => {
-      const checkIn = recordMock(CreateReceiptCheckInDocument, {
-        dataFor: checkInAnswer({ refuses: () => true }),
-        held: true,
-      });
-      const { result, cache } = await setup({ checkIn });
-      await act(async () => {
-        result.current.review.chooseLine(1, { ...MILK, notStocked: true });
-      });
-      await drainTimers();
-      expect(result.current.review.rows[0]?.onList).toBe(true);
+      const checkIn = refusing(() => true, { held: true });
+      const { cache, chooseOnList, confirm } = await setup({ checkIn });
+      await chooseOnList({ 1: { ...MILK, notStocked: true } });
       const toBuy =
         'itemsConnection:{"filters":{"isPurchased":false,"itemIds":["cat-milk"]}}';
 
-      await drained(() => result.current.review.addChosen());
+      await confirm();
 
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
+      expect(sent(checkIn)).toEqual([
         expect.not.objectContaining({ pantryItemId: expect.anything() }),
       ]);
       // Bought, and not stamped as moved to the pantry.
-      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(record(cache, SLI_MILK)).toMatchObject({
         purchaseInfo: { isPurchased: true, movedToPantryAt: null },
       });
-      expect(cache.extract(true)['ShoppingList:list-1']).toMatchObject({
+      expect(record(cache, 'ShoppingList:list-1')).toMatchObject({
         [toBuy]: { totalCount: 0, edges: [] },
       });
 
       await drained(() => checkIn.release());
-      expect(cache.extract(true)['ShoppingListItem:sli-milk']).toMatchObject({
+      expect(record(cache, SLI_MILK)).toMatchObject({
         purchaseInfo: { isPurchased: false },
       });
-      expect(cache.extract(true)['ShoppingList:list-1']).toMatchObject({
-        [toBuy]: {
-          totalCount: 1,
-          edges: [{ node: { __ref: 'ShoppingListItem:sli-milk' } }],
-        },
+      expect(record(cache, 'ShoppingList:list-1')).toMatchObject({
+        [toBuy]: { totalCount: 1, edges: [{ node: { __ref: SLI_MILK } }] },
       });
     });
 
     it('adds a line on its own when the user keeps it off the list', async () => {
-      const { result, checkIn, addChosen } = await setup();
-      await act(async () => {
-        result.current.review.chooseLine(1, { ...MILK, offList: true });
-      });
+      const { review, choose, checkIn, addChosen } = await setup();
+      await choose({ 1: { ...MILK, offList: true } });
       // Still offered, so the line can be put back on the list.
       await drainTimers();
-      expect(result.current.review.listItemNameFor(1, MILK)).toBe('Milk');
-      expect(result.current.review.rows[0]?.onList).toBe(false);
+      expect(review().listItemNameFor(1, MILK)).toBe('Milk');
+      expect(review().rows[0]?.onList).toBe(false);
 
       await addChosen();
 
-      const [input] = fired(checkIn);
-      expect(input).not.toHaveProperty('shoppingListId');
-      expect(sentLinesOf(checkIn.fired[0] ?? {})).toEqual([
+      expect(fired(checkIn)[0]).not.toHaveProperty('shoppingListId');
+      expect(sent(checkIn)).toEqual([
         expect.not.objectContaining({ shoppingListItemId: expect.anything() }),
       ]);
     });
@@ -1798,9 +1449,6 @@ describe('useReceiptReview', () => {
 
   // The check-in adds a receipt's new store on the server; the device shows it.
   describe('a store new to the household', () => {
-    const resolved = () =>
-      recordMock(ResolveReceiptLinesDocument, { data: RESOLVED });
-
     // The household's stores, already read; Kroger #412 among them or not.
     const knowing = (storeIds: string[]) => {
       const cache = makeCache();
@@ -1826,28 +1474,21 @@ describe('useReceiptReview', () => {
       );
       return cache;
     };
+    const storeIdsOf = (cache: Cache) =>
+      readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id) ?? null;
 
-    const confirmed = async (
-      options: Parameters<typeof setup>[0],
-    ): Promise<{
-      learned: LearnedStore | null;
-      cache: ReturnType<typeof makeCache>;
-    }> => {
-      const cache = options?.cache ?? makeCache();
-      const { result, addChosen } = await setup({ ...options, cache });
-      await drainTimers();
-      expect(result.current.review.matchState).toBe('done');
-      const outcome = (await addChosen()) as {
-        learned: Promise<LearnedStore | null>;
-      };
-      let learned: LearnedStore | null = null;
-      learned = await drained(() => outcome.learned);
-      return { learned, cache };
+    const confirmed = async (options: Options) => {
+      const { review, cache, addChosen } = await setup({
+        resolve: resolved(),
+        ...options,
+      });
+      expect(review().matchState).toBe('done');
+      const { learned } = await addChosen();
+      return { learned: await drained(() => learned), cache };
     };
 
     it("learns the receipt's store, and shows it among the household's", async () => {
       const { learned, cache } = await confirmed({
-        resolve: resolved(),
         cache: knowing(['store-ge']),
       });
 
@@ -1872,9 +1513,8 @@ describe('useReceiptReview', () => {
         },
       });
       const { learned, cache } = await confirmed({
-        resolve: resolved(),
         cache: knowing(['store-ge']),
-        storeRemove,
+        mocks: [storeRemove],
       });
       const added = pantryItemNames(cache);
       expect(added).toContain('Whole milk');
@@ -1884,16 +1524,14 @@ describe('useReceiptReview', () => {
       expect(storeRemove.fired.map(vars => inputOf(vars))).toEqual([
         { homeId: 'home-1', target: { storeId: 'store-27' } },
       ]);
-      expect(
-        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
-      ).toEqual(['store-ge']);
+      expect(storeIdsOf(cache)).toEqual(['store-ge']);
       expect(pantryItemNames(cache)).toEqual(added);
     });
 
-    it('learns nothing when the check-in is refused whole', async () => {
-      const { learned, cache } = await confirmed({
-        resolve: resolved(),
-        cache: knowing(['store-ge']),
+    it.each([
+      {
+        when: 'when the check-in is refused whole',
+        known: ['store-ge'],
         checkIn: recordMock(CreateReceiptCheckInDocument, {
           data: {
             createReceiptCheckIn: {
@@ -1904,48 +1542,31 @@ describe('useReceiptReview', () => {
             },
           },
         }),
+      },
+      { when: 'of a store the household already has', known: ['store-27'] },
+      // An Undo then could remove a store the household already had.
+      { when: "while the household's stores were never read" },
+    ])('learns nothing $when', async ({ known, checkIn }) => {
+      const { learned, cache } = await confirmed({
+        cache: known && knowing(known),
+        checkIn,
       });
 
       expect(learned).toBeNull();
-      expect(
-        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
-      ).toEqual(['store-ge']);
-    });
-
-    it('learns nothing of a store the household already has', async () => {
-      const { learned } = await confirmed({
-        resolve: resolved(),
-        cache: knowing(['store-27']),
-      });
-
-      expect(learned).toBeNull();
-    });
-
-    // An Undo then could remove a store the household already had.
-    it("learns nothing while the household's stores were never read", async () => {
-      const { learned, cache } = await confirmed({ resolve: resolved() });
-
-      expect(learned).toBeNull();
-      expect(readUsualStores(cache, 'home-1')).toBeNull();
+      expect(storeIdsOf(cache)).toEqual(known ?? null);
     });
 
     it('learns a store the confirm adds, under the id it minted', async () => {
-      const coOp = {
-        name: 'East End Food Co-Op',
-        address: '7516 Meade Street',
-      };
-      const storeCreate = creating(coOp);
+      const storeCreate = creating(CO_OP);
       const { learned, cache } = await confirmed({
-        resolve: proposing(coOp),
-        storeCreate,
+        resolve: proposing(CO_OP),
+        mocks: [storeCreate],
         cache: knowing(['store-ge']),
       });
 
       const minted = String(inputOf(storeCreate.fired[0] ?? {}).id);
-      expect(learned).toMatchObject({ name: 'East End Food Co-Op' });
-      expect(
-        readUsualStores(cache, 'home-1')?.map(entry => entry.store?.id),
-      ).toContain(minted);
+      expect(learned).toMatchObject({ name: CO_OP.name });
+      expect(storeIdsOf(cache)).toContain(minted);
     });
   });
 });

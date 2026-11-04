@@ -12,7 +12,8 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import type { SubscriptionConfig } from '#/services/subscriptions/types';
-import { HomeSubtype } from '#/graphql/generated/schemaTypes';
+import { clearPositions, holdPosition } from '#/apollo/feed/feedPositions';
+import { HomeSubtype, SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { GetHomesDocument } from '#operations/home/home.generated';
 import { GetHomeDocument } from '#features/home/screens/useHomeDetailManagement.generated';
 import { GetMyPendingInvitesDocument } from '#features/onboarding/screens/useOnboardingInvites.generated';
@@ -84,6 +85,32 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockRegister.mockReturnValue({});
   useStore.setState({ selectedHomeId: 'home-1' });
+});
+
+describe('a home the change feed holds', () => {
+  beforeEach(() =>
+    holdPosition('home-1', {
+      kind: SyncScopeKind.Home,
+      cursor: 'c',
+      snapshotAt: Date.now(),
+    }),
+  );
+  afterEach(() => clearPositions());
+
+  // The feed's pull brings the row and its summary the people, so the event
+  // only prompts what the poke already does.
+  it.each([HomeSubtype.MembershipJoined, HomeSubtype.MembershipRoleChanged])(
+    'refetches nothing on %s',
+    subtype => {
+      const refetchQueries = deliverMembershipEvent(
+        subtype,
+        'membership-1',
+        cacheWithViewerMembership('membership-1'),
+      );
+
+      expect(refetchQueries).not.toHaveBeenCalled();
+    },
+  );
 });
 
 describe('useHomeSubscriptions', () => {

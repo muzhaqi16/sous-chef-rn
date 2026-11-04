@@ -15,6 +15,7 @@ fragment ReceiptParseReaders on ReceiptParse {
         }
         symbol
       }
+      name
       product
       quantity
       text

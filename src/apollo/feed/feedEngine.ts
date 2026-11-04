@@ -354,10 +354,35 @@ export class FeedEngine {
     Telemetry.histogram('feed_pull_ms', performance.now() - startedAt);
     const applied = pages.flatMap(page => page.applied);
     if (applied.length > 0) queueManager.settleFromFeed(applied);
-    await Promise.all(
-      pages.flatMap(page => (page.afterApply ? [page.afterApply()] : [])),
+    return this.completePages(adapter, pages, session);
+  }
+
+  /** False when a page was left incomplete: its scope is owed a full read. */
+  private async completePages(
+    adapter: FeedAdapter,
+    pages: readonly FeedPage[],
+    session: number,
+  ): Promise<boolean> {
+    const answers = await Promise.all(
+      pages.flatMap(page =>
+        page.afterApply
+          ? [
+              page
+                .afterApply()
+                .then(answer => ({ scopeId: page.scopeId, answer })),
+            ]
+          : [],
+      ),
     );
-    return this.isCurrent(session);
+    if (!this.isCurrent(session)) return false;
+    let complete = true;
+    for (const { scopeId, answer } of answers) {
+      if (answer.data !== undefined) continue;
+      complete = false;
+      this.fullReadsOwed.set(scopeId, adapter.kind);
+      this.paceAfter(answer.error);
+    }
+    return complete;
   }
 
   private settle(

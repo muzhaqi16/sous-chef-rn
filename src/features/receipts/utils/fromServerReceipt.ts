@@ -22,7 +22,7 @@ interface ApiReceipt {
     '__typename' | 'kind' | 'measureUnit'
   > & {
     kind: `${ReceiptLineKind}`;
-    // The phone's own reading names none.
+    // The phone's own reading names no measure unit.
     measureUnit?: ServerReceiptLine['measureUnit'];
   })[];
 }
@@ -48,6 +48,7 @@ const toLine = (line: ApiReceiptLine, index: number): ParsedReceiptLine => ({
   rawText: line.text,
   kind: KIND_OF[line.kind],
   ...(line.product ? { product: line.product } : {}),
+  ...(line.name ? { name: line.name } : {}),
   ...(line.code ? { code: line.code } : {}),
   ...(line.quantity == null ? {} : { quantity: line.quantity }),
   ...(line.unit ? { unit: line.unit } : {}),

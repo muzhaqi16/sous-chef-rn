@@ -15,6 +15,11 @@ import {
   PantryFeedSnapshotDocument,
   PantryFeedSummaryDocument,
 } from '#features/pantry/offline/pantryFeed.generated';
+import {
+  HomeFeedChangesDocument,
+  HomeFeedSnapshotDocument,
+  HomeFeedSummaryDocument,
+} from '#features/home/offline/homeFeed.generated';
 import { completeMockedResponse } from './apolloMockProvider';
 
 /**
@@ -68,6 +73,10 @@ export interface Server {
   snapshot: (input: SnapshotInput['input']) => unknown;
   pantryPull: (input: PullInput['input']) => unknown;
   pantrySnapshot: (input: SnapshotInput['input']) => unknown;
+  homePull: (input: PullInput['input']) => unknown;
+  homeSnapshot: (input: SnapshotInput['input']) => unknown;
+  /** A home's computed values and people; its default states the home alone. */
+  homeSummary: (id: string) => unknown;
 }
 
 export const listed = (scopes: readonly Scope[], hasNextPage = false) => ({
@@ -100,6 +109,8 @@ export const wholeList = (
 export const pulls: PullInput['input'][] = [];
 export const pantryPulls: PullInput['input'][] = [];
 export const summaries: string[] = [];
+export const homePulls: PullInput['input'][] = [];
+export const homeSummaries: string[] = [];
 export const scopeReads: { kinds?: string[] | null }[] = [];
 export const snapshots: SnapshotInput['input'][] = [];
 
@@ -142,6 +153,21 @@ export function clientOver(server: Partial<Server>): ApolloClient {
       mock(PantryFeedSummaryDocument as never, ({ id }: { id: string }) => {
         summaries.push(id);
         return { data: { pantry: { __typename: 'Pantry', id } } };
+      }),
+      mock(HomeFeedChangesDocument as never, ({ input }: PullInput) => {
+        homePulls.push(input);
+        return (server.homePull ?? (() => pulled([])))(input);
+      }),
+      mock(HomeFeedSnapshotDocument as never, ({ input }: SnapshotInput) => {
+        snapshots.push(input);
+        return (server.homeSnapshot ?? (() => wholeList([])))(input);
+      }),
+      mock(HomeFeedSummaryDocument as never, ({ id }: { id: string }) => {
+        homeSummaries.push(id);
+        return (
+          server.homeSummary ??
+          (() => ({ data: { home: { __typename: 'Home', id } } }))
+        )(id);
       }),
     ]),
   });

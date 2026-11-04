@@ -20,6 +20,7 @@ const line = (
 ): ServerLine => ({
   __typename: 'ParsedReceiptLine',
   product: null,
+  name: null,
   code: null,
   quantity: null,
   unit: null,
@@ -283,6 +284,48 @@ describe('fromServerReceipt', () => {
     expect(fromServerReceipt({ merchant: merchant(null), lines: [] })).toEqual({
       lines: [],
     });
+  });
+});
+
+describe("a server line's plain name", () => {
+  it('rides to the review line, which matching searches by', () => {
+    const [potatoes] = receiptReviewLines(
+      fromServerReceipt({
+        merchant: merchant("TRADER JOE'S"),
+        lines: [
+          line({
+            text: 'A-POTATO RUSSET ORG 3 LB 3.99',
+            kind: ReceiptLineKind.Item,
+            product: 'A-POTATO RUSSET ORG 3 LB',
+            name: 'organic russet potatoes',
+            amount: 3.99,
+          }),
+        ],
+      }),
+    );
+
+    expect(potatoes).toMatchObject({
+      printed: 'A-POTATO RUSSET ORG 3 LB',
+      name: 'organic russet potatoes',
+    });
+  });
+
+  it('is left out where the reading names none', () => {
+    const [milk] = receiptReviewLines(
+      fromServerReceipt({
+        merchant: merchant('KROGER'),
+        lines: [
+          line({
+            text: 'KRO WHL MILK 3.29',
+            kind: ReceiptLineKind.Item,
+            product: 'KRO WHL MILK',
+            amount: 3.29,
+          }),
+        ],
+      }),
+    );
+
+    expect(milk).not.toHaveProperty('name');
   });
 });
 

@@ -4,6 +4,7 @@ import {
   createAddToQueryConnectionUpdater,
   createRemoveFromParentConnectionUpdater,
   createRemoveFromQueryConnectionUpdater,
+  isUnfilteredVariant,
   skipUnmatchedArgVariants,
 } from '#/apollo/utils/cacheUpdaters';
 import { writeLocalEntity } from '#/apollo/utils/writeLocalEntity';
@@ -107,4 +108,37 @@ export function unlistStorageLocation(
 ): void {
   if (pantryId) removeFromPantryLocations(cache, pantryId, id);
   removeFromStorageLocationsCache(cache, id, { evictItem });
+}
+
+/**
+ * A location the feed brought, in its home's list and each held pantry of the
+ * home. A pantry's sorted lists are the server's, so only the one every reader
+ * shares takes it.
+ */
+export function placeStorageLocation(
+  cache: ApolloCache,
+  id: string,
+  homeId: string,
+  pantryIds: readonly string[],
+): void {
+  listStorageLocation(cache, id, homeId, undefined);
+  const location: LocationRef = { __typename: 'StorageLocation', id };
+  for (const pantryId of pantryIds) {
+    addToPantryLocations(cache, pantryId, location, {
+      position: 'end',
+      skipStoreField: storeFieldName => !isUnfilteredVariant(storeFieldName),
+    });
+  }
+}
+
+/** A location the feed removed, out of every list that names it; the caller evicts it. */
+export function unplaceStorageLocation(
+  cache: ApolloCache,
+  id: string,
+  pantryIds: readonly string[],
+): void {
+  for (const pantryId of pantryIds) {
+    removeFromPantryLocations(cache, pantryId, id);
+  }
+  removeFromStorageLocationsCache(cache, id);
 }

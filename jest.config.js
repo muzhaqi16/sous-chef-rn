@@ -68,7 +68,9 @@ const transformIgnorePatterns = [
     ')/)',
 ];
 
-/** The React Native app: every suite, under the React Native preset. */
+const WHOLE_TREE_SUITES = '/__tests__/(architecture|lint)/';
+
+/** The React Native app: its suites, under the React Native preset. */
 const mobile = {
   displayName: 'mobile',
   preset: '@react-native/jest-preset',
@@ -94,13 +96,31 @@ const mobile = {
     // Without this, the host's `npm test` would walk into every worktree and
     // run a duplicated copy of the suite per agent in flight.
     '/\\.claude/worktrees/',
-    // The core-portability project's own suites.
-    '/__tests__/core-portability/',
     // Specs `__tests__/lint/typedRules.test.ts` runs in one suite.
     '/__tests__/lint/typedRules/',
+    // The other projects' suites.
+    '/__tests__/core-portability/',
+    WHOLE_TREE_SUITES,
   ],
   modulePathIgnorePatterns,
   transformIgnorePatterns,
+};
+
+/**
+ * The suites that read or type-check the whole tree, under the app's preset.
+ * CI runs them beside the unit shards. `roots` stays the app's, since the root
+ * and `src` `__mocks__` are found through it. So everything else is ignored,
+ * which holds when a command-line `--testMatch` (reassure's) replaces this.
+ */
+const wholeTree = {
+  ...mobile,
+  displayName: 'whole-tree',
+  testPathIgnorePatterns: [
+    ...mobile.testPathIgnorePatterns.filter(
+      pattern => pattern !== WHOLE_TREE_SUITES,
+    ),
+    `^(?!.*${WHOLE_TREE_SUITES})`,
+  ],
 };
 
 /**
@@ -192,5 +212,5 @@ module.exports = {
     },
   },
   reporters: ['<rootDir>/__tests__/setup/quietPassingFiles.js', 'default'],
-  projects: [mobile, corePortability],
+  projects: [mobile, wholeTree, corePortability],
 };
