@@ -19,12 +19,11 @@ interface ApiReceipt {
   merchant: Pick<ServerReceipt['merchant'], 'name'>;
   lines: readonly (Omit<
     ServerReceiptLine,
-    '__typename' | 'kind' | 'measureUnit' | 'name'
+    '__typename' | 'kind' | 'measureUnit'
   > & {
     kind: `${ReceiptLineKind}`;
-    // The phone's own reading names neither.
+    // The phone's own reading names no measure unit.
     measureUnit?: ServerReceiptLine['measureUnit'];
-    name?: ServerReceiptLine['name'];
   })[];
 }
 type ApiReceiptLine = ApiReceipt['lines'][number];
