@@ -26,6 +26,12 @@ jest.mock('#/utils/isNetworkError', () => ({
   isNetworkError: jest.fn(() => false),
 }));
 
+// A retry waits a backoff first; the wait itself is not under test.
+jest.mock('#/utils/backoff', () => ({
+  ...jest.requireActual('#/utils/backoff'),
+  sleep: () => Promise.resolve(),
+}));
+
 // Mock wsLink
 jest.mock('../wsLink', () => ({
   reconnectWebSocket: jest.fn(),
@@ -649,7 +655,7 @@ describe('refreshToken', () => {
           done();
         },
       });
-    }, 30000);
+    });
 
     describe('operations waiting on a refresh that fails', () => {
       /** One leader starts the refresh; the rest join it while it is in flight. */
@@ -692,7 +698,7 @@ describe('refreshToken', () => {
           ['network', true],
           ['network', true],
         ]);
-      }, 30000);
+      });
 
       it('defers every waiter when the refresh fails on neither the credential nor the network', async () => {
         (mockedClient.mutate as jest.Mock).mockRejectedValue(
@@ -812,7 +818,7 @@ describe('refreshToken', () => {
 
       const result = await proactiveTokenRefresh();
       expect(result).toBeNull();
-    }, 30000);
+    });
 
     it('resets refresh state after completion', async () => {
       (mockedUseStore.getState as jest.Mock).mockReturnValue({

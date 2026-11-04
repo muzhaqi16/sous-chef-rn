@@ -468,6 +468,13 @@ npm test
 
 `npm run lint:fix` and `npm run format` auto-fix what they can.
 
+CI splits `npm test` across runners that start together (`pr-checks.yml`):
+Jest's `mobile` project in three shards (`--shard`), and its `whole-tree`
+(`__tests__/architecture`, `__tests__/lint`) and `core-portability` projects in
+a fourth. A fifth job merges their coverage (`scripts/merge-coverage.mjs`) into
+what one run would count and holds it to `jest.config.js`'s threshold. Locally,
+`npm test` runs every project at once.
+
 Every whole-tree gate runs somewhere: the cheap ones in `pre-commit`, the
 expensive ones in `pre-push` (§ Git hooks), and all of them again in
 `pr-checks.yml`. Three run in CI only: `find-stale-cache-fields --check`,
@@ -494,19 +501,19 @@ counters on independent sequences, read by `getBuildNumber()`.
 
 The whole-tree gates, and where each runs:
 
-| Gate                                | Holds                                                                                                                                                                                                                              | Runs in               |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
-| `check-i18n`                        | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged                                                                                                                                                        | pre-commit, CI        |
-| `check-version-sync`                | `package.json`, `versionName` and every `MARKETING_VERSION` agree                                                                                                                                                                  | pre-commit, CI        |
-| `check-startup-origin`              | the startup clock is the first module Metro's output evaluates                                                                                                                                                                     | pre-commit, CI        |
-| `check-launch-arg-auth`             | no distributable build accepts an injected session                                                                                                                                                                                 | pre-commit, CI, build |
-| `check-compiler-bailouts`           | no component silently skips React Compiler compilation                                                                                                                                                                             | pre-push, CI          |
-| `check:dead-modules` (knip)         | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal`                                        | pre-push, CI          |
-| `check:import-cycles` (madge)       | no load-time import cycle; `import type` and `await import()` edges are skipped                                                                                                                                                    | pre-push, CI          |
-| `find-stale-cache-fields`           | every mutation returns what the queries read on each entity it returns and on the collection it moves (via the generated `<Type>Readers`); the readers files are current; API-blocked pairs expire when the schema gains the field | CI                    |
-| `check-bundled-secrets`             | every credential in a built bundle carries a recorded decision                                                                                                                                                                     | build                 |
-| `check-build-provenance`            | the build identity in `env.generated.ts` is the one CI intended                                                                                                                                                                    | build                 |
-| `release-check`                     | a release's operations validate against every schema production serves, and the app compiles against each                                                                                                                         | store build           |
+| Gate                          | Holds                                                                                                                                                                                                                              | Runs in               |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------- |
+| `check-i18n`                  | `en`, `es`, `it`, `sq` carry the same keys, core and feature locales merged                                                                                                                                                        | pre-commit, CI        |
+| `check-version-sync`          | `package.json`, `versionName` and every `MARKETING_VERSION` agree                                                                                                                                                                  | pre-commit, CI        |
+| `check-startup-origin`        | the startup clock is the first module Metro's output evaluates                                                                                                                                                                     | pre-commit, CI        |
+| `check-launch-arg-auth`       | no distributable build accepts an injected session                                                                                                                                                                                 | pre-commit, CI, build |
+| `check-compiler-bailouts`     | no component silently skips React Compiler compilation                                                                                                                                                                             | pre-push, CI          |
+| `check:dead-modules` (knip)   | every `src/` module and export has a production importer; a test import or `jest.mock()` does not count, an export used only in its own file is fine, and a test seam is tagged `@internal`                                        | pre-push, CI          |
+| `check:import-cycles` (madge) | no load-time import cycle; `import type` and `await import()` edges are skipped                                                                                                                                                    | pre-push, CI          |
+| `find-stale-cache-fields`     | every mutation returns what the queries read on each entity it returns and on the collection it moves (via the generated `<Type>Readers`); the readers files are current; API-blocked pairs expire when the schema gains the field | CI                    |
+| `check-bundled-secrets`       | every credential in a built bundle carries a recorded decision                                                                                                                                                                     | build                 |
+| `check-build-provenance`      | the build identity in `env.generated.ts` is the one CI intended                                                                                                                                                                    | build                 |
+| `release-check`               | a release's operations validate against every schema production serves, and the app compiles against each                                                                                                                          | store build           |
 
 Everything else that used to be a script — the data-layer boundary, the
 canonical mechanisms, the token, typography and tier rules — is either a
@@ -561,7 +568,7 @@ only. Detection does not depend on either.
 | -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **pre-commit** | `lint-staged --no-revert` — ESLint + Prettier + related Jest tests on staged files; a failed task never resets the shared tree — then the whole-tree checks that cost ~0.2s together: `check-i18n`, `check-version-sync`, `check-startup-origin`, `check-launch-arg-auth` |
 | **commit-msg** | commitlint — [Conventional Commits](https://www.conventionalcommits.org/) required                                                                                                                                                                                        |
-| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                     |
+| **pre-push**   | `typecheck`, `check:compiler-bailouts`, `check:dead-modules` (knip) and `check:import-cycles` (madge) **concurrently**, then a codegen drift check and `check:fillers` (the generated optimistic fillers)                                                                 |
 
 The split is by cost. The five sub-second checks run per commit so a broken
 locale key or a version drift surfaces at the commit that caused it. The four

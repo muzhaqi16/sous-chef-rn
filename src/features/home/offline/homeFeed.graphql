@@ -1,0 +1,233 @@
+# A home's rows as the feed answers them: the stored columns its readers read,
+# as the server answers computed values on a full read alone and keeps people
+# out of every scope. `status` differs in type across the rows, so it is
+# aliased; the cache stores a field by its name.
+query HomeFeedChanges($input: SyncChangesInput!) {
+  syncChanges(input: $input) {
+    scope {
+      id
+    }
+    status
+    cursor
+    hasMore
+    changed {
+      __typename
+      ... on Home {
+        id
+        version
+        name
+        description
+        currency
+        timezone
+        allowJoinCode
+        joinCode
+        isPublic
+        maxMembers
+        updatedAt
+      }
+      ... on Membership {
+        id
+        version
+        userId
+        role
+        membershipStatus: status
+        displayName
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+        sharesDietaryNeeds
+      }
+      ... on HomeInvite {
+        id
+        version
+        email
+        recipientName
+        role
+        inviteStatus: status
+        expiresAt
+        message
+      }
+      ... on StorageLocation {
+        id
+        version
+        name
+        type
+        icon
+        color
+        temperature
+        description
+        isClimateControlled
+        capacity
+        capacityUnit
+        sortOrder
+        isDefault
+        parentLocation {
+          id
+          version
+        }
+      }
+    }
+    removed {
+      entityType
+      id
+    }
+    applied {
+      operationId
+      entityType
+      entityId
+      version
+    }
+  }
+}
+
+query HomeFeedSnapshot($input: SyncSnapshotInput!) {
+  syncSnapshot(input: $input) {
+    status
+    cursor
+    endCursor
+    hasMore
+    rows {
+      __typename
+      ... on Home {
+        id
+        version
+        name
+        description
+        currency
+        timezone
+        allowJoinCode
+        joinCode
+        isPublic
+        maxMembers
+        updatedAt
+      }
+      ... on Membership {
+        id
+        version
+        userId
+        role
+        membershipStatus: status
+        displayName
+        canViewPantry
+        canEditPantry
+        canAddItems
+        canRemoveItems
+        canInviteOthers
+        canManageHome
+        sharesDietaryNeeds
+      }
+      ... on HomeInvite {
+        id
+        version
+        email
+        recipientName
+        role
+        inviteStatus: status
+        expiresAt
+        message
+      }
+      ... on StorageLocation {
+        id
+        version
+        name
+        type
+        icon
+        color
+        temperature
+        description
+        isClimateControlled
+        capacity
+        capacityUnit
+        sortOrder
+        isDefault
+        parentLocation {
+          id
+          version
+        }
+      }
+    }
+  }
+}
+
+# What a pull leaves out: the home's computed values and the people its rows
+# name, read after a page that added or removed one of them or moved what the
+# join link is made of, and after a full read. It also reads what the homes
+# list reads on a home, as a full read is how a home joins that list.
+query HomeFeedSummary($id: ID!) {
+  home(id: $id) {
+    id
+    version
+    ...HomeReaders
+    pantriesConnection(first: 10) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        node {
+          id
+          version
+          name
+          isDefault
+        }
+      }
+    }
+    membersConnection(first: 20) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          id
+          version
+          ...MembershipReaders
+        }
+      }
+    }
+    invitesConnection(first: 20) {
+      totalCount
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+      edges {
+        cursor
+        node {
+          id
+          version
+          ...HomeInviteReaders
+        }
+      }
+    }
+  }
+  storageLocations(homeId: $id) {
+    totalCount
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+    edges {
+      cursor
+      node {
+        id
+        version
+        ...StorageLocationReaders
+      }
+    }
+  }
+}
+
+# What the server makes the home's join link of: a pull that moves either
+# leaves the link the summary read last.
+fragment homeFeed_join on Home {
+  id
+  joinCode
+  allowJoinCode
+}

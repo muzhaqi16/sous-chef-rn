@@ -3,8 +3,12 @@
  * server's answer writes its own rows; `commit` adds what it cannot state.
  */
 import type { ApolloCache, OperationVariables } from '@apollo/client';
+import {
+  rowBaseline,
+  type RowFields,
+} from '#/apollo/pendingWrites/conflictRead';
 import { inputIdOf } from '#/apollo/pendingWrites/inputId';
-import type { LocalWrite } from '#/apollo/pendingWrites/types';
+import type { ConflictRead, LocalWrite } from '#/apollo/pendingWrites/types';
 import { writeEntityFields } from '#/apollo/utils/localFirstFields';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
 import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
@@ -34,6 +38,10 @@ import {
   type HeldSuggestion,
   type SuggestionParent,
 } from '#features/catalog/cache/suggestions';
+import {
+  StorageLocationConflict_StorageLocationFragmentDoc,
+  StorageLocationForConflictDocument,
+} from './storageLocationConflict.generated';
 
 const locationRef = (id: string) => ({ __typename: 'StorageLocation', id });
 
@@ -69,6 +77,8 @@ export type LocationFieldsInputs = {
   fields: Readonly<Record<string, unknown>>;
   /** The default the server moves off, which its answer does not state. */
   displacedId?: string;
+  /** The row as the person saw it, for an edit that settles its conflicts. */
+  baseline?: RowFields;
 };
 
 function clearDefault(cache: ApolloCache, displacedId: string | undefined) {
@@ -87,6 +97,22 @@ export const locationFields: LocalWrite<LocationFieldsInputs> = {
   commit(cache, { inputs: { displacedId } }) {
     clearDefault(cache, displacedId);
   },
+};
+
+const locationConflict: ConflictRead<LocationFieldsInputs> = {
+  typename: 'StorageLocation',
+  query: StorageLocationForConflictDocument,
+  fragment: StorageLocationConflict_StorageLocationFragmentDoc,
+  changed: ({ fields }) => fields,
+};
+
+/** An edit sends the version it read, so a stale one settles from the row. */
+export const updateLocation: LocalWrite<LocationFieldsInputs> = {
+  ...locationFields,
+  conflict: locationConflict,
+  capture: (cache, variables) => ({
+    baseline: rowBaseline(cache, locationConflict, variables),
+  }),
 };
 
 export type RemoveLocationInputs = { pantryId?: string };

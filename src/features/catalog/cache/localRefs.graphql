@@ -16,3 +16,11 @@ fragment localRefs_unit on Unit {
     other
   }
 }
+
+# What a row reads of a storage location a local edit names.
+fragment localRefs_storageLocation on StorageLocation {
+  version
+  id
+  name
+  type
+}

@@ -115,6 +115,7 @@ fragment pantryItem_listed on PantryItem {
     }
   }
   storageLocation {
+    version
     id
     name
     type

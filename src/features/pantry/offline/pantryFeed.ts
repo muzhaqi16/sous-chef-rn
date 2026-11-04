@@ -1,9 +1,13 @@
 import type { ApolloCache, ApolloClient } from '@apollo/client';
-import type { FeedAdapter, FeedPage, FeedSnapshot } from '#/apollo/feed/types';
+import type {
+  FeedAdapter,
+  FeedAnswer,
+  FeedPage,
+  FeedSnapshot,
+} from '#/apollo/feed/types';
 import { readWholeScope } from '#/apollo/feed/readWholeScope';
 import { queueStore } from '#/apollo/offlineQueue/queueStore';
 import { isHeld } from '#/apollo/utils/writeLocalEntity';
-import { safeEvict } from '#/apollo/utils/cacheUpdaters';
 import { SyncScopeKind } from '#/graphql/generated/schemaTypes';
 import { todayKey } from '#/utils/dateUtils';
 import { logger } from '#/utils/environment';
@@ -53,26 +57,28 @@ function applyChanges(
     } else if (entityType === 'PantryItemBatch') {
       dropPantryBatch(cache, id);
       moved = true;
-    } else if (entityType === 'PantryItemUsage') {
-      // Left out of the pull, so only one a read placed is here to go.
-      safeEvict(cache, 'PantryItemUsage', id);
     }
   }
   if (moved) dropServerLists(cache, pantryId);
   return moved;
 }
 
-/** The counts are computed on read, so a pull leaves them for this. */
+/**
+ * The counts are computed on read, so a pull leaves them for this. Unread, the
+ * rows are still complete and only the counts lag, which is not worth a whole
+ * pantry's read: the next page that moves one reads them again.
+ */
 async function readSummaryAgain(
   client: ApolloClient,
   pantryId: string,
-): Promise<void> {
+): Promise<FeedAnswer<true>> {
   const { error } = await client.query({
     query: PantryFeedSummaryDocument,
     variables: { id: pantryId, today: todayKey() },
     fetchPolicy: 'network-only',
   });
   if (error) logger.warn('Pantry feed: the summary was not read', error);
+  return { data: true };
 }
 
 const readSnapshotPage = (
@@ -106,13 +112,17 @@ function replacing(
           stacks.push(row.id);
           break;
         // A batch is written by the read, and its page read again. This feed
-        // asks for pantries, so a list's rows reach only its own.
+        // asks for pantries, so another kind's rows reach only its own.
         case 'PantryItemBatch':
         case 'Pantry':
         case 'PantryItemUsage':
         case 'ShoppingList':
         case 'ShoppingListItem':
         case 'ShoppingListCollaborator':
+        case 'Home':
+        case 'HomeInvite':
+        case 'Membership':
+        case 'StorageLocation':
         default:
           // A row type a newer server added.
           break;
@@ -152,7 +162,9 @@ export const pantryFeedAdapter: FeedAdapter = {
           moved = applyChanges(cache, page.scope.id, page);
         },
         afterApply: () =>
-          moved ? readSummaryAgain(client, page.scope.id) : Promise.resolve(),
+          moved
+            ? readSummaryAgain(client, page.scope.id)
+            : Promise.resolve({ data: true }),
       };
     });
     return { data: pages };

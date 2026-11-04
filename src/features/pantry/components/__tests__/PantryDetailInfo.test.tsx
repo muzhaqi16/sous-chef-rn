@@ -258,6 +258,7 @@ describe('PantryDetailInfo', () => {
       ...baseItem,
       storageLocation: {
         __typename: 'StorageLocation',
+        version: 1,
         id: 'sl1',
         name: 'Top shelf',
       },

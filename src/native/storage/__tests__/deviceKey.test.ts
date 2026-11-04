@@ -11,6 +11,12 @@ import type { STORAGE_TYPE, BIOMETRY_TYPE } from 'react-native-keychain';
 
 import { DeviceKeyManager } from '../deviceKey';
 
+// A failed read waits a backoff before the next; the wait is not under test.
+jest.mock('#/utils/backoff', () => ({
+  ...jest.requireActual('#/utils/backoff'),
+  sleep: () => Promise.resolve(),
+}));
+
 const mockedGetSupportedBiometryType =
   getSupportedBiometryType as jest.MockedFunction<
     typeof getSupportedBiometryType

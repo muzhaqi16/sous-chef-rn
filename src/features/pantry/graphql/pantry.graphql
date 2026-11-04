@@ -85,6 +85,7 @@ query GetPantry(
           createdAt
           updatedAt
           storageLocation {
+            version
             id
           }
           unit {
@@ -111,6 +112,7 @@ query GetPantry(
     ) {
       edges {
         node {
+          version
           id
           name
           type
@@ -120,6 +122,7 @@ query GetPantry(
           isDefault
           currentItemCount
           parentLocation {
+            version
             id
             name
           }
@@ -587,6 +590,7 @@ mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
     __typename
     ... on CreatePantryItemPayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -628,10 +632,12 @@ mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
     ... on UpdatePantryItemPayload {
       converged
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
       previousStorageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -676,6 +682,7 @@ mutation DeletePantryItem($input: DeletePantryItemInput!, $today: LocalDate!) {
         ...PantryReaders
       }
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -703,6 +710,7 @@ mutation CreatePantryItemUsage(
     __typename
     ... on CreatePantryItemUsagePayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -778,6 +786,7 @@ mutation RestockPantryItem(
     __typename
     ... on RestockPantryItemPayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -824,6 +833,7 @@ mutation UpdatePantryItemQuantity(
     __typename
     ... on UpdatePantryItemQuantityPayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -866,6 +876,7 @@ mutation AdjustPantryItemQuantity(
     ... on AdjustPantryItemQuantityPayload {
       converged
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -908,6 +919,7 @@ mutation CorrectPantryItemPackageSize(
     ... on CorrectPantryItemPackageSizePayload {
       converged
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -950,6 +962,7 @@ mutation ConvertExpiredToWaste(
     __typename
     ... on ConvertExpiredToWastePayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -1090,6 +1103,7 @@ mutation OpenPantryItemBatch(
     __typename
     ... on OpenPantryItemBatchPayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }
@@ -1126,6 +1140,7 @@ mutation WastePantryItemBatch(
     __typename
     ... on WastePantryItemBatchPayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }

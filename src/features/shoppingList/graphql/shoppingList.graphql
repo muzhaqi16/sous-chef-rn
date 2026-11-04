@@ -894,6 +894,7 @@ mutation MoveShoppingItemToPantry(
     __typename
     ... on MoveShoppingItemToPantryPayload {
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }

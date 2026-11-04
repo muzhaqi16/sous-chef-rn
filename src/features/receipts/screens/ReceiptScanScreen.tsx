@@ -83,7 +83,8 @@ const READING_BANNER: Record<ServerReadingStatus, ReadingBanner | null> = {
       body: 'receipts.saved.photoLimitedBody',
     },
   },
-  unavailable: {
+  // The server read the receipt and found no lines: a new scan may do better.
+  failed: {
     variant: 'info',
     icon: 'information-circle-outline',
     title: 'receipts.saved.notReadTitle',
@@ -91,6 +92,17 @@ const READING_BANNER: Record<ServerReadingStatus, ReadingBanner | null> = {
     photos: {
       title: 'receipts.saved.photoNotReadTitle',
       body: 'receipts.saved.photoNotReadBody',
+    },
+  },
+  // Nothing could take the receipt, so a scan now meets the same.
+  unavailable: {
+    variant: 'info',
+    icon: 'information-circle-outline',
+    title: 'receipts.saved.unavailableTitle',
+    body: 'receipts.saved.unavailableBody',
+    photos: {
+      title: 'receipts.saved.photoUnavailableTitle',
+      body: 'receipts.saved.photoUnavailableBody',
     },
   },
   tooLong: {

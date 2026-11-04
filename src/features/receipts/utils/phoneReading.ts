@@ -72,6 +72,7 @@ const toReceiptRead = ({ merchant, lines }: ParsedReceipt): ReceiptRead => ({
     text: line.rawText,
     kind: KIND_OF[line.kind],
     product: line.product ?? null,
+    name: line.name ?? null,
     code: line.code ?? null,
     quantity: line.quantity ?? null,
     unit: line.unit ?? null,

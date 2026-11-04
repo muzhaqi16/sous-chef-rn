@@ -1,0 +1,27 @@
+# The row a stale edit is compared with: what it held and what the server holds now.
+query StorageLocationForConflict($id: ID!) {
+  storageLocation(id: $id) {
+    version
+    id
+    ...StorageLocationConflict_storageLocation
+  }
+}
+
+fragment StorageLocationConflict_storageLocation on StorageLocation {
+  version
+  id
+  name
+  type
+  icon
+  color
+  temperature
+  description
+  isClimateControlled
+  capacity
+  capacityUnit
+  isDefault
+  parentLocation {
+    version
+    id
+  }
+}

@@ -43,6 +43,7 @@ mutation CreateReceiptCheckIn(
           id
           ...PantryItemReaders
           storageLocation {
+            version
             id
             ...StorageLocationReaders
           }

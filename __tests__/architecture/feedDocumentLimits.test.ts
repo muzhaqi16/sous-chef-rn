@@ -22,6 +22,11 @@ import {
   PantryFeedChangesDocument,
   PantryFeedSnapshotDocument,
 } from '#features/pantry/offline/pantryFeed.generated';
+import {
+  HomeFeedChangesDocument,
+  HomeFeedSnapshotDocument,
+  HomeFeedSummaryDocument,
+} from '#features/home/offline/homeFeed.generated';
 
 /**
  * The feed's rows carry every field a list cell reads, so these documents grow
@@ -124,6 +129,9 @@ describe.each([
   ['a list full read', ListFeedSnapshotDocument],
   ['a pantry pull', PantryFeedChangesDocument],
   ['a pantry full read', PantryFeedSnapshotDocument],
+  ['a home pull', HomeFeedChangesDocument],
+  ['a home full read', HomeFeedSnapshotDocument],
+  ['a home summary', HomeFeedSummaryDocument],
 ])('%s', (_name, document) => {
   const text = print(document);
 

@@ -63,16 +63,15 @@ const NEED_COPY: Record<CheckInLineNeed, TranslationKey> = {
 };
 
 /**
- * What adding does with a line: `add` it, add the API's unsure `guess` unless
- * the user picks another, retry it once `failed`; or nothing: `added` already,
- * `pending` the API's match, `unmatched`, or `skipped` by the user.
+ * What adding does with a line: `add` it, retry it once `failed`; or nothing:
+ * `added` already, `pending` the API's match, `unmatched` until the user picks
+ * one, or `skipped` by the user.
  */
 export type ReceiptRowStatus =
   | 'add'
   | 'failed'
   | 'added'
   | 'pending'
-  | 'guess'
   | 'unmatched'
   | 'skipped';
 
@@ -81,6 +80,8 @@ export interface ReceiptReviewRow extends ReceiptReviewLine {
   choice?: ReceiptLineChoice;
   /** Items the API proposes for the line, best first. */
   candidates: ReceiptCandidate[];
+  /** The API's unsure best match on a line with no product: named, never added. */
+  suggestion?: ReceiptCandidate;
   /** Why the last attempt to add it failed. */
   failure?: string;
   /** Adding it ticks a shopping-list line off rather than adding it again. */
@@ -169,6 +170,7 @@ export function useReceiptReview() {
     lines.map(line => ({
       index: line.index,
       text: line.printed,
+      name: line.name,
       code: line.code,
     })),
     merchantHeader,
@@ -179,9 +181,9 @@ export function useReceiptReview() {
   const chosen = lines.map(line => {
     const explicit = draft?.choices?.[line.index];
     const match = matchFor(line.index);
-    // An unsure guess is added as is unless the user picks another: every
-    // line the API matched needs no input.
-    const proposed = match?.preselect ?? match?.guess;
+    // Only a match the API is sure of is the line's product: an unsure one is
+    // suggested, so a wrong guess never reaches the pantry unchecked.
+    const proposed = match?.preselect;
     const proposal =
       explicit === undefined && proposed
         ? {
@@ -195,7 +197,6 @@ export function useReceiptReview() {
       match,
       // Null is the user leaving the line out, proposal or not.
       choice: explicit === undefined ? proposal : explicit ?? undefined,
-      guessed: explicit === undefined && !match?.preselect && !!proposal,
       skipped: explicit === null,
     };
   });
@@ -282,14 +283,11 @@ export function useReceiptReview() {
   const links = linkReceiptLines(pending, openLines);
 
   const statusOf = (
-    { line, choice, guessed, skipped }: (typeof chosen)[number],
+    { line, choice, skipped }: (typeof chosen)[number],
     failure: string | undefined,
   ): ReceiptRowStatus => {
     if (added.has(line.index)) return 'added';
-    if (choice) {
-      if (failure) return 'failed';
-      return guessed ? 'guess' : 'add';
-    }
+    if (choice) return failure ? 'failed' : 'add';
     if (skipped) return 'skipped';
     if (matchState !== 'done') return 'pending';
     return 'unmatched';
@@ -315,6 +313,7 @@ export function useReceiptReview() {
       status: statusOf(entry, failure),
       ...(choice ? { choice } : {}),
       candidates: match?.candidates ?? [],
+      ...(match?.guess && !choice ? { suggestion: match.guess } : {}),
       failure,
       onList: links.has(line.index),
     };
@@ -432,7 +431,9 @@ export function useReceiptReview() {
         ids,
         listLine,
         heldUnit: itemId ? heldUnitOf(itemId) : null,
-        proposed: match?.preselect ?? match?.guess,
+        proposed: match?.preselect
+          ? { ...match.preselect, preselected: true }
+          : match?.guess && { ...match.guess, preselected: false },
       });
       if ('needs' in built) {
         lacking[entry.index] = built.needs;

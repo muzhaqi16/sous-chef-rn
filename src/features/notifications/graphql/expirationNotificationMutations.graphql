@@ -19,6 +19,7 @@ mutation MarkExpirationAction(
         ...PantryReaders
       }
       storageLocation {
+        version
         id
         ...StorageLocationReaders
       }

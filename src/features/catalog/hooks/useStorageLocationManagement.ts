@@ -184,14 +184,22 @@ export function useStorageLocationManagement(
       fields,
       displacedId: displaced?.id,
     };
+    // The lock: an edit that crossed another answers VERSION_CONFLICT.
+    const version = locations.find(location => location.id === id)?.version;
     const settled = await pendingWritesOf(client.cache).send(
       UpdateStorageLocationDocument,
-      { input: { ...input, id } },
+      { input: { ...input, id, ...(version !== undefined && { version }) } },
       write =>
         settleMutation(() => updateMutation(write), {
           document: UpdateStorageLocationDocument,
           fallback: t('errors.codes.genericRetry'),
           present: 'toast',
+          // Else the stale version stays held and every retry conflicts again.
+          onVersionConflict: () => {
+            refetch().catch(() => {
+              // The screen's own refresh asks again.
+            });
+          },
         }),
       inputs,
     );

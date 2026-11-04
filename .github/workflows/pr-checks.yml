@@ -249,8 +249,71 @@ jobs:
         run: npm run check:fillers
 
   # Unit tests
+  # The app's unit suites, split by Jest across three runners that start
+  # together. Each keeps its coverage, and `unit-coverage` merges the parts and
+  # holds the merge to the threshold, so a shard's own share goes unchecked.
   unit-tests:
-    name: Unit Tests
+    name: Unit Tests (${{ matrix.shard }}/3)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: 'npm'
+
+      - name: Install dependencies and generate GraphQL types
+        uses: ./.github/actions/setup-deps
+
+      # A cold run compiles the app before its tests run, most of a job's time.
+      # Jest keys an entry by its file's content, so a stale one is never read;
+      # the lockfile stays in the key, since a babel plugin's upgrade is not.
+      - name: Restore Jest cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.cache/jest
+          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-unit-${{ matrix.shard }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-unit-${{ matrix.shard }}-
+            ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-
+
+      - name: Run unit tests
+        run: >-
+          npm test -- --selectProjects=mobile --shard=${{ matrix.shard }}/3
+          --coverage --coverageThreshold='{}' --coverageReporters=json
+          --cacheDirectory="$HOME/.cache/jest"
+
+      - name: Keep coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-unit-${{ matrix.shard }}
+          path: coverage/coverage-final.json
+          if-no-files-found: error
+          retention-days: 1
+
+      # Saved however the tests ended: a run the time limit stopped has still
+      # compiled the app, and `actions/cache` alone saves only on success.
+      - name: Save Jest cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ~/.cache/jest
+          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-unit-${{ matrix.shard }}-${{ github.sha }}
+
+  # The suites that read or type-check the whole tree (Jest's `whole-tree`
+  # project) and the core run without React Native, beside the unit shards.
+  # Their coverage joins the merge: core-portability loads every core file.
+  whole-tree-tests:
+    name: Whole-tree Tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
@@ -267,18 +330,65 @@ jobs:
       - name: Install dependencies and generate GraphQL types
         uses: ./.github/actions/setup-deps
 
-      # A cold run compiles the whole app before its tests run, most of this
-      # job's time. Jest keys an entry by its file's content, so a stale one is
-      # never read.
       - name: Restore Jest cache
         uses: actions/cache/restore@v4
         with:
           path: ~/.cache/jest
-          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
-          restore-keys: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-
+          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-whole-tree-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-whole-tree-
+            ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-
 
-      - name: Run unit tests
-        run: npm test -- --coverage --cacheDirectory="$HOME/.cache/jest"
+      - name: Run whole-tree tests
+        run: >-
+          npm test -- --selectProjects whole-tree core-portability
+          --coverage --coverageThreshold='{}' --coverageReporters=json
+          --cacheDirectory="$HOME/.cache/jest"
+
+      - name: Keep coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-whole-tree
+          path: coverage/coverage-final.json
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Save Jest cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: ~/.cache/jest
+          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-whole-tree-${{ github.sha }}
+
+  # The coverage one unsharded run would report: every test job's part merged,
+  # held to `jest.config.js`'s threshold, and sent to Codecov.
+  unit-coverage:
+    name: Unit Tests
+    needs: [unit-tests, whole-tree-tests]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+          cache: 'npm'
+
+      - name: Install dependencies and generate GraphQL types
+        uses: ./.github/actions/setup-deps
+
+      - name: Collect coverage parts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: coverage-*
+          path: coverage-parts
+
+      - name: Merge coverage and check its threshold
+        run: node scripts/merge-coverage.mjs coverage-parts coverage
 
       - name: Upload coverage
         uses: codecov/codecov-action@v5
@@ -286,15 +396,6 @@ jobs:
         with:
           files: ./coverage/lcov.info
           flags: unittests
-
-      # Saved however the tests ended: a run the time limit stopped has still
-      # compiled the app, and `actions/cache` alone saves only on success.
-      - name: Save Jest cache
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: ~/.cache/jest
-          key: ${{ runner.os }}-jest-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
 
   # Render-performance comparison. RECORDS, never fails the build.
   #
@@ -424,13 +525,17 @@ jobs:
         lint,
         i18n-check,
         unit-tests,
+        whole-tree-tests,
+        unit-coverage,
         compiler-bailouts,
         stale-cache-fields,
         bundled-secret-scanner,
         dependency-audit,
         whole-tree-gates,
       ]
-    if: always()
+    # A failed or timed-out gate still reports here. A run a newer push
+    # cancelled has no verdict, so it reports nothing rather than a failure.
+    if: ${{ !cancelled() }}
 
     steps:
       - name: Check all jobs
@@ -439,6 +544,8 @@ jobs:
              [ "${{ needs.lint.result }}" != "success" ] || \
              [ "${{ needs.i18n-check.result }}" != "success" ] || \
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
+             [ "${{ needs.whole-tree-tests.result }}" != "success" ] || \
+             [ "${{ needs.unit-coverage.result }}" != "success" ] || \
              [ "${{ needs.compiler-bailouts.result }}" != "success" ] || \
              [ "${{ needs.stale-cache-fields.result }}" != "success" ] || \
              [ "${{ needs.bundled-secret-scanner.result }}" != "success" ] || \
@@ -450,7 +557,9 @@ jobs:
             echo "- TypeScript: ${{ needs.typecheck.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Lint: ${{ needs.lint.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- i18n: ${{ needs.i18n-check.result }}" >> $GITHUB_STEP_SUMMARY
-            echo "- Unit Tests: ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Unit Tests (shards): ${{ needs.unit-tests.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Whole-tree Tests: ${{ needs.whole-tree-tests.result }}" >> $GITHUB_STEP_SUMMARY
+            echo "- Unit Coverage: ${{ needs.unit-coverage.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Compiler Bailouts: ${{ needs.compiler-bailouts.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Stale Cache Fields: ${{ needs.stale-cache-fields.result }}" >> $GITHUB_STEP_SUMMARY
             echo "- Bundled Secrets: ${{ needs.bundled-secret-scanner.result }}" >> $GITHUB_STEP_SUMMARY
@@ -466,6 +575,7 @@ jobs:
           echo "- ✅ Lint" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ i18n" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Unit Tests" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Whole-tree Tests" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Compiler Bailouts" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Stale Cache Fields" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Bundled Secrets" >> $GITHUB_STEP_SUMMARY

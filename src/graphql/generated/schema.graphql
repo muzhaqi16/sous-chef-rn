@@ -3287,8 +3287,17 @@ Always include a __typename so the variant can be discriminated.
 union CreateStorageLocationResult = ConflictError | CreateStorageLocationPayload | ForbiddenError | NotFoundError | ValidationError
 
 input CreateStoreFromPlaceInput {
+  """
+  The chain the store belongs to, when known: a receipt's ProposedStore.chain
+  """
+  chainId: ID
   """StorePlace.placeId, as a search answered it"""
   placeId: ID!
+  """
+  The store's number in its chain, as its receipts print it: a receipt's
+  ProposedStore.storeNumber. Needs chainId
+  """
+  storeNumber: String
 }
 
 input CreateStoreInput {
@@ -5386,6 +5395,7 @@ enum ExternalSource {
   KROGER
   OPENFOODFACTS
   OPENSTREETMAP
+  RECEIPT
   SPOONACULAR
   TASTY
   USDA
@@ -13447,6 +13457,13 @@ type ParsedReceiptLine {
   localizedName; null when it names none. unit stays as printed.
   """
   measureUnit: Unit
+  """
+  The food an ITEM bought, in plain words as a catalog lists it ("organic
+  russet potatoes" for "A-POTATO RUSSET ORG 3 LB"); null on any other line,
+  or when no model named it. Send it as ReceiptLineInput.name, which search
+  ranks; product stays what the receipt prints.
+  """
+  name: String
   """The product name as printed, on an ITEM"""
   product: String
   """
@@ -13795,7 +13812,8 @@ enum ProfileVisibility {
 
 """
 A store the receipt names that is not on file: send it to createStore when the
-user confirms, or to createStoreFromPlace when placeId is set.
+user confirms, or to createStoreFromPlace when placeId is set, with its chain's
+id and its storeNumber either way, so the branch's next receipt finds it.
 """
 type ProposedStore {
   """As printed, else OpenStreetMap's when placeId is set"""
@@ -15324,7 +15342,9 @@ input ReceiptCheckInLineInput {
   """
   discount: Float
   """
-  The user changed or chose the item rather than accepting the proposal; false when omitted
+  The user changed or chose the item rather than accepting the proposal; false
+  when omitted. An item accepted as proposed, by any step, is remembered as
+  weaker evidence than a choice.
   """
   edited: Boolean
   """The stock's expiry day, as YYYY-MM-DD"""
@@ -15431,6 +15451,12 @@ input ReceiptLineInput {
   The code printed on the line: a barcode (often without its check digit) or the store's item number
   """
   code: String
+  """
+  The line's plain name as ParsedReceiptLine.name gave it ("organic russet
+  potatoes"): search ranks it in place of text, and it names an item exactly
+  as text does. A remembered match still keys on text. Blank is none.
+  """
+  name: String
   """The line's product text as printed, e.g. GV WHL MLK 1G"""
   text: String!
 }
@@ -15460,13 +15486,13 @@ type ReceiptLineResolution {
 """How sure a receipt line's best candidate is."""
 enum ReceiptMatchConfidence {
   """
-  A printed code, the store's own item number, this household's alias, or an alias many households share named the item
+  A printed code, the store's own item number, this household's alias, or an alias households share at the chain named the item
   """
   HIGH
   """Search found candidates, but none clearly ahead: ask the user"""
   LOW
   """
-  An alias a few households share, or search with one candidate clearly ahead of the rest
+  Search with one candidate clearly ahead of the rest, or one the line names exactly
   """
   MEDIUM
   """Nothing close enough to propose"""
@@ -15483,7 +15509,9 @@ enum ReceiptMatchMethod {
   The line's printed barcode, its check digit computed when the receipt leaves it off
   """
   CODE
-  """Scored text and semantic search over the line's text"""
+  """
+  Scored text and semantic search over the line's plain name when sent, else its text
+  """
   SEARCH
   """The store's own item number, for a known store"""
   STORE_SKU
@@ -16781,9 +16809,9 @@ union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundEr
 """One confirmed line of a receipt."""
 input RecordReceiptMatchLineInput {
   """
-  The user changed or chose the item rather than accepting the proposal. A
-  search proposal accepted unchanged (resolvedBy SEARCH) is a guess nobody
-  checked: it is not remembered, and counts as skipped.
+  The user changed or chose the item rather than accepting the proposal. An
+  item accepted as proposed, by any step, is remembered as kept: weaker
+  evidence, which answers the household once kept on two receipts.
   """
   edited: Boolean!
   """The item the household chose for it"""
@@ -16833,7 +16861,7 @@ type RecordReceiptMatchesPayload {
   """Lines remembered"""
   recorded: Int!
   """
-  Lines not remembered: no chain or store is known, or no text is left once prices and codes are set aside
+  Lines not remembered: no chain or store is known, no text is left once prices and codes are set aside, or the line kept an answer households share, which it does not add to
   """
   skipped: Int!
   """
@@ -19183,6 +19211,11 @@ type StorageLocation {
   type: StorageType!
   """When this storage location was last updated"""
   updatedAt: DateTime!
+  """
+  The location's revision, advanced by every write. Send it back as version on
+  updateStorageLocation; a stale value is refused as a conflict.
+  """
+  version: Int!
 }
 
 """
@@ -20062,7 +20095,7 @@ input SyncChangesInput {
 }
 
 """A row a sync page can carry."""
-union SyncEntity = Pantry | PantryItem | PantryItemBatch | PantryItemUsage | ShoppingList | ShoppingListCollaborator | ShoppingListItem
+union SyncEntity = Home | HomeInvite | Membership | Pantry | PantryItem | PantryItemBatch | PantryItemUsage | ShoppingList | ShoppingListCollaborator | ShoppingListItem | StorageLocation
 
 """What changed in one scope since a cursor."""
 type SyncPage {
@@ -20189,7 +20222,11 @@ type SyncScopeEdge implements Edge {
 What a sync scope covers. One list is one scope. A kind appears here once a pull, a snapshot and a poke all serve it.
 """
 enum SyncScopeKind {
-  """One pantry, with its stacks, their batches and their usage"""
+  """
+  One home, with its active memberships, pending invites and live storage locations
+  """
+  HOME
+  """One pantry, with its stacks and their batches"""
   PANTRY
   SHOPPING_LIST
 }
@@ -21936,6 +21973,10 @@ input UpdateStorageLocationInput {
   temperature: StorageState
   """New storage type"""
   type: StorageType
+  """
+  The version read; an older one refuses the update (VERSION_CONFLICT). Omitted, the update applies whatever the version.
+  """
+  version: Int
 }
 
 type UpdateStorageLocationPayload {

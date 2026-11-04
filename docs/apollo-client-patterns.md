@@ -674,7 +674,8 @@ For the server to support version conflicts, mutations must:
   hand-built row states the version it knows from an answer, else the one
   the cache holds, else 0, and 0 only for a row the server hasn't created.
   Persisted rows from before every read selected it were purged with
-  `shape-7`, and batches, which gained a `version` later, with `shape-8`.
+  `shape-7`, batches, which gained a `version` later, with `shape-8`, and
+  storage locations with `shape-9`.
 - **`answerOrderingLink` keeps a newer row** (`src/apollo/links/`, under
   `localWritePrecedenceLink`). When an answer's copy of a row has a lower
   `version` than the one the server last gave the device, the link lays the

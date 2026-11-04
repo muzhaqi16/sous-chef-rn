@@ -46,10 +46,9 @@ jest.mock('#/apollo/clientRegistry', () => ({
 
 const OTHER = 'list-2';
 const EAGER_KEY = 'apollo-cache-v1';
-const POSITIONS_KEY = 'apollo-shard-positions';
 const VERSION_KEY = 'apollo-cache-version';
-/** The persisted shape the last build before shards wrote. */
-const PRE_SHARD_VERSION = 'shape-8';
+/** The persisted shape 4.9.0 and 4.9.1 wrote, before locations had a version. */
+const OLDER_SHAPE = 'shape-8';
 const shardKey = (id: string) => `apollo-shard:${id}`;
 
 const row = (id: string) => ({
@@ -80,13 +79,6 @@ const LIST_NAME = gql`
   fragment ShardListRow on ShoppingList {
     id
     version
-  }
-`;
-
-const LINE_NOTES = gql`
-  fragment ShardLineNotes on ShoppingListItem {
-    id
-    notes
   }
 `;
 
@@ -356,13 +348,10 @@ describe('leaving', () => {
 describe('an upgraded device', () => {
   afterEach(() => queueStore.removeMutation('queued-edit'));
 
-  it('keeps its lists and a queued change from before lists were stored apart', async () => {
-    const cache = await deviceHolding();
-    // What a build before shards left: every line in the blob, and no positions.
-    forgetShardMemory();
-    save(cache);
-    storage.set(VERSION_KEY, PRE_SHARD_VERSION);
-    storage.remove(POSITIONS_KEY);
+  it('drops the lists an older shape held, so each reads in full, and keeps a queued change', async () => {
+    save(await deviceHolding());
+    expect(storage.contains(shardKey(LIST))).toBe(true);
+    storage.set(VERSION_KEY, OLDER_SHAPE);
     queueStore.setCurrentUserId('user-1');
     queueStore.addMutation(
       makeQueuedMutation({
@@ -380,15 +369,9 @@ describe('an upgraded device', () => {
     apolloCachePersistence.restoreShards();
     pendingWritesOf(restarted).restore(queueStore.getPendingWrites());
 
+    expect(storage.contains(shardKey(LIST))).toBe(false);
     expect(heldScopes().size).toBe(0);
-    expect(lines(restarted, LIST)).toEqual([`${LIST}-a`]);
-    expect(
-      restarted.readFragment<{ notes: string | null }>({
-        id: `ShoppingListItem:${LIST}-a`,
-        fragment: LINE_NOTES,
-        optimistic: true,
-      })?.notes,
-    ).toBe('Two');
+    expect(lines(restarted, LIST)).toBeUndefined();
     expect(queueStore.getMutation('queued-edit')).toBeTruthy();
   });
 });

@@ -39,6 +39,8 @@ export interface ReceiptMatchLine {
   index: number;
   /** The product words as printed. */
   text: string;
+  /** The same in plain words, which the API searches by in place of `text`. */
+  name?: string;
   code?: string;
 }
 
@@ -128,6 +130,7 @@ export function useReceiptMatches(
               lines: sent.map(line => ({
                 clientId: String(line.index),
                 text: line.text,
+                ...(line.name ? { name: line.name } : {}),
                 code: line.code,
               })),
             },
