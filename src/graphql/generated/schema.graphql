@@ -15341,7 +15341,9 @@ input ReceiptCheckInLineInput {
   """
   discount: Float
   """
-  The user changed or chose the item rather than accepting the proposal; false when omitted
+  The user changed or chose the item rather than accepting the proposal; false
+  when omitted. An item accepted as proposed, by any step, is remembered as
+  weaker evidence than a choice.
   """
   edited: Boolean
   """The stock's expiry day, as YYYY-MM-DD"""
@@ -15483,13 +15485,13 @@ type ReceiptLineResolution {
 """How sure a receipt line's best candidate is."""
 enum ReceiptMatchConfidence {
   """
-  A printed code, the store's own item number, this household's alias, or an alias many households share named the item
+  A printed code, the store's own item number, this household's alias, or an alias households share at the chain named the item
   """
   HIGH
   """Search found candidates, but none clearly ahead: ask the user"""
   LOW
   """
-  An alias a few households share, or search with one candidate clearly ahead of the rest
+  Search with one candidate clearly ahead of the rest, or one the line names exactly
   """
   MEDIUM
   """Nothing close enough to propose"""
@@ -15506,7 +15508,9 @@ enum ReceiptMatchMethod {
   The line's printed barcode, its check digit computed when the receipt leaves it off
   """
   CODE
-  """Scored text and semantic search over the line's text"""
+  """
+  Scored text and semantic search over the line's plain name when sent, else its text
+  """
   SEARCH
   """The store's own item number, for a known store"""
   STORE_SKU
@@ -16804,9 +16808,9 @@ union RecordPriceObservationResult = ConflictError | ForbiddenError | NotFoundEr
 """One confirmed line of a receipt."""
 input RecordReceiptMatchLineInput {
   """
-  The user changed or chose the item rather than accepting the proposal. A
-  search proposal accepted unchanged (resolvedBy SEARCH) is a guess nobody
-  checked: it is not remembered, and counts as skipped.
+  The user changed or chose the item rather than accepting the proposal. An
+  item accepted as proposed, by any step, is remembered as kept: weaker
+  evidence, which answers the household once kept on two receipts.
   """
   edited: Boolean!
   """The item the household chose for it"""
@@ -16856,7 +16860,7 @@ type RecordReceiptMatchesPayload {
   """Lines remembered"""
   recorded: Int!
   """
-  Lines not remembered: no chain or store is known, or no text is left once prices and codes are set aside
+  Lines not remembered: no chain or store is known, no text is left once prices and codes are set aside, or the line kept an answer households share, which it does not add to
   """
   skipped: Int!
   """
