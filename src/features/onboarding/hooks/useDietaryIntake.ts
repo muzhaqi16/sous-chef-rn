@@ -15,7 +15,8 @@ export interface DietarySelection {
     value: Intolerance;
     severity: RestrictionSeverity.Allergy | RestrictionSeverity.Intolerance;
   }[];
-  diet: Diet | null;
+  /** One animal-food diet and one eating style at most (`withDietPicked`). */
+  diets: Diet[];
   /** Foods to avoid, each with the severity the avoid sheet chose. */
   foods: { id: string; name: string; severity: RestrictionSeverity }[];
 }
@@ -43,9 +44,9 @@ function wantedOf(selection: DietarySelection): Map<string, Wanted> {
       severity,
     });
   }
-  if (selection.diet) {
-    wanted.set(`diet:${selection.diet}`, {
-      kind: { diet: selection.diet },
+  for (const diet of selection.diets) {
+    wanted.set(`diet:${diet}`, {
+      kind: { diet },
       severity: RestrictionSeverity.Preference,
     });
   }

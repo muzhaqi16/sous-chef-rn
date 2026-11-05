@@ -28,7 +28,7 @@ jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
   }),
 }));
 
-const NONE: DietarySelection = { allergens: [], diet: null, foods: [] };
+const NONE: DietarySelection = { allergens: [], diets: [], foods: [] };
 
 const held = (
   id: string,
@@ -229,13 +229,13 @@ describe('useDietaryIntake', () => {
 
   it('replaces its own diet when another is chosen', async () => {
     const { result, rerender } = renderHook(() => useDietaryIntake());
-    await save(result, { ...NONE, diet: Diet.Vegetarian });
+    await save(result, { ...NONE, diets: [Diet.Vegetarian] });
     mockRestrictions = [
       held('r-veg', { diet: Diet.Vegetarian }, RestrictionSeverity.Preference),
     ];
     rerender({});
 
-    await save(result, { ...NONE, diet: Diet.Vegan });
+    await save(result, { ...NONE, diets: [Diet.Vegan] });
 
     expect(mockRemove).toHaveBeenCalledWith('r-veg');
     expect(mockAdd).toHaveBeenLastCalledWith(
@@ -246,11 +246,26 @@ describe('useDietaryIntake', () => {
     );
   });
 
+  it('saves an eating style beside an animal-food diet', async () => {
+    const { result } = renderHook(() => useDietaryIntake());
+
+    await save(result, { ...NONE, diets: [Diet.Vegetarian, Diet.Keto] });
+
+    for (const diet of [Diet.Vegetarian, Diet.Keto]) {
+      expect(mockAdd).toHaveBeenCalledWith(
+        { diet },
+        RestrictionSeverity.Preference,
+        undefined,
+        expect.any(String),
+      );
+    }
+  });
+
   it('reports a refused write', async () => {
     mockAdd.mockResolvedValueOnce(false);
     const { result } = renderHook(() => useDietaryIntake());
 
-    const ok = await save(result, { ...NONE, diet: Diet.Keto });
+    const ok = await save(result, { ...NONE, diets: [Diet.Keto] });
 
     expect(ok).toBe(false);
   });

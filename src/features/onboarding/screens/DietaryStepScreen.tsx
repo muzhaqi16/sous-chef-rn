@@ -17,6 +17,7 @@ import {
   INTOLERANCE_OPTIONS_MAJOR_FIRST,
   SEVERITY_LABEL_KEYS,
   isLifestyleDiet,
+  withDietPicked,
 } from '#domain/dietary';
 import { useDietarySharing } from '#features/profile/hooks/useDietarySharing';
 import { AvoidFoodSheet } from '#features/profile/ui/AvoidFoodSheet';
@@ -41,7 +42,7 @@ const LIFESTYLE_DIETS = DIET_OPTIONS.filter(option =>
 );
 
 /**
- * Allergies, a diet and foods to avoid, tapped, never typed except for the food
+ * Allergies, diets and foods to avoid, tapped, never typed except for the food
  * search. Nothing starts selected, and nothing is saved until Continue.
  */
 export const DietaryStepScreen = () => {
@@ -52,7 +53,7 @@ export const DietaryStepScreen = () => {
   const { save } = useDietaryIntake();
   const { homes } = useDietarySharing();
   const [allergens, setAllergens] = useState<DietarySelection['allergens']>([]);
-  const [diet, setDiet] = useState<Diet | null>(null);
+  const [diets, setDiets] = useState<Diet[]>([]);
   const [foods, setFoods] = useState<DietarySelection['foods']>([]);
   const [avoidSheetVisible, setAvoidSheetVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -74,7 +75,7 @@ export const DietaryStepScreen = () => {
   const handleContinue = async () => {
     setSaving(true);
     setFailed(false);
-    const saved = await save({ allergens, diet, foods });
+    const saved = await save({ allergens, diets, foods });
     setSaving(false);
     if (saved) navigateToNextStep('Dietary');
     else setFailed(true);
@@ -153,10 +154,12 @@ export const DietaryStepScreen = () => {
               <AnimatedChip
                 key={option.value}
                 label={t(option.labelKey)}
-                selected={diet === option.value}
+                selected={diets.includes(option.value)}
                 onPress={() =>
-                  setDiet(current =>
-                    current === option.value ? null : option.value,
+                  setDiets(current =>
+                    current.includes(option.value)
+                      ? current.filter(diet => diet !== option.value)
+                      : withDietPicked(current, option.value),
                   )
                 }
               />

@@ -9,7 +9,9 @@ import {
   INTOLERANCE_OPTIONS_MAJOR_FIRST,
   canAlert,
   householdCheckOf,
+  oneDietPerGroup,
   restrictionLabelKey,
+  withDietPicked,
 } from '../dietary';
 
 describe('INTOLERANCE_OPTIONS_MAJOR_FIRST', () => {
@@ -35,6 +37,47 @@ describe('INTOLERANCE_OPTIONS_MAJOR_FIRST', () => {
     expect([...values].sort()).toEqual(
       INTOLERANCE_OPTIONS.map(option => option.value).sort(),
     );
+  });
+});
+
+describe('withDietPicked', () => {
+  it('replaces the animal-food diet held with another', () => {
+    expect(withDietPicked([Diet.Vegetarian, Diet.Keto], Diet.Vegan)).toEqual([
+      Diet.Keto,
+      Diet.Vegan,
+    ]);
+  });
+
+  it('keeps an eating style beside an animal-food diet', () => {
+    expect(withDietPicked([Diet.Vegetarian], Diet.Keto)).toEqual([
+      Diet.Vegetarian,
+      Diet.Keto,
+    ]);
+    expect(withDietPicked([Diet.Vegetarian, Diet.Keto], Diet.Paleo)).toEqual([
+      Diet.Vegetarian,
+      Diet.Paleo,
+    ]);
+  });
+
+  it('stacks a constraint on anything', () => {
+    expect(
+      withDietPicked([Diet.Vegan, Diet.GlutenFree], Diet.LowFodmap),
+    ).toEqual([Diet.Vegan, Diet.GlutenFree, Diet.LowFodmap]);
+  });
+});
+
+describe('oneDietPerGroup', () => {
+  it('keeps the first diet of each group and every constraint', () => {
+    expect(
+      oneDietPerGroup([
+        Diet.Vegan,
+        Diet.Keto,
+        Diet.Vegetarian,
+        Diet.GlutenFree,
+        Diet.Paleo,
+        Diet.LowFodmap,
+      ]),
+    ).toEqual([Diet.Vegan, Diet.Keto, Diet.GlutenFree, Diet.LowFodmap]);
   });
 });
 

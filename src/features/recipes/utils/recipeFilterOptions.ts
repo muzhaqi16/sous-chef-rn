@@ -73,8 +73,7 @@ export const INTOLERANCE_OPTIONS: RecipeFilterOption<Intolerance>[] = [
   { labelKey: 'recipes.intolerance.FISH', value: Intolerance.Fish },
 ];
 
-// Lifestyle diets are mutually exclusive (single-select); constraint diets
-// stack on top (multi-select).
+// The diets held one per group, then the constraints that stack on them.
 export const LIFESTYLE_DIET_OPTIONS = DIET_OPTIONS.filter(option =>
   isLifestyleDiet(option.value),
 );

@@ -13,18 +13,63 @@ import {
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 
 /**
- * Stackable dietary constraints — they layer on a lifestyle diet, so they stay
- * multi-select, while every other `Diet` member is mutually exclusive. One
- * source for both the recipe filter sheet and the dietary-profile selector.
+ * Stackable dietary constraints: they layer on any diet. One source for the
+ * dietary profile, the onboarding step and the recipe filters.
  */
 export const CONSTRAINT_DIETS: ReadonlySet<Diet> = new Set([
   Diet.GlutenFree,
   Diet.LowFodmap,
 ]);
 
-/** True for mutually-exclusive lifestyle diets (vegan, keto, paleo, …). */
+/** Ways of eating that sit beside an animal-food diet, as in vegetarian keto. */
+const EATING_STYLE_DIETS: ReadonlySet<Diet> = new Set([
+  Diet.Keto,
+  Diet.Paleo,
+  Diet.Primal,
+  Diet.Whole30,
+]);
+
+/**
+ * The group a diet is chosen in. A person holds one animal-food diet (they
+ * nest: vegan sits inside vegetarian) and one eating style; constraints stack.
+ */
+export type DietGroup = 'animalFood' | 'eatingStyle' | 'constraint';
+
+export const dietGroup = (diet: Diet): DietGroup =>
+  CONSTRAINT_DIETS.has(diet)
+    ? 'constraint'
+    : EATING_STYLE_DIETS.has(diet)
+    ? 'eatingStyle'
+    : 'animalFood';
+
+/** True for a diet held one per group (vegan, keto, …), not a constraint. */
 export const isLifestyleDiet = (diet: Diet): boolean =>
-  !CONSTRAINT_DIETS.has(diet);
+  dietGroup(diet) !== 'constraint';
+
+/** `diets` with `picked` added, replacing the diet of its group it rules out. */
+export function withDietPicked(diets: readonly Diet[], picked: Diet): Diet[] {
+  const group = dietGroup(picked);
+  return [
+    ...diets.filter(
+      diet =>
+        diet !== picked &&
+        (group === 'constraint' || dietGroup(diet) !== group),
+    ),
+    picked,
+  ];
+}
+
+/** `diets` with at most one of each group, the first held kept. */
+export const oneDietPerGroup = (diets: readonly Diet[]): Diet[] =>
+  diets.reduce<Diet[]>(
+    (kept, diet) =>
+      kept.includes(diet) ||
+      (isLifestyleDiet(diet) &&
+        kept.some(held => dietGroup(held) === dietGroup(diet)))
+        ? kept
+        : [...kept, diet],
+    [],
+  );
 
 /** Least to most experienced — the picker's order, which the enum's is not. */
 export const SKILL_LEVELS: readonly CookingSkillLevel[] = [

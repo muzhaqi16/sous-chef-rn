@@ -131,7 +131,7 @@ describe('DietaryStepScreen', () => {
 
     const saved = await continueStep(user);
 
-    expect(saved).toEqual({ allergens: [], diet: null, foods: [] });
+    expect(saved).toEqual({ allergens: [], diets: [], foods: [] });
   });
 
   it('saves peanuts as an allergy', async () => {
@@ -167,15 +167,16 @@ describe('DietaryStepScreen', () => {
     ]);
   });
 
-  it('keeps one diet: a second tap replaces the first', async () => {
+  it('keeps one animal-food diet, with an eating style beside it', async () => {
     const user = userEvent.setup();
     render(<DietaryStepScreen />);
 
     await user.press(screen.getByText(label('labels.vegetarian')));
+    await user.press(screen.getByText(label('recipes.diet.KETO')));
     await user.press(screen.getByText(label('labels.vegan')));
     const saved = await continueStep(user);
 
-    expect(saved.diet).toBe(Diet.Vegan);
+    expect(saved.diets).toEqual([Diet.Keto, Diet.Vegan]);
   });
 
   it('adds a food from the avoid sheet, with the severity it chose', async () => {
