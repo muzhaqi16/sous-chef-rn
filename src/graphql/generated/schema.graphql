@@ -15818,6 +15818,26 @@ type Recipe {
     """Page size, reading backward: default 20, at most 100"""
     last: Int
   ): MealPlanItemConnection!
+  """
+  The ingredients matchPercentage counts that the pantries in scope lack,
+  by the same matching and scope: non-optional, pantry basics left out, in
+  display order. What "add what's missing to the list" adds. Empty when
+  unauthenticated.
+  """
+  missingIngredientsConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """
+    Only this home's pantries, those you may view; refused unless you are an active member. Every pantry you may view when omitted
+    """
+    homeId: ID
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): RecipeIngredientConnection!
   """The recipe's title."""
   name: String!
   """The author's free-text notes, or null when none."""
