@@ -17809,6 +17809,10 @@ type SharedDietaryRestriction {
   """
   item: Item
   """
+  A religious diet: set only on an alert reaching its owner, since Home.dietaryNeeds never lists one
+  """
+  religiousDiet: ReligiousDiet
+  """
   How strictly it holds, from ALLERGY (must avoid) to GOAL (trying to follow)
   """
   severity: RestrictionSeverity!
