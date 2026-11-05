@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import type { View } from 'react-native';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
@@ -24,6 +24,16 @@ export function useMeasuredRect(
       });
     });
   };
+
+  // A receiver that arrives after the view's last layout (a spotlight step
+  // starting later) is measured now: `onLayout` will not fire again for it.
+  const wantsRect = onMeasure !== undefined;
+  const hadReceiver = useRef(wantsRect);
+  const measureArrival = useEffectEvent(measure);
+  useEffect(() => {
+    if (wantsRect && !hadReceiver.current) measureArrival();
+    hadReceiver.current = wantsRect;
+  }, [wantsRect]);
 
   return { ref, measure };
 }

@@ -49,6 +49,37 @@ describe('useMeasuredRect', () => {
     expect(onMeasure).not.toHaveBeenCalled();
   });
 
+  // The tutorial's Purchased-tab step: the receiver is passed only once the
+  // step starts, after the tab's last layout, so no `onLayout` measures it.
+  it('measures when a receiver arrives after mount', () => {
+    const onMeasure = jest.fn();
+    const { result, rerender } = renderHook(
+      ({ receiver }: { receiver?: typeof onMeasure }) =>
+        useMeasuredRect(receiver),
+      { initialProps: {} },
+    );
+    result.current.ref.current = viewMeasuring(40, 20);
+
+    rerender({ receiver: onMeasure });
+
+    expect(onMeasure).toHaveBeenCalledWith({
+      x: 10,
+      y: 30,
+      width: 40,
+      height: 20,
+    });
+  });
+
+  it('leaves a receiver present from mount to its layout', () => {
+    const measure = jest.fn();
+    const { result, rerender } = renderHook(() => useMeasuredRect(jest.fn()));
+    result.current.ref.current = { measure } as unknown as View;
+
+    rerender({});
+
+    expect(measure).not.toHaveBeenCalled();
+  });
+
   it('measures nothing without a receiver', () => {
     const measure = jest.fn();
     const { result } = renderHook(() => useMeasuredRect(undefined));

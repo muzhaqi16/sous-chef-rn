@@ -1,5 +1,5 @@
 import React from 'react';
-import { ScrollView } from 'react-native';
+import { ScrollView, type View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { Text } from '#components/atoms/Text';
 import { fireEvent, render, screen } from '@testing-library/react-native';
@@ -57,5 +57,47 @@ describe('ModeTabs', () => {
 
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenCalledWith('purchased');
+  });
+
+  // The List tutorial's Purchased-tab step asks for the tab's rect only once
+  // the step starts, after the tab's last layout.
+  it('reports a tab’s rect to a receiver that arrives after layout', () => {
+    const frame = jest
+      .spyOn(global, 'requestAnimationFrame')
+      .mockImplementation(callback => {
+        callback(0);
+        return 0;
+      });
+    const onTabLayout = jest.fn();
+    const tabs = (receiver?: typeof onTabLayout) => (
+      <ModeTabs
+        options={['shopping', 'purchased']}
+        value="shopping"
+        onChange={jest.fn()}
+        formatLabel={option => option}
+        onTabLayout={receiver}
+      />
+    );
+    type MeasureCallback = Parameters<View['measure']>[0];
+    render(tabs());
+    // The preset's mocked View: each tab's wrapper is a class instance.
+    for (const { instance } of screen.UNSAFE_getAllByProps({
+      collapsable: false,
+    })) {
+      if (instance) {
+        (instance as View).measure = (callback: MeasureCallback) =>
+          callback(0, 0, 80, 40, 10, 100);
+      }
+    }
+
+    screen.rerender(tabs(onTabLayout));
+
+    expect(onTabLayout).toHaveBeenCalledWith('purchased', {
+      x: 10,
+      y: 100,
+      width: 80,
+      height: 40,
+    });
+    frame.mockRestore();
   });
 });

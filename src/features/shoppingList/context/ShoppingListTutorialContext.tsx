@@ -3,6 +3,7 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useEffectEvent,
   useRef,
   type ReactNode,
 } from 'react';
@@ -195,12 +196,18 @@ interface ShoppingListTutorialProviderProps {
   canStart: boolean;
   /** The list on screen, whose price tracking decides the price step. */
   listId?: string;
+  /** @internal The wait before the first step; 0 starts at once (tests). */
+  startDelay?: number;
 }
+
+/** How long a spotlight step waits for its target before it is skipped. */
+const TARGET_TIMEOUT_MS = 1500;
 
 export function ShoppingListTutorialProvider({
   children,
   canStart,
   listId,
+  startDelay = 2000,
 }: ShoppingListTutorialProviderProps) {
   const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
@@ -244,26 +251,20 @@ export function ShoppingListTutorialProvider({
     userIdRef.current = userId;
   }, [userId]);
 
-  // 2s startup delay.
+  // Startup delay; none asked for starts at once.
+  const canBegin = canStart && !isCompleted && !hasStarted && tutorialsEnabled;
+  if (canBegin && startDelay <= 0) {
+    setHasStarted(true);
+    setCurrentStep(ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON);
+  }
   useEffect(() => {
-    if (!canStart || isCompleted || hasStarted || !tutorialsEnabled) return;
-
+    if (!canBegin || startDelay <= 0) return;
     const timer = setTimeout(() => {
       setHasStarted(true);
       setCurrentStep(ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON);
-    }, 2000);
+    }, startDelay);
     return () => clearTimeout(timer);
-  }, [canStart, isCompleted, hasStarted, tutorialsEnabled]);
-
-  // The superseded feature IDs count as shown once this tutorial starts.
-  useEffect(() => {
-    if (!hasStarted) return;
-    for (const oldId of OLD_TUTORIAL_IDS) {
-      storeApi
-        .getState()
-        .markFeatureHintShown(buildStorageKey(userIdRef.current, oldId));
-    }
-  }, [hasStarted]);
+  }, [canBegin, startDelay]);
 
   const advanceTo = (nextStep: ShoppingListTutorialStep) => {
     setIsTransitioning(true);
@@ -279,10 +280,13 @@ export function ShoppingListTutorialProvider({
 
   const markComplete = () => {
     // This tutorial's own flag only: the user-controlled "Show Tutorials"
-    // setting gates every screen and must not be flipped here.
-    storeApi
-      .getState()
-      .markFeatureHintShown(buildStorageKey(userIdRef.current, FEATURE_ID));
+    // setting gates every screen and must not be flipped here. The superseded
+    // ids count as shown only now: a tour left part-way is not finished.
+    for (const featureId of [FEATURE_ID, ...OLD_TUTORIAL_IDS]) {
+      storeApi
+        .getState()
+        .markFeatureHintShown(buildStorageKey(userIdRef.current, featureId));
+    }
     // The standalone swipe hint must not fire on its own afterwards.
     storeApi
       .getState()
@@ -386,11 +390,6 @@ export function ShoppingListTutorialProvider({
 
   const skipAll = () => {
     markComplete();
-    for (const oldId of OLD_TUTORIAL_IDS) {
-      storeApi
-        .getState()
-        .markFeatureHintShown(buildStorageKey(userIdRef.current, oldId));
-    }
   };
 
   const isActive =
@@ -399,6 +398,22 @@ export function ShoppingListTutorialProvider({
     !isTransitioning &&
     currentStep !== ShoppingListTutorialStep.IDLE &&
     currentStep !== ShoppingListTutorialStep.COMPLETED;
+
+  // A spotlight whose target never registers is skipped, so the tour never
+  // waits on nothing (and never leaves swiping switched off).
+  const targetKey = TUTORIAL_STEP_CONFIG[currentStep]?.rectKey;
+  const waitingFor =
+    isActive && targetKey !== undefined && !rects[targetKey]
+      ? currentStep
+      : null;
+  const skipMissingTarget = useEffectEvent(() => {
+    skipCurrentStep();
+  });
+  useEffect(() => {
+    if (waitingFor === null) return;
+    const timer = setTimeout(skipMissingTarget, TARGET_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [waitingFor]);
 
   const stateValue: ShoppingListTutorialStateContextValue = {
     currentStep,
