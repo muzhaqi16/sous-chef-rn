@@ -12876,9 +12876,16 @@ type PantryItemSuggestion {
   Calendar days from today to the expiry date: 0 on the date itself (for EXPIRING_SOON source)
   """
   daysUntilExpiry: Int
-  """Default unit object for one-tap add"""
+  """The unit defaultUnitId names"""
   defaultUnit: SuggestionUnit
-  """Default unit ID for one-tap add (last used or item default)"""
+  """
+  The unit a one-tap add uses: a held stack's own unit (low stock, expiring
+  soon), the unit a removed stack used, else one the item is bought or
+  tracked in (its preferred tracking unit, else its oldest retail unit),
+  never a base measure such as a gram. Null when the item has none; an add
+  naming no unit then lands where resolveTrackingUnit puts it (the pantry's
+  unit for the item, the item's tracking or retail unit, else a count).
+  """
   defaultUnitId: ID
   """Expiry date (for EXPIRING_SOON source)"""
   expiresOn: LocalDate
@@ -18780,9 +18787,15 @@ Combines multiple sources: recently deleted, frequently added, and popular items
 type ShoppingListSuggestion {
   """Primary category name"""
   category: String
-  """Default unit object for one-tap add"""
+  """The unit defaultUnitId names"""
   defaultUnit: SuggestionUnit
-  """Default unit ID for one-tap add (last used or item default)"""
+  """
+  The unit a one-tap add uses: the unit the row last used (a removed line, a
+  running-low root), else one the item is bought or tracked in (its preferred
+  tracking unit, else its oldest retail unit), never a base measure such as
+  a gram. Null when the item has none; an add naming no unit then lands in
+  the item's preferred tracking unit, else in none.
+  """
   defaultUnitId: ID
   """
   Frequency count - times user added this item (for FREQUENTLY_ADDED source)
@@ -21554,6 +21567,27 @@ input UpdatePantryItemInput {
 }
 
 type UpdatePantryItemPayload {
+  """
+  The stack's batches after this write, read as pantryItemBatchesConnection
+  reads them: an expiresOn edit dates or clears every active batch, so a
+  client updates its batch list without a second request.
+  """
+  batchesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; newest first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PantryItemBatchOrderBy
+    """Only batches in this status"""
+    status: BatchStatus
+  ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
   and this payload is read as it stands now. The canonical, API-wide replay flag.
