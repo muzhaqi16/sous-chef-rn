@@ -55,6 +55,6 @@ const styles = StyleSheet.create(theme => ({
   },
   buttonText: {
     marginLeft: theme.spacing.xs,
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
 }));

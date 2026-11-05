@@ -43,7 +43,7 @@ export const BrandListScreen: React.FC<BrandListScreenProps> = ({ route }) => {
   const confirmDelete = () => {
     if (!list) return;
     alertService.alert(
-      t('brandLists.deleteTitle', { name: list.name }),
+      t('labels.deleteNamed', { name: list.name }),
       t('brandLists.deleteBody'),
       destructiveConfirm(t('brandLists.deleteList'), () => {
         goBack();

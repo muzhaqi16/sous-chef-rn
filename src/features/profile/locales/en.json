@@ -389,7 +389,6 @@
     "namePlaceholder": "e.g. Boycott",
     "rename": "Rename list",
     "deleteList": "Delete list",
-    "deleteTitle": "Delete {{name}}?",
     "deleteBody": "Its brands are removed with it.",
     "brandCount_one": "{{count}} brand",
     "brandCount_other": "{{count}} brands",

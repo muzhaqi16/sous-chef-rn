@@ -137,6 +137,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   sortOptionLabelActive: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
 }));

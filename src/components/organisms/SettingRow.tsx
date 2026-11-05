@@ -131,7 +131,7 @@ export const SettingRow: React.FC<SettingRowProps> = ({
       return t('settingRow.tapToSelect');
     } else if (item.type === 'text') {
       return t('labels.tapToEdit');
-    } else if (item.type === 'navigation' || item.type === 'action') {
+    } else if (item.type === 'navigation') {
       return t('settingRow.tapToOpen');
     }
     return undefined;
@@ -224,10 +224,6 @@ export const SettingRow: React.FC<SettingRowProps> = ({
               </Text>
               <Icon name="chevron-forward" size={20} tone="textSecondary" />
             </View>
-          )}
-
-          {item.type === 'action' && (
-            <Icon name="chevron-forward" size={20} tone="textSecondary" />
           )}
 
           {item.type === 'navigation' && (

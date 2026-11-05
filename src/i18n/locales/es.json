@@ -341,6 +341,7 @@
     "default": "Predeterminado",
     "defaultServings": "Raciones por defecto",
     "delete": "Eliminar",
+    "deleteNamed": "¿Eliminar {{name}}?",
     "deleteList": "Eliminar lista",
     "deletePantry": "Eliminar despensa",
     "deletedUser": "Usuario eliminado",
@@ -724,8 +725,7 @@
     "nameMin": "El nombre debe tener al menos 2 caracteres"
   },
   "quantityBadge": {
-    "a11yLabel": "Cantidad: {{quantity}}. Toca para editar",
-    "a11yLabelReadOnly": "Cantidad: {{quantity}}",
+    "a11yLabel": "Cantidad: {{quantity}}",
     "a11yHint": "Abre el editor de cantidad"
   },
   "tutorial": {
@@ -746,7 +746,6 @@
     "partialBody": "Esto es lo que tu dispositivo tiene por ahora."
   },
   "tabBar": {
-    "actionButton": "Botón de acción",
     "actionButtonHint": "Abre la acción de la pestaña actual",
     "addMenuHint": "Abre las formas de añadir"
   },

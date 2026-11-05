@@ -7,13 +7,14 @@ import {
 } from './foundations/colors';
 import { brand } from './foundations/brand';
 
+import { onColor } from './foundations/derivePalette';
+
 /**
  * The brand's foreground, fixed rather than derived: white on the brand orange
- * is 2.58:1, so `onColor` would pick the near-black. A user-picked brand still
+ * is 2.58:1, below AA by decision (`onColor.test.ts`). A user-picked brand
  * derives its own in `applyAppearance`, where the swatches span light and dark.
  */
 const onBrand = colors.neutral[0];
-import { onColor } from './foundations/derivePalette';
 import { spacing, layout } from './foundations/spacing';
 import { typography, fonts } from './foundations/typography';
 import { radii } from './foundations/radii';
@@ -22,6 +23,7 @@ import { shadows, darkShadows } from './foundations/shadows';
 import { sizes } from './foundations/sizes';
 import { zIndex } from './foundations/zIndex';
 import { motion } from './motion';
+import { TOUCH_TARGET_MIN } from './touchTarget';
 import { type, MAX_FONT_SCALE } from './foundations/type';
 
 /**
@@ -67,7 +69,10 @@ const commonTheme = {
   fonts,
   radii,
   borderWidth,
-  sizes,
+  sizes: {
+    ...sizes,
+    touchTarget: { ...sizes.touchTarget, min: TOUCH_TARGET_MIN },
+  },
   zIndex,
   opacity: {
     pressed: 0.7,
@@ -81,12 +86,14 @@ export const lightTheme = {
   shadows,
   colors: {
     ...colors,
-    // Primary — sourced from the brand palette (`appConfig.branding.primaryColor`,
-    // jaffa by default). The AppearanceScreen "Default" swatch reads the same
-    // config value, so the two stay in sync from a single source.
+    // Primary — the logo orange (`appConfig.branding.primaryColor`, jaffa by
+    // default), as a fill and as brand text. Both sit below AA by decision:
+    // 2.58:1 under white, 2.35:1 as text on the page (`toneContrast.test.ts`).
     primary: brand[500],
     primaryLight: brand[100],
     primaryDark: brand[700],
+    primaryText: brand[500],
+    onPrimaryLight: brand[500],
     onPrimary: onBrand,
     onError: onColor(
       lightSemantic.error,
@@ -132,7 +139,9 @@ export const lightTheme = {
     // Input specific
     inputBackground: colors.neutral[0],
     inputText: colors.neutral[900],
-    inputPlaceholder: colors.neutral[500],
+    // Between `neutral[500]` (3.98:1 on white) and `textTertiary`, so a hint stays
+    // lighter than copy and still reads at AA on the input.
+    inputPlaceholder: '#736D62',
 
     // Borders
     border: colors.neutral[300],
@@ -183,8 +192,6 @@ export const lightTheme = {
     expiration: colors.expiration,
     filterTab: colors.filterTab,
     chartCategorical,
-    avatar: colors.avatar,
-    sectionHeader: colors.sectionHeader,
     alertBanner: colors.alertBanner,
 
     // Overlay
@@ -214,12 +221,14 @@ export const darkTheme = {
   shadows: darkShadows,
   colors: {
     ...colors,
-    // Primary — brand[500] for consistency with light mode.
+    // Primary — the same fill as light mode.
     // primaryLight uses brand[400] @ 20% for a slightly brighter accent surface
     // since the deeper hue can swallow itself on dark backgrounds.
     primary: brand[500],
     primaryLight: brand[400] + '20',
     primaryDark: brand[600],
+    primaryText: brand[500],
+    onPrimaryLight: brand[300],
     onPrimary: onBrand,
     onError: onColor(
       darkSemantic.error,
@@ -327,8 +336,6 @@ export const darkTheme = {
     expiration: darkExpiration,
     filterTab: darkFilterTab,
     chartCategorical: darkChartCategorical,
-    avatar: colors.avatar,
-    sectionHeader: colors.sectionHeader,
     // Alert banner — solid dark backgrounds instead of light-mode pastels
     alertBanner: {
       error: {

@@ -1,17 +1,37 @@
 import type { ComponentProps, ReactNode } from 'react';
 import { useRef, useEffect, useContext, useState } from 'react';
-import { Keyboard } from 'react-native';
+import { Keyboard, View } from 'react-native';
 import {
+  BottomSheetHandle,
   BottomSheetModal as GorhomBottomSheetModal,
+  type BottomSheetBackgroundProps,
   type BottomSheetModalProps,
 } from '@gorhom/bottom-sheet';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { withUnistyles } from 'react-native-unistyles';
+import { StyleSheet, withUnistyles } from 'react-native-unistyles';
 import { NavigationContext } from '@react-navigation/native';
 import { useSharedBottomSheetConfigs } from '#hooks/ui/useSharedBottomSheetConfigs';
 import { useBottomSheetBackHandler } from '#hooks/ui/useBottomSheetBackHandler';
 import { useBottomSheetBackdropClaim } from '#hooks/ui/useBottomSheetBackdropClaim';
 import { CurrentThemeScope } from '#components/atoms/CurrentThemeScope';
+
+// gorhom's default background and handle are each an "adjustable" TalkBack
+// stop ("Bottom Sheet", "Bottom sheet handle") ahead of the content; these paint
+// the same and take no stop. A sheet closes by its own controls or Back.
+const SheetBackground = ({
+  pointerEvents,
+  style,
+}: BottomSheetBackgroundProps) => (
+  <View pointerEvents={pointerEvents} style={[styles.background, style]} />
+);
+
+const SheetHandle = (props: ComponentProps<typeof BottomSheetHandle>) => (
+  <BottomSheetHandle {...props} accessible={false} />
+);
+
+const styles = StyleSheet.create(theme => ({
+  background: { borderRadius: theme.radii.xl },
+}));
 
 const ThemedModalShell = withUnistyles(GorhomBottomSheetModal, theme => ({
   backgroundStyle: { backgroundColor: theme.colors.surface },
@@ -38,6 +58,10 @@ const ThemedBottomSheetModal = ({
     // every row and button inside it from VoiceOver.
     // Verified: #gorhom-sheet-content-hides-its-children-from-voiceover
     accessible={false}
+    accessibilityRole={null}
+    accessibilityLabel={null}
+    backgroundComponent={SheetBackground}
+    handleComponent={SheetHandle}
     {...props}
     // Android hands the focus of an input unmounted with the sheet to the first
     // field on the screen beneath, keyboard and all; blurred as the close

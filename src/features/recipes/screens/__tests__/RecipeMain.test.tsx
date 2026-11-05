@@ -647,7 +647,8 @@ describe('RecipeMain', () => {
     expect(mockToRecipeDetail).toHaveBeenCalledWith({ recipeId: 'abc123' });
   });
 
-  it('shows the filter count badge when filters are active', () => {
+  // The badge is drawn inside the labelled button, so only the label speaks it.
+  it('shows the filter count badge when filters are active, and says it', () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
         <Component />
@@ -664,7 +665,9 @@ describe('RecipeMain', () => {
     });
 
     const tree = render(<RecipeMain />);
-    const filterButton = tree.getByLabelText('Dietary restrictions');
+    const filterButton = tree.getByLabelText(
+      'Dietary restrictions, 3 filters active',
+    );
     expect(within(filterButton).getByText('3')).toBeTruthy();
   });
 

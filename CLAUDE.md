@@ -434,7 +434,7 @@ back control, gutter or safe area (`screenUsesTheScaffold.test.ts`,
 - **A field the user can fix is reported ON the field**; alerts are for
   submission failures.
 - **Validation is a yup schema beside the form** via `yupResolver`, `Controller`
-  and `handleSubmit(onValid, logValidationErrors)`; the submit hook does not
+  and `handleSubmit(onValid, reportValidationErrors)`; the submit hook does not
   validate. Messages resolve LAZILY (`key => () => t(key)`,
   `src/utils/validation/common.ts`).
 - **A cross-field rule needs an explicit `trigger()`**, or `rules={{ deps }}` where

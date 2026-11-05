@@ -23,6 +23,8 @@ interface Props<T extends FieldValues> {
   errors: FieldErrors<T>;
   submitText: string;
   submitButtonTestID?: string;
+  /** A refusal of the whole submit, shown above the button while it still applies. */
+  submitError?: string | null;
   onSubmit: () => void;
   submitDisabled?: boolean;
   /** Seconds left on a cooldown, appended to the button label while > 0. */
@@ -50,6 +52,7 @@ export function AuthFormTemplate<T extends FieldValues>({
   control,
   errors,
   submitText,
+  submitError,
   submitButtonTestID,
   onSubmit,
   submitDisabled,
@@ -156,6 +159,19 @@ export function AuthFormTemplate<T extends FieldValues>({
       <View style={variantStyles.trailingSpace} />
 
       <Animated.View style={variantStyles.action} layout={layoutTransition}>
+        {submitError ? (
+          // Polite: Android reads it as it appears; iOS is told by the screen.
+          <Text
+            role="error"
+            tone="error"
+            align="center"
+            accessibilityLiveRegion="polite"
+            style={variantStyles.submitError}
+            testID={authTestIDs.formSubmitError}
+          >
+            {submitError}
+          </Text>
+        ) : null}
         <Button
           title={
             submitCountdown && submitCountdown > 0
@@ -201,6 +217,9 @@ export function AuthFormTemplate<T extends FieldValues>({
 }
 
 const styles = StyleSheet.create(theme => ({
+  submitError: {
+    marginBottom: theme.spacing.sm,
+  },
   formContainer: {
     // See AuthWrapper.inner — this must grow, not claim a fixed viewport box, or
     // its own content overflows past whatever a following sibling occupies.

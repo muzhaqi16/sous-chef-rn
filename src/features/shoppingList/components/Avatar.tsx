@@ -76,7 +76,7 @@ export const Avatar: React.FC<AvatarProps> = ({
       >
         <Text
           role="bodyStrong"
-          tone="accent"
+          tone="onPrimaryLight"
           style={[{ fontSize }, textColor && { color: textColor }]}
         >
           {initials}
@@ -110,13 +110,13 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
   },
   initialsContainer: {
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
   },
   iconContainer: {
     justifyContent: 'center',

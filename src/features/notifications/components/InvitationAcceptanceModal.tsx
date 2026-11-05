@@ -185,7 +185,7 @@ const InvitationDetails: React.FC<InvitationDetailsProps> = ({
             <Icon
               name={invitation.type === 'HOME_INVITE' ? 'home' : 'cart'}
               size={32}
-              tone="primary"
+              tone="onPrimaryLight"
             />
           </View>
           <Text role="heading" style={styles.title}>
@@ -290,7 +290,7 @@ const styles = StyleSheet.create(theme => ({
     width: 48,
     height: 48,
     borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.md,
@@ -337,7 +337,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     gap: theme.spacing.xs,
-    backgroundColor: theme.colors.error + '10',
+    backgroundColor: theme.colors.errorLight,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.error,
   },

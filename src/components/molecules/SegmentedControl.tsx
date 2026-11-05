@@ -31,6 +31,7 @@ interface SegmentedControlProps<T extends string> {
 interface SegmentedTabProps<T extends string> {
   option: T;
   index: number;
+  selected: boolean;
   isCompact: boolean;
   formatLabel: (value: T) => string;
   onPress: () => void;
@@ -42,6 +43,7 @@ interface SegmentedTabProps<T extends string> {
 const SegmentedTab = <T extends string>({
   option,
   index,
+  selected,
   isCompact,
   formatLabel,
   onPress,
@@ -75,7 +77,13 @@ const SegmentedTab = <T extends string>({
   const variantStyles = styles.useVariants({ compact: isCompact });
 
   return (
-    <AppPressable style={variantStyles.segment} onPress={onPress}>
+    // A value picked inside a form: one radio of a group, not a tab.
+    <AppPressable
+      style={variantStyles.segment}
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ checked: selected }}
+    >
       <Animated.Text
         style={[variantStyles.segmentText, labelTypeStyle, textAnimatedStyle]}
         numberOfLines={2}
@@ -146,7 +154,14 @@ export const SegmentedControl = <T extends string>({
   return (
     <View style={variantStyles2.container} testID={testID}>
       {label ? <Label required={required}>{label}</Label> : null}
-      <View style={variantStyles2.segmentedControl} onLayout={handleLayout}>
+      <View
+        style={variantStyles2.segmentedControl}
+        onLayout={handleLayout}
+        // Kept as a node: Fabric flattens a layout-only View, group role and all.
+        collapsable={false}
+        accessibilityRole="radiogroup"
+        accessibilityLabel={label}
+      >
         <Animated.View
           style={[variantStyles2.indicator, indicatorAnimatedStyle]}
         />
@@ -155,6 +170,7 @@ export const SegmentedControl = <T extends string>({
             key={option}
             option={option}
             index={index}
+            selected={index === selectedIndex}
             isCompact={isCompact}
             formatLabel={formatLabel}
             onPress={() => {

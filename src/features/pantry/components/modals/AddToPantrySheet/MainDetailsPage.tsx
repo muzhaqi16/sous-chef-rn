@@ -1,5 +1,5 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import React from 'react';
+import React, { useRef } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
@@ -12,6 +12,7 @@ import { CategoryAutocompleteField } from '#features/catalog/ui/autocomplete/Cat
 import { DatePickerField } from '#components/molecules/DatePickerField';
 import { SegmentedControl } from '#components/molecules/SegmentedControl';
 import { StorageState } from '#/graphql/generated/schemaTypes';
+import type { ThemedBottomSheetTextInputRef } from '#components/atoms/themedComponents';
 
 const STORAGE_STATES = Object.values(StorageState);
 
@@ -20,6 +21,8 @@ export interface MainDetailsPageProps {
   setItemName: (value: string) => void;
   /** Validation message for the name field, rendered on the input itself. */
   itemNameError?: string;
+  /** Item Name's input, which a failed submit focuses. */
+  itemNameRef?: React.Ref<ThemedBottomSheetTextInputRef>;
   brand: string;
   setBrand: (value: string) => void;
   suggestedBrands?: { id: string; name: string }[];
@@ -40,6 +43,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
   itemName,
   setItemName,
   itemNameError,
+  itemNameRef,
   brand,
   setBrand,
   suggestedBrands,
@@ -53,6 +57,9 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
   insets,
 }) => {
   const { t } = useTranslation();
+  // Return moves through the text fields in order: name, brand, category.
+  const brandRef = useRef<ThemedBottomSheetTextInputRef>(null);
+  const categoryRef = useRef<ThemedBottomSheetTextInputRef>(null);
   // Keyed off the enum like every other StorageState picker, so `NONE` — which
   // `Object.values(StorageState)` puts in this list — gets a label instead of
   // falling through to the raw "NONE". `enumKeyCoverage.test.ts` fails if
@@ -75,6 +82,10 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
         label={t('labels.itemName')}
         required
         error={itemNameError}
+        sheetRef={itemNameRef}
+        returnKeyType="next"
+        submitBehavior="submit"
+        onSubmitEditing={() => brandRef.current?.focus()}
         value={itemName}
         onChangeText={setItemName}
         placeholder={t('addToPantry.itemNamePlaceholder')}
@@ -94,6 +105,11 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
             placeholder={t('addToPantry.brandPlaceholder')}
             suggestedBrands={suggestedBrands}
             onBrandSelected={handleBrandSelected}
+            chaining={{
+              inputRef: brandRef,
+              returnKeyType: 'next',
+              onSubmitEditing: () => categoryRef.current?.focus(),
+            }}
           />
         </View>
 
@@ -105,6 +121,7 @@ export const MainDetailsPage: React.FC<MainDetailsPageProps> = ({
             value={category}
             onChangeText={setCategory}
             placeholder={t('labels.eGDairyProduce')}
+            chaining={{ inputRef: categoryRef, returnKeyType: 'done' }}
           />
         </View>
 

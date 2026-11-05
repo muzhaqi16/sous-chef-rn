@@ -22,6 +22,7 @@ import { getShoppingListPermissionsWithOwner } from '#features/shoppingList/util
 import * as selectorModalModule from '#features/shoppingList/components/useShoppingListSelectorModal';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import type { BarAction } from '#components/molecules/BarActions';
+import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { useStore } from '#store';
 import { fireEvent, userEvent } from '@testing-library/react-native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -98,10 +99,12 @@ jest.mock('#hooks/ui/useSwipeableCoordinator', () => ({
   })),
 }));
 
+const mockSetAddMenuOpen = jest.fn();
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: jest.fn(() => ({
     setOverlayOpen: jest.fn(),
     setScannerProps: jest.fn(),
+    setAddMenuOpen: mockSetAddMenuOpen,
   })),
   useTabBarState: jest.fn(() => ({
     addButtonRect: null,
@@ -205,13 +208,17 @@ jest.mock(
 let mockListProps: {
   onTogglePurchase?: (id: string, opts?: { withDetails?: boolean }) => void;
 } = {};
+let mockEmptyState: EmptyStateProps | undefined;
 jest.mock('#features/shoppingList/components/ListTemplate', () => ({
   ListTemplate: ({
     customListProps,
+    emptyState,
   }: {
     customListProps: typeof mockListProps;
+    emptyState?: EmptyStateProps;
   }) => {
     mockListProps = customListProps;
+    mockEmptyState = emptyState;
     return null;
   },
 }));
@@ -779,5 +786,16 @@ describe('ShoppingListMainContent + menu', () => {
 
     entry('manual')?.onPress();
     expect(mockOpenAddItemManually).toHaveBeenCalled();
+  });
+
+  // The menu is where a member who may not add is told why.
+  it("opens the same menu from an empty list's Add Item", () => {
+    mockOpenAddItemSheet.mockClear();
+    render(<ShoppingListMainContent screenData={makeScreenData()} />);
+
+    mockEmptyState?.action?.onPress();
+
+    expect(mockSetAddMenuOpen).toHaveBeenCalledWith(true);
+    expect(mockOpenAddItemSheet).not.toHaveBeenCalled();
   });
 });

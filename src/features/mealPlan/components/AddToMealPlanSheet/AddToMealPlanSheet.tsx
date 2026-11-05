@@ -324,6 +324,6 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   mealTypeTextSelected: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
 }));

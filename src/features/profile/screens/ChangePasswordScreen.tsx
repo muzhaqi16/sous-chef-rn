@@ -15,7 +15,7 @@ import {
 } from '#features/profile/hooks/useChangePassword';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { changePasswordSchema } from '#utils/validation/auth';
-import { logValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { SubScreen } from '#components/templates/SubScreen';
 import { toastService } from '#services/toastService';
@@ -159,6 +159,8 @@ export const ChangePasswordScreen: React.FC = () => {
               {t('changePassword.currentPassword')}
             </Text>
             <PasswordInput
+              purpose="current"
+              accessibilityLabel={t('changePassword.currentPassword')}
               value={watchedValues.currentPassword}
               onChangeText={text => setField('currentPassword', text)}
               placeholder={t('changePassword.currentPasswordPlaceholder')}
@@ -172,6 +174,8 @@ export const ChangePasswordScreen: React.FC = () => {
               {t('auth.newPassword')}
             </Text>
             <PasswordInput
+              purpose="new"
+              accessibilityLabel={t('auth.newPassword')}
               value={watchedValues.newPassword}
               onChangeText={text => setField('newPassword', text)}
               placeholder={t('auth.newPasswordPlaceholder')}
@@ -185,6 +189,8 @@ export const ChangePasswordScreen: React.FC = () => {
               {t('changePassword.confirmPassword')}
             </Text>
             <PasswordInput
+              purpose="new"
+              accessibilityLabel={t('changePassword.confirmPassword')}
               value={watchedValues.confirmPassword}
               onChangeText={text => setField('confirmPassword', text)}
               placeholder={t('auth.confirmPasswordPlaceholder')}
@@ -195,7 +201,7 @@ export const ChangePasswordScreen: React.FC = () => {
 
           <Button
             variant="primary"
-            onPress={form.handleSubmit(onSubmit, logValidationErrors)}
+            onPress={form.handleSubmit(onSubmit, reportValidationErrors)}
             disabled={!isFormValid}
             loading={isSubmitting}
             style={styles.buttonSpacing}

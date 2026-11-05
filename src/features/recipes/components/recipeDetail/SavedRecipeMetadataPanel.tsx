@@ -145,13 +145,13 @@ const styles = StyleSheet.create(theme => ({
     marginLeft: theme.spacing.md,
   },
   tagChip: {
-    backgroundColor: theme.colors.primary + '15',
+    backgroundColor: theme.colors.primaryLight,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing['2xs'],
     borderRadius: theme.radii.full,
   },
   tagChipText: {
-    color: theme.colors.primary,
+    color: theme.colors.onPrimaryLight,
   },
   notesDisplayRow: {
     paddingVertical: theme.spacing.xs,

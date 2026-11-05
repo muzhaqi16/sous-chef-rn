@@ -19,7 +19,7 @@ import { useResendBackoff } from '#features/auth/hooks/useResendBackoff';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { logger } from '#/utils/environment';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { emailVerificationSchema } from '#/utils/validation/auth';
 import { toastService } from '#services/toastService';
 import { authTestIDs } from '#features/auth/testIDs';
@@ -267,7 +267,7 @@ export function CodeVerificationScreen({
             // RHF applies the field's onChange synchronously before onComplete
             // fires, so handleSubmit reads the full code.
             props: {
-              onComplete: handleSubmit(onVerifyCode, logValidationErrors),
+              onComplete: handleSubmit(onVerifyCode, reportValidationErrors),
             },
           },
         ]}
@@ -295,7 +295,7 @@ export function CodeVerificationScreen({
         linkDisabled={isSignup ? !canResend : undefined}
         linkCountdown={isSignup ? countdown : undefined}
         submitText={t('labels.submit')}
-        onSubmit={handleSubmit(onVerifyCode, logValidationErrors)}
+        onSubmit={handleSubmit(onVerifyCode, reportValidationErrors)}
         footerText={
           isSignup
             ? t('auth.alreadyVerified')

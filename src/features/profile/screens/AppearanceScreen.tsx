@@ -16,7 +16,7 @@ import {
   DENSITY_META,
   FONT_SCALE_META,
 } from '#/theme/foundations/appearanceConfig';
-import { appConfig } from '#/config/appConfig';
+import { brand } from '#/theme/foundations/brand';
 import { Text } from '#components/atoms/Text';
 import { SubScreen } from '#components/templates/SubScreen';
 import { colors } from '#/theme/foundations/colors';
@@ -41,10 +41,6 @@ const APP_COLORS: {
   {
     labelKey: 'storageLocationForm.colorRed',
     value: colors.accentSwatches.red,
-  },
-  {
-    labelKey: 'storageLocationForm.colorTeal',
-    value: colors.accentSwatches.teal,
   },
   {
     labelKey: 'storageLocationForm.colorPink',
@@ -72,6 +68,11 @@ export default function AppearanceScreen() {
     setFontScalePreference,
     setHighContrast,
   } = useThemePreferences();
+  // A saved colour outside this list (Teal) carries no readable content, so
+  // `applyAppearance` skips it and the default brand shows.
+  const selectedColor = APP_COLORS.some(c => c.value === primaryColorOverride)
+    ? primaryColorOverride
+    : null;
 
   return (
     <SubScreen title={t('labels.appearance')}>
@@ -97,18 +98,25 @@ export default function AppearanceScreen() {
 
         {/* App Color */}
         <Text role="bodyStrong">{t('appearance.brandColor')}</Text>
-        <View style={styles.colorRow}>
+        <View
+          style={styles.colorRow}
+          // Kept as a node: Fabric flattens a layout-only View, group role and all.
+          collapsable={false}
+          accessibilityRole="radiogroup"
+          accessibilityLabel={t('appearance.brandColor')}
+        >
           {APP_COLORS.map(c => (
             <AppPressable
               key={c.labelKey}
               haptic
               onPress={() => setPrimaryColorOverride(c.value)}
+              accessibilityRole="radio"
+              accessibilityState={{ checked: selectedColor === c.value }}
               accessibilityLabel={t(c.labelKey)}
               style={[
                 styles.colorSwatch,
-                { backgroundColor: c.value ?? appConfig.branding.primaryColor },
-                (primaryColorOverride ?? null) === c.value &&
-                  styles.colorSwatchSelected,
+                { backgroundColor: c.value ?? brand[500] },
+                selectedColor === c.value && styles.colorSwatchSelected,
               ]}
             />
           ))}
@@ -167,8 +175,8 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
   },
   colorSwatch: {
-    width: 40,
-    height: 40,
+    width: theme.sizes.touchTarget.min,
+    height: theme.sizes.touchTarget.min,
     borderRadius: theme.radii.full,
   },
   colorSwatchSelected: {

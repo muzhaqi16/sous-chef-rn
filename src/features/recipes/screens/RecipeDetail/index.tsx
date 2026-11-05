@@ -90,6 +90,17 @@ function cookedSummary(
   });
 }
 
+function MetaItem({ icon, children }: { icon: IconName; children: string }) {
+  return (
+    <View style={styles.metaItem}>
+      <Icon name={icon} size={14} tone="textSecondary" />
+      <Text role="caption" tone="secondary">
+        {children}
+      </Text>
+    </View>
+  );
+}
+
 /** Submit a draft, withdraw one in review, unpublish a published one. */
 const PUBLISH_ACTION_ICON: Readonly<Record<RecipeStatus, IconName>> = {
   [RecipeStatus.Draft]: 'cloud-upload-outline',
@@ -505,32 +516,28 @@ const RecipeDetailScreen: React.FC = () => {
         {/* Recipe Metadata */}
         <View style={styles.metadata}>
           {displayData.servings != null && (
-            <Text role="caption" tone="secondary">
-              🍽️ {t('labels.servingsCount', { count: displayData.servings })}
-            </Text>
+            <MetaItem icon="restaurant-outline">
+              {t('labels.servingsCount', { count: displayData.servings })}
+            </MetaItem>
           )}
           {!!displayData.readyInMinutes && (
-            <Text role="caption" tone="secondary">
-              ⏱️{' '}
-              {t('labels.min', {
-                count: displayData.readyInMinutes,
-              })}
-            </Text>
+            <MetaItem icon="time-outline">
+              {t('labels.min', { count: displayData.readyInMinutes })}
+            </MetaItem>
           )}
           {displayData.healthScore != null &&
             !isNaN(displayData.healthScore) && (
-              <Text role="caption" tone="secondary">
-                💚{' '}
+              <MetaItem icon="leaf-outline">
                 {t('recipes.percentHealthy', {
                   percent: Math.round(displayData.healthScore),
                 })}
-              </Text>
+              </MetaItem>
             )}
           {/* Cooked count - inline with metadata */}
           {!!isSaved && (
             <Pressable
               style={({ pressed }) => [
-                styles.cookedMetadata,
+                styles.metaItem,
                 pressed && { opacity: 0.7 },
               ]}
               onPress={() => setCookedModalVisible(true)}
@@ -597,28 +604,28 @@ const RecipeDetailScreen: React.FC = () => {
           <View style={styles.tags}>
             {!!displayData.vegetarian && (
               <View style={styles.tag}>
-                <Text role="label" tone="accent">
+                <Text role="label" tone="onPrimaryLight">
                   {t('labels.vegetarian')}
                 </Text>
               </View>
             )}
             {!!displayData.vegan && (
               <View style={styles.tag}>
-                <Text role="label" tone="accent">
+                <Text role="label" tone="onPrimaryLight">
                   {t('labels.vegan')}
                 </Text>
               </View>
             )}
             {!!displayData.glutenFree && (
               <View style={styles.tag}>
-                <Text role="label" tone="accent">
+                <Text role="label" tone="onPrimaryLight">
                   {t('recipes.diet.GLUTEN_FREE')}
                 </Text>
               </View>
             )}
             {!!displayData.dairyFree && (
               <View style={styles.tag}>
-                <Text role="label" tone="accent">
+                <Text role="label" tone="onPrimaryLight">
                   {t('recipes.dairyFree')}
                 </Text>
               </View>
@@ -865,7 +872,7 @@ const styles = StyleSheet.create(theme => ({
     rowGap: theme.spacing.xs,
     marginBottom: theme.spacing.md,
   },
-  cookedMetadata: {
+  metaItem: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: theme.spacing.xs,
@@ -877,7 +884,7 @@ const styles = StyleSheet.create(theme => ({
     marginBottom: theme.spacing.lg,
   },
   tag: {
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,

@@ -46,6 +46,7 @@ import { motion } from '#/theme/motion';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { suggestedLineCost } from '#features/shoppingList/utils/purchasePrice';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { layout } from '#/theme/foundations/spacing';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 /**
@@ -258,7 +259,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             tutorialActions?.notifyMoveToPantryTapped();
           }}
           style={styles.moveToPantryButton}
-          hitSlop={hitSlop.md}
+          hitSlop={MOVE_TO_PANTRY_SLOP}
           accessibilityLabel={t('moveToPantry.title')}
           testID={shoppingListTestIDs.itemMoveToPantry(itemId)}
         >
@@ -415,9 +416,19 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   );
 };
 
+/** Half the 4 dp gap to the quantity chip on the left; the row's inset on the right. */
+const MOVE_TO_PANTRY_SLOP = {
+  top: hitSlop.md,
+  bottom: hitSlop.md,
+  left: 2,
+  right: layout.rowInsetHorizontal,
+};
+
 const styles = StyleSheet.create(theme => ({
+  // 40 wide: with its slop it reaches the touch floor inside the row.
   moveToPantryButton: {
-    padding: theme.spacing.xs,
+    paddingVertical: theme.spacing.xs,
+    paddingHorizontal: theme.spacing.sm,
   },
   rightElementContainer: {
     flexDirection: 'row',

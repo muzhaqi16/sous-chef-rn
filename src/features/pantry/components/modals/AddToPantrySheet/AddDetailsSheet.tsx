@@ -1,9 +1,10 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import React, { useState, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useForm, useWatch, type Path, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { View } from 'react-native';
+import { BackHandler, View } from 'react-native';
 import { useTranslation } from '#/i18n';
+import type { Translate } from '#/i18n/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PagerView from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
@@ -24,7 +25,10 @@ import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator
 import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { takesContents } from '#domain/stockAmount';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
+import { alertService } from '#/services/alertService';
+import { destructiveConfirm } from '#/services/destructiveConfirm';
+import type { ThemedBottomSheetTextInputRef } from '#components/atoms/themedComponents';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   addPantryItemSchema,
@@ -41,7 +45,17 @@ interface AddDetailsSheetProps {
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
+  /** Holds the parent sheet open against a pan-down while input would be lost. */
+  onHoldOpen?: (held: boolean) => void;
 }
+
+/** Typed input is never dropped without asking, the way `FormScreen` asks. */
+const confirmDiscard = (translate: Translate, discard: () => void) =>
+  alertService.alert(
+    translate('confirmations.discardChangesTitle'),
+    translate('confirmations.discardChanges'),
+    destructiveConfirm(translate('labels.discard'), discard),
+  );
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   pantryId,
@@ -49,6 +63,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   storageLocations = [],
   onClose,
   onSuccess,
+  onHoldOpen,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -59,6 +74,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     t('addToPantry.pageStock'),
   ];
   const pagerRef = useRef<PagerView>(null);
+  const itemNameRef = useRef<ThemedBottomSheetTextInputRef>(null);
 
   // Page state
   const [currentPage, setCurrentPage] = useState(0);
@@ -70,7 +86,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     handleSubmit,
     setValue,
     trigger,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<AddPantryItemFormData>({
     resolver: yupResolver(addPantryItemSchema),
     defaultValues: addPantryItemDefaults(prefilledItemName),
@@ -203,6 +219,26 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     pagerRef.current?.setPage(index);
   };
 
+  const handleCancel = () => (isDirty ? confirmDiscard(t, onClose) : onClose());
+
+  useEffect(() => {
+    onHoldOpen?.(isDirty);
+    return () => onHoldOpen?.(false);
+  }, [isDirty, onHoldOpen]);
+
+  // Registered after the sheet's own Back handler, so it runs first.
+  useEffect(() => {
+    if (!isDirty) return;
+    const subscription = BackHandler.addEventListener(
+      'hardwareBackPress',
+      () => {
+        confirmDiscard(t, onClose);
+        return true;
+      },
+    );
+    return () => subscription.remove();
+  }, [isDirty, onClose, t]);
+
   const { handleConfirm, loading } = usePantryItemSubmission({
     pantryId,
     onSuccess,
@@ -214,18 +250,21 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         title={t('addToPantry.addItemDetails')}
         cancelLabel={t('labels.cancel')}
         confirmLabel={loading ? t('labels.adding') : t('labels.add')}
-        onCancel={onClose}
+        onCancel={handleCancel}
         // `handleSubmit` validates first: an invalid form shows its message on
         // the field and jumps to that field's page. Only a valid form reaches
         // `handleConfirm`.
         onConfirm={() => {
           void handleSubmit(handleConfirm, formErrors => {
-            logValidationErrors(formErrors);
+            reportValidationErrors(formErrors);
             const [firstField] = Object.keys(formErrors);
             if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
               return;
             const page = FIELD_PAGE[firstField];
             if (page !== undefined) handlePageChange(page);
+            // Its fields write through `setValue`, so React Hook Form holds no
+            // ref to focus; the one a submit can leave empty is Item Name.
+            if (firstField === 'itemName') itemNameRef.current?.focus();
           })();
         }}
         saving={loading}
@@ -255,6 +294,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
           itemName={itemName}
           setItemName={setItemName}
           itemNameError={errors.itemName?.message}
+          itemNameRef={itemNameRef}
           brand={brand}
           setBrand={setBrand}
           category={category}

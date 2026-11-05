@@ -18,7 +18,6 @@ const BRAND_SWATCHES = [
   '#16A34A',
   '#7C3AED',
   '#DC2626',
-  '#0D9488',
   '#f51aff',
 ];
 
@@ -48,17 +47,10 @@ describe('onColor', () => {
     expect(wrong).toEqual([]);
   });
 
-  it('clears AA body contrast on every brand colour that can', () => {
-    // Teal reaches only 4.44:1 against its better foreground, so no choice of
-    // text colour clears AA on it — the swatch itself needs darkening.
-    const TOPS_OUT_BELOW_AA = ['#0D9488'];
-
-    const failing = BRAND_SWATCHES.filter(fill => {
-      const fg = onColor(fill, WHITE, NEAR_BLACK);
-      return (
-        chroma.contrast(fill, fg) < AA_BODY && !TOPS_OUT_BELOW_AA.includes(fill)
-      );
-    });
+  it('clears AA body contrast on every offered brand colour', () => {
+    const failing = BRAND_SWATCHES.filter(
+      fill => chroma.contrast(fill, onColor(fill, WHITE, NEAR_BLACK)) < AA_BODY,
+    );
 
     expect(failing).toEqual([]);
   });
@@ -94,13 +86,13 @@ describe('on-fill tokens', () => {
   });
 
   it('keep a user-picked brand at AA, where the foreground is still derived', () => {
-    // Only the default is fixed. Teal tops out at 4.44:1 against either
-    // candidate, so it is the one swatch no foreground can rescue.
+    // Only the default is fixed; Teal, which no foreground reached AA on, is
+    // not offered.
     const failing = BRAND_SWATCHES.slice(1).filter(
       fill => chroma.contrast(fill, onColor(fill, WHITE, NEAR_BLACK)) < AA_BODY,
     );
 
-    expect(failing).toEqual(['#0D9488']);
+    expect(failing).toEqual([]);
   });
 
   it('keep a selected chip readable in both themes', () => {

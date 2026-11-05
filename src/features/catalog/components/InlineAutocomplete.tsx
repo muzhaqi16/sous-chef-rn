@@ -1,5 +1,9 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { View, type LayoutChangeEvent } from 'react-native';
+import {
+  View,
+  type LayoutChangeEvent,
+  type ReturnKeyTypeOptions,
+} from 'react-native';
 // The dropdown must own its scroll gesture inside a draggable bottom sheet.
 // RNGH's ScrollView prevents the sheet's pan handler from interrupting it.
 import { ScrollView } from 'react-native-gesture-handler';
@@ -8,18 +12,29 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { StyleSheet } from 'react-native-unistyles';
 // Themed wrapper, not gorhom's raw `BottomSheetTextInput`: the raw one sets no
 // `placeholderTextColor` and falls back to the OS default, ignoring the theme.
-import { ThemedBottomSheetTextInput } from '#components/atoms/themedComponents';
+import {
+  ThemedBottomSheetTextInput,
+  type ThemedBottomSheetTextInputRef,
+} from '#components/atoms/themedComponents';
 import { Label } from '#components/atoms/Label';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { useNoMatchCopy } from '#hooks/search/useNoMatchCopy';
 import { catalogTestIDs } from '#features/catalog/testIDs';
+import { useFieldAccessibility } from '#hooks/ui/useFieldAccessibility';
 
 /** Tallest the suggestion list is allowed to get; mirrored in `suggestionsContainer`. */
 const DROPDOWN_MAX_HEIGHT = 220;
 /** The list's offset below the input; mirrored from `suggestionsContainer.marginTop`. */
 const DROPDOWN_GAP = 4;
+
+/** How the return key moves on from a field: the next field's input, or done. */
+export interface FieldChaining {
+  inputRef?: React.Ref<ThemedBottomSheetTextInputRef>;
+  returnKeyType?: ReturnKeyTypeOptions;
+  onSubmitEditing?: () => void;
+}
 
 export interface InlineAutocompleteProps<T> {
   // Core
@@ -55,6 +70,7 @@ export interface InlineAutocompleteProps<T> {
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   /** The field itself was finished: blurred or submitted. */
   onEndEditing?: () => void;
+  chaining?: FieldChaining;
 
   // Renders a spacer of the open list's height: the list is absolute, so an
   // `enableDynamicSizing` sheet doesn't measure it and it opens past the sheet's
@@ -86,6 +102,7 @@ export function InlineAutocomplete<T>({
   autoCapitalize = 'none',
   reserveDropdownSpace = false,
   onEndEditing,
+  chaining,
 }: InlineAutocompleteProps<T>) {
   const [searchTerm, setSearchTerm] = useState(value);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -207,6 +224,7 @@ export function InlineAutocomplete<T>({
   };
 
   const variantStyles = styles.useVariants({ error: !!error });
+  const fieldAccessibility = useFieldAccessibility({ label, required, error });
 
   return (
     <>
@@ -225,6 +243,12 @@ export function InlineAutocomplete<T>({
             onFocus={handleFocus}
             autoCapitalize={autoCapitalize}
             testID={testID}
+            {...fieldAccessibility}
+            ref={chaining?.inputRef}
+            returnKeyType={chaining?.returnKeyType}
+            onSubmitEditing={chaining?.onSubmitEditing}
+            // Hands focus on without the keyboard dropping in between.
+            submitBehavior={chaining?.onSubmitEditing ? 'submit' : undefined}
           />
           {!!loading && !!hasSearchQuery && (
             <ThemedActivityIndicator

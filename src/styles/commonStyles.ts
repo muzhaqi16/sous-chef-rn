@@ -274,7 +274,7 @@ export const commonStyles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   bottomSheetOptionTextSelected: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
     ...theme.type.bodyStrong,
   },
 

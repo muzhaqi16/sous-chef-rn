@@ -34,6 +34,27 @@ describe('SettingsSection', () => {
     },
   ];
 
+  it('renders a lone row with no heading when given no title', () => {
+    render(
+      <SettingsSection
+        items={[
+          {
+            key: 'logout',
+            label: 'Log Out',
+            type: 'action',
+            onPress: jest.fn(),
+          },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('setting-row-logout')).toBeTruthy();
+    expect(screen.getAllByText(/./).map(node => node.props.children)).toEqual([
+      'Log Out',
+      'first',
+      'last',
+    ]);
+  });
+
   it('renders section title', () => {
     render(<SettingsSection title="Preferences" items={defaultItems} />);
     expect(screen.getByText('Preferences')).toBeTruthy();

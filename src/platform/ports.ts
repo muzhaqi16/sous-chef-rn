@@ -152,6 +152,12 @@ export interface Haptics {
   warning(): void;
 }
 
+/** The host's screen reader, when one is running. */
+export interface ScreenReader {
+  /** Speaks `message` without moving focus; does nothing with no reader on. */
+  announce(message: string): void;
+}
+
 /** The OS's own rating prompt; whether it appears is the OS's call. */
 export interface ReviewPrompt {
   request(): void;
@@ -213,6 +219,7 @@ export interface PlatformServices {
   appearance: Appearance;
   imagePrefetch: ImagePrefetch;
   haptics: Haptics;
+  screenReader: ScreenReader;
   reviewPrompt: ReviewPrompt;
   approximateLocation: ApproximateLocation;
   fileParts: FileParts;

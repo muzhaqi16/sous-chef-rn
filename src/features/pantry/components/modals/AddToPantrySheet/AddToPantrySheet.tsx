@@ -237,12 +237,13 @@ export const AddToPantrySheet: React.FC<AddToPantrySheetProps> = ({
       startStep={startStep}
       shouldFetch={state.shouldFetch}
       initialSearchQuery={initialSearchQuery}
-      renderDetails={({ goBack }) => (
+      renderDetails={({ goBack, holdOpen }) => (
         <AddDetailsSheet
           pantryId={pantryId}
           prefilledItemName={prefilledItemName}
           storageLocations={storageLocations}
           onClose={goBack}
+          onHoldOpen={holdOpen}
           onSuccess={handleAddSuccess}
         />
       )}

@@ -341,6 +341,7 @@
     "default": "I parazgjedhur",
     "defaultServings": "Pjesë të parazgjedhura",
     "delete": "Fshi",
+    "deleteNamed": "Të fshihet {{name}}?",
     "deleteList": "Fshi listën",
     "deletePantry": "Fshi qilarin",
     "deletedUser": "Përdorues i fshirë",
@@ -724,8 +725,7 @@
     "nameMin": "Emri duhet të ketë të paktën 2 karaktere"
   },
   "quantityBadge": {
-    "a11yLabel": "Sasia: {{quantity}}. Prek për të modifikuar",
-    "a11yLabelReadOnly": "Sasia: {{quantity}}",
+    "a11yLabel": "Sasia: {{quantity}}",
     "a11yHint": "Hap redaktuesin e sasisë"
   },
   "tutorial": {
@@ -746,7 +746,6 @@
     "partialBody": "Kaq ka pajisja jote për momentin."
   },
   "tabBar": {
-    "actionButton": "Butoni i veprimit",
     "actionButtonHint": "Hap veprimin për skedën aktuale",
     "addMenuHint": "Hap mënyrat për të shtuar"
   },

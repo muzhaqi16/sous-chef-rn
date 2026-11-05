@@ -205,7 +205,10 @@ describe('ShoppingListItemDetail', () => {
     renderWithApollo(<ShoppingListItemDetail route={route} />, {
       operationMocks: [buildItemMock('si1', buildShoppingListItem())],
     });
-    expect(screen.getByText('Item Details')).toBeTruthy();
+    // The bar's title is hidden from screen readers: it copies the body title.
+    expect(
+      screen.getByText('Item Details', { includeHiddenElements: true }),
+    ).toBeTruthy();
   });
 
   it('shows category', async () => {

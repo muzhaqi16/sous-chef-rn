@@ -27,7 +27,7 @@ import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { alertService } from '#/services/alertService';
 import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { localizeNumericHint } from '#/utils/formatters/number';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 
@@ -139,7 +139,7 @@ export const ShoppingListDetailsStep: React.FC<
       setSaving,
       () => alertService.alert(t('labels.error'), t('errors.addItemFailed')),
     );
-  }, logValidationErrors);
+  }, reportValidationErrors);
 
   return (
     <View style={styles.container} testID={shoppingListTestIDs.addSheetDetails}>

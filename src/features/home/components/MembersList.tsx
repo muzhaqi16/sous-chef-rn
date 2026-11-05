@@ -132,7 +132,7 @@ const styles = StyleSheet.create(theme => ({
           borderColor: theme.colors.primary,
         },
         false: {
-          backgroundColor: theme.colors.primary + '20',
+          backgroundColor: theme.colors.primaryLight,
         },
       },
     },
@@ -144,7 +144,7 @@ const styles = StyleSheet.create(theme => ({
           color: theme.colors.onPrimary,
         },
         false: {
-          color: theme.colors.primary,
+          color: theme.colors.onPrimaryLight,
         },
       },
     },

@@ -129,7 +129,7 @@ const ChipGroup: React.FC<ChipGroupProps> = ({ label, chips, onPress }) => {
         {chips.length > 0 ? (
           chips.map(chip => (
             <View key={chip.id} style={styles.chip}>
-              <Text role="caption" tone="accent">
+              <Text role="caption" tone="onPrimaryLight">
                 {chip.label}
               </Text>
             </View>
@@ -172,6 +172,6 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.lg,
     borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
   },
 }));

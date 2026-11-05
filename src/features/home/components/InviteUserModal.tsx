@@ -17,7 +17,7 @@ import { localizedErrorMessage } from '#/services/errorService';
 import type { Translate } from '#/i18n/types';
 import { useForm, Controller } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { logValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import {
   inviteUserSchema,
   type InviteUserFormValues,
@@ -204,7 +204,7 @@ const InviteUserForm: React.FC<Omit<InviteUserModalProps, 'visible'>> = ({
     );
   };
 
-  const handleSubmit = submitForm(onValid, logValidationErrors);
+  const handleSubmit = submitForm(onValid, reportValidationErrors);
 
   return (
     <>
@@ -348,7 +348,7 @@ const styles = StyleSheet.create(theme => ({
       selected: {
         true: {
           borderColor: theme.colors.primary,
-          backgroundColor: theme.colors.primary + '10',
+          backgroundColor: theme.colors.primaryLight,
         },
         false: {
           borderColor: theme.colors.border,

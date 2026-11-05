@@ -92,7 +92,7 @@ export const UsageTab: React.FC<
         <TrendLineChart
           data={usageData?.usageTrend ?? []}
           height={200}
-          uniProps={theme => ({ color: theme.colors.primary })}
+          uniProps={theme => ({ color: theme.colors.primaryText })}
           subtitle={t('pantryAnalytics.usageTrendSubtitle')}
         />
       </ChartSection>
@@ -126,7 +126,7 @@ export const UsageTab: React.FC<
       >
         <TopItemsBarChart
           data={topUsedItemsData}
-          uniProps={theme => ({ color: theme.colors.primary })}
+          uniProps={theme => ({ color: theme.colors.primaryText })}
         />
       </ChartSection>
     </ScrollView>

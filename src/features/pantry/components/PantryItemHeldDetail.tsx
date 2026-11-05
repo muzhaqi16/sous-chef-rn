@@ -96,7 +96,7 @@ export const PantryItemHeldDetail: React.FC<PantryItemHeldDetailProps> = ({
 
 const styles = StyleSheet.create(theme => ({
   amount: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   content: {
     gap: theme.spacing.md,

@@ -65,14 +65,16 @@ describe('QuantityBadge', () => {
     expect(mockOnPress).not.toHaveBeenCalled();
   });
 
-  it('has correct accessibility label', () => {
+  // What a tap does is the hint's to say, so the label is only the value.
+  it('names the quantity, and leaves what a tap does to the hint', () => {
     render(<QuantityBadge quantity={5} unit="oz" onPress={mockOnPress} />);
-    expect(screen.getByLabelText('Quantity: 5 oz. Tap to edit')).toBeTruthy();
+    const badge = screen.getByLabelText('Quantity: 5 oz');
+    expect(badge.props.accessibilityHint).toBe('Opens quantity editor');
   });
 
   it('has correct accessibility label without unit', () => {
     render(<QuantityBadge quantity={3} onPress={mockOnPress} />);
-    expect(screen.getByLabelText('Quantity: 3. Tap to edit')).toBeTruthy();
+    expect(screen.getByLabelText('Quantity: 3')).toBeTruthy();
   });
 
   it.each([

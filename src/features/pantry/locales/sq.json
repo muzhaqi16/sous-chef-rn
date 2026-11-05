@@ -39,7 +39,6 @@
       "emptyTitle": "Ende pa lote",
       "packageSize": "Paketimi: {{size}}"
     },
-    "deleteTitle": "Fshi artikullin",
     "discardBatchesTitle": "Hidh grupet e skaduara",
     "discardBatchesBody": "Kjo do t'i shënojë të gjitha grupet e skaduara si të shpenzuara.",
     "discardItemTitle": "Hidh artikullin e skaduar",

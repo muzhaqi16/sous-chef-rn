@@ -23,7 +23,7 @@ import {
   parseWeight,
   type CorrectWeightFormValues,
 } from './correctWeightFormConfig';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import type { PackageSizeCorrectionInput } from '#features/pantry/types';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { currentReading, formatReading } from '#domain/measure';
@@ -148,7 +148,7 @@ export const CorrectPackageSizeModal: React.FC<
       return;
     }
     onClose();
-  }, logValidationErrors);
+  }, reportValidationErrors);
   const handleConfirm = () => {
     void submit();
   };

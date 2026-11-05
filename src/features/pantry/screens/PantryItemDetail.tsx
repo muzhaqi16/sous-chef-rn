@@ -665,7 +665,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.xs,
   },
   categoryText: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   infoColumns: {
     flexDirection: 'row',

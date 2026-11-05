@@ -41,7 +41,9 @@ const DECORATIVE: AccessibilityProps = {
 };
 
 export const TONE_TO_COLOR = {
-  primary: (t: Theme) => t.colors.primary,
+  // A glyph is a foreground: the brand fill `primary` reads 2.35:1 on a light page.
+  primary: (t: Theme) => t.colors.primaryText,
+  onPrimaryLight: (t: Theme) => t.colors.onPrimaryLight,
   secondary: (t: Theme) => t.colors.secondary,
   border: (t: Theme) => t.colors.border,
   textPrimary: (t: Theme) => t.colors.textPrimary,

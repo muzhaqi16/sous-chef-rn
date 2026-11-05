@@ -87,19 +87,9 @@ jest.mock('#features/profile/screens/useConfigurableSettings', () => ({
           },
         ],
       },
-      {
-        title: '',
-        items: [
-          {
-            key: 'logout',
-            label: 'Logout',
-            type: 'action',
-            onPress: jest.fn(),
-          },
-        ],
-      },
     ],
     BiometricModal: null,
+    logout: jest.fn(),
   }),
 }));
 

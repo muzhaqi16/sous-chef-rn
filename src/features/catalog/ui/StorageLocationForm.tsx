@@ -497,13 +497,13 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textSecondary,
   },
   typeLabelSelected: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   parentLabel: {
     color: theme.colors.textSecondary,
   },
   parentLabelSelected: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   hint: {
     marginTop: theme.spacing.xs,

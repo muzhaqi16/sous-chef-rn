@@ -15,7 +15,7 @@ import { Button } from '#components/molecules/Button';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { toastService } from '#services/toastService';
 import { firstNonBlank } from '#/utils/firstNonBlank';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { useReportContent } from '#features/profile/hooks/useReportContent';
 import { REPORT_TYPE_LABEL_KEYS } from '#features/profile/utils/reportLabels';
 import { profileTestIDs } from '#features/profile/testIDs';
@@ -76,7 +76,7 @@ const ReportContentForm: React.FC<ReportContentFormProps> = ({
         break;
     }
     onClose();
-  }, logValidationErrors);
+  }, reportValidationErrors);
 
   return (
     <>

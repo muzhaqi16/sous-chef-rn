@@ -17,6 +17,7 @@ type Ground =
   | 'backgroundSecondary'
   | 'surface'
   | 'surfaceVariant'
+  | 'primaryLight'
   | 'errorLight'
   | 'successLight'
   | 'warningLight'
@@ -43,6 +44,7 @@ const GROUNDS: Record<TextTone, Ground[]> = {
   accent: PAGE,
   // The foreground of a `primary` fill, never set on a page ground.
   onPrimary: [],
+  onPrimaryLight: ['primaryLight'],
 };
 
 interface Exemption {
@@ -57,6 +59,11 @@ const BELOW_AA_BY_DECISION: Exemption[] = [
     tone: 'accent',
     reason:
       'the brand orange is the design colour by decision; onColor.test.ts pins the same trade for onPrimary',
+  },
+  {
+    theme: 'light',
+    tone: 'onPrimaryLight',
+    reason: 'the same brand orange, on its own tint chip',
   },
 ];
 
@@ -104,5 +111,39 @@ describe('text tone contrast', () => {
     ).map(e => `${e.theme} ${e.tone}`);
 
     expect(stale).toEqual([]);
+  });
+});
+
+interface Pair {
+  what: string;
+  fg: string;
+  bg: string;
+}
+
+/** The input paints its own ground; a borderless field reads on `surface`. */
+const PLACEHOLDER_GROUNDS: ('inputBackground' | 'surface')[] = [
+  'inputBackground',
+  'surface',
+];
+
+describe('copy outside the text tones', () => {
+  it('sets the placeholder and every alert banner at AA body contrast', () => {
+    const pairs = THEMES.flatMap(({ themeName, colors }): Pair[] => [
+      ...PLACEHOLDER_GROUNDS.map(ground => ({
+        what: `${themeName} inputPlaceholder on ${ground}`,
+        fg: colors.inputPlaceholder,
+        bg: colors[ground],
+      })),
+      ...Object.entries(colors.alertBanner).map(([kind, banner]) => ({
+        what: `${themeName} alertBanner.${kind}`,
+        fg: banner.text,
+        bg: banner.bg,
+      })),
+    ]);
+    const failing = pairs
+      .filter(p => chroma.contrast(p.fg, p.bg) < AA_BODY)
+      .map(p => `${p.what}: ${chroma.contrast(p.fg, p.bg).toFixed(2)}`);
+
+    expect(failing).toEqual([]);
   });
 });

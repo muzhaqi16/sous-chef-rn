@@ -74,6 +74,8 @@ export function AddItemSheet<
   const goBackToSearch = () => {
     setStep('search');
   };
+  // Set by a details form holding input, so a pan-down cannot drop it.
+  const [heldOpen, setHeldOpen] = useState(false);
 
   // Shared state management
   const state = useAddItemSheetState({
@@ -227,6 +229,7 @@ export function AddItemSheet<
     <BottomSheetModal
       ref={bottomSheetRef}
       {...modalProps}
+      enablePanDownToClose={!heldOpen}
       // @ts-expect-error - BottomSheetModal doesn't officially support testID but it works
       testID={catalogTestIDs.addItemSheetModal(config.testIDPrefix)}
     >
@@ -248,6 +251,7 @@ export function AddItemSheet<
           // Opened on the form, there is no search to go back to: back closes.
           renderDetails({
             goBack: openingStep === 'details' ? onClose : goBackToSearch,
+            holdOpen: setHeldOpen,
           })
         ) : inDrilldown ? (
           <SuggestionDrilldown

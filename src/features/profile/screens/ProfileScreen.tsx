@@ -162,6 +162,17 @@ export const ProfileScreen = () => {
             )}
           />
         ))}
+      <SettingsSection
+        items={[
+          {
+            key: 'logout',
+            label: t('profile.labels.logout'),
+            type: 'action',
+            onPress: handleLogout,
+            testID: profileTestIDs.logoutRow,
+          },
+        ]}
+      />
       {BiometricModal}
       <ActionTray ref={actionTrayRef}>
         <View style={styles.menu}>

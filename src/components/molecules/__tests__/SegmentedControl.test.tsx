@@ -32,6 +32,17 @@ describe('SegmentedControl', () => {
     expect(screen.queryByText('Frequency')).toBeNull();
   });
 
+  it('announces each option as a radio, the value checked', () => {
+    render(<SegmentedControl {...defaultProps} label="Frequency" />);
+
+    expect(
+      screen.getByRole('radio', { name: 'daily', checked: true }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('radio', { name: 'weekly', checked: false }),
+    ).toBeTruthy();
+  });
+
   it('calls onChange with selected option when pressed', async () => {
     const user = userEvent.setup();
     render(<SegmentedControl {...defaultProps} />);

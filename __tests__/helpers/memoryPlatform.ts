@@ -185,6 +185,7 @@ export function createMemoryPlatform(): PlatformServices {
     appearance: { applyTheme: () => {}, apply: () => {} },
     imagePrefetch: { prefetch: () => {} },
     haptics: { selection: () => {}, warning: () => {} },
+    screenReader: { announce: () => {} },
     reviewPrompt: { request: () => {} },
     // A test host that has never been asked; a test that needs a place mocks it.
     approximateLocation: {

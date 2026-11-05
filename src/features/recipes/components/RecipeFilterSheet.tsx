@@ -396,7 +396,7 @@ const styles = StyleSheet.create(theme => ({
   infoBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: theme.colors.primary + '1A',
+    backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingVertical: theme.spacing.smPlus,

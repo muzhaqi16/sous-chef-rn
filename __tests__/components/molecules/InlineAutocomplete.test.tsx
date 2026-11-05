@@ -1,7 +1,8 @@
 'use no memo';
 
 import React from 'react';
-import { render } from '@testing-library/react-native';
+import { render, screen } from '@testing-library/react-native';
+import { t } from '#/i18n';
 import { Text } from '#components/atoms/Text';
 import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
 
@@ -51,6 +52,27 @@ describe('InlineAutocomplete', () => {
       <InlineAutocomplete {...defaultProps} error="Field is required" />,
     );
     expect(getByText('Field is required')).toBeTruthy();
+  });
+
+  it('is named by its visible label, with required and its error', () => {
+    render(
+      <InlineAutocomplete
+        {...defaultProps}
+        label="Brand"
+        required
+        error="Pick a brand"
+        placeholder="e.g. Organic Valley"
+        testID="brand"
+      />,
+    );
+    const input = screen.getByTestId('brand');
+
+    expect(input.props.accessibilityLabel).toBe(
+      t('a11y.requiredField', { label: 'Brand' }),
+    );
+    expect(input.props.accessibilityHint).toBe(
+      t('a11y.fieldError', { error: 'Pick a brand' }),
+    );
   });
 
   it('renders with testID', () => {

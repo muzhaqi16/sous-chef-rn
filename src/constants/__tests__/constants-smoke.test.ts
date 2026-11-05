@@ -14,6 +14,7 @@ import {
   TAB_BAR_HEIGHT,
 } from '../layout';
 import { motion } from '#/theme/motion';
+import { Dimensions } from 'react-native';
 
 describe('animations constants', () => {
   it('exports spring presets with expected keys', () => {
@@ -119,6 +120,19 @@ describe('layout', () => {
       const button = 56 + 12;
       expect(getScrollClearancePadding(0)).toBe(96 + button);
       expect(getScrollClearancePadding(34)).toBe(114 + button);
+    });
+
+    // Landscape puts the button in the bar's row, so only the bar is cleared.
+    it('clears only the bar in landscape', () => {
+      const window = jest.spyOn(Dimensions, 'get').mockReturnValue({
+        width: 915,
+        height: 411,
+        scale: 2,
+        fontScale: 1,
+      });
+
+      expect(getScrollClearancePadding(0)).toBe(96);
+      window.mockRestore();
     });
 
     it('is always the larger of the two', () => {

@@ -341,6 +341,7 @@
     "default": "Default",
     "defaultServings": "Default Servings",
     "delete": "Delete",
+    "deleteNamed": "Delete {{name}}?",
     "deleteList": "Delete List",
     "deletePantry": "Delete Pantry",
     "deletedUser": "Deleted user",
@@ -466,7 +467,7 @@
     "saveChanges": "Save Changes",
     "saving": "Saving...",
     "scanAnother": "Scan Another",
-    "scanBarcode": "Scan Barcode",
+    "scanBarcode": "Scan barcode",
     "scanReceipt": "Scan receipt",
     "searchToAdd": "Search to add",
     "addManually": "Add manually",
@@ -724,8 +725,7 @@
     "nameMin": "Name must be at least 2 characters"
   },
   "quantityBadge": {
-    "a11yLabel": "Quantity: {{quantity}}. Tap to edit",
-    "a11yLabelReadOnly": "Quantity: {{quantity}}",
+    "a11yLabel": "Quantity: {{quantity}}",
     "a11yHint": "Opens quantity editor"
   },
   "tutorial": {
@@ -746,7 +746,6 @@
     "partialBody": "This is what your device holds for now."
   },
   "tabBar": {
-    "actionButton": "Action button",
     "actionButtonHint": "Opens the action for the current tab",
     "addMenuHint": "Opens the ways to add"
   },

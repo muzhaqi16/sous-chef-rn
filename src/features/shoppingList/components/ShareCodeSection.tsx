@@ -261,7 +261,7 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
   },
   shareLinkText: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   sectionTitleSpacing: {
     marginBottom: theme.spacing.base,

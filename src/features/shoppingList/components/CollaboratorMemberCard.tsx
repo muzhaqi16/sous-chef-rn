@@ -197,19 +197,19 @@ const styles = StyleSheet.create(theme => ({
     variants: {
       status: {
         active: {
-          backgroundColor: theme.colors.success + '20',
+          backgroundColor: theme.colors.successLight,
           borderColor: theme.colors.success,
         },
         pending: {
-          backgroundColor: theme.colors.warning + '20',
+          backgroundColor: theme.colors.warningLight,
           borderColor: theme.colors.warning,
         },
         removed: {
-          backgroundColor: theme.colors.textTertiary + '20',
+          backgroundColor: theme.colors.surfaceVariant,
           borderColor: theme.colors.textTertiary,
         },
         owner: {
-          backgroundColor: theme.colors.primary + '20',
+          backgroundColor: theme.colors.primaryLight,
           borderColor: theme.colors.primary,
         },
       },
@@ -220,8 +220,8 @@ const styles = StyleSheet.create(theme => ({
       status: {
         active: { color: theme.colors.success },
         pending: { color: theme.colors.warning },
-        removed: { color: theme.colors.textTertiary },
-        owner: { color: theme.colors.primary },
+        removed: { color: theme.colors.textSecondary },
+        owner: { color: theme.colors.onPrimaryLight },
       },
     },
   },

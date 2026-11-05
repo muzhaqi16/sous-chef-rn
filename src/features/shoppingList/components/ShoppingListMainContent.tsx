@@ -131,7 +131,8 @@ export const ShoppingListMainContent: React.FC<
   } = useAppNavigation();
   const storeModeEnabled = useStoreModeEnabled();
   const budgetAndPricesEnabled = useBudgetAndPricesEnabled();
-  const { setScannerProps, scrollTabBarHidden } = useTabBarSetters();
+  const { setScannerProps, scrollTabBarHidden, setAddMenuOpen } =
+    useTabBarSetters();
   const { addButtonRect, isOverlayOpen } = useTabBarState();
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
@@ -532,9 +533,11 @@ export const ShoppingListMainContent: React.FC<
     icon: 'cart-outline',
     title: t('shoppingListScreen.emptyTitle'),
     description: t('shoppingListScreen.emptyDescription'),
+    // The floating +'s menu, which also says why a member may not add.
     action: {
       label: t('labels.addItem'),
-      onPress: openAddItemSheet,
+      icon: 'add',
+      onPress: () => setAddMenuOpen(true),
     },
   };
 

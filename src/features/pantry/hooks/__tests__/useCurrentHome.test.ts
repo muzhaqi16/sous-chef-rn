@@ -49,6 +49,18 @@ describe('useCurrentHome', () => {
     expect(homes.fired).toEqual([]);
   });
 
+  it('counts no homes until the list has an answer', () => {
+    const unanswered = renderHookWithApollo(() => useCurrentHome(), {
+      cache: seedCache([]),
+      operationMocks: [],
+    });
+    const { result } = renderWithCachedHomes();
+
+    // A list the device never received is unknown, not empty.
+    expect(unanswered.result.current.homeCount).toBeNull();
+    expect(result.current.homeCount).toBe(1);
+  });
+
   // `useDefaultHome` owns the fetch; this read only follows it.
   it('asks nothing when the cached homes list goes', async () => {
     const { cache, homes } = renderWithCachedHomes();

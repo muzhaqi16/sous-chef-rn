@@ -8,7 +8,7 @@ import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { Button } from '#components/molecules/Button';
 import { FormCheckbox } from '#components/molecules/FormCheckbox';
 import { homeTestIDs } from '#features/home/testIDs';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import {
   CREATE_HOME_DEFAULTS,
   createHomeSchema,
@@ -86,7 +86,7 @@ export const CreateHomeForm: React.FC<CreateHomeFormProps> = ({
         <Button
           testID={homeTestIDs.createHomeSubmitButton}
           loading={isCreating}
-          onPress={handleSubmit(onSubmit, logValidationErrors)}
+          onPress={handleSubmit(onSubmit, reportValidationErrors)}
           variant="primary"
           style={styles.button}
         >

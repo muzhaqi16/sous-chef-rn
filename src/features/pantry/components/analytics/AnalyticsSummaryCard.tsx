@@ -34,7 +34,7 @@ export const AnalyticsSummaryCard: React.FC<AnalyticsSummaryCardProps> = ({
             <ThemedIcon
               name={icon}
               size={20}
-              uniProps={t => ({ color: color ?? t.colors.primary })}
+              uniProps={t => ({ color: color ?? t.colors.onPrimaryLight })}
             />
           </View>
         )}
@@ -74,7 +74,7 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: theme.spacing.sm,
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
   },
   title: {
     flex: 1,

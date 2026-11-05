@@ -255,8 +255,11 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           {/* Always mounted; the interpolated opacity (and pointerEvents
               "none") keeps it invisible and inert while the hero is
               expanded, with no UI↔JS mount round-trips during scroll. */}
+          {/* A copy of the large title in the content: one is read, not two. */}
           <Animated.View
             pointerEvents="none"
+            accessibilityElementsHidden
+            importantForAccessibility="no-hide-descendants"
             style={[styles.titleWrap, titleLayoutStyle, titleStyle]}
           >
             {title ? (

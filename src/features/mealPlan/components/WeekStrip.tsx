@@ -176,7 +176,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.onPrimary,
   },
   dayLabelToday: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   dayLabelDisabled: {
     color: theme.colors.textTertiary,
@@ -188,7 +188,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.onPrimary,
   },
   dayNumberToday: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   dayNumberDisabled: {
     color: theme.colors.textTertiary,

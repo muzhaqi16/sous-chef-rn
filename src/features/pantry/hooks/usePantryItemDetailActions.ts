@@ -156,8 +156,10 @@ export function usePantryItemDetailActions({
   };
 
   const handleDelete = () => {
+    const name = item?.itemName;
     alertService.alert(
-      t('pantryItemDetail.deleteTitle'),
+      // Names what goes, so the confirmation can't be read against another item.
+      name ? t('labels.deleteNamed', { name }) : t('labels.delete'),
       t('labels.areYouSureYouWantToDeleteThisItem'),
       destructiveConfirm(t('labels.delete'), () => {
         void confirmDelete();

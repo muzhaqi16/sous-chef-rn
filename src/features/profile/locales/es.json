@@ -389,7 +389,6 @@
     "namePlaceholder": "p. ej. Boicot",
     "rename": "Cambiar nombre",
     "deleteList": "Eliminar lista",
-    "deleteTitle": "¿Eliminar {{name}}?",
     "deleteBody": "Sus marcas se eliminan con ella.",
     "brandCount_one": "{{count}} marca",
     "brandCount_other": "{{count}} marcas",

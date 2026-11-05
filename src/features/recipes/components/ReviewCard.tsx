@@ -150,9 +150,12 @@ export const ReviewCard: React.FC<ReviewCardProps> = ({
         <Icon
           name={hasVotedHelpful ? 'thumbs-up' : 'thumbs-up-outline'}
           size={14}
-          tone={hasVotedHelpful ? 'primary' : 'textSecondary'}
+          tone={hasVotedHelpful ? 'onPrimaryLight' : 'textSecondary'}
         />
-        <Text role="caption" tone={hasVotedHelpful ? 'accent' : 'secondary'}>
+        <Text
+          role="caption"
+          tone={hasVotedHelpful ? 'onPrimaryLight' : 'secondary'}
+        >
           {review.helpful > 0
             ? t('recipes.helpfulWithCount', { count: review.helpful })
             : t('recipes.helpful')}
@@ -232,7 +235,7 @@ const styles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     borderWidth: theme.borderWidth.hairline,
     borderColor: theme.colors.primary,
-    backgroundColor: theme.colors.primary + '10',
+    backgroundColor: theme.colors.primaryLight,
   },
   pressed: {
     opacity: theme.opacity.pressed,

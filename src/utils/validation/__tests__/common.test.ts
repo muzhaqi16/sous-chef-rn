@@ -9,7 +9,9 @@ import {
   passwordRule,
   positiveDecimalRule,
   quantityRule,
+  reportValidationErrors,
 } from '../common';
+import { requirePlatform } from '#platform/install';
 
 describe('emailRule', () => {
   it('accepts valid email', async () => {
@@ -211,5 +213,29 @@ describe('optionalMoneyRule', () => {
     await expect(rule.validate(value)).rejects.toThrow(
       'Enter the amount paid, like 3.49, or leave it empty.',
     );
+  });
+});
+
+describe('reportValidationErrors', () => {
+  it('has the screen reader speak the first message, once', () => {
+    const announce = jest.spyOn(requirePlatform('screenReader'), 'announce');
+
+    reportValidationErrors({
+      itemName: { type: 'required', message: 'Please enter an item name' },
+      brand: { type: 'max', message: 'Brand is too long' },
+    });
+
+    expect(announce).toHaveBeenCalledTimes(1);
+    expect(announce).toHaveBeenCalledWith('Please enter an item name');
+    announce.mockRestore();
+  });
+
+  it('speaks nothing for an error with no message of its own', () => {
+    const announce = jest.spyOn(requirePlatform('screenReader'), 'announce');
+
+    reportValidationErrors({ lines: { type: 'array' } });
+
+    expect(announce).not.toHaveBeenCalled();
+    announce.mockRestore();
   });
 });

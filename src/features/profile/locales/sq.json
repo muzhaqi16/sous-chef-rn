@@ -389,7 +389,6 @@
     "namePlaceholder": "p.sh. Bojkot",
     "rename": "Riemërto listën",
     "deleteList": "Fshi listën",
-    "deleteTitle": "Të fshihet {{name}}?",
     "deleteBody": "Markat e saj hiqen bashkë me të.",
     "brandCount_one": "{{count}} markë",
     "brandCount_other": "{{count}} marka",

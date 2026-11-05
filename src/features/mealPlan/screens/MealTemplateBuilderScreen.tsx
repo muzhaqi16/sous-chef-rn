@@ -27,7 +27,7 @@ import { generateId } from '#/utils/generateId';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { AddMealSheet } from '#features/mealPlan/components/AddMealSheet';
 import {
   changedMealRef,
@@ -330,7 +330,10 @@ export const MealTemplateBuilderScreen: React.FC<
     <FormScreen
       title={isEdit ? t('labels.editTemplate') : t('labels.newTemplate')}
       onClose={goBack}
-      onSave={templateForm.handleSubmit(onValidTemplate, logValidationErrors)}
+      onSave={templateForm.handleSubmit(
+        onValidTemplate,
+        reportValidationErrors,
+      )}
       loading={creating || updating}
       testID={mealPlanTestIDs.templateBuilderScreen}
     >
@@ -560,7 +563,7 @@ export const MealTemplateBuilderScreen: React.FC<
             styles.addMealButton,
             pressed && styles.pressed,
           ]}
-          onPress={itemForm.handleSubmit(onValidItem, logValidationErrors)}
+          onPress={itemForm.handleSubmit(onValidItem, reportValidationErrors)}
           testID={mealPlanTestIDs.templateSubmitItemButton}
         >
           <Icon

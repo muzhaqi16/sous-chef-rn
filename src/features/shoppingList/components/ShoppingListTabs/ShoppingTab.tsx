@@ -18,6 +18,7 @@ import {
   useShoppingListSearchQuery,
 } from './ShoppingListDataContext';
 import { useShoppingListModalActions } from '#features/shoppingList/context/ShoppingListModalsContext';
+import { useTabBarSetters } from '#/context/TabBarActionsContext';
 import { motion } from '#/theme/motion';
 
 // Module scope so it survives unmount/remount through stack navigation (and
@@ -81,6 +82,7 @@ const ShoppingTabComponent: React.FC = () => {
   const { t } = useTranslation();
   const searchQuery = useShoppingListSearchQuery();
   const { openAddItemSheet } = useShoppingListModalActions();
+  const { setAddMenuOpen } = useTabBarSetters();
 
   const displayQuery =
     searchQuery.length > 30 ? searchQuery.slice(0, 30) + '...' : searchQuery;
@@ -103,6 +105,12 @@ const ShoppingTabComponent: React.FC = () => {
       icon={<ShoppingEmptyIllustration size="medium" />}
       title={t('shoppingListScreens.emptyTitle')}
       description={t('shoppingListScreens.emptyDescription')}
+      // The floating +'s menu, which also says why a member may not add.
+      action={{
+        label: t('labels.addItem'),
+        icon: 'add',
+        onPress: () => setAddMenuOpen(true),
+      }}
     />
   );
 

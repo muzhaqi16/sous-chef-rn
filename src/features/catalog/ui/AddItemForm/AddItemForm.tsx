@@ -36,7 +36,7 @@ import type { AddItemFormInitialData } from '#/utils/items/createItemMapping';
 import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator';
 import { CollapsibleSection } from '#components/molecules/CollapsibleSection';
 import { Text } from '#components/atoms/Text';
-import { logValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { BarcodeInfo } from './BarcodeInfo';
 import { parseDecimalInput } from '#/utils/parseDecimalInput';
 import { formatNumberForInput } from '#/utils/formatters/number';
@@ -385,7 +385,7 @@ const AddItemForm: React.FC<AddItemFormProps> = ({
   // Save is never disabled: a failing field, even one prefilled and never
   // touched, shows its message, and the form opens the first one's page.
   const handleInvalid = (formErrors: FieldErrors<CreateItemFormData>) => {
-    logValidationErrors(formErrors);
+    reportValidationErrors(formErrors);
     const [firstField] = Object.keys(formErrors);
     if (firstField !== undefined) openPageOf(firstField);
   };

@@ -179,6 +179,14 @@ describe('SpotlightCoachMark Skip', () => {
     expect(getByText('Skip')).toBeTruthy();
   });
 
+  it('names Next and Done as buttons, without the chevron', () => {
+    const { getByRole } = renderStep(0, 3);
+    expect(getByRole('button', { name: 'Next' })).toBeTruthy();
+
+    const last = renderStep(2, 3);
+    expect(last.getByRole('button', { name: 'Done' })).toBeTruthy();
+  });
+
   it('leaves the last step to Done alone', () => {
     const { getByText, queryByText } = renderStep(2, 3);
     expect(getByText('Done')).toBeTruthy();

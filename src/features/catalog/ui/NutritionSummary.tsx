@@ -291,9 +291,9 @@ const badgeStyles = StyleSheet.create(theme => ({
     borderRadius: theme.radii.full,
     variants: {
       variant: {
-        positive: { backgroundColor: theme.colors.success + '20' },
-        caution: { backgroundColor: theme.colors.warning + '20' },
-        neutral: { backgroundColor: theme.colors.textSecondary + '20' },
+        positive: { backgroundColor: theme.colors.successLight },
+        caution: { backgroundColor: theme.colors.warningLight },
+        neutral: { backgroundColor: theme.colors.surfaceVariant },
       },
     },
   },

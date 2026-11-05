@@ -275,11 +275,11 @@ async function login(
   options?: {
     showRememberPrompt?: boolean;
     /**
-     * A refusal the CALLER can act on, carrying the union member's `code`. The
-     * toast still fires; this is for a refusal with somewhere to go, such as
-     * `AUTH_EMAIL_NOT_VERIFIED`, which the emailed code clears.
+     * A refusal the CALLER can act on, carrying the union member's `code`: one
+     * with somewhere to go, such as `AUTH_EMAIL_NOT_VERIFIED`, which the emailed
+     * code clears. `true` means the caller shows it, so no toast fires.
      */
-    onRefusal?: (code: string) => void;
+    onRefusal?: (code: string) => boolean;
     /** Logs a failure without telling the user, for a caller whose fallback does. */
     quiet?: boolean;
   },
@@ -337,13 +337,13 @@ async function login(
 
     const refusal = result.data?.login;
     if (refusal && 'code' in refusal) {
-      if (quiet) {
+      const shownByCaller = options?.onRefusal?.(refusal.code) ?? false;
+      if (quiet || shownByCaller) {
         logger.warn(`Login rejected by the server: ${refusal.code}`);
         store.setAuthIsLoading(false);
       } else {
         handleRejectedAuthPayload(refusal, operationNameOf(LoginDocument));
       }
-      options?.onRefusal?.(refusal.code);
       return false;
     }
 

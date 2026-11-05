@@ -13,7 +13,10 @@ import { ShoppingListStack } from '#navigation/stacks/ShoppingListStack';
 import { RecipeStack } from '#navigation/stacks/RecipeStack';
 import { MealPlanStack } from '#navigation/stacks/MealPlanStack';
 import { ApolloProvider, useApolloClient } from '@apollo/client/react';
-import { TabBarActionsProvider } from '#/context/TabBarActionsContext';
+import {
+  TabBarActionsProvider,
+  useTabBarState,
+} from '#/context/TabBarActionsContext';
 import { FloatingTabBar } from '#app/FloatingTabBar/FloatingTabBar';
 import { scopedClient } from '#/apollo/scopedClient';
 
@@ -42,10 +45,28 @@ function TabQueryScope({
   );
 }
 
+// The open add menu is the page: the screen it covers leaves the screen
+// reader's reach until it closes.
+function BehindAddMenu({ children }: { children: React.ReactNode }) {
+  const { isAddMenuOpen } = useTabBarState();
+  return (
+    <View
+      style={styles.screen}
+      importantForAccessibility={isAddMenuOpen ? 'no-hide-descendants' : 'auto'}
+      accessibilityElementsHidden={isAddMenuOpen}
+    >
+      {children}
+    </View>
+  );
+}
+
 const styles = StyleSheet.create(theme => ({
   layout: {
     flex: 1,
     backgroundColor: theme.colors.background,
+  },
+  screen: {
+    flex: 1,
   },
 }));
 
@@ -59,7 +80,9 @@ export const HomeTabs = createBottomTabNavigator({
   tabBar: props => <FloatingTabBar {...props} tabs={TAB_APPEARANCE} />,
   layout: HomeTabsLayout,
   screenLayout: ({ children, route }) => (
-    <TabQueryScope tab={route.name}>{children}</TabQueryScope>
+    <TabQueryScope tab={route.name}>
+      <BehindAddMenu>{children}</BehindAddMenu>
+    </TabQueryScope>
   ),
   screenOptions: {
     headerShown: false,

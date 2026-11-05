@@ -34,6 +34,17 @@ describe('FilterTabs', () => {
     expect(defaultProps.onTabChange).toHaveBeenCalledWith('fridge');
   });
 
+  it('announces each chip as a tab, the active one selected', () => {
+    render(<FilterTabs {...defaultProps} />);
+
+    expect(
+      screen.getByRole('tab', { name: 'All', selected: true }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole('tab', { name: 'Fridge', selected: false }),
+    ).toBeTruthy();
+  });
+
   it('renders testIDs with prefix', () => {
     render(<FilterTabs {...defaultProps} testIDPrefix="location" />);
     expect(screen.getByTestId('location-all')).toBeTruthy();

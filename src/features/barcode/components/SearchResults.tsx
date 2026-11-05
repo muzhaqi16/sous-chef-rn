@@ -20,7 +20,7 @@ import { useCachedUnits } from '#store/useAppStore';
 import { formatAmountLeft } from '#features/pantry/hooks/usePantryItemTransformation';
 import { useHeldStacks } from '#features/pantry/hooks/useHeldStacks';
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { ScanAmountSection } from './ScanAmountSection';
 import { ScanNutritionSection } from './ScanNutritionSection';
 import {
@@ -260,7 +260,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
       ),
     errors => {
       setIsEditingAmount(true);
-      logValidationErrors(errors);
+      reportValidationErrors(errors);
     },
   );
 

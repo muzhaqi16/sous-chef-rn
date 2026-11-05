@@ -25,7 +25,7 @@ import { InfoRow } from '#components/atoms/InfoRow';
 import { knownSkillLevel } from '#domain/dietary';
 
 const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
-  iconColor: theme.colors.primary,
+  iconColor: theme.colors.primaryText,
 }));
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';

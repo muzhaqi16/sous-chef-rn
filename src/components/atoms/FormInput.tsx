@@ -1,16 +1,17 @@
 import React from 'react';
 import type { TextInputProps, ViewStyle } from 'react-native';
 import { View } from 'react-native';
-import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormFieldWrapper } from '#components/atoms/FormFieldWrapper';
 import { singleLineInputStyle } from '#components/atoms/singleLineInputStyle';
 import {
   ThemedBottomSheetTextInput,
   ThemedTextInput,
+  type ThemedBottomSheetTextInputRef,
   type ThemedTextInputRef,
 } from '#components/atoms/themedComponents';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
+import { useFieldAccessibility } from '#hooks/ui/useFieldAccessibility';
 
 interface FormInputProps extends Omit<TextInputProps, 'style'> {
   label: string;
@@ -29,6 +30,8 @@ interface FormInputProps extends Omit<TextInputProps, 'style'> {
    * sheet input has its own ref type (see BaseInput's `sheetRef`).
    */
   ref?: React.Ref<ThemedTextInputRef>;
+  /** The same input inside a sheet, whose ref type is gorhom's. */
+  sheetRef?: React.Ref<ThemedBottomSheetTextInputRef>;
 }
 
 export const FormInput: React.FC<FormInputProps> = ({
@@ -42,6 +45,7 @@ export const FormInput: React.FC<FormInputProps> = ({
   useBottomSheetInput = false,
   trailing,
   ref,
+  sheetRef,
   ...textInputProps
 }) => {
   const contextValue = useIsBottomSheetInput();
@@ -53,22 +57,17 @@ export const FormInput: React.FC<FormInputProps> = ({
     multiline: !!textInputProps.multiline,
   });
 
-  const { t } = useTranslation();
-  const inputLabel = accessibilityLabel ?? label;
-  const fullLabel =
-    required && inputLabel
-      ? t('a11y.requiredField', { label: inputLabel })
-      : inputLabel;
-  const errorHint = error ? t('a11y.fieldError', { error }) : undefined;
-  const fullHint =
-    accessibilityHint && errorHint
-      ? t('a11y.hintWithError', { hint: accessibilityHint, error: errorHint })
-      : errorHint ?? accessibilityHint;
+  const fieldAccessibility = useFieldAccessibility({
+    label,
+    required,
+    error,
+    accessibilityLabel,
+    accessibilityHint,
+  });
   const inputProps = {
     style: [variantStyles.input, inputStyle],
     accessible: true,
-    accessibilityLabel: fullLabel,
-    accessibilityHint: fullHint,
+    ...fieldAccessibility,
     accessibilityState: { disabled: textInputProps.editable === false },
     ...textInputProps,
   };
@@ -82,7 +81,7 @@ export const FormInput: React.FC<FormInputProps> = ({
     >
       <View style={variantStyles.inputContainer}>
         {inSheet ? (
-          <ThemedBottomSheetTextInput {...inputProps} />
+          <ThemedBottomSheetTextInput ref={sheetRef} {...inputProps} />
         ) : (
           <ThemedTextInput ref={ref} {...inputProps} />
         )}

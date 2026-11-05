@@ -222,7 +222,7 @@ export function useShoppingListItemForm(
 
   return {
     // react-hook-form surface — fields render through `Controller control={control}`
-    // and Save goes through `handleSubmit(onValid, logValidationErrors)`.
+    // and Save goes through `handleSubmit(onValid, reportValidationErrors)`.
     control,
     handleSubmit,
     errors,

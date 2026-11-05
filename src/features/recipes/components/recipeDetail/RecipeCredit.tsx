@@ -84,6 +84,6 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   viewOriginalText: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
 }));

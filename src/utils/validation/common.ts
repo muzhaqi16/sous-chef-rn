@@ -1,5 +1,6 @@
 import { string, ValidationError, type Schema } from 'yup';
 import type { FieldErrors, FieldValues } from 'react-hook-form';
+import { requirePlatform } from '#platform/install';
 import { logger } from '#/utils/environment';
 import { t, type TranslationKey } from '#/i18n';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -82,14 +83,26 @@ export function fieldError(rule: Schema, value: unknown): string | null {
   }
 }
 
-export function logValidationErrors(errors: FieldErrors<FieldValues>) {
-  const fields = Object.entries(errors)
+/**
+ * A form's invalid-submit handler. A message under a field is silent to a
+ * screen reader, so the first one is spoken; React Hook Form focuses the first
+ * field in error that registered a ref.
+ */
+export function reportValidationErrors(errors: FieldErrors<FieldValues>) {
+  const entries = Object.entries(errors);
+  const fields = entries
     .map(([key, err]) => {
       const message = err?.message;
       return `${key}: ${typeof message === 'string' ? message : 'undefined'}`;
     })
     .join(', ');
   logger.warn('Form validation failed:', fields);
+
+  const [first] = entries;
+  const message = first?.[1]?.message;
+  if (typeof message === 'string') {
+    requirePlatform('screenReader').announce(message);
+  }
 }
 
 // --- shared rules ------------------------------------------------------------
