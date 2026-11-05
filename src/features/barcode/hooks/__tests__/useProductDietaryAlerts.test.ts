@@ -9,6 +9,7 @@ import {
   DietaryAlertState,
   Intolerance,
   MembershipRole,
+  ReligiousDiet,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
 import { ProductDietaryAlertsDocument } from '../useProductDietaryAlerts.generated';
@@ -30,13 +31,18 @@ jest.mock('#features/profile/hooks/useRestrictionsInPlay', () => ({
 
 const restriction = (
   id: string,
-  kind: { diet?: Diet; intolerance?: Intolerance },
+  kind: {
+    diet?: Diet;
+    intolerance?: Intolerance;
+    religiousDiet?: ReligiousDiet;
+  },
   severity: RestrictionSeverity,
 ) => ({
   id,
   diet: kind.diet ?? null,
   intolerance: kind.intolerance ?? null,
   healthGoal: null,
+  religiousDiet: kind.religiousDiet ?? null,
   item: null,
   severity,
 });
@@ -143,6 +149,47 @@ describe('useProductDietaryAlerts', () => {
         imageUrl: null,
         primaryUpc: '012345678905',
       },
+    ]);
+  });
+
+  // Only its owner is ever alerted on a religious diet.
+  it('words a religious diet as a diet the product breaks', async () => {
+    const halalMock = recordMock(ProductDietaryAlertsDocument, {
+      data: {
+        item: {
+          id: 'bacon',
+          dietaryAlerts: [
+            {
+              state: DietaryAlertState.Contains,
+              membership: {
+                id: 'm-me',
+                userId: 'u-me',
+                role: MembershipRole.Owner,
+                displayName: 'John',
+              },
+              restriction: restriction(
+                'r-halal',
+                { religiousDiet: ReligiousDiet.Halal },
+                RestrictionSeverity.Preference,
+              ),
+            },
+          ],
+          dietaryAlternatives: [],
+        },
+      },
+    });
+    const { result } = renderHookWithApollo(
+      () => useProductDietaryAlerts('bacon'),
+      { operationMocks: [halalMock.mock] },
+    );
+
+    await drainTimers();
+    expect(result.current.alerts).toEqual([
+      expect.objectContaining({
+        memberName: t('homeDetail.youLabel'),
+        what: t('recipes.religiousDiet.HALAL'),
+        isDiet: true,
+      }),
     ]);
   });
 

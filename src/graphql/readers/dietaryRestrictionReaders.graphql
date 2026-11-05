@@ -11,5 +11,6 @@ fragment DietaryRestrictionReaders on DietaryRestriction {
     version
   }
   notes
+  religiousDiet
   severity
 }

@@ -6,6 +6,7 @@ import {
   DietaryAlertState,
   HealthGoal,
   Intolerance,
+  ReligiousDiet,
   RestrictionSeverity,
   type MembershipRole,
 } from '#/graphql/generated/schemaTypes';
@@ -149,6 +150,12 @@ export const HEALTH_GOAL_OPTIONS: readonly DietaryOption<HealthGoal>[] = [
   },
 ];
 
+/** A religious diet's food rules: private to the user, at most one held. */
+export const RELIGIOUS_DIET_OPTIONS: readonly DietaryOption<ReligiousDiet>[] = [
+  { labelKey: 'recipes.religiousDiet.HALAL', value: ReligiousDiet.Halal },
+  { labelKey: 'recipes.religiousDiet.KOSHER', value: ReligiousDiet.Kosher },
+];
+
 /**
  * The copy key naming what a restriction restricts. A value this build's enum
  * does not list yet reads as unknown, never raw.
@@ -157,14 +164,17 @@ export function restrictionLabelKey(restriction: {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   healthGoal?: HealthGoal | null;
+  religiousDiet?: ReligiousDiet | null;
 }): TranslationKey {
-  const { diet, intolerance, healthGoal } = restriction;
+  const { diet, intolerance, healthGoal, religiousDiet } = restriction;
   const match = diet
     ? DIET_OPTIONS.find(option => option.value === diet)
     : intolerance
     ? INTOLERANCE_OPTIONS.find(option => option.value === intolerance)
     : healthGoal
     ? HEALTH_GOAL_OPTIONS.find(option => option.value === healthGoal)
+    : religiousDiet
+    ? RELIGIOUS_DIET_OPTIONS.find(option => option.value === religiousDiet)
     : undefined;
   return match ? match.labelKey : 'labels.unknown';
 }
@@ -232,7 +242,7 @@ export function toHouseholdAlert(
     what: restrictionLabel(restriction, t),
     state,
     severity: restriction.severity,
-    isDiet: !!restriction.diet,
+    isDiet: !!restriction.diet || !!restriction.religiousDiet,
   };
 }
 
@@ -241,8 +251,12 @@ export const canAlert = (restriction: {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   item?: { id: string } | null;
+  religiousDiet?: ReligiousDiet | null;
 }): boolean =>
-  !!restriction.diet || !!restriction.intolerance || !!restriction.item;
+  !!restriction.diet ||
+  !!restriction.intolerance ||
+  !!restriction.item ||
+  !!restriction.religiousDiet;
 
 /** An allergy or intolerance reads as a warning; a preference or goal, a note. */
 export const isStrictSeverity = (severity: RestrictionSeverity): boolean =>

@@ -24,6 +24,7 @@ import type {
   Diet,
   Intolerance,
   HealthGoal,
+  ReligiousDiet,
   RestrictionKindInput,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
@@ -42,6 +43,7 @@ export interface DietaryRestriction {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   healthGoal?: HealthGoal | null;
+  religiousDiet?: ReligiousDiet | null;
   /** The avoided catalog item, as the root the server stored. */
   item?: { id: string; name: string } | null;
   severity: RestrictionSeverity;
@@ -154,6 +156,7 @@ export const useDietaryProfile = ({
         diet: r.diet,
         intolerance: r.intolerance,
         healthGoal: r.healthGoal,
+        religiousDiet: r.religiousDiet,
         item: r.item,
         severity: r.severity,
         notes: r.notes,

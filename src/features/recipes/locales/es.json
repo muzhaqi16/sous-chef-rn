@@ -333,6 +333,10 @@
       "VEGETARIAN": "Vegetariano",
       "WHOLE30": "Whole30"
     },
+    "religiousDiet": {
+      "HALAL": "Halal",
+      "KOSHER": "Kosher"
+    },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "Apto para diabéticos",
       "HEART_HEALTHY": "Saludable para el corazón",

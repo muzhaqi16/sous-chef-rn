@@ -1,5 +1,9 @@
 import { renderHook } from '@testing-library/react-native';
-import { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import {
+  Diet,
+  Intolerance,
+  ReligiousDiet,
+} from '#/graphql/generated/schemaTypes';
 import {
   useHeldRestrictions,
   type HeldRestriction,
@@ -15,15 +19,16 @@ const held = (restrictions: HeldRestriction[]) =>
     .mocked(useHeldRestrictions)
     .mockReturnValue({ restrictions, complete: true });
 
-const diet = (value: Diet): HeldRestriction => ({
-  diet: value,
+const none: HeldRestriction = {
+  diet: null,
+  religiousDiet: null,
   intolerance: null,
   item: null,
-});
+};
+const diet = (value: Diet): HeldRestriction => ({ ...none, diet: value });
 const allergen = (value: Intolerance): HeldRestriction => ({
-  diet: null,
+  ...none,
   intolerance: value,
-  item: null,
 });
 
 describe('useRestrictionsNote', () => {
@@ -37,13 +42,22 @@ describe('useRestrictionsNote', () => {
   });
 
   it('names an avoided food by its catalog name', () => {
-    held([
-      { diet: null, intolerance: null, item: { id: 'i-1', name: 'Bacon' } },
-    ]);
+    held([{ ...none, item: { id: 'i-1', name: 'Bacon' } }]);
 
     const { result } = renderHook(() => useRestrictionsNote('home-1'));
 
     expect(result.current).toBe('No bacon');
+  });
+
+  it('names a religious diet among the diets', () => {
+    held([
+      allergen(Intolerance.Peanut),
+      { ...none, religiousDiet: ReligiousDiet.Halal },
+    ]);
+
+    const { result } = renderHook(() => useRestrictionsNote('home-1'));
+
+    expect(result.current).toBe('Halal • No peanut');
   });
 
   it('counts what it has no room to name', () => {

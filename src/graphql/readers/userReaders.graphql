@@ -29,6 +29,7 @@ fragment UserReaders on User {
         version
       }
       notes
+      religiousDiet
       severity
     }
     snacksPerDay

@@ -51,6 +51,7 @@ const DAIRY_NOTE = {
     diet: null,
     intolerance: null,
     healthGoal: null,
+    religiousDiet: null,
     item: { id: 'yogurt', name: 'yogurt' },
     severity: RestrictionSeverity.Preference,
   },

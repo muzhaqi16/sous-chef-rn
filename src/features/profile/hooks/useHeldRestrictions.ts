@@ -1,20 +1,33 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { canAlert } from '#domain/dietary';
-import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import type {
+  Diet,
+  Intolerance,
+  ReligiousDiet,
+} from '#/graphql/generated/schemaTypes';
 import { HomeDietaryNeedsDocument } from '#features/home/hooks/useHomeDietaryNeeds.generated';
 import { GetDietaryProfileDocument } from '#operations/user/user.generated';
 import { useUser } from '#store/useAppStore';
 
-/** A restriction that screens what is suggested: a diet, an allergen or a food. */
+/**
+ * A restriction that screens what is suggested: a diet, a religious diet (the
+ * user's own only), an allergen or a food.
+ */
 export interface HeldRestriction {
   diet: Diet | null;
+  religiousDiet: ReligiousDiet | null;
   intolerance: Intolerance | null;
   item: { id: string; name: string } | null;
 }
 
-const keyOf = ({ diet, intolerance, item }: HeldRestriction): string =>
-  diet ?? intolerance ?? `item:${item?.id ?? ''}`;
+const keyOf = ({
+  diet,
+  religiousDiet,
+  intolerance,
+  item,
+}: HeldRestriction): string =>
+  diet ?? religiousDiet ?? intolerance ?? `item:${item?.id ?? ''}`;
 
 /**
  * The restrictions a household check honors: the user's own and those a member
@@ -40,20 +53,26 @@ export function useHeldRestrictions(homeId: string | null | undefined): {
   // `skipToken` keeps the last run's answer: with no home it is another's.
   const ownRead = userId ? own.data : undefined;
   const sharedRead = homeId ? shared.data : undefined;
-  const all = [
+  const all: HeldRestriction[] = [
     ...(ownRead?.me?.dietaryProfile?.restrictions ?? []),
-    ...(sharedRead?.home?.dietaryNeeds ?? []).flatMap(
-      member => member.restrictions,
+    ...(sharedRead?.home?.dietaryNeeds ?? []).flatMap(member =>
+      // A home never lists a member's religious diet.
+      member.restrictions.map(restriction => ({
+        ...restriction,
+        religiousDiet: null,
+      })),
     ),
-  ].filter(canAlert);
-
-  const byKey = new Map<string, HeldRestriction>();
-  for (const { diet, intolerance, item } of all) {
-    const held: HeldRestriction = {
+  ]
+    .filter(canAlert)
+    .map(({ diet, religiousDiet, intolerance, item }) => ({
       diet: diet ?? null,
+      religiousDiet: religiousDiet ?? null,
       intolerance: intolerance ?? null,
       item: item ? { id: item.id, name: item.name } : null,
-    };
+    }));
+
+  const byKey = new Map<string, HeldRestriction>();
+  for (const held of all) {
     if (!byKey.has(keyOf(held))) byKey.set(keyOf(held), held);
   }
 

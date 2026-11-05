@@ -7,6 +7,7 @@ import {
   Diet,
   HealthGoal,
   Intolerance,
+  ReligiousDiet,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
 import { HomeDietaryNeedsDocument } from '#features/home/hooks/useHomeDietaryNeeds.generated';
@@ -42,6 +43,14 @@ const restriction = (
   item: null,
   severity: RestrictionSeverity.Preference,
 });
+/** The user's own row, which alone can carry a religious diet. */
+const ownRestriction = (
+  id: string,
+  fields: Parameters<typeof restriction>[1] & { religiousDiet?: ReligiousDiet },
+) => ({
+  ...restriction(id, fields),
+  religiousDiet: fields.religiousDiet ?? null,
+});
 
 describe('useHeldRestrictions', () => {
   it('names each restriction once, own and shared, and no health goal', async () => {
@@ -53,8 +62,9 @@ describe('useHeldRestrictions', () => {
             id: 'profile-1',
             userId: 'user-1',
             restrictions: [
-              restriction('r-veg', { diet: Diet.Vegetarian }),
-              restriction('r-goal', { healthGoal: HealthGoal.LowCarb }),
+              ownRestriction('r-veg', { diet: Diet.Vegetarian }),
+              ownRestriction('r-goal', { healthGoal: HealthGoal.LowCarb }),
+              ownRestriction('r-halal', { religiousDiet: ReligiousDiet.Halal }),
             ],
           },
         },
@@ -90,8 +100,24 @@ describe('useHeldRestrictions', () => {
 
     expect(result.current).toEqual({
       restrictions: [
-        { diet: Diet.Vegetarian, intolerance: null, item: null },
-        { diet: null, intolerance: Intolerance.Peanut, item: null },
+        {
+          diet: Diet.Vegetarian,
+          religiousDiet: null,
+          intolerance: null,
+          item: null,
+        },
+        {
+          diet: null,
+          religiousDiet: ReligiousDiet.Halal,
+          intolerance: null,
+          item: null,
+        },
+        {
+          diet: null,
+          religiousDiet: null,
+          intolerance: Intolerance.Peanut,
+          item: null,
+        },
       ],
       complete: true,
     });

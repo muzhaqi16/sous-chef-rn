@@ -7,8 +7,8 @@ const NAMED = 3;
 
 /**
  * What pantry suggestions honor, worded for the note above them, such as
- * "Vegetarian • No peanut": diets first, then what is left out. Null when no
- * restriction is held, or none is known yet.
+ * "Vegetarian • No peanut": diets first, a religious diet among them, then
+ * what is left out. Null when no restriction is held, or none is known yet.
  */
 export function useRestrictionsNote(
   homeId: string | null | undefined,
@@ -17,8 +17,10 @@ export function useRestrictionsNote(
   const { restrictions } = useHeldRestrictions(homeId);
   if (restrictions.length === 0) return null;
 
-  const diets = restrictions.filter(restriction => restriction.diet);
-  const avoided = restrictions.filter(restriction => !restriction.diet);
+  const isDiet = (restriction: (typeof restrictions)[number]) =>
+    !!restriction.diet || !!restriction.religiousDiet;
+  const diets = restrictions.filter(isDiet);
+  const avoided = restrictions.filter(restriction => !isDiet(restriction));
   const parts = [
     ...diets.map(restriction => restrictionLabel(restriction, t)),
     ...avoided.map(restriction =>

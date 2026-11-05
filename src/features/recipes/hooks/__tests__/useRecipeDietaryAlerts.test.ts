@@ -51,6 +51,7 @@ const PEANUT = {
   diet: null,
   intolerance: Intolerance.Peanut,
   healthGoal: null,
+  religiousDiet: null,
   item: null,
   severity: RestrictionSeverity.Allergy,
 };
@@ -59,6 +60,7 @@ const BACON = {
   diet: null,
   intolerance: null,
   healthGoal: null,
+  religiousDiet: null,
   item: { id: 'bacon', name: 'bacon' },
   severity: RestrictionSeverity.Preference,
 };

@@ -1,4 +1,9 @@
-import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
+import {
+  Diet,
+  HealthGoal,
+  Intolerance,
+  ReligiousDiet,
+} from '#/graphql/generated/schemaTypes';
 import {
   INTOLERANCE_OPTIONS,
   INTOLERANCE_OPTIONS_MAJOR_FIRST,
@@ -40,6 +45,10 @@ describe('canAlert', () => {
     expect(canAlert({ item: { id: 'bacon' } })).toBe(true);
   });
 
+  it('lets a religious diet alert its owner', () => {
+    expect(canAlert({ religiousDiet: ReligiousDiet.Halal })).toBe(true);
+  });
+
   it('never lets a health goal alert', () => {
     const lowCarb = {
       diet: null,
@@ -59,6 +68,12 @@ describe('restrictionLabelKey', () => {
     );
     expect(restrictionLabelKey({ healthGoal: HealthGoal.LowCarb })).toBe(
       'recipes.healthGoal.LOW_CARB',
+    );
+  });
+
+  it('names a religious diet', () => {
+    expect(restrictionLabelKey({ religiousDiet: ReligiousDiet.Kosher })).toBe(
+      'recipes.religiousDiet.KOSHER',
     );
   });
 
