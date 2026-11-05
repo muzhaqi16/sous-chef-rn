@@ -9,6 +9,8 @@ import { Text } from '#components/atoms/Text';
 import { commonStyles } from '#/styles/commonStyles';
 import { rowType } from '#/theme/foundations/type';
 import { toDisplayItems } from '#features/recipes/screens/recipeDisplayItems';
+import { RestrictionsNote } from '#features/recipes/ui/RestrictionsNote';
+import { useSelectedHomeId } from '#store/useAppStore';
 import type { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 
@@ -23,11 +25,13 @@ type RecipePayoffProps = Pick<
  */
 export const RecipePayoff = ({ rows, showCheckLabel }: RecipePayoffProps) => {
   const { t } = useTranslation();
+  const homeId = useSelectedHomeId();
   if (rows.length === 0) return null;
 
   return (
     <View style={styles.section} testID={onboardingTestIDs.payoff}>
       <Text role="bodyStrong">{t('recipes.basedOnPantry')}</Text>
+      <RestrictionsNote homeId={homeId} />
       {toDisplayItems(rows, t).map(recipe => (
         <RowCard key={recipe.id}>
           <View style={[commonStyles.rowSurface, commonStyles.rowContent]}>

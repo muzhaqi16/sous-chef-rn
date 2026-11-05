@@ -12,6 +12,7 @@ export const todayTestIDs = {
   mealRow: (id: string) => `today-meal-${id}`,
   nothingPlanned: 'today-nothing-planned',
   suggestionsSeeAll: 'today-suggestions-see-all',
+  restrictionsNote: 'today-restrictions-note',
   shoppingRow: 'today-shopping-row',
   firstRun: 'today-first-run',
 };

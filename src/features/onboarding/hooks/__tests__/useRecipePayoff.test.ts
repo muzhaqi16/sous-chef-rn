@@ -131,11 +131,17 @@ describe('useRecipePayoff', () => {
     expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']);
   });
 
-  it('leaves out a recipe the pantry holds nothing of', async () => {
-    const { result } = renderPayoff([edge('a', 0), edge('b', 40)]);
+  // A weak match: a recipe using under half its ingredients from the pantry is
+  // not one the pantry can make.
+  it('leaves out a recipe the pantry holds under half of', async () => {
+    const { result } = renderPayoff([
+      edge('a', 0),
+      edge('b', 49),
+      edge('c', 50),
+    ]);
 
     await drainTimers();
-    expect(ids(result.current.rows)).toEqual(['b']);
+    expect(ids(result.current.rows)).toEqual(['c']);
   });
 
   it('shows none with no candidate', async () => {

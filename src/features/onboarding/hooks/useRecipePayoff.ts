@@ -2,6 +2,7 @@ import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useServerRecipeSuggestions } from '#features/recipes/hooks/useServerRecipeSuggestions';
 import { useRestrictionsInPlay } from '#features/profile/hooks/useRestrictionsInPlay';
+import { READY_COVERAGE } from '#domain/recipeCoverage';
 
 const PAYOFF_COUNT = 3;
 
@@ -14,14 +15,14 @@ const PAYOFF_COUNT = 3;
 export function useRecipePayoff() {
   const suggestionsOn = useFeatureFlag('pantrySuggestions');
   const restrictionsInPlay = useRestrictionsInPlay(useSelectedHomeId());
-  const { rows } = useServerRecipeSuggestions(suggestionsOn, {
-    excludeDietaryConflicts: true,
-  });
+  const { rows } = useServerRecipeSuggestions(suggestionsOn);
 
   return {
     rows: rows
       .flatMap(row =>
-        row.source === 'suggestion' && row.edge.coverage > 0 ? [row] : [],
+        row.source === 'suggestion' && row.edge.coverage >= READY_COVERAGE
+          ? [row]
+          : [],
       )
       .slice(0, PAYOFF_COUNT),
     showCheckLabel: restrictionsInPlay !== false,

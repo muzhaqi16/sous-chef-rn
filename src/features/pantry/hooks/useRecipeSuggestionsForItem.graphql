@@ -1,6 +1,12 @@
 # Catalog recipes that use one pantry item, for its detail page.
 query CatalogRecipesForItem($ingredients: [String!]!, $first: Int) {
-  catalogRecipesByIngredients(ingredients: $ingredients, first: $first) {
+  # The caller's own restrictions are always screened; this adds the ones
+  # members share, as every suggestion surface does.
+  catalogRecipesByIngredients(
+    ingredients: $ingredients
+    first: $first
+    excludeDietaryConflicts: true
+  ) {
     edges {
       cursor
       node {
