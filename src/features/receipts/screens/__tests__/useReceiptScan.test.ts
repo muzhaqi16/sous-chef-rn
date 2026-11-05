@@ -1180,6 +1180,7 @@ describe('useReceiptScan', () => {
       kind: 'ITEM',
       product: 'GV WHOLE MILK',
       name: null,
+      brand: null,
       code: null,
       quantity: null,
       unit: null,
