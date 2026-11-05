@@ -9,8 +9,9 @@ import { READY_COVERAGE } from '#domain/recipeCoverage';
 export const coverageBadge = (
   percent: number,
   translate: Translate,
+  ready = percent >= READY_COVERAGE,
 ): BadgeContent | undefined =>
-  percent >= READY_COVERAGE
+  ready
     ? {
         text: translate('recipes.pantryCoverage', { percent }),
         lines: [

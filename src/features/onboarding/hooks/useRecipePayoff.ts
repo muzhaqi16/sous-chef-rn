@@ -2,7 +2,7 @@ import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { useSelectedHomeId } from '#store/useAppStore';
 import { useServerRecipeSuggestions } from '#features/recipes/hooks/useServerRecipeSuggestions';
 import { useRestrictionsInPlay } from '#features/profile/hooks/useRestrictionsInPlay';
-import { READY_COVERAGE } from '#domain/recipeCoverage';
+import { suggestionTier } from '#domain/recipeCoverage';
 
 const PAYOFF_COUNT = 3;
 
@@ -20,7 +20,12 @@ export function useRecipePayoff() {
   return {
     rows: rows
       .flatMap(row =>
-        row.source === 'suggestion' && row.edge.coverage >= READY_COVERAGE
+        row.source === 'suggestion' &&
+        suggestionTier({
+          coverage: row.edge.coverage,
+          missingIngredientCount: row.edge.missingIngredientCount,
+          usedIngredientCount: row.edge.usedIngredients.length,
+        }) === 'ready'
           ? [row]
           : [],
       )

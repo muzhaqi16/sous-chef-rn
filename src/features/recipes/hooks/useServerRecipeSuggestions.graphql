@@ -14,6 +14,17 @@ query RecipeSuggestions(
   ) {
     edges {
       coverage
+      # Pantry basics left out of both: what is held, and what is left to buy.
+      missingIngredientCount
+      usedIngredients {
+        id
+        name
+        item {
+          version
+          id
+          name
+        }
+      }
       # The stacks expiring within three days of `today` that it would use.
       expiringStacks {
         version

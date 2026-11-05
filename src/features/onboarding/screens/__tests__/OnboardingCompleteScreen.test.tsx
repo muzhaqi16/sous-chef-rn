@@ -138,6 +138,8 @@ const SHAKSHUKA = {
   source: 'suggestion',
   edge: {
     coverage: 80,
+    missingIngredientCount: 1,
+    usedIngredients: [{ id: 'r1-eggs', name: 'eggs', item: null }],
     expiringStacks: [],
     node: {
       id: 'r1',
