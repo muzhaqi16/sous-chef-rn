@@ -4896,7 +4896,7 @@ type DietaryProfile {
   """
   proteinTarget: Int
   """
-  The religious diet the user follows; null when none is set. Private to the user, never shared with a home
+  The religious diet the user follows: the one restriction of that kind, null when none. Private to the user, never shared with a home
   """
   religiousDiet: ReligiousDiet
   """
@@ -4927,6 +4927,10 @@ type DietaryRestriction {
   """
   item: Item
   notes: String
+  """
+  A religious diet whose food rules the user follows; private to the user and never in Home.dietaryNeeds. Null for the other kinds
+  """
+  religiousDiet: ReligiousDiet
   severity: RestrictionSeverity!
   updatedAt: DateTime!
 }
@@ -14897,7 +14901,9 @@ type Query {
   recipes anyone can discover, and the caller's own and saved ones, come
   first when at least half their non-optional ingredients are held: best
   covered first, with stock about to expire lifting the recipes that use it.
-  The most cooked published recipes fill the rest of the page.
+  Then those using any held ingredient, fewest left to buy first; the most
+  cooked published recipes fill the rest of the page. Pantry basics (water,
+  salt, pepper, a cooking oil, sugar, flour) count toward none of it.
   
   Everything the caller's dietary profile holds is honoured, at any severity
   and without excludeDietaryConflicts. A recipe is left out when it is tagged
@@ -15780,8 +15786,9 @@ type Recipe {
   latestRevision: RecipeRevision
   """
   How much of this recipe you can already make from the pantries in scope,
-  0-100: that home's with homeId, else every pantry you may view. Null when
-  unauthenticated.
+  0-100: the share of its non-optional ingredients held, pantry basics (water,
+  salt, pepper, a cooking oil, sugar, flour) left out. That home's pantries
+  with homeId, else every pantry you may view. Null when unauthenticated.
   """
   matchPercentage(
     """
@@ -16755,8 +16762,8 @@ type RecipeSuggestionConnection {
 type RecipeSuggestionEdge {
   """
   The share of the recipe's non-optional ingredients the pantries in scope
-  hold, from 0 to 100: the figure Recipe.matchPercentage reports for the same
-  homeId.
+  hold, from 0 to 100, pantry basics left out: the figure
+  Recipe.matchPercentage reports for the same homeId.
   """
   coverage: Int!
   cursor: String!
@@ -16765,7 +16772,17 @@ type RecipeSuggestionEdge {
   the recipe would use; empty when today was not sent.
   """
   expiringStacks: [PantryItem!]!
+  """How many ingredients are left to buy: the length of missingIngredients"""
+  missingIngredientCount: Int!
+  """
+  The non-optional ingredients, pantry basics left out, the pantries in scope lack: what is left to buy
+  """
+  missingIngredients: [RecipeIngredient!]!
   node: Recipe!
+  """
+  The non-optional ingredients, pantry basics left out, the pantries in scope hold
+  """
+  usedIngredients: [RecipeIngredient!]!
 }
 
 input RecordPantryStockCheckInput {
@@ -17530,7 +17547,7 @@ Always include a __typename so the variant can be discriminated.
 union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
 """
-What one restriction restricts: exactly one of a diet, an intolerance, a health goal or a catalog item.
+What one restriction restricts: exactly one of a diet, an intolerance, a health goal, a catalog item or a religious diet.
 """
 input RestrictionKindInput @oneOf {
   """A diet the user follows, such as VEGAN"""
@@ -17544,6 +17561,12 @@ input RestrictionKindInput @oneOf {
   (ValidationError on kind.item); covers everything at or below that root and its same-name twins.
   """
   item: ID
+  """
+  A religious diet the user follows: its food rules screen suggestions and raise alerts for the
+  user alone, never shared with a home. A profile holds one; a second is refused (ValidationError
+  on kind.religiousDiet)
+  """
+  religiousDiet: ReligiousDiet
 }
 
 enum RestrictionSeverity {
@@ -21043,7 +21066,9 @@ input UpdateDietaryProfileInput {
   Daily protein goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
   proteinTarget: Int
-  """A religious dietary requirement the user follows; null clears it"""
+  """
+  A religious dietary requirement the user follows, held as the profile's one religiousDiet restriction; null removes it
+  """
   religiousDiet: ReligiousDiet
   """
   Snacks a day the user plans for, a non-negative integer; 1 by default, null is refused
