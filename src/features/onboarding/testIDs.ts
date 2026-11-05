@@ -32,9 +32,10 @@ export const onboardingTestIDs = {
   receiptScan: 'onboarding-receipt-scan',
   receiptStaples: 'onboarding-receipt-staples',
   receiptAdded: 'onboarding-receipt-added',
-  /** The completion screen's recipes and invite button. */
+  /** The completion screen's recipes, invite button and store offer. */
   payoff: 'onboarding-payoff',
   invite: 'onboarding-invite',
+  stores: 'onboarding-stores',
   /** A staples group, by the storage state it holds. */
   staplesGroup: (state: string) => `onboarding-staples-${state}`,
 };

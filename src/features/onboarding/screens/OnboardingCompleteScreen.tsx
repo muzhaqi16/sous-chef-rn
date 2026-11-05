@@ -7,6 +7,7 @@ import { alertService } from '#/services/alertService';
 import { shareUrl } from '#native/share';
 import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
 import { RecipePayoff } from '#features/onboarding/components/RecipePayoff';
+import { StoresOffer } from '#features/onboarding/components/StoresOffer';
 import { Button } from '#components/molecules/Button';
 import { useSelectedHomeId, useUpdateUser, useUser } from '#store/useAppStore';
 import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
@@ -14,6 +15,7 @@ import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnb
 import { useHouseholdInvite } from '#features/onboarding/hooks/useHouseholdInvite';
 import { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { useNotificationSettings } from '#features/notifications/hooks/useNotificationSettings';
@@ -101,6 +103,7 @@ export const OnboardingCompleteScreen = () => {
   const { completeOnboarding } = useCompleteOnboarding(user?.id);
   const summary = useOnboardingSummary();
   const homeId = useSelectedHomeId();
+  const apiUnavailable = useIsApiUnavailable();
   const payoff = useRecipePayoff();
   const { settings, updateMultipleSettings } = useNotificationSettings();
   const { hasPermission, turnOnPush } = useTurnOnPush(updateMultipleSettings);
@@ -213,6 +216,9 @@ export const OnboardingCompleteScreen = () => {
         {homeId && summary.cooksFor !== null && summary.cooksFor > 1 ? (
           <InviteHousehold homeId={homeId} />
         ) : null}
+
+        {/* Finding stores needs the API. */}
+        {homeId && !apiUnavailable ? <StoresOffer homeId={homeId} /> : null}
 
         <Text
           role="caption"

@@ -20,12 +20,19 @@ import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEna
 import { useReadingSystem } from '#hooks/settings/useReadingSystem';
 import { toastService } from '#/services/toastService';
 import { scheduleIdle } from '#/utils/scheduleIdle';
-import type { FoundOption, StoreChoice } from '#domain/stores';
-import { useCreateStore } from '#features/catalog/hooks/useCreateStore';
-import { useCreateStoreFromPlace } from '#features/catalog/hooks/useCreateStoreFromPlace';
+import {
+  chainOption,
+  storeOption,
+  type FoundOption,
+  type StoreChoice,
+} from '#domain/stores';
 import { useNearMe } from '#features/catalog/hooks/useNearMe';
 import { useStoreSearch } from '#features/catalog/hooks/useStoreSearch';
-import { useUsualStoreWrites } from '#features/catalog/hooks/useUsualStoreWrites';
+import {
+  unlistedKey,
+  useStorePicks,
+  type Tapped,
+} from '#features/catalog/hooks/useStorePicks';
 import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
 import { StoreList } from '#features/catalog/ui/StoreList';
 import { StoreRow } from '#features/catalog/ui/StoreRow';
@@ -34,17 +41,21 @@ import { catalogTestIDs } from '#features/catalog/testIDs';
 const US_ZIP = /^\d{5}$/;
 const OPENSTREETMAP_COPYRIGHT = 'https://www.openstreetmap.org/copyright';
 
+const optionOf = (choice: StoreChoice): FoundOption =>
+  choice.store ? storeOption(choice.store) : chainOption(choice.chain);
+
 /**
  * Finds a store to add to the household's: near a zip code, by name or
  * address, a whole chain, or one the app does not know, added by its name for
- * this household alone. Offline it lists the household's stores.
+ * this household alone. Offline it lists the household's stores. With
+ * `several`, each tap adds a store and the picker stays open until Done.
  */
 export const StorePickerScreen: React.FC<
-  StaticScreenProps<{ homeId: string | null }>
+  StaticScreenProps<{ homeId: string | null; several?: boolean }>
 > = ({ route }) => {
   useScreenTransition('StorePickerScreen');
   const { t } = useTranslation();
-  const { homeId } = route.params;
+  const { homeId, several = false } = route.params;
   const { goBack } = useAppNavigation();
   const readingSystem = useReadingSystem();
   const lastZip = useStorePickerStore(state => state.lastZip);
@@ -85,32 +96,14 @@ export const StorePickerScreen: React.FC<
   useEffect(() => {
     if (zipListed) setLastZip(zip);
   }, [zipListed, zip, setLastZip]);
-  const writes = useUsualStoreWrites(homeId);
-  const { createStore } = useCreateStore();
-  const { createStoreFromPlace } = useCreateStoreFromPlace();
-
-  const add = async (choice: StoreChoice) => {
-    if (!(await writes.add(choice))) return;
-    toastService.success(t('storePicker.addedToStores'));
-    goBack();
-  };
-
-  // A name alone with this home is the household's own label; a later receipt
-  // from the same shop turns it into the real store.
-  const addUnlisted = async (name: string) => {
-    const created = await createStore({ name, homeId });
-    if (created) await add({ store: created });
-  };
-
-  // The search may have lost the place, or be down; its name still adds it.
-  const addPlace = async ({ id, name }: { id: string; name: string }) => {
-    const created = await createStoreFromPlace(id);
-    await (created ? add({ store: created }) : addUnlisted(name));
-  };
-
-  const pick = ({ choice }: FoundOption) => {
-    void ('place' in choice ? addPlace(choice.place) : add(choice));
-  };
+  const picks = useStorePicks({
+    homeId,
+    several,
+    onAdded: () => {
+      toastService.success(t('storePicker.addedToStores'));
+      goBack();
+    },
+  });
 
   const term = search.term.trim();
   // A refused zip says why on its field, with nothing under it.
@@ -130,10 +123,50 @@ export const StorePickerScreen: React.FC<
   // The row that adds a store needs a typed name, so a list near a place says so.
   const canTypeToAdd =
     search.answered && !term && !search.isOffline && !search.zipRefused;
+  const busy = <Loading size="small" />;
+  // A name added this visit reads as its store, so it can be taken back.
+  const unlistedPick = unlisted
+    ? picks.pickOf(unlistedKey(unlisted))
+    : undefined;
+
+  const row = (option: FoundOption, tapped: Tapped, testID: string) => {
+    const pick = picks.pickOf(option.key);
+    const added = option.added || !!pick;
+    return (
+      <StoreRow
+        option={{ ...option, added }}
+        readingSystem={readingSystem}
+        markAdded
+        status={
+          option.hasPrices
+            ? { tone: 'info', text: t('storePicker.hasPrices') }
+            : undefined
+        }
+        trailing={picks.isSettling(option.key) ? busy : undefined}
+        onPress={picks.pressFor(option.key, tapped, added)}
+        accessibilityHint={
+          pick?.ours ? t('storePicker.takeBackHint') : undefined
+        }
+        testID={testID}
+      />
+    );
+  };
 
   return (
     <SubScreen
       title={t('usualStores.addStore')}
+      actions={
+        several
+          ? [
+              {
+                label: t('labels.done'),
+                variant: 'primary',
+                onPress: goBack,
+                testID: catalogTestIDs.storePickerDone,
+              },
+            ]
+          : undefined
+      }
       scroll="list"
       gutter="none"
       testID={catalogTestIDs.storePickerScreen}
@@ -219,15 +252,26 @@ export const StorePickerScreen: React.FC<
         data={search.options}
         ListEmptyComponent={empty}
         ListFooterComponent={
-          unlisted ? (
-            <RowCard>
+          unlistedPick ? (
+            row(
+              optionOf(unlistedPick.choice),
+              unlistedPick.choice,
+              catalogTestIDs.storePickerUnlisted,
+            )
+          ) : unlisted ? (
+            <RowCard testID={catalogTestIDs.storePickerUnlisted}>
               <ListItem
                 leftIcon="add-circle-outline"
                 title={t('storePicker.notListed', { name: unlisted })}
+                rightElement={
+                  picks.isSettling(unlistedKey(unlisted)) ? busy : undefined
+                }
                 accessibilityHint=""
-                onPress={() => {
-                  void addUnlisted(unlisted);
-                }}
+                onPress={picks.pressFor(
+                  unlistedKey(unlisted),
+                  { unlisted },
+                  false,
+                )}
               />
             </RowCard>
           ) : canTypeToAdd ? (
@@ -236,26 +280,9 @@ export const StorePickerScreen: React.FC<
             </Text>
           ) : null
         }
-        renderItem={({ item }) => (
-          <StoreRow
-            option={item}
-            readingSystem={readingSystem}
-            markAdded
-            status={
-              item.hasPrices
-                ? { tone: 'info', text: t('storePicker.hasPrices') }
-                : undefined
-            }
-            onPress={
-              item.added
-                ? undefined
-                : () => {
-                    pick(item);
-                  }
-            }
-            testID={catalogTestIDs.storePickerRow(item.key)}
-          />
-        )}
+        renderItem={({ item }) =>
+          row(item, item.choice, catalogTestIDs.storePickerRow(item.key))
+        }
       />
       <Dialog
         visible={nearMe.state === 'explaining'}

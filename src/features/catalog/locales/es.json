@@ -486,6 +486,7 @@
     "locating": "Buscando tiendas cerca de ti…",
     "locationOff": "La ubicación está desactivada para {{appName}}. Actívala en Ajustes o escribe un código postal.",
     "locationFailed": "No se pudo saber dónde estás. Escribe un código postal.",
-    "hasPrices": "Tiene precios"
+    "hasPrices": "Tiene precios",
+    "takeBackHint": "La quita de tus tiendas"
   }
 }

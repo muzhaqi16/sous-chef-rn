@@ -1,13 +1,20 @@
 'use no memo';
 
 import React from 'react';
-import {
-  render,
-  screen,
-  userEvent,
-  within,
-} from '@testing-library/react-native';
+import { act, screen, userEvent, within } from '@testing-library/react-native';
+import { CommonActions } from '@react-navigation/native';
 import { t } from '#/i18n';
+import { makeCache } from '#/apollo/cache';
+import { requirePlatform } from '#/platform/install';
+import { useStore } from '#store';
+import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { renderWithApollo } from '#/test-utils/apolloMockProvider';
+import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
+import { UsualStoresDocument } from '#features/catalog/hooks/useUsualStores.generated';
+import {
+  writeUsualStores,
+  type UsualStoreEntry,
+} from '#features/catalog/cache/usualStores';
 import { alertService } from '#/services/alertService';
 import type { AlertButton } from '#platform/presenters';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
@@ -19,12 +26,21 @@ import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockUpdateUser = jest.fn();
+let mockHomeId: string | null = 'home-1';
 jest.mock('#store/useAppStore', () => ({
+  ...jest.requireActual('#store/useAppStore'),
   useUser: () => ({ id: 'u1', onBoarded: false }),
   useUpdateUser: () => mockUpdateUser,
-  useSelectedHomeId: () => 'home-1',
+  useSelectedHomeId: () => mockHomeId,
 }));
 
+let mockRegion: string | null = 'US';
+jest.mock('#/domain/regionCurrency', () => ({
+  ...jest.requireActual('#/domain/regionCurrency'),
+  deviceRegion: () => mockRegion,
+}));
+
+jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#features/onboarding/hooks/useOnboardingSummary');
 
@@ -133,6 +149,33 @@ const SHAKSHUKA = {
   },
 };
 
+const usualStore = (
+  id: string,
+  name: string,
+  addedVia = UsualStoreSource.Picked,
+): UsualStoreEntry => ({
+  __typename: 'UsualStore',
+  id: `home-1:${id}`,
+  addedVia,
+  pinned: false,
+  compared: addedVia === UsualStoreSource.Receipt,
+  lastUsedAt:
+    addedVia === UsualStoreSource.Receipt ? '2026-11-01T12:00:00.000Z' : null,
+  store: { __typename: 'Store', id, name, address: null, chain: null },
+  chain: null,
+});
+
+/** The screen over a cache holding the household's usual stores. */
+const renderScreen = (stores: UsualStoreEntry[] = []) => {
+  const cache = makeCache();
+  writeUsualStores(cache, 'home-1', stores);
+  const { client } = renderWithApollo(<OnboardingCompleteScreen />, {
+    cache,
+    operationMocks: [],
+  });
+  return { cache, client };
+};
+
 /** The summary's lines in order, read off their bullets. */
 const summaryLines = () =>
   screen.getAllByText(/^• /).map(node => String(node.props.children).slice(2));
@@ -160,6 +203,8 @@ afterEach(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockHomeId = 'home-1';
+  mockRegion = 'US';
   summaryOf(HOME_READY);
   mockPayoff = [];
   mockShowCheckLabel = false;
@@ -177,7 +222,10 @@ beforeEach(() => {
     });
 });
 
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => {
+  jest.restoreAllMocks();
+  useStore.setState({ isOnline: true, apiReachable: null });
+});
 
 describe('OnboardingCompleteScreen', () => {
   describe('the summary', () => {
@@ -188,7 +236,7 @@ describe('OnboardingCompleteScreen', () => {
         dietarySaved: true,
         receiptItems: 7,
       });
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(summaryLines()).toEqual([
         t('onBoarding.summaryHomeReady'),
@@ -200,7 +248,7 @@ describe('OnboardingCompleteScreen', () => {
 
     it('leaves out a skipped dietary step', () => {
       summaryOf({ ...HOME_READY, cooksFor: 1, receiptItems: 3 });
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(summaryLines()).toEqual([
         t('onBoarding.summaryHomeReady'),
@@ -211,7 +259,7 @@ describe('OnboardingCompleteScreen', () => {
 
     it('names staples picked instead of a receipt', () => {
       summaryOf({ ...HOME_READY, stapleItems: 12 });
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(summaryLines()).toEqual([
         t('onBoarding.summaryHomeReady'),
@@ -220,7 +268,7 @@ describe('OnboardingCompleteScreen', () => {
     });
 
     it('says only that the home is ready when every step was skipped', () => {
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(summaryLines()).toEqual([t('onBoarding.summaryHomeReady')]);
       expect(screen.getByText(t('onBoarding.completeSubtitle'))).toBeTruthy();
@@ -228,7 +276,7 @@ describe('OnboardingCompleteScreen', () => {
 
     it('with nothing set up, says so and lists nothing', () => {
       summaryOf({});
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(screen.getByText(t('onBoarding.readyToStart'))).toBeTruthy();
       expect(screen.getByText(t('onBoarding.nothingSetUp'))).toBeTruthy();
@@ -239,14 +287,14 @@ describe('OnboardingCompleteScreen', () => {
 
   describe('the recipes the pantry can make', () => {
     it('shows none with nothing added', () => {
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(screen.queryByTestId(onboardingTestIDs.payoff)).toBeNull();
     });
 
     it('shows the pantry recipes', () => {
       mockPayoff = [SHAKSHUKA];
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(screen.getByTestId(onboardingTestIDs.payoff)).toBeTruthy();
       expect(screen.getByText(t('recipes.basedOnPantry'))).toBeTruthy();
@@ -257,7 +305,7 @@ describe('OnboardingCompleteScreen', () => {
     it('says to check the label under them when a restriction applies', () => {
       mockPayoff = [SHAKSHUKA];
       mockShowCheckLabel = true;
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(
         within(screen.getByTestId(onboardingTestIDs.payoff)).getByText(
@@ -268,7 +316,7 @@ describe('OnboardingCompleteScreen', () => {
 
     it('shows no caveat on its own when there is no recipe', () => {
       mockShowCheckLabel = true;
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
     });
@@ -278,7 +326,7 @@ describe('OnboardingCompleteScreen', () => {
     it('shares the home\'s link for "two of us"', async () => {
       summaryOf({ ...HOME_READY, cooksFor: 2 });
       const user = userEvent.setup();
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       await user.press(screen.getByText(t('onBoarding.inviteHousehold')));
 
@@ -291,7 +339,7 @@ describe('OnboardingCompleteScreen', () => {
 
     it('offers no invite for "just me"', () => {
       summaryOf({ ...HOME_READY, cooksFor: 1 });
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       expect(screen.queryByTestId(onboardingTestIDs.invite)).toBeNull();
     });
@@ -300,7 +348,7 @@ describe('OnboardingCompleteScreen', () => {
       summaryOf({ ...HOME_READY, cooksFor: 3 });
       mockVerified = false;
       const user = userEvent.setup();
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       await user.press(screen.getByText(t('onBoarding.inviteHousehold')));
 
@@ -312,7 +360,7 @@ describe('OnboardingCompleteScreen', () => {
       summaryOf({ ...HOME_READY, cooksFor: 2 });
       mockInviteLink.mockResolvedValue(null);
       const user = userEvent.setup();
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       await user.press(screen.getByText(t('onBoarding.inviteHousehold')));
       await drainTimers();
@@ -324,10 +372,140 @@ describe('OnboardingCompleteScreen', () => {
     });
   });
 
+  describe('the store card', () => {
+    const offer = () => screen.queryByText(t('onBoarding.addStores'));
+
+    beforeEach(() => {
+      jest.useRealTimers();
+    });
+
+    it('finishes without it, showing no zip code, location prompt or store list', async () => {
+      const user = userEvent.setup();
+      renderScreen();
+
+      expect(offer()).toBeTruthy();
+      await getStarted(user, t('labels.notNow'));
+
+      await act(async () => {
+        await mockCompleteOnboarding.mock.results[0]?.value;
+      });
+      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
+      expect(useAppNavigation().navigation.dispatch).not.toHaveBeenCalled();
+      expect(screen.queryByText(t('storePicker.zipLabel'))).toBeNull();
+      expect(screen.queryByText(t('storePicker.nearMe'))).toBeNull();
+      expect(screen.queryByText(t('storePicker.nearMeTitle'))).toBeNull();
+    });
+
+    it("opens the store picker for the user's home, asking nothing of the device", async () => {
+      const location = requirePlatform('approximateLocation');
+      const access = jest.spyOn(location, 'access');
+      const requestAccess = jest.spyOn(location, 'requestAccess');
+      const user = userEvent.setup();
+      renderScreen();
+
+      await user.press(screen.getByText(t('onBoarding.addStores')));
+
+      expect(useAppNavigation().navigation.dispatch).toHaveBeenCalledWith(
+        CommonActions.navigate('OnboardingStores', { homeId: 'home-1' }),
+      );
+      expect(access).not.toHaveBeenCalled();
+      expect(requestAccess).not.toHaveBeenCalled();
+    });
+
+    it('is not offered without a home', () => {
+      mockHomeId = null;
+      renderScreen();
+
+      expect(screen.queryByTestId(onboardingTestIDs.stores)).toBeNull();
+    });
+
+    it('is offered whatever the device region', () => {
+      mockRegion = 'IT';
+      renderScreen();
+
+      expect(offer()).toBeTruthy();
+    });
+
+    it('is not offered while the API is unavailable, and the rest stays', () => {
+      useStore.setState({ isOnline: false });
+      renderScreen();
+
+      expect(screen.queryByTestId(onboardingTestIDs.stores)).toBeNull();
+      expect(summaryLines()).toEqual([t('onBoarding.summaryHomeReady')]);
+      expect(screen.getByText(t('labels.getStarted'))).toBeTruthy();
+    });
+
+    it('names the stores picked from it, once back', async () => {
+      const { cache, client } = renderScreen();
+      expect(offer()).toBeTruthy();
+      // The card's watcher hears a write in the same broadcast as this one.
+      const broadcast = new Promise<void>(resolve => {
+        client
+          .watchQuery({
+            query: UsualStoresDocument,
+            variables: { homeId: 'home-1' },
+            fetchPolicy: 'cache-only',
+          })
+          .subscribe(({ data }) => {
+            if (data?.usualStores?.length === 2) resolve();
+          });
+      });
+
+      writeUsualStores(cache, 'home-1', [
+        usualStore('s-aldi', 'ALDI'),
+        usualStore('s-sal', 'Save-A-Lot'),
+      ]);
+
+      await act(async () => {
+        await broadcast;
+      });
+
+      expect(
+        screen.getByText(
+          t('onBoarding.yourStores', { names: 'ALDI, Save-A-Lot' }),
+        ),
+      ).toBeTruthy();
+      expect(offer()).toBeNull();
+      expect(screen.getByText(t('onBoarding.addMoreStores'))).toBeTruthy();
+    });
+
+    it("counts a scanned receipt's store among them", () => {
+      renderScreen([
+        usualStore('s-ge', 'Giant Eagle', UsualStoreSource.Receipt),
+        usualStore('s-aldi', 'ALDI'),
+      ]);
+
+      expect(
+        screen.getByText(
+          t('onBoarding.yourStores', { names: 'Giant Eagle, ALDI' }),
+        ),
+      ).toBeTruthy();
+    });
+
+    it('names three, then counts the rest', () => {
+      renderScreen([
+        usualStore('s-ge', 'Giant Eagle', UsualStoreSource.Receipt),
+        usualStore('s-aldi', 'ALDI'),
+        usualStore('s-sal', 'Save-A-Lot'),
+        usualStore('s-coop', 'East End Food Co-op'),
+        usualStore('s-tj', "Trader Joe's"),
+      ]);
+
+      expect(
+        screen.getByText(
+          t('onBoarding.yourStoresAndMore', {
+            names: 'Giant Eagle, ALDI, Save-A-Lot',
+            count: 2,
+          }),
+        ),
+      ).toBeTruthy();
+    });
+  });
+
   describe('the notification ask', () => {
     it('turns push and expiry alerts on when the user agrees, then finishes', async () => {
       const user = userEvent.setup();
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       await getStarted(user, t('onBoarding.notifyTurnOn'));
 
@@ -340,7 +518,7 @@ describe('OnboardingCompleteScreen', () => {
 
     it('finishes with nothing turned on when the user says not now', async () => {
       const user = userEvent.setup();
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       await getStarted(user, t('labels.notNow'));
 
@@ -353,7 +531,7 @@ describe('OnboardingCompleteScreen', () => {
       mockHasPermission = true;
       mockPushEnabled = true;
       const user = userEvent.setup();
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       await getStarted(user);
 
@@ -365,7 +543,7 @@ describe('OnboardingCompleteScreen', () => {
     it('asks when the device allows but push is off', async () => {
       mockHasPermission = true;
       const user = userEvent.setup();
-      render(<OnboardingCompleteScreen />);
+      renderScreen();
 
       await getStarted(user);
 
@@ -380,7 +558,7 @@ describe('OnboardingCompleteScreen', () => {
   it('stays and says so when completing fails', async () => {
     mockCompleteOnboarding.mockResolvedValue(false);
     const user = userEvent.setup();
-    render(<OnboardingCompleteScreen />);
+    renderScreen();
 
     await getStarted(user, t('labels.notNow'));
 

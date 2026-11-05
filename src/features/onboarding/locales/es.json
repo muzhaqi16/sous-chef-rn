@@ -63,6 +63,11 @@
     "summaryStapleItems_other": "{{count}} básicos añadidos a tu despensa",
     "inviteHousehold": "Invita a quienes comen contigo",
     "inviteFailed": "No pudimos crear un enlace de invitación. Puedes compartirlo más tarde desde los ajustes de tu hogar.",
+    "addStores": "Añade las tiendas donde compras",
+    "addMoreStores": "Añadir más tiendas",
+    "yourStores": "Tus tiendas: {{names}}",
+    "yourStoresAndMore_one": "Tus tiendas: {{names}} y {{count}} más",
+    "yourStoresAndMore_other": "Tus tiendas: {{names}} y {{count}} más",
     "notifyTitle": "Entérate antes de que la comida caduque",
     "notifyMessage": "Te avisaremos cuando algo de tu despensa esté a punto de caducar. Puedes cambiarlo en Ajustes.",
     "notifyTurnOn": "Activar"

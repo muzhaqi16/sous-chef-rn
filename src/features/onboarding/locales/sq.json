@@ -63,6 +63,11 @@
     "summaryStapleItems_other": "{{count}} ushqime bazë të shtuara në qilar",
     "inviteHousehold": "Fto ata për të cilët gatuan",
     "inviteFailed": "Nuk arritëm të krijonim një lidhje ftese. Mund ta ndash më vonë nga cilësimet e shtëpisë.",
+    "addStores": "Shto dyqanet ku blen",
+    "addMoreStores": "Shto dyqane të tjera",
+    "yourStores": "Dyqanet e tua: {{names}}",
+    "yourStoresAndMore_one": "Dyqanet e tua: {{names}} dhe {{count}} tjetër",
+    "yourStoresAndMore_other": "Dyqanet e tua: {{names}} dhe {{count}} të tjera",
     "notifyTitle": "Mëso para se ushqimi të prishet",
     "notifyMessage": "Do të të njoftojmë kur diçka në qilar është gati të skadojë. Mund ta ndryshosh te Cilësimet.",
     "notifyTurnOn": "Aktivizo"

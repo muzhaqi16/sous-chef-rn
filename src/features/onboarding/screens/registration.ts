@@ -3,6 +3,7 @@ import {
   ReceiptReviewScreen,
   ReceiptScanScreen,
 } from '#features/receipts/screens/registration';
+import { StorePickerScreen } from '#features/catalog/screens/StorePickerScreen';
 import { topInsetWith } from '#navigation/layouts/TopInsetLayout';
 import { OnboardingReceiptExits } from '#features/onboarding/components/OnboardingReceiptExits';
 import { OnboardingSetupScreen } from './OnboardingSetupScreen';
@@ -55,5 +56,11 @@ export const onboardingScreens = {
   OnboardingComplete: createNativeStackScreen({
     screen: OnboardingCompleteScreen,
     linking: 'onboarding/complete',
+  }),
+  // The root's picker is not mounted while onboarding runs.
+  OnboardingStores: createNativeStackScreen({
+    screen: StorePickerScreen,
+    initialParams: { several: true },
+    linking: null,
   }),
 };

@@ -63,6 +63,11 @@
     "summaryStapleItems_other": "{{count}} staples added to your pantry",
     "inviteHousehold": "Invite the people you cook for",
     "inviteFailed": "We couldn't make an invite link. You can share one later from your home's settings.",
+    "addStores": "Add the stores you shop at",
+    "addMoreStores": "Add more stores",
+    "yourStores": "Your stores: {{names}}",
+    "yourStoresAndMore_one": "Your stores: {{names}} and {{count}} more",
+    "yourStoresAndMore_other": "Your stores: {{names}} and {{count}} more",
     "notifyTitle": "Know before food goes off",
     "notifyMessage": "We'll let you know when something in your pantry is about to expire. You can change this in Settings.",
     "notifyTurnOn": "Turn on"

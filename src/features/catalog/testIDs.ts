@@ -45,6 +45,8 @@ export const catalogTestIDs = {
   storePickerNearMe: 'store-picker-near-me',
   storePickerNearMeContinue: 'store-picker-near-me-continue',
   storePickerRow: (key: string) => `store-picker-${key}`,
+  storePickerUnlisted: 'store-picker-unlisted',
+  storePickerDone: 'store-picker-done',
 
   /** `AddItemSheet`, under its host's `testIDPrefix`. */
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,

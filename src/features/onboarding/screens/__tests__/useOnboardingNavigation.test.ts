@@ -135,6 +135,22 @@ describe('useOnboardingNavigation', () => {
       expect(mockDispatch).not.toHaveBeenCalled();
     });
   });
+
+  describe('navigateWithinStep', () => {
+    it("opens the store picker for the user's home", () => {
+      const { result } = renderHook(() => useOnboardingNavigation());
+
+      act(() => {
+        result.current.navigateWithinStep('OnboardingStores', {
+          homeId: 'home-1',
+        });
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.navigate('OnboardingStores', { homeId: 'home-1' }),
+      );
+    });
+  });
 });
 
 describe('the visible sequence', () => {
@@ -193,6 +209,9 @@ describe('the visible sequence', () => {
     ).toBeNull();
     expect(
       onboardingProgress('OnboardingComplete', { hasPantry: true }),
+    ).toBeNull();
+    expect(
+      onboardingProgress('OnboardingStores', { hasPantry: true }),
     ).toBeNull();
     expect(onboardingProgress('SomewhereElse', { hasPantry: true })).toBeNull();
   });

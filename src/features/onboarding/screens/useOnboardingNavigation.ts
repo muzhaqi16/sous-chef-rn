@@ -37,7 +37,11 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     shownWhen: ({ hasPantry }) => hasPantry,
     subRoutes: ['OnboardingReceiptScan', 'OnboardingReceiptReview', 'Staples'],
   },
-  { id: 'OnboardingComplete', numbered: false },
+  {
+    id: 'OnboardingComplete',
+    numbered: false,
+    subRoutes: ['OnboardingStores'],
+  },
 ];
 
 /** The steps this user will see, in order. */
@@ -123,8 +127,10 @@ export function useOnboardingNavigation() {
   };
 
   /** Opens one of a step's sub-routes. */
-  const navigateWithinStep = (subRoute: OnboardingStepId) =>
-    navigation.dispatch(CommonActions.navigate(subRoute));
+  const navigateWithinStep = <Route extends OnboardingStepId>(
+    subRoute: Route,
+    params?: OnboardingStackParams[Route],
+  ) => navigation.dispatch(CommonActions.navigate(subRoute, params));
 
   return { navigateToNextStep, navigateToPreviousStep, navigateWithinStep };
 }
