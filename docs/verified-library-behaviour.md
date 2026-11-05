@@ -433,6 +433,27 @@ a no-op stub. `runAfterInteractions` is just `setImmediate`;
 grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
 ```
 
+### Navigator packages call the router's action creators by name
+
+**Claim:** `@react-navigation/native-stack`, `bottom-tabs` and `elements` dispatch
+`StackActions.*`, `TabActions.*` and `CommonActions.*` creators from the router that
+`@react-navigation/native` re-exports. No install-time or type check ties the two. A
+creator the router no longer has throws "undefined is not a function" only when the
+call runs. native-stack's `onDismissed` runs when the OS dismisses a screen, for
+example when a configuration change recreates the activity.
+
+**Verified against `@react-navigation/native-stack@8.0.0-alpha.59`,
+`@react-navigation/routers@8.0.0-alpha.21` on 2026-11-05.** native-stack calls
+`StackActions.dismiss`, which the router has. Guarded by
+`__tests__/navigation/navigatorActionsExist.library.test.ts`; native-stack
+8.0.0-alpha.57, which calls a `StackActions.remove` no router has, fails it.
+
+Re-check:
+
+```
+npx jest __tests__/navigation/navigatorActionsExist.library.test.ts
+```
+
 ### RN's Modal calls onDismiss only on iOS, after UIKit's dismissal
 
 **Claim:**
