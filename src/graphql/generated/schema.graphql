@@ -4818,7 +4818,7 @@ What kind of evidence raised a dietary alert; the client writes the copy per kin
 """
 enum DietaryAlertSource {
   """
-  An allergen the product declares, or one found in an ingredient's name; matched is its name
+  An allergen or animal food the product declares, or one a name names; matched is its name
   """
   ALLERGEN
   """
@@ -14245,8 +14245,20 @@ type Query {
   External catalog recipes ranked by how many of the named ingredients they
   use, ignoring pantry staples such as water, salt and flour. Forward only:
   the ranking has no later page.
+  
+  Screened as recipeSuggestions is: everything the caller's dietary profile
+  holds, at any severity, leaves out a recipe not tagged with a held diet or
+  a stricter one, or one that breaks a restriction or the caller's religious
+  diet. A held copy is judged by its ingredients, a catalog card by its name
+  and ingredient names, and a card whose ingredients are unknown is left out
+  for anyone it could harm. While screening, up to twice first cards are
+  read, and the page holds fewer than first only when fewer pass.
   """
   catalogRecipesByIngredients(
+    """
+    Also screen the dietary restrictions shared in the caller's homes, as the caller's own are always screened; false when omitted
+    """
+    excludeDietaryConflicts: Boolean = false
     """How many recipes: 25 when omitted, at most 25"""
     first: Int
     """
@@ -14887,19 +14899,21 @@ type Query {
   covered first, with stock about to expire lifting the recipes that use it.
   The most cooked published recipes fill the rest of the page.
   
-  A recipe tagged with an intolerance the caller's dietary profile holds as
-  an allergy or an intolerance is left out, and so is one not tagged with a
-  diet held that way. That check reads recipe tags only; with
-  excludeDietaryConflicts, ingredients are screened too.
+  Everything the caller's dietary profile holds is honoured, at any severity
+  and without excludeDietaryConflicts. A recipe is left out when it is tagged
+  with an intolerance held, when it is not tagged with a diet held or a
+  stricter one (VEGAN keeps a VEGETARIAN), when any ingredient raises a
+  dietary alert, CONTAINS or MAY_CONTAIN, as RecipeIngredient.dietaryAlerts
+  judges it, or when its name names an animal food a held diet refuses. A
+  religious diet leaves out pork, blood and gelatin; HALAL alcohol too;
+  KOSHER shellfish, other animals that are not kosher, and meat with dairy.
   
-  With excludeDietaryConflicts, a recipe is also left out when any of its
-  ingredients raises a dietary alert, of any severity, CONTAINS or
-  MAY_CONTAIN, as RecipeIngredient.dietaryAlerts judges it. The
-  restrictions are the caller's own and those shared in homeId's home, or,
-  without homeId, in every home whose pantries are read; a caller in no home
-  is screened on their own. Up to 4 × (first + 1) candidates, at most 200,
-  are judged; the page holds fewer than first only when fewer of those
-  pass. No alert means no evidence, never safe.
+  With excludeDietaryConflicts, the restrictions shared in homeId's home,
+  or, without homeId, in every home whose pantries are read, are screened
+  the same way; a religious diet is never shared. While anything is
+  screened, up to 4 × (first + 1) candidates, at most 200, are judged; the
+  page holds fewer than first only when fewer of those pass. No alert means
+  no evidence, never safe.
   
   Forward only, via first. The ranking depends on the caller's pantry and
   day, so after, before and last are not offered.
@@ -14909,7 +14923,7 @@ type Query {
   """
   recipeSuggestions(
     """
-    Leave out recipes with an ingredient that raises any dietary alert for the restrictions in scope; false when omitted
+    Also screen the dietary restrictions shared in the homes read, as the caller's own are always screened; false when omitted
     """
     excludeDietaryConflicts: Boolean = false
     """How many suggestions: 20 when omitted, at most 100"""
