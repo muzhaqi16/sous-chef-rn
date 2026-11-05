@@ -16,6 +16,7 @@
     "stockPantryTitle": "Abastece tu despensa",
     "stockPantrySubtitle": "Selecciona los artículos que ya tienes en casa",
     "stockPantrySubtitleOptional": "Selecciona los artículos que ya tienes en casa (opcional)",
+    "staplesAssumedBasics": "Damos por hecho que tienes sal, pimienta, aceite, harina y azúcar.",
     "addItemSingular": "Añadir {{count}} artículo",
     "addItemPlural": "Añadir {{count}} artículos",
     "completeTitle": "¡Todo listo!",

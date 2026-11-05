@@ -243,6 +243,10 @@ export const SelectPantryItems = () => {
       testID={onboardingTestIDs.selectPantryItemsScreen}
     >
       <View style={styles.listContent}>
+        {/* Recipe matching counts these as held, so they are never asked for. */}
+        <Text role="caption" tone="secondary" align="center">
+          {t('onBoarding.staplesAssumedBasics')}
+        </Text>
         <Text role="caption" tone="secondary" align="center">
           {t('labels.selected', { count: selectedItems.length })}
         </Text>

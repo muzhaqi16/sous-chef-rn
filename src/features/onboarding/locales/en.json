@@ -16,6 +16,7 @@
     "stockPantryTitle": "Stock your pantry",
     "stockPantrySubtitle": "Select items you already have at home",
     "stockPantrySubtitleOptional": "Select items you already have at home (optional)",
+    "staplesAssumedBasics": "We assume you have salt, pepper, oil, flour and sugar.",
     "addItemSingular": "Add {{count}} Item",
     "addItemPlural": "Add {{count}} Items",
     "completeTitle": "All set!",

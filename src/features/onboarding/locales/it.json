@@ -16,6 +16,7 @@
     "stockPantryTitle": "Riempi la dispensa",
     "stockPantrySubtitle": "Seleziona gli articoli che hai già in casa",
     "stockPantrySubtitleOptional": "Seleziona gli articoli che hai già in casa (opzionale)",
+    "staplesAssumedBasics": "Diamo per scontato che tu abbia sale, pepe, olio, farina e zucchero.",
     "addItemSingular": "Aggiungi {{count}} articolo",
     "addItemPlural": "Aggiungi {{count}} articoli",
     "completeTitle": "Tutto pronto!",

@@ -16,6 +16,7 @@
     "stockPantryTitle": "Mbush qilarin",
     "stockPantrySubtitle": "Zgjidh artikujt që ke tashmë në shtëpi",
     "stockPantrySubtitleOptional": "Zgjidh artikujt që ke tashmë në shtëpi (opsionale)",
+    "staplesAssumedBasics": "Supozojmë se ke kripë, piper, vaj, miell dhe sheqer.",
     "addItemSingular": "Shto {{count}} artikull",
     "addItemPlural": "Shto {{count}} artikuj",
     "completeTitle": "Gjithçka gati!",
