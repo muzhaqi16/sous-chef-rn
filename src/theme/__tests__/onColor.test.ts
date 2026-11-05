@@ -56,7 +56,7 @@ describe('onColor', () => {
   });
 
   it('beats a fixed white foreground, which is what it replaces', () => {
-    // Four of the seven swatches are unreadable with white on them.
+    // Three of the six swatches are unreadable with white on them.
     const whiteFails = BRAND_SWATCHES.filter(
       fill => chroma.contrast(fill, WHITE) < AA_BODY,
     );

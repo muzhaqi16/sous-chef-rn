@@ -342,6 +342,7 @@
     "defaultServings": "Porzioni predefinite",
     "delete": "Elimina",
     "deleteNamed": "Eliminare {{name}}?",
+    "removeNamed": "Rimuovere {{name}}?",
     "deleteList": "Elimina lista",
     "deletePantry": "Elimina dispensa",
     "deletedUser": "Utente eliminato",

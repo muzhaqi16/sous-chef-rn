@@ -1,10 +1,9 @@
 import { pantryTestIDs } from '#features/pantry/testIDs';
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm, useWatch, type Path, type PathValue } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
-import { BackHandler, View } from 'react-native';
+import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import PagerView from 'react-native-pager-view';
 import { StyleSheet } from 'react-native-unistyles';
@@ -26,9 +25,7 @@ import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { takesContents } from '#domain/stockAmount';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
 import { reportValidationErrors } from '#/utils/validation/common';
-import { alertService } from '#/services/alertService';
-import { destructiveConfirm } from '#/services/destructiveConfirm';
-import type { ThemedBottomSheetTextInputRef } from '#components/atoms/themedComponents';
+import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   addPantryItemSchema,
@@ -49,14 +46,6 @@ interface AddDetailsSheetProps {
   onHoldOpen?: (held: boolean) => void;
 }
 
-/** Typed input is never dropped without asking, the way `FormScreen` asks. */
-const confirmDiscard = (translate: Translate, discard: () => void) =>
-  alertService.alert(
-    translate('confirmations.discardChangesTitle'),
-    translate('confirmations.discardChanges'),
-    destructiveConfirm(translate('labels.discard'), discard),
-  );
-
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   pantryId,
   prefilledItemName = '',
@@ -74,7 +63,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     t('addToPantry.pageStock'),
   ];
   const pagerRef = useRef<PagerView>(null);
-  const itemNameRef = useRef<ThemedBottomSheetTextInputRef>(null);
 
   // Page state
   const [currentPage, setCurrentPage] = useState(0);
@@ -86,6 +74,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     handleSubmit,
     setValue,
     trigger,
+    setFocus,
     formState: { errors, isDirty },
   } = useForm<AddPantryItemFormData>({
     resolver: yupResolver(addPantryItemSchema),
@@ -101,11 +90,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     compute: (formValues: AddPantryItemFormData) => formValues,
   });
   const {
-    itemName,
     quantityInput,
     unit,
     storageState,
-    category,
     unitType,
     sizeInput,
     sizeUnitDisplay,
@@ -114,7 +101,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     storageNotes,
     condition,
     tags,
-    brand,
     minQuantity,
     restockQuantity,
     storeName,
@@ -143,12 +129,10 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Setter-shaped adapters, so the four page components keep their existing
   // `value` + `setValue` prop interfaces rather than each being rewritten.
-  const setItemName = (v: string) => setField('itemName', v);
   const setQuantityInput = (v: string) => setField('quantityInput', v);
   const setUnit = (v: string) => setField('unit', v);
   const setUnitId = (v: string | null) => setField('unitId', v);
   const setStorageState = (v: StorageState) => setField('storageState', v);
-  const setCategory = (v: string) => setField('category', v);
   const setSizeInput = (v: string) => setField('sizeInput', v);
   const setSizeUnit = (v: string) => setField('sizeUnitDisplay', v);
   const setExpirationDate = (v: Date | null) => setField('expirationDate', v);
@@ -158,7 +142,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const setStorageNotes = (v: string) => setField('storageNotes', v);
   const setCondition = (v: ItemCondition) => setField('condition', v);
   const setTags = (v: string) => setField('tags', v);
-  const setBrand = (v: string) => setField('brand', v);
   const setMinQuantity = (v: string) => setField('minQuantity', v);
   const setRestockQuantity = (v: string) => setField('restockQuantity', v);
   const setStoreName = (v: string) => setField('storeName', v);
@@ -219,25 +202,11 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     pagerRef.current?.setPage(index);
   };
 
-  const handleCancel = () => (isDirty ? confirmDiscard(t, onClose) : onClose());
-
-  useEffect(() => {
-    onHoldOpen?.(isDirty);
-    return () => onHoldOpen?.(false);
-  }, [isDirty, onHoldOpen]);
-
-  // Registered after the sheet's own Back handler, so it runs first.
-  useEffect(() => {
-    if (!isDirty) return;
-    const subscription = BackHandler.addEventListener(
-      'hardwareBackPress',
-      () => {
-        confirmDiscard(t, onClose);
-        return true;
-      },
-    );
-    return () => subscription.remove();
-  }, [isDirty, onClose, t]);
+  const handleCancel = useDiscardGuard({
+    isDirty,
+    onDiscard: onClose,
+    onHoldOpen,
+  });
 
   const { handleConfirm, loading } = usePantryItemSubmission({
     pantryId,
@@ -261,10 +230,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
             if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
               return;
             const page = FIELD_PAGE[firstField];
+            // react-hook-form then focuses the first field in error it holds.
             if (page !== undefined) handlePageChange(page);
-            // Its fields write through `setValue`, so React Hook Form holds no
-            // ref to focus; the one a submit can leave empty is Item Name.
-            if (firstField === 'itemName') itemNameRef.current?.focus();
           })();
         }}
         saving={loading}
@@ -291,14 +258,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       >
         {/* Page 1: Main */}
         <MainDetailsPage
-          itemName={itemName}
-          setItemName={setItemName}
-          itemNameError={errors.itemName?.message}
-          itemNameRef={itemNameRef}
-          brand={brand}
-          setBrand={setBrand}
-          category={category}
-          setCategory={setCategory}
+          control={control}
+          setFocus={setFocus}
           expirationDate={expirationDate}
           setExpirationDate={setExpirationDate}
           storageState={storageState}

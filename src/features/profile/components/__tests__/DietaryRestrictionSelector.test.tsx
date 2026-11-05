@@ -54,7 +54,7 @@ jest.mock(
                 <Text>{item.label}</Text>
                 <Pressable
                   testID={`remove-${item.id}`}
-                  onPress={() => onRemove(item.id)}
+                  onPress={() => onRemove(item)}
                 >
                   <Text>Remove</Text>
                 </Pressable>
@@ -258,7 +258,11 @@ describe('DietaryRestrictionSelector', () => {
       />,
     );
     await user.press(screen.getByTestId('remove-r1'));
-    expect(defaultProps.onRemove).toHaveBeenCalledWith('r1');
+    // The row as shown, so the confirmation can name it.
+    expect(defaultProps.onRemove).toHaveBeenCalledWith({
+      id: 'r1',
+      label: 'Vegetarian',
+    });
   });
 
   it('lists avoided foods by name, saying how strict a stricter one is', () => {

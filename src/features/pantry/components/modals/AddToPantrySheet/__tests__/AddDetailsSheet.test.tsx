@@ -54,37 +54,61 @@ jest.mock('#features/pantry/hooks/usePantryItemSubmission', () => ({
 }));
 
 const mockFocusItemName = jest.fn();
+
+// Stands in for Item Name's input: react-hook-form focuses a field through the
+// ref its `Controller` hands out, so this is what a failed submit reaches.
+function MockFocusProbe({ ref }: { ref: React.Ref<{ focus: () => void }> }) {
+  const { useImperativeHandle } = require('react');
+  useImperativeHandle(ref, () => ({ focus: mockFocusItemName }));
+  return null;
+}
+
 jest.mock('../MainDetailsPage', () => ({
-  // Renders `itemNameError` so the sheet's contract with the page — that a
-  // validation failure reaches the field — is assertable here. Whether the
-  // page paints it as a red border is FormInput's own test.
+  // Renders the name field through the sheet's own `control`, so the contract
+  // with the page (a validation failure reaches the field, and focus can) is
+  // assertable here. Whether the page paints the message is FormInput's test.
   MainDetailsPage: ({
-    itemNameError,
-    itemNameRef,
-    setItemName,
+    control,
     storageState,
   }: {
-    itemNameError?: string;
-    itemNameRef?: React.Ref<{ focus: () => void }>;
-    setItemName: (value: string) => void;
+    control: import('react-hook-form').Control<
+      import('#features/pantry/types').AddPantryItemFormData
+    >;
     storageState: string;
   }) => {
     const { View, Text, Pressable } = require('react-native');
-    const { useImperativeHandle } = require('react');
-    useImperativeHandle(itemNameRef, () => ({
-      focus: mockFocusItemName,
-    }));
+    const { Controller } = require('react-hook-form');
     return (
       <View testID="main-details-page">
         <Text>Main Details Page</Text>
-        <Pressable
-          testID="main-details-page-type-name"
-          onPress={() => setItemName('Milk')}
+        <Controller
+          control={control}
+          name="itemName"
+          render={({
+            field,
+            fieldState,
+          }: {
+            field: {
+              onChange: (value: string) => void;
+              ref: React.Ref<{ focus: () => void }>;
+            };
+            fieldState: { error?: { message?: string } };
+          }) => (
+            <>
+              <MockFocusProbe ref={field.ref} />
+              <Pressable
+                testID="main-details-page-type-name"
+                onPress={() => field.onChange('Milk')}
+              />
+              {fieldState.error ? (
+                <Text testID="main-details-page-name-error">
+                  {fieldState.error.message}
+                </Text>
+              ) : null}
+            </>
+          )}
         />
         <Text testID="main-details-page-storage-state">{storageState}</Text>
-        {itemNameError ? (
-          <Text testID="main-details-page-name-error">{itemNameError}</Text>
-        ) : null}
       </View>
     );
   },

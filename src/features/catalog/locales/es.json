@@ -322,7 +322,6 @@
     "searchPlaceholder": "Buscar carpetas...",
     "duplicate": "Ya existe una carpeta llamada \"{{name}}\".",
     "manageTitle": "Gestionar carpeta",
-    "deleteConfirm": "¿Eliminar esta carpeta?",
     "deleteFolder": "Eliminar carpeta",
     "deleteHint": "Las recetas se moverán a Sin carpeta",
     "renamePlaceholder": "Introduce el nuevo nombre de la carpeta...",

@@ -29,6 +29,7 @@ const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
 }));
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
+import type { RestrictionSectionItem } from '#features/profile/components/RestrictionSection/RestrictionSection';
 import { DietarySharingSection } from '#features/profile/components/DietarySharingSection';
 import { useDietarySharing } from '#features/profile/hooks/useDietarySharing';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
@@ -56,9 +57,9 @@ export const DietaryProfileScreen: React.FC = () => {
   const [editingMeals, setEditingMeals] = useState(false);
   const [editingSnacks, setEditingSnacks] = useState(false);
 
-  const handleRemoveRestriction = (id: string) => {
+  const handleRemoveRestriction = ({ id, label }: RestrictionSectionItem) => {
     alertService.alert(
-      t('dietary.removeRestrictionTitle'),
+      t('labels.removeNamed', { name: label }),
       t('dietary.removeRestrictionConfirm'),
       [
         {

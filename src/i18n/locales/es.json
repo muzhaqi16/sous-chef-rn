@@ -342,6 +342,7 @@
     "defaultServings": "Raciones por defecto",
     "delete": "Eliminar",
     "deleteNamed": "¿Eliminar {{name}}?",
+    "removeNamed": "¿Quitar {{name}}?",
     "deleteList": "Eliminar lista",
     "deletePantry": "Eliminar despensa",
     "deletedUser": "Usuario eliminado",

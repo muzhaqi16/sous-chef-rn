@@ -61,7 +61,6 @@
   "dietary": {
     "title": "Perfil alimentario",
     "restrictions": "Restricciones alimentarias",
-    "removeRestrictionTitle": "Eliminar restricción",
     "removeRestrictionConfirm": "¿Seguro que quieres eliminar esta restricción alimentaria?",
     "removeRestrictionFailed": "No se pudo eliminar la restricción",
     "foodPreferences": "Preferencias alimentarias",

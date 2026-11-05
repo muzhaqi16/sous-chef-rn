@@ -106,7 +106,9 @@ export const ManageFolderSheet: React.FC<ManageFolderSheetProps> = ({
           <View style={styles.deleteConfirmContainer}>
             <Icon name="warning-outline" size={32} tone="error" />
             <Text role="heading" style={styles.deleteConfirmTitle}>
-              {t('folderPicker.deleteConfirm')}
+              {managingFolder
+                ? t('labels.deleteNamed', { name: managingFolder })
+                : t('folderPicker.deleteFolder')}
             </Text>
             <Text
               role="body"

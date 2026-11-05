@@ -8,8 +8,8 @@ import {
   ThemedBottomSheetTextInput,
   ThemedTextInput,
   type ThemedBottomSheetTextInputRef,
-  type ThemedTextInputRef,
 } from '#components/atoms/themedComponents';
+import { assignRef, type FocusableInputRef } from './inputRef';
 import { useIsBottomSheetInput } from '#context/BottomSheetInputContext';
 import { useFieldAccessibility } from '#hooks/ui/useFieldAccessibility';
 
@@ -26,11 +26,11 @@ interface FormInputProps extends Omit<TextInputProps, 'style'> {
   /** Optional element rendered inside the input on the right (e.g. an icon button). */
   trailing?: React.ReactNode;
   /**
-   * The input outside a sheet, for a host that moves focus to it: gorhom's
-   * sheet input has its own ref type (see BaseInput's `sheetRef`).
+   * The input, for a host that only focuses it (react-hook-form, a chained
+   * form). Attached inside a sheet too, where the input is gorhom's.
    */
-  ref?: React.Ref<ThemedTextInputRef>;
-  /** The same input inside a sheet, whose ref type is gorhom's. */
+  ref?: React.Ref<FocusableInputRef>;
+  /** The input inside a sheet, as gorhom's own type. */
   sheetRef?: React.Ref<ThemedBottomSheetTextInputRef>;
 }
 
@@ -81,9 +81,15 @@ export const FormInput: React.FC<FormInputProps> = ({
     >
       <View style={variantStyles.inputContainer}>
         {inSheet ? (
-          <ThemedBottomSheetTextInput ref={sheetRef} {...inputProps} />
+          <ThemedBottomSheetTextInput
+            ref={node => {
+              assignRef(sheetRef, node);
+              assignRef(ref, node ?? null);
+            }}
+            {...inputProps}
+          />
         ) : (
-          <ThemedTextInput ref={ref} {...inputProps} />
+          <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
         )}
         {!!trailing && <View style={variantStyles.trailing}>{trailing}</View>}
       </View>

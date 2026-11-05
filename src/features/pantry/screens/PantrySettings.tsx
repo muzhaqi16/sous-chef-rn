@@ -169,7 +169,9 @@ export const PantrySettings: React.FC<
     if (!pantryId) return;
 
     alertService.alert(
-      t('labels.deletePantry'),
+      pantry?.name
+        ? t('labels.deleteNamed', { name: pantry.name })
+        : t('labels.deletePantry'),
       t('pantrySettings.deleteConfirmMessage'),
       destructiveConfirm(t('labels.delete'), () => {
         // Stops the subscription racing the delete.

@@ -30,6 +30,7 @@ import { localizeNumericHint } from '#/utils/formatters/number';
 import { reportValidationErrors } from '#/utils/validation/common';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
+import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
 
 interface ShoppingListDetailsStepProps {
   shoppingListId: string | undefined;
@@ -39,6 +40,8 @@ interface ShoppingListDetailsStepProps {
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
+  /** Holds the parent sheet open against a pan-down while input would be lost. */
+  onHoldOpen?: (held: boolean) => void;
 }
 
 /**
@@ -48,7 +51,13 @@ interface ShoppingListDetailsStepProps {
  */
 export const ShoppingListDetailsStep: React.FC<
   ShoppingListDetailsStepProps
-> = ({ shoppingListId, prefilledItemName = '', onClose, onSuccess }) => {
+> = ({
+  shoppingListId,
+  prefilledItemName = '',
+  onClose,
+  onSuccess,
+  onHoldOpen,
+}) => {
   const { t } = useTranslation();
   // Off, the line is added with no price.
   const showPrices = useBudgetAndPricesEnabled();
@@ -59,6 +68,7 @@ export const ShoppingListDetailsStep: React.FC<
   const {
     control,
     handleSubmit,
+    setFocus,
     errors,
     values: {
       itemName,
@@ -69,7 +79,6 @@ export const ShoppingListDetailsStep: React.FC<
       estimatedPrice,
       brand,
       brandId,
-      netWeight,
       netWeightUnitId,
       priority,
       storeId,
@@ -78,7 +87,19 @@ export const ShoppingListDetailsStep: React.FC<
     setFieldValue,
     buildUnitInput,
     parseNetWeightInput,
+    hasDirtyFields,
   } = useShoppingListItemForm({ itemName: prefilledItemName });
+
+  const handleCancel = useDiscardGuard({
+    isDirty: hasDirtyFields,
+    onDiscard: onClose,
+    onHoldOpen,
+  });
+
+  // The typed fields render through `Controller`, so react-hook-form holds
+  // their inputs: the return key moves on by name, and a failed submit focuses
+  // the first field in error.
+  const afterNetWeight = showPrices ? 'estimatedPrice' : 'notes';
 
   const { addItem } = useAddShoppingItem({ listId: shoppingListId });
   const [saving, setSaving] = useState(false);
@@ -147,7 +168,7 @@ export const ShoppingListDetailsStep: React.FC<
         title={t('labels.addItem')}
         cancelLabel={t('labels.cancel')}
         confirmLabel={t('labels.add')}
-        onCancel={onClose}
+        onCancel={handleCancel}
         onConfirm={handleSave}
         saving={saving}
         cancelTestID={shoppingListTestIDs.addSheetCancelButton}
@@ -172,7 +193,7 @@ export const ShoppingListDetailsStep: React.FC<
         <Controller
           control={control}
           name="itemName"
-          render={({ field: { value, onChange } }) => (
+          render={({ field: { value, onChange, ref } }) => (
             <FormInput
               label={t('labels.itemName')}
               required
@@ -181,6 +202,10 @@ export const ShoppingListDetailsStep: React.FC<
               onChangeText={onChange}
               placeholder={t('shoppingListScreens.itemNamePlaceholder')}
               useBottomSheetInput
+              ref={ref}
+              returnKeyType="next"
+              submitBehavior="submit"
+              onSubmitEditing={() => setFocus('quantityInput')}
               testID={shoppingListTestIDs.addSheetNameInput}
             />
           )}
@@ -208,7 +233,7 @@ export const ShoppingListDetailsStep: React.FC<
           <Controller
             control={control}
             name="quantityInput"
-            render={({ field: { value, onChange } }) => (
+            render={({ field: { value, onChange, ref } }) => (
               <EditableCounter
                 label={t('labels.quantity')}
                 required
@@ -216,6 +241,10 @@ export const ShoppingListDetailsStep: React.FC<
                 value={value}
                 onChangeText={onChange}
                 placeholder="1"
+                ref={ref}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => setFocus('netWeight')}
                 testID={shoppingListTestIDs.addSheetQuantityInput}
               />
             )}
@@ -232,16 +261,28 @@ export const ShoppingListDetailsStep: React.FC<
         </FieldRow>
 
         <FieldRow>
-          <FormInput
-            label={t('labels.netWeight')}
-            value={netWeight}
-            onChangeText={text => setFieldValue('netWeight', text)}
-            // The all-or-nothing rule reports on BOTH halves of the pair; only
-            // the unit half was rendered here.
-            error={errors.netWeight?.message}
-            placeholder={t('shoppingListScreens.netWeightPlaceholder')}
-            keyboardType="decimal-pad"
-            useBottomSheetInput
+          <Controller
+            control={control}
+            name="netWeight"
+            // The all-or-nothing rule lives on `netWeightUnit`; it re-runs as
+            // the weight is typed.
+            rules={{ deps: ['netWeightUnit'] }}
+            render={({ field: { value, onChange, ref } }) => (
+              <FormInput
+                label={t('labels.netWeight')}
+                value={value}
+                onChangeText={onChange}
+                // The rule reports on BOTH halves of the pair.
+                error={errors.netWeight?.message}
+                placeholder={t('shoppingListScreens.netWeightPlaceholder')}
+                keyboardType="decimal-pad"
+                useBottomSheetInput
+                ref={ref}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => setFocus(afterNetWeight)}
+              />
+            )}
           />
           <Controller
             control={control}
@@ -261,15 +302,26 @@ export const ShoppingListDetailsStep: React.FC<
         </FieldRow>
 
         {showPrices ? (
-          <FormInput
-            label={t('shoppingListScreens.estimatedPrice')}
-            value={estimatedPrice}
-            onChangeText={text => setFieldValue('estimatedPrice', text)}
-            placeholder={localizeNumericHint(
-              t('shoppingListScreens.estimatedPricePlaceholder'),
+          <Controller
+            control={control}
+            name="estimatedPrice"
+            render={({ field: { value, onChange, ref } }) => (
+              <FormInput
+                label={t('shoppingListScreens.estimatedPrice')}
+                value={value}
+                onChangeText={onChange}
+                error={errors.estimatedPrice?.message}
+                placeholder={localizeNumericHint(
+                  t('shoppingListScreens.estimatedPricePlaceholder'),
+                )}
+                keyboardType="numeric"
+                useBottomSheetInput
+                ref={ref}
+                returnKeyType="next"
+                submitBehavior="submit"
+                onSubmitEditing={() => setFocus('notes')}
+              />
             )}
-            keyboardType="numeric"
-            useBottomSheetInput
           />
         ) : null}
 
@@ -293,14 +345,21 @@ export const ShoppingListDetailsStep: React.FC<
           helperText={t('labels.storeSelectHint')}
         />
 
-        <FormInput
-          label={t('labels.notes')}
-          value={notes}
-          onChangeText={text => setFieldValue('notes', text)}
-          placeholder={t('shoppingListScreens.notesPlaceholder')}
-          multiline
-          numberOfLines={3}
-          useBottomSheetInput
+        <Controller
+          control={control}
+          name="notes"
+          render={({ field: { value, onChange, ref } }) => (
+            <FormInput
+              label={t('labels.notes')}
+              value={value}
+              onChangeText={onChange}
+              placeholder={t('shoppingListScreens.notesPlaceholder')}
+              multiline
+              numberOfLines={3}
+              useBottomSheetInput
+              ref={ref}
+            />
+          )}
         />
       </BottomSheetFormScrollView>
     </View>

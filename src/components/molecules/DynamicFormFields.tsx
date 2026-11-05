@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { View } from 'react-native';
-import type { ThemedTextInputRef } from '#components/atoms/themedComponents';
+import type { FocusableInputRef } from '#components/atoms/inputRef';
 import type { Control, FieldErrors, Path } from 'react-hook-form';
 import { type FieldValues, Controller } from 'react-hook-form';
 
@@ -77,7 +77,7 @@ export function DynamicFormFields<T extends FieldValues>({
   // Focus is only reachable imperatively in React Native, so moving between
   // fields needs a handle on each one. Populated by callback refs at commit,
   // read only from the return-key handler.
-  const inputRefs = useRef<Array<ThemedTextInputRef | null>>([]);
+  const inputRefs = useRef<Array<FocusableInputRef | null>>([]);
   const renderers = useFieldRenderers();
   // Memoize the field components to prevent recreation
   const memoizedFields = (() => {
@@ -141,7 +141,9 @@ export function DynamicFormFields<T extends FieldValues>({
               control={control}
               name={name}
               rules={deps ? { deps } : undefined}
-              render={({ field: { onChange, onBlur, value } }) => {
+              render={({
+                field: { onChange, onBlur, value, ref: fieldRef },
+              }) => {
                 // Custom onChange handler that transforms value if needed
                 const handleChange = (newValue: unknown) => {
                   const transformedValue =
@@ -224,11 +226,12 @@ export function DynamicFormFields<T extends FieldValues>({
                     label,
                     ...(placeholder && { placeholder }),
                     ...(testID && { testID }),
-                    ...(focusChaining && {
-                      ref: (node: ThemedTextInputRef | null) => {
-                        inputRefs.current[index] = node;
-                      },
-                    }),
+                    // react-hook-form focuses the first field in error through
+                    // this ref when a submit fails.
+                    ref: (node: FocusableInputRef | null) => {
+                      fieldRef(node);
+                      if (focusChaining) inputRefs.current[index] = node;
+                    },
                     ...chainingProps,
                     ...props,
                   };

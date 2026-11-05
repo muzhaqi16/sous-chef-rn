@@ -322,7 +322,6 @@
     "searchPlaceholder": "Kërko dosje...",
     "duplicate": "Një dosje me emrin \"{{name}}\" ekziston tashmë.",
     "manageTitle": "Menaxho dosjen",
-    "deleteConfirm": "Ta fshish këtë dosje?",
     "deleteFolder": "Fshi dosjen",
     "deleteHint": "Recetat do të zhvendosen te \"Pa dosje\"",
     "renamePlaceholder": "Shkruaj emrin e ri të dosjes...",

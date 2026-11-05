@@ -219,7 +219,7 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
 
         <View
           style={[
-            styles.contentCard,
+            styles.contentCard(insets.left, insets.right),
             !hasHero && styles.contentCardNoHero,
             contentStyle,
           ]}
@@ -241,7 +241,12 @@ export const CollapsingHeroDetail: React.FC<CollapsingHeroDetailProps> = ({
           style={[
             styles.barRow,
             commonStyles.barInset,
-            { top: insets.top + HEADER_TOP_GAP },
+            // In landscape a cutout sits at a side; the hero still reaches it.
+            {
+              top: insets.top + HEADER_TOP_GAP,
+              left: insets.left,
+              right: insets.right,
+            },
           ]}
         >
           <HeroChip
@@ -314,16 +319,17 @@ const styles = StyleSheet.create(theme => ({
   },
   // Opaque card that rides up over the hero as you scroll; rounded top + slight
   // overlap make the image-to-content transition. It is the page, so it owns
-  // the gutter the bar's back glyph sits on.
-  contentCard: {
+  // the gutter the bar's back glyph sits on, plus any side safe area.
+  contentCard: (insetLeft: number, insetRight: number) => ({
     flexGrow: 1,
     backgroundColor: theme.colors.background,
     borderTopLeftRadius: theme.radii.xl,
     borderTopRightRadius: theme.radii.xl,
     marginTop: -theme.spacing.mdPlus,
     paddingTop: theme.spacing.sm,
-    paddingHorizontal: theme.layout.pageGutter,
-  },
+    paddingLeft: theme.layout.pageGutter + insetLeft,
+    paddingRight: theme.layout.pageGutter + insetRight,
+  }),
   contentCardNoHero: {
     marginTop: 0,
   },

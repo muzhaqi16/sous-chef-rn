@@ -342,6 +342,7 @@
     "defaultServings": "Default Servings",
     "delete": "Delete",
     "deleteNamed": "Delete {{name}}?",
+    "removeNamed": "Remove {{name}}?",
     "deleteList": "Delete List",
     "deletePantry": "Delete Pantry",
     "deletedUser": "Deleted user",

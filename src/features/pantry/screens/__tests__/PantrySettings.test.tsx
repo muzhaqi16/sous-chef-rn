@@ -286,14 +286,14 @@ describe('PantrySettings', () => {
     );
   });
 
-  it('calls handleDelete and shows confirmation alert', async () => {
+  it('asks before deleting, naming the pantry', async () => {
     renderWithApollo(<PantrySettings route={editRoute} />, {
       cache: cacheWithPantry(defaultPantry),
     });
 
     fireEvent.press(screen.getByText('Delete Pantry'));
     expect(alertService.alert).toHaveBeenCalledWith(
-      'Delete Pantry',
+      `Delete ${defaultPantry.name}?`,
       expect.stringContaining('Are you sure'),
       expect.any(Array),
     );

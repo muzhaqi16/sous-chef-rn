@@ -342,6 +342,7 @@
     "defaultServings": "Pjesë të parazgjedhura",
     "delete": "Fshi",
     "deleteNamed": "Të fshihet {{name}}?",
+    "removeNamed": "Të hiqet {{name}}?",
     "deleteList": "Fshi listën",
     "deletePantry": "Fshi qilarin",
     "deletedUser": "Përdorues i fshirë",
