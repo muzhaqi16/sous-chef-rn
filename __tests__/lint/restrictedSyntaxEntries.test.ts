@@ -288,8 +288,8 @@ const TEST_FIXTURES: Fixture[] = [
     ],
     valid: [
       "import { act, screen } from '@testing-library/react-native';",
-      'await drainTimers();',
-      'await drained(() => client.query({ query }));',
+      'await act(async () => { await log.answered(StorePlacesDocument); });',
+      'await act(async () => { await client.query({ query }); });',
       'screen.getByText("Milk");',
     ],
   },
