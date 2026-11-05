@@ -59,6 +59,7 @@ export function useMealPlanList(
     error,
     refetch,
     observable,
+    variables,
   } = useQuery(
     GetMealPlansDocument,
     skipped
@@ -69,8 +70,16 @@ export function useMealPlanList(
         },
   );
   // `skipToken` keeps the last run's data even when the filters have moved on
-  // (a new day's `startDate`); a skipped variant answers nothing.
-  const data = skipped ? undefined : result;
+  // (a new day's `startDate`), so a stood-down read answers only for the same
+  // variant: a screen left covered keeps its plans, not another day's.
+  const lastRunIsThisVariant =
+    JSON.stringify([
+      variables.filters ?? null,
+      variables.orderBy,
+      variables.first,
+    ]) === JSON.stringify([filters ?? null, { startDate: orderBy }, first]);
+  const data =
+    isLoggedOut || (skip && !lastRunIsThisVariant) ? undefined : result;
 
   useApolloErrorLogger(GetMealPlansDocument, error);
 
