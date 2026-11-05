@@ -137,3 +137,25 @@ describe('useTutorialSequence — order and missing targets', () => {
     });
   });
 });
+
+describe('useTutorialSequence — not now', () => {
+  it('hides the step without marking it, so a later visit shows it again', () => {
+    const { result } = renderHook(() =>
+      useTutorialSequence({
+        steps,
+        targetRects,
+        canStart: true,
+        isPaused: false,
+        startDelay: 0,
+      }),
+    );
+    expect(result.current.currentStep?.title).toBe('A');
+
+    act(() => {
+      result.current.pause();
+    });
+
+    expect(result.current.currentStep).toBeNull();
+    expect(hints()['feature_hint_shown_user-1_step_a']).toBeUndefined();
+  });
+});

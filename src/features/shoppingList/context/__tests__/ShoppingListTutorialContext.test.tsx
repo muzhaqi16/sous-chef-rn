@@ -97,6 +97,44 @@ describe('ShoppingListTutorialProvider — a tour left part-way', () => {
     );
   });
 
+  it('stops for a stray tap without counting as done', () => {
+    const { result } = renderHook(
+      () => ({
+        state: useShoppingListTutorialState(),
+        actions: useShoppingListTutorialActions(),
+      }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.actions?.pause();
+    });
+
+    expect(result.current.state?.isActive).toBe(false);
+    for (const id of ids) {
+      expect(hints()[`feature_hint_shown_user-1_${id}`]).toBeUndefined();
+    }
+  });
+
+  it('shows the add sheet hint with the sheet, before the rows below it', () => {
+    const { result } = renderHook(
+      () => ({
+        state: useShoppingListTutorialState(),
+        actions: useShoppingListTutorialActions(),
+      }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.actions?.notifyAddButtonPressed();
+    });
+
+    expect(result.current.state?.currentStep).toBe(
+      ShoppingListTutorialStep.GUIDE_ADD_ITEM,
+    );
+    expect(result.current.state?.isActive).toBe(true);
+  });
+
   it('counts the tour and the ones it replaced as done once ended', () => {
     const { result } = renderHook(() => useShoppingListTutorialActions(), {
       wrapper,

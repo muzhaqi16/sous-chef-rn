@@ -411,6 +411,7 @@ function PantryMainContent({
           stepIndex={coachStep.stepIndex}
           totalSteps={coachStep.totalSteps}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             const action = tutorialTargetActions[coachStep.stepIndex];

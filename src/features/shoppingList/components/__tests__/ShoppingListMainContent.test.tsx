@@ -92,10 +92,12 @@ jest.mock('#features/shoppingList/hooks/useItemReordering', () => ({
   })),
 }));
 
+const mockCloseAllRows = jest.fn();
 jest.mock('#hooks/ui/useSwipeableCoordinator', () => ({
   useSwipeableCoordinator: jest.fn(() => ({
     handleSwipeableWillOpen: jest.fn(),
     handleSwipeableClose: jest.fn(),
+    closeAll: mockCloseAllRows,
   })),
 }));
 
@@ -502,6 +504,24 @@ describe('ShoppingListMainContent', () => {
       <ShoppingListMainContent screenData={makeScreenData()} />,
     );
     expect(tree.toJSON()).toBeTruthy();
+  });
+
+  // A row left swiped open puts its checkbox beside where it rests, and the
+  // spotlight would point at empty space.
+  it('closes open rows when a step points into a row', () => {
+    (useShoppingListTutorial as jest.Mock).mockReturnValue(
+      makeTutorial({
+        currentStep: ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
+      }),
+    );
+
+    render(
+      <ShoppingListMainContent
+        screenData={makeScreenData({ rawUnpurchasedItems: [{ id: 'item-1' }] })}
+      />,
+    );
+
+    expect(mockCloseAllRows).toHaveBeenCalled();
   });
 
   describe('tutorial coach-mark render guards', () => {

@@ -330,6 +330,7 @@ export const TodayMain: React.FC = () => {
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             tutorial.advance();

@@ -61,6 +61,8 @@ export interface UseTutorialSequenceReturn {
   advanceInPlace: () => void;
   /** Dismiss all remaining steps */
   skipAll: () => void;
+  /** Hides the sequence until the screen mounts again, marking nothing. */
+  pause: () => void;
 }
 
 // ── Hook ──
@@ -85,6 +87,7 @@ export const useTutorialSequence = ({
   // Steps whose target never measured, passed over for this mount only: the
   // next visit tries them again.
   const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set());
+  const [paused, setPaused] = useState(false);
 
   // React to external resets (centralized signal hook)
   const wasReset = useTutorialResetSignal();
@@ -93,6 +96,7 @@ export const useTutorialSequence = ({
     setHasStarted(false);
     setIsTransitioning(false);
     setSkipped(new Set());
+    setPaused(false);
   }
 
   const visibleSteps = steps.filter(step => step.when?.() ?? true);
@@ -131,7 +135,12 @@ export const useTutorialSequence = ({
   // A step whose target never measures is passed over, so the sequence never
   // waits on nothing.
   const waitingFor =
-    hasStarted && tutorialsEnabled && !isPaused && activeStep && !activeRect
+    hasStarted &&
+    tutorialsEnabled &&
+    !isPaused &&
+    !paused &&
+    activeStep &&
+    !activeRect
       ? activeStep.featureId
       : null;
   const targetTimeoutMs =
@@ -191,6 +200,7 @@ export const useTutorialSequence = ({
     hasStarted &&
     tutorialsEnabled &&
     !isPaused &&
+    !paused &&
     !isTransitioning &&
     activeStepIndex !== -1;
 
@@ -205,5 +215,11 @@ export const useTutorialSequence = ({
         }
       : null;
 
-  return { currentStep, advance, advanceInPlace, skipAll };
+  return {
+    currentStep,
+    advance,
+    advanceInPlace,
+    skipAll,
+    pause: () => setPaused(true),
+  };
 };

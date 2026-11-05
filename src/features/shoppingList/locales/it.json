@@ -334,7 +334,7 @@
     },
     "swipeActions": {
       "title": "Scorri per gestire gli articoli",
-      "subtitle": "Scorri un articolo a sinistra per modificarlo, a destra per eliminarlo"
+      "subtitle": "Scorri un articolo a destra per modificarlo, a sinistra per eliminarlo"
     },
     "checkbox": {
       "subtitle": "Tocca la casella per segnare questo articolo come acquistato"

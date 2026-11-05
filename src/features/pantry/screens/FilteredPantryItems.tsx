@@ -512,6 +512,7 @@ export const FilteredPantryItems: React.FC<
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onTargetPress={tutorial.advance}
         />
       ) : null}

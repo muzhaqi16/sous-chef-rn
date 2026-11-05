@@ -52,7 +52,10 @@ export interface SpotlightCoachMarkProps {
   targetRect: TargetRect;
   title: string;
   subtitle?: string;
+  /** Ends the whole tutorial: its Skip all, or Done on the last step. */
   onDismiss: () => void;
+  /** Closes this tip only, for a tap on the dim or Android back; it comes back later. */
+  onClose: () => void;
   /** Called when the user taps the highlighted target area */
   onTargetPress?: () => void;
   /** Current step index (0-based) for multi-step tutorials */
@@ -76,6 +79,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   title,
   subtitle,
   onDismiss,
+  onClose,
   onTargetPress,
   stepIndex,
   totalSteps,
@@ -309,8 +313,9 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
         {!allowGesturePassthrough && (
           <Pressable
             style={styles.dismissArea}
-            onPress={onDismiss}
+            onPress={onClose}
             accessible={false}
+            testID={kitTestIDs.spotlightDim}
           />
         )}
 
@@ -425,7 +430,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
       animationType="none"
       statusBarTranslucent
       navigationBarTranslucent
-      onRequestClose={onDismiss}
+      onRequestClose={onClose}
     >
       <GestureHandlerRootView style={styles.fullScreen}>
         {overlay}

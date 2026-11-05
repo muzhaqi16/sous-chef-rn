@@ -158,6 +158,8 @@ interface ShoppingListTutorialActionsContextValue {
   skipCurrentStep: () => void;
   /** Dismisses the whole tutorial. */
   skipAll: () => void;
+  /** Hides the tutorial until the List mounts again, marking nothing. */
+  pause: () => void;
 }
 
 // Combined type for the backwards-compatible hook.
@@ -220,6 +222,7 @@ export function ShoppingListTutorialProvider({
   const [currentStep, setCurrentStep] = useState(ShoppingListTutorialStep.IDLE);
   const [hasStarted, setHasStarted] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [rects, setRects] = useState<
     Partial<Record<TutorialRectKey, TargetRect | null>>
   >({});
@@ -252,7 +255,8 @@ export function ShoppingListTutorialProvider({
   }, [userId]);
 
   // Startup delay; none asked for starts at once.
-  const canBegin = canStart && !isCompleted && !hasStarted && tutorialsEnabled;
+  const canBegin =
+    canStart && !isCompleted && !hasStarted && tutorialsEnabled && !paused;
   if (canBegin && startDelay <= 0) {
     setHasStarted(true);
     setCurrentStep(ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON);
@@ -392,10 +396,16 @@ export function ShoppingListTutorialProvider({
     markComplete();
   };
 
+  // A hint inside the add sheet shows with the sheet: arriving later, it
+  // pushes the rows down under the finger reaching for them.
+  const inSheet =
+    currentStep === ShoppingListTutorialStep.GUIDE_ADD_ITEM ||
+    currentStep === ShoppingListTutorialStep.HINT_DISMISS_SHEET;
   const isActive =
     hasStarted &&
     !isCompleted &&
-    !isTransitioning &&
+    (!isTransitioning || inSheet) &&
+    !paused &&
     currentStep !== ShoppingListTutorialStep.IDLE &&
     currentStep !== ShoppingListTutorialStep.COMPLETED;
 
@@ -434,6 +444,7 @@ export function ShoppingListTutorialProvider({
     registerRect,
     skipCurrentStep,
     skipAll,
+    pause: () => setPaused(true),
   };
 
   return (
