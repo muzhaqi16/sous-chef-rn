@@ -29,7 +29,8 @@ export function useCurrentHome() {
 
   return {
     currentHome,
-    homeCount: homes.length,
+    // Null until the list has an answer: a failed read offline is not "no homes".
+    homeCount: homesData || homes.length > 0 ? homes.length : null,
     selectedHomeId,
     isHomeSelectionReady,
   };

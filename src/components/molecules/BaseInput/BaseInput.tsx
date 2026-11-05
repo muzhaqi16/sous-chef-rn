@@ -25,11 +25,17 @@ import {
 import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { useFieldAccessibility } from '#hooks/ui/useFieldAccessibility';
 
 export interface BaseInputProps extends TextInputProps {
   label?: string;
   containerStyle?: StyleProp<ViewStyle>;
   errorMessage?: string;
+  /**
+   * An error a form shows itself (`DynamicFormFields`): announced on the input,
+   * never drawn here as well.
+   */
+  error?: string;
   leftIcon?: ReactNode;
   rightIcon?: ReactNode;
   showClearIcon?: boolean;
@@ -52,6 +58,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   label,
   containerStyle,
   errorMessage,
+  error,
   leftIcon,
   rightIcon,
   showClearIcon = false,
@@ -64,9 +71,17 @@ export const BaseInput: React.FC<BaseInputProps> = ({
   ref,
   sheetRef,
   isLoading = false,
+  accessibilityLabel,
+  accessibilityHint,
   ...textInputProps
 }) => {
   const { t } = useTranslation();
+  const fieldAccessibility = useFieldAccessibility({
+    label,
+    error: errorMessage ?? error,
+    accessibilityLabel,
+    accessibilityHint,
+  });
   const [isFocused, setIsFocused] = useState(false);
   const hasError = Boolean(errorMessage);
   const showClear = showClearIcon && (value === undefined || value.length > 0);
@@ -113,6 +128,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
             onBlur={handleBlur}
             value={value}
             multiline={multiline}
+            {...fieldAccessibility}
             {...textInputProps}
           />
         ) : (
@@ -128,6 +144,7 @@ export const BaseInput: React.FC<BaseInputProps> = ({
             onBlur={handleBlur}
             value={value}
             multiline={multiline}
+            {...fieldAccessibility}
             {...textInputProps}
           />
         )}

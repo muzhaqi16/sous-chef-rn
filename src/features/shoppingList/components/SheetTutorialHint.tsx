@@ -95,7 +95,7 @@ const styles = StyleSheet.create(theme => ({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: theme.colors.primary + '1A', // 10% opacity
+    backgroundColor: theme.colors.primaryLight,
     borderRadius: theme.radii.md,
     borderCurve: 'continuous',
     paddingVertical: theme.spacing.smPlus,

@@ -11,8 +11,9 @@ import { Telemetry } from '#/services/telemetry';
 import { ProfileScreen } from '../ProfileScreen';
 
 /**
- * Sign-out lives in the more-options tray: pressing it runs the settings hook's
- * `logout`, which owns the pending-writes warning and `authService.logout`.
+ * Sign-out is the last row and also in the more-options tray: both run the
+ * settings hook's `logout`, which owns the pending-writes warning and
+ * `authService.logout`.
  */
 
 const mockSignOut = jest.fn();
@@ -140,20 +141,24 @@ describe('ProfileScreen sign-out', () => {
     });
   });
 
-  it('reaches the row by its label', () => {
+  it('signs out from the last row, through the same logout as the tray', () => {
     render(<ProfileScreen />);
 
-    fireEvent.press(screen.getByText('Log Out'));
+    fireEvent.press(screen.getByTestId('profile-logout-row'));
 
     expect(mockSignOut).toHaveBeenCalledTimes(1);
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith('logout_clicked', {
+      source: 'ProfileScreen',
+    });
   });
 
-  it('is no longer a settings row', () => {
+  it('labels both ways out "Log Out", and the tray keeps Delete Account', () => {
     render(<ProfileScreen />);
 
-    expect(screen.getAllByText('Log Out')).toHaveLength(1);
-    expect(screen.getByTestId('action-tray')).toContainElement(
-      screen.getByTestId('profile-logout-button'),
-    );
+    expect(screen.getAllByText('Log Out')).toHaveLength(2);
+    const tray = screen.getByTestId('action-tray');
+    expect(tray).toContainElement(screen.getByTestId('profile-logout-button'));
+    expect(tray).not.toContainElement(screen.getByTestId('profile-logout-row'));
+    expect(tray).toContainElement(screen.getByText('Delete Account'));
   });
 });

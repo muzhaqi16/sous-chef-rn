@@ -139,6 +139,66 @@ describe('the top inset is applied exactly once', () => {
   });
 });
 
+// In landscape a cutout or rounded corner sits at a side; the same layout
+// keeps every screen clear of it, once.
+describe('the side insets are applied exactly once', () => {
+  const CUTOUT = 48;
+  const leftPaddings = (json: unknown): number[] => {
+    const found: number[] = [];
+    const walk = (node: unknown): void => {
+      if (Array.isArray(node)) {
+        node.forEach(walk);
+        return;
+      }
+      if (!node || typeof node !== 'object') return;
+      const el = node as {
+        props?: Record<string, unknown>;
+        children?: unknown;
+      };
+      for (const entry of [el.props?.style].flat(3)) {
+        const pl = (entry as { paddingLeft?: unknown } | undefined)
+          ?.paddingLeft;
+        if (pl === CUTOUT) found.push(pl);
+      }
+      walk(el.children);
+    };
+    walk(json);
+    return found;
+  };
+
+  beforeEach(() => {
+    (useSafeAreaInsets as jest.Mock).mockReturnValue({
+      top: 0,
+      bottom: 0,
+      left: CUTOUT,
+      right: 0,
+    });
+  });
+
+  afterAll(() => {
+    (useSafeAreaInsets as jest.Mock).mockReturnValue({
+      top: 0,
+      bottom: 0,
+      left: 0,
+      right: 0,
+    });
+  });
+
+  it('insets a Screen inside the layout once', () => {
+    const tree = render(
+      topInsetScreenLayout({
+        children: (
+          <Screen header={{ variant: 'tab', title: 'T' }}>
+            <Text role="body">content</Text>
+          </Screen>
+        ),
+      }),
+    ).toJSON();
+
+    expect(leftPaddings(tree)).toHaveLength(1);
+  });
+});
+
 /**
  * The opt-out is per SCREEN, so it has to be read as a list rather than trusted
  * one file at a time: a screen that drops the inset by accident looks exactly

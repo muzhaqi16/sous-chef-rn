@@ -150,7 +150,7 @@ export const LedgerTab: React.FC<
             ledgerData?.summary.totalConsumed ?? 0,
           )}
           icon="restaurant"
-          uniProps={theme => ({ color: theme.colors.primary })}
+          uniProps={theme => ({ color: theme.colors.primaryText })}
           subtitle={t('pantryAnalytics.totalQuantity')}
         />
       </View>

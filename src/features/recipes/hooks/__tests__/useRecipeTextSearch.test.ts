@@ -141,7 +141,7 @@ describe('useRecipeTextSearch', () => {
     expect(result.current.results[0]).toEqual({
       key: 'recipe-recipe-1',
       title: 'Pasta al Forno',
-      subtitle: '⏱ 25 min • 4 servings',
+      subtitle: '25 min • 4 servings',
       imageUrl: 'https://cdn.example.com/forno.jpg',
       // Vegan wins over vegetarian.
       dietTags: ['vegan'],

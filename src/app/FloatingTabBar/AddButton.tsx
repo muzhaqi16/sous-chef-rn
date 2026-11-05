@@ -31,9 +31,7 @@ export const AddButton: React.FC<AddButtonProps> = ({
       haptic="medium"
       style={variantStyles.addButton}
       accessibilityRole="button"
-      accessibilityLabel={
-        menuOpen ? t('labels.close') : t('tabBar.actionButton')
-      }
+      accessibilityLabel={menuOpen ? t('labels.close') : t('labels.add')}
       accessibilityHint={
         hasMenu ? t('tabBar.addMenuHint') : t('tabBar.actionButtonHint')
       }

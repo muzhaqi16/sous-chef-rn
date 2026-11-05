@@ -1,6 +1,9 @@
 'use no memo';
 import React from 'react';
 import { fireEvent, render, screen } from '@testing-library/react-native';
+import { BackHandler, TextInput } from 'react-native';
+import { t } from '#/i18n';
+import { alertService } from '#/services/alertService';
 import { ShoppingListDetailsStep } from '../ShoppingListDetailsStep';
 import { useBudgetAndPricesEnabled } from '#hooks/settings/useBudgetAndPricesEnabled';
 import { drainTimers } from '#/test-utils/drainTimers';
@@ -150,5 +153,127 @@ describe('ShoppingListDetailsStep', () => {
     expect(screen.getByTestId('add-shopping-item-name-input').props.value).toBe(
       'Bananas',
     );
+  });
+
+  // The mock's one `focus` is shared by every input; its `this` says which.
+  const input = (props: Record<string, string>) =>
+    expect.objectContaining({ props: expect.objectContaining(props) });
+
+  // react-hook-form's `setFocus` focuses on the next tick.
+  const pressReturn = async (field: ReturnType<typeof screen.getByTestId>) => {
+    fireEvent(field, 'submitEditing');
+    await drainTimers();
+  };
+
+  it('moves the return key through the typed fields in order', async () => {
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    renderStep();
+
+    await pressReturn(screen.getByTestId('add-shopping-item-name-input'));
+    expect(focus.mock.contexts.at(-1)).toEqual(
+      input({ testID: 'add-shopping-item-quantity-input' }),
+    );
+
+    await pressReturn(screen.getByTestId('add-shopping-item-quantity-input'));
+    expect(focus.mock.contexts.at(-1)).toEqual(
+      input({ placeholder: 'e.g., 500' }),
+    );
+
+    await pressReturn(screen.getByPlaceholderText('e.g., 500'));
+    expect(focus.mock.contexts.at(-1)).toEqual(
+      input({ placeholder: 'e.g., 4.99' }),
+    );
+
+    await pressReturn(screen.getByPlaceholderText('e.g., 4.99'));
+    expect(focus.mock.contexts.at(-1)).toEqual(
+      input({ placeholder: 'Any special notes...' }),
+    );
+    focus.mockRestore();
+  });
+
+  it('skips the price on the way to Notes with prices turned off', async () => {
+    jest.mocked(useBudgetAndPricesEnabled).mockReturnValue(false);
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    renderStep();
+
+    await pressReturn(screen.getByPlaceholderText('e.g., 500'));
+
+    expect(focus.mock.contexts.at(-1)).toEqual(
+      input({ placeholder: 'Any special notes...' }),
+    );
+    focus.mockRestore();
+  });
+
+  it('focuses Item Name when a submit fails on it', async () => {
+    const focus = jest.spyOn(TextInput.prototype, 'focus');
+    renderStep();
+
+    fireEvent.press(screen.getByTestId('add-shopping-item-submit-button'));
+    await drainTimers();
+
+    expect(mockAddItem).not.toHaveBeenCalled();
+    expect(focus.mock.contexts).toContainEqual(
+      input({ testID: 'add-shopping-item-name-input' }),
+    );
+    focus.mockRestore();
+  });
+
+  describe('Cancel', () => {
+    it('closes an untouched form at once', () => {
+      const alert = jest.spyOn(alertService, 'alert');
+      const onClose = jest.fn();
+      renderStep({ onClose, prefilledItemName: 'Bananas' });
+
+      fireEvent.press(screen.getByTestId('add-shopping-item-cancel-button'));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(alert).not.toHaveBeenCalled();
+      alert.mockRestore();
+    });
+
+    it('asks before dropping what was typed, and holds the sheet open', async () => {
+      const alert = jest.spyOn(alertService, 'alert');
+      const onClose = jest.fn();
+      const onHoldOpen = jest.fn();
+      renderStep({ onClose, onHoldOpen });
+
+      fireEvent.changeText(
+        screen.getByTestId('add-shopping-item-name-input'),
+        'Bananas',
+      );
+      await drainTimers();
+      fireEvent.press(screen.getByTestId('add-shopping-item-cancel-button'));
+
+      expect(onHoldOpen).toHaveBeenLastCalledWith(true);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(alert).toHaveBeenCalledWith(
+        t('confirmations.discardChangesTitle'),
+        t('confirmations.discardChanges'),
+        expect.any(Array),
+      );
+      alert.mockRestore();
+    });
+
+    it("asks on Android's Back too while input would be lost", async () => {
+      const alert = jest.spyOn(alertService, 'alert');
+      const added = jest.spyOn(BackHandler, 'addEventListener');
+      renderStep();
+
+      fireEvent.changeText(
+        screen.getByTestId('add-shopping-item-name-input'),
+        'Bananas',
+      );
+      await drainTimers();
+      const [, onBack] = added.mock.calls.at(-1) ?? [];
+      expect(onBack?.({ type: 'hardwareBackPress', timeStamp: 0 })).toBe(true);
+
+      expect(alert).toHaveBeenCalledWith(
+        t('confirmations.discardChangesTitle'),
+        t('confirmations.discardChanges'),
+        expect.any(Array),
+      );
+      alert.mockRestore();
+      added.mockRestore();
+    });
   });
 });

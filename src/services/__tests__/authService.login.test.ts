@@ -111,6 +111,30 @@ describe('authService.login — LoginResult union', () => {
     expect(mockToastError).toHaveBeenCalledWith('Invalid email or password');
   });
 
+  it('leaves the refusal to a caller that shows it, with no toast', async () => {
+    mockMutate.mockResolvedValueOnce(
+      rejection('AUTH_CREDENTIALS_INVALID', 'Bad credentials'),
+    );
+    const onRefusal = jest.fn(() => true);
+
+    const ok = await authService.login(INPUT, { onRefusal });
+
+    expect(ok).toBe(false);
+    expect(onRefusal).toHaveBeenCalledWith('AUTH_CREDENTIALS_INVALID');
+    expect(mockToastError).not.toHaveBeenCalled();
+    expect(mockStoreSpies.setAuthIsLoading).toHaveBeenLastCalledWith(false);
+  });
+
+  it('still toasts a refusal the caller does not show', async () => {
+    mockMutate.mockResolvedValueOnce(
+      rejection('AUTH_CREDENTIALS_INVALID', 'Bad credentials'),
+    );
+
+    await authService.login(INPUT, { onRefusal: () => false });
+
+    expect(mockToastError).toHaveBeenCalledWith('Invalid email or password');
+  });
+
   it('falls back to the app’s generic copy for a code with no mapped copy', async () => {
     mockMutate.mockResolvedValueOnce({
       data: {

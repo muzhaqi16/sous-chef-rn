@@ -195,12 +195,13 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       initialSearchQuery={initialSearchQuery}
       showImages={showImages}
       tutorialHint={tutorialHintElement}
-      renderDetails={({ goBack }) => (
+      renderDetails={({ goBack, holdOpen }) => (
         <ShoppingListDetailsStep
           shoppingListId={shoppingListId}
           prefilledItemName={prefilledItemName}
           onClose={goBack}
           onSuccess={handleAddDetailsSuccess}
+          onHoldOpen={holdOpen}
         />
       )}
     />

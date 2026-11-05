@@ -11,7 +11,7 @@ import { FormInput } from '#components/atoms/FormInput';
 import { FormTextArea } from '#components/atoms/FormTextArea';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import type {
   CaptureRequest,
   CaptureStart,
@@ -134,7 +134,7 @@ const CaptureForm: React.FC<CaptureFormProps> = ({
       case 'refused':
         showRefusal(outcome);
     }
-  }, logValidationErrors);
+  }, reportValidationErrors);
 
   return (
     <CaptureFormFrame

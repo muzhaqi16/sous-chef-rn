@@ -120,23 +120,25 @@ cancels every v3 detector gesture that has not activated. A
 only stops a fling presses nothing — over React Native's `ScrollView` as well
 as RNGH's.
 
-**Verified against `react-native-gesture-handler@3.4.0`** (2026-10-16), in
-source and by an on-device A/B on the pantry list (emulator, synthetic input)
-with 3.3.0 as the control:
+**Verified against `react-native-gesture-handler@3.5.0`** (2026-11-05), in
+source and by on-device A/Bs on the pantry list (emulator, synthetic input):
+3.4.0 against a 3.3.0 control, then a 3.5.0 `localRelease` against a 3.4.0 one.
 
-| Pantry list                        | 3.3.0                    | 3.4.0              |
-| ---------------------------------- | ------------------------ | ------------------ |
-| Drifting scroll, RN `ScrollView`   | the row opens mid-scroll | stays shut (2 / 2) |
-| Drifting scroll, RNGH `ScrollView` | stays shut               | stays shut         |
-| Tap to stop a fling, RNGH host     | presses the row (3 / 3)  | no press (0 / 3)   |
-| Tap to stop a fling, RN host       | not run                  | no press (0 / 2)   |
+| Pantry list                        | 3.3.0                    | 3.4.0              | 3.5.0              |
+| ---------------------------------- | ------------------------ | ------------------ | ------------------ |
+| Drifting scroll, RN `ScrollView`   | the row opens mid-scroll | stays shut (2 / 2) | not run            |
+| Drifting scroll, RNGH `ScrollView` | stays shut               | stays shut (2 / 2) | stays shut (2 / 2) |
+| Tap to stop a fling, RNGH host     | presses the row (3 / 3)  | no press (0 / 5)   | no press (0 / 2)   |
+| Tap to stop a fling, RN host       | not run                  | no press (0 / 2)   | not run            |
 
 `cancelHandlersOnNativeTouchGrab` in `GestureHandlerOrchestrator.kt` cancels a
 non-active handler whose action type is a native or virtual detector, and
 `cancelHandlersOnNativeTouchCancel` catches a takeover the root never hears
 about by the `ACTION_CANCEL` it sends down. `cancelAllLegacyHandlers` still
 matches v1/v2 alone, so before 3.4.0 an RNGH host was the only arbitration —
-and even that pressed a row on a fling-stopping tap.
+and even that pressed a row on a fling-stopping tap. 3.5.0 leaves both sweeps
+as they were; a pan cancelled after it activated now springs the row back to
+where it rested.
 
 **Every swipeable list still takes `SwipeAwareScrollComponent`:** RNGH's
 refresh control needs an RNGH host (next entry), and the A/B covers one list —
@@ -160,8 +162,8 @@ grep -n "fun cancelHandlersOnNativeTouchGrab" -A 8 node_modules/react-native-ges
 `block` prop that only its own `RefreshControl` consumes; RN's control receives
 it as an unknown prop. Nothing throws, warns, or type-errors.
 
-**Verified against `react-native-gesture-handler@3.4.0` +
-`react-native-unistyles@3.5.3` + `@shopify/flash-list@2.3.3`** (2026-10-16).
+**Verified against `react-native-gesture-handler@3.5.0` +
+`react-native-unistyles@3.8.1` + `@shopify/flash-list@2.3.3`** (2026-11-05).
 
 - **RN's control arrives unnamed.** A list that passes only
   `onRefresh`/`refreshing` gets the control FlashList builds, which is React
@@ -190,8 +192,8 @@ retraction path androidx's `SwipeRefreshLayout` needs. This is the upstream fix
 for the parked Android refresh spinner — but the app still forces
 `nestedScrollEnabled={false}`, because nothing here has measured the removal.
 
-**Verified against `react-native-gesture-handler@3.4.0` +
-`react-native@0.86.3`** (2026-10-16). Under a `refreshControl` on Android, RN
+**Verified against `react-native-gesture-handler@3.5.0` +
+`react-native@0.86.3`** (2026-11-05). Under a `refreshControl` on Android, RN
 defaults `nestedScrollEnabled` to `true`, and an explicit `false` survives.
 `NativeViewGestureHandler.kt`'s `ScrollViewHook` overrides
 `shouldStopNestedScroll() = true`, so the handler calls
@@ -431,6 +433,27 @@ a no-op stub. `runAfterInteractions` is just `setImmediate`;
 
 ```
 grep -n "InteractionManagerStub\|setImmediate(\|return -1" node_modules/react-native/Libraries/Interaction/InteractionManager.js
+```
+
+### Navigator packages call the router's action creators by name
+
+**Claim:** `@react-navigation/native-stack`, `bottom-tabs` and `elements` dispatch
+`StackActions.*`, `TabActions.*` and `CommonActions.*` creators from the router that
+`@react-navigation/native` re-exports. No install-time or type check ties the two. A
+creator the router no longer has throws "undefined is not a function" only when the
+call runs. native-stack's `onDismissed` runs when the OS dismisses a screen, for
+example when a configuration change recreates the activity.
+
+**Verified against `@react-navigation/native-stack@8.0.0-alpha.59`,
+`@react-navigation/routers@8.0.0-alpha.21` on 2026-11-05.** native-stack calls
+`StackActions.dismiss`, which the router has. Guarded by
+`__tests__/navigation/navigatorActionsExist.library.test.ts`; native-stack
+8.0.0-alpha.57, which calls a `StackActions.remove` no router has, fails it.
+
+Re-check:
+
+```
+npx jest __tests__/navigation/navigatorActionsExist.library.test.ts
 ```
 
 ### RN's Modal calls onDismiss only on iOS, after UIKit's dismissal

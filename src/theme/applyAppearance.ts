@@ -1,5 +1,11 @@
 import { UnistylesRuntime } from 'react-native-unistyles';
-import { derivePalette, onColor } from './foundations/derivePalette';
+import {
+  carriesReadableContent,
+  derivePalette,
+  foregroundShade,
+  onColor,
+  paintedTint,
+} from './foundations/derivePalette';
 import {
   layout as baseLayout,
   spacing as baseSpacing,
@@ -10,6 +16,7 @@ import {
   type as baseType,
   type TypeRole,
 } from './foundations/type';
+import { brand } from './foundations/brand';
 import { colors } from './foundations/colors';
 import { lightTheme, darkTheme } from './themes';
 import {
@@ -47,6 +54,10 @@ function scaleObject<T extends Record<string, number>>(
   return scaled as T;
 }
 
+/** The dark theme's `primaryLight`: the brand at this alpha over the page. */
+const PRIMARY_LIGHT_ALPHA_HEX = '20';
+const PRIMARY_LIGHT_ALPHA = parseInt(PRIMARY_LIGHT_ALPHA_HEX, 16) / 255;
+
 function withAlpha(hex: string, alpha: string): string {
   return `${hex}${alpha}`;
 }
@@ -63,6 +74,14 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
   const fontMul =
     FONT_SCALE_META[prefs.fontScalePreference ?? PREFERENCE_DEFAULTS.fontScale]
       .multiplier;
+  // A saved colour no content reads on (Teal, before it was withdrawn) falls
+  // back to the default brand.
+  const picked = prefs.primaryColorOverride;
+  const override =
+    picked !== null &&
+    carriesReadableContent(picked, colors.neutral[0], colors.neutral[900])
+      ? picked
+      : null;
 
   const buildNext = (themeName: 'light' | 'dark') => {
     const base = themeName === 'light' ? lightTheme : darkTheme;
@@ -86,48 +105,81 @@ export function applyAppearanceToRuntime(prefs: AppearanceSettings): void {
       maxFontScaleMultiplier: MAX_FONT_SCALE / fontMul,
     };
 
-    if (prefs.primaryColorOverride) {
-      const palette = derivePalette(prefs.primaryColorOverride);
+    if (override) {
+      const palette = derivePalette(override);
       const isDark = themeName === 'dark';
+      const onFill = onColor(
+        palette['500'],
+        colors.neutral[0],
+        colors.neutral[900],
+      );
+      const primaryText = foregroundShade(
+        palette,
+        [
+          base.colors.background,
+          base.colors.backgroundSecondary,
+          base.colors.surface,
+        ],
+        isDark ? '500' : '700',
+        isDark ? 'lighter' : 'darker',
+      );
       next.colors = {
         ...next.colors,
-        // [500] is the palette anchor and matches the base theme's `primary` in
-        // both modes; the rest mirror its per-mode shade mapping.
+        // [500] is the colour the user picked; the rest mirror the per-mode shade
+        // mapping. Its foreground follows the colour's luminance, not the theme.
         primary: palette['500'],
-        // The readable foreground follows the new brand's luminance, not the
-        // theme: four of the seven pickable colours want dark text, three light.
-        onPrimary: onColor(
-          palette['500'],
-          colors.neutral[0],
-          colors.neutral[900],
-        ),
-        iconOnPrimary: onColor(
-          palette['500'],
-          colors.neutral[0],
-          colors.neutral[900],
-        ),
+        onPrimary: onFill,
+        iconOnPrimary: onFill,
         chipSelectedText: onColor(
           isDark ? palette['400'] : palette['300'],
           colors.neutral[0],
           colors.neutral[900],
         ),
-        primaryLight: isDark ? palette['400'] + '20' : palette['100'],
+        primaryLight: isDark
+          ? palette['400'] + PRIMARY_LIGHT_ALPHA_HEX
+          : palette['100'],
         primaryDark: isDark ? palette['600'] : palette['700'],
-        iconPrimary: isDark ? palette['400'] : palette['500'],
+        primaryText,
+        onPrimaryLight: isDark
+          ? foregroundShade(
+              palette,
+              [base.colors.background, base.colors.surface].map(ground =>
+                paintedTint(palette['400'], PRIMARY_LIGHT_ALPHA, ground),
+              ),
+              '300',
+              'lighter',
+            )
+          : foregroundShade(palette, [palette['100']], '800', 'darker'),
+        iconPrimary: isDark ? palette['400'] : primaryText,
         chipSelectedBackground: isDark ? palette['400'] : palette['300'],
         filterTab: {
           ...next.colors.filterTab,
           activeBg: palette['500'],
+          activeText: onFill,
           filteredBg: isDark ? withAlpha(palette['400'], '26') : palette['50'],
-          filteredText: isDark ? palette['300'] : palette['600'],
+          filteredText: isDark
+            ? palette['300']
+            : foregroundShade(palette, [palette['50']], '600', 'darker'),
         },
-        sectionHeader: {
-          ...next.colors.sectionHeader,
-          actionText: isDark ? palette['400'] : palette['500'],
-        },
-        avatar: {
-          ...next.colors.avatar,
-          shadow: withAlpha(palette['500'], '4D'),
+      };
+    }
+
+    // High Contrast lifts the one pairing the default brand keeps below AA by
+    // decision: the logo orange as a fill under white and as text on the page.
+    if (prefs.highContrast && !override) {
+      const isLight = themeName === 'light';
+      next.colors = {
+        ...next.colors,
+        primary: brand[700],
+        ...(isLight && {
+          primaryText: brand[700],
+          iconPrimary: brand[700],
+          onPrimaryLight: brand[800],
+        }),
+        filterTab: {
+          ...next.colors.filterTab,
+          activeBg: brand[700],
+          ...(isLight && { filteredText: brand[700] }),
         },
       };
     }

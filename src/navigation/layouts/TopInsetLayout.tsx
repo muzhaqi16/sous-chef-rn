@@ -5,14 +5,25 @@ import { StyleSheet } from 'react-native-unistyles';
 
 /**
  * Applies the top safe-area inset per screen rather than globally, so an
- * immersive screen simply omits it. A `View` + `paddingTop`, not `SafeAreaView`,
- * so Unistyles keeps it bound to the ShadowTree and a theme change needs no
- * React re-render.
+ * immersive screen simply omits it, and the side insets a landscape cutout or
+ * rounded corner takes. A `View` + padding, not `SafeAreaView`, so Unistyles
+ * keeps it bound to the ShadowTree and a theme change needs no React re-render.
  */
 export function TopInsetLayout({ children }: { children: React.ReactNode }) {
   const insets = useSafeAreaInsets();
   return (
-    <View style={[styles.fill, { paddingTop: insets.top }]}>{children}</View>
+    <View
+      style={[
+        styles.fill,
+        {
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
+      {children}
+    </View>
   );
 }
 

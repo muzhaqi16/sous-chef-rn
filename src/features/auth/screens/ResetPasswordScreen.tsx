@@ -19,7 +19,7 @@ import {
 } from '#features/auth/hooks/useResetPassword';
 import { logger } from '#/utils/environment';
 import { localizedErrorMessage } from '#/services/errorService';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { resetPasswordSchema } from '#/utils/validation/auth';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
@@ -321,6 +321,8 @@ export const ResetPasswordScreen: React.FC = () => {
               {t('auth.newPassword')}
             </Text>
             <PasswordInput
+              purpose="new"
+              accessibilityLabel={t('auth.newPassword')}
               value={watchedValues.newPassword}
               onChangeText={text => setField('newPassword', text)}
               placeholder={t('auth.newPasswordPlaceholder')}
@@ -340,6 +342,8 @@ export const ResetPasswordScreen: React.FC = () => {
               {t('auth.confirmPassword')}
             </Text>
             <PasswordInput
+              purpose="new"
+              accessibilityLabel={t('auth.confirmPassword')}
               ref={confirmPasswordRef}
               returnKeyType="done"
               value={watchedValues.confirmPassword}
@@ -353,7 +357,7 @@ export const ResetPasswordScreen: React.FC = () => {
 
           <Button
             variant="primary"
-            onPress={form.handleSubmit(onSubmit, logValidationErrors)}
+            onPress={form.handleSubmit(onSubmit, reportValidationErrors)}
             disabled={!form.formState.isValid}
             loading={isSubmitting}
             style={styles.buttonSpacing}

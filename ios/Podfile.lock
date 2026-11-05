@@ -2264,7 +2264,7 @@ PODS:
     - React-utils (= 0.86.3)
     - ReactNativeDependencies
   - ReactNativeDependencies (0.86.3)
-  - ReactNavigation (8.0.0-alpha.50):
+  - ReactNavigation (8.0.0-alpha.51):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2312,7 +2312,7 @@ PODS:
     - React-Core
   - RNDeviceInfo (15.0.2):
     - React-Core
-  - RNGestureHandler (3.4.0):
+  - RNGestureHandler (3.5.0):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2505,7 +2505,7 @@ PODS:
     - ReactNativeDependencies
     - RNWorklets
     - Yoga
-  - RNScreens (4.27.0):
+  - RNScreens (4.30.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2527,9 +2527,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNScreens/common (= 4.27.0)
+    - RNScreens/common (= 4.30.1)
     - Yoga
-  - RNScreens/common (4.27.0):
+  - RNScreens/common (4.30.1):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -3152,17 +3152,17 @@ SPEC CHECKSUMS:
   ReactCodegen: 828f54f35f2bc4ee3f39345144ff0ec22c9535c2
   ReactCommon: 02f6a489d5eb4ab79d7deba5cd4434e0ba351a07
   ReactNativeDependencies: 6738e602b46fd24aa453cd58267ec3bb8bf29d27
-  ReactNavigation: 30494f2c734d41d090802ef0701a6139f04889d8
+  ReactNavigation: e11d977146fa873953761d80f15f1ba70e7ffbdb
   RNCClipboard: 715fa7c6c8366f17d00f05a439ee7488f390fa5f
   RNCPushNotificationIOS: 85957a0534fd1309b4c028ccbe5b1baf9ab5cf57
   RNDeviceInfo: 4c852998208b60dc192ae3529e5867817719ad1e
-  RNGestureHandler: 0099c580b39852fedd18458e7af4d0e3e038d683
+  RNGestureHandler: 96c9b91fab76e7fd9c81928b168d4179277a36a5
   RNKeychain: 6778b35b5bd067c322f8479526ac09b1d61f31d0
   RNNotifee: 5e3b271e8ea7456a36eec994085543c9adca9168
   RNPermissions: 64d0b4bc04663ebed27a42b69c2f0df699d2b4d4
   RNReactNativeHapticFeedback: 16e5f7fd37e2acc5a33ea14f48bfd88ff43776ee
   RNReanimated: 51c9f6dcd9787f260c9bb9ac28b097270f15c5fc
-  RNScreens: de068bbd7d91b820fedac25c597d4b14830de74b
+  RNScreens: 40b8d4fbffca379138edb3d8032ceaba316a65b2
   RNSVG: 6cae8d4082913be2eb43eaec2a456222c42195ed
   RNWorklets: 3da8f468c848547646f4e6b12fb46ad93a2cdee2
   Unistyles: befd57e9173fd8202ab772de43f6aa7b54b17cad

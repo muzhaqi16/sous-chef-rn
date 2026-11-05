@@ -156,7 +156,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   folderOptionTextSelected: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   newFolderButton: {
     flexDirection: 'row',

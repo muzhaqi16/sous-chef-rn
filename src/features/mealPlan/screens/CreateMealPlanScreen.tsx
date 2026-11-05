@@ -30,7 +30,7 @@ import { MealPlanType } from '#/graphql/generated/schemaTypes';
 import type { MealTemplateDisplayFragment } from '#features/mealPlan/graphql/mealPlanFragments.generated';
 import { Text } from '#components/atoms/Text';
 import type { Translate } from '#/i18n/types';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import {
   createMealPlanDefaults,
   DEFAULT_PLAN_SERVINGS,
@@ -192,7 +192,7 @@ export const CreateMealPlanScreen: React.FC = () => {
     <FormScreen
       title={t('labels.createMealPlan')}
       onClose={goBack}
-      onSave={handleSubmit(onValid, logValidationErrors)}
+      onSave={handleSubmit(onValid, reportValidationErrors)}
       loading={creating}
       testID={mealPlanTestIDs.createScreen}
     >
@@ -369,6 +369,6 @@ const createFromTemplateStyles = StyleSheet.create(theme => ({
     opacity: theme.opacity.pressed,
   },
   linkIcon: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
 }));

@@ -15,6 +15,8 @@ export const EmailInput: React.FC<
       keyboardType="email-address"
       autoCapitalize="none"
       autoCorrect={false}
+      autoComplete="email"
+      textContentType="emailAddress"
       placeholder={t('auth.emailPlaceholder')}
       {...props}
     />

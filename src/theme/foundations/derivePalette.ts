@@ -59,6 +59,47 @@ export function derivePalette(hex: string): DerivedPalette {
   };
 }
 
+const AA_BODY = 4.5;
+
+/**
+ * The first shade from `from`, stepping `toward` darker or lighter, that reads at
+ * AA body contrast on every ground; the palette's end if none does.
+ */
+export function foregroundShade(
+  palette: DerivedPalette,
+  grounds: readonly string[],
+  from: PaletteShade,
+  toward: 'darker' | 'lighter',
+): string {
+  const start = SHADE_KEYS.indexOf(from);
+  const steps =
+    toward === 'darker'
+      ? SHADE_KEYS.slice(start)
+      : SHADE_KEYS.slice(0, start + 1).reverse();
+  const readable = steps.find(key =>
+    grounds.every(ground => chroma.contrast(palette[key], ground) >= AA_BODY),
+  );
+  return palette[readable ?? (toward === 'darker' ? '950' : '50')];
+}
+
+/** A translucent `tint` at `alpha` as painted over `ground`. */
+export function paintedTint(
+  tint: string,
+  alpha: number,
+  ground: string,
+): string {
+  return chroma.mix(ground, tint, alpha, 'rgb').hex();
+}
+
+/** Whether the better of `light`/`dark` reads on `fill` at AA body contrast. */
+export function carriesReadableContent(
+  fill: string,
+  light: string,
+  dark: string,
+): boolean {
+  return chroma.contrast(fill, onColor(fill, light, dark)) >= AA_BODY;
+}
+
 /**
  * Whichever of `light`/`dark` reads better on `fill`. "On primary" is a function
  * of the fill's luminance, not of the theme — the brand colour is user-overridable

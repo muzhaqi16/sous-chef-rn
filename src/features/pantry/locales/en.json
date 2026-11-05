@@ -39,7 +39,6 @@
       "emptyTitle": "No batches yet",
       "packageSize": "Package: {{size}}"
     },
-    "deleteTitle": "Delete Item",
     "discardBatchesTitle": "Discard Expired Batches",
     "discardBatchesBody": "This will mark all expired batches as wasted.",
     "discardItemTitle": "Discard Expired Item",

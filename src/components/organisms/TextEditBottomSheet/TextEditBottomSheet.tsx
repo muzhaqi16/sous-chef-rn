@@ -7,7 +7,7 @@ import { Controller, useForm, type FieldValues } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { object, string, type AnyObjectSchema } from 'yup';
 import { Button } from '#components/molecules/Button';
-import { logValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import { Text } from '#components/atoms/Text';
 import { Divider } from '#components/atoms/Divider';
 import { Sheet } from '#components/templates/Sheet';
@@ -101,7 +101,7 @@ export const TextEditBottomSheet: React.FC<TextEditBottomSheetProps> = ({
         <Button
           variant="ghost"
           size="small"
-          onPress={form.handleSubmit(handleSave, logValidationErrors)}
+          onPress={form.handleSubmit(handleSave, reportValidationErrors)}
           accessibilityLabel={t('labels.save')}
         >
           {t('labels.save')}

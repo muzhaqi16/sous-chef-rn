@@ -135,7 +135,9 @@ export function useTodayOverview() {
   const activeListId = useActiveShoppingListId(lists);
   const activeList = lists.find(list => list.id === activeListId);
 
-  const hasNoHousehold = isReady && !selectedHomeId;
+  const hasNoHousehold = isReady && !selectedHomeId && homeCount === 0;
+  // No home and no answer for the list: the read failed, which is not "none".
+  const homesUnanswered = isReady && !selectedHomeId && homeCount === null;
   const householdIsEmpty =
     (noPantry || stats?.totalItems === 0) &&
     plansHaveResult &&
@@ -147,7 +149,7 @@ export function useTodayOverview() {
   // Until the pantry resolves there is nothing to ask, which is not an answer;
   // a home with no pantry has no counts to wait for.
   const countsState = useDataState({
-    loading: countsResult.loading || (!pantry && !noPantry),
+    loading: countsResult.loading || (!pantry && !noPantry && !homesUnanswered),
     error: countsResult.error,
     hasResult: noPantry || stats !== null || countsData !== undefined,
     isEmpty: false,

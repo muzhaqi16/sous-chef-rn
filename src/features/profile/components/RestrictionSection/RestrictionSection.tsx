@@ -14,7 +14,8 @@ export interface RestrictionSectionItem {
 export interface RestrictionSectionProps {
   title: string;
   existingItems: RestrictionSectionItem[];
-  onRemove: (id: string) => void;
+  /** Gets the row as shown, so a confirmation can name it. */
+  onRemove: (item: RestrictionSectionItem) => void;
   onAddPress: () => void;
   emptyMessage?: string;
 }
@@ -54,7 +55,7 @@ export const RestrictionSection: React.FC<RestrictionSectionProps> = ({
               </View>
               <AppPressable
                 style={styles.removeButton}
-                onPress={() => onRemove(item.id)}
+                onPress={() => onRemove(item)}
                 accessibilityLabel={t('a11y.removeNamed', { name: item.label })}
               >
                 <Icon name="close-circle-outline" size={18} tone="error" />

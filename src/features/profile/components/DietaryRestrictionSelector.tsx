@@ -3,7 +3,10 @@ import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { RestrictionSection } from '#features/profile/components/RestrictionSection/RestrictionSection';
+import {
+  RestrictionSection,
+  type RestrictionSectionItem,
+} from '#features/profile/components/RestrictionSection/RestrictionSection';
 import { MultiSelectChipSheet } from '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet';
 import { AvoidFoodSheet } from '#features/profile/ui/AvoidFoodSheet';
 import type {
@@ -43,7 +46,7 @@ type DietaryRestrictionSelectorProps = {
     restrictions: RestrictionKindInput[],
     severity: RestrictionSeverity,
   ) => Promise<boolean>;
-  onRemove: (id: string) => void;
+  onRemove: (item: RestrictionSectionItem) => void;
   /** Set the single lifestyle diet, removing any prior lifestyle row(s). The
    *  `replaceIds` are the existing lifestyle restriction ids to clear once the
    *  new diet is added. */

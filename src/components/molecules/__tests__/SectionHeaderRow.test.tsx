@@ -23,6 +23,21 @@ describe('SectionHeaderRow', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  // At large text on a narrow phone, a heading that cannot shrink pushes the
+  // action past the screen edge.
+  it('lets a long heading wrap beside its action', () => {
+    render(
+      <SectionHeaderRow
+        title="Based on your pantry"
+        action={{ label: 'See all', onPress: jest.fn() }}
+      />,
+    );
+
+    expect(screen.getByText('Based on your pantry')).toHaveStyle({
+      flexShrink: 1,
+    });
+  });
+
   it('holds a disabled action still', async () => {
     const user = userEvent.setup();
     const onPress = jest.fn();

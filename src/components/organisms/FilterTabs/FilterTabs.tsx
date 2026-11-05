@@ -68,6 +68,7 @@ function FilterTabsComponent<T extends string = string>({
     <View style={variantStyles.container}>
       <Animated.ScrollView
         ref={animatedRef}
+        accessibilityRole="tablist"
         horizontal
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={variantStyles.scrollContent}
@@ -174,7 +175,7 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   tabLabel: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
     variants: {
       compact: {
         true: { fontSize: theme.typography.fontSize.xs },

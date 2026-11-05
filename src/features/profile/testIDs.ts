@@ -8,6 +8,7 @@ export const profileTestIDs = {
   moreButton: 'profile-more-button',
   verifyEmailBanner: 'verify-email-banner',
   logoutButton: 'profile-logout-button',
+  logoutRow: 'profile-logout-row',
 
   settingsScreen: 'settings-screen',
   dataSourcesScreen: 'data-sources-screen',

@@ -101,6 +101,9 @@ function FilterTabsItemComponent<T extends string>({
       onPress={handlePress}
       onLayout={onLayout}
       testID={testID}
+      // A chip that switches the view is a tab; an action chip (add) is not.
+      accessibilityRole={tab.isAction ? 'button' : 'tab'}
+      accessibilityState={tab.isAction ? undefined : { selected: isActive }}
       style={[
         variantStyles.tab,
         isActive && tab.activeColor

@@ -135,6 +135,35 @@ describe('SettingRow', () => {
     expect(screen.getAllByText('Dark').length).toBeGreaterThanOrEqual(1);
   });
 
+  // An action runs where it is (Log Out), so it promises no screen to open.
+  it('gives an action row no "Tap to open" hint', () => {
+    const item = {
+      key: 'logout',
+      label: 'Log Out',
+      type: 'action',
+      onPress: jest.fn(),
+    };
+    render(<SettingRow item={item} isFirst={true} isLast={true} />);
+
+    expect(screen.getByLabelText('Log Out').props.accessibilityHint).toBe(
+      undefined,
+    );
+  });
+
+  it('tells a navigation row it opens a screen', () => {
+    const item = {
+      key: 'profile',
+      label: 'Profile',
+      type: 'navigation',
+      onPress: jest.fn(),
+    };
+    render(<SettingRow item={item} isFirst={true} isLast={true} />);
+
+    expect(screen.getByLabelText('Profile').props.accessibilityHint).toBe(
+      'Tap to open',
+    );
+  });
+
   it('renders navigation type with chevron', () => {
     const item = {
       key: 'profile',

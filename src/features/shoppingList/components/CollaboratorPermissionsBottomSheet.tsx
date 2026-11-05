@@ -337,7 +337,7 @@ const styles = StyleSheet.create(theme => ({
       selected: {
         true: {
           borderColor: theme.colors.primary,
-          backgroundColor: theme.colors.primary + '10',
+          backgroundColor: theme.colors.primaryLight,
         },
       },
     },

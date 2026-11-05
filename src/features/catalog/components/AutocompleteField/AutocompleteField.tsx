@@ -2,7 +2,10 @@ import React from 'react';
 import { View } from 'react-native';
 
 import { StyleSheet } from 'react-native-unistyles';
-import { InlineAutocomplete } from '#features/catalog/components/InlineAutocomplete';
+import {
+  InlineAutocomplete,
+  type FieldChaining,
+} from '#features/catalog/components/InlineAutocomplete';
 import { BottomSheetAutocompleteInput } from '#features/catalog/components/BottomSheetAutocompleteInput';
 import { Text } from '#components/atoms/Text';
 
@@ -35,6 +38,7 @@ interface InlineVariantProps<TItem> extends SharedProps<TItem> {
   /** See `InlineAutocomplete`: for hosts sized to their own content. */
   reserveDropdownSpace?: boolean;
   holdsEverything?: boolean;
+  chaining?: FieldChaining;
 }
 
 interface ModalVariantProps<TItem> extends SharedProps<TItem> {
@@ -118,6 +122,7 @@ export function AutocompleteField<TItem>(props: AutocompleteFieldProps<TItem>) {
         holdsEverything={props.holdsEverything}
         reserveDropdownSpace={props.reserveDropdownSpace}
         onEndEditing={props.onEndEditing}
+        chaining={props.chaining}
       />
     );
   }

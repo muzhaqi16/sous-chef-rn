@@ -272,7 +272,11 @@ jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
     tabs,
     onTabChange,
     testIDPrefix,
-  }: Pick<FilterTabsProps, 'tabs' | 'onTabChange' | 'testIDPrefix'>) => {
+    counts,
+  }: Pick<
+    FilterTabsProps,
+    'tabs' | 'onTabChange' | 'testIDPrefix' | 'counts'
+  >) => {
     const { Text, Pressable, View } = require('react-native');
     return (
       <View testID="filter-tabs">
@@ -283,6 +287,7 @@ jest.mock('#components/organisms/FilterTabs/FilterTabs', () => ({
             onPress={() => (tab.onPress ? tab.onPress() : onTabChange(tab.id))}
           >
             <Text>{tab.label}</Text>
+            {counts?.[tab.id] !== undefined && <Text>{counts[tab.id]}</Text>}
           </Pressable>
         ))}
       </View>
@@ -419,6 +424,19 @@ describe('PantryContent', () => {
 
     fireEvent.press(screen.getByText('Try again'));
     expect(onRetry).toHaveBeenCalledTimes(1);
+  });
+
+  it('counts nothing on the location tabs when the items read failed', () => {
+    render(
+      <PantryContent
+        {...defaultProps}
+        items={[]}
+        itemsFailure={{ state: 'offline', onRetry: jest.fn() }}
+      />,
+    );
+    const allTab = screen.getByTestId('pantry-location-tab-all');
+
+    expect(within(allTab).queryByText('0')).toBeNull();
   });
 
   it('keeps the no-home state above a failed items read', () => {

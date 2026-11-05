@@ -61,7 +61,6 @@
   "dietary": {
     "title": "Perfil alimentario",
     "restrictions": "Restricciones alimentarias",
-    "removeRestrictionTitle": "Eliminar restricción",
     "removeRestrictionConfirm": "¿Seguro que quieres eliminar esta restricción alimentaria?",
     "removeRestrictionFailed": "No se pudo eliminar la restricción",
     "foodPreferences": "Preferencias alimentarias",
@@ -389,7 +388,6 @@
     "namePlaceholder": "p. ej. Boicot",
     "rename": "Cambiar nombre",
     "deleteList": "Eliminar lista",
-    "deleteTitle": "¿Eliminar {{name}}?",
     "deleteBody": "Sus marcas se eliminan con ella.",
     "brandCount_one": "{{count}} marca",
     "brandCount_other": "{{count}} marcas",

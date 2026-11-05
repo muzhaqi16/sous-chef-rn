@@ -173,10 +173,10 @@ const styles = StyleSheet.create(theme => ({
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,
     borderCurve: 'continuous',
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
   },
   defaultBadgeText: {
-    color: theme.colors.primary,
+    color: theme.colors.onPrimaryLight,
   },
   createListRow: {
     flexDirection: 'row',

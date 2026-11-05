@@ -4,7 +4,6 @@ import { StyleSheet } from 'react-native-unistyles';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { SectionHeader } from '#components/atoms/SectionHeader';
 import { Text } from '#components/atoms/Text';
-import { hitSlop } from '#/theme/foundations/sizes';
 
 export interface SectionHeaderAction {
   label: string;
@@ -29,12 +28,12 @@ export const SectionHeaderRow: React.FC<SectionHeaderRowProps> = ({
   testID,
 }) => (
   <View style={[styles.row, style]} testID={testID}>
-    <SectionHeader>{title}</SectionHeader>
+    <SectionHeader style={styles.title}>{title}</SectionHeader>
     {action ? (
       <AppPressable
         onPress={action.onPress}
         disabled={action.disabled}
-        hitSlop={hitSlop.md}
+        style={styles.action}
         accessibilityRole="button"
         testID={action.testID}
       >
@@ -47,6 +46,26 @@ export const SectionHeaderRow: React.FC<SectionHeaderRowProps> = ({
 );
 
 const styles = StyleSheet.create(theme => ({
+  // The full touch target, without growing the row past its heading. It grows
+  // upward: below, it keeps the 8 dp reach it always had, short of the content.
+  action: {
+    minWidth: theme.sizes.touchTarget.min,
+    minHeight: theme.sizes.touchTarget.min,
+    marginTop: -(
+      theme.sizes.touchTarget.min -
+      theme.type.label.lineHeight -
+      theme.spacing.sm
+    ),
+    marginBottom: -theme.spacing.sm,
+    // The label sits on the heading's line, above the reach below it.
+    paddingBottom: theme.spacing.sm,
+    justifyContent: 'flex-end',
+    alignItems: 'flex-end',
+  },
+  // Wraps rather than pushing the action past the screen edge at large text.
+  title: {
+    flexShrink: 1,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

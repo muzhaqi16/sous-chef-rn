@@ -14,7 +14,7 @@ import { EditableField } from '#features/home/components/EditableField';
 import { NavigationRow } from '#features/home/components/NavigationRow';
 
 const ThemedNavigationRow = withUnistyles(NavigationRow, theme => ({
-  iconColor: theme.colors.primary,
+  iconColor: theme.colors.primaryText,
 }));
 import { HomeMembersSection } from '#features/home/components/HomeMembersSection';
 import { SettingSwitch } from '#components/molecules/SettingSwitch';

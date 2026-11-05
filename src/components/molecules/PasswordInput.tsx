@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { StyleSheet } from 'react-native-unistyles';
+import type { TextInputProps } from 'react-native';
 import type { BaseInputProps } from '#components/molecules/BaseInput/BaseInput';
 import { BaseInput } from '#components/molecules/BaseInput/BaseInput';
 import { AppPressable } from '#components/atoms/AppPressable';
@@ -8,13 +9,29 @@ import { Icon } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
 import { hitSlop } from '#/theme/foundations/sizes';
 
+/** Which password a field takes, so autofill offers the saved one or a new one. */
+type PasswordPurpose = 'current' | 'new';
+
+const AUTOFILL: Record<
+  PasswordPurpose,
+  Pick<TextInputProps, 'autoComplete' | 'textContentType'>
+> = {
+  current: { autoComplete: 'current-password', textContentType: 'password' },
+  new: { autoComplete: 'new-password', textContentType: 'newPassword' },
+};
+
 export interface PasswordInputProps
-  extends Omit<BaseInputProps, 'secureTextEntry'> {
+  extends Omit<
+    BaseInputProps,
+    'secureTextEntry' | 'autoComplete' | 'textContentType'
+  > {
+  purpose: PasswordPurpose;
   /** set to false to hide the "show password" toggle */
   showToggle?: boolean;
 }
 
 export const PasswordInput: React.FC<PasswordInputProps> = ({
+  purpose,
   showToggle = true,
   ...props
 }) => {
@@ -27,6 +44,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
         secureTextEntry={true}
         autoCapitalize="none"
         placeholder="••••••••"
+        {...AUTOFILL[purpose]}
         {...props}
       />
     );
@@ -37,6 +55,7 @@ export const PasswordInput: React.FC<PasswordInputProps> = ({
       autoCorrect={false}
       autoCapitalize="none"
       placeholder="••••••••"
+      {...AUTOFILL[purpose]}
       rightIcon={
         <AppPressable
           onPress={() => setVisible(v => !v)}

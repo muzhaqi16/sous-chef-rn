@@ -1,4 +1,9 @@
-import { AppState, Platform, type AppStateStatus } from 'react-native';
+import {
+  AccessibilityInfo,
+  AppState,
+  Platform,
+  type AppStateStatus,
+} from 'react-native';
 import { getVersion, isEmulatorSync } from 'react-native-device-info';
 import NetInfo from '@react-native-community/netinfo';
 import { installPlatform } from '#platform/install';
@@ -68,6 +73,9 @@ installPlatform({
   haptics: {
     selection: () => HapticService.selection(),
     warning: () => HapticService.warning(),
+  },
+  screenReader: {
+    announce: message => AccessibilityInfo.announceForAccessibility(message),
   },
   reviewPrompt: { request: () => ReviewPrompt.request() },
   approximateLocation: ApproximateLocation,

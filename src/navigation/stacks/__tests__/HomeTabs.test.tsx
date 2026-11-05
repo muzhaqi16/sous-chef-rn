@@ -8,7 +8,8 @@ import {
   type ObservableQuery,
 } from '@apollo/client';
 import { ApolloProvider, useApolloClient } from '@apollo/client/react';
-import { render } from '@testing-library/react-native';
+import { Text } from '#components/atoms/Text';
+import { render, screen } from '@testing-library/react-native';
 import { RESYNC_SCOPE } from '#/apollo/scopedClient';
 import { APOLLO_DEFAULT_OPTIONS } from '#/apollo/defaultOptions';
 
@@ -43,8 +44,10 @@ jest.mock('../ShoppingListStack', () => ({
 }));
 jest.mock('../RecipeStack', () => ({ RecipeStack: 'RecipeStack' }));
 jest.mock('../MealPlanStack', () => ({ MealPlanStack: 'MealPlanStack' }));
+let mockAddMenuOpen = false;
 jest.mock('#/context/TabBarActionsContext', () => ({
   TabBarActionsProvider: ({ children }: { children: ReactNode }) => children,
+  useTabBarState: () => ({ isAddMenuOpen: mockAddMenuOpen }),
 }));
 jest.mock('#app/FloatingTabBar/FloatingTabBar', () => ({
   FloatingTabBar: 'FloatingTabBar',
@@ -123,6 +126,32 @@ describe('HomeTabs', () => {
     );
 
     expect(watched?.options.context).toEqual({ [RESYNC_SCOPE]: 'Pantry' });
+  });
+
+  it('takes the tab out of the screen reader while the add menu covers it', () => {
+    const layout = mockNavigatorConfig?.screenLayout;
+    const client = new ApolloClient({
+      cache: new InMemoryCache(),
+      defaultOptions: APOLLO_DEFAULT_OPTIONS,
+      link: ApolloLink.empty(),
+    });
+    const tab = (open: boolean) => {
+      mockAddMenuOpen = open;
+      return (
+        <ApolloProvider client={client}>
+          {layout?.({ route: { name: 'Pantry' }, children: <Text>Row</Text> })}
+        </ApolloProvider>
+      );
+    };
+
+    const { rerender } = render(tab(false));
+    expect(screen.getByText('Row')).toBeTruthy();
+
+    rerender(tab(true));
+    expect(screen.queryByText('Row')).toBeNull();
+    expect(
+      screen.getByText('Row', { includeHiddenElements: true }),
+    ).toBeTruthy();
   });
 
   it('keeps blurred tabs mounted rather than pausing them', () => {

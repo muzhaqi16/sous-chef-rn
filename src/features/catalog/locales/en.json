@@ -322,7 +322,6 @@
     "searchPlaceholder": "Search folders...",
     "duplicate": "A folder named \"{{name}}\" already exists.",
     "manageTitle": "Manage Folder",
-    "deleteConfirm": "Delete this folder?",
     "deleteFolder": "Delete Folder",
     "deleteHint": "Recipes will be moved to No Folder",
     "renamePlaceholder": "Enter new folder name...",

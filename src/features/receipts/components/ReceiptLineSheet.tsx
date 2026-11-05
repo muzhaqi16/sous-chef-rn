@@ -18,7 +18,7 @@ import { ItemAutocompleteField } from '#features/catalog/ui/autocomplete/ItemAut
 import { UnitAutocompleteField } from '#features/catalog/ui/autocomplete/UnitAutocompleteField';
 import { useResolveUnit } from '#features/catalog/hooks/useResolveUnit';
 import { localizeNumericHint } from '#/utils/formatters/number';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import type { ReceiptLineChoice } from '../store/receiptDraftStore';
 import type { ReceiptReviewLine } from '../utils/receiptReviewLines';
 import type { ListMatchKey } from '../utils/linkReceiptLines';
@@ -95,7 +95,7 @@ const ReceiptLineForm: React.FC<ReceiptLineFormProps> = ({
     }
     onSave(toLineChoice({ ...values, unitId: resolvedUnitId }));
     onClose();
-  }, logValidationErrors);
+  }, reportValidationErrors);
 
   return (
     <>

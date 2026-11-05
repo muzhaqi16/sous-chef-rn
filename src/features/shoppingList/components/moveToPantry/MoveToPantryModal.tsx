@@ -39,7 +39,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { Controller, useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import {
-  logValidationErrors,
+  reportValidationErrors,
   parseMoneyInput,
 } from '#/utils/validation/common';
 import { isOwnKey } from '#utils/isOwnKey';
@@ -429,7 +429,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           accessibilityLabel: t('moveToPantry.title'),
           onPress: () => {
             void resolveTypedUnits().then(() =>
-              handleSubmit(onValid, logValidationErrors)(),
+              handleSubmit(onValid, reportValidationErrors)(),
             );
           },
           disabled: confirmDisabled,

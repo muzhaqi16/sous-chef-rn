@@ -56,7 +56,7 @@ describe('AddButton', () => {
 
   it('has correct accessibility label', () => {
     render(<AddButton onPress={jest.fn()} />);
-    expect(screen.getByLabelText('Action button')).toBeTruthy();
+    expect(screen.getByLabelText('Add')).toBeTruthy();
   });
 
   it('renders as disabled when disabled prop is true', () => {
@@ -86,6 +86,7 @@ describe('TabItem', () => {
     titleKey: 'labels.pantry',
     onPress: jest.fn(),
     showLabel: true,
+    fitLabel: false,
     activeTabIndex: mockSharedValue,
     tabIndex: 0,
   };

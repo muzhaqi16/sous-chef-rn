@@ -203,10 +203,19 @@ const RecipeMainInner: React.FC = () => {
     setSearchMode(mode);
   };
 
+  // The badge is a child of the labelled button, so the label carries its count.
   const filterAccessory: SearchBarAction = {
     icon: 'options-outline',
     onPress: openFilterSheet,
-    accessibilityLabel: t('recipes.dietaryRestrictions'),
+    accessibilityLabel:
+      screen.activeFilterCount > 0
+        ? t('a11y.counterValue', {
+            label: t('recipes.dietaryRestrictions'),
+            value: t('recipes.filtersActiveSummary', {
+              count: screen.activeFilterCount,
+            }),
+          })
+        : t('recipes.dietaryRestrictions'),
     badge: screen.activeFilterCount,
     onButtonLayout: (rect: LayoutRect) => setButtonRect('dietaryButton', rect),
   };

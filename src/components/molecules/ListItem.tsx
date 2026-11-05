@@ -93,9 +93,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
               {subtitle}
             </ListItemSubtitle>
           ) : (
-            <ListItemSubtitleSlot purchased={isPurchased}>
-              {subtitle}
-            </ListItemSubtitleSlot>
+            <View style={styles.subtitleContainer}>{subtitle}</View>
           ))}
       </View>
       {!!badge &&
@@ -146,7 +144,7 @@ const ListItemComponent: React.FC<ListItemProps> = ({
 };
 
 /**
- * The three `purchased`-variant surfaces, each owning its own `useVariants` call.
+ * The two `purchased`-variant surfaces, each owning its own `useVariants` call.
  * Unistyles' variant transform silently bails the React Compiler out of whichever
  * function contains that call, and `ListItem` renders every shopping-list row, so
  * it is the one that must stay compiled; a bailout in these leaves costs nothing.
@@ -186,14 +184,6 @@ const ListItemSubtitle: React.FC<{
   );
 };
 
-const ListItemSubtitleSlot: React.FC<{
-  purchased: boolean;
-  children: React.ReactNode;
-}> = ({ purchased, children }) => {
-  const variantStyles3 = styles.useVariants({ purchased });
-  return <View style={variantStyles3.subtitleContainer}>{children}</View>;
-};
-
 export const ListItem = ListItemComponent;
 
 const styles = StyleSheet.create(theme => ({
@@ -208,11 +198,12 @@ const styles = StyleSheet.create(theme => ({
   title: {
     color: theme.colors.textPrimary,
     variants: {
+      // A colour, not opacity: a purchased row can still be unticked, so its
+      // text holds AA (`textTertiary` is held on the page grounds).
       purchased: {
         true: {
           textDecorationLine: 'line-through',
-          opacity: theme.opacity.disabled,
-          color: theme.colors.textSecondary,
+          color: theme.colors.textTertiary,
         },
       },
     },
@@ -224,19 +215,12 @@ const styles = StyleSheet.create(theme => ({
       purchased: {
         true: {
           textDecorationLine: 'line-through',
-          opacity: theme.opacity.disabled,
+          color: theme.colors.textTertiary,
         },
       },
     },
   },
   subtitleContainer: {
     marginTop: theme.layout.rowTextGap,
-    variants: {
-      purchased: {
-        true: {
-          opacity: theme.opacity.disabled,
-        },
-      },
-    },
   },
 }));

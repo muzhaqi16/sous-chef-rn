@@ -40,6 +40,11 @@ interface TabItemProps {
   /** The label's i18n key, from the owning feature's manifest. */
   titleKey?: TranslationKey;
   showLabel: boolean;
+  /**
+   * The label may outgrow its tab, so it shrinks to fit. Only then: asked
+   * always, Android shrinks the caption role's labels even where they fit.
+   */
+  fitLabel: boolean;
   activeTabIndex: SharedValue<number>;
   tabIndex: number;
 }
@@ -52,6 +57,7 @@ export const TabItem: React.FC<TabItemProps> = ({
   icon = UNKNOWN_TAB_ICON,
   titleKey,
   showLabel,
+  fitLabel,
   activeTabIndex,
   tabIndex,
 }) => {
@@ -118,6 +124,10 @@ export const TabItem: React.FC<TabItemProps> = ({
         <Text
           role="caption"
           numberOfLines={1}
+          // Under the 1.6 font ceiling a long label shrinks to fit its tab
+          // rather than truncating ("Meal Pl…" at 360 dp).
+          adjustsFontSizeToFit={fitLabel}
+          minimumFontScale={0.65}
           style={[styles.tabLabel, isFocused && styles.tabLabelFocused]}
         >
           {label}
@@ -151,6 +161,6 @@ const styles = StyleSheet.create(theme => ({
     includeFontPadding: false,
   },
   tabLabelFocused: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
 }));

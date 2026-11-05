@@ -48,9 +48,10 @@ export const sizes = {
       height: 87, // Standard row height
     },
   },
-  // Touch target sizes (minimum 44x44 for accessibility)
+  // Touch target sizes. `min` is the platform floor, set in `themes.ts`
+  // (`touchTarget.ts`): the core can't read the platform.
   touchTarget: {
-    min: 44, // Minimum recommended touch target size
+    min: 44,
     sm: 40,
     md: 44,
     lg: 56,

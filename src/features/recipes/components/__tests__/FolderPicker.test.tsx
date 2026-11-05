@@ -401,7 +401,7 @@ describe('FolderPicker', () => {
     // The delete confirmation is toggled via showDeleteConfirm state
     // Default is false, so we should see normal manage view
     expect(screen.getByText('Manage Folder')).toBeTruthy();
-    expect(screen.queryByText('Delete this folder?')).toBeNull();
+    expect(screen.queryByText(/^Delete .+\?$/)).toBeNull();
   });
 
   it('does not show hint when hasFolderActions is false and folders exist', () => {

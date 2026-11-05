@@ -18,7 +18,7 @@ import {
  *
  * `net-weight-needs-value` shipped able to fail with no consumer rendering
  * `errors.netWeight` anywhere: picking a weight unit without typing a weight
- * made Save refuse, `logValidationErrors` wrote a `logger.warn`, and the button
+ * made Save refuse, `reportValidationErrors` wrote a `logger.warn`, and the button
  * was dead with nothing on screen to explain it. In edit mode a stored row with
  * a unit and no weight could never be saved at all.
  *

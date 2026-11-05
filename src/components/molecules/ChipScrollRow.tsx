@@ -173,6 +173,6 @@ const styles = StyleSheet.create(theme => ({
     },
   },
   chipTextActive: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
 }));

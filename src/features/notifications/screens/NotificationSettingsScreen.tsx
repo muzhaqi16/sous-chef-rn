@@ -388,7 +388,7 @@ export const NotificationSettingsScreen: React.FC = () => {
 
 const styles = StyleSheet.create(theme => ({
   quietTimeAlert: {
-    backgroundColor: theme.colors.info + '20',
+    backgroundColor: theme.colors.infoLight,
     padding: theme.spacing.md,
     marginTop: theme.spacing.sm,
     borderRadius: theme.radii.sm,

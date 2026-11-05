@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { Linking } from 'react-native';
 import { LandingAuthScreen } from '../LandingAuthScreen';
 
 const mockToLogin = jest.fn();
@@ -107,5 +108,21 @@ describe('LandingAuthScreen', () => {
     render(<LandingAuthScreen />);
     expect(screen.getByText(/Terms & Conditions/)).toBeTruthy();
     expect(screen.getByText(/Privacy Policy/)).toBeTruthy();
+  });
+
+  // Each is its own link to its own page, not one target for the whole line.
+  it.each([
+    ['Terms & Conditions', 'https://app.example.com/terms-of-use'],
+    ['Privacy Policy', 'https://app.example.com/privacy-policy'],
+  ])('offers "%s" as its own link to %s', async (name, url) => {
+    const user = userEvent.setup();
+    const openURL = jest.spyOn(Linking, 'openURL').mockResolvedValue(true);
+    render(<LandingAuthScreen />);
+
+    await user.press(screen.getByRole('link', { name }));
+
+    expect(openURL).toHaveBeenCalledTimes(1);
+    expect(openURL).toHaveBeenCalledWith(url);
+    openURL.mockRestore();
   });
 });

@@ -99,6 +99,7 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
             onPress={onDismiss}
             style={styles.trailingAction}
             hitSlop={hitSlop.md}
+            accessibilityRole="button"
           >
             <Text role="bodyStrong" tone="accent">
               {t('labels.done')}
@@ -109,6 +110,9 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
             onPress={onNext}
             style={styles.trailingAction}
             hitSlop={hitSlop.md}
+            accessibilityRole="button"
+            // The chevron is decoration: read "Next", not "Next ›".
+            accessibilityLabel={t('labels.next')}
           >
             <Text role="bodyStrong" tone="accent">
               {t('labels.next')} ›

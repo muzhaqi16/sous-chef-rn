@@ -39,7 +39,6 @@
       "emptyTitle": "Aún sin lotes",
       "packageSize": "Paquete: {{size}}"
     },
-    "deleteTitle": "Eliminar artículo",
     "discardBatchesTitle": "Descartar lotes caducados",
     "discardBatchesBody": "Esto marcará todos los lotes caducados como desperdiciados.",
     "discardItemTitle": "Descartar artículo caducado",

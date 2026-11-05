@@ -1,5 +1,6 @@
 import React from 'react';
 import { AutocompleteField } from '#features/catalog/components/AutocompleteField/AutocompleteField';
+import type { FieldChaining } from '#features/catalog/components/InlineAutocomplete';
 
 export interface GenericAutocompleteFieldProps<T> {
   variant: 'inline' | 'modal';
@@ -32,6 +33,8 @@ export interface GenericAutocompleteFieldProps<T> {
   reserveDropdownSpace?: boolean;
   /** See `InlineAutocomplete`: a set the device holds whole. */
   holdsEverything?: boolean;
+  /** Inline only: where the return key moves on to. */
+  chaining?: FieldChaining;
   // Modal-variant copy + tuning.
   modalTitle: string;
   modalSearchPlaceholder: string;
@@ -68,6 +71,7 @@ export function GenericAutocompleteField<T>({
   maxResults,
   reserveDropdownSpace,
   holdsEverything,
+  chaining,
   modalTitle,
   modalSearchPlaceholder,
   modalEmptyText,
@@ -101,6 +105,7 @@ export function GenericAutocompleteField<T>({
         reserveDropdownSpace={reserveDropdownSpace}
         holdsEverything={holdsEverything}
         onEndEditing={onEndEditing}
+        chaining={chaining}
       />
     );
   }

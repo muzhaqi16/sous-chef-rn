@@ -25,7 +25,7 @@ import {
 } from '#features/shoppingList/utils/priority';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { Controller } from 'react-hook-form';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { useShoppingListItemForm } from '#features/shoppingList/hooks/useShoppingListItemForm';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import {
@@ -269,7 +269,7 @@ export const AddEditItem: React.FC<StaticScreenProps<RouteParams>> = ({
       // Wrapped in an arrow so the whole submit — including this body's read
       // of `itemVersionRef.current` — happens on press, not during render.
       onSave={() => {
-        void handleSubmit(handleSave, logValidationErrors)();
+        void handleSubmit(handleSave, reportValidationErrors)();
       }}
       loading={saving}
       testID={formTestIDs.screen}

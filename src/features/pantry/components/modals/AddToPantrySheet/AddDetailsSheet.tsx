@@ -24,7 +24,8 @@ import { PageIndicator } from '#components/molecules/PageIndicator/PageIndicator
 import { makeIdNameHandler } from '#components/organisms/makeIdNameHandler';
 import { takesContents } from '#domain/stockAmount';
 import type { UnitType } from '#/graphql/generated/schemaTypes';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
+import { useDiscardGuard } from '#hooks/ui/useDiscardGuard';
 import { isOwnKey } from '#utils/isOwnKey';
 import {
   addPantryItemSchema,
@@ -41,6 +42,8 @@ interface AddDetailsSheetProps {
   onClose: () => void;
   /** Item was created — the parent closes the whole sheet. */
   onSuccess: () => void;
+  /** Holds the parent sheet open against a pan-down while input would be lost. */
+  onHoldOpen?: (held: boolean) => void;
 }
 
 export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
@@ -49,6 +52,7 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   storageLocations = [],
   onClose,
   onSuccess,
+  onHoldOpen,
 }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
@@ -70,7 +74,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     handleSubmit,
     setValue,
     trigger,
-    formState: { errors },
+    setFocus,
+    formState: { errors, isDirty },
   } = useForm<AddPantryItemFormData>({
     resolver: yupResolver(addPantryItemSchema),
     defaultValues: addPantryItemDefaults(prefilledItemName),
@@ -85,11 +90,9 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     compute: (formValues: AddPantryItemFormData) => formValues,
   });
   const {
-    itemName,
     quantityInput,
     unit,
     storageState,
-    category,
     unitType,
     sizeInput,
     sizeUnitDisplay,
@@ -98,7 +101,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     storageNotes,
     condition,
     tags,
-    brand,
     minQuantity,
     restockQuantity,
     storeName,
@@ -127,12 +129,10 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
 
   // Setter-shaped adapters, so the four page components keep their existing
   // `value` + `setValue` prop interfaces rather than each being rewritten.
-  const setItemName = (v: string) => setField('itemName', v);
   const setQuantityInput = (v: string) => setField('quantityInput', v);
   const setUnit = (v: string) => setField('unit', v);
   const setUnitId = (v: string | null) => setField('unitId', v);
   const setStorageState = (v: StorageState) => setField('storageState', v);
-  const setCategory = (v: string) => setField('category', v);
   const setSizeInput = (v: string) => setField('sizeInput', v);
   const setSizeUnit = (v: string) => setField('sizeUnitDisplay', v);
   const setExpirationDate = (v: Date | null) => setField('expirationDate', v);
@@ -142,7 +142,6 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
   const setStorageNotes = (v: string) => setField('storageNotes', v);
   const setCondition = (v: ItemCondition) => setField('condition', v);
   const setTags = (v: string) => setField('tags', v);
-  const setBrand = (v: string) => setField('brand', v);
   const setMinQuantity = (v: string) => setField('minQuantity', v);
   const setRestockQuantity = (v: string) => setField('restockQuantity', v);
   const setStoreName = (v: string) => setField('storeName', v);
@@ -203,6 +202,12 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
     pagerRef.current?.setPage(index);
   };
 
+  const handleCancel = useDiscardGuard({
+    isDirty,
+    onDiscard: onClose,
+    onHoldOpen,
+  });
+
   const { handleConfirm, loading } = usePantryItemSubmission({
     pantryId,
     onSuccess,
@@ -214,17 +219,18 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
         title={t('addToPantry.addItemDetails')}
         cancelLabel={t('labels.cancel')}
         confirmLabel={loading ? t('labels.adding') : t('labels.add')}
-        onCancel={onClose}
+        onCancel={handleCancel}
         // `handleSubmit` validates first: an invalid form shows its message on
         // the field and jumps to that field's page. Only a valid form reaches
         // `handleConfirm`.
         onConfirm={() => {
           void handleSubmit(handleConfirm, formErrors => {
-            logValidationErrors(formErrors);
+            reportValidationErrors(formErrors);
             const [firstField] = Object.keys(formErrors);
             if (firstField === undefined || !isOwnKey(FIELD_PAGE, firstField))
               return;
             const page = FIELD_PAGE[firstField];
+            // react-hook-form then focuses the first field in error it holds.
             if (page !== undefined) handlePageChange(page);
           })();
         }}
@@ -252,13 +258,8 @@ export const AddDetailsSheet: React.FC<AddDetailsSheetProps> = ({
       >
         {/* Page 1: Main */}
         <MainDetailsPage
-          itemName={itemName}
-          setItemName={setItemName}
-          itemNameError={errors.itemName?.message}
-          brand={brand}
-          setBrand={setBrand}
-          category={category}
-          setCategory={setCategory}
+          control={control}
+          setFocus={setFocus}
           expirationDate={expirationDate}
           setExpirationDate={setExpirationDate}
           storageState={storageState}

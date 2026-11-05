@@ -27,6 +27,14 @@ describe('StatCard', () => {
     expect(onPress).toHaveBeenCalledTimes(1);
   });
 
+  // A word wider than the card would otherwise break between any two letters.
+  it('breaks a label word too wide for the card at a hyphen', () => {
+    renderCard(6);
+    expect(screen.getByText('Expired').props.android_hyphenationFrequency).toBe(
+      'normal',
+    );
+  });
+
   it('shows 0 and opens nothing at zero', async () => {
     const user = userEvent.setup();
     const onPress = renderCard(0);

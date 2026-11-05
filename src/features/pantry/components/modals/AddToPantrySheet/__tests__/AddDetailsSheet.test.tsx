@@ -6,6 +6,9 @@ import { AddDetailsSheet } from '../AddDetailsSheet';
 import type { StoragePageProps } from '../StoragePage';
 import type { StorageState as StorageStateType } from '#/graphql/generated/schemaTypes';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { requirePlatform } from '#platform/install';
+import { alertService } from '#/services/alertService';
+import { t } from '#/i18n';
 
 type PagerViewMockProps = {
   children?: React.ReactNode;
@@ -50,25 +53,62 @@ jest.mock('#features/pantry/hooks/usePantryItemSubmission', () => ({
   })),
 }));
 
+const mockFocusItemName = jest.fn();
+
+// Stands in for Item Name's input: react-hook-form focuses a field through the
+// ref its `Controller` hands out, so this is what a failed submit reaches.
+function MockFocusProbe({ ref }: { ref: React.Ref<{ focus: () => void }> }) {
+  const { useImperativeHandle } = require('react');
+  useImperativeHandle(ref, () => ({ focus: mockFocusItemName }));
+  return null;
+}
+
 jest.mock('../MainDetailsPage', () => ({
-  // Renders `itemNameError` so the sheet's contract with the page — that a
-  // validation failure reaches the field — is assertable here. Whether the
-  // page paints it as a red border is FormInput's own test.
+  // Renders the name field through the sheet's own `control`, so the contract
+  // with the page (a validation failure reaches the field, and focus can) is
+  // assertable here. Whether the page paints the message is FormInput's test.
   MainDetailsPage: ({
-    itemNameError,
+    control,
     storageState,
   }: {
-    itemNameError?: string;
+    control: import('react-hook-form').Control<
+      import('#features/pantry/types').AddPantryItemFormData
+    >;
     storageState: string;
   }) => {
-    const { View, Text } = require('react-native');
+    const { View, Text, Pressable } = require('react-native');
+    const { Controller } = require('react-hook-form');
     return (
       <View testID="main-details-page">
         <Text>Main Details Page</Text>
+        <Controller
+          control={control}
+          name="itemName"
+          render={({
+            field,
+            fieldState,
+          }: {
+            field: {
+              onChange: (value: string) => void;
+              ref: React.Ref<{ focus: () => void }>;
+            };
+            fieldState: { error?: { message?: string } };
+          }) => (
+            <>
+              <MockFocusProbe ref={field.ref} />
+              <Pressable
+                testID="main-details-page-type-name"
+                onPress={() => field.onChange('Milk')}
+              />
+              {fieldState.error ? (
+                <Text testID="main-details-page-name-error">
+                  {fieldState.error.message}
+                </Text>
+              ) : null}
+            </>
+          )}
+        />
         <Text testID="main-details-page-storage-state">{storageState}</Text>
-        {itemNameError ? (
-          <Text testID="main-details-page-name-error">{itemNameError}</Text>
-        ) : null}
       </View>
     );
   },
@@ -257,6 +297,62 @@ describe('AddDetailsSheet', () => {
     expect(
       screen.getByTestId('main-details-page-name-error'),
     ).toHaveTextContent('Please enter an item name');
+  });
+
+  it('focuses Item Name on an empty submit and speaks its message', async () => {
+    const user = userEvent.setup();
+    const announce = jest.spyOn(requirePlatform('screenReader'), 'announce');
+    mockFocusItemName.mockClear();
+
+    render(<AddDetailsSheet {...defaultProps} />);
+    await user.press(screen.getByTestId('add-pantry-item-submit-button'));
+    await drainTimers();
+
+    expect(mockFocusItemName).toHaveBeenCalled();
+    expect(announce).toHaveBeenCalledWith('Please enter an item name');
+    announce.mockRestore();
+  });
+
+  describe('Cancel', () => {
+    it('closes an untouched form at once', async () => {
+      const user = userEvent.setup();
+      const alert = jest.spyOn(alertService, 'alert');
+      const onClose = jest.fn();
+
+      render(<AddDetailsSheet {...defaultProps} onClose={onClose} />);
+      await user.press(screen.getByTestId('add-pantry-item-cancel-button'));
+
+      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(alert).not.toHaveBeenCalled();
+      alert.mockRestore();
+    });
+
+    it('asks before dropping what was typed, and holds the sheet open', async () => {
+      const user = userEvent.setup();
+      const alert = jest.spyOn(alertService, 'alert');
+      const onClose = jest.fn();
+      const onHoldOpen = jest.fn();
+
+      render(
+        <AddDetailsSheet
+          {...defaultProps}
+          onClose={onClose}
+          onHoldOpen={onHoldOpen}
+        />,
+      );
+      await user.press(screen.getByTestId('main-details-page-type-name'));
+      await drainTimers();
+      await user.press(screen.getByTestId('add-pantry-item-cancel-button'));
+
+      expect(onHoldOpen).toHaveBeenLastCalledWith(true);
+      expect(onClose).not.toHaveBeenCalled();
+      expect(alert).toHaveBeenCalledWith(
+        t('confirmations.discardChangesTitle'),
+        t('confirmations.discardChanges'),
+        expect.any(Array),
+      );
+      alert.mockRestore();
+    });
   });
 
   it('submits once the required fields are filled', async () => {

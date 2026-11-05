@@ -325,6 +325,23 @@ it('is a first run with no household', () => {
   expect(result.current.overview.state).toBe('empty');
 });
 
+it('is no first run while the homes list has no answer', async () => {
+  mockedCurrentPantry.mockReturnValue({
+    pantry: null,
+    pantries: [],
+    setSelectedPantryId: jest.fn(),
+    currentHome: undefined,
+    selectedHomeId: null,
+    homeCount: null,
+    isReady: true,
+  });
+  const { result } = renderOverview([plansMock(false), listsMock(false)]);
+
+  await drainTimers();
+  expect(result.current.overview.needsHousehold).toBe(false);
+  expect(['error', 'offline']).toContain(result.current.overview.state);
+});
+
 it('is not a first run while a list exists', async () => {
   const { result } = renderOverview([
     countsMock(stats(0, 0, 0)),

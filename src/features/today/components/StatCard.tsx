@@ -39,7 +39,13 @@ export const StatCard: React.FC<StatCardProps> = ({
       <Text role="title" tone={empty ? 'tertiary' : tone}>
         {String(Math.max(count, 0))}
       </Text>
-      <Text role="caption" tone="secondary" numberOfLines={2}>
+      {/* Wraps as far as large text needs; the row stretches the cards alike.
+          A word wider than the card breaks at a hyphen, not between letters. */}
+      <Text
+        role="caption"
+        tone="secondary"
+        android_hyphenationFrequency="normal"
+      >
         {label}
       </Text>
     </Card>

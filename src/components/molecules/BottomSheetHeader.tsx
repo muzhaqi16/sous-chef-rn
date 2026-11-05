@@ -127,10 +127,20 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-between',
     paddingVertical: theme.spacing.sm,
   },
+  // The full touch target; the negative margin keeps the header the height
+  // of its padded label.
   button: {
     paddingVertical: theme.spacing.xs,
     paddingHorizontal: theme.spacing.xs,
     minWidth: 70,
+    minHeight: theme.sizes.touchTarget.min,
+    marginVertical:
+      -(
+        theme.sizes.touchTarget.min -
+        theme.type.body.lineHeight -
+        2 * theme.spacing.xs
+      ) / 2,
+    justifyContent: 'center',
   },
   title: {
     flex: 1,

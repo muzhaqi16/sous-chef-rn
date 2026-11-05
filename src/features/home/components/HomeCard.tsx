@@ -75,7 +75,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
   // animated node takes no themed style.
   const animatedHighlightStyle = useAnimatedStyle(() => ({
     opacity: highlightOpacity.get(),
-    backgroundColor: animatedTheme.get().colors.primary + '15',
+    backgroundColor: animatedTheme.get().colors.primaryLight,
   }));
 
   if (!complete) return null;
@@ -124,7 +124,7 @@ export const HomeCard: React.FC<HomeCardProps> = ({
           </View>
           {!!isDefault && (
             <View style={styles.defaultBadge}>
-              <Text role="label" tone="accent">
+              <Text role="label" tone="onPrimaryLight">
                 {t('homeManagement.cardDefault')}
               </Text>
             </View>
@@ -189,7 +189,7 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.xs,
   },
   defaultBadge: {
-    backgroundColor: theme.colors.primary + '20',
+    backgroundColor: theme.colors.primaryLight,
     paddingHorizontal: theme.spacing.sm,
     paddingVertical: theme.spacing.xs,
     borderRadius: theme.radii.sm,

@@ -210,8 +210,11 @@ export function usePantryScreen() {
   };
 
   // 6. Derived states
-  const noHomeSelected = isReady && !selectedHomeId && homeCount > 0;
+  const noHomeSelected =
+    isReady && !selectedHomeId && homeCount !== null && homeCount > 0;
   const noHomes = isReady && !selectedHomeId && homeCount === 0;
+  // No home and no answer for the list: the read failed, which is not "none".
+  const homesUnanswered = isReady && !selectedHomeId && homeCount === null;
   // Requires the home itself to have resolved. `isReady` alone isn't enough:
   // `useDefaultHome` flips it early off persisted home/pantry ids, before
   // `GetHomes` lands, so there is a window where `pantries` is empty purely
@@ -231,7 +234,7 @@ export function usePantryScreen() {
     loading,
     error: pantryError,
     hasResult,
-    skipped,
+    skipped: skipped && !homesUnanswered,
     isEmpty: rawPantryItems.length === 0,
   });
 

@@ -117,6 +117,11 @@ const styles = StyleSheet.create(theme => ({
   titleSwitch: {
     alignSelf: 'flex-start',
     maxWidth: '100%',
+    // The full touch target, without growing the bar past its title.
+    minHeight: theme.sizes.touchTarget.min,
+    marginVertical:
+      -(theme.sizes.touchTarget.min - theme.type.title.lineHeight) / 2,
+    justifyContent: 'center',
   },
   titleRow: {
     flexDirection: 'row',

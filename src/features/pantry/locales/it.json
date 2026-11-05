@@ -39,7 +39,6 @@
       "emptyTitle": "Nessun lotto",
       "packageSize": "Confezione: {{size}}"
     },
-    "deleteTitle": "Elimina articolo",
     "discardBatchesTitle": "Scarta i lotti scaduti",
     "discardBatchesBody": "Questo segnerà tutti i lotti scaduti come sprecati.",
     "discardItemTitle": "Scarta articolo scaduto",

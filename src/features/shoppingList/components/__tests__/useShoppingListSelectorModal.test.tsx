@@ -1,7 +1,8 @@
 'use no memo';
 
 import { isValidElement, type ReactElement } from 'react';
-import { act, render, screen } from '@testing-library/react-native';
+import { act, fireEvent, render, screen } from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { renderHookWithApollo } from '#/test-utils/apolloMockProvider';
 import {
   useShoppingListSelectorModal,
@@ -1042,6 +1043,76 @@ describe('useShoppingListSelectorModal', () => {
       expect(mockNav.toListSettings).toHaveBeenCalledWith({
         listId: 'list-1',
       });
+    });
+  });
+
+  describe('deleting selected lists', () => {
+    const deletable = () => [
+      ...makeLists(),
+      makeList({ id: 'list-3', name: 'Camping', _isOwner: true }),
+    ];
+
+    /** Long-presses a row into delete mode, then presses the trash action. */
+    const deleteVia = (
+      result: { current: ReturnType<typeof useShoppingListSelectorModal> },
+      lists: ShoppingListSelectorItem[],
+      rowName: string,
+      alsoSelect?: string,
+    ) => {
+      const row = lists.find(list => list.name === rowName)!;
+      mount(result.current.listConfig.renderCustomItem!(row, false, jest.fn()));
+      fireEvent(screen.getByText(rowName), 'longPress');
+      if (alsoSelect) {
+        // A row rendered in delete mode toggles its selection on press.
+        const other = lists.find(list => list.name === alsoSelect)!;
+        mount(
+          result.current.listConfig.renderCustomItem!(other, false, jest.fn()),
+        );
+        fireEvent.press(screen.getByText(alsoSelect));
+      }
+      act(() => result.current.listConfig.headerActions?.[0]?.onPress?.());
+    };
+
+    it('names the one list it is about to delete', () => {
+      const alert = jest.spyOn(alertService, 'alert');
+      const lists = deletable();
+      const { result } = renderHook(() =>
+        useShoppingListSelectorModal({
+          listDataWithOwnership: lists,
+          currentListId: 'list-1',
+          setSelectedShoppingListId: jest.fn(),
+        }),
+      );
+
+      deleteVia(result, lists, 'Groceries');
+
+      expect(alert).toHaveBeenCalledWith(
+        'Delete Groceries?',
+        expect.any(String),
+        expect.any(Array),
+      );
+      alert.mockRestore();
+    });
+
+    it('counts the lists when several are selected', () => {
+      const alert = jest.spyOn(alertService, 'alert');
+      const lists = deletable();
+      const { result } = renderHook(() =>
+        useShoppingListSelectorModal({
+          listDataWithOwnership: lists,
+          currentListId: 'list-1',
+          setSelectedShoppingListId: jest.fn(),
+        }),
+      );
+
+      deleteVia(result, lists, 'Groceries', 'Camping');
+
+      expect(alert).toHaveBeenCalledWith(
+        'Delete 2 Lists',
+        expect.any(String),
+        expect.any(Array),
+      );
+      alert.mockRestore();
     });
   });
 });

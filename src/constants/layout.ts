@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { Dimensions, Platform } from 'react-native';
 import { sizes } from '#/theme/foundations/sizes';
 
 /**
@@ -29,6 +29,11 @@ export const getTabBarBottomPadding = (safeBottom: number): number =>
  * floating above the bar as well. This is trailing slack after the last row: it
  * adds scroll distance at the end and takes no visible space, so a surface that
  * is centred rather than scrolled takes {@link getTabBarBottomPadding} instead.
+ * In landscape the button sits in the bar's row (`FloatingTabBar`), so only the
+ * bar is cleared: the extra row of slack would hide the last row on a short screen.
  */
-export const getScrollClearancePadding = (safeBottom: number): number =>
-  getTabBarBottomPadding(safeBottom) + sizes.fab.md + FLOATING_BUTTON_GAP;
+export const getScrollClearancePadding = (safeBottom: number): number => {
+  const { width, height } = Dimensions.get('window');
+  const buttonAbove = width > height ? 0 : sizes.fab.md + FLOATING_BUTTON_GAP;
+  return getTabBarBottomPadding(safeBottom) + buttonAbove;
+};

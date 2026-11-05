@@ -365,7 +365,8 @@ describe('RecipeDetail', () => {
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  it('shows servings and time metadata', () => {
+  // A screen reader spells an emoji out by name, so the metadata carries none.
+  it('shows servings, time and health score with no glyph in the copy', () => {
     const tree = renderDetail({
       displayData: {
         dataAttributions: [],
@@ -373,12 +374,41 @@ describe('RecipeDetail', () => {
         title: 'Quick Soup',
         servings: 6,
         readyInMinutes: 15,
+        healthScore: 72.4,
         ingredients: [],
         instructions: [],
       },
     });
-    expect(tree.getByText(/6 servings/)).toBeTruthy();
-    expect(tree.getByText(/15 min/)).toBeTruthy();
+    expect(tree.getByText('6 servings')).toBeTruthy();
+    expect(tree.getByText('15 min')).toBeTruthy();
+    expect(tree.getByText('72% healthy')).toBeTruthy();
+  });
+
+  it('reads each nutrient as one item, its label before its value', () => {
+    const tree = renderDetail({
+      displayData: {
+        dataAttributions: [],
+        details: 'complete',
+        title: 'Quick Soup',
+        servings: 6,
+        caloriesPerServing: 380,
+        nutrition: {
+          calories: 380,
+          protein: 44,
+          totalCarbs: null,
+          totalFat: 12.6,
+          dietaryFiber: null,
+          totalSugars: null,
+          sodium: 640,
+        },
+        ingredients: [],
+        instructions: [],
+      },
+    });
+    expect(tree.getByLabelText('Cal / serving, 380')).toBeTruthy();
+    expect(tree.getByLabelText('Protein, 44 g')).toBeTruthy();
+    expect(tree.getByLabelText('Fat, 13 g')).toBeTruthy();
+    expect(tree.getByLabelText('Sodium, 640 mg')).toBeTruthy();
   });
 
   // --- Branch coverage tests ---

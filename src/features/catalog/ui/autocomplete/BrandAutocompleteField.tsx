@@ -5,6 +5,7 @@ import {
   type BrandItem,
 } from '#features/catalog/hooks/useBrandAutocomplete';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
+import type { FieldChaining } from '#features/catalog/components/InlineAutocomplete';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 
 interface BrandAutocompleteFieldProps {
@@ -16,6 +17,8 @@ interface BrandAutocompleteFieldProps {
   required?: boolean;
   error?: string;
   testID?: string;
+  /** Inline only: where the return key moves on to. */
+  chaining?: FieldChaining;
   suggestedBrands?: Array<{ id: string; name: string }>;
   onBrandSelected?: (brandId: string | null, brandName: string | null) => void;
 }
@@ -29,6 +32,7 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
   required,
   error,
   testID,
+  chaining,
   suggestedBrands = [],
   onBrandSelected,
 }) => {
@@ -44,6 +48,7 @@ export const BrandAutocompleteField: React.FC<BrandAutocompleteFieldProps> = ({
       required={required}
       error={error}
       testID={testID}
+      chaining={chaining}
       onChangeText={text => {
         onChangeText(text);
         brand.handleSearchTermChange(text);

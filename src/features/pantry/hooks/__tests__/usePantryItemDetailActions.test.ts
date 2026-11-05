@@ -155,13 +155,13 @@ describe('usePantryItemDetailActions', () => {
   });
 
   describe('handleDelete', () => {
-    it('opens a confirmation alert', () => {
+    it('opens a confirmation naming the item', () => {
       const { result } = setup();
 
       act(() => result.current.handleDelete());
 
       expect(alertService.alert).toHaveBeenCalledWith(
-        'Delete Item',
+        'Delete Milk?',
         'Are you sure you want to delete this item?',
         expect.any(Array),
       );

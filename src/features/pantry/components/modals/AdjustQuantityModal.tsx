@@ -26,7 +26,7 @@ import {
   parseRemainingWeight,
   type AdjustQuantityFormValues,
 } from './adjustQuantityFormConfig';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import {
   currentReading,
   formatReading,
@@ -164,7 +164,7 @@ export const AdjustQuantityModal: React.FC<AdjustQuantityModalProps> = ({
       },
     );
     onClose();
-  }, logValidationErrors);
+  }, reportValidationErrors);
 
   return (
     <Sheet

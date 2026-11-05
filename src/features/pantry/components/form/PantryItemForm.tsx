@@ -38,7 +38,7 @@ import { NetWeightSection } from './NetWeightSection';
 import { usePantryItemFormSubmit } from './usePantryItemFormSubmit';
 import { editedAmount } from './editedAmount';
 import { usePantryUnitChange } from '#features/pantry/hooks/usePantryUnitChange';
-import { logValidationErrors } from '#utils/validation/common';
+import { reportValidationErrors } from '#utils/validation/common';
 import {
   TAB_FIELDS,
   INVENTORY_ADVANCED_FIELDS,
@@ -335,7 +335,7 @@ export const PantryItemForm: React.FC<PantryItemFormProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const submit = async () => {
     setIsSaving(true);
-    await handleSubmit(handleSave, logValidationErrors)();
+    await handleSubmit(handleSave, reportValidationErrors)();
     setIsSaving(false);
   };
   const save = () => {

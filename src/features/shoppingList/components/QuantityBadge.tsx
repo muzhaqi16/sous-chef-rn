@@ -15,6 +15,17 @@ import {
 import { Text } from '#components/atoms/Text';
 import { hitSlop } from '#/theme/foundations/sizes';
 
+/**
+ * Tall enough for the touch floor; on the right, half the 4 dp gap to the row's
+ * Move to Pantry action, which takes the other half.
+ */
+const CHIP_SLOP = {
+  top: hitSlop.lg,
+  bottom: hitSlop.lg,
+  left: hitSlop.md,
+  right: 2,
+};
+
 interface QuantityBadgeProps {
   testID?: string;
   quantity: number;
@@ -66,7 +77,9 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
     ? { backgroundColor: themeColors.surfaceVariant }
     : null;
   const quantityOverride = themeColors
-    ? { color: themeColors.textPrimary }
+    ? {
+        color: isDisabled ? themeColors.textSecondary : themeColors.textPrimary,
+      }
     : null;
   const unitOverride = themeColors
     ? { color: themeColors.textSecondary }
@@ -78,16 +91,12 @@ export const QuantityBadge: React.FC<QuantityBadgeProps> = ({
       onPress={onPress}
       disabled={isDisabled}
       accessibilityRole="button"
-      // A badge the viewer may not edit says what it holds, not what a tap does.
-      accessibilityLabel={t(
-        isDisabled
-          ? 'quantityBadge.a11yLabelReadOnly'
-          : 'quantityBadge.a11yLabel',
-        { quantity: accessibilityText },
-      )}
+      accessibilityLabel={t('quantityBadge.a11yLabel', {
+        quantity: accessibilityText,
+      })}
       accessibilityHint={isDisabled ? undefined : t('quantityBadge.a11yHint')}
       accessibilityState={{ disabled: isDisabled }}
-      hitSlop={hitSlop.md}
+      hitSlop={CHIP_SLOP}
     >
       <View style={[variantStyles.container, containerOverride]}>
         <Text
@@ -135,10 +144,6 @@ const styles = StyleSheet.create(theme => ({
         true: { flexDirection: 'row', gap: theme.spacing['2xs'] },
         false: {},
       },
-      disabled: {
-        true: { opacity: theme.opacity.disabled },
-        false: {},
-      },
       purchased: {
         true: {},
         false: {},
@@ -148,6 +153,12 @@ const styles = StyleSheet.create(theme => ({
   quantityText: {
     color: theme.colors.textPrimary,
     variants: {
+      // A solid colour, not opacity: dimming took the text to 3.20:1. Secondary
+      // holds AA on `surfaceVariant` in both themes; tertiary is 4.16:1 in dark.
+      disabled: {
+        true: { color: theme.colors.textSecondary },
+        false: {},
+      },
       purchased: {
         true: { textDecorationLine: 'line-through' },
         false: {},

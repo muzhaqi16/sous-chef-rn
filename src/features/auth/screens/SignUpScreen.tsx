@@ -11,7 +11,7 @@ import { EmailInput } from '#components/molecules/EmailInput';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { NameInput } from '#components/molecules/NameInput';
 import { signUpSchema } from '#/utils/validation/auth';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import type { RegisterInput } from '#/graphql/generated/schemaTypes';
 import { authService } from '#/services/authService';
 import { useAppStore } from '#store/useAppStore';
@@ -80,7 +80,7 @@ export const SignUpScreen = (): React.JSX.Element => {
             name: 'password',
             label: t('auth.password'),
             component: PasswordInput,
-            props: { testID: authTestIDs.signUpPasswordInput },
+            props: { purpose: 'new', testID: authTestIDs.signUpPasswordInput },
             // The match rule reports on `confirmPassword` while reading this
             // field, so editing this one has to re-run that one.
             deps: ['confirmPassword'],
@@ -89,7 +89,10 @@ export const SignUpScreen = (): React.JSX.Element => {
             name: 'confirmPassword',
             label: t('auth.confirmPassword'),
             component: PasswordInput,
-            props: { testID: authTestIDs.signUpConfirmPasswordInput },
+            props: {
+              purpose: 'new',
+              testID: authTestIDs.signUpConfirmPasswordInput,
+            },
           },
         ]}
         control={form.control}
@@ -99,7 +102,7 @@ export const SignUpScreen = (): React.JSX.Element => {
           isRegistering ? t('auth.creatingAccount') : t('auth.signUp')
         }
         submitButtonTestID={authTestIDs.signUpSubmitButton}
-        onSubmit={form.handleSubmit(onSubmit, logValidationErrors)}
+        onSubmit={form.handleSubmit(onSubmit, reportValidationErrors)}
         footerText={t('auth.haveAccount')}
         footerLinkText={t('auth.signIn')}
         footerLinkTestID={authTestIDs.signUpLoginLink}

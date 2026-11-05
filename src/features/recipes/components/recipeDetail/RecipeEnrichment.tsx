@@ -38,6 +38,23 @@ function macroRows(
   });
 }
 
+// One item to a screen reader, label first, though the value shows above it.
+function NutrientCell({ label, value }: { label: string; value: string }) {
+  const { t } = useTranslation();
+  return (
+    <View
+      accessible
+      accessibilityLabel={t('a11y.counterValue', { label, value })}
+      style={styles.nutrientCell}
+    >
+      <Text role="label">{value}</Text>
+      <Text role="caption" tone="secondary">
+        {label}
+      </Text>
+    </View>
+  );
+}
+
 interface RecipeEnrichmentProps {
   caloriesPerServing?: number;
   nutrition?: RecipeNutritionFacts | null;
@@ -79,20 +96,17 @@ export const RecipeEnrichment: React.FC<RecipeEnrichmentProps> = ({
           </SectionHeader>
           <View style={styles.nutrientGrid}>
             {calories !== null && (
-              <View style={styles.nutrientCell}>
-                <Text role="label">{Math.round(calories)}</Text>
-                <Text role="caption" tone="secondary">
-                  {t('recipes.caloriesPerServingLabel')}
-                </Text>
-              </View>
+              <NutrientCell
+                label={t('recipes.caloriesPerServingLabel')}
+                value={String(Math.round(calories))}
+              />
             )}
             {nutrients.map(row => (
-              <View key={row.labelKey} style={styles.nutrientCell}>
-                <Text role="label">{row.value}</Text>
-                <Text role="caption" tone="secondary">
-                  {t(row.labelKey)}
-                </Text>
-              </View>
+              <NutrientCell
+                key={row.labelKey}
+                label={t(row.labelKey)}
+                value={row.value}
+              />
             ))}
           </View>
         </View>

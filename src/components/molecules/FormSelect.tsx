@@ -179,7 +179,7 @@ const styles = StyleSheet.create(theme => ({
     color: theme.colors.textPrimary,
   },
   selectedOptionText: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   closeButton: {
     marginTop: theme.spacing.md,

@@ -61,7 +61,6 @@
   "dietary": {
     "title": "Profili dietik",
     "restrictions": "Kufizime dietike",
-    "removeRestrictionTitle": "Hiq kufizimin",
     "removeRestrictionConfirm": "Vërtet dëshiron ta heqësh këtë kufizim dietik?",
     "removeRestrictionFailed": "Nuk u hoq dot kufizimi",
     "foodPreferences": "Preferencat ushqimore",
@@ -389,7 +388,6 @@
     "namePlaceholder": "p.sh. Bojkot",
     "rename": "Riemërto listën",
     "deleteList": "Fshi listën",
-    "deleteTitle": "Të fshihet {{name}}?",
     "deleteBody": "Markat e saj hiqen bashkë me të.",
     "brandCount_one": "{{count}} markë",
     "brandCount_other": "{{count}} marka",

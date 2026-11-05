@@ -156,9 +156,16 @@ export function useShoppingListSelectorModal({
   const handleDeleteSelected = () => {
     const count = selectedForDeletion.size;
     if (count === 0) return;
+    const [onlyId] = selectedForDeletion;
+    const only =
+      count === 1
+        ? listDataWithOwnership.find(list => list.id === onlyId)
+        : undefined;
 
     alertService.alert(
-      t('shoppingListSelector.deleteAlertTitle', { count }),
+      only
+        ? t('labels.deleteNamed', { name: only.name })
+        : t('shoppingListSelector.deleteAlertTitle', { count }),
       t('shoppingListSelector.deleteAlertMessage', { count }),
       destructiveConfirm(t('labels.delete'), () => {
         void deleteSelected();

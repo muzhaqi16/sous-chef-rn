@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { errorService } from '#/services/errorService';
 import { toastService } from '#/services/toastService';
-import { View } from 'react-native';
+import { AccessibilityInfo, Platform, View } from 'react-native';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
@@ -14,7 +14,7 @@ import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { EmailInput } from '#components/molecules/EmailInput';
 import { PasswordInput } from '#components/molecules/PasswordInput';
 import { loginSchema } from '#/utils/validation/auth';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import type { LoginInput } from '#/graphql/generated/schemaTypes';
 import { useRememberMe } from '#features/auth/hooks/useRememberMe';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
@@ -32,6 +32,7 @@ import { authTestIDs } from '#features/auth/testIDs';
 
 // `onRefusal` hands back the code as the untyped string the server sent.
 const EMAIL_NOT_VERIFIED: string = ErrorCode.AuthEmailNotVerified;
+const CREDENTIALS_INVALID: string = ErrorCode.AuthCredentialsInvalid;
 
 /** Module-level function to load auth info.
  *  Extracted from useEffect to avoid try-catch bailout. */
@@ -147,6 +148,19 @@ export function LoginScreen(): React.JSX.Element {
     defaultValues: { email: '', password: '' },
   });
 
+  // Wrong credentials stay on the form, not in a passing toast, for as long as
+  // the fields still hold what was refused.
+  const [refusal, setRefusal] = useState<
+    (LoginInput & { message: string }) | null
+  >(null);
+  const entered = useWatch({ control: form.control });
+  const refusalMessage =
+    refusal &&
+    refusal.email === entered.email &&
+    refusal.password === entered.password
+      ? refusal.message
+      : null;
+
   // Track screen view and load stored credentials and biometric info on mount
   useEffect(() => {
     void loadAuthInfoAsync(
@@ -161,16 +175,28 @@ export function LoginScreen(): React.JSX.Element {
 
   const onSubmit = async (input: LoginInput) => {
     Telemetry.trackEvent('login_attempt', { method: 'email_password' });
+    setRefusal(null);
 
     // `login` reports its own failures and resolves false; it does not throw.
     const signedIn = await authService.login(input, {
-      // A 403 with valid credentials: the mailbox is unproven and the emailed
-      // code clears it, so the screen offers code entry rather than a toast on
-      // a form the reader can only re-submit.
       onRefusal: code => {
+        // A 403 with valid credentials: the mailbox is unproven and the emailed
+        // code clears it, so the screen offers code entry.
         if (code === EMAIL_NOT_VERIFIED) {
           setUnverifiedEmail(input.email);
+          return false;
         }
+        if (code !== CREDENTIALS_INVALID) return false;
+        const message = errorService.getUserFriendlyMessage(
+          code,
+          t('errors.codes.genericRetry'),
+        );
+        setRefusal({ ...input, message });
+        // Android reads the live region as it appears.
+        if (Platform.OS === 'ios') {
+          AccessibilityInfo.announceForAccessibility(message);
+        }
+        return true;
       },
     });
     if (signedIn) {
@@ -277,7 +303,11 @@ export function LoginScreen(): React.JSX.Element {
             name: 'password',
             label: t('auth.password'),
             component: PasswordInput,
-            props: { showToggle: true, testID: authTestIDs.loginPasswordInput },
+            props: {
+              purpose: 'current',
+              showToggle: true,
+              testID: authTestIDs.loginPasswordInput,
+            },
           },
         ]}
         control={form.control}
@@ -293,7 +323,8 @@ export function LoginScreen(): React.JSX.Element {
         }}
         submitText={isLoggingIn ? t('auth.loggingIn') : t('auth.logIn')}
         submitButtonTestID={authTestIDs.loginSubmitButton}
-        onSubmit={form.handleSubmit(onSubmit, logValidationErrors)}
+        submitError={refusalMessage}
+        onSubmit={form.handleSubmit(onSubmit, reportValidationErrors)}
         footerText={t('auth.noAccount')}
         footerLinkText={t('auth.signUp')}
         footerLinkTestID={authTestIDs.loginSignUpLink}
@@ -366,7 +397,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   biometricText: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   biometricTextDisabled: {
     color: theme.colors.textSecondary,

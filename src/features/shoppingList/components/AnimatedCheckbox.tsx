@@ -15,6 +15,8 @@ import { HapticService } from '#services/haptic/HapticService';
 // separate gesture system, so the tap fires both toggle and row navigation.
 import { Pressable } from 'react-native-gesture-handler';
 import { motion } from '#/theme/motion';
+import { layout } from '#/theme/foundations/spacing';
+import { hitSlopFor } from '#/theme/touchTarget';
 
 type AnimatedCheckboxProps = {
   checked: boolean;
@@ -31,6 +33,15 @@ type AnimatedCheckboxProps = {
    * box sticks visually checked when the user cancels.
    */
   optimistic?: boolean;
+};
+
+/**
+ * The touch floor around the box, inside the row: the gap to the thumbnail
+ * bounds the right side, so the row's inset makes up the width on the left.
+ */
+const rowSlop = (size: number) => {
+  const { top, bottom } = hitSlopFor(size, size);
+  return { top, bottom, left: layout.rowInsetHorizontal, right: layout.rowGap };
 };
 
 export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
@@ -83,10 +94,12 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
         visuallyChecked ? animatedTheme.get().colors.primary : 'transparent',
         { duration: motion.timing.INSTANT, easing: motion.easing.standard },
       ),
+      // The outline is the unchecked box's only edge, so it takes 3:1 (WCAG
+      // 1.4.11); `border` is 1.45:1 on the row.
       borderColor: withTiming(
         visuallyChecked
           ? animatedTheme.get().colors.primary
-          : animatedTheme.get().colors.border,
+          : animatedTheme.get().colors.textTertiary,
         { duration: motion.timing.INSTANT, easing: motion.easing.standard },
       ),
       transform: [
@@ -131,6 +144,7 @@ export const AnimatedCheckbox: React.FC<AnimatedCheckboxProps> = ({
       onPressOut={handlePressOut}
       disabled={disabled}
       style={variantStyles.pressable}
+      hitSlop={rowSlop(size)}
       accessibilityRole="checkbox"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ checked: !!visuallyChecked, disabled }}

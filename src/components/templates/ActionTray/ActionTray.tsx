@@ -18,8 +18,9 @@ import {
   type BottomSheetFooterProps,
   type BottomSheetScrollViewMethods,
 } from '@gorhom/bottom-sheet';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet as UnistylesStyleSheet } from 'react-native-unistyles';
-import { AppPressable } from '#components/atoms/AppPressable';
+import { hitSlopFor } from '#/theme/touchTarget';
 import { Text } from '#components/atoms/Text';
 import { Icon } from '#components/atoms/Icon';
 import { BarActions } from '#components/molecules/BarActions';
@@ -41,6 +42,9 @@ const BOTTOM_INSET = 30;
 
 // GlobalBackdrop paints the dim instead.
 const NullBackdrop = () => null;
+
+/** The 32 dp close button, padded to the platform's touch floor. */
+const CLOSE_SLOP = hitSlopFor(32, 32);
 
 export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
   (
@@ -173,13 +177,20 @@ export const ActionTray = forwardRef<ActionTrayRef, ActionTrayProps>(
           <View style={styles.fill} />
           <BarActions actions={headerActions} placement="gutter" />
           {showCloseButton ? (
-            <AppPressable
+            // RNGH's `Pressable`, as `ActionMenuRow`: the handle is gorhom's
+            // drag surface, which wins a touch from RN's on Android.
+            <Pressable
               onPress={handleDismiss}
-              style={styles.closeButton}
+              hitSlop={CLOSE_SLOP}
+              accessibilityRole="button"
               accessibilityLabel={t('labels.close')}
             >
-              <Icon name="close" size={16} tone="textSecondary" />
-            </AppPressable>
+              {({ pressed }) => (
+                <View style={[styles.closeButton, pressed && styles.pressed]}>
+                  <Icon name="close" size={16} tone="textSecondary" />
+                </View>
+              )}
+            </Pressable>
           ) : null}
         </View>
       ) : null;
@@ -282,6 +293,9 @@ const styles = UnistylesStyleSheet.create(theme => ({
   },
   fill: {
     flex: 1,
+  },
+  pressed: {
+    opacity: theme.opacity.pressed,
   },
   closeButton: {
     width: 32,

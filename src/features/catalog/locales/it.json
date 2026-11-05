@@ -322,7 +322,6 @@
     "searchPlaceholder": "Cerca cartelle...",
     "duplicate": "Esiste già una cartella con il nome \"{{name}}\".",
     "manageTitle": "Gestisci cartella",
-    "deleteConfirm": "Eliminare questa cartella?",
     "deleteFolder": "Elimina cartella",
     "deleteHint": "Le ricette verranno spostate in Senza cartella",
     "renamePlaceholder": "Inserisci il nuovo nome della cartella...",

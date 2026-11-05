@@ -16,6 +16,7 @@ export type TextTone =
   | 'secondary'
   | 'tertiary'
   | 'onPrimary'
+  | 'onPrimaryLight'
   | 'onSurfaceVariant'
   | 'error'
   | 'danger'
@@ -34,10 +35,11 @@ export const TONE_COLOR: Record<TextTone, ColorToken> = {
   secondary: 'textSecondary',
   tertiary: 'textTertiary',
   onPrimary: 'onPrimary',
+  onPrimaryLight: 'onPrimaryLight',
   onSurfaceVariant: 'textOnSurfaceVariant',
   error: 'error',
   danger: 'danger',
-  accent: 'primary',
+  accent: 'primaryText',
   success: 'success',
   warning: 'warning',
   info: 'info',
@@ -141,6 +143,7 @@ const styles = StyleSheet.create(theme => ({
         secondary: { color: theme.colors[TONE_COLOR.secondary] },
         tertiary: { color: theme.colors[TONE_COLOR.tertiary] },
         onPrimary: { color: theme.colors[TONE_COLOR.onPrimary] },
+        onPrimaryLight: { color: theme.colors[TONE_COLOR.onPrimaryLight] },
         onSurfaceVariant: { color: theme.colors[TONE_COLOR.onSurfaceVariant] },
         error: { color: theme.colors[TONE_COLOR.error] },
         danger: { color: theme.colors[TONE_COLOR.danger] },

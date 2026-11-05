@@ -6,7 +6,8 @@ import { SettingRow } from './SettingRow';
 import { Text } from '#components/atoms/Text';
 
 export interface SettingsSectionProps {
-  title: string;
+  /** Omitted for a lone row that needs no heading. */
+  title?: string;
   /** Optional explanatory line under the title. */
   description?: string;
   /** Rendered as `SettingRow`s; mutually exclusive with `children`. */
@@ -33,20 +34,22 @@ export const SettingsSection: React.FC<SettingsSectionProps> = ({
 
   return (
     <View style={variantStyles.section}>
-      <View style={variantStyles.header}>
-        <Text role="label" tone="secondary" style={variantStyles.title}>
-          {title}
-        </Text>
-        {description ? (
-          <Text
-            role="caption"
-            tone="tertiary"
-            style={variantStyles.description}
-          >
-            {description}
+      {!!title && (
+        <View style={variantStyles.header}>
+          <Text role="label" tone="secondary" style={variantStyles.title}>
+            {title}
           </Text>
-        ) : null}
-      </View>
+          {description ? (
+            <Text
+              role="caption"
+              tone="tertiary"
+              style={variantStyles.description}
+            >
+              {description}
+            </Text>
+          ) : null}
+        </View>
+      )}
       <View style={variantStyles.body}>
         {children ??
           items?.map((item, idx) => (

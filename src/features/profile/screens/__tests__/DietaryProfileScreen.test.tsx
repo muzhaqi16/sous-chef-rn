@@ -1,6 +1,12 @@
 'use no memo';
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  userEvent,
+} from '@testing-library/react-native';
+import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { DietaryProfileScreen } from '../DietaryProfileScreen';
 import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
@@ -77,11 +83,19 @@ jest.mock('#components/templates/SubScreen', () => {
 });
 
 jest.mock('#features/profile/components/DietaryRestrictionSelector', () => {
-  const { View, Text } = require('react-native');
+  const { View, Text, Pressable } = require('react-native');
   return {
-    DietaryRestrictionSelector: () => (
+    DietaryRestrictionSelector: ({
+      onRemove,
+    }: {
+      onRemove: (item: { id: string; label: string }) => void;
+    }) => (
       <View testID="dietary-restriction-selector">
         <Text>DietaryRestrictionSelector</Text>
+        <Pressable
+          testID="remove-bacon"
+          onPress={() => onRemove({ id: 'r-bacon', label: 'bacon' })}
+        />
       </View>
     ),
   };
@@ -211,6 +225,21 @@ describe('DietaryProfileScreen', () => {
     render(<DietaryProfileScreen />);
     expect(screen.getByText('Dietary Restrictions')).toBeTruthy();
     expect(screen.getByTestId('dietary-restriction-selector')).toBeTruthy();
+  });
+
+  // Named as its row shows it, an avoided food included.
+  it('names the restriction it asks to remove', () => {
+    const alert = jest.spyOn(alertService, 'alert');
+    render(<DietaryProfileScreen />);
+
+    fireEvent.press(screen.getByTestId('remove-bacon'));
+
+    expect(alert).toHaveBeenCalledWith(
+      'Remove bacon?',
+      expect.any(String),
+      expect.any(Array),
+    );
+    alert.mockRestore();
   });
 
   it('renders Food Preferences section', () => {

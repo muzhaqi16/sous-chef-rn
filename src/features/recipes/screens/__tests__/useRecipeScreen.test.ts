@@ -98,7 +98,7 @@ const sampleDiscoveryRow = {
 const sampleDiscoveryItem = {
   id: 'catalog-SPOONACULAR-1234',
   title: 'Sample Random Recipe',
-  subtitle: '⏱ 30 min • 4 servings',
+  subtitle: '30 min • 4 servings',
   badge: { text: 'Suggested' },
   imageUrl: 'https://img/disc-1.jpg',
   target: {
@@ -403,7 +403,7 @@ describe('useRecipeScreen', () => {
       {
         id: 'recipe-r1',
         title: 'Family Lasagna',
-        subtitle: '⏱ 60 min • 4 servings',
+        subtitle: '60 min • 4 servings',
         badge: undefined,
         imageUrl: undefined,
         target: {
@@ -428,7 +428,7 @@ describe('useRecipeScreen', () => {
       {
         id: 'catalog-SPOONACULAR-7001',
         title: 'Pasta Carbonara',
-        subtitle: '⏱ 25 min • 2 servings',
+        subtitle: '25 min • 2 servings',
         badge: { text: '❤️ 12', variant: 'primary' },
         imageUrl: 'https://img/7001.jpg',
         target: {

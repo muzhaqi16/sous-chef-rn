@@ -1,6 +1,7 @@
 import React from 'react';
+import { View } from 'react-native';
+import { Pressable } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native-unistyles';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { Text } from '#components/atoms/Text';
 import { Icon, type IconName, type IconLibrary } from '#components/atoms/Icon';
 
@@ -28,7 +29,11 @@ interface ActionMenuRowProps {
   testID?: string;
 }
 
-/** One choice in an `ActionTray` menu: an icon and its label. */
+/**
+ * One choice in an `ActionTray` menu: an icon and its label. RNGH's `Pressable`:
+ * on Android the tray's gorhom sheet gestures win a touch from RN's, dropping the
+ * press. Themed styles sit on the inner View, which Unistyles keeps bound.
+ */
 export const ActionMenuRow: React.FC<ActionMenuRowProps> = ({
   icon,
   library,
@@ -41,23 +46,35 @@ export const ActionMenuRow: React.FC<ActionMenuRowProps> = ({
   let look: RowLook = destructive ? 'destructive' : 'plain';
   if (disabled) look = 'disabled';
   return (
-    <AppPressable
-      style={styles.row(destructive)}
+    <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ disabled }}
       testID={testID}
     >
-      <Icon name={icon} library={library} size={20} tone={TONES[look].icon} />
-      <Text role="bodyStrong" tone={TONES[look].text}>
-        {label}
-      </Text>
-    </AppPressable>
+      {({ pressed }) => (
+        <View style={[styles.row(destructive), pressed && styles.pressed]}>
+          <Icon
+            name={icon}
+            library={library}
+            size={20}
+            tone={TONES[look].icon}
+          />
+          <Text role="bodyStrong" tone={TONES[look].text}>
+            {label}
+          </Text>
+        </View>
+      )}
+    </Pressable>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  pressed: {
+    opacity: theme.opacity.pressed,
+  },
   row: (destructive: boolean) => ({
     flexDirection: 'row',
     alignItems: 'center',

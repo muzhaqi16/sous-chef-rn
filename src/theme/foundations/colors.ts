@@ -128,10 +128,8 @@ export const colors = {
 
   // Light-mode canonical shape; `darkFilterTab` below mirrors the keys exactly.
   filterTab: {
-    // Mirrors what `applyAppearance` derives for a custom brand, so the default
-    // theme and an overridden one shade the tab the same way.
+    // The `primary` fill and its white foreground, below AA by decision.
     activeBg: jaffa['500'],
-    // White, matching a primary button. Below AA on this orange; see `onBrand`.
     activeText: '#FFFFFF',
     inactiveBg: '#F3F4F6',
     inactiveText: '#000000',
@@ -142,26 +140,17 @@ export const colors = {
     activeCountBg: 'rgba(255,255,255,0.25)',
   },
 
-  avatar: {
-    shadow: 'rgba(245, 130, 52, 0.3)',
-  },
-
-  sectionHeader: {
-    warningText: '#EA580C',
-    actionText: jaffa['500'],
-  },
-
   alertBanner: {
     error: {
       bg: '#FEF2F2',
       border: '#FECACA',
-      text: '#DC2626',
+      text: '#B91C1C',
       iconBg: '#FEE2E2',
     },
     warning: {
       bg: '#FFFBEB',
       border: '#FDE68A',
-      text: '#EA580C',
+      text: '#9A3412',
       iconBg: '#FEF3C7',
     },
     // The secondary ramp: the brand orange would read as `warning`.
@@ -174,7 +163,7 @@ export const colors = {
     success: {
       bg: '#F0FDF4',
       border: '#BBF7D0',
-      text: '#16A34A',
+      text: '#15803D',
       iconBg: '#DCFCE7',
     },
   },
@@ -223,7 +212,6 @@ export const colors = {
     green: '#16A34A',
     purple: '#7C3AED',
     red: '#DC2626',
-    teal: '#0D9488',
     pink: '#f51aff',
   },
   /** The loading illustration: artwork, so it keeps its own colours in both schemes. */

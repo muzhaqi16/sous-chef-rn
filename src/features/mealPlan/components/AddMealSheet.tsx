@@ -493,7 +493,7 @@ const styles = StyleSheet.create(theme => ({
   },
   customMealText: {
     flex: 1,
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   },
   recipeItem: {
     flexDirection: 'row',

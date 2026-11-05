@@ -47,6 +47,7 @@ export function useShoppingListItemForm(
     reset,
     getValues,
     setValue,
+    setFocus,
     trigger,
     formState: { errors, dirtyFields, isDirty },
   } = useForm<ShoppingItemFormData>({
@@ -222,9 +223,11 @@ export function useShoppingListItemForm(
 
   return {
     // react-hook-form surface — fields render through `Controller control={control}`
-    // and Save goes through `handleSubmit(onValid, logValidationErrors)`.
+    // and Save goes through `handleSubmit(onValid, reportValidationErrors)`.
     control,
     handleSubmit,
+    /** Focuses a field rendered through `Controller`, by name, as the return key does. */
+    setFocus,
     errors,
     /** Current values, subscribed — for logic and display, not for field wiring. */
     values,

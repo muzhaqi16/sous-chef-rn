@@ -4,6 +4,7 @@ import type { CategorySuggestion } from '#/graphql/generated/schemaTypes';
 import { CategoryType } from '#/graphql/generated/schemaTypes';
 import { useCategoryAutocomplete } from '#features/catalog/hooks/useCategoryAutocomplete';
 import { GenericAutocompleteField } from '#features/catalog/components/AutocompleteField/GenericAutocompleteField';
+import type { FieldChaining } from '#features/catalog/components/InlineAutocomplete';
 import { AutocompleteRow } from '#features/catalog/components/AutocompleteField/AutocompleteRow';
 
 interface CategoryAutocompleteFieldProps {
@@ -15,6 +16,8 @@ interface CategoryAutocompleteFieldProps {
   required?: boolean;
   error?: string;
   testID?: string;
+  /** Inline only: where the return key moves on to. */
+  chaining?: FieldChaining;
   onCategorySelected?: (categoryId: string | null) => void;
   categoryType?: CategoryType;
 }
@@ -30,6 +33,7 @@ export const CategoryAutocompleteField: React.FC<
   required,
   error,
   testID,
+  chaining,
   onCategorySelected,
   categoryType = CategoryType.General,
 }) => {
@@ -45,6 +49,7 @@ export const CategoryAutocompleteField: React.FC<
       required={required}
       error={error}
       testID={testID}
+      chaining={chaining}
       onChangeText={text => {
         onChangeText(text);
         category.handleSearchTermChange(text);

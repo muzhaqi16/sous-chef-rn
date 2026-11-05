@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { alertService } from '#/services/alertService';
 import { authService } from '#/services/authService';
 import { biometricService } from '#/services/biometric/deviceCredential';
@@ -65,7 +65,19 @@ jest.mock('#features/auth/components/AuthWrapper', () => {
 });
 
 jest.mock('#features/auth/components/AuthFormTemplate', () => {
-  const { View, Text, Pressable } = require('react-native');
+  const { View, Text, Pressable, TextInput } = require('react-native');
+  // One real field, so an edit after a refusal can be driven.
+  const EmailField = ({ control }: { control: unknown }) => {
+    const { useController } = require('react-hook-form');
+    const { field } = useController({ name: 'email', control });
+    return (
+      <TextInput
+        testID="mock-email-input"
+        value={field.value}
+        onChangeText={field.onChange}
+      />
+    );
+  };
   return {
     AuthFormTemplate: ({
       title,
@@ -80,6 +92,8 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
       footerLinkText,
       footerLinkTestID,
       onFooterLinkPress,
+      control,
+      submitError,
     }: {
       title?: string;
       subtitle?: string;
@@ -93,9 +107,15 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
       footerLinkText?: string;
       footerLinkTestID?: string;
       onFooterLinkPress?: () => void;
+      control?: unknown;
+      submitError?: string | null;
     }) => (
       <View testID="auth-form-template">
         <Text>{title}</Text>
+        <EmailField control={control} />
+        {submitError ? (
+          <Text testID="mock-submit-error">{submitError}</Text>
+        ) : null}
         {subtitle ? <Text>{subtitle}</Text> : null}
         <Pressable testID={submitButtonTestID} onPress={onSubmit}>
           <Text>{submitText}</Text>
@@ -292,6 +312,32 @@ describe('LoginScreen', () => {
     expect(loginSpy).toHaveBeenCalledTimes(1);
     expect(screen.queryByTestId('code-verification-screen')).toBeNull();
     expect(screen.getByTestId('login-screen')).toBeTruthy();
+    loginSpy.mockRestore();
+  });
+
+  it('keeps wrong credentials on the form, without a toast, until a field changes', async () => {
+    const loginSpy = jest
+      .spyOn(authService, 'login')
+      .mockImplementation(async (_input, options) => {
+        options?.onRefusal?.('AUTH_CREDENTIALS_INVALID');
+        return false;
+      });
+    const user = userEvent.setup();
+    render(<LoginScreen />);
+
+    await user.press(screen.getByTestId('login-submit-button'));
+    await drainTimers();
+    expect(screen.getByTestId('mock-submit-error')).toHaveTextContent(
+      'Invalid email or password',
+    );
+
+    await act(async () => {
+      jest.advanceTimersByTime(10_000);
+    });
+    expect(screen.getByTestId('mock-submit-error')).toBeTruthy();
+
+    await user.type(screen.getByTestId('mock-email-input'), 'a');
+    expect(screen.queryByTestId('mock-submit-error')).toBeNull();
     loginSpy.mockRestore();
   });
 });

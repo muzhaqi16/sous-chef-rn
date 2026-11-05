@@ -343,7 +343,7 @@ describe('MoveToPantryModal', () => {
   });
 
   describe('a confirm the schema refuses', () => {
-    // `logValidationErrors` only writes to the log, and none of the three
+    // `reportValidationErrors` only writes to the log, and none of the three
     // fixable fields rendered `fieldState.error` — so a refused confirm was a
     // button that did nothing, with nothing on screen saying which field.
     it('names the field on the field rather than doing nothing', async () => {

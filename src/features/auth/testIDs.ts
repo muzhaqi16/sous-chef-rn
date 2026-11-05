@@ -9,12 +9,15 @@ export const authTestIDs = {
   landingScreen: 'landing-auth-screen',
   landingLoginButton: 'landing-login-button',
   landingSignUpButton: 'landing-signup-button',
+  termsLink: 'landing-terms-link',
+  privacyLink: 'landing-privacy-link',
 
   loginScreen: 'login-screen',
   loginEmailInput: 'login-email-input',
   loginPasswordInput: 'login-password-input',
   loginForgotPasswordLink: 'login-forgot-password-link',
   loginSubmitButton: 'login-submit-button',
+  formSubmitError: 'auth-form-submit-error',
   loginSignUpLink: 'login-signup-link',
 
   signUpScreen: 'signup-screen',

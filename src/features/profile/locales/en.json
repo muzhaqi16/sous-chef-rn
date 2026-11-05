@@ -61,7 +61,6 @@
   "dietary": {
     "title": "Dietary Profile",
     "restrictions": "Dietary Restrictions",
-    "removeRestrictionTitle": "Remove Restriction",
     "removeRestrictionConfirm": "Are you sure you want to remove this dietary restriction?",
     "removeRestrictionFailed": "Failed to remove restriction",
     "foodPreferences": "Food Preferences",
@@ -389,7 +388,6 @@
     "namePlaceholder": "e.g. Boycott",
     "rename": "Rename list",
     "deleteList": "Delete list",
-    "deleteTitle": "Delete {{name}}?",
     "deleteBody": "Its brands are removed with it.",
     "brandCount_one": "{{count}} brand",
     "brandCount_other": "{{count}} brands",

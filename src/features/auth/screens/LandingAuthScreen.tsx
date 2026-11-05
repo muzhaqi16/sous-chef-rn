@@ -1,8 +1,6 @@
 import React from 'react';
-import { logger } from '#/utils/environment';
 import { useTranslation } from '#/i18n';
-import { View, Linking } from 'react-native';
-import { Pressable } from '#components/atoms/themedComponents';
+import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { Button } from '#components/molecules/Button';
@@ -64,27 +62,31 @@ export function LandingAuthScreen() {
           />
         </View>
 
-        <Pressable
-          style={({ pressed }) => pressed && styles.pressed}
-          onPress={() => {
-            Linking.openURL(getWebAppUrl('/privacy-policy')).catch(err =>
-              logger.warn('Failed to open URL:', err),
-            );
-          }}
+        <Text
+          role="caption"
+          tone="secondary"
+          align="center"
+          style={styles.footerText}
         >
-          <Text
-            role="caption"
-            tone="secondary"
-            align="center"
-            style={styles.footerText}
+          {t('auth.legalNotice')}
+          {'\n'}
+          <Link
+            variant="subtle"
+            href={getWebAppUrl('/terms-of-use')}
+            testID={authTestIDs.termsLink}
           >
-            {t('auth.legalNotice')}
-            {'\n'}
-            <Link variant="subtle">{t('auth.termsLink')}</Link>{' '}
-            {t('auth.legalAnd')}{' '}
-            <Link variant="subtle">{t('auth.privacyLink')}</Link>.
-          </Text>
-        </Pressable>
+            {t('auth.termsLink')}
+          </Link>{' '}
+          {t('auth.legalAnd')}{' '}
+          <Link
+            variant="subtle"
+            href={getWebAppUrl('/privacy-policy')}
+            testID={authTestIDs.privacyLink}
+          >
+            {t('auth.privacyLink')}
+          </Link>
+          .
+        </Text>
       </View>
     </AuthWrapper>
   );
@@ -122,9 +124,6 @@ const styles = StyleSheet.create(theme => ({
 
   footerText: {
     marginTop: theme.spacing.lg,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
   },
   accentBar: {
     width: 40,

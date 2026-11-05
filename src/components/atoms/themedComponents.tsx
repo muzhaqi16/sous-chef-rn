@@ -47,7 +47,7 @@ const inputProps = (
 > => ({
   placeholderTextColor: theme.colors.inputPlaceholder,
   keyboardAppearance: themeName === 'dark' ? 'dark' : 'light',
-  cursorColor: theme.colors.primary,
+  cursorColor: theme.colors.primaryText,
 });
 
 const UniTextInput = withUnistyles(TextInput, (theme, rt) =>
@@ -108,7 +108,7 @@ export const ThemedKeyboardAwareScrollView = withUnistyles(
 export const ThemedActivityIndicator = withUnistyles(
   ActivityIndicator,
   theme => ({
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   }),
 );
 
@@ -132,7 +132,7 @@ export const OnErrorActivityIndicator = withUnistyles(
 export const PrimaryActivityIndicator = withUnistyles(
   ActivityIndicator,
   theme => ({
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
   }),
 );
 
@@ -167,7 +167,7 @@ const REFRESH_SPINNER_OFFSET = Platform.OS === 'android' ? 40 : 0;
 // Android draws the arc on a disc that defaults to white in every theme.
 const refreshTheme = (theme: Theme) => ({
   colors: [theme.colors.primary],
-  tintColor: theme.colors.primary,
+  tintColor: theme.colors.primaryText,
   progressBackgroundColor: theme.colors.surface,
   progressViewOffset: REFRESH_SPINNER_OFFSET,
 });

@@ -355,6 +355,13 @@ they read it.
   role for a ground the theme does NOT paint — over a photo, a camera preview, a
   dark overlay — and it stays light in both appearances. There is no
   `colors.white`.
+- **The brand has three roles.**
+  - **`primary`** is the fill, and `onPrimary` is what sits on it.
+  - **`primaryText`** is the brand as text or an icon: the `accent` tone, `Icon`'s `primary` tone, and a link.
+  - **`primaryLight`** is the tint, and `onPrimaryLight` is its content.
+
+  A brand-coloured foreground reads `primaryText`, never `primary`, and a tint reads `primaryLight`, never `primary + 'NN'`. The roles let a picked brand and High Contrast lift a foreground to AA without changing the fill.
+- **The default brand orange sits below AA by decision.** Its text on the page reads 2.35:1 and white on it 2.58:1. Each such pairing is listed where a contrast test reads it: `toneContrast.test.ts` `BELOW_AA_BY_DECISION`, `onColor.test.ts`, and `onFillTextUsesItsToken.test.ts`. High Contrast maps the default brand to `brand[700]` (`applyAppearance.ts`), and `applyAppearance.test.ts` holds every brand pairing at AA there.
 - **`sous-chef/on-fill-text-uses-its-token`** catches the two per-file shapes: a
   raw white literal, and an `on*` token over a fill it does not name.
   **`__tests__/ui/onFillTextUsesItsToken.test.ts`** keeps what needs more than
@@ -636,7 +643,7 @@ they read it.
   - A yup schema sits next to the form, resolved through `yupResolver` on
     `useForm`.
   - Fields render through `Controller`, and Save goes through
-    `handleSubmit(onValid, logValidationErrors)`.
+    `handleSubmit(onValid, reportValidationErrors)`.
   - The submit hook does not validate: reaching it means the form is already
     valid.
 - **The schemas** are `shoppingItemFormConfig.ts` (shared by the AddEditItem

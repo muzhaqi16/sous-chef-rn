@@ -41,7 +41,7 @@ import type { RecipeCreatedBy } from '#features/recipes/utils/recipeCacheWriters
 import { localizedErrorMessage } from '#/services/errorService';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { recipesTestIDs } from '#features/recipes/testIDs';
-import { logValidationErrors } from '#/utils/validation/common';
+import { reportValidationErrors } from '#/utils/validation/common';
 import { presentFailure } from '#/utils/errors/presentFailure';
 
 /** The fields whose sections render their own validation message. */
@@ -185,7 +185,7 @@ export const RecipeFormScreen: React.FC<
 
   // A field the user can fix is reported ON the field: the list sections carry
   // their own message, and the basic fields render theirs under the input.
-  const handleSave = form.handleSubmit(onValid, logValidationErrors);
+  const handleSave = form.handleSubmit(onValid, reportValidationErrors);
 
   // Ingredient handlers
   const handleEditIngredient = (ingredient: IngredientFormState) => {

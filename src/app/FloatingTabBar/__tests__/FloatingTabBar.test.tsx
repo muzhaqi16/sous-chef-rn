@@ -21,6 +21,13 @@ jest.mock(
 
 import React from 'react';
 import { toastService } from '#/services/toastService';
+
+// RN's `useWindowDimensions` export is a getter over this module.
+const mockWindow = { width: 411, height: 915, scale: 2, fontScale: 1 };
+jest.mock('react-native/Libraries/Utilities/useWindowDimensions', () => ({
+  __esModule: true,
+  default: () => mockWindow,
+}));
 import type { ViewStyle } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { act, render, screen, userEvent } from '@testing-library/react-native';
@@ -33,7 +40,7 @@ import {
 import { FloatingTabBar } from '../FloatingTabBar';
 import type { TabAppearance } from '#features/types';
 import { useStore } from '#store';
-import { TAB_BAR_HEIGHT } from '#constants/layout';
+import { TAB_BAR_HEIGHT, getTabBarBottomOffset } from '#constants/layout';
 import { withTiming } from 'react-native-reanimated';
 import { SHEET } from '#/constants/animations';
 import { drainTimers } from '#/test-utils/drainTimers';
@@ -472,6 +479,35 @@ describe('FloatingTabBar', () => {
 
       expect(barHeight()).toBe(TAB_BAR_HEIGHT);
       expect(addButtonBottom()).toBe(labelledBottom);
+    });
+  });
+
+  describe('orientation', () => {
+    const withWindow = (width: number, height: number) => {
+      mockWindow.width = width;
+      mockWindow.height = height;
+    };
+    const barBottom = getTabBarBottomOffset(0);
+
+    afterEach(() => {
+      withWindow(411, 915);
+    });
+
+    it('floats the + above the bar in portrait', () => {
+      withWindow(411, 915);
+      renderTabBar();
+
+      expect(addButtonBottom()).toBeGreaterThanOrEqual(
+        barBottom + TAB_BAR_HEIGHT,
+      );
+    });
+
+    it('keeps the + in the bar’s row in landscape, so the chrome is one row tall', () => {
+      withWindow(915, 411);
+      renderTabBar();
+
+      expect(addButtonBottom()).toBeGreaterThanOrEqual(barBottom);
+      expect(addButtonBottom()).toBeLessThan(barBottom + TAB_BAR_HEIGHT);
     });
   });
 });

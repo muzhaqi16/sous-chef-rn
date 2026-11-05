@@ -76,7 +76,7 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   stepNumber: {
-    color: theme.colors.primary,
+    color: theme.colors.primaryText,
     minWidth: 24,
   },
   stepText: {

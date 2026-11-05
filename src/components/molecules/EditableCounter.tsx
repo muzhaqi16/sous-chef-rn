@@ -1,11 +1,16 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import { View, type GestureResponderEvent } from 'react-native';
+import {
+  View,
+  type GestureResponderEvent,
+  type TextInputProps,
+} from 'react-native';
 import {
   Pressable,
   ThemedBottomSheetTextInput,
   ThemedTextInput,
 } from '#components/atoms/themedComponents';
+import { assignRef, type FocusableInputRef } from '#components/atoms/inputRef';
 import { Icon } from '#components/atoms/Icon';
 import { StyleSheet } from 'react-native-unistyles';
 import { parseFractionalInput } from '#/utils/fractionUtils';
@@ -32,6 +37,12 @@ interface EditableCounterProps {
   /** How a stepped value is written; `decimal` for a field whose parser rejects `/`. */
   notation?: QuantityNotation;
   testID?: string;
+  /** The field, for a host that focuses it; attached in a sheet or out. */
+  ref?: React.Ref<FocusableInputRef>;
+  /** Where the return key moves on to, as in a chained form. */
+  returnKeyType?: TextInputProps['returnKeyType'];
+  submitBehavior?: TextInputProps['submitBehavior'];
+  onSubmitEditing?: () => void;
 }
 
 /** Pill counter with +/- buttons and an editable field; accepts fractions ("1/2"). */
@@ -47,15 +58,17 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
   required = false,
   notation = 'mixed',
   testID,
+  ref,
+  returnKeyType,
+  submitBehavior,
+  onSubmitEditing,
 }) => {
   const { t } = useTranslation();
   const [isFocused, setIsFocused] = useState(false);
   // Inside a sheet the field must be a `BottomSheetTextInput` or gorhom misses
   // the focus; picked from context because it throws on the full screens this
   // counter also serves. Same rule as `FormInput`.
-  const InputComponent = useIsBottomSheetInput()
-    ? ThemedBottomSheetTextInput
-    : ThemedTextInput;
+  const inSheet = useIsBottomSheetInput();
 
   // `error` last so an invalid value stays visibly invalid while focused —
   // the focus ring would otherwise paint over the thing being reported.
@@ -79,6 +92,28 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
     onChangeText(
       formatQuantityForInput(Math.max(min, currentValue - step), { notation }),
     );
+  };
+
+  const inputProps: TextInputProps = {
+    style: variantStyles.input,
+    value,
+    onChangeText,
+    onFocus: () => setIsFocused(true),
+    onBlur: () => setIsFocused(false),
+    placeholder,
+    keyboardType: 'numbers-and-punctuation',
+    editable: !disabled,
+    selectTextOnFocus: true,
+    textAlign: 'center',
+    accessible: true,
+    accessibilityLabel: label
+      ? t('a11y.valueSuffix', { label })
+      : t('a11y.quantityValue'),
+    accessibilityHint: t('editableCounter.hint'),
+    testID,
+    returnKeyType,
+    submitBehavior,
+    onSubmitEditing,
   };
 
   return (
@@ -132,24 +167,14 @@ export const EditableCounter: React.FC<EditableCounterProps> = ({
           />
         </Pressable>
 
-        <InputComponent
-          style={variantStyles.input}
-          value={value}
-          onChangeText={onChangeText}
-          onFocus={() => setIsFocused(true)}
-          onBlur={() => setIsFocused(false)}
-          placeholder={placeholder}
-          keyboardType="numbers-and-punctuation"
-          editable={!disabled}
-          selectTextOnFocus
-          textAlign="center"
-          accessible
-          accessibilityLabel={
-            label ? t('a11y.valueSuffix', { label }) : t('a11y.quantityValue')
-          }
-          accessibilityHint={t('editableCounter.hint')}
-          testID={testID}
-        />
+        {inSheet ? (
+          <ThemedBottomSheetTextInput
+            ref={node => assignRef(ref, node ?? null)}
+            {...inputProps}
+          />
+        ) : (
+          <ThemedTextInput ref={node => assignRef(ref, node)} {...inputProps} />
+        )}
 
         <Pressable
           onPress={handleIncrement}

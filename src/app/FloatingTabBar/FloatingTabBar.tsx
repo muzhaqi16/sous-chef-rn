@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect } from 'react';
-import { View } from 'react-native';
+import { View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
   useSharedValue,
@@ -23,7 +23,11 @@ import type { FloatingTabBarProps } from './types';
 import { AddButton } from './AddButton';
 import { AddMenu } from './AddMenu';
 import { TabItem } from './TabItem';
-import { useShowNavigationLabels } from '#store/useAppStore';
+import {
+  useShowNavigationLabels,
+  useThemePreferences,
+} from '#store/useAppStore';
+import { FONT_SCALE_META } from '#/theme/foundations/appearanceConfig';
 import { HapticService } from '#services/haptic/HapticService';
 import { SHEET, TAB_BAR } from '#/constants/animations';
 import { GlassSurface, supportsGlass } from '#components/atoms/GlassSurface';
@@ -34,6 +38,7 @@ import {
   getTabBarBottomOffset,
 } from '#constants/layout';
 import { kitTestIDs } from '#components/testIDs';
+import { sizes } from '#/theme/foundations/sizes';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 
 export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
@@ -44,6 +49,22 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
 }) => {
   const { showAddButton, addButtonConfig, addMenu, isAddMenuOpen } =
     useTabBarState();
+  const {
+    width: windowWidth,
+    height: windowHeight,
+    fontScale,
+  } = useWindowDimensions();
+  const isNarrow = windowWidth < NARROW_WIDTH;
+  // A label can outgrow its tab on a narrow screen or with text enlarged by the
+  // OS or the app's own font size.
+  const { fontScalePreference } = useThemePreferences();
+  const fitLabels =
+    isNarrow ||
+    fontScale > 1 ||
+    FONT_SCALE_META[fontScalePreference].multiplier > 1;
+  // Landscape keeps the chrome to one row: a capped, centred bar with the `+`
+  // beside it, inside the side insets a cutout or rounded corner takes.
+  const isLandscape = windowWidth > windowHeight;
 
   // True for every backdrop claim, sheets and selectors alike, from the global
   // backdrop's slot count — broader than the selector-only `isOverlayOpen`.
@@ -83,7 +104,11 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       onlyAction?.onPress();
     }
   };
-  const { bottom: safeBottom } = useSafeAreaInsets();
+  const {
+    bottom: safeBottom,
+    left: safeLeft,
+    right: safeRight,
+  } = useSafeAreaInsets();
 
   const activeTabIndex = useSharedValue(state.index);
 
@@ -123,9 +148,18 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   }));
   const barSurfaceStyle = useAnimatedStyle(() => {
     const theme = animatedTheme.get();
+    const row = isLandscape
+      ? landscapeRow(
+          windowWidth,
+          safeLeft,
+          safeRight,
+          theme.layout.pageGutter,
+          showAddButton,
+        )
+      : null;
     return {
-      left: theme.layout.pageGutter,
-      right: theme.layout.pageGutter,
+      left: row ? row.barLeft : theme.layout.pageGutter,
+      right: row ? row.barRight : theme.layout.pageGutter,
       borderRadius: theme.radii.full,
       ...theme.shadows.lg,
       // iOS 26 Liquid Glass drops the solid fill; Android / iOS < 26 keep it.
@@ -134,10 +168,16 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
         : { backgroundColor: theme.colors.navigationSurface }),
     };
   });
-  // Flush with the bar's right edge.
-  const addButtonOffsetStyle = useAnimatedStyle(() => ({
-    right: animatedTheme.get().layout.pageGutter,
-  }));
+  // Flush with the bar's right edge, or beside it in landscape.
+  const addButtonOffsetStyle = useAnimatedStyle(() => {
+    const gutter = animatedTheme.get().layout.pageGutter;
+    return {
+      right: isLandscape
+        ? landscapeRow(windowWidth, safeLeft, safeRight, gutter, true)
+            .buttonRight
+        : gutter,
+    };
+  });
 
   const animatedStyle = useAnimatedStyle(() => {
     // Sheets contribute dim opacity scaled by BACKDROP_OPACITY; dividing inverts
@@ -157,7 +197,9 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const containerStyle = { bottom: barBottom };
 
   const floatingButtonStyle = {
-    bottom: barBottom + TAB_BAR_HEIGHT + FLOATING_BUTTON_GAP,
+    bottom: isLandscape
+      ? barBottom + (TAB_BAR_HEIGHT - sizes.fab.md) / 2
+      : barBottom + TAB_BAR_HEIGHT + FLOATING_BUTTON_GAP,
   };
 
   const handleTabPress = (
@@ -201,6 +243,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
       style={[
         containerStyle,
         styles.container,
+        isNarrow && styles.containerNarrow,
         overlayLayerStyle,
         barSurfaceStyle,
         animatedStyle,
@@ -223,6 +266,7 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
               icon={tabs[route.name]?.icon}
               titleKey={tabs[route.name]?.titleKey}
               showLabel={showNavigationLabels}
+              fitLabel={fitLabels}
               activeTabIndex={activeTabIndex}
               tabIndex={index}
             />
@@ -276,6 +320,37 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   );
 };
 
+/** Below this width (dp) the bar trims its side padding. */
+const NARROW_WIDTH = 400;
+/** The widest the bar grows in landscape (dp): five tabs need no more. */
+const LANDSCAPE_BAR_MAX_WIDTH = 520;
+
+/**
+ * Landscape's one row, centred between the side insets: the bar, then the `+`
+ * a gap to its right. Offsets are from each screen edge.
+ */
+function landscapeRow(
+  windowWidth: number,
+  safeLeft: number,
+  safeRight: number,
+  gutter: number,
+  withButton: boolean,
+) {
+  'worklet';
+  const leftEdge = safeLeft + gutter;
+  const rightEdge = safeRight + gutter;
+  const button = withButton ? sizes.fab.md + FLOATING_BUTTON_GAP : 0;
+  const available = windowWidth - leftEdge - rightEdge;
+  const barWidth = Math.min(available - button, LANDSCAPE_BAR_MAX_WIDTH);
+  const offset = (available - barWidth - button) / 2;
+  const barLeft = leftEdge + offset;
+  return {
+    barLeft,
+    barRight: windowWidth - barLeft - barWidth,
+    buttonRight: rightEdge + offset,
+  };
+}
+
 const styles = StyleSheet.create(theme => ({
   // Themed values are in `barSurfaceStyle` and `overlayLayerStyle`.
   container: {
@@ -283,6 +358,10 @@ const styles = StyleSheet.create(theme => ({
     borderCurve: 'continuous',
     position: 'absolute',
     paddingHorizontal: '5%',
+  },
+  // A 360 dp phone gives each tab too little for "Meal Plan" at 5%.
+  containerNarrow: {
+    paddingHorizontal: '2%',
   },
   // Self-clips to the bar radius and ignores touches so taps reach the buttons.
   glassFill: {

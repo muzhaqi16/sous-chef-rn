@@ -355,7 +355,8 @@ export const PantryContent = React.forwardRef<
                 tabs={tabsWithAddButton}
                 activeTabId={locationFilter}
                 onTabChange={handleLocationFilterChange}
-                counts={locationCounts}
+                // A failed read holds no items: its zeros are unknown, not counts.
+                counts={itemsFailure ? undefined : locationCounts}
                 testIDPrefix={pantryTestIDs.locationTabPrefix}
               />
             </View>
