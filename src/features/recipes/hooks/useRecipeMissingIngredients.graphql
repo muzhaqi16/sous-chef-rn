@@ -1,0 +1,15 @@
+# What the selected home's pantries lack of a recipe, pantry basics left out:
+# the rows "add what's missing" sends. A recipe's lines fit in one page of 100.
+query RecipeMissingIngredients($id: ID!, $homeId: ID) {
+  recipe(id: $id) {
+    version
+    id
+    missingIngredientsConnection(homeId: $homeId, first: 100) {
+      edges {
+        node {
+          id
+        }
+      }
+    }
+  }
+}

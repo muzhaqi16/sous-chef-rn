@@ -185,6 +185,8 @@
     "dairyFree": "Pa bulmet",
     "about": "Rreth",
     "addAll": "Shto të gjitha",
+    "addMissing_one": "Shto {{count}} që mungon",
+    "addMissing_other": "Shto {{count}} që mungojnë",
     "recipeFrom": "Recetë nga {{source}}",
     "externalSource": "Burim i jashtëm",
     "viewOriginalRecipe": "Shiko recetën origjinale",

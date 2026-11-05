@@ -185,6 +185,8 @@
     "dairyFree": "Dairy Free",
     "about": "About",
     "addAll": "Add All",
+    "addMissing_one": "Add {{count}} missing",
+    "addMissing_other": "Add {{count}} missing",
     "recipeFrom": "Recipe from {{source}}",
     "externalSource": "External Source",
     "viewOriginalRecipe": "View Original Recipe",

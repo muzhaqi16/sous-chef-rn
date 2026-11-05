@@ -185,6 +185,8 @@
     "dairyFree": "Senza lattosio",
     "about": "Informazioni",
     "addAll": "Aggiungi tutto",
+    "addMissing_one": "Aggiungi {{count}} mancante",
+    "addMissing_other": "Aggiungi {{count}} mancanti",
     "recipeFrom": "Ricetta da {{source}}",
     "externalSource": "Fonte esterna",
     "viewOriginalRecipe": "Vedi ricetta originale",

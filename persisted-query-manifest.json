@@ -1239,6 +1239,12 @@
       "body": "query RecipeDietaryAlerts($recipeId: ID!, $homeId: ID!, $ingredientsFirst: Int!) {\n  recipe(id: $recipeId) {\n    version\n    id\n    ingredientsConnection(first: $ingredientsFirst) {\n      edges {\n        node {\n          id\n          dietaryAlerts(homeId: $homeId) {\n            state\n            membership {\n              version\n              id\n              userId\n              role\n              displayName\n              __typename\n            }\n            restriction {\n              id\n              diet\n              intolerance\n              healthGoal\n              religiousDiet\n              item {\n                version\n                id\n                name\n                __typename\n              }\n              severity\n              __typename\n            }\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      totalCount\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
+      "id": "674e60989e080f290bf39741c987d77cec07a0ea0d7ef288dc8c2018d0d0b58c",
+      "name": "RecipeMissingIngredients",
+      "type": "query",
+      "body": "query RecipeMissingIngredients($id: ID!, $homeId: ID) {\n  recipe(id: $id) {\n    version\n    id\n    missingIngredientsConnection(homeId: $homeId, first: 100) {\n      edges {\n        node {\n          id\n          __typename\n        }\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+    },
+    {
       "id": "ba652e2600902ec73aa054165f872820a2a8a5f050c7cf93c1789e69ec5753a4",
       "name": "RecipeSubstitutes",
       "type": "query",
