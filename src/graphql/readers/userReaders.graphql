@@ -17,6 +17,7 @@ fragment UserReaders on User {
     mealsPerDay
     preferredCuisines
     proteinTarget
+    religiousDiet
     restrictions {
       id
       createdAt

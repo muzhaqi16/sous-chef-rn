@@ -9,6 +9,7 @@ import {
 import { t } from '#/i18n';
 import {
   Diet,
+  ReligiousDiet,
   Intolerance,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
@@ -146,6 +147,7 @@ describe('DietaryStepScreen', () => {
       ],
       diets: [Diet.Vegetarian],
       foods: [],
+      religiousDiet: null,
     };
     mockHeld = before;
     const user = userEvent.setup();
@@ -160,13 +162,44 @@ describe('DietaryStepScreen', () => {
     mockHeld = null;
   });
 
+  it('saves a private religious diet beside a diet', async () => {
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('labels.vegetarian')));
+    await user.press(screen.getByText(label('recipes.religiousDiet.KOSHER')));
+    const saved = await continueStep(user);
+
+    expect(saved.diets).toEqual([Diet.Vegetarian]);
+    expect(saved.religiousDiet).toBe(ReligiousDiet.Kosher);
+    expect(
+      screen.getByText(label('dietaryProfile.religiousDietPrivate')),
+    ).toBeTruthy();
+  });
+
+  it('clears the religious diet on a second tap', async () => {
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('recipes.religiousDiet.HALAL')));
+    await user.press(screen.getByText(label('recipes.religiousDiet.HALAL')));
+    const saved = await continueStep(user);
+
+    expect(saved.religiousDiet).toBeNull();
+  });
+
   it('starts with nothing selected', async () => {
     const user = userEvent.setup();
     render(<DietaryStepScreen />);
 
     const saved = await continueStep(user);
 
-    expect(saved).toEqual({ allergens: [], diets: [], foods: [] });
+    expect(saved).toEqual({
+      allergens: [],
+      diets: [],
+      foods: [],
+      religiousDiet: null,
+    });
   });
 
   it('saves peanuts as an allergy', async () => {

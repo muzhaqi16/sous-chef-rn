@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import {
   Diet,
+  ReligiousDiet,
   Intolerance,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
@@ -20,16 +21,27 @@ type Restriction = {
 let mockRestrictions: Restriction[] = [];
 const mockAdd = jest.fn().mockResolvedValue(true);
 const mockRemove = jest.fn().mockResolvedValue(true);
+const mockUpdate = jest.fn().mockResolvedValue(true);
+let mockReligiousDiet: ReligiousDiet | null = null;
 jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
   useDietaryProfile: () => ({
     profile: { restrictions: mockRestrictions },
-    editableProfile: { restrictions: mockRestrictions },
+    editableProfile: {
+      restrictions: mockRestrictions,
+      religiousDiet: mockReligiousDiet,
+    },
+    updateDietaryProfile: mockUpdate,
     addDietaryRestriction: mockAdd,
     removeDietaryRestriction: mockRemove,
   }),
 }));
 
-const NONE: DietarySelection = { allergens: [], diets: [], foods: [] };
+const NONE: DietarySelection = {
+  allergens: [],
+  diets: [],
+  foods: [],
+  religiousDiet: null,
+};
 
 const held = (
   id: string,
@@ -277,6 +289,30 @@ describe('useDietaryIntake', () => {
         expect.any(String),
       );
     }
+  });
+
+  it('saves a religious diet to the profile', async () => {
+    const { result } = renderHook(() => useDietaryIntake());
+
+    await save(result, { ...NONE, religiousDiet: ReligiousDiet.Halal });
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      religiousDiet: ReligiousDiet.Halal,
+    });
+  });
+
+  it('clears a religious diet only when the step showed it', async () => {
+    mockReligiousDiet = ReligiousDiet.Kosher;
+    const { result } = renderHook(() => useDietaryIntake());
+
+    // Not shown (the profile had not loaded): left alone.
+    await save(result, NONE);
+    expect(mockUpdate).not.toHaveBeenCalled();
+
+    // Shown and deselected: cleared.
+    await save(result, NONE, { ...NONE, religiousDiet: ReligiousDiet.Kosher });
+    expect(mockUpdate).toHaveBeenCalledWith({ religiousDiet: null });
+    mockReligiousDiet = null;
   });
 
   it('reports a refused write', async () => {

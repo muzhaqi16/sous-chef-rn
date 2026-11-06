@@ -5,9 +5,11 @@ import { useTranslation } from '#/i18n';
 import {
   RestrictionSeverity,
   type Diet,
+  type ReligiousDiet,
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
 import { Reveal } from '#components/atoms/Reveal';
+import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
 import { Text } from '#components/atoms/Text';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { Button } from '#components/molecules/Button';
@@ -56,6 +58,9 @@ export const DietaryStepScreen = () => {
   const { homes } = useDietarySharing();
   const [allergens, setAllergens] = useState<DietarySelection['allergens']>([]);
   const [diets, setDiets] = useState<Diet[]>([]);
+  const [religiousDiet, setReligiousDiet] = useState<ReligiousDiet | null>(
+    null,
+  );
   const [foods, setFoods] = useState<DietarySelection['foods']>([]);
   const [avoidSheetVisible, setAvoidSheetVisible] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -68,12 +73,14 @@ export const DietaryStepScreen = () => {
     !shown &&
     allergens.length === 0 &&
     diets.length === 0 &&
-    foods.length === 0
+    foods.length === 0 &&
+    religiousDiet === null
   ) {
     setShown(held);
     setAllergens(held.allergens);
     setDiets(held.diets);
     setFoods(held.foods);
+    setReligiousDiet(held.religiousDiet);
   }
 
   const toggleAllergen = (value: Intolerance) =>
@@ -89,12 +96,13 @@ export const DietaryStepScreen = () => {
       ),
     );
 
-  const choices = allergens.length + diets.length + foods.length;
+  const choices =
+    allergens.length + diets.length + foods.length + (religiousDiet ? 1 : 0);
 
   const handleContinue = async () => {
     setSaving(true);
     setFailed(false);
-    const saved = await save({ allergens, diets, foods }, shown);
+    const saved = await save({ allergens, diets, foods, religiousDiet }, shown);
     setSaving(false);
     if (saved) navigateToNextStep('Dietary');
     else setFailed(true);
@@ -190,6 +198,11 @@ export const DietaryStepScreen = () => {
               />
             ))}
           </View>
+
+          <ReligiousDietPicker
+            value={religiousDiet}
+            onChange={setReligiousDiet}
+          />
         </View>
 
         <View style={styles.section}>

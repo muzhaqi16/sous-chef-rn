@@ -68,6 +68,8 @@ export interface DietaryProfileData {
   snacksPerDay: number;
   /** How many people the user cooks for; null when not answered. */
   cooksFor?: number | null;
+  /** A religious diet the user follows, private to them; null when none. */
+  religiousDiet: ReligiousDiet | null;
   cookingSkillLevel?: CookingSkillLevel | null;
   maxPrepTimeMinutes?: number | null;
   maxCookTimeMinutes?: number | null;
@@ -86,6 +88,7 @@ const DIETARY_PROFILE_DEFAULTS: DietaryProfileValues = {
   snacksPerDay: 1,
   maxPrepTimeMinutes: 45,
   maxCookTimeMinutes: 60,
+  religiousDiet: null,
 };
 
 /**
@@ -171,6 +174,7 @@ export const useDietaryProfile = ({
       mealsPerDay: profile.mealsPerDay || 3,
       snacksPerDay: profile.snacksPerDay || 1,
       cooksFor: profile.cooksFor,
+      religiousDiet: profile.religiousDiet ?? null,
       cookingSkillLevel: profile.cookingSkillLevel,
       maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
       maxCookTimeMinutes: profile.maxCookTimeMinutes,
@@ -193,10 +197,15 @@ export const useDietaryProfile = ({
     maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
     budgetPerMeal?: number | null;
+    /** Null removes it, the one field where null is sent rather than dropped. */
+    religiousDiet?: ReligiousDiet | null;
   }) => {
-    // Convert null to undefined for GraphQL input
+    // Null leaves a field as it is, except a religious diet, which it clears.
     const cleanedUpdates = Object.fromEntries(
-      Object.entries(updates).map(([key, value]) => [key, value ?? undefined]),
+      Object.entries(updates).map(([key, value]) => [
+        key,
+        key === 'religiousDiet' ? value : value ?? undefined,
+      ]),
     );
 
     const settled = await sendFields(client.cache, {

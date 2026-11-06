@@ -48,6 +48,7 @@ query GetDietaryProfile {
       mealsPerDay
       snacksPerDay
       cooksFor
+      religiousDiet
       cookingSkillLevel
       maxPrepTimeMinutes
       maxCookTimeMinutes
@@ -140,6 +141,7 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
         mealsPerDay
         snacksPerDay
         cooksFor
+        religiousDiet
         cookingSkillLevel
         maxPrepTimeMinutes
         maxCookTimeMinutes

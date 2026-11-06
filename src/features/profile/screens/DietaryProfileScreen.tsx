@@ -28,6 +28,7 @@ const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
   iconColor: theme.colors.primaryText,
 }));
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
+import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 import type { RestrictionSectionItem } from '#features/profile/components/RestrictionSection/RestrictionSection';
 import { DietarySharingSection } from '#features/profile/components/DietarySharingSection';
@@ -285,6 +286,14 @@ export const DietaryProfileScreen: React.FC = () => {
             onAdd={handleAddRestrictions}
             onRemove={handleRemoveRestriction}
             onChangeDiets={handleChangeDiets}
+          />
+        </View>
+        <View style={styles.sectionCard}>
+          <ReligiousDietPicker
+            value={profile.religiousDiet}
+            onChange={religiousDiet => {
+              void updateDietaryProfile({ religiousDiet });
+            }}
           />
         </View>
       </Animated.View>

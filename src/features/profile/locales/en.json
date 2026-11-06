@@ -165,7 +165,9 @@
     },
     "avoidAllergy": "{{name}} (allergy)",
     "avoidIntolerance": "{{name}} (intolerance)",
-    "addAvoidFailed": "Couldn't add that food. Try again."
+    "addAvoidFailed": "Couldn't add that food. Try again.",
+    "religiousDietTitle": "Religious diet",
+    "religiousDietPrivate": "Private: used only for your suggestions, never shown to your homes."
   },
   "cookingPreferences": {
     "prepTimeRange": "Prep time must be between {{min}} and {{max}} minutes",

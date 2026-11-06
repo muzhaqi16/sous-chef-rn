@@ -3,6 +3,7 @@ import {
   RestrictionSeverity,
   type Diet,
   type Intolerance,
+  type ReligiousDiet,
   type RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
@@ -20,6 +21,8 @@ export interface DietarySelection {
   diets: Diet[];
   /** Foods to avoid, each with the severity the avoid sheet chose. */
   foods: { id: string; name: string; severity: RestrictionSeverity }[];
+  /** Private to the user; null when none. */
+  religiousDiet: ReligiousDiet | null;
 }
 
 interface Wanted {
@@ -78,9 +81,12 @@ export function useDietaryIntake() {
   const {
     profile,
     editableProfile,
+    updateDietaryProfile,
     addDietaryRestriction,
     removeDietaryRestriction,
   } = useDietaryProfile({ fetchPolicy: 'cache-first' });
+  // Whether this step set the religious diet, so it may clear it again.
+  const setReligiousDiet = useRef(false);
   const { recordDietarySaved } = useRecordOnboardingProgress();
   // Keys this step added, with the id and severity sent: only these may be
   // undone. Before the profile exists on the device, no read lists them.
@@ -103,6 +109,7 @@ export function useDietaryIntake() {
         foods: restrictions.flatMap(({ item, severity }) =>
           item ? [{ id: item.id, name: item.name, severity }] : [],
         ),
+        religiousDiet: editableProfile.religiousDiet,
       }
     : null;
 
@@ -158,10 +165,27 @@ export function useDietaryIntake() {
       }
     }
 
+    // Set when chosen; cleared only when the step showed it or set it.
+    const religiousNow = editableProfile?.religiousDiet ?? null;
+    const mayClear = !!shown?.religiousDiet || setReligiousDiet.current;
+    if (
+      selection.religiousDiet !== religiousNow &&
+      (selection.religiousDiet !== null || mayClear)
+    ) {
+      if (
+        await updateDietaryProfile({ religiousDiet: selection.religiousDiet })
+      ) {
+        setReligiousDiet.current = selection.religiousDiet !== null;
+      } else {
+        ok = false;
+      }
+    }
+
     recordDietarySaved(
-      [...wanted.keys()].some(
-        key => existing.has(key) || addedRef.current.has(key),
-      ),
+      selection.religiousDiet !== null ||
+        [...wanted.keys()].some(
+          key => existing.has(key) || addedRef.current.has(key),
+        ),
     );
     return ok;
   };
