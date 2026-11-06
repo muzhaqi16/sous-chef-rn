@@ -1,10 +1,6 @@
 import { useQuery } from '@apollo/client/react';
 import { GetOnboardingItemsDocument } from '#operations/item/item.generated';
-import {
-  ItemLevel,
-  ItemType,
-  SortOrder,
-} from '#/graphql/generated/schemaTypes';
+import { ItemLevel, ItemType } from '#/graphql/generated/schemaTypes';
 
 /**
  * The catalog foods the onboarding picker offers, curated and ranked by how
@@ -24,8 +20,8 @@ export function useOnboardingItems({ first = 50 }: { first?: number } = {}) {
           level: ItemLevel.Concept,
           types: [ItemType.Food, ItemType.Foundation],
         },
-        // The curated order: the foods most recipes call for first.
-        orderBy: { onboardingRank: SortOrder.Asc },
+        // No orderBy: the API answers in the staples' curated order (the
+        // foods most recipes call for first), an older API by popularity.
         first,
       },
     },
