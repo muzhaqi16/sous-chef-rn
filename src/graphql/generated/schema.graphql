@@ -7517,6 +7517,10 @@ order declared here, whatever order the request writes them in.
 input ItemOrderBy {
   createdAt: SortOrder
   name: SortOrder
+  """
+  An onboarding staple's place in the list, 1 first (ASC), by the recipes calling for it; an unranked item sorts last
+  """
+  onboardingRank: SortOrder
   popularity: SortOrder
   shelfLife: SortOrder
   updatedAt: SortOrder
