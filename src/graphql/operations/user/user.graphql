@@ -48,6 +48,7 @@ query GetDietaryProfile {
       mealsPerDay
       snacksPerDay
       cooksFor
+      religiousDiet
       cookingSkillLevel
       maxPrepTimeMinutes
       maxCookTimeMinutes
@@ -59,6 +60,7 @@ query GetDietaryProfile {
         diet
         intolerance
         healthGoal
+        religiousDiet
         item {
           version
           id
@@ -139,6 +141,7 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
         mealsPerDay
         snacksPerDay
         cooksFor
+        religiousDiet
         cookingSkillLevel
         maxPrepTimeMinutes
         maxCookTimeMinutes
@@ -150,6 +153,7 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
           diet
           intolerance
           healthGoal
+          religiousDiet
           item {
             version
             id
@@ -193,6 +197,7 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
         diet
         intolerance
         healthGoal
+        religiousDiet
         item {
           version
           id

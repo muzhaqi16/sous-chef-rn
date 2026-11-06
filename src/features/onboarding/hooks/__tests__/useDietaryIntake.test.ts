@@ -1,6 +1,7 @@
 import { act, renderHook } from '@testing-library/react-native';
 import {
   Diet,
+  ReligiousDiet,
   Intolerance,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
@@ -20,15 +21,27 @@ type Restriction = {
 let mockRestrictions: Restriction[] = [];
 const mockAdd = jest.fn().mockResolvedValue(true);
 const mockRemove = jest.fn().mockResolvedValue(true);
+const mockUpdate = jest.fn().mockResolvedValue(true);
+let mockReligiousDiet: ReligiousDiet | null = null;
 jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
   useDietaryProfile: () => ({
     profile: { restrictions: mockRestrictions },
+    editableProfile: {
+      restrictions: mockRestrictions,
+      religiousDiet: mockReligiousDiet,
+    },
+    updateDietaryProfile: mockUpdate,
     addDietaryRestriction: mockAdd,
     removeDietaryRestriction: mockRemove,
   }),
 }));
 
-const NONE: DietarySelection = { allergens: [], diet: null, foods: [] };
+const NONE: DietarySelection = {
+  allergens: [],
+  diets: [],
+  foods: [],
+  religiousDiet: null,
+};
 
 const held = (
   id: string,
@@ -53,10 +66,11 @@ beforeEach(() => {
 async function save(
   result: { current: ReturnType<typeof useDietaryIntake> },
   selection: DietarySelection,
+  shown: DietarySelection | null = null,
 ) {
   let ok = false;
   await act(async () => {
-    ok = await result.current.save(selection);
+    ok = await result.current.save(selection, shown);
   });
   return ok;
 }
@@ -191,6 +205,22 @@ describe('useDietaryIntake', () => {
     expect(useOnboardingProgressStore.getState().dietarySaved).toBe(false);
   });
 
+  it('removes a saved answer the step showed and the user deselected', async () => {
+    mockRestrictions = [
+      held('r-veg', { diet: Diet.Vegetarian }, RestrictionSeverity.Preference),
+      held('r-goal', { diet: Diet.GlutenFree }, RestrictionSeverity.Preference),
+    ];
+    const { result } = renderHook(() => useDietaryIntake());
+    const shown = result.current.held;
+    expect(shown?.diets).toEqual([Diet.Vegetarian]);
+
+    await save(result, NONE, shown);
+
+    // The constraint was never shown, so it stays.
+    expect(mockRemove).toHaveBeenCalledTimes(1);
+    expect(mockRemove).toHaveBeenCalledWith('r-veg');
+  });
+
   it('replaces its own allergy with an intolerance when switched', async () => {
     const { result, rerender } = renderHook(() => useDietaryIntake());
     await save(result, {
@@ -229,13 +259,13 @@ describe('useDietaryIntake', () => {
 
   it('replaces its own diet when another is chosen', async () => {
     const { result, rerender } = renderHook(() => useDietaryIntake());
-    await save(result, { ...NONE, diet: Diet.Vegetarian });
+    await save(result, { ...NONE, diets: [Diet.Vegetarian] });
     mockRestrictions = [
       held('r-veg', { diet: Diet.Vegetarian }, RestrictionSeverity.Preference),
     ];
     rerender({});
 
-    await save(result, { ...NONE, diet: Diet.Vegan });
+    await save(result, { ...NONE, diets: [Diet.Vegan] });
 
     expect(mockRemove).toHaveBeenCalledWith('r-veg');
     expect(mockAdd).toHaveBeenLastCalledWith(
@@ -246,11 +276,50 @@ describe('useDietaryIntake', () => {
     );
   });
 
+  it('saves an eating style beside an animal-food diet', async () => {
+    const { result } = renderHook(() => useDietaryIntake());
+
+    await save(result, { ...NONE, diets: [Diet.Vegetarian, Diet.Keto] });
+
+    for (const diet of [Diet.Vegetarian, Diet.Keto]) {
+      expect(mockAdd).toHaveBeenCalledWith(
+        { diet },
+        RestrictionSeverity.Preference,
+        undefined,
+        expect.any(String),
+      );
+    }
+  });
+
+  it('saves a religious diet to the profile', async () => {
+    const { result } = renderHook(() => useDietaryIntake());
+
+    await save(result, { ...NONE, religiousDiet: ReligiousDiet.Halal });
+
+    expect(mockUpdate).toHaveBeenCalledWith({
+      religiousDiet: ReligiousDiet.Halal,
+    });
+  });
+
+  it('clears a religious diet only when the step showed it', async () => {
+    mockReligiousDiet = ReligiousDiet.Kosher;
+    const { result } = renderHook(() => useDietaryIntake());
+
+    // Not shown (the profile had not loaded): left alone.
+    await save(result, NONE);
+    expect(mockUpdate).not.toHaveBeenCalled();
+
+    // Shown and deselected: cleared.
+    await save(result, NONE, { ...NONE, religiousDiet: ReligiousDiet.Kosher });
+    expect(mockUpdate).toHaveBeenCalledWith({ religiousDiet: null });
+    mockReligiousDiet = null;
+  });
+
   it('reports a refused write', async () => {
     mockAdd.mockResolvedValueOnce(false);
     const { result } = renderHook(() => useDietaryIntake());
 
-    const ok = await save(result, { ...NONE, diet: Diet.Keto });
+    const ok = await save(result, { ...NONE, diets: [Diet.Keto] });
 
     expect(ok).toBe(false);
   });

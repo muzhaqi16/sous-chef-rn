@@ -96,6 +96,11 @@
     "unitsReadByDefault": "Masat u lexuan në njësitë e zakonshme të SHBA-së.",
     "pantryCoverage": "{{percent}}% e përbërësve në qilarin tënd",
     "coveragePercent": "{{percent}}%",
+    "readyToCook": "Gati për t’u gatuar",
+    "usesYourMoreToBuy_one": "Përdor {{item}} nga qilari yt · edhe {{count}} për të blerë",
+    "usesYourMoreToBuy_other": "Përdor {{item}} nga qilari yt · edhe {{count}} për të blerë",
+    "moreToBuy_one": "Edhe {{count}} për të blerë",
+    "moreToBuy_other": "Edhe {{count}} për të blerë",
     "usesExpiringSoon_one": "Përdor {{names}} para se të skadojë",
     "usesExpiringSoon_other": "Përdor {{names}} para se të skadojnë",
     "needInspiration": "Të nevojitet frymëzim?",
@@ -113,6 +118,9 @@
     "discoverDescription": "Kërko receta ose shfleto sugjerimet",
     "discoveryFailedTitle": "Recetat nuk u ngarkuan dot",
     "discoveryFailedDescription": "Tërhiqe poshtë për ta provuar sërish.",
+    "restrictionsNoteWithout": "Pa {{what}}",
+    "restrictionsNoteMore": "+{{number}}",
+    "restrictionsNoteHint": "Hap Profilin tënd dietik",
     "noResultsFiltered_one": "Asnjë përputhje — {{count}} filtër dietik aktiv",
     "noResultsFiltered_other": "Asnjë përputhje — {{count}} filtra dietikë aktivë",
     "clearFiltersAction": "Pastro filtrat dhe kërko përsëri",
@@ -177,6 +185,8 @@
     "dairyFree": "Pa bulmet",
     "about": "Rreth",
     "addAll": "Shto të gjitha",
+    "addMissing_one": "Shto {{count}} që mungon",
+    "addMissing_other": "Shto {{count}} që mungojnë",
     "recipeFrom": "Recetë nga {{source}}",
     "externalSource": "Burim i jashtëm",
     "viewOriginalRecipe": "Shiko recetën origjinale",
@@ -329,6 +339,10 @@
       "VEGAN": "Vegan",
       "VEGETARIAN": "Vegjetarian",
       "WHOLE30": "Whole30"
+    },
+    "religiousDiet": {
+      "HALAL": "Hallall",
+      "KOSHER": "Kosher"
     },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "I përshtatshëm për diabetikët",

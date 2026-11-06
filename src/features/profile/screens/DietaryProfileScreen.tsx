@@ -28,6 +28,7 @@ const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
   iconColor: theme.colors.primaryText,
 }));
 import { CuisineSelector } from '#features/profile/components/CuisineSelector';
+import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 import type { RestrictionSectionItem } from '#features/profile/components/RestrictionSection/RestrictionSection';
 import { DietarySharingSection } from '#features/profile/components/DietarySharingSection';
@@ -109,27 +110,25 @@ export const DietaryProfileScreen: React.FC = () => {
   // prior lifestyle row(s) only once the add succeeds (so a failure leaves the
   // existing diet intact). Constraints/intolerances/goals still add via
   // handleAddRestrictions.
-  const handleSelectLifestyleDiet = async (
-    diet: Diet,
-    replaceIds: string[],
-  ) => {
-    const added = await addDietaryRestriction(
-      { diet },
-      RestrictionSeverity.Preference,
+  // Adds before it removes: a failed add keeps the diets held as they were.
+  const handleChangeDiets = async (added: Diet[], removedIds: string[]) => {
+    const outcomes = await Promise.all(
+      added.map(diet =>
+        addDietaryRestriction({ diet }, RestrictionSeverity.Preference),
+      ),
     );
-    if (added) {
-      const removed = await Promise.all(
-        replaceIds.map(id => removeDietaryRestriction(id)),
+    if (!outcomes.every(Boolean)) return false;
+    const removed = await Promise.all(
+      removedIds.map(id => removeDietaryRestriction(id)),
+    );
+    // A silent failure here leaves two diets of one group held.
+    if (!removed.every(Boolean)) {
+      alertService.alert(
+        t('labels.error'),
+        t('dietary.removeRestrictionFailed'),
       );
-      // A silent failure here leaves the person holding two lifestyle diets.
-      if (!removed.every(Boolean)) {
-        alertService.alert(
-          t('labels.error'),
-          t('dietary.removeRestrictionFailed'),
-        );
-      }
     }
-    return added;
+    return true;
   };
 
   // Cooking preferences state
@@ -286,7 +285,15 @@ export const DietaryProfileScreen: React.FC = () => {
             existingRestrictions={profile.restrictions}
             onAdd={handleAddRestrictions}
             onRemove={handleRemoveRestriction}
-            onSelectLifestyleDiet={handleSelectLifestyleDiet}
+            onChangeDiets={handleChangeDiets}
+          />
+        </View>
+        <View style={styles.sectionCard}>
+          <ReligiousDietPicker
+            value={profile.religiousDiet}
+            onChange={religiousDiet => {
+              void updateDietaryProfile({ religiousDiet });
+            }}
           />
         </View>
       </Animated.View>

@@ -12,6 +12,7 @@ export const kitTestIDs = {
   headerMoreButton: 'header-more-button',
   offlineBanner: 'offline-banner',
   spotlightTarget: 'spotlight-target',
+  spotlightDim: 'spotlight-dim',
   spotlightSkipButton: 'spotlight-skip-button',
   splashScreen: 'splash-screen',
   tabBar: 'tab-bar',

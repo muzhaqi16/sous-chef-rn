@@ -486,6 +486,7 @@
     "locating": "Ricerca dei negozi vicini…",
     "locationOff": "La posizione è disattivata per {{appName}}. Attivala in Impostazioni o inserisci un CAP.",
     "locationFailed": "Impossibile capire dove ti trovi. Inserisci un CAP.",
-    "hasPrices": "Prezzi disponibili"
+    "hasPrices": "Prezzi disponibili",
+    "takeBackHint": "Lo rimuove dai tuoi negozi"
   }
 }

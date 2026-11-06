@@ -149,6 +149,8 @@ export interface Connectivity {
 /** The feedback an action gives when it runs; a host without it does nothing. */
 export interface Haptics {
   selection(): void;
+  /** Something finished well, such as setting up the app. */
+  success(): void;
   warning(): void;
 }
 

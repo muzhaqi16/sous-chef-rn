@@ -28,6 +28,7 @@ fragment useProductDietaryAlerts_item on Item {
       diet
       intolerance
       healthGoal
+      religiousDiet
       item {
         version
         id

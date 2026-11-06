@@ -357,7 +357,6 @@
   "expirationAction": {
     "cooked": "Cocinado",
     "shared": "Compartido con alguien",
-    "extended": "Vida útil ampliada",
     "wasted": "Desperdiciado / Descartado",
     "noAction": "Sin acción",
     "expiringSoon": "Caduca pronto",

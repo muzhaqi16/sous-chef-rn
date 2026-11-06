@@ -461,6 +461,7 @@ const RecipeMainInner: React.FC = () => {
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             const actions: Record<number, () => void> = {

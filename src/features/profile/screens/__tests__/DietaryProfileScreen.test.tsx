@@ -9,7 +9,10 @@ import {
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { DietaryProfileScreen } from '../DietaryProfileScreen';
-import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
+import {
+  CookingSkillLevel,
+  ReligiousDiet,
+} from '#/graphql/generated/schemaTypes';
 
 // --- Mocks ---
 
@@ -35,6 +38,7 @@ jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
       proteinTarget: 150,
       carbsTarget: 250,
       fatTarget: 70,
+      religiousDiet: 'KOSHER',
     },
     loading: false,
     updateDietaryProfile: mockUpdateDietaryProfile,
@@ -214,6 +218,21 @@ describe('DietaryProfileScreen', () => {
     expect(screen.getByText('Shared with')).toBeTruthy();
     expect(screen.getByTestId('dietary-sharing-switch-home-1')).toBeTruthy();
     expect(screen.getByTestId('dietary-sharing-switch-home-2')).toBeTruthy();
+  });
+
+  it('changes the religious diet chosen in onboarding, or clears it', async () => {
+    const user = userEvent.setup();
+    render(<DietaryProfileScreen />);
+
+    await user.press(screen.getByText(t('recipes.religiousDiet.KOSHER')));
+    expect(mockUpdateDietaryProfile).toHaveBeenLastCalledWith({
+      religiousDiet: null,
+    });
+
+    await user.press(screen.getByText(t('recipes.religiousDiet.HALAL')));
+    expect(mockUpdateDietaryProfile).toHaveBeenLastCalledWith({
+      religiousDiet: ReligiousDiet.Halal,
+    });
   });
 
   it('renders the screen with title', () => {

@@ -1,8 +1,16 @@
 import { CommonActions, StackActions } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { storeApi } from '#store';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { logger } from '#/utils/environment';
 import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
+import {
+  recordReachedStep,
+  setupExpectsPantry,
+  storedResumableStep,
+  useOnboardingSetupStore,
+  type ResumableOnboardingStep,
+} from '#features/onboarding/store/onboardingProgressStore';
 
 /** An onboarding route. */
 export type OnboardingStepId = keyof OnboardingStackParams;
@@ -35,9 +43,13 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: 'Receipt',
     numbered: true,
     shownWhen: ({ hasPantry }) => hasPantry,
-    subRoutes: ['OnboardingReceiptScan', 'OnboardingReceiptReview', 'Staples'],
+    subRoutes: ['OnboardingReceiptScan', 'OnboardingReceiptReview'],
   },
-  { id: 'OnboardingComplete', numbered: false },
+  {
+    id: 'OnboardingComplete',
+    numbered: false,
+    subRoutes: ['OnboardingStores'],
+  },
 ];
 
 /** The steps this user will see, in order. */
@@ -65,9 +77,40 @@ export function onboardingProgress(
   return index < 0 ? null : { step: index + 1, total: numbered.length };
 }
 
-/** What decides which steps this user sees, read from the session. */
+const isResumable = (id: OnboardingStepId): id is ResumableOnboardingStep =>
+  id === 'Household' || id === 'Dietary' || id === 'Receipt';
+
+/**
+ * What decides which steps this user sees, read from the session. A pantry
+ * setup is still making counts, so the step total does not change under them.
+ */
 export function useOnboardingStepContext(): OnboardingStepContext {
-  return { hasPantry: !!useSelectedPantryId() };
+  const setup = useOnboardingSetupStore(state => state.setup);
+  return { hasPantry: !!useSelectedPantryId() || setupExpectsPantry(setup) };
+}
+
+/** The same, read outside React at the moment of a navigation. */
+const currentStepContext = (): OnboardingStepContext => ({
+  hasPantry:
+    !!storeApi.getState().selectedPantryId ||
+    setupExpectsPantry(useOnboardingSetupStore.getState().setup),
+});
+
+/**
+ * The questions from `first` up to the furthest reached before a restart, so
+ * the stack reopens there with the earlier ones behind it for Back.
+ */
+export async function routesToResume(
+  first: OnboardingStepId,
+): Promise<{ name: OnboardingStepId }[]> {
+  const resume = await storedResumableStep();
+  const live = visibleOnboardingSteps(currentStepContext());
+  const from = live.findIndex(step => step.id === first);
+  const resumeIndex = resume ? live.findIndex(step => step.id === resume) : -1;
+  return live
+    .slice(from, Math.max(resumeIndex, from) + 1)
+    .filter(step => step.numbered)
+    .map(step => ({ name: step.id }));
 }
 
 export function useOnboardingNavigation() {
@@ -88,6 +131,7 @@ export function useOnboardingNavigation() {
     if (currentIndex < 0) return;
     const next = steps[currentIndex + 1];
     if (!next) return;
+    if (isResumable(next.id)) void recordReachedStep(next.id);
 
     // The completion screen replaces the stack, so there is no going back;
     // nor is there to setup, which has nothing to show once done.
@@ -96,7 +140,15 @@ export function useOnboardingNavigation() {
         CommonActions.reset({ index: 0, routes: [{ name: next.id }] }),
       );
     } else if (currentScreen === 'OnboardingSetup') {
-      navigation.dispatch(StackActions.replace(next.id));
+      // The invitations' choice is made: on to the questions, reopening at
+      // the furthest one reached before a restart.
+      void routesToResume(next.id).then(routes => {
+        navigation.dispatch(
+          routes.length > 1
+            ? CommonActions.reset({ index: routes.length - 1, routes })
+            : StackActions.replace(next.id),
+        );
+      });
     } else {
       navigation.dispatch(CommonActions.navigate(next.id));
     }
@@ -123,8 +175,25 @@ export function useOnboardingNavigation() {
   };
 
   /** Opens one of a step's sub-routes. */
-  const navigateWithinStep = (subRoute: OnboardingStepId) =>
-    navigation.dispatch(CommonActions.navigate(subRoute));
+  const navigateWithinStep = <Route extends OnboardingStepId>(
+    subRoute: Route,
+    params?: OnboardingStackParams[Route],
+  ) => navigation.dispatch(CommonActions.navigate(subRoute, params));
 
-  return { navigateToNextStep, navigateToPreviousStep, navigateWithinStep };
+  /** Opens an answered step from the summary; its save returns there. */
+  const changeAnswer = (step: 'Dietary') =>
+    navigation.dispatch(
+      CommonActions.navigate(step, { returnTo: 'OnboardingComplete' }),
+    );
+
+  /** Back to the summary a changed answer was opened from. */
+  const backToSummary = () => navigation.dispatch(StackActions.pop());
+
+  return {
+    navigateToNextStep,
+    navigateToPreviousStep,
+    navigateWithinStep,
+    changeAnswer,
+    backToSummary,
+  };
 }

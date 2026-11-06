@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import {
   RestrictionSeverity,
   type Diet,
+  type ReligiousDiet,
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
+import { Reveal } from '#components/atoms/Reveal';
+import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
 import { Text } from '#components/atoms/Text';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { Button } from '#components/molecules/Button';
@@ -17,10 +21,11 @@ import {
   INTOLERANCE_OPTIONS_MAJOR_FIRST,
   SEVERITY_LABEL_KEYS,
   isLifestyleDiet,
+  withDietPicked,
 } from '#domain/dietary';
 import { useDietarySharing } from '#features/profile/hooks/useDietarySharing';
 import { AvoidFoodSheet } from '#features/profile/ui/AvoidFoodSheet';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
+import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import {
   useDietaryIntake,
   type DietarySelection,
@@ -41,22 +46,51 @@ const LIFESTYLE_DIETS = DIET_OPTIONS.filter(option =>
 );
 
 /**
- * Allergies, a diet and foods to avoid, tapped, never typed except for the food
- * search. Nothing starts selected, and nothing is saved until Continue.
+ * Allergies, diets and foods to avoid, tapped, never typed except for the food
+ * search. Only what the profile already holds starts selected, and nothing
+ * is saved until Continue.
  */
-export const DietaryStepScreen = () => {
+/** Opened from the completion summary, the step saves and returns there. */
+type DietaryStepParams = { returnTo?: 'OnboardingComplete' } | undefined;
+
+export const DietaryStepScreen = ({
+  route,
+}: Partial<StaticScreenProps<DietaryStepParams>>) => {
   const { t } = useTranslation();
   useScreenTransition('DietaryStepScreen');
-  const { navigateToNextStep, navigateToPreviousStep } =
+  const { navigateToNextStep, navigateToPreviousStep, backToSummary } =
     useOnboardingNavigation();
-  const { save } = useDietaryIntake();
+  const fromSummary = route?.params?.returnTo === 'OnboardingComplete';
+  const onDone = () =>
+    fromSummary ? backToSummary() : navigateToNextStep('Dietary');
+  const { save, held } = useDietaryIntake();
   const { homes } = useDietarySharing();
   const [allergens, setAllergens] = useState<DietarySelection['allergens']>([]);
-  const [diet, setDiet] = useState<Diet | null>(null);
+  const [diets, setDiets] = useState<Diet[]>([]);
+  const [religiousDiet, setReligiousDiet] = useState<ReligiousDiet | null>(
+    null,
+  );
   const [foods, setFoods] = useState<DietarySelection['foods']>([]);
   const [avoidSheetVisible, setAvoidSheetVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  // What was saved before (a return after a restart) starts selected, unless
+  // the user has already picked something.
+  const [shown, setShown] = useState<DietarySelection | null>(null);
+  if (
+    held &&
+    !shown &&
+    allergens.length === 0 &&
+    diets.length === 0 &&
+    foods.length === 0 &&
+    religiousDiet === null
+  ) {
+    setShown(held);
+    setAllergens(held.allergens);
+    setDiets(held.diets);
+    setFoods(held.foods);
+    setReligiousDiet(held.religiousDiet);
+  }
 
   const toggleAllergen = (value: Intolerance) =>
     setAllergens(current =>
@@ -71,45 +105,42 @@ export const DietaryStepScreen = () => {
       ),
     );
 
+  const choices =
+    allergens.length + diets.length + foods.length + (religiousDiet ? 1 : 0);
+
   const handleContinue = async () => {
     setSaving(true);
     setFailed(false);
-    const saved = await save({ allergens, diet, foods });
+    const saved = await save({ allergens, diets, foods, religiousDiet }, shown);
     setSaving(false);
-    if (saved) navigateToNextStep('Dietary');
+    if (saved) onDone();
     else setFailed(true);
   };
 
   const sharedHomes = homes.filter(home => home.shared).map(home => home.name);
 
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={t('onBoarding.dietaryTitle')}
-      subtitle={t('onBoarding.dietarySubtitle')}
-      onBack={() => navigateToPreviousStep('Dietary')}
-      onSkip={() => navigateToNextStep('Dietary')}
-      primaryAction={
-        <Button
-          title={t('labels.continue')}
-          onPress={() => {
-            void handleContinue();
-          }}
-          variant="primary"
-          loading={saving}
-        />
+      question={t('onBoarding.dietarySubtitle')}
+      onBack={() =>
+        fromSummary ? backToSummary() : navigateToPreviousStep('Dietary')
       }
+      onSkip={fromSummary ? undefined : () => navigateToNextStep('Dietary')}
+      primary={{
+        // Says what the tap does with the answers given.
+        label:
+          choices === 0
+            ? t('onBoarding.dietaryNothingToAvoid')
+            : t('onBoarding.dietarySaveChoices', { count: choices }),
+        onPress: () => {
+          void handleContinue();
+        },
+        loading: saving,
+      }}
       testID={onboardingTestIDs.dietaryScreen}
     >
       <View style={styles.sections}>
-        <Text role="body">{t('dietaryAlerts.checkLabel')}</Text>
-        <Text role="body" tone="secondary">
-          {sharedHomes.length > 0
-            ? t('onBoarding.dietarySharedWith', {
-                homes: sharedHomes.join(', '),
-              })
-            : t('onBoarding.dietarySharingGeneric')}
-        </Text>
-
         <View style={styles.section}>
           <Text role="bodyStrong">{t('onBoarding.dietaryAllergensTitle')}</Text>
           <View style={styles.chips}>
@@ -124,26 +155,40 @@ export const DietaryStepScreen = () => {
               />
             ))}
           </View>
-          {allergens.map(allergen => {
-            const option = INTOLERANCE_OPTIONS_MAJOR_FIRST.find(
-              candidate => candidate.value === allergen.value,
-            );
-            return (
-              <SegmentedControl
-                key={allergen.value}
-                label={option ? t(option.labelKey) : t('labels.unknown')}
-                options={ALLERGEN_SEVERITIES}
-                value={allergen.severity}
-                onChange={severity => setSeverity(allergen.value, severity)}
-                formatLabel={severity => {
-                  const key = SEVERITY_LABEL_KEYS[severity];
-                  return key ? t(key) : t('labels.unknown');
-                }}
-                size="compact"
-                testID={onboardingTestIDs.dietarySeverity(allergen.value)}
-              />
-            );
-          })}
+          {/* Each opens as its allergen is picked, so what follows slides
+              rather than jumps; a closed one takes no space, so the spacing
+              sits inside each. */}
+          <View>
+            {INTOLERANCE_OPTIONS_MAJOR_FIRST.map(option => {
+              const allergen = allergens.find(
+                picked => picked.value === option.value,
+              );
+              return (
+                <Reveal key={option.value} open={!!allergen}>
+                  {allergen ? (
+                    <View style={styles.severity}>
+                      <SegmentedControl
+                        label={t(option.labelKey)}
+                        options={ALLERGEN_SEVERITIES}
+                        value={allergen.severity}
+                        onChange={severity =>
+                          setSeverity(allergen.value, severity)
+                        }
+                        formatLabel={severity => {
+                          const key = SEVERITY_LABEL_KEYS[severity];
+                          return key ? t(key) : t('labels.unknown');
+                        }}
+                        size="compact"
+                        testID={onboardingTestIDs.dietarySeverity(
+                          allergen.value,
+                        )}
+                      />
+                    </View>
+                  ) : null}
+                </Reveal>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -153,15 +198,22 @@ export const DietaryStepScreen = () => {
               <AnimatedChip
                 key={option.value}
                 label={t(option.labelKey)}
-                selected={diet === option.value}
+                selected={diets.includes(option.value)}
                 onPress={() =>
-                  setDiet(current =>
-                    current === option.value ? null : option.value,
+                  setDiets(current =>
+                    current.includes(option.value)
+                      ? current.filter(diet => diet !== option.value)
+                      : withDietPicked(current, option.value),
                   )
                 }
               />
             ))}
           </View>
+
+          <ReligiousDietPicker
+            value={religiousDiet}
+            onChange={setReligiousDiet}
+          />
         </View>
 
         <View style={styles.section}>
@@ -191,6 +243,18 @@ export const DietaryStepScreen = () => {
           />
         </View>
 
+        {/* The notices follow the choices, just above the step's button. */}
+        <View style={styles.notices}>
+          <Text role="body">{t('dietaryAlerts.checkLabel')}</Text>
+          <Text role="body" tone="secondary">
+            {sharedHomes.length > 0
+              ? t('onBoarding.dietarySharedWith', {
+                  homes: sharedHomes.join(', '),
+                })
+              : t('onBoarding.dietarySharingGeneric')}
+          </Text>
+        </View>
+
         {failed ? (
           <Text role="error" tone="error">
             {t('onBoarding.dietarySaveFailed')}
@@ -209,7 +273,7 @@ export const DietaryStepScreen = () => {
           return Promise.resolve(true);
         }}
       />
-    </OnBoardingWrapper>
+    </OnboardingStepScaffold>
   );
 };
 
@@ -219,6 +283,12 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     gap: theme.spacing.sm,
+  },
+  notices: {
+    gap: theme.spacing.sm,
+  },
+  severity: {
+    paddingTop: theme.spacing.sm,
   },
   chips: {
     flexDirection: 'row',

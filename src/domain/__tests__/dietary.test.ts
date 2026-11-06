@@ -1,10 +1,17 @@
-import { Diet, HealthGoal, Intolerance } from '#/graphql/generated/schemaTypes';
+import {
+  Diet,
+  HealthGoal,
+  Intolerance,
+  ReligiousDiet,
+} from '#/graphql/generated/schemaTypes';
 import {
   INTOLERANCE_OPTIONS,
   INTOLERANCE_OPTIONS_MAJOR_FIRST,
   canAlert,
   householdCheckOf,
+  oneDietPerGroup,
   restrictionLabelKey,
+  withDietPicked,
 } from '../dietary';
 
 describe('INTOLERANCE_OPTIONS_MAJOR_FIRST', () => {
@@ -33,11 +40,56 @@ describe('INTOLERANCE_OPTIONS_MAJOR_FIRST', () => {
   });
 });
 
+describe('withDietPicked', () => {
+  it('replaces the animal-food diet held with another', () => {
+    expect(withDietPicked([Diet.Vegetarian, Diet.Keto], Diet.Vegan)).toEqual([
+      Diet.Keto,
+      Diet.Vegan,
+    ]);
+  });
+
+  it('keeps an eating style beside an animal-food diet', () => {
+    expect(withDietPicked([Diet.Vegetarian], Diet.Keto)).toEqual([
+      Diet.Vegetarian,
+      Diet.Keto,
+    ]);
+    expect(withDietPicked([Diet.Vegetarian, Diet.Keto], Diet.Paleo)).toEqual([
+      Diet.Vegetarian,
+      Diet.Paleo,
+    ]);
+  });
+
+  it('stacks a constraint on anything', () => {
+    expect(
+      withDietPicked([Diet.Vegan, Diet.GlutenFree], Diet.LowFodmap),
+    ).toEqual([Diet.Vegan, Diet.GlutenFree, Diet.LowFodmap]);
+  });
+});
+
+describe('oneDietPerGroup', () => {
+  it('keeps the first diet of each group and every constraint', () => {
+    expect(
+      oneDietPerGroup([
+        Diet.Vegan,
+        Diet.Keto,
+        Diet.Vegetarian,
+        Diet.GlutenFree,
+        Diet.Paleo,
+        Diet.LowFodmap,
+      ]),
+    ).toEqual([Diet.Vegan, Diet.Keto, Diet.GlutenFree, Diet.LowFodmap]);
+  });
+});
+
 describe('canAlert', () => {
   it('lets a diet, an intolerance and an avoided item alert', () => {
     expect(canAlert({ diet: Diet.Vegan })).toBe(true);
     expect(canAlert({ intolerance: Intolerance.Peanut })).toBe(true);
     expect(canAlert({ item: { id: 'bacon' } })).toBe(true);
+  });
+
+  it('lets a religious diet alert its owner', () => {
+    expect(canAlert({ religiousDiet: ReligiousDiet.Halal })).toBe(true);
   });
 
   it('never lets a health goal alert', () => {
@@ -59,6 +111,12 @@ describe('restrictionLabelKey', () => {
     );
     expect(restrictionLabelKey({ healthGoal: HealthGoal.LowCarb })).toBe(
       'recipes.healthGoal.LOW_CARB',
+    );
+  });
+
+  it('names a religious diet', () => {
+    expect(restrictionLabelKey({ religiousDiet: ReligiousDiet.Kosher })).toBe(
+      'recipes.religiousDiet.KOSHER',
     );
   });
 

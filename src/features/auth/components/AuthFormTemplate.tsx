@@ -1,9 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { useGenericKeyboardHandler } from 'react-native-keyboard-controller';
-import { scheduleOnRN } from 'react-native-worklets';
-import Animated, { LinearTransition } from 'react-native-reanimated';
 
 import type { FieldValues, Control, FieldErrors } from 'react-hook-form';
 import type { FieldDef } from '#components/molecules/DynamicFormFields';
@@ -12,12 +9,13 @@ import { Button } from '#components/molecules/Button';
 import { Link } from '#components/atoms/Link';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Text } from '#components/atoms/Text';
-import { motion } from '#/theme/motion';
 import { authTestIDs } from '#features/auth/testIDs';
 
 interface Props<T extends FieldValues> {
   title: string;
   subtitle?: string | React.ReactNode;
+  /** A step the user takes before filling the form, such as opening Mail. */
+  headerAction?: { title: string; onPress: () => void; testID?: string };
   fields: FieldDef<T>[];
   control: Control<T>;
   errors: FieldErrors<T>;
@@ -48,6 +46,7 @@ interface Props<T extends FieldValues> {
 export function AuthFormTemplate<T extends FieldValues>({
   title,
   subtitle,
+  headerAction,
   fields,
   control,
   errors,
@@ -71,69 +70,37 @@ export function AuthFormTemplate<T extends FieldValues>({
   isLoading = false,
   focusChaining = false,
 }: Props<T>) {
-  // With the keyboard up the scroll view keeps its full height, so the flexible
-  // slack survives and pushes the fields under it. Collapsing the slack keeps the
-  // whole form, header included, above the keyboard.
-  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [transitionMs, setTransitionMs] = useState(motion.timing.MODERATE);
-
-  // `onStart` carries the DESTINATION of a movement about to begin, so the layout
-  // transition runs alongside the keyboard in both directions — `useKeyboardState`
-  // only reports a dismissal once hiding has FINISHED. `onEnd` settles movements
-  // that raise no start, like an interactive drag-to-dismiss.
-  // `useGenericKeyboardHandler` is the variant that does not set the Android
-  // soft-input mode, which the manifest and the scroll view already declare.
-  useGenericKeyboardHandler(
-    {
-      onStart: e => {
-        'worklet';
-
-        scheduleOnRN(setIsKeyboardVisible, e.progress === 1);
-        // Below Android 11 the reported duration can be 0; 250ms is what the
-        // library itself substitutes there.
-        scheduleOnRN(
-          setTransitionMs,
-          e.duration > 0 ? e.duration : motion.timing.MODERATE,
-        );
-      },
-      onEnd: e => {
-        'worklet';
-
-        scheduleOnRN(setIsKeyboardVisible, e.progress === 1);
-      },
-    },
-    [],
-  );
-
-  const layoutTransition = LinearTransition.duration(transitionMs);
-
-  const variantStyles = styles.useVariants({ compact: isKeyboardVisible });
-
   return (
-    <View style={variantStyles.formContainer}>
-      <View style={variantStyles.leadingSpace} />
-      <Animated.View layout={layoutTransition}>
-        <View style={variantStyles.titleRow} testID={authTestIDs.formTitleRow}>
-          <Text role="title" tone="primary" align="center">
-            {title}
-          </Text>
+    // Top-aligned with fixed gaps: the keyboard rising moves no control
+    // under a finger already on its way to it.
+    <View style={styles.formContainer}>
+      <View style={styles.titleRow} testID={authTestIDs.formTitleRow}>
+        <Text role="title" tone="primary" align="center">
+          {title}
+        </Text>
+      </View>
+      {subtitle ? (
+        <Text
+          role="body"
+          tone="secondary"
+          align="center"
+          style={styles.subtitle}
+        >
+          {subtitle}
+        </Text>
+      ) : null}
+      {headerAction ? (
+        <View style={styles.headerAction}>
+          <Button
+            title={headerAction.title}
+            onPress={headerAction.onPress}
+            variant="secondary"
+            testID={headerAction.testID}
+          />
         </View>
-        {subtitle ? (
-          <Text
-            role="body"
-            tone="secondary"
-            align="center"
-            style={variantStyles.subtitle}
-          >
-            {subtitle}
-          </Text>
-        ) : null}
-      </Animated.View>
+      ) : null}
 
-      <Animated.View
-        style={variantStyles.fieldsGroup}
-        layout={layoutTransition}
-      >
+      <View style={styles.fieldsGroup}>
         <DynamicFormFields<T>
           fields={fields}
           control={control}
@@ -142,7 +109,7 @@ export function AuthFormTemplate<T extends FieldValues>({
         />
 
         {!!linkText && !!onLinkPress && (
-          <View style={variantStyles.linkRow}>
+          <View style={styles.linkRow}>
             <Link
               onPress={onLinkPress}
               testID={linkTestID}
@@ -154,11 +121,9 @@ export function AuthFormTemplate<T extends FieldValues>({
             </Link>
           </View>
         )}
-      </Animated.View>
+      </View>
 
-      <View style={variantStyles.trailingSpace} />
-
-      <Animated.View style={variantStyles.action} layout={layoutTransition}>
+      <View style={styles.action}>
         {submitError ? (
           // Polite: Android reads it as it appears; iOS is told by the screen.
           <Text
@@ -166,7 +131,7 @@ export function AuthFormTemplate<T extends FieldValues>({
             tone="error"
             align="center"
             accessibilityLiveRegion="polite"
-            style={variantStyles.submitError}
+            style={styles.submitError}
             testID={authTestIDs.formSubmitError}
           >
             {submitError}
@@ -183,34 +148,29 @@ export function AuthFormTemplate<T extends FieldValues>({
           loading={isLoading}
           testID={submitButtonTestID}
         />
-      </Animated.View>
+      </View>
 
       {!!footerText && !!footerLinkText && !!onFooterLinkPress && (
-        <Animated.View layout={layoutTransition}>
-          <Pressable
-            onPress={onFooterLinkPress}
-            disabled={footerLinkDisabled}
-            testID={footerLinkTestID}
-            style={({ pressed }) => pressed && variantStyles.pressed}
+        <Pressable
+          onPress={onFooterLinkPress}
+          disabled={footerLinkDisabled}
+          testID={footerLinkTestID}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Text
+            role="body"
+            tone="secondary"
+            align="center"
+            style={[styles.footer, footerLinkDisabled && styles.footerDisabled]}
           >
-            <Text
-              role="body"
-              tone="secondary"
-              align="center"
-              style={[
-                variantStyles.footer,
-                footerLinkDisabled && variantStyles.footerDisabled,
-              ]}
-            >
-              {footerText}{' '}
-              <Link disabled={footerLinkDisabled}>
-                {footerLinkCountdown && footerLinkCountdown > 0
-                  ? `${footerLinkText} (${footerLinkCountdown}s)`
-                  : footerLinkText}
-              </Link>
-            </Text>
-          </Pressable>
-        </Animated.View>
+            {footerText}{' '}
+            <Link disabled={footerLinkDisabled}>
+              {footerLinkCountdown && footerLinkCountdown > 0
+                ? `${footerLinkText} (${footerLinkCountdown}s)`
+                : footerLinkText}
+            </Link>
+          </Text>
+        </Pressable>
       )}
     </View>
   );
@@ -225,38 +185,21 @@ const styles = StyleSheet.create(theme => ({
     // its own content overflows past whatever a following sibling occupies.
     flexGrow: 1,
   },
-  // The leftover height splits 1:2 around header + fields, which sits them
-  // above centre. Keyboard up: nothing to split.
-  leadingSpace: {
-    variants: {
-      compact: { true: { flexGrow: 0 }, false: { flexGrow: 1 } },
-    },
-  },
-  trailingSpace: {
-    variants: {
-      compact: { true: { flexGrow: 0 }, false: { flexGrow: 2 } },
-    },
-  },
   fieldsGroup: {
-    variants: {
-      compact: {
-        true: { marginTop: 0 },
-        false: { marginTop: theme.spacing.md },
-      },
-    },
+    marginTop: theme.spacing.md,
   },
   titleRow: {
+    marginTop: theme.spacing.xl,
     minHeight: theme.sizes.button.md,
     justifyContent: 'center',
     marginBottom: theme.spacing.sm,
   },
   subtitle: {
-    variants: {
-      compact: {
-        true: { marginBottom: theme.spacing.md },
-        false: { marginBottom: theme.spacing.xl },
-      },
-    },
+    marginBottom: theme.spacing.lg,
+  },
+  headerAction: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   linkRow: {
     alignItems: 'flex-end',
@@ -266,28 +209,11 @@ const styles = StyleSheet.create(theme => ({
     marginTop: theme.spacing.sm,
   },
   action: {
-    // The spacers collapse on a screen with no leftover height; the padding is
-    // what keeps a gap above the button there.
-    variants: {
-      compact: {
-        true: {
-          paddingTop: theme.spacing.md,
-          marginBottom: theme.spacing.sm,
-        },
-        false: {
-          paddingTop: theme.spacing.lg,
-          marginBottom: theme.spacing.md,
-        },
-      },
-    },
+    paddingTop: theme.spacing.xl,
+    marginBottom: theme.spacing.sm,
   },
   footer: {
-    variants: {
-      compact: {
-        true: { paddingVertical: theme.spacing.sm },
-        false: { paddingVertical: theme.spacing.lg },
-      },
-    },
+    paddingVertical: theme.spacing.md,
   },
   footerDisabled: {
     opacity: theme.opacity.disabled,

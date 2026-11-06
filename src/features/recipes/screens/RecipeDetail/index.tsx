@@ -193,6 +193,8 @@ const RecipeDetailScreen: React.FC = () => {
     addedIngredients,
     handleAddSingleIngredient,
     handleAddAll,
+    missingCount,
+    handleAddMissing,
     handleListSelected,
     creatingList,
     handleCreateListAndAddIngredients,
@@ -664,11 +666,26 @@ const RecipeDetailScreen: React.FC = () => {
           <View style={styles.ingredientsSection}>
             <SectionHeaderRow
               title={t('itemPhotos.perspective.ingredient_list')}
-              action={{
-                label: addingToList ? t('labels.adding') : t('recipes.addAll'),
-                onPress: handleAddAll,
-                disabled: addingToList,
-              }}
+              action={
+                // The pantry holds some of it: add only the rest.
+                missingCount !== null &&
+                missingCount > 0 &&
+                missingCount < displayData.ingredients.length
+                  ? {
+                      label: addingToList
+                        ? t('labels.adding')
+                        : t('recipes.addMissing', { count: missingCount }),
+                      onPress: handleAddMissing,
+                      disabled: addingToList,
+                    }
+                  : {
+                      label: addingToList
+                        ? t('labels.adding')
+                        : t('recipes.addAll'),
+                      onPress: handleAddAll,
+                      disabled: addingToList,
+                    }
+              }
               style={styles.ingredientsSectionHeader}
             />
             <HorizontalRail surface="background" bleed="page">

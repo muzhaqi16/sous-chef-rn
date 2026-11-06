@@ -16,6 +16,9 @@ const buildStorageKey = (userId: string | undefined, featureId: string) =>
     ? `${HINT_PREFIX}${userId}_${featureId}`
     : `${HINT_PREFIX}${featureId}`;
 
+/** How long a step waits for its target to measure before it is skipped. */
+const DEFAULT_TARGET_TIMEOUT_MS = 1500;
+
 // ── Public types ──
 
 export interface TutorialStep {
@@ -24,6 +27,10 @@ export interface TutorialStep {
   subtitle: string;
   /** Key into the targetRects record */
   rectKey: string;
+  /** Absent, the step applies; one that does not is neither shown nor counted. */
+  when?: () => boolean;
+  /** How long the step waits for its target before the sequence moves on. */
+  targetTimeoutMs?: number;
 }
 
 export interface UseTutorialSequenceOptions {
@@ -54,6 +61,8 @@ export interface UseTutorialSequenceReturn {
   advanceInPlace: () => void;
   /** Dismiss all remaining steps */
   skipAll: () => void;
+  /** Hides the sequence until the screen mounts again, marking nothing. */
+  pause: () => void;
 }
 
 // ── Hook ──
@@ -75,6 +84,10 @@ export const useTutorialSequence = ({
 
   const [hasStarted, setHasStarted] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
+  // Steps whose target never measured, passed over for this mount only: the
+  // next visit tries them again.
+  const [skipped, setSkipped] = useState<ReadonlySet<string>>(() => new Set());
+  const [paused, setPaused] = useState(false);
 
   // React to external resets (centralized signal hook)
   const wasReset = useTutorialResetSignal();
@@ -82,34 +95,66 @@ export const useTutorialSequence = ({
     setGeneration(0);
     setHasStarted(false);
     setIsTransitioning(false);
+    setSkipped(new Set());
+    setPaused(false);
   }
 
-  // Derive the first incomplete step from MMKV (synchronous, sub-ms read).
+  const visibleSteps = steps.filter(step => step.when?.() ?? true);
+
+  // The first step not yet shown, in order, whether or not its target has
+  // measured: a later target measuring first must not jump the queue.
   // `generation` is referenced so the compiler sees this code depends on it.
   const activeStepIndex =
     generation >= 0
-      ? steps.findIndex(step => {
-          // Through `hasFeatureHintBeenShown` rather than reading MMKV
-          // directly, so the Detox suppression applies here too. Reading the
-          // key straight from storage is what made this sequence keep showing
-          // under E2E after the shared helper was already suppressed.
-          const shown = hasFeatureHintBeenShown(step.featureId, userId);
-          const rect = targetRects[step.rectKey];
-          return !shown && rect != null;
-        })
+      ? visibleSteps.findIndex(
+          step =>
+            !skipped.has(step.featureId) &&
+            // Through `hasFeatureHintBeenShown` rather than reading MMKV
+            // directly, so the Detox suppression applies here too.
+            !hasFeatureHintBeenShown(step.featureId, userId),
+        )
       : -1;
 
   const allComplete = activeStepIndex === -1;
+  const activeStep = visibleSteps[activeStepIndex];
+  const activeRect = activeStep
+    ? targetRects[activeStep.rectKey] ?? null
+    : null;
 
-  // Startup delay
+  // Startup delay; none asked for starts at once.
+  const canBegin = canStart && !allComplete && !hasStarted && tutorialsEnabled;
+  if (canBegin && startDelay <= 0) setHasStarted(true);
   useEffect(() => {
-    if (!canStart || allComplete || hasStarted || !tutorialsEnabled) return;
-
+    if (!canBegin || startDelay <= 0) return;
     const timer = setTimeout(() => {
       setHasStarted(true);
     }, startDelay);
     return () => clearTimeout(timer);
-  }, [canStart, allComplete, hasStarted, startDelay, tutorialsEnabled]);
+  }, [canBegin, startDelay]);
+
+  // A step whose target never measures is passed over, so the sequence never
+  // waits on nothing.
+  const waitingFor =
+    hasStarted &&
+    tutorialsEnabled &&
+    !isPaused &&
+    !paused &&
+    activeStep &&
+    !activeRect
+      ? activeStep.featureId
+      : null;
+  const targetTimeoutMs =
+    activeStep?.targetTimeoutMs ?? DEFAULT_TARGET_TIMEOUT_MS;
+  if (waitingFor !== null && targetTimeoutMs <= 0) {
+    setSkipped(new Set(skipped).add(waitingFor));
+  }
+  useEffect(() => {
+    if (waitingFor === null || targetTimeoutMs <= 0) return;
+    const timer = setTimeout(() => {
+      setSkipped(previous => new Set(previous).add(waitingFor));
+    }, targetTimeoutMs);
+    return () => clearTimeout(timer);
+  }, [waitingFor, targetTimeoutMs]);
 
   // Timer ref for advance transition cleanup
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -121,22 +166,15 @@ export const useTutorialSequence = ({
     };
   }, []);
 
-  // Stable refs for callbacks
-  const stepsRef = useRef(steps);
-  const userIdRef = useRef(userId);
-  useEffect(() => {
-    stepsRef.current = steps;
-  }, [steps]);
-  useEffect(() => {
-    userIdRef.current = userId;
-  }, [userId]);
-
-  const advance = () => {
-    const step = stepsRef.current[activeStepIndex];
-    if (!step) return;
+  const markShown = (featureId: string) => {
     storeApi
       .getState()
-      .markFeatureHintShown(buildStorageKey(userIdRef.current, step.featureId));
+      .markFeatureHintShown(buildStorageKey(userId, featureId));
+  };
+
+  const advance = () => {
+    if (!activeStep) return;
+    markShown(activeStep.featureId);
     setGeneration(g => g + 1);
     setIsTransitioning(true);
     if (transitionTimerRef.current) clearTimeout(transitionTimerRef.current);
@@ -147,22 +185,13 @@ export const useTutorialSequence = ({
   };
 
   const advanceInPlace = () => {
-    const step = stepsRef.current[activeStepIndex];
-    if (!step) return;
-    storeApi
-      .getState()
-      .markFeatureHintShown(buildStorageKey(userIdRef.current, step.featureId));
+    if (!activeStep) return;
+    markShown(activeStep.featureId);
     setGeneration(g => g + 1);
   };
 
   const skipAll = () => {
-    for (const step of stepsRef.current) {
-      storeApi
-        .getState()
-        .markFeatureHintShown(
-          buildStorageKey(userIdRef.current, step.featureId),
-        );
-    }
+    for (const step of steps) markShown(step.featureId);
     setGeneration(g => g + 1);
   };
 
@@ -171,11 +200,10 @@ export const useTutorialSequence = ({
     hasStarted &&
     tutorialsEnabled &&
     !isPaused &&
+    !paused &&
     !isTransitioning &&
     activeStepIndex !== -1;
 
-  const activeStep = steps[activeStepIndex];
-  const activeRect = activeStep ? targetRects[activeStep.rectKey] : null;
   const currentStep: TutorialStepConfig | null =
     isActive && activeStep && activeRect
       ? {
@@ -183,9 +211,15 @@ export const useTutorialSequence = ({
           title: activeStep.title,
           subtitle: activeStep.subtitle,
           stepIndex: activeStepIndex,
-          totalSteps: steps.length,
+          totalSteps: visibleSteps.length,
         }
       : null;
 
-  return { currentStep, advance, advanceInPlace, skipAll };
+  return {
+    currentStep,
+    advance,
+    advanceInPlace,
+    skipAll,
+    pause: () => setPaused(true),
+  };
 };

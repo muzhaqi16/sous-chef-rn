@@ -56,6 +56,100 @@ describe('ShoppingListTutorialProvider — screen-scoped completion', () => {
   });
 });
 
+describe('ShoppingListTutorialProvider — a tour left part-way', () => {
+  const wrapper = ({ children }: { children: React.ReactNode }) => (
+    <ShoppingListTutorialProvider canStart startDelay={0}>
+      {children}
+    </ShoppingListTutorialProvider>
+  );
+  const ids = [
+    'shopping_interactive_tutorial',
+    'shopping_tutorial_selector',
+    'shopping_tutorial_tabs',
+    'shopping_tutorial_add',
+  ];
+
+  it('does not count a tour closed part-way as done', () => {
+    const { result, unmount } = renderHook(
+      () => ({
+        state: useShoppingListTutorialState(),
+        actions: useShoppingListTutorialActions(),
+      }),
+      { wrapper },
+    );
+    expect(result.current.state?.currentStep).toBe(
+      ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON,
+    );
+    act(() => {
+      result.current.actions?.skipCurrentStep();
+    });
+
+    unmount();
+
+    for (const id of ids) {
+      expect(hints()[`feature_hint_shown_user-1_${id}`]).toBeUndefined();
+    }
+    const reopened = renderHook(() => useShoppingListTutorialState(), {
+      wrapper,
+    });
+    expect(reopened.result.current?.currentStep).toBe(
+      ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON,
+    );
+  });
+
+  it('stops for a stray tap without counting as done', () => {
+    const { result } = renderHook(
+      () => ({
+        state: useShoppingListTutorialState(),
+        actions: useShoppingListTutorialActions(),
+      }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.actions?.pause();
+    });
+
+    expect(result.current.state?.isActive).toBe(false);
+    for (const id of ids) {
+      expect(hints()[`feature_hint_shown_user-1_${id}`]).toBeUndefined();
+    }
+  });
+
+  it('shows the add sheet hint with the sheet, before the rows below it', () => {
+    const { result } = renderHook(
+      () => ({
+        state: useShoppingListTutorialState(),
+        actions: useShoppingListTutorialActions(),
+      }),
+      { wrapper },
+    );
+
+    act(() => {
+      result.current.actions?.notifyAddButtonPressed();
+    });
+
+    expect(result.current.state?.currentStep).toBe(
+      ShoppingListTutorialStep.GUIDE_ADD_ITEM,
+    );
+    expect(result.current.state?.isActive).toBe(true);
+  });
+
+  it('counts the tour and the ones it replaced as done once ended', () => {
+    const { result } = renderHook(() => useShoppingListTutorialActions(), {
+      wrapper,
+    });
+
+    act(() => {
+      result.current?.skipAll();
+    });
+
+    for (const id of ids) {
+      expect(hints()[`feature_hint_shown_user-1_${id}`]).toBe(true);
+    }
+  });
+});
+
 describe('ShoppingListTutorialProvider — step sequence', () => {
   it('spotlights the long-press-price step between the checkbox and purchased-tab steps', () => {
     jest.useFakeTimers();

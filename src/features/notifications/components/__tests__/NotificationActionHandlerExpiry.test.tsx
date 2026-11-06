@@ -11,14 +11,18 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkExpirationActionDocument } from '#features/notifications/graphql/expirationNotificationMutations.generated';
+import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
 import { MarkNotificationAsReadDocument } from '#features/notifications/graphql/notificationMutations.generated';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 import {
   ExpirationAction,
   NotificationCategory,
+  NotificationSourceType,
   NotificationStatus,
   NotificationType,
   Priority,
+  UsagePurpose,
+  WasteReason,
 } from '#/graphql/generated/schemaTypes';
 import { operationNameOf } from '#/apollo/utils/documentOperation';
 import { todayKey } from '#/utils/dateUtils';
@@ -89,6 +93,7 @@ function seedFeed(unreadCount: number): InMemoryCache {
       sentAt: '2026-01-01T00:00:00.000Z',
       isAuthoredContent: false,
     },
+    { __typename: 'PantryItem', id: 'stack-1', heldQuantity: 2 },
   ]);
   seedQuery(cache, {
     query: NotificationSummaryDocument,
@@ -107,6 +112,37 @@ function seedFeed(unreadCount: number): InMemoryCache {
 const readBadge = (cache: InMemoryCache) =>
   cache.readQuery({ query: NotificationSummaryDocument })?.notificationSummary
     .unreadCount;
+
+/** `n1` as the server already has it: read. */
+const seedRead = (cache: InMemoryCache) =>
+  cache.modify({
+    id: cache.identify({ __typename: 'Notification', id: 'n1' }),
+    fields: { status: () => NotificationStatus.Read },
+  });
+
+/** What `stack-1` holds as the screens read it, pending writes included. */
+const readHeld = (cache: InMemoryCache): unknown =>
+  cache.extract(true)['PantryItem:stack-1']?.heldQuantity;
+
+/** The usage write's answer: the stack holds nothing once it lands. */
+const usageAnswer = (options: { held?: boolean } = {}) =>
+  recordMock(CreatePantryItemUsageDocument, {
+    ...options,
+    data: {
+      createPantryItemUsage: {
+        __typename: 'CreatePantryItemUsagePayload',
+        pantryItemUsage: {
+          __typename: 'PantryItemUsage',
+          id: 'usage-1',
+          pantryItem: {
+            __typename: 'PantryItem',
+            id: 'stack-1',
+            heldQuantity: 0,
+          },
+        },
+      },
+    },
+  });
 
 const linkedReminder: DisplayNotification = {
   id: 'n1',
@@ -153,8 +189,9 @@ beforeEach(() => {
 });
 
 describe('NotificationActionHandler — acting on an expiry notification', () => {
-  it('sends the action and one mark-read, and shows the badge that mark-read states', async () => {
+  it('uses up the stack, then records the answer, with one mark-read', async () => {
     const cache = seedFeed(3);
+    const usage = usageAnswer({ held: true });
     const action = actionAnswer();
     // No local delta takes 3 to 7: only the response can state it.
     const markRead = recordMock(MarkNotificationAsReadDocument, {
@@ -178,18 +215,36 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
       <NotificationActionHandler>
         {() => <MutationProbe />}
       </NotificationActionHandler>,
-      { cache, operationMocks: [action.mock, markRead.mock] },
+      { cache, operationMocks: [usage.mock, action.mock, markRead.mock] },
     );
 
     act(() =>
       mockOnActionSelected?.(linkedReminder, ExpirationAction.Consumed),
     );
 
-    // The notification reads at once, on the local write.
+    // The stock and the notification move at once, on the local writes; the
+    // answer waits for the stock write.
+    expect(readHeld(cache)).toBe(0);
     expect(readNotificationStatus(cache, 'n1')).toBe(NotificationStatus.Read);
     await drainTimers();
-    expect(readBadge(cache)).toBe(7);
+    expect(action.fired).toEqual([]);
 
+    usage.release();
+    await drainTimers();
+
+    expect(usage.fired).toEqual([
+      {
+        input: {
+          pantryItemId: 'stack-1',
+          amount: { all: true },
+          purpose: UsagePurpose.General,
+          today: todayKey(),
+          idempotencyKey: expect.any(String),
+        },
+        today: todayKey(),
+      },
+    ]);
+    expect(readHeld(cache)).toBe(0);
     expect(action.fired).toEqual([
       {
         input: { notificationId: 'exp-1', action: ExpirationAction.Consumed },
@@ -197,20 +252,111 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
       },
     ]);
     expect(markRead.fired).toEqual([{ input: { id: 'n1' } }]);
+    expect(readBadge(cache)).toBe(7);
     // The reminder gets no write of its own: the server reads it with `n1`.
     expect(sentMutations()).toEqual([
-      operationNameOf(MarkExpirationActionDocument),
+      operationNameOf(CreatePantryItemUsageDocument),
       operationNameOf(MarkNotificationAsReadDocument),
+      operationNameOf(MarkExpirationActionDocument),
     ]);
-    expect(readNotificationStatus(cache, 'n1')).toBe(NotificationStatus.Read);
   });
 
-  it('sends only the action for a notification already read', async () => {
+  it('throws out only the package a reminder names when the stack holds others', async () => {
     const cache = seedFeed(3);
-    cache.modify({
-      id: cache.identify({ __typename: 'Notification', id: 'n1' }),
-      fields: { status: () => NotificationStatus.Read },
+    seedRead(cache);
+    const usage = usageAnswer({ held: true });
+    const action = actionAnswer();
+    renderWithApollo(
+      <NotificationActionHandler>
+        {() => <MutationProbe />}
+      </NotificationActionHandler>,
+      { cache, operationMocks: [usage.mock, action.mock] },
+    );
+
+    act(() =>
+      mockOnActionSelected?.(
+        {
+          ...linkedReminder,
+          isRead: true,
+          sourceId: 'batch-2',
+          sourceType: NotificationSourceType.PantryItemBatch,
+          expiresOn: '2026-01-01',
+          data: {
+            __typename: 'ExpiryReminderNotificationData',
+            itemName: 'Milk',
+            daysUntilExpiry: 0,
+            expiresOn: '2026-01-01',
+            isMultiBatch: true,
+            batchOpenedAt: null,
+            batchAddedAt: null,
+          },
+        },
+        ExpirationAction.Waste,
+      ),
+    );
+
+    // A package's share of the stack is the server's to work out.
+    expect(readHeld(cache)).toBe(2);
+    usage.release();
+    await drainTimers();
+
+    expect(usage.fired).toEqual([
+      {
+        input: {
+          pantryItemId: 'stack-1',
+          amount: { all: true },
+          purpose: UsagePurpose.Waste,
+          targetBatchId: 'batch-2',
+          wasteReason: WasteReason.Expired,
+          today: todayKey(),
+          idempotencyKey: expect.any(String),
+        },
+        today: todayKey(),
+      },
+    ]);
+    expect(action.fired).toHaveLength(1);
+    // Already read: no mark-read.
+    expect(sentMutations()).toEqual([
+      operationNameOf(CreatePantryItemUsageDocument),
+      operationNameOf(MarkExpirationActionDocument),
+    ]);
+    expect(readBadge(cache)).toBe(3);
+  });
+
+  it('records no answer when the server refuses the stock write', async () => {
+    const cache = seedFeed(3);
+    const refused = recordMock(CreatePantryItemUsageDocument, {
+      data: {
+        createPantryItemUsage: {
+          __typename: 'ValidationError',
+          message: 'Nothing is left to use',
+        },
+      },
     });
+    const action = actionAnswer();
+    renderWithApollo(
+      <NotificationActionHandler>
+        {() => <MutationProbe />}
+      </NotificationActionHandler>,
+      { cache, operationMocks: [refused.mock, action.mock] },
+    );
+
+    act(() =>
+      mockOnActionSelected?.(
+        { ...linkedReminder, isRead: true },
+        ExpirationAction.Cooked,
+      ),
+    );
+    await drainTimers();
+
+    expect(refused.fired).toHaveLength(1);
+    expect(action.fired).toEqual([]);
+    expect(readHeld(cache)).toBe(2);
+  });
+
+  it('records only the answer for No action', async () => {
+    const cache = seedFeed(3);
+    seedRead(cache);
     const action = actionAnswer();
     renderWithApollo(
       <NotificationActionHandler>
@@ -222,16 +368,16 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
     act(() =>
       mockOnActionSelected?.(
         { ...linkedReminder, isRead: true },
-        ExpirationAction.Waste,
+        ExpirationAction.NoAction,
       ),
     );
-
     await drainTimers();
+
     expect(action.fired).toHaveLength(1);
     expect(sentMutations()).toEqual([
       operationNameOf(MarkExpirationActionDocument),
     ]);
-    expect(readBadge(cache)).toBe(3);
+    expect(readHeld(cache)).toBe(2);
   });
 
   it('sends nothing for a notification with no linked reminder', () => {

@@ -32,6 +32,7 @@ query RecipeDietaryAlerts(
               diet
               intolerance
               healthGoal
+              religiousDiet
               item {
                 version
                 id

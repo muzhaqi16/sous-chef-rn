@@ -7,7 +7,7 @@ import {
   within,
 } from '@testing-library/react-native';
 import { Text } from '#components/atoms/Text';
-import { OnBoardingWrapper } from '../OnBoardingWrapper';
+import { OnboardingStepScaffold } from '../OnboardingStepScaffold';
 import { ONBOARDING_STEPS } from '#features/onboarding/screens/useOnboardingNavigation';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { kitTestIDs } from '#components/testIDs';
@@ -20,7 +20,7 @@ jest.mock('@react-navigation/native', () => ({
 
 const NUMBERED = ONBOARDING_STEPS.filter(step => step.numbered).length;
 
-describe('OnBoardingWrapper', () => {
+describe('OnboardingStepScaffold', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRouteName = 'Receipt';
@@ -29,27 +29,27 @@ describe('OnBoardingWrapper', () => {
 
   it('renders children content', () => {
     render(
-      <OnBoardingWrapper>
+      <OnboardingStepScaffold>
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
     expect(screen.getByText('Content')).toBeTruthy();
   });
 
   it('renders title when provided directly', () => {
     render(
-      <OnBoardingWrapper title="Welcome">
+      <OnboardingStepScaffold title="Welcome">
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
     expect(screen.getByText('Welcome')).toBeTruthy();
   });
 
-  it('renders subtitle when provided', () => {
+  it('shows the question in the content', () => {
     render(
-      <OnBoardingWrapper subtitle="Get started">
+      <OnboardingStepScaffold question="Get started">
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
     expect(screen.getByText('Get started')).toBeTruthy();
   });
@@ -58,9 +58,9 @@ describe('OnBoardingWrapper', () => {
     const user = userEvent.setup();
     const onBack = jest.fn();
     render(
-      <OnBoardingWrapper onBack={onBack}>
+      <OnboardingStepScaffold onBack={onBack}>
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
     await user.press(screen.getByTestId(kitTestIDs.headerBackButton));
     expect(onBack).toHaveBeenCalled();
@@ -68,20 +68,20 @@ describe('OnBoardingWrapper', () => {
 
   it('does not render back button when onBack is not provided', () => {
     render(
-      <OnBoardingWrapper>
+      <OnboardingStepScaffold>
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
     expect(screen.queryByTestId(kitTestIDs.headerBackButton)).toBeNull();
   });
 
-  it('renders skip button when onSkip is provided', async () => {
+  it('offers Skip in the header when onSkip is provided', async () => {
     const user = userEvent.setup();
     const onSkip = jest.fn();
     render(
-      <OnBoardingWrapper onSkip={onSkip}>
+      <OnboardingStepScaffold onSkip={onSkip}>
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
     expect(screen.getByText('Skip')).toBeTruthy();
     await user.press(screen.getByText('Skip'));
@@ -92,9 +92,9 @@ describe('OnBoardingWrapper', () => {
     // Household is the first question.
     mockRouteName = 'Household';
     render(
-      <OnBoardingWrapper>
+      <OnboardingStepScaffold>
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
 
     // The numbers come from ONBOARDING_STEPS, so removing a step moves them
@@ -112,9 +112,9 @@ describe('OnBoardingWrapper', () => {
     for (const route of ['OnboardingComplete', 'SomewhereElse']) {
       mockRouteName = route;
       const { unmount } = render(
-        <OnBoardingWrapper>
+        <OnboardingStepScaffold>
           <Text>Content</Text>
-        </OnBoardingWrapper>,
+        </OnboardingStepScaffold>,
       );
       expect(
         screen.queryByTestId(onboardingTestIDs.stepNumber, {
@@ -126,32 +126,36 @@ describe('OnBoardingWrapper', () => {
     }
   });
 
-  it('puts the primary action in the footer, above the step number and Skip', () => {
+  it('puts the primary button in the footer above the step number, and Skip in the header', async () => {
+    const user = userEvent.setup();
+    const onNext = jest.fn();
     render(
-      <OnBoardingWrapper
+      <OnboardingStepScaffold
         onSkip={jest.fn()}
-        primaryAction={<Text testID="primary">Next</Text>}
+        primary={{ label: 'Next', onPress: onNext, testID: 'primary' }}
       >
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
 
     const footer = within(screen.getByTestId(onboardingTestIDs.footer));
-    expect(footer.getByTestId('primary')).toBeTruthy();
-    expect(footer.getByText('Skip')).toBeTruthy();
+    await user.press(footer.getByTestId('primary'));
+    expect(onNext).toHaveBeenCalledTimes(1);
+    expect(footer.getByText('Next')).toBeTruthy();
     expect(
       footer.getByTestId(onboardingTestIDs.stepNumber, {
         includeHiddenElements: true,
       }),
     ).toBeTruthy();
+    expect(footer.queryByText('Skip')).toBeNull();
     expect(footer.queryByText('Content')).toBeNull();
   });
 
   it('shows skip button testID when testID and onSkip provided', () => {
     render(
-      <OnBoardingWrapper testID="onboarding" onSkip={jest.fn()}>
+      <OnboardingStepScaffold testID="onboarding" onSkip={jest.fn()}>
         <Text>Content</Text>
-      </OnBoardingWrapper>,
+      </OnboardingStepScaffold>,
     );
     expect(screen.getByTestId('onboarding-skip-button')).toBeTruthy();
   });

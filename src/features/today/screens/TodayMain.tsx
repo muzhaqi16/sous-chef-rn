@@ -7,6 +7,7 @@ import { Screen } from '#components/templates/Screen';
 import type { BarAction } from '#components/molecules/BarActions';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
+import { RestrictionsNote } from '#features/recipes/ui/RestrictionsNote';
 import { StatCard } from '#features/today/components/StatCard';
 import { ItemCard } from '#components/organisms/ItemCard';
 import { DataStateView } from '#components/organisms/DataStateView';
@@ -46,6 +47,7 @@ export const TodayMain: React.FC = () => {
     toShoppingListMain,
     toRecipeMain,
     toMealPlanMain,
+    toDietaryProfile,
   } = useAppNavigation();
   const overview = useTodayOverview();
   // A first run is content too: a new account's launch would otherwise never mark.
@@ -277,6 +279,12 @@ export const TodayMain: React.FC = () => {
               }}
               style={styles.sectionHeader}
             />
+            <RestrictionsNote
+              homeId={overview.selectedHomeId}
+              onPress={toDietaryProfile}
+              style={styles.restrictionsNote}
+              testID={todayTestIDs.restrictionsNote}
+            />
             {suggestions.loading
               ? Array.from({ length: SUGGESTION_PREVIEW }, (_, index) => (
                   <ItemCardSkeleton key={index} />
@@ -322,6 +330,7 @@ export const TodayMain: React.FC = () => {
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             tutorial.advance();
@@ -345,6 +354,9 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.sm,
   },
   sectionHeader: {
+    marginBottom: theme.spacing.sm,
+  },
+  restrictionsNote: {
     marginBottom: theme.spacing.sm,
   },
 }));

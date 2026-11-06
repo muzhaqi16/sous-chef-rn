@@ -1,7 +1,13 @@
 # Catalog recipes that use the pantry's items, ranked by how many they use.
 # One page: the API offers no next one.
 query CatalogRecipesByIngredients($ingredients: [String!]!, $first: Int) {
-  catalogRecipesByIngredients(ingredients: $ingredients, first: $first) {
+  # The caller's own restrictions are always screened; this adds the ones
+  # members share, as every suggestion surface does.
+  catalogRecipesByIngredients(
+    ingredients: $ingredients
+    first: $first
+    excludeDietaryConflicts: true
+  ) {
     edges {
       cursor
       usedIngredientCount

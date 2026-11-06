@@ -1,12 +1,17 @@
 import type { Translate } from '#/i18n/types';
 import type { BadgeContent } from '#components/atoms/Badge';
+import { READY_COVERAGE } from '#domain/recipeCoverage';
 
-/** How much of a recipe the pantries hold, as a card's badge; none when they hold none of it. */
+/**
+ * How much of a recipe the pantries hold, as a card's badge: only on a recipe
+ * ready to cook, so a thin match never reads as a success.
+ */
 export const coverageBadge = (
   percent: number,
   translate: Translate,
+  ready = percent >= READY_COVERAGE,
 ): BadgeContent | undefined =>
-  percent > 0
+  ready
     ? {
         text: translate('recipes.pantryCoverage', { percent }),
         lines: [

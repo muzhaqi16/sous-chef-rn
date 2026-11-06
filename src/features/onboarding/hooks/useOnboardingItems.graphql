@@ -1,0 +1,28 @@
+# The staples the kitchen step offers, each with what it means for the home's
+# dietary needs, so one that clashes with the user's own answers is left out.
+query GetOnboardingItems($filters: ItemFilters, $first: Int, $homeId: ID!) {
+  items(filters: $filters, first: $first) {
+    edges {
+      cursor
+      node {
+        version
+        id
+        name
+        imageUrl
+        storageState
+        dietaryAlerts(homeId: $homeId) {
+          state
+          membership {
+            version
+            id
+            userId
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

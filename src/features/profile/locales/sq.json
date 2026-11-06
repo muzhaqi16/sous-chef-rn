@@ -165,7 +165,9 @@
     },
     "avoidAllergy": "{{name}} (alergji)",
     "avoidIntolerance": "{{name}} (intolerancë)",
-    "addAvoidFailed": "Ushqimi nuk u shtua dot. Provo përsëri."
+    "addAvoidFailed": "Ushqimi nuk u shtua dot. Provo përsëri.",
+    "religiousDietTitle": "Dietë fetare",
+    "religiousDietPrivate": "Privat: përdoret vetëm për sugjerimet e tua, shtëpitë e tua nuk e shohin."
   },
   "cookingPreferences": {
     "prepTimeRange": "Koha e përgatitjes duhet të jetë midis {{min}} dhe {{max}} minutash",

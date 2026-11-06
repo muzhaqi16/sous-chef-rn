@@ -2,35 +2,6 @@
 # QUERIES
 # ============================================
 
-query GetOnboardingItems(
-  $filters: ItemFilters
-  $orderBy: ItemOrderBy
-  $first: Int
-  $after: String
-) {
-  items(filters: $filters, orderBy: $orderBy, first: $first, after: $after) {
-    edges {
-      cursor
-      node {
-        version
-        id
-        name
-        imageUrl
-        storageState
-        displayUnit {
-          id
-          name
-        }
-      }
-    }
-    pageInfo {
-      hasNextPage
-      endCursor
-    }
-    totalCount
-  }
-}
-
 query AutocompleteItems($input: AutocompleteInput!) {
   autocompleteItems(input: $input) {
     suggestions {

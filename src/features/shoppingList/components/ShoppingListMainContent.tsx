@@ -2,7 +2,7 @@ import {
   deleteAction,
   editAction,
 } from '#components/organisms/SwipeableItem/commonActions';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useEffectEvent, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useAnimatedReaction } from 'react-native-reanimated';
@@ -255,6 +255,18 @@ export const ShoppingListMainContent: React.FC<
   // Coordinate swipeable items so only one is open at a time
   const { handleSwipeableWillOpen, handleSwipeableClose, closeAll } =
     useSwipeableCoordinator();
+
+  // A tutorial step that points into a row needs the row closed: one left
+  // swiped open puts its checkbox and icons beside where they rest.
+  const rowStep =
+    tutorial?.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX ||
+    tutorial?.currentStep ===
+      ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE ||
+    tutorial?.currentStep === ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY;
+  const closeRows = useEffectEvent(closeAll);
+  useEffect(() => {
+    if (rowStep) closeRows();
+  }, [rowStep]);
 
   // Handle refresh
   const handleRefresh = () => {
@@ -702,6 +714,7 @@ export const ShoppingListMainContent: React.FC<
             subtitle={t(stepConfig.subtitleKey)}
             {...tutorialStepPosition(stepConfig.stepIndex, tutorial.priceStep)}
             onDismiss={tutorial.skipAll}
+            onClose={tutorial.pause}
             onNext={handleNext}
             onTargetPress={handleTargetPress}
             allowGesturePassthrough={isSwipeStep}

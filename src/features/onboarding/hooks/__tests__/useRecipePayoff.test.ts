@@ -33,8 +33,12 @@ type Edge = NonNullable<
   >[number]
 >;
 
-const edge = (id: string, coverage = 50): Edge => ({
+/** A suggestion holding `coverage`% of its ingredients, `missing` left to buy. */
+const edge = (id: string, coverage = 50, missing = 5): Edge => ({
   coverage,
+  missingIngredientCount: missing,
+  usedIngredients:
+    coverage > 0 ? [{ id: `${id}-eggs`, name: 'eggs', item: null }] : [],
   expiringStacks: [],
   node: { id },
 });
@@ -95,6 +99,15 @@ describe('useRecipePayoff', () => {
             {
               __typename: 'RecipeSuggestionEdge',
               coverage: 90,
+              missingIngredientCount: 1,
+              usedIngredients: [
+                {
+                  __typename: 'RecipeIngredient',
+                  id: 'peanut-noodles-noodles',
+                  name: 'noodles',
+                  item: null,
+                },
+              ],
               expiringStacks: [],
               node: {
                 __typename: 'Recipe',
@@ -131,8 +144,21 @@ describe('useRecipePayoff', () => {
     expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']);
   });
 
-  it('leaves out a recipe the pantry holds nothing of', async () => {
-    const { result } = renderPayoff([edge('a', 0), edge('b', 40)]);
+  // A weak match: a recipe using under half its ingredients from the pantry is
+  // not one the pantry can make.
+  it('leaves out a recipe the pantry holds under half of', async () => {
+    const { result } = renderPayoff([
+      edge('a', 0),
+      edge('b', 49),
+      edge('c', 50),
+    ]);
+
+    await drainTimers();
+    expect(ids(result.current.rows)).toEqual(['c']);
+  });
+
+  it('counts a recipe two ingredients short as one the pantry can make', async () => {
+    const { result } = renderPayoff([edge('a', 30, 3), edge('b', 30, 2)]);
 
     await drainTimers();
     expect(ids(result.current.rows)).toEqual(['b']);

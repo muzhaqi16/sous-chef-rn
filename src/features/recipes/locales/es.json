@@ -96,6 +96,11 @@
     "unitsReadByDefault": "Las medidas se leyeron en unidades habituales de EE. UU.",
     "pantryCoverage": "{{percent}} % de sus ingredientes en tu despensa",
     "coveragePercent": "{{percent}} %",
+    "readyToCook": "Listo para cocinar",
+    "usesYourMoreToBuy_one": "Usa {{item}} de tu despensa · falta {{count}} por comprar",
+    "usesYourMoreToBuy_other": "Usa {{item}} de tu despensa · faltan {{count}} por comprar",
+    "moreToBuy_one": "Falta {{count}} por comprar",
+    "moreToBuy_other": "Faltan {{count}} por comprar",
     "usesExpiringSoon_one": "Usa {{names}} antes de que caduque",
     "usesExpiringSoon_other": "Usa {{names}} antes de que caduquen",
     "needInspiration": "¿Necesitas inspiración?",
@@ -113,6 +118,9 @@
     "discoverDescription": "Busca recetas o explora sugerencias",
     "discoveryFailedTitle": "No se pudieron cargar las recetas",
     "discoveryFailedDescription": "Desliza hacia abajo para volver a intentarlo.",
+    "restrictionsNoteWithout": "Sin {{what}}",
+    "restrictionsNoteMore": "+{{number}}",
+    "restrictionsNoteHint": "Abre tu Perfil alimenticio",
     "noResultsFiltered_one": "Sin resultados — {{count}} filtro dietético activo",
     "noResultsFiltered_other": "Sin resultados — {{count}} filtros dietéticos activos",
     "clearFiltersAction": "Borrar filtros y buscar de nuevo",
@@ -177,6 +185,8 @@
     "dairyFree": "Sin lácteos",
     "about": "Acerca de",
     "addAll": "Añadir todo",
+    "addMissing_one": "Añadir {{count}} que falta",
+    "addMissing_other": "Añadir {{count}} que faltan",
     "recipeFrom": "Receta de {{source}}",
     "externalSource": "Fuente externa",
     "viewOriginalRecipe": "Ver receta original",
@@ -329,6 +339,10 @@
       "VEGAN": "Vegano",
       "VEGETARIAN": "Vegetariano",
       "WHOLE30": "Whole30"
+    },
+    "religiousDiet": {
+      "HALAL": "Halal",
+      "KOSHER": "Kosher"
     },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "Apto para diabéticos",

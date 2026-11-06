@@ -4,7 +4,15 @@ import { useTranslation } from '#/i18n';
 import { alertService } from '#/services/alertService';
 import { toastService } from '#/services/toastService';
 import { errorService } from '#/services/errorService';
-import type { ExpirationAction } from '#/graphql/generated/schemaTypes';
+import {
+  ExpirationAction,
+  NotificationSourceType,
+  UsagePurpose,
+  WasteReason,
+} from '#/graphql/generated/schemaTypes';
+import { daysUntilExpiry } from '#domain/expiry';
+import { todayKey } from '#/utils/dateUtils';
+import { useFinishStock } from '#features/pantry/hooks/useFinishStock';
 import { InvitationAcceptanceModal } from './InvitationAcceptanceModal';
 import type { InvitationData } from '#features/notifications/types';
 import { ExpirationActionSheet } from './ExpirationActionSheet';
@@ -25,6 +33,43 @@ const readInvite = (data: NotificationItem['data']) => {
     return { ...data, entityName: data.listName };
   }
   return null;
+};
+
+/** What an answer to a reminder records on the stock; null records nothing. */
+const purposeOf = (action: ExpirationAction): UsagePurpose | null => {
+  switch (action) {
+    case ExpirationAction.Cooked:
+      return UsagePurpose.Cooking;
+    case ExpirationAction.Consumed:
+      return UsagePurpose.General;
+    case ExpirationAction.Shared:
+      return UsagePurpose.Gift;
+    case ExpirationAction.Waste:
+      return UsagePurpose.Waste;
+    case ExpirationAction.Extended:
+    case ExpirationAction.NoAction:
+      return null;
+  }
+};
+
+/**
+ * The package a reminder names, when its stack holds others; with one package
+ * the whole stack is that package.
+ */
+const reminderBatchOf = (notification: NotificationItem): string | null => {
+  const { data, sourceId, sourceType } = notification;
+  const isMultiBatch =
+    data?.__typename === 'ExpiryReminderNotificationData' && data.isMultiBatch;
+  return isMultiBatch && sourceType === NotificationSourceType.PantryItemBatch
+    ? sourceId ?? null
+    : null;
+};
+
+const wasteReasonOf = (notification: NotificationItem): WasteReason => {
+  const { expiresOn } = notification;
+  return expiresOn && daysUntilExpiry(expiresOn, todayKey()) < 0
+    ? WasteReason.Expired
+    : WasteReason.Other;
 };
 
 interface NotificationActionHandlerProps {
@@ -53,6 +98,7 @@ export const NotificationActionHandler: React.FC<
     useState<NotificationItem | null>(null);
   const { syncMarkAction } = useExpirationNotificationSync();
   const { syncMarkAsRead } = useNotificationSync();
+  const { finishStock } = useFinishStock();
   const { toPantryMain, toShoppingListMain, toNotifications } =
     useAppNavigation();
   const setHomeAndPantry = useAppStore(state => state.setHomeAndPantry);
@@ -115,13 +161,34 @@ export const NotificationActionHandler: React.FC<
     setSelectedExpirationNotification({ ...notification, ...enrichment });
   };
 
+  // The answer is recorded on the reminder only once the stock has taken it.
+  const recordOutcome = async (
+    notification: NotificationItem,
+    reminderId: string,
+    action: ExpirationAction,
+  ) => {
+    const purpose = purposeOf(action);
+    const { pantryItemId } = notification;
+    if (purpose && pantryItemId) {
+      const applied = await finishStock(pantryItemId, {
+        purpose,
+        batchId: reminderBatchOf(notification),
+        ...(purpose === UsagePurpose.Waste
+          ? { wasteReason: wasteReasonOf(notification) }
+          : {}),
+      });
+      if (!applied) return;
+    }
+    await syncMarkAction(notification.id, reminderId, action);
+  };
+
   const handleExpirationAction = (
     notification: NotificationItem,
     action: ExpirationAction,
   ) => {
     if (notification.expirationNotificationId) {
-      void syncMarkAction(
-        notification.id,
+      void recordOutcome(
+        notification,
         notification.expirationNotificationId,
         action,
       );

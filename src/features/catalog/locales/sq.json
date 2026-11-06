@@ -486,6 +486,7 @@
     "locating": "Po kërkojmë dyqane pranë teje…",
     "locationOff": "Vendndodhja është e çaktivizuar për {{appName}}. Aktivizoje te Cilësimet ose shkruaj një kod postar.",
     "locationFailed": "Nuk u kuptua dot ku ndodhesh. Shkruaj një kod postar.",
-    "hasPrices": "Ka çmime"
+    "hasPrices": "Ka çmime",
+    "takeBackHint": "E heq nga dyqanet e tua"
   }
 }

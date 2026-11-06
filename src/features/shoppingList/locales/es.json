@@ -334,7 +334,7 @@
     },
     "swipeActions": {
       "title": "Desliza para gestionar los artículos",
-      "subtitle": "Desliza un artículo a la izquierda para editarlo o a la derecha para eliminarlo"
+      "subtitle": "Desliza un artículo a la derecha para editarlo o a la izquierda para eliminarlo"
     },
     "checkbox": {
       "subtitle": "Toca la casilla para marcar este artículo como comprado"

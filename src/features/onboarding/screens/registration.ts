@@ -3,13 +3,13 @@ import {
   ReceiptReviewScreen,
   ReceiptScanScreen,
 } from '#features/receipts/screens/registration';
+import { StorePickerScreen } from '#features/catalog/screens/StorePickerScreen';
 import { topInsetWith } from '#navigation/layouts/TopInsetLayout';
 import { OnboardingReceiptExits } from '#features/onboarding/components/OnboardingReceiptExits';
 import { OnboardingSetupScreen } from './OnboardingSetupScreen';
 import { HouseholdStepScreen } from './HouseholdStepScreen';
 import { DietaryStepScreen } from './DietaryStepScreen';
 import { ReceiptStepScreen } from './ReceiptStepScreen';
-import { SelectPantryItems } from './SelectPantryItems';
 import { OnboardingCompleteScreen } from './OnboardingCompleteScreen';
 
 // The receipts feature's own screens, given onboarding's exits.
@@ -29,6 +29,8 @@ export const onboardingScreens = {
   Household: createNativeStackScreen({
     screen: HouseholdStepScreen,
     linking: 'onboarding/household',
+    // The first question: nothing is behind it to swipe to.
+    options: { gestureEnabled: false },
   }),
   Dietary: createNativeStackScreen({
     screen: DietaryStepScreen,
@@ -48,12 +50,14 @@ export const onboardingScreens = {
     linking: null,
     layout: receiptLayout,
   }),
-  Staples: createNativeStackScreen({
-    screen: SelectPantryItems,
-    linking: 'onboarding/staples',
-  }),
   OnboardingComplete: createNativeStackScreen({
     screen: OnboardingCompleteScreen,
     linking: 'onboarding/complete',
+  }),
+  // The root's picker is not mounted while onboarding runs.
+  OnboardingStores: createNativeStackScreen({
+    screen: StorePickerScreen,
+    initialParams: { several: true },
+    linking: null,
   }),
 };

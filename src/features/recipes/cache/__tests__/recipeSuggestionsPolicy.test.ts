@@ -12,6 +12,8 @@ const ranking = (...ids: string[]): RecipeSuggestionsQuery => ({
     edges: ids.map(id => ({
       __typename: 'RecipeSuggestionEdge',
       coverage: 50,
+      missingIngredientCount: 0,
+      usedIngredients: [],
       expiringStacks: [],
       node: {
         __typename: 'Recipe',

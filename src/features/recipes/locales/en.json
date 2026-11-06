@@ -96,6 +96,11 @@
     "unitsReadByDefault": "Measures were read as US customary units.",
     "pantryCoverage": "{{percent}}% of its ingredients in your pantry",
     "coveragePercent": "{{percent}}%",
+    "readyToCook": "Ready to cook",
+    "usesYourMoreToBuy_one": "Uses your {{item}} · {{count}} more to buy",
+    "usesYourMoreToBuy_other": "Uses your {{item}} · {{count}} more to buy",
+    "moreToBuy_one": "{{count}} more to buy",
+    "moreToBuy_other": "{{count}} more to buy",
     "usesExpiringSoon_one": "Uses {{names}} before it expires",
     "usesExpiringSoon_other": "Uses {{names}} before they expire",
     "needInspiration": "Need inspiration?",
@@ -113,6 +118,9 @@
     "discoverDescription": "Search for recipes or browse suggestions",
     "discoveryFailedTitle": "Recipes couldn't be loaded",
     "discoveryFailedDescription": "Pull down to try again.",
+    "restrictionsNoteWithout": "No {{what}}",
+    "restrictionsNoteMore": "+{{number}}",
+    "restrictionsNoteHint": "Opens your Dietary Profile",
     "noResultsFiltered_one": "No matches — {{count}} dietary filter is active",
     "noResultsFiltered_other": "No matches — {{count}} dietary filters are active",
     "clearFiltersAction": "Clear filters & search again",
@@ -177,6 +185,8 @@
     "dairyFree": "Dairy Free",
     "about": "About",
     "addAll": "Add All",
+    "addMissing_one": "Add {{count}} missing",
+    "addMissing_other": "Add {{count}} missing",
     "recipeFrom": "Recipe from {{source}}",
     "externalSource": "External Source",
     "viewOriginalRecipe": "View Original Recipe",
@@ -329,6 +339,10 @@
       "VEGAN": "Vegan",
       "VEGETARIAN": "Vegetarian",
       "WHOLE30": "Whole30"
+    },
+    "religiousDiet": {
+      "HALAL": "Halal",
+      "KOSHER": "Kosher"
     },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "Diabetic Friendly",

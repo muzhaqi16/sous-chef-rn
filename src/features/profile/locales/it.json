@@ -165,7 +165,9 @@
     },
     "avoidAllergy": "{{name}} (allergia)",
     "avoidIntolerance": "{{name}} (intolleranza)",
-    "addAvoidFailed": "Impossibile aggiungere questo alimento. Riprova."
+    "addAvoidFailed": "Impossibile aggiungere questo alimento. Riprova.",
+    "religiousDietTitle": "Dieta religiosa",
+    "religiousDietPrivate": "Privato: usato solo per i tuoi suggerimenti, le tue case non lo vedono."
   },
   "cookingPreferences": {
     "prepTimeRange": "Il tempo di preparazione deve essere tra {{min}} e {{max}} minuti",

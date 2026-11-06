@@ -82,13 +82,13 @@ optional:
   `ThemeEpochSentinel` for its themed descendants), and the scroll view's
   `bottomOffset` is the footer's measured height, so a focused field clears it.
   A primary action that must stay reachable while typing belongs in the
-  footer, as `OnBoardingWrapper`'s does.
+  footer, as `OnboardingStepScaffold`'s does.
 - **Back or close.** A pushed screen shows back; one presented from the bottom
   (modal or `slide_from_bottom` card) shows close in the same slot.
 - **Presets.** `SubScreen` is a pushed screen whose back returns to the previous
   screen; `FormScreen` a full-screen form (close + save); `DetailTemplate` a
   screen of card sections; `PaginatedHistoryScreen` a `SubScreen` over one
-  paginated list; `AuthWrapper` and `OnBoardingWrapper` the auth and onboarding
+  paginated list; `AuthWrapper` and `OnboardingStepScaffold` the auth and onboarding
   shells. A pushed screen whose back is plain `goBack` is `SubScreen`, never
   `Screen` with a hand-built `back`. A form sheet's header is `SheetHeader`
   (close, centred title, primary confirm); only templates render `Header`.

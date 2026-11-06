@@ -22,6 +22,7 @@ import {
   CreateShoppingListDocument,
   GetShoppingListsLiteDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { AddItemsToShoppingListFromRecipeDocument } from '../useRecipeShoppingList.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
@@ -32,6 +33,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: unknown) => unknown) =>
     selector({ setSelectedShoppingListId: jest.fn() }),
   useSelectedShoppingListId: jest.fn(() => undefined),
+  useSelectedHomeId: jest.fn(() => 'home-1'),
   useUser: jest.fn(() => ({ id: 'user-1', email: 'cook@example.com' })),
 }));
 
@@ -137,8 +139,11 @@ async function renderShopping(
     recipe = null,
     withoutRecipeId = false,
     listIds = ['sl-1'],
+    missing = [],
   }: {
     cache?: InMemoryCache;
+    /** The ingredients the server says the home's pantries lack. */
+    missing?: string[];
     recipe?: MaterializedRecipe | null;
     /** A recipe still loading: the screen has no id to hand the hook. */
     withoutRecipeId?: boolean;
@@ -151,7 +156,20 @@ async function renderShopping(
     (backendRecipe: MaterializedRecipe | null) =>
       useRecipeShoppingList({ recipeId, backendRecipe }),
     {
-      operationMocks: [shoppingListsMock(listIds), add],
+      operationMocks: [
+        shoppingListsMock(listIds),
+        add,
+        recordMock(RecipeMissingIngredientsDocument, {
+          data: {
+            recipe: {
+              id: 'recipe-1',
+              missingIngredientsConnection: {
+                edges: missing.map(id => ({ node: { id } })),
+              },
+            },
+          },
+        }).mock,
+      ],
       cache,
       initialProps: recipe,
     },
@@ -757,6 +775,31 @@ describe('useRecipeShoppingList — Add All', () => {
 
     expect(add.fired).toEqual([]);
     expect(toasts()).toEqual(failed(NOTHING_TO_ADD));
+  });
+});
+
+describe('useRecipeShoppingList — Add what is missing', () => {
+  it('sends only the ingredients the pantry lacks', async () => {
+    const add = queuedAdd();
+    const { result } = await renderShopping(add.mock, {
+      recipe: recipeWith([
+        ingredient({ id: 'ing-1', name: 'Flour' }),
+        ingredient({ id: 'ing-2', name: 'Eggs' }),
+        ingredient({ id: 'ing-3', name: 'Butter' }),
+      ]),
+      missing: ['ing-1', 'ing-3'],
+    });
+    expect(result.current.missingCount).toBe(2);
+
+    act(() => {
+      result.current.handleAddMissing();
+    });
+    await pickList(result);
+
+    expect(add.fired).toEqual([
+      batchOf([sentRow(1), sentRow(2, 'ing-3', 'Butter')]),
+    ]);
+    expect(marked(result)).toEqual(['ing-1', 'ing-3']);
   });
 });
 

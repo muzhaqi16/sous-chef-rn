@@ -4818,7 +4818,7 @@ What kind of evidence raised a dietary alert; the client writes the copy per kin
 """
 enum DietaryAlertSource {
   """
-  An allergen the product declares, or one found in an ingredient's name; matched is its name
+  An allergen or animal food the product declares, or one a name names; matched is its name
   """
   ALLERGEN
   """
@@ -4896,7 +4896,7 @@ type DietaryProfile {
   """
   proteinTarget: Int
   """
-  The religious diet the user follows; null when none is set. Private to the user, never shared with a home
+  The religious diet the user follows: the one restriction of that kind, null when none. Private to the user, never shared with a home
   """
   religiousDiet: ReligiousDiet
   """
@@ -4927,6 +4927,10 @@ type DietaryRestriction {
   """
   item: Item
   notes: String
+  """
+  A religious diet whose food rules the user follows; private to the user and never in Home.dietaryNeeds. Null for the other kinds
+  """
+  religiousDiet: ReligiousDiet
   severity: RestrictionSeverity!
   updatedAt: DateTime!
 }
@@ -7513,6 +7517,10 @@ order declared here, whatever order the request writes them in.
 input ItemOrderBy {
   createdAt: SortOrder
   name: SortOrder
+  """
+  An onboarding staple's place in the list, 1 first (ASC), by the recipes calling for it; an unranked item sorts last
+  """
+  onboardingRank: SortOrder
   popularity: SortOrder
   shelfLife: SortOrder
   updatedAt: SortOrder
@@ -12872,9 +12880,16 @@ type PantryItemSuggestion {
   Calendar days from today to the expiry date: 0 on the date itself (for EXPIRING_SOON source)
   """
   daysUntilExpiry: Int
-  """Default unit object for one-tap add"""
+  """The unit defaultUnitId names"""
   defaultUnit: SuggestionUnit
-  """Default unit ID for one-tap add (last used or item default)"""
+  """
+  The unit a one-tap add uses: a held stack's own unit (low stock, expiring
+  soon), the unit a removed stack used, else one the item is bought or
+  tracked in (its preferred tracking unit, else its oldest retail unit),
+  never a base measure such as a gram. Null when the item has none; an add
+  naming no unit then lands where resolveTrackingUnit puts it (the pantry's
+  unit for the item, the item's tracking or retail unit, else a count).
+  """
   defaultUnitId: ID
   """Expiry date (for EXPIRING_SOON source)"""
   expiresOn: LocalDate
@@ -14245,8 +14260,20 @@ type Query {
   External catalog recipes ranked by how many of the named ingredients they
   use, ignoring pantry staples such as water, salt and flour. Forward only:
   the ranking has no later page.
+  
+  Screened as recipeSuggestions is: everything the caller's dietary profile
+  holds, at any severity, leaves out a recipe not tagged with a held diet or
+  a stricter one, or one that breaks a restriction or the caller's religious
+  diet. A held copy is judged by its ingredients, a catalog card by its name
+  and ingredient names, and a card whose ingredients are unknown is left out
+  for anyone it could harm. While screening, up to twice first cards are
+  read, and the page holds fewer than first only when fewer pass.
   """
   catalogRecipesByIngredients(
+    """
+    Also screen the dietary restrictions shared in the caller's homes, as the caller's own are always screened; false when omitted
+    """
+    excludeDietaryConflicts: Boolean = false
     """How many recipes: 25 when omitted, at most 25"""
     first: Int
     """
@@ -14885,21 +14912,25 @@ type Query {
   recipes anyone can discover, and the caller's own and saved ones, come
   first when at least half their non-optional ingredients are held: best
   covered first, with stock about to expire lifting the recipes that use it.
-  The most cooked published recipes fill the rest of the page.
+  Then those using any held ingredient, fewest left to buy first; the most
+  cooked published recipes fill the rest of the page. Pantry basics (water,
+  salt, pepper, a cooking oil, sugar, flour) count toward none of it.
   
-  A recipe tagged with an intolerance the caller's dietary profile holds as
-  an allergy or an intolerance is left out, and so is one not tagged with a
-  diet held that way. That check reads recipe tags only; with
-  excludeDietaryConflicts, ingredients are screened too.
+  Everything the caller's dietary profile holds is honoured, at any severity
+  and without excludeDietaryConflicts. A recipe is left out when it is tagged
+  with an intolerance held, when it is not tagged with a diet held or a
+  stricter one (VEGAN keeps a VEGETARIAN), when any ingredient raises a
+  dietary alert, CONTAINS or MAY_CONTAIN, as RecipeIngredient.dietaryAlerts
+  judges it, or when its name names an animal food a held diet refuses. A
+  religious diet leaves out pork, blood and gelatin; HALAL alcohol too;
+  KOSHER shellfish, other animals that are not kosher, and meat with dairy.
   
-  With excludeDietaryConflicts, a recipe is also left out when any of its
-  ingredients raises a dietary alert, of any severity, CONTAINS or
-  MAY_CONTAIN, as RecipeIngredient.dietaryAlerts judges it. The
-  restrictions are the caller's own and those shared in homeId's home, or,
-  without homeId, in every home whose pantries are read; a caller in no home
-  is screened on their own. Up to 4 × (first + 1) candidates, at most 200,
-  are judged; the page holds fewer than first only when fewer of those
-  pass. No alert means no evidence, never safe.
+  With excludeDietaryConflicts, the restrictions shared in homeId's home,
+  or, without homeId, in every home whose pantries are read, are screened
+  the same way; a religious diet is never shared. While anything is
+  screened, up to 4 × (first + 1) candidates, at most 200, are judged; the
+  page holds fewer than first only when fewer of those pass. No alert means
+  no evidence, never safe.
   
   Forward only, via first. The ranking depends on the caller's pantry and
   day, so after, before and last are not offered.
@@ -14909,7 +14940,7 @@ type Query {
   """
   recipeSuggestions(
     """
-    Leave out recipes with an ingredient that raises any dietary alert for the restrictions in scope; false when omitted
+    Also screen the dietary restrictions shared in the homes read, as the caller's own are always screened; false when omitted
     """
     excludeDietaryConflicts: Boolean = false
     """How many suggestions: 20 when omitted, at most 100"""
@@ -15766,8 +15797,9 @@ type Recipe {
   latestRevision: RecipeRevision
   """
   How much of this recipe you can already make from the pantries in scope,
-  0-100: that home's with homeId, else every pantry you may view. Null when
-  unauthenticated.
+  0-100: the share of its non-optional ingredients held, pantry basics (water,
+  salt, pepper, a cooking oil, sugar, flour) left out. That home's pantries
+  with homeId, else every pantry you may view. Null when unauthenticated.
   """
   matchPercentage(
     """
@@ -15790,6 +15822,26 @@ type Recipe {
     """Page size, reading backward: default 20, at most 100"""
     last: Int
   ): MealPlanItemConnection!
+  """
+  The ingredients matchPercentage counts that the pantries in scope lack,
+  by the same matching and scope: non-optional, pantry basics left out, in
+  display order. What "add what's missing to the list" adds. Empty when
+  unauthenticated.
+  """
+  missingIngredientsConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """
+    Only this home's pantries, those you may view; refused unless you are an active member. Every pantry you may view when omitted
+    """
+    homeId: ID
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+  ): RecipeIngredientConnection!
   """The recipe's title."""
   name: String!
   """The author's free-text notes, or null when none."""
@@ -16741,8 +16793,8 @@ type RecipeSuggestionConnection {
 type RecipeSuggestionEdge {
   """
   The share of the recipe's non-optional ingredients the pantries in scope
-  hold, from 0 to 100: the figure Recipe.matchPercentage reports for the same
-  homeId.
+  hold, from 0 to 100, pantry basics left out: the figure
+  Recipe.matchPercentage reports for the same homeId.
   """
   coverage: Int!
   cursor: String!
@@ -16751,7 +16803,17 @@ type RecipeSuggestionEdge {
   the recipe would use; empty when today was not sent.
   """
   expiringStacks: [PantryItem!]!
+  """How many ingredients are left to buy: the length of missingIngredients"""
+  missingIngredientCount: Int!
+  """
+  The non-optional ingredients, pantry basics left out, the pantries in scope lack: what is left to buy
+  """
+  missingIngredients: [RecipeIngredient!]!
   node: Recipe!
+  """
+  The non-optional ingredients, pantry basics left out, the pantries in scope hold
+  """
+  usedIngredients: [RecipeIngredient!]!
 }
 
 input RecordPantryStockCheckInput {
@@ -17516,7 +17578,7 @@ Always include a __typename so the variant can be discriminated.
 union RestorePantryItemResult = ConflictError | DuplicatePantryItemError | ForbiddenError | NotFoundError | RestorePantryItemPayload | ValidationError
 
 """
-What one restriction restricts: exactly one of a diet, an intolerance, a health goal or a catalog item.
+What one restriction restricts: exactly one of a diet, an intolerance, a health goal, a catalog item or a religious diet.
 """
 input RestrictionKindInput @oneOf {
   """A diet the user follows, such as VEGAN"""
@@ -17530,6 +17592,12 @@ input RestrictionKindInput @oneOf {
   (ValidationError on kind.item); covers everything at or below that root and its same-name twins.
   """
   item: ID
+  """
+  A religious diet the user follows: its food rules screen suggestions and raise alerts for the
+  user alone, never shared with a home. A profile holds one; a second is refused (ValidationError
+  on kind.religiousDiet)
+  """
+  religiousDiet: ReligiousDiet
 }
 
 enum RestrictionSeverity {
@@ -17771,6 +17839,10 @@ type SharedDietaryRestriction {
   The catalog item avoided, when the restriction avoids one: the root of the item picked
   """
   item: Item
+  """
+  A religious diet: set only on an alert reaching its owner, since Home.dietaryNeeds never lists one
+  """
+  religiousDiet: ReligiousDiet
   """
   How strictly it holds, from ALLERGY (must avoid) to GOAL (trying to follow)
   """
@@ -18739,9 +18811,15 @@ Combines multiple sources: recently deleted, frequently added, and popular items
 type ShoppingListSuggestion {
   """Primary category name"""
   category: String
-  """Default unit object for one-tap add"""
+  """The unit defaultUnitId names"""
   defaultUnit: SuggestionUnit
-  """Default unit ID for one-tap add (last used or item default)"""
+  """
+  The unit a one-tap add uses: the unit the row last used (a removed line, a
+  running-low root), else one the item is bought or tracked in (its preferred
+  tracking unit, else its oldest retail unit), never a base measure such as
+  a gram. Null when the item has none; an add naming no unit then lands in
+  the item's preferred tracking unit, else in none.
+  """
   defaultUnitId: ID
   """
   Frequency count - times user added this item (for FREQUENTLY_ADDED source)
@@ -21029,7 +21107,9 @@ input UpdateDietaryProfileInput {
   Daily protein goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
   proteinTarget: Int
-  """A religious dietary requirement the user follows; null clears it"""
+  """
+  A religious dietary requirement the user follows, held as the profile's one religiousDiet restriction; null removes it
+  """
   religiousDiet: ReligiousDiet
   """
   Snacks a day the user plans for, a non-negative integer; 1 by default, null is refused
@@ -21511,6 +21591,27 @@ input UpdatePantryItemInput {
 }
 
 type UpdatePantryItemPayload {
+  """
+  The stack's batches after this write, read as pantryItemBatchesConnection
+  reads them: an expiresOn edit dates or clears every active batch, so a
+  client updates its batch list without a second request.
+  """
+  batchesConnection(
+    """Resume after this cursor: a previous page's endCursor"""
+    after: String
+    """Resume before this cursor: a previous page's startCursor"""
+    before: String
+    """Page size, reading forward: default 20, at most 100"""
+    first: Int
+    """Page size, reading backward: default 20, at most 100"""
+    last: Int
+    """
+    Sort order; newest first when omitted. Fields apply in declaration order, not request order
+    """
+    orderBy: PantryItemBatchOrderBy
+    """Only batches in this status"""
+    status: BatchStatus
+  ): PantryItemBatchConnection!
   """
   True when this call was a replay of a write already applied: it wrote nothing,
   and this payload is read as it stands now. The canonical, API-wide replay flag.

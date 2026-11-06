@@ -1123,3 +1123,57 @@ describe('useRecipeScreen', () => {
     });
   });
 });
+
+describe('the filter control and the pantry suggestions', () => {
+  // The file's fake clock would hold the mock's answer; these await it.
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  // A meal type filter: the search applies it, and the count includes it.
+  it('applies a filter to the search and counts it', async () => {
+    const search = searchAnswering(page([]));
+    const { result } = renderRecipeScreen([search.mock]);
+
+    act(() => {
+      result.current.applyFilters({
+        diet: [],
+        intolerances: [],
+        mealType: RecipeCategory.Breakfast,
+        maxReadyTime: null,
+      });
+    });
+    await act(async () => {
+      await result.current.handleTextSearch('eggs');
+    });
+
+    expect(search.fired.at(-1)).toMatchObject({
+      query: 'eggs',
+      filters: { category: RecipeCategory.Breakfast },
+    });
+    expect(result.current.activeFilterCount).toBe(1);
+  });
+
+  // The pantry suggestions follow the dietary profile, as their note says.
+  it('leaves the pantry suggestions to the dietary profile', () => {
+    mockUseDietaryProfile.mockReturnValue({
+      profile: { restrictions: [{ id: 'r1', diet: Diet.Vegetarian }] },
+      loading: false,
+    });
+    const { result } = renderRecipeScreen();
+
+    act(() => {
+      result.current.applyFilters({
+        diet: [Diet.Vegan],
+        intolerances: [],
+        mealType: RecipeCategory.Breakfast,
+        maxReadyTime: null,
+      });
+    });
+
+    expect(mockUseRecipeDiscovery).toHaveBeenLastCalledWith({
+      diets: [Diet.Vegetarian],
+      intolerances: [],
+    });
+  });
+});

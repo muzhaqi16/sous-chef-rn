@@ -24,6 +24,7 @@ import {
   recipeShoppingRows,
   type RecipeShoppingRow,
 } from '#features/recipes/utils/recipeShoppingRows';
+import { useRecipeMissingIngredients } from './useRecipeMissingIngredients';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 
 interface UseRecipeShoppingListOptions {
@@ -31,7 +32,8 @@ interface UseRecipeShoppingListOptions {
   backendRecipe: MaterializedRecipe | null | undefined;
 }
 
-type PendingAction = { type: 'all' };
+/** Every ingredient, or only those the selected home's pantries lack. */
+type PendingAction = { type: 'all' } | { type: 'missing' };
 
 /** What became of the rows sent: every row is added, updated or refused. */
 interface AddOutcome {
@@ -250,10 +252,16 @@ export function useRecipeShoppingList({
     return true;
   };
 
-  // Adds all ingredients to the picked list. Called after the list picker
-  // resolves. `listName` may be passed for newly-created lists not yet in
-  // the local array.
-  const addAllIngredientsToList = (listId: string, listName?: string) => {
+  const missing = useRecipeMissingIngredients(recipeId);
+
+  // Adds the action's ingredients to the picked list. Called after the list
+  // picker resolves. `listName` may be passed for newly-created lists not yet
+  // in the local array.
+  const addIngredientsToList = (
+    action: PendingAction,
+    listId: string,
+    listName?: string,
+  ) => {
     const resolvedName = listName ?? getShoppingListById(listId)?.name;
     if (!resolvedName) {
       toastService.error(t('recipes.shoppingListNotFound'));
@@ -264,16 +272,16 @@ export function useRecipeShoppingList({
     if (refusesRecipeOverLimit()) return;
     void executeWithLoadingState(
       async () => {
-        const rows =
-          backendRecipe && recipeId
-            ? recipeShoppingRows(
-                recipeId,
-                backendRecipe.ingredientsConnection.edges.map(
-                  edge => edge.node,
-                ),
-                { unnamed: t('recipes.unnamedIngredient') },
-              )
-            : [];
+        const ingredients = (
+          backendRecipe?.ingredientsConnection.edges ?? []
+        ).flatMap(({ node }) =>
+          action.type === 'all' || missing?.has(node.id) ? [node] : [],
+        );
+        const rows = recipeId
+          ? recipeShoppingRows(recipeId, ingredients, {
+              unnamed: t('recipes.unnamedIngredient'),
+            })
+          : [];
         if (rows.length === 0) {
           toastService.error(t('recipes.noIngredientsToAdd'));
           return;
@@ -326,11 +334,15 @@ export function useRecipeShoppingList({
     openListPicker({ type: 'all' });
   };
 
+  // Only what the pantry lacks, so a held ingredient is not bought twice.
+  const handleAddMissing = () => {
+    if (refusesRecipeOverLimit()) return;
+    openListPicker({ type: 'missing' });
+  };
+
   const handleListSelected = (listId: string) => {
     setListPickerVisible(false);
-    if (pendingAction?.type === 'all') {
-      addAllIngredientsToList(listId);
-    }
+    if (pendingAction) addIngredientsToList(pendingAction, listId);
     setPendingAction(null);
   };
 
@@ -360,8 +372,8 @@ export function useRecipeShoppingList({
         setSelectedShoppingListId(newList.id);
         setListPickerVisible(false);
 
-        if (currentPendingAction?.type === 'all') {
-          addAllIngredientsToList(newList.id, newList.name);
+        if (currentPendingAction) {
+          addIngredientsToList(currentPendingAction, newList.id, newList.name);
         }
         setPendingAction(null);
       },
@@ -390,6 +402,9 @@ export function useRecipeShoppingList({
 
     handleAddSingleIngredient,
     handleAddAll,
+    /** How many ingredients the pantry lacks; null until the server says. */
+    missingCount: missing?.size ?? null,
+    handleAddMissing,
     handleListSelected,
     handleCreateListAndAddIngredients,
     handleSheetDismiss,

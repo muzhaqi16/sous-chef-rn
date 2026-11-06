@@ -9,16 +9,19 @@ import {
 import { t } from '#/i18n';
 import {
   Diet,
+  ReligiousDiet,
   Intolerance,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { DietaryStepScreen } from '../DietaryStepScreen';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { STEP_PRIMARY } from '#/test-utils/onboardingStepScaffold';
 
 const mockSave = jest.fn().mockResolvedValue(true);
+let mockHeld: unknown = null;
 jest.mock('#features/onboarding/hooks/useDietaryIntake', () => ({
-  useDietaryIntake: () => ({ save: mockSave }),
+  useDietaryIntake: () => ({ save: mockSave, held: mockHeld }),
 }));
 
 let mockHomes = [{ id: 'home-1', name: 'Maya Home', shared: true }];
@@ -52,35 +55,18 @@ jest.mock('#features/profile/ui/AvoidFoodSheet', () => ({
 }));
 
 const mockNavigateToNextStep = jest.fn();
+const mockBackToSummary = jest.fn();
 jest.mock('../useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     navigateToPreviousStep: jest.fn(),
+    backToSummary: mockBackToSummary,
   }),
 }));
 
-jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({
-    children,
-    onSkip,
-    primaryAction,
-  }: {
-    children?: React.ReactNode;
-    onSkip?: () => void;
-    primaryAction?: React.ReactNode;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View>
-        {children}
-        {primaryAction}
-        <Pressable onPress={onSkip}>
-          <Text>Skip</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
+jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
+  require('#/test-utils/onboardingStepScaffold'),
+);
 
 const label = (key: Parameters<typeof t>[0]) => t(key);
 
@@ -98,11 +84,42 @@ beforeEach(() => {
 });
 
 async function continueStep(user: ReturnType<typeof userEvent.setup>) {
-  await user.press(screen.getByText(t('labels.continue')));
+  await user.press(screen.getByTestId(STEP_PRIMARY));
   await drainTimers();
   expect(mockSave).toHaveBeenCalled();
   return mockSave.mock.calls[0]?.[0];
 }
+
+describe('DietaryStepScreen — the primary button and the notices', () => {
+  it('reads "Nothing to avoid" with nothing picked', () => {
+    render(<DietaryStepScreen />);
+
+    expect(screen.getByTestId(STEP_PRIMARY)).toHaveTextContent(
+      'Nothing to avoid',
+    );
+  });
+
+  it('says how many choices it saves', async () => {
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('recipes.intolerance.PEANUT')));
+    await user.press(screen.getByText(label('labels.vegetarian')));
+
+    expect(screen.getByTestId(STEP_PRIMARY)).toHaveTextContent(
+      'Save 2 choices',
+    );
+  });
+
+  it('shows its notices after the choices', () => {
+    render(<DietaryStepScreen />);
+
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf(t('dietaryProfile.avoidTitle'))).toBeLessThan(
+      tree.indexOf(t('dietaryAlerts.checkLabel')),
+    );
+  });
+});
 
 describe('DietaryStepScreen', () => {
   it('lists the nine major US allergens first', () => {
@@ -125,13 +142,66 @@ describe('DietaryStepScreen', () => {
     expect(labels.slice(0, 9)).toEqual(firstNine.map(key => label(key)));
   });
 
+  it('starts with what was saved before a restart, and says what it showed', async () => {
+    const before = {
+      allergens: [
+        { value: Intolerance.Peanut, severity: RestrictionSeverity.Allergy },
+      ],
+      diets: [Diet.Vegetarian],
+      foods: [],
+      religiousDiet: null,
+    };
+    mockHeld = before;
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('labels.vegetarian')));
+    const saved = await continueStep(user);
+
+    // Vegetarian deselected: the save may remove it, since it was shown.
+    expect(saved).toEqual({ ...before, diets: [] });
+    expect(mockSave.mock.calls[0]?.[1]).toEqual(before);
+    mockHeld = null;
+  });
+
+  it('saves a private religious diet beside a diet', async () => {
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('labels.vegetarian')));
+    await user.press(screen.getByText(label('recipes.religiousDiet.KOSHER')));
+    const saved = await continueStep(user);
+
+    expect(saved.diets).toEqual([Diet.Vegetarian]);
+    expect(saved.religiousDiet).toBe(ReligiousDiet.Kosher);
+    expect(
+      screen.getByText(label('dietaryProfile.religiousDietPrivate')),
+    ).toBeTruthy();
+  });
+
+  it('clears the religious diet on a second tap', async () => {
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('recipes.religiousDiet.HALAL')));
+    await user.press(screen.getByText(label('recipes.religiousDiet.HALAL')));
+    const saved = await continueStep(user);
+
+    expect(saved.religiousDiet).toBeNull();
+  });
+
   it('starts with nothing selected', async () => {
     const user = userEvent.setup();
     render(<DietaryStepScreen />);
 
     const saved = await continueStep(user);
 
-    expect(saved).toEqual({ allergens: [], diet: null, foods: [] });
+    expect(saved).toEqual({
+      allergens: [],
+      diets: [],
+      foods: [],
+      religiousDiet: null,
+    });
   });
 
   it('saves peanuts as an allergy', async () => {
@@ -167,15 +237,16 @@ describe('DietaryStepScreen', () => {
     ]);
   });
 
-  it('keeps one diet: a second tap replaces the first', async () => {
+  it('keeps one animal-food diet, with an eating style beside it', async () => {
     const user = userEvent.setup();
     render(<DietaryStepScreen />);
 
     await user.press(screen.getByText(label('labels.vegetarian')));
+    await user.press(screen.getByText(label('recipes.diet.KETO')));
     await user.press(screen.getByText(label('labels.vegan')));
     const saved = await continueStep(user);
 
-    expect(saved.diet).toBe(Diet.Vegan);
+    expect(saved.diets).toEqual([Diet.Keto, Diet.Vegan]);
   });
 
   it('adds a food from the avoid sheet, with the severity it chose', async () => {
@@ -249,5 +320,26 @@ describe('DietaryStepScreen', () => {
     await drainTimers();
     expect(screen.getByText(t('onBoarding.dietarySaveFailed'))).toBeTruthy();
     expect(mockNavigateToNextStep).not.toHaveBeenCalled();
+  });
+
+  describe('opened from the completion summary', () => {
+    const fromSummary = { params: { returnTo: 'OnboardingComplete' as const } };
+
+    it('saves, then returns to the summary', async () => {
+      const user = userEvent.setup();
+      render(<DietaryStepScreen route={fromSummary} />);
+
+      await user.press(screen.getByTestId(STEP_PRIMARY));
+
+      expect(mockSave).toHaveBeenCalled();
+      expect(mockBackToSummary).toHaveBeenCalledTimes(1);
+      expect(mockNavigateToNextStep).not.toHaveBeenCalled();
+    });
+
+    it('offers no Skip, since the answer is only being changed', () => {
+      render(<DietaryStepScreen route={fromSummary} />);
+
+      expect(screen.queryByText('Skip')).toBeNull();
+    });
   });
 });

@@ -16,9 +16,9 @@ import {
   type SearchOutcome,
 } from '#features/recipes/hooks/useRecipeSearch';
 import type { IconName } from '#components/atoms/Icon';
-import type { Diet, Intolerance } from '#/graphql/generated/schemaTypes';
+import type { Intolerance } from '#/graphql/generated/schemaTypes';
 import type { RecipeFilters } from '#features/recipes/utils/recipeFilterOptions';
-import { isLifestyleDiet } from '#domain/dietary';
+import { oneDietPerGroup } from '#domain/dietary';
 import {
   MAX_CATALOG_INGREDIENTS,
   acceptedIngredientNames,
@@ -64,17 +64,11 @@ export function useRecipeScreen() {
     fetchPolicy: 'cache-first',
   });
 
-  // The profile's diets: at most one lifestyle diet (the first) plus every
-  // constraint diet. Discovery and the search filters' seed share them, so the
-  // two agree.
-  const profileDiets = (dietaryProfile?.restrictions ?? []).flatMap(r =>
-    r.diet ? [r.diet] : [],
+  // The profile's diets, one of each group. Discovery and the search filters'
+  // seed share them, so the two agree.
+  const reconciledDiets = oneDietPerGroup(
+    (dietaryProfile?.restrictions ?? []).flatMap(r => (r.diet ? [r.diet] : [])),
   );
-  const firstLifestyleDiet = profileDiets.find(isLifestyleDiet);
-  const reconciledDiets: Diet[] = [
-    ...(firstLifestyleDiet ? [firstLifestyleDiet] : []),
-    ...profileDiets.filter(diet => !isLifestyleDiet(diet)),
-  ];
   const profileIntolerances: Intolerance[] = (
     dietaryProfile?.restrictions ?? []
   ).flatMap(r => (r.intolerance ? [r.intolerance] : []));

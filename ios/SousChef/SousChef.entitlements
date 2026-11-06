@@ -7,6 +7,7 @@
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:app.souschef.dev</string>
+		<string>webcredentials:app.souschef.dev</string>
 	</array>
 </dict>
 </plist>

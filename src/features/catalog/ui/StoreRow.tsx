@@ -23,6 +23,8 @@ interface StoreRowProps {
   markAdded?: boolean;
   trailing?: React.ReactNode;
   onPress?: () => void;
+  /** What a tap does, when the row's text does not say. */
+  accessibilityHint?: string;
   /** Swipe actions; their testIDs take `testIDPrefix`. */
   swipe?: { left?: SwipeAction[]; right?: SwipeAction[]; testIDPrefix: string };
   testID?: string;
@@ -37,6 +39,7 @@ export const StoreRow: React.FC<StoreRowProps> = ({
   markAdded = false,
   trailing,
   onPress,
+  accessibilityHint = '',
   swipe,
   testID,
 }) => {
@@ -78,7 +81,7 @@ export const StoreRow: React.FC<StoreRowProps> = ({
       rightElement={trailing}
       // Swiped, the swipe's container is the row's one accessible element.
       accessibilityLabel={swipe ? undefined : label}
-      accessibilityHint=""
+      accessibilityHint={accessibilityHint}
       onPress={swipe ? undefined : onPress}
     />
   );

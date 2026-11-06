@@ -5,93 +5,253 @@ import { useTranslation } from '#/i18n';
 import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
+import { Loading } from '#components/molecules/Loading';
+import { DataStateView } from '#components/organisms/DataStateView';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
-import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
+import { useSelectedPantryId } from '#store/useAppStore';
+import {
+  OnboardingStepScaffold,
+  type StepPrimary,
+} from '#features/onboarding/components/OnboardingStepScaffold';
+import { StaplesPicker } from '#features/onboarding/components/StaplesPicker';
+import {
+  startOnboardingSetup,
+  useOnboardingSetup,
+} from '#features/onboarding/hooks/useOnboardingSetup';
+import { useStaplesSelection } from '#features/onboarding/hooks/useStaplesSelection';
+import {
+  useOnboardingProgressStore,
+  useOnboardingSetupStore,
+  type OnboardingSetupStatus,
+} from '#features/onboarding/store/onboardingProgressStore';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingNavigation } from './useOnboardingNavigation';
+import { useOnboardingInvites } from './useOnboardingInvites';
 
 /**
- * Fills the pantry from one receipt, or from staples instead. A cancelled scan,
- * a refused camera or a closed review comes back here, so staples stay offered.
+ * Fills the pantry from a receipt and from staples, on one screen. A cancelled
+ * scan, a refused camera or a closed review comes back here, staples intact.
  */
 export const ReceiptStepScreen = () => {
   const { t } = useTranslation();
   useScreenTransition('ReceiptStepScreen');
   const { navigateToNextStep, navigateToPreviousStep, navigateWithinStep } =
     useOnboardingNavigation();
+  const hasPantry = !!useSelectedPantryId();
+  const setupStatus = useOnboardingSetupStore(state => state.setup);
+  const setup = useOnboardingSetup();
+  const { refetch: refetchInvites } = useOnboardingInvites();
+  const onBack = () => navigateToPreviousStep('Receipt');
+  const onNext = () => navigateToNextStep('Receipt');
+
+  if (hasPantry) {
+    return (
+      <KitchenChoices
+        onBack={onBack}
+        onNext={onNext}
+        onScan={() => navigateWithinStep('OnboardingReceiptScan')}
+      />
+    );
+  }
+
+  return (
+    <OnboardingStepScaffold
+      title={t('onBoarding.receiptTitle')}
+      onBack={onBack}
+      onSkip={onNext}
+      primary={
+        setupStatus.kind === 'failed'
+          ? {
+              label: t('labels.tryAgain'),
+              onPress: () =>
+                startOnboardingSetup(setup.run, setupStatus.createMissingHome),
+            }
+          : undefined
+      }
+      testID={onboardingTestIDs.receiptScreen}
+    >
+      <SetupWait
+        status={setupStatus}
+        readState={setup.readState}
+        onRetryRead={() => {
+          // With no home, invitations decide what setup creates.
+          setup.retryRead();
+          void refetchInvites();
+        }}
+      />
+    </OnboardingStepScaffold>
+  );
+};
+
+/** The scan and the staples, once setup has left a pantry to fill. */
+const KitchenChoices = ({
+  onBack,
+  onNext,
+  onScan,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+  onScan: () => void;
+}) => {
+  const { t } = useTranslation();
+  const offline = useIsApiUnavailable();
   const receiptItems = useOnboardingProgressStore(state => state.receiptItems);
+  const staples = useStaplesSelection();
   const canScan = appConfig.features.receipts !== false;
   const added = receiptItems > 0;
 
-  const scan = () => navigateWithinStep('OnboardingReceiptScan');
-  const pickStaples = () => navigateWithinStep('Staples');
+  const primary: StepPrimary =
+    staples.hasChanges && !offline
+      ? {
+          label: staples.isFirstVisit
+            ? t(
+                staples.selectedCount === 1
+                  ? 'onBoarding.addItemSingular'
+                  : 'onBoarding.addItemPlural',
+                { count: staples.selectedCount },
+              )
+            : t('labels.saveChanges'),
+          // A refused staple is reported and left out; the step moves on.
+          onPress: () => {
+            void staples.save().then(onNext);
+          },
+          loading: staples.saving,
+        }
+      : { label: t('labels.continue'), onPress: onNext };
 
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={t('onBoarding.receiptTitle')}
-      subtitle={
+      question={
         canScan
           ? t('onBoarding.receiptSubtitle')
           : t('onBoarding.receiptStaplesOnlySubtitle')
       }
-      onBack={() => navigateToPreviousStep('Receipt')}
-      onSkip={() => navigateToNextStep('Receipt')}
-      primaryAction={
-        added ? (
-          <Button
-            title={t('labels.continue')}
-            onPress={() => navigateToNextStep('Receipt')}
-            variant="primary"
-          />
-        ) : canScan ? (
-          <Button
-            title={t('labels.scanReceipt')}
-            icon="receipt-outline"
-            onPress={scan}
-            variant="primary"
-            testID={onboardingTestIDs.receiptScan}
-          />
-        ) : (
-          <Button
-            title={t('onBoarding.receiptPickStaplesOnly')}
-            onPress={pickStaples}
-            variant="primary"
-            testID={onboardingTestIDs.receiptStaples}
-          />
-        )
-      }
+      onBack={onBack}
+      onSkip={onNext}
+      primary={primary}
       testID={onboardingTestIDs.receiptScreen}
     >
-      <View style={styles.body}>
-        {added ? (
-          <Text role="body" testID={onboardingTestIDs.receiptAdded}>
-            {t('onBoarding.receiptAdded', { count: receiptItems })}
+      {offline ? (
+        <Text
+          role="body"
+          tone="secondary"
+          align="center"
+          testID={onboardingTestIDs.receiptOffline}
+        >
+          {t('onBoarding.kitchenOffline')}
+        </Text>
+      ) : (
+        <View style={styles.body}>
+          {added ? (
+            <Text role="body" testID={onboardingTestIDs.receiptAdded}>
+              {t('onBoarding.receiptAdded', { count: receiptItems })}
+            </Text>
+          ) : null}
+          {canScan ? (
+            <Button
+              title={
+                added
+                  ? t('receipts.saved.scanAnother')
+                  : t('labels.scanReceipt')
+              }
+              icon="receipt-outline"
+              onPress={onScan}
+              variant="outline"
+              testID={onboardingTestIDs.receiptScan}
+            />
+          ) : null}
+          <StaplesSection staples={staples} />
+        </View>
+      )}
+    </OnboardingStepScaffold>
+  );
+};
+
+/** The staples list, or why it is not there yet. */
+const StaplesSection = ({
+  staples,
+}: {
+  staples: ReturnType<typeof useStaplesSelection>;
+}) => {
+  const { t } = useTranslation();
+  switch (staples.state) {
+    case 'loading':
+      return <Loading />;
+    case 'failed':
+      return (
+        <View style={styles.body}>
+          <Text role="error" tone="error" align="center">
+            {t('errors.loadItemsFailed')}
           </Text>
-        ) : null}
-        {added && canScan ? (
           <Button
-            title={t('receipts.saved.scanAnother')}
-            onPress={scan}
+            title={t('labels.tryAgain')}
+            onPress={staples.retry}
             variant="outline"
-            testID={onboardingTestIDs.receiptScan}
           />
-        ) : null}
-        {!added && canScan ? (
-          <Button
-            title={t('onBoarding.receiptPickStaples')}
-            onPress={pickStaples}
-            variant="outline"
-            testID={onboardingTestIDs.receiptStaples}
-          />
-        ) : null}
+        </View>
+      );
+    case 'unread':
+      // Unread, a held food would show unpicked and be added twice.
+      return <DataStateView state="error" onRetry={staples.retry} />;
+    case 'ready':
+      return (
+        <StaplesPicker
+          groups={staples.groups}
+          selectedCount={staples.selectedCount}
+          isMaxReached={staples.isMaxReached}
+          onToggle={staples.toggle}
+        />
+      );
+  }
+};
+
+/** The step before setup has left a pantry: still making it, or why not. */
+const SetupWait = ({
+  status,
+  readState,
+  onRetryRead,
+}: {
+  status: OnboardingSetupStatus;
+  readState: ReturnType<typeof useOnboardingSetup>['readState'];
+  onRetryRead: () => void;
+}) => {
+  const { t } = useTranslation();
+  if (status.kind === 'failed') {
+    return (
+      <View style={styles.body} testID={onboardingTestIDs.receiptSetupFailed}>
+        <Text role="bodyStrong" align="center">
+          {t('onBoarding.setupFailedTitle')}
+        </Text>
+        <Text role="body" tone="secondary" align="center">
+          {status.message}
+        </Text>
       </View>
-    </OnBoardingWrapper>
+    );
+  }
+  if (status.kind === 'owed') {
+    return (
+      <View style={styles.body}>
+        <DataStateView
+          state={readState === 'offline' ? 'offline' : 'error'}
+          onRetry={onRetryRead}
+        />
+        <Text role="body" tone="secondary" align="center">
+          {t('onBoarding.finishSetupLater')}
+        </Text>
+      </View>
+    );
+  }
+  return (
+    <View testID={onboardingTestIDs.receiptSetupRunning}>
+      <Loading message={t('onBoarding.settingUpTitle')} />
+    </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
   body: {
-    gap: theme.spacing.md,
+    gap: theme.spacing.lg,
   },
 }));

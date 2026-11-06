@@ -486,6 +486,7 @@
     "locating": "Finding stores near you…",
     "locationOff": "Location is off for {{appName}}. Turn it on in Settings, or enter a zip code.",
     "locationFailed": "Couldn't tell where you are. Enter a zip code instead.",
-    "hasPrices": "Has prices"
+    "hasPrices": "Has prices",
+    "takeBackHint": "Removes it from your stores"
   }
 }

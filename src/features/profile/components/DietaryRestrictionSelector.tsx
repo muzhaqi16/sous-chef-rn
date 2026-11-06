@@ -24,12 +24,13 @@ import {
   INTOLERANCE_OPTIONS,
   isLifestyleDiet,
   restrictionLabelKey,
+  withDietPicked,
 } from '#domain/dietary';
 import { executeWriteWithFinally } from '#/utils/finallyHelpers';
 import { logger } from '#/utils/environment';
 
-// Mutually-exclusive lifestyle diets (single-select) vs stackable constraints
-// (multi-select), derived from the shared classification.
+// Diets held one per group (an animal-food diet, an eating style) vs stackable
+// constraints, derived from the shared classification.
 const LIFESTYLE_DIETS = DIET_OPTIONS.filter(d => isLifestyleDiet(d.value));
 const CONSTRAINT_DIETS = DIET_OPTIONS.filter(d => !isLifestyleDiet(d.value));
 
@@ -47,15 +48,13 @@ type DietaryRestrictionSelectorProps = {
     severity: RestrictionSeverity,
   ) => Promise<boolean>;
   onRemove: (item: RestrictionSectionItem) => void;
-  /** Set the single lifestyle diet, removing any prior lifestyle row(s). The
-   *  `replaceIds` are the existing lifestyle restriction ids to clear once the
-   *  new diet is added. */
-  onSelectLifestyleDiet: (diet: Diet, replaceIds: string[]) => Promise<boolean>;
+  /** Adds the diets picked, then removes the rows of those dropped. */
+  onChangeDiets: (added: Diet[], removedIds: string[]) => Promise<boolean>;
 };
 
 export const DietaryRestrictionSelector: React.FC<
   DietaryRestrictionSelectorProps
-> = ({ existingRestrictions, onAdd, onRemove, onSelectLifestyleDiet }) => {
+> = ({ existingRestrictions, onAdd, onRemove, onChangeDiets }) => {
   const { t } = useTranslation();
 
   // Sheet visibility states
@@ -85,7 +84,9 @@ export const DietaryRestrictionSelector: React.FC<
   const existingLifestyleRows = existingRestrictions.filter(
     r => r.diet && isLifestyleDiet(r.diet),
   );
-  const currentLifestyleDiet = existingLifestyleRows[0]?.diet ?? null;
+  const currentLifestyleDiets = existingLifestyleRows.flatMap(r =>
+    r.diet ? [r.diet] : [],
+  );
   const existingConstraintRows = existingRestrictions.filter(
     r => r.diet && !isLifestyleDiet(r.diet),
   );
@@ -164,7 +165,7 @@ export const DietaryRestrictionSelector: React.FC<
 
   // Handle opening sheets
   const handleOpenDietSheet = () => {
-    setSelectedDietIds(currentLifestyleDiet ? [currentLifestyleDiet] : []);
+    setSelectedDietIds(currentLifestyleDiets);
     setDietSheetVisible(true);
   };
 
@@ -206,18 +207,28 @@ export const DietaryRestrictionSelector: React.FC<
   };
 
   // Save handlers
+  // A tap replaces only the diet of its group it rules out: Vegan replaces
+  // Vegetarian, Keto sits beside it.
+  const handleSelectDiets = (next: Diet[]) => {
+    const picked = next.find(diet => !selectedDietIds.includes(diet));
+    setSelectedDietIds(picked ? withDietPicked(selectedDietIds, picked) : next);
+  };
+
   const handleSaveDiet = () => {
-    const selected = selectedDietIds[0];
-    // No change (nothing picked, or re-picked the current diet) — just close.
-    if (!selected || selected === currentLifestyleDiet) {
+    const added = selectedDietIds.filter(
+      diet => !currentLifestyleDiets.includes(diet),
+    );
+    const removedIds = existingLifestyleRows.flatMap(r =>
+      r.diet && !selectedDietIds.includes(r.diet) ? [r.id] : [],
+    );
+    if (added.length === 0 && removedIds.length === 0) {
       setDietSheetVisible(false);
       return;
     }
 
     void executeWriteWithFinally(
       async () => {
-        const replaceIds = existingLifestyleRows.map(r => r.id);
-        const success = await onSelectLifestyleDiet(selected, replaceIds);
+        const success = await onChangeDiets(added, removedIds);
 
         if (success) {
           setSelectedDietIds([]);
@@ -333,7 +344,7 @@ export const DietaryRestrictionSelector: React.FC<
 
   return (
     <View style={styles.container}>
-      {/* Diet Section (single lifestyle diet) */}
+      {/* Diet Section: one animal-food diet and one eating style */}
       <RestrictionSection
         title={t('labels.diet')}
         existingItems={existingLifestyleItems}
@@ -378,17 +389,15 @@ export const DietaryRestrictionSelector: React.FC<
         emptyMessage={t('dietaryProfile.avoidEmpty')}
       />
 
-      {/* Diet Selection Sheet (single-select) */}
       <MultiSelectChipSheet
         visible={isDietSheetVisible}
         title={t('dietaryProfile.dietSheetTitle')}
         items={availableLifestyle}
         selectedItems={selectedDietIds}
-        onSelect={setSelectedDietIds}
+        onSelect={handleSelectDiets}
         onClose={() => setDietSheetVisible(false)}
         onDone={handleSaveDiet}
         loading={isSavingDiets}
-        singleSelect
       />
 
       {/* Dietary Constraints Selection Sheet */}

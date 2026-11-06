@@ -5,6 +5,7 @@ import { StyleSheet } from 'react-native-unistyles';
 import { fireEvent, render } from '@testing-library/react-native';
 import { usePanGesture } from 'react-native-gesture-handler';
 import { scheduleOnRN } from 'react-native-worklets';
+import { kitTestIDs } from '#components/testIDs';
 import { SpotlightCoachMark } from '../SpotlightCoachMark';
 
 jest.mock('#store/useAppStore', () => ({
@@ -38,6 +39,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
         stepIndex={0}
         totalSteps={3}
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
         onNext={jest.fn()}
       />,
     );
@@ -54,6 +56,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
         stepIndex={0}
         totalSteps={3}
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
         onNext={onNext}
       />,
     );
@@ -75,6 +78,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
         stepIndex={0}
         totalSteps={3}
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
         onNext={onNext}
       />,
     );
@@ -96,6 +100,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
         stepIndex={0}
         totalSteps={3}
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
         onNext={onNext}
       />,
     );
@@ -116,6 +121,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
         stepIndex={2}
         totalSteps={3}
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
       />,
     );
     const gesture = getLatestPanGesture();
@@ -130,6 +136,7 @@ describe('SpotlightCoachMark swipe-to-advance gesture', () => {
         stepIndex={0}
         totalSteps={3}
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
         onNext={jest.fn()}
         allowGesturePassthrough
       />,
@@ -151,6 +158,7 @@ describe('SpotlightCoachMark Skip', () => {
         stepIndex={stepIndex}
         totalSteps={totalSteps}
         onDismiss={onDismiss}
+        onClose={jest.fn()}
         onNext={jest.fn()}
       />,
     );
@@ -204,6 +212,7 @@ describe('SpotlightCoachMark degenerate-rect guard', () => {
         targetRect={{ x: 100, y: 200, width: 0, height: 50 }}
         title="X"
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
       />,
     );
     expect(toJSON()).toBeNull();
@@ -215,6 +224,7 @@ describe('SpotlightCoachMark degenerate-rect guard', () => {
         targetRect={{ x: 100, y: 200, width: 50, height: 0 }}
         title="X"
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
       />,
     );
     expect(toJSON()).toBeNull();
@@ -226,8 +236,32 @@ describe('SpotlightCoachMark degenerate-rect guard', () => {
         targetRect={{ x: 100, y: 200, width: 50, height: 50 }}
         title="X"
         onDismiss={jest.fn()}
+        onClose={jest.fn()}
       />,
     );
     expect(toJSON()).not.toBeNull();
+  });
+});
+
+describe('SpotlightCoachMark outside the card', () => {
+  // A stray tap on the dim must not end a whole tour.
+  it('closes only this tip on a tap on the dim', () => {
+    const onDismiss = jest.fn();
+    const onClose = jest.fn();
+    const { getByTestId } = render(
+      <SpotlightCoachMark
+        targetRect={{ x: 8, y: 60, width: 160, height: 40 }}
+        title="Tap to manage homes"
+        stepIndex={1}
+        totalSteps={4}
+        onDismiss={onDismiss}
+        onClose={onClose}
+      />,
+    );
+
+    fireEvent.press(getByTestId(kitTestIDs.spotlightDim));
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+    expect(onDismiss).not.toHaveBeenCalled();
   });
 });

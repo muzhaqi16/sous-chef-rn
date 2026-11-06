@@ -334,7 +334,7 @@
     },
     "swipeActions": {
       "title": "Swipe to manage items",
-      "subtitle": "Swipe any item left to edit, or right to delete"
+      "subtitle": "Swipe an item right to edit it, or left to delete it"
     },
     "checkbox": {
       "subtitle": "Tap the checkbox to mark this item as purchased"
