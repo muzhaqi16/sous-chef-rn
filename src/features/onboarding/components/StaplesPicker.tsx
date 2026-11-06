@@ -40,7 +40,9 @@ export const StaplesPicker = ({
             style={styles.group}
             testID={onboardingTestIDs.staplesGroup(group.state)}
           >
-            <Text role="bodyStrong">{t(group.labelKey)}</Text>
+            <Text role="bodyStrong" align="center">
+              {t(group.labelKey)}
+            </Text>
             <View style={styles.chips}>
               {group.items.map(item => (
                 <AnimatedChip
@@ -50,6 +52,7 @@ export const StaplesPicker = ({
                   onPress={() => onToggle(item.id)}
                   disabled={!item.selected && isMaxReached}
                   imageUrl={item.imageUrl ?? undefined}
+                  reserveImageHeight
                 />
               ))}
             </View>
@@ -67,9 +70,12 @@ const styles = StyleSheet.create(theme => ({
   group: {
     gap: theme.spacing.sm,
   },
+  // Centred like the question and captions above, so a short last row sits
+  // in the middle rather than trailing off the left.
   chips: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: theme.spacing.sm,
   },
 }));
