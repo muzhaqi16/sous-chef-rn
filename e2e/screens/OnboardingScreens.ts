@@ -2,7 +2,6 @@
 
 import { BaseScreen } from './BaseScreen';
 import { onboardingTestIDs } from '../../src/features/onboarding/testIDs';
-import { kitTestIDs } from '../../src/components/testIDs';
 
 /**
  * Pending invitations with no home: create one's own, or none for now. Setup
@@ -38,7 +37,7 @@ export class DietaryStepScreen extends BaseScreen {
   }
 }
 
-/** The receipt step: scan a receipt, or pick staples instead. */
+/** The kitchen step: scan a receipt, and pick staples on the same screen. */
 export class ReceiptStepScreen extends BaseScreen {
   protected screenID = onboardingTestIDs.receiptScreen;
 
@@ -50,25 +49,6 @@ export class ReceiptStepScreen extends BaseScreen {
     await this.tapByID(onboardingTestIDs.receiptScan);
   }
 
-  async tapPickStaples() {
-    await this.tapByID(onboardingTestIDs.receiptStaples);
-  }
-}
-
-/** Staples, the receipt step's alternative: foods grouped by where they are kept. */
-export class SelectPantryItemsScreen extends BaseScreen {
-  protected screenID = onboardingTestIDs.selectPantryItemsScreen;
-
-  async tapSkip() {
-    await this.tapByID(onboardingTestIDs.skipButton(this.screenID));
-  }
-
-  async tapBack() {
-    await this.tapByID(kitTestIDs.headerBackButton);
-  }
-
-  // Item selection is AnimatedChip components with no testIDs — a test can
-  // assert the screen is present and skip.
 }
 
 /** The completion screen, the last. */

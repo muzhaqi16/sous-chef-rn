@@ -8,7 +8,7 @@ import {
   recordReachedStep,
   setupExpectsPantry,
   storedResumableStep,
-  useOnboardingProgressStore,
+  useOnboardingSetupStore,
   type ResumableOnboardingStep,
 } from '#features/onboarding/store/onboardingProgressStore';
 
@@ -43,7 +43,7 @@ export const ONBOARDING_STEPS: readonly OnboardingStep[] = [
     id: 'Receipt',
     numbered: true,
     shownWhen: ({ hasPantry }) => hasPantry,
-    subRoutes: ['OnboardingReceiptScan', 'OnboardingReceiptReview', 'Staples'],
+    subRoutes: ['OnboardingReceiptScan', 'OnboardingReceiptReview'],
   },
   {
     id: 'OnboardingComplete',
@@ -85,7 +85,7 @@ const isResumable = (id: OnboardingStepId): id is ResumableOnboardingStep =>
  * setup is still making counts, so the step total does not change under them.
  */
 export function useOnboardingStepContext(): OnboardingStepContext {
-  const setup = useOnboardingProgressStore(state => state.setup);
+  const setup = useOnboardingSetupStore(state => state.setup);
   return { hasPantry: !!useSelectedPantryId() || setupExpectsPantry(setup) };
 }
 
@@ -93,7 +93,7 @@ export function useOnboardingStepContext(): OnboardingStepContext {
 const currentStepContext = (): OnboardingStepContext => ({
   hasPantry:
     !!storeApi.getState().selectedPantryId ||
-    setupExpectsPantry(useOnboardingProgressStore.getState().setup),
+    setupExpectsPantry(useOnboardingSetupStore.getState().setup),
 });
 
 /**

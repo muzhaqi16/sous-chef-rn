@@ -10,7 +10,6 @@ import { OnboardingSetupScreen } from './OnboardingSetupScreen';
 import { HouseholdStepScreen } from './HouseholdStepScreen';
 import { DietaryStepScreen } from './DietaryStepScreen';
 import { ReceiptStepScreen } from './ReceiptStepScreen';
-import { SelectPantryItems } from './SelectPantryItems';
 import { OnboardingCompleteScreen } from './OnboardingCompleteScreen';
 
 // The receipts feature's own screens, given onboarding's exits.
@@ -50,10 +49,6 @@ export const onboardingScreens = {
     screen: ReceiptReviewScreen,
     linking: null,
     layout: receiptLayout,
-  }),
-  Staples: createNativeStackScreen({
-    screen: SelectPantryItems,
-    linking: 'onboarding/staples',
   }),
   OnboardingComplete: createNativeStackScreen({
     screen: OnboardingCompleteScreen,

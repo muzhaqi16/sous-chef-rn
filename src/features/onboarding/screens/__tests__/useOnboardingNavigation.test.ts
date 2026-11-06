@@ -10,6 +10,7 @@ import {
 import {
   initialOnboardingProgress,
   useOnboardingProgressStore,
+  useOnboardingSetupStore,
 } from '#features/onboarding/store/onboardingProgressStore';
 
 const mockDispatch = jest.fn();
@@ -33,6 +34,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockPantryId = 'pantry-1';
   useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
+  useOnboardingSetupStore.setState({ setup: { kind: 'reading' } });
 });
 
 describe('useOnboardingNavigation', () => {
@@ -115,7 +117,7 @@ describe('useOnboardingNavigation', () => {
     it('passes over the receipt step with no pantry to stock', () => {
       // Setup finished without a home: the user joins one by an invitation.
       mockPantryId = null;
-      useOnboardingProgressStore.setState({ setup: { kind: 'done' } });
+      useOnboardingSetupStore.setState({ setup: { kind: 'done' } });
       const { result } = renderHook(() => useOnboardingNavigation());
 
       act(() => {
@@ -132,7 +134,7 @@ describe('useOnboardingNavigation', () => {
 
     it('keeps the receipt step while setup is still making the pantry', () => {
       mockPantryId = null;
-      useOnboardingProgressStore.setState({
+      useOnboardingSetupStore.setState({
         setup: { kind: 'running', createMissingHome: true },
       });
       const { result } = renderHook(() => useOnboardingNavigation());
@@ -174,7 +176,7 @@ describe('useOnboardingNavigation', () => {
       const { result } = renderHook(() => useOnboardingNavigation());
 
       act(() => {
-        result.current.navigateToPreviousStep('Staples');
+        result.current.navigateToPreviousStep('OnboardingReceiptReview');
       });
 
       expect(mockDispatch).toHaveBeenCalledWith(
@@ -240,10 +242,10 @@ describe('the visible sequence', () => {
     ).toEqual({ step: 3, total: 3 });
   });
 
-  it("numbers a sub-route as its step, so staples reads the receipt step's number", () => {
+  it("numbers a sub-route as its step, so the scanner reads the receipt step's number", () => {
     const context = { hasPantry: true };
 
-    expect(onboardingProgress('Staples', context)).toEqual(
+    expect(onboardingProgress('OnboardingReceiptScan', context)).toEqual(
       onboardingProgress('Receipt', context),
     );
     expect(onboardingProgress('Receipt', context)).toEqual({
@@ -261,7 +263,7 @@ describe('the visible sequence', () => {
     });
 
     act(() => {
-      useOnboardingProgressStore.setState({
+      useOnboardingSetupStore.setState({
         setup: { kind: 'running', createMissingHome: true },
       });
     });

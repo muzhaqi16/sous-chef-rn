@@ -4,7 +4,7 @@ import {
   startOnboardingSetup,
   useOnboardingSetup,
 } from '#features/onboarding/hooks/useOnboardingSetup';
-import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
+import { useOnboardingSetupStore } from '#features/onboarding/store/onboardingProgressStore';
 import { unreadAccountState } from '#features/onboarding/utils/unreadAccountState';
 import { useOnboardingInvites } from './useOnboardingInvites';
 import { routesToResume } from './useOnboardingNavigation';
@@ -31,9 +31,7 @@ export const OnboardingSetupRunner = ({
     loading: invitesLoading,
     state: invitesState,
   } = useOnboardingInvites();
-  const setSetupStatus = useOnboardingProgressStore(
-    state => state.setSetupStatus,
-  );
+  const setSetupStatus = useOnboardingSetupStore(state => state.setSetupStatus);
   // React runs a mount effect twice in development: a second decision would
   // reopen the stack again, and setup itself runs once anyway.
   const decidedRef = useRef(false);
@@ -41,7 +39,7 @@ export const OnboardingSetupRunner = ({
   const reopen = useEffectEvent(() => {
     void routesToResume('Household').then(routes => {
       // Invitations are asked about first; their choice reopens here itself.
-      const { setup: status } = useOnboardingProgressStore.getState();
+      const { setup: status } = useOnboardingSetupStore.getState();
       if (routes.length > 1 && status.kind !== 'invited') {
         navigation.dispatch(
           CommonActions.reset({ index: routes.length - 1, routes }),

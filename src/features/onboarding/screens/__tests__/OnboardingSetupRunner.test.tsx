@@ -5,6 +5,7 @@ import type { OnboardingSetupOutcome } from '#features/onboarding/hooks/useOnboa
 import {
   initialOnboardingProgress,
   useOnboardingProgressStore,
+  useOnboardingSetupStore,
 } from '#features/onboarding/store/onboardingProgressStore';
 import type { DataState } from '#hooks/data/useDataState';
 import { OnboardingSetupRunner } from '../OnboardingSetupRunner';
@@ -71,6 +72,7 @@ const openedInvitations = () =>
 beforeEach(() => {
   jest.clearAllMocks();
   useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
+  useOnboardingSetupStore.setState({ setup: { kind: 'reading' } });
   mockSetup = { loading: false, hasHome: false, readState: 'empty' };
   mockInvites = [];
   mockInvitesState = 'empty';
@@ -84,7 +86,7 @@ describe('OnboardingSetupRunner', () => {
 
     expect(mockRun).toHaveBeenCalledTimes(1);
     expect(mockRun).toHaveBeenCalledWith({ createMissingHome: true });
-    expect(useOnboardingProgressStore.getState().setup).toEqual({
+    expect(useOnboardingSetupStore.getState().setup).toEqual({
       kind: 'done',
     });
     expect(mockDispatch).not.toHaveBeenCalled();
@@ -95,7 +97,7 @@ describe('OnboardingSetupRunner', () => {
     renderRunner();
     await settle({ runAnswers: false });
 
-    expect(useOnboardingProgressStore.getState().setup).toEqual({
+    expect(useOnboardingSetupStore.getState().setup).toEqual({
       kind: 'running',
       createMissingHome: true,
     });
@@ -107,7 +109,7 @@ describe('OnboardingSetupRunner', () => {
     await settle();
 
     expect(mockRun).not.toHaveBeenCalled();
-    expect(useOnboardingProgressStore.getState().setup).toEqual({
+    expect(useOnboardingSetupStore.getState().setup).toEqual({
       kind: 'reading',
     });
   });
@@ -129,7 +131,7 @@ describe('OnboardingSetupRunner', () => {
     renderRunner();
     await settle();
 
-    expect(useOnboardingProgressStore.getState().setup).toEqual({
+    expect(useOnboardingSetupStore.getState().setup).toEqual({
       kind: 'failed',
       message: 'Home limit',
       createMissingHome: true,
@@ -144,7 +146,7 @@ describe('OnboardingSetupRunner', () => {
 
       expect(openedInvitations()).toBe(true);
       expect(mockRun).not.toHaveBeenCalled();
-      expect(useOnboardingProgressStore.getState().setup).toEqual({
+      expect(useOnboardingSetupStore.getState().setup).toEqual({
         kind: 'invited',
       });
     });
@@ -177,7 +179,7 @@ describe('OnboardingSetupRunner', () => {
 
       expect(mockRun).not.toHaveBeenCalled();
       expect(mockSetOwed).toHaveBeenCalledWith(true);
-      expect(useOnboardingProgressStore.getState().setup).toEqual({
+      expect(useOnboardingSetupStore.getState().setup).toEqual({
         kind: 'owed',
       });
     });

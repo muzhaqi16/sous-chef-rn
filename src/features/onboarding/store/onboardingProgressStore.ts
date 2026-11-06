@@ -54,15 +54,12 @@ export interface OnboardingProgressState {
   stapleItems: number;
   /** The furthest question reached; null before the first. */
   reachedStep: ResumableOnboardingStep | null;
-  /** This launch's setup; never stored on the device. */
-  setup: OnboardingSetupStatus;
   recordCooksFor: (count: number) => void;
   recordDietarySaved: (saved: boolean) => void;
   recordReceiptItems: (added: number) => void;
   /** `added` falls when a return to the step takes staples out. */
   recordStapleItems: (added: number) => void;
   recordReachedStep: (step: ResumableOnboardingStep) => void;
-  setSetupStatus: (setup: OnboardingSetupStatus) => void;
 }
 
 const STEP_ORDER: readonly ResumableOnboardingStep[] = [
@@ -73,19 +70,13 @@ const STEP_ORDER: readonly ResumableOnboardingStep[] = [
 
 export const initialOnboardingProgress: Pick<
   OnboardingProgressState,
-  | 'cooksFor'
-  | 'dietarySaved'
-  | 'receiptItems'
-  | 'stapleItems'
-  | 'reachedStep'
-  | 'setup'
+  'cooksFor' | 'dietarySaved' | 'receiptItems' | 'stapleItems' | 'reachedStep'
 > = {
   cooksFor: null,
   dietarySaved: false,
   receiptItems: 0,
   stapleItems: 0,
   reachedStep: null,
-  setup: { kind: 'reading' },
 };
 
 export const useOnboardingProgressStore = create<OnboardingProgressState>()(
@@ -108,7 +99,6 @@ export const useOnboardingProgressStore = create<OnboardingProgressState>()(
             ? state
             : { reachedStep: step },
         ),
-      setSetupStatus: setup => set({ setup }),
     }),
     {
       name: 'sous-chef-onboarding-progress',
@@ -130,6 +120,23 @@ hydrateWhenStarted(useOnboardingProgressStore);
 
 registerSessionScopedStore('onboardingProgress', () =>
   useOnboardingProgressStore.setState({ ...initialOnboardingProgress }),
+);
+
+/**
+ * This launch's setup. A store apart from the progress, and never stored: a
+ * write to a persisted store before its device copy loads saves the defaults
+ * over it, and setup starts as the app opens.
+ */
+export const useOnboardingSetupStore = create<{
+  setup: OnboardingSetupStatus;
+  setSetupStatus: (setup: OnboardingSetupStatus) => void;
+}>()(set => ({
+  setup: { kind: 'reading' },
+  setSetupStatus: setup => set({ setup }),
+}));
+
+registerSessionScopedStore('onboardingSetup', () =>
+  useOnboardingSetupStore.setState({ setup: { kind: 'reading' } }),
 );
 
 /** The steps' writers. `useShallow`: the selector returns a fresh object. */

@@ -6,6 +6,7 @@ import type { OnboardingSetupOutcome } from '#features/onboarding/hooks/useOnboa
 import {
   initialOnboardingProgress,
   useOnboardingProgressStore,
+  useOnboardingSetupStore,
 } from '#features/onboarding/store/onboardingProgressStore';
 import { OnboardingSetupScreen } from '../OnboardingSetupScreen';
 
@@ -42,6 +43,7 @@ jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
 beforeEach(() => {
   jest.clearAllMocks();
   useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
+  useOnboardingSetupStore.setState({ setup: { kind: 'reading' } });
   // Never answers: the questions go on while setup runs.
   mockRun.mockReturnValue(new Promise(() => {}));
 });
@@ -62,7 +64,7 @@ describe('OnboardingSetupScreen', () => {
 
     expect(mockRun).toHaveBeenCalledWith({ createMissingHome: true });
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('OnboardingSetup');
-    expect(useOnboardingProgressStore.getState().setup).toEqual({
+    expect(useOnboardingSetupStore.getState().setup).toEqual({
       kind: 'running',
       createMissingHome: true,
     });

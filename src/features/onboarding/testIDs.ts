@@ -3,7 +3,6 @@
  * imports: Detox's Jest reads this by relative path, outside the aliases.
  */
 export const onboardingTestIDs = {
-  selectPantryItemsScreen: 'onboarding-select-pantry-items-screen',
   completeScreen: 'onboarding-complete-screen',
 
   /** `OnboardingStepScaffold`'s header buttons, under the step screen's id. */
@@ -33,11 +32,12 @@ export const onboardingTestIDs = {
   /** The receipt step: scan, staples instead, and how many a review added. */
   receiptScreen: 'onboarding-receipt-screen',
   receiptScan: 'onboarding-receipt-scan',
-  receiptStaples: 'onboarding-receipt-staples',
   receiptAdded: 'onboarding-receipt-added',
   /** The receipt step while setup has not left a pantry yet. */
   receiptSetupRunning: 'onboarding-receipt-setup-running',
   receiptSetupFailed: 'onboarding-receipt-setup-failed',
+  /** The receipt step offline: scanning and staples wait for a connection. */
+  receiptOffline: 'onboarding-receipt-offline',
   /** The completion screen's recipes, invite button and store offer. */
   payoff: 'onboarding-payoff',
   invite: 'onboarding-invite',

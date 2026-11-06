@@ -18,7 +18,7 @@ import {
 } from '#features/pantry/hooks/useCreatePantry';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
-import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
+import { useOnboardingSetupStore } from '#features/onboarding/store/onboardingProgressStore';
 import {
   useAppStore,
   useHasUnverifiedEmail,
@@ -143,7 +143,7 @@ export function startOnboardingSetup(
   run: ReturnType<typeof useOnboardingSetup>['run'],
   createMissingHome: boolean,
 ): void {
-  const { setSetupStatus } = useOnboardingProgressStore.getState();
+  const { setSetupStatus } = useOnboardingSetupStore.getState();
   setSetupStatus({ kind: 'running', createMissingHome });
   void run({ createMissingHome }).then(outcome => {
     setSetupStatus(
