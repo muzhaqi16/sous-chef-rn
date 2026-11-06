@@ -5,8 +5,8 @@ import { onboardingTestIDs } from '../../src/features/onboarding/testIDs';
 import { kitTestIDs } from '../../src/components/testIDs';
 
 /**
- * Setup: selects or creates the home, pantry and list, then replaces itself
- * with the first question. It stops only when invitations are pending.
+ * Pending invitations with no home: create one's own, or none for now. Setup
+ * otherwise runs beside the questions with no screen of its own.
  */
 export class OnboardingSetupScreen extends BaseScreen {
   protected screenID = onboardingTestIDs.setupScreen;

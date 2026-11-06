@@ -8,6 +8,9 @@ import {
   useOnboardingProgressStore,
 } from '#features/onboarding/store/onboardingProgressStore';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
+import type { OnboardingSetupOutcome } from '#features/onboarding/hooks/useOnboardingSetup';
+import type { DataState } from '#hooks/data/useDataState';
+import { useStore } from '#store';
 import { ReceiptStepScreen } from '../ReceiptStepScreen';
 
 const mockNavigateToNextStep = jest.fn();
@@ -24,9 +27,31 @@ jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
   require('#/test-utils/onboardingStepScaffold'),
 );
 
+const mockRun = jest.fn<
+  Promise<OnboardingSetupOutcome>,
+  [{ createMissingHome: boolean }]
+>();
+const mockRetryRead = jest.fn();
+let mockReadState: DataState = 'ready';
+jest.mock('#features/onboarding/hooks/useOnboardingSetup', () => ({
+  ...jest.requireActual('#features/onboarding/hooks/useOnboardingSetup'),
+  useOnboardingSetup: () => ({
+    run: mockRun,
+    readState: mockReadState,
+    retryRead: mockRetryRead,
+  }),
+}));
+const mockRefetchInvites = jest.fn();
+jest.mock('../useOnboardingInvites', () => ({
+  useOnboardingInvites: () => ({ refetch: mockRefetchInvites }),
+}));
+
 beforeEach(() => {
   jest.clearAllMocks();
   useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
+  useStore.setState({ selectedPantryId: 'pantry-1' });
+  mockReadState = 'ready';
+  mockRun.mockResolvedValue({ status: 'done' });
   delete appConfig.features.receipts;
 });
 
@@ -93,5 +118,69 @@ describe('ReceiptStepScreen', () => {
 
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('Receipt');
     expect(mockNavigateWithinStep).not.toHaveBeenCalled();
+  });
+
+  describe('before setup has made the pantry', () => {
+    beforeEach(() => {
+      useStore.setState({ selectedPantryId: null });
+    });
+
+    it('waits on setup, offering no scan yet', () => {
+      useOnboardingProgressStore.setState({
+        setup: { kind: 'running', createMissingHome: true },
+      });
+      render(<ReceiptStepScreen />);
+
+      expect(
+        screen.getByTestId(onboardingTestIDs.receiptSetupRunning),
+      ).toBeTruthy();
+      expect(screen.queryByText(t('labels.scanReceipt'))).toBeNull();
+    });
+
+    it('shows why setup failed, and tries again from here', async () => {
+      useOnboardingProgressStore.setState({
+        setup: {
+          kind: 'failed',
+          message: 'The server refused the home.',
+          createMissingHome: true,
+        },
+      });
+      const user = userEvent.setup();
+      render(<ReceiptStepScreen />);
+
+      expect(screen.getByText('The server refused the home.')).toBeTruthy();
+      await user.press(screen.getByText(t('labels.tryAgain')));
+
+      expect(mockRun).toHaveBeenCalledWith({ createMissingHome: true });
+      // The retry's outcome is recorded for the step to read.
+      expect(useOnboardingProgressStore.getState().setup).toEqual({
+        kind: 'done',
+      });
+    });
+
+    it('offers to read the account again when it could not be read', async () => {
+      useOnboardingProgressStore.setState({ setup: { kind: 'owed' } });
+      mockReadState = 'offline';
+      const user = userEvent.setup();
+      render(<ReceiptStepScreen />);
+
+      expect(screen.getByText(t('onBoarding.finishSetupLater'))).toBeTruthy();
+      await user.press(screen.getByText(t('labels.tryAgain')));
+
+      expect(mockRetryRead).toHaveBeenCalled();
+      expect(mockRefetchInvites).toHaveBeenCalled();
+    });
+
+    it('can still be skipped', async () => {
+      useOnboardingProgressStore.setState({
+        setup: { kind: 'running', createMissingHome: true },
+      });
+      const user = userEvent.setup();
+      render(<ReceiptStepScreen />);
+
+      await user.press(screen.getByText('Skip'));
+
+      expect(mockNavigateToNextStep).toHaveBeenCalledWith('Receipt');
+    });
   });
 });

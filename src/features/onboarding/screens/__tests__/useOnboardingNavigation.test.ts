@@ -3,6 +3,7 @@ import { CommonActions, StackActions } from '@react-navigation/native';
 import {
   onboardingProgress,
   useOnboardingNavigation,
+  useOnboardingStepContext,
   visibleOnboardingSteps,
   type OnboardingStep,
 } from '../useOnboardingNavigation';
@@ -112,7 +113,9 @@ describe('useOnboardingNavigation', () => {
     });
 
     it('passes over the receipt step with no pantry to stock', () => {
+      // Setup finished without a home: the user joins one by an invitation.
       mockPantryId = null;
+      useOnboardingProgressStore.setState({ setup: { kind: 'done' } });
       const { result } = renderHook(() => useOnboardingNavigation());
 
       act(() => {
@@ -124,6 +127,22 @@ describe('useOnboardingNavigation', () => {
           index: 0,
           routes: [{ name: 'OnboardingComplete' }],
         }),
+      );
+    });
+
+    it('keeps the receipt step while setup is still making the pantry', () => {
+      mockPantryId = null;
+      useOnboardingProgressStore.setState({
+        setup: { kind: 'running', createMissingHome: true },
+      });
+      const { result } = renderHook(() => useOnboardingNavigation());
+
+      act(() => {
+        result.current.navigateToNextStep('Dietary');
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.navigate('Receipt'),
       );
     });
 
@@ -229,6 +248,25 @@ describe('the visible sequence', () => {
     );
     expect(onboardingProgress('Receipt', context)).toEqual({
       step: 3,
+      total: 3,
+    });
+  });
+
+  it('reads "of 3" before setup has made the pantry', () => {
+    mockPantryId = null;
+    const reading = renderHook(() => useOnboardingStepContext());
+    expect(onboardingProgress('Household', reading.result.current)).toEqual({
+      step: 1,
+      total: 3,
+    });
+
+    act(() => {
+      useOnboardingProgressStore.setState({
+        setup: { kind: 'running', createMissingHome: true },
+      });
+    });
+    expect(onboardingProgress('Dietary', reading.result.current)).toEqual({
+      step: 2,
       total: 3,
     });
   });

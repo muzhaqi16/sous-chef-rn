@@ -6,7 +6,9 @@ import { logger } from '#/utils/environment';
 import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
 import {
   recordReachedStep,
+  setupExpectsPantry,
   storedResumableStep,
+  useOnboardingProgressStore,
   type ResumableOnboardingStep,
 } from '#features/onboarding/store/onboardingProgressStore';
 
@@ -78,9 +80,37 @@ export function onboardingProgress(
 const isResumable = (id: OnboardingStepId): id is ResumableOnboardingStep =>
   id === 'Household' || id === 'Dietary' || id === 'Receipt';
 
-/** What decides which steps this user sees, read from the session. */
+/**
+ * What decides which steps this user sees, read from the session. A pantry
+ * setup is still making counts, so the step total does not change under them.
+ */
 export function useOnboardingStepContext(): OnboardingStepContext {
-  return { hasPantry: !!useSelectedPantryId() };
+  const setup = useOnboardingProgressStore(state => state.setup);
+  return { hasPantry: !!useSelectedPantryId() || setupExpectsPantry(setup) };
+}
+
+/** The same, read outside React at the moment of a navigation. */
+const currentStepContext = (): OnboardingStepContext => ({
+  hasPantry:
+    !!storeApi.getState().selectedPantryId ||
+    setupExpectsPantry(useOnboardingProgressStore.getState().setup),
+});
+
+/**
+ * The questions from `first` up to the furthest reached before a restart, so
+ * the stack reopens there with the earlier ones behind it for Back.
+ */
+export async function routesToResume(
+  first: OnboardingStepId,
+): Promise<{ name: OnboardingStepId }[]> {
+  const resume = await storedResumableStep();
+  const live = visibleOnboardingSteps(currentStepContext());
+  const from = live.findIndex(step => step.id === first);
+  const resumeIndex = resume ? live.findIndex(step => step.id === resume) : -1;
+  return live
+    .slice(from, Math.max(resumeIndex, from) + 1)
+    .filter(step => step.numbered)
+    .map(step => ({ name: step.id }));
 }
 
 export function useOnboardingNavigation() {
@@ -110,21 +140,9 @@ export function useOnboardingNavigation() {
         CommonActions.reset({ index: 0, routes: [{ name: next.id }] }),
       );
     } else if (currentScreen === 'OnboardingSetup') {
-      // After a restart, reopen at the furthest question reached, with the
-      // ones before it behind it for Back.
-      void storedResumableStep().then(resume => {
-        // Read now: setup has just made the pantry this render did not see.
-        const live = visibleOnboardingSteps({
-          hasPantry: !!storeApi.getState().selectedPantryId,
-        });
-        const from = live.findIndex(step => step.id === next.id);
-        const resumeIndex = resume
-          ? live.findIndex(step => step.id === resume)
-          : -1;
-        const routes = live
-          .slice(from, Math.max(resumeIndex, from) + 1)
-          .filter(step => step.numbered)
-          .map(step => ({ name: step.id }));
+      // The invitations' choice is made: on to the questions, reopening at
+      // the furthest one reached before a restart.
+      void routesToResume(next.id).then(routes => {
         navigation.dispatch(
           routes.length > 1
             ? CommonActions.reset({ index: routes.length - 1, routes })

@@ -18,6 +18,7 @@ import {
 } from '#features/pantry/hooks/useCreatePantry';
 import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateShoppingList';
 import { useShoppingListsLite } from '#features/shoppingList/hooks/useShoppingListsLite';
+import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
 import {
   useAppStore,
   useHasUnverifiedEmail,
@@ -122,8 +123,8 @@ async function performSetup(deps: SetupDeps): Promise<OnboardingSetupOutcome> {
   return { status: 'done' };
 }
 
-// A launch that owes a setup restarts the stack at its setup screen, so that
-// screen and `OwedAccountSetup` both read no home: run apart, each creates one.
+// Onboarding's runner and `OwedAccountSetup` can both read no home at once:
+// run apart, each would create one.
 let setupInFlight: Promise<OnboardingSetupOutcome> | null = null;
 
 function setupOnce(deps: SetupDeps): Promise<OnboardingSetupOutcome> {
@@ -131,6 +132,26 @@ function setupOnce(deps: SetupDeps): Promise<OnboardingSetupOutcome> {
     setupInFlight = null;
   });
   return setupInFlight;
+}
+
+/**
+ * Starts setup and records how it stands, so a step that needs the pantry can
+ * wait on it. `run` is the caller's current one: it creates what that render
+ * found missing.
+ */
+export function startOnboardingSetup(
+  run: ReturnType<typeof useOnboardingSetup>['run'],
+  createMissingHome: boolean,
+): void {
+  const { setSetupStatus } = useOnboardingProgressStore.getState();
+  setSetupStatus({ kind: 'running', createMissingHome });
+  void run({ createMissingHome }).then(outcome => {
+    setSetupStatus(
+      outcome.status === 'done'
+        ? { kind: 'done' }
+        : { kind: 'failed', message: outcome.message, createMissingHome },
+    );
+  });
 }
 
 /**

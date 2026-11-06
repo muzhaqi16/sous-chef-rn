@@ -152,6 +152,25 @@ describe('HouseholdStepScreen — the greeting', () => {
   });
 });
 
+describe('HouseholdStepScreen — setup still running', () => {
+  it('is answered and saved before the home exists', async () => {
+    // Setup creates the home beside this question: nothing is selected yet.
+    useStore.setState({ selectedHomeId: null });
+    const user = userEvent.setup();
+    const { update } = await renderStep();
+
+    expect(screen.getByText('Welcome, Maya')).toBeTruthy();
+    expect(screen.queryByText("Maya's home")).toBeNull();
+    await user.press(
+      screen.getByTestId(onboardingTestIDs.householdChoice('two')),
+    );
+
+    await drainTimers();
+    expect(update.fired).toEqual([{ input: { cooksFor: 2 } }]);
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household');
+  });
+});
+
 describe('HouseholdStepScreen — answers already saved', () => {
   it('shows "Two of us" chosen when it was saved before a restart', async () => {
     await renderStep(queuedUpdate(), 2);

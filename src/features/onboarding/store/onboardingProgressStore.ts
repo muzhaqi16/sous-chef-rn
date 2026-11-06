@@ -9,6 +9,37 @@ import { registerSessionScopedStore } from '#store/sessionScopedStores';
 export type ResumableOnboardingStep = 'Household' | 'Dietary' | 'Receipt';
 
 /**
+ * Where creating the home, pantry and list stands while the questions are
+ * answered: `invited` waits on the user's choice, `owed` on a read of the
+ * account that failed, which `OwedAccountSetup` finishes.
+ */
+export type OnboardingSetupStatus =
+  | { kind: 'reading' }
+  | { kind: 'invited' }
+  | { kind: 'running'; createMissingHome: boolean }
+  | { kind: 'done' }
+  | { kind: 'failed'; message: string; createMissingHome: boolean }
+  | { kind: 'owed' };
+
+/**
+ * Whether setup will leave a pantry selected, so the kitchen step is counted
+ * before it exists. Unknown, it will: only a user who joins no home gets none.
+ */
+export const setupExpectsPantry = (setup: OnboardingSetupStatus): boolean => {
+  switch (setup.kind) {
+    case 'running':
+    case 'failed':
+      return setup.createMissingHome;
+    case 'invited':
+    case 'done':
+      return false;
+    case 'reading':
+    case 'owed':
+      return true;
+  }
+};
+
+/**
  * What this onboarding did that the account cannot tell afterwards: who the
  * user cooks for, the dietary needs saved, and items added to the pantry here,
  * not by another member or in an earlier session. A home and a list are read
@@ -23,12 +54,15 @@ export interface OnboardingProgressState {
   stapleItems: number;
   /** The furthest question reached; null before the first. */
   reachedStep: ResumableOnboardingStep | null;
+  /** This launch's setup; never stored on the device. */
+  setup: OnboardingSetupStatus;
   recordCooksFor: (count: number) => void;
   recordDietarySaved: (saved: boolean) => void;
   recordReceiptItems: (added: number) => void;
   /** `added` falls when a return to the step takes staples out. */
   recordStapleItems: (added: number) => void;
   recordReachedStep: (step: ResumableOnboardingStep) => void;
+  setSetupStatus: (setup: OnboardingSetupStatus) => void;
 }
 
 const STEP_ORDER: readonly ResumableOnboardingStep[] = [
@@ -39,13 +73,19 @@ const STEP_ORDER: readonly ResumableOnboardingStep[] = [
 
 export const initialOnboardingProgress: Pick<
   OnboardingProgressState,
-  'cooksFor' | 'dietarySaved' | 'receiptItems' | 'stapleItems' | 'reachedStep'
+  | 'cooksFor'
+  | 'dietarySaved'
+  | 'receiptItems'
+  | 'stapleItems'
+  | 'reachedStep'
+  | 'setup'
 > = {
   cooksFor: null,
   dietarySaved: false,
   receiptItems: 0,
   stapleItems: 0,
   reachedStep: null,
+  setup: { kind: 'reading' },
 };
 
 export const useOnboardingProgressStore = create<OnboardingProgressState>()(
@@ -68,6 +108,7 @@ export const useOnboardingProgressStore = create<OnboardingProgressState>()(
             ? state
             : { reachedStep: step },
         ),
+      setSetupStatus: setup => set({ setup }),
     }),
     {
       name: 'sous-chef-onboarding-progress',
