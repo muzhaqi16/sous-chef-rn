@@ -6,6 +6,10 @@ import {
   visibleOnboardingSteps,
   type OnboardingStep,
 } from '../useOnboardingNavigation';
+import {
+  initialOnboardingProgress,
+  useOnboardingProgressStore,
+} from '#features/onboarding/store/onboardingProgressStore';
 
 const mockDispatch = jest.fn();
 
@@ -27,20 +31,54 @@ jest.mock('#store/useAppStore', () => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockPantryId = 'pantry-1';
+  useOnboardingProgressStore.setState({ ...initialOnboardingProgress });
 });
 
 describe('useOnboardingNavigation', () => {
   describe('navigateToNextStep', () => {
-    it('replaces setup with the first question, so back never returns to it', () => {
+    it('replaces setup with the first question, so back never returns to it', async () => {
       const { result } = renderHook(() => useOnboardingNavigation());
 
-      act(() => {
+      // It first reads the stored progress, so the move follows a tick later.
+      await act(async () => {
         result.current.navigateToNextStep('OnboardingSetup');
       });
 
       expect(mockDispatch).toHaveBeenCalledWith(
         StackActions.replace('Household'),
       );
+    });
+
+    it('reopens at the furthest question reached, the ones before it behind it', async () => {
+      const { result } = renderHook(() => useOnboardingNavigation());
+      await act(async () => {
+        result.current.navigateToNextStep('Household');
+      });
+      mockDispatch.mockClear();
+
+      // The app restarts: setup runs again before the questions.
+      await act(async () => {
+        result.current.navigateToNextStep('OnboardingSetup');
+      });
+
+      expect(mockDispatch).toHaveBeenCalledWith(
+        CommonActions.reset({
+          index: 1,
+          routes: [{ name: 'Household' }, { name: 'Dietary' }],
+        }),
+      );
+    });
+
+    it('keeps the furthest question when the user goes back', async () => {
+      const { result } = renderHook(() => useOnboardingNavigation());
+      await act(async () => {
+        result.current.navigateToNextStep('Dietary');
+      });
+      await act(async () => {
+        result.current.navigateToNextStep('OnboardingSetup');
+      });
+
+      expect(useOnboardingProgressStore.getState().reachedStep).toBe('Receipt');
     });
 
     it('resets navigation stack when navigating to OnboardingComplete', () => {

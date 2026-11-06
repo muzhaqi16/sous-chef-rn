@@ -43,14 +43,15 @@ const LIFESTYLE_DIETS = DIET_OPTIONS.filter(option =>
 
 /**
  * Allergies, diets and foods to avoid, tapped, never typed except for the food
- * search. Nothing starts selected, and nothing is saved until Continue.
+ * search. Only what the profile already holds starts selected, and nothing
+ * is saved until Continue.
  */
 export const DietaryStepScreen = () => {
   const { t } = useTranslation();
   useScreenTransition('DietaryStepScreen');
   const { navigateToNextStep, navigateToPreviousStep } =
     useOnboardingNavigation();
-  const { save } = useDietaryIntake();
+  const { save, held } = useDietaryIntake();
   const { homes } = useDietarySharing();
   const [allergens, setAllergens] = useState<DietarySelection['allergens']>([]);
   const [diets, setDiets] = useState<Diet[]>([]);
@@ -58,6 +59,21 @@ export const DietaryStepScreen = () => {
   const [avoidSheetVisible, setAvoidSheetVisible] = useState(false);
   const [saving, setSaving] = useState(false);
   const [failed, setFailed] = useState(false);
+  // What was saved before (a return after a restart) starts selected, unless
+  // the user has already picked something.
+  const [shown, setShown] = useState<DietarySelection | null>(null);
+  if (
+    held &&
+    !shown &&
+    allergens.length === 0 &&
+    diets.length === 0 &&
+    foods.length === 0
+  ) {
+    setShown(held);
+    setAllergens(held.allergens);
+    setDiets(held.diets);
+    setFoods(held.foods);
+  }
 
   const toggleAllergen = (value: Intolerance) =>
     setAllergens(current =>
@@ -75,7 +91,7 @@ export const DietaryStepScreen = () => {
   const handleContinue = async () => {
     setSaving(true);
     setFailed(false);
-    const saved = await save({ allergens, diets, foods });
+    const saved = await save({ allergens, diets, foods }, shown);
     setSaving(false);
     if (saved) navigateToNextStep('Dietary');
     else setFailed(true);

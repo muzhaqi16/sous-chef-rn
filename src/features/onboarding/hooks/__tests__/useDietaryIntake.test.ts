@@ -23,6 +23,7 @@ const mockRemove = jest.fn().mockResolvedValue(true);
 jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
   useDietaryProfile: () => ({
     profile: { restrictions: mockRestrictions },
+    editableProfile: { restrictions: mockRestrictions },
     addDietaryRestriction: mockAdd,
     removeDietaryRestriction: mockRemove,
   }),
@@ -53,10 +54,11 @@ beforeEach(() => {
 async function save(
   result: { current: ReturnType<typeof useDietaryIntake> },
   selection: DietarySelection,
+  shown: DietarySelection | null = null,
 ) {
   let ok = false;
   await act(async () => {
-    ok = await result.current.save(selection);
+    ok = await result.current.save(selection, shown);
   });
   return ok;
 }
@@ -189,6 +191,22 @@ describe('useDietaryIntake', () => {
     expect(mockRemove).toHaveBeenCalledTimes(1);
     expect(mockRemove).toHaveBeenCalledWith('r-sesame');
     expect(useOnboardingProgressStore.getState().dietarySaved).toBe(false);
+  });
+
+  it('removes a saved answer the step showed and the user deselected', async () => {
+    mockRestrictions = [
+      held('r-veg', { diet: Diet.Vegetarian }, RestrictionSeverity.Preference),
+      held('r-goal', { diet: Diet.GlutenFree }, RestrictionSeverity.Preference),
+    ];
+    const { result } = renderHook(() => useDietaryIntake());
+    const shown = result.current.held;
+    expect(shown?.diets).toEqual([Diet.Vegetarian]);
+
+    await save(result, NONE, shown);
+
+    // The constraint was never shown, so it stays.
+    expect(mockRemove).toHaveBeenCalledTimes(1);
+    expect(mockRemove).toHaveBeenCalledWith('r-veg');
   });
 
   it('replaces its own allergy with an intolerance when switched', async () => {

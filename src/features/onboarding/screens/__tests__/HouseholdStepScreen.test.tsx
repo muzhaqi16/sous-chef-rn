@@ -46,12 +46,12 @@ jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
   },
 }));
 
-const profileMock = () =>
+const profileMock = (cooksFor: number | null = null) =>
   recordMock(GetDietaryProfileDocument, {
     data: {
       me: {
         id: 'user-1',
-        dietaryProfile: { id: 'dp-1', cooksFor: null, restrictions: [] },
+        dietaryProfile: { id: 'dp-1', cooksFor, restrictions: [] },
       },
     },
   });
@@ -68,16 +68,23 @@ const cachedCooksFor = (cache: ApolloCache) =>
     'DietaryProfile:dp-1'
   ]?.cooksFor;
 
-async function renderStep(update = queuedUpdate()) {
+async function renderStep(
+  update = queuedUpdate(),
+  savedCooksFor: number | null = null,
+) {
   const cache = makeCache();
   renderWithApollo(<HouseholdStepScreen />, {
     cache,
-    operationMocks: [profileMock().mock, update.mock],
+    operationMocks: [profileMock(savedCooksFor).mock, update.mock],
   });
   await drainTimers();
-  expect(cachedCooksFor(cache)).toBeNull();
+  expect(cachedCooksFor(cache)).toBe(savedCooksFor);
   return { cache, update };
 }
+
+const checked = (choice: 'one' | 'two' | 'family') =>
+  screen.getByTestId(onboardingTestIDs.householdChoice(choice)).props
+    .accessibilityState?.checked;
 
 const recordedCooksFor = () => useOnboardingProgressStore.getState().cooksFor;
 
@@ -103,6 +110,24 @@ beforeEach(() => {
 });
 
 afterEach(() => useStore.setState({ user: null }));
+
+describe('HouseholdStepScreen — answers already saved', () => {
+  it('shows "Two of us" chosen when it was saved before a restart', async () => {
+    await renderStep(queuedUpdate(), 2);
+
+    expect(checked('two')).toBe(true);
+    expect(checked('one')).toBe(false);
+  });
+
+  it('reopens a saved family with its count', async () => {
+    await renderStep(queuedUpdate(), 5);
+
+    expect(checked('family')).toBe(true);
+    expect(
+      screen.getByText(t('onBoarding.householdPeople', { count: 5 })),
+    ).toBeTruthy();
+  });
+});
 
 describe('HouseholdStepScreen', () => {
   it('answers "just me" in one tap, saves it to the profile and moves on', async () => {

@@ -6,6 +6,7 @@ import {
   type RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
 import { generateEntityId } from '#/utils/generateEntityId';
+import { isLifestyleDiet } from '#domain/dietary';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardingProgressStore';
 
@@ -59,14 +60,27 @@ function wantedOf(selection: DietarySelection): Map<string, Wanted> {
   return wanted;
 }
 
+type Allergen = DietarySelection['allergens'][number];
+
+const isAllergenSeverity = (
+  severity: RestrictionSeverity,
+): severity is Allergen['severity'] =>
+  severity === RestrictionSeverity.Allergy ||
+  severity === RestrictionSeverity.Intolerance;
+
 /**
  * Saves the dietary step's selection to the user's own profile on Continue:
- * adds only what the profile lacks, and removes what this step added and the
- * user has since deselected. Nothing the user had before is touched.
+ * adds only what the profile lacks, and removes what the user deselected of
+ * what this step added or showed them. A row the step never showed (a health
+ * goal, a constraint, a religious diet) is never touched.
  */
 export function useDietaryIntake() {
-  const { profile, addDietaryRestriction, removeDietaryRestriction } =
-    useDietaryProfile({ fetchPolicy: 'cache-first' });
+  const {
+    profile,
+    editableProfile,
+    addDietaryRestriction,
+    removeDietaryRestriction,
+  } = useDietaryProfile({ fetchPolicy: 'cache-first' });
   const { recordDietarySaved } = useRecordOnboardingProgress();
   // Keys this step added, with the id and severity sent: only these may be
   // undone. Before the profile exists on the device, no read lists them.
@@ -74,22 +88,52 @@ export function useDietaryIntake() {
     new Map<string, { id: string; severity: RestrictionSeverity }>(),
   );
 
-  /** Resolves false when a write was refused; what succeeded stays saved. */
-  const save = async (selection: DietarySelection): Promise<boolean> => {
+  const restrictions = profile?.restrictions ?? [];
+  /** What the profile already holds that the step shows; null until read. */
+  const held: DietarySelection | null = editableProfile
+    ? {
+        allergens: restrictions.flatMap(({ intolerance, severity }) =>
+          intolerance && isAllergenSeverity(severity)
+            ? [{ value: intolerance, severity }]
+            : [],
+        ),
+        diets: restrictions.flatMap(({ diet }) =>
+          diet && isLifestyleDiet(diet) ? [diet] : [],
+        ),
+        foods: restrictions.flatMap(({ item, severity }) =>
+          item ? [{ id: item.id, name: item.name, severity }] : [],
+        ),
+      }
+    : null;
+
+  /**
+   * Resolves false when a write was refused; what succeeded stays saved.
+   * `shown` is what the step showed as already saved: only those, and this
+   * step's own adds, may be removed.
+   */
+  const save = async (
+    selection: DietarySelection,
+    shown: DietarySelection | null = null,
+  ): Promise<boolean> => {
     const wanted = wantedOf(selection);
     const existing = new Map<
       string,
       { id: string; severity: RestrictionSeverity }
     >();
-    for (const restriction of profile?.restrictions ?? []) {
+    for (const restriction of restrictions) {
       const key = keyOf(restriction);
       if (key) existing.set(key, restriction);
     }
+    const removable = new Map(addedRef.current);
+    for (const key of shown ? wantedOf(shown).keys() : []) {
+      const row = existing.get(key);
+      if (row) removable.set(key, row);
+    }
 
     let ok = true;
-    for (const [key, added] of addedRef.current) {
-      if (wanted.get(key)?.severity === added.severity) continue;
-      const id = existing.get(key)?.id ?? added.id;
+    for (const [key, own] of removable) {
+      if (wanted.get(key)?.severity === own.severity) continue;
+      const id = existing.get(key)?.id ?? own.id;
       if (await removeDietaryRestriction(id)) {
         existing.delete(key);
         addedRef.current.delete(key);
@@ -122,5 +166,5 @@ export function useDietaryIntake() {
     return ok;
   };
 
-  return { save };
+  return { save, held };
 }

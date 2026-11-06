@@ -1,8 +1,14 @@
 import { CommonActions, StackActions } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
+import { storeApi } from '#store';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { logger } from '#/utils/environment';
 import type { OnboardingStackParams } from '#navigation/stacks/OnboardingStack';
+import {
+  recordReachedStep,
+  storedResumableStep,
+  type ResumableOnboardingStep,
+} from '#features/onboarding/store/onboardingProgressStore';
 
 /** An onboarding route. */
 export type OnboardingStepId = keyof OnboardingStackParams;
@@ -69,6 +75,9 @@ export function onboardingProgress(
   return index < 0 ? null : { step: index + 1, total: numbered.length };
 }
 
+const isResumable = (id: OnboardingStepId): id is ResumableOnboardingStep =>
+  id === 'Household' || id === 'Dietary' || id === 'Receipt';
+
 /** What decides which steps this user sees, read from the session. */
 export function useOnboardingStepContext(): OnboardingStepContext {
   return { hasPantry: !!useSelectedPantryId() };
@@ -92,6 +101,7 @@ export function useOnboardingNavigation() {
     if (currentIndex < 0) return;
     const next = steps[currentIndex + 1];
     if (!next) return;
+    if (isResumable(next.id)) void recordReachedStep(next.id);
 
     // The completion screen replaces the stack, so there is no going back;
     // nor is there to setup, which has nothing to show once done.
@@ -100,7 +110,27 @@ export function useOnboardingNavigation() {
         CommonActions.reset({ index: 0, routes: [{ name: next.id }] }),
       );
     } else if (currentScreen === 'OnboardingSetup') {
-      navigation.dispatch(StackActions.replace(next.id));
+      // After a restart, reopen at the furthest question reached, with the
+      // ones before it behind it for Back.
+      void storedResumableStep().then(resume => {
+        // Read now: setup has just made the pantry this render did not see.
+        const live = visibleOnboardingSteps({
+          hasPantry: !!storeApi.getState().selectedPantryId,
+        });
+        const from = live.findIndex(step => step.id === next.id);
+        const resumeIndex = resume
+          ? live.findIndex(step => step.id === resume)
+          : -1;
+        const routes = live
+          .slice(from, Math.max(resumeIndex, from) + 1)
+          .filter(step => step.numbered)
+          .map(step => ({ name: step.id }));
+        navigation.dispatch(
+          routes.length > 1
+            ? CommonActions.reset({ index: routes.length - 1, routes })
+            : StackActions.replace(next.id),
+        );
+      });
     } else {
       navigation.dispatch(CommonActions.navigate(next.id));
     }

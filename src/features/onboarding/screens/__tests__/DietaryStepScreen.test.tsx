@@ -17,8 +17,9 @@ import { DietaryStepScreen } from '../DietaryStepScreen';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockSave = jest.fn().mockResolvedValue(true);
+let mockHeld: unknown = null;
 jest.mock('#features/onboarding/hooks/useDietaryIntake', () => ({
-  useDietaryIntake: () => ({ save: mockSave }),
+  useDietaryIntake: () => ({ save: mockSave, held: mockHeld }),
 }));
 
 let mockHomes = [{ id: 'home-1', name: 'Maya Home', shared: true }];
@@ -123,6 +124,27 @@ describe('DietaryStepScreen', () => {
       .map(node => within(node).queryByText(/./)?.props.children)
       .filter((text): text is string => typeof text === 'string');
     expect(labels.slice(0, 9)).toEqual(firstNine.map(key => label(key)));
+  });
+
+  it('starts with what was saved before a restart, and says what it showed', async () => {
+    const before = {
+      allergens: [
+        { value: Intolerance.Peanut, severity: RestrictionSeverity.Allergy },
+      ],
+      diets: [Diet.Vegetarian],
+      foods: [],
+    };
+    mockHeld = before;
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('labels.vegetarian')));
+    const saved = await continueStep(user);
+
+    // Vegetarian deselected: the save may remove it, since it was shown.
+    expect(saved).toEqual({ ...before, diets: [] });
+    expect(mockSave.mock.calls[0]?.[1]).toEqual(before);
+    mockHeld = null;
   });
 
   it('starts with nothing selected', async () => {

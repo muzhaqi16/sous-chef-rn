@@ -21,11 +21,22 @@ export const HouseholdStepScreen = () => {
   const { t } = useTranslation();
   useScreenTransition('HouseholdStepScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
-  const { answer: saveAnswer } = useHouseholdAnswer();
+  const { answer: saveAnswer, saved } = useHouseholdAnswer();
   const [family, setFamily] = useState(false);
   const [familySize, setFamilySize] = useState(FAMILY_DEFAULT);
+  // A saved family count reopens the family answer once, when it arrives.
+  const [seededFromSaved, setSeededFromSaved] = useState(false);
+  if (!seededFromSaved && saved !== null) {
+    setSeededFromSaved(true);
+    if (saved >= FAMILY_MIN) {
+      setFamily(true);
+      setFamilySize(saved);
+    }
+  }
   // The count being saved: its row reads as chosen until the step moves on.
   const [saving, setSaving] = useState<number | null>(null);
+  // The row read as chosen: the one being saved, else the saved answer.
+  const chosen = saving ?? (family ? null : saved);
   // Back on this step, the question is open again.
   const isFocused = useIsScreenFocused();
   const [wasFocused, setWasFocused] = useState(isFocused);
@@ -67,7 +78,7 @@ export const HouseholdStepScreen = () => {
       <View>
         <RowCard>
           <RadioRow
-            selected={saving === 1}
+            selected={chosen === 1}
             disabled={saving !== null}
             onPress={() => {
               void answer(1);
@@ -80,7 +91,7 @@ export const HouseholdStepScreen = () => {
         </RowCard>
         <RowCard>
           <RadioRow
-            selected={saving === 2}
+            selected={chosen === 2}
             disabled={saving !== null}
             onPress={() => {
               void answer(2);
