@@ -6,7 +6,7 @@ export const onboardingTestIDs = {
   selectPantryItemsScreen: 'onboarding-select-pantry-items-screen',
   completeScreen: 'onboarding-complete-screen',
 
-  /** `OnBoardingWrapper`'s header buttons, under the step screen's id. */
+  /** `OnboardingStepScaffold`'s header buttons, under the step screen's id. */
   skipButton: (screenID: string) => `${screenID}-skip-button`,
   /** "Step 2 of 3", shown beside the progress bar. */
   stepNumber: 'onboarding-step-number',

@@ -5,7 +5,7 @@ import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
 import { shareUrl } from '#native/share';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
+import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { RecipePayoff } from '#features/onboarding/components/RecipePayoff';
 import { StoresOffer } from '#features/onboarding/components/StoresOffer';
 import { Button } from '#components/molecules/Button';
@@ -162,21 +162,18 @@ export const OnboardingCompleteScreen = () => {
   };
 
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={t('onBoarding.completeTitle')}
-      subtitle={
+      question={
         summary.homeAndPantry
           ? t('onBoarding.completeSubtitle')
           : t('onBoarding.readyToStart')
       }
-      primaryAction={
-        <Button
-          title={t('labels.getStarted')}
-          onPress={handleGetStarted}
-          variant="primary"
-          loading={isCompleting}
-        />
-      }
+      primary={{
+        label: t('labels.getStarted'),
+        onPress: handleGetStarted,
+        loading: isCompleting,
+      }}
       testID={onboardingTestIDs.completeScreen}
     >
       <View style={styles.container}>
@@ -237,7 +234,7 @@ export const OnboardingCompleteScreen = () => {
           </View>
         )}
       </View>
-    </OnBoardingWrapper>
+    </OnboardingStepScaffold>
   );
 };
 

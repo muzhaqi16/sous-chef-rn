@@ -94,31 +94,9 @@ jest.mock('#features/notifications/screens/useTurnOnPush', () => ({
   }),
 }));
 
-jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({
-    title,
-    subtitle,
-    children,
-    primaryAction,
-    testID,
-  }: {
-    title?: string;
-    subtitle?: string;
-    children?: React.ReactNode;
-    primaryAction?: React.ReactNode;
-    testID?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{title}</Text>
-        <Text>{subtitle}</Text>
-        {children}
-        {primaryAction}
-      </View>
-    );
-  },
-}));
+jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
+  require('#/test-utils/onboardingStepScaffold'),
+);
 
 const summaryOf = (done: Partial<OnboardingSummary>): void => {
   jest.mocked(useOnboardingSummary).mockReturnValue({

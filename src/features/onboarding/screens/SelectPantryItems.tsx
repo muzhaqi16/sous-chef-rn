@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import { Text } from '#components/atoms/Text';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
+import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { usePantryItemSelection } from '#features/pantry/hooks/usePantryItemSelection';
@@ -91,9 +91,9 @@ export const SelectPantryItems = () => {
   // still lands the pre-selection without discarding a tap.
   if ((loading && !hasLoaded) || (pantryLoading && !pantryHasLoaded)) {
     return (
-      <OnBoardingWrapper
+      <OnboardingStepScaffold
         title={t('onBoarding.stockPantryTitle')}
-        subtitle={t('onBoarding.stockPantrySubtitle')}
+        question={t('onBoarding.stockPantrySubtitle')}
         onBack={() => navigateToPreviousStep('Staples')}
         onSkip={() => navigateToNextStep('Staples')}
       >
@@ -102,15 +102,15 @@ export const SelectPantryItems = () => {
           showBrand={false}
           message={t('loading.loading')}
         />
-      </OnBoardingWrapper>
+      </OnboardingStepScaffold>
     );
   }
 
   if (failed) {
     return (
-      <OnBoardingWrapper
+      <OnboardingStepScaffold
         title={t('onBoarding.stockPantryTitle')}
-        subtitle={t('onBoarding.stockPantrySubtitle')}
+        question={t('onBoarding.stockPantrySubtitle')}
         onBack={() => navigateToPreviousStep('Staples')}
         onSkip={() => navigateToNextStep('Staples')}
       >
@@ -127,16 +127,16 @@ export const SelectPantryItems = () => {
             {t('auth.tryAgain')}
           </Button>
         </View>
-      </OnBoardingWrapper>
+      </OnboardingStepScaffold>
     );
   }
 
   // Unread, a held item would show as unpicked and be added a second time.
   if (pantryState === 'error' || pantryState === 'offline') {
     return (
-      <OnBoardingWrapper
+      <OnboardingStepScaffold
         title={t('onBoarding.stockPantryTitle')}
-        subtitle={t('onBoarding.stockPantrySubtitle')}
+        question={t('onBoarding.stockPantrySubtitle')}
         onBack={() => navigateToPreviousStep('Staples')}
         onSkip={() => navigateToNextStep('Staples')}
       >
@@ -146,7 +146,7 @@ export const SelectPantryItems = () => {
             void refetchPantry();
           }}
         />
-      </OnBoardingWrapper>
+      </OnboardingStepScaffold>
     );
   }
 
@@ -212,34 +212,29 @@ export const SelectPantryItems = () => {
   };
 
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={t('onBoarding.stockPantryTitle')}
-      subtitle={t('onBoarding.stockPantrySubtitleOptional')}
+      question={t('onBoarding.stockPantrySubtitleOptional')}
       onBack={() => navigateToPreviousStep('Staples')}
       onSkip={() => navigateToNextStep('Staples')}
-      primaryAction={
-        <Button
-          title={
-            isSaving
-              ? t('labels.saving')
-              : isFirstVisit
-              ? selectedItems.length === 0
-                ? t('labels.addItems')
-                : t(
-                    selectedItems.length === 1
-                      ? 'onBoarding.addItemSingular'
-                      : 'onBoarding.addItemPlural',
-                    { count: selectedItems.length },
-                  )
-              : hasChanges
-              ? t('labels.saveChanges')
-              : t('labels.continue')
-          }
-          onPress={onNext}
-          variant="primary"
-          disabled={isSaving || (isFirstVisit && selectedItems.length === 0)}
-        />
-      }
+      primary={{
+        label: isSaving
+          ? t('labels.saving')
+          : isFirstVisit
+          ? selectedItems.length === 0
+            ? t('labels.addItems')
+            : t(
+                selectedItems.length === 1
+                  ? 'onBoarding.addItemSingular'
+                  : 'onBoarding.addItemPlural',
+                { count: selectedItems.length },
+              )
+          : hasChanges
+          ? t('labels.saveChanges')
+          : t('labels.continue'),
+        onPress: onNext,
+        disabled: isSaving || (isFirstVisit && selectedItems.length === 0),
+      }}
       testID={onboardingTestIDs.selectPantryItemsScreen}
     >
       <View style={styles.listContent}>
@@ -277,7 +272,7 @@ export const SelectPantryItems = () => {
           ) : null;
         })}
       </View>
-    </OnBoardingWrapper>
+    </OnboardingStepScaffold>
   );
 };
 

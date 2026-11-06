@@ -18,7 +18,7 @@ const SCAFFOLDS = [
   'PaginatedHistoryScreen',
   'CollapsingHeroDetail',
   'AuthWrapper',
-  'OnBoardingWrapper',
+  'OnboardingStepScaffold',
 ];
 
 /** A screen file that renders no scaffold itself, and why. */

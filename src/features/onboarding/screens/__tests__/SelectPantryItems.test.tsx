@@ -14,6 +14,7 @@ import {
   initialOnboardingProgress,
   useOnboardingProgressStore,
 } from '#features/onboarding/store/onboardingProgressStore';
+import { STEP_PRIMARY } from '#/test-utils/onboardingStepScaffold';
 
 // Its midnight timer re-arms itself, so a mounted watch never drains.
 jest.mock('#hooks/app/useToday', () => ({
@@ -85,31 +86,9 @@ jest.mock('#features/onboarding/hooks/useSelectableItems', () => ({
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#/services/errorService');
 
-jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({
-    title,
-    subtitle,
-    children,
-    primaryAction,
-    testID,
-  }: {
-    title?: string;
-    subtitle?: string;
-    children?: React.ReactNode;
-    primaryAction?: React.ReactNode;
-    testID?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID || 'onboarding-wrapper'}>
-        <Text>{title}</Text>
-        <Text>{subtitle}</Text>
-        {children}
-        {primaryAction}
-      </View>
-    );
-  },
-}));
+jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
+  require('#/test-utils/onboardingStepScaffold'),
+);
 jest.mock('#components/molecules/Button', () => ({
   Button: ({
     title,
@@ -358,7 +337,7 @@ describe('SelectPantryItems', () => {
     });
 
     await drainTimers();
-    fireEvent.press(screen.getByTestId('action-button'));
+    fireEvent.press(screen.getByTestId(STEP_PRIMARY));
 
     await drainTimers();
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('Staples');
@@ -403,7 +382,7 @@ describe('SelectPantryItems', () => {
     });
 
     await drainTimers();
-    fireEvent.press(screen.getByTestId('action-button'));
+    fireEvent.press(screen.getByTestId(STEP_PRIMARY));
 
     await drainTimers();
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('Staples');
@@ -518,7 +497,7 @@ describe('SelectPantryItems as staples', () => {
     });
 
     await drainTimers();
-    fireEvent.press(screen.getByTestId('action-button'));
+    fireEvent.press(screen.getByTestId(STEP_PRIMARY));
 
     await drainTimers();
     expect(mockNavigateToNextStep).toHaveBeenCalledWith('Staples');

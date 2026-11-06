@@ -6,12 +6,11 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
 import { RowCard } from '#components/atoms/RowCard';
 import { Text } from '#components/atoms/Text';
-import { Button } from '#components/molecules/Button';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { COOKS_FOR_MAX, FAMILY_DEFAULT, FAMILY_MIN } from '#domain/servings';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
+import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { useHouseholdAnswer } from '#features/onboarding/hooks/useHouseholdAnswer';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingNavigation } from './useOnboardingNavigation';
@@ -57,21 +56,20 @@ export const HouseholdStepScreen = () => {
   const sizeLabel = t('onBoarding.householdPeople', { count: familySize });
 
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={t('onBoarding.householdTitle')}
-      subtitle={t('onBoarding.householdSubtitle')}
+      question={t('onBoarding.householdSubtitle')}
       onSkip={() => navigateToNextStep('Household')}
-      primaryAction={
-        family ? (
-          <Button
-            title={t('labels.continue')}
-            onPress={() => {
-              void answer(familySize);
-            }}
-            variant="primary"
-            loading={saving !== null}
-          />
-        ) : undefined
+      primary={
+        family
+          ? {
+              label: t('labels.continue'),
+              onPress: () => {
+                void answer(familySize);
+              },
+              loading: saving !== null,
+            }
+          : undefined
       }
       testID={onboardingTestIDs.householdScreen}
     >
@@ -160,7 +158,7 @@ export const HouseholdStepScreen = () => {
           </View>
         ) : null}
       </View>
-    </OnBoardingWrapper>
+    </OnboardingStepScaffold>
   );
 };
 

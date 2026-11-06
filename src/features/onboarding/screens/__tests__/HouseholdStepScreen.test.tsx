@@ -23,28 +23,9 @@ jest.mock('../useOnboardingNavigation', () => ({
   }),
 }));
 
-jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({
-    children,
-    onSkip,
-    primaryAction,
-  }: {
-    children?: React.ReactNode;
-    onSkip?: () => void;
-    primaryAction?: React.ReactNode;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View>
-        {children}
-        {primaryAction}
-        <Pressable onPress={onSkip}>
-          <Text>Skip</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
+jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
+  require('#/test-utils/onboardingStepScaffold'),
+);
 
 const profileMock = (cooksFor: number | null = null) =>
   recordMock(GetDietaryProfileDocument, {

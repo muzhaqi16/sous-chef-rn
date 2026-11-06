@@ -6,7 +6,7 @@ import { appConfig } from '#/config/appConfig';
 import { Text } from '#components/atoms/Text';
 import { Button } from '#components/molecules/Button';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
+import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingNavigation } from './useOnboardingNavigation';
@@ -28,38 +28,33 @@ export const ReceiptStepScreen = () => {
   const pickStaples = () => navigateWithinStep('Staples');
 
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={t('onBoarding.receiptTitle')}
-      subtitle={
+      question={
         canScan
           ? t('onBoarding.receiptSubtitle')
           : t('onBoarding.receiptStaplesOnlySubtitle')
       }
       onBack={() => navigateToPreviousStep('Receipt')}
       onSkip={() => navigateToNextStep('Receipt')}
-      primaryAction={
-        added ? (
-          <Button
-            title={t('labels.continue')}
-            onPress={() => navigateToNextStep('Receipt')}
-            variant="primary"
-          />
-        ) : canScan ? (
-          <Button
-            title={t('labels.scanReceipt')}
-            icon="receipt-outline"
-            onPress={scan}
-            variant="primary"
-            testID={onboardingTestIDs.receiptScan}
-          />
-        ) : (
-          <Button
-            title={t('onBoarding.receiptPickStaplesOnly')}
-            onPress={pickStaples}
-            variant="primary"
-            testID={onboardingTestIDs.receiptStaples}
-          />
-        )
+      primary={
+        added
+          ? {
+              label: t('labels.continue'),
+              onPress: () => navigateToNextStep('Receipt'),
+            }
+          : canScan
+          ? {
+              label: t('labels.scanReceipt'),
+              icon: 'receipt-outline',
+              onPress: scan,
+              testID: onboardingTestIDs.receiptScan,
+            }
+          : {
+              label: t('onBoarding.receiptPickStaplesOnly'),
+              onPress: pickStaples,
+              testID: onboardingTestIDs.receiptStaples,
+            }
       }
       testID={onboardingTestIDs.receiptScreen}
     >
@@ -86,7 +81,7 @@ export const ReceiptStepScreen = () => {
           />
         ) : null}
       </View>
-    </OnBoardingWrapper>
+    </OnboardingStepScaffold>
   );
 };
 

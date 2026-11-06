@@ -8,7 +8,7 @@ import { Loading } from '#components/molecules/Loading';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { OnboardingErrorBoundary } from '#components/providers/ScreenErrorBoundary';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
+import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { InviteCard } from '#features/onboarding/components/InviteCard';
 import { useOnboardingSetup } from '#features/onboarding/hooks/useOnboardingSetup';
 import { unreadAccountState } from '#features/onboarding/utils/unreadAccountState';
@@ -70,7 +70,7 @@ const OnboardingSetupScreenComponent = () => {
 
   if (!phase && unreadState) {
     return (
-      <OnBoardingWrapper testID={onboardingTestIDs.setupScreen}>
+      <OnboardingStepScaffold testID={onboardingTestIDs.setupScreen}>
         <DataStateView
           state={unreadState}
           onRetry={() => {
@@ -93,23 +93,20 @@ const OnboardingSetupScreenComponent = () => {
           variant="ghost"
           testID={onboardingTestIDs.setupContinueOffline}
         />
-      </OnBoardingWrapper>
+      </OnboardingStepScaffold>
     );
   }
 
   if (!phase && ready && offersInvites) {
     return (
-      <OnBoardingWrapper
+      <OnboardingStepScaffold
         title={t('onBoarding.pendingInvitesTitle')}
-        subtitle={t('onBoarding.pendingInvitesSubtitle')}
-        primaryAction={
-          <Button
-            title={t('onBoarding.createOwnHome')}
-            onPress={() => start(true)}
-            variant="primary"
-            testID={onboardingTestIDs.setupCreateHome}
-          />
-        }
+        question={t('onBoarding.pendingInvitesSubtitle')}
+        primary={{
+          label: t('onBoarding.createOwnHome'),
+          onPress: () => start(true),
+          testID: onboardingTestIDs.setupCreateHome,
+        }}
         testID={onboardingTestIDs.setupScreen}
       >
         <View style={styles.invites}>
@@ -126,21 +123,18 @@ const OnboardingSetupScreenComponent = () => {
           variant="ghost"
           testID={onboardingTestIDs.setupSkipHome}
         />
-      </OnBoardingWrapper>
+      </OnboardingStepScaffold>
     );
   }
 
   if (phase?.kind === 'failed') {
     return (
-      <OnBoardingWrapper
+      <OnboardingStepScaffold
         title={t('onBoarding.setupFailedTitle')}
-        primaryAction={
-          <Button
-            title={t('labels.tryAgain')}
-            onPress={() => start(phase.createMissingHome)}
-            variant="primary"
-          />
-        }
+        primary={{
+          label: t('labels.tryAgain'),
+          onPress: () => start(phase.createMissingHome),
+        }}
         testID={onboardingTestIDs.setupScreen}
       >
         <Text role="body" tone="secondary" align="center">
@@ -151,18 +145,18 @@ const OnboardingSetupScreenComponent = () => {
           onPress={() => navigateToNextStep('OnboardingSetup')}
           variant="ghost"
         />
-      </OnBoardingWrapper>
+      </OnboardingStepScaffold>
     );
   }
 
   // Reading what exists claims no setup: an invitation may still be offered.
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={phase ? t('onBoarding.settingUpTitle') : undefined}
       testID={onboardingTestIDs.setupScreen}
     >
       <Loading />
-    </OnBoardingWrapper>
+    </OnboardingStepScaffold>
   );
 };
 

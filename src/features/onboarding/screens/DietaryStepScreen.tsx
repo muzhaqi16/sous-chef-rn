@@ -21,7 +21,7 @@ import {
 } from '#domain/dietary';
 import { useDietarySharing } from '#features/profile/hooks/useDietarySharing';
 import { AvoidFoodSheet } from '#features/profile/ui/AvoidFoodSheet';
-import { OnBoardingWrapper } from '#features/onboarding/components/OnBoardingWrapper';
+import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import {
   useDietaryIntake,
   type DietarySelection,
@@ -100,21 +100,18 @@ export const DietaryStepScreen = () => {
   const sharedHomes = homes.filter(home => home.shared).map(home => home.name);
 
   return (
-    <OnBoardingWrapper
+    <OnboardingStepScaffold
       title={t('onBoarding.dietaryTitle')}
-      subtitle={t('onBoarding.dietarySubtitle')}
+      question={t('onBoarding.dietarySubtitle')}
       onBack={() => navigateToPreviousStep('Dietary')}
       onSkip={() => navigateToNextStep('Dietary')}
-      primaryAction={
-        <Button
-          title={t('labels.continue')}
-          onPress={() => {
-            void handleContinue();
-          }}
-          variant="primary"
-          loading={saving}
-        />
-      }
+      primary={{
+        label: t('labels.continue'),
+        onPress: () => {
+          void handleContinue();
+        },
+        loading: saving,
+      }}
       testID={onboardingTestIDs.dietaryScreen}
     >
       <View style={styles.sections}>
@@ -228,7 +225,7 @@ export const DietaryStepScreen = () => {
           return Promise.resolve(true);
         }}
       />
-    </OnBoardingWrapper>
+    </OnboardingStepScaffold>
   );
 };
 

@@ -58,28 +58,9 @@ jest.mock('../useOnboardingNavigation', () => ({
   }),
 }));
 
-jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({
-    title,
-    children,
-    primaryAction,
-    testID,
-  }: {
-    title?: string;
-    children?: React.ReactNode;
-    primaryAction?: React.ReactNode;
-    testID?: string;
-  }) => {
-    const { View, Text } = require('react-native');
-    return (
-      <View testID={testID}>
-        <Text>{title}</Text>
-        {children}
-        {primaryAction}
-      </View>
-    );
-  },
-}));
+jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
+  require('#/test-utils/onboardingStepScaffold'),
+);
 
 beforeEach(() => {
   jest.useFakeTimers();
