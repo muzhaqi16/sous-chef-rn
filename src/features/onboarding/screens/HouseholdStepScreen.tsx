@@ -4,22 +4,31 @@ import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
+import { Reveal } from '#components/atoms/Reveal';
 import { RowCard } from '#components/atoms/RowCard';
 import { Text } from '#components/atoms/Text';
 import { RadioRow } from '#components/molecules/RadioRow';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { COOKS_FOR_MAX, FAMILY_DEFAULT, FAMILY_MIN } from '#domain/servings';
+import { hitSlop } from '#/theme/foundations/sizes';
 import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { useHouseholdAnswer } from '#features/onboarding/hooks/useHouseholdAnswer';
+import { useHouseholdGreeting } from '#features/onboarding/hooks/useHouseholdGreeting';
+import { RenameHomeDialog } from '#features/onboarding/components/RenameHomeDialog';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingNavigation } from './useOnboardingNavigation';
 
-/** Who the user cooks for: one or two answers in a tap, a family with its count. */
+/**
+ * The first question: a greeting by name and the home's name, then who the
+ * user cooks for, one or two answered in a tap, a family with its count.
+ */
 export const HouseholdStepScreen = () => {
   const { t } = useTranslation();
   useScreenTransition('HouseholdStepScreen');
   const { navigateToNextStep } = useOnboardingNavigation();
+  const greeting = useHouseholdGreeting();
+  const [renaming, setRenaming] = useState(false);
   const { answer: saveAnswer, saved } = useHouseholdAnswer();
   const [family, setFamily] = useState(false);
   const [familySize, setFamilySize] = useState(FAMILY_DEFAULT);
@@ -57,8 +66,6 @@ export const HouseholdStepScreen = () => {
 
   return (
     <OnboardingStepScaffold
-      title={t('onBoarding.householdTitle')}
-      question={t('onBoarding.householdSubtitle')}
       onSkip={() => navigateToNextStep('Household')}
       primary={
         family
@@ -73,6 +80,57 @@ export const HouseholdStepScreen = () => {
       }
       testID={onboardingTestIDs.householdScreen}
     >
+      <View
+        style={styles.greeting}
+        testID={onboardingTestIDs.householdGreeting}
+      >
+        <Text role="heading" align="center">
+          {greeting.firstName
+            ? t('onBoarding.greeting', { name: greeting.firstName })
+            : t('onBoarding.greetingNoName')}
+        </Text>
+        {/* The line keeps its height while the home loads, so the choices
+            below never move under a finger. */}
+        {greeting.canRename && greeting.homeName ? (
+          <AppPressable
+            onPress={() => setRenaming(true)}
+            accessibilityRole="button"
+            accessibilityHint={t('onBoarding.homeNameHint')}
+            hitSlop={hitSlop.md}
+            style={styles.homeName}
+            testID={onboardingTestIDs.householdHomeName}
+          >
+            <Text role="bodyStrong" tone="accent">
+              {greeting.homeName}
+            </Text>
+            <Icon name="pencil-outline" size="sm" tone="primary" />
+          </AppPressable>
+        ) : (
+          <Text
+            role="bodyStrong"
+            tone="secondary"
+            align="center"
+            style={styles.homeName}
+            testID={onboardingTestIDs.householdHomeName}
+          >
+            {greeting.homeName ?? ' '}
+          </Text>
+        )}
+        <Text role="title" align="center" style={styles.question}>
+          {t('onBoarding.householdTitle')}
+        </Text>
+        <Text role="body" tone="secondary" align="center">
+          {t('onBoarding.householdSubtitle')}
+        </Text>
+      </View>
+      <RenameHomeDialog
+        visible={renaming}
+        currentName={greeting.homeName ?? ''}
+        onClose={() => setRenaming(false)}
+        onRename={name =>
+          greeting.rename(name, t('errors.updateHomeNameFailed'))
+        }
+      />
       <View>
         <RowCard>
           <RadioRow
@@ -111,7 +169,7 @@ export const HouseholdStepScreen = () => {
             <Text role="body">{t('onBoarding.householdFamily')}</Text>
           </RadioRow>
         </RowCard>
-        {family ? (
+        <Reveal open={family}>
           <View
             style={styles.stepper}
             accessible
@@ -156,13 +214,27 @@ export const HouseholdStepScreen = () => {
               />
             </AppPressable>
           </View>
-        ) : null}
+        </Reveal>
       </View>
     </OnboardingStepScaffold>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
+  greeting: {
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    marginBottom: theme.spacing.lg,
+  },
+  homeName: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: theme.spacing.xs,
+    minHeight: theme.sizes.button.sm,
+  },
+  question: {
+    marginTop: theme.spacing.md,
+  },
   choice: {
     gap: theme.spacing.md,
     paddingVertical: theme.spacing.md,

@@ -20,6 +20,10 @@ export const onboardingTestIDs = {
   /** The household question: who the user cooks for. */
   householdScreen: 'onboarding-household-screen',
   householdChoice: (choice: string) => `onboarding-household-${choice}`,
+  householdGreeting: 'onboarding-household-greeting',
+  householdHomeName: 'onboarding-household-home-name',
+  renameHomeInput: 'onboarding-rename-home-input',
+  renameHomeSave: 'onboarding-rename-home-save',
   householdFewer: 'onboarding-household-fewer',
   householdMore: 'onboarding-household-more',
   /** The dietary step, and each chosen allergen's Allergy / Intolerance control. */

@@ -30,6 +30,8 @@ export const onboardingScreens = {
   Household: createNativeStackScreen({
     screen: HouseholdStepScreen,
     linking: 'onboarding/household',
+    // The first question replaces setup: nothing is behind it to swipe to.
+    options: { gestureEnabled: false },
   }),
   Dietary: createNativeStackScreen({
     screen: DietaryStepScreen,
