@@ -1,96 +1,22 @@
 import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
-import type { Translate } from '#/i18n/types';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
 import { alertService } from '#/services/alertService';
-import { shareUrl } from '#native/share';
 import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
+import { CompletionHero } from '#features/onboarding/components/CompletionHero';
+import { SetupSummary } from '#features/onboarding/components/SetupSummary';
 import { RecipePayoff } from '#features/onboarding/components/RecipePayoff';
-import { StoresOffer } from '#features/onboarding/components/StoresOffer';
-import { Button } from '#components/molecules/Button';
+import { OnboardingOffers } from '#features/onboarding/components/OnboardingOffers';
 import { useSelectedHomeId, useUpdateUser, useUser } from '#store/useAppStore';
-import { useVerifiedEmailGate } from '#hooks/auth/useEmailVerification';
 import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnboarding';
-import { useHouseholdInvite } from '#features/onboarding/hooks/useHouseholdInvite';
 import { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
-import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { Text } from '#components/atoms/Text';
-import { Icon } from '#components/atoms/Icon';
 import { useNotificationSettings } from '#features/notifications/hooks/useNotificationSettings';
 import { useTurnOnPush } from '#features/notifications/screens/useTurnOnPush';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
-import {
-  useOnboardingSummary,
-  type OnboardingSummary,
-} from '#features/onboarding/hooks/useOnboardingSummary';
-
-/** The summary's lines: the home first, then each step done here, in order. */
-function summaryLines(summary: OnboardingSummary, t: Translate): string[] {
-  const lines: string[] = [];
-  if (summary.homeAndPantry && summary.shoppingList) {
-    lines.push(t('onBoarding.summaryHomeReady'));
-  } else if (summary.homeAndPantry) {
-    lines.push(t('onBoarding.summaryHomeAndPantry'));
-  } else if (summary.shoppingList) {
-    lines.push(t('onBoarding.summaryShoppingList'));
-  }
-  if (summary.cooksFor !== null) {
-    lines.push(t('onBoarding.summaryCooksFor', { count: summary.cooksFor }));
-  }
-  if (summary.dietarySaved) lines.push(t('onBoarding.summaryDietarySaved'));
-  if (summary.receiptItems > 0) {
-    lines.push(
-      t('onBoarding.summaryReceiptItems', { count: summary.receiptItems }),
-    );
-  }
-  if (summary.stapleItems > 0) {
-    lines.push(
-      t('onBoarding.summaryStapleItems', { count: summary.stapleItems }),
-    );
-  }
-  return lines;
-}
-
-/** Invites the people the user cooks for to their home, by its join link. */
-const InviteHousehold = ({ homeId }: { homeId: string }) => {
-  const { t } = useTranslation();
-  const { requireVerifiedEmail } = useVerifiedEmailGate();
-  const { inviteLink } = useHouseholdInvite(homeId);
-  const [sharing, setSharing] = useState(false);
-  const [failed, setFailed] = useState(false);
-
-  const invite = async () => {
-    if (!requireVerifiedEmail()) return;
-    setSharing(true);
-    setFailed(false);
-    const url = await inviteLink();
-    setSharing(false);
-    if (url) await shareUrl(url, t('homeDetail.shareLinkMessage'));
-    else setFailed(true);
-  };
-
-  return (
-    <View style={styles.invite}>
-      <Button
-        title={t('onBoarding.inviteHousehold')}
-        icon="person-add-outline"
-        onPress={() => {
-          void invite();
-        }}
-        variant="outline"
-        loading={sharing}
-        testID={onboardingTestIDs.invite}
-      />
-      {failed ? (
-        <Text role="error" tone="error" align="center">
-          {t('onBoarding.inviteFailed')}
-        </Text>
-      ) : null}
-    </View>
-  );
-};
+import { useOnboardingSummary } from '#features/onboarding/hooks/useOnboardingSummary';
 
 export const OnboardingCompleteScreen = () => {
   const { t } = useTranslation();
@@ -103,12 +29,9 @@ export const OnboardingCompleteScreen = () => {
   const { completeOnboarding } = useCompleteOnboarding(user?.id);
   const summary = useOnboardingSummary();
   const homeId = useSelectedHomeId();
-  const apiUnavailable = useIsApiUnavailable();
   const payoff = useRecipePayoff();
   const { settings, updateMultipleSettings } = useNotificationSettings();
   const { hasPermission, turnOnPush } = useTurnOnPush(updateMultipleSettings);
-  // Only what the user has: a skipped step is never claimed.
-  const completed = summaryLines(summary, t);
 
   const handleComplete = async () => {
     if (!user?.id) {
@@ -177,45 +100,15 @@ export const OnboardingCompleteScreen = () => {
       testID={onboardingTestIDs.completeScreen}
     >
       <View style={styles.container}>
-        <View style={styles.successIcon}>
-          <Icon name="checkmark" size={44} tone="onSuccess" />
-        </View>
-
-        {completed.length > 0 ? (
-          <>
-            <Text role="heading" align="center" style={styles.congratsText}>
-              {t('onBoarding.congratulations')}
-            </Text>
-            <View style={styles.summaryList}>
-              {completed.map(line => (
-                <Text
-                  key={line}
-                  role="body"
-                  tone="secondary"
-                  style={styles.summaryItem}
-                >
-                  {`• ${line}`}
-                </Text>
-              ))}
-            </View>
-          </>
-        ) : (
-          <Text role="body" align="center" style={styles.congratsText}>
-            {t('onBoarding.nothingSetUp')}
-          </Text>
-        )}
+        <CompletionHero />
+        <SetupSummary summary={summary} />
 
         <RecipePayoff
           rows={payoff.rows}
           showCheckLabel={payoff.showCheckLabel}
         />
 
-        {homeId && summary.cooksFor !== null && summary.cooksFor > 1 ? (
-          <InviteHousehold homeId={homeId} />
-        ) : null}
-
-        {/* Finding stores needs the API. */}
-        {homeId && !apiUnavailable ? <StoresOffer homeId={homeId} /> : null}
+        <OnboardingOffers homeId={homeId} cooksFor={summary.cooksFor} />
 
         <Text
           role="caption"
@@ -244,33 +137,9 @@ const styles = StyleSheet.create(theme => ({
     alignItems: 'center',
     paddingVertical: theme.spacing.xl,
   },
-  successIcon: {
-    width: 80,
-    height: 80,
-    borderRadius: theme.radii.full,
-    backgroundColor: theme.colors.success,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: theme.spacing.xl,
-  },
-  congratsText: {
-    marginBottom: theme.spacing.xl,
-    paddingHorizontal: theme.spacing.lg,
-  },
-  summaryList: {
-    marginBottom: theme.spacing.xl,
-  },
-  summaryItem: {
-    marginBottom: theme.spacing.sm,
-  },
   infoText: {
     marginTop: theme.spacing.xl,
     paddingHorizontal: theme.spacing.xl,
-  },
-  invite: {
-    alignSelf: 'stretch',
-    marginTop: theme.spacing.xl,
-    gap: theme.spacing.sm,
   },
   errorContainer: {
     marginTop: theme.spacing.md,
