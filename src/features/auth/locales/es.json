@@ -25,6 +25,7 @@
     "emailVerifiedToast": "¡Correo verificado correctamente!",
     "emailVerifiedToastSignIn": "Correo verificado. Inicia sesión con la contraseña que ya tiene esta cuenta.",
     "enterCode": "Introduce el código",
+    "openMail": "Abrir Mail",
     "enterCodeSubtitlePrefix": "Hemos enviado un código de verificación a",
     "enterCodeSubtitleSuffix": ". Introdúcelo abajo o abre el enlace del mismo correo. Ambos caducan en 24 horas.",
     "exitVerificationConfirm": "Cerrar sesión",

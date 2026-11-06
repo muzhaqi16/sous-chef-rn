@@ -25,6 +25,7 @@
     "emailVerifiedToast": "Email verificata con successo!",
     "emailVerifiedToastSignIn": "Email verificata. Accedi con la password che questo account ha già.",
     "enterCode": "Inserisci il codice",
+    "openMail": "Apri Mail",
     "enterCodeSubtitlePrefix": "Abbiamo inviato un codice di verifica a",
     "enterCodeSubtitleSuffix": ". Inseriscilo qui sotto, oppure apri il link nella stessa email. Entrambi scadono tra 24 ore.",
     "exitVerificationConfirm": "Esci",

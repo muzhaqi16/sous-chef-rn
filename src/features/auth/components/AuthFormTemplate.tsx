@@ -14,6 +14,8 @@ import { authTestIDs } from '#features/auth/testIDs';
 interface Props<T extends FieldValues> {
   title: string;
   subtitle?: string | React.ReactNode;
+  /** A step the user takes before filling the form, such as opening Mail. */
+  headerAction?: { title: string; onPress: () => void; testID?: string };
   fields: FieldDef<T>[];
   control: Control<T>;
   errors: FieldErrors<T>;
@@ -44,6 +46,7 @@ interface Props<T extends FieldValues> {
 export function AuthFormTemplate<T extends FieldValues>({
   title,
   subtitle,
+  headerAction,
   fields,
   control,
   errors,
@@ -85,6 +88,16 @@ export function AuthFormTemplate<T extends FieldValues>({
         >
           {subtitle}
         </Text>
+      ) : null}
+      {headerAction ? (
+        <View style={styles.headerAction}>
+          <Button
+            title={headerAction.title}
+            onPress={headerAction.onPress}
+            variant="secondary"
+            testID={headerAction.testID}
+          />
+        </View>
       ) : null}
 
       <View style={styles.fieldsGroup}>
@@ -183,6 +196,10 @@ const styles = StyleSheet.create(theme => ({
   },
   subtitle: {
     marginBottom: theme.spacing.lg,
+  },
+  headerAction: {
+    alignItems: 'center',
+    marginBottom: theme.spacing.md,
   },
   linkRow: {
     alignItems: 'flex-end',

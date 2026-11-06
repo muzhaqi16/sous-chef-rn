@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { yupResolver } from '@hookform/resolvers/yup';
 import { useTranslation } from '#/i18n';
@@ -22,6 +22,7 @@ import { logger } from '#/utils/environment';
 import { reportValidationErrors } from '#/utils/validation/common';
 import { emailVerificationSchema } from '#/utils/validation/auth';
 import { toastService } from '#services/toastService';
+import { canOpenMailApp, openMailApp } from '#native/mailApp';
 import { authTestIDs } from '#features/auth/testIDs';
 import { destructiveConfirm } from '#/services/destructiveConfirm';
 
@@ -109,6 +110,18 @@ export function CodeVerificationScreen({
   // Held here rather than in `setError`: RHF publishes the form state captured
   // BEFORE `onValid` when the submit settles, wiping an error set inside it.
   const [refusal, setRefusal] = useState<string | null>(null);
+
+  // Offered only where a mail app opens: the code is in the email.
+  const [mailAppOpens, setMailAppOpens] = useState(false);
+  useEffect(() => {
+    let current = true;
+    void canOpenMailApp().then(opens => {
+      if (current) setMailAppOpens(opens);
+    });
+    return () => {
+      current = false;
+    };
+  }, []);
 
   const {
     control,
@@ -258,6 +271,17 @@ export function CodeVerificationScreen({
             <Text role="bodyStrong">{targetEmail ?? t('auth.yourEmail')}</Text>
             {t('auth.enterCodeSubtitleSuffix')}
           </>
+        }
+        headerAction={
+          mailAppOpens
+            ? {
+                title: t('auth.openMail'),
+                onPress: () => {
+                  void openMailApp();
+                },
+                testID: authTestIDs.codeVerificationOpenMail,
+              }
+            : undefined
         }
         fields={[
           {

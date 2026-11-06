@@ -25,6 +25,7 @@
     "emailVerifiedToast": "Email verified successfully!",
     "emailVerifiedToastSignIn": "Email verified. Sign in with the password this account already has.",
     "enterCode": "Enter Code",
+    "openMail": "Open Mail",
     "enterCodeSubtitlePrefix": "We've sent a verification code to",
     "enterCodeSubtitleSuffix": ". Enter it below, or open the link in the same email. Both expire in 24 hours.",
     "exitVerificationConfirm": "Sign Out",

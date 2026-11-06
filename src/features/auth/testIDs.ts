@@ -47,6 +47,7 @@ export const authTestIDs = {
 
   codeVerificationScreen: 'code-verification-screen',
   codeVerificationResendLink: 'resend-code',
+  codeVerificationOpenMail: 'code-verification-open-mail',
   codeVerificationSkipLink: 'skip-verification',
   codeVerificationSignInLink: 'code-verification-sign-in',
 
