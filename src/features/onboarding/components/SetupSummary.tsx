@@ -47,8 +47,8 @@ export const SetupSummary = ({ summary }: { summary: OnboardingSummary }) => {
   }
   return (
     <>
-      <Text role="heading" align="center" style={styles.heading}>
-        {t('onBoarding.congratulations')}
+      <Text role="bodyStrong" align="center" style={styles.heading}>
+        {t('onBoarding.summaryLead')}
       </Text>
       <View style={styles.list}>
         {lines.map(line => (

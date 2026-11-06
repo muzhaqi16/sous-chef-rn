@@ -85,13 +85,8 @@ export const OnboardingCompleteScreen = () => {
   };
 
   return (
+    // The hero carries the title: nothing is behind this screen to go back to.
     <OnboardingStepScaffold
-      title={t('onBoarding.completeTitle')}
-      question={
-        summary.homeAndPantry
-          ? t('onBoarding.completeSubtitle')
-          : t('onBoarding.readyToStart')
-      }
       primary={{
         label: t('labels.getStarted'),
         onPress: handleGetStarted,
@@ -100,7 +95,13 @@ export const OnboardingCompleteScreen = () => {
       testID={onboardingTestIDs.completeScreen}
     >
       <View style={styles.container}>
-        <CompletionHero />
+        <CompletionHero
+          subtitle={
+            summary.homeAndPantry
+              ? t('onBoarding.completeSubtitle')
+              : t('onBoarding.readyToStart')
+          }
+        />
         <SetupSummary summary={summary} />
 
         <RecipePayoff

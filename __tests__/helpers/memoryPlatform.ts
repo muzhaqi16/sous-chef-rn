@@ -184,7 +184,7 @@ export function createMemoryPlatform(): PlatformServices {
     connectivity: createMemoryConnectivity(),
     appearance: { applyTheme: () => {}, apply: () => {} },
     imagePrefetch: { prefetch: () => {} },
-    haptics: { selection: () => {}, warning: () => {} },
+    haptics: { selection: () => {}, success: () => {}, warning: () => {} },
     screenReader: { announce: () => {} },
     reviewPrompt: { request: () => {} },
     // A test host that has never been asked; a test that needs a place mocks it.

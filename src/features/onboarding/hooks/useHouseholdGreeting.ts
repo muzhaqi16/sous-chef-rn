@@ -1,10 +1,10 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { MembershipRole } from '#/graphql/generated/schemaTypes';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
-import { firstNonBlank } from '#/utils/firstNonBlank';
-import { useSelectedHomeId, useUser } from '#store/useAppStore';
+import { useSelectedHomeId } from '#store/useAppStore';
 import { useUpdateHomeFields } from '#features/home/hooks/useUpdateHomeFields';
 import { HouseholdGreetingHomeDocument } from './useHouseholdGreeting.generated';
+import { useFirstName } from './useFirstName';
 
 /**
  * Who the household question greets, and the home it names: the first name
@@ -12,7 +12,7 @@ import { HouseholdGreetingHomeDocument } from './useHouseholdGreeting.generated'
  * The home is null until setup has made it and the device has read it.
  */
 export function useHouseholdGreeting() {
-  const user = useUser();
+  const firstName = useFirstName();
   const homeId = useSelectedHomeId();
   const { data, variables, error } = useQuery(
     HouseholdGreetingHomeDocument,
@@ -25,10 +25,9 @@ export function useHouseholdGreeting() {
 
   // `skipToken` keeps the last run's data: it may be another home's.
   const home = homeId && variables.id === homeId ? data?.home ?? null : null;
-  const [firstWord] = (user?.name ?? '').trim().split(/\s+/);
 
   return {
-    firstName: firstNonBlank(user?.firstName, firstWord) ?? null,
+    firstName,
     homeName: home?.name ?? null,
     canRename: home?.myMembership?.role === MembershipRole.Owner,
     /** True when the new name landed or is queued; `fallback` is the failure copy. */

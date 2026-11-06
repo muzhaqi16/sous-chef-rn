@@ -5,6 +5,7 @@ import { act, screen, userEvent, within } from '@testing-library/react-native';
 import { CommonActions } from '@react-navigation/native';
 import { t } from '#/i18n';
 import { makeCache } from '#/apollo/cache';
+import { withTiming } from 'react-native-reanimated';
 import { requirePlatform } from '#/platform/install';
 import { useStore } from '#store';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -27,9 +28,13 @@ import { drainTimers } from '#/test-utils/drainTimers';
 
 const mockUpdateUser = jest.fn();
 let mockHomeId: string | null = 'home-1';
+let mockUser: { id: string; onBoarded: boolean; firstName?: string } = {
+  id: 'u1',
+  onBoarded: false,
+};
 jest.mock('#store/useAppStore', () => ({
   ...jest.requireActual('#store/useAppStore'),
-  useUser: () => ({ id: 'u1', onBoarded: false }),
+  useUser: () => mockUser,
   useUpdateUser: () => mockUpdateUser,
   useSelectedHomeId: () => mockHomeId,
 }));
@@ -174,6 +179,7 @@ async function getStarted(
 }
 
 beforeEach(() => {
+  mockUser = { id: 'u1', onBoarded: false };
   jest.useFakeTimers();
 });
 
@@ -208,6 +214,41 @@ afterEach(() => {
 });
 
 describe('OnboardingCompleteScreen', () => {
+  describe('the celebration', () => {
+    it('greets the user by first name, with a check and one success haptic', () => {
+      mockUser = { id: 'u1', onBoarded: false, firstName: 'Nora' };
+      const success = jest.spyOn(requirePlatform('haptics'), 'success');
+      renderScreen();
+
+      expect(
+        screen.getByText(t('onBoarding.completeTitleNamed', { name: 'Nora' })),
+      ).toBeTruthy();
+      expect(
+        screen.getByTestId(onboardingTestIDs.completionCheck),
+      ).toBeTruthy();
+      expect(success).toHaveBeenCalledTimes(1);
+      success.mockRestore();
+    });
+
+    it('greets without a name when the account has none', () => {
+      renderScreen();
+
+      expect(screen.getByText(t('onBoarding.completeTitle'))).toBeTruthy();
+    });
+
+    // Reanimated finishes an animation at once under the OS setting when the
+    // call passes no override. Verified: #reanimated-applies-reduce-motion-itself
+    it('leaves Reduce Motion to the device, so the check shows complete', () => {
+      jest.mocked(withTiming).mockClear();
+      renderScreen();
+
+      expect(withTiming).toHaveBeenCalled();
+      for (const [, config] of jest.mocked(withTiming).mock.calls) {
+        expect(config).not.toHaveProperty('reduceMotion');
+      }
+    });
+  });
+
   describe('the summary', () => {
     it('lists every step done, after saying the home is ready', () => {
       summaryOf({
@@ -260,7 +301,7 @@ describe('OnboardingCompleteScreen', () => {
 
       expect(screen.getByText(t('onBoarding.readyToStart'))).toBeTruthy();
       expect(screen.getByText(t('onBoarding.nothingSetUp'))).toBeTruthy();
-      expect(screen.queryByText(t('onBoarding.congratulations'))).toBeNull();
+      expect(screen.queryByText(t('onBoarding.summaryLead'))).toBeNull();
       expect(screen.queryAllByText(/^• /)).toHaveLength(0);
     });
   });

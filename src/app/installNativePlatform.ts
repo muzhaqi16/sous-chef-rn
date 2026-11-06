@@ -72,6 +72,7 @@ installPlatform({
   imagePrefetch: { prefetch: uris => preloadImages(uris) },
   haptics: {
     selection: () => HapticService.selection(),
+    success: () => HapticService.success(),
     warning: () => HapticService.warning(),
   },
   screenReader: {

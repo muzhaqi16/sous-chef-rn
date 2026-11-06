@@ -4,6 +4,8 @@
  */
 export const onboardingTestIDs = {
   completeScreen: 'onboarding-complete-screen',
+  /** The completion screen's drawn check. */
+  completionCheck: 'onboarding-completion-check',
 
   /** `OnboardingStepScaffold`'s header buttons, under the step screen's id. */
   skipButton: (screenID: string) => `${screenID}-skip-button`,
