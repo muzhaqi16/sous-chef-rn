@@ -18,7 +18,7 @@ import { useAppStore } from '#store/useAppStore';
 import { useAuthNavigation } from '#features/auth/screens/useAuthNavigation';
 import { authTestIDs } from '#features/auth/testIDs';
 
-type SignUpValues = RegisterInput & { confirmPassword: string; name: string };
+type SignUpValues = RegisterInput & { name: string };
 
 export const SignUpScreen = (): React.JSX.Element => {
   const { t } = useTranslation();
@@ -36,7 +36,6 @@ export const SignUpScreen = (): React.JSX.Element => {
       name: '',
       email: '',
       password: '',
-      confirmPassword: '',
     },
   });
 
@@ -81,18 +80,6 @@ export const SignUpScreen = (): React.JSX.Element => {
             label: t('auth.password'),
             component: PasswordInput,
             props: { purpose: 'new', testID: authTestIDs.signUpPasswordInput },
-            // The match rule reports on `confirmPassword` while reading this
-            // field, so editing this one has to re-run that one.
-            deps: ['confirmPassword'],
-          },
-          {
-            name: 'confirmPassword',
-            label: t('auth.confirmPassword'),
-            component: PasswordInput,
-            props: {
-              purpose: 'new',
-              testID: authTestIDs.signUpConfirmPasswordInput,
-            },
           },
         ]}
         control={form.control}

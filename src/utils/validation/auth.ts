@@ -20,14 +20,12 @@ export const loginSchema = object({
 
 // ----------------------------------------------------------------------------
 
-// 2) sign-up (email + password + confirmPassword)
+// 2) sign-up (name + email + password): the show toggle and a saved
+// password replace typing it twice
 export const signUpSchema = object({
   name: string().required(msg('fullNameRequired')).min(2, msg('fullNameMin')),
   email: emailRule,
   password: newPasswordRule,
-  confirmPassword: string()
-    .oneOf([ref('password')], msg('passwordsMustMatch'))
-    .required(msg('passwordConfirmRequired')),
 });
 
 // ----------------------------------------------------------------------------

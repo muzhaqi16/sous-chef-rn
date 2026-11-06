@@ -24,7 +24,6 @@ export const authTestIDs = {
   signUpNameInput: 'signup-name-input',
   signUpEmailInput: 'signup-email-input',
   signUpPasswordInput: 'signup-password-input',
-  signUpConfirmPasswordInput: 'signup-confirm-password-input',
   signUpSubmitButton: 'signup-submit-button',
   signUpLoginLink: 'signup-login-link',
 

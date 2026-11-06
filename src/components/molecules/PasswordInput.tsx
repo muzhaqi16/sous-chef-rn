@@ -8,22 +8,27 @@ import { AppPressable } from '#components/atoms/AppPressable';
 import { Icon } from '#components/atoms/Icon';
 import { useTranslation } from '#/i18n';
 import { hitSlop } from '#/theme/foundations/sizes';
+import { NEW_PASSWORD_RULES } from '#/utils/validation/common';
 
 /** Which password a field takes, so autofill offers the saved one or a new one. */
 type PasswordPurpose = 'current' | 'new';
 
 const AUTOFILL: Record<
   PasswordPurpose,
-  Pick<TextInputProps, 'autoComplete' | 'textContentType'>
+  Pick<TextInputProps, 'autoComplete' | 'textContentType' | 'passwordRules'>
 > = {
   current: { autoComplete: 'current-password', textContentType: 'password' },
-  new: { autoComplete: 'new-password', textContentType: 'newPassword' },
+  new: {
+    autoComplete: 'new-password',
+    textContentType: 'newPassword',
+    passwordRules: NEW_PASSWORD_RULES,
+  },
 };
 
 export interface PasswordInputProps
   extends Omit<
     BaseInputProps,
-    'secureTextEntry' | 'autoComplete' | 'textContentType'
+    'secureTextEntry' | 'autoComplete' | 'textContentType' | 'passwordRules'
   > {
   purpose: PasswordPurpose;
   /** set to false to hide the "show password" toggle */

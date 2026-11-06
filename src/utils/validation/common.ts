@@ -123,19 +123,25 @@ export const emailRule = string()
 // Sign-in reads back a password the user ALREADY has, so no policy rule: like
 // the server's login schema, only non-empty plus bcrypt's 72 cap, which no
 // stored password can exceed.
+const PASSWORD_MAX = 72;
+const NEW_PASSWORD_MIN = 8;
+
 export const passwordRule = string()
   .required(lazyMessage('commonValidation.passwordRequired'))
-  .max(72, lazyMessage('commonValidation.passwordMax'));
+  .max(PASSWORD_MAX, lazyMessage('commonValidation.passwordMax'));
 
 // The server's policy for a password being SET, checked here so the user is
 // told which rule they missed instead of a generic refusal.
 export const newPasswordRule = string()
   .required(lazyMessage('commonValidation.passwordRequired'))
-  .min(8, lazyMessage('commonValidation.passwordMin'))
-  .max(72, lazyMessage('commonValidation.passwordMax'))
+  .min(NEW_PASSWORD_MIN, lazyMessage('commonValidation.passwordMin'))
+  .max(PASSWORD_MAX, lazyMessage('commonValidation.passwordMax'))
   .matches(/[a-z]/, lazyMessage('commonValidation.passwordLowercase'))
   .matches(/[A-Z]/, lazyMessage('commonValidation.passwordUppercase'))
   .matches(/[0-9]/, lazyMessage('commonValidation.passwordNumber'));
+
+/** The same policy for iOS's password generator, so a suggested one passes. */
+export const NEW_PASSWORD_RULES = `minlength: ${NEW_PASSWORD_MIN}; maxlength: ${PASSWORD_MAX}; required: lower; required: upper; required: digit;`;
 
 // A first or last name in any script ("José", "李"), cleaned rather than refused.
 export const nameRule = string()
