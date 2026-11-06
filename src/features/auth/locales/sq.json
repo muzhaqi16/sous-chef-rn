@@ -36,6 +36,7 @@
     "fullNameMin": "Emri i plotë duhet të ketë të paktën 2 karaktere",
     "fullNameRequired": "Emri i plotë është i detyrueshëm",
     "haveAccount": "Keni tashmë një llogari?",
+    "haveAccountButton": "Kam një llogari",
     "invalidResetLinkSubtitle": "Kjo lidhje për rivendosjen e fjalëkalimit është e pavlefshme ose ka skaduar. Kërko një rivendosje të re nga ekrani i hyrjes.",
     "invalidResetLinkTitle": "Lidhje e pavlefshme",
     "invalidResetToken": "Token i pavlefshëm",

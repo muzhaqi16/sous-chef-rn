@@ -78,16 +78,16 @@ describe('LandingAuthScreen', () => {
     ).toBeTruthy();
   });
 
-  it('renders Log In button', () => {
-    render(<LandingAuthScreen />);
-    expect(screen.getByTestId('landing-login-button')).toBeTruthy();
-    expect(screen.getByText('Log In')).toBeTruthy();
-  });
-
-  it('renders Sign Up button', () => {
+  it('leads with creating an account, in title case', () => {
     render(<LandingAuthScreen />);
     expect(screen.getByTestId('landing-signup-button')).toBeTruthy();
-    expect(screen.getByText('Sign Up')).toBeTruthy();
+    expect(screen.getByText('Create account')).toBeTruthy();
+  });
+
+  it('offers signing in to an existing account beneath it', () => {
+    render(<LandingAuthScreen />);
+    expect(screen.getByTestId('landing-login-button')).toBeTruthy();
+    expect(screen.getByText('I have an account')).toBeTruthy();
   });
 
   it('navigates to Login when Log In button is pressed', async () => {

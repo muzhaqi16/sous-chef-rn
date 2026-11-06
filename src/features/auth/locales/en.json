@@ -36,6 +36,7 @@
     "fullNameMin": "Full name must be at least 2 characters",
     "fullNameRequired": "Full name is required",
     "haveAccount": "Already have an account?",
+    "haveAccountButton": "I have an account",
     "invalidResetLinkSubtitle": "This password reset link is invalid or has expired. Please request a new password reset from the login screen.",
     "invalidResetLinkTitle": "Invalid Reset Link",
     "invalidResetToken": "Invalid reset token",

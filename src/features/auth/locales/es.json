@@ -36,6 +36,7 @@
     "fullNameMin": "El nombre completo debe tener al menos 2 caracteres",
     "fullNameRequired": "El nombre completo es obligatorio",
     "haveAccount": "¿Ya tienes una cuenta?",
+    "haveAccountButton": "Ya tengo una cuenta",
     "invalidResetLinkSubtitle": "Este enlace de restablecimiento de contraseña es inválido o ha caducado. Solicita un nuevo restablecimiento desde la pantalla de inicio de sesión.",
     "invalidResetLinkTitle": "Enlace de restablecimiento inválido",
     "invalidResetToken": "Token de restablecimiento inválido",

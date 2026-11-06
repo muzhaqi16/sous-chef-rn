@@ -36,6 +36,7 @@
     "fullNameMin": "Il nome completo deve contenere almeno 2 caratteri",
     "fullNameRequired": "Il nome completo è obbligatorio",
     "haveAccount": "Hai già un account?",
+    "haveAccountButton": "Ho già un account",
     "invalidResetLinkSubtitle": "Questo link di reimpostazione password non è valido o è scaduto. Richiedi un nuovo reimpostamento dalla schermata di accesso.",
     "invalidResetLinkTitle": "Link di reimpostazione non valido",
     "invalidResetToken": "Token di reimpostazione non valido",
