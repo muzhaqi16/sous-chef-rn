@@ -15,6 +15,7 @@ import {
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { DietaryStepScreen } from '../DietaryStepScreen';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { STEP_PRIMARY } from '#/test-utils/onboardingStepScaffold';
 
 const mockSave = jest.fn().mockResolvedValue(true);
 let mockHeld: unknown = null;
@@ -80,11 +81,42 @@ beforeEach(() => {
 });
 
 async function continueStep(user: ReturnType<typeof userEvent.setup>) {
-  await user.press(screen.getByText(t('labels.continue')));
+  await user.press(screen.getByTestId(STEP_PRIMARY));
   await drainTimers();
   expect(mockSave).toHaveBeenCalled();
   return mockSave.mock.calls[0]?.[0];
 }
+
+describe('DietaryStepScreen — the primary button and the notices', () => {
+  it('reads "Nothing to avoid" with nothing picked', () => {
+    render(<DietaryStepScreen />);
+
+    expect(screen.getByTestId(STEP_PRIMARY)).toHaveTextContent(
+      'Nothing to avoid',
+    );
+  });
+
+  it('says how many choices it saves', async () => {
+    const user = userEvent.setup();
+    render(<DietaryStepScreen />);
+
+    await user.press(screen.getByText(label('recipes.intolerance.PEANUT')));
+    await user.press(screen.getByText(label('labels.vegetarian')));
+
+    expect(screen.getByTestId(STEP_PRIMARY)).toHaveTextContent(
+      'Save 2 choices',
+    );
+  });
+
+  it('shows its notices after the choices', () => {
+    render(<DietaryStepScreen />);
+
+    const tree = JSON.stringify(screen.toJSON());
+    expect(tree.indexOf(t('dietaryProfile.avoidTitle'))).toBeLessThan(
+      tree.indexOf(t('dietaryAlerts.checkLabel')),
+    );
+  });
+});
 
 describe('DietaryStepScreen', () => {
   it('lists the nine major US allergens first', () => {

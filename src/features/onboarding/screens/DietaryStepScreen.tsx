@@ -7,6 +7,7 @@ import {
   type Diet,
   type Intolerance,
 } from '#/graphql/generated/schemaTypes';
+import { Reveal } from '#components/atoms/Reveal';
 import { Text } from '#components/atoms/Text';
 import { AnimatedChip } from '#components/molecules/AnimatedChip';
 import { Button } from '#components/molecules/Button';
@@ -88,6 +89,8 @@ export const DietaryStepScreen = () => {
       ),
     );
 
+  const choices = allergens.length + diets.length + foods.length;
+
   const handleContinue = async () => {
     setSaving(true);
     setFailed(false);
@@ -106,7 +109,11 @@ export const DietaryStepScreen = () => {
       onBack={() => navigateToPreviousStep('Dietary')}
       onSkip={() => navigateToNextStep('Dietary')}
       primary={{
-        label: t('labels.continue'),
+        // Says what the tap does with the answers given.
+        label:
+          choices === 0
+            ? t('onBoarding.dietaryNothingToAvoid')
+            : t('onBoarding.dietarySaveChoices', { count: choices }),
         onPress: () => {
           void handleContinue();
         },
@@ -115,15 +122,6 @@ export const DietaryStepScreen = () => {
       testID={onboardingTestIDs.dietaryScreen}
     >
       <View style={styles.sections}>
-        <Text role="body">{t('dietaryAlerts.checkLabel')}</Text>
-        <Text role="body" tone="secondary">
-          {sharedHomes.length > 0
-            ? t('onBoarding.dietarySharedWith', {
-                homes: sharedHomes.join(', '),
-              })
-            : t('onBoarding.dietarySharingGeneric')}
-        </Text>
-
         <View style={styles.section}>
           <Text role="bodyStrong">{t('onBoarding.dietaryAllergensTitle')}</Text>
           <View style={styles.chips}>
@@ -138,26 +136,40 @@ export const DietaryStepScreen = () => {
               />
             ))}
           </View>
-          {allergens.map(allergen => {
-            const option = INTOLERANCE_OPTIONS_MAJOR_FIRST.find(
-              candidate => candidate.value === allergen.value,
-            );
-            return (
-              <SegmentedControl
-                key={allergen.value}
-                label={option ? t(option.labelKey) : t('labels.unknown')}
-                options={ALLERGEN_SEVERITIES}
-                value={allergen.severity}
-                onChange={severity => setSeverity(allergen.value, severity)}
-                formatLabel={severity => {
-                  const key = SEVERITY_LABEL_KEYS[severity];
-                  return key ? t(key) : t('labels.unknown');
-                }}
-                size="compact"
-                testID={onboardingTestIDs.dietarySeverity(allergen.value)}
-              />
-            );
-          })}
+          {/* Each opens as its allergen is picked, so what follows slides
+              rather than jumps; a closed one takes no space, so the spacing
+              sits inside each. */}
+          <View>
+            {INTOLERANCE_OPTIONS_MAJOR_FIRST.map(option => {
+              const allergen = allergens.find(
+                picked => picked.value === option.value,
+              );
+              return (
+                <Reveal key={option.value} open={!!allergen}>
+                  {allergen ? (
+                    <View style={styles.severity}>
+                      <SegmentedControl
+                        label={t(option.labelKey)}
+                        options={ALLERGEN_SEVERITIES}
+                        value={allergen.severity}
+                        onChange={severity =>
+                          setSeverity(allergen.value, severity)
+                        }
+                        formatLabel={severity => {
+                          const key = SEVERITY_LABEL_KEYS[severity];
+                          return key ? t(key) : t('labels.unknown');
+                        }}
+                        size="compact"
+                        testID={onboardingTestIDs.dietarySeverity(
+                          allergen.value,
+                        )}
+                      />
+                    </View>
+                  ) : null}
+                </Reveal>
+              );
+            })}
+          </View>
         </View>
 
         <View style={styles.section}>
@@ -207,6 +219,18 @@ export const DietaryStepScreen = () => {
           />
         </View>
 
+        {/* The notices follow the choices, just above the step's button. */}
+        <View style={styles.notices}>
+          <Text role="body">{t('dietaryAlerts.checkLabel')}</Text>
+          <Text role="body" tone="secondary">
+            {sharedHomes.length > 0
+              ? t('onBoarding.dietarySharedWith', {
+                  homes: sharedHomes.join(', '),
+                })
+              : t('onBoarding.dietarySharingGeneric')}
+          </Text>
+        </View>
+
         {failed ? (
           <Text role="error" tone="error">
             {t('onBoarding.dietarySaveFailed')}
@@ -235,6 +259,12 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     gap: theme.spacing.sm,
+  },
+  notices: {
+    gap: theme.spacing.sm,
+  },
+  severity: {
+    paddingTop: theme.spacing.sm,
   },
   chips: {
     flexDirection: 'row',
