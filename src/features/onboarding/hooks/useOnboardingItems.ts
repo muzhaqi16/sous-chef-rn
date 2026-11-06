@@ -7,8 +7,8 @@ import {
 } from '#/graphql/generated/schemaTypes';
 
 /**
- * The catalog foods the onboarding picker offers, curated and most popular
- * first, never a branded product — which items those are is onboarding's
+ * The catalog foods the onboarding picker offers, curated and ranked by how
+ * many recipes call for them, never a branded product — which items those are is onboarding's
  * decision. The API's curated path applies only `types` and `level`; any
  * other filter is a VALIDATION_FAILED. `hasLoaded` sits
  * beside `loading` because `cache-and-network` reports loading on EVERY mount
@@ -24,7 +24,8 @@ export function useOnboardingItems({ first = 50 }: { first?: number } = {}) {
           level: ItemLevel.Concept,
           types: [ItemType.Food, ItemType.Foundation],
         },
-        orderBy: { popularity: SortOrder.Desc },
+        // The curated order: the foods most recipes call for first.
+        orderBy: { onboardingRank: SortOrder.Asc },
         first,
       },
     },
