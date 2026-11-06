@@ -35,6 +35,7 @@ import {
   writeLocalPantry,
 } from '#features/pantry/cache/pantry';
 import {
+  dateActiveBatches,
   dropBatchesPage,
   isBatchesPage,
   writeRestatedBatches,
@@ -290,6 +291,15 @@ const pantryRowConflict: ConflictRead<EntityFieldsInputs> = {
   changed: ({ fields }) => fields,
 };
 
+/** The date an update sets: undefined when it leaves the date alone. */
+function expiryOf(variables: OperationVariables): string | null | undefined {
+  const input: unknown = variables.input;
+  if (!isRecord(input) || !('expiresOn' in input)) return undefined;
+  return typeof input.expiresOn === 'string' ? input.expiresOn : null;
+}
+
+// A date edit moves every active batch's date with the stack's, and the answer
+// restates the batches.
 export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
   ...entityFields,
   keyed: true,
@@ -297,4 +307,21 @@ export const updatePantryRow: LocalWrite<EntityFieldsInputs> = {
   capture: (cache, variables) => ({
     baseline: rowBaseline(cache, pantryRowConflict, variables),
   }),
+  apply(cache, write) {
+    entityFields.apply(cache, write);
+    const stack = stackOf(write.variables);
+    const expiresOn = expiryOf(write.variables);
+    if (!stack || expiresOn === undefined) return;
+    if (dateActiveBatches(cache, stack.id, expiresOn)) {
+      writeEntityFields(cache, stack, { earliestBatchExpiresOn: expiresOn });
+    }
+  },
+  commit(cache, { variables }, data) {
+    const stack = stackOf(variables);
+    const payload: unknown = appliedPayload(data);
+    if (!stack || !isRecord(payload)) return;
+    if (isBatchesPage(payload.batchesConnection)) {
+      writeRestatedBatches(cache, stack.id, payload.batchesConnection);
+    }
+  },
 };

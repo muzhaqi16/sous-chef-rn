@@ -55,10 +55,12 @@ jest.mock('#features/profile/ui/AvoidFoodSheet', () => ({
 }));
 
 const mockNavigateToNextStep = jest.fn();
+const mockBackToSummary = jest.fn();
 jest.mock('../useOnboardingNavigation', () => ({
   useOnboardingNavigation: () => ({
     navigateToNextStep: mockNavigateToNextStep,
     navigateToPreviousStep: jest.fn(),
+    backToSummary: mockBackToSummary,
   }),
 }));
 
@@ -318,5 +320,26 @@ describe('DietaryStepScreen', () => {
     await drainTimers();
     expect(screen.getByText(t('onBoarding.dietarySaveFailed'))).toBeTruthy();
     expect(mockNavigateToNextStep).not.toHaveBeenCalled();
+  });
+
+  describe('opened from the completion summary', () => {
+    const fromSummary = { params: { returnTo: 'OnboardingComplete' as const } };
+
+    it('saves, then returns to the summary', async () => {
+      const user = userEvent.setup();
+      render(<DietaryStepScreen route={fromSummary} />);
+
+      await user.press(screen.getByTestId(STEP_PRIMARY));
+
+      expect(mockSave).toHaveBeenCalled();
+      expect(mockBackToSummary).toHaveBeenCalledTimes(1);
+      expect(mockNavigateToNextStep).not.toHaveBeenCalled();
+    });
+
+    it('offers no Skip, since the answer is only being changed', () => {
+      render(<DietaryStepScreen route={fromSummary} />);
+
+      expect(screen.queryByText('Skip')).toBeNull();
+    });
   });
 });

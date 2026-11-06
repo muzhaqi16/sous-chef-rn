@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
+import type { StaticScreenProps } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { useTranslation } from '#/i18n';
 import {
@@ -49,11 +50,19 @@ const LIFESTYLE_DIETS = DIET_OPTIONS.filter(option =>
  * search. Only what the profile already holds starts selected, and nothing
  * is saved until Continue.
  */
-export const DietaryStepScreen = () => {
+/** Opened from the completion summary, the step saves and returns there. */
+type DietaryStepParams = { returnTo?: 'OnboardingComplete' } | undefined;
+
+export const DietaryStepScreen = ({
+  route,
+}: Partial<StaticScreenProps<DietaryStepParams>>) => {
   const { t } = useTranslation();
   useScreenTransition('DietaryStepScreen');
-  const { navigateToNextStep, navigateToPreviousStep } =
+  const { navigateToNextStep, navigateToPreviousStep, backToSummary } =
     useOnboardingNavigation();
+  const fromSummary = route?.params?.returnTo === 'OnboardingComplete';
+  const onDone = () =>
+    fromSummary ? backToSummary() : navigateToNextStep('Dietary');
   const { save, held } = useDietaryIntake();
   const { homes } = useDietarySharing();
   const [allergens, setAllergens] = useState<DietarySelection['allergens']>([]);
@@ -104,7 +113,7 @@ export const DietaryStepScreen = () => {
     setFailed(false);
     const saved = await save({ allergens, diets, foods, religiousDiet }, shown);
     setSaving(false);
-    if (saved) navigateToNextStep('Dietary');
+    if (saved) onDone();
     else setFailed(true);
   };
 
@@ -114,8 +123,10 @@ export const DietaryStepScreen = () => {
     <OnboardingStepScaffold
       title={t('onBoarding.dietaryTitle')}
       question={t('onBoarding.dietarySubtitle')}
-      onBack={() => navigateToPreviousStep('Dietary')}
-      onSkip={() => navigateToNextStep('Dietary')}
+      onBack={() =>
+        fromSummary ? backToSummary() : navigateToPreviousStep('Dietary')
+      }
+      onSkip={fromSummary ? undefined : () => navigateToNextStep('Dietary')}
       primary={{
         // Says what the tap does with the answers given.
         label:

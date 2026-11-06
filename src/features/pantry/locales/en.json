@@ -357,7 +357,6 @@
   "expirationAction": {
     "cooked": "Cooked",
     "shared": "Shared with someone",
-    "extended": "Extended shelf life",
     "wasted": "Wasted / Discarded",
     "noAction": "No action taken",
     "expiringSoon": "Expiring soon",

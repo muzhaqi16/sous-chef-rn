@@ -204,6 +204,7 @@ describe('a count of what a package holds', () => {
           },
         },
         today: expect.any(String),
+        batchesFirst: 100,
       },
     ]);
     expect(readBatch(cache)).toEqual(

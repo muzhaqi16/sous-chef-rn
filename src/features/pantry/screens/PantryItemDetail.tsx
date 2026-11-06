@@ -290,9 +290,8 @@ export const PantryItemDetail: React.FC<
 
   const quantityText = formatAmountLeft(item, readingSystem);
 
-  // The EXPIRED flag can land a day late east of UTC, so the date decides too.
-  // The batches' date, not the item's: an edit moves only the item's, and the
-  // server discards only expired batches.
+  // The EXPIRED flag can land a day late east of UTC, so the date decides too:
+  // the batches' dates, since the server discards only expired batches.
   const hasExpiredBatches =
     (item.quantity > 0 &&
       (item.condition === ItemCondition.Expired ||

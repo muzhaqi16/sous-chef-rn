@@ -55,11 +55,6 @@ const EXPIRATION_ACTIONS: {
     icon: 'share-social',
   },
   {
-    action: ExpirationAction.Extended,
-    labelKey: 'expirationAction.extended',
-    icon: 'calendar',
-  },
-  {
     action: ExpirationAction.Waste,
     labelKey: 'expirationAction.wasted',
     icon: 'trash',

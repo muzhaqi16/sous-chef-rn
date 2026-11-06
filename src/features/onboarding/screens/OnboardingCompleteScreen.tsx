@@ -17,6 +17,8 @@ import { useNotificationSettings } from '#features/notifications/hooks/useNotifi
 import { useTurnOnPush } from '#features/notifications/screens/useTurnOnPush';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingSummary } from '#features/onboarding/hooks/useOnboardingSummary';
+import { useHouseholdAnswer } from '#features/onboarding/hooks/useHouseholdAnswer';
+import { useOnboardingNavigation } from './useOnboardingNavigation';
 
 export const OnboardingCompleteScreen = () => {
   const { t } = useTranslation();
@@ -28,6 +30,8 @@ export const OnboardingCompleteScreen = () => {
 
   const { completeOnboarding } = useCompleteOnboarding(user?.id);
   const summary = useOnboardingSummary();
+  const household = useHouseholdAnswer();
+  const { changeAnswer } = useOnboardingNavigation();
   const homeId = useSelectedHomeId();
   const payoff = useRecipePayoff();
   const { settings, updateMultipleSettings } = useNotificationSettings();
@@ -102,7 +106,13 @@ export const OnboardingCompleteScreen = () => {
               : t('onBoarding.readyToStart')
           }
         />
-        <SetupSummary summary={summary} />
+        <SetupSummary
+          summary={summary}
+          onChangeCooksFor={count => {
+            void household.answer(count);
+          }}
+          onChangeDietary={() => changeAnswer('Dietary')}
+        />
 
         <RecipePayoff
           rows={payoff.rows}

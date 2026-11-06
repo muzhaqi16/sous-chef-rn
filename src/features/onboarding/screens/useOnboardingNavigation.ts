@@ -180,5 +180,20 @@ export function useOnboardingNavigation() {
     params?: OnboardingStackParams[Route],
   ) => navigation.dispatch(CommonActions.navigate(subRoute, params));
 
-  return { navigateToNextStep, navigateToPreviousStep, navigateWithinStep };
+  /** Opens an answered step from the summary; its save returns there. */
+  const changeAnswer = (step: 'Dietary') =>
+    navigation.dispatch(
+      CommonActions.navigate(step, { returnTo: 'OnboardingComplete' }),
+    );
+
+  /** Back to the summary a changed answer was opened from. */
+  const backToSummary = () => navigation.dispatch(StackActions.pop());
+
+  return {
+    navigateToNextStep,
+    navigateToPreviousStep,
+    navigateWithinStep,
+    changeAnswer,
+    backToSummary,
+  };
 }

@@ -263,6 +263,23 @@ export function drawInside(
   return true;
 }
 
+/** What a stack holds in its tracking unit; null when the cache holds no row. */
+export function heldQuantityOf(
+  cache: ApolloCache,
+  pantryItemId: string,
+): number | null {
+  const id = cache.identify({ __typename: 'PantryItem', id: pantryItemId });
+  if (!id) return null;
+  const cached = cache.readFragment<WriteHeldStock_PantryItemFragment>({
+    id,
+    fragment: WriteHeldStock_PantryItemFragmentDoc,
+    fragmentName: 'writeHeldStock_pantryItem',
+    returnPartialData: true,
+    optimistic: true,
+  });
+  return cached?.heldQuantity ?? null;
+}
+
 /**
  * An amount entered in `unitId`, in the stack's tracking unit when no
  * conversion is needed: the tracking unit itself, or a dozen of it. Null when

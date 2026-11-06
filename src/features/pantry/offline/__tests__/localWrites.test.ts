@@ -7,9 +7,15 @@ import {
   completeSeed,
   seedFragment,
   seedQuery,
+  type MockDataFor,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
-import { ItemCondition, UnitType } from '#/graphql/generated/schemaTypes';
+import {
+  BatchStatus,
+  ItemCondition,
+  UnitType,
+} from '#/graphql/generated/schemaTypes';
+import type { EntityFieldsInputs } from '#/apollo/pendingWrites/entityFields';
 import {
   ConvertExpiredToWasteDocument,
   CreatePantryDocument,
@@ -17,7 +23,9 @@ import {
   CreatePantryItemUsageDocument,
   DeletePantryDocument,
   DeletePantryItemDocument,
+  GetPantryItemBatchesDocument,
   RestockPantryItemDocument,
+  UpdatePantryItemDocument,
   UpdatePantryItemQuantityDocument,
 } from '#features/pantry/graphql/pantry.generated';
 import {
@@ -29,6 +37,7 @@ import {
   removeItem,
   removePantry,
   setStock,
+  updatePantryRow,
   type AddStockInputs,
   type CreateItemInputs,
   type CreatePantryInputs,
@@ -118,6 +127,7 @@ function setup() {
     CreatePantryItemUsage: drawStock,
     RestockPantryItem: addStock,
     ConvertExpiredToWaste: discardExpired,
+    UpdatePantryItem: updatePantryRow,
   };
   return { cache, writes: new PendingWrites(cache, table), table };
 }
@@ -815,6 +825,139 @@ describe('removing a stack', () => {
     jest.useRealTimers();
 
     expect(shown(pantry, false)).toEqual({ ids: [], total: 0 });
+  });
+});
+
+describe('dating a stack', () => {
+  /** The detail's batch page: one batch held, one used up. */
+  const withBatches = (pantry: Setup) => {
+    seedQuery(pantry.cache, {
+      query: GetPantryItemBatchesDocument,
+      variables: { pantryItemId: 'held' },
+      data: {
+        pantryItemBatchesConnection: {
+          __typename: 'PantryItemBatchConnection',
+          totalCount: 2,
+          pageInfo: { __typename: 'PageInfo', hasNextPage: false },
+          edges: [
+            {
+              __typename: 'PantryItemBatchEdge',
+              node: {
+                __typename: 'PantryItemBatch',
+                id: 'active',
+                status: BatchStatus.Active,
+                expiresOn: '2026-10-01',
+                expiresAtIsManual: false,
+              },
+            },
+            {
+              __typename: 'PantryItemBatchEdge',
+              node: {
+                __typename: 'PantryItemBatch',
+                id: 'used',
+                status: BatchStatus.Depleted,
+                expiresOn: '2026-09-01',
+                expiresAtIsManual: false,
+              },
+            },
+          ],
+        },
+      },
+    });
+    return pantry;
+  };
+
+  const batches = ({ cache }: Setup, optimistic = true) =>
+    cache
+      .readQuery({
+        query: GetPantryItemBatchesDocument,
+        variables: { pantryItemId: 'held' },
+        optimistic,
+      })
+      ?.pantryItemBatchesConnection.edges.map(({ node }) => ({
+        id: node.id,
+        expiresOn: node.expiresOn,
+        expiresAtIsManual: node.expiresAtIsManual,
+      }));
+
+  const date = ({ writes }: Setup, expiresOn: string | null) => {
+    const inputs: EntityFieldsInputs = {
+      entity: { __typename: 'PantryItem', id: 'held' },
+      fields: { expiresOn },
+    };
+    return writes.begin(
+      UpdatePantryItemDocument,
+      { input: { id: 'held', version: 3, expiresOn }, today: '2026-10-30' },
+      inputs,
+    );
+  };
+
+  it('moves every active batch to the typed date at once', () => {
+    const pantry = withBatches(setup());
+
+    date(pantry, '2027-01-15');
+
+    expect(batches(pantry)).toEqual([
+      { id: 'active', expiresOn: '2027-01-15', expiresAtIsManual: true },
+      { id: 'used', expiresOn: '2026-09-01', expiresAtIsManual: false },
+    ]);
+  });
+
+  it('clears them, and the answer restates the batch page', () => {
+    const pantry = withBatches(setup());
+    const write = date(pantry, null);
+    expect(batches(pantry)?.[0]?.expiresOn).toBeNull();
+
+    // The server's page, without the used-up batch: only the commit's write
+    // of the page can drop it.
+    const answer: MockDataFor<typeof UpdatePantryItemDocument> = {
+      updatePantryItem: {
+        __typename: 'UpdatePantryItemPayload',
+        pantryItem: { __typename: 'PantryItem', id: 'held' },
+        batchesConnection: {
+          __typename: 'PantryItemBatchConnection',
+          totalCount: 1,
+          pageInfo: { __typename: 'PageInfo', hasNextPage: false },
+          edges: [
+            {
+              __typename: 'PantryItemBatchEdge',
+              node: {
+                __typename: 'PantryItemBatch',
+                id: 'active',
+                status: BatchStatus.Active,
+                expiresOn: null,
+                expiresAtIsManual: true,
+              },
+            },
+          ],
+        },
+      },
+    };
+    const stated = completeSeed(
+      UpdatePantryItemDocument,
+      write.variables,
+      answer,
+    );
+    pantry.writes.confirm(write.id, stated);
+
+    expect(batches(pantry, false)).toEqual([
+      { id: 'active', expiresOn: null, expiresAtIsManual: true },
+    ]);
+  });
+
+  it('leaves the batches alone when the date is not edited', () => {
+    const pantry = withBatches(setup());
+
+    pantry.writes.begin(
+      UpdatePantryItemDocument,
+      { input: { id: 'held', version: 3, tags: ['x'] }, today: '2026-10-30' },
+      {
+        entity: { __typename: 'PantryItem', id: 'held' },
+        fields: { tags: ['x'] },
+      } satisfies EntityFieldsInputs,
+    );
+
+    expect(batches(pantry)?.[0]?.expiresOn).toBe('2026-10-01');
   });
 });
 

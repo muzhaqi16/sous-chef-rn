@@ -16,6 +16,7 @@ import { OnboardingStepScaffold } from '#features/onboarding/components/Onboardi
 import { useHouseholdAnswer } from '#features/onboarding/hooks/useHouseholdAnswer';
 import { useHouseholdGreeting } from '#features/onboarding/hooks/useHouseholdGreeting';
 import { RenameHomeDialog } from '#features/onboarding/components/RenameHomeDialog';
+import { PeopleStepper } from '#features/onboarding/components/PeopleStepper';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingNavigation } from './useOnboardingNavigation';
 
@@ -58,11 +59,6 @@ export const HouseholdStepScreen = () => {
     await saveAnswer(count);
     navigateToNextStep('Household');
   };
-  const changeSize = (delta: number) =>
-    setFamilySize(size =>
-      Math.min(COOKS_FOR_MAX, Math.max(FAMILY_MIN, size + delta)),
-    );
-  const sizeLabel = t('onBoarding.householdPeople', { count: familySize });
 
   return (
     <OnboardingStepScaffold
@@ -170,50 +166,13 @@ export const HouseholdStepScreen = () => {
           </RadioRow>
         </RowCard>
         <Reveal open={family}>
-          <View
-            style={styles.stepper}
-            accessible
-            accessibilityRole="adjustable"
-            accessibilityLabel={t('onBoarding.householdFamily')}
-            accessibilityValue={{ text: sizeLabel }}
-            accessibilityActions={[
-              { name: 'increment' },
-              { name: 'decrement' },
-            ]}
-            onAccessibilityAction={event =>
-              changeSize(event.nativeEvent.actionName === 'increment' ? 1 : -1)
-            }
-          >
-            <AppPressable
-              onPress={() => changeSize(-1)}
-              disabled={familySize <= FAMILY_MIN}
-              accessibilityLabel={t('onBoarding.householdFewer')}
-              style={styles.stepperButton}
-              testID={onboardingTestIDs.householdFewer}
-            >
-              <Icon
-                name="remove-circle-outline"
-                size={32}
-                tone={familySize <= FAMILY_MIN ? 'textTertiary' : 'primary'}
-              />
-            </AppPressable>
-            <Text role="subheading" style={styles.stepperValue}>
-              {sizeLabel}
-            </Text>
-            <AppPressable
-              onPress={() => changeSize(1)}
-              disabled={familySize >= COOKS_FOR_MAX}
-              accessibilityLabel={t('onBoarding.householdMore')}
-              style={styles.stepperButton}
-              testID={onboardingTestIDs.householdMore}
-            >
-              <Icon
-                name="add-circle-outline"
-                size={32}
-                tone={familySize >= COOKS_FOR_MAX ? 'textTertiary' : 'primary'}
-              />
-            </AppPressable>
-          </View>
+          <PeopleStepper
+            value={familySize}
+            min={FAMILY_MIN}
+            max={COOKS_FOR_MAX}
+            onChange={setFamilySize}
+            label={t('onBoarding.householdFamily')}
+          />
         </Reveal>
       </View>
     </OnboardingStepScaffold>
@@ -239,19 +198,5 @@ const styles = StyleSheet.create(theme => ({
     gap: theme.spacing.md,
     paddingVertical: theme.spacing.md,
     paddingHorizontal: theme.spacing.lg,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: theme.spacing.lg,
-    paddingVertical: theme.spacing.md,
-  },
-  stepperButton: {
-    padding: theme.spacing.xs,
-  },
-  stepperValue: {
-    minWidth: 120,
-    textAlign: 'center',
   },
 }));

@@ -48,6 +48,10 @@ jest.mock('#/domain/regionCurrency', () => ({
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/performance/useScreenTransition');
 jest.mock('#features/onboarding/hooks/useOnboardingSummary');
+const mockAnswerHousehold = jest.fn().mockResolvedValue(undefined);
+jest.mock('#features/onboarding/hooks/useHouseholdAnswer', () => ({
+  useHouseholdAnswer: () => ({ answer: mockAnswerHousehold, saved: null }),
+}));
 
 const mockCompleteOnboarding = jest.fn();
 jest.mock('#features/onboarding/hooks/useCompleteOnboarding', () => ({
@@ -214,6 +218,48 @@ afterEach(() => {
 });
 
 describe('OnboardingCompleteScreen', () => {
+  describe('changing an answer from the summary', () => {
+    it('changes who the meals are for with a stepper, in place', async () => {
+      summaryOf({ ...HOME_READY, cooksFor: 4 });
+      const user = userEvent.setup();
+      renderScreen();
+
+      await user.press(
+        screen.getByTestId(onboardingTestIDs.summaryLine('household')),
+      );
+      await user.press(screen.getByTestId(onboardingTestIDs.householdFewer));
+
+      // Saved where the household step saves it, so recipes start at three.
+      expect(mockAnswerHousehold).toHaveBeenCalledWith(3);
+    });
+
+    it('opens the dietary step, which returns here once saved', async () => {
+      summaryOf({ ...HOME_READY, dietarySaved: true });
+      const user = userEvent.setup();
+      renderScreen();
+
+      await user.press(
+        screen.getByTestId(onboardingTestIDs.summaryLine('dietary')),
+      );
+
+      expect(useAppNavigation().navigation.dispatch).toHaveBeenCalledWith(
+        CommonActions.navigate('Dietary', { returnTo: 'OnboardingComplete' }),
+      );
+    });
+
+    it('leaves the home and kitchen lines as they are', () => {
+      summaryOf({ ...HOME_READY, stapleItems: 3 });
+      renderScreen();
+
+      expect(
+        screen.queryByTestId(onboardingTestIDs.summaryLine('home')),
+      ).toBeNull();
+      expect(
+        screen.queryByTestId(onboardingTestIDs.summaryLine('staples')),
+      ).toBeNull();
+    });
+  });
+
   describe('the celebration', () => {
     it('greets the user by first name, with a check and one success haptic', () => {
       mockUser = { id: 'u1', onBoarded: false, firstName: 'Nora' };
