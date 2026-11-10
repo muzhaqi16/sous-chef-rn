@@ -3432,6 +3432,10 @@ enum Cuisine {
 
 """Sub-input for curation/trending filters"""
 input CurationFilterInput {
+  """
+  Foods people commonly avoid, in the order admins listed them: live PUBLIC concepts only; applies nothing else
+  """
+  commonlyAvoided: Boolean
   isPopular: Boolean
   isRecent: Boolean
   isTrending: Boolean
@@ -14544,7 +14548,8 @@ type Query {
   - items(filters: { lookup: { upc, upcFormat } }) - UPC/barcode lookup
   - items(filters: { lookup: { sku, skuStoreId } }) - SKU lookup
   
-  A curated list (curation isPopular, isTrending, isRecent, showInOnboarding)
+  A curated list (curation isPopular, isTrending, isRecent, showInOnboarding,
+  commonlyAvoided)
   and a UPC/SKU lookup each return a single page, so after, before and last
   are refused, and each applies a subset of the filters. A filter the
   request's mode does not apply is refused with a validation error naming
