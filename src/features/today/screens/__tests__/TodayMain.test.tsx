@@ -33,10 +33,6 @@ const mockNavigation = {
 jest.mock('#hooks/navigation/useAppNavigation', () => ({
   useAppNavigation: () => mockNavigation,
 }));
-// The note's data hook reads Apollo, which this screen test does not mount.
-jest.mock('#features/recipes/hooks/useRestrictionsNote', () => ({
-  useRestrictionsNote: () => null,
-}));
 jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
   useTabBarAddMenu: jest.fn(),
 }));
