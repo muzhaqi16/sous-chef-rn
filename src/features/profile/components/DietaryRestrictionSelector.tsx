@@ -439,6 +439,11 @@ export const DietaryRestrictionSelector: React.FC<
       <AvoidFoodSheet
         visible={isAvoidSheetVisible}
         onDismiss={() => setAvoidSheetVisible(false)}
+        avoided={
+          new Set(
+            existingRestrictions.flatMap(r => (r.item ? [r.item.id] : [])),
+          )
+        }
         onPick={handleAvoidFood}
       />
     </View>

@@ -141,6 +141,7 @@
     "avoidHint": "Every kind of it is flagged, for you and the homes you share with.",
     "avoidSearchPlaceholder": "Search foods",
     "avoidSearchNeedsConnection": "Searching foods needs a connection. Try again when you're back online.",
+    "avoidSuggestionsTitle": "Often avoided",
     "avoidNamed": "Avoid {{name}}",
     "avoidSeverity": {
       "preference": "Avoid",

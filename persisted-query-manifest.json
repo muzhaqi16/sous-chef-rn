@@ -165,6 +165,12 @@
       "body": "mutation ChangePassword($input: ChangePasswordInput!) {\n  changePassword(input: $input) {\n    __typename\n    ... on ChangePasswordPayload {\n      status\n      session {\n        accessToken\n        refreshToken\n        __typename\n      }\n      __typename\n    }\n    ... on Error {\n      code\n      disposition\n      message\n      __typename\n    }\n    ... on ValidationError {\n      field\n      __typename\n    }\n  }\n}"
     },
     {
+      "id": "71857516b6dd1125022b8fb08902b6d55c036a5cf6b341447bd7bdc5f76c57e9",
+      "name": "CommonlyAvoidedFoods",
+      "type": "query",
+      "body": "query CommonlyAvoidedFoods($first: Int!) {\n  items(filters: {curation: {commonlyAvoided: true}}, first: $first) {\n    edges {\n      node {\n        version\n        id\n        ...AvoidFoodRow_item\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}\n\nfragment AvoidFoodRow_item on Item {\n  version\n  id\n  name\n  imageUrl\n  categories {\n    id\n    isPrimary\n    category {\n      version\n      id\n      name\n      __typename\n    }\n    __typename\n  }\n  __typename\n}"
+    },
+    {
       "id": "7c12200c16a15bae886451ee4e07ef0a279c6d44907219b11e442e5d6832d89d",
       "name": "CompleteOnboarding",
       "type": "mutation",

@@ -265,6 +265,7 @@ export const DietaryStepScreen = ({
       <AvoidFoodSheet
         visible={avoidSheetVisible}
         onDismiss={() => setAvoidSheetVisible(false)}
+        avoided={new Set(foods.map(food => food.id))}
         onPick={(food, severity) => {
           setFoods(current => [
             ...current.filter(picked => picked.id !== food.id),

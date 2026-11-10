@@ -141,6 +141,7 @@
     "avoidHint": "Çdo lloj i tij shënohet, për ty dhe për shtëpitë me të cilat ndan.",
     "avoidSearchPlaceholder": "Kërko ushqime",
     "avoidSearchNeedsConnection": "Për të kërkuar ushqime duhet lidhje me internetin. Provo sërish kur të kesh lidhje.",
+    "avoidSuggestionsTitle": "Që shmangen shpesh",
     "avoidNamed": "Shmang {{name}}",
     "avoidSeverity": {
       "preference": "Shmang",

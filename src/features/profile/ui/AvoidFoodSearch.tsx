@@ -14,18 +14,24 @@ interface AvoidFoodSearchProps {
   onPick: (food: { id: string; name: string }) => void;
   /** Resets the search when it becomes false, as a closing sheet does. */
   active?: boolean;
+  /** Item ids already avoided, which the suggestions leave out. */
+  avoided?: ReadonlySet<string>;
 }
+
+const NONE_AVOIDED: ReadonlySet<string> = new Set();
 
 /**
  * A search for catalog foods (never products) to avoid, with its results and
- * the reason when it can't answer. The avoid sheet and onboarding share it.
+ * the reason when it can't answer; with nothing typed, the foods people
+ * commonly avoid. The avoid sheet and onboarding share it.
  */
 export const AvoidFoodSearch: React.FC<AvoidFoodSearchProps> = ({
   onPick,
   active = true,
+  avoided = NONE_AVOIDED,
 }) => {
   const { t } = useTranslation();
-  const search = useAvoidFoodSearch();
+  const search = useAvoidFoodSearch({ active, avoided });
   const { reset } = search;
 
   useEffect(() => {
@@ -51,6 +57,14 @@ export const AvoidFoodSearch: React.FC<AvoidFoodSearchProps> = ({
         isLoading={search.searching}
         containerStyle={styles.spaced}
       />
+      {search.suggestions.length > 0 ? (
+        <Text role="label" tone="secondary" style={styles.spaced}>
+          {t('dietaryProfile.avoidSuggestionsTitle')}
+        </Text>
+      ) : null}
+      {search.suggestions.map(food => (
+        <AvoidFoodRow key={food.id} food={food} onPress={onPick} />
+      ))}
       {search.foods.map(food => (
         <AvoidFoodRow key={food.id} food={food} onPress={onPick} />
       ))}

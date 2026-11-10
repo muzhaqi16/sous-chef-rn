@@ -141,6 +141,7 @@
     "avoidHint": "Ogni sua varietà viene segnalata, a te e alle case con cui condividi.",
     "avoidSearchPlaceholder": "Cerca alimenti",
     "avoidSearchNeedsConnection": "Per cercare alimenti serve una connessione. Riprova quando torni online.",
+    "avoidSuggestionsTitle": "Spesso evitati",
     "avoidNamed": "Evita {{name}}",
     "avoidSeverity": {
       "preference": "Evita",

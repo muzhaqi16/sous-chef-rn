@@ -15,3 +15,17 @@ query SearchAvoidableFoods($query: String!, $first: Int!) {
     }
   }
 }
+
+# What the search lists before anything is typed: foods people commonly avoid,
+# in the order admins listed them, every one a PUBLIC concept.
+query CommonlyAvoidedFoods($first: Int!) {
+  items(filters: { curation: { commonlyAvoided: true } }, first: $first) {
+    edges {
+      node {
+        version
+        id
+        ...AvoidFoodRow_item
+      }
+    }
+  }
+}

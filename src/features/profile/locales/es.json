@@ -141,6 +141,7 @@
     "avoidHint": "Se marca cualquier variedad, para ti y para los hogares con los que compartes.",
     "avoidSearchPlaceholder": "Buscar alimentos",
     "avoidSearchNeedsConnection": "Para buscar alimentos hace falta conexión. Inténtalo de nuevo cuando vuelvas a tenerla.",
+    "avoidSuggestionsTitle": "Evitados con frecuencia",
     "avoidNamed": "Evitar {{name}}",
     "avoidSeverity": {
       "preference": "Evitar",
