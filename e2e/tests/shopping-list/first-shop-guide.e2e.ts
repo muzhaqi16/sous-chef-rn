@@ -12,6 +12,7 @@ import { kitTestIDs } from '../../../src/components/testIDs';
 import { shoppingListTestIDs } from '../../../src/features/shoppingList/testIDs';
 import { catalogTestIDs } from '../../../src/features/catalog/testIDs';
 import { GUIDE_TOURS } from '../../../src/domain/guides';
+import { expectDisappearsAfter } from '../../helpers/assertions';
 
 const SEARCH_INPUT = catalogTestIDs.addItemSheetSearchInput(
   shoppingListTestIDs.addSheetPrefix,
@@ -66,16 +67,14 @@ describe('The first-shop guide', () => {
 
     // Putting away is on Purchased, which the list switches to by itself.
     await stepShows('4 of 4');
-    await element(by.id(TARGET)).tap();
-    await waitFor(element(by.id(shoppingListTestIDs.moveToPantryConfirm)))
-      .toBeVisible()
-      .withTimeout(5000);
-    await element(by.id(shoppingListTestIDs.moveToPantryConfirm)).tap();
-
-    // The move, however made, ends the guide. A one-step tip may follow on the
-    // same spotlight; it has no End tour, which the guide's waiting step has.
-    await waitFor(element(by.id(kitTestIDs.spotlightEndButton)))
-      .not.toBeVisible()
-      .withTimeout(10000);
+    // The move, however made, ends the guide: its waiting step offers End
+    // tour, and a one-step tip that may follow on the same spotlight has none.
+    await expectDisappearsAfter(kitTestIDs.spotlightEndButton, async () => {
+      await element(by.id(TARGET)).tap();
+      await waitFor(element(by.id(shoppingListTestIDs.moveToPantryConfirm)))
+        .toBeVisible()
+        .withTimeout(5000);
+      await element(by.id(shoppingListTestIDs.moveToPantryConfirm)).tap();
+    });
   });
 });
