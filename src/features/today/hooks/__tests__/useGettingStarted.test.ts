@@ -5,6 +5,7 @@ import {
 } from '#/test-utils/apolloMockProvider';
 import { operationLog } from '#/test-utils/operationLog';
 import { useStore } from '#store';
+import { Telemetry } from '#services/telemetry';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { suppressFeatureHintsForE2E } from '#hooks/settings/useFeatureHint';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
@@ -155,6 +156,20 @@ describe('useGettingStarted', () => {
     await answered();
     expect(doneOf(result.current.card).plan).toBe(true);
     expect(doneOf(result.current.card).cook).toBe(true);
+  });
+
+  it('counts each item done once in the funnel', () => {
+    signIn(NEW);
+    jest.mocked(Telemetry.trackEvent).mockClear();
+
+    const { rerender } = renderCard(3);
+    rerender({ count: 4 });
+
+    expect(
+      jest
+        .mocked(Telemetry.trackEvent)
+        .mock.calls.filter(([name]) => name === 'getting_started_item_done'),
+    ).toEqual([['getting_started_item_done', { item: 'stock' }]]);
   });
 
   it('ticks shopping once a bought item is moved to the pantry', async () => {

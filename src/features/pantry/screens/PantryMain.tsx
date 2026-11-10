@@ -27,6 +27,7 @@ import {
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
 import { useTutorialSession } from '#hooks/ui/tutorialSession';
+import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { GUIDE_TOURS } from '#domain/guides';
 import { useSoonestDatedItem } from '#features/pantry/hooks/useSoonestDatedItem';
@@ -297,6 +298,10 @@ function PantryMainContent({
     skip: !isPantryFocused,
   });
   useExpiryPushAsk({ datedItemName, isFocused: isPantryFocused });
+  // Dated food is the other half of a new account's activation.
+  useEffect(() => {
+    if (datedItemName) noteTipFact('datedItem');
+  }, [datedItemName]);
 
   const tutorial = useTutorialSequence({
     steps: buildPantryTutorialSteps(t, screen.pantries.length),

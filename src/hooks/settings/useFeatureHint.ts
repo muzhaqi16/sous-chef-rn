@@ -1,4 +1,5 @@
 import { storeApi } from '#store';
+import { Telemetry } from '#services/telemetry';
 import { featureHintKey } from '#store/slices/tutorialSlice';
 
 /**
@@ -45,14 +46,38 @@ export const replayTipsFor = (userId: string): void => {
   store.bumpTutorialResetGeneration();
 };
 
-/** What an account has done that a contextual tip waits for. */
-export type TipFact = 'recipeSaved' | 'recipeAdded';
+/** What an account has done that a tip, or activation, waits for. */
+export type TipFact =
+  | 'recipeSaved'
+  | 'recipeAdded'
+  | 'recipeOpened'
+  | 'datedItem'
+  | 'activationReached';
 
-/** Notes, for the signed-in account on this device, that it did this. */
+/** How soon after sign-up both first steps count as activation. */
+const ACTIVATION_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
+/**
+ * Notes, for the signed-in account on this device, that it did this. An
+ * account that has dated food in its pantry and has opened a recipe within
+ * three days of sign-up has reached activation, sent once.
+ */
 export const noteTipFact = (fact: TipFact): void => {
-  const store = storeApi.getState();
-  const userId = store.user?.id;
-  if (userId) store.noteTipFact(userId, fact);
+  const user = storeApi.getState().user;
+  if (!user) return;
+  storeApi.getState().noteTipFact(user.id, fact);
+  const facts = storeApi.getState().tipFacts[user.id] ?? [];
+  if (
+    facts.includes('activationReached') ||
+    !facts.includes('datedItem') ||
+    !facts.includes('recipeOpened')
+  ) {
+    return;
+  }
+  const createdAt = user.createdAt ? Date.parse(user.createdAt) : NaN;
+  if (!(Date.now() - createdAt <= ACTIVATION_WINDOW_MS)) return;
+  storeApi.getState().noteTipFact(user.id, 'activationReached');
+  Telemetry.trackEvent('activation_reached', {});
 };
 
 export const hasTipFact = (fact: TipFact, userId?: string): boolean =>

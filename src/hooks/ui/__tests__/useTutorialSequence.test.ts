@@ -316,6 +316,43 @@ describe('useTutorialSequence — a guide started from Getting started', () => {
   });
 });
 
+describe('useTutorialSequence — measurement', () => {
+  const events = () =>
+    jest
+      .mocked(Telemetry.trackEvent)
+      .mock.calls.map(([name, props]) => [name, props?.via ?? props?.reason]);
+
+  beforeEach(() => jest.mocked(Telemetry.trackEvent).mockClear());
+
+  it('sends a view, how each step ended, and the tour finished', () => {
+    const { result } = renderTour();
+    act(() => result.current.advanceInPlace());
+    act(() => result.current.advance());
+
+    expect(events()).toEqual([
+      ['tour_step_viewed', undefined],
+      ['tour_step_completed', 'next'],
+      ['tour_step_viewed', undefined],
+      ['tour_step_completed', 'target'],
+      ['tour_completed', undefined],
+    ]);
+  });
+
+  it('sends why a tour was left: Not now, or End tour', () => {
+    const first = renderTour();
+    act(() => first.result.current.pause());
+    first.unmount();
+    act(() => nextSession());
+    const second = renderTour();
+    act(() => second.result.current.skipAll());
+
+    expect(events().filter(([name]) => name === 'tour_dismissed')).toEqual([
+      ['tour_dismissed', 'not_now'],
+      ['tour_dismissed', 'end'],
+    ]);
+  });
+});
+
 describe('useTutorialSequence — a step inside a sheet', () => {
   const inSheet: TutorialStep[] = [
     {

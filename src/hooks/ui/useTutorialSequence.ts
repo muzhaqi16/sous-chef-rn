@@ -268,8 +268,20 @@ export const useTutorialSequence = ({
     markFeatureHintShown(featureId, userId);
   };
 
+  // How each step ends, for measuring where tours lose people.
+  const isLastStep = activeStepIndex === visibleSteps.length - 1;
+  const trackDone = (featureId: string, via: 'next' | 'target' | 'action') => {
+    Telemetry.trackEvent('tour_step_completed', {
+      tour_id: tour,
+      feature_id: featureId,
+      via,
+    });
+    if (isLastStep) Telemetry.trackEvent('tour_completed', { tour_id: tour });
+  };
+
   const advance = () => {
     if (!activeStep) return;
+    trackDone(activeStep.featureId, 'target');
     markShown(activeStep.featureId);
     setGeneration(g => g + 1);
     setIsTransitioning(true);
@@ -280,11 +292,13 @@ export const useTutorialSequence = ({
     }, 400);
   };
 
-  const advanceInPlace = () => {
+  const moveOn = (via: 'next' | 'action') => {
     if (!activeStep) return;
+    trackDone(activeStep.featureId, via);
     markShown(activeStep.featureId);
     setGeneration(g => g + 1);
   };
+  const advanceInPlace = () => moveOn('next');
 
   // A step waiting for an action continues when it happens, however done,
   // while the tour runs: shown, or out of the way of the user's own path.
@@ -294,7 +308,7 @@ export const useTutorialSequence = ({
         ? null
         : activeStep.advanceOn.event
       : null;
-  const onAwaited = useEffectEvent(() => advanceInPlace());
+  const onAwaited = useEffectEvent(() => moveOn('action'));
   useEffect(() => {
     if (awaited === null) return;
     return onTutorialEvent(event => {
@@ -302,7 +316,17 @@ export const useTutorialSequence = ({
     });
   }, [awaited]);
 
+  // Got it on the last step finishes the tour; End tour before it leaves it.
   const skipAll = () => {
+    if (activeStep && isLastStep) {
+      trackDone(activeStep.featureId, 'next');
+    } else if (activeStep) {
+      Telemetry.trackEvent('tour_dismissed', {
+        tour_id: tour,
+        feature_id: activeStep.featureId,
+        reason: 'end',
+      });
+    }
     for (const step of steps) markShown(step.featureId);
     setGeneration(g => g + 1);
   };
@@ -341,6 +365,20 @@ export const useTutorialSequence = ({
         }
       : null;
 
+  // Each step counted once as it comes into view, spotlight or inline.
+  const viewedId =
+    currentStep?.featureId ?? (inlineStep ? activeStep?.featureId : null);
+  const onViewed = useEffectEvent((featureId: string) => {
+    Telemetry.trackEvent('tour_step_viewed', {
+      tour_id: tour,
+      feature_id: featureId,
+      started_by_user: startedByUser,
+    });
+  });
+  useEffect(() => {
+    if (viewedId) onViewed(viewedId);
+  }, [viewedId]);
+
   // Showing a tip unasked takes the account's one slot for the session.
   const shownUnasked =
     (currentStep !== null || inlineStep !== null) && !startedByUser;
@@ -358,6 +396,13 @@ export const useTutorialSequence = ({
     advanceInPlace,
     skipAll,
     pause: () => {
+      if (activeStep) {
+        Telemetry.trackEvent('tour_dismissed', {
+          tour_id: tour,
+          feature_id: activeStep.featureId,
+          reason: 'not_now',
+        });
+      }
       setPaused(true);
       tutorialSession.pause(tour);
       tutorialSession.endGuide(tour);

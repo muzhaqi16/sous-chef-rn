@@ -7,6 +7,7 @@ import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { featureHintsSuppressed } from '#hooks/settings/useFeatureHint';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { onTutorialEvent } from '#domain/tutorialEvents';
+import { Telemetry } from '#services/telemetry';
 import type { GuideItem } from '#domain/guides';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { GettingStartedDocument } from './useGettingStarted.generated';
@@ -97,7 +98,11 @@ export function useGettingStarted({
     .join(',');
   useEffect(() => {
     if (!userId || newlyDone === '') return;
-    storeApi.getState().markGettingStartedDone(userId, newlyDone.split(','));
+    const done = newlyDone.split(',');
+    storeApi.getState().markGettingStartedDone(userId, done);
+    for (const item of done) {
+      Telemetry.trackEvent('getting_started_item_done', { item });
+    }
   }, [userId, newlyDone]);
 
   // No server record says an item was put away, so the device notes it.

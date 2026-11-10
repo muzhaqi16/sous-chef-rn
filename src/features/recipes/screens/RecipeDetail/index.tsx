@@ -1,5 +1,6 @@
+import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View } from 'react-native';
 import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
@@ -292,6 +293,11 @@ const RecipeDetailScreen: React.FC = () => {
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
   const [showReportSheet, setShowReportSheet] = useState(false);
+  // Opening a recipe is half of a new account's activation.
+  useEffect(() => {
+    if (recipeId) noteTipFact('recipeOpened');
+  }, [recipeId]);
+
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
   const cooksFor = useCooksFor();
