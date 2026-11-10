@@ -14,7 +14,6 @@ const ranking = (...ids: string[]): RecipeSuggestionsQuery => ({
       coverage: 50,
       missingIngredientCount: 0,
       usedIngredients: [],
-      missingIngredients: [],
       expiringStacks: [],
       node: {
         __typename: 'Recipe',

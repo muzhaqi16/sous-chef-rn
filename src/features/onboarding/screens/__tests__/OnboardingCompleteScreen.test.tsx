@@ -1,7 +1,7 @@
 'use no memo';
 
 import React from 'react';
-import { act, screen, userEvent, within } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
 import { CommonActions } from '@react-navigation/native';
 import { t } from '#/i18n';
 import { makeCache } from '#/apollo/cache';
@@ -57,21 +57,6 @@ jest.mock('#features/onboarding/hooks/useCompleteOnboarding', () => ({
   useCompleteOnboarding: () => ({ completeOnboarding: mockCompleteOnboarding }),
 }));
 
-let mockPayoff: unknown[] = [];
-let mockShowCheckLabel = false;
-let mockPopular = false;
-jest.mock('#features/onboarding/hooks/useRecipePayoff', () => ({
-  useRecipePayoff: () => ({
-    rows: mockPayoff,
-    popular: mockPopular,
-    showCheckLabel: mockShowCheckLabel,
-  }),
-}));
-const mockAddMissing = jest.fn().mockResolvedValue(true);
-jest.mock('#features/recipes/hooks/useAddMissingToList', () => ({
-  useAddMissingToList: () => mockAddMissing,
-}));
-
 const mockInviteLink = jest.fn();
 jest.mock('#features/onboarding/hooks/useHouseholdInvite', () => ({
   useHouseholdInvite: () => ({ inviteLink: mockInviteLink }),
@@ -107,49 +92,6 @@ const summaryOf = (done: Partial<OnboardingSummary>): void => {
 };
 
 const HOME_READY = { homeAndPantry: true, shoppingList: true };
-
-const SHAKSHUKA = {
-  source: 'suggestion',
-  edge: {
-    coverage: 80,
-    missingIngredientCount: 1,
-    usedIngredients: [{ id: 'r1-eggs', name: 'eggs', item: null }],
-    expiringStacks: [],
-    node: {
-      id: 'r1',
-      name: 'Shakshuka',
-      imageUrl: null,
-      servings: 2,
-      totalTimeMinutes: 25,
-    },
-  },
-};
-
-/** Uses the eggs held, under half of it: three more to buy. */
-const FRITTATA = {
-  source: 'suggestion',
-  edge: {
-    coverage: 30,
-    missingIngredientCount: 3,
-    usedIngredients: [{ id: 'r2-eggs', name: 'eggs', item: null }],
-    missingIngredients: ['spinach', 'feta', 'milk'].map(name => ({
-      id: `r2-${name}`,
-      name,
-      quantity: 1,
-      isOptional: false,
-      unit: null,
-      item: null,
-    })),
-    expiringStacks: [],
-    node: {
-      id: 'r2',
-      name: 'Frittata',
-      imageUrl: null,
-      servings: 2,
-      totalTimeMinutes: 20,
-    },
-  },
-};
 
 const usualStore = (
   id: string,
@@ -201,9 +143,6 @@ beforeEach(() => {
   mockHomeId = 'home-1';
   mockRegion = 'US';
   summaryOf(HOME_READY);
-  mockPayoff = [];
-  mockPopular = false;
-  mockShowCheckLabel = false;
   mockVerified = true;
   mockCompleteOnboarding.mockResolvedValue(true);
   mockInviteLink.mockResolvedValue('https://app.souschef.dev/join-home/ABC123');
@@ -216,100 +155,6 @@ afterEach(() => {
 });
 
 describe('OnboardingCompleteScreen', () => {
-  describe('the payoff tiers', () => {
-    it('shows an almost-there recipe with what is left to buy, never as ready', () => {
-      mockPayoff = [FRITTATA];
-      renderScreen();
-
-      expect(
-        screen.getByText(
-          new RegExp(
-            t('recipes.usesYourMoreToBuy', { item: 'eggs', count: 3 }),
-          ),
-        ),
-      ).toBeTruthy();
-      expect(
-        screen.queryByText(new RegExp(t('recipes.readyToCook'))),
-      ).toBeNull();
-    });
-
-    it('adds what is missing to the list in one tap', async () => {
-      mockPayoff = [FRITTATA];
-      const user = userEvent.setup();
-      renderScreen();
-
-      await user.press(
-        screen.getByTestId(onboardingTestIDs.payoffAddMissing('r2')),
-      );
-      await act(async () => {
-        await mockAddMissing.mock.results[0]?.value;
-      });
-
-      expect(mockAddMissing).toHaveBeenCalledWith(
-        'r2',
-        expect.arrayContaining([expect.objectContaining({ name: 'spinach' })]),
-      );
-      expect(screen.getByText(t('labels.added'))).toBeTruthy();
-    });
-
-    it('titles popular picks from the answers, with no tier', () => {
-      mockPopular = true;
-      mockPayoff = [
-        {
-          ...FRITTATA,
-          edge: { ...FRITTATA.edge, coverage: 0, usedIngredients: [] },
-        },
-      ];
-      summaryOf({ ...HOME_READY, cooksFor: 4, stapleItems: 3 });
-      renderScreen();
-
-      expect(
-        screen.getByText(t('onBoarding.payoffPopularTitle', { count: 4 })),
-      ).toBeTruthy();
-      expect(screen.queryByText(t('recipes.basedOnPantry'))).toBeNull();
-      expect(
-        screen.queryByTestId(onboardingTestIDs.payoffAddMissing('r2')),
-      ).toBeNull();
-    });
-  });
-
-  describe('tapping a payoff recipe', () => {
-    beforeEach(() => {
-      useStore.setState({ pendingDeepLinkAction: null });
-    });
-
-    it('finishes onboarding and opens the recipe once the app shows', async () => {
-      mockPayoff = [SHAKSHUKA];
-      const user = userEvent.setup();
-      renderScreen();
-
-      await user.press(screen.getByText('Shakshuka'));
-      await act(async () => {
-        await mockCompleteOnboarding.mock.results[0]?.value;
-      });
-
-      expect(useStore.getState().pendingDeepLinkAction).toEqual(
-        expect.objectContaining({ type: 'open_recipe', recipeId: 'r1' }),
-      );
-      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
-    });
-
-    it('drops the recipe when finishing fails, so it never opens later', async () => {
-      mockPayoff = [SHAKSHUKA];
-      mockCompleteOnboarding.mockResolvedValue(false);
-      const user = userEvent.setup();
-      renderScreen();
-
-      await user.press(screen.getByText('Shakshuka'));
-      await act(async () => {
-        await mockCompleteOnboarding.mock.results[0]?.value;
-      });
-
-      expect(useStore.getState().pendingDeepLinkAction).toBeNull();
-      expect(mockUpdateUser).not.toHaveBeenCalled();
-    });
-  });
-
   describe('changing an answer from the summary', () => {
     it('changes who the meals are for with a stepper, in place', async () => {
       summaryOf({ ...HOME_READY, cooksFor: 4 });
@@ -444,41 +289,13 @@ describe('OnboardingCompleteScreen', () => {
     });
   });
 
-  describe('the recipes the pantry can make', () => {
-    it('shows none with nothing added', () => {
-      renderScreen();
+  // The pantry's recipes are on Today, one tap away, so the offers stay
+  // above the fold here.
+  it('shows no recipes, even with staples added', () => {
+    summaryOf({ ...HOME_READY, stapleItems: 3 });
+    renderScreen();
 
-      expect(screen.queryByTestId(onboardingTestIDs.payoff)).toBeNull();
-    });
-
-    it('shows the pantry recipes', () => {
-      mockPayoff = [SHAKSHUKA];
-      renderScreen();
-
-      expect(screen.getByTestId(onboardingTestIDs.payoff)).toBeTruthy();
-      expect(screen.getByText(t('recipes.basedOnPantry'))).toBeTruthy();
-      expect(screen.getByText('Shakshuka')).toBeTruthy();
-      expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
-    });
-
-    it('says to check the label under them when a restriction applies', () => {
-      mockPayoff = [SHAKSHUKA];
-      mockShowCheckLabel = true;
-      renderScreen();
-
-      expect(
-        within(screen.getByTestId(onboardingTestIDs.payoff)).getByText(
-          t('dietaryAlerts.checkLabel'),
-        ),
-      ).toBeTruthy();
-    });
-
-    it('shows no caveat on its own when there is no recipe', () => {
-      mockShowCheckLabel = true;
-      renderScreen();
-
-      expect(screen.queryByText(t('dietaryAlerts.checkLabel'))).toBeNull();
-    });
+    expect(screen.queryByText(t('recipes.basedOnPantry'))).toBeNull();
   });
 
   describe('the invite link', () => {

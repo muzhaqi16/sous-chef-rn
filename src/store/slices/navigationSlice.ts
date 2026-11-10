@@ -2,13 +2,14 @@ import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 
 /**
- * A link held until its moment, replayed by `useDeepLinkRouter`: a join
- * `useJoinLinkAuthGate` queued once the visitor signs in, a recipe opened from
- * onboarding's payoff once the main app shows. Held in memory only.
+ * A join link `useJoinLinkAuthGate` queued for a logged-out visitor, replayed
+ * by `useDeepLinkRouter` after sign-in. Held in memory only, never persisted.
  */
-export type DeepLinkAction =
-  | { type: 'join_home' | 'join_list'; code: string; timestamp: number }
-  | { type: 'open_recipe'; recipeId: string; timestamp: number };
+export interface DeepLinkAction {
+  type: 'join_home' | 'join_list';
+  code: string;
+  timestamp: number;
+}
 
 interface UserNavigationState {
   /** The device-region currency default has been applied once for this account. */

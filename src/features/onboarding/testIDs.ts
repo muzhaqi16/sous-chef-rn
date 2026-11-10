@@ -42,10 +42,7 @@ export const onboardingTestIDs = {
   receiptSetupFailed: 'onboarding-receipt-setup-failed',
   /** The receipt step offline: scanning and staples wait for a connection. */
   receiptOffline: 'onboarding-receipt-offline',
-  /** The completion screen's recipes, invite button and store offer. */
-  payoff: 'onboarding-payoff',
-  payoffRecipe: (id: string) => `onboarding-payoff-recipe-${id}`,
-  payoffAddMissing: (id: string) => `onboarding-payoff-add-missing-${id}`,
+  /** The completion screen's invite button and store offer. */
   invite: 'onboarding-invite',
   stores: 'onboarding-stores',
   /** A staples group, by the storage state it holds. */

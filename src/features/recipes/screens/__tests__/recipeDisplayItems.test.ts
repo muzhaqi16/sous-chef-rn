@@ -18,7 +18,6 @@ const suggestion = (
       name,
       item: null,
     })),
-    missingIngredients: [],
     expiringStacks: [],
     node: {
       __typename: 'Recipe',

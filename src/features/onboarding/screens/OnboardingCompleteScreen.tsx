@@ -5,17 +5,9 @@ import { StyleSheet } from 'react-native-unistyles';
 import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { CompletionHero } from '#features/onboarding/components/CompletionHero';
 import { SetupSummary } from '#features/onboarding/components/SetupSummary';
-import { RecipePayoff } from '#features/onboarding/components/RecipePayoff';
 import { OnboardingOffers } from '#features/onboarding/components/OnboardingOffers';
-import {
-  useAppStore,
-  useSelectedHomeId,
-  useUpdateUser,
-  useUser,
-} from '#store/useAppStore';
+import { useSelectedHomeId, useUpdateUser, useUser } from '#store/useAppStore';
 import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnboarding';
-import { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
-import { useAddMissingToList } from '#features/recipes/hooks/useAddMissingToList';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
@@ -37,14 +29,6 @@ export const OnboardingCompleteScreen = () => {
   const household = useHouseholdAnswer();
   const { changeAnswer } = useOnboardingNavigation();
   const homeId = useSelectedHomeId();
-  const payoff = useRecipePayoff({
-    hasStock: summary.receiptItems + summary.stapleItems > 0,
-  });
-  const addMissingToList = useAddMissingToList();
-
-  const setPendingDeepLinkAction = useAppStore(
-    state => state.setPendingDeepLinkAction,
-  );
 
   /** True once onboarding is done; the main app then mounts by itself. */
   const handleComplete = async (): Promise<boolean> => {
@@ -71,20 +55,8 @@ export const OnboardingCompleteScreen = () => {
     return true;
   };
 
-  // A recipe opens over Today once the app shows, and a finish that failed
-  // drops it, so it never opens later. Notifications are asked about once
-  // the pantry shows dated food, not here.
-  const openRecipe = async (recipeId: string) => {
-    // A finish already running would be sent twice.
-    if (isCompleting) return;
-    setPendingDeepLinkAction({
-      type: 'open_recipe',
-      recipeId,
-      timestamp: Date.now(),
-    });
-    if (!(await handleComplete())) setPendingDeepLinkAction(null);
-  };
-
+  // Notifications are asked about once the pantry shows dated food, and the
+  // pantry's recipes on Today, not here.
   const handleGetStarted = () => {
     void handleComplete();
   };
@@ -113,17 +85,6 @@ export const OnboardingCompleteScreen = () => {
             void household.answer(count);
           }}
           onChangeDietary={() => changeAnswer('Dietary')}
-        />
-
-        <RecipePayoff
-          rows={payoff.rows}
-          popular={payoff.popular}
-          showCheckLabel={payoff.showCheckLabel}
-          cooksFor={summary.cooksFor}
-          onAddMissing={addMissingToList}
-          onOpen={recipeId => {
-            void openRecipe(recipeId);
-          }}
         />
 
         <OnboardingOffers homeId={homeId} cooksFor={summary.cooksFor} />

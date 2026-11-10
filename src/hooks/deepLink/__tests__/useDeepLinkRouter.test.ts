@@ -7,12 +7,6 @@ import { memoryIntents } from '#/test-utils/memoryPlatform';
 
 const mockToJoinHomeByCode = jest.spyOn(memoryIntents(), 'toJoinHomeByCode');
 const mockToJoinByShareCode = jest.spyOn(memoryIntents(), 'toJoinByShareCode');
-const mockToRecipeDetail = jest.spyOn(memoryIntents(), 'toRecipeDetail');
-
-let mockMainApp = true;
-jest.mock('#hooks/navigation/useNavigationGuards', () => ({
-  useIsMainApp: () => mockMainApp,
-}));
 
 const mockClearPending = jest.fn();
 let mockIsHydrated = true;
@@ -39,51 +33,6 @@ describe('useDeepLinkRouter', () => {
     mockIsHydrated = true;
     mockSignedIn = true;
     mockPending = null;
-    mockMainApp = true;
-  });
-
-  describe("a recipe tapped on onboarding's payoff", () => {
-    it('waits for the main app, then opens it', () => {
-      mockMainApp = false;
-      mockPending = {
-        type: 'open_recipe',
-        recipeId: 'r1',
-        timestamp: Date.now(),
-      };
-      const { rerender } = renderHook(() => useDeepLinkRouter());
-      expect(mockToRecipeDetail).not.toHaveBeenCalled();
-      expect(mockClearPending).not.toHaveBeenCalled();
-
-      mockMainApp = true;
-      rerender({});
-
-      expect(mockToRecipeDetail).toHaveBeenCalledWith({ recipeId: 'r1' });
-      expect(mockClearPending).toHaveBeenCalled();
-    });
-
-    it('is dropped without a word once stale', () => {
-      const { toastService } = jest.requireMock('#/services/toastService');
-      mockPending = {
-        type: 'open_recipe',
-        recipeId: 'r1',
-        timestamp: Date.now() - 10 * 60 * 1000,
-      };
-
-      renderHook(() => useDeepLinkRouter());
-
-      expect(mockToRecipeDetail).not.toHaveBeenCalled();
-      expect(toastService.warning).not.toHaveBeenCalled();
-      expect(mockClearPending).toHaveBeenCalled();
-    });
-  });
-
-  it('still replays a join link during onboarding', () => {
-    mockMainApp = false;
-    mockPending = { type: 'join_home', code: 'HOME123', timestamp: Date.now() };
-
-    renderHook(() => useDeepLinkRouter());
-
-    expect(mockToJoinHomeByCode).toHaveBeenCalledWith('HOME123');
   });
 
   it('replays a pending join_list once authenticated', () => {
