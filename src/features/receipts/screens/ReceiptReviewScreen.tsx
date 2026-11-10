@@ -82,7 +82,7 @@ const STATUS_LOOK: Record<ReceiptRowStatus, StatusLook> = {
     section: 'toAdd',
     icon: 'checkmark-circle',
     tone: 'success',
-    badge: { text: 'receipts.review.onList', variant: 'primary' },
+    badge: { text: 'labels.onYourList', variant: 'primary' },
   },
   failed: {
     section: 'toAdd',

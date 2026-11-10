@@ -53,6 +53,7 @@ const renderRow = (value: DisplayIngredient, showPrice = true) =>
       showPrice={showPrice}
       ingredient={value}
       isAdded={false}
+      isMissing={false}
       alerts={[]}
       onPress={jest.fn()}
       testID="tile"
@@ -149,6 +150,7 @@ describe('IngredientTile', () => {
         showPrice
         ingredient={ingredient(1, 'cup')}
         isAdded={false}
+        isMissing={false}
         alerts={[]}
         onPress={onPress}
         testID="tile"
@@ -171,6 +173,7 @@ describe('IngredientTile', () => {
         showPrice
         ingredient={ingredient(8, 'slice')}
         isAdded={false}
+        isMissing={false}
         alerts={[
           alert('r-you', 'You', RestrictionSeverity.Preference),
           alert('r-ana', 'Ana', RestrictionSeverity.Allergy),
@@ -201,6 +204,7 @@ describe('IngredientTile', () => {
         showPrice
         ingredient={ingredient(8, 'slice')}
         isAdded={false}
+        isMissing={false}
         alerts={[alert('r-you', 'You', RestrictionSeverity.Preference)]}
         onPress={jest.fn()}
       />,
@@ -217,6 +221,7 @@ describe('IngredientTile', () => {
         showPrice
         ingredient={ingredient(8, 'slice')}
         isAdded
+        isMissing={false}
         alerts={[alert('r-ana', 'Ana', RestrictionSeverity.Allergy)]}
         onPress={jest.fn()}
         testID="tile"

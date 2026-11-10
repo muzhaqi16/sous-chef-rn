@@ -191,10 +191,10 @@ const RecipeDetailScreen: React.FC = () => {
     shoppingListsState,
     retryShoppingLists,
     addingToList,
-    addedIngredients,
+    listedIngredients,
     handleAddSingleIngredient,
     handleAddAll,
-    missingCount,
+    missingIngredients,
     handleAddMissing,
     handleListSelected,
     creatingList,
@@ -674,14 +674,18 @@ const RecipeDetailScreen: React.FC = () => {
             <SectionHeaderRow
               title={t('itemPhotos.perspective.ingredient_list')}
               action={
-                // The pantry holds some of it: add only the rest.
-                missingCount !== null &&
-                missingCount > 0 &&
-                missingCount < displayData.ingredients.length
+                // Nothing left to buy: what the pantry lacks is on the list.
+                missingIngredients?.size === 0
+                  ? undefined
+                  : // The pantry holds some of it: add only the rest.
+                  missingIngredients &&
+                    missingIngredients.size < displayData.ingredients.length
                   ? {
                       label: addingToList
                         ? t('labels.adding')
-                        : t('recipes.addMissing', { count: missingCount }),
+                        : t('recipes.addMissing', {
+                            count: missingIngredients.size,
+                          }),
                       onPress: handleAddMissing,
                       disabled: addingToList,
                     }
@@ -702,7 +706,8 @@ const RecipeDetailScreen: React.FC = () => {
                   <IngredientTile
                     key={`${ingredient.id}-${index}`}
                     ingredient={ingredient}
-                    isAdded={addedIngredients.has(ingredient.id)}
+                    isAdded={listedIngredients.has(ingredient.id)}
+                    isMissing={!!missingIngredients?.has(ingredient.id)}
                     alerts={alerts}
                     showPrice={showPrices}
                     onPress={() =>
@@ -728,7 +733,7 @@ const RecipeDetailScreen: React.FC = () => {
                   : []
               }
               isAdded={
-                !!openIngredient && addedIngredients.has(openIngredient.id)
+                !!openIngredient && listedIngredients.has(openIngredient.id)
               }
               onAdd={() => {
                 if (openIngredient) {

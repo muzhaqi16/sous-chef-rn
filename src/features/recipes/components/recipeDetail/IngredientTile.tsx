@@ -26,7 +26,10 @@ const IMAGE_SIZE = 64;
 
 interface IngredientTileProps {
   ingredient: DisplayIngredient;
+  /** On the list: added from this page, or already there. */
   isAdded: boolean;
+  /** The pantry lacks it and no list holds it. */
+  isMissing: boolean;
   /** The household's alerts on it; with any, a tap opens them instead of adding. */
   alerts: HouseholdAlert[];
   /** Budget & prices is on; off, no price is shown or read out. */
@@ -56,6 +59,7 @@ function alertSummary(alerts: HouseholdAlert[], t: TranslateFn): string | null {
 export const IngredientTile: React.FC<IngredientTileProps> = ({
   ingredient,
   isAdded,
+  isMissing,
   alerts,
   showPrice,
   onPress,
@@ -96,7 +100,17 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
       style={variantStyles.tile}
       onPress={onPress}
       disabled={isAdded ? !lead : false}
-      accessibilityLabel={[name, amount, price, summary]
+      accessibilityLabel={[
+        name,
+        amount,
+        price,
+        summary,
+        isAdded
+          ? t('labels.onYourList')
+          : isMissing
+          ? t('labels.missing')
+          : null,
+      ]
         .filter(Boolean)
         .join(', ')}
       accessibilityHint={
@@ -136,6 +150,9 @@ export const IngredientTile: React.FC<IngredientTileProps> = ({
           {summary}
         </Badge>
       )}
+      {isMissing ? (
+        <Badge variant="primary">{t('labels.missing')}</Badge>
+      ) : null}
       {isAdded ? (
         <View style={variantStyles.corner}>
           <Icon name="checkmark" size={12} tone="onSuccess" />

@@ -229,7 +229,7 @@ function renderDetail(overrides: Record<string, unknown> = {}) {
     handleSaveRecipe: jest.fn(),
     shoppingLists: [],
     addingToList: false,
-    addedIngredients: new Set(),
+    listedIngredients: new Set(),
     handleAddSingleIngredient: jest.fn(),
     handleAddAllIngredientsToList: jest.fn(),
     handleAddAllIngredients: jest.fn(),
@@ -738,18 +738,38 @@ describe('RecipeDetail', () => {
       });
     });
 
-    it('marks an added ingredient and stops adding it again', () => {
+    it('marks an ingredient on the list and stops adding it again', () => {
       const handleAddSingleIngredient = jest.fn();
       renderIngredients({
-        addedIngredients: new Set(['i0']),
+        listedIngredients: new Set(['i0']),
         handleAddSingleIngredient,
       });
 
-      expect(
-        screen.getByTestId(recipesTestIDs.ingredientTile(0)),
-      ).toBeDisabled();
-      fireEvent.press(screen.getByTestId(recipesTestIDs.ingredientTile(0)));
+      const tile = screen.getByTestId(recipesTestIDs.ingredientTile(0));
+      expect(tile).toBeDisabled();
+      expect(tile.props.accessibilityLabel).toContain(t('labels.onYourList'));
+      fireEvent.press(tile);
       expect(handleAddSingleIngredient).not.toHaveBeenCalled();
+    });
+
+    it('names the ingredient the pantry lacks, and counts it in the add', () => {
+      renderIngredients({ missingIngredients: new Set(['i1']) });
+
+      expect(screen.getAllByText(t('labels.missing'))).toHaveLength(1);
+      expect(
+        screen.getByTestId(recipesTestIDs.ingredientTile(1)).props
+          .accessibilityLabel,
+      ).toContain(t('labels.missing'));
+      expect(
+        screen.getByText(t('recipes.addMissing', { count: 1 })),
+      ).toBeTruthy();
+    });
+
+    it('offers no add once what the pantry lacks is on the list', () => {
+      renderIngredients({ missingIngredients: new Set() });
+
+      expect(screen.queryByText(t('labels.missing'))).toBeNull();
+      expect(screen.queryByText(t('recipes.addAll'))).toBeNull();
     });
   });
 

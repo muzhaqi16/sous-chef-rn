@@ -11,6 +11,7 @@ import { useCreateShoppingList } from '#features/shoppingList/hooks/useCreateSho
 import { logger } from '#/utils/environment';
 import { recipeShoppingRows } from '#features/recipes/utils/recipeShoppingRows';
 import { useRecipeMissingIngredients } from './useRecipeMissingIngredients';
+import { useOpenListLinesFor } from '#features/shoppingList/hooks/useOpenListLinesFor';
 import { MAX_RECIPE_INGREDIENTS } from '#domain/recipeIngredientsPaging';
 
 interface UseRecipeShoppingListOptions {
@@ -114,7 +115,29 @@ export function useRecipeShoppingList({
     return true;
   };
 
-  const missing = useRecipeMissingIngredients(recipeId);
+  const lacked = useRecipeMissingIngredients(recipeId);
+  const ingredientNodes = (
+    backendRecipe?.ingredientsConnection.edges ?? []
+  ).map(({ node }) => node);
+  // What the pantry lacks may be on the list already, from an earlier visit.
+  const { lines: openLines } = useOpenListLinesFor(
+    targetListId,
+    ingredientNodes.flatMap(node =>
+      lacked?.has(node.id) && node.item ? [node.item.id] : [],
+    ),
+  );
+  const listedItemIds = new Set(
+    openLines.flatMap(line => (line.item ? [line.item.id] : [])),
+  );
+  const listedIngredients = new Set<string | number>(addedIngredients);
+  for (const node of ingredientNodes) {
+    if (node.item && listedItemIds.has(node.item.id)) {
+      listedIngredients.add(node.id);
+    }
+  }
+  const missing = lacked
+    ? new Set([...lacked].filter(id => !listedIngredients.has(id)))
+    : null;
 
   // Adds the action's ingredients to the picked list. Called after the list
   // picker resolves. `listName` may be passed for newly-created lists not yet
@@ -259,13 +282,14 @@ export function useRecipeShoppingList({
       void refetchShoppingLists();
     },
     addingToList,
-    addedIngredients,
+    /** On the list: added from this page, or already on the active list. */
+    listedIngredients,
     creatingList,
 
     handleAddSingleIngredient,
     handleAddAll,
-    /** How many ingredients the pantry lacks; null until the server says. */
-    missingCount: missing?.size ?? null,
+    /** What the pantry lacks and no list holds yet; null until the server says. */
+    missingIngredients: missing,
     handleAddMissing,
     handleListSelected,
     handleCreateListAndAddIngredients,

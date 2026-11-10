@@ -112,7 +112,6 @@
       "totalsBody": "Artikujt e lexuar bëjnë {{counted}}, por fatura thotë {{printed}}. Mund të ketë mbetur jashtë një rresht, ndaj krahasoje listën me faturën para se të shtosh.",
       "listIncompleteTitle": "Lista jote është shumë e gjatë për t'u kontrolluar e tëra",
       "listIncompleteBody": "U kontrollua vetëm një pjesë e saj. Një rresht i faturës që përputhet me një artikull më poshtë shtohet më vete.",
-      "onList": "Në listën tënde",
       "tickOffTitle": "Shënoje si të blerë në listën e blerjeve",
       "tickOffBody": "“{{name}}” është në listën tënde. Shënohet si i blerë dhe kalon në qilar, në vend që të shtohet dy herë.",
       "notStockedTitle": "Jo për qilarin",
