@@ -156,6 +156,8 @@
     "restockFailedRetry": "Artikulli nuk u rifurnizua dot. Provo përsëri.",
     "recordUsageFailedRetry": "Regjistrimi i përdorimit të artikullit dështoi. Provo sërish.",
     "recordWasteFailedRetry": "Regjistrimi i mbetjeve të artikullit dështoi. Provo sërish.",
+    "stockAlreadyGone": "Nuk ka mbetur asgjë në qilarin tënd.",
+    "stockAlreadyGoneTitle": "Tashmë u përdor",
     "moveToPantryFailedRetry": "Artikulli nuk u zhvendos dot te qilari. Provo përsëri.",
     "adjustQuantityFailed": "Sasia nuk mund të rregullohej.",
     "correctWeightFailed": "Madhësia e paketimit nuk u korrigjua dot.",

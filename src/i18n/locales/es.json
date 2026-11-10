@@ -156,6 +156,8 @@
     "restockFailedRetry": "No se pudo reponer el artículo. Inténtalo de nuevo.",
     "recordUsageFailedRetry": "No se pudo registrar el uso del artículo. Inténtalo de nuevo.",
     "recordWasteFailedRetry": "No se pudo registrar el desperdicio del artículo. Inténtalo de nuevo.",
+    "stockAlreadyGone": "No queda nada en tu despensa.",
+    "stockAlreadyGoneTitle": "Ya se ha usado",
     "moveToPantryFailedRetry": "No se pudo mover el artículo a la despensa. Inténtalo de nuevo.",
     "adjustQuantityFailed": "No se pudo ajustar la cantidad.",
     "correctWeightFailed": "No se pudo corregir el tamaño del paquete.",

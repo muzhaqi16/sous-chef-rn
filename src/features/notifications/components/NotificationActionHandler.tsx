@@ -161,7 +161,8 @@ export const NotificationActionHandler: React.FC<
     setSelectedExpirationNotification({ ...notification, ...enrichment });
   };
 
-  // The answer is recorded on the reminder only once the stock has taken it.
+  // The answer is recorded on the reminder once the stock has taken it, or
+  // once there is none left to take: either way the reminder is answered.
   const recordOutcome = async (
     notification: NotificationItem,
     reminderId: string,
@@ -170,14 +171,14 @@ export const NotificationActionHandler: React.FC<
     const purpose = purposeOf(action);
     const { pantryItemId } = notification;
     if (purpose && pantryItemId) {
-      const applied = await finishStock(pantryItemId, {
+      const outcome = await finishStock(pantryItemId, {
         purpose,
         batchId: reminderBatchOf(notification),
         ...(purpose === UsagePurpose.Waste
           ? { wasteReason: wasteReasonOf(notification) }
           : {}),
       });
-      if (!applied) return;
+      if (outcome === 'failed') return;
     }
     await syncMarkAction(notification.id, reminderId, action);
   };

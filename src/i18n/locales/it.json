@@ -156,6 +156,8 @@
     "restockFailedRetry": "Impossibile rifornire l'articolo. Riprova.",
     "recordUsageFailedRetry": "Impossibile registrare l'uso dell'articolo. Riprova.",
     "recordWasteFailedRetry": "Impossibile registrare lo spreco dell'articolo. Riprova.",
+    "stockAlreadyGone": "In dispensa non ne è rimasto nulla.",
+    "stockAlreadyGoneTitle": "Già finito",
     "moveToPantryFailedRetry": "Impossibile spostare l'articolo nella dispensa. Riprova.",
     "adjustQuantityFailed": "Impossibile regolare la quantità.",
     "correctWeightFailed": "Impossibile correggere la dimensione della confezione.",

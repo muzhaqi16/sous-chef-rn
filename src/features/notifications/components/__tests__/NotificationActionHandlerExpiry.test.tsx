@@ -12,6 +12,7 @@ import {
 import { drainTimers } from '#/test-utils/drainTimers';
 import { MarkExpirationActionDocument } from '#features/notifications/graphql/expirationNotificationMutations.generated';
 import { CreatePantryItemUsageDocument } from '#features/pantry/graphql/pantry.generated';
+import { ErrorCode } from '#/graphql/generated/schemaTypes';
 import { MarkNotificationAsReadDocument } from '#features/notifications/graphql/notificationMutations.generated';
 import { NotificationSummaryDocument } from '#features/notifications/graphql/notifications.generated';
 import {
@@ -329,7 +330,8 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
       data: {
         createPantryItemUsage: {
           __typename: 'ValidationError',
-          message: 'Nothing is left to use',
+          code: ErrorCode.ValidationFailed,
+          message: 'That use is not allowed',
         },
       },
     });
@@ -352,6 +354,38 @@ describe('NotificationActionHandler — acting on an expiry notification', () =>
     expect(refused.fired).toHaveLength(1);
     expect(action.fired).toEqual([]);
     expect(readHeld(cache)).toBe(2);
+  });
+
+  // Used up elsewhere first: the use is refused, yet the reminder is answered.
+  it('records the answer when nothing is left of the stock', async () => {
+    const cache = seedFeed(3);
+    const usedUp = recordMock(CreatePantryItemUsageDocument, {
+      data: {
+        createPantryItemUsage: {
+          __typename: 'InsufficientQuantityError',
+          code: ErrorCode.InsufficientQuantity,
+          message: 'Cannot use more than available quantity: 0 remains',
+        },
+      },
+    });
+    const action = actionAnswer();
+    renderWithApollo(
+      <NotificationActionHandler>
+        {() => <MutationProbe />}
+      </NotificationActionHandler>,
+      { cache, operationMocks: [usedUp.mock, action.mock] },
+    );
+
+    act(() =>
+      mockOnActionSelected?.(
+        { ...linkedReminder, isRead: true },
+        ExpirationAction.Cooked,
+      ),
+    );
+    await drainTimers();
+
+    expect(usedUp.fired).toHaveLength(1);
+    expect(action.fired).toHaveLength(1);
   });
 
   it('records only the answer for No action', async () => {

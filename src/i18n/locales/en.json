@@ -156,6 +156,8 @@
     "restockFailedRetry": "Failed to restock item. Please try again.",
     "recordUsageFailedRetry": "Failed to record item usage. Please try again.",
     "recordWasteFailedRetry": "Failed to record item waste. Please try again.",
+    "stockAlreadyGone": "None of it is left in your pantry.",
+    "stockAlreadyGoneTitle": "Already used up",
     "moveToPantryFailedRetry": "Failed to move item to the pantry. Please try again.",
     "adjustQuantityFailed": "Could not adjust the quantity.",
     "correctWeightFailed": "Could not correct the package size.",
