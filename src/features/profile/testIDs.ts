@@ -16,6 +16,7 @@ export const profileTestIDs = {
   settingsState: 'settings-state',
   settingsUnitSystemPicker: 'settings-unit-system-picker',
   settingsShowTutorialsSwitch: 'settings-show-tutorials-switch',
+  settingsReplayTips: 'settings-replay-tips',
   settingsReceiptPhotosSwitch: 'settings-receipt-photos-switch',
   settingsHapticFeedbackSwitch: 'settings-haptic-feedback-switch',
   settingsNavigationLabelsSwitch: 'settings-navigation-labels-switch',

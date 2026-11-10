@@ -57,6 +57,8 @@ import { useOnboardingProgressStore } from '#features/onboarding/store/onboardin
 import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
 import { registeredSessionScopedStores } from '#store/sessionScopedStores';
 import { useStore, PERSISTED_KEYS } from '#store';
+import { featureHintKey } from '#store/slices/tutorialSlice';
+import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
 
 /**
  * Persisted keys a session end deliberately keeps, each with the reason.
@@ -99,9 +101,15 @@ const KEPT_ON_PURPOSE: Record<string, string> = {
   userPreferences: 'Record keyed by user id; per-account UI flags only',
   userNavigationStates: 'Record keyed by user id; per-account UI flags only',
   featureHintsShown:
-    'Record keyed by `<user id>:<feature id>`; the same account signing back ' +
-    'in should not be shown every coach mark again',
+    'Record keyed by `feature_hint_shown_<user id>_<feature id>`; the same ' +
+    'account signing back in should not be shown every coach mark again',
   loginCounts: 'Record keyed by user id; a count, and nothing else',
+  gettingStarted:
+    'Record keyed by user id; which Getting started items are done, by id',
+  lastUnpromptedTipAt:
+    'Record keyed by user id; a timestamp, so tips stay rationed per account',
+  pushAskAnswered:
+    'Record keyed by user id; whether the reminder ask was answered, not how',
 
   // Catalog data warmed for offline autocomplete. Identical for every account
   // and independent of who was signed in; clearing it costs offline
@@ -300,6 +308,22 @@ describe('a session end leaves no data belonging to the previous person', () => 
 
     expect(useStore.getState().cachedUnits).toHaveLength(1);
     expect(useStore.getState().cachedCategories).toHaveLength(1);
+  });
+
+  it('Signing out and back in: a finished guide does not show again', async () => {
+    useStore.setState({
+      featureHintsShown: { [featureHintKey('u1', 'first_shop_add')]: true },
+      gettingStarted: {
+        u1: { hidden: true, done: ['addItem'], retired: false },
+      },
+      pushAskAnswered: { u1: true },
+    });
+
+    await useStore.getState().endSession('signed_out');
+
+    expect(hasFeatureHintBeenShown('first_shop_add', 'u1')).toBe(true);
+    expect(useStore.getState().gettingStarted.u1?.done).toEqual(['addItem']);
+    expect(useStore.getState().pushAskAnswered.u1).toBe(true);
   });
 
   it('every deliberately-kept key is still persisted, so the list cannot rot', () => {

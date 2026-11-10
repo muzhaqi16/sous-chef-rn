@@ -1,26 +1,58 @@
 // ============================================
-// Per-user tutorial progress: which hints have been shown, and how many
-// times each account has signed in (post-login modals space themselves out
-// with it). Keyed by user so a shared device keeps the two apart.
+// Per-account tutorial progress: the hints shown, the Getting started card,
+// the unasked-tip clock, the push ask, and how many times each account has
+// signed in (post-login modals space themselves out with it). Keyed by user
+// so a shared device keeps them apart, and kept through sign-out.
 // ============================================
 
 import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 
+/** One account's Getting started card. */
+export interface GettingStartedRecord {
+  hidden: boolean;
+  /** The items done, by id. */
+  done: string[];
+  /** Every item done once: the card does not come back. */
+  retired: boolean;
+}
+
+const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
+
+/** A hint's key in `featureHintsShown`; with no account, the bare feature id. */
+export const featureHintKey = (userId: string | undefined, featureId: string) =>
+  userId
+    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
+    : `${FEATURE_HINT_PREFIX}${featureId}`;
+
 export interface TutorialState {
-  /** `<userId|anonymous>:<featureId>` → shown. */
+  /** `featureHintKey(userId, featureId)` → shown. */
   featureHintsShown: Record<string, boolean>;
   loginCounts: Record<string, number>;
+  /** Per account; kept through sign-out, like the hints. */
+  gettingStarted: Record<string, GettingStartedRecord>;
+  /** Per account: when a tip last showed unasked, for the session's one. */
+  lastUnpromptedTipAt: Record<string, number>;
+  /** Per account: the push ask was answered, yes or no. */
+  pushAskAnswered: Record<string, boolean>;
 
   markFeatureHintShown: (key: string) => void;
-  /** Every hint, for every account on this device. */
-  clearAllFeatureHints: () => void;
   incrementLoginCount: (userId: string) => void;
+  recordUnpromptedTip: (userId: string, at: number) => void;
+  /**
+   * One account's tours and tips, shown again: its hints, its unasked-tip
+   * clock, and its Getting started card unless every item is done. Other
+   * accounts on the device keep theirs.
+   */
+  clearTipsFor: (userId: string) => void;
 }
 
 export const initialTutorialState = {
   featureHintsShown: {},
   loginCounts: {},
+  gettingStarted: {},
+  lastUnpromptedTipAt: {},
+  pushAskAnswered: {},
 };
 
 export const createTutorialSlice: StateCreator<
@@ -37,15 +69,27 @@ export const createTutorialSlice: StateCreator<
     });
   },
 
-  clearAllFeatureHints: () => {
-    set(state => {
-      state.featureHintsShown = {};
-    });
-  },
-
   incrementLoginCount: userId => {
     set(state => {
       state.loginCounts[userId] = (state.loginCounts[userId] ?? 0) + 1;
+    });
+  },
+
+  recordUnpromptedTip: (userId, at) => {
+    set(state => {
+      state.lastUnpromptedTipAt[userId] = at;
+    });
+  },
+
+  clearTipsFor: userId => {
+    set(state => {
+      const prefix = featureHintKey(userId, '');
+      for (const key of Object.keys(state.featureHintsShown)) {
+        if (key.startsWith(prefix)) delete state.featureHintsShown[key];
+      }
+      delete state.lastUnpromptedTipAt[userId];
+      const card = state.gettingStarted[userId];
+      if (card && !card.retired) card.hidden = false;
     });
   },
 });

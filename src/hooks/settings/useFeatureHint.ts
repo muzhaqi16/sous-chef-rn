@@ -1,13 +1,5 @@
 import { storeApi } from '#store';
-
-const FEATURE_HINT_PREFIX = 'feature_hint_shown_';
-
-// Per-account: tutorials show once for each logged-in user. Switching to a
-// different account resets the tutorial state for that account.
-const buildStorageKey = (userId: string | undefined, featureId: string) =>
-  userId
-    ? `${FEATURE_HINT_PREFIX}${userId}_${featureId}`
-    : `${FEATURE_HINT_PREFIX}${featureId}`;
+import { featureHintKey } from '#store/slices/tutorialSlice';
 
 /**
  * Under Detox every hint reports as already shown: the overlay dims the screen
@@ -21,24 +13,32 @@ export const suppressFeatureHintsForE2E = (): void => {
   suppressedForE2E = true;
 };
 
+/** Per account: each account on a device sees each hint once. */
 export const hasFeatureHintBeenShown = (
   featureId: string,
   userId?: string,
 ): boolean => {
   if (suppressedForE2E) return true;
   return (
-    storeApi.getState().featureHintsShown[buildStorageKey(userId, featureId)] ??
+    storeApi.getState().featureHintsShown[featureHintKey(userId, featureId)] ??
     false
   );
 };
 
-/** Clears every hint, for all users. */
-export const resetAllFeatureHints = (): void => {
+export const markFeatureHintShown = (
+  featureId: string,
+  userId?: string,
+): void => {
+  storeApi.getState().markFeatureHintShown(featureHintKey(userId, featureId));
+};
+
+/**
+ * "Replay tips": every tour and tip for this account shows again. Other
+ * accounts on the device keep their progress.
+ */
+export const replayTipsFor = (userId: string): void => {
   const store = storeApi.getState();
-  store.clearAllFeatureHints();
-  // Set synchronously — the server sync is async, and the hooks re-read the
-  // moment the generation below bumps.
-  store.mirrorSettings({ showTutorials: true });
+  store.clearTipsFor(userId);
   store.bumpTutorialResetGeneration();
 };
 

@@ -3,7 +3,7 @@ import { useAppStore } from '#store/useAppStore';
 
 /**
  * `true` for the single render that detects a tutorial reset
- * (`resetAllFeatureHints` → `bumpTutorialResetGeneration`), via the
+ * (`replayTipsFor` → `bumpTutorialResetGeneration`), via the
  * adjusting-state-during-render pattern — no refs, no effects.
  */
 export function useTutorialResetSignal(): boolean {

@@ -11,9 +11,12 @@ import { startTutorialSession, tutorialSession } from '../tutorialSession';
 const hints = () => useStore.getState().featureHintsShown;
 
 let mockTutorialsOn = true;
+let mockUserId = 'user-1';
 jest.mock('#store/useAppStore', () => ({
-  useUserId: () => 'user-1',
+  useUserId: () => mockUserId,
   useShowTutorials: () => mockTutorialsOn,
+  useAppStore: (select: (state: unknown) => unknown) =>
+    select(jest.requireActual('#store').useStore.getState()),
 }));
 
 let mockOverlayOpen = false;
@@ -43,11 +46,18 @@ const renderSequence = () =>
   );
 
 beforeEach(() => {
-  useStore.getState().clearAllFeatureHints();
+  useStore.setState({ featureHintsShown: {}, lastUnpromptedTipAt: {} });
   startTutorialSession();
   mockTutorialsOn = true;
+  mockUserId = 'user-1';
   mockOverlayOpen = false;
 });
+
+/** A later session: it starts after any tip recorded in this one. */
+const nextSession = () => {
+  jest.spyOn(Date, 'now').mockReturnValueOnce(Date.now() + 1);
+  startTutorialSession();
+};
 
 /** A tour as a screen mounts it, shown at once. */
 const renderTour = (
@@ -247,7 +257,7 @@ describe('useTutorialSequence — Not now pauses; ending stops for good', () => 
 
     expect(renderTour().result.current.currentStep).toBeNull();
 
-    act(() => startTutorialSession());
+    act(() => nextSession());
     expect(renderTour().result.current.currentStep?.title).toBe('A');
   });
 
@@ -264,7 +274,7 @@ describe('useTutorialSequence — Not now pauses; ending stops for good', () => 
     act(() => first.result.current.skipAll());
     first.unmount();
 
-    act(() => startTutorialSession());
+    act(() => nextSession());
     expect(renderTour().result.current.currentStep).toBeNull();
   });
 });
@@ -282,9 +292,30 @@ describe('useTutorialSequence — unprompted tips are rationed', () => {
     });
     expect(other.result.current.currentStep).toBeNull();
 
-    act(() => startTutorialSession());
+    act(() => nextSession());
     other.rerender({});
     expect(other.result.current.currentStep?.title).toBe('C');
+  });
+
+  it('gives each account on the phone its own; signing back in keeps the one used', () => {
+    const recipes: TutorialStep[] = [
+      { featureId: 'step_c', title: 'C', subtitle: 'c', rectKey: 'a' },
+    ];
+    expect(
+      renderTour({ tourId: 'pantry' }).result.current.currentStep?.title,
+    ).toBe('A');
+
+    mockUserId = 'user-2';
+    expect(
+      renderTour({ tourId: 'recipes', sequence: recipes }).result.current
+        .currentStep?.title,
+    ).toBe('C');
+
+    mockUserId = 'user-1';
+    expect(
+      renderTour({ tourId: 'recipes', sequence: recipes }).result.current
+        .currentStep,
+    ).toBeNull();
   });
 
   it('waits while a sheet is open', () => {

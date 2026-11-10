@@ -29,7 +29,7 @@ jest.mock('#features/shoppingList/hooks/useListAsksPrice', () => ({
 }));
 
 beforeEach(() => {
-  useStore.getState().clearAllFeatureHints();
+  useStore.setState({ featureHintsShown: {}, lastUnpromptedTipAt: {} });
 });
 
 describe('ShoppingListTutorialProvider — screen-scoped completion', () => {

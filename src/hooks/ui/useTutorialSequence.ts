@@ -6,26 +6,18 @@ import {
   useRef,
 } from 'react';
 import { useKeyboardState } from 'react-native-keyboard-controller';
-import { useShowTutorials } from '#store/useAppStore';
-import { useUserId } from '#store/useAppStore';
+import { useAppStore, useShowTutorials, useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
-import { hasFeatureHintBeenShown } from '#/hooks/settings/useFeatureHint';
+import {
+  hasFeatureHintBeenShown,
+  markFeatureHintShown,
+} from '#/hooks/settings/useFeatureHint';
 import { Telemetry } from '#services/telemetry';
 import { storeApi } from '#store';
 import { onTutorialEvent, type TutorialEvent } from '#domain/tutorialEvents';
 import { tutorialSession, useTutorialSession } from './tutorialSession';
-
-// Same key shape as `#hooks/settings/useFeatureHint`'s helpers, so resetAllFeatureHints()
-// and hasFeatureHintBeenShown() see these steps. Per-account scoping so
-// tutorials re-show when a different user logs in.
-const HINT_PREFIX = 'feature_hint_shown_';
-
-const buildStorageKey = (userId: string | undefined, featureId: string) =>
-  userId
-    ? `${HINT_PREFIX}${userId}_${featureId}`
-    : `${HINT_PREFIX}${featureId}`;
 
 /** How long a step waits for its target to measure before it is skipped. */
 const DEFAULT_TARGET_TIMEOUT_MS = 1500;
@@ -109,6 +101,9 @@ export const useTutorialSequence = ({
   const session = useTutorialSession();
   const overlayOpen = useOverlayBackdropPresence();
   const keyboardShown = useKeyboardState(keyboard => keyboard.isVisible);
+  const lastUnaskedAt = useAppStore(state =>
+    userId ? state.lastUnpromptedTipAt[userId] : undefined,
+  );
   const tour = tourId ?? steps[0]?.featureId ?? '';
 
   // Incrementing this forces re-derivation of activeStepIndex after
@@ -136,13 +131,21 @@ export const useTutorialSequence = ({
   // A tour the user started runs whatever the switch, the session's limit or
   // an earlier Not now; it pauses only for the caller's own signals (its
   // screen leaving focus, a selector open), since it opens sheets itself. One
-  // shown unasked waits for tips on, its session slot, and a clear screen.
+  // shown unasked waits for tips on, its account's slot this session, and a
+  // clear screen. The slot outlives a sign-out through `lastUnpromptedTipAt`.
+  const { unprompted } = session;
+  const claimed =
+    unprompted && unprompted.userId === userId ? unprompted.tour : null;
+  const slotFree =
+    claimed === null
+      ? (lastUnaskedAt ?? 0) < session.startedAt
+      : claimed === tour;
   const allowed = startedByUser
     ? true
     : tutorialsEnabled &&
       !session.onboardingFinished &&
       !session.pausedTours.has(tour) &&
-      (session.unpromptedTour === null || session.unpromptedTour === tour);
+      slotFree;
   const signalsPause = startedByUser
     ? false
     : overlayOpen || keyboardShown || !session.active;
@@ -219,9 +222,7 @@ export const useTutorialSequence = ({
   }, []);
 
   const markShown = (featureId: string) => {
-    storeApi
-      .getState()
-      .markFeatureHintShown(buildStorageKey(userId, featureId));
+    markFeatureHintShown(featureId, userId);
   };
 
   const advance = () => {
@@ -282,11 +283,13 @@ export const useTutorialSequence = ({
         }
       : null;
 
-  // Showing a tip unasked takes the session's one slot.
+  // Showing a tip unasked takes the account's one slot for the session.
   const shownUnasked = currentStep !== null && !startedByUser;
   useEffect(() => {
-    if (shownUnasked) tutorialSession.claimUnprompted(tour);
-  }, [shownUnasked, tour]);
+    if (!shownUnasked) return;
+    tutorialSession.claimUnprompted(userId, tour);
+    if (userId) storeApi.getState().recordUnpromptedTip(userId, Date.now());
+  }, [shownUnasked, tour, userId]);
 
   return {
     currentStep,

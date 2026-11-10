@@ -5,10 +5,12 @@ import { requirePlatform } from '#platform/install';
 const SESSION_GAP_MS = 30 * 60 * 1000;
 
 interface TutorialSessionState {
+  /** When this session began: an unasked tip after it takes the session's one. */
+  startedAt: number;
   /** Tours "Not now" put away until the next session. */
   pausedTours: ReadonlySet<string>;
-  /** The one tour shown unasked this session, if any. */
-  unpromptedTour: string | null;
+  /** The tour that took the session's unasked slot, and whose it is. */
+  unprompted: { userId: string | undefined; tour: string } | null;
   /** Onboarding finished in this session, which then shows nothing unasked. */
   onboardingFinished: boolean;
   /** The app is in the foreground. */
@@ -16,8 +18,9 @@ interface TutorialSessionState {
 }
 
 const fresh = (active: boolean): TutorialSessionState => ({
+  startedAt: Date.now(),
   pausedTours: new Set(),
-  unpromptedTour: null,
+  unprompted: null,
   onboardingFinished: false,
   active,
 });
@@ -62,10 +65,15 @@ export const tutorialSession = {
     const now = current();
     set({ ...now, pausedTours: new Set(now.pausedTours).add(tour) });
   },
-  /** Takes the session's one unasked slot for this tour. */
-  claimUnprompted(tour: string) {
+  /** Takes this account's one unasked slot for the session for this tour. */
+  claimUnprompted(userId: string | undefined, tour: string) {
     const now = current();
-    if (now.unpromptedTour === null) set({ ...now, unpromptedTour: tour });
+    if (now.unprompted?.userId === userId) return;
+    set({ ...now, unprompted: { userId, tour } });
+  },
+  /** "Replay tips": what this session held back may show again now. */
+  replay() {
+    set(fresh(current().active));
   },
   /** Onboarding is done: nothing shows unasked for the rest of the session. */
   noteOnboardingFinished() {

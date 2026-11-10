@@ -104,7 +104,6 @@ jest.mock('#/services/push/pushTokenProvider', () => ({
 
 jest.mock('#/hooks/settings/useFeatureHint', () => ({
   incrementLoginCount: jest.fn(),
-  resetAllFeatureHints: jest.fn(),
 }));
 
 import { logger } from '#/utils/environment';

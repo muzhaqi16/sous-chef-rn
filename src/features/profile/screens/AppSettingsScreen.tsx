@@ -13,9 +13,14 @@ import {
 import { UnitSystem } from '#/graphql/generated/schemaTypes';
 import { ModalPicker } from '#components/molecules/ModalPicker';
 import { AppPressable } from '#components/atoms/AppPressable';
-import { useAppStore, useShowNavigationLabels } from '#store/useAppStore';
+import {
+  useAppStore,
+  useShowNavigationLabels,
+  useUserId,
+} from '#store/useAppStore';
 import { useStore } from '#store';
-import { resetAllFeatureHints } from '#hooks/settings/useFeatureHint';
+import { replayTipsFor } from '#hooks/settings/useFeatureHint';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { useUserPreferences } from '#hooks/settings/useUserPreferences';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
 import { executeAsyncWithCleanup } from '#/utils/finallyHelpers';
@@ -104,6 +109,16 @@ export const AppSettingsScreen: React.FC = () => {
     );
   };
 
+  // This account only: others on the device keep their progress.
+  const userId = useUserId();
+  const handleReplayTips = () => {
+    if (!userId) return;
+    if (!settings.showTutorials) handleSettingChange('showTutorials', true);
+    tutorialSession.replay();
+    replayTipsFor(userId);
+    toastService.success(t('settings.replayTipsDone'));
+  };
+
   const handleResetToDefaults = () => {
     alertService.alert(
       t('settings.resetToDefaults'),
@@ -113,8 +128,6 @@ export const AppSettingsScreen: React.FC = () => {
         void executeAsyncWithCleanup(
           async () => {
             const success = await resetToDefaults();
-            // Also reset feature hints/tutorials and per-user preferences
-            resetAllFeatureHints();
             resetUserPreferences();
             // Only the success path speaks: `resetToDefaults` already
             // surfaces its own failure with `errors.resetSettingsFailed`.
@@ -202,6 +215,22 @@ export const AppSettingsScreen: React.FC = () => {
           value={settings.showTutorials}
           onValueChange={value => handleSettingChange('showTutorials', value)}
         />
+        <AppPressable
+          haptic
+          testID={profileTestIDs.settingsReplayTips}
+          style={styles.pickerContainer}
+          onPress={handleReplayTips}
+          accessibilityRole="button"
+          accessibilityLabel={t('settings.replayTips')}
+          accessibilityHint={t('settings.replayTipsDesc')}
+        >
+          <Text role="bodyStrong" tone="secondary">
+            {t('settings.replayTips')}
+          </Text>
+          <Text role="caption" tone="secondary" style={styles.picker}>
+            {t('settings.replayTipsDesc')}
+          </Text>
+        </AppPressable>
         <SettingSwitch
           testID={profileTestIDs.settingsReceiptPhotosSwitch}
           title={t('receipts.photoSetting.title')}

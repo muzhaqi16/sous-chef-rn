@@ -12,12 +12,12 @@ import { useShowTutorials } from '#store/useAppStore';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
-import { storeApi } from '#store';
-import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
+import {
+  hasFeatureHintBeenShown,
+  markFeatureHintShown,
+} from '#hooks/settings/useFeatureHint';
 import { useListAsksPrice } from '#features/shoppingList/hooks/useListAsksPrice';
 
-// Key shape shared with useFeatureHint / resetAllFeatureHints.
-const HINT_PREFIX = 'feature_hint_shown_';
 const FEATURE_ID = 'shopping_interactive_tutorial';
 
 const OLD_TUTORIAL_IDS = [
@@ -26,14 +26,8 @@ const OLD_TUTORIAL_IDS = [
   'shopping_tutorial_add',
 ];
 
-function buildStorageKey(userId: string | undefined, featureId: string) {
-  return userId
-    ? `${HINT_PREFIX}${userId}_${featureId}`
-    : `${HINT_PREFIX}${featureId}`;
-}
-
-// Read on mount AND on a reset signal, so resetAllFeatureHints (Settings →
-// "Reset to Defaults") clearing the flags replays the tutorial. Through
+// Read on mount AND on a reset signal, so Settings → "Replay tips" clearing
+// the flags replays the tutorial. Through
 // `hasFeatureHintBeenShown`, so the Detox suppression hides it too.
 function readCompletedFromStorage(userId: string | undefined): boolean {
   return [FEATURE_ID, ...OLD_TUTORIAL_IDS].some(featureId =>
@@ -239,8 +233,8 @@ export function ShoppingListTutorialProvider({
     };
   }, []);
 
-  // Re-derive from MMKV rather than forcing false: resetAllFeatureHints is the
-  // only thing that clears the flags.
+  // Re-derive from MMKV rather than forcing false: Replay tips is the only
+  // thing that clears the flags.
   const wasReset = useTutorialResetSignal();
   if (wasReset) {
     setIsCompleted(readCompletedFromStorage(userId));
@@ -287,16 +281,10 @@ export function ShoppingListTutorialProvider({
     // setting gates every screen and must not be flipped here. The superseded
     // ids count as shown only now: a tour left part-way is not finished.
     for (const featureId of [FEATURE_ID, ...OLD_TUTORIAL_IDS]) {
-      storeApi
-        .getState()
-        .markFeatureHintShown(buildStorageKey(userIdRef.current, featureId));
+      markFeatureHintShown(featureId, userIdRef.current);
     }
     // The standalone swipe hint must not fire on its own afterwards.
-    storeApi
-      .getState()
-      .markFeatureHintShown(
-        buildStorageKey(userIdRef.current, 'shopping_list_swipe'),
-      );
+    markFeatureHintShown('shopping_list_swipe', userIdRef.current);
     setIsCompleted(true);
     setCurrentStep(ShoppingListTutorialStep.COMPLETED);
   };
