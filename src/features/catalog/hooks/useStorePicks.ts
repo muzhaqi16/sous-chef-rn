@@ -26,7 +26,8 @@ export const unlistedKey = (name: string) =>
 /**
  * What a tap on a store picker row does. Alone, it adds one store and
  * `onAdded` runs. With `several`, each tap adds a store, and a second tap takes
- * back one this visit added; a tap on a row whose write is settling is ignored.
+ * back one this visit added. Either way, a tap on a row whose write is
+ * settling is ignored.
  */
 export function useStorePicks({
   homeId,
@@ -69,9 +70,13 @@ export function useStorePicks({
       : storeFor({ unlisted: tapped.place.name });
   };
 
-  const addOne = async (tapped: Tapped) => {
+  // Settling too: a second tap would add twice and go back twice.
+  const addOne = async (key: string, tapped: Tapped) => {
+    settle(key, true);
     const choice = await storeFor(tapped);
-    if (choice && (await writes.add(choice))) onAdded();
+    const added = !!choice && (await writes.add(choice));
+    settle(key, false);
+    if (added) onAdded();
   };
 
   // A place may turn out to be a store the household already has: it reads
@@ -119,7 +124,7 @@ export function useStorePicks({
         return added
           ? undefined
           : () => {
-              void addOne(tapped);
+              void addOne(key, tapped);
             };
       }
       const [tappedKey, mine] = pickedAt(key) ?? [];
