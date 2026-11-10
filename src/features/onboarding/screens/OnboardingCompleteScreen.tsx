@@ -23,6 +23,7 @@ import { useNotificationSettings } from '#features/notifications/hooks/useNotifi
 import { useTurnOnPush } from '#features/notifications/screens/useTurnOnPush';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingSummary } from '#features/onboarding/hooks/useOnboardingSummary';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { useHouseholdAnswer } from '#features/onboarding/hooks/useHouseholdAnswer';
 import { useOnboardingNavigation } from './useOnboardingNavigation';
 
@@ -68,6 +69,8 @@ export const OnboardingCompleteScreen = () => {
     }
 
     // Success — RootNavigator auto-navigates to main_app once onBoarded = true.
+    // The app it opens on shows no tip unasked this session.
+    tutorialSession.noteOnboardingFinished();
     updateUser({ onBoarded: true });
     setIsCompleting(false);
     return true;

@@ -10,6 +10,11 @@ jest.mock('react-native-keyboard-controller', () => ({
     height: { value: 0 },
     progress: { value: 0 },
   })),
+  // No keyboard is ever up under Jest.
+  useKeyboardState: jest.fn(selector => {
+    const state = { isVisible: false, height: 0 };
+    return selector ? selector(state) : state;
+  }),
   KeyboardAvoidingView: require('react-native').View,
   KeyboardStickyView: require('react-native').View,
   KeyboardAwareScrollView: require('react-native').ScrollView,

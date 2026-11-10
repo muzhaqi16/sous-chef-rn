@@ -1,10 +1,21 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react';
+import {
+  useState,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+} from 'react';
+import { useKeyboardState } from 'react-native-keyboard-controller';
 import { useShowTutorials } from '#store/useAppStore';
 import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { useOverlayBackdropPresence } from '#components/providers/OverlayBackdropProvider';
 import { useTutorialResetSignal } from '#hooks/ui/useTutorialResetSignal';
 import { hasFeatureHintBeenShown } from '#/hooks/settings/useFeatureHint';
+import { Telemetry } from '#services/telemetry';
 import { storeApi } from '#store';
+import { onTutorialEvent, type TutorialEvent } from '#domain/tutorialEvents';
+import { tutorialSession, useTutorialSession } from './tutorialSession';
 
 // Same key shape as `#hooks/settings/useFeatureHint`'s helpers, so resetAllFeatureHints()
 // and hasFeatureHintBeenShown() see these steps. Per-account scoping so
@@ -31,6 +42,12 @@ export interface TutorialStep {
   when?: () => boolean;
   /** How long the step waits for its target before the sequence moves on. */
   targetTimeoutMs?: number;
+  /** `next`, the default, continues on the tip's button; an event, on the action. */
+  advanceOn?: 'next' | { event: TutorialEvent };
+  /** `inline` is a hint inside a sheet rather than a spotlight. */
+  presentation?: 'spotlight' | 'inline';
+  /** A hand showing the gesture over the target. */
+  demo?: 'swipe' | 'longPress';
 }
 
 export interface UseTutorialSequenceOptions {
@@ -42,6 +59,13 @@ export interface UseTutorialSequenceOptions {
   isPaused: boolean;
   /** Delay before first step appears (default 2000ms) */
   startDelay?: number;
+  /** Names the tour for Not now and the session's one unasked tour. */
+  tourId?: string;
+  /**
+   * Started by the user (the Getting started card): it runs with tips off, past
+   * the session limit, and over the sheets it opens itself.
+   */
+  startedByUser?: boolean;
 }
 
 export interface TutorialStepConfig {
@@ -50,6 +74,10 @@ export interface TutorialStepConfig {
   subtitle: string;
   stepIndex: number;
   totalSteps: number;
+  /** The step continues on the user's action, not a Next button. */
+  waitsForAction: boolean;
+  presentation: 'spotlight' | 'inline';
+  demo?: 'swipe' | 'longPress';
 }
 
 export interface UseTutorialSequenceReturn {
@@ -59,9 +87,9 @@ export interface UseTutorialSequenceReturn {
   /** Advance without the transition gap — keeps the overlay mounted so the
    *  spotlight can seamlessly move to the next target (used by swipe-to-advance). */
   advanceInPlace: () => void;
-  /** Dismiss all remaining steps */
+  /** "End tour": every step counts as shown, so it does not come back. */
   skipAll: () => void;
-  /** Hides the sequence until the screen mounts again, marking nothing. */
+  /** "Not now": hidden for this session, marking nothing, so it resumes later. */
   pause: () => void;
 }
 
@@ -73,9 +101,15 @@ export const useTutorialSequence = ({
   canStart,
   isPaused,
   startDelay = 2000,
+  tourId,
+  startedByUser = false,
 }: UseTutorialSequenceOptions): UseTutorialSequenceReturn => {
   const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
+  const session = useTutorialSession();
+  const overlayOpen = useOverlayBackdropPresence();
+  const keyboardShown = useKeyboardState(keyboard => keyboard.isVisible);
+  const tour = tourId ?? steps[0]?.featureId ?? '';
 
   // Incrementing this forces re-derivation of activeStepIndex after
   // MMKV writes (advance/skipAll). Without it React wouldn't know to re-render
@@ -98,6 +132,20 @@ export const useTutorialSequence = ({
     setSkipped(new Set());
     setPaused(false);
   }
+
+  // A tour the user started runs whatever the switch, the session's limit or
+  // an earlier Not now; it pauses only for the caller's own signals (its
+  // screen leaving focus, a selector open), since it opens sheets itself. One
+  // shown unasked waits for tips on, its session slot, and a clear screen.
+  const allowed = startedByUser
+    ? true
+    : tutorialsEnabled &&
+      !session.onboardingFinished &&
+      !session.pausedTours.has(tour) &&
+      (session.unpromptedTour === null || session.unpromptedTour === tour);
+  const signalsPause = startedByUser
+    ? false
+    : overlayOpen || keyboardShown || !session.active;
 
   const visibleSteps = steps.filter(step => step.when?.() ?? true);
 
@@ -122,7 +170,7 @@ export const useTutorialSequence = ({
     : null;
 
   // Startup delay; none asked for starts at once.
-  const canBegin = canStart && !allComplete && !hasStarted && tutorialsEnabled;
+  const canBegin = canStart && !allComplete && !hasStarted && allowed;
   if (canBegin && startDelay <= 0) setHasStarted(true);
   useEffect(() => {
     if (!canBegin || startDelay <= 0) return;
@@ -132,29 +180,33 @@ export const useTutorialSequence = ({
     return () => clearTimeout(timer);
   }, [canBegin, startDelay]);
 
+  const running =
+    hasStarted && allowed && !isPaused && !signalsPause && !paused;
+
   // A step whose target never measures is passed over, so the sequence never
   // waits on nothing.
   const waitingFor =
-    hasStarted &&
-    tutorialsEnabled &&
-    !isPaused &&
-    !paused &&
-    activeStep &&
-    !activeRect
-      ? activeStep.featureId
-      : null;
+    running && activeStep && !activeRect ? activeStep.featureId : null;
   const targetTimeoutMs =
     activeStep?.targetTimeoutMs ?? DEFAULT_TARGET_TIMEOUT_MS;
   if (waitingFor !== null && targetTimeoutMs <= 0) {
+    Telemetry.trackEvent('tour_target_timeout', {
+      tour_id: tour,
+      feature_id: waitingFor,
+    });
     setSkipped(new Set(skipped).add(waitingFor));
   }
   useEffect(() => {
     if (waitingFor === null || targetTimeoutMs <= 0) return;
     const timer = setTimeout(() => {
+      Telemetry.trackEvent('tour_target_timeout', {
+        tour_id: tour,
+        feature_id: waitingFor,
+      });
       setSkipped(previous => new Set(previous).add(waitingFor));
     }, targetTimeoutMs);
     return () => clearTimeout(timer);
-  }, [waitingFor, targetTimeoutMs]);
+  }, [waitingFor, targetTimeoutMs, tour]);
 
   // Timer ref for advance transition cleanup
   const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -190,19 +242,29 @@ export const useTutorialSequence = ({
     setGeneration(g => g + 1);
   };
 
+  // A step waiting for an action continues when it happens, however done,
+  // while the tour runs: shown, or out of the way of the user's own path.
+  const awaited =
+    hasStarted && activeStep && activeStep.advanceOn !== undefined
+      ? activeStep.advanceOn === 'next'
+        ? null
+        : activeStep.advanceOn.event
+      : null;
+  const onAwaited = useEffectEvent(() => advanceInPlace());
+  useEffect(() => {
+    if (awaited === null) return;
+    return onTutorialEvent(event => {
+      if (event === awaited) onAwaited();
+    });
+  }, [awaited]);
+
   const skipAll = () => {
     for (const step of steps) markShown(step.featureId);
     setGeneration(g => g + 1);
   };
 
   // Build output
-  const isActive =
-    hasStarted &&
-    tutorialsEnabled &&
-    !isPaused &&
-    !paused &&
-    !isTransitioning &&
-    activeStepIndex !== -1;
+  const isActive = running && !isTransitioning && activeStepIndex !== -1;
 
   const currentStep: TutorialStepConfig | null =
     isActive && activeStep && activeRect
@@ -212,14 +274,28 @@ export const useTutorialSequence = ({
           subtitle: activeStep.subtitle,
           stepIndex: activeStepIndex,
           totalSteps: visibleSteps.length,
+          waitsForAction:
+            activeStep.advanceOn !== undefined &&
+            activeStep.advanceOn !== 'next',
+          presentation: activeStep.presentation ?? 'spotlight',
+          demo: activeStep.demo,
         }
       : null;
+
+  // Showing a tip unasked takes the session's one slot.
+  const shownUnasked = currentStep !== null && !startedByUser;
+  useEffect(() => {
+    if (shownUnasked) tutorialSession.claimUnprompted(tour);
+  }, [shownUnasked, tour]);
 
   return {
     currentStep,
     advance,
     advanceInPlace,
     skipAll,
-    pause: () => setPaused(true),
+    pause: () => {
+      setPaused(true);
+      tutorialSession.pause(tour);
+    },
   };
 };

@@ -3,13 +3,22 @@ import { useTutorialSequence, type TutorialStep } from '../useTutorialSequence';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
 import { useStore } from '#store';
+import { Telemetry } from '#services/telemetry';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
+import { startTutorialSession, tutorialSession } from '../tutorialSession';
 
 /** The hint record the store keeps, in the shape these assertions read. */
 const hints = () => useStore.getState().featureHintsShown;
 
+let mockTutorialsOn = true;
 jest.mock('#store/useAppStore', () => ({
   useUserId: () => 'user-1',
-  useShowTutorials: () => true,
+  useShowTutorials: () => mockTutorialsOn,
+}));
+
+let mockOverlayOpen = false;
+jest.mock('#components/providers/OverlayBackdropProvider', () => ({
+  useOverlayBackdropPresence: () => mockOverlayOpen,
 }));
 
 jest.mock('#hooks/ui/useTutorialResetSignal', () => ({
@@ -35,7 +44,30 @@ const renderSequence = () =>
 
 beforeEach(() => {
   useStore.getState().clearAllFeatureHints();
+  startTutorialSession();
+  mockTutorialsOn = true;
+  mockOverlayOpen = false;
 });
+
+/** A tour as a screen mounts it, shown at once. */
+const renderTour = (
+  options: {
+    tourId?: string;
+    startedByUser?: boolean;
+    sequence?: TutorialStep[];
+  } = {},
+) =>
+  renderHook(() =>
+    useTutorialSequence({
+      steps: options.sequence ?? steps,
+      targetRects,
+      canStart: true,
+      isPaused: false,
+      startDelay: 0,
+      tourId: options.tourId ?? 'tour-1',
+      startedByUser: options.startedByUser,
+    }),
+  );
 
 describe('useTutorialSequence — per-step completion', () => {
   it('records each step in MMKV as it is advanced, scoped to this sequence only', () => {
@@ -139,7 +171,7 @@ describe('useTutorialSequence — order and missing targets', () => {
 });
 
 describe('useTutorialSequence — not now', () => {
-  it('hides the step without marking it, so a later visit shows it again', () => {
+  it('hides the step without marking it, so a later session shows it again', () => {
     const { result } = renderHook(() =>
       useTutorialSequence({
         steps,
@@ -157,5 +189,157 @@ describe('useTutorialSequence — not now', () => {
 
     expect(result.current.currentStep).toBeNull();
     expect(hints()['feature_hint_shown_user-1_step_a']).toBeUndefined();
+  });
+});
+
+describe('useTutorialSequence — a tour continues on the action', () => {
+  it('moves on when the awaited action happens, however it is done', () => {
+    const { result } = renderTour({
+      sequence: [
+        {
+          ...steps[0]!,
+          advanceOn: { event: 'list.itemAdded' },
+        },
+        steps[1]!,
+      ],
+    });
+    expect(result.current.currentStep).toMatchObject({
+      title: 'A',
+      waitsForAction: true,
+    });
+
+    act(() => emitTutorialEvent('list.itemAdded'));
+
+    expect(result.current.currentStep?.title).toBe('B');
+    expect(hints()['feature_hint_shown_user-1_step_a']).toBe(true);
+  });
+
+  it('ignores other actions', () => {
+    const { result } = renderTour({
+      sequence: [{ ...steps[0]!, advanceOn: { event: 'list.itemAdded' } }],
+    });
+
+    act(() => emitTutorialEvent('list.movedToPantry'));
+
+    expect(result.current.currentStep?.title).toBe('A');
+  });
+});
+
+describe('useTutorialSequence — done only when it finishes', () => {
+  it('resumes at the step reached after the app closes mid-tour', () => {
+    const first = renderTour();
+    act(() => first.result.current.advance());
+    first.unmount();
+
+    const again = renderTour();
+
+    expect(again.result.current.currentStep?.title).toBe('B');
+    expect(hints()['feature_hint_shown_user-1_step_b']).toBeUndefined();
+  });
+});
+
+describe('useTutorialSequence — Not now pauses; ending stops for good', () => {
+  it('Not now: away for this session, back in the next', () => {
+    const first = renderTour();
+    act(() => first.result.current.pause());
+    expect(first.result.current.currentStep).toBeNull();
+    first.unmount();
+
+    expect(renderTour().result.current.currentStep).toBeNull();
+
+    act(() => startTutorialSession());
+    expect(renderTour().result.current.currentStep?.title).toBe('A');
+  });
+
+  it('Not now still lets the user start it from Getting started', () => {
+    act(() => tutorialSession.pause('tour-1'));
+
+    const started = renderTour({ startedByUser: true });
+
+    expect(started.result.current.currentStep?.title).toBe('A');
+  });
+
+  it('ending it marks every step, so it never shows again', () => {
+    const first = renderTour();
+    act(() => first.result.current.skipAll());
+    first.unmount();
+
+    act(() => startTutorialSession());
+    expect(renderTour().result.current.currentStep).toBeNull();
+  });
+});
+
+describe('useTutorialSequence — unprompted tips are rationed', () => {
+  it('shows one unasked tour a session; a second waits for the next', () => {
+    const shown = renderTour({ tourId: 'pantry' });
+    expect(shown.result.current.currentStep?.title).toBe('A');
+
+    const other = renderTour({
+      tourId: 'recipes',
+      sequence: [
+        { featureId: 'step_c', title: 'C', subtitle: 'c', rectKey: 'a' },
+      ],
+    });
+    expect(other.result.current.currentStep).toBeNull();
+
+    act(() => startTutorialSession());
+    other.rerender({});
+    expect(other.result.current.currentStep?.title).toBe('C');
+  });
+
+  it('waits while a sheet is open', () => {
+    mockOverlayOpen = true;
+    const { result, rerender } = renderTour();
+    expect(result.current.currentStep).toBeNull();
+
+    mockOverlayOpen = false;
+    rerender({});
+    expect(result.current.currentStep?.title).toBe('A');
+  });
+
+  it('shows nothing unasked in the session onboarding finished', () => {
+    act(() => tutorialSession.noteOnboardingFinished());
+
+    expect(renderTour().result.current.currentStep).toBeNull();
+    expect(
+      renderTour({ startedByUser: true }).result.current.currentStep?.title,
+    ).toBe('A');
+  });
+});
+
+describe('useTutorialSequence — the Show tutorials switch', () => {
+  it('switched off mid-tour, the tour closes', () => {
+    const { result, rerender } = renderTour();
+    expect(result.current.currentStep?.title).toBe('A');
+
+    mockTutorialsOn = false;
+    rerender({});
+
+    expect(result.current.currentStep).toBeNull();
+  });
+
+  it('a guide the user starts runs with tips off, over a sheet of its own', () => {
+    mockTutorialsOn = false;
+    mockOverlayOpen = true;
+
+    const { result } = renderTour({ startedByUser: true });
+
+    expect(result.current.currentStep?.title).toBe('A');
+  });
+});
+
+describe('useTutorialSequence — a tour never stalls', () => {
+  it('reports a target that never measured as it passes over it', () => {
+    renderTour({
+      sequence: [
+        { ...steps[0]!, rectKey: 'gone', targetTimeoutMs: 0 },
+        steps[1]!,
+      ],
+    });
+
+    expect(Telemetry.trackEvent).toHaveBeenCalledWith(
+      'tour_target_timeout',
+      expect.objectContaining({ feature_id: 'step_a' }),
+    );
   });
 });
