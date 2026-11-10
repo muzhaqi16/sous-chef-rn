@@ -10,12 +10,29 @@ query GetOnboardingItems($filters: ItemFilters, $first: Int, $homeId: ID!) {
         name
         imageUrl
         storageState
+        # The same shape as every other read of an item's alerts: the cache
+        # keeps one per item.
         dietaryAlerts(homeId: $homeId) {
           state
           membership {
             version
             id
             userId
+            role
+            displayName
+          }
+          restriction {
+            id
+            diet
+            intolerance
+            healthGoal
+            religiousDiet
+            item {
+              version
+              id
+              name
+            }
+            severity
           }
         }
       }

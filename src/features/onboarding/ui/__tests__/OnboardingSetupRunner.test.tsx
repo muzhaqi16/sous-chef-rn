@@ -9,7 +9,7 @@ import {
 } from '#features/onboarding/store/onboardingProgressStore';
 import type { DataState } from '#hooks/data/useDataState';
 import { OnboardingSetupRunner } from '../OnboardingSetupRunner';
-import { routesToResume } from '../useOnboardingNavigation';
+import { routesToResume } from '#features/onboarding/screens/useOnboardingNavigation';
 
 const mockRun = jest.fn<
   Promise<OnboardingSetupOutcome>,
@@ -33,7 +33,7 @@ jest.mock('#features/onboarding/hooks/useOnboardingSetup', () => ({
 
 let mockInvites: { id: string }[] = [];
 let mockInvitesState: DataState = 'empty';
-jest.mock('../useOnboardingInvites', () => ({
+jest.mock('#features/onboarding/screens/useOnboardingInvites', () => ({
   useOnboardingInvites: () => ({
     invites: mockInvites,
     loading: false,

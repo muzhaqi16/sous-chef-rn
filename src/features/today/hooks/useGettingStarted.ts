@@ -3,6 +3,7 @@ import { skipToken, useQuery } from '@apollo/client/react';
 import { storeApi } from '#store';
 import { useAppStore, useSelectedHomeId, useUser } from '#store/useAppStore';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
+import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { featureHintsSuppressed } from '#hooks/settings/useFeatureHint';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { onTutorialEvent } from '#domain/tutorialEvents';
@@ -59,8 +60,9 @@ export function useGettingStarted({
   const showing =
     acknowledging || (eligible && !record?.hidden && !record?.retired);
 
-  // Asked again each time Today shows, so what was done elsewhere ticks.
-  const { data } = useQuery(
+  // Asked again each time Today shows, so what was done elsewhere ticks. A
+  // failed read leaves each item as the device holds it, never undone.
+  const { data, error } = useQuery(
     GettingStartedDocument,
     showing && !acknowledging && isFocused && homeId
       ? {
@@ -70,6 +72,7 @@ export function useGettingStarted({
         }
       : skipToken,
   );
+  useApolloErrorLogger(GettingStartedDocument, error);
 
   const seen = new Set(record?.done ?? []);
   const plannedMeal =

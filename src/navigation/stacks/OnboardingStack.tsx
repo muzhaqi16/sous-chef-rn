@@ -2,7 +2,7 @@ import type { StaticParamList } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import React from 'react';
 import { onboardingScreens } from '#features/onboarding/screens/registration';
-import { OnboardingSetupRunner } from '#features/onboarding/screens/OnboardingSetupRunner';
+import { OnboardingSetupRunner } from '#features/onboarding/ui/OnboardingSetupRunner';
 import { topInsetScreenLayout } from '#navigation/layouts/TopInsetLayout';
 import { motion } from '#/theme/motion';
 

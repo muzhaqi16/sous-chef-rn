@@ -173,7 +173,8 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   const holeBottom = hole.top + hole.height;
 
   // ── Card placement, inside the safe area ──
-  const gutter = theme.layout.pageGutter;
+  // An overlay's own margin from the screen edge, not a page's gutter.
+  const gutter = theme.spacing.md;
   const cardWidth = Math.min(frame.width - gutter * 2, TOOLTIP_MAX_WIDTH);
   const [cardHeight, setCardHeight] = useState<number | null>(null);
   const handleCardLayout = (event: LayoutChangeEvent) => {

@@ -6,8 +6,8 @@ import {
 } from '#features/onboarding/hooks/useOnboardingSetup';
 import { useOnboardingSetupStore } from '#features/onboarding/store/onboardingProgressStore';
 import { unreadAccountState } from '#features/onboarding/utils/unreadAccountState';
-import { useOnboardingInvites } from './useOnboardingInvites';
-import { routesToResume } from './useOnboardingNavigation';
+import { useOnboardingInvites } from '#features/onboarding/screens/useOnboardingInvites';
+import { routesToResume } from '#features/onboarding/screens/useOnboardingNavigation';
 
 interface OnboardingSetupRunnerProps {
   /** The onboarding stack's own navigation, from its layout. */
