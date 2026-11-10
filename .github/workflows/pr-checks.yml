@@ -52,11 +52,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     # Type-aware linting holds the TypeScript program in memory. A cacheless
-    # `eslint .` over the whole repo peaks near 4GB RSS, which overruns Node's
-    # default old-space heap on the runner and aborts with "Ineffective
-    # mark-compacts near heap limit". Match the build-android jobs.
+    # `eslint .` over the whole repo needs between 3 and 4GB of heap, so 4GB
+    # leaves it no room to grow before it aborts with "Ineffective mark-compacts
+    # near heap limit". Match the pre-commit hook's 6GB; the runner has 16GB.
     env:
-      NODE_OPTIONS: --max-old-space-size=4096
+      NODE_OPTIONS: --max-old-space-size=6144
 
     steps:
       - name: Checkout code
