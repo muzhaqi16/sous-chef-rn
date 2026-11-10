@@ -1086,16 +1086,3 @@ Re-check: in the dev app on the phone, wrap `nativeModuleProxy.RNKeychainManager
 ```
 grep -n "errSecUserCanceled" -A1 node_modules/react-native-keychain/ios/RNKeychainManager/RNKeychainManager.m
 ```
-
-### typescript-eslint single-run mode loads overlapping tsconfigs twice
-
-Verified 2026-11-10 with `@typescript-eslint/parser` 8.72.2 on this repository.
-
-**Claim:** from 8.72.1, single-run mode builds a standalone Program for each tsconfig, and a file that falls back to the project service (a `#!` script, a file its nearest tsconfig excludes, a tsconfig another one overlaps) loads that project again; the two share no source files (typescript-eslint#13109, open). Single-run mode turns on by itself under `CI=true` or the `eslint` binary. With it, `eslint .` crashed at a 4 GB heap after 130 s, as PR Checks did from `6d3b80c3e` (8.70.0 → 8.72.2); with it off it passed in 106 s, and still crashed at 3 GB. `eslint/project.js` sets `disallowAutomaticSingleRunInference: true` on every typed block, and PR Checks gives ESLint the 6 GB the pre-commit hook does.
-
-Re-check: on a cold cache, single-run forced back on, then the config as it is:
-
-```
-TSESTREE_SINGLE_RUN=true CI=true NODE_OPTIONS=--max-old-space-size=4096 npx eslint --cache-location /tmp/eslint-a --max-warnings 0 .
-CI=true NODE_OPTIONS=--max-old-space-size=4096 npx eslint --cache-location /tmp/eslint-b --max-warnings 0 .
-```

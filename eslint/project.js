@@ -36,15 +36,8 @@ const ROOT = path.join(__dirname, '..');
 // file the named project happened to exclude no longer falls through to an
 // inferred program — where a type-aware rule sees no program and returns
 // nothing, which reads as a clean file. Pinned to the repo root: a runner
-// started elsewhere would otherwise resolve against its own cwd. Automatic
-// single-run mode stays off: from typescript-eslint 8.72.1 it loads a second
-// copy of overlapping tsconfigs, and `eslint .` exhausts CI's heap.
-// Verified: #typescript-eslint-single-run-mode-loads-overlapping-tsconfigs-twice
-const TYPED = {
-  projectService: true,
-  tsconfigRootDir: ROOT,
-  disallowAutomaticSingleRunInference: true,
-};
+// started elsewhere would otherwise resolve against its own cwd.
+const TYPED = { projectService: true, tsconfigRootDir: ROOT };
 
 const TEST_FILES = ['**/__tests__/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'];
 
