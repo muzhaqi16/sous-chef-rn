@@ -8,7 +8,12 @@ import { CompletionHero } from '#features/onboarding/components/CompletionHero';
 import { SetupSummary } from '#features/onboarding/components/SetupSummary';
 import { RecipePayoff } from '#features/onboarding/components/RecipePayoff';
 import { OnboardingOffers } from '#features/onboarding/components/OnboardingOffers';
-import { useSelectedHomeId, useUpdateUser, useUser } from '#store/useAppStore';
+import {
+  useAppStore,
+  useSelectedHomeId,
+  useUpdateUser,
+  useUser,
+} from '#store/useAppStore';
 import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnboarding';
 import { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
@@ -37,10 +42,15 @@ export const OnboardingCompleteScreen = () => {
   const { settings, updateMultipleSettings } = useNotificationSettings();
   const { hasPermission, turnOnPush } = useTurnOnPush(updateMultipleSettings);
 
-  const handleComplete = async () => {
+  const setPendingDeepLinkAction = useAppStore(
+    state => state.setPendingDeepLinkAction,
+  );
+
+  /** True once onboarding is done; the main app then mounts by itself. */
+  const handleComplete = async (): Promise<boolean> => {
     if (!user?.id) {
       setError(t('onBoarding.userNotFoundError'));
-      return;
+      return false;
     }
 
     setIsCompleting(true);
@@ -50,12 +60,24 @@ export const OnboardingCompleteScreen = () => {
     if (!(await completeOnboarding())) {
       setError(t('onBoarding.completeOnboardingError'));
       setIsCompleting(false);
-      return;
+      return false;
     }
 
     // Success — RootNavigator auto-navigates to main_app once onBoarded = true.
     updateUser({ onBoarded: true });
     setIsCompleting(false);
+    return true;
+  };
+
+  // The recipe opens over Today once the app shows; a finish that failed
+  // drops it, so it never opens later out of the blue.
+  const openRecipe = async (recipeId: string) => {
+    setPendingDeepLinkAction({
+      type: 'open_recipe',
+      recipeId,
+      timestamp: Date.now(),
+    });
+    if (!(await handleComplete())) setPendingDeepLinkAction(null);
   };
 
   // The reason first; the OS prompt only once the user agrees. Dismissing the
@@ -117,6 +139,9 @@ export const OnboardingCompleteScreen = () => {
         <RecipePayoff
           rows={payoff.rows}
           showCheckLabel={payoff.showCheckLabel}
+          onOpen={recipeId => {
+            void openRecipe(recipeId);
+          }}
         />
 
         <OnboardingOffers homeId={homeId} cooksFor={summary.cooksFor} />

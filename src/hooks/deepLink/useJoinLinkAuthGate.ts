@@ -6,7 +6,7 @@ import { useStore } from '#store';
 import type { DeepLinkAction } from '#store/slices/navigationSlice';
 import { toastService } from '#/services/toastService';
 
-type JoinLinkType = DeepLinkAction['type'];
+type JoinLinkType = Extract<DeepLinkAction, { code: string }>['type'];
 
 const SIGN_IN_MESSAGE_KEY: Record<JoinLinkType, TranslationKey> = {
   join_home: 'joinLink.signInHome',

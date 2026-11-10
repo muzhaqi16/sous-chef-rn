@@ -218,6 +218,43 @@ afterEach(() => {
 });
 
 describe('OnboardingCompleteScreen', () => {
+  describe('tapping a payoff recipe', () => {
+    beforeEach(() => {
+      useStore.setState({ pendingDeepLinkAction: null });
+    });
+
+    it('finishes onboarding and opens the recipe once the app shows', async () => {
+      mockPayoff = [SHAKSHUKA];
+      const user = userEvent.setup();
+      renderScreen();
+
+      await user.press(screen.getByText('Shakshuka'));
+      await act(async () => {
+        await mockCompleteOnboarding.mock.results[0]?.value;
+      });
+
+      expect(useStore.getState().pendingDeepLinkAction).toEqual(
+        expect.objectContaining({ type: 'open_recipe', recipeId: 'r1' }),
+      );
+      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
+    });
+
+    it('drops the recipe when finishing fails, so it never opens later', async () => {
+      mockPayoff = [SHAKSHUKA];
+      mockCompleteOnboarding.mockResolvedValue(false);
+      const user = userEvent.setup();
+      renderScreen();
+
+      await user.press(screen.getByText('Shakshuka'));
+      await act(async () => {
+        await mockCompleteOnboarding.mock.results[0]?.value;
+      });
+
+      expect(useStore.getState().pendingDeepLinkAction).toBeNull();
+      expect(mockUpdateUser).not.toHaveBeenCalled();
+    });
+  });
+
   describe('changing an answer from the summary', () => {
     it('changes who the meals are for with a stepper, in place', async () => {
       summaryOf({ ...HOME_READY, cooksFor: 4 });
