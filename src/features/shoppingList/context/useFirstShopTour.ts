@@ -63,7 +63,8 @@ interface FirstShopTourInput {
  * The List's first-shop guide, four tips: the `+`, then a hint in the add
  * sheet until an item is added however it is added, then checking it off,
  * then putting it away once moved to the pantry however it is moved. Apart
- * from it, a tip showing the row swipe once the list holds three items.
+ * from it, a tip showing the row swipe once the list holds three items, and
+ * one offering to scan the trip's receipt once bought items wait to go in.
  */
 export function useFirstShopTour({
   hasList,
@@ -158,6 +159,25 @@ export function useFirstShopTour({
     startDelay,
   });
 
+  // Once bought items wait to go in, a tip offers scanning the trip's receipt.
+  const swipeIdle =
+    swipeTip.currentStep === null && swipeTip.activeRectKey === null;
+  const receiptTip = useTutorialSequence({
+    tourId: 'list_receipt',
+    steps: [
+      {
+        featureId: 'list_receipt_offer',
+        title: t('labels.scanReceipt'),
+        subtitle: t('shoppingListTutorial.receiptOffer.subtitle'),
+        rectKey: 'addButton',
+      },
+    ],
+    targetRects,
+    canStart: guideIdle && swipeIdle && hasPurchasedToMove,
+    isPaused,
+    startDelay,
+  });
+
   const wants = (key: FirstShopTarget, tab: ListTab) =>
     tabShown === tab &&
     (guide.activeRectKey === key ||
@@ -176,6 +196,7 @@ export function useFirstShopTour({
   return {
     guide,
     swipeTip,
+    receiptTip,
     /** Which row targets a tip waits on, for the first row to measure. */
     wanted: {
       checkbox: wants('checkbox', 'shopping'),

@@ -341,6 +341,9 @@
     "moveToPantry": {
       "title": "Move to pantry",
       "subtitle": "Tap to move this item to your pantry"
+    },
+    "receiptOffer": {
+      "subtitle": "Bought these? Scan this trip’s receipt to put them in your pantry."
     }
   },
   "listTemplate": {

@@ -341,6 +341,9 @@
     "moveToPantry": {
       "title": "Mover a la despensa",
       "subtitle": "Toca para mover este artículo a tu despensa"
+    },
+    "receiptOffer": {
+      "subtitle": "¿Ya los compraste? Escanea el ticket de esta compra para pasarlos a tu despensa."
     }
   },
   "listTemplate": {

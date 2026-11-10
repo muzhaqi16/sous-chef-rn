@@ -56,13 +56,18 @@ import { Screen } from '#components/templates/Screen';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 
-function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
+// Switching pantries is taught once there are two to switch between.
+function buildPantryTutorialSteps(
+  t: Translate,
+  pantryCount: number,
+): TutorialStep[] {
   return [
     {
       featureId: 'pantry_tutorial_settings',
       title: t('labels.pantrySettings'),
       subtitle: t('pantryScreen.tutorialPantrySettingsSubtitle'),
       rectKey: 'settingsIcon',
+      when: () => pantryCount > 1,
     },
     {
       featureId: 'pantry_tutorial_add',
@@ -294,7 +299,7 @@ function PantryMainContent({
   useExpiryPushAsk({ datedItemName, isFocused: isPantryFocused });
 
   const tutorial = useTutorialSequence({
-    steps: buildPantryTutorialSteps(t),
+    steps: buildPantryTutorialSteps(t, screen.pantries.length),
     targetRects: {
       settingsIcon: settingsIconRect,
       addButton: addButtonRect,
@@ -303,12 +308,18 @@ function PantryMainContent({
     isPaused: !isPantryFocused || isOverlayOpen || stockGuideStarted,
   });
 
-  const tutorialTargetActions: Record<number, () => void> = {
-    0: onSettingsPress,
-    1: () => {
-      Telemetry.trackEvent('add_pantry_item_clicked');
-      openAddSheet();
-    },
+  const runTutorialTarget = (featureId: string) => {
+    switch (featureId) {
+      case 'pantry_tutorial_settings':
+        onSettingsPress();
+        break;
+      case 'pantry_tutorial_add':
+        Telemetry.trackEvent('add_pantry_item_clicked');
+        openAddSheet();
+        break;
+      default:
+        break;
+    }
   };
 
   const canAdd =
@@ -500,8 +511,7 @@ function PantryMainContent({
           onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
-            const action = tutorialTargetActions[coachStep.stepIndex];
-            action?.();
+            runTutorialTarget(coachStep.featureId);
             tutorial.advance();
           }}
         />

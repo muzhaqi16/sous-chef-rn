@@ -119,6 +119,7 @@ export const ShoppingListMainContent: React.FC<
 
   const {
     toBarcode,
+    toReceiptScan,
     toListSettings,
     toShoppingListItemDetail,
     toEditItem,
@@ -651,6 +652,23 @@ export const ShoppingListMainContent: React.FC<
           );
         }
         const tipStep = swipeTip.currentStep;
+        const receiptStep = tour.receiptTip.currentStep;
+        if (!tipStep && receiptStep) {
+          const { receiptTip } = tour;
+          return (
+            <SpotlightCoachMark
+              targetRect={receiptStep.targetRect}
+              title={receiptStep.title}
+              subtitle={receiptStep.subtitle}
+              onDismiss={receiptTip.skipAll}
+              onClose={receiptTip.pause}
+              onTargetPress={() => {
+                toReceiptScan();
+                receiptTip.advance();
+              }}
+            />
+          );
+        }
         if (!tipStep) return null;
         return (
           <SpotlightCoachMark

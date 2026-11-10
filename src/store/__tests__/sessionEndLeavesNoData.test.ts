@@ -110,6 +110,8 @@ const KEPT_ON_PURPOSE: Record<string, string> = {
     'Record keyed by user id; a timestamp, so tips stay rationed per account',
   pushAskAnswered:
     'Record keyed by user id; whether the reminder ask was answered, not how',
+  tipFacts:
+    'Record keyed by user id; which first steps happened (a saved recipe), no content',
 
   // Catalog data warmed for offline autocomplete. Identical for every account
   // and independent of who was signed in; clearing it costs offline

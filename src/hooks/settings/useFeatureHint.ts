@@ -45,6 +45,19 @@ export const replayTipsFor = (userId: string): void => {
   store.bumpTutorialResetGeneration();
 };
 
+/** What an account has done that a contextual tip waits for. */
+export type TipFact = 'recipeSaved' | 'recipeAdded';
+
+/** Notes, for the signed-in account on this device, that it did this. */
+export const noteTipFact = (fact: TipFact): void => {
+  const store = storeApi.getState();
+  const userId = store.user?.id;
+  if (userId) store.noteTipFact(userId, fact);
+};
+
+export const hasTipFact = (fact: TipFact, userId?: string): boolean =>
+  !!userId && (storeApi.getState().tipFacts[userId] ?? []).includes(fact);
+
 export const incrementLoginCount = (userId: string): void => {
   storeApi.getState().incrementLoginCount(userId);
 };

@@ -358,11 +358,13 @@ const makeTour = (
   overrides: {
     guide?: ReturnType<typeof sequence>;
     swipeTip?: ReturnType<typeof sequence>;
+    receiptTip?: ReturnType<typeof sequence>;
     wanted?: Partial<Record<'checkbox' | 'archiveIcon' | 'itemCard', boolean>>;
   } = {},
 ) => ({
   guide: overrides.guide ?? sequence(),
   swipeTip: overrides.swipeTip ?? sequence(),
+  receiptTip: overrides.receiptTip ?? sequence(),
   wanted: {
     checkbox: false,
     archiveIcon: false,
@@ -624,6 +626,26 @@ describe('ShoppingListMainContent', () => {
         <ShoppingListMainContent screenData={makeScreenData()} />,
       );
       expect(getByText('Swipe')).toBeTruthy();
+    });
+
+    it('Items checked off a list: a tip offers scanning the trip’s receipt', () => {
+      const receiptTip = sequence({
+        featureId: 'list_receipt_offer',
+        title: 'Scan receipt',
+      });
+      (useFirstShopTourContext as jest.Mock).mockReturnValue(
+        makeTour({ receiptTip }),
+      );
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
+      );
+
+      fireEvent.press(getByTestId('spotlight-coach-mark'));
+
+      expect(
+        jest.mocked(useAppNavigation)().toReceiptScan,
+      ).toHaveBeenCalledTimes(1);
+      expect(receiptTip.advance).toHaveBeenCalledTimes(1);
     });
 
     it('hides every tip while a sheet is open', () => {

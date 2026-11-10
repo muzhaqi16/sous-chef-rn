@@ -1,3 +1,4 @@
+import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import {
   skipToken,
   useApolloClient,
@@ -142,6 +143,7 @@ export function useRecipeFormWrites(recipeId: string | undefined) {
         }),
       inputs,
     );
+    if (!settled.failure) noteTipFact('recipeAdded');
     return outcomeOf(settled.failure);
   };
 

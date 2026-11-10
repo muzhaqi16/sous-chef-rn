@@ -55,6 +55,16 @@ describe('tutorialSlice', () => {
     });
   });
 
+  it('keeps what an account has done for tips, through Replay tips', () => {
+    const store = createTestStore();
+
+    store.getState().noteTipFact('a', 'recipeSaved');
+    store.getState().noteTipFact('a', 'recipeSaved');
+    store.getState().clearTipsFor('a');
+
+    expect(store.getState().tipFacts).toEqual({ a: ['recipeSaved'] });
+  });
+
   it('records when a tip last showed unasked, per account', () => {
     const store = createTestStore();
 

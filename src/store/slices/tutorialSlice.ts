@@ -35,6 +35,11 @@ export interface TutorialState {
   lastUnpromptedTipAt: Record<string, number>;
   /** Per account: the push ask was answered, yes or no. */
   pushAskAnswered: Record<string, boolean>;
+  /**
+   * Per account: what it has done that a contextual tip waits for, such as a
+   * first saved recipe. Replay tips keeps them: they are facts, not tips.
+   */
+  tipFacts: Record<string, string[]>;
 
   markFeatureHintShown: (key: string) => void;
   incrementLoginCount: (userId: string) => void;
@@ -47,6 +52,7 @@ export interface TutorialState {
   retireGettingStarted: (userId: string) => void;
   /** The notification ask was answered here, yes or no: it is not made again. */
   answerPushAsk: (userId: string) => void;
+  noteTipFact: (userId: string, fact: string) => void;
   /**
    * One account's tours and tips, shown again: its hints, its unasked-tip
    * clock, and its Getting started card unless every item is done. Other
@@ -61,6 +67,7 @@ export const initialTutorialState = {
   gettingStarted: {},
   lastUnpromptedTipAt: {},
   pushAskAnswered: {},
+  tipFacts: {},
 };
 
 export const createTutorialSlice: StateCreator<
@@ -110,6 +117,13 @@ export const createTutorialSlice: StateCreator<
         retired: false,
       });
       card.hidden = true;
+    });
+  },
+
+  noteTipFact: (userId, fact) => {
+    set(state => {
+      const facts = (state.tipFacts[userId] ??= []);
+      if (!facts.includes(fact)) facts.push(fact);
     });
   },
 

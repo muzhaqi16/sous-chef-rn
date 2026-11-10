@@ -341,6 +341,9 @@
     "moveToPantry": {
       "title": "Sposta nella dispensa",
       "subtitle": "Tocca per spostare questo articolo nella tua dispensa"
+    },
+    "receiptOffer": {
+      "subtitle": "Li hai comprati? Scansiona lo scontrino di questa spesa per metterli in dispensa."
     }
   },
   "listTemplate": {

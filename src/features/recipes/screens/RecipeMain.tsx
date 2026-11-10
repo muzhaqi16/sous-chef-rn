@@ -31,6 +31,8 @@ import { useTutorialSession } from '#hooks/ui/tutorialSession';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { GUIDE_TOURS } from '#domain/guides';
+import { hasTipFact } from '#hooks/settings/useFeatureHint';
+import { useUserId } from '#store/useAppStore';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
@@ -106,7 +108,6 @@ const RecipeMainInner: React.FC = () => {
   type TutorialTarget =
     | 'savedButton'
     | 'myRecipesButton'
-    | 'dietaryButton'
     | 'pantryButton'
     | 'discoveryHeader';
 
@@ -169,12 +170,16 @@ const RecipeMainInner: React.FC = () => {
     isPaused: !isRecipeFocused || isSheetOpen,
   });
 
+  const userId = useUserId();
   const tutorial = useTutorialSequence({
-    steps: getRecipeTutorialSteps(t),
+    steps: getRecipeTutorialSteps(t, {
+      hasSaved: () => hasTipFact('recipeSaved', userId),
+      hasOwnRecipe: () => hasTipFact('recipeAdded', userId),
+      hasPantryItems: () => screen.hasPantryItems,
+    }),
     targetRects: {
       savedButton: buttonRects.savedButton ?? null,
       myRecipesButton: buttonRects.myRecipesButton ?? null,
-      dietaryButton: buttonRects.dietaryButton ?? null,
       pantryButton: buttonRects.pantryButton ?? null,
     },
     canStart: true,
@@ -261,7 +266,6 @@ const RecipeMainInner: React.FC = () => {
           })
         : t('recipes.dietaryRestrictions'),
     badge: screen.activeFilterCount,
-    onButtonLayout: (rect: LayoutRect) => setButtonRect('dietaryButton', rect),
   };
 
   const ingredientNames = [...screen.selectedIngredients].join(', ');
@@ -533,17 +537,21 @@ const RecipeMainInner: React.FC = () => {
           onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
-            const actions: Record<number, () => void> = {
-              0: toSavedRecipes,
-              1: toMyRecipes,
-              2: openFilterSheet,
-              3: () => {
+            const featureId: string = tutorial.currentStep?.featureId ?? '';
+            switch (featureId) {
+              case 'recipe_tutorial_saved':
+                toSavedRecipes();
+                break;
+              case 'recipe_tutorial_my_recipes':
+                toMyRecipes();
+                break;
+              case 'recipe_tutorial_pantry':
                 switchSearchMode('ingredients');
                 openIngredientSelector();
-              },
-            };
-            const step = tutorial.currentStep;
-            if (step) actions[step.stepIndex]?.();
+                break;
+              default:
+                break;
+            }
             tutorial.advance();
           }}
         />

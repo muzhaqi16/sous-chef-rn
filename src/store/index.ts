@@ -250,12 +250,13 @@ const PERSISTED_KEYS = classifyKeys(
   'lastStoresFetchedAt',
 
   // Tutorials, per account: hints seen, login count, the Getting started
-  // card, the unasked-tip clock and the push ask.
+  // card, the unasked-tip clock, the push ask and what tips wait for.
   'featureHintsShown',
   'loginCounts',
   'gettingStarted',
   'lastUnpromptedTipAt',
   'pushAskAnswered',
+  'tipFacts',
 
   // Telemetry: the one real user choice (the feature flags are env-derived)
   'userConsent',

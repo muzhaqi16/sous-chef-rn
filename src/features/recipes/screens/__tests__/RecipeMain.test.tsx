@@ -138,7 +138,10 @@ jest.mock('#hooks/ui/useTutorialSequence', () => ({
     isActive: false,
   })),
 }));
-jest.mock('#hooks/settings/useFeatureHint', () => ({}));
+let mockTipFacts: string[] = [];
+jest.mock('#hooks/settings/useFeatureHint', () => ({
+  hasTipFact: (fact: string) => mockTipFacts.includes(fact),
+}));
 jest.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: () => null,
   useBottomSheetScrollableCreator: jest.fn(
@@ -305,6 +308,48 @@ describe('RecipeMain', () => {
       true,
     );
     act(() => tutorialSession.endGuide(GUIDE_TOURS.cook));
+  });
+
+  describe('tips in context', () => {
+    const visibleTips = () =>
+      jest
+        .mocked(useTutorialSequence)
+        .mock.calls.map(([options]) => options)
+        .filter(o => o.tourId === undefined)
+        .pop()
+        ?.steps.filter(step => step.when?.() ?? true)
+        .map(step => step.featureId);
+
+    beforeEach(() => {
+      mockTipFacts = [];
+      mockDeferredScreen.mockImplementation(
+        ({ component: Component }: { component: React.ComponentType }) => (
+          <Component />
+        ),
+      );
+    });
+
+    it('Nothing saved yet: no tip about saved recipes, nor any about diet filters', () => {
+      render(<RecipeMain />);
+
+      expect(visibleTips()).not.toContain('recipe_tutorial_saved');
+      expect(visibleTips()).not.toContain('recipe_tutorial_dietary');
+    });
+
+    it('The first saved recipe: the Saved tip may show', () => {
+      mockTipFacts = ['recipeSaved'];
+      render(<RecipeMain />);
+
+      expect(visibleTips()).toContain('recipe_tutorial_saved');
+      expect(visibleTips()).not.toContain('recipe_tutorial_my_recipes');
+    });
+
+    it('My recipes once the first is imported or written', () => {
+      mockTipFacts = ['recipeAdded'];
+      render(<RecipeMain />);
+
+      expect(visibleTips()).toContain('recipe_tutorial_my_recipes');
+    });
   });
 
   it('renders the outer component with fallback', () => {

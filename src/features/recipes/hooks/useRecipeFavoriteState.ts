@@ -1,3 +1,4 @@
+import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { useState } from 'react';
 import { errorService } from '#/services/errorService';
 import { useApolloClient, useMutation } from '@apollo/client/react';
@@ -81,6 +82,7 @@ export function useRecipeFavoriteState({
     );
 
     if (settled.failure) return;
+    noteTipFact('recipeSaved');
     toastService.success(t('recipes.recipeSavedToCollection'));
     onSaved();
   };

@@ -341,6 +341,9 @@
     "moveToPantry": {
       "title": "Zhvendos te qilari",
       "subtitle": "Trokit për ta zhvendosur këtë artikull te qilari yt"
+    },
+    "receiptOffer": {
+      "subtitle": "I bleve? Skano faturën e kësaj blerjeje për t’i futur në qilar."
     }
   },
   "listTemplate": {

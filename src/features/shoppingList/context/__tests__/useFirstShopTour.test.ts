@@ -171,6 +171,25 @@ describe('useFirstShopTour', () => {
     expect(result.current.swipeTip.currentStep?.demo).toBe('swipe');
   });
 
+  it('Items checked off a list: offers scanning the receipt once the guide is done', () => {
+    useStore.setState({
+      featureHintsShown: Object.fromEntries(
+        [...Object.values(FIRST_SHOP_STEP), 'shopping_list_swipe'].map(id => [
+          featureHintKey('user-1', id),
+          true,
+        ]),
+      ),
+    });
+    const { result, rerender } = renderTour();
+    expect(result.current.receiptTip.currentStep).toBeNull();
+
+    rerender({ ...baseInput, hasPurchasedToMove: true });
+
+    expect(result.current.receiptTip.currentStep?.featureId).toBe(
+      'list_receipt_offer',
+    );
+  });
+
   it('counts a row swiped open as the swipe tip done', () => {
     useStore.setState({
       featureHintsShown: Object.fromEntries(

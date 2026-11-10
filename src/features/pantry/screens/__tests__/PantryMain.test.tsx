@@ -619,6 +619,28 @@ describe('PantryMain', () => {
       });
     });
 
+    it('One pantry: no tip about switching or creating pantries', () => {
+      mockPantryScreen({ pantries: [{ id: 'p1' }] as never });
+      renderWithApollo(<PantryMain />);
+
+      expect(
+        lastTutorial()
+          ?.steps.filter(step => step.when?.() ?? true)
+          .map(step => step.featureId),
+      ).toEqual(['pantry_tutorial_add']);
+    });
+
+    it('A second pantry: a later visit may show the switching tip', () => {
+      mockPantryScreen({ pantries: [{ id: 'p1' }, { id: 'p2' }] as never });
+      renderWithApollo(<PantryMain />);
+
+      expect(
+        lastTutorial()
+          ?.steps.filter(step => step.when?.() ?? true)
+          .map(step => step.featureId),
+      ).toEqual(['pantry_tutorial_settings', 'pantry_tutorial_add']);
+    });
+
     it('Stock your pantry: started from the card, + shows Scan receipt while the own tour waits', () => {
       act(() => tutorialSession.startGuide(GUIDE_TOURS.stock));
       renderWithApollo(<PantryMain />);
