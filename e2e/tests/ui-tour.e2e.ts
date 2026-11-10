@@ -122,6 +122,8 @@ describe('UI Tour', () => {
       }
       await settle(800);
       await shoot('06-profile');
+      // Profile is pushed over the tabs, which come back with Back.
+      await element(by.id(kitTestIDs.headerBackButton)).tap();
     });
 
     await safe('Pantry add sheet', async () => {

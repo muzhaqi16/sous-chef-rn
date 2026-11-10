@@ -52,6 +52,9 @@ export const catalogTestIDs = {
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,
   addItemSheetSearchInput: (prefix: string) => `${prefix}-search-input`,
   addManuallyButton: (prefix: string) => `${prefix}-add-manually-button`,
+  /** A search result's +, by its place in the results. */
+  quickAddResult: (prefix: string, index: number) =>
+    `${prefix}-quick-add-${index}`,
 
   /** `BottomSheetAutocompleteInput`, under the field's id. */
   suggestion: (fieldID: string, index: number) =>

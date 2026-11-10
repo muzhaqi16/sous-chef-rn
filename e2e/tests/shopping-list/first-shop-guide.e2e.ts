@@ -1,13 +1,13 @@
 /**
  * The first-shop guide, end to end: the `+`, the hint in the add sheet, an
- * item added through "Add manually", checking one off, and putting one away.
+ * item added with its own +, checking one off, and putting one away.
  * Launched with the guide started and this account's tips fresh, so it runs
  * the same on every pass.
  */
 
 import { element, by, waitFor } from 'detox';
 import { bootstrapAuthenticatedSession } from '../../helpers/auth';
-import { generateItemName } from '../../helpers/data';
+import { ShoppingListScreen } from '../../screens/ShoppingListScreen';
 import { kitTestIDs } from '../../../src/components/testIDs';
 import { shoppingListTestIDs } from '../../../src/features/shoppingList/testIDs';
 import { catalogTestIDs } from '../../../src/features/catalog/testIDs';
@@ -16,10 +16,11 @@ import { GUIDE_TOURS } from '../../../src/domain/guides';
 const SEARCH_INPUT = catalogTestIDs.addItemSheetSearchInput(
   shoppingListTestIDs.addSheetPrefix,
 );
-const ADD_MANUALLY = catalogTestIDs.addManuallyButton(
-  shoppingListTestIDs.addSheetPrefix,
-);
 const TARGET = kitTestIDs.spotlightTarget;
+const FIRST_RESULT_ADD = catalogTestIDs.quickAddResult(
+  shoppingListTestIDs.addSheetPrefix,
+  0,
+);
 
 /** The tip at this step is up, its target the one to tap. */
 const stepShows = (progress: string) =>
@@ -32,7 +33,7 @@ describe('The first-shop guide', () => {
     await bootstrapAuthenticatedSession({ guide: GUIDE_TOURS.shop });
   });
 
-  it('walks from + to putting an item away, adding it through Add manually', async () => {
+  it('walks from + to putting an item away, adding with the item’s own +', async () => {
     // A tip Today raises first is put away; the guide waits on the List.
     try {
       await waitFor(element(by.id(kitTestIDs.spotlightNotNowButton)))
@@ -51,18 +52,14 @@ describe('The first-shop guide', () => {
     await waitFor(element(by.id(shoppingListTestIDs.tourSheetHint)))
       .toBeVisible()
       .withTimeout(5000);
-    await element(by.id(SEARCH_INPUT)).replaceText(generateItemName('Guide'));
-    await waitFor(element(by.id(ADD_MANUALLY)))
+    // The search's results come below a short debounce; the + is the action
+    // the hint names, so it is the one tapped.
+    await element(by.id(SEARCH_INPUT)).replaceText('Tomatoes');
+    await waitFor(element(by.id(FIRST_RESULT_ADD)))
       .toBeVisible()
-      .withTimeout(5000);
-    await element(by.id(ADD_MANUALLY)).tap();
-    await waitFor(element(by.id(shoppingListTestIDs.addSheetNameInput)))
-      .toBeVisible()
-      .withTimeout(5000);
-    await element(by.id(shoppingListTestIDs.addSheetSubmitButton)).tap();
-    await waitFor(element(by.id(shoppingListTestIDs.addSheetNameInput)))
-      .not.toBeVisible()
-      .withTimeout(15000);
+      .withTimeout(10000);
+    await element(by.id(FIRST_RESULT_ADD)).tap();
+    await new ShoppingListScreen().dismissAddItemSheet();
 
     await stepShows('3 of 4');
     await element(by.id(TARGET)).tap();
@@ -75,8 +72,9 @@ describe('The first-shop guide', () => {
       .withTimeout(5000);
     await element(by.id(shoppingListTestIDs.moveToPantryConfirm)).tap();
 
-    // The move, however made, ends the guide.
-    await waitFor(element(by.id(TARGET)))
+    // The move, however made, ends the guide. A one-step tip may follow on the
+    // same spotlight; it has no End tour, which the guide's waiting step has.
+    await waitFor(element(by.id(kitTestIDs.spotlightEndButton)))
       .not.toBeVisible()
       .withTimeout(10000);
   });
