@@ -26,8 +26,8 @@ const RING_LENGTH = 2 * Math.PI * RADIUS;
 const CHECK_PATH = 'M27 45 L39 57 L62 33';
 // The two strokes' lengths, rounded up so no gap shows at the start.
 const CHECK_LENGTH = 51;
-// The ring draws, then the check, over two steps of the scale.
-const DRAW_DURATION = motion.timing.SLOW * 2;
+// The ring draws, then the check, within one step of the motion scale.
+const DRAW_DURATION = motion.timing.SLOW;
 
 /**
  * The completion screen's opening: a check that draws itself, one success
