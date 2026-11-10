@@ -6,7 +6,6 @@ import {
   screen,
   within,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
 import { useStore } from '#store';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { kitTestIDs } from '#components/testIDs';
@@ -488,15 +487,22 @@ describe('tutorial', () => {
     expect(options?.canStart).toBe(true);
   });
 
-  it('never teaches switching homes to a user with one home', () => {
+  it('A new user with one home: no coach mark about homes', () => {
     renderToday({ homeCount: 1 });
 
     const [options] = mockedTutorial.mock.lastCall ?? [];
-    expect(options?.steps.map(step => [step.featureId, step.rectKey])).toEqual([
-      ['today_tutorial_your_home', 'household'],
-    ]);
-    expect(options?.steps[0]?.title).toBe(t('today.tutorialYourHomeTitle'));
-    expect(options?.canStart).toBe(true);
+    expect(options?.steps.filter(step => step.when?.() ?? true)).toEqual([]);
+  });
+
+  it('A user in two homes: the home-switching tip can be shown', () => {
+    renderToday({ homeCount: 2 });
+
+    const [options] = mockedTutorial.mock.lastCall ?? [];
+    expect(
+      options?.steps
+        .filter(step => step.when?.() ?? true)
+        .map(step => step.featureId),
+    ).toEqual(['pantry_tutorial_home']);
   });
 
   it('does not start while the number of homes is unknown', () => {

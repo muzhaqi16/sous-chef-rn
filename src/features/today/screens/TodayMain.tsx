@@ -66,25 +66,18 @@ export const TodayMain: React.FC = () => {
   const [householdRect, setHouseholdRect] = useState<TargetRect | null>(null);
   const isFocused = useIsScreenFocused();
   const { isOverlayOpen } = useTabBarState();
-  // Switching homes is taught only to someone with two; one home learns where
-  // to rename it. Each has its own id, so the switching tip still shows once a
-  // second home arrives. Pantry's old step keeps its old id.
-  const homeStep =
-    overview.homeCount !== null && overview.homeCount > 1
-      ? {
-          featureId: 'pantry_tutorial_home',
-          title: t('today.tutorialHouseholdTitle'),
-          subtitle: t('today.tutorialHouseholdSubtitle'),
-          rectKey: 'household',
-        }
-      : {
-          featureId: 'today_tutorial_your_home',
-          title: t('today.tutorialYourHomeTitle'),
-          subtitle: t('today.tutorialYourHomeSubtitle'),
-          rectKey: 'household',
-        };
+  // Switching homes is taught only to someone with two, under Pantry's old
+  // id; a one-home account is shown nothing here.
   const tutorial = useTutorialSequence({
-    steps: [homeStep],
+    steps: [
+      {
+        featureId: 'pantry_tutorial_home',
+        title: t('today.tutorialHouseholdTitle'),
+        subtitle: t('today.tutorialHouseholdSubtitle'),
+        rectKey: 'household',
+        when: () => overview.homeCount !== null && overview.homeCount > 1,
+      },
+    ],
     targetRects: { household: householdRect },
     canStart: overview.state === 'ready' && overview.homeCount !== null,
     isPaused: !isFocused || isOverlayOpen,
