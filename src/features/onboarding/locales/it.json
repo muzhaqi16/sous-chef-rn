@@ -77,10 +77,7 @@
     "addMoreStores": "Aggiungi altri negozi",
     "yourStores": "I tuoi negozi: {{names}}",
     "yourStoresAndMore_one": "I tuoi negozi: {{names}} e {{count}} altro",
-    "yourStoresAndMore_other": "I tuoi negozi: {{names}} e altri {{count}}",
-    "notifyTitle": "Scopri prima che il cibo scada",
-    "notifyMessage": "Ti avviseremo quando qualcosa in dispensa sta per scadere. Puoi cambiarlo nelle Impostazioni.",
-    "notifyTurnOn": "Attiva"
+    "yourStoresAndMore_other": "I tuoi negozi: {{names}} e altri {{count}}"
   },
   "onboarding": {
     "progress": "Passaggio {{step}} di {{total}}"

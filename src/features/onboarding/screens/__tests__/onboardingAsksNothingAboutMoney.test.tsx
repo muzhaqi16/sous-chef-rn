@@ -2,7 +2,6 @@ import React from 'react';
 import { act, screen, userEvent } from '@testing-library/react-native';
 import { t } from '#/i18n';
 import { alertService } from '#/services/alertService';
-import type { AlertButton } from '#platform/presenters';
 import { useStore } from '#store';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { UsualStoreSource } from '#/graphql/generated/schemaTypes';
@@ -93,16 +92,9 @@ const renderFinishing = (stores: object[]) => {
 
 const MONEY = /price|budget|estimat|cost|spend/i;
 
-let alertButtons: AlertButton[] = [];
-
 beforeEach(() => {
   useStore.setState({ user: NEW_ACCOUNT, selectedHomeId: 'home-1' });
-  alertButtons = [];
-  jest
-    .spyOn(alertService, 'alert')
-    .mockImplementation((_title, _message, buttons) => {
-      alertButtons = buttons ?? [];
-    });
+  jest.spyOn(alertService, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -150,26 +142,19 @@ describe('Onboarding asks nothing about money and needs no store', () => {
     },
   );
 
-  it.each([
-    ['turning notifications on', 'onBoarding.notifyTurnOn'],
-    ['passing notifications by', 'labels.notNow'],
-  ] as const)(
-    'finishes %s, with stores added, sending no shopping settings',
-    async (_case, answer) => {
-      const user = userEvent.setup();
-      const { sent, storesRead, finishing } = renderFinishing(STORES);
-      await storesRead();
-      expect(screen.getByText(NAMED())).toBeTruthy();
+  it('finishes with stores added, sending no shopping or notification settings', async () => {
+    const user = userEvent.setup();
+    const { sent, storesRead, finishing } = renderFinishing(STORES);
+    await storesRead();
+    expect(screen.getByText(NAMED())).toBeTruthy();
 
-      await user.press(screen.getByText(t('labels.getStarted')));
-      alertButtons.find(button => button.text === t(answer))?.onPress?.();
+    await user.press(screen.getByText(t('labels.getStarted')));
 
-      await finishing();
-      expect(sent.completed).toBe(1);
-      expect(sent.notifications).toBe(answer === 'labels.notNow' ? 0 : 1);
-      expect(sent.settings).not.toContainEqual(
-        expect.objectContaining({ shopping: expect.anything() }),
-      );
-    },
-  );
+    await finishing();
+    expect(sent.completed).toBe(1);
+    expect(sent.notifications).toBe(0);
+    expect(sent.settings).not.toContainEqual(
+      expect.objectContaining({ shopping: expect.anything() }),
+    );
+  });
 });

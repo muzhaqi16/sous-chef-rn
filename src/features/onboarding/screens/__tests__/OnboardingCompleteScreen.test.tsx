@@ -17,7 +17,6 @@ import {
   type UsualStoreEntry,
 } from '#features/catalog/cache/usualStores';
 import { alertService } from '#/services/alertService';
-import type { AlertButton } from '#platform/presenters';
 import { OnboardingCompleteScreen } from '../OnboardingCompleteScreen';
 import {
   useOnboardingSummary,
@@ -89,24 +88,6 @@ jest.mock('#hooks/auth/useEmailVerification', () => ({
 const mockShareUrl = jest.fn();
 jest.mock('#native/share', () => ({
   shareUrl: (...args: unknown[]) => mockShareUrl(...args),
-}));
-
-let mockPushEnabled = false;
-jest.mock('#features/notifications/hooks/useNotificationSettings', () => ({
-  useNotificationSettings: () => ({
-    settings: { pushEnabled: mockPushEnabled },
-    updateMultipleSettings: jest.fn(),
-  }),
-}));
-
-let mockHasPermission: boolean | null = false;
-const mockTurnOnPush = jest.fn();
-jest.mock('#features/notifications/screens/useTurnOnPush', () => ({
-  useTurnOnPush: () => ({
-    hasPermission: mockHasPermission,
-    checkPermissions: jest.fn(),
-    turnOnPush: mockTurnOnPush,
-  }),
 }));
 
 jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
@@ -201,17 +182,9 @@ const renderScreen = (stores: UsualStoreEntry[] = []) => {
 const summaryLines = () =>
   screen.getAllByText(/^• /).map(node => String(node.props.children).slice(2));
 
-let alertButtons: AlertButton[] = [];
-
-/** "Get started", then the notification dialog's button with this text. */
-async function getStarted(
-  user: ReturnType<typeof userEvent.setup>,
-  answer?: string,
-) {
+/** "Get started". */
+async function getStarted(user: ReturnType<typeof userEvent.setup>) {
   await user.press(screen.getByText(t('labels.getStarted')));
-  if (!answer) return;
-  const button = alertButtons.find(candidate => candidate.text === answer);
-  button?.onPress?.();
 }
 
 beforeEach(() => {
@@ -232,17 +205,9 @@ beforeEach(() => {
   mockPopular = false;
   mockShowCheckLabel = false;
   mockVerified = true;
-  mockPushEnabled = false;
-  mockHasPermission = false;
   mockCompleteOnboarding.mockResolvedValue(true);
-  mockTurnOnPush.mockResolvedValue(true);
   mockInviteLink.mockResolvedValue('https://app.souschef.dev/join-home/ABC123');
-  alertButtons = [];
-  jest
-    .spyOn(alertService, 'alert')
-    .mockImplementation((_title, _message, buttons) => {
-      alertButtons = buttons ?? [];
-    });
+  jest.spyOn(alertService, 'alert').mockImplementation(() => {});
 });
 
 afterEach(() => {
@@ -319,14 +284,7 @@ describe('OnboardingCompleteScreen', () => {
       renderScreen();
 
       await user.press(screen.getByText('Shakshuka'));
-      // The same ask as Get started, before the finish.
-      expect(alertButtons.map(button => button.text)).toContain(
-        t('labels.notNow'),
-      );
       await act(async () => {
-        alertButtons
-          .find(button => button.text === t('labels.notNow'))
-          ?.onPress?.();
         await mockCompleteOnboarding.mock.results[0]?.value;
       });
 
@@ -343,14 +301,7 @@ describe('OnboardingCompleteScreen', () => {
       renderScreen();
 
       await user.press(screen.getByText('Shakshuka'));
-      // The same ask as Get started, before the finish.
-      expect(alertButtons.map(button => button.text)).toContain(
-        t('labels.notNow'),
-      );
       await act(async () => {
-        alertButtons
-          .find(button => button.text === t('labels.notNow'))
-          ?.onPress?.();
         await mockCompleteOnboarding.mock.results[0]?.value;
       });
 
@@ -573,7 +524,7 @@ describe('OnboardingCompleteScreen', () => {
       await user.press(screen.getByText(t('onBoarding.inviteHousehold')));
       await drainTimers();
       expect(screen.getByText(t('onBoarding.inviteFailed'))).toBeTruthy();
-      await getStarted(user, t('labels.notNow'));
+      await getStarted(user);
 
       await drainTimers();
       expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
@@ -592,7 +543,7 @@ describe('OnboardingCompleteScreen', () => {
       renderScreen();
 
       expect(offer()).toBeTruthy();
-      await getStarted(user, t('labels.notNow'));
+      await getStarted(user);
 
       await act(async () => {
         await mockCompleteOnboarding.mock.results[0]?.value;
@@ -710,57 +661,16 @@ describe('OnboardingCompleteScreen', () => {
     });
   });
 
-  describe('the notification ask', () => {
-    it('turns push and expiry alerts on when the user agrees, then finishes', async () => {
-      const user = userEvent.setup();
-      renderScreen();
+  // Notifications are asked about once the pantry shows dated food.
+  it('Finishing: lands on Today without asking about notifications', async () => {
+    const user = userEvent.setup();
+    renderScreen();
 
-      await getStarted(user, t('onBoarding.notifyTurnOn'));
+    await getStarted(user);
 
-      await drainTimers();
-      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
-      expect(mockTurnOnPush).toHaveBeenCalledWith({
-        expirationNotifications: true,
-      });
-    });
-
-    it('finishes with nothing turned on when the user says not now', async () => {
-      const user = userEvent.setup();
-      renderScreen();
-
-      await getStarted(user, t('labels.notNow'));
-
-      await drainTimers();
-      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
-      expect(mockTurnOnPush).not.toHaveBeenCalled();
-    });
-
-    it('does not ask when the device allows and push is on', async () => {
-      mockHasPermission = true;
-      mockPushEnabled = true;
-      const user = userEvent.setup();
-      renderScreen();
-
-      await getStarted(user);
-
-      expect(alertService.alert).not.toHaveBeenCalled();
-      await drainTimers();
-      expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
-    });
-
-    it('asks when the device allows but push is off', async () => {
-      mockHasPermission = true;
-      const user = userEvent.setup();
-      renderScreen();
-
-      await getStarted(user);
-
-      expect(alertService.alert).toHaveBeenCalledWith(
-        t('onBoarding.notifyTitle'),
-        t('onBoarding.notifyMessage'),
-        expect.any(Array),
-      );
-    });
+    await drainTimers();
+    expect(alertService.alert).not.toHaveBeenCalled();
+    expect(mockUpdateUser).toHaveBeenCalledWith({ onBoarded: true });
   });
 
   it('stays and says so when completing fails', async () => {
@@ -768,7 +678,7 @@ describe('OnboardingCompleteScreen', () => {
     const user = userEvent.setup();
     renderScreen();
 
-    await getStarted(user, t('labels.notNow'));
+    await getStarted(user);
 
     await drainTimers();
     expect(

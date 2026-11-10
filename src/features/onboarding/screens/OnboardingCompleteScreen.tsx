@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
 import { StyleSheet } from 'react-native-unistyles';
-import { alertService } from '#/services/alertService';
 import { OnboardingStepScaffold } from '#features/onboarding/components/OnboardingStepScaffold';
 import { CompletionHero } from '#features/onboarding/components/CompletionHero';
 import { SetupSummary } from '#features/onboarding/components/SetupSummary';
@@ -19,8 +18,6 @@ import { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
 import { useAddMissingToList } from '#features/recipes/hooks/useAddMissingToList';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
-import { useNotificationSettings } from '#features/notifications/hooks/useNotificationSettings';
-import { useTurnOnPush } from '#features/notifications/screens/useTurnOnPush';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingSummary } from '#features/onboarding/hooks/useOnboardingSummary';
 import { tutorialSession } from '#hooks/ui/tutorialSession';
@@ -44,8 +41,6 @@ export const OnboardingCompleteScreen = () => {
     hasStock: summary.receiptItems + summary.stapleItems > 0,
   });
   const addMissingToList = useAddMissingToList();
-  const { settings, updateMultipleSettings } = useNotificationSettings();
-  const { hasPermission, turnOnPush } = useTurnOnPush(updateMultipleSettings);
 
   const setPendingDeepLinkAction = useAppStore(
     state => state.setPendingDeepLinkAction,
@@ -76,37 +71,9 @@ export const OnboardingCompleteScreen = () => {
     return true;
   };
 
-  // The reason first; the OS prompt only once the user agrees, then the
-  // finish. Dismissing the dialog answers Not now. True once onboarding is done.
-  const askThenComplete = (): Promise<boolean> => {
-    if (hasPermission === true && settings.pushEnabled) return handleComplete();
-    return new Promise(resolve => {
-      alertService.alert(
-        t('onBoarding.notifyTitle'),
-        t('onBoarding.notifyMessage'),
-        [
-          {
-            text: t('labels.notNow'),
-            style: 'cancel',
-            onPress: () => {
-              void handleComplete().then(resolve);
-            },
-          },
-          {
-            text: t('onBoarding.notifyTurnOn'),
-            onPress: () => {
-              void turnOnPush({ expirationNotifications: true })
-                .then(handleComplete)
-                .then(resolve);
-            },
-          },
-        ],
-      );
-    });
-  };
-
-  // Every way out asks the same: a recipe opens over Today once the app
-  // shows, and a finish that failed drops it, so it never opens later.
+  // A recipe opens over Today once the app shows, and a finish that failed
+  // drops it, so it never opens later. Notifications are asked about once
+  // the pantry shows dated food, not here.
   const openRecipe = async (recipeId: string) => {
     // A finish already running would be sent twice.
     if (isCompleting) return;
@@ -115,11 +82,11 @@ export const OnboardingCompleteScreen = () => {
       recipeId,
       timestamp: Date.now(),
     });
-    if (!(await askThenComplete())) setPendingDeepLinkAction(null);
+    if (!(await handleComplete())) setPendingDeepLinkAction(null);
   };
 
   const handleGetStarted = () => {
-    void askThenComplete();
+    void handleComplete();
   };
 
   return (

@@ -29,6 +29,8 @@ import {
 import { useTutorialSession } from '#hooks/ui/tutorialSession';
 import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
 import { GUIDE_TOURS } from '#domain/guides';
+import { useSoonestDatedItem } from '#features/pantry/hooks/useSoonestDatedItem';
+import { useExpiryPushAsk } from '#features/notifications/screens/useExpiryPushAsk';
 import { Telemetry } from '#services/telemetry';
 import { useStore } from '#store';
 import { usePantryScreen } from '#features/pantry/screens/usePantryScreen';
@@ -284,6 +286,12 @@ function PantryMainContent({
     GUIDE_TOURS.stock,
   );
   const offline = useIsApiUnavailable();
+  // The first dated food here, onboarding's staples or a receipt's, brings the
+  // one ask to turn notifications on.
+  const datedItemName = useSoonestDatedItem(screen.pantry?.id, {
+    skip: !isPantryFocused,
+  });
+  useExpiryPushAsk({ datedItemName, isFocused: isPantryFocused });
 
   const tutorial = useTutorialSequence({
     steps: buildPantryTutorialSteps(t),

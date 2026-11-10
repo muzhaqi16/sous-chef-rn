@@ -207,7 +207,12 @@
     "actionRequiredBody": "Ky njoftim kërkon një veprim: {{action}}",
     "goToNotifications": "Shko te njoftimet",
     "urgentUnread_one": "{{count}} njoftim urgjent",
-    "urgentUnread_other": "{{count}} njoftime urgjente"
+    "urgentUnread_other": "{{count}} njoftime urgjente",
+    "expiryAsk": {
+      "title": "Dije para se të prishet ushqimi",
+      "message": "Do të të njoftojmë para se të prishet ushqimi. I pari: {{item}}. Mund ta ndryshosh te Cilësimet.",
+      "turnOn": "Aktivizo"
+    }
   },
   "notificationGroups": {
     "urgent": "🚨 Urgjente",

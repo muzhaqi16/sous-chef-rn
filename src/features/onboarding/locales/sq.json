@@ -77,10 +77,7 @@
     "addMoreStores": "Shto dyqane të tjera",
     "yourStores": "Dyqanet e tua: {{names}}",
     "yourStoresAndMore_one": "Dyqanet e tua: {{names}} dhe {{count}} tjetër",
-    "yourStoresAndMore_other": "Dyqanet e tua: {{names}} dhe {{count}} të tjera",
-    "notifyTitle": "Mëso para se ushqimi të prishet",
-    "notifyMessage": "Do të të njoftojmë kur diçka në qilar është gati të skadojë. Mund ta ndryshosh te Cilësimet.",
-    "notifyTurnOn": "Aktivizo"
+    "yourStoresAndMore_other": "Dyqanet e tua: {{names}} dhe {{count}} të tjera"
   },
   "onboarding": {
     "progress": "Hapi {{step}} nga {{total}}"

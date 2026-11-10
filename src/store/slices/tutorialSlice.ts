@@ -45,6 +45,8 @@ export interface TutorialState {
   hideGettingStarted: (userId: string) => void;
   /** Every item done and acknowledged: the card does not come back. */
   retireGettingStarted: (userId: string) => void;
+  /** The notification ask was answered here, yes or no: it is not made again. */
+  answerPushAsk: (userId: string) => void;
   /**
    * One account's tours and tips, shown again: its hints, its unasked-tip
    * clock, and its Getting started card unless every item is done. Other
@@ -108,6 +110,12 @@ export const createTutorialSlice: StateCreator<
         retired: false,
       });
       card.hidden = true;
+    });
+  },
+
+  answerPushAsk: userId => {
+    set(state => {
+      state.pushAskAnswered[userId] = true;
     });
   },
 

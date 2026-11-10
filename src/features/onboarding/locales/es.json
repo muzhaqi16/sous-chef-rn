@@ -77,10 +77,7 @@
     "addMoreStores": "Añadir más tiendas",
     "yourStores": "Tus tiendas: {{names}}",
     "yourStoresAndMore_one": "Tus tiendas: {{names}} y {{count}} más",
-    "yourStoresAndMore_other": "Tus tiendas: {{names}} y {{count}} más",
-    "notifyTitle": "Entérate antes de que la comida caduque",
-    "notifyMessage": "Te avisaremos cuando algo de tu despensa esté a punto de caducar. Puedes cambiarlo en Ajustes.",
-    "notifyTurnOn": "Activar"
+    "yourStoresAndMore_other": "Tus tiendas: {{names}} y {{count}} más"
   },
   "onboarding": {
     "progress": "Paso {{step}} de {{total}}"

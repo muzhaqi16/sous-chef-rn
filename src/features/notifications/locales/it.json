@@ -207,7 +207,12 @@
     "actionRequiredBody": "Questa notifica richiede un'azione: {{action}}",
     "goToNotifications": "Vai alle notifiche",
     "urgentUnread_one": "{{count}} notifica urgente",
-    "urgentUnread_other": "{{count}} notifiche urgenti"
+    "urgentUnread_other": "{{count}} notifiche urgenti",
+    "expiryAsk": {
+      "title": "Sappi prima che il cibo vada a male",
+      "message": "Ti avviseremo prima che il cibo vada a male. Per primo: {{item}}. Puoi cambiarlo nelle Impostazioni.",
+      "turnOn": "Attiva"
+    }
   },
   "notificationGroups": {
     "urgent": "🚨 Urgenti",

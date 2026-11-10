@@ -77,10 +77,7 @@
     "addMoreStores": "Add more stores",
     "yourStores": "Your stores: {{names}}",
     "yourStoresAndMore_one": "Your stores: {{names}} and {{count}} more",
-    "yourStoresAndMore_other": "Your stores: {{names}} and {{count}} more",
-    "notifyTitle": "Know before food goes off",
-    "notifyMessage": "We'll let you know when something in your pantry is about to expire. You can change this in Settings.",
-    "notifyTurnOn": "Turn on"
+    "yourStoresAndMore_other": "Your stores: {{names}} and {{count}} more"
   },
   "onboarding": {
     "progress": "Step {{step}} of {{total}}"
