@@ -11,12 +11,6 @@ fragment ShoppingListReaders on ShoppingList {
   completedItems
   completedShopDate
   completionRate
-  costToGo {
-    amount
-    currency
-    lines
-    pricedLines
-  }
   currency
   description
   home {

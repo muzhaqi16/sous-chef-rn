@@ -11,7 +11,7 @@ import { aisleAfter, type AisleTab } from '#features/shoppingList/utils/aisles';
 import { linesInAisle } from '#features/shoppingList/components/SortableShoppingList/aisleRows';
 import {
   formatCostToGo,
-  useListCostToGo,
+  useLiveCostToGo,
   type ListCostToGo,
 } from '../hooks/useListCostToGo';
 import { useShoppingListManagement } from '../hooks/useShoppingListManagement';
@@ -76,7 +76,13 @@ export function useStoreMode(listId: string) {
     refetch,
   } = useShoppingListManagement(listId, { loadEveryUnpurchasedPage: true });
 
-  const costToGo = useListCostToGo(listId);
+  // The lines it prices; ticking, editing or a server answer changes the key.
+  const costToGo = useLiveCostToGo(
+    listId,
+    rawUnpurchasedItems
+      .map(line => `${line.id}:${line.version}:${line.quantity}`)
+      .join(),
+  );
   const { unpurchasedItems: lines, purchasedItems: cart } =
     useShoppingListTransformMulti({ rawUnpurchasedItems, rawPurchasedItems });
   const { aisleEntries, routeNote } = useAisleView(
