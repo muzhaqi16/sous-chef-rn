@@ -10,6 +10,8 @@ import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
+import type { TabBarAddAction } from '#/context/TabBarActionsContext';
+import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantrySelectorConfig } from '#features/pantry/screens/usePantrySelectorConfig';
 import { useScannerSetup } from '#features/barcode/screens/useScannerSetup';
@@ -263,6 +265,7 @@ function PantryMainContent({
   } = usePantryModals();
 
   const permissions = usePantryPermissions();
+  const { currentHome } = useCurrentHome();
 
   // Element positions for the tutorial spotlight coach-marks.
   const [settingsIconRect, setSettingsIconRect] = useState<{
@@ -297,43 +300,75 @@ function PantryMainContent({
     !screen.noPantries &&
     permissions.canAddItems;
 
-  // Always registered, so the `+` says why it cannot add rather than doing
-  // nothing. Every way to add is one tap from here, as on Recipes.
-  const addRefusal = canAdd ? undefined : t('errors.codes.forbidden');
-  useTabBarAddMenu([
-    {
-      key: 'search',
-      label: t('labels.searchToAdd'),
-      icon: 'search',
-      onPress: () => {
-        Telemetry.trackEvent('add_pantry_item_clicked');
-        openAddSheet();
-      },
-      disabledReason: addRefusal,
-    },
-    {
-      key: 'barcode',
-      label: t('labels.scanBarcode'),
-      icon: 'barcode-outline',
-      onPress: () =>
-        toBarcode({ source: 'pantry', pantryId: screen.pantry?.id }),
-      disabledReason: addRefusal,
-    },
-    {
-      key: 'receipt',
-      label: t('labels.scanReceipt'),
-      icon: 'receipt-outline',
-      onPress: () => toReceiptScan(),
-      disabledReason: addRefusal,
-    },
-    {
-      key: 'manual',
-      label: t('labels.addManually'),
-      icon: 'create-outline',
-      onPress: openAddManually,
-      disabledReason: addRefusal,
-    },
-  ]);
+  // With nowhere to add yet, the `+` takes the step its empty state offers;
+  // one action runs straight from the bar, with no menu.
+  const nextStep: TabBarAddAction | null = screen.noHomes
+    ? {
+        key: 'getStarted',
+        label: t('labels.getStarted'),
+        icon: 'home-outline',
+        onPress: onSelectHome,
+      }
+    : screen.noHomeSelected
+    ? {
+        key: 'chooseHome',
+        label: t('pantryScreen.noHomeSelectedAction'),
+        icon: 'home-outline',
+        onPress: onSelectHome,
+      }
+    : screen.noPantries
+    ? {
+        key: 'createPantry',
+        label: t('pantryScreen.noPantriesAction'),
+        icon: 'basket-outline',
+        onPress: onCreatePantry,
+      }
+    : null;
+  // Otherwise every way to add is one tap from here, as on Recipes, and a
+  // member who may not add is told so, and whom to ask.
+  const addRefusal = permissions.canAddItems
+    ? undefined
+    : currentHome?.name
+    ? t('moveToPantry.cannotAddBody', { home: currentHome.name })
+    : t('errors.codes.forbidden');
+  useTabBarAddMenu(
+    nextStep
+      ? [nextStep]
+      : [
+          {
+            key: 'search',
+            label: t('labels.searchToAdd'),
+            icon: 'search',
+            onPress: () => {
+              Telemetry.trackEvent('add_pantry_item_clicked');
+              openAddSheet();
+            },
+            disabledReason: addRefusal,
+          },
+          {
+            key: 'barcode',
+            label: t('labels.scanBarcode'),
+            icon: 'barcode-outline',
+            onPress: () =>
+              toBarcode({ source: 'pantry', pantryId: screen.pantry?.id }),
+            disabledReason: addRefusal,
+          },
+          {
+            key: 'receipt',
+            label: t('labels.scanReceipt'),
+            icon: 'receipt-outline',
+            onPress: () => toReceiptScan(),
+            disabledReason: addRefusal,
+          },
+          {
+            key: 'manual',
+            label: t('labels.addManually'),
+            icon: 'create-outline',
+            onPress: openAddManually,
+            disabledReason: addRefusal,
+          },
+        ],
+  );
 
   const handleAddItem = canAdd ? openAddSheet : undefined;
 

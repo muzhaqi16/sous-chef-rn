@@ -9,6 +9,7 @@ import { act, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryMain } from '../PantryMain';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
+import { t } from '#/i18n';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
@@ -24,6 +25,14 @@ let capturedPantryContentProps: Partial<PantryContentProps> = {};
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#features/pantry/hooks/usePantryPermissions');
+jest.mock('#features/pantry/hooks/useCurrentHome', () => ({
+  useCurrentHome: () => ({
+    currentHome: { id: 'h1', name: "Sam's home" },
+    homeCount: 1,
+    selectedHomeId: 'h1',
+    isHomeSelectionReady: true,
+  }),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
   useRoute: jest.fn(() => ({ params: {} })),
@@ -282,6 +291,43 @@ describe('PantryMain', () => {
         'receipt',
         'manual',
       ]);
+    });
+
+    it('takes the next step instead with no home yet, so + is never a dead end', () => {
+      mockUsePantryScreen.mockReturnValue({
+        ...defaultPantryScreen,
+        noHomes: true,
+      });
+      renderWithApollo(<PantryMain />);
+
+      // One action runs straight from the bar, with no menu.
+      expect(menu().map(action => action.key)).toEqual(['getStarted']);
+      expect(entry('getStarted')?.disabledReason).toBeUndefined();
+    });
+
+    it('offers to make a pantry when the home has none', () => {
+      mockUsePantryScreen.mockReturnValue({
+        ...defaultPantryScreen,
+        noPantries: true,
+      });
+      renderWithApollo(<PantryMain />);
+
+      expect(menu().map(action => action.key)).toEqual(['createPantry']);
+    });
+
+    it('tells a member who may not add why, naming the home', () => {
+      jest.mocked(usePantryPermissions).mockReturnValue({
+        canAddItems: false,
+        canEditItems: true,
+        canRemoveItems: false,
+        canCreatePantry: false,
+        canDeletePantry: false,
+      });
+      renderWithApollo(<PantryMain />);
+
+      expect(entry('search')?.disabledReason).toBe(
+        t('moveToPantry.cannotAddBody', { home: "Sam's home" }),
+      );
     });
 
     it('opens each flow directly', () => {
