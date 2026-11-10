@@ -470,9 +470,9 @@ const MealPlanMainInner: React.FC = () => {
   );
   const { addButtonRect, isOverlayOpen } = useTabBarState();
   const isFocused = useIsScreenFocused();
-  const [emptyRect, setEmptyRect] = useState<TargetRect | null>(null);
-  const { ref: emptyRef, measure: measureEmpty } = useMeasuredRect(
-    planGuideStarted ? setEmptyRect : undefined,
+  const [createRect, setCreateRect] = useState<TargetRect | null>(null);
+  const { ref: createRef, measure: measureCreate } = useMeasuredRect(
+    planGuideStarted ? setCreateRect : undefined,
   );
   const noPlans = mealPlans.length === 0 && plansState === 'empty';
   const planGuide = useTutorialSequence({
@@ -482,7 +482,7 @@ const MealPlanMainInner: React.FC = () => {
         featureId: 'plan_guide_create',
         title: t('mealPlan.guideCreateTitle'),
         subtitle: t('mealPlan.guideCreateSubtitle'),
-        rectKey: 'emptyState',
+        rectKey: 'createButton',
         when: () => noPlans,
       },
       {
@@ -493,7 +493,7 @@ const MealPlanMainInner: React.FC = () => {
         when: () => !noPlans && permissions.canEdit,
       },
     ],
-    targetRects: { emptyState: emptyRect, addButton: addButtonRect },
+    targetRects: { createButton: createRect, addButton: addButtonRect },
     canStart: planGuideStarted,
     isPaused: !isFocused || isOverlayOpen || addMealVisible,
   });
@@ -541,12 +541,11 @@ const MealPlanMainInner: React.FC = () => {
         {plansState === 'error' || plansState === 'offline' ? (
           <DataStateView state={plansState} onRetry={handleRetryPlans} />
         ) : (
-          <View ref={emptyRef} collapsable={false} onLayout={measureEmpty}>
-            <MealPlanEmptyState
-              onCreatePlan={handleCreatePlan}
-              onCreateFromTemplate={handleOpenTemplateBrowser}
-            />
-          </View>
+          <MealPlanEmptyState
+            onCreatePlan={handleCreatePlan}
+            onCreateFromTemplate={handleOpenTemplateBrowser}
+            measureCreate={{ ref: createRef, onLayout: measureCreate }}
+          />
         )}
 
         <TemplateSheets
