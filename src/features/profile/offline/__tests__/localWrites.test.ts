@@ -11,12 +11,17 @@ import {
   AddDietaryRestrictionDocument,
   GetDietaryProfileDocument,
   RemoveDietaryRestrictionDocument,
+  UpdateDietaryProfileDocument,
 } from '#operations/user/user.generated';
 import {
   Diet,
+  ReligiousDiet,
   RestrictionSeverity,
   type RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
+import { RecipeSuggestionsDocument } from '#features/recipes/hooks/useServerRecipeSuggestions.generated';
+import { CatalogRecipesByIngredientsDocument } from '#features/recipes/hooks/useCatalogDiscovery.generated';
+import type { EntityFieldsInputs } from '#/apollo/pendingWrites/entityFields';
 import type { LocalBrandEntry } from '#features/profile/cache/brandLists';
 import {
   AddBrandToListDocument,
@@ -29,6 +34,7 @@ import {
   addBrand,
   addRestriction,
   createBrandList,
+  dietaryProfileFields,
   removeBrand,
   removeBrandList,
   removeRestriction,
@@ -101,6 +107,7 @@ function setup() {
     RemoveBrandFromList: removeBrand,
     AddDietaryRestriction: addRestriction,
     RemoveDietaryRestriction: removeRestriction,
+    UpdateDietaryProfile: dietaryProfileFields,
   };
   return { cache, writes: new PendingWrites(cache, table) };
 }
@@ -433,5 +440,118 @@ describe('removing a dietary restriction', () => {
 
     expect(restrictions(screen, false)).toEqual([]);
     expect(screen.cache.extract()['DietaryRestriction:held']).toBeUndefined();
+  });
+});
+
+describe('what the server screened by the restrictions before', () => {
+  /** The rankings Today and Recipes show, as the server screened them. */
+  const withScreenedAnswers = () => {
+    const screen = setup();
+    seedQuery(screen.cache, {
+      query: RecipeSuggestionsDocument,
+      variables: {
+        first: 20,
+        today: '2026-11-10',
+        homeId: 'home-1',
+        excludeDietaryConflicts: true,
+      },
+      data: { recipeSuggestions: { edges: [] } },
+    });
+    seedQuery(screen.cache, {
+      query: CatalogRecipesByIngredientsDocument,
+      variables: { ingredients: ['milk'], first: 25 },
+      data: {
+        catalogRecipesByIngredients: { edges: [], catalogAvailable: true },
+      },
+    });
+    return screen;
+  };
+
+  const screened = ({ cache }: Setup) =>
+    Object.keys(cache.extract().ROOT_QUERY ?? {})
+      .filter(
+        key =>
+          key.startsWith('recipeSuggestions') ||
+          key.startsWith('catalogRecipesByIngredients'),
+      )
+      .map(key => key.replace(/[(:].*$/, ''));
+
+  const updateProfile = ({ writes }: Setup, input: Record<string, unknown>) => {
+    const inputs: EntityFieldsInputs = {
+      entity: { __typename: 'DietaryProfile', id: PROFILE_ID },
+      fields: input,
+    };
+    return writes.begin(UpdateDietaryProfileDocument, { input }, inputs);
+  };
+
+  const profileAnswer = (fields: Record<string, unknown>) => ({
+    updateDietaryProfile: {
+      __typename: 'UpdateDietaryProfilePayload',
+      dietaryProfile: {
+        __typename: 'DietaryProfile',
+        id: PROFILE_ID,
+        ...fields,
+      },
+    },
+  });
+
+  it('keeps them while an added restriction waits, and drops them once answered', () => {
+    const screen = withScreenedAnswers();
+
+    const write = addHeldKind(screen);
+    expect(screened(screen)).toEqual([
+      'recipeSuggestions',
+      'catalogRecipesByIngredients',
+    ]);
+
+    answered(screen, write, {
+      addRestriction: {
+        __typename: 'AddRestrictionPayload',
+        converged: false,
+        dietaryRestriction: {
+          __typename: 'DietaryRestriction',
+          id: 'minted',
+          diet: Diet.Vegan,
+          severity: RestrictionSeverity.Preference,
+        },
+      },
+    });
+
+    expect(screened(screen)).toEqual([]);
+  });
+
+  it('drops them once a removal is answered', () => {
+    const screen = withScreenedAnswers();
+
+    answered(screen, removeHeldRestriction(screen), {
+      removeRestriction: {
+        __typename: 'RemoveRestrictionPayload',
+        converged: false,
+        dietaryRestriction: { __typename: 'DietaryRestriction', id: 'held' },
+      },
+    });
+
+    expect(screened(screen)).toEqual([]);
+  });
+
+  it('drops them once a religious diet is set, and keeps them for any other field', () => {
+    const halal = withScreenedAnswers();
+    answered(
+      halal,
+      updateProfile(halal, { religiousDiet: ReligiousDiet.Halal }),
+      profileAnswer({ religiousDiet: ReligiousDiet.Halal }),
+    );
+    expect(screened(halal)).toEqual([]);
+
+    const cooks = withScreenedAnswers();
+    answered(
+      cooks,
+      updateProfile(cooks, { cooksFor: 4 }),
+      profileAnswer({ cooksFor: 4 }),
+    );
+    expect(screened(cooks)).toEqual([
+      'recipeSuggestions',
+      'catalogRecipesByIngredients',
+    ]);
   });
 });
