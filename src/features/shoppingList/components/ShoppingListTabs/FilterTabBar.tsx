@@ -20,13 +20,6 @@ interface FilterTabBarProps<TKey extends string> {
   jumpTo: (key: TKey) => void;
   counts?: Partial<Record<TKey, number>>;
   actionButtons?: FilterTabActionButton[];
-  /** Optional: measure a specific tab's rect for tutorial spotlight */
-  onTabMeasure?: (
-    key: TKey,
-    rect: { x: number; y: number; width: number; height: number },
-  ) => void;
-  /** Which tab key(s) should be measured */
-  measureTabKeys?: TKey[];
 }
 
 export function FilterTabBar<TKey extends string>({
@@ -34,8 +27,6 @@ export function FilterTabBar<TKey extends string>({
   jumpTo,
   counts,
   actionButtons,
-  onTabMeasure,
-  measureTabKeys,
 }: FilterTabBarProps<TKey>) {
   const { routes, index } = navigationState;
   const titleOf = (key: TKey) =>
@@ -55,13 +46,6 @@ export function FilterTabBar<TKey extends string>({
         countOf={counts ? key => counts[key] : undefined}
         tabTestID={key =>
           kitTestIDs.filterTab(shoppingListTestIDs.tabBarPrefix, key)
-        }
-        onTabLayout={
-          onTabMeasure
-            ? (key, rect) => {
-                if (measureTabKeys?.includes(key)) onTabMeasure(key, rect);
-              }
-            : undefined
         }
         trailing={actionButtons?.map((btn, idx) => {
           const testID = btn.testID ?? shoppingListTestIDs.tabBarAction(idx);

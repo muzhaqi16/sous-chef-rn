@@ -10,17 +10,6 @@ jest.mock('#components/atoms/Icon', () => ({
   },
 }));
 
-const RECT = { x: 1, y: 2, width: 40, height: 30 };
-const LAYOUT = {
-  nativeEvent: { layout: { x: 0, y: 0, width: 40, height: 44 } },
-};
-jest.mock('#hooks/ui/useMeasuredRect', () => ({
-  useMeasuredRect: (onMeasure?: (rect: typeof RECT) => void) => ({
-    ref: { current: null },
-    measure: () => onMeasure?.(RECT),
-  }),
-}));
-
 describe('FilterTabBar', () => {
   const navigationState = {
     index: 0,
@@ -79,26 +68,5 @@ describe('FilterTabBar', () => {
       />,
     );
     expect(screen.getByText('filter')).toBeTruthy();
-  });
-
-  it('measures only the tabs the tutorial asks for', () => {
-    const onTabMeasure = jest.fn();
-    render(
-      <FilterTabBar
-        navigationState={navigationState}
-        jumpTo={jumpTo}
-        onTabMeasure={onTabMeasure}
-        measureTabKeys={['pending']}
-      />,
-    );
-    for (const key of ['all', 'pending', 'done']) {
-      fireEvent(
-        screen.getByTestId(`filter-tab-${key}`).parent!,
-        'layout',
-        LAYOUT,
-      );
-    }
-    expect(onTabMeasure).toHaveBeenCalledTimes(1);
-    expect(onTabMeasure).toHaveBeenCalledWith('pending', RECT);
   });
 });

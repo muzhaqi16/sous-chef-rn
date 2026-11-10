@@ -39,6 +39,8 @@ export const shoppingListTestIDs = {
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */
   tabBarPrefix: 'filter-tab',
+  /** The first-shop guide's step inside the add sheet. */
+  tourSheetHint: 'shopping-tour-sheet-hint',
   /** An action button that brings no testID of its own, by position. */
   tabBarAction: (index: number) => `filter-tab-action-${index}`,
   /** The header icon that opens store mode, and store mode's own parts. */

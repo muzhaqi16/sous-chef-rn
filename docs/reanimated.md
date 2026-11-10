@@ -76,7 +76,6 @@ watch the rows below slide up (`useRowReflow`).
 
 - `src/components/molecules/AnimatedChip.tsx`: reached through `MultiSelectChipSheet`,
   `CuisineSelector` and onboarding's `StaplesPicker`. Toggle chips quickly.
-- `src/features/shoppingList/components/SheetTutorialHint.tsx`
 - The Add a meal sheet's dim must hold after the sheet settles and release on close.
 
 **Small enter/exit toggles:**

@@ -132,8 +132,9 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
               {t('labels.notNow')}
             </Text>
           </Pressable>
-          {/* Got it already ends the tour on its last step. */}
-          {several && !isLast ? (
+          {/* Got it already ends the tour on its last step, unless that step
+              waits for the user's action and has none. */}
+          {several && (!isLast || waitsForAction) ? (
             <Pressable
               onPress={onDismiss}
               style={styles.textAction}

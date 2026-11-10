@@ -24,11 +24,8 @@ import { Text } from '#components/atoms/Text';
 import { useIsPendingSync } from '#hooks/offline/useIsPendingSync';
 
 import { useSlideAnimation } from '#hooks/animations/useSlideAnimation';
-import {
-  useShoppingListTutorialState,
-  useShoppingListTutorialActions,
-  ShoppingListTutorialStep,
-} from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
+import { useFirstShopRowTargets } from '#features/shoppingList/context/FirstShopTourContext';
 import { resolveImageUrl } from '#utils/imageUtils';
 import { firstNonBlank } from '#/utils/firstNonBlank';
 import { shownLineReading } from '#features/shoppingList/utils/lineReading';
@@ -97,9 +94,9 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // these two are gated here; every handler is withheld upstream instead.
   const { canRemoveItems, canEditItems } = permissions;
 
-  // Interactive tutorial — only the first row, and only on its steps.
-  const tutorial = useShoppingListTutorialState();
-  const tutorialActions = useShoppingListTutorialActions();
+  // The List's tips point only at the first row.
+  const tour = useFirstShopRowTargets();
+  const registerRect = tour?.registerRect;
 
   // Forced to match the active tab, so a freshly toggled row paints the new
   // state before the cache propagates.
@@ -164,73 +161,47 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
   // fragment data feeds it directly.
   const imageUrl = resolveImageUrl(data);
 
-  const isTutorialSwipeTarget =
-    tutorial?.currentStep ===
-      ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS &&
-    index === 0 &&
-    !isPurchased;
-
-  const isTutorialLongPressTarget =
-    tutorial?.currentStep ===
-      ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE &&
-    index === 0 &&
-    !isPurchased;
-
-  // Both spotlight the whole row, so they share the 'itemCard' rect; only one
-  // of the two steps is ever active.
-  const isTutorialItemCardTarget =
-    isTutorialSwipeTarget || isTutorialLongPressTarget;
-
-  // No swiping under the tutorial overlay, except on the swipe step itself.
-  const swipeEnabled =
-    !tutorial?.isActive ||
-    tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
-
-  const isTutorialCheckboxTarget =
-    tutorial?.isActive &&
-    tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX &&
-    index === 0 &&
-    !isPurchased;
-
-  // `currentStep`, not `isActive`: the latter is false during the 400ms tab
-  // transition, and the rect must be measured before the spotlight renders.
+  const firstToBuy = index === 0 && !isPurchased;
+  const isTutorialItemCardTarget = !!tour?.wanted.itemCard && firstToBuy;
+  const isTutorialCheckboxTarget = !!tour?.wanted.checkbox && firstToBuy;
+  // Measured as soon as it is wanted, before the tip shows, so the tip has a
+  // target to point at when it starts.
   const isTutorialArchiveTarget =
-    tutorial?.currentStep ===
-      ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY &&
-    index === 0 &&
-    isPurchased;
+    !!tour?.wanted.archiveIcon && index === 0 && isPurchased;
 
   // `registerRect` only ever sets, so each rect must be cleared when this row
   // stops being the step's target (purchased, removed, step advanced, cell
   // recycled) or the coach mark spotlights a vanished element.
+  // Keyed on the stable `registerRect`: a cleanup that ran on every change of
+  // the context would clear the rect while its tip still shows.
   useEffect(() => {
     if (!isTutorialCheckboxTarget) return;
-    return () => tutorialActions?.registerRect('checkbox', null);
-  }, [isTutorialCheckboxTarget, tutorialActions]);
+    return () => registerRect?.('checkbox', null);
+  }, [isTutorialCheckboxTarget, registerRect]);
 
   useEffect(() => {
     if (!isTutorialArchiveTarget) return;
-    return () => tutorialActions?.registerRect('archiveIcon', null);
-  }, [isTutorialArchiveTarget, tutorialActions]);
+    return () => registerRect?.('archiveIcon', null);
+  }, [isTutorialArchiveTarget, registerRect]);
 
   useEffect(() => {
     if (!isTutorialItemCardTarget) return;
-    return () => tutorialActions?.registerRect('itemCard', null);
-  }, [isTutorialItemCardTarget, tutorialActions]);
+    return () => registerRect?.('itemCard', null);
+  }, [isTutorialItemCardTarget, registerRect]);
 
   const { ref: checkboxRef, measure: measureCheckbox } = useMeasuredRect(
     isTutorialCheckboxTarget
-      ? rect => tutorialActions?.registerRect('checkbox', rect)
+      ? rect => tour.registerRect('checkbox', rect)
       : undefined,
   );
   const { ref: archiveIconRef, measure: measureArchiveIcon } = useMeasuredRect(
     isTutorialArchiveTarget
-      ? rect => tutorialActions?.registerRect('archiveIcon', rect)
+      ? rect => tour.registerRect('archiveIcon', rect)
       : undefined,
   );
   const { ref: itemCardRef, measure: measureItemCard } = useMeasuredRect(
     isTutorialItemCardTarget
-      ? rect => tutorialActions?.registerRect('itemCard', rect)
+      ? rect => tour.registerRect('itemCard', rect)
       : undefined,
   );
 
@@ -254,10 +225,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
         onLayout={isTutorialArchiveTarget ? measureArchiveIcon : undefined}
       >
         <Pressable
-          onPress={() => {
-            onMoveToPantry(itemId);
-            tutorialActions?.notifyMoveToPantryTapped();
-          }}
+          onPress={() => onMoveToPantry(itemId)}
           style={styles.moveToPantryButton}
           hitSlop={MOVE_TO_PANTRY_SLOP}
           accessibilityLabel={t('moveToPantry.title')}
@@ -313,10 +281,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           // A tap toggles with default values; the row then moves to the other
           // tab, so slide it out first and toggle after. Recording actual
           // qty/price is the long-press.
-          triggerSlide(-1, () => {
-            onTogglePurchase(itemId);
-            tutorialActions?.notifyCheckboxTapped();
-          });
+          triggerSlide(-1, () => onTogglePurchase(itemId));
         }}
         size={28}
         testID={shoppingListTestIDs.itemCheckbox(itemId)}
@@ -393,9 +358,7 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
           friction={1}
           onSwipeableWillOpen={ref => {
             onSwipeableWillOpen?.(ref);
-            if (isTutorialSwipeTarget) {
-              tutorialActions?.notifySwipeActionsSeen();
-            }
+            emitTutorialEvent('list.rowSwiped');
           }}
           onSwipeableClose={() => {
             onSwipeableClose?.();
@@ -403,7 +366,6 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
             if (isTutorialCheckboxTarget) measureCheckbox();
             if (isTutorialItemCardTarget) measureItemCard();
           }}
-          enabled={swipeEnabled}
         >
           <ListItem
             title={itemName}

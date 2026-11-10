@@ -274,8 +274,7 @@
   },
   "addToShoppingListSheet": {
     "tutorialTapPlus": "Toca + junto a un artículo para añadirlo",
-    "tutorialTapAddManually": "Toca \"Añadir manualmente\" para añadir un artículo",
-    "tutorialPullDown": "Desliza hacia abajo para cerrar"
+    "tutorialTapAddManually": "Toca \"Añadir manualmente\" para añadir un artículo"
   },
   "shoppingListSelector": {
     "title": "Selecciona Lista de Compras",
@@ -334,18 +333,10 @@
     },
     "swipeActions": {
       "title": "Desliza para gestionar los artículos",
-      "subtitle": "Desliza un artículo a la derecha para editarlo o a la izquierda para eliminarlo"
+      "subtitle": "Desliza un artículo a la derecha para editarlo o a la izquierda para eliminarlo. Con un lector de pantalla, ambas están en las acciones del artículo."
     },
     "checkbox": {
       "subtitle": "Toca la casilla para marcar este artículo como comprado"
-    },
-    "longPress": {
-      "title": "Registra el precio",
-      "subtitle": "Mantén pulsado un artículo para introducir su cantidad y precio reales antes de marcarlo como comprado"
-    },
-    "purchasedTab": {
-      "title": "Ver artículos comprados",
-      "subtitle": "Toca para ver tus artículos comprados"
     },
     "moveToPantry": {
       "title": "Mover a la despensa",

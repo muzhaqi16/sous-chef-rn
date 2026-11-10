@@ -2,7 +2,10 @@
  * What a user does that a tour step can wait for. Every path that does it
  * emits it, so a step continues however the action was done.
  */
-export type TutorialEvent = 'list.itemAdded' | 'list.movedToPantry';
+export type TutorialEvent =
+  | 'list.itemAdded'
+  | 'list.movedToPantry'
+  | 'list.rowSwiped';
 
 type Listener = (event: TutorialEvent) => void;
 

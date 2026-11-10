@@ -279,6 +279,37 @@ describe('useTutorialSequence — Not now pauses; ending stops for good', () => 
   });
 });
 
+describe('useTutorialSequence — a step inside a sheet', () => {
+  const inSheet: TutorialStep[] = [
+    {
+      featureId: 'step_pick',
+      title: 'Tap +',
+      subtitle: 'or add manually',
+      rectKey: 'none',
+      presentation: 'inline',
+      advanceOn: { event: 'list.itemAdded' },
+    },
+  ];
+
+  it('shows with no target, and its own sheet does not pause it', () => {
+    mockOverlayOpen = true;
+    const { result } = renderTour({ sequence: inSheet });
+
+    expect(result.current.currentStep).toBeNull();
+    expect(result.current.inlineStep?.title).toBe('Tap +');
+    expect(result.current.activeRectKey).toBeNull();
+  });
+
+  it('continues on its action', () => {
+    const { result } = renderTour({ sequence: inSheet });
+
+    act(() => emitTutorialEvent('list.itemAdded'));
+
+    expect(result.current.inlineStep).toBeNull();
+    expect(hints()['feature_hint_shown_user-1_step_pick']).toBe(true);
+  });
+});
+
 describe('useTutorialSequence — unprompted tips are rationed', () => {
   it('shows one unasked tour a session; a second waits for the next', () => {
     const shown = renderTour({ tourId: 'pantry' });

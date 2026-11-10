@@ -11,11 +11,8 @@ import type { ItemSuggestion } from '#/graphql/generated/schemaTypes';
 import { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
-import {
-  useShoppingListTutorial,
-  ShoppingListTutorialStep,
-} from '#features/shoppingList/context/ShoppingListTutorialContext';
-import { SheetTutorialHint } from '#features/shoppingList/components/SheetTutorialHint';
+import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
+import { InlineTourHint } from '#features/shoppingList/components/InlineTourHint';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
 import { shoppingListSheetConfig } from '#features/shoppingList/components/AddToShoppingListSheet/shoppingListSheetConfig';
@@ -49,7 +46,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     },
   );
   const showImages = useShowShoppingListImages();
-  const tutorial = useShoppingListTutorial();
+  const guide = useFirstShopTourContext()?.guide;
 
   // Shared state management for sheet visibility and deferred data fetching
   const state = useAddItemSheetState({
@@ -126,7 +123,6 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
       return;
     }
     onItemAdded?.();
-    tutorial?.notifyItemAdded();
   };
 
   const handleQuickAddSearchSuggestion = (item: ItemSuggestion) =>
@@ -148,36 +144,20 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
     dismissSuggestion({ itemId: item.itemId, name: item.name });
   };
 
-  // Build tutorial hint for the add item sheet (steps 2 and 3)
-  const tutorialHintElement = (() => {
-    if (!tutorial?.isActive) return undefined;
-
-    if (tutorial.currentStep === ShoppingListTutorialStep.GUIDE_ADD_ITEM) {
-      return (
-        <SheetTutorialHint
-          variant="inline"
-          text={
-            suggestionsResult.state === 'ready'
-              ? t('addToShoppingListSheet.tutorialTapPlus')
-              : t('addToShoppingListSheet.tutorialTapAddManually')
-          }
-          onSkip={tutorial.skipAll}
-        />
-      );
-    }
-
-    if (tutorial.currentStep === ShoppingListTutorialStep.HINT_DISMISS_SHEET) {
-      return (
-        <SheetTutorialHint
-          variant="handle"
-          text={t('addToShoppingListSheet.tutorialPullDown')}
-          onSkip={tutorial.skipAll}
-        />
-      );
-    }
-
-    return undefined;
-  })();
+  // The guide's add step, in the sheet from its first frame: arriving later,
+  // it would push the rows down under the finger reaching for them. Adding,
+  // however done, continues the guide.
+  const step = guide?.inlineStep;
+  const tutorialHintElement =
+    guide && step ? (
+      <InlineTourHint
+        text={suggestionsResult.state === 'ready' ? step.title : step.subtitle}
+        stepIndex={step.stepIndex}
+        totalSteps={step.totalSteps}
+        onClose={guide.pause}
+        onEnd={guide.skipAll}
+      />
+    ) : undefined;
 
   return (
     <AddItemSheet

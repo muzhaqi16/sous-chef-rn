@@ -36,7 +36,10 @@ export interface TutorialStep {
   targetTimeoutMs?: number;
   /** `next`, the default, continues on the tip's button; an event, on the action. */
   advanceOn?: 'next' | { event: TutorialEvent };
-  /** `inline` is a hint inside a sheet rather than a spotlight. */
+  /**
+   * `inline` is a hint inside the sheet the step happens in, not a spotlight:
+   * it needs no target, and its own sheet and keyboard do not pause it.
+   */
   presentation?: 'spotlight' | 'inline';
   /** A hand showing the gesture over the target. */
   demo?: 'swipe' | 'longPress';
@@ -61,6 +64,8 @@ export interface UseTutorialSequenceOptions {
 }
 
 export interface TutorialStepConfig {
+  /** Which step it is, for a screen that acts on the step shown. */
+  featureId: string;
   targetRect: TargetRect;
   title: string;
   subtitle: string;
@@ -68,12 +73,27 @@ export interface TutorialStepConfig {
   totalSteps: number;
   /** The step continues on the user's action, not a Next button. */
   waitsForAction: boolean;
-  presentation: 'spotlight' | 'inline';
   demo?: 'swipe' | 'longPress';
 }
 
+/** An inline step, for the sheet that shows it. */
+export interface TutorialInlineStep {
+  title: string;
+  subtitle: string;
+  stepIndex: number;
+  totalSteps: number;
+}
+
 export interface UseTutorialSequenceReturn {
+  /** The spotlight step showing, if any. */
   currentStep: TutorialStepConfig | null;
+  /** The inline step showing, if any. */
+  inlineStep: TutorialInlineStep | null;
+  /**
+   * The target the next step will point at, while the tour is unfinished, so
+   * it can be measured before the step shows.
+   */
+  activeRectKey: string | null;
   /** Dismiss current step and advance to next */
   advance: () => void;
   /** Advance without the transition gap — keeps the overlay mounted so the
@@ -146,9 +166,6 @@ export const useTutorialSequence = ({
       !session.onboardingFinished &&
       !session.pausedTours.has(tour) &&
       slotFree;
-  const signalsPause = startedByUser
-    ? false
-    : overlayOpen || keyboardShown || !session.active;
 
   const visibleSteps = steps.filter(step => step.when?.() ?? true);
 
@@ -168,6 +185,10 @@ export const useTutorialSequence = ({
 
   const allComplete = activeStepIndex === -1;
   const activeStep = visibleSteps[activeStepIndex];
+  const inline = activeStep?.presentation === 'inline';
+  const signalsPause = startedByUser
+    ? false
+    : (!inline && (overlayOpen || keyboardShown)) || !session.active;
   const activeRect = activeStep
     ? targetRects[activeStep.rectKey] ?? null
     : null;
@@ -189,7 +210,9 @@ export const useTutorialSequence = ({
   // A step whose target never measures is passed over, so the sequence never
   // waits on nothing.
   const waitingFor =
-    running && activeStep && !activeRect ? activeStep.featureId : null;
+    running && activeStep && !inline && !activeRect
+      ? activeStep.featureId
+      : null;
   const targetTimeoutMs =
     activeStep?.targetTimeoutMs ?? DEFAULT_TARGET_TIMEOUT_MS;
   if (waitingFor !== null && targetTimeoutMs <= 0) {
@@ -268,8 +291,9 @@ export const useTutorialSequence = ({
   const isActive = running && !isTransitioning && activeStepIndex !== -1;
 
   const currentStep: TutorialStepConfig | null =
-    isActive && activeStep && activeRect
+    isActive && activeStep && !inline && activeRect
       ? {
+          featureId: activeStep.featureId,
           targetRect: activeRect,
           title: activeStep.title,
           subtitle: activeStep.subtitle,
@@ -278,13 +302,22 @@ export const useTutorialSequence = ({
           waitsForAction:
             activeStep.advanceOn !== undefined &&
             activeStep.advanceOn !== 'next',
-          presentation: activeStep.presentation ?? 'spotlight',
           demo: activeStep.demo,
+        }
+      : null;
+  const inlineStep: TutorialInlineStep | null =
+    isActive && activeStep && inline
+      ? {
+          title: activeStep.title,
+          subtitle: activeStep.subtitle,
+          stepIndex: activeStepIndex,
+          totalSteps: visibleSteps.length,
         }
       : null;
 
   // Showing a tip unasked takes the account's one slot for the session.
-  const shownUnasked = currentStep !== null && !startedByUser;
+  const shownUnasked =
+    (currentStep !== null || inlineStep !== null) && !startedByUser;
   useEffect(() => {
     if (!shownUnasked) return;
     tutorialSession.claimUnprompted(userId, tour);
@@ -293,6 +326,8 @@ export const useTutorialSequence = ({
 
   return {
     currentStep,
+    inlineStep,
+    activeRectKey: activeStep && !inline ? activeStep.rectKey : null,
     advance,
     advanceInPlace,
     skipAll,

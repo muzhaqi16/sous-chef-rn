@@ -8,6 +8,7 @@ import {
 } from '#features/shoppingList/cache/purchase';
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { settleMutation } from '#/apollo/utils/settleMutation';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -99,6 +100,7 @@ export function useBatchMoveToPantry({
     // Queued (offline / API down): no summary, and `purchasedItems` is only the
     // slice on screen, so report pending rather than a possibly-wrong count.
     if (settled.status === 'queued') {
+      emitTutorialEvent('list.movedToPantry');
       toastService.success(t('moveToPantry.queued'));
       onSuccess?.();
       askForReviewAfterSuccess();
@@ -126,6 +128,7 @@ export function useBatchMoveToPantry({
     const movedCount = payload.summary.succeeded;
     const alreadyThereCount = payload.summary.skipped;
     const failedCount = payload.summary.failed;
+    if (movedCount > 0) emitTutorialEvent('list.movedToPantry');
 
     if (movedCount > 0) {
       const alreadyThere =

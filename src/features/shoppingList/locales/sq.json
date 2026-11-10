@@ -274,8 +274,7 @@
   },
   "addToShoppingListSheet": {
     "tutorialTapPlus": "Trokit + pranë një artikulli për ta shtuar",
-    "tutorialTapAddManually": "Trokit \"Shto manualisht\" për të shtuar një artikull",
-    "tutorialPullDown": "Tërhiq poshtë për të mbyllur"
+    "tutorialTapAddManually": "Trokit \"Shto manualisht\" për të shtuar një artikull"
   },
   "shoppingListSelector": {
     "title": "Zgjidh Listën e Blerjeve",
@@ -334,18 +333,10 @@
     },
     "swipeActions": {
       "title": "Rrëshqit për të menaxhuar artikujt",
-      "subtitle": "Rrëshqit djathtas një artikull për ta modifikuar, ose majtas për ta fshirë"
+      "subtitle": "Rrëshqit djathtas një artikull për ta modifikuar, ose majtas për ta fshirë. Me lexuesin e ekranit, të dyja janë te veprimet e artikullit."
     },
     "checkbox": {
       "subtitle": "Trokit kutinë për ta shënuar këtë artikull si të blerë"
-    },
-    "longPress": {
-      "title": "Regjistro çmimin",
-      "subtitle": "Shtyp gjatë një artikull për të futur sasinë dhe çmimin real para se ta shënosh si të blerë"
-    },
-    "purchasedTab": {
-      "title": "Shiko artikujt e blerë",
-      "subtitle": "Trokit për të parë artikujt e blerë"
     },
     "moveToPantry": {
       "title": "Zhvendos te qilari",

@@ -185,6 +185,14 @@ describe('SpotlightCoachMark controls', () => {
     expect(screen.queryByRole('button', { name: 'End tour' })).toBeNull();
   });
 
+  it('still offers End tour on a last step that waits for the user', () => {
+    const { onDismiss } = renderMark({ stepIndex: 2, waitsForAction: true });
+
+    expect(screen.queryByRole('button', { name: 'Got it' })).toBeNull();
+    fireEvent.press(screen.getByRole('button', { name: 'End tour' }));
+    expect(onDismiss).toHaveBeenCalledTimes(1);
+  });
+
   it('offers no Next on a step that waits for the user', () => {
     renderMark({ waitsForAction: true });
 
