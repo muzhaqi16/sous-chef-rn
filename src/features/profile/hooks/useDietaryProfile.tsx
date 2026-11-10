@@ -197,16 +197,10 @@ export const useDietaryProfile = ({
     maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
     budgetPerMeal?: number | null;
-    /** Null removes it, the one field where null is sent rather than dropped. */
     religiousDiet?: ReligiousDiet | null;
   }) => {
-    // Null leaves a field as it is, except a religious diet, which it clears.
-    const cleanedUpdates = Object.fromEntries(
-      Object.entries(updates).map(([key, value]) => [
-        key,
-        key === 'religiousDiet' ? value : value ?? undefined,
-      ]),
-    );
+    // Null clears a field, as the API reads it; a field left out is kept.
+    const cleanedUpdates: Record<string, unknown> = { ...updates };
 
     const settled = await sendFields(client.cache, {
       entity: profile

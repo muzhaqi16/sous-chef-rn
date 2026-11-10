@@ -2,6 +2,7 @@
 
 import type { MockFor, MockPart } from '#/test-utils/apolloMockProvider';
 import {
+  inputOf,
   recordMock,
   renderHookWithApollo,
 } from '#/test-utils/apolloMockProvider';
@@ -90,25 +91,6 @@ function buildGetProfileMock(
           __typename: 'User',
           id: 'user-1',
           dietaryProfile: profile,
-        },
-      },
-    },
-  };
-}
-
-function buildUpdateProfileMock(): MockFor<
-  typeof UpdateDietaryProfileDocument
-> {
-  return {
-    request: {
-      query: UpdateDietaryProfileDocument,
-      variables: () => true,
-    },
-    result: {
-      data: {
-        updateDietaryProfile: {
-          __typename: 'UpdateDietaryProfilePayload',
-          dietaryProfile: { ...mockProfileData, mealsPerDay: 4 },
         },
       },
     },
@@ -375,9 +357,18 @@ describe('useDietaryProfile', () => {
     expect(restriction?.notes).toBe('test');
   });
 
-  it('updateDietaryProfile calls mutation with cleaned input', async () => {
+  // The API reads null as "clear it": a removed limit or target must reach it.
+  it('updateDietaryProfile sends null, which clears the field', async () => {
+    const updated = recordMock(UpdateDietaryProfileDocument, {
+      data: {
+        updateDietaryProfile: {
+          __typename: 'UpdateDietaryProfilePayload',
+          dietaryProfile: { ...mockProfileData, mealsPerDay: 4 },
+        },
+      },
+    });
     const { result } = renderHookWithApollo(() => useDietaryProfile(), {
-      operationMocks: [buildGetProfileMock(), buildUpdateProfileMock()],
+      operationMocks: [buildGetProfileMock(), updated.mock],
     });
 
     await drainTimers();
@@ -388,10 +379,17 @@ describe('useDietaryProfile', () => {
       result.current.updateDietaryProfile({
         mealsPerDay: 4,
         calorieTarget: null,
+        maxCookTimeMinutes: null,
       }),
     );
 
     expect(success).toBe(true);
+    expect(updated.fired).toHaveLength(1);
+    expect(inputOf(updated.fired[0]!)).toEqual({
+      mealsPerDay: 4,
+      calorieTarget: null,
+      maxCookTimeMinutes: null,
+    });
   });
 
   // A refusal member is `data`, so `!!result.data` read it as success: the

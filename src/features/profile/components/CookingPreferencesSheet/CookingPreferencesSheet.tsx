@@ -24,11 +24,12 @@ import { profileTestIDs } from '#features/profile/testIDs';
 interface CookingPreferencesSheetProps {
   visible: boolean;
   onClose: () => void;
+  /** A field emptied from a stored value arrives as null, which clears it. */
   onSave: (values: {
     cookingSkillLevel?: CookingSkillLevel;
-    maxPrepTimeMinutes?: number;
-    maxCookTimeMinutes?: number;
-    budgetPerMeal?: number;
+    maxPrepTimeMinutes?: number | null;
+    maxCookTimeMinutes?: number | null;
+    budgetPerMeal?: number | null;
   }) => Promise<boolean>;
   initialValues?: {
     cookingSkillLevel?: CookingSkillLevel | null;
@@ -85,10 +86,20 @@ export const CookingPreferencesSheet: React.FC<
   const handleSave = async () => {
     const updates: {
       cookingSkillLevel?: CookingSkillLevel;
-      maxPrepTimeMinutes?: number;
-      maxCookTimeMinutes?: number;
-      budgetPerMeal?: number;
+      maxPrepTimeMinutes?: number | null;
+      maxCookTimeMinutes?: number | null;
+      budgetPerMeal?: number | null;
     } = {};
+    // A field left blank sends nothing; one emptied from a stored value clears it.
+    if (!prepTime && initialValues?.maxPrepTimeMinutes != null) {
+      updates.maxPrepTimeMinutes = null;
+    }
+    if (!cookTime && initialValues?.maxCookTimeMinutes != null) {
+      updates.maxCookTimeMinutes = null;
+    }
+    if (!budget && initialValues?.budgetPerMeal != null) {
+      updates.budgetPerMeal = null;
+    }
 
     if (skillLevel) {
       updates.cookingSkillLevel = skillLevel;

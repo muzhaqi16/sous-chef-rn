@@ -141,9 +141,9 @@ export const DietaryProfileScreen: React.FC = () => {
 
   const handleSaveCookingPrefs = async (values: {
     cookingSkillLevel?: CookingSkillLevel;
-    maxPrepTimeMinutes?: number;
-    maxCookTimeMinutes?: number;
-    budgetPerMeal?: number;
+    maxPrepTimeMinutes?: number | null;
+    maxCookTimeMinutes?: number | null;
+    budgetPerMeal?: number | null;
   }) => {
     const success = await updateDietaryProfile(values);
     if (success) {
@@ -156,10 +156,10 @@ export const DietaryProfileScreen: React.FC = () => {
   const [editingMacros, setEditingMacros] = useState(false);
 
   const handleSaveMacros = async (values: {
-    calorieTarget?: number;
-    proteinTarget?: number;
-    carbsTarget?: number;
-    fatTarget?: number;
+    calorieTarget?: number | null;
+    proteinTarget?: number | null;
+    carbsTarget?: number | null;
+    fatTarget?: number | null;
   }) => {
     const success = await updateDietaryProfile(values);
     if (success) {

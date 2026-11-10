@@ -104,15 +104,6 @@ jest.mock('#components/molecules/ModalPicker', () => {
   };
 });
 
-jest.mock('#domain/dietary', () => ({
-  SKILL_LEVELS: ['BEGINNER', 'INTERMEDIATE', 'ADVANCED'],
-  DIETARY_LIMITS: {
-    prepTime: { min: 0, max: 480 },
-    cookTime: { min: 0, max: 480 },
-    budget: { min: 0, max: 1000 },
-  },
-}));
-
 beforeEach(() => {
   jest.useFakeTimers();
 });
@@ -196,6 +187,31 @@ describe('CookingPreferencesSheet', () => {
         cookingSkillLevel: CookingSkillLevel.Intermediate,
       }),
     );
+  });
+
+  // The API reads null as "clear it", so an emptied limit is removed, not kept.
+  it('clears a limit emptied from its stored value and keeps the rest', async () => {
+    const stored = { maxPrepTimeMinutes: 45, maxCookTimeMinutes: 60 };
+    // The fields are seeded as the sheet opens.
+    const { rerender } = render(
+      <CookingPreferencesSheet
+        {...defaultProps}
+        visible={false}
+        initialValues={stored}
+      />,
+    );
+    rerender(
+      <CookingPreferencesSheet {...defaultProps} initialValues={stored} />,
+    );
+    fireEvent.changeText(screen.getByDisplayValue('60'), '');
+
+    fireEvent.press(screen.getByTestId('save-btn'));
+    await drainTimers();
+
+    expect(defaultProps.onSave).toHaveBeenCalledWith({
+      maxPrepTimeMinutes: 45,
+      maxCookTimeMinutes: null,
+    });
   });
 
   it('renders without initial values', () => {
