@@ -73,8 +73,37 @@ export const OnboardingCompleteScreen = () => {
     return true;
   };
 
-  // The recipe opens over Today once the app shows; a finish that failed
-  // drops it, so it never opens later out of the blue.
+  // The reason first; the OS prompt only once the user agrees, then the
+  // finish. Dismissing the dialog answers Not now. True once onboarding is done.
+  const askThenComplete = (): Promise<boolean> => {
+    if (hasPermission === true && settings.pushEnabled) return handleComplete();
+    return new Promise(resolve => {
+      alertService.alert(
+        t('onBoarding.notifyTitle'),
+        t('onBoarding.notifyMessage'),
+        [
+          {
+            text: t('labels.notNow'),
+            style: 'cancel',
+            onPress: () => {
+              void handleComplete().then(resolve);
+            },
+          },
+          {
+            text: t('onBoarding.notifyTurnOn'),
+            onPress: () => {
+              void turnOnPush({ expirationNotifications: true })
+                .then(handleComplete)
+                .then(resolve);
+            },
+          },
+        ],
+      );
+    });
+  };
+
+  // Every way out asks the same: a recipe opens over Today once the app
+  // shows, and a finish that failed drops it, so it never opens later.
   const openRecipe = async (recipeId: string) => {
     // A finish already running would be sent twice.
     if (isCompleting) return;
@@ -83,37 +112,11 @@ export const OnboardingCompleteScreen = () => {
       recipeId,
       timestamp: Date.now(),
     });
-    if (!(await handleComplete())) setPendingDeepLinkAction(null);
+    if (!(await askThenComplete())) setPendingDeepLinkAction(null);
   };
 
-  // The reason first; the OS prompt only once the user agrees. Dismissing the
-  // dialog answers Not now.
   const handleGetStarted = () => {
-    if (hasPermission === true && settings.pushEnabled) {
-      void handleComplete();
-      return;
-    }
-    alertService.alert(
-      t('onBoarding.notifyTitle'),
-      t('onBoarding.notifyMessage'),
-      [
-        {
-          text: t('labels.notNow'),
-          style: 'cancel',
-          onPress: () => {
-            void handleComplete();
-          },
-        },
-        {
-          text: t('onBoarding.notifyTurnOn'),
-          onPress: () => {
-            void turnOnPush({ expirationNotifications: true }).then(
-              handleComplete,
-            );
-          },
-        },
-      ],
-    );
+    void askThenComplete();
   };
 
   return (

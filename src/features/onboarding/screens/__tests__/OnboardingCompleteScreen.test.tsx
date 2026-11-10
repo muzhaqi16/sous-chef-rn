@@ -319,7 +319,14 @@ describe('OnboardingCompleteScreen', () => {
       renderScreen();
 
       await user.press(screen.getByText('Shakshuka'));
+      // The same ask as Get started, before the finish.
+      expect(alertButtons.map(button => button.text)).toContain(
+        t('labels.notNow'),
+      );
       await act(async () => {
+        alertButtons
+          .find(button => button.text === t('labels.notNow'))
+          ?.onPress?.();
         await mockCompleteOnboarding.mock.results[0]?.value;
       });
 
@@ -336,7 +343,14 @@ describe('OnboardingCompleteScreen', () => {
       renderScreen();
 
       await user.press(screen.getByText('Shakshuka'));
+      // The same ask as Get started, before the finish.
+      expect(alertButtons.map(button => button.text)).toContain(
+        t('labels.notNow'),
+      );
       await act(async () => {
+        alertButtons
+          .find(button => button.text === t('labels.notNow'))
+          ?.onPress?.();
         await mockCompleteOnboarding.mock.results[0]?.value;
       });
 
