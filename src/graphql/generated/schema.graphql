@@ -4854,7 +4854,7 @@ nutrition against these goals.
 """
 type DietaryProfile {
   """The budget for one meal, in the user's preferred currency."""
-  budgetPerMeal: Float
+  budgetPerMeal: Float @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """
   Daily calorie goal in kcal. A meal plan linked to this profile measures its daily average against it; null or 0 when no goal is set.
   """
@@ -4864,7 +4864,7 @@ type DietaryProfile {
   """
   carbsTarget: Int
   """How much cooking experience the user claims; null when not stated"""
-  cookingSkillLevel: CookingSkillLevel
+  cookingSkillLevel: CookingSkillLevel @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
   """
   How many people the user cooks for, 1 to 20: the servings a recipe starts from. Null when not answered, and a recipe starts at its own servings
   """
@@ -4874,13 +4874,13 @@ type DietaryProfile {
   """
   Ingredients the user dislikes, as free text; empty when none. Nothing screens against it: avoided items are restrictions
   """
-  dislikedIngredients: [String!]!
+  dislikedIngredients: [String!]! @deprecated(reason: "Stored and decides nothing. Avoid a food with an item restriction (RestrictionKindInput.item), which alerts and recipe screening read.")
   """
   Daily fat goal in grams, measured as calorieTarget is; null or 0 when no goal is set
   """
   fatTarget: Int
   """Ingredients the user favours, as free text; empty when none"""
-  favoriteIngredients: [String!]!
+  favoriteIngredients: [String!]! @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
   """The profile's unique identifier"""
   id: ID!
   """
@@ -4890,11 +4890,11 @@ type DietaryProfile {
   """
   The longest preparation time the user wants, in minutes; null when the user set no limit
   """
-  maxPrepTimeMinutes: Int
+  maxPrepTimeMinutes: Int @deprecated(reason: "Stored and decides nothing. The one time limit a profile offers is maxCookTimeMinutes.")
   """Meals a day the user plans for; 3 by default"""
-  mealsPerDay: Int!
+  mealsPerDay: Int! @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """Cuisines the user prefers; empty when none"""
-  preferredCuisines: [Cuisine!]!
+  preferredCuisines: [Cuisine!]! @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (searchRecipes).")
   """
   Daily protein goal in grams, measured as calorieTarget is; null or 0 when no goal is set
   """
@@ -4908,7 +4908,7 @@ type DietaryProfile {
   """
   restrictions: [DietaryRestriction!]!
   """Snacks a day the user plans for; 1 by default"""
-  snacksPerDay: Int!
+  snacksPerDay: Int! @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """When the profile was last written"""
   updatedAt: DateTime!
   user: User!
@@ -21067,7 +21067,7 @@ input UpdateDietaryProfileInput {
   """
   Budget for one meal, in the user's preferred currency: 0 to 999,999,999. Null clears it
   """
-  budgetPerMeal: Float
+  budgetPerMeal: Float @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """
   Daily calorie goal in kcal, a non-negative integer. A meal plan linked to this profile measures its daily average against it; 0 or null sets no goal, and null clears it
   """
@@ -21077,13 +21077,13 @@ input UpdateDietaryProfileInput {
   """
   carbsTarget: Int
   """How much cooking experience the user claims; null clears it"""
-  cookingSkillLevel: CookingSkillLevel
+  cookingSkillLevel: CookingSkillLevel @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
   """How many people the user cooks for, 1 to 20; null clears it"""
   cooksFor: Int
   """
   Ingredients the user dislikes, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused. Nothing screens against it: an avoided item (RestrictionKindInput.item) is what alerts read
   """
-  dislikedIngredients: [String!]
+  dislikedIngredients: [String!] @deprecated(reason: "Stored and decides nothing. Avoid a food with an item restriction (RestrictionKindInput.item), which alerts and recipe screening read.")
   """
   Daily fat goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
@@ -21091,7 +21091,7 @@ input UpdateDietaryProfileInput {
   """
   Ingredients the user favours, as free text, replacing the whole list: each 1 to 100 characters after trimming. An empty list clears it, null is refused
   """
-  favoriteIngredients: [String!]
+  favoriteIngredients: [String!] @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it.")
   """
   The longest cooking time the user wants, in minutes: a non-negative integer. Null clears it: no limit
   """
@@ -21099,15 +21099,15 @@ input UpdateDietaryProfileInput {
   """
   The longest preparation time the user wants, in minutes: a non-negative integer. Null clears it: no limit
   """
-  maxPrepTimeMinutes: Int
+  maxPrepTimeMinutes: Int @deprecated(reason: "Stored and decides nothing. The one time limit a profile offers is maxCookTimeMinutes.")
   """
   Meals a day the user plans for, a non-negative integer; 3 by default, null is refused
   """
-  mealsPerDay: Int
+  mealsPerDay: Int @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
   """
   Cuisines the user prefers, replacing the whole list; an empty list clears it, null is refused
   """
-  preferredCuisines: [Cuisine!]
+  preferredCuisines: [Cuisine!] @deprecated(reason: "Stored and decides nothing: no search or suggestion reads it. Narrow a recipe search with RecipeFilters.cuisines (searchRecipes).")
   """
   Daily protein goal in grams, a non-negative integer, measured as calorieTarget is; 0 or null sets no goal
   """
@@ -21119,7 +21119,7 @@ input UpdateDietaryProfileInput {
   """
   Snacks a day the user plans for, a non-negative integer; 1 by default, null is refused
   """
-  snacksPerDay: Int
+  snacksPerDay: Int @deprecated(reason: "Stored and decides nothing: no meal plan or suggestion reads it.")
 }
 
 type UpdateDietaryProfilePayload {
