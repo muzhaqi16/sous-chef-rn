@@ -370,6 +370,22 @@ describe('ShoppingListMainContent', () => {
     expect(getByTestId('shopping-list-screen')).toBeTruthy();
   });
 
+  it('offers to create a list from the + when there is none, not a wait', () => {
+    render(
+      <ShoppingListMainContent
+        screenData={makeScreenData({
+          lists: [],
+          listsLoading: false,
+          listsHasResult: true,
+        })}
+      />,
+    );
+
+    const menu = jest.mocked(useTabBarAddMenu).mock.calls.at(-1)?.[0] ?? [];
+    expect(menu.map(action => action.key)).toEqual(['createList']);
+    expect(menu[0]?.disabledReason).toBeUndefined();
+  });
+
   it('renders with items', () => {
     const { getByTestId } = render(
       <ShoppingListMainContent

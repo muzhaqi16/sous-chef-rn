@@ -423,38 +423,55 @@ export const ShoppingListMainContent: React.FC<
   const addDisabledReason = permissions.canAddItems ? undefined : addRefusal;
   // An add handed over from Today waits for this, not for the refusal.
   const addPending = !permissions.resolved;
-  useTabBarAddMenu([
-    {
-      key: 'search',
-      label: t('labels.searchToAdd'),
-      icon: 'search',
-      onPress: () => {
-        Telemetry.trackEvent('add_item_from_tab_bar', {
-          list_id: currentListId,
-        });
-        openAddItemSheet();
-      },
-      disabledReason: addDisabledReason,
-      pending: addPending,
-    },
-    {
-      key: 'barcode',
-      label: t('labels.scanBarcode'),
-      icon: 'barcode-outline',
-      onPress: () =>
-        toBarcode({ source: 'shoppingList', shoppingListId: currentListId }),
-      disabledReason: addDisabledReason,
-      pending: addPending,
-    },
-    {
-      key: 'manual',
-      label: t('labels.addManually'),
-      icon: 'create-outline',
-      onPress: openAddItemManually,
-      disabledReason: addDisabledReason,
-      pending: addPending,
-    },
-  ]);
+  // With no list to add to, the + makes one, as the empty state offers: its
+  // permissions never resolve, so the entries would wait on "Loading" forever.
+  const noLists = !isLoadingInitial && listsState === 'empty';
+  useTabBarAddMenu(
+    noLists
+      ? [
+          {
+            key: 'createList',
+            label: t('shoppingListScreen.noListsAction'),
+            icon: 'cart-outline',
+            onPress: () => toListSettings(),
+          },
+        ]
+      : [
+          {
+            key: 'search',
+            label: t('labels.searchToAdd'),
+            icon: 'search',
+            onPress: () => {
+              Telemetry.trackEvent('add_item_from_tab_bar', {
+                list_id: currentListId,
+              });
+              openAddItemSheet();
+            },
+            disabledReason: addDisabledReason,
+            pending: addPending,
+          },
+          {
+            key: 'barcode',
+            label: t('labels.scanBarcode'),
+            icon: 'barcode-outline',
+            onPress: () =>
+              toBarcode({
+                source: 'shoppingList',
+                shoppingListId: currentListId,
+              }),
+            disabledReason: addDisabledReason,
+            pending: addPending,
+          },
+          {
+            key: 'manual',
+            label: t('labels.addManually'),
+            icon: 'create-outline',
+            onPress: openAddItemManually,
+            disabledReason: addDisabledReason,
+            pending: addPending,
+          },
+        ],
+  );
 
   // Every screen whose header carries the switch-list button mounts this.
   const listSelector = (
