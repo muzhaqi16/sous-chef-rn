@@ -184,6 +184,24 @@ describe('useStaplesSelection', () => {
     expect(useOnboardingProgressStore.getState().stapleItems).toBe(0);
   });
 
+  it("never takes out what it does not offer: a receipt's items, a food left out", async () => {
+    mockHeld = new Map([
+      ['milk', 'row-milk'],
+      ['receipt-steak', 'row-steak'],
+      ['peanuts', 'row-peanuts'],
+    ]);
+    const { result } = await renderStaples();
+    expect(result.current.hasChanges).toBe(false);
+
+    act(() => result.current.toggle('peas'));
+    await act(async () => {
+      await result.current.save();
+    });
+
+    expect(mockRemoveItem).not.toHaveBeenCalled();
+    expect(mockAddItem).toHaveBeenCalledTimes(1);
+  });
+
   it('starts with what the pantry holds, and takes out one unpicked', async () => {
     mockHeld = new Map([['milk', 'row-milk']]);
     useOnboardingProgressStore.setState({ stapleItems: 3 });

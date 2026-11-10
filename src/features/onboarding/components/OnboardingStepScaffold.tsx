@@ -41,15 +41,19 @@ interface OnboardingStepScaffoldProps {
 /** Layout-only: each block of a step arrives a beat after the one above it. */
 const StepEntrance = ({
   index,
+  grow = false,
   children,
 }: {
   index: number;
+  /** Fills its parent, so a child taking `flex: 1` still can. */
+  grow?: boolean;
   children: ReactNode;
 }) => (
   <Animated.View
     entering={FadeInDown.delay(index * motion.timing.INSTANT).duration(
       motion.timing.MODERATE,
     )}
+    style={grow ? styles.grow : undefined}
   >
     {children}
   </Animated.View>
@@ -145,7 +149,9 @@ export const OnboardingStepScaffold = ({
         </StepEntrance>
       ) : null}
       <View style={styles.content}>
-        <StepEntrance index={question ? 1 : 0}>{children}</StepEntrance>
+        <StepEntrance index={question ? 1 : 0} grow>
+          {children}
+        </StepEntrance>
       </View>
     </Screen>
   );
@@ -173,5 +179,8 @@ const styles = StyleSheet.create(theme => ({
   content: {
     flexGrow: 1,
     paddingTop: theme.spacing.md,
+  },
+  grow: {
+    flexGrow: 1,
   },
 }));

@@ -2,12 +2,9 @@ import type { StateCreator } from 'zustand';
 import type { RootState } from '../index';
 
 /**
- * A join link `useJoinLinkAuthGate` queued for a logged-out visitor, replayed
- * by `useDeepLinkRouter` after sign-in. Held in memory only, never persisted.
- */
-/**
- * A link held until its moment: a join once the visitor signs in, a recipe
- * opened from onboarding's payoff once the main app shows.
+ * A link held until its moment, replayed by `useDeepLinkRouter`: a join
+ * `useJoinLinkAuthGate` queued once the visitor signs in, a recipe opened from
+ * onboarding's payoff once the main app shows. Held in memory only.
  */
 export type DeepLinkAction =
   | { type: 'join_home' | 'join_list'; code: string; timestamp: number }

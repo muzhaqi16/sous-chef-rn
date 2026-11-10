@@ -68,13 +68,18 @@ export function useStaplesSelection() {
       ? 'unread'
       : 'ready';
 
+  // Only a staple shown here may be taken out: the pantry also holds a
+  // receipt's items and foods the list leaves out. Until both reads answer,
+  // nothing is a change.
+  const ready = state === 'ready';
   const selectedIds = new Set(selectedItems.map(item => item.id));
-  const toAdd = selectedItems.filter(
-    item => !pantry.existingCatalogIds.has(item.id),
+  const heldStaples = items.flatMap(item =>
+    pantry.existingCatalogIds.has(item.id) ? [item.id] : [],
   );
-  const toRemove = [...pantry.existingCatalogIds].filter(
-    id => !selectedIds.has(id),
-  );
+  const toAdd = ready
+    ? selectedItems.filter(item => !pantry.existingCatalogIds.has(item.id))
+    : [];
+  const toRemove = ready ? heldStaples.filter(id => !selectedIds.has(id)) : [];
 
   const save = (): Promise<void> =>
     executeWriteWithFinally(
@@ -129,7 +134,7 @@ export function useStaplesSelection() {
     /** New picks to add, or held ones to take out. */
     hasChanges: toAdd.length > 0 || toRemove.length > 0,
     /** Nothing from the staples is in the pantry yet. */
-    isFirstVisit: pantry.existingCatalogIds.size === 0,
+    isFirstVisit: heldStaples.length === 0,
     saving,
     save,
     retry: () => {

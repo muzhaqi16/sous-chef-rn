@@ -22,7 +22,7 @@ import { Icon } from '#components/atoms/Icon';
 import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
 import { NumberInputSheet } from '#features/profile/components/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#components/atoms/InfoRow';
-import { knownSkillLevel } from '#domain/dietary';
+import { dietGroup, knownSkillLevel } from '#domain/dietary';
 
 const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
   iconColor: theme.colors.primaryText,
@@ -106,20 +106,25 @@ export const DietaryProfileScreen: React.FC = () => {
     return allSucceeded;
   };
 
-  // Set the single lifestyle diet: add the new diet first, then clear the
-  // prior lifestyle row(s) only once the add succeeds (so a failure leaves the
-  // existing diet intact). Constraints/intolerances/goals still add via
-  // handleAddRestrictions.
-  // Adds before it removes: a failed add keeps the diets held as they were.
+  // Adds before it removes: a dropped diet goes only once no add in its group
+  // failed, so a group never holds two and a failed add keeps its old diet.
   const handleChangeDiets = async (added: Diet[], removedIds: string[]) => {
     const outcomes = await Promise.all(
       added.map(diet =>
         addDietaryRestriction({ diet }, RestrictionSeverity.Preference),
       ),
     );
-    if (!outcomes.every(Boolean)) return false;
+    const failedGroups = new Set(
+      added.flatMap((diet, index) =>
+        outcomes[index] ? [] : [dietGroup(diet)],
+      ),
+    );
+    const removable = removedIds.filter(id => {
+      const diet = profile?.restrictions.find(row => row.id === id)?.diet;
+      return !diet || !failedGroups.has(dietGroup(diet));
+    });
     const removed = await Promise.all(
-      removedIds.map(id => removeDietaryRestriction(id)),
+      removable.map(id => removeDietaryRestriction(id)),
     );
     // A silent failure here leaves two diets of one group held.
     if (!removed.every(Boolean)) {
@@ -128,7 +133,7 @@ export const DietaryProfileScreen: React.FC = () => {
         t('dietary.removeRestrictionFailed'),
       );
     }
-    return true;
+    return failedGroups.size === 0;
   };
 
   // Cooking preferences state

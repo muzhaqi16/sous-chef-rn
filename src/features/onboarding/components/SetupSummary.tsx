@@ -72,6 +72,9 @@ export const SetupSummary = ({
 }: SetupSummaryProps) => {
   const { t } = useTranslation();
   const [changingHousehold, setChangingHousehold] = useState(false);
+  // The count last tapped to: the summary records one only once it is saved,
+  // so quick taps would each step from the same old count.
+  const [draftCooksFor, setDraftCooksFor] = useState<number | null>(null);
   const lines = summaryLines(summary, t);
 
   if (lines.length === 0) {
@@ -114,10 +117,13 @@ export const SetupSummary = ({
             {line.kind === 'household' && summary.cooksFor !== null ? (
               <Reveal open={changingHousehold}>
                 <PeopleStepper
-                  value={summary.cooksFor}
+                  value={draftCooksFor ?? summary.cooksFor}
                   min={1}
                   max={COOKS_FOR_MAX}
-                  onChange={onChangeCooksFor}
+                  onChange={count => {
+                    setDraftCooksFor(count);
+                    onChangeCooksFor(count);
+                  }}
                   label={t('onBoarding.householdTitle')}
                 />
               </Reveal>

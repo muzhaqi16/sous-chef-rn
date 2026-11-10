@@ -34,26 +34,39 @@ import { useOnboardingInvites } from './useOnboardingInvites';
  * scan, a refused camera or a closed review comes back here, staples intact.
  */
 export const ReceiptStepScreen = () => {
-  const { t } = useTranslation();
   useScreenTransition('ReceiptStepScreen');
   const { navigateToNextStep, navigateToPreviousStep, navigateWithinStep } =
     useOnboardingNavigation();
   const hasPantry = !!useSelectedPantryId();
-  const setupStatus = useOnboardingSetupStore(state => state.setup);
-  const setup = useOnboardingSetup();
-  const { refetch: refetchInvites } = useOnboardingInvites();
   const onBack = () => navigateToPreviousStep('Receipt');
   const onNext = () => navigateToNextStep('Receipt');
 
-  if (hasPantry) {
-    return (
-      <KitchenChoices
-        onBack={onBack}
-        onNext={onNext}
-        onScan={() => navigateWithinStep('OnboardingReceiptScan')}
-      />
-    );
-  }
+  return hasPantry ? (
+    <KitchenChoices
+      onBack={onBack}
+      onNext={onNext}
+      onScan={() => navigateWithinStep('OnboardingReceiptScan')}
+    />
+  ) : (
+    <SetupPending onBack={onBack} onNext={onNext} />
+  );
+};
+
+/**
+ * The step while setup has not left a pantry. The account's reads live here:
+ * with a pantry in place, the step needs none of them.
+ */
+const SetupPending = ({
+  onBack,
+  onNext,
+}: {
+  onBack: () => void;
+  onNext: () => void;
+}) => {
+  const { t } = useTranslation();
+  const setupStatus = useOnboardingSetupStore(state => state.setup);
+  const setup = useOnboardingSetup();
+  const { refetch: refetchInvites } = useOnboardingInvites();
 
   return (
     <OnboardingStepScaffold

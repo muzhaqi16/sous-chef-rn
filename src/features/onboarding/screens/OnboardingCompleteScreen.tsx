@@ -72,6 +72,8 @@ export const OnboardingCompleteScreen = () => {
   // The recipe opens over Today once the app shows; a finish that failed
   // drops it, so it never opens later out of the blue.
   const openRecipe = async (recipeId: string) => {
+    // A finish already running would be sent twice.
+    if (isCompleting) return;
     setPendingDeepLinkAction({
       type: 'open_recipe',
       recipeId,
