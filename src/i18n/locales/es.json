@@ -507,7 +507,6 @@
     "tapToEdit": "Toca para editar",
     "tapToViewDetails": "Toca para ver los detalles",
     "templateName": "Nombre de la plantilla",
-    "thisFieldIsRequired": "Este campo es obligatorio",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
     "tips": "Consejos",
     "stockValue": "Valor del stock",
@@ -689,10 +688,6 @@
       "shoppingList": "Lista",
       "mealPlan": "Plan"
     }
-  },
-  "numberInputSheet": {
-    "minError": "El valor debe ser al menos {{min}}",
-    "maxError": "El valor debe ser como máximo {{max}}"
   },
   "notFound": {
     "message": "Esta pantalla no existe. Verifica la URL o vuelve a una pantalla válida.",

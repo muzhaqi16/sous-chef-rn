@@ -38,21 +38,13 @@ query GetDietaryProfile {
     dietaryProfile {
       id
       userId
-      preferredCuisines
-      dislikedIngredients
-      favoriteIngredients
       calorieTarget
       proteinTarget
       carbsTarget
       fatTarget
-      mealsPerDay
-      snacksPerDay
       cooksFor
       religiousDiet
-      cookingSkillLevel
-      maxPrepTimeMinutes
       maxCookTimeMinutes
-      budgetPerMeal
       createdAt
       updatedAt
       restrictions {
@@ -131,21 +123,13 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
       dietaryProfile {
         id
         userId
-        preferredCuisines
-        dislikedIngredients
-        favoriteIngredients
         calorieTarget
         proteinTarget
         carbsTarget
         fatTarget
-        mealsPerDay
-        snacksPerDay
         cooksFor
         religiousDiet
-        cookingSkillLevel
-        maxPrepTimeMinutes
         maxCookTimeMinutes
-        budgetPerMeal
         createdAt
         updatedAt
         restrictions {

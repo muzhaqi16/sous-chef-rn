@@ -63,27 +63,11 @@
     "restrictions": "Restricciones alimentarias",
     "removeRestrictionConfirm": "¿Seguro que quieres eliminar esta restricción alimentaria?",
     "removeRestrictionFailed": "No se pudo eliminar la restricción",
-    "foodPreferences": "Preferencias alimentarias",
-    "favoriteIngredients": "Ingredientes favoritos",
-    "favoriteIngredientsPlaceholder": "p. ej., ajo, albahaca, pollo",
-    "favoriteIngredientsAdd": "Añadir ingrediente favorito",
-    "favoriteIngredientsEmpty": "Aún no hay ingredientes favoritos",
-    "dislikedIngredients": "Ingredientes que no te gustan",
-    "dislikedIngredientsPlaceholder": "p. ej., cilantro, champiñones, aceitunas",
-    "dislikedIngredientsAdd": "Añadir ingrediente",
-    "dislikedIngredientsEmpty": "Aún no hay ingredientes añadidos",
     "nutritionGoals": "Objetivos nutricionales",
-    "mealsPerDay": "Comidas al día",
-    "snacksPerDay": "Tentempiés al día",
-    "mealsPerDayTitle": "Comidas al día",
-    "snacksPerDayTitle": "Tentempiés al día",
-    "mealsPlaceholder": "p. ej., 3",
-    "skillLevel": "Nivel de habilidad",
-    "maxPrepTime": "Tiempo máx. de preparación",
-    "budgetPerMeal": "Presupuesto por comida",
     "minutes": "minutos",
     "macroTargets": "Objetivos de macros (avanzado)",
     "macroTargetsEmpty": "Aún no hay objetivos",
+    "cookTimeEmpty": "Sin límite de tiempo",
     "dailyCalories": "Calorías diarias",
     "protein": "Proteína",
     "fat": "Grasa",
@@ -170,24 +154,10 @@
     "religiousDietPrivate": "Privado: solo se usa para tus sugerencias y tus hogares no lo ven."
   },
   "cookingPreferences": {
-    "prepTimeRange": "El tiempo de preparación debe estar entre {{min}} y {{max}} minutos",
     "cookTimeRange": "El tiempo de cocción debe estar entre {{min}} y {{max}} minutos",
-    "budgetRange": "El presupuesto debe estar entre {{min}} y {{max}}",
     "updateFailed": "No se pudieron actualizar las preferencias de cocina",
-    "skillLevel": "Nivel de habilidad culinaria",
-    "selectSkillLevel": "Selecciona un nivel...",
-    "maxPrepTime": "Tiempo máx. de preparación (minutos)",
-    "prepTimePlaceholder": "p. ej., 30",
     "maxCookTime": "Tiempo máx. de cocción (minutos)",
-    "cookTimePlaceholder": "p. ej., 60",
-    "budgetPerMeal": "Presupuesto por comida ($)",
-    "budgetPlaceholder": "p. ej., 15.00",
-    "skillLevels": {
-      "BEGINNER": "Principiante",
-      "INTERMEDIATE": "Intermedio",
-      "ADVANCED": "Avanzado",
-      "EXPERT": "Experto"
-    }
+    "cookTimePlaceholder": "p. ej., 60"
   },
   "profile": {
     "sections": {
@@ -303,14 +273,6 @@
     "dateUnreasonable": "Introduce una fecha de nacimiento razonable",
     "invalidVisibility": "Selecciona una opción de visibilidad válida",
     "invalidGender": "Selecciona un género válido"
-  },
-  "stringArrayManager": {
-    "inputPlaceholder": "Introduce un valor...",
-    "empty": "Aún no has añadido nada",
-    "valueRequired": "Introduce un valor",
-    "duplicate": "Este elemento ya existe",
-    "maxItems_one": "Puedes añadir hasta {{count}} elemento",
-    "maxItems_other": "Puedes añadir hasta {{count}} elementos"
   },
   "restrictionSection": {
     "empty": "Aún no hay ninguno"

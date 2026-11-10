@@ -63,27 +63,11 @@
     "restrictions": "Kufizime dietike",
     "removeRestrictionConfirm": "Vërtet dëshiron ta heqësh këtë kufizim dietik?",
     "removeRestrictionFailed": "Nuk u hoq dot kufizimi",
-    "foodPreferences": "Preferencat ushqimore",
-    "favoriteIngredients": "Përbërësit e preferuar",
-    "favoriteIngredientsPlaceholder": "p.sh. hudhër, borzilok, pulë",
-    "favoriteIngredientsAdd": "Shto përbërës të preferuar",
-    "favoriteIngredientsEmpty": "Ende pa përbërës të preferuar",
-    "dislikedIngredients": "Përbërësit që s'i pëlqen",
-    "dislikedIngredientsPlaceholder": "p.sh. koriandër, kërpudha, ullinj",
-    "dislikedIngredientsAdd": "Shto përbërës",
-    "dislikedIngredientsEmpty": "Ende pa përbërës të shtuar",
     "nutritionGoals": "Synimet ushqyese",
-    "mealsPerDay": "Vakte në ditë",
-    "snacksPerDay": "Snake në ditë",
-    "mealsPerDayTitle": "Vakte në ditë",
-    "snacksPerDayTitle": "Snake në ditë",
-    "mealsPlaceholder": "p.sh. 3",
-    "skillLevel": "Niveli i aftësisë",
-    "maxPrepTime": "Koha maks. e përgatitjes",
-    "budgetPerMeal": "Buxheti për vakt",
     "minutes": "minuta",
     "macroTargets": "Synimet e makrove (i avancuar)",
     "macroTargetsEmpty": "Ende pa objektiva",
+    "cookTimeEmpty": "Pa kufi kohe",
     "dailyCalories": "Kalori ditore",
     "protein": "Proteinë",
     "fat": "Yndyrë",
@@ -170,24 +154,10 @@
     "religiousDietPrivate": "Privat: përdoret vetëm për sugjerimet e tua, shtëpitë e tua nuk e shohin."
   },
   "cookingPreferences": {
-    "prepTimeRange": "Koha e përgatitjes duhet të jetë midis {{min}} dhe {{max}} minutash",
     "cookTimeRange": "Koha e gatimit duhet të jetë midis {{min}} dhe {{max}} minutash",
-    "budgetRange": "Buxheti duhet të jetë midis {{min}} dhe {{max}}",
     "updateFailed": "Nuk u përditësuan dot preferencat e gatimit",
-    "skillLevel": "Niveli i aftësisë në gatim",
-    "selectSkillLevel": "Zgjidh nivelin e aftësisë...",
-    "maxPrepTime": "Koha maksimale e përgatitjes (minuta)",
-    "prepTimePlaceholder": "p.sh. 30",
     "maxCookTime": "Koha maksimale e gatimit (minuta)",
-    "cookTimePlaceholder": "p.sh. 60",
-    "budgetPerMeal": "Buxheti për vakt ($)",
-    "budgetPlaceholder": "p.sh. 15.00",
-    "skillLevels": {
-      "BEGINNER": "Fillestar",
-      "INTERMEDIATE": "I mesëm",
-      "ADVANCED": "I avancuar",
-      "EXPERT": "Ekspert"
-    }
+    "cookTimePlaceholder": "p.sh. 60"
   },
   "profile": {
     "sections": {
@@ -303,14 +273,6 @@
     "dateUnreasonable": "Shkruaj një datëlindje të arsyeshme",
     "invalidVisibility": "Zgjidh një opsion të vlefshëm dukshmërie",
     "invalidGender": "Zgjidh një gjini të vlefshme"
-  },
-  "stringArrayManager": {
-    "inputPlaceholder": "Shkruaj një vlerë...",
-    "empty": "Nuk ke shtuar asgjë ende",
-    "valueRequired": "Shkruaj një vlerë",
-    "duplicate": "Ky element ekziston tashmë",
-    "maxItems_one": "Mund të shtosh deri në {{count}} element",
-    "maxItems_other": "Mund të shtosh deri në {{count}} elemente"
   },
   "restrictionSection": {
     "empty": "Asnjë i shtuar ende"

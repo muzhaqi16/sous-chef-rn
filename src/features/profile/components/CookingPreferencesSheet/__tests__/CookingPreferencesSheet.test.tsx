@@ -2,7 +2,6 @@
 import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react-native';
 import { CookingPreferencesSheet } from '#features/profile/components/CookingPreferencesSheet/CookingPreferencesSheet';
-import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
 import { drainTimers } from '#/test-utils/drainTimers';
 
 jest.mock('#hooks/ui/useSharedBottomSheetConfigs', () => ({
@@ -69,41 +68,6 @@ jest.mock('#components/molecules/BottomSheetHeader', () => ({
   },
 }));
 
-// Stands in for the tray so the OPTIONS are reachable without driving gorhom's
-// present/animate cycle. `stackBehavior` is captured because passing 'push' is
-// what keeps this picker from minimizing the sheet it opens from.
-const modalPickerProps: { stackBehavior?: string }[] = [];
-jest.mock('#components/molecules/ModalPicker', () => {
-  const RN = require('react-native');
-  const R = require('react');
-  return {
-    ModalPicker: (props: {
-      visible: boolean;
-      options: { label: string; value: string }[];
-      onSelect: (value: string) => void;
-      stackBehavior?: string;
-    }) => {
-      modalPickerProps.push({ stackBehavior: props.stackBehavior });
-      if (!props.visible) return null;
-      return R.createElement(
-        RN.View,
-        { testID: 'modal-picker' },
-        props.options.map(opt =>
-          R.createElement(
-            RN.Pressable,
-            {
-              key: opt.value,
-              testID: `modal-picker-option-${opt.value}`,
-              onPress: () => props.onSelect(opt.value),
-            },
-            R.createElement(RN.Text, null, opt.label),
-          ),
-        ),
-      );
-    },
-  };
-});
-
 beforeEach(() => {
   jest.useFakeTimers();
 });
@@ -120,79 +84,8 @@ describe('CookingPreferencesSheet', () => {
     initialValues: {},
   };
 
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
-  it('renders the title', () => {
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
-  });
-
-  it('renders skill level picker section', () => {
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    expect(screen.getByText('Cooking Skill Level')).toBeTruthy();
-  });
-
-  it('renders all form inputs', () => {
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    expect(screen.getByText('Max Prep Time (minutes)')).toBeTruthy();
-    expect(screen.getByText('Max Cook Time (minutes)')).toBeTruthy();
-    expect(screen.getByText('Budget per Meal ($)')).toBeTruthy();
-  });
-
-  it('renders save button', () => {
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    expect(screen.getByText('Save')).toBeTruthy();
-  });
-
-  it('opens the skill level tray on press and lists every level', () => {
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    expect(screen.queryByTestId('modal-picker')).toBeNull();
-
-    fireEvent.press(
-      screen.getByTestId('cooking-preferences-skill-level-picker'),
-    );
-
-    expect(screen.getByText('Beginner')).toBeTruthy();
-    expect(screen.getByText('Intermediate')).toBeTruthy();
-    expect(screen.getByText('Advanced')).toBeTruthy();
-  });
-
-  it('opens the skill tray with stackBehavior="push"', () => {
-    // gorhom's default 'switch' minimizes the HOST sheet, which reads as a
-    // crash — this picker always opens from inside one.
-    modalPickerProps.length = 0;
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    expect(modalPickerProps.length).toBeGreaterThan(0);
-    expect(modalPickerProps.every(p => p.stackBehavior === 'push')).toBe(true);
-  });
-
-  it('shows the chosen skill level on the trigger and saves it', async () => {
-    render(<CookingPreferencesSheet {...defaultProps} />);
-    fireEvent.press(
-      screen.getByTestId('cooking-preferences-skill-level-picker'),
-    );
-    fireEvent.press(screen.getByTestId('modal-picker-option-INTERMEDIATE'));
-
-    // Tray closed, trigger now reads the selection rather than the placeholder.
-    expect(screen.queryByTestId('modal-picker')).toBeNull();
-    expect(screen.getByText('Intermediate')).toBeTruthy();
-
-    fireEvent.press(screen.getByTestId('save-btn'));
-    await drainTimers();
-    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
-    expect(defaultProps.onSave).toHaveBeenCalledWith(
-      expect.objectContaining({
-        cookingSkillLevel: CookingSkillLevel.Intermediate,
-      }),
-    );
-  });
-
-  // The API reads null as "clear it", so an emptied limit is removed, not kept.
-  it('clears a limit emptied from its stored value and keeps the rest', async () => {
-    const stored = { maxPrepTimeMinutes: 45, maxCookTimeMinutes: 60 };
-    // The fields are seeded as the sheet opens.
+  /** The sheet as it opens over a stored limit: its field is seeded then. */
+  const openWith = (stored: { maxCookTimeMinutes?: number | null }) => {
     const { rerender } = render(
       <CookingPreferencesSheet
         {...defaultProps}
@@ -203,15 +96,50 @@ describe('CookingPreferencesSheet', () => {
     rerender(
       <CookingPreferencesSheet {...defaultProps} initialValues={stored} />,
     );
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+
+  it('asks only for the longest cooking time', () => {
+    render(<CookingPreferencesSheet {...defaultProps} />);
+    expect(screen.getByText('Cooking Preferences')).toBeTruthy();
+    expect(screen.getAllByTestId(/^input-/)).toHaveLength(1);
+  });
+
+  it('saves a cook time typed in', async () => {
+    openWith({});
+    fireEvent.changeText(screen.getAllByTestId(/^input-/)[0]!, '40');
+
+    fireEvent.press(screen.getByTestId('save-btn'));
+    await drainTimers();
+
+    expect(defaultProps.onSave).toHaveBeenCalledWith({
+      maxCookTimeMinutes: 40,
+    });
+  });
+
+  // The API reads null as "clear it", so an emptied limit is removed, not kept.
+  it('clears a limit emptied from its stored value', async () => {
+    openWith({ maxCookTimeMinutes: 60 });
     fireEvent.changeText(screen.getByDisplayValue('60'), '');
 
     fireEvent.press(screen.getByTestId('save-btn'));
     await drainTimers();
 
     expect(defaultProps.onSave).toHaveBeenCalledWith({
-      maxPrepTimeMinutes: 45,
       maxCookTimeMinutes: null,
     });
+  });
+
+  it('sends nothing for a limit left blank', async () => {
+    openWith({});
+
+    fireEvent.press(screen.getByTestId('save-btn'));
+    await drainTimers();
+
+    expect(defaultProps.onSave).toHaveBeenCalledWith({});
   });
 
   it('renders without initial values', () => {

@@ -507,11 +507,8 @@
     }
   },
   "cuisineSelector": {
-    "title": "Cucine preferite",
-    "subtitle": "Seleziona le tue cucine preferite",
     "showAll": "Mostra tutte le cucine",
-    "showLess": "Mostra meno",
-    "addFailed": "Impossibile aggiungere la cucina"
+    "showLess": "Mostra meno"
   },
   "cuisines": {
     "AFRICAN": "Africana",

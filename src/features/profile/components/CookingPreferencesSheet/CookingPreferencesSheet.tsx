@@ -8,65 +8,31 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useStandardBottomSheet } from '#hooks/ui/useStandardBottomSheet';
 import { StyleSheet } from 'react-native-unistyles';
 import { FormInput } from '#components/atoms/FormInput';
-import { ModalPicker } from '#components/molecules/ModalPicker';
-import { AppPressable } from '#components/atoms/AppPressable';
 import { BottomSheetHeader } from '#components/molecules/BottomSheetHeader';
-import { SKILL_LEVELS, DIETARY_LIMITS, knownSkillLevel } from '#domain/dietary';
-import type { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
-import { Text } from '#components/atoms/Text';
-import { parseDecimalInput } from '#/utils/parseDecimalInput';
-import {
-  formatNumberForInput,
-  localizeNumericHint,
-} from '#/utils/formatters/number';
-import { profileTestIDs } from '#features/profile/testIDs';
+import { DIETARY_LIMITS } from '#domain/dietary';
 
 interface CookingPreferencesSheetProps {
   visible: boolean;
   onClose: () => void;
-  /** A field emptied from a stored value arrives as null, which clears it. */
-  onSave: (values: {
-    cookingSkillLevel?: CookingSkillLevel;
-    maxPrepTimeMinutes?: number | null;
-    maxCookTimeMinutes?: number | null;
-    budgetPerMeal?: number | null;
-  }) => Promise<boolean>;
-  initialValues?: {
-    cookingSkillLevel?: CookingSkillLevel | null;
-    maxPrepTimeMinutes?: number | null;
-    maxCookTimeMinutes?: number | null;
-    budgetPerMeal?: number | null;
-  };
+  /** An emptied limit arrives as null, which clears it. */
+  onSave: (values: { maxCookTimeMinutes?: number | null }) => Promise<boolean>;
+  initialValues?: { maxCookTimeMinutes?: number | null };
 }
 
+/** The longest cooking time the user wants, which Recipes' search filters by. */
 export const CookingPreferencesSheet: React.FC<
   CookingPreferencesSheetProps
 > = ({ visible, onClose, onSave, initialValues }) => {
   const { t } = useTranslation();
   const insets = useSafeAreaInsets();
 
-  // Standard bottom-sheet boilerplate (ref + modalProps + present/dismiss
-  // effect) is provided by useStandardBottomSheet.
   const { ref: bottomSheetRef, modalProps } = useStandardBottomSheet({
     visible,
     onDismiss: onClose,
-    snapPoints: ['65%'],
+    snapPoints: ['40%'],
   });
 
-  // Form state
-  const [skillLevel, setSkillLevel] = useState<CookingSkillLevel | null>(null);
-  const [skillPickerVisible, setSkillPickerVisible] = useState(false);
-
-  const skillLevelOptions = SKILL_LEVELS.map(level => ({
-    label: t(`cookingPreferences.skillLevels.${level}`),
-    value: level,
-  }));
-  const skillLevelLabel = skillLevel
-    ? t(`cookingPreferences.skillLevels.${skillLevel}`)
-    : t('cookingPreferences.selectSkillLevel');
-  const [prepTime, setPrepTime] = useState('');
   const [cookTime, setCookTime] = useState('');
-  const [budget, setBudget] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Reset form when modal opens (render-time conditional state update)
@@ -76,56 +42,12 @@ export const CookingPreferencesSheet: React.FC<
     setPrevVisible(visible);
     setPrevInitialValues(initialValues);
     if (visible) {
-      setSkillLevel(knownSkillLevel(initialValues?.cookingSkillLevel));
-      setPrepTime(initialValues?.maxPrepTimeMinutes?.toString() ?? '');
       setCookTime(initialValues?.maxCookTimeMinutes?.toString() ?? '');
-      setBudget(formatNumberForInput(initialValues?.budgetPerMeal));
     }
   }
 
   const handleSave = async () => {
-    const updates: {
-      cookingSkillLevel?: CookingSkillLevel;
-      maxPrepTimeMinutes?: number | null;
-      maxCookTimeMinutes?: number | null;
-      budgetPerMeal?: number | null;
-    } = {};
-    // A field left blank sends nothing; one emptied from a stored value clears it.
-    if (!prepTime && initialValues?.maxPrepTimeMinutes != null) {
-      updates.maxPrepTimeMinutes = null;
-    }
-    if (!cookTime && initialValues?.maxCookTimeMinutes != null) {
-      updates.maxCookTimeMinutes = null;
-    }
-    if (!budget && initialValues?.budgetPerMeal != null) {
-      updates.budgetPerMeal = null;
-    }
-
-    if (skillLevel) {
-      updates.cookingSkillLevel = skillLevel;
-    }
-
-    // Validate and add prep time if provided
-    if (prepTime) {
-      const prepTimeValue = parseInt(prepTime);
-      if (
-        isNaN(prepTimeValue) ||
-        prepTimeValue < DIETARY_LIMITS.prepTime.min ||
-        prepTimeValue > DIETARY_LIMITS.prepTime.max
-      ) {
-        alertService.alert(
-          t('labels.invalidInput'),
-          t('cookingPreferences.prepTimeRange', {
-            min: DIETARY_LIMITS.prepTime.min,
-            max: DIETARY_LIMITS.prepTime.max,
-          }),
-        );
-        return;
-      }
-      updates.maxPrepTimeMinutes = prepTimeValue;
-    }
-
-    // Validate and add cook time if provided
+    const updates: { maxCookTimeMinutes?: number | null } = {};
     if (cookTime) {
       const cookTimeValue = parseInt(cookTime);
       if (
@@ -143,26 +65,9 @@ export const CookingPreferencesSheet: React.FC<
         return;
       }
       updates.maxCookTimeMinutes = cookTimeValue;
-    }
-
-    // Validate and add budget if provided
-    if (budget) {
-      const budgetValue = parseDecimalInput(budget);
-      if (
-        isNaN(budgetValue) ||
-        budgetValue < DIETARY_LIMITS.budget.min ||
-        budgetValue > DIETARY_LIMITS.budget.max
-      ) {
-        alertService.alert(
-          t('labels.invalidInput'),
-          t('cookingPreferences.budgetRange', {
-            min: DIETARY_LIMITS.budget.min,
-            max: DIETARY_LIMITS.budget.max,
-          }),
-        );
-        return;
-      }
-      updates.budgetPerMeal = budgetValue;
+    } else if (initialValues?.maxCookTimeMinutes != null) {
+      // Left blank sends nothing; emptied from a stored limit, it clears it.
+      updates.maxCookTimeMinutes = null;
     }
 
     setSaving(true);
@@ -179,12 +84,6 @@ export const CookingPreferencesSheet: React.FC<
 
   return (
     <BottomSheetModal ref={bottomSheetRef} {...modalProps}>
-      {/*
-        The form variant, not the raw one. A sheet on
-        `BottomSheetScrollView` gets no `bottomOffset` and no input context,
-        so its three `FormInput`s resolved to the plain RN `TextInput` and the
-        sheet was blind to the keyboard.
-      */}
       <BottomSheetFormScrollView
         style={styles.scrollView}
         contentContainerStyle={[
@@ -193,7 +92,6 @@ export const CookingPreferencesSheet: React.FC<
         ]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <BottomSheetHeader
           contentPadding="md"
           title={t('labels.cookingPreferences')}
@@ -203,55 +101,6 @@ export const CookingPreferencesSheet: React.FC<
           confirmDisabled={saving}
         />
 
-        {/* Skill Level Picker — an in-app tray, not the platform Picker. On
-            Android the native dropdown is an Activity-themed DIALOG, so it
-            follows the OS `uiMode` and ignores the in-app theme entirely;
-            nothing reachable from RN retints it. `stackBehavior="push"` because
-            this opens from inside a sheet. */}
-        <View style={styles.section}>
-          <Text role="bodyStrong" style={styles.label}>
-            {t('cookingPreferences.skillLevel')}
-          </Text>
-          <AppPressable
-            haptic
-            testID={profileTestIDs.cookingPreferencesSkillLevelPicker}
-            style={styles.pickerContainer}
-            onPress={() => setSkillPickerVisible(true)}
-            accessibilityRole="button"
-            accessibilityLabel={t('cookingPreferences.skillLevel')}
-            accessibilityValue={{ text: skillLevelLabel }}
-          >
-            <Text role="body" tone={skillLevel ? 'accent' : 'tertiary'}>
-              {skillLevelLabel}
-            </Text>
-          </AppPressable>
-          <ModalPicker
-            label={t('cookingPreferences.skillLevel')}
-            visible={skillPickerVisible}
-            options={skillLevelOptions}
-            selected={skillLevel}
-            stackBehavior="push"
-            onSelect={value => {
-              setSkillLevel(value);
-              setSkillPickerVisible(false);
-            }}
-            onCancel={() => setSkillPickerVisible(false)}
-          />
-        </View>
-
-        {/* Max Prep Time */}
-        <View style={styles.section}>
-          <FormInput
-            label={t('cookingPreferences.maxPrepTime')}
-            value={prepTime}
-            onChangeText={setPrepTime}
-            keyboardType="number-pad"
-            placeholder={t('cookingPreferences.prepTimePlaceholder')}
-            useBottomSheetInput
-          />
-        </View>
-
-        {/* Max Cook Time */}
         <View style={styles.section}>
           <FormInput
             label={t('cookingPreferences.maxCookTime')}
@@ -259,20 +108,6 @@ export const CookingPreferencesSheet: React.FC<
             onChangeText={setCookTime}
             keyboardType="number-pad"
             placeholder={t('cookingPreferences.cookTimePlaceholder')}
-            useBottomSheetInput
-          />
-        </View>
-
-        {/* Budget per Meal */}
-        <View style={styles.section}>
-          <FormInput
-            label={t('cookingPreferences.budgetPerMeal')}
-            value={budget}
-            onChangeText={setBudget}
-            keyboardType="decimal-pad"
-            placeholder={localizeNumericHint(
-              t('cookingPreferences.budgetPlaceholder'),
-            )}
             useBottomSheetInput
           />
         </View>
@@ -290,19 +125,5 @@ const styles = StyleSheet.create(theme => ({
   },
   section: {
     marginBottom: theme.spacing.lg,
-  },
-  label: {
-    marginBottom: theme.spacing.sm,
-  },
-  pickerContainer: {
-    backgroundColor: theme.colors.surface,
-    borderRadius: theme.radii.md,
-    borderCurve: 'continuous',
-    borderWidth: theme.borderWidth.hairline,
-    borderColor: theme.colors.border,
-    overflow: 'hidden',
-    // The native Picker supplied its own row height; a Pressable does not.
-    paddingVertical: theme.spacing.md,
-    paddingHorizontal: theme.spacing.md,
   },
 }));

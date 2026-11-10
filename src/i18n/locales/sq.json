@@ -507,7 +507,6 @@
     "tapToEdit": "Trokit për ta modifikuar",
     "tapToViewDetails": "Trokit për të parë detajet",
     "templateName": "Emri i modelit",
-    "thisFieldIsRequired": "Kjo fushë është e detyrueshme",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
     "tips": "Këshilla",
     "stockValue": "Vlera e stokut",
@@ -689,10 +688,6 @@
       "shoppingList": "Lista",
       "mealPlan": "Vaktet"
     }
-  },
-  "numberInputSheet": {
-    "minError": "Vlera duhet të jetë të paktën {{min}}",
-    "maxError": "Vlera duhet të jetë më së shumti {{max}}"
   },
   "notFound": {
     "message": "Kjo pamje nuk ekziston. Kontrollo URL-në ose kthehu te një pamje e vlefshme.",

@@ -1,33 +1,22 @@
 import React, { useState } from 'react';
 import { View } from 'react-native';
-import { useMoney } from '#/domain/money';
 import { useTranslation } from '#/i18n';
-import { Pressable } from '#components/atoms/themedComponents';
 import { AppPressable } from '#components/atoms/AppPressable';
 import { alertService } from '#/services/alertService';
-import { StyleSheet, withUnistyles } from 'react-native-unistyles';
+import { StyleSheet } from 'react-native-unistyles';
 import Animated, { FadeIn, LinearTransition } from 'react-native-reanimated';
 
 import { SubScreen } from '#components/templates/SubScreen';
 import { useDietaryProfile } from '#features/profile/hooks/useDietaryProfile';
 import type {
-  CookingSkillLevel,
   Diet,
-  Cuisine,
   RestrictionKindInput,
 } from '#/graphql/generated/schemaTypes';
 import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { commonStyles } from '#/styles/commonStyles';
 import { Icon } from '#components/atoms/Icon';
-import { StringArrayManager } from '#features/profile/components/StringArrayManager/StringArrayManager';
-import { NumberInputSheet } from '#features/profile/components/NumberInputSheet/NumberInputSheet';
 import { InfoRow } from '#components/atoms/InfoRow';
-import { dietGroup, knownSkillLevel } from '#domain/dietary';
-
-const ThemedInfoRow = withUnistyles(InfoRow, theme => ({
-  iconColor: theme.colors.primaryText,
-}));
-import { CuisineSelector } from '#features/profile/components/CuisineSelector';
+import { dietGroup } from '#domain/dietary';
 import { ReligiousDietPicker } from '#features/profile/ui/ReligiousDietPicker';
 import { DietaryRestrictionSelector } from '#features/profile/components/DietaryRestrictionSelector';
 import type { RestrictionSectionItem } from '#features/profile/components/RestrictionSection/RestrictionSection';
@@ -42,7 +31,6 @@ import { DataStateView } from '#components/organisms/DataStateView';
 
 export const DietaryProfileScreen: React.FC = () => {
   const { t } = useTranslation();
-  const money = useMoney();
   const {
     editableProfile: profile,
     loading,
@@ -53,10 +41,6 @@ export const DietaryProfileScreen: React.FC = () => {
     removeDietaryRestriction,
   } = useDietaryProfile();
   const sharing = useDietarySharing();
-
-  // State for modals and editing
-  const [editingMeals, setEditingMeals] = useState(false);
-  const [editingSnacks, setEditingSnacks] = useState(false);
 
   const handleRemoveRestriction = ({ id, label }: RestrictionSectionItem) => {
     alertService.alert(
@@ -140,10 +124,7 @@ export const DietaryProfileScreen: React.FC = () => {
   const [editingCookingPrefs, setEditingCookingPrefs] = useState(false);
 
   const handleSaveCookingPrefs = async (values: {
-    cookingSkillLevel?: CookingSkillLevel;
-    maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
-    budgetPerMeal?: number | null;
   }) => {
     const success = await updateDietaryProfile(values);
     if (success) {
@@ -168,73 +149,11 @@ export const DietaryProfileScreen: React.FC = () => {
     return success;
   };
 
-  // Cuisine handlers
-  const handleAddCuisine = async (cuisine: Cuisine) => {
-    const currentCuisines = profile?.preferredCuisines ?? [];
-    return await updateDietaryProfile({
-      preferredCuisines: [...currentCuisines, cuisine],
-    });
-  };
-
-  const handleRemoveCuisine = async (cuisine: Cuisine) => {
-    const currentCuisines = profile?.preferredCuisines ?? [];
-    await updateDietaryProfile({
-      preferredCuisines: currentCuisines.filter(c => c !== cuisine),
-    });
-  };
-
-  // Ingredient handlers
-  const handleAddFavoriteIngredient = async (ingredient: string) => {
-    return await updateDietaryProfile({
-      favoriteIngredients: [
-        ...(profile?.favoriteIngredients ?? []),
-        ingredient,
-      ],
-    });
-  };
-
-  const handleRemoveFavoriteIngredient = async (ingredient: string) => {
-    await updateDietaryProfile({
-      favoriteIngredients: (profile?.favoriteIngredients ?? []).filter(
-        i => i !== ingredient,
-      ),
-    });
-  };
-
-  const handleAddDislikedIngredient = async (ingredient: string) => {
-    return await updateDietaryProfile({
-      dislikedIngredients: [
-        ...(profile?.dislikedIngredients ?? []),
-        ingredient,
-      ],
-    });
-  };
-
-  const handleRemoveDislikedIngredient = async (ingredient: string) => {
-    await updateDietaryProfile({
-      dislikedIngredients: (profile?.dislikedIngredients ?? []).filter(
-        i => i !== ingredient,
-      ),
-    });
-  };
-
   // Modal handlers
-  const handleOpenMeals = () => setEditingMeals(true);
-  const handleCloseMeals = () => setEditingMeals(false);
-  const handleOpenSnacks = () => setEditingSnacks(true);
-  const handleCloseSnacks = () => setEditingSnacks(false);
   const handleOpenCookingPrefs = () => setEditingCookingPrefs(true);
   const handleCloseCookingPrefs = () => setEditingCookingPrefs(false);
   const handleOpenMacros = () => setEditingMacros(true);
   const handleCloseMacros = () => setEditingMacros(false);
-
-  const handleSaveMeals = async (value: number) => {
-    return await updateDietaryProfile({ mealsPerDay: value });
-  };
-
-  const handleSaveSnacks = async (value: number) => {
-    return await updateDietaryProfile({ snacksPerDay: value });
-  };
 
   // Gate on "nothing to show", not on `loading` — `cache-and-network` reports
   // `loading: true` for the whole network leg on every mount, so a bare
@@ -272,7 +191,6 @@ export const DietaryProfileScreen: React.FC = () => {
     profile.carbsTarget,
     profile.fatTarget,
   ].some(target => !!target);
-  const skillLevel = knownSkillLevel(profile.cookingSkillLevel);
 
   return (
     <SubScreen title={t('dietary.title')}>
@@ -320,87 +238,9 @@ export const DietaryProfileScreen: React.FC = () => {
           </View>
         </Animated.View>
       )}
-      {/* Food Preferences Section */}
-      <Animated.View
-        entering={FadeIn.duration(motion.timing.SLOW).delay(100)}
-        layout={LinearTransition}
-        style={styles.sectionContainer}
-      >
-        <Text role="bodyStrong" tone="secondary">
-          {t('dietary.foodPreferences')}
-        </Text>
-        <View style={styles.sectionCard}>
-          <CuisineSelector
-            selectedCuisines={profile.preferredCuisines}
-            onAdd={handleAddCuisine}
-            onRemove={handleRemoveCuisine}
-          />
-
-          <StringArrayManager
-            title={t('dietary.favoriteIngredients')}
-            items={profile.favoriteIngredients}
-            onAdd={handleAddFavoriteIngredient}
-            onRemove={handleRemoveFavoriteIngredient}
-            inputPlaceholder={t('dietary.favoriteIngredientsPlaceholder')}
-            addButtonLabel={t('dietary.favoriteIngredientsAdd')}
-            emptyMessage={t('dietary.favoriteIngredientsEmpty')}
-            containerStyle={styles.ingredientsContainer}
-          />
-
-          <StringArrayManager
-            title={t('dietary.dislikedIngredients')}
-            items={profile.dislikedIngredients}
-            onAdd={handleAddDislikedIngredient}
-            onRemove={handleRemoveDislikedIngredient}
-            inputPlaceholder={t('dietary.dislikedIngredientsPlaceholder')}
-            addButtonLabel={t('dietary.dislikedIngredientsAdd')}
-            emptyMessage={t('dietary.dislikedIngredientsEmpty')}
-            containerStyle={styles.ingredientsContainer}
-          />
-        </View>
-      </Animated.View>
-      {/* Nutrition Goals Section */}
-      <Animated.View
-        entering={FadeIn.duration(motion.timing.SLOW).delay(200)}
-        layout={LinearTransition}
-        style={styles.sectionContainer}
-      >
-        <Text role="bodyStrong" tone="secondary">
-          {t('dietary.nutritionGoals')}
-        </Text>
-        <View style={styles.sectionCard}>
-          <Pressable
-            style={({ pressed }) => pressed && styles.pressed}
-            onPress={handleOpenMeals}
-            accessibilityLabel={t('a11y.editNamed', {
-              name: t('dietary.mealsPerDay'),
-            })}
-          >
-            <ThemedInfoRow
-              label={t('dietary.mealsPerDay')}
-              value={profile.mealsPerDay}
-              icon="create-outline"
-            />
-          </Pressable>
-          <Pressable
-            style={({ pressed }) => pressed && styles.pressed}
-            onPress={handleOpenSnacks}
-            accessibilityLabel={t('a11y.editNamed', {
-              name: t('dietary.snacksPerDay'),
-            })}
-          >
-            <ThemedInfoRow
-              label={t('dietary.snacksPerDay')}
-              value={profile.snacksPerDay}
-              showBorder={false}
-              icon="create-outline"
-            />
-          </Pressable>
-        </View>
-      </Animated.View>
       {/* Cooking Preferences Section */}
       <Animated.View
-        entering={FadeIn.duration(motion.timing.SLOW).delay(300)}
+        entering={FadeIn.duration(motion.timing.SLOW).delay(100)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -419,39 +259,23 @@ export const DietaryProfileScreen: React.FC = () => {
               <Icon name="create-outline" size={20} tone="primary" />
             </AppPressable>
           </View>
-          {!!skillLevel && (
-            <InfoRow
-              label={t('dietary.skillLevel')}
-              value={t(`cookingPreferences.skillLevels.${skillLevel}`)}
-            />
-          )}
-          {!!profile.maxPrepTimeMinutes && (
-            <InfoRow
-              label={t('dietary.maxPrepTime')}
-              value={profile.maxPrepTimeMinutes}
-              unit={t('dietary.minutes')}
-            />
-          )}
-          {!!profile.maxCookTimeMinutes && (
+          {profile.maxCookTimeMinutes ? (
             <InfoRow
               label={t('labels.maxCookTime')}
               value={profile.maxCookTimeMinutes}
               unit={t('dietary.minutes')}
-            />
-          )}
-          {!!profile.budgetPerMeal && (
-            <InfoRow
-              label={t('dietary.budgetPerMeal')}
-              value={profile.budgetPerMeal}
-              formatter={val => money(Number(val))}
               showBorder={false}
             />
+          ) : (
+            <Text role="caption" tone="secondary">
+              {t('dietary.cookTimeEmpty')}
+            </Text>
           )}
         </View>
       </Animated.View>
       {/* Macro Targets Section (Advanced) */}
       <Animated.View
-        entering={FadeIn.duration(motion.timing.SLOW).delay(400)}
+        entering={FadeIn.duration(motion.timing.SLOW).delay(150)}
         layout={LinearTransition}
         style={styles.sectionContainer}
       >
@@ -506,38 +330,12 @@ export const DietaryProfileScreen: React.FC = () => {
           )}
         </View>
       </Animated.View>
-      {/* Nutrition Goals Sheets */}
-      <NumberInputSheet
-        visible={editingMeals}
-        title={t('dietary.mealsPerDayTitle')}
-        value={profile.mealsPerDay}
-        onSave={handleSaveMeals}
-        onClose={handleCloseMeals}
-        min={1}
-        max={6}
-        placeholder={t('dietary.mealsPlaceholder')}
-      />
-      <NumberInputSheet
-        visible={editingSnacks}
-        title={t('dietary.snacksPerDayTitle')}
-        value={profile.snacksPerDay}
-        onSave={handleSaveSnacks}
-        onClose={handleCloseSnacks}
-        min={0}
-        max={5}
-        placeholder={t('labels.eG2')}
-      />
       {/* Cooking Preferences Sheet */}
       <CookingPreferencesSheet
         visible={editingCookingPrefs}
         onClose={handleCloseCookingPrefs}
         onSave={handleSaveCookingPrefs}
-        initialValues={{
-          cookingSkillLevel: profile.cookingSkillLevel,
-          maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
-          maxCookTimeMinutes: profile.maxCookTimeMinutes,
-          budgetPerMeal: profile.budgetPerMeal,
-        }}
+        initialValues={{ maxCookTimeMinutes: profile.maxCookTimeMinutes }}
       />
       {/* Macro Targets Sheet */}
       <MacroTargetsSheet
@@ -577,12 +375,6 @@ const styles = StyleSheet.create(theme => ({
   },
   editButton: {
     padding: theme.spacing.xs,
-  },
-  pressed: {
-    opacity: theme.opacity.pressed,
-  },
-  ingredientsContainer: {
-    marginTop: theme.spacing.md,
   },
 }));
 

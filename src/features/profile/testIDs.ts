@@ -33,8 +33,6 @@ export const profileTestIDs = {
   avoidCandidate: (itemId: string) => `dietary-avoid-candidate-${itemId}`,
   settingsShareUsageDataSwitch: 'settings-share-usage-data-switch',
 
-  cookingPreferencesSkillLevelPicker: 'cooking-preferences-skill-level-picker',
-
   /** A reason in the report sheet, by its `ReportType` value. */
   reportReason: (type: string) => `report-reason-${type}`,
   reportDescriptionInput: 'report-description-input',

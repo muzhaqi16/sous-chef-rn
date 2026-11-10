@@ -15,8 +15,6 @@ import {
   type GetDietaryProfileQuery,
 } from '#operations/user/user.generated';
 import {
-  CookingSkillLevel,
-  Cuisine,
   Diet,
   ErrorCode,
   Intolerance,
@@ -48,19 +46,12 @@ const mockProfileData: MockPart<DietaryProfile> = {
   __typename: 'DietaryProfile',
   id: 'dp-1',
   userId: 'user-1',
-  preferredCuisines: [Cuisine.Italian],
-  dislikedIngredients: ['cilantro'],
-  favoriteIngredients: ['garlic'],
   calorieTarget: 2000,
   proteinTarget: 50,
   carbsTarget: 250,
   fatTarget: 65,
-  mealsPerDay: 3,
-  snacksPerDay: 1,
-  cookingSkillLevel: CookingSkillLevel.Intermediate,
-  maxPrepTimeMinutes: 30,
+  cooksFor: 2,
   maxCookTimeMinutes: 60,
-  budgetPerMeal: 15,
   createdAt: '2025-01-01T00:00:00.000Z',
   updatedAt: '2025-01-01T00:00:00.000Z',
   restrictions: [
@@ -178,7 +169,7 @@ describe('useDietaryProfile', () => {
     expect(result.current.profile?.id).toBe('dp-1');
     expect(result.current.profile?.userId).toBe('user-1');
     expect(result.current.profile?.restrictions).toHaveLength(1);
-    expect(result.current.profile?.preferredCuisines).toEqual(['ITALIAN']);
+    expect(result.current.profile?.maxCookTimeMinutes).toBe(60);
   });
 
   it('returns loading state', () => {
@@ -211,9 +202,6 @@ describe('useDietaryProfile', () => {
     expect(result.current.profile).toBeNull();
     expect(result.current.editableProfile).toMatchObject({
       restrictions: [],
-      mealsPerDay: 3,
-      snacksPerDay: 1,
-      maxPrepTimeMinutes: 45,
       maxCookTimeMinutes: 60,
     });
   });
@@ -363,7 +351,7 @@ describe('useDietaryProfile', () => {
       data: {
         updateDietaryProfile: {
           __typename: 'UpdateDietaryProfilePayload',
-          dietaryProfile: { ...mockProfileData, mealsPerDay: 4 },
+          dietaryProfile: { ...mockProfileData, cooksFor: 4 },
         },
       },
     });
@@ -377,7 +365,7 @@ describe('useDietaryProfile', () => {
     let success: boolean = false;
     success = await drained(() =>
       result.current.updateDietaryProfile({
-        mealsPerDay: 4,
+        cooksFor: 4,
         calorieTarget: null,
         maxCookTimeMinutes: null,
       }),
@@ -386,7 +374,7 @@ describe('useDietaryProfile', () => {
     expect(success).toBe(true);
     expect(updated.fired).toHaveLength(1);
     expect(inputOf(updated.fired[0]!)).toEqual({
-      mealsPerDay: 4,
+      cooksFor: 4,
       calorieTarget: null,
       maxCookTimeMinutes: null,
     });
@@ -417,7 +405,7 @@ describe('useDietaryProfile', () => {
 
     let success = true;
     success = await drained(() =>
-      result.current.updateDietaryProfile({ mealsPerDay: 5 }),
+      result.current.updateDietaryProfile({ cooksFor: 5 }),
     );
 
     expect(success).toBe(false);
@@ -428,7 +416,7 @@ describe('useDietaryProfile', () => {
     );
     // The permanent local write is reverted.
     await drainTimers();
-    expect(result.current.profile?.mealsPerDay).toBe(3);
+    expect(result.current.profile?.cooksFor).toBe(2);
   });
 
   // Both callers alert on the false return, and a bulk add would stack one

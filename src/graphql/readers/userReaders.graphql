@@ -6,19 +6,12 @@ fragment UserReaders on User {
   }
   dietaryProfile {
     id
-    budgetPerMeal
     calorieTarget
     carbsTarget
-    cookingSkillLevel
     cooksFor
     createdAt
-    dislikedIngredients
     fatTarget
-    favoriteIngredients
     maxCookTimeMinutes
-    maxPrepTimeMinutes
-    mealsPerDay
-    preferredCuisines
     proteinTarget
     religiousDiet
     restrictions {
@@ -36,7 +29,6 @@ fragment UserReaders on User {
       religiousDiet
       severity
     }
-    snacksPerDay
     updatedAt
     userId
   }

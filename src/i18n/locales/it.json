@@ -507,7 +507,6 @@
     "tapToEdit": "Tocca per modificare",
     "tapToViewDetails": "Tocca per vedere i dettagli",
     "templateName": "Nome del modello",
-    "thisFieldIsRequired": "Questo campo è obbligatorio",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
     "tips": "Consigli",
     "stockValue": "Valore delle scorte",
@@ -689,10 +688,6 @@
       "shoppingList": "Lista",
       "mealPlan": "Pasti"
     }
-  },
-  "numberInputSheet": {
-    "minError": "Il valore deve essere almeno {{min}}",
-    "maxError": "Il valore deve essere al massimo {{max}}"
   },
   "notFound": {
     "message": "Questa schermata non esiste. Controlla l'URL o torna a una schermata valida.",

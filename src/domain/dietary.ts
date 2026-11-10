@@ -1,7 +1,6 @@
 import type { TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import {
-  CookingSkillLevel,
   Diet,
   DietaryAlertState,
   HealthGoal,
@@ -71,27 +70,8 @@ export const oneDietPerGroup = (diets: readonly Diet[]): Diet[] =>
     [],
   );
 
-/** Least to most experienced — the picker's order, which the enum's is not. */
-export const SKILL_LEVELS: readonly CookingSkillLevel[] = [
-  CookingSkillLevel.Beginner,
-  CookingSkillLevel.Intermediate,
-  CookingSkillLevel.Advanced,
-  CookingSkillLevel.Expert,
-];
-
-/**
- * A stored level this build can word. A cache persisted before the enum holds
- * the Title-case string it replaced until the profile is refetched.
- */
-export const knownSkillLevel = (
-  value: string | null | undefined,
-): CookingSkillLevel | null =>
-  SKILL_LEVELS.find(level => level === value) ?? null;
-
 export const DIETARY_LIMITS = {
-  prepTime: { min: 0, max: 480 },
   cookTime: { min: 0, max: 480 },
-  budget: { min: 0, max: 1000 },
   calories: { min: 0, max: 10000 },
   protein: { min: 0, max: 500 },
   carbs: { min: 0, max: 1000 },

@@ -507,11 +507,8 @@
     }
   },
   "cuisineSelector": {
-    "title": "Preferred Cuisines",
-    "subtitle": "Select your favorite cuisines",
     "showAll": "Show All Cuisines",
-    "showLess": "Show Less",
-    "addFailed": "Failed to add cuisine"
+    "showLess": "Show Less"
   },
   "cuisines": {
     "AFRICAN": "African",

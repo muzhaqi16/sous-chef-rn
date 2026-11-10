@@ -507,7 +507,6 @@
     "tapToEdit": "Tap to edit",
     "tapToViewDetails": "Tap to view details",
     "templateName": "Template Name",
-    "thisFieldIsRequired": "This field is required",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "This item isn't in the catalog any more — it may have been removed.",
     "tips": "Tips",
     "stockValue": "Stock value",
@@ -689,10 +688,6 @@
       "shoppingList": "List",
       "mealPlan": "Meal Plan"
     }
-  },
-  "numberInputSheet": {
-    "minError": "Value must be at least {{min}}",
-    "maxError": "Value must be at most {{max}}"
   },
   "notFound": {
     "message": "This screen doesn't exist. Please check the URL or navigate back to a valid screen.",
