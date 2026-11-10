@@ -68,7 +68,7 @@ export type DietaryProfileValues = Omit<DietaryProfileData, 'id' | 'userId'>;
 /** What the server creates a profile with (`DietaryProfileRepository`). */
 const DIETARY_PROFILE_DEFAULTS: DietaryProfileValues = {
   restrictions: [],
-  maxCookTimeMinutes: 60,
+  maxCookTimeMinutes: null,
   religiousDiet: null,
 };
 

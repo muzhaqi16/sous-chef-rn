@@ -202,7 +202,7 @@ describe('useDietaryProfile', () => {
     expect(result.current.profile).toBeNull();
     expect(result.current.editableProfile).toMatchObject({
       restrictions: [],
-      maxCookTimeMinutes: 60,
+      maxCookTimeMinutes: null,
     });
   });
 
