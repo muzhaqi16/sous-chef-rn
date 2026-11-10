@@ -1,6 +1,6 @@
 {
   "name": "sous-chef-app",
-  "version": "4.9.3",
+  "version": "4.10.0",
   "private": true,
   "scripts": {
     "android": "bash scripts/run-android.sh",
