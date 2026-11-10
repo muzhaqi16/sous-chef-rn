@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   storeChoiceKey,
   type PlaceChoice,
@@ -55,19 +55,36 @@ export function useStorePicks({
     });
   };
 
+  // The stores this visit made, by the name or place that made them: taken
+  // back and added again, a row reuses its store rather than making another.
+  const madeRef = useRef(new Map<string, StoreChoice>());
+  const made = async (
+    key: string,
+    create: () => Promise<StoreChoice | null>,
+  ): Promise<StoreChoice | null> => {
+    const known = madeRef.current.get(key);
+    if (known) return known;
+    const created = await create();
+    if (created) madeRef.current.set(key, created);
+    return created;
+  };
+
   // A name alone with this home is the household's own label; a later receipt
   // from the same shop turns it into the real store. A place the search has
   // lost, or a search that is down, still adds by its name.
   const storeFor = async (tapped: Tapped): Promise<StoreChoice | null> => {
     if ('unlisted' in tapped) {
-      const created = await createStore({ name: tapped.unlisted, homeId });
-      return created ? { store: created } : null;
+      return made(unlistedKey(tapped.unlisted), async () => {
+        const created = await createStore({ name: tapped.unlisted, homeId });
+        return created ? { store: created } : null;
+      });
     }
     if (!('place' in tapped)) return tapped;
-    const created = await createStoreFromPlace(tapped.place.id);
-    return created
-      ? { store: created }
-      : storeFor({ unlisted: tapped.place.name });
+    const fromPlace = await made(`place:${tapped.place.id}`, async () => {
+      const created = await createStoreFromPlace(tapped.place.id);
+      return created ? { store: created } : null;
+    });
+    return fromPlace ?? storeFor({ unlisted: tapped.place.name });
   };
 
   // Settling too: a second tap would add twice and go back twice.

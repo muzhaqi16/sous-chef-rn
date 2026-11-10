@@ -561,7 +561,7 @@ describe('StorePickerScreen', () => {
       expect(offersNoTap(row)).toBe(true);
     });
 
-    it('adds a typed name once, and takes it back on a second tap', async () => {
+    it('adds a typed name once, takes it back on a second tap, and reuses it on a third', async () => {
       const api = householdApi();
       const create = recordMock(CreateStoreDocument, {
         dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => {
@@ -605,6 +605,17 @@ describe('StorePickerScreen', () => {
       expect(
         screen.getByText("Not listed? Add “Pete's Corner Market”"),
       ).toBeTruthy();
+
+      // Added again, it is the same store: no second one is made.
+      fireEvent.press(
+        screen.getByText("Not listed? Add “Pete's Corner Market”"),
+      );
+      await answered(AddUsualStoreDocument, 2);
+      expect(create.fired).toHaveLength(1);
+      expect(api.add.fired.map(storeIdOf)).toEqual([
+        String(inputOf(create.fired[0] ?? {}).id),
+        String(inputOf(create.fired[0] ?? {}).id),
+      ]);
     });
 
     it('sends nothing for a second tap while a place is becoming a store', async () => {
