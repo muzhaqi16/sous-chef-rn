@@ -44,13 +44,20 @@ describe('a suggestion card for a new pantry', () => {
     expect(item?.badge).toBeUndefined();
   });
 
-  it('calls a recipe two short ready to cook, with the share held', () => {
-    const item = card(suggestion(40, 2, ['eggs', 'cheddar']));
+  it('calls a recipe half held ready to cook, with the share held', () => {
+    const item = card(suggestion(60, 3, ['eggs', 'cheddar']));
 
     expect(item?.subtitle).toContain(t('recipes.readyToCook'));
     expect(item?.badge?.text).toBe(
-      t('recipes.pantryCoverage', { percent: 40 }),
+      t('recipes.pantryCoverage', { percent: 60 }),
     );
+  });
+
+  it('calls a recipe two short ready to cook, with no share under half', () => {
+    const item = card(suggestion(33, 2, ['lemon']));
+
+    expect(item?.subtitle).toContain(t('recipes.readyToCook'));
+    expect(item?.badge).toBeUndefined();
   });
 
   it('names no tier for a recipe that uses nothing held', () => {

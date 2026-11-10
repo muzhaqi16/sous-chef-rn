@@ -4,14 +4,15 @@ import { READY_COVERAGE } from '#domain/recipeCoverage';
 
 /**
  * How much of a recipe the pantries hold, as a card's badge: only on a recipe
- * ready to cook, so a thin match never reads as a success.
+ * ready to cook, and never under half, so a thin match never reads as a
+ * success. A recipe ready by being two short says so without a share.
  */
 export const coverageBadge = (
   percent: number,
   translate: Translate,
-  ready = percent >= READY_COVERAGE,
+  ready = true,
 ): BadgeContent | undefined =>
-  ready
+  ready && percent >= READY_COVERAGE
     ? {
         text: translate('recipes.pantryCoverage', { percent }),
         lines: [
