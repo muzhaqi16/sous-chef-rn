@@ -1,13 +1,13 @@
 # The pantry's dated stock that expires first, for the notification ask to
 # name. `expiringSoon` with a wide horizon keeps undated stock out of the page.
-query SoonestDatedItem($pantryId: ID!) {
+query SoonestDatedItem($pantryId: ID!, $today: LocalDate!) {
   pantry(id: $pantryId) {
     version
     id
     itemsConnection(
       first: 1
       orderBy: { expiresOn: ASC }
-      filters: { expiringSoon: true, expirationDays: 3650 }
+      filters: { expiringSoon: true, expirationDays: 3650, today: $today }
     ) {
       edges {
         node {

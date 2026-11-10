@@ -1479,10 +1479,10 @@
       "body": "query SignedInEmailVerification {\n  me {\n    id\n    emailVerified\n    __typename\n  }\n}"
     },
     {
-      "id": "b79c325805a80705a8f18123ddd6154e8cf801862b3c5207441311fb52940567",
+      "id": "7adf243ca0e2975fec04d91f1c20e9192a48f111d7ad543fbdcaf4c812efc4f8",
       "name": "SoonestDatedItem",
       "type": "query",
-      "body": "query SoonestDatedItem($pantryId: ID!) {\n  pantry(id: $pantryId) {\n    version\n    id\n    itemsConnection(\n      first: 1\n      orderBy: {expiresOn: ASC}\n      filters: {expiringSoon: true, expirationDays: 3650}\n    ) {\n      edges {\n        node {\n          version\n          id\n          expiresOn\n          item {\n            version\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
+      "body": "query SoonestDatedItem($pantryId: ID!, $today: LocalDate!) {\n  pantry(id: $pantryId) {\n    version\n    id\n    itemsConnection(\n      first: 1\n      orderBy: {expiresOn: ASC}\n      filters: {expiringSoon: true, expirationDays: 3650, today: $today}\n    ) {\n      edges {\n        node {\n          version\n          id\n          expiresOn\n          item {\n            version\n            id\n            name\n            __typename\n          }\n          __typename\n        }\n        __typename\n      }\n      pageInfo {\n        hasNextPage\n        endCursor\n        __typename\n      }\n      __typename\n    }\n    __typename\n  }\n}"
     },
     {
       "id": "0249eb8535955b622ad637a5972adb1f82518ae514a5771ca9b16d8c4c9c02db",

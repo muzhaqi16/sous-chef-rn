@@ -1,5 +1,6 @@
 import { skipToken, useQuery } from '@apollo/client/react';
 import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
+import { useToday } from '#hooks/app/useToday';
 import { SoonestDatedItemDocument } from './useSoonestDatedItem.generated';
 
 /**
@@ -10,10 +11,11 @@ export function useSoonestDatedItem(
   pantryId: string | null | undefined,
   { skip = false }: { skip?: boolean } = {},
 ): string | null {
+  const today = useToday();
   const { data, error } = useQuery(
     SoonestDatedItemDocument,
     pantryId && !skip
-      ? { variables: { pantryId }, fetchPolicy: 'cache-and-network' }
+      ? { variables: { pantryId, today }, fetchPolicy: 'cache-and-network' }
       : skipToken,
   );
   useApolloErrorLogger(SoonestDatedItemDocument, error);
