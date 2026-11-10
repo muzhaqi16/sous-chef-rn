@@ -26,6 +26,9 @@ import {
   useTutorialSequence,
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
+import { useTutorialSession } from '#hooks/ui/tutorialSession';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { GUIDE_TOURS } from '#domain/guides';
 import { Telemetry } from '#services/telemetry';
 import { useStore } from '#store';
 import { usePantryScreen } from '#features/pantry/screens/usePantryScreen';
@@ -275,6 +278,12 @@ function PantryMainContent({
     height: number;
   } | null>(null);
   const { addButtonRect, isOverlayOpen } = useTabBarState();
+  // "Stock your pantry", started from Today's Getting started card. While it
+  // runs, the screen's own tour waits.
+  const stockGuideStarted = useTutorialSession().startedGuides.has(
+    GUIDE_TOURS.stock,
+  );
+  const offline = useIsApiUnavailable();
 
   const tutorial = useTutorialSequence({
     steps: buildPantryTutorialSteps(t),
@@ -283,7 +292,7 @@ function PantryMainContent({
       addButton: addButtonRect,
     },
     canStart: canStartTutorial,
-    isPaused: !isPantryFocused || isOverlayOpen,
+    isPaused: !isPantryFocused || isOverlayOpen || stockGuideStarted,
   });
 
   const tutorialTargetActions: Record<number, () => void> = {
@@ -378,6 +387,26 @@ function PantryMainContent({
 
   const coachStep = tutorial.currentStep;
 
+  const stockGuide = useTutorialSequence({
+    tourId: GUIDE_TOURS.stock,
+    steps: [
+      {
+        featureId: 'stock_guide_receipt',
+        title: t('labels.scanReceipt'),
+        // Reading a receipt is the server's.
+        subtitle: offline
+          ? t('pantryScreen.stockGuideOffline')
+          : t('pantryScreen.stockGuideSubtitle'),
+        rectKey: 'addButton',
+        when: () => canAdd,
+      },
+    ],
+    targetRects: { addButton: addButtonRect },
+    canStart: stockGuideStarted,
+    isPaused: !isPantryFocused || isOverlayOpen,
+  });
+  const stockStep = stockGuide.currentStep;
+
   return (
     <Screen testID={pantryTestIDs.screen} scroll="list" gutter="none">
       <PantryContent
@@ -438,7 +467,19 @@ function PantryMainContent({
         onClose={onOverlayClose}
       />
       {/* Tutorial spotlight coach-marks */}
-      {coachStep ? (
+      {stockStep ? (
+        <SpotlightCoachMark
+          targetRect={stockStep.targetRect}
+          title={stockStep.title}
+          subtitle={stockStep.subtitle}
+          onDismiss={stockGuide.skipAll}
+          onClose={stockGuide.pause}
+          onTargetPress={() => {
+            if (!offline) toReceiptScan();
+            stockGuide.advance();
+          }}
+        />
+      ) : coachStep ? (
         <SpotlightCoachMark
           targetRect={coachStep.targetRect}
           title={coachStep.title}

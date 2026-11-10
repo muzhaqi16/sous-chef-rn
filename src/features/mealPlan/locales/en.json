@@ -20,7 +20,10 @@
     "addNeedsPlan": "Create a meal plan first, then add meals to it.",
     "noAddPermission": "You can view this plan but not add meals to it.",
     "needsTheTemplate": "Open the template first so its meals are available.",
-    "daily": "Daily"
+    "daily": "Daily",
+    "guideCreateTitle": "Start a plan",
+    "guideCreateSubtitle": "A plan holds a week of meals. Start one, then put meals on its days.",
+    "guideAddSubtitle": "Tap + to put a meal on a day of your plan."
   },
   "addMealSheet": {
     "searchPlaceholder": "Search recipes or add a custom meal...",

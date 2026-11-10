@@ -399,7 +399,9 @@
       "per": "Per {{amount}} di {{name}}",
       "inPantry": "Nella tua dispensa",
       "partlyInPantry": "In parte nella tua dispensa"
-    }
+    },
+    "cookGuideSuggestions": "Ricette con quello che hai, prima con ciò che scade prima. Aprine una per cucinarla.",
+    "cookGuideOffline": "Le ricette dalla dispensa richiedono una connessione. Compariranno qui quando sarai di nuovo online."
   },
   "recipeFilters": {
     "title": "Filtri",

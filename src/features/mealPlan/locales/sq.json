@@ -20,7 +20,10 @@
     "addNeedsPlan": "Krijo fillimisht një plan vaktesh, pastaj shto vaktet.",
     "noAddPermission": "Mund ta shohësh këtë plan, por jo t'i shtosh vakte.",
     "needsTheTemplate": "Hap fillimisht modelin, që vaktet e tij të jenë të disponueshme.",
-    "daily": "Ditor"
+    "daily": "Ditor",
+    "guideCreateTitle": "Nis një plan",
+    "guideCreateSubtitle": "Një plan mban vaktet e një jave. Nis një, pastaj vendos vakte në ditët e tij.",
+    "guideAddSubtitle": "Prek + për të vendosur një vakt në një ditë të planit."
   },
   "addMealSheet": {
     "searchPlaceholder": "Kërko receta ose shto një vakt të personalizuar...",

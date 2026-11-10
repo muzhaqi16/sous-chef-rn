@@ -3,6 +3,9 @@
 import React from 'react';
 import { render, userEvent, act, within } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
@@ -277,6 +280,31 @@ describe('RecipeMain', () => {
     mockItemListImpl = (props: ItemListMockProps) =>
       props.ListHeaderComponent ?? null;
     mockScreenWith({});
+  });
+
+  it('Cook from your pantry: started from the card, it leads to the pantry’s recipes while the own tour waits', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    act(() => tutorialSession.startGuide(GUIDE_TOURS.cook));
+
+    render(<RecipeMain />);
+
+    const calls = jest
+      .mocked(useTutorialSequence)
+      .mock.calls.map(([options]) => options);
+    const guide = calls.filter(o => o.tourId === GUIDE_TOURS.cook).pop();
+    expect(guide?.canStart).toBe(true);
+    expect(guide?.steps.map(step => step.rectKey)).toEqual([
+      'discoveryHeader',
+      'pantryButton',
+    ]);
+    expect(calls.filter(o => o.tourId === undefined).pop()?.isPaused).toBe(
+      true,
+    );
+    act(() => tutorialSession.endGuide(GUIDE_TOURS.cook));
   });
 
   it('renders the outer component with fallback', () => {

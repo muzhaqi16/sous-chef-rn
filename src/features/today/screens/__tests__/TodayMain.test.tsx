@@ -16,6 +16,8 @@ import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { todayTestIDs } from '#features/today/testIDs';
 import { useTodayOverview } from '../useTodayOverview';
 import { useGettingStarted } from '#features/today/hooks/useGettingStarted';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { TodayMain } from '../TodayMain';
 
 const mockNavigation = {
@@ -259,12 +261,14 @@ describe('Getting started', () => {
     expect(screen.queryByTestId(todayTestIDs.statCard('expired'))).toBeNull();
   });
 
-  it('opens the List tab for "Shop from your list"', () => {
+  it('Shop from your list: opens the List tab with its guide started', () => {
     jest.mocked(useGettingStarted).mockReturnValue({ card, hide: jest.fn() });
+    const startGuide = jest.spyOn(tutorialSession, 'startGuide');
     renderToday();
 
     fireEvent.press(screen.getByTestId(todayTestIDs.gettingStartedStart));
 
+    expect(startGuide).toHaveBeenCalledWith(GUIDE_TOURS.shop);
     expect(mockNavigation.toShoppingListMain).toHaveBeenCalledTimes(1);
   });
 });

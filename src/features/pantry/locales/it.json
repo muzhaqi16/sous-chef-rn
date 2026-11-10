@@ -308,7 +308,9 @@
     "tutorialAddItemsTitle": "Aggiungi articoli rapidamente",
     "tutorialAddItemsSubtitle": "Tocca + per aggiungere articoli alla tua dispensa",
     "outOfStock": "Esaurito",
-    "runningLow": "Sta finendo"
+    "runningLow": "Sta finendo",
+    "stockGuideSubtitle": "Tocca + e scansiona uno scontrino recente: ciò che hai comprato va dritto in dispensa.",
+    "stockGuideOffline": "Scansionare uno scontrino richiede una connessione. Riprova quando sarai di nuovo online."
   },
   "storageState": {
     "AMBIENT": "Temperatura ambiente",

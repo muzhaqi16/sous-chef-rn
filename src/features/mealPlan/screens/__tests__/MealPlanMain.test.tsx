@@ -1,11 +1,14 @@
 'use no memo';
 
 import React from 'react';
-import { fireEvent, render } from '@testing-library/react-native';
+import { act, fireEvent, render } from '@testing-library/react-native';
 import { View as HeaderHost } from 'react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { t } from '#/i18n';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { MealPlanMain } from '../MealPlanMain';
 import { mealPlanTestIDs } from '#features/mealPlan/testIDs';
 import { MealType } from '#/graphql/generated/schemaTypes';
@@ -25,10 +28,23 @@ jest.mock('#hooks/navigation/useTabBarAddMenu', () => ({
   useTabBarAddMenu: jest.fn(),
 }));
 
+jest.mock('#hooks/ui/useTutorialSequence', () => ({
+  useTutorialSequence: jest.fn(() => ({
+    currentStep: null,
+    inlineStep: null,
+    activeRectKey: null,
+    advance: jest.fn(),
+    advanceInPlace: jest.fn(),
+    skipAll: jest.fn(),
+    pause: jest.fn(),
+  })),
+}));
+
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarSetters: jest.fn(() => ({
     setOverlayOpen: jest.fn(),
   })),
+  useTabBarState: () => ({ addButtonRect: null, isOverlayOpen: false }),
 }));
 
 jest.mock('#hooks/ui/useSelectorManagement', () => ({
@@ -280,6 +296,30 @@ describe('MealPlanMain', () => {
     const tree = renderWithApollo(<MealPlanMain />);
     expect(tree.getByTestId('meal-plan-screen')).toBeTruthy();
     expect(tree.getByTestId('meal-plan-empty-state')).toBeTruthy();
+  });
+
+  it('Plan a meal: started from the card, with no plan it points at starting one', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: DeferredScreenMockProps) => <Component />,
+    );
+    const { useMealPlans } = jest.requireMock(
+      '#features/mealPlan/hooks/useMealPlans',
+    );
+    useMealPlans.mockReturnValue(mockMealPlansState());
+    act(() => tutorialSession.startGuide(GUIDE_TOURS.plan));
+
+    renderWithApollo(<MealPlanMain />);
+
+    const guide = jest
+      .mocked(useTutorialSequence)
+      .mock.calls.map(([options]) => options)
+      .filter(options => options.tourId === GUIDE_TOURS.plan)
+      .pop();
+    expect(guide?.canStart).toBe(true);
+    expect(
+      guide?.steps.filter(step => step.when?.() ?? true).map(s => s.featureId),
+    ).toEqual(['plan_guide_create']);
+    act(() => tutorialSession.endGuide(GUIDE_TOURS.plan));
   });
 
   it('offers a retry, not "create a plan", when the plan fetch failed', () => {

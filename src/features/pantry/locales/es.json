@@ -308,7 +308,9 @@
     "tutorialAddItemsTitle": "Añade artículos rápidamente",
     "tutorialAddItemsSubtitle": "Toca + para añadir artículos a tu despensa",
     "outOfStock": "Sin existencias",
-    "runningLow": "Queda poco"
+    "runningLow": "Queda poco",
+    "stockGuideSubtitle": "Toca + y escanea un ticket reciente: lo que compraste va directo a tu despensa.",
+    "stockGuideOffline": "Escanear un ticket necesita conexión. Pruébalo cuando vuelvas a estar en línea."
   },
   "storageState": {
     "AMBIENT": "Ambiente",

@@ -5,7 +5,14 @@ import type { TargetRect } from '#components/organisms/SpotlightCoachMark/Spotli
 import { useStore } from '#store';
 import { Telemetry } from '#services/telemetry';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
-import { startTutorialSession, tutorialSession } from '../tutorialSession';
+import {
+  startTutorialSession,
+  tutorialSession,
+  useTutorialSession,
+} from '../tutorialSession';
+
+/** The session as a component reads it. */
+const sessionNow = () => renderHook(useTutorialSession).result.current;
 
 /** The hint record the store keeps, in the shape these assertions read. */
 const hints = () => useStore.getState().featureHintsShown;
@@ -276,6 +283,36 @@ describe('useTutorialSequence — Not now pauses; ending stops for good', () => 
 
     act(() => nextSession());
     expect(renderTour().result.current.currentStep).toBeNull();
+  });
+});
+
+describe('useTutorialSequence — a guide started from Getting started', () => {
+  it('A guide started with tips off: it runs', () => {
+    mockTutorialsOn = false;
+    act(() => tutorialSession.startGuide('tour-1'));
+
+    expect(renderTour().result.current.currentStep?.title).toBe('A');
+  });
+
+  it('Leaving mid-guide: Not now puts it away, and starting it again resumes at the step reached', () => {
+    act(() => tutorialSession.startGuide('tour-1'));
+    const { result } = renderTour();
+    act(() => result.current.advanceInPlace());
+    act(() => result.current.pause());
+    expect(result.current.currentStep).toBeNull();
+
+    act(() => tutorialSession.startGuide('tour-1'));
+
+    expect(result.current.currentStep?.title).toBe('B');
+  });
+
+  it('ends with its last step', () => {
+    act(() => tutorialSession.startGuide('tour-1'));
+    const { result } = renderTour();
+
+    act(() => result.current.skipAll());
+
+    expect([...sessionNow().startedGuides].includes('tour-1')).toBe(false);
   });
 });
 

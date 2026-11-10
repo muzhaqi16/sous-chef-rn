@@ -13,6 +13,8 @@ import { t } from '#/i18n';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import type {
   PantryContentProps,
   PantryContentRef,
@@ -588,10 +590,19 @@ describe('PantryMain', () => {
   });
 
   describe('tutorial', () => {
-    const lastTutorial = () => {
-      const [options] = jest.mocked(useTutorialSequence).mock.lastCall ?? [];
-      return options;
-    };
+    // The screen's own tour, beside the guide Getting started may start.
+    const lastTutorial = () =>
+      jest
+        .mocked(useTutorialSequence)
+        .mock.calls.map(([options]) => options)
+        .filter(options => options.tourId === undefined)
+        .pop();
+    const stockGuide = () =>
+      jest
+        .mocked(useTutorialSequence)
+        .mock.calls.map(([options]) => options)
+        .filter(options => options.tourId === GUIDE_TOURS.stock)
+        .pop();
 
     it('points Select pantry at the title and keeps the + step', () => {
       const titleRect = { x: 16, y: 60, width: 120, height: 28 };
@@ -606,6 +617,18 @@ describe('PantryMain', () => {
         settingsIcon: titleRect,
         addButton: { x: 160, y: 760, width: 56, height: 56 },
       });
+    });
+
+    it('Stock your pantry: started from the card, + shows Scan receipt while the own tour waits', () => {
+      act(() => tutorialSession.startGuide(GUIDE_TOURS.stock));
+      renderWithApollo(<PantryMain />);
+
+      expect(stockGuide()?.canStart).toBe(true);
+      expect(stockGuide()?.targetRects).toEqual({
+        addButton: { x: 160, y: 760, width: 56, height: 56 },
+      });
+      expect(lastTutorial()?.isPaused).toBe(true);
+      act(() => tutorialSession.endGuide(GUIDE_TOURS.stock));
     });
   });
 });

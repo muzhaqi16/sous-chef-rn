@@ -308,7 +308,9 @@
     "tutorialAddItemsTitle": "Shto artikuj shpejt",
     "tutorialAddItemsSubtitle": "Trokit + për të shtuar artikuj në qilarin tënd",
     "outOfStock": "Pa stok",
-    "runningLow": "Po mbaron"
+    "runningLow": "Po mbaron",
+    "stockGuideSubtitle": "Prek + dhe skano një faturë të fundit: çka bleve shkon drejt në qilar.",
+    "stockGuideOffline": "Skanimi i një fature ka nevojë për lidhje. Provoje sapo të jesh sërish online."
   },
   "storageState": {
     "AMBIENT": "Ambient",

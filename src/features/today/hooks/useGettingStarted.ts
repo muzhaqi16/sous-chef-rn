@@ -7,11 +7,12 @@ import { useApolloErrorLogger } from '#hooks/apollo/useApolloErrorLogger';
 import { featureHintsSuppressed } from '#hooks/settings/useFeatureHint';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import { onTutorialEvent } from '#domain/tutorialEvents';
+import type { GuideItem } from '#domain/guides';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
 import { GettingStartedDocument } from './useGettingStarted.generated';
 
 /** The first things worth doing, in the order the card lists them. */
-export type GettingStartedItem = 'stock' | 'shop' | 'cook' | 'plan';
+export type GettingStartedItem = GuideItem;
 
 const ITEMS: GettingStartedItem[] = ['stock', 'shop', 'cook', 'plan'];
 

@@ -399,7 +399,9 @@
       "per": "Para {{amount}} de {{name}}",
       "inPantry": "En tu despensa",
       "partlyInPantry": "En parte en tu despensa"
-    }
+    },
+    "cookGuideSuggestions": "Recetas con lo que tienes, primero con lo que caduca antes. Abre una para cocinarla.",
+    "cookGuideOffline": "Las recetas de tu despensa necesitan conexión. Aparecerán aquí cuando vuelvas a estar en línea."
   },
   "recipeFilters": {
     "title": "Filtros",

@@ -4,6 +4,8 @@ import { useUserId } from '#store/useAppStore';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
+import { useTutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 
 /** What the list's tips point at. */
 export type FirstShopTarget =
@@ -86,12 +88,13 @@ export function useFirstShopTour({
   // only once their tab shows.
   const [tabShown, setTabShown] = useState<ListTab>('shopping');
 
+  const session = useTutorialSession();
   const finishedEarlier = EARLIER_TUTORIAL.some(featureId =>
     hasFeatureHintBeenShown(featureId, userId),
   );
 
   const guide = useTutorialSequence({
-    tourId: 'first_shop',
+    tourId: GUIDE_TOURS.shop,
     steps: [
       {
         featureId: FIRST_SHOP_STEP.add,
@@ -123,7 +126,10 @@ export function useFirstShopTour({
       },
     ],
     targetRects,
-    canStart: hasList && !finishedEarlier,
+    // Started from Getting started, it runs whatever came before.
+    canStart:
+      hasList &&
+      (!finishedEarlier || session.startedGuides.has(GUIDE_TOURS.shop)),
     isPaused,
     startDelay,
   });

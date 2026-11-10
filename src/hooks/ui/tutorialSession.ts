@@ -9,6 +9,8 @@ interface TutorialSessionState {
   startedAt: number;
   /** Tours "Not now" put away until the next session. */
   pausedTours: ReadonlySet<string>;
+  /** Guides the user started from the Getting started card, until each ends. */
+  startedGuides: ReadonlySet<string>;
   /** The tour that took the session's unasked slot, and whose it is. */
   unprompted: { userId: string | undefined; tour: string } | null;
   /** Onboarding finished in this session, which then shows nothing unasked. */
@@ -20,6 +22,7 @@ interface TutorialSessionState {
 const fresh = (active: boolean): TutorialSessionState => ({
   startedAt: Date.now(),
   pausedTours: new Set(),
+  startedGuides: new Set(),
   unprompted: null,
   onboardingFinished: false,
   active,
@@ -70,6 +73,19 @@ export const tutorialSession = {
     const now = current();
     if (now.unprompted?.userId === userId) return;
     set({ ...now, unprompted: { userId, tour } });
+  },
+  /** The user asked for this guide: it runs as one they started. */
+  startGuide(tour: string) {
+    const now = current();
+    set({ ...now, startedGuides: new Set(now.startedGuides).add(tour) });
+  },
+  /** The guide ended, finished or put away; the card starts it again. */
+  endGuide(tour: string) {
+    const now = current();
+    if (!now.startedGuides.has(tour)) return;
+    const startedGuides = new Set(now.startedGuides);
+    startedGuides.delete(tour);
+    set({ ...now, startedGuides });
   },
   /** "Replay tips": what this session held back may show again now. */
   replay() {

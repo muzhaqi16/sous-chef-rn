@@ -19,6 +19,9 @@ import { storeApi } from '#store';
 import { onTutorialEvent, type TutorialEvent } from '#domain/tutorialEvents';
 import { tutorialSession, useTutorialSession } from './tutorialSession';
 
+/** A guide the user started comes up promptly once its screen is open. */
+const USER_STARTED_DELAY_MS = 500;
+
 /** How long a step waits for its target to measure before it is skipped. */
 const DEFAULT_TARGET_TIMEOUT_MS = 1500;
 
@@ -112,9 +115,9 @@ export const useTutorialSequence = ({
   targetRects,
   canStart,
   isPaused,
-  startDelay = 2000,
+  startDelay: askedDelay = 2000,
   tourId,
-  startedByUser = false,
+  startedByUser: startedHere = false,
 }: UseTutorialSequenceOptions): UseTutorialSequenceReturn => {
   const userId = useUserId();
   const tutorialsEnabled = useShowTutorials();
@@ -125,6 +128,11 @@ export const useTutorialSequence = ({
     userId ? state.lastUnpromptedTipAt[userId] : undefined,
   );
   const tour = tourId ?? steps[0]?.featureId ?? '';
+  // Started here, or from the Getting started card for this tour.
+  const startedByUser = startedHere || session.startedGuides.has(tour);
+  const startDelay = startedByUser
+    ? Math.min(askedDelay, USER_STARTED_DELAY_MS)
+    : askedDelay;
 
   // Incrementing this forces re-derivation of activeStepIndex after
   // MMKV writes (advance/skipAll). Without it React wouldn't know to re-render
@@ -166,6 +174,18 @@ export const useTutorialSequence = ({
       !session.onboardingFinished &&
       !session.pausedTours.has(tour) &&
       slotFree;
+
+  // Started again from the card: what put it away or passed a step over on
+  // this visit is cleared.
+  const guideStarted = session.startedGuides.has(tour);
+  const [wasGuideStarted, setWasGuideStarted] = useState(guideStarted);
+  if (guideStarted !== wasGuideStarted) {
+    setWasGuideStarted(guideStarted);
+    if (guideStarted) {
+      setPaused(false);
+      setSkipped(new Set());
+    }
+  }
 
   const visibleSteps = steps.filter(step => step.when?.() ?? true);
 
@@ -287,6 +307,12 @@ export const useTutorialSequence = ({
     setGeneration(g => g + 1);
   };
 
+  // A guide the user started ends with its last step; the card starts it
+  // again if anything is left.
+  useEffect(() => {
+    if (guideStarted && allComplete) tutorialSession.endGuide(tour);
+  }, [guideStarted, allComplete, tour]);
+
   // Build output
   const isActive = running && !isTransitioning && activeStepIndex !== -1;
 
@@ -334,6 +360,7 @@ export const useTutorialSequence = ({
     pause: () => {
       setPaused(true);
       tutorialSession.pause(tour);
+      tutorialSession.endGuide(tour);
     },
   };
 };

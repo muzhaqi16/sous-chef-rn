@@ -3,7 +3,11 @@ import { act, renderHook } from '@testing-library/react-native';
 import type { TargetRect } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 import { useStore } from '#store';
 import { emitTutorialEvent } from '#domain/tutorialEvents';
-import { startTutorialSession } from '#hooks/ui/tutorialSession';
+import {
+  startTutorialSession,
+  tutorialSession,
+} from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
 import { featureHintKey } from '#store/slices/tutorialSlice';
 import { FIRST_SHOP_STEP, useFirstShopTour } from '../useFirstShopTour';
@@ -190,6 +194,23 @@ describe('useFirstShopTour', () => {
     act(() => emitTutorialEvent('list.rowSwiped'));
 
     expect(hasFeatureHintBeenShown('shopping_list_swipe', 'user-1')).toBe(true);
+  });
+
+  it('Shop from your list: started from the card, it shows how to add an item, waiting until one is', () => {
+    useStore.setState({
+      featureHintsShown: {
+        [featureHintKey('user-1', 'shopping_interactive_tutorial')]: true,
+      },
+    });
+    act(() => tutorialSession.startGuide(GUIDE_TOURS.shop));
+    const { result } = renderTour();
+
+    expect(result.current.guide.currentStep?.featureId).toBe(
+      FIRST_SHOP_STEP.add,
+    );
+    act(() => result.current.guide.advanceInPlace());
+    expect(result.current.guide.inlineStep).not.toBeNull();
+    act(() => tutorialSession.endGuide(GUIDE_TOURS.shop));
   });
 
   it('walks no one through the list again who finished its earlier tutorial', () => {

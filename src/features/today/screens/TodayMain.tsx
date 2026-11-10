@@ -27,6 +27,8 @@ import { useTabBarState } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import {
   useSetPendingTabAdd,
@@ -177,10 +179,12 @@ export const TodayMain: React.FC = () => {
   const gettingStarted = useGettingStarted({
     pantryItemCount: counts?.total ?? null,
   });
+  // Each item's guide runs on the tab it opens, even with tips off.
   const startItem = (item: GettingStartedItem) => {
+    tutorialSession.startGuide(GUIDE_TOURS[item]);
     switch (item) {
       case 'stock':
-        addPantryItem();
+        toPantryMain();
         break;
       case 'shop':
         toShoppingListMain();
