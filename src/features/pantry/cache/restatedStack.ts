@@ -1,6 +1,7 @@
 import type { ApolloCache } from '@apollo/client';
 import type { Unmasked } from '@apollo/client/masking';
 import { GetPantryItemBatchesDocument } from '#features/pantry/graphql/pantry.generated';
+import { BatchStatus } from '#/graphql/generated/schemaTypes';
 import { isRecord } from '#/utils/isRecord';
 import type { WriteRestatedBatches_PageFragment } from './restatedStack.generated';
 
@@ -18,6 +19,32 @@ export function writeRestatedBatches(
     variables: { pantryItemId },
     data: { __typename: 'Query', pantryItemBatchesConnection: page },
   });
+}
+
+/**
+ * A date edit as the server applies it: every active batch the detail holds
+ * takes the stack's date, as typed. False when it holds none.
+ */
+export function dateActiveBatches(
+  cache: ApolloCache,
+  pantryItemId: string,
+  expiresOn: string | null,
+): boolean {
+  const page = cache.readQuery({
+    query: GetPantryItemBatchesDocument,
+    variables: { pantryItemId },
+    optimistic: true,
+  });
+  const active = (page?.pantryItemBatchesConnection.edges ?? []).filter(
+    ({ node }) => node.status === BatchStatus.Active,
+  );
+  for (const { node } of active) {
+    cache.modify({
+      id: cache.identify(node),
+      fields: { expiresOn: () => expiresOn, expiresAtIsManual: () => true },
+    });
+  }
+  return active.length > 0;
 }
 
 /** An answer's `batchesConnection`, which a commit reads as `unknown`. */

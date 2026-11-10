@@ -16,6 +16,7 @@ import {
   macroTargetsSchema,
   macroTargetsDefaults,
   macroTargetUpdates,
+  type MacroTargetUpdates,
   type MacroTargetsFormValues,
 } from './macroTargetsFormConfig';
 import { reportValidationErrors } from '#/utils/validation/common';
@@ -23,12 +24,8 @@ import { reportValidationErrors } from '#/utils/validation/common';
 interface MacroTargetsSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSave: (values: {
-    calorieTarget?: number;
-    proteinTarget?: number;
-    carbsTarget?: number;
-    fatTarget?: number;
-  }) => Promise<boolean>;
+  /** A target emptied from a stored one arrives as null, which clears it. */
+  onSave: (values: MacroTargetUpdates) => Promise<boolean>;
   initialValues?: {
     calorieTarget?: number | null;
     proteinTarget?: number | null;
@@ -92,7 +89,9 @@ export const MacroTargetsSheet: React.FC<MacroTargetsSheetProps> = ({
   // stays an alert.
   const handleSave = handleSubmit(async values => {
     setSaving(true);
-    const success = await onSave(macroTargetUpdates(values));
+    const success = await onSave(
+      macroTargetUpdates(values, initialValues ?? {}),
+    );
     setSaving(false);
 
     if (!success) {

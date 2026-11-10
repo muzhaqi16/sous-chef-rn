@@ -156,6 +156,8 @@
     "restockFailedRetry": "Impossibile rifornire l'articolo. Riprova.",
     "recordUsageFailedRetry": "Impossibile registrare l'uso dell'articolo. Riprova.",
     "recordWasteFailedRetry": "Impossibile registrare lo spreco dell'articolo. Riprova.",
+    "stockAlreadyGone": "In dispensa non ne è rimasto nulla.",
+    "stockAlreadyGoneTitle": "Già finito",
     "moveToPantryFailedRetry": "Impossibile spostare l'articolo nella dispensa. Riprova.",
     "adjustQuantityFailed": "Impossibile regolare la quantità.",
     "correctWeightFailed": "Impossibile correggere la dimensione della confezione.",
@@ -428,6 +430,7 @@
     "notesOptional": "Note (opzionale)",
     "notifications": "Notifiche",
     "ok": "OK",
+    "onYourList": "Nella tua lista",
     "openSettings": "Apri impostazioni",
     "overstock": "Eccesso di stock",
     "ozGMl": "oz, g, ml",
@@ -485,7 +488,6 @@
     "shareLink": "Condividi link",
     "shoppingList": "Lista della spesa",
     "skip": "Salta",
-    "skipAll": "Salta tutto",
     "sku": "SKU",
     "slowDownAMoment": "Aspetta un momento",
     "someone": "Qualcuno",
@@ -506,7 +508,6 @@
     "tapToEdit": "Tocca per modificare",
     "tapToViewDetails": "Tocca per vedere i dettagli",
     "templateName": "Nome del modello",
-    "thisFieldIsRequired": "Questo campo è obbligatorio",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Questo articolo non è più nel catalogo: potrebbe essere stato rimosso.",
     "tips": "Consigli",
     "stockValue": "Valore delle scorte",
@@ -638,6 +639,9 @@
     "features": "Funzionalità",
     "showTutorials": "Mostra tutorial",
     "showTutorialsDesc": "Mostra suggerimenti e tutorial utili",
+    "replayTips": "Rivedi i suggerimenti",
+    "replayTipsDesc": "Mostra di nuovo tutte le guide e i suggerimenti su questo account",
+    "replayTipsDone": "I suggerimenti verranno mostrati di nuovo",
     "experience": "Esperienza",
     "hapticFeedback": "Feedback aptico",
     "hapticFeedbackDesc": "Vibrazione per interazioni e avvisi",
@@ -653,8 +657,8 @@
     "resetSection": "Ripristina",
     "resetToDefaults": "Ripristina ai valori predefiniti",
     "resetToDefaultsDesc": "Ripristina tutte le impostazioni ai valori predefiniti",
-    "resetConfirm": "Vuoi davvero ripristinare tutte le impostazioni ai valori predefiniti? Verranno reimpostati anche tutti i tutorial.",
-    "resetSuccess": "Le impostazioni e i tutorial sono stati ripristinati.",
+    "resetConfirm": "Vuoi davvero ripristinare tutte le impostazioni ai valori predefiniti?",
+    "resetSuccess": "Le impostazioni dell’app sono tornate ai valori predefiniti.",
     "loadingSettings": "Caricamento impostazioni...",
     "updateFailed": "Impossibile aggiornare l'impostazione. Riprova.",
     "currencySubtitle": "I nuovi costi vengono registrati in questa valuta",
@@ -685,10 +689,6 @@
       "shoppingList": "Lista",
       "mealPlan": "Pasti"
     }
-  },
-  "numberInputSheet": {
-    "minError": "Il valore deve essere almeno {{min}}",
-    "maxError": "Il valore deve essere al massimo {{max}}"
   },
   "notFound": {
     "message": "Questa schermata non esiste. Controlla l'URL o torna a una schermata valida.",
@@ -730,8 +730,9 @@
     "a11yHint": "Apre l'editor della quantità"
   },
   "tutorial": {
-    "youGotIt": "Perfetto!",
-    "skipTutorial": "Salta il tutorial"
+    "gotIt": "Ho capito",
+    "endTour": "Termina la guida",
+    "stepOf": "{{step}} di {{total}}"
   },
   "offline": {
     "title": "Offline",

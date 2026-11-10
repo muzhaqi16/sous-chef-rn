@@ -42,7 +42,6 @@ query GetShoppingListDetails($id: ID!) {
     priceTracking
     ...useListAsksPrice_list
     ...useListCurrency_list
-    ...useListCostToGo_list
     # The store this trip is shopped at: a ticked line's price is recorded there.
     targetStore {
       id

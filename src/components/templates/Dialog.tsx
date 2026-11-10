@@ -50,8 +50,14 @@ export const Dialog: React.FC<DialogProps> = ({
 
   const surface = (
     <View style={styles.scrim}>
-      {/* Reanimated drives this node's paddingBottom, so it takes no themed style. */}
-      <KeyboardAvoidingView behavior="padding" style={styles.fill}>
+      {/* Reanimated drives this node's paddingBottom, so it takes no themed style.
+          `automaticOffset`: measured in the Modal's own frame it fell ~70pt
+          short of the keyboard on iOS 27, leaving Save under it. */}
+      <KeyboardAvoidingView
+        behavior="padding"
+        automaticOffset
+        style={styles.fill}
+      >
         <View style={styles.centre}>
           <View style={styles.card}>{children}</View>
         </View>

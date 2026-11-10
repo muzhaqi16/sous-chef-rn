@@ -96,6 +96,11 @@
     "unitsReadByDefault": "Masat u lexuan në njësitë e zakonshme të SHBA-së.",
     "pantryCoverage": "{{percent}}% e përbërësve në qilarin tënd",
     "coveragePercent": "{{percent}}%",
+    "readyToCook": "Gati për t’u gatuar",
+    "usesYourMoreToBuy_one": "Përdor {{item}} nga qilari yt · edhe {{count}} për të blerë",
+    "usesYourMoreToBuy_other": "Përdor {{item}} nga qilari yt · edhe {{count}} për të blerë",
+    "moreToBuy_one": "Edhe {{count}} për të blerë",
+    "moreToBuy_other": "Edhe {{count}} për të blerë",
     "usesExpiringSoon_one": "Përdor {{names}} para se të skadojë",
     "usesExpiringSoon_other": "Përdor {{names}} para se të skadojnë",
     "needInspiration": "Të nevojitet frymëzim?",
@@ -134,11 +139,10 @@
     "writeItMyself": "Ta shkruaj vetë",
     "deleteRecipeFailed": "Fshirja e recetës dështoi. Provo përsëri.",
     "dietaryRestrictions": "Kufizime dietike",
-    "dietaryRestrictionsSubtitle": "Vendos preferencat për të filtruar rezultatet",
     "cookWithPantry": "Gatuaj me çfarë ke",
     "searchByName": "Sipas emrit",
     "searchByIngredients": "Sipas përbërësve",
-    "cookWithPantrySubtitle": "Kërko receta sipas përbërësve në qilar",
+    "cookWithPantrySubtitle": "Kërko receta sipas përbërësve në qilar.",
     "loadingRecipe": "Po ngarkohet receta...",
     "recipeNotFoundDb": "Receta nuk u gjet në bazën e të dhënave",
     "recipeNotFound": "Receta nuk u gjet",
@@ -177,6 +181,8 @@
     "dairyFree": "Pa bulmet",
     "about": "Rreth",
     "addAll": "Shto të gjitha",
+    "addMissing_one": "Shto {{count}} që mungon",
+    "addMissing_other": "Shto {{count}} që mungojnë",
     "recipeFrom": "Recetë nga {{source}}",
     "externalSource": "Burim i jashtëm",
     "viewOriginalRecipe": "Shiko recetën origjinale",
@@ -330,6 +336,10 @@
       "VEGETARIAN": "Vegjetarian",
       "WHOLE30": "Whole30"
     },
+    "religiousDiet": {
+      "HALAL": "Hallall",
+      "KOSHER": "Kosher"
+    },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "I përshtatshëm për diabetikët",
       "HEART_HEALTHY": "I shëndetshëm për zemrën",
@@ -365,7 +375,10 @@
     "pantryMatchLabel_one": "{{used}} nga {{count}} përbërës në qilarin tënd, {{missing}} për t'u blerë",
     "pantryMatchLabel_other": "{{used}} nga {{count}} përbërës në qilarin tënd, {{missing}} për t'u blerë",
     "createdFromRecipe": "Krijuar nga një recetë",
-    "ratingBreakdownRow": "{{count}} vlerësime me {{stars}} yje",
+    "ratingBreakdownRow_one": "{{count}} vlerësim me {{stars}}",
+    "ratingBreakdownRow_other": "{{count}} vlerësime me {{stars}}",
+    "ratingStars_one": "{{count}} yll",
+    "ratingStars_other": "{{count}} yje",
     "favoriteA11y": "Shto te të preferuarat",
     "unfavoriteA11y": "Hiq nga të preferuarat",
     "ingredientsTooMany": "Një recetë mund të ketë maksimumi {{count}} përbërës",
@@ -385,7 +398,10 @@
       "per": "Për {{amount}} {{name}}",
       "inPantry": "Në qilarin tënd",
       "partlyInPantry": "Pjesërisht në qilarin tënd"
-    }
+    },
+    "cookGuideSuggestions": "Receta me çka ke, duke nisur me ushqimin që skadon më shpejt. Hap një për ta gatuar.",
+    "cookGuideCook": "Hap një dhe, kur ta kesh gatuar, prek {{action}}.",
+    "cookGuideOffline": "Recetat nga qilari kanë nevojë për lidhje. Do të shfaqen këtu sapo të jesh sërish online."
   },
   "recipeFilters": {
     "title": "Filtrat",
@@ -488,11 +504,8 @@
     }
   },
   "cuisineSelector": {
-    "title": "Kuzhinat e preferuara",
-    "subtitle": "Zgjidh kuzhinat e tua të preferuara",
     "showAll": "Shfaq të gjitha kuzhinat",
-    "showLess": "Shfaq më pak",
-    "addFailed": "Shtimi i kuzhinës dështoi"
+    "showLess": "Shfaq më pak"
   },
   "cuisines": {
     "AFRICAN": "Afrikane",

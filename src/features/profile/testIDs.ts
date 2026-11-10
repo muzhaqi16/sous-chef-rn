@@ -16,6 +16,7 @@ export const profileTestIDs = {
   settingsState: 'settings-state',
   settingsUnitSystemPicker: 'settings-unit-system-picker',
   settingsShowTutorialsSwitch: 'settings-show-tutorials-switch',
+  settingsReplayTips: 'settings-replay-tips',
   settingsReceiptPhotosSwitch: 'settings-receipt-photos-switch',
   settingsHapticFeedbackSwitch: 'settings-haptic-feedback-switch',
   settingsNavigationLabelsSwitch: 'settings-navigation-labels-switch',
@@ -31,8 +32,6 @@ export const profileTestIDs = {
   /** One food the avoid sheet's search found. */
   avoidCandidate: (itemId: string) => `dietary-avoid-candidate-${itemId}`,
   settingsShareUsageDataSwitch: 'settings-share-usage-data-switch',
-
-  cookingPreferencesSkillLevelPicker: 'cooking-preferences-skill-level-picker',
 
   /** A reason in the report sheet, by its `ReportType` value. */
   reportReason: (type: string) => `report-reason-${type}`,

@@ -24,20 +24,24 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
   const cuisinesToShow = showAll ? getAllCuisineOptions() : POPULAR_CUISINES;
 
   return (
-    <View style={styles.chipGrid}>
-      {cuisinesToShow.map(cuisine => (
-        <AnimatedChip
-          key={cuisine.value}
-          label={t(cuisine.labelKey)}
-          selected={selected.includes(cuisine.value)}
-          onPress={() => onToggle(cuisine.value)}
-        />
-      ))}
+    <View style={styles.container}>
+      <View style={styles.chipGrid}>
+        {cuisinesToShow.map(cuisine => (
+          <AnimatedChip
+            key={cuisine.value}
+            label={t(cuisine.labelKey)}
+            selected={selected.includes(cuisine.value)}
+            onPress={() => onToggle(cuisine.value)}
+          />
+        ))}
+      </View>
 
+      {/* Its own row: in the grid it read as one more cuisine. */}
       {!showAll && (
         <AppPressable
           style={styles.showMoreButton}
           onPress={() => setShowAll(true)}
+          accessibilityRole="button"
         >
           <Icon name="add-circle-outline" size={18} tone="primary" />
           <Text role="bodyStrong" tone="accent" style={styles.showMoreText}>
@@ -50,6 +54,7 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
         <AppPressable
           style={styles.showMoreButton}
           onPress={() => setShowAll(false)}
+          accessibilityRole="button"
         >
           <Icon name="remove-circle-outline" size={18} tone="textSecondary" />
           <Text role="body" style={styles.showMoreText}>
@@ -62,6 +67,9 @@ export const CuisineChips: React.FC<CuisineChipsProps> = ({
 };
 
 const styles = StyleSheet.create(theme => ({
+  container: {
+    gap: theme.spacing.md,
+  },
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -69,11 +77,11 @@ const styles = StyleSheet.create(theme => ({
     justifyContent: 'space-evenly',
   },
   showMoreButton: {
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: theme.spacing.md,
     paddingVertical: theme.spacing.sm,
-    margin: theme.spacing.xs,
     borderRadius: theme.radii.pill,
     borderCurve: 'continuous',
     borderWidth: theme.borderWidth.thin,

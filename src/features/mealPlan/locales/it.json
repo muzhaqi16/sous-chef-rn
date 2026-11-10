@@ -20,7 +20,10 @@
     "addNeedsPlan": "Crea prima un piano pasti, poi aggiungi i pasti.",
     "noAddPermission": "Puoi vedere questo piano, ma non aggiungervi pasti.",
     "needsTheTemplate": "Apri prima il modello, così i suoi pasti sono disponibili.",
-    "daily": "Giornaliero"
+    "daily": "Giornaliero",
+    "guideCreateTitle": "Inizia un piano",
+    "guideCreateSubtitle": "Un piano raccoglie una settimana di pasti. Iniziane uno, poi metti i pasti nei suoi giorni.",
+    "guideAddSubtitle": "Tocca + per mettere un pasto in un giorno del piano."
   },
   "addMealSheet": {
     "searchPlaceholder": "Cerca ricette o aggiungi un pasto personalizzato...",

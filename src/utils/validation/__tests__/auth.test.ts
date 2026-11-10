@@ -7,6 +7,7 @@ import {
   changePasswordSchema,
 } from '../auth';
 import { changeLanguage } from '#/i18n/config';
+import { NEW_PASSWORD_RULES, newPasswordRule } from '../common';
 
 describe('loginSchema', () => {
   it('validates a correct login', async () => {
@@ -39,7 +40,6 @@ describe('signUpSchema', () => {
     name: 'John Doe',
     email: 'john@example.com',
     password: 'Pass1234',
-    confirmPassword: 'Pass1234',
   };
 
   it('validates correct sign-up', async () => {
@@ -58,10 +58,9 @@ describe('signUpSchema', () => {
     ).rejects.toThrow('2 characters');
   });
 
-  it('rejects mismatched passwords', async () => {
-    await expect(
-      signUpSchema.validate({ ...valid, confirmPassword: 'Different1' }),
-    ).rejects.toThrow('must match');
+  // The show toggle and a saved password replace typing it twice.
+  it('asks for the password once', async () => {
+    await expect(signUpSchema.validate(valid)).resolves.toEqual(valid);
   });
 });
 
@@ -161,7 +160,6 @@ describe('the password policy for a password being SET', () => {
           name: 'John Doe',
           email: 'john@example.com',
           password,
-          confirmPassword: password,
         }),
     },
     {
@@ -288,12 +286,11 @@ describe('lazy localization across language switches', () => {
     await changeLanguage('es');
     await expect(
       signUpSchema.validate({
-        name: 'John Doe',
+        name: 'J',
         email: 'john@example.com',
         password: 'Pass1234',
-        confirmPassword: 'Different1',
       }),
-    ).rejects.toThrow('deben coincidir');
+    ).rejects.toThrow('al menos 2 caracteres');
   });
 
   it('resolves a shared common rule message in the active language', async () => {
@@ -301,5 +298,30 @@ describe('lazy localization across language switches', () => {
     await expect(
       loginSchema.validate({ email: 'notanemail', password: 'Pass1234' }),
     ).rejects.toThrow('indirizzo email valido');
+  });
+});
+
+describe("iOS's rules for a suggested password", () => {
+  it('state the same policy as newPasswordRule', () => {
+    const tests = newPasswordRule.describe().tests;
+    const bound = (name: string, key: string) =>
+      tests.find(test => test.name === name)?.params?.[key];
+
+    expect(NEW_PASSWORD_RULES).toBe(
+      `minlength: ${String(bound('min', 'min'))}; maxlength: ${String(
+        bound('max', 'max'),
+      )}; required: lower; required: upper; required: digit;`,
+    );
+  });
+
+  it.each([
+    ['a lowercase letter', 'ABCDEFG1'],
+    ['an uppercase letter', 'abcdefg1'],
+    ['a digit', 'Abcdefgh'],
+  ])('require %s, as newPasswordRule does', async (_, missing) => {
+    await expect(newPasswordRule.validate(missing)).rejects.toThrow();
+    await expect(newPasswordRule.validate('Abcdefg1')).resolves.toBe(
+      'Abcdefg1',
+    );
   });
 });

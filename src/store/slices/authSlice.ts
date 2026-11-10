@@ -69,6 +69,11 @@ export interface User {
   displayName?: string | null;
   /** ISO code; null until the person states one. See `src/domain/money.ts`. */
   preferredCurrency?: string | null;
+  /**
+   * When the account was made, from the sign-in payload; absent on a user
+   * persisted before it was kept, an account older than anything reading it.
+   */
+  createdAt?: string;
 }
 
 /**

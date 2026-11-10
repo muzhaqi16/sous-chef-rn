@@ -14,4 +14,8 @@ export const todayTestIDs = {
   suggestionsSeeAll: 'today-suggestions-see-all',
   shoppingRow: 'today-shopping-row',
   firstRun: 'today-first-run',
+  gettingStarted: 'today-getting-started',
+  gettingStartedHide: 'today-getting-started-hide',
+  gettingStartedStart: 'today-getting-started-start',
+  gettingStartedItem: (item: string) => `today-getting-started-${item}`,
 };

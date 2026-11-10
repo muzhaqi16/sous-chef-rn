@@ -7,7 +7,7 @@ import { Sheet } from '#components/templates/Sheet';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
 import type { Diet } from '#/graphql/generated/schemaTypes';
-import { isLifestyleDiet } from '#domain/dietary';
+import { withDietPicked } from '#domain/dietary';
 import {
   type RecipeFilters,
   DEFAULT_FILTERS,
@@ -72,25 +72,14 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
     onSheetChange(index);
   };
 
-  // Lifestyle diets are mutually exclusive: selecting one replaces any prior
-  // lifestyle pick while preserving the stackable constraint selections.
-  const toggleLifestyleDiet = (value: Diet) => {
-    setDraftFilters(prev => {
-      const constraints = prev.diet.filter(d => !isLifestyleDiet(d));
-      return {
-        ...prev,
-        diet: prev.diet.includes(value) ? constraints : [...constraints, value],
-      };
-    });
-  };
-
-  // Constraint diets stack freely (gluten-free + low-FODMAP, on any lifestyle).
-  const toggleConstraintDiet = (value: Diet) => {
+  // A pick replaces only the diet of its group it rules out (Vegan replaces
+  // Vegetarian; Keto sits beside it); constraints stack.
+  const toggleDiet = (value: Diet) => {
     setDraftFilters(prev => ({
       ...prev,
       diet: prev.diet.includes(value)
         ? prev.diet.filter(d => d !== value)
-        : [...prev.diet, value],
+        : withDietPicked(prev.diet, value),
     }));
   };
 
@@ -138,7 +127,6 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 {t('labels.diet')}
               </Text>
 
-              {/* Lifestyle diet — single select (mutually exclusive) */}
               <Text
                 role="caption"
                 tone="secondary"
@@ -156,7 +144,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                         styles.filterChip,
                         isSelected && styles.filterChipActive,
                       ]}
-                      onPress={() => toggleLifestyleDiet(diet.value)}
+                      onPress={() => toggleDiet(diet.value)}
                     >
                       <Text
                         role="label"
@@ -171,7 +159,6 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                 })}
               </View>
 
-              {/* Dietary constraints — multi select (stack on any lifestyle) */}
               <Text
                 role="caption"
                 tone="secondary"
@@ -189,7 +176,7 @@ export const RecipeFilterSheet: React.FC<RecipeFilterSheetProps> = ({
                         styles.filterChip,
                         isSelected && styles.filterChipActive,
                       ]}
-                      onPress={() => toggleConstraintDiet(diet.value)}
+                      onPress={() => toggleDiet(diet.value)}
                     >
                       <Text
                         role="label"

@@ -1,4 +1,5 @@
 import React from 'react';
+import { View } from 'react-native';
 import type { StyleProp, ViewStyle } from 'react-native';
 import Animated, { FadeIn, ZoomIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
@@ -30,6 +31,8 @@ export interface EmptyStateProps {
     icon?: IconName;
     /** Shown but not tappable; the `hint` says why. */
     disabled?: boolean;
+    /** Measures the button for a spotlight: `useMeasuredRect`'s ref and `measure`. */
+    measure?: { ref: React.Ref<View>; onLayout: () => void };
   };
 
   /** Secondary action button */
@@ -153,16 +156,22 @@ export const EmptyState: React.FC<EmptyStateProps> = ({
         </Text>
       )}
       {!!action && (
-        <Button
-          onPress={action.onPress}
-          variant={action.variant ?? 'primary'}
-          size="medium"
-          icon={action.icon}
-          disabled={action.disabled}
+        <View
+          ref={action.measure?.ref}
+          collapsable={false}
+          onLayout={action.measure?.onLayout}
           style={variantStyles.actionButton}
         >
-          {action.label}
-        </Button>
+          <Button
+            onPress={action.onPress}
+            variant={action.variant ?? 'primary'}
+            size="medium"
+            icon={action.icon}
+            disabled={action.disabled}
+          >
+            {action.label}
+          </Button>
+        </View>
       )}
       {!!secondaryAction && (
         <Button

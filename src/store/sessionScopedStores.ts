@@ -27,6 +27,8 @@ export const SESSION_SCOPED_PERSISTED_KEYS: string[] = [
   'sous-chef-receipt-photo-consent',
   // features/catalog/store/storePickerStore.ts: the zip stores were found near.
   'sous-chef-store-picker',
+  // features/onboarding/store/onboardingProgressStore.ts: answers and the step reached.
+  'sous-chef-onboarding-progress',
 ];
 
 /** Last write wins, so a hot reload replaces rather than duplicates. */

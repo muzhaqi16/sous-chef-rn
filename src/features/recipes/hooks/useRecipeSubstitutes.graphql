@@ -103,6 +103,7 @@ query RecipeSubstitutes(
                 diet
                 intolerance
                 healthGoal
+                religiousDiet
                 item {
                   version
                   id

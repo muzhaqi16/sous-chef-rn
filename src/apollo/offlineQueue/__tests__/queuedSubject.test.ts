@@ -150,7 +150,7 @@ describe('queuedSubject', () => {
     expect(
       queuedSubject({
         mutation: UpdateDietaryProfileDocument,
-        variables: { input: { mealsPerDay: 3 } },
+        variables: { input: { cooksFor: 3 } },
       }),
     ).toEqual({ subjectIds: [], sourceIds: [], mintedIds: [] });
   });

@@ -7,7 +7,7 @@ import { useRecordOnboardingProgress } from '#features/onboarding/store/onboardi
  * profile, where recipes read it. A count outside 1–20 is never sent.
  */
 export function useHouseholdAnswer() {
-  const { updateDietaryProfile } = useDietaryProfile({
+  const { editableProfile, updateDietaryProfile } = useDietaryProfile({
     fetchPolicy: 'cache-first',
   });
   const { recordCooksFor } = useRecordOnboardingProgress();
@@ -22,5 +22,9 @@ export function useHouseholdAnswer() {
     if (await updateDietaryProfile({ cooksFor: count })) recordCooksFor(count);
   };
 
-  return { answer };
+  return {
+    answer,
+    /** The count already saved, shown again on a return; null when none. */
+    saved: editableProfile?.cooksFor ?? null,
+  };
 }

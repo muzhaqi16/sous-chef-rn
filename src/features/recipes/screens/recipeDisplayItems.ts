@@ -18,6 +18,7 @@ import {
   timeAndServings,
 } from '#features/recipes/utils/recipeCardText';
 import { coverageBadge } from '#features/recipes/ui/coverageBadge';
+import { suggestionTier } from '#domain/recipeCoverage';
 
 export interface DisplayItem {
   id: string;
@@ -112,12 +113,20 @@ function pantryDisplayItem(
   };
 }
 
-/** A suggestion as its card: the stock it uses up first, its coverage as the badge. */
+/**
+ * A suggestion as its card: where it stands for the pantry, then the stock it
+ * uses up first. Only a recipe ready to cook shows how much is held.
+ */
 function suggestionDisplayItem(
   edge: RecipeSuggestionEdge,
   translate: Translate,
 ): CardContent {
-  const { node, coverage } = edge;
+  const { node, coverage, missingIngredientCount, usedIngredients } = edge;
+  const tier = suggestionTier({
+    coverage,
+    missingIngredientCount,
+    usedIngredientCount: usedIngredients.length,
+  });
   // One name per item: two stacks of milk are still "Uses milk".
   const named = new Set<string>();
   const expiring = edge.expiringStacks
@@ -129,6 +138,20 @@ function suggestionDisplayItem(
       return true;
     });
   const subtitleParts: string[] = [];
+  const [firstUsed] = usedIngredients;
+  if (tier === 'ready') {
+    subtitleParts.push(translate('recipes.readyToCook'));
+  } else if (tier === 'almost') {
+    // The stock about to expire already names what it uses.
+    subtitleParts.push(
+      expiring.length > 0 || !firstUsed
+        ? translate('recipes.moreToBuy', { count: missingIngredientCount })
+        : translate('recipes.usesYourMoreToBuy', {
+            item: firstUsed.item?.name ?? firstUsed.name,
+            count: missingIngredientCount,
+          }),
+    );
+  }
   if (expiring.length > 0) {
     subtitleParts.push(
       translate('recipes.usesExpiringSoon', {
@@ -150,7 +173,7 @@ function suggestionDisplayItem(
   return {
     title: node.name,
     subtitle: subtitleParts.join(' • '),
-    badge: coverageBadge(coverage, translate),
+    badge: coverageBadge(coverage, translate, tier === 'ready'),
     imageUrl,
     target: { recipeId: node.id, row: { name: node.name, imageUrl } },
   };

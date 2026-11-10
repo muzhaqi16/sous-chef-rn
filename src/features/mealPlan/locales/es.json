@@ -20,7 +20,10 @@
     "addNeedsPlan": "Crea primero un plan de comidas y luego añade comidas.",
     "noAddPermission": "Puedes ver este plan, pero no añadirle comidas.",
     "needsTheTemplate": "Abre primero la plantilla para tener sus comidas.",
-    "daily": "Diario"
+    "daily": "Diario",
+    "guideCreateTitle": "Empieza un plan",
+    "guideCreateSubtitle": "Un plan reúne una semana de comidas. Empieza uno y luego pon comidas en sus días.",
+    "guideAddSubtitle": "Toca + para poner una comida en un día de tu plan."
   },
   "addMealSheet": {
     "searchPlaceholder": "Busca recetas o añade una comida personalizada...",

@@ -15,6 +15,7 @@ export const shoppingListTestIDs = {
   searchInput: 'shopping-list-search-input',
   batchMoveToPantryButton: 'shopping-list-batch-move-pantry',
   moveToPantryPackageSizeUnit: 'move-to-pantry-package-size-unit',
+  moveToPantryConfirm: 'move-to-pantry-confirm',
   clearAllButton: 'shopping-list-clear-all',
   /** List settings: the store the list is shopped at. */
   listSettingsStore: 'list-settings-store',
@@ -39,6 +40,8 @@ export const shoppingListTestIDs = {
 
   /** `FilterTabBar`: tabs go through `kitTestIDs.filterTab` under this prefix. */
   tabBarPrefix: 'filter-tab',
+  /** The first-shop guide's step inside the add sheet. */
+  tourSheetHint: 'shopping-tour-sheet-hint',
   /** An action button that brings no testID of its own, by position. */
   tabBarAction: (index: number) => `filter-tab-action-${index}`,
   /** The header icon that opens store mode, and store mode's own parts. */

@@ -52,20 +52,31 @@ export const macroTargetsDefaults = (): MacroTargetsFormValues => ({
 });
 
 export interface MacroTargetUpdates {
-  calorieTarget?: number;
-  proteinTarget?: number;
-  carbsTarget?: number;
-  fatTarget?: number;
+  calorieTarget?: number | null;
+  proteinTarget?: number | null;
+  carbsTarget?: number | null;
+  fatTarget?: number | null;
 }
 
-/** A blank field is left out entirely, so it clears no stored target. */
+/**
+ * A filled field sends its target. A blank one sends nothing, so saving one
+ * target keeps the others, unless it held a stored target: emptied, it
+ * clears it (null).
+ */
 export const macroTargetUpdates = (
   values: MacroTargetsFormValues,
+  held: MacroTargetUpdates = {},
 ): MacroTargetUpdates => {
   const updates: MacroTargetUpdates = {};
-  if (values.calories) updates.calorieTarget = parseInt(values.calories);
-  if (values.protein) updates.proteinTarget = parseInt(values.protein);
-  if (values.carbs) updates.carbsTarget = parseInt(values.carbs);
-  if (values.fat) updates.fatTarget = parseInt(values.fat);
+  const target = (entry: string, stored: number | null | undefined) =>
+    entry ? parseInt(entry) : stored != null ? null : undefined;
+  const calorieTarget = target(values.calories, held.calorieTarget);
+  const proteinTarget = target(values.protein, held.proteinTarget);
+  const carbsTarget = target(values.carbs, held.carbsTarget);
+  const fatTarget = target(values.fat, held.fatTarget);
+  if (calorieTarget !== undefined) updates.calorieTarget = calorieTarget;
+  if (proteinTarget !== undefined) updates.proteinTarget = proteinTarget;
+  if (carbsTarget !== undefined) updates.carbsTarget = carbsTarget;
+  if (fatTarget !== undefined) updates.fatTarget = fatTarget;
   return updates;
 };

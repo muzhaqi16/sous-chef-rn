@@ -23,6 +23,8 @@ import type { NetworkState } from '#store/slices/networkSlice';
 import { createNetworkSlice } from '#store/slices/networkSlice';
 import type { TelemetryState } from '#store/slices/telemetrySlice';
 import { createTelemetrySlice } from '#store/slices/telemetrySlice';
+import type { TutorialState } from '#store/slices/tutorialSlice';
+import { createTutorialSlice } from '#store/slices/tutorialSlice';
 import type { RootState } from '#store/index';
 
 type TestRootState = AuthState &
@@ -31,7 +33,8 @@ type TestRootState = AuthState &
   UIState &
   AppState &
   NetworkState &
-  TelemetryState;
+  TelemetryState &
+  TutorialState;
 
 /**
  * Create a fully isolated store for testing.
@@ -50,6 +53,7 @@ export function createTestStore(initialOverrides?: Partial<TestRootState>) {
           ...createAppSlice(set, get, api),
           ...createNetworkSlice(set, get, api),
           ...createTelemetrySlice(set, get, api),
+          ...createTutorialSlice(set, get, api),
           // Reset manager stubs
           resetStore: jest.fn(),
           tokenRefreshFailed: jest.fn(),

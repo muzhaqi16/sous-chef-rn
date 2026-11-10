@@ -26,7 +26,14 @@ import { RecipeSkeleton } from '#features/recipes/components/skeletons/RecipeSke
 import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { InlineTourHint } from '#components/molecules/InlineTourHint';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { useTutorialSession } from '#hooks/ui/tutorialSession';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { GUIDE_TOURS } from '#domain/guides';
+import { hasTipFact } from '#hooks/settings/useFeatureHint';
+import { useUserId } from '#store/useAppStore';
 import { useTranslation, type TranslationKey } from '#/i18n';
 import { IngredientSelectorSheet } from '#features/recipes/components/recipeSearch/IngredientSelectorSheet';
 import { useRecipeScreen } from '#features/recipes/screens/useRecipeScreen';
@@ -102,8 +109,8 @@ const RecipeMainInner: React.FC = () => {
   type TutorialTarget =
     | 'savedButton'
     | 'myRecipesButton'
-    | 'dietaryButton'
-    | 'pantryButton';
+    | 'pantryButton'
+    | 'discoveryHeader';
 
   // Single state for all layout rects — avoids 4 separate re-renders
   const [buttonRects, setButtonRects] = useState<
@@ -125,16 +132,69 @@ const RecipeMainInner: React.FC = () => {
   const [ingredientSheetVisible, setIngredientSheetVisible] = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
 
+  // "Cook from your pantry", started from Today's Getting started card. While
+  // it runs, the screen's own tour waits.
+  const cookGuideStarted = useTutorialSession().startedGuides.has(
+    GUIDE_TOURS.cook,
+  );
+  const offline = useIsApiUnavailable();
+  const { ref: discoveryRef, measure: measureDiscovery } = useMeasuredRect(
+    cookGuideStarted
+      ? rect => setButtonRect('discoveryHeader', rect)
+      : undefined,
+  );
+  const cookGuide = useTutorialSequence({
+    tourId: GUIDE_TOURS.cook,
+    steps: [
+      {
+        featureId: 'cook_guide_suggestions',
+        title: t('recipes.basedOnPantry'),
+        // Pantry suggestions are the server's to rank, expiring food first.
+        subtitle: offline
+          ? t('recipes.cookGuideOffline')
+          : t('recipes.cookGuideSuggestions'),
+        rectKey: 'discoveryHeader',
+      },
+      // The tab's own pantry tip: seeing either counts for both.
+      {
+        featureId: 'recipe_tutorial_pantry',
+        title: t('recipes.cookWithPantry'),
+        subtitle: t('recipes.cookWithPantrySubtitle'),
+        rectKey: 'pantryButton',
+        when: () => screen.hasPantryItems,
+      },
+      // The guide waits for a cook, made from whichever recipe the user opens.
+      {
+        featureId: 'cook_guide_cook',
+        title: t('recipes.cookGuideCook', { action: t('recipes.markCooked') }),
+        subtitle: '',
+        rectKey: 'discoveryHeader',
+        presentation: 'inline',
+        advanceOn: { event: 'recipe.cooked' },
+      },
+    ],
+    targetRects: {
+      discoveryHeader: buttonRects.discoveryHeader ?? null,
+      pantryButton: buttonRects.pantryButton ?? null,
+    },
+    canStart: cookGuideStarted,
+    isPaused: !isRecipeFocused || isSheetOpen,
+  });
+
+  const userId = useUserId();
   const tutorial = useTutorialSequence({
-    steps: getRecipeTutorialSteps(t),
+    steps: getRecipeTutorialSteps(t, {
+      hasSaved: () => hasTipFact('recipeSaved', userId),
+      hasOwnRecipe: () => hasTipFact('recipeAdded', userId),
+      hasPantryItems: () => screen.hasPantryItems,
+    }),
     targetRects: {
       savedButton: buttonRects.savedButton ?? null,
       myRecipesButton: buttonRects.myRecipesButton ?? null,
-      dietaryButton: buttonRects.dietaryButton ?? null,
       pantryButton: buttonRects.pantryButton ?? null,
     },
     canStart: true,
-    isPaused: !isRecipeFocused || isSheetOpen,
+    isPaused: !isRecipeFocused || isSheetOpen || cookGuideStarted,
   });
 
   useTabScreenLifecycle({
@@ -217,7 +277,6 @@ const RecipeMainInner: React.FC = () => {
           })
         : t('recipes.dietaryRestrictions'),
     badge: screen.activeFilterCount,
-    onButtonLayout: (rect: LayoutRect) => setButtonRect('dietaryButton', rect),
   };
 
   const ingredientNames = [...screen.selectedIngredients].join(', ');
@@ -244,7 +303,12 @@ const RecipeMainInner: React.FC = () => {
     const isPantry = screen.discovery.mode === 'pantry';
     const busy = screen.discovery.loading || screen.discovery.refreshing;
     return (
-      <View style={styles.suggestedHeader}>
+      <View
+        ref={discoveryRef}
+        collapsable={false}
+        onLayout={measureDiscovery}
+        style={styles.suggestedHeader}
+      >
         <View style={styles.suggestedTextContainer}>
           <Text role="heading">
             {isPantry
@@ -324,6 +388,15 @@ const RecipeMainInner: React.FC = () => {
         />
       ) : null}
       {ListHeader}
+      {cookGuide.inlineStep && !screen.showSearchResults ? (
+        <InlineTourHint
+          text={cookGuide.inlineStep.title}
+          stepIndex={cookGuide.inlineStep.stepIndex}
+          totalSteps={cookGuide.inlineStep.totalSteps}
+          onClose={cookGuide.pause}
+          onEnd={cookGuide.skipAll}
+        />
+      ) : null}
     </>
   );
 
@@ -453,27 +526,52 @@ const RecipeMainInner: React.FC = () => {
         }
       />
 
-      {tutorial.currentStep ? (
+      {cookGuide.currentStep ? (
+        <SpotlightCoachMark
+          targetRect={cookGuide.currentStep.targetRect}
+          title={cookGuide.currentStep.title}
+          subtitle={cookGuide.currentStep.subtitle}
+          stepIndex={cookGuide.currentStep.stepIndex}
+          totalSteps={cookGuide.currentStep.totalSteps}
+          onDismiss={cookGuide.skipAll}
+          onClose={cookGuide.pause}
+          onNext={cookGuide.advanceInPlace}
+          onTargetPress={() => {
+            if (cookGuide.currentStep?.featureId === 'recipe_tutorial_pantry') {
+              switchSearchMode('ingredients');
+              openIngredientSelector();
+            }
+            cookGuide.advance();
+          }}
+        />
+      ) : tutorial.currentStep ? (
         <SpotlightCoachMark
           targetRect={tutorial.currentStep.targetRect}
           title={tutorial.currentStep.title}
           subtitle={tutorial.currentStep.subtitle}
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
+          waitsForAction={tutorial.currentStep.waitsForAction}
+          demo={tutorial.currentStep.demo}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
-            const actions: Record<number, () => void> = {
-              0: toSavedRecipes,
-              1: toMyRecipes,
-              2: openFilterSheet,
-              3: () => {
+            const featureId: string = tutorial.currentStep?.featureId ?? '';
+            switch (featureId) {
+              case 'recipe_tutorial_saved':
+                toSavedRecipes();
+                break;
+              case 'recipe_tutorial_my_recipes':
+                toMyRecipes();
+                break;
+              case 'recipe_tutorial_pantry':
                 switchSearchMode('ingredients');
                 openIngredientSelector();
-              },
-            };
-            const step = tutorial.currentStep;
-            if (step) actions[step.stepIndex]?.();
+                break;
+              default:
+                break;
+            }
             tutorial.advance();
           }}
         />

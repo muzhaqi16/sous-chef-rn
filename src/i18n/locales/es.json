@@ -156,6 +156,8 @@
     "restockFailedRetry": "No se pudo reponer el artículo. Inténtalo de nuevo.",
     "recordUsageFailedRetry": "No se pudo registrar el uso del artículo. Inténtalo de nuevo.",
     "recordWasteFailedRetry": "No se pudo registrar el desperdicio del artículo. Inténtalo de nuevo.",
+    "stockAlreadyGone": "No queda nada en tu despensa.",
+    "stockAlreadyGoneTitle": "Ya se ha usado",
     "moveToPantryFailedRetry": "No se pudo mover el artículo a la despensa. Inténtalo de nuevo.",
     "adjustQuantityFailed": "No se pudo ajustar la cantidad.",
     "correctWeightFailed": "No se pudo corregir el tamaño del paquete.",
@@ -428,6 +430,7 @@
     "notesOptional": "Notas (opcional)",
     "notifications": "Notificaciones",
     "ok": "OK",
+    "onYourList": "En tu lista",
     "openSettings": "Abrir ajustes",
     "overstock": "Exceso de stock",
     "ozGMl": "oz, g, ml",
@@ -485,7 +488,6 @@
     "shareLink": "Compartir enlace",
     "shoppingList": "Lista de la compra",
     "skip": "Omitir",
-    "skipAll": "Omitir todo",
     "sku": "SKU",
     "slowDownAMoment": "Espera un momento",
     "someone": "Alguien",
@@ -506,7 +508,6 @@
     "tapToEdit": "Toca para editar",
     "tapToViewDetails": "Toca para ver los detalles",
     "templateName": "Nombre de la plantilla",
-    "thisFieldIsRequired": "Este campo es obligatorio",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Este artículo ya no está en el catálogo; es posible que se haya eliminado.",
     "tips": "Consejos",
     "stockValue": "Valor del stock",
@@ -638,6 +639,9 @@
     "features": "Funcionalidades",
     "showTutorials": "Mostrar tutoriales",
     "showTutorialsDesc": "Muestra consejos y tutoriales útiles",
+    "replayTips": "Ver consejos de nuevo",
+    "replayTipsDesc": "Vuelve a mostrar todas las guías y consejos en esta cuenta",
+    "replayTipsDone": "Los consejos se mostrarán de nuevo",
     "experience": "Experiencia",
     "hapticFeedback": "Respuesta háptica",
     "hapticFeedbackDesc": "Vibración para interacciones y alertas",
@@ -653,8 +657,8 @@
     "resetSection": "Restablecer",
     "resetToDefaults": "Restablecer valores predeterminados",
     "resetToDefaultsDesc": "Restablece todos los ajustes a sus valores predeterminados",
-    "resetConfirm": "¿Seguro que quieres restablecer todos los ajustes a sus valores predeterminados? También se reiniciarán todos los tutoriales.",
-    "resetSuccess": "Los ajustes y tutoriales se han restablecido.",
+    "resetConfirm": "¿Seguro que quieres restablecer todos los ajustes a sus valores predeterminados?",
+    "resetSuccess": "Los ajustes de la app han vuelto a sus valores predeterminados.",
     "loadingSettings": "Cargando ajustes...",
     "updateFailed": "No se pudo actualizar el ajuste. Inténtalo de nuevo.",
     "currencySubtitle": "Los nuevos costes se registran en esta moneda",
@@ -685,10 +689,6 @@
       "shoppingList": "Lista",
       "mealPlan": "Plan"
     }
-  },
-  "numberInputSheet": {
-    "minError": "El valor debe ser al menos {{min}}",
-    "maxError": "El valor debe ser como máximo {{max}}"
   },
   "notFound": {
     "message": "Esta pantalla no existe. Verifica la URL o vuelve a una pantalla válida.",
@@ -730,8 +730,9 @@
     "a11yHint": "Abre el editor de cantidad"
   },
   "tutorial": {
-    "youGotIt": "¡Lo tienes!",
-    "skipTutorial": "Omitir tutorial"
+    "gotIt": "Entendido",
+    "endTour": "Terminar guía",
+    "stepOf": "{{step}} de {{total}}"
   },
   "offline": {
     "title": "Sin conexión",

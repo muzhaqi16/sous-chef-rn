@@ -210,6 +210,8 @@ export interface BootstrapOptions {
     option: 'name' | 'expiry' | 'quantity' | 'recent';
     direction: 'asc' | 'desc';
   };
+  /** A guide to run from launch, with the account's tips fresh and on. */
+  guide?: string;
 }
 
 /**
@@ -223,12 +225,15 @@ export async function bootstrapAuthenticatedSession(
 
   // Seeded on BOTH launch paths below. `reloadReactNative` keeps the original
   // launch args and the preference persists, so seeding once holds for the file.
-  const preferenceArgs = options.pantrySort
-    ? {
-        detoxPantrySortOption: options.pantrySort.option,
-        detoxPantrySortDirection: options.pantrySort.direction,
-      }
-    : {};
+  const preferenceArgs = {
+    ...(options.pantrySort
+      ? {
+          detoxPantrySortOption: options.pantrySort.option,
+          detoxPantrySortDirection: options.pantrySort.direction,
+        }
+      : {}),
+    ...(options.guide ? { detoxGuide: options.guide } : {}),
+  };
 
   try {
     const tokens = await getAuthTokens();

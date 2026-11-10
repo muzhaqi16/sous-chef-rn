@@ -40,6 +40,7 @@ interface SuggestionRowProps {
   onSelectSuggestion: (item: ItemSuggestion) => void;
   showBrands: boolean;
   showImages: boolean;
+  quickAddTestID: string;
 }
 
 const SuggestionRow = ({
@@ -47,6 +48,7 @@ const SuggestionRow = ({
   onSelectSuggestion,
   showBrands,
   showImages,
+  quickAddTestID,
 }: SuggestionRowProps) => {
   const { t } = useTranslation();
 
@@ -62,6 +64,7 @@ const SuggestionRow = ({
           <QuickAddButton
             onPress={() => onSelectSuggestion(item)}
             accessibilityLabel={t('a11y.quickAdd', { name: item.name })}
+            testID={quickAddTestID}
           />
         }
       />
@@ -159,10 +162,11 @@ export const ItemSuggestionsList = ({
         </View>
       ) : null}
       {addManuallyPosition === 'top' && addManually}
-      {suggestions.map(item => (
+      {suggestions.map((item, index) => (
         <SuggestionRow
           key={item.id}
           item={item}
+          quickAddTestID={catalogTestIDs.quickAddResult(testIDPrefix, index)}
           onSelectSuggestion={onSelectSuggestion}
           showBrands={showBrands}
           showImages={showImages}

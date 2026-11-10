@@ -3,10 +3,13 @@
  * imports: Detox's Jest reads this by relative path, outside the aliases.
  */
 export const onboardingTestIDs = {
-  selectPantryItemsScreen: 'onboarding-select-pantry-items-screen',
   completeScreen: 'onboarding-complete-screen',
+  /** The completion screen's drawn check. */
+  completionCheck: 'onboarding-completion-check',
+  /** A summary line on the completion screen, by what it says was done. */
+  summaryLine: (kind: string) => `onboarding-summary-${kind}`,
 
-  /** `OnBoardingWrapper`'s header buttons, under the step screen's id. */
+  /** `OnboardingStepScaffold`'s header buttons, under the step screen's id. */
   skipButton: (screenID: string) => `${screenID}-skip-button`,
   /** "Step 2 of 3", shown beside the progress bar. */
   stepNumber: 'onboarding-step-number',
@@ -16,10 +19,13 @@ export const onboardingTestIDs = {
   setupScreen: 'onboarding-setup-screen',
   setupCreateHome: 'onboarding-setup-create-home',
   setupSkipHome: 'onboarding-setup-skip-home',
-  setupContinueOffline: 'onboarding-setup-continue-offline',
   /** The household question: who the user cooks for. */
   householdScreen: 'onboarding-household-screen',
   householdChoice: (choice: string) => `onboarding-household-${choice}`,
+  householdGreeting: 'onboarding-household-greeting',
+  householdHomeName: 'onboarding-household-home-name',
+  renameHomeInput: 'onboarding-rename-home-input',
+  renameHomeSave: 'onboarding-rename-home-save',
   householdFewer: 'onboarding-household-fewer',
   householdMore: 'onboarding-household-more',
   /** The dietary step, and each chosen allergen's Allergy / Intolerance control. */
@@ -30,11 +36,15 @@ export const onboardingTestIDs = {
   /** The receipt step: scan, staples instead, and how many a review added. */
   receiptScreen: 'onboarding-receipt-screen',
   receiptScan: 'onboarding-receipt-scan',
-  receiptStaples: 'onboarding-receipt-staples',
   receiptAdded: 'onboarding-receipt-added',
-  /** The completion screen's recipes and invite button. */
-  payoff: 'onboarding-payoff',
+  /** The receipt step while setup has not left a pantry yet. */
+  receiptSetupRunning: 'onboarding-receipt-setup-running',
+  receiptSetupFailed: 'onboarding-receipt-setup-failed',
+  /** The receipt step offline: scanning and staples wait for a connection. */
+  receiptOffline: 'onboarding-receipt-offline',
+  /** The completion screen's invite button and store offer. */
   invite: 'onboarding-invite',
+  stores: 'onboarding-stores',
   /** A staples group, by the storage state it holds. */
   staplesGroup: (state: string) => `onboarding-staples-${state}`,
 };

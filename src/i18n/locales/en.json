@@ -156,6 +156,8 @@
     "restockFailedRetry": "Failed to restock item. Please try again.",
     "recordUsageFailedRetry": "Failed to record item usage. Please try again.",
     "recordWasteFailedRetry": "Failed to record item waste. Please try again.",
+    "stockAlreadyGone": "None of it is left in your pantry.",
+    "stockAlreadyGoneTitle": "Already used up",
     "moveToPantryFailedRetry": "Failed to move item to the pantry. Please try again.",
     "adjustQuantityFailed": "Could not adjust the quantity.",
     "correctWeightFailed": "Could not correct the package size.",
@@ -428,6 +430,7 @@
     "notesOptional": "Notes (Optional)",
     "notifications": "Notifications",
     "ok": "OK",
+    "onYourList": "On your list",
     "openSettings": "Open Settings",
     "overstock": "Overstock",
     "ozGMl": "oz, g, ml",
@@ -485,7 +488,6 @@
     "shareLink": "Share link",
     "shoppingList": "Shopping List",
     "skip": "Skip",
-    "skipAll": "Skip all",
     "sku": "SKU",
     "slowDownAMoment": "Slow down a moment",
     "someone": "Someone",
@@ -506,7 +508,6 @@
     "tapToEdit": "Tap to edit",
     "tapToViewDetails": "Tap to view details",
     "templateName": "Template Name",
-    "thisFieldIsRequired": "This field is required",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "This item isn't in the catalog any more — it may have been removed.",
     "tips": "Tips",
     "stockValue": "Stock value",
@@ -638,6 +639,9 @@
     "features": "Features",
     "showTutorials": "Show Tutorials",
     "showTutorialsDesc": "Display helpful tips and tutorials",
+    "replayTips": "Replay Tips",
+    "replayTipsDesc": "Show every tour and tip again on this account",
+    "replayTipsDone": "Tips will show again",
     "experience": "Experience",
     "hapticFeedback": "Haptic Feedback",
     "hapticFeedbackDesc": "Vibration feedback for interactions and alerts",
@@ -653,8 +657,8 @@
     "resetSection": "Reset",
     "resetToDefaults": "Reset to Defaults",
     "resetToDefaultsDesc": "Reset all app settings to their default values",
-    "resetConfirm": "Are you sure you want to reset all app settings to their default values? This will also reset all tutorials.",
-    "resetSuccess": "Settings and tutorials have been reset to defaults.",
+    "resetConfirm": "Are you sure you want to reset all app settings to their default values?",
+    "resetSuccess": "App settings are back to their defaults.",
     "loadingSettings": "Loading settings...",
     "updateFailed": "Failed to update setting. Please try again.",
     "currencySubtitle": "New costs are recorded in this currency",
@@ -685,10 +689,6 @@
       "shoppingList": "List",
       "mealPlan": "Meal Plan"
     }
-  },
-  "numberInputSheet": {
-    "minError": "Value must be at least {{min}}",
-    "maxError": "Value must be at most {{max}}"
   },
   "notFound": {
     "message": "This screen doesn't exist. Please check the URL or navigate back to a valid screen.",
@@ -730,8 +730,9 @@
     "a11yHint": "Opens quantity editor"
   },
   "tutorial": {
-    "youGotIt": "You got it!",
-    "skipTutorial": "Skip tutorial"
+    "gotIt": "Got it",
+    "endTour": "End tour",
+    "stepOf": "{{step}} of {{total}}"
   },
   "offline": {
     "title": "Offline",

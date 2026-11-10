@@ -12,7 +12,14 @@ export const kitTestIDs = {
   headerMoreButton: 'header-more-button',
   offlineBanner: 'offline-banner',
   spotlightTarget: 'spotlight-target',
-  spotlightSkipButton: 'spotlight-skip-button',
+  spotlightDim: 'spotlight-dim',
+  /** "Not now": this tip only, back later. */
+  spotlightNotNowButton: 'spotlight-not-now-button',
+  /** "End tour": every step counts as shown. */
+  spotlightEndButton: 'spotlight-end-button',
+  /** Next, or Got it on a tour's last step. */
+  spotlightPrimaryButton: 'spotlight-primary-button',
+  spotlightGestureDemo: 'spotlight-gesture-demo',
   splashScreen: 'splash-screen',
   tabBar: 'tab-bar',
   tabBarAddButton: 'tab-bar-add-button',

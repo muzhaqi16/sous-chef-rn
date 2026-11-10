@@ -92,7 +92,7 @@ jest.mock('../../hooks/useListCostToGo', () => ({
   ...jest.requireActual<typeof import('../../hooks/useListCostToGo')>(
     '../../hooks/useListCostToGo',
   ),
-  useListCostToGo: () => mockCostToGo,
+  useLiveCostToGo: () => mockCostToGo,
 }));
 
 jest.mock('../../hooks/useShoppingListManagement', () => ({

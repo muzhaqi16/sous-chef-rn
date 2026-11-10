@@ -156,6 +156,8 @@
     "restockFailedRetry": "Artikulli nuk u rifurnizua dot. Provo përsëri.",
     "recordUsageFailedRetry": "Regjistrimi i përdorimit të artikullit dështoi. Provo sërish.",
     "recordWasteFailedRetry": "Regjistrimi i mbetjeve të artikullit dështoi. Provo sërish.",
+    "stockAlreadyGone": "Nuk ka mbetur asgjë në qilarin tënd.",
+    "stockAlreadyGoneTitle": "Tashmë u përdor",
     "moveToPantryFailedRetry": "Artikulli nuk u zhvendos dot te qilari. Provo përsëri.",
     "adjustQuantityFailed": "Sasia nuk mund të rregullohej.",
     "correctWeightFailed": "Madhësia e paketimit nuk u korrigjua dot.",
@@ -428,6 +430,7 @@
     "notesOptional": "Shënime (opsionale)",
     "notifications": "Njoftimet",
     "ok": "OK",
+    "onYourList": "Në listën tënde",
     "openSettings": "Hap cilësimet",
     "overstock": "Tepricë",
     "ozGMl": "oz, g, ml",
@@ -485,7 +488,6 @@
     "shareLink": "Ndaj lidhjen",
     "shoppingList": "Lista e blerjeve",
     "skip": "Kapërce",
-    "skipAll": "Kapërce të gjitha",
     "sku": "SKU",
     "slowDownAMoment": "Prit një moment",
     "someone": "Dikush",
@@ -506,7 +508,6 @@
     "tapToEdit": "Trokit për ta modifikuar",
     "tapToViewDetails": "Trokit për të parë detajet",
     "templateName": "Emri i modelit",
-    "thisFieldIsRequired": "Kjo fushë është e detyrueshme",
     "thisItemIsnTInTheCatalogAnyMoreItMayHaveBeenRemoved": "Ky artikull nuk është më në katalog — mund të jetë hequr.",
     "tips": "Këshilla",
     "stockValue": "Vlera e stokut",
@@ -638,6 +639,9 @@
     "features": "Veçoritë",
     "showTutorials": "Shfaq udhëzuesit",
     "showTutorialsDesc": "Shfaq këshilla dhe udhëzues të dobishëm",
+    "replayTips": "Shiko sërish këshillat",
+    "replayTipsDesc": "Shfaq sërish të gjithë udhëzuesit dhe këshillat në këtë llogari",
+    "replayTipsDone": "Këshillat do të shfaqen sërish",
     "experience": "Përvoja",
     "hapticFeedback": "Përgjigje haptike",
     "hapticFeedbackDesc": "Dridhje për ndërveprime dhe sinjalizime",
@@ -653,8 +657,8 @@
     "resetSection": "Rivendos",
     "resetToDefaults": "Rivendos parazgjedhjet",
     "resetToDefaultsDesc": "Rivendos të gjitha cilësimet te vlerat e tyre të parazgjedhura",
-    "resetConfirm": "Vërtet dëshiron t'i rivendosësh të gjitha cilësimet te parazgjedhjet? Do të rivendosen edhe të gjithë udhëzuesit.",
-    "resetSuccess": "Cilësimet dhe udhëzuesit u rivendosën.",
+    "resetConfirm": "Vërtet dëshiron t'i rivendosësh të gjitha cilësimet te parazgjedhjet?",
+    "resetSuccess": "Cilësimet e aplikacionit u kthyen te parazgjedhjet.",
     "loadingSettings": "Po ngarkohen cilësimet...",
     "updateFailed": "Nuk u përditësua dot cilësimi. Provoje sërish.",
     "currencySubtitle": "Kostot e reja regjistrohen në këtë monedhë",
@@ -685,10 +689,6 @@
       "shoppingList": "Lista",
       "mealPlan": "Vaktet"
     }
-  },
-  "numberInputSheet": {
-    "minError": "Vlera duhet të jetë të paktën {{min}}",
-    "maxError": "Vlera duhet të jetë më së shumti {{max}}"
   },
   "notFound": {
     "message": "Kjo pamje nuk ekziston. Kontrollo URL-në ose kthehu te një pamje e vlefshme.",
@@ -730,8 +730,9 @@
     "a11yHint": "Hap redaktuesin e sasisë"
   },
   "tutorial": {
-    "youGotIt": "E kuptova!",
-    "skipTutorial": "Kapërce udhëzuesin"
+    "gotIt": "E kuptova",
+    "endTour": "Mbyll udhëzuesin",
+    "stepOf": "{{step}} nga {{total}}"
   },
   "offline": {
     "title": "Offline",

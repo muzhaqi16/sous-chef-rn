@@ -24,7 +24,6 @@ export const authTestIDs = {
   signUpNameInput: 'signup-name-input',
   signUpEmailInput: 'signup-email-input',
   signUpPasswordInput: 'signup-password-input',
-  signUpConfirmPasswordInput: 'signup-confirm-password-input',
   signUpSubmitButton: 'signup-submit-button',
   signUpLoginLink: 'signup-login-link',
 
@@ -48,6 +47,7 @@ export const authTestIDs = {
 
   codeVerificationScreen: 'code-verification-screen',
   codeVerificationResendLink: 'resend-code',
+  codeVerificationOpenMail: 'code-verification-open-mail',
   codeVerificationSkipLink: 'skip-verification',
   codeVerificationSignInLink: 'code-verification-sign-in',
 

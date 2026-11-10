@@ -21,6 +21,8 @@ const SEVERITIES: RestrictionSeverity[] = [
 interface AvoidFoodSheetProps {
   visible: boolean;
   onDismiss: () => void;
+  /** Item ids already avoided, which the suggestions leave out. */
+  avoided?: ReadonlySet<string>;
   /** Resolves whether the food was added; the sheet closes only when it was. */
   onPick: (
     food: { id: string; name: string },
@@ -36,6 +38,7 @@ interface AvoidFoodSheetProps {
 export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
   visible,
   onDismiss,
+  avoided,
   onPick,
 }) => {
   const { t } = useTranslation();
@@ -84,6 +87,7 @@ export const AvoidFoodSheet: React.FC<AvoidFoodSheetProps> = ({
         </View>
         <AvoidFoodSearch
           active={visible}
+          avoided={avoided}
           onPick={food => {
             void handlePick(food);
           }}

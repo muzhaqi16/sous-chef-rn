@@ -19,11 +19,10 @@ import {
   RemoveDietaryRestrictionDocument,
 } from '#operations/user/user.generated';
 import type {
-  CookingSkillLevel,
-  Cuisine,
   Diet,
   Intolerance,
   HealthGoal,
+  ReligiousDiet,
   RestrictionKindInput,
   RestrictionSeverity,
 } from '#/graphql/generated/schemaTypes';
@@ -42,6 +41,7 @@ export interface DietaryRestriction {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   healthGoal?: HealthGoal | null;
+  religiousDiet?: ReligiousDiet | null;
   /** The avoided catalog item, as the root the server stored. */
   item?: { id: string; name: string } | null;
   severity: RestrictionSeverity;
@@ -52,24 +52,15 @@ export interface DietaryProfileData {
   id: string;
   userId: string;
   restrictions: DietaryRestriction[];
-  // Server stores cuisines as the `Cuisine` enum and echoes back the enum-name
-  // strings (the read type is [String!]!); the write input is [Cuisine!]. Typed
-  // as Cuisine[] so callers can only ever send valid enum members.
-  preferredCuisines: Cuisine[];
-  dislikedIngredients: string[];
-  favoriteIngredients: string[];
   calorieTarget?: number | null;
   proteinTarget?: number | null;
   carbsTarget?: number | null;
   fatTarget?: number | null;
-  mealsPerDay: number;
-  snacksPerDay: number;
   /** How many people the user cooks for; null when not answered. */
   cooksFor?: number | null;
-  cookingSkillLevel?: CookingSkillLevel | null;
-  maxPrepTimeMinutes?: number | null;
+  /** A religious diet the user follows, private to them; null when none. */
+  religiousDiet: ReligiousDiet | null;
   maxCookTimeMinutes?: number | null;
-  budgetPerMeal?: number | null;
 }
 
 export type DietaryProfileValues = Omit<DietaryProfileData, 'id' | 'userId'>;
@@ -77,13 +68,8 @@ export type DietaryProfileValues = Omit<DietaryProfileData, 'id' | 'userId'>;
 /** What the server creates a profile with (`DietaryProfileRepository`). */
 const DIETARY_PROFILE_DEFAULTS: DietaryProfileValues = {
   restrictions: [],
-  preferredCuisines: [],
-  dislikedIngredients: [],
-  favoriteIngredients: [],
-  mealsPerDay: 3,
-  snacksPerDay: 1,
-  maxPrepTimeMinutes: 45,
-  maxCookTimeMinutes: 60,
+  maxCookTimeMinutes: null,
+  religiousDiet: null,
 };
 
 /**
@@ -154,47 +140,32 @@ export const useDietaryProfile = ({
         diet: r.diet,
         intolerance: r.intolerance,
         healthGoal: r.healthGoal,
+        religiousDiet: r.religiousDiet,
         item: r.item,
         severity: r.severity,
         notes: r.notes,
       })),
-      preferredCuisines: profile.preferredCuisines,
-      dislikedIngredients: profile.dislikedIngredients,
-      favoriteIngredients: profile.favoriteIngredients,
       calorieTarget: profile.calorieTarget,
       proteinTarget: profile.proteinTarget,
       carbsTarget: profile.carbsTarget,
       fatTarget: profile.fatTarget,
-      mealsPerDay: profile.mealsPerDay || 3,
-      snacksPerDay: profile.snacksPerDay || 1,
       cooksFor: profile.cooksFor,
-      cookingSkillLevel: profile.cookingSkillLevel,
-      maxPrepTimeMinutes: profile.maxPrepTimeMinutes,
+      religiousDiet: profile.religiousDiet ?? null,
       maxCookTimeMinutes: profile.maxCookTimeMinutes,
-      budgetPerMeal: profile.budgetPerMeal,
     };
   };
 
   const updateDietaryProfile = async (updates: {
-    preferredCuisines?: Cuisine[];
-    dislikedIngredients?: string[];
-    favoriteIngredients?: string[];
     calorieTarget?: number | null;
     proteinTarget?: number | null;
     carbsTarget?: number | null;
     fatTarget?: number | null;
-    mealsPerDay?: number;
-    snacksPerDay?: number;
     cooksFor?: number | null;
-    cookingSkillLevel?: CookingSkillLevel | null;
-    maxPrepTimeMinutes?: number | null;
     maxCookTimeMinutes?: number | null;
-    budgetPerMeal?: number | null;
+    religiousDiet?: ReligiousDiet | null;
   }) => {
-    // Convert null to undefined for GraphQL input
-    const cleanedUpdates = Object.fromEntries(
-      Object.entries(updates).map(([key, value]) => [key, value ?? undefined]),
-    );
+    // Null clears a field, as the API reads it; a field left out is kept.
+    const cleanedUpdates: Record<string, unknown> = { ...updates };
 
     const settled = await sendFields(client.cache, {
       entity: profile

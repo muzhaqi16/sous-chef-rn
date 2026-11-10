@@ -273,9 +273,8 @@
     "quantityRequired": "Shkruaj një sasi më të madhe se zero"
   },
   "addToShoppingListSheet": {
-    "tutorialTapPlus": "Trokit + pranë një artikulli për ta shtuar",
-    "tutorialTapAddManually": "Trokit \"Shto manualisht\" për të shtuar një artikull",
-    "tutorialPullDown": "Tërhiq poshtë për të mbyllur"
+    "tutorialTapPlus": "Trokit + pranë një artikulli për ta shtuar.",
+    "tutorialTapAddManually": "Trokit \"Shto manualisht\" për të shtuar një artikull."
   },
   "shoppingListSelector": {
     "title": "Zgjidh Listën e Blerjeve",
@@ -330,26 +329,24 @@
   "shoppingListTutorial": {
     "addButton": {
       "title": "Shto një artikull",
-      "subtitle": "Trokit + për të shtuar artikuj në listën e blerjeve"
+      "subtitle": "Trokit + për të shtuar artikuj në listën e blerjeve."
     },
     "swipeActions": {
       "title": "Rrëshqit për të menaxhuar artikujt",
-      "subtitle": "Rrëshqit majtas një artikull për ta modifikuar, ose djathtas për ta fshirë"
+      "subtitle": "Rrëshqit djathtas një artikull për ta modifikuar, ose majtas për ta fshirë. Me lexuesin e ekranit, të dyja janë te veprimet e artikullit."
     },
     "checkbox": {
-      "subtitle": "Trokit kutinë për ta shënuar këtë artikull si të blerë"
-    },
-    "longPress": {
-      "title": "Regjistro çmimin",
-      "subtitle": "Shtyp gjatë një artikull për të futur sasinë dhe çmimin real para se ta shënosh si të blerë"
-    },
-    "purchasedTab": {
-      "title": "Shiko artikujt e blerë",
-      "subtitle": "Trokit për të parë artikujt e blerë"
+      "subtitle": "Trokit kutinë për ta shënuar këtë artikull si të blerë."
     },
     "moveToPantry": {
       "title": "Zhvendos te qilari",
-      "subtitle": "Trokit për ta zhvendosur këtë artikull te qilari yt"
+      "subtitle": "Trokit për ta zhvendosur këtë artikull te qilari yt."
+    },
+    "receiptOffer": {
+      "subtitle": "I bleve? Skano faturën e kësaj blerjeje për t’i futur në qilar."
+    },
+    "storeModeNew": {
+      "subtitle": "E re: bëj pazarin rresht pas rreshti, sipas renditjes së dyqanit. Prek për ta provuar."
     }
   },
   "listTemplate": {

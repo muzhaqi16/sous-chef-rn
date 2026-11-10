@@ -4,8 +4,7 @@
  */
 
 import { SHEET, SLIDE_PRESETS } from '../animations';
-import { SKILL_LEVELS, DIETARY_LIMITS, knownSkillLevel } from '#domain/dietary';
-import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
+import { DIETARY_LIMITS } from '#domain/dietary';
 import { Platform } from 'react-native';
 import {
   getTabBarBottomOffset,
@@ -48,24 +47,8 @@ describe('animations constants', () => {
 });
 
 describe('dietary constants', () => {
-  it('exports SKILL_LEVELS, least to most experienced', () => {
-    expect(SKILL_LEVELS).toEqual([
-      CookingSkillLevel.Beginner,
-      CookingSkillLevel.Intermediate,
-      CookingSkillLevel.Advanced,
-      CookingSkillLevel.Expert,
-    ]);
-  });
-
-  it('reads a Title-case level an older cache holds as no level', () => {
-    expect(knownSkillLevel('Intermediate')).toBeNull();
-    expect(knownSkillLevel(CookingSkillLevel.Expert)).toBe(
-      CookingSkillLevel.Expert,
-    );
-  });
-
   it('exports DIETARY_LIMITS with expected ranges', () => {
-    expect(DIETARY_LIMITS.prepTime).toEqual({ min: 0, max: 480 });
+    expect(DIETARY_LIMITS.cookTime).toEqual({ min: 0, max: 480 });
     expect(DIETARY_LIMITS.calories).toEqual({ min: 0, max: 10000 });
     expect(DIETARY_LIMITS.protein).toEqual({ min: 0, max: 500 });
   });

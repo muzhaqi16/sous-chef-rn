@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { View } from 'react-native';
+import Animated, { ZoomIn } from 'react-native-reanimated';
 import { StyleSheet } from 'react-native-unistyles';
 import { AuthWrapper } from '#features/auth/components/AuthWrapper';
 import { Button } from '#components/molecules/Button';
@@ -11,6 +12,13 @@ import { appAssets } from '#/assets/appAssets';
 import { Text } from '#components/atoms/Text';
 import { LocalImage } from '#components/atoms/LocalImage';
 import { authTestIDs } from '#features/auth/testIDs';
+import { motion } from '#/theme/motion';
+
+const { damping, stiffness, mass } = motion.spring.GENTLE;
+const logoEntering = ZoomIn.springify()
+  .damping(damping)
+  .stiffness(stiffness)
+  .mass(mass);
 
 export function LandingAuthScreen() {
   const { t } = useTranslation();
@@ -20,11 +28,13 @@ export function LandingAuthScreen() {
     <AuthWrapper testID={authTestIDs.landingScreen}>
       {/* 1. Hero image flex-zone */}
       <View style={styles.heroContainer}>
-        <LocalImage
-          source={appAssets.logo}
-          style={styles.hero}
-          resizeMode="contain"
-        />
+        <Animated.View entering={logoEntering}>
+          <LocalImage
+            source={appAssets.logo}
+            style={styles.hero}
+            resizeMode="contain"
+          />
+        </Animated.View>
       </View>
 
       {/* 2. Content flex-zone */}
@@ -44,21 +54,20 @@ export function LandingAuthScreen() {
           {t('auth.landingSubtitle')}
         </Text>
 
+        {/* A new user's way in leads; a returning one's sits under it. */}
         <View style={styles.buttons}>
           <Button
+            testID={authTestIDs.landingSignUpButton}
+            title={t('auth.signupTitle')}
+            onPress={toSignUp}
+            fullWidth
+          />
+          <Button
             testID={authTestIDs.landingLoginButton}
-            title={t('auth.logIn')}
+            title={t('auth.haveAccountButton')}
             onPress={toLogin}
             variant="secondary"
             fullWidth
-            txtStyle={styles.txt}
-          />
-          <Button
-            testID={authTestIDs.landingSignUpButton}
-            title={t('auth.signUp')}
-            onPress={toSignUp}
-            fullWidth
-            txtStyle={styles.txt}
           />
         </View>
 
@@ -107,18 +116,12 @@ const styles = StyleSheet.create(theme => ({
     paddingBottom: theme.spacing.xl,
   },
 
-  txt: {
-    textTransform: 'uppercase',
-  },
   subtitle: {
     width: '100%',
   },
 
   buttons: {
-    flex: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    gap: theme.spacing.md,
+    gap: theme.spacing.sm,
     marginTop: theme.spacing.xl,
   },
 

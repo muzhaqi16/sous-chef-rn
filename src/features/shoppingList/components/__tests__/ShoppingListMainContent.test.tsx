@@ -7,10 +7,8 @@ import {
   ShoppingListMainContent,
   type ShoppingListMainContentProps,
 } from '#features/shoppingList/components/ShoppingListMainContent';
-import {
-  useShoppingListTutorial,
-  ShoppingListTutorialStep,
-} from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
+import { FIRST_SHOP_STEP } from '#features/shoppingList/context/useFirstShopTour';
 import {
   useAnyShoppingListSheetVisible,
   useShoppingListModalActions,
@@ -92,10 +90,12 @@ jest.mock('#features/shoppingList/hooks/useItemReordering', () => ({
   })),
 }));
 
+const mockCloseAllRows = jest.fn();
 jest.mock('#hooks/ui/useSwipeableCoordinator', () => ({
   useSwipeableCoordinator: jest.fn(() => ({
     handleSwipeableWillOpen: jest.fn(),
     handleSwipeableClose: jest.fn(),
+    closeAll: mockCloseAllRows,
   })),
 }));
 
@@ -127,27 +127,22 @@ jest.mock('@react-navigation/native', () => ({
 
 const mockOpenAddItemSheet = jest.fn();
 const mockOpenAddItemManually = jest.fn();
+const mockOpenMoveToPantry = jest.fn();
 jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
   useShoppingListModalActions: jest.fn(() => ({
     openAddItemSheet: mockOpenAddItemSheet,
     openAddItemManually: mockOpenAddItemManually,
     openQuantityEdit: jest.fn(),
     openPurchaseAmount: jest.fn(),
-    openMoveToPantry: jest.fn(),
+    openMoveToPantry: mockOpenMoveToPantry,
     openMoveToAisle: jest.fn(),
   })),
   useAnyShoppingListSheetVisible: jest.fn(() => false),
 }));
 
-jest.mock('#features/shoppingList/context/ShoppingListTutorialContext', () => {
-  const actual = jest.requireActual(
-    '#features/shoppingList/context/ShoppingListTutorialContext',
-  );
-  return {
-    ...actual,
-    useShoppingListTutorial: jest.fn(() => null),
-  };
-});
+jest.mock('#features/shoppingList/context/FirstShopTourContext', () => ({
+  useFirstShopTourContext: jest.fn(() => null),
+}));
 
 jest.mock('#features/shoppingList/utils/shoppingListPermissions', () => ({
   getShoppingListPermissionsWithOwner: jest.fn(() => ({
@@ -264,9 +259,19 @@ jest.mock(
 jest.mock(
   '#components/organisms/SpotlightCoachMark/SpotlightCoachMark',
   () => ({
-    SpotlightCoachMark: ({ title }: { title: string }) => {
+    SpotlightCoachMark: ({
+      title,
+      onTargetPress,
+    }: {
+      title: string;
+      onTargetPress?: () => void;
+    }) => {
       const { Text } = require('react-native');
-      return <Text testID="spotlight-coach-mark">{title}</Text>;
+      return (
+        <Text testID="spotlight-coach-mark" onPress={onTargetPress}>
+          {title}
+        </Text>
+      );
     },
   }),
 );
@@ -325,32 +330,56 @@ const makeScreenData = (overrides: ScreenDataOverrides = {}): ScreenData => {
   return data as ScreenData;
 };
 
-// Full tutorial mock shape — every notify*/skip* fn the component may call,
-// even though a given test only ever exercises the one matching its step.
-const makeTutorial = (
-  overrides: Partial<NonNullable<ReturnType<typeof useShoppingListTutorial>>>,
+const RECT = { x: 0, y: 0, width: 10, height: 10 };
+
+/** A tour sequence with nothing showing, unless a step is given. */
+const sequence = (
+  step: { featureId: string; title: string } | null = null,
 ) => ({
-  isActive: true,
-  currentStep: ShoppingListTutorialStep.IDLE,
-  rects: {},
-  registerRect: jest.fn(),
-  notifyAddButtonPressed: jest.fn(),
-  notifyItemAdded: jest.fn(),
-  notifySheetClosed: jest.fn(),
-  notifySwipeActionsSeen: jest.fn(),
-  notifyCheckboxTapped: jest.fn(),
-  notifyLongPressPriceSeen: jest.fn(),
-  notifyPurchasedTabTapped: jest.fn(),
-  notifyMoveToPantryTapped: jest.fn(),
-  skipCurrentStep: jest.fn(),
+  currentStep: step
+    ? {
+        ...step,
+        targetRect: RECT,
+        subtitle: '',
+        stepIndex: 0,
+        totalSteps: 4,
+        waitsForAction: false,
+      }
+    : null,
+  inlineStep: null,
+  activeRectKey: null,
+  advance: jest.fn(),
+  advanceInPlace: jest.fn(),
   skipAll: jest.fn(),
-  ...overrides,
+  pause: jest.fn(),
+});
+
+const makeTour = (
+  overrides: {
+    guide?: ReturnType<typeof sequence>;
+    swipeTip?: ReturnType<typeof sequence>;
+    receiptTip?: ReturnType<typeof sequence>;
+    wanted?: Partial<Record<'checkbox' | 'archiveIcon' | 'itemCard', boolean>>;
+  } = {},
+) => ({
+  guide: overrides.guide ?? sequence(),
+  swipeTip: overrides.swipeTip ?? sequence(),
+  receiptTip: overrides.receiptTip ?? sequence(),
+  wanted: {
+    checkbox: false,
+    archiveIcon: false,
+    itemCard: false,
+    ...overrides.wanted,
+  },
+  registerRect: jest.fn(),
+  tabForGuide: null,
+  noteTab: jest.fn(),
 });
 
 describe('ShoppingListMainContent', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (useShoppingListTutorial as jest.Mock).mockReturnValue(null);
+    (useFirstShopTourContext as jest.Mock).mockReturnValue(null);
     (useAnyShoppingListSheetVisible as jest.Mock).mockReturnValue(false);
   });
 
@@ -366,6 +395,22 @@ describe('ShoppingListMainContent', () => {
       <ShoppingListMainContent screenData={makeScreenData({ lists: [] })} />,
     );
     expect(getByTestId('shopping-list-screen')).toBeTruthy();
+  });
+
+  it('offers to create a list from the + when there is none, not a wait', () => {
+    render(
+      <ShoppingListMainContent
+        screenData={makeScreenData({
+          lists: [],
+          listsLoading: false,
+          listsHasResult: true,
+        })}
+      />,
+    );
+
+    const menu = jest.mocked(useTabBarAddMenu).mock.calls.at(-1)?.[0] ?? [];
+    expect(menu.map(action => action.key)).toEqual(['createList']);
+    expect(menu[0]?.disabledReason).toBeUndefined();
   });
 
   it('renders with items', () => {
@@ -504,81 +549,109 @@ describe('ShoppingListMainContent', () => {
     expect(tree.toJSON()).toBeTruthy();
   });
 
-  describe('tutorial coach-mark render guards', () => {
-    // Positive control: proves the mocks/wiring actually let the coach mark
-    // render at all, so the negative cases below are meaningful rather than
-    // trivially passing because nothing was ever going to render.
-    it('renders the coach mark when the step, rect, and item all line up', () => {
-      (useShoppingListTutorial as jest.Mock).mockReturnValue(
-        makeTutorial({
-          currentStep: ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
-          rects: { checkbox: { x: 0, y: 0, width: 10, height: 10 } },
+  // A row left swiped open puts its checkbox beside where it rests, and the
+  // spotlight would point at empty space.
+  it('closes open rows when a tip points into a row', () => {
+    (useFirstShopTourContext as jest.Mock).mockReturnValue(
+      makeTour({ wanted: { checkbox: true } }),
+    );
+
+    render(
+      <ShoppingListMainContent
+        screenData={makeScreenData({ rawUnpurchasedItems: [{ id: 'item-1' }] })}
+      />,
+    );
+
+    expect(mockCloseAllRows).toHaveBeenCalled();
+  });
+
+  describe('the first-shop guide and the swipe tip', () => {
+    it('shows the guide’s step', () => {
+      (useFirstShopTourContext as jest.Mock).mockReturnValue(
+        makeTour({
+          guide: sequence({ featureId: FIRST_SHOP_STEP.add, title: 'Add' }),
         }),
+      );
+      const { getByText } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
+      );
+      expect(getByText('Add')).toBeTruthy();
+    });
+
+    it('opens the add sheet from the + step and moves to the sheet’s hint', () => {
+      const guide = sequence({ featureId: FIRST_SHOP_STEP.add, title: 'Add' });
+      (useFirstShopTourContext as jest.Mock).mockReturnValue(
+        makeTour({ guide }),
+      );
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
+      );
+
+      fireEvent.press(getByTestId('spotlight-coach-mark'));
+
+      expect(mockOpenAddItemSheet).toHaveBeenCalledTimes(1);
+      expect(guide.advanceInPlace).toHaveBeenCalledTimes(1);
+    });
+
+    it('opens Move to pantry for the bought row, leaving the move to continue the guide', () => {
+      const guide = sequence({
+        featureId: FIRST_SHOP_STEP.putAway,
+        title: 'Put it away',
+      });
+      (useFirstShopTourContext as jest.Mock).mockReturnValue(
+        makeTour({ guide }),
       );
       const { getByTestId } = render(
         <ShoppingListMainContent
-          screenData={makeScreenData({
-            rawUnpurchasedItems: [{ id: 'item-1' }],
-          })}
+          screenData={makeScreenData({ rawPurchasedItems: [{ id: 'bought' }] })}
         />,
       );
-      expect(getByTestId('spotlight-coach-mark')).toBeTruthy();
+
+      fireEvent.press(getByTestId('spotlight-coach-mark'));
+
+      expect(mockOpenMoveToPantry).toHaveBeenCalledWith('bought');
+      expect(guide.advance).not.toHaveBeenCalled();
     });
 
-    it('hides the coach mark when the checkbox step has no unpurchased items, even with a stale rect', () => {
-      (useShoppingListTutorial as jest.Mock).mockReturnValue(
-        makeTutorial({
-          currentStep: ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX,
-          // Simulates a rect left over from before the last item was purchased/removed.
-          rects: { checkbox: { x: 0, y: 0, width: 10, height: 10 } },
+    it('shows the swipe tip when the guide shows nothing', () => {
+      (useFirstShopTourContext as jest.Mock).mockReturnValue(
+        makeTour({
+          swipeTip: sequence({
+            featureId: 'shopping_list_swipe',
+            title: 'Swipe',
+          }),
         }),
       );
-      const { queryByTestId } = render(
-        <ShoppingListMainContent
-          screenData={makeScreenData({ rawUnpurchasedItems: [] })}
-        />,
+      const { getByText } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
       );
-      expect(queryByTestId('spotlight-coach-mark')).toBeNull();
+      expect(getByText('Swipe')).toBeTruthy();
     });
 
-    it('hides the coach mark when the move-to-pantry step has no purchased items', () => {
-      (useShoppingListTutorial as jest.Mock).mockReturnValue(
-        makeTutorial({
-          currentStep: ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY,
-          rects: { archiveIcon: { x: 0, y: 0, width: 10, height: 10 } },
-        }),
+    it('Items checked off a list: a tip offers scanning the trip’s receipt', () => {
+      const receiptTip = sequence({
+        featureId: 'list_receipt_offer',
+        title: 'Scan receipt',
+      });
+      (useFirstShopTourContext as jest.Mock).mockReturnValue(
+        makeTour({ receiptTip }),
       );
-      const { queryByTestId } = render(
-        <ShoppingListMainContent
-          screenData={makeScreenData({ rawPurchasedItems: [] })}
-        />,
+      const { getByTestId } = render(
+        <ShoppingListMainContent screenData={makeScreenData()} />,
       );
-      expect(queryByTestId('spotlight-coach-mark')).toBeNull();
+
+      fireEvent.press(getByTestId('spotlight-coach-mark'));
+
+      expect(
+        jest.mocked(useAppNavigation)().toReceiptScan,
+      ).toHaveBeenCalledTimes(1);
+      expect(receiptTip.advance).toHaveBeenCalledTimes(1);
     });
 
-    it('hides the coach mark while the add-item sheet is open, even mid-way through an unrelated step', () => {
-      (useShoppingListTutorial as jest.Mock).mockReturnValue(
-        makeTutorial({
-          currentStep: ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE,
-          rects: { itemCard: { x: 0, y: 0, width: 10, height: 10 } },
-        }),
-      );
-      (useAnyShoppingListSheetVisible as jest.Mock).mockReturnValue(true);
-      const { queryByTestId } = render(
-        <ShoppingListMainContent
-          screenData={makeScreenData({
-            rawUnpurchasedItems: [{ id: 'item-1' }],
-          })}
-        />,
-      );
-      expect(queryByTestId('spotlight-coach-mark')).toBeNull();
-    });
-
-    it('hides the coach mark while the purchase-amount sheet it opened is still open', () => {
-      (useShoppingListTutorial as jest.Mock).mockReturnValue(
-        makeTutorial({
-          currentStep: ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE,
-          rects: { itemCard: { x: 0, y: 0, width: 10, height: 10 } },
+    it('hides every tip while a sheet is open', () => {
+      (useFirstShopTourContext as jest.Mock).mockReturnValue(
+        makeTour({
+          guide: sequence({ featureId: FIRST_SHOP_STEP.check, title: 'Check' }),
         }),
       );
       (useAnyShoppingListSheetVisible as jest.Mock).mockReturnValue(true);

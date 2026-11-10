@@ -8,6 +8,11 @@ import type { BarAction } from '#components/molecules/BarActions';
 import type { EmptyStateProps } from '#components/molecules/EmptyState';
 import { SectionHeaderRow } from '#components/molecules/SectionHeaderRow';
 import { StatCard } from '#features/today/components/StatCard';
+import { GettingStartedCard } from '#features/today/components/GettingStartedCard';
+import {
+  useGettingStarted,
+  type GettingStartedItem,
+} from '#features/today/hooks/useGettingStarted';
 import { ItemCard } from '#components/organisms/ItemCard';
 import { DataStateView } from '#components/organisms/DataStateView';
 import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
@@ -21,6 +26,8 @@ import { useTabBarState } from '#/context/TabBarActionsContext';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
 import {
   useSetPendingTabAdd,
@@ -57,25 +64,18 @@ export const TodayMain: React.FC = () => {
   const [householdRect, setHouseholdRect] = useState<TargetRect | null>(null);
   const isFocused = useIsScreenFocused();
   const { isOverlayOpen } = useTabBarState();
-  // Switching homes is taught only to someone with two; one home learns where
-  // to rename it. Each has its own id, so the switching tip still shows once a
-  // second home arrives. Pantry's old step keeps its old id.
-  const homeStep =
-    overview.homeCount !== null && overview.homeCount > 1
-      ? {
-          featureId: 'pantry_tutorial_home',
-          title: t('today.tutorialHouseholdTitle'),
-          subtitle: t('today.tutorialHouseholdSubtitle'),
-          rectKey: 'household',
-        }
-      : {
-          featureId: 'today_tutorial_your_home',
-          title: t('today.tutorialYourHomeTitle'),
-          subtitle: t('today.tutorialYourHomeSubtitle'),
-          rectKey: 'household',
-        };
+  // Switching homes is taught only to someone with two, under Pantry's old
+  // id; a one-home account is shown nothing here.
   const tutorial = useTutorialSequence({
-    steps: [homeStep],
+    steps: [
+      {
+        featureId: 'pantry_tutorial_home',
+        title: t('today.tutorialHouseholdTitle'),
+        subtitle: t('today.tutorialHouseholdSubtitle'),
+        rectKey: 'household',
+        when: () => overview.homeCount !== null && overview.homeCount > 1,
+      },
+    ],
     targetRects: { household: householdRect },
     canStart: overview.state === 'ready' && overview.homeCount !== null,
     isPaused: !isFocused || isOverlayOpen,
@@ -167,6 +167,27 @@ export const TodayMain: React.FC = () => {
       };
 
   const { counts, meals, mealsState, suggestions, shopping } = overview;
+  const gettingStarted = useGettingStarted({
+    pantryItemCount: counts?.total ?? null,
+  });
+  // Each item's guide runs on the tab it opens, even with tips off.
+  const startItem = (item: GettingStartedItem) => {
+    tutorialSession.startGuide(GUIDE_TOURS[item]);
+    switch (item) {
+      case 'stock':
+        toPantryMain();
+        break;
+      case 'shop':
+        toShoppingListMain();
+        break;
+      case 'cook':
+        toRecipeMain();
+        break;
+      case 'plan':
+        toMealPlanMain();
+        break;
+    }
+  };
 
   return (
     <Screen
@@ -195,7 +216,14 @@ export const TodayMain: React.FC = () => {
       testID={todayTestIDs.screen}
     >
       <View style={styles.sections}>
-        {counts ? (
+        {/* While it shows, the card takes the tiles' place. */}
+        {gettingStarted.card ? (
+          <GettingStartedCard
+            {...gettingStarted.card}
+            onStart={startItem}
+            onHide={gettingStarted.hide}
+          />
+        ) : counts ? (
           <View style={styles.stats}>
             <StatCard
               count={counts.expired}
@@ -321,7 +349,10 @@ export const TodayMain: React.FC = () => {
           subtitle={tutorial.currentStep.subtitle}
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
+          waitsForAction={tutorial.currentStep.waitsForAction}
+          demo={tutorial.currentStep.demo}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
             tutorial.advance();

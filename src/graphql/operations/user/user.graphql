@@ -38,20 +38,13 @@ query GetDietaryProfile {
     dietaryProfile {
       id
       userId
-      preferredCuisines
-      dislikedIngredients
-      favoriteIngredients
       calorieTarget
       proteinTarget
       carbsTarget
       fatTarget
-      mealsPerDay
-      snacksPerDay
       cooksFor
-      cookingSkillLevel
-      maxPrepTimeMinutes
+      religiousDiet
       maxCookTimeMinutes
-      budgetPerMeal
       createdAt
       updatedAt
       restrictions {
@@ -59,6 +52,7 @@ query GetDietaryProfile {
         diet
         intolerance
         healthGoal
+        religiousDiet
         item {
           version
           id
@@ -129,20 +123,13 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
       dietaryProfile {
         id
         userId
-        preferredCuisines
-        dislikedIngredients
-        favoriteIngredients
         calorieTarget
         proteinTarget
         carbsTarget
         fatTarget
-        mealsPerDay
-        snacksPerDay
         cooksFor
-        cookingSkillLevel
-        maxPrepTimeMinutes
+        religiousDiet
         maxCookTimeMinutes
-        budgetPerMeal
         createdAt
         updatedAt
         restrictions {
@@ -150,6 +137,7 @@ mutation UpdateDietaryProfile($input: UpdateDietaryProfileInput!) {
           diet
           intolerance
           healthGoal
+          religiousDiet
           item {
             version
             id
@@ -193,6 +181,7 @@ mutation AddDietaryRestriction($input: AddRestrictionInput!) {
         diet
         intolerance
         healthGoal
+        religiousDiet
         item {
           version
           id

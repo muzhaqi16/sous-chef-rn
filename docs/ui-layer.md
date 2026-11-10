@@ -82,13 +82,13 @@ optional:
   `ThemeEpochSentinel` for its themed descendants), and the scroll view's
   `bottomOffset` is the footer's measured height, so a focused field clears it.
   A primary action that must stay reachable while typing belongs in the
-  footer, as `OnBoardingWrapper`'s does.
+  footer, as `OnboardingStepScaffold`'s does.
 - **Back or close.** A pushed screen shows back; one presented from the bottom
   (modal or `slide_from_bottom` card) shows close in the same slot.
 - **Presets.** `SubScreen` is a pushed screen whose back returns to the previous
   screen; `FormScreen` a full-screen form (close + save); `DetailTemplate` a
   screen of card sections; `PaginatedHistoryScreen` a `SubScreen` over one
-  paginated list; `AuthWrapper` and `OnBoardingWrapper` the auth and onboarding
+  paginated list; `AuthWrapper` and `OnboardingStepScaffold` the auth and onboarding
   shells. A pushed screen whose back is plain `goBack` is `SubScreen`, never
   `Screen` with a hand-built `back`. A form sheet's header is `SheetHeader`
   (close, centred title, primary confirm); only templates render `Header`.
@@ -480,8 +480,17 @@ they read it.
     the slot to React state.
 - **Two overlay signals, on purpose.** `useOverlayBackdropPresence()` (any claim)
   resets the tab bar's scroll-hide and holds the pantry rows still behind a
-  sheet. `isOverlayOpen` in `TabBarActionsContext`, set only by selectors, pauses
-  the tutorials, which open sheets of their own and must not pause themselves.
+  sheet. `isOverlayOpen` in `TabBarActionsContext`, set only by selectors, is
+  what a tour the user started pauses on.
+- **A tip shown unasked waits for a clear screen; a guide the user started
+  does not.** `useTutorialSequence` pauses an unprompted tour on any backdrop
+  claim (`useOverlayBackdropPresence()`), the keyboard and the app leaving the
+  foreground, and allows one unprompted tour a session (`tutorialSession`), none
+  in the session onboarding finished. A sequence passing `startedByUser` (the
+  Getting started card) pauses only on its caller's `isPaused` (focus,
+  `isOverlayOpen`), since it opens sheets of its own, and runs with Show
+  tutorials off. Not now puts a tour away until the next session; End marks
+  every step shown.
 - **Inputs in a sheet resolve to `BottomSheetTextInput`.** A plain RN `TextInput`
   leaves the sheet blind to the keyboard. `BottomSheetTextInput` throws outside a
   sheet, so shared inputs pick it from context —

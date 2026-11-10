@@ -1,51 +1,77 @@
 import type { TranslationKey } from '#/i18n';
 import type { Translate } from '#/i18n/types';
 import {
-  CookingSkillLevel,
   Diet,
   DietaryAlertState,
   HealthGoal,
   Intolerance,
+  ReligiousDiet,
   RestrictionSeverity,
   type MembershipRole,
 } from '#/graphql/generated/schemaTypes';
 import { getMemberDisplayName } from '#/utils/formatters/memberFormatters';
 
 /**
- * Stackable dietary constraints — they layer on a lifestyle diet, so they stay
- * multi-select, while every other `Diet` member is mutually exclusive. One
- * source for both the recipe filter sheet and the dietary-profile selector.
+ * Stackable dietary constraints: they layer on any diet. One source for the
+ * dietary profile, the onboarding step and the recipe filters.
  */
 export const CONSTRAINT_DIETS: ReadonlySet<Diet> = new Set([
   Diet.GlutenFree,
   Diet.LowFodmap,
 ]);
 
-/** True for mutually-exclusive lifestyle diets (vegan, keto, paleo, …). */
-export const isLifestyleDiet = (diet: Diet): boolean =>
-  !CONSTRAINT_DIETS.has(diet);
-
-/** Least to most experienced — the picker's order, which the enum's is not. */
-export const SKILL_LEVELS: readonly CookingSkillLevel[] = [
-  CookingSkillLevel.Beginner,
-  CookingSkillLevel.Intermediate,
-  CookingSkillLevel.Advanced,
-  CookingSkillLevel.Expert,
-];
+/** Ways of eating that sit beside an animal-food diet, as in vegetarian keto. */
+const EATING_STYLE_DIETS: ReadonlySet<Diet> = new Set([
+  Diet.Keto,
+  Diet.Paleo,
+  Diet.Primal,
+  Diet.Whole30,
+]);
 
 /**
- * A stored level this build can word. A cache persisted before the enum holds
- * the Title-case string it replaced until the profile is refetched.
+ * The group a diet is chosen in. A person holds one animal-food diet (they
+ * nest: vegan sits inside vegetarian) and one eating style; constraints stack.
  */
-export const knownSkillLevel = (
-  value: string | null | undefined,
-): CookingSkillLevel | null =>
-  SKILL_LEVELS.find(level => level === value) ?? null;
+export type DietGroup = 'animalFood' | 'eatingStyle' | 'constraint';
+
+export const dietGroup = (diet: Diet): DietGroup =>
+  CONSTRAINT_DIETS.has(diet)
+    ? 'constraint'
+    : EATING_STYLE_DIETS.has(diet)
+    ? 'eatingStyle'
+    : 'animalFood';
+
+/** True for a diet held one per group (vegan, keto, …), not a constraint. */
+export const isLifestyleDiet = (diet: Diet): boolean =>
+  dietGroup(diet) !== 'constraint';
+
+/** `diets` with `picked` added, replacing the diet of its group it rules out. */
+export function withDietPicked(diets: readonly Diet[], picked: Diet): Diet[] {
+  const group = dietGroup(picked);
+  return [
+    ...diets.filter(
+      diet =>
+        diet !== picked &&
+        (group === 'constraint' || dietGroup(diet) !== group),
+    ),
+    picked,
+  ];
+}
+
+/** `diets` with at most one of each group, the first held kept. */
+export const oneDietPerGroup = (diets: readonly Diet[]): Diet[] =>
+  diets.reduce<Diet[]>(
+    (kept, diet) =>
+      kept.includes(diet) ||
+      (isLifestyleDiet(diet) &&
+        kept.some(held => dietGroup(held) === dietGroup(diet)))
+        ? kept
+        : [...kept, diet],
+    [],
+  );
 
 export const DIETARY_LIMITS = {
-  prepTime: { min: 0, max: 480 },
   cookTime: { min: 0, max: 480 },
-  budget: { min: 0, max: 1000 },
   calories: { min: 0, max: 10000 },
   protein: { min: 0, max: 500 },
   carbs: { min: 0, max: 1000 },
@@ -149,6 +175,12 @@ export const HEALTH_GOAL_OPTIONS: readonly DietaryOption<HealthGoal>[] = [
   },
 ];
 
+/** A religious diet's food rules: private to the user, at most one held. */
+export const RELIGIOUS_DIET_OPTIONS: readonly DietaryOption<ReligiousDiet>[] = [
+  { labelKey: 'recipes.religiousDiet.HALAL', value: ReligiousDiet.Halal },
+  { labelKey: 'recipes.religiousDiet.KOSHER', value: ReligiousDiet.Kosher },
+];
+
 /**
  * The copy key naming what a restriction restricts. A value this build's enum
  * does not list yet reads as unknown, never raw.
@@ -157,14 +189,17 @@ export function restrictionLabelKey(restriction: {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   healthGoal?: HealthGoal | null;
+  religiousDiet?: ReligiousDiet | null;
 }): TranslationKey {
-  const { diet, intolerance, healthGoal } = restriction;
+  const { diet, intolerance, healthGoal, religiousDiet } = restriction;
   const match = diet
     ? DIET_OPTIONS.find(option => option.value === diet)
     : intolerance
     ? INTOLERANCE_OPTIONS.find(option => option.value === intolerance)
     : healthGoal
     ? HEALTH_GOAL_OPTIONS.find(option => option.value === healthGoal)
+    : religiousDiet
+    ? RELIGIOUS_DIET_OPTIONS.find(option => option.value === religiousDiet)
     : undefined;
   return match ? match.labelKey : 'labels.unknown';
 }
@@ -232,7 +267,7 @@ export function toHouseholdAlert(
     what: restrictionLabel(restriction, t),
     state,
     severity: restriction.severity,
-    isDiet: !!restriction.diet,
+    isDiet: !!restriction.diet || !!restriction.religiousDiet,
   };
 }
 
@@ -241,8 +276,12 @@ export const canAlert = (restriction: {
   diet?: Diet | null;
   intolerance?: Intolerance | null;
   item?: { id: string } | null;
+  religiousDiet?: ReligiousDiet | null;
 }): boolean =>
-  !!restriction.diet || !!restriction.intolerance || !!restriction.item;
+  !!restriction.diet ||
+  !!restriction.intolerance ||
+  !!restriction.item ||
+  !!restriction.religiousDiet;
 
 /** An allergy or intolerance reads as a warning; a preference or goal, a note. */
 export const isStrictSeverity = (severity: RestrictionSeverity): boolean =>

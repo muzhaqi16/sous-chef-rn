@@ -19,7 +19,6 @@ import { CountBadge } from '#components/atoms/CountBadge';
 import { Pressable } from '#components/atoms/themedComponents';
 import { hitSlop } from '#/theme/foundations/sizes';
 import { commonStyles } from '#/styles/commonStyles';
-import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
 import { Icon, type IconName } from '#components/atoms/Icon';
 
 export interface SearchBarAction {
@@ -30,13 +29,6 @@ export interface SearchBarAction {
   /** What the control does; its icon's name is no label. */
   accessibilityLabel: string;
   testID?: string;
-  /** Its screen rect once laid out, for a spotlight tutorial to point at. */
-  onButtonLayout?: (rect: {
-    x: number;
-    y: number;
-    width: number;
-    height: number;
-  }) => void;
 }
 
 /**
@@ -81,26 +73,21 @@ type SearchBarProps = Omit<TextInputProps, 'style'> & {
 };
 
 /** The one control beside the field: a plain icon, its count badge over it. */
-const SearchAccessory: FC<{ action: SearchBarAction }> = ({ action }) => {
-  const { ref, measure } = useMeasuredRect(action.onButtonLayout);
-  return (
-    <View ref={ref} collapsable={false} onLayout={measure}>
-      <Pressable
-        onPress={action.onPress}
-        hitSlop={hitSlop.lg}
-        accessibilityRole="button"
-        accessibilityLabel={action.accessibilityLabel}
-        testID={action.testID}
-        style={styles.accessory}
-      >
-        <View>
-          <Icon name={action.icon} size="md" tone="primary" />
-          <CountBadge count={action.badge} />
-        </View>
-      </Pressable>
+const SearchAccessory: FC<{ action: SearchBarAction }> = ({ action }) => (
+  <Pressable
+    onPress={action.onPress}
+    hitSlop={hitSlop.lg}
+    accessibilityRole="button"
+    accessibilityLabel={action.accessibilityLabel}
+    testID={action.testID}
+    style={styles.accessory}
+  >
+    <View>
+      <Icon name={action.icon} size="md" tone="primary" />
+      <CountBadge count={action.badge} />
     </View>
-  );
-};
+  </Pressable>
+);
 
 export const SearchBar = forwardRef<SearchBarRef, SearchBarProps>(
   (

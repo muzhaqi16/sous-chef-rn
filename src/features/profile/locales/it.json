@@ -63,27 +63,11 @@
     "restrictions": "Restrizioni alimentari",
     "removeRestrictionConfirm": "Vuoi davvero rimuovere questa restrizione alimentare?",
     "removeRestrictionFailed": "Impossibile rimuovere la restrizione",
-    "foodPreferences": "Preferenze alimentari",
-    "favoriteIngredients": "Ingredienti preferiti",
-    "favoriteIngredientsPlaceholder": "es. aglio, basilico, pollo",
-    "favoriteIngredientsAdd": "Aggiungi ingrediente preferito",
-    "favoriteIngredientsEmpty": "Nessun ingrediente preferito aggiunto",
-    "dislikedIngredients": "Ingredienti non graditi",
-    "dislikedIngredientsPlaceholder": "es. coriandolo, funghi, olive",
-    "dislikedIngredientsAdd": "Aggiungi ingrediente",
-    "dislikedIngredientsEmpty": "Nessun ingrediente aggiunto",
     "nutritionGoals": "Obiettivi nutrizionali",
-    "mealsPerDay": "Pasti al giorno",
-    "snacksPerDay": "Spuntini al giorno",
-    "mealsPerDayTitle": "Pasti al giorno",
-    "snacksPerDayTitle": "Spuntini al giorno",
-    "mealsPlaceholder": "es. 3",
-    "skillLevel": "Livello di abilità",
-    "maxPrepTime": "Tempo max preparazione",
-    "budgetPerMeal": "Budget per pasto",
     "minutes": "minuti",
     "macroTargets": "Obiettivi macro (avanzato)",
     "macroTargetsEmpty": "Nessun obiettivo impostato",
+    "cookTimeEmpty": "Nessun limite di tempo",
     "dailyCalories": "Calorie giornaliere",
     "protein": "Proteine",
     "fat": "Grassi",
@@ -157,6 +141,7 @@
     "avoidHint": "Ogni sua varietà viene segnalata, a te e alle case con cui condividi.",
     "avoidSearchPlaceholder": "Cerca alimenti",
     "avoidSearchNeedsConnection": "Per cercare alimenti serve una connessione. Riprova quando torni online.",
+    "avoidSuggestionsTitle": "Spesso evitati",
     "avoidNamed": "Evita {{name}}",
     "avoidSeverity": {
       "preference": "Evita",
@@ -165,27 +150,15 @@
     },
     "avoidAllergy": "{{name}} (allergia)",
     "avoidIntolerance": "{{name}} (intolleranza)",
-    "addAvoidFailed": "Impossibile aggiungere questo alimento. Riprova."
+    "addAvoidFailed": "Impossibile aggiungere questo alimento. Riprova.",
+    "religiousDietTitle": "Dieta religiosa",
+    "religiousDietPrivate": "Privato: usato solo per i tuoi suggerimenti, le tue case non lo vedono."
   },
   "cookingPreferences": {
-    "prepTimeRange": "Il tempo di preparazione deve essere tra {{min}} e {{max}} minuti",
     "cookTimeRange": "Il tempo di cottura deve essere tra {{min}} e {{max}} minuti",
-    "budgetRange": "Il budget deve essere tra {{min}} e {{max}}",
     "updateFailed": "Impossibile aggiornare le preferenze di cucina",
-    "skillLevel": "Livello di abilità culinaria",
-    "selectSkillLevel": "Seleziona livello di abilità...",
-    "maxPrepTime": "Tempo max di preparazione (minuti)",
-    "prepTimePlaceholder": "es., 30",
     "maxCookTime": "Tempo max di cottura (minuti)",
-    "cookTimePlaceholder": "es., 60",
-    "budgetPerMeal": "Budget per pasto ($)",
-    "budgetPlaceholder": "es., 15.00",
-    "skillLevels": {
-      "BEGINNER": "Principiante",
-      "INTERMEDIATE": "Intermedio",
-      "ADVANCED": "Avanzato",
-      "EXPERT": "Esperto"
-    }
+    "cookTimePlaceholder": "es., 60"
   },
   "profile": {
     "sections": {
@@ -301,14 +274,6 @@
     "dateUnreasonable": "Inserisci una data di nascita plausibile",
     "invalidVisibility": "Seleziona un'opzione di visibilità valida",
     "invalidGender": "Seleziona un genere valido"
-  },
-  "stringArrayManager": {
-    "inputPlaceholder": "Inserisci un valore...",
-    "empty": "Nessun elemento aggiunto",
-    "valueRequired": "Inserisci un valore",
-    "duplicate": "Questo elemento esiste già",
-    "maxItems_one": "Puoi aggiungere al massimo {{count}} elemento",
-    "maxItems_other": "Puoi aggiungere al massimo {{count}} elementi"
   },
   "restrictionSection": {
     "empty": "Nessuno aggiunto"

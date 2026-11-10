@@ -207,7 +207,12 @@
     "actionRequiredBody": "Esta notificación requiere una acción: {{action}}",
     "goToNotifications": "Ir a las notificaciones",
     "urgentUnread_one": "{{count}} notificación urgente",
-    "urgentUnread_other": "{{count}} notificaciones urgentes"
+    "urgentUnread_other": "{{count}} notificaciones urgentes",
+    "expiryAsk": {
+      "title": "Entérate antes de que se eche a perder",
+      "message": "Te avisaremos antes de que se eche a perder la comida. Lo primero: {{item}}. Puedes cambiarlo en Ajustes.",
+      "turnOn": "Activar"
+    }
   },
   "notificationGroups": {
     "urgent": "🚨 Urgente",

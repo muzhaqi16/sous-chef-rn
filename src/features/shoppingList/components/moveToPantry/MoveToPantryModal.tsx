@@ -434,6 +434,7 @@ export const MoveToPantryModal: React.FC<MoveToPantryModalProps> = ({
           },
           disabled: confirmDisabled,
           loading: isMoving,
+          testID: shoppingListTestIDs.moveToPantryConfirm,
         }}
       />
 

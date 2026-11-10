@@ -26,8 +26,8 @@ const receiptStepScreen = new ReceiptStepScreen();
 async function skipOptionalOnboardingScreens() {
   await dismissBiometricPromptIfPresent();
 
-  // Setup creates the home, pantry and list itself; it waits only when an
-  // invitation is pending.
+  // Setup creates the home, pantry and list beside the questions; its screen
+  // opens, over the first question, only when an invitation is pending.
   try {
     await onboardingSetupScreen.waitForScreen(2000);
     await onboardingSetupScreen.tapSkipHome();

@@ -96,6 +96,11 @@
     "unitsReadByDefault": "Measures were read as US customary units.",
     "pantryCoverage": "{{percent}}% of its ingredients in your pantry",
     "coveragePercent": "{{percent}}%",
+    "readyToCook": "Ready to cook",
+    "usesYourMoreToBuy_one": "Uses your {{item}} · {{count}} more to buy",
+    "usesYourMoreToBuy_other": "Uses your {{item}} · {{count}} more to buy",
+    "moreToBuy_one": "{{count}} more to buy",
+    "moreToBuy_other": "{{count}} more to buy",
     "usesExpiringSoon_one": "Uses {{names}} before it expires",
     "usesExpiringSoon_other": "Uses {{names}} before they expire",
     "needInspiration": "Need inspiration?",
@@ -134,11 +139,10 @@
     "writeItMyself": "Write it myself",
     "deleteRecipeFailed": "Failed to delete recipe. Please try again.",
     "dietaryRestrictions": "Dietary restrictions",
-    "dietaryRestrictionsSubtitle": "Set your dietary preferences to filter recipe results",
     "cookWithPantry": "Cook with what you have",
     "searchByName": "By name",
     "searchByIngredients": "By ingredients",
-    "cookWithPantrySubtitle": "Search for recipes based on ingredients in your pantry",
+    "cookWithPantrySubtitle": "Search for recipes based on ingredients in your pantry.",
     "loadingRecipe": "Loading recipe...",
     "recipeNotFoundDb": "Recipe not found in database",
     "recipeNotFound": "Recipe not found",
@@ -177,6 +181,8 @@
     "dairyFree": "Dairy Free",
     "about": "About",
     "addAll": "Add All",
+    "addMissing_one": "Add {{count}} missing",
+    "addMissing_other": "Add {{count}} missing",
     "recipeFrom": "Recipe from {{source}}",
     "externalSource": "External Source",
     "viewOriginalRecipe": "View Original Recipe",
@@ -330,6 +336,10 @@
       "VEGETARIAN": "Vegetarian",
       "WHOLE30": "Whole30"
     },
+    "religiousDiet": {
+      "HALAL": "Halal",
+      "KOSHER": "Kosher"
+    },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "Diabetic Friendly",
       "HEART_HEALTHY": "Heart Healthy",
@@ -365,7 +375,10 @@
     "pantryMatchLabel_one": "{{used}} of {{count}} ingredient in your pantry, {{missing}} to buy",
     "pantryMatchLabel_other": "{{used}} of {{count}} ingredients in your pantry, {{missing}} to buy",
     "createdFromRecipe": "Created from recipe",
-    "ratingBreakdownRow": "{{count}} reviews rated {{stars}} stars",
+    "ratingBreakdownRow_one": "{{count}} review rated {{stars}}",
+    "ratingBreakdownRow_other": "{{count}} reviews rated {{stars}}",
+    "ratingStars_one": "{{count}} star",
+    "ratingStars_other": "{{count}} stars",
     "favoriteA11y": "Add to favourites",
     "unfavoriteA11y": "Remove from favourites",
     "ingredientsTooMany": "A recipe can have at most {{count}} ingredients",
@@ -385,7 +398,10 @@
       "per": "For {{amount}} of {{name}}",
       "inPantry": "In your pantry",
       "partlyInPantry": "Partly in your pantry"
-    }
+    },
+    "cookGuideSuggestions": "Recipes from what you have, using the food that expires soonest first. Open one to cook it.",
+    "cookGuideCook": "Open one, and once it’s made, tap {{action}}.",
+    "cookGuideOffline": "Recipes from your pantry need a connection. They’ll show here once you’re back online."
   },
   "recipeFilters": {
     "title": "Filters",
@@ -488,11 +504,8 @@
     }
   },
   "cuisineSelector": {
-    "title": "Preferred Cuisines",
-    "subtitle": "Select your favorite cuisines",
     "showAll": "Show All Cuisines",
-    "showLess": "Show Less",
-    "addFailed": "Failed to add cuisine"
+    "showLess": "Show Less"
   },
   "cuisines": {
     "AFRICAN": "African",

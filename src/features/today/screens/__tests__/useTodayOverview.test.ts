@@ -204,6 +204,7 @@ it("reads the current pantry's counts for today", async () => {
     expired: 6,
     expiring: 3,
     lowStock: 0,
+    total: 9,
   });
   expect(counts.fired).toEqual([{ id: 'p1', today: TODAY }]);
   expect(result.current.overview.householdName).toBe('Test Home');
@@ -426,6 +427,7 @@ it('keeps its counts when a later read fails, never reading as offline', async (
     expired: 6,
     expiring: 3,
     lowStock: 0,
+    total: 9,
   });
 });
 

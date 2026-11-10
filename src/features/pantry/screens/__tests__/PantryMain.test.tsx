@@ -9,9 +9,12 @@ import { act, screen } from '@testing-library/react-native';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { PantryMain } from '../PantryMain';
 import { usePantryPermissions } from '#features/pantry/hooks/usePantryPermissions';
+import { t } from '#/i18n';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import type {
   PantryContentProps,
   PantryContentRef,
@@ -24,6 +27,14 @@ let capturedPantryContentProps: Partial<PantryContentProps> = {};
 // --- Navigation ---
 jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#features/pantry/hooks/usePantryPermissions');
+jest.mock('#features/pantry/hooks/useCurrentHome', () => ({
+  useCurrentHome: () => ({
+    currentHome: { id: 'h1', name: "Sam's home" },
+    homeCount: 1,
+    selectedHomeId: 'h1',
+    isHomeSelectionReady: true,
+  }),
+}));
 jest.mock('@react-navigation/native', () => ({
   useFocusEffect: jest.fn(),
   useRoute: jest.fn(() => ({ params: {} })),
@@ -284,6 +295,43 @@ describe('PantryMain', () => {
       ]);
     });
 
+    it('takes the next step instead with no home yet, so + is never a dead end', () => {
+      mockUsePantryScreen.mockReturnValue({
+        ...defaultPantryScreen,
+        noHomes: true,
+      });
+      renderWithApollo(<PantryMain />);
+
+      // One action runs straight from the bar, with no menu.
+      expect(menu().map(action => action.key)).toEqual(['getStarted']);
+      expect(entry('getStarted')?.disabledReason).toBeUndefined();
+    });
+
+    it('offers to make a pantry when the home has none', () => {
+      mockUsePantryScreen.mockReturnValue({
+        ...defaultPantryScreen,
+        noPantries: true,
+      });
+      renderWithApollo(<PantryMain />);
+
+      expect(menu().map(action => action.key)).toEqual(['createPantry']);
+    });
+
+    it('tells a member who may not add why, naming the home', () => {
+      jest.mocked(usePantryPermissions).mockReturnValue({
+        canAddItems: false,
+        canEditItems: true,
+        canRemoveItems: false,
+        canCreatePantry: false,
+        canDeletePantry: false,
+      });
+      renderWithApollo(<PantryMain />);
+
+      expect(entry('search')?.disabledReason).toBe(
+        t('moveToPantry.cannotAddBody', { home: "Sam's home" }),
+      );
+    });
+
     it('opens each flow directly', () => {
       renderWithApollo(<PantryMain />);
       const nav = jest.mocked(useAppNavigation)();
@@ -542,10 +590,19 @@ describe('PantryMain', () => {
   });
 
   describe('tutorial', () => {
-    const lastTutorial = () => {
-      const [options] = jest.mocked(useTutorialSequence).mock.lastCall ?? [];
-      return options;
-    };
+    // The screen's own tour, beside the guide Getting started may start.
+    const lastTutorial = () =>
+      jest
+        .mocked(useTutorialSequence)
+        .mock.calls.map(([options]) => options)
+        .filter(options => options.tourId === undefined)
+        .pop();
+    const stockGuide = () =>
+      jest
+        .mocked(useTutorialSequence)
+        .mock.calls.map(([options]) => options)
+        .filter(options => options.tourId === GUIDE_TOURS.stock)
+        .pop();
 
     it('points Select pantry at the title and keeps the + step', () => {
       const titleRect = { x: 16, y: 60, width: 120, height: 28 };
@@ -560,6 +617,40 @@ describe('PantryMain', () => {
         settingsIcon: titleRect,
         addButton: { x: 160, y: 760, width: 56, height: 56 },
       });
+    });
+
+    it('One pantry: no tip about switching or creating pantries', () => {
+      mockPantryScreen({ pantries: [{ id: 'p1' }] as never });
+      renderWithApollo(<PantryMain />);
+
+      expect(
+        lastTutorial()
+          ?.steps.filter(step => step.when?.() ?? true)
+          .map(step => step.featureId),
+      ).toEqual(['pantry_tutorial_add']);
+    });
+
+    it('A second pantry: a later visit may show the switching tip', () => {
+      mockPantryScreen({ pantries: [{ id: 'p1' }, { id: 'p2' }] as never });
+      renderWithApollo(<PantryMain />);
+
+      expect(
+        lastTutorial()
+          ?.steps.filter(step => step.when?.() ?? true)
+          .map(step => step.featureId),
+      ).toEqual(['pantry_tutorial_settings', 'pantry_tutorial_add']);
+    });
+
+    it('Stock your pantry: started from the card, + shows Scan receipt while the own tour waits', () => {
+      act(() => tutorialSession.startGuide(GUIDE_TOURS.stock));
+      renderWithApollo(<PantryMain />);
+
+      expect(stockGuide()?.canStart).toBe(true);
+      expect(stockGuide()?.targetRects).toEqual({
+        addButton: { x: 160, y: 760, width: 56, height: 56 },
+      });
+      expect(lastTutorial()?.isPaused).toBe(true);
+      act(() => tutorialSession.endGuide(GUIDE_TOURS.stock));
     });
   });
 });

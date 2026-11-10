@@ -71,6 +71,7 @@ export function showLocalRestriction(
       diet: kind.diet ?? null,
       healthGoal: kind.healthGoal ?? null,
       intolerance: kind.intolerance ?? null,
+      religiousDiet: kind.religiousDiet ?? null,
       item,
       severity,
       notes: notes ?? null,

@@ -308,7 +308,9 @@
     "tutorialAddItemsTitle": "Add items quickly",
     "tutorialAddItemsSubtitle": "Tap + to add items to your pantry",
     "outOfStock": "Out of stock",
-    "runningLow": "Running low"
+    "runningLow": "Running low",
+    "stockGuideSubtitle": "Tap + and scan a recent receipt: what you bought goes straight into your pantry.",
+    "stockGuideOffline": "Scanning a receipt needs a connection. Try it once you’re back online."
   },
   "storageState": {
     "AMBIENT": "Ambient",
@@ -357,7 +359,6 @@
   "expirationAction": {
     "cooked": "Cooked",
     "shared": "Shared with someone",
-    "extended": "Extended shelf life",
     "wasted": "Wasted / Discarded",
     "noAction": "No action taken",
     "expiringSoon": "Expiring soon",

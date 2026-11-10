@@ -45,11 +45,16 @@ export const catalogTestIDs = {
   storePickerNearMe: 'store-picker-near-me',
   storePickerNearMeContinue: 'store-picker-near-me-continue',
   storePickerRow: (key: string) => `store-picker-${key}`,
+  storePickerUnlisted: 'store-picker-unlisted',
+  storePickerDone: 'store-picker-done',
 
   /** `AddItemSheet`, under its host's `testIDPrefix`. */
   addItemSheetModal: (prefix: string) => `${prefix}-modal`,
   addItemSheetSearchInput: (prefix: string) => `${prefix}-search-input`,
   addManuallyButton: (prefix: string) => `${prefix}-add-manually-button`,
+  /** A search result's +, by its place in the results. */
+  quickAddResult: (prefix: string, index: number) =>
+    `${prefix}-quick-add-${index}`,
 
   /** `BottomSheetAutocompleteInput`, under the field's id. */
   suggestion: (fieldID: string, index: number) =>

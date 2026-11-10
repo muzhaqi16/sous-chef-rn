@@ -15,6 +15,8 @@ import { useStore } from '#store';
 import { onboardingTestIDs } from '#features/onboarding/testIDs';
 import { useOnboardingProgressStore } from '#features/onboarding/store/onboardingProgressStore';
 import { HouseholdStepScreen } from '../HouseholdStepScreen';
+import { HouseholdGreetingHomeDocument } from '#features/onboarding/hooks/useHouseholdGreeting.generated';
+import { MembershipRole } from '#/graphql/generated/schemaTypes';
 
 const mockNavigateToNextStep = jest.fn();
 jest.mock('../useOnboardingNavigation', () => ({
@@ -23,35 +25,16 @@ jest.mock('../useOnboardingNavigation', () => ({
   }),
 }));
 
-jest.mock('#features/onboarding/components/OnBoardingWrapper', () => ({
-  OnBoardingWrapper: ({
-    children,
-    onSkip,
-    primaryAction,
-  }: {
-    children?: React.ReactNode;
-    onSkip?: () => void;
-    primaryAction?: React.ReactNode;
-  }) => {
-    const { View, Text, Pressable } = require('react-native');
-    return (
-      <View>
-        {children}
-        {primaryAction}
-        <Pressable onPress={onSkip}>
-          <Text>Skip</Text>
-        </Pressable>
-      </View>
-    );
-  },
-}));
+jest.mock('#features/onboarding/components/OnboardingStepScaffold', () =>
+  require('#/test-utils/onboardingStepScaffold'),
+);
 
-const profileMock = () =>
+const profileMock = (cooksFor: number | null = null) =>
   recordMock(GetDietaryProfileDocument, {
     data: {
       me: {
         id: 'user-1',
-        dietaryProfile: { id: 'dp-1', cooksFor: null, restrictions: [] },
+        dietaryProfile: { id: 'dp-1', cooksFor, restrictions: [] },
       },
     },
   });
@@ -68,16 +51,36 @@ const cachedCooksFor = (cache: ApolloCache) =>
     'DietaryProfile:dp-1'
   ]?.cooksFor;
 
-async function renderStep(update = queuedUpdate()) {
+/** The selected home as the greeting reads it, the user in `role`. */
+const greetingHome = (name: string, role: MembershipRole) =>
+  recordMock(HouseholdGreetingHomeDocument, {
+    data: {
+      home: {
+        id: 'home-1',
+        name,
+        myMembership: { id: 'm-1', role },
+      },
+    },
+  });
+
+async function renderStep(
+  update = queuedUpdate(),
+  savedCooksFor: number | null = null,
+  home = greetingHome("Maya's home", MembershipRole.Owner),
+) {
   const cache = makeCache();
   renderWithApollo(<HouseholdStepScreen />, {
     cache,
-    operationMocks: [profileMock().mock, update.mock],
+    operationMocks: [profileMock(savedCooksFor).mock, update.mock, home.mock],
   });
   await drainTimers();
-  expect(cachedCooksFor(cache)).toBeNull();
+  expect(cachedCooksFor(cache)).toBe(savedCooksFor);
   return { cache, update };
 }
+
+const checked = (choice: 'one' | 'two' | 'family') =>
+  screen.getByTestId(onboardingTestIDs.householdChoice(choice)).props
+    .accessibilityState?.checked;
 
 const recordedCooksFor = () => useOnboardingProgressStore.getState().cooksFor;
 
@@ -98,11 +101,93 @@ beforeEach(() => {
       email: 'maya@example.com',
       emailVerified: true,
       onBoarded: false,
+      firstName: 'Maya',
     },
+    selectedHomeId: 'home-1',
   });
 });
 
 afterEach(() => useStore.setState({ user: null }));
+
+describe('HouseholdStepScreen — the greeting', () => {
+  it('greets the user by first name, with the home they can rename', async () => {
+    const user = userEvent.setup();
+    await renderStep();
+
+    expect(screen.getByText('Welcome, Maya')).toBeTruthy();
+    expect(screen.getByText(t('onBoarding.householdTitle'))).toBeTruthy();
+    await user.press(screen.getByTestId(onboardingTestIDs.householdHomeName));
+    expect(screen.getByText(t('onBoarding.renameHomeTitle'))).toBeTruthy();
+  });
+
+  it('greets without a name when the account has none', async () => {
+    useStore.setState({
+      user: {
+        id: 'user-1',
+        email: 'maya@example.com',
+        emailVerified: true,
+        onBoarded: false,
+      },
+    });
+    await renderStep(
+      queuedUpdate(),
+      null,
+      greetingHome('My home', MembershipRole.Owner),
+    );
+
+    expect(screen.getByText(t('onBoarding.greetingNoName'))).toBeTruthy();
+    expect(screen.getByText('My home')).toBeTruthy();
+  });
+
+  it('names a joined home without offering to rename it', async () => {
+    await renderStep(
+      queuedUpdate(),
+      null,
+      greetingHome("Sam's home", MembershipRole.Member),
+    );
+
+    const name = screen.getByTestId(onboardingTestIDs.householdHomeName);
+    expect(name).toHaveTextContent("Sam's home");
+    expect(name.props.accessibilityRole).not.toBe('button');
+  });
+});
+
+describe('HouseholdStepScreen — setup still running', () => {
+  it('is answered and saved before the home exists', async () => {
+    // Setup creates the home beside this question: nothing is selected yet.
+    useStore.setState({ selectedHomeId: null });
+    const user = userEvent.setup();
+    const { update } = await renderStep();
+
+    expect(screen.getByText('Welcome, Maya')).toBeTruthy();
+    expect(screen.queryByText("Maya's home")).toBeNull();
+    await user.press(
+      screen.getByTestId(onboardingTestIDs.householdChoice('two')),
+    );
+
+    await drainTimers();
+    expect(update.fired).toEqual([{ input: { cooksFor: 2 } }]);
+    expect(mockNavigateToNextStep).toHaveBeenCalledWith('Household');
+  });
+});
+
+describe('HouseholdStepScreen — answers already saved', () => {
+  it('shows "Two of us" chosen when it was saved before a restart', async () => {
+    await renderStep(queuedUpdate(), 2);
+
+    expect(checked('two')).toBe(true);
+    expect(checked('one')).toBe(false);
+  });
+
+  it('reopens a saved family with its count', async () => {
+    await renderStep(queuedUpdate(), 5);
+
+    expect(checked('family')).toBe(true);
+    expect(
+      screen.getByText(t('onBoarding.householdPeople', { count: 5 })),
+    ).toBeTruthy();
+  });
+});
 
 describe('HouseholdStepScreen', () => {
   it('answers "just me" in one tap, saves it to the profile and moves on', async () => {

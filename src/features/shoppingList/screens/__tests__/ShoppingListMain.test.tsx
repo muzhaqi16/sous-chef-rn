@@ -8,9 +8,6 @@ jest.mock('#hooks/navigation/useAppNavigation');
 jest.mock('#hooks/settings/useBudgetAndPricesEnabled', () => ({
   useBudgetAndPricesEnabled: () => false,
 }));
-jest.mock('#features/shoppingList/hooks/useListAsksPrice', () => ({
-  useListAsksPrice: () => false,
-}));
 
 jest.mock('#features/shoppingList/screens/useShoppingListScreen', () => ({
   useShoppingListScreen: () => ({
@@ -34,6 +31,15 @@ jest.mock('#features/shoppingList/screens/useShoppingListScreen', () => ({
 jest.mock('#features/shoppingList/context/ShoppingListModalsContext', () => ({
   ShoppingListModalsProvider: ({ children }: { children: React.ReactNode }) =>
     children,
+}));
+
+jest.mock('#features/shoppingList/context/FirstShopTourContext', () => ({
+  FirstShopTourProvider: ({ children }: { children: React.ReactNode }) =>
+    children,
+}));
+
+jest.mock('#/context/TabBarActionsContext', () => ({
+  useTabBarState: () => ({ addButtonRect: null, isOverlayOpen: false }),
 }));
 
 jest.mock('#hooks/performance/useTabScreenLifecycle', () => ({

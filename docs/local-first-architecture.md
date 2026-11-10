@@ -496,9 +496,9 @@ payload** (e.g. `ConflictError` / `ValidationError`) settles `failed`, and the l
   with storage or the queue full, goes anyway, and `offline_queue_journal_failed_total` counts it.
 - **Onboarding's setup waits for the account to be read.** Offline with nothing held, it cannot tell a
   new account from one that holds a home or an invitation, and a local-first create cannot be merged
-  later. So the setup step never creates on a guess: the person goes on with `accountSetupOwed` set, and
-  `OwedAccountSetup` at the app root finishes setup once the reads answer. Still on the step, setup runs
-  by itself when the read answers.
+  later. So setup (`OnboardingSetupRunner`, beside the questions) never creates on a guess: it sets
+  `accountSetupOwed`, the questions go on, and `OwedAccountSetup` at the app root finishes setup once the
+  reads answer. The kitchen step, which needs the pantry, offers to read again meanwhile.
 - **Changes not saved keep what the server would not take.** `handleQueueFailure` drops the layer, so
   the row ends on the server's state, and marks the entry `QueueStatus.REFUSED`, where it stays until
   the person acts: on the Changes not saved screen, reached from the toast's action and from a banner

@@ -1,6 +1,7 @@
 import { toastService } from '#/services/toastService';
 import React from 'react';
-import { screen, userEvent } from '@testing-library/react-native';
+import { act, screen, userEvent } from '@testing-library/react-native';
+import { authTestIDs } from '#features/auth/testIDs';
 import type { MockFor } from '#/test-utils/apolloMockProvider';
 import { renderWithApollo } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
@@ -28,6 +29,7 @@ const mockToastError = jest.mocked(toastService.error);
 type MockAuthFormTemplateProps = {
   title: string;
   subtitle?: string | React.ReactNode;
+  headerAction?: { title: string; onPress: () => void; testID?: string };
   linkText?: string;
   linkTestID?: string;
   onLinkPress?: () => void;
@@ -120,6 +122,7 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
     AuthFormTemplate: ({
       title,
       subtitle,
+      headerAction,
       linkText,
       linkTestID,
       onLinkPress,
@@ -160,6 +163,14 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
         ) : (
           <View testID="subtitle-container">{subtitle}</View>
         )}
+        {headerAction ? (
+          <Pressable
+            testID={headerAction.testID}
+            onPress={headerAction.onPress}
+          >
+            <Text>{headerAction.title}</Text>
+          </Pressable>
+        ) : null}
         {linkText ? (
           <Pressable
             testID={linkTestID}
@@ -192,6 +203,23 @@ jest.mock('#features/auth/components/AuthFormTemplate', () => {
     ),
   };
 });
+
+let mockMailAppOpens = false;
+let mockMailAppAsked: Promise<boolean> = Promise.resolve(false);
+const mockOpenMailApp = jest.fn().mockResolvedValue(true);
+jest.mock('#native/mailApp', () => ({
+  canOpenMailApp: () => {
+    mockMailAppAsked = Promise.resolve(mockMailAppOpens);
+    return mockMailAppAsked;
+  },
+  openMailApp: () => mockOpenMailApp(),
+}));
+
+/** Waits for the screen's question whether a mail app opens to be answered. */
+const mailAppAnswered = () =>
+  act(async () => {
+    await mockMailAppAsked;
+  });
 
 jest.mock('#features/auth/components/CodeInputAdapter', () => ({
   CodeInputAdapter: 'CodeInputAdapter',
@@ -284,6 +312,27 @@ describe('CodeVerificationScreen', () => {
   it('renders the user email in the subtitle', () => {
     renderWithApollo(<CodeVerificationScreen context="gate" />);
     expect(screen.getByText('test@example.com')).toBeTruthy();
+  });
+
+  it('offers to open Mail where a mail app opens, the code being in the email', async () => {
+    mockMailAppOpens = true;
+    const user = userEvent.setup();
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
+    await mailAppAnswered();
+
+    await user.press(screen.getByTestId(authTestIDs.codeVerificationOpenMail));
+
+    expect(mockOpenMailApp).toHaveBeenCalledTimes(1);
+    mockMailAppOpens = false;
+  });
+
+  it('offers no Open Mail where no mail app opens', async () => {
+    renderWithApollo(<CodeVerificationScreen context="gate" />);
+    await mailAppAnswered();
+
+    expect(
+      screen.queryByTestId(authTestIDs.codeVerificationOpenMail),
+    ).toBeNull();
   });
 
   it('renders the submit button', () => {

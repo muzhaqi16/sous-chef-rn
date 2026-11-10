@@ -100,9 +100,9 @@ production set plus these.
 | ------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `apolloReactMock`   | `jest.mock('@apollo/client/react')`.                                                                           |
 | `bareInMemoryCache` | `new InMemoryCache()` in a suite that imports the Apollo mock helper.                                          |
-| `fixedSleep`        | A promise `setTimeout` resolves. Await the thing itself, or run a fake clock with `drainTimers`.               |
+| `fixedSleep`        | A promise `setTimeout` resolves. Await the thing itself, never a clock, real or fake.                          |
 | `rawCacheSeed`      | `cache.writeQuery` / `writeFragment` in a test. Use `seedQuery` / `seedFragment`, which complete from the SDL. |
-| `realTimeWait`      | `waitFor` / `findBy*` in a test. Await the thing itself, or use `drainTimers` / `drained` on a fake clock.     |
+| `realTimeWait`      | `waitFor` / `findBy*` in a test. Await the thing itself (`operationLog`, `client.query`), never a fake clock.  |
 | `typenameAsConst`   | `__typename: 'X' as const` in place of typing the fixture.                                                     |
 
 ## Exemptions

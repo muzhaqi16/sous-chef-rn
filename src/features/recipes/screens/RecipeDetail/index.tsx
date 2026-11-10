@@ -1,5 +1,6 @@
+import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { PROTECTED_RECIPE_FOLDERS } from '#features/recipes/utils/folders';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import type { StaticScreenProps } from '@react-navigation/native';
 import { View } from 'react-native';
 import { useTranslation, type TranslateFn, type TranslationKey } from '#/i18n';
@@ -190,9 +191,11 @@ const RecipeDetailScreen: React.FC = () => {
     shoppingListsState,
     retryShoppingLists,
     addingToList,
-    addedIngredients,
+    listedIngredients,
     handleAddSingleIngredient,
     handleAddAll,
+    missingIngredients,
+    handleAddMissing,
     handleListSelected,
     creatingList,
     handleCreateListAndAddIngredients,
@@ -290,6 +293,11 @@ const RecipeDetailScreen: React.FC = () => {
   const [showSaveSheet, setShowSaveSheet] = useState(false);
   const [showManageSheet, setShowManageSheet] = useState(false);
   const [showReportSheet, setShowReportSheet] = useState(false);
+  // Opening a recipe is half of a new account's activation.
+  useEffect(() => {
+    if (recipeId) noteTipFact('recipeOpened');
+  }, [recipeId]);
+
   const addToMealPlan = useAddToMealPlanSheet({ recipeId: recipeId ?? '' });
   const household = useRecipeDietaryAlerts(recipeId);
   const cooksFor = useCooksFor();
@@ -533,8 +541,8 @@ const RecipeDetailScreen: React.FC = () => {
                 })}
               </MetaItem>
             )}
-          {/* Cooked count - inline with metadata */}
-          {!!isSaved && (
+          {/* Any recipe can be cooked; only a saved one keeps a count. */}
+          {!!recipeId && (
             <Pressable
               style={({ pressed }) => [
                 styles.metaItem,
@@ -542,6 +550,7 @@ const RecipeDetailScreen: React.FC = () => {
               ]}
               onPress={() => setCookedModalVisible(true)}
               disabled={markingAsCooked}
+              accessibilityRole="button"
             >
               {markingAsCooked ? (
                 <SuccessActivityIndicator size="small" />
@@ -664,11 +673,30 @@ const RecipeDetailScreen: React.FC = () => {
           <View style={styles.ingredientsSection}>
             <SectionHeaderRow
               title={t('itemPhotos.perspective.ingredient_list')}
-              action={{
-                label: addingToList ? t('labels.adding') : t('recipes.addAll'),
-                onPress: handleAddAll,
-                disabled: addingToList,
-              }}
+              action={
+                // Nothing left to buy: what the pantry lacks is on the list.
+                missingIngredients?.size === 0
+                  ? undefined
+                  : // The pantry holds some of it: add only the rest.
+                  missingIngredients &&
+                    missingIngredients.size < displayData.ingredients.length
+                  ? {
+                      label: addingToList
+                        ? t('labels.adding')
+                        : t('recipes.addMissing', {
+                            count: missingIngredients.size,
+                          }),
+                      onPress: handleAddMissing,
+                      disabled: addingToList,
+                    }
+                  : {
+                      label: addingToList
+                        ? t('labels.adding')
+                        : t('recipes.addAll'),
+                      onPress: handleAddAll,
+                      disabled: addingToList,
+                    }
+              }
               style={styles.ingredientsSectionHeader}
             />
             <HorizontalRail surface="background" bleed="page">
@@ -678,7 +706,8 @@ const RecipeDetailScreen: React.FC = () => {
                   <IngredientTile
                     key={`${ingredient.id}-${index}`}
                     ingredient={ingredient}
-                    isAdded={addedIngredients.has(ingredient.id)}
+                    isAdded={listedIngredients.has(ingredient.id)}
+                    isMissing={!!missingIngredients?.has(ingredient.id)}
                     alerts={alerts}
                     showPrice={showPrices}
                     onPress={() =>
@@ -704,7 +733,7 @@ const RecipeDetailScreen: React.FC = () => {
                   : []
               }
               isAdded={
-                !!openIngredient && addedIngredients.has(openIngredient.id)
+                !!openIngredient && listedIngredients.has(openIngredient.id)
               }
               onAdd={() => {
                 if (openIngredient) {

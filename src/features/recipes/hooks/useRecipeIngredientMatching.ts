@@ -28,6 +28,7 @@ import {
 import { toastService } from '#/services/toastService';
 import { Telemetry } from '#/services/telemetry';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
 import { logger } from '#/utils/environment';
@@ -486,6 +487,7 @@ export function useRecipeIngredientMatching(recipeId: string | undefined) {
     );
     // Applied and queued both succeed; a queued cook replays later.
     if (settled.failure) return;
+    emitTutorialEvent('recipe.cooked');
 
     const data = appliedPayload(settled.data);
     // Replay diagnostics: `converged: true` means this client-minted cooking-log

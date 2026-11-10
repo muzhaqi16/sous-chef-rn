@@ -134,6 +134,7 @@ export const StorageDetailsSection: React.FC<StorageDetailsSectionProps> = ({
         value={expirationDate ?? null}
         onChange={onDateChange}
         placeholder={t('labels.selectDate')}
+        clearable
       />
 
       {/* Notes */}

@@ -24,13 +24,14 @@ export const DietarySharingSection: React.FC<DietarySharingSectionProps> = ({
       <Text role="caption" tone="secondary" style={styles.hint}>
         {sharesAny ? t('dietary.sharedWithShown') : t('dietary.sharedWithNone')}
       </Text>
-      {homes.map(home => (
+      {homes.map((home, index) => (
         <SettingSwitch
           key={home.id}
           title={home.name}
           value={home.shared}
           onValueChange={shared => onChange(home.id, shared)}
           testID={profileTestIDs.dietarySharingSwitch(home.id)}
+          showBorder={index < homes.length - 1}
         />
       ))}
     </>

@@ -1,15 +1,18 @@
 import React from 'react';
 import { useTranslation } from '#/i18n';
 import { EmptyState } from '#components/molecules/EmptyState';
+import type { EmptyStateProps } from '#components/molecules/EmptyState';
 
 interface MealPlanEmptyStateProps {
   onCreatePlan: () => void;
   onCreateFromTemplate?: () => void;
+  measureCreate?: NonNullable<EmptyStateProps['action']>['measure'];
 }
 
 export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
   onCreatePlan,
   onCreateFromTemplate,
+  measureCreate,
 }) => {
   const { t } = useTranslation();
 
@@ -23,6 +26,7 @@ export const MealPlanEmptyState: React.FC<MealPlanEmptyStateProps> = ({
         label: t('mealPlanEmpty.createFirst'),
         onPress: onCreatePlan,
         icon: 'add',
+        measure: measureCreate,
       }}
       secondaryAction={
         onCreateFromTemplate

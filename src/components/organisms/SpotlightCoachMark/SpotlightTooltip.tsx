@@ -1,51 +1,82 @@
-import React from 'react';
-import { View, type StyleProp, type ViewStyle } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import {
+  AccessibilityInfo,
+  View,
+  type LayoutChangeEvent,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { Pressable } from '#components/atoms/themedComponents';
 import { StyleSheet } from 'react-native-unistyles';
+import { Pressable } from '#components/atoms/themedComponents';
+import { Button } from '#components/molecules/Button';
 import { useAnimatedTheme } from '#hooks/ui/useAnimatedTheme';
 import { useTranslation } from '#/i18n';
 import { Text } from '#components/atoms/Text';
+import { requirePlatform } from '#platform/install';
 import { ARROW_SIZE } from './spotlightConstants';
-import { hitSlop } from '#/theme/foundations/sizes';
 import { kitTestIDs } from '#components/testIDs';
 
 interface SpotlightTooltipProps {
-  /** Absolute position ({left,width,top|bottom}) of the tooltip card. */
+  /** Absolute position ({left,top,width}) of the card. */
   containerStyle: StyleProp<ViewStyle>;
-  /** Absolute position ({left,top|bottom}) of the pointer arrow. */
-  arrowStyle: StyleProp<ViewStyle>;
+  /** Absolute position of the pointer arrow; none when the card cannot sit beside the target. */
+  arrowStyle: StyleProp<ViewStyle> | null;
   /** Reanimated entry/cross-fade style for the card. */
   animatedStyle: React.ComponentProps<typeof Animated.View>['style'];
+  onLayout: (event: LayoutChangeEvent) => void;
   title: string;
   subtitle?: string;
   stepIndex?: number;
   totalSteps?: number;
+  /** The step continues on the user's action, so it has no Next. */
+  waitsForAction?: boolean;
+  /** The screen behind stays reachable, so the step is also spoken. */
+  announce?: boolean;
+  /** "End tour", or Got it on the last step. */
   onDismiss: () => void;
+  /** "Not now": this tip closes and comes back later. */
+  onClose: () => void;
   onNext?: () => void;
 }
 
 /**
- * Tooltip card rendered by {@link SpotlightCoachMark}: title/subtitle, step
- * dots, and its actions: Skip on the left, Next or Done on the right. Skip
- * lives here, not over the screen, because the parent already keeps the card
- * clear of the hole and on screen, and a floating one landed on header buttons.
- * Purely presentational — the parent owns all geometry and animation.
+ * The card a {@link SpotlightCoachMark} points from: "2 of 3", the tip, and
+ * its actions — "Not now", "End tour" on a tour of several steps, and a filled
+ * Next or Got it. The parent owns all geometry and animation. A screen reader
+ * is taken to the tip's text, and its escape gesture is "Not now".
  */
 export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
   containerStyle,
   arrowStyle,
   animatedStyle,
+  onLayout,
   title,
   subtitle,
   stepIndex,
   totalSteps,
+  waitsForAction = false,
+  announce = false,
   onDismiss,
+  onClose,
   onNext,
 }) => {
   const { t } = useTranslation();
+  const several = totalSteps != null && totalSteps > 1;
   const isLast =
-    totalSteps != null && stepIndex != null && stepIndex >= totalSteps - 1;
+    totalSteps == null || stepIndex == null || stepIndex >= totalSteps - 1;
+  const progress =
+    several && stepIndex != null
+      ? t('tutorial.stepOf', { step: stepIndex + 1, total: totalSteps })
+      : null;
+  const spoken = [progress, title, subtitle].filter(Boolean).join('. ');
+
+  const textRef = useRef<View>(null);
+  useEffect(() => {
+    const text = textRef.current;
+    if (text) AccessibilityInfo.sendAccessibilityEvent(text, 'focus');
+    if (announce) requirePlatform('screenReader').announce(spoken);
+  }, [spoken, announce]);
 
   const animatedTheme = useAnimatedTheme();
   const surfaceStyle = useAnimatedStyle(() => {
@@ -58,76 +89,83 @@ export const SpotlightTooltip: React.FC<SpotlightTooltipProps> = ({
     };
   });
 
-  return (
-    <Animated.View
-      style={[styles.tooltip, containerStyle, surfaceStyle, animatedStyle]}
-    >
-      {/* Arrow */}
-      <View style={[styles.arrow, arrowStyle]} />
+  const primary = waitsForAction
+    ? null
+    : isLast
+    ? { label: t('tutorial.gotIt'), onPress: onDismiss }
+    : onNext
+    ? { label: t('labels.next'), onPress: onNext }
+    : null;
 
-      <Text role="heading" style={styles.tooltipTitle}>
-        {title}
-      </Text>
-      {subtitle ? <Text tone="secondary">{subtitle}</Text> : null}
-      {totalSteps != null && stepIndex != null && totalSteps > 1 ? (
-        <View style={styles.stepIndicator}>
-          {Array.from({ length: totalSteps }, (_, i) => (
-            <View key={i} style={styles.stepDot(i === stepIndex)} />
-          ))}
+  return (
+    <View style={[styles.position, containerStyle]} onLayout={onLayout}>
+      <Animated.View
+        style={[styles.card, surfaceStyle, animatedStyle]}
+        onAccessibilityEscape={onClose}
+      >
+        {arrowStyle ? <View style={[styles.arrow, arrowStyle]} /> : null}
+
+        <View
+          ref={textRef}
+          accessible
+          accessibilityRole="text"
+          accessibilityLabel={spoken}
+          style={styles.text}
+        >
+          {progress ? (
+            <Text role="caption" tone="secondary">
+              {progress}
+            </Text>
+          ) : null}
+          <Text role="heading">{title}</Text>
+          {subtitle ? <Text tone="secondary">{subtitle}</Text> : null}
         </View>
-      ) : null}
-      <View style={styles.actions}>
-        {/* Done already ends the tutorial; a Skip beside it would repeat it. */}
-        {isLast ? null : (
+
+        <View style={styles.actions}>
           <Pressable
-            onPress={onDismiss}
-            style={styles.actionButton}
-            hitSlop={hitSlop.md}
+            onPress={onClose}
+            style={styles.textAction}
             accessibilityRole="button"
-            accessibilityHint={t('tutorial.skipTutorial')}
-            testID={kitTestIDs.spotlightSkipButton}
+            testID={kitTestIDs.spotlightNotNowButton}
           >
             <Text role="bodyStrong" tone="secondary">
-              {totalSteps != null && totalSteps > 1
-                ? t('labels.skipAll')
-                : t('labels.skip')}
+              {t('labels.notNow')}
             </Text>
           </Pressable>
-        )}
-        {isLast ? (
-          <Pressable
-            onPress={onDismiss}
-            style={styles.trailingAction}
-            hitSlop={hitSlop.md}
-            accessibilityRole="button"
-          >
-            <Text role="bodyStrong" tone="accent">
-              {t('labels.done')}
-            </Text>
-          </Pressable>
-        ) : onNext ? (
-          <Pressable
-            onPress={onNext}
-            style={styles.trailingAction}
-            hitSlop={hitSlop.md}
-            accessibilityRole="button"
-            // The chevron is decoration: read "Next", not "Next ›".
-            accessibilityLabel={t('labels.next')}
-          >
-            <Text role="bodyStrong" tone="accent">
-              {t('labels.next')} ›
-            </Text>
-          </Pressable>
-        ) : null}
-      </View>
-    </Animated.View>
+          {/* Got it already ends the tour on its last step, unless that step
+              waits for the user's action and has none. */}
+          {several && (!isLast || waitsForAction) ? (
+            <Pressable
+              onPress={onDismiss}
+              style={styles.textAction}
+              accessibilityRole="button"
+              testID={kitTestIDs.spotlightEndButton}
+            >
+              <Text role="bodyStrong" tone="secondary">
+                {t('tutorial.endTour')}
+              </Text>
+            </Pressable>
+          ) : null}
+          {primary ? (
+            <Button
+              title={primary.label}
+              onPress={primary.onPress}
+              style={styles.primary}
+              testID={kitTestIDs.spotlightPrimaryButton}
+            />
+          ) : null}
+        </View>
+      </Animated.View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create(theme => ({
-  // Themed surface values are in `surfaceStyle`.
-  tooltip: {
+  position: {
     position: 'absolute',
+  },
+  // Themed surface values are in `surfaceStyle`.
+  card: {
     borderCurve: 'continuous',
   },
   arrow: {
@@ -137,34 +175,23 @@ const styles = StyleSheet.create(theme => ({
     transform: [{ rotate: '45deg' }],
     backgroundColor: theme.colors.surface,
   },
-  tooltipTitle: {
-    marginBottom: theme.spacing.xs,
-  },
-  stepIndicator: {
-    flexDirection: 'row',
-    justifyContent: 'center',
+  text: {
     gap: theme.spacing.xs,
-    marginTop: theme.spacing.md,
   },
-  stepDot: (active: boolean) => ({
-    width: 8,
-    height: 8,
-    borderRadius: theme.radii.sm,
-    borderCurve: 'continuous',
-    backgroundColor: active ? theme.colors.primary : theme.colors.border,
-  }),
   actions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
+    columnGap: theme.spacing.xs,
     marginTop: theme.spacing.md,
   },
-  actionButton: {
-    paddingVertical: theme.spacing.xs,
+  textAction: {
+    minHeight: theme.sizes.touchTarget.min,
+    minWidth: theme.sizes.touchTarget.min,
+    justifyContent: 'center',
     paddingHorizontal: theme.spacing.sm,
   },
-  trailingAction: {
+  primary: {
     marginLeft: 'auto',
-    paddingVertical: theme.spacing.xs,
-    paddingHorizontal: theme.spacing.sm,
   },
 }));

@@ -63,27 +63,11 @@
     "restrictions": "Dietary Restrictions",
     "removeRestrictionConfirm": "Are you sure you want to remove this dietary restriction?",
     "removeRestrictionFailed": "Failed to remove restriction",
-    "foodPreferences": "Food Preferences",
-    "favoriteIngredients": "Favorite Ingredients",
-    "favoriteIngredientsPlaceholder": "e.g., Garlic, Basil, Chicken",
-    "favoriteIngredientsAdd": "Add Favorite Ingredient",
-    "favoriteIngredientsEmpty": "No favorite ingredients added yet",
-    "dislikedIngredients": "Disliked Ingredients",
-    "dislikedIngredientsPlaceholder": "e.g., Cilantro, Mushrooms, Olives",
-    "dislikedIngredientsAdd": "Add Disliked Ingredient",
-    "dislikedIngredientsEmpty": "No disliked ingredients added yet",
     "nutritionGoals": "Nutrition Goals",
-    "mealsPerDay": "Meals per day",
-    "snacksPerDay": "Snacks per day",
-    "mealsPerDayTitle": "Meals Per Day",
-    "snacksPerDayTitle": "Snacks Per Day",
-    "mealsPlaceholder": "e.g., 3",
-    "skillLevel": "Skill Level",
-    "maxPrepTime": "Max Prep Time",
-    "budgetPerMeal": "Budget per Meal",
     "minutes": "minutes",
     "macroTargets": "Macro Targets (Advanced)",
     "macroTargetsEmpty": "No targets set yet",
+    "cookTimeEmpty": "No time limit set",
     "dailyCalories": "Daily Calories",
     "protein": "Protein",
     "fat": "Fat",
@@ -157,6 +141,7 @@
     "avoidHint": "Every kind of it is flagged, for you and the homes you share with.",
     "avoidSearchPlaceholder": "Search foods",
     "avoidSearchNeedsConnection": "Searching foods needs a connection. Try again when you're back online.",
+    "avoidSuggestionsTitle": "Often avoided",
     "avoidNamed": "Avoid {{name}}",
     "avoidSeverity": {
       "preference": "Avoid",
@@ -165,27 +150,15 @@
     },
     "avoidAllergy": "{{name}} (allergy)",
     "avoidIntolerance": "{{name}} (intolerance)",
-    "addAvoidFailed": "Couldn't add that food. Try again."
+    "addAvoidFailed": "Couldn't add that food. Try again.",
+    "religiousDietTitle": "Religious diet",
+    "religiousDietPrivate": "Private: used only for your suggestions, never shown to your homes."
   },
   "cookingPreferences": {
-    "prepTimeRange": "Prep time must be between {{min}} and {{max}} minutes",
     "cookTimeRange": "Cook time must be between {{min}} and {{max}} minutes",
-    "budgetRange": "Budget must be between {{min}} and {{max}}",
     "updateFailed": "Failed to update cooking preferences",
-    "skillLevel": "Cooking Skill Level",
-    "selectSkillLevel": "Select skill level...",
-    "maxPrepTime": "Max Prep Time (minutes)",
-    "prepTimePlaceholder": "e.g., 30",
     "maxCookTime": "Max Cook Time (minutes)",
-    "cookTimePlaceholder": "e.g., 60",
-    "budgetPerMeal": "Budget per Meal ($)",
-    "budgetPlaceholder": "e.g., 15.00",
-    "skillLevels": {
-      "BEGINNER": "Beginner",
-      "INTERMEDIATE": "Intermediate",
-      "ADVANCED": "Advanced",
-      "EXPERT": "Expert"
-    }
+    "cookTimePlaceholder": "e.g., 60"
   },
   "profile": {
     "sections": {
@@ -301,14 +274,6 @@
     "dateUnreasonable": "Please enter a reasonable birth date",
     "invalidVisibility": "Please select a valid visibility option",
     "invalidGender": "Please select a valid gender"
-  },
-  "stringArrayManager": {
-    "inputPlaceholder": "Enter value...",
-    "empty": "No items added yet",
-    "valueRequired": "Please enter a value",
-    "duplicate": "This item already exists",
-    "maxItems_one": "You can add up to {{count}} item",
-    "maxItems_other": "You can add up to {{count}} items"
   },
   "restrictionSection": {
     "empty": "None added yet"

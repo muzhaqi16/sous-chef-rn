@@ -626,11 +626,20 @@ mutation CreatePantryItem($input: CreatePantryItemInput!, $today: LocalDate!) {
   }
 }
 
-mutation UpdatePantryItem($input: UpdatePantryItemInput!, $today: LocalDate!) {
+mutation UpdatePantryItem(
+  $input: UpdatePantryItemInput!
+  $today: LocalDate!
+  $batchesFirst: Int = 100
+) {
   updatePantryItem(input: $input) {
     __typename
     ... on UpdatePantryItemPayload {
       converged
+      # GetPantryItemBatches' page, at its size: a date edit moves every
+      # active batch's date.
+      batchesConnection(first: $batchesFirst) {
+        ...writeRestatedBatches_page
+      }
       storageLocation {
         version
         id

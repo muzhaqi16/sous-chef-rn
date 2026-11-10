@@ -17,6 +17,7 @@ import { settleMutation } from '#/apollo/utils/settleMutation';
 import { useTranslation } from '#/i18n';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { todayKey } from '#/utils/dateUtils';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
 
 export interface MoveToPantryInput {
   pantryId: string;
@@ -118,6 +119,7 @@ export function useMoveToPantry({
       pantry_id: input.pantryId,
       remove_from_list: input.removeFromList,
     });
+    emitTutorialEvent('list.movedToPantry');
 
     return true;
   };

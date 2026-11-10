@@ -24,7 +24,19 @@ import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector
 import type { ItemSelectorRef } from '#components/organisms/AnimatedItemSelector/types';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
-import { useTabBarSetters } from '#/context/TabBarActionsContext';
+import {
+  useTabBarSetters,
+  useTabBarState,
+} from '#/context/TabBarActionsContext';
+import {
+  SpotlightCoachMark,
+  type TargetRect,
+} from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { useTutorialSession } from '#hooks/ui/tutorialSession';
+import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
+import { useIsScreenFocused } from '#hooks/utils/useIsScreenFocused';
+import { GUIDE_TOURS } from '#domain/guides';
 import { useSelectorManagement } from '#hooks/ui/useSelectorManagement';
 import {
   useMealPlanDisplay,
@@ -451,6 +463,63 @@ const MealPlanMainInner: React.FC = () => {
     title: t('labels.mealPlan'),
   };
 
+  // "Plan a meal", started from Today's Getting started card: with no plan it
+  // starts one; with a plan, it puts a meal on a day.
+  const planGuideStarted = useTutorialSession().startedGuides.has(
+    GUIDE_TOURS.plan,
+  );
+  const { addButtonRect, isOverlayOpen } = useTabBarState();
+  const isFocused = useIsScreenFocused();
+  const [createRect, setCreateRect] = useState<TargetRect | null>(null);
+  const { ref: createRef, measure: measureCreate } = useMeasuredRect(
+    planGuideStarted ? setCreateRect : undefined,
+  );
+  const noPlans = mealPlans.length === 0 && plansState === 'empty';
+  const planGuide = useTutorialSequence({
+    tourId: GUIDE_TOURS.plan,
+    steps: [
+      {
+        featureId: 'plan_guide_create',
+        title: t('mealPlan.guideCreateTitle'),
+        subtitle: t('mealPlan.guideCreateSubtitle'),
+        rectKey: 'createButton',
+        when: () => noPlans,
+      },
+      {
+        featureId: 'plan_guide_add',
+        title: t('mealTemplateBuilder.addMeal'),
+        subtitle: t('mealPlan.guideAddSubtitle'),
+        rectKey: 'addButton',
+        when: () => !noPlans && permissions.canEdit,
+      },
+    ],
+    targetRects: { createButton: createRect, addButton: addButtonRect },
+    canStart: planGuideStarted,
+    isPaused: !isFocused || isOverlayOpen || addMealVisible,
+  });
+  const planGuideStep = planGuide.currentStep;
+  const planGuideMark = planGuideStep ? (
+    <SpotlightCoachMark
+      targetRect={planGuideStep.targetRect}
+      title={planGuideStep.title}
+      subtitle={planGuideStep.subtitle}
+      stepIndex={planGuideStep.stepIndex}
+      totalSteps={planGuideStep.totalSteps}
+      onDismiss={planGuide.skipAll}
+      onClose={planGuide.pause}
+      onNext={planGuide.advanceInPlace}
+      onTargetPress={() => {
+        if (planGuideStep.featureId === 'plan_guide_create') {
+          handleCreatePlan();
+        } else {
+          setAddMealType(undefined);
+          setAddMealVisible(true);
+        }
+        planGuide.advance();
+      }}
+    />
+  ) : null;
+
   // Cold start, nothing cached: the skeleton holds until the plan list arrives,
   // not a calendar for a plan that may not exist. A refetch keeps
   // `initialLoading` false, so it never covers content.
@@ -475,6 +544,7 @@ const MealPlanMainInner: React.FC = () => {
           <MealPlanEmptyState
             onCreatePlan={handleCreatePlan}
             onCreateFromTemplate={handleOpenTemplateBrowser}
+            measureCreate={{ ref: createRef, onLayout: measureCreate }}
           />
         )}
 
@@ -482,6 +552,7 @@ const MealPlanMainInner: React.FC = () => {
           browserVisible={templateBrowserVisible}
           onCloseBrowser={() => setTemplateBrowserVisible(false)}
         />
+        {planGuideMark}
       </Screen>
     );
   }
@@ -677,6 +748,7 @@ const MealPlanMainInner: React.FC = () => {
         onOpen={handleOverlayOpen}
         onClose={handleOverlayClose}
       />
+      {planGuideMark}
     </Screen>
   );
 };

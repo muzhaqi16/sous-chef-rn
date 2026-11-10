@@ -2,7 +2,7 @@ import {
   deleteAction,
   editAction,
 } from '#components/organisms/SwipeableItem/commonActions';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useEffectEvent, useState } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
 import { useAnimatedReaction } from 'react-native-reanimated';
@@ -15,7 +15,10 @@ import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector
 import { ListTemplate } from '#features/shoppingList/components/ListTemplate';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#features/shoppingList/components/ShoppingListTabs/ShoppingListTabs';
-import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import {
+  SpotlightCoachMark,
+  type TargetRect,
+} from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -35,12 +38,10 @@ import {
   useAnyShoppingListSheetVisible,
 } from '#features/shoppingList/context/ShoppingListModalsContext';
 import { useUser } from '#store/useAppStore';
-import {
-  useShoppingListTutorial,
-  ShoppingListTutorialStep,
-  TUTORIAL_STEP_CONFIG,
-  tutorialStepPosition,
-} from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { useNewFeatureTour } from '#hooks/ui/useNewFeatureTour';
+import { FIRST_SHOP_STEP } from '#features/shoppingList/context/useFirstShopTour';
 
 // Utils
 import { useShoppingListPermissions } from '#features/shoppingList/hooks/useShoppingListPermissions';
@@ -58,6 +59,8 @@ import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import type { BarAction } from '#components/molecules/BarActions';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
+/** When store mode reached production (4.8.1). */
+const STORE_MODE_RELEASED = '2026-10-20T00:00:00Z';
 /**
  * Inner content component that uses modal context.
  * Separated to allow useShoppingListModals() to access the provider.
@@ -123,6 +126,7 @@ export const ShoppingListMainContent: React.FC<
 
   const {
     toBarcode,
+    toReceiptScan,
     toListSettings,
     toShoppingListItemDetail,
     toEditItem,
@@ -130,10 +134,15 @@ export const ShoppingListMainContent: React.FC<
     toListBudget,
   } = useAppNavigation();
   const storeModeEnabled = useStoreModeEnabled();
+  const storeModeTourAllowed = useNewFeatureTour({
+    introducedOn: STORE_MODE_RELEASED,
+    flag: 'storeMode',
+  });
+  const [storeModeRect, setStoreModeRect] = useState<TargetRect | null>(null);
   const budgetAndPricesEnabled = useBudgetAndPricesEnabled();
   const { setScannerProps, scrollTabBarHidden, setAddMenuOpen } =
     useTabBarSetters();
-  const { addButtonRect, isOverlayOpen } = useTabBarState();
+  const { isOverlayOpen } = useTabBarState();
 
   // ── Scroll direction tracking (tab bar hide on scroll down) ──
   const {
@@ -152,13 +161,7 @@ export const ShoppingListMainContent: React.FC<
     },
   );
 
-  // ── Interactive tutorial context ──
-  const tutorial = useShoppingListTutorial();
-
-  // Register the tab bar add button rect with the tutorial context
-  useEffect(() => {
-    tutorial?.registerRect('addButton', addButtonRect ?? null);
-  }, [tutorial, addButtonRect]);
+  const tour = useFirstShopTourContext();
 
   // ── Screen focus tracking ──
   const [isScreenFocused, setIsScreenFocused] = useState(true);
@@ -256,6 +259,14 @@ export const ShoppingListMainContent: React.FC<
   const { handleSwipeableWillOpen, handleSwipeableClose, closeAll } =
     useSwipeableCoordinator();
 
+  // A tip that points into a row needs the row closed: one left swiped open
+  // puts its checkbox and icons beside where they rest.
+  const rowStep = !!tour?.wanted.checkbox || !!tour?.wanted.archiveIcon;
+  const closeRows = useEffectEvent(closeAll);
+  useEffect(() => {
+    if (rowStep) closeRows();
+  }, [rowStep]);
+
   // Handle refresh
   const handleRefresh = () => {
     return executeRefreshWithFinally(() => refetchItems(), setRefreshing);
@@ -296,8 +307,26 @@ export const ShoppingListMainContent: React.FC<
           onPress: () => toStoreMode({ listId: currentListId }),
           testID: shoppingListTestIDs.storeModeButton,
           accessibilityLabel: t('shoppingListScreens.storeMode.open'),
+          onMeasure: rect => setStoreModeRect({ ...rect, shape: 'round' }),
         }
       : null;
+  // Store mode reached production in 4.8.1: an account older than that is
+  // shown where it opens, once.
+  const storeModeTour = useTutorialSequence({
+    tourId: 'feature_store_mode',
+    steps: [
+      {
+        featureId: 'feature_store_mode',
+        title: t('settings.storeMode'),
+        subtitle: t('shoppingListTutorial.storeModeNew.subtitle'),
+        rectKey: 'storeMode',
+        when: () => storeModeTourAllowed && storeModeAction !== null,
+      },
+    ],
+    targetRects: { storeMode: storeModeRect },
+    canStart: !!currentListId,
+    isPaused: !isScreenFocused || isOverlayOpen || anySheetVisible,
+  });
   // Opt-in from Settings: the list's money on a screen of its own.
   const budgetAction: BarAction | null =
     budgetAndPricesEnabled && currentListId
@@ -411,38 +440,55 @@ export const ShoppingListMainContent: React.FC<
   const addDisabledReason = permissions.canAddItems ? undefined : addRefusal;
   // An add handed over from Today waits for this, not for the refusal.
   const addPending = !permissions.resolved;
-  useTabBarAddMenu([
-    {
-      key: 'search',
-      label: t('labels.searchToAdd'),
-      icon: 'search',
-      onPress: () => {
-        Telemetry.trackEvent('add_item_from_tab_bar', {
-          list_id: currentListId,
-        });
-        openAddItemSheet();
-      },
-      disabledReason: addDisabledReason,
-      pending: addPending,
-    },
-    {
-      key: 'barcode',
-      label: t('labels.scanBarcode'),
-      icon: 'barcode-outline',
-      onPress: () =>
-        toBarcode({ source: 'shoppingList', shoppingListId: currentListId }),
-      disabledReason: addDisabledReason,
-      pending: addPending,
-    },
-    {
-      key: 'manual',
-      label: t('labels.addManually'),
-      icon: 'create-outline',
-      onPress: openAddItemManually,
-      disabledReason: addDisabledReason,
-      pending: addPending,
-    },
-  ]);
+  // With no list to add to, the + makes one, as the empty state offers: its
+  // permissions never resolve, so the entries would wait on "Loading" forever.
+  const noLists = !isLoadingInitial && listsState === 'empty';
+  useTabBarAddMenu(
+    noLists
+      ? [
+          {
+            key: 'createList',
+            label: t('shoppingListScreen.noListsAction'),
+            icon: 'cart-outline',
+            onPress: () => toListSettings(),
+          },
+        ]
+      : [
+          {
+            key: 'search',
+            label: t('labels.searchToAdd'),
+            icon: 'search',
+            onPress: () => {
+              Telemetry.trackEvent('add_item_from_tab_bar', {
+                list_id: currentListId,
+              });
+              openAddItemSheet();
+            },
+            disabledReason: addDisabledReason,
+            pending: addPending,
+          },
+          {
+            key: 'barcode',
+            label: t('labels.scanBarcode'),
+            icon: 'barcode-outline',
+            onPress: () =>
+              toBarcode({
+                source: 'shoppingList',
+                shoppingListId: currentListId,
+              }),
+            disabledReason: addDisabledReason,
+            pending: addPending,
+          },
+          {
+            key: 'manual',
+            label: t('labels.addManually'),
+            icon: 'create-outline',
+            onPress: openAddItemManually,
+            disabledReason: addDisabledReason,
+            pending: addPending,
+          },
+        ],
+  );
 
   // Every screen whose header carries the switch-list button mounts this.
   const listSelector = (
@@ -586,125 +632,99 @@ export const ShoppingListMainContent: React.FC<
 
       {listSelector}
 
-      {/* Interactive tutorial spotlight coach-marks */}
+      {/* The first-shop guide and the swipe tip. Any open sheet hides them,
+          including the ones they open; each resumes once the sheets close. */}
       {(() => {
-        if (!tutorial?.isActive) return null;
-        if (!isScreenFocused || isOverlayOpen) return null;
-
-        // Any open sheet hides the spotlight, including the amount sheet the
-        // long-press step opens (the step holds until it closes, see
-        // ShoppingListModalsContext); it resumes once every sheet closes.
-        if (anySheetVisible) return null;
-
-        const isSwipeStep =
-          tutorial.currentStep ===
-          ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS;
-        const isCheckboxStep =
-          tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX;
-        const isLongPressStep =
-          tutorial.currentStep ===
-          ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE;
-        const isMoveToPantryStep =
-          tutorial.currentStep ===
-          ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY;
-
-        // A row-targeting step needs a matching row: one skipped onto an empty
-        // list, or whose row moved out from under it, would point at a stale or
-        // absent rect.
-        const needsUnpurchasedItem =
-          isSwipeStep || isCheckboxStep || isLongPressStep;
-        const needsPurchasedItem = isMoveToPantryStep;
-        if (needsUnpurchasedItem && rawUnpurchasedItems.length === 0)
+        if (!tour || !isScreenFocused || isOverlayOpen || anySheetVisible)
           return null;
-        if (needsPurchasedItem && rawPurchasedItems.length === 0) return null;
-
-        const stepConfig = TUTORIAL_STEP_CONFIG[tutorial.currentStep];
-        if (!stepConfig) return null;
-
-        // SortableItem clears its rect when it stops being the target, but a
-        // rect not yet (re)measured is null too: never render on one.
-        const targetRect = tutorial.rects[stepConfig.rectKey];
-        if (!targetRect) return null;
-
-        const handleTargetPress = () => {
-          if (
-            tutorial.currentStep ===
-            ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON
-          ) {
-            Telemetry.trackEvent('add_item_from_tab_bar', {
-              list_id: currentListId,
-            });
-            openAddItemSheet();
-            tutorial.notifyAddButtonPressed();
-          } else if (
-            tutorial.currentStep ===
-            ShoppingListTutorialStep.SPOTLIGHT_SWIPE_ACTIONS
-          ) {
-            // Also handled by swipe detection in SortableItem, but
-            // tap-to-advance serves as fallback
-            tutorial.notifySwipeActionsSeen();
-          } else if (
-            tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_CHECKBOX
-          ) {
-            const firstItemId = rawUnpurchasedItems[0]?.id;
-            if (firstItemId) {
-              void handleTogglePurchase(firstItemId);
-              tutorial.notifyCheckboxTapped();
-            }
-          } else if (
-            tutorial.currentStep ===
-            ShoppingListTutorialStep.SPOTLIGHT_LONG_PRESS_PRICE
-          ) {
-            // Opens the purchase-amount sheet; the tutorial advances only
-            // once that sheet actually closes (wired in
-            // ShoppingListModalsContext), not immediately on open.
-            const firstItemId = rawUnpurchasedItems[0]?.id;
-            if (firstItemId) {
-              openPurchaseAmount(firstItemId);
-            }
-          } else if (
-            tutorial.currentStep ===
-            ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB
-          ) {
-            tutorial.notifyPurchasedTabTapped();
-          } else if (
-            tutorial.currentStep ===
-            ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY
-          ) {
-            const firstItemId = rawPurchasedItems[0]?.id;
-            if (firstItemId) {
-              openMoveToPantry(firstItemId);
-              tutorial.notifyMoveToPantryTapped();
-            }
-          }
-        };
-
-        const handleNext = () => {
-          if (
-            tutorial.currentStep ===
-            ShoppingListTutorialStep.SPOTLIGHT_ADD_BUTTON
-          ) {
+        const { guide, swipeTip } = tour;
+        const guideStep = guide.currentStep;
+        if (guideStep) {
+          const featureId = guideStep.featureId;
+          const firstUnpurchased = rawUnpurchasedItems[0]?.id;
+          const firstToPutAway = rawPurchasedItems[0]?.id;
+          const openSheet = () => {
             Telemetry.trackEvent('add_item_from_tab_bar', {
               list_id: currentListId,
               source: 'tutorial',
             });
             openAddItemSheet();
-            tutorial.notifyAddButtonPressed();
-          } else {
-            tutorial.skipCurrentStep();
-          }
-        };
-
+          };
+          const onTargetPress = () => {
+            if (featureId === FIRST_SHOP_STEP.add) {
+              openSheet();
+              guide.advanceInPlace();
+            } else if (featureId === FIRST_SHOP_STEP.check) {
+              if (firstUnpurchased) void handleTogglePurchase(firstUnpurchased);
+              guide.advance();
+            } else if (featureId === FIRST_SHOP_STEP.putAway) {
+              // The move's write continues the guide, however it is moved.
+              if (firstToPutAway) openMoveToPantry(firstToPutAway);
+            }
+          };
+          return (
+            <SpotlightCoachMark
+              targetRect={guideStep.targetRect}
+              title={guideStep.title}
+              subtitle={guideStep.subtitle}
+              stepIndex={guideStep.stepIndex}
+              totalSteps={guideStep.totalSteps}
+              waitsForAction={guideStep.waitsForAction}
+              onDismiss={guide.skipAll}
+              onClose={guide.pause}
+              onNext={
+                featureId === FIRST_SHOP_STEP.add
+                  ? onTargetPress
+                  : guide.advanceInPlace
+              }
+              onTargetPress={onTargetPress}
+            />
+          );
+        }
+        const tipStep = swipeTip.currentStep;
+        const receiptStep = tour.receiptTip.currentStep;
+        const featureStep = storeModeTour.currentStep;
+        if (!tipStep && !receiptStep && featureStep) {
+          return (
+            <SpotlightCoachMark
+              targetRect={featureStep.targetRect}
+              title={featureStep.title}
+              subtitle={featureStep.subtitle}
+              onDismiss={storeModeTour.skipAll}
+              onClose={storeModeTour.pause}
+              onTargetPress={() => {
+                if (currentListId) toStoreMode({ listId: currentListId });
+                storeModeTour.advance();
+              }}
+            />
+          );
+        }
+        if (!tipStep && receiptStep) {
+          const { receiptTip } = tour;
+          return (
+            <SpotlightCoachMark
+              targetRect={receiptStep.targetRect}
+              title={receiptStep.title}
+              subtitle={receiptStep.subtitle}
+              onDismiss={receiptTip.skipAll}
+              onClose={receiptTip.pause}
+              onTargetPress={() => {
+                toReceiptScan();
+                receiptTip.advance();
+              }}
+            />
+          );
+        }
+        if (!tipStep) return null;
         return (
           <SpotlightCoachMark
-            targetRect={targetRect}
-            title={t(stepConfig.titleKey)}
-            subtitle={t(stepConfig.subtitleKey)}
-            {...tutorialStepPosition(stepConfig.stepIndex, tutorial.priceStep)}
-            onDismiss={tutorial.skipAll}
-            onNext={handleNext}
-            onTargetPress={handleTargetPress}
-            allowGesturePassthrough={isSwipeStep}
+            targetRect={tipStep.targetRect}
+            title={tipStep.title}
+            subtitle={tipStep.subtitle}
+            demo={tipStep.demo}
+            onDismiss={swipeTip.skipAll}
+            onClose={swipeTip.pause}
+            allowGesturePassthrough
           />
         );
       })()}

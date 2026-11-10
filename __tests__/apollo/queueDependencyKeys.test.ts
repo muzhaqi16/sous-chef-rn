@@ -53,7 +53,6 @@ const NEVER_QUEUED_REFERENCE: Record<string, string> = {
   brandId: 'catalog rows are created online only',
   chainId: 'store chains are server-owned reference data',
   dietaryProfileId: 'one per user, minted by the server at sign-up',
-  appliesToHomeId: 'deprecated, and no caller sends it',
   notificationId: 'minted by the server, never by a queued write',
   externalSourceId: 'an external catalogue id',
   spoonacularIngredientId: 'an external catalogue id',
@@ -67,12 +66,16 @@ function unwrap(type: GraphQLInputType): GraphQLInputType {
   return inner;
 }
 
-/** `*Id` fields of an input, top-level and one level into a row array. */
+/**
+ * `*Id` fields of an input, top-level and one level into a row array. A
+ * deprecated field is left out: no write may send it.
+ */
 function idFieldsOf(type: GraphQLInputType, depth = 0): string[] {
   const inner = unwrap(type);
   if (!isInputObjectType(inner)) return [];
   const out: string[] = [];
   for (const field of Object.values(inner.getFields())) {
+    if (field.deprecationReason != null) continue;
     if (/Id$/.test(field.name)) out.push(field.name);
     if (depth === 0) out.push(...idFieldsOf(field.type, 1));
   }

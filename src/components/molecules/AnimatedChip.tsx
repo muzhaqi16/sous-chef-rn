@@ -43,6 +43,8 @@ type AnimatedChipProps = {
   onPress: () => void;
   disabled?: boolean;
   imageUrl?: string;
+  /** As tall as a chip with a photo, for a list where some have none. */
+  reserveImageHeight?: boolean;
 };
 
 export const AnimatedChip: React.FC<AnimatedChipProps> = ({
@@ -51,6 +53,7 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
   onPress,
   disabled = false,
   imageUrl,
+  reserveImageHeight = false,
 }) => {
   const animatedTheme = useAnimatedTheme();
 
@@ -83,6 +86,10 @@ export const AnimatedChip: React.FC<AnimatedChipProps> = ({
       borderWidth: theme.borderWidth.thin,
       paddingVertical: theme.spacing.xsPlus,
       paddingHorizontal: theme.spacing.sm,
+      minHeight: reserveImageHeight
+        ? theme.sizes.icon.md +
+          2 * (theme.spacing.xsPlus + theme.borderWidth.thin)
+        : 0,
     };
   });
 

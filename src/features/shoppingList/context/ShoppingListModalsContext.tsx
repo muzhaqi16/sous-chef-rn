@@ -15,7 +15,6 @@ import {
 } from '#features/shoppingList/hooks/usePurchaseAmountModal';
 import { useMoveToPantryModal } from '#features/shoppingList/hooks/useMoveToPantryModal';
 import { useMoveToAisleModal } from '#features/shoppingList/hooks/useMoveToAisleModal';
-import { useShoppingListTutorialActions } from '#features/shoppingList/context/ShoppingListTutorialContext';
 import {
   useListAsksPrice,
   useListTracksPrices,
@@ -75,8 +74,6 @@ export function ShoppingListModalsProvider({
   onSearchQueryClear,
   onNavigateToListSettings,
 }: ShoppingListModalsProviderProps) {
-  const tutorial = useShoppingListTutorialActions();
-
   const addItemSheet = useAddItemSheet({
     currentListId,
     onNavigateToListSettings,
@@ -147,10 +144,7 @@ export function ShoppingListModalsProvider({
         visible={addItemSheet.visible}
         startStep={addItemSheet.startStep}
         shoppingListId={currentListId}
-        onClose={() => {
-          addItemSheet.close();
-          tutorial?.notifySheetClosed();
-        }}
+        onClose={addItemSheet.close}
         initialSearchQuery={searchQuery}
         onItemAdded={onSearchQueryClear}
       />
@@ -167,14 +161,8 @@ export function ShoppingListModalsProvider({
         visible={purchaseAmount.visible}
         item={purchaseAmount.selectedItem}
         currency={listCurrency}
-        onClose={() => {
-          purchaseAmount.close();
-          tutorial?.notifyLongPressPriceSeen();
-        }}
-        onConfirm={async (quantity, price) => {
-          await purchaseAmount.confirm(quantity, price);
-          tutorial?.notifyLongPressPriceSeen();
-        }}
+        onClose={purchaseAmount.close}
+        onConfirm={purchaseAmount.confirm}
         loading={purchaseAmount.isLoading}
         askPrice={tracksPrices}
       />

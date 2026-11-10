@@ -96,6 +96,11 @@
     "unitsReadByDefault": "Las medidas se leyeron en unidades habituales de EE. UU.",
     "pantryCoverage": "{{percent}} % de sus ingredientes en tu despensa",
     "coveragePercent": "{{percent}} %",
+    "readyToCook": "Listo para cocinar",
+    "usesYourMoreToBuy_one": "Usa {{item}} de tu despensa · falta {{count}} por comprar",
+    "usesYourMoreToBuy_other": "Usa {{item}} de tu despensa · faltan {{count}} por comprar",
+    "moreToBuy_one": "Falta {{count}} por comprar",
+    "moreToBuy_other": "Faltan {{count}} por comprar",
     "usesExpiringSoon_one": "Usa {{names}} antes de que caduque",
     "usesExpiringSoon_other": "Usa {{names}} antes de que caduquen",
     "needInspiration": "¿Necesitas inspiración?",
@@ -134,11 +139,10 @@
     "writeItMyself": "Escribirla yo",
     "deleteRecipeFailed": "No se pudo eliminar la receta. Inténtalo de nuevo.",
     "dietaryRestrictions": "Restricciones alimentarias",
-    "dietaryRestrictionsSubtitle": "Establece tus preferencias para filtrar resultados",
     "cookWithPantry": "Cocina con lo que tienes",
     "searchByName": "Por nombre",
     "searchByIngredients": "Por ingredientes",
-    "cookWithPantrySubtitle": "Busca recetas basadas en los ingredientes de tu despensa",
+    "cookWithPantrySubtitle": "Busca recetas basadas en los ingredientes de tu despensa.",
     "loadingRecipe": "Cargando receta...",
     "recipeNotFoundDb": "Receta no encontrada en la base de datos",
     "recipeNotFound": "Receta no encontrada",
@@ -177,6 +181,8 @@
     "dairyFree": "Sin lácteos",
     "about": "Acerca de",
     "addAll": "Añadir todo",
+    "addMissing_one": "Añadir {{count}} que falta",
+    "addMissing_other": "Añadir {{count}} que faltan",
     "recipeFrom": "Receta de {{source}}",
     "externalSource": "Fuente externa",
     "viewOriginalRecipe": "Ver receta original",
@@ -330,6 +336,10 @@
       "VEGETARIAN": "Vegetariano",
       "WHOLE30": "Whole30"
     },
+    "religiousDiet": {
+      "HALAL": "Halal",
+      "KOSHER": "Kosher"
+    },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "Apto para diabéticos",
       "HEART_HEALTHY": "Saludable para el corazón",
@@ -365,7 +375,10 @@
     "pantryMatchLabel_one": "{{used}} de {{count}} ingrediente en tu despensa, {{missing}} por comprar",
     "pantryMatchLabel_other": "{{used}} de {{count}} ingredientes en tu despensa, {{missing}} por comprar",
     "createdFromRecipe": "Creada a partir de una receta",
-    "ratingBreakdownRow": "{{count}} reseñas con {{stars}} estrellas",
+    "ratingBreakdownRow_one": "{{count}} reseña con {{stars}}",
+    "ratingBreakdownRow_other": "{{count}} reseñas con {{stars}}",
+    "ratingStars_one": "{{count}} estrella",
+    "ratingStars_other": "{{count}} estrellas",
     "favoriteA11y": "Añadir a favoritos",
     "unfavoriteA11y": "Quitar de favoritos",
     "ingredientsTooMany": "Una receta puede tener como máximo {{count}} ingredientes",
@@ -385,7 +398,10 @@
       "per": "Para {{amount}} de {{name}}",
       "inPantry": "En tu despensa",
       "partlyInPantry": "En parte en tu despensa"
-    }
+    },
+    "cookGuideSuggestions": "Recetas con lo que tienes, primero con lo que caduca antes. Abre una para cocinarla.",
+    "cookGuideCook": "Abre una y, cuando esté hecha, toca {{action}}.",
+    "cookGuideOffline": "Las recetas de tu despensa necesitan conexión. Aparecerán aquí cuando vuelvas a estar en línea."
   },
   "recipeFilters": {
     "title": "Filtros",
@@ -488,11 +504,8 @@
     }
   },
   "cuisineSelector": {
-    "title": "Cocinas preferidas",
-    "subtitle": "Selecciona tus cocinas favoritas",
     "showAll": "Ver todas las cocinas",
-    "showLess": "Ver menos",
-    "addFailed": "No se pudo añadir la cocina"
+    "showLess": "Ver menos"
   },
   "cuisines": {
     "AFRICAN": "Africana",

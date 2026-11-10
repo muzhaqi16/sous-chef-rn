@@ -20,8 +20,10 @@ import {
 import { drained, drainTimers } from '#/test-utils/drainTimers';
 import {
   CreateShoppingListDocument,
+  GetShoppingListItemsFilteredDocument,
   GetShoppingListsLiteDocument,
 } from '#features/shoppingList/graphql/shoppingList.generated';
+import { RecipeMissingIngredientsDocument } from '#features/recipes/hooks/useRecipeMissingIngredients.generated';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
 import { AddItemsToShoppingListFromRecipeDocument } from '../useRecipeShoppingList.generated';
 import type { DisplayIngredient, MaterializedRecipe } from '../useRecipeData';
@@ -32,6 +34,7 @@ jest.mock('#store/useAppStore', () => ({
   useAppStore: (selector: (s: unknown) => unknown) =>
     selector({ setSelectedShoppingListId: jest.fn() }),
   useSelectedShoppingListId: jest.fn(() => undefined),
+  useSelectedHomeId: jest.fn(() => 'home-1'),
   useUser: jest.fn(() => ({ id: 'user-1', email: 'cook@example.com' })),
 }));
 
@@ -137,8 +140,14 @@ async function renderShopping(
     recipe = null,
     withoutRecipeId = false,
     listIds = ['sl-1'],
+    missing = [],
+    listedItemIds = [],
   }: {
     cache?: InMemoryCache;
+    /** The ingredients the server says the home's pantries lack. */
+    missing?: string[];
+    /** The catalog items the list's open lines name. */
+    listedItemIds?: string[];
     recipe?: MaterializedRecipe | null;
     /** A recipe still loading: the screen has no id to hand the hook. */
     withoutRecipeId?: boolean;
@@ -151,7 +160,32 @@ async function renderShopping(
     (backendRecipe: MaterializedRecipe | null) =>
       useRecipeShoppingList({ recipeId, backendRecipe }),
     {
-      operationMocks: [shoppingListsMock(listIds), add],
+      operationMocks: [
+        shoppingListsMock(listIds),
+        add,
+        recordMock(RecipeMissingIngredientsDocument, {
+          data: {
+            recipe: {
+              id: 'recipe-1',
+              missingIngredientsConnection: {
+                edges: missing.map(id => ({ node: { id } })),
+              },
+            },
+          },
+        }).mock,
+        recordMock(GetShoppingListItemsFilteredDocument, {
+          data: {
+            shoppingList: {
+              id: 'sl-1',
+              itemsConnection: {
+                edges: listedItemIds.map(itemId => ({
+                  node: { id: `line-${itemId}`, item: { id: itemId } },
+                })),
+              },
+            },
+          },
+        }).mock,
+      ],
       cache,
       initialProps: recipe,
     },
@@ -312,7 +346,10 @@ const toasts = () => ({
 const succeeded = (message: string) => ({ success: [message], error: [] });
 const failed = (message: string) => ({ success: [], error: [message] });
 
-const marked = (result: Hook) => [...result.current.addedIngredients];
+const marked = (result: Hook) => [...result.current.listedIngredients];
+const missingIds = (result: Hook) => [
+  ...(result.current.missingIngredients ?? []),
+];
 
 /** Adds one ingredient on its own, as its row's add button does. */
 const addOne = (result: Hook, overrides: Partial<DisplayIngredient> = {}) =>
@@ -757,6 +794,81 @@ describe('useRecipeShoppingList — Add All', () => {
 
     expect(add.fired).toEqual([]);
     expect(toasts()).toEqual(failed(NOTHING_TO_ADD));
+  });
+});
+
+describe('useRecipeShoppingList — Add what is missing', () => {
+  it('sends only the ingredients the pantry lacks', async () => {
+    const add = queuedAdd();
+    const { result } = await renderShopping(add.mock, {
+      recipe: recipeWith([
+        ingredient({ id: 'ing-1', name: 'Flour' }),
+        ingredient({ id: 'ing-2', name: 'Eggs' }),
+        ingredient({ id: 'ing-3', name: 'Butter' }),
+      ]),
+      missing: ['ing-1', 'ing-3'],
+    });
+    expect(missingIds(result)).toEqual(['ing-1', 'ing-3']);
+
+    act(() => {
+      result.current.handleAddMissing();
+    });
+    await pickList(result);
+
+    expect(add.fired).toEqual([
+      batchOf([sentRow(1), sentRow(2, 'ing-3', 'Butter')]),
+    ]);
+    expect(marked(result)).toEqual(['ing-1', 'ing-3']);
+    expect(missingIds(result)).toEqual([]);
+  });
+
+  it('stops counting an ingredient once it is added on its own', async () => {
+    const { result } = await renderShopping(queuedAdd().mock, {
+      recipe: recipeWith([
+        ingredient({ id: 'ing-1', name: 'Flour' }),
+        ingredient({ id: 'ing-2', name: 'Vanilla' }),
+      ]),
+      missing: ['ing-2'],
+    });
+    expect(missingIds(result)).toEqual(['ing-2']);
+
+    await addOne(result, { id: 'ing-2', name: 'Vanilla' });
+
+    expect(missingIds(result)).toEqual([]);
+  });
+
+  it('counts nothing the list already holds, and sends only the rest', async () => {
+    const add = queuedAdd();
+    const { result } = await renderShopping(add.mock, {
+      recipe: recipeWith([
+        ingredient({ id: 'ing-1', name: 'Flour' }),
+        ingredient({
+          id: 'ing-2',
+          name: 'Vanilla',
+          item: {
+            __typename: 'Item',
+            id: 'item-vanilla',
+            version: 1,
+            name: 'Vanilla',
+            imageUrl: null,
+          },
+        }),
+        ingredient({ id: 'ing-3', name: 'Butter' }),
+      ]),
+      missing: ['ing-2', 'ing-3'],
+      listedItemIds: ['item-vanilla'],
+    });
+    await drainTimers();
+
+    expect(missingIds(result)).toEqual(['ing-3']);
+    expect(marked(result)).toEqual(['ing-2']);
+
+    act(() => {
+      result.current.handleAddMissing();
+    });
+    await pickList(result);
+
+    expect(add.fired).toEqual([batchOf([sentRow(1, 'ing-3', 'Butter')])]);
   });
 });
 

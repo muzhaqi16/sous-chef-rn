@@ -10,8 +10,17 @@
     "householdHint": "Ndrysho ose menaxho shtëpitë",
     "tutorialHouseholdTitle": "Trokit për të menaxhuar shtëpitë",
     "tutorialHouseholdSubtitle": "Kalo mes shtëpive ose menaxho cilësimet e shtëpisë",
-    "tutorialYourHomeTitle": "Shtëpia jote",
-    "tutorialYourHomeSubtitle": "Trokit për ta riemërtuar ose për të ftuar njerëzit me të cilët bën pazar",
-    "householdFallback": "Shtëpia jote"
+    "householdFallback": "Shtëpia jote",
+    "gettingStarted": {
+      "title": "Hapat e parë",
+      "progress": "{{done}} nga {{total}} të bëra",
+      "hide": "Fshih Hapat e parë",
+      "start": "Fillo",
+      "stock": "Mbush qilarin",
+      "shop": "Bëj pazarin me listën",
+      "cook": "Gatuaj me çka ke në qilar",
+      "allDoneTitle": "Bazat janë gati",
+      "allDoneBody": "Gjithçka tjetër është një prekje larg."
+    }
   }
 }

@@ -20,7 +20,7 @@ export interface UIState {
 
   pendingTabAdd: PendingTabAdd | null;
 
-  // Tutorial reset signal (session-only counter; bumped by resetAllFeatureHints)
+  // Tutorial reset signal (session-only counter; bumped by replayTipsFor)
   tutorialResetGeneration: number;
 
   // The crop screen's output, read once by whichever screen sent the user

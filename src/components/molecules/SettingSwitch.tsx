@@ -15,6 +15,8 @@ interface SettingSwitchProps {
   isAction?: boolean;
   testID?: string;
   containerStyle?: ViewStyle;
+  /** The rule under the row; off for the last row in a card. */
+  showBorder?: boolean;
 }
 
 /**
@@ -31,11 +33,13 @@ export const SettingSwitch: React.FC<SettingSwitchProps> = ({
   loading = false,
   testID,
   containerStyle,
+  showBorder = true,
 }) => {
   return (
     <View
       style={[
         styles.container,
+        !showBorder && styles.containerBorderless,
         disabled && styles.containerDisabled,
         containerStyle,
       ]}
@@ -74,6 +78,9 @@ const styles = StyleSheet.create(theme => ({
     backgroundColor: theme.colors.surface,
     borderBottomWidth: theme.borderWidth.hairline,
     borderBottomColor: theme.colors.border,
+  },
+  containerBorderless: {
+    borderBottomWidth: theme.borderWidth.none,
   },
   containerDisabled: {
     opacity: theme.opacity.disabled,

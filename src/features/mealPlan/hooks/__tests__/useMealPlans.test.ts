@@ -7,6 +7,8 @@ import {
   type MockedResponse,
 } from '#/test-utils/apolloMockProvider';
 import { drained, drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
+import { act } from '@testing-library/react-native';
 import { connectionOf } from '#/test-utils/fixtures/connectionOf';
 import { GetMealPlansDocument } from '#features/mealPlan/graphql/mealPlan.generated';
 import { SortOrder } from '#/graphql/generated/schemaTypes';
@@ -358,5 +360,59 @@ describe('useMealPlans', () => {
         }),
       );
     });
+  });
+});
+
+// Today stays mounted under a pushed screen and stands its reads down; a
+// stood-down list that answered nothing read as a failed read on its
+// "Meals today" card.
+describe('a caller that stands down', () => {
+  beforeEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('keeps its last answer for the same plans while skipped', async () => {
+    const plan = { id: 'active', startDate: YESTERDAY, endDate: TOMORROW };
+    const log = operationLog();
+    const { result, rerender } = renderHookWithApollo(
+      ({ skip }: { skip: boolean }) => useMealPlans({ skip }),
+      {
+        operationMocks: [planData([plan])],
+        cache: seedPlanCache([plan]),
+        links: [log.link],
+        initialProps: { skip: false },
+      },
+    );
+    // The list and the page that finds today's plan both answer.
+    await act(async () => {
+      await log.answered(GetMealPlansDocument, 2);
+    });
+    expect(result.current.state.hasResult).toBe(true);
+
+    rerender({ skip: true });
+
+    expect(result.current.state.hasResult).toBe(true);
+    expect(result.current.state.currentPlan?.id).toBe('active');
+  });
+
+  it('keeps an answer of no plans as no plans while skipped', async () => {
+    const log = operationLog();
+    const { result, rerender } = renderHookWithApollo(
+      ({ skip }: { skip: boolean }) => useMealPlans({ skip }),
+      {
+        operationMocks: [emptyMock()],
+        links: [log.link],
+        initialProps: { skip: false },
+      },
+    );
+    // The list and the page that finds today's plan both answer.
+    await act(async () => {
+      await log.answered(GetMealPlansDocument, 2);
+    });
+
+    rerender({ skip: true });
+
+    expect(result.current.state.hasResult).toBe(true);
+    expect(result.current.state.currentPlan).toBeFalsy();
   });
 });

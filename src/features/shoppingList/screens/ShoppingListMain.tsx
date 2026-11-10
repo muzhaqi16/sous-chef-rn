@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { View } from 'react-native';
 import { useTranslation } from '#/i18n';
-import { useRoute } from '@react-navigation/native';
+import { useIsFocused, useRoute } from '@react-navigation/native';
 import { StyleSheet } from 'react-native-unistyles';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { FilterTabBar } from '#features/shoppingList/components/ShoppingListTabs/FilterTabBar';
@@ -13,7 +13,8 @@ import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useStore } from '#store';
 import { useShoppingListScreen } from '#features/shoppingList/screens/useShoppingListScreen';
 import { ShoppingListModalsProvider } from '#features/shoppingList/context/ShoppingListModalsContext';
-import { ShoppingListTutorialProvider } from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { FirstShopTourProvider } from '#features/shoppingList/context/FirstShopTourContext';
+import { useTabBarState } from '#/context/TabBarActionsContext';
 import { useTabScreenLifecycle } from '#hooks/performance/useTabScreenLifecycle';
 
 import { ShoppingListMainContent } from '#features/shoppingList/components/ShoppingListMainContent';
@@ -42,6 +43,8 @@ const ShoppingListMainInner: React.FC = () => {
 
   // --- Screen Data Hook ---
   const screenData = useShoppingListScreen();
+  const { addButtonRect, isOverlayOpen } = useTabBarState();
+  const isFocused = useIsFocused();
 
   // --- Lifecycle: optimistic restoration, cache persistence, perf tracking ---
   useTabScreenLifecycle({
@@ -57,9 +60,14 @@ const ShoppingListMainInner: React.FC = () => {
   });
 
   return (
-    <ShoppingListTutorialProvider
-      canStart={screenData.state.lists.length > 0}
-      listId={screenData.state.currentListId}
+    <FirstShopTourProvider
+      hasList={screenData.state.lists.length > 0}
+      unpurchasedCount={screenData.state.rawUnpurchasedItems.length}
+      hasPurchasedToMove={screenData.state.rawPurchasedItems.some(
+        item => !item.purchaseInfo.movedToPantryAt,
+      )}
+      addButtonRect={addButtonRect}
+      isPaused={!isFocused || isOverlayOpen}
     >
       <ShoppingListModalsProvider
         currentListId={screenData.state.currentListId}
@@ -74,7 +82,7 @@ const ShoppingListMainInner: React.FC = () => {
       >
         <ShoppingListMainContent screenData={screenData} />
       </ShoppingListModalsProvider>
-    </ShoppingListTutorialProvider>
+    </FirstShopTourProvider>
   );
 };
 

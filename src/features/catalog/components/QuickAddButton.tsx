@@ -7,12 +7,14 @@ import { hitSlop } from '#/theme/foundations/sizes';
 interface QuickAddButtonProps {
   onPress: () => void;
   accessibilityLabel: string;
+  testID?: string;
 }
 
 /** A suggestion row's trailing +: adds the item without opening a form. */
 export const QuickAddButton: React.FC<QuickAddButtonProps> = ({
   onPress,
   accessibilityLabel,
+  testID,
 }) => (
   <AppPressable
     style={styles.button}
@@ -20,6 +22,7 @@ export const QuickAddButton: React.FC<QuickAddButtonProps> = ({
     hitSlop={hitSlop.md}
     accessibilityRole="button"
     accessibilityLabel={accessibilityLabel}
+    testID={testID}
   >
     <Icon name="add" size={20} tone="primary" />
   </AppPressable>

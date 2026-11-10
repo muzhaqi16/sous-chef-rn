@@ -9,3 +9,13 @@ fragment useListCostToGo_list on ShoppingList {
     lines
   }
 }
+
+# Store mode's own read of it: the server re-prices the list on every read, so
+# no mutation and no list read carries it.
+query ListCostToGo($id: ID!) {
+  shoppingList(id: $id) {
+    version
+    id
+    ...useListCostToGo_list
+  }
+}

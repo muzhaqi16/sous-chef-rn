@@ -73,19 +73,37 @@ jest.mock(
 jest.mock(
   '#components/organisms/MultiSelectChipSheet/MultiSelectChipSheet',
   () => {
-    const { View, Text } = require('react-native');
+    const { View, Text, Pressable } = require('react-native');
     return {
+      // Toggles a chip as the real sheet's multi-select does.
       MultiSelectChipSheet: ({
         visible,
         title,
         items,
-      }: MultiSelectChipSheetProps) =>
+        selectedItems,
+        onSelect,
+        onDone,
+      }: MultiSelectChipSheetProps<string>) =>
         visible ? (
           <View testID="multi-select-sheet">
             <Text>{title}</Text>
             {items.map(item => (
-              <Text key={item.id}>{item.label}</Text>
+              <Pressable
+                key={item.id}
+                onPress={() =>
+                  onSelect(
+                    selectedItems.includes(item.id)
+                      ? selectedItems.filter(id => id !== item.id)
+                      : [...selectedItems, item.id],
+                  )
+                }
+              >
+                <Text>{item.label}</Text>
+              </Pressable>
             ))}
+            <Pressable testID="sheet-done" onPress={onDone}>
+              <Text>Done</Text>
+            </Pressable>
           </View>
         ) : null,
     };
@@ -96,7 +114,7 @@ const defaultProps = {
   existingRestrictions: [],
   onAdd: jest.fn().mockResolvedValue(true),
   onRemove: jest.fn(),
-  onSelectLifestyleDiet: jest.fn().mockResolvedValue(true),
+  onChangeDiets: jest.fn().mockResolvedValue(true),
 };
 
 describe('DietaryRestrictionSelector', () => {
@@ -146,6 +164,35 @@ describe('DietaryRestrictionSelector', () => {
     // Lifestyle diet shows (Diet section); constraint shows (Constraints section)
     expect(screen.getByText('Vegan')).toBeTruthy();
     expect(screen.getByText('Gluten Free')).toBeTruthy();
+  });
+
+  it('keeps one animal-food diet and one eating style', async () => {
+    const user = userEvent.setup();
+    render(
+      <DietaryRestrictionSelector
+        {...defaultProps}
+        existingRestrictions={[
+          {
+            id: 'r-veg',
+            diet: Diet.Vegetarian,
+            intolerance: null,
+            healthGoal: null,
+            severity: RestrictionSeverity.Preference,
+          },
+        ]}
+      />,
+    );
+
+    await user.press(screen.getByTestId('add-Diet'));
+    await user.press(screen.getByText(t('recipes.diet.KETO')));
+    await user.press(screen.getByText(t('labels.vegan')));
+    await user.press(screen.getByTestId('sheet-done'));
+
+    // Keto sits beside the diet held; Vegan replaces Vegetarian.
+    expect(defaultProps.onChangeDiets).toHaveBeenCalledWith(
+      [Diet.Keto, Diet.Vegan],
+      ['r-veg'],
+    );
   });
 
   it('renders existing intolerance restrictions', () => {

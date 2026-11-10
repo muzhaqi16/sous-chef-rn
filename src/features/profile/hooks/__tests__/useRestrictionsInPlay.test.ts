@@ -30,6 +30,7 @@ interface Restriction {
   diet: null;
   intolerance: Intolerance | null;
   healthGoal: HealthGoal | null;
+  religiousDiet: null;
   item: null;
   severity: RestrictionSeverity;
 }
@@ -39,6 +40,7 @@ const peanutAllergy: Restriction = {
   diet: null,
   intolerance: Intolerance.Peanut,
   healthGoal: null,
+  religiousDiet: null,
   item: null,
   severity: RestrictionSeverity.Allergy,
 };
@@ -47,6 +49,7 @@ const lowCarbGoal: Restriction = {
   diet: null,
   intolerance: null,
   healthGoal: HealthGoal.LowCarb,
+  religiousDiet: null,
   item: null,
   severity: RestrictionSeverity.Goal,
 };
@@ -69,7 +72,15 @@ const homeNeeds = (restrictions: Restriction[]) =>
       home: {
         id: 'home-1',
         dietaryNeeds: restrictions.length
-          ? [{ membership: { id: 'm-2', userId: 'user-2' }, restrictions }]
+          ? [
+              {
+                membership: { id: 'm-2', userId: 'user-2' },
+                // A home never sees a member's religious diet.
+                restrictions: restrictions.map(
+                  ({ religiousDiet: _private, ...shared }) => shared,
+                ),
+              },
+            ]
           : [],
       },
     },

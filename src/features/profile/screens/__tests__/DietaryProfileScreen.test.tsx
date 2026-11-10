@@ -9,7 +9,7 @@ import {
 import { alertService } from '#/services/alertService';
 import { t } from '#/i18n';
 import { DietaryProfileScreen } from '../DietaryProfileScreen';
-import { CookingSkillLevel } from '#/graphql/generated/schemaTypes';
+import { ReligiousDiet } from '#/graphql/generated/schemaTypes';
 
 // --- Mocks ---
 
@@ -22,19 +22,12 @@ jest.mock('#features/profile/hooks/useDietaryProfile', () => ({
   useDietaryProfile: () => ({
     editableProfile: {
       restrictions: [],
-      preferredCuisines: ['ITALIAN', 'MEXICAN'],
-      favoriteIngredients: ['Garlic', 'Basil'],
-      dislikedIngredients: ['Cilantro'],
-      mealsPerDay: 3,
-      snacksPerDay: 2,
-      cookingSkillLevel: 'INTERMEDIATE',
-      maxPrepTimeMinutes: 30,
       maxCookTimeMinutes: 45,
-      budgetPerMeal: 15,
       calorieTarget: 2000,
       proteinTarget: 150,
       carbsTarget: 250,
       fatTarget: 70,
+      religiousDiet: 'KOSHER',
     },
     loading: false,
     updateDietaryProfile: mockUpdateDietaryProfile,
@@ -101,57 +94,6 @@ jest.mock('#features/profile/components/DietaryRestrictionSelector', () => {
   };
 });
 
-jest.mock('#features/profile/components/CuisineSelector', () => {
-  const { View, Text } = require('react-native');
-  return {
-    CuisineSelector: ({ selectedCuisines }: { selectedCuisines: string[] }) => (
-      <View testID="cuisine-selector">
-        <Text>CuisineSelector</Text>
-        <Text>{selectedCuisines.join(', ')}</Text>
-      </View>
-    ),
-  };
-});
-
-jest.mock(
-  '#features/profile/components/StringArrayManager/StringArrayManager',
-  () => {
-    const { View, Text } = require('react-native');
-    return {
-      StringArrayManager: ({
-        title,
-        items,
-      }: {
-        title: string;
-        items?: string[];
-      }) => (
-        <View testID={`string-array-${title}`}>
-          <Text>{title}</Text>
-          {items
-            ? items.map((item: string) => <Text key={item}>{item}</Text>)
-            : null}
-        </View>
-      ),
-    };
-  },
-);
-
-jest.mock(
-  '#features/profile/components/NumberInputSheet/NumberInputSheet',
-  () => {
-    const { View } = require('react-native');
-    return {
-      NumberInputSheet: ({
-        visible,
-        title,
-      }: {
-        visible?: boolean;
-        title?: string;
-      }) => (visible ? <View testID={`sheet-${title}`} /> : null),
-    };
-  },
-);
-
 jest.mock('#components/atoms/InfoRow', () => {
   const { View, Text } = require('react-native');
   return {
@@ -216,6 +158,21 @@ describe('DietaryProfileScreen', () => {
     expect(screen.getByTestId('dietary-sharing-switch-home-2')).toBeTruthy();
   });
 
+  it('changes the religious diet chosen in onboarding, or clears it', async () => {
+    const user = userEvent.setup();
+    render(<DietaryProfileScreen />);
+
+    await user.press(screen.getByText(t('recipes.religiousDiet.KOSHER')));
+    expect(mockUpdateDietaryProfile).toHaveBeenLastCalledWith({
+      religiousDiet: null,
+    });
+
+    await user.press(screen.getByText(t('recipes.religiousDiet.HALAL')));
+    expect(mockUpdateDietaryProfile).toHaveBeenLastCalledWith({
+      religiousDiet: ReligiousDiet.Halal,
+    });
+  });
+
   it('renders the screen with title', () => {
     render(<DietaryProfileScreen />);
     expect(screen.getByText('Dietary Profile')).toBeTruthy();
@@ -242,42 +199,21 @@ describe('DietaryProfileScreen', () => {
     alert.mockRestore();
   });
 
-  it('renders Food Preferences section', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Food Preferences')).toBeTruthy();
-  });
-
-  it('renders CuisineSelector with selected cuisines', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByTestId('cuisine-selector')).toBeTruthy();
-    expect(screen.getByText('ITALIAN, MEXICAN')).toBeTruthy();
-  });
-
-  it('renders Favorite Ingredients', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Favorite Ingredients')).toBeTruthy();
-    expect(screen.getByText('Garlic')).toBeTruthy();
-    expect(screen.getByText('Basil')).toBeTruthy();
-  });
-
-  it('renders Disliked Ingredients', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Disliked Ingredients')).toBeTruthy();
-    expect(screen.getByText('Cilantro')).toBeTruthy();
-  });
-
-  it('renders Nutrition Goals section', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Nutrition Goals')).toBeTruthy();
-    expect(screen.getByText('Meals per day')).toBeTruthy();
-    expect(screen.getByText('Snacks per day')).toBeTruthy();
-  });
-
-  it('renders Cooking Preferences section', () => {
+  it('shows the longest cooking time, which Recipes search filters by', () => {
     render(<DietaryProfileScreen />);
     expect(screen.getByText('Cooking Preferences')).toBeTruthy();
-    expect(screen.getByText('Skill Level')).toBeTruthy();
-    expect(screen.getByText('Intermediate')).toBeTruthy();
+    expect(screen.getByText(t('labels.maxCookTime'))).toBeTruthy();
+    expect(screen.getByText('45')).toBeTruthy();
+  });
+
+  // Only what something reads is offered.
+  it('offers no setting nothing reads', () => {
+    render(<DietaryProfileScreen />);
+    expect(screen.queryByText('Food Preferences')).toBeNull();
+    expect(screen.queryByText('Nutrition Goals')).toBeNull();
+    expect(screen.queryByText('Favorite Ingredients')).toBeNull();
+    expect(screen.queryByText('Disliked Ingredients')).toBeNull();
+    expect(screen.queryByText('Skill Level')).toBeNull();
   });
 
   it('renders Macro Targets section', () => {
@@ -333,15 +269,7 @@ describe('DietaryProfileScreen - loading state', () => {
       .mockReturnValue({
         editableProfile: {
           restrictions: [],
-          preferredCuisines: ['ITALIAN'],
-          favoriteIngredients: ['Garlic'],
-          dislikedIngredients: [],
-          mealsPerDay: 3,
-          snacksPerDay: 2,
-          cookingSkillLevel: CookingSkillLevel.Intermediate,
-          maxPrepTimeMinutes: 30,
           maxCookTimeMinutes: 45,
-          budgetPerMeal: 15,
           calorieTarget: 2000,
           proteinTarget: 150,
           carbsTarget: 250,
@@ -399,15 +327,7 @@ describe('DietaryProfileScreen - partial profile', () => {
       .mockReturnValue({
         editableProfile: {
           restrictions: [{ type: 'VEGETARIAN', severity: 'STRICT' }],
-          preferredCuisines: [],
-          favoriteIngredients: [],
-          dislikedIngredients: [],
-          mealsPerDay: null,
-          snacksPerDay: null,
-          cookingSkillLevel: null,
-          maxPrepTimeMinutes: null,
           maxCookTimeMinutes: null,
-          budgetPerMeal: null,
           calorieTarget: null,
           proteinTarget: null,
           carbsTarget: null,
@@ -427,29 +347,9 @@ describe('DietaryProfileScreen - partial profile', () => {
     expect(screen.getByLabelText('Edit Macro Targets')).toBeTruthy();
   });
 
-  it('renders with restrictions but no cuisines or ingredients', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Dietary Restrictions')).toBeTruthy();
-    expect(screen.getByText('Food Preferences')).toBeTruthy();
-  });
-
-  it('renders nutrition goals with null values', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Nutrition Goals')).toBeTruthy();
-  });
-
-  it('renders cooking preferences with null skill level', () => {
+  it('says when no cooking time limit is set', () => {
     render(<DietaryProfileScreen />);
     expect(screen.getByText('Cooking Preferences')).toBeTruthy();
-  });
-
-  it('renders nutrition goals section heading', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByText('Nutrition Goals')).toBeTruthy();
-  });
-
-  it('renders food preferences section with empty arrays', () => {
-    render(<DietaryProfileScreen />);
-    expect(screen.getByTestId('cuisine-selector')).toBeTruthy();
+    expect(screen.getByText(t('dietary.cookTimeEmpty'))).toBeTruthy();
   });
 });

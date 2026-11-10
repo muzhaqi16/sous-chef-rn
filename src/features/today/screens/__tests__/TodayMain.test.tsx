@@ -6,7 +6,6 @@ import {
   screen,
   within,
 } from '@testing-library/react-native';
-import { t } from '#/i18n';
 import { useStore } from '#store';
 import { CachedImage } from '#components/atoms/CachedImage';
 import { kitTestIDs } from '#components/testIDs';
@@ -15,6 +14,9 @@ import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { todayTestIDs } from '#features/today/testIDs';
 import { useTodayOverview } from '../useTodayOverview';
+import { useGettingStarted } from '#features/today/hooks/useGettingStarted';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { TodayMain } from '../TodayMain';
 
 const mockNavigation = {
@@ -39,6 +41,9 @@ jest.mock('../useTodayOverview', () => ({
     '../useTodayOverview',
   ),
   useTodayOverview: jest.fn(),
+}));
+jest.mock('#features/today/hooks/useGettingStarted', () => ({
+  useGettingStarted: jest.fn(() => ({ card: null, hide: jest.fn() })),
 }));
 jest.mock('#/context/TabBarActionsContext', () => ({
   useTabBarState: () => ({ isOverlayOpen: false }),
@@ -103,7 +108,7 @@ const overviewOf = (overrides: Partial<Overview> = {}): Overview => ({
   state: 'ready',
   needsHousehold: false,
   retry: jest.fn(),
-  counts: { expired: 6, expiring: 3, lowStock: 0 },
+  counts: { expired: 6, expiring: 3, lowStock: 0, total: 9 },
   meals: [],
   mealsState: 'ready',
   retryMeals: jest.fn(),
@@ -228,6 +233,38 @@ describe('status counts', () => {
     fireEvent.press(screen.getByTestId(todayTestIDs.statCard('lowStock')));
 
     expect(mockNavigation.toFilteredPantryItems).not.toHaveBeenCalled();
+  });
+});
+
+describe('Getting started', () => {
+  const card = {
+    items: [
+      { id: 'stock' as const, done: true },
+      { id: 'shop' as const, done: false },
+      { id: 'cook' as const, done: false },
+      { id: 'plan' as const, done: false },
+    ],
+    doneCount: 1,
+    allDone: false,
+  };
+
+  it('A new account: the card is first under the home’s name, in place of the tiles', () => {
+    jest.mocked(useGettingStarted).mockReturnValue({ card, hide: jest.fn() });
+    renderToday();
+
+    expect(screen.getByTestId(todayTestIDs.gettingStarted)).toBeTruthy();
+    expect(screen.queryByTestId(todayTestIDs.statCard('expired'))).toBeNull();
+  });
+
+  it('Shop from your list: opens the List tab with its guide started', () => {
+    jest.mocked(useGettingStarted).mockReturnValue({ card, hide: jest.fn() });
+    const startGuide = jest.spyOn(tutorialSession, 'startGuide');
+    renderToday();
+
+    fireEvent.press(screen.getByTestId(todayTestIDs.gettingStartedStart));
+
+    expect(startGuide).toHaveBeenCalledWith(GUIDE_TOURS.shop);
+    expect(mockNavigation.toShoppingListMain).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -446,15 +483,22 @@ describe('tutorial', () => {
     expect(options?.canStart).toBe(true);
   });
 
-  it('never teaches switching homes to a user with one home', () => {
+  it('A new user with one home: no coach mark about homes', () => {
     renderToday({ homeCount: 1 });
 
     const [options] = mockedTutorial.mock.lastCall ?? [];
-    expect(options?.steps.map(step => [step.featureId, step.rectKey])).toEqual([
-      ['today_tutorial_your_home', 'household'],
-    ]);
-    expect(options?.steps[0]?.title).toBe(t('today.tutorialYourHomeTitle'));
-    expect(options?.canStart).toBe(true);
+    expect(options?.steps.filter(step => step.when?.() ?? true)).toEqual([]);
+  });
+
+  it('A user in two homes: the home-switching tip can be shown', () => {
+    renderToday({ homeCount: 2 });
+
+    const [options] = mockedTutorial.mock.lastCall ?? [];
+    expect(
+      options?.steps
+        .filter(step => step.when?.() ?? true)
+        .map(step => step.featureId),
+    ).toEqual(['pantry_tutorial_home']);
   });
 
   it('does not start while the number of homes is unknown', () => {

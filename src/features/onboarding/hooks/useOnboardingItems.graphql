@@ -1,0 +1,45 @@
+# The staples the kitchen step offers, each with what it means for the home's
+# dietary needs, so one that clashes with the user's own answers is left out.
+query GetOnboardingItems($filters: ItemFilters, $first: Int, $homeId: ID!) {
+  items(filters: $filters, first: $first) {
+    edges {
+      cursor
+      node {
+        version
+        id
+        name
+        imageUrl
+        storageState
+        # The same shape as every other read of an item's alerts: the cache
+        # keeps one per item.
+        dietaryAlerts(homeId: $homeId) {
+          state
+          membership {
+            version
+            id
+            userId
+            role
+            displayName
+          }
+          restriction {
+            id
+            diet
+            intolerance
+            healthGoal
+            religiousDiet
+            item {
+              version
+              id
+              name
+            }
+            severity
+          }
+        }
+      }
+    }
+    pageInfo {
+      hasNextPage
+      endCursor
+    }
+  }
+}

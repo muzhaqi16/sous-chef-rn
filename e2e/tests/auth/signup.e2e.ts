@@ -54,7 +54,6 @@ describe('Sign Up', () => {
       await signUpScreen.expectVisible(authTestIDs.signUpNameInput);
       await signUpScreen.expectVisible(authTestIDs.signUpEmailInput);
       await signUpScreen.expectVisible(authTestIDs.signUpPasswordInput);
-      await signUpScreen.expectVisible(authTestIDs.signUpConfirmPasswordInput);
       await signUpScreen.expectSubmitVisible();
     });
   });
@@ -63,7 +62,6 @@ describe('Sign Up', () => {
     it('should show error for empty name', async () => {
       await signUpScreen.enterEmail(generateTestEmail());
       await signUpScreen.enterPassword(VALID_PASSWORD);
-      await signUpScreen.enterConfirmPassword(VALID_PASSWORD);
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
@@ -73,7 +71,6 @@ describe('Sign Up', () => {
     it('should show error for empty email', async () => {
       await signUpScreen.enterName('Test User');
       await signUpScreen.enterPassword(VALID_PASSWORD);
-      await signUpScreen.enterConfirmPassword(VALID_PASSWORD);
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
@@ -84,7 +81,6 @@ describe('Sign Up', () => {
       await signUpScreen.enterName('Test User');
       await signUpScreen.enterEmail('invalid-email');
       await signUpScreen.enterPassword(VALID_PASSWORD);
-      await signUpScreen.enterConfirmPassword(VALID_PASSWORD);
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
@@ -95,22 +91,10 @@ describe('Sign Up', () => {
       await signUpScreen.enterName('Test User');
       await signUpScreen.enterEmail(generateTestEmail());
       await signUpScreen.enterPassword('weak');
-      await signUpScreen.enterConfirmPassword('weak');
       await signUpScreen.submit();
 
       await signUpScreen.waitForScreen();
       await signUpScreen.expectPasswordFieldError();
-    });
-
-    it('should show error for password mismatch', async () => {
-      await signUpScreen.enterName('Test User');
-      await signUpScreen.enterEmail(generateTestEmail());
-      await signUpScreen.enterPassword(VALID_PASSWORD);
-      await signUpScreen.enterConfirmPassword('DifferentPass123!');
-      await signUpScreen.submit();
-
-      await signUpScreen.waitForScreen();
-      await signUpScreen.expectConfirmPasswordFieldError();
     });
   });
 
@@ -153,19 +137,18 @@ describe('Sign Up', () => {
   });
 
   /**
-   * A mismatched confirmation keeps each submit off the network while the whole
-   * schema still runs, so no name error beside that one means the name passed.
-   * The API takes any name of 1-255 characters.
+   * A weak password keeps each submit off the network while the whole schema
+   * still runs, so no name error beside that one means the name passed. The
+   * API takes any name of 1-255 characters.
    */
   describe('Name Edge Cases', () => {
     async function submitWithName(enterName: () => Promise<void>) {
       await enterName();
       await signUpScreen.enterEmail(generateTestEmail());
-      await signUpScreen.enterPassword(VALID_PASSWORD);
-      await signUpScreen.enterConfirmPassword('DifferentPass123!');
+      await signUpScreen.enterPassword('weak');
       await signUpScreen.submit();
 
-      await signUpScreen.expectConfirmPasswordFieldError();
+      await signUpScreen.expectPasswordFieldError();
       await signUpScreen.expectNoNameFieldError();
     }
 

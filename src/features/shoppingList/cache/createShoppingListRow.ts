@@ -5,6 +5,7 @@
  */
 
 import type { ApolloCache } from '@apollo/client';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
 import type { DocumentNode } from 'graphql';
 import type {
   AddItemsToShoppingListInput,
@@ -116,6 +117,7 @@ export async function addItemsInSlices<TItem extends { id?: string | null }>(
   settle: { document: DocumentNode; fallback: string },
 ): Promise<SettledFailure | null> {
   let firstFailure: SettledFailure | null = null;
+  let landed = false;
   // In order: a queued slice replays behind the one before it.
   for (let start = 0; start < items.length; start += ADD_ITEMS_BATCH_LIMIT) {
     const slice = items.slice(start, start + ADD_ITEMS_BATCH_LIMIT);
@@ -132,7 +134,10 @@ export async function addItemsInSlices<TItem extends { id?: string | null }>(
       inputs,
     );
     firstFailure ??= settled.failure ?? null;
+    landed ||= settled.failure === undefined;
   }
+  // A tour step waiting for an add continues, whichever way it came.
+  if (landed) emitTutorialEvent('list.itemAdded');
   return firstFailure;
 }
 
@@ -180,6 +185,7 @@ export async function createShoppingListRow<TData>(
       data: settled.data,
     };
   }
+  emitTutorialEvent('list.itemAdded');
   return {
     id: landedRowId(settled.data) ?? id,
     outcome: 'kept',

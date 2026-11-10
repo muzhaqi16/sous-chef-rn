@@ -96,6 +96,11 @@
     "unitsReadByDefault": "Le misure sono state lette in unità consuete statunitensi.",
     "pantryCoverage": "{{percent}}% degli ingredienti in dispensa",
     "coveragePercent": "{{percent}}%",
+    "readyToCook": "Pronto da cucinare",
+    "usesYourMoreToBuy_one": "Usa {{item}} della tua dispensa · {{count}} da comprare",
+    "usesYourMoreToBuy_other": "Usa {{item}} della tua dispensa · {{count}} da comprare",
+    "moreToBuy_one": "{{count}} da comprare",
+    "moreToBuy_other": "{{count}} da comprare",
     "usesExpiringSoon_one": "Usa {{names}} prima che scada",
     "usesExpiringSoon_other": "Usa {{names}} prima che scadano",
     "needInspiration": "Cerchi ispirazione?",
@@ -134,11 +139,10 @@
     "writeItMyself": "Scriverla io",
     "deleteRecipeFailed": "Impossibile eliminare la ricetta. Riprova.",
     "dietaryRestrictions": "Restrizioni alimentari",
-    "dietaryRestrictionsSubtitle": "Imposta le tue preferenze per filtrare i risultati",
     "cookWithPantry": "Cucina con ciò che hai",
     "searchByName": "Per nome",
     "searchByIngredients": "Per ingredienti",
-    "cookWithPantrySubtitle": "Cerca ricette in base agli ingredienti nella dispensa",
+    "cookWithPantrySubtitle": "Cerca ricette in base agli ingredienti nella dispensa.",
     "loadingRecipe": "Caricamento ricetta...",
     "recipeNotFoundDb": "Ricetta non trovata nel database",
     "recipeNotFound": "Ricetta non trovata",
@@ -177,6 +181,8 @@
     "dairyFree": "Senza lattosio",
     "about": "Informazioni",
     "addAll": "Aggiungi tutto",
+    "addMissing_one": "Aggiungi {{count}} mancante",
+    "addMissing_other": "Aggiungi {{count}} mancanti",
     "recipeFrom": "Ricetta da {{source}}",
     "externalSource": "Fonte esterna",
     "viewOriginalRecipe": "Vedi ricetta originale",
@@ -330,6 +336,10 @@
       "VEGETARIAN": "Vegetariano",
       "WHOLE30": "Whole30"
     },
+    "religiousDiet": {
+      "HALAL": "Halal",
+      "KOSHER": "Kosher"
+    },
     "healthGoal": {
       "DIABETIC_FRIENDLY": "Adatto ai diabetici",
       "HEART_HEALTHY": "Salutare per il cuore",
@@ -365,7 +375,10 @@
     "pantryMatchLabel_one": "{{used}} di {{count}} ingrediente nella tua dispensa, {{missing}} da comprare",
     "pantryMatchLabel_other": "{{used}} di {{count}} ingredienti nella tua dispensa, {{missing}} da comprare",
     "createdFromRecipe": "Creata da una ricetta",
-    "ratingBreakdownRow": "{{count}} recensioni con {{stars}} stelle",
+    "ratingBreakdownRow_one": "{{count}} recensione con {{stars}}",
+    "ratingBreakdownRow_other": "{{count}} recensioni con {{stars}}",
+    "ratingStars_one": "{{count}} stella",
+    "ratingStars_other": "{{count}} stelle",
     "favoriteA11y": "Aggiungi ai preferiti",
     "unfavoriteA11y": "Rimuovi dai preferiti",
     "ingredientsTooMany": "Una ricetta può avere al massimo {{count}} ingredienti",
@@ -385,7 +398,10 @@
       "per": "Per {{amount}} di {{name}}",
       "inPantry": "Nella tua dispensa",
       "partlyInPantry": "In parte nella tua dispensa"
-    }
+    },
+    "cookGuideSuggestions": "Ricette con quello che hai, prima con ciò che scade prima. Aprine una per cucinarla.",
+    "cookGuideCook": "Aprine una e, quando è pronta, tocca {{action}}.",
+    "cookGuideOffline": "Le ricette dalla dispensa richiedono una connessione. Compariranno qui quando sarai di nuovo online."
   },
   "recipeFilters": {
     "title": "Filtri",
@@ -488,11 +504,8 @@
     }
   },
   "cuisineSelector": {
-    "title": "Cucine preferite",
-    "subtitle": "Seleziona le tue cucine preferite",
     "showAll": "Mostra tutte le cucine",
-    "showLess": "Mostra meno",
-    "addFailed": "Impossibile aggiungere la cucina"
+    "showLess": "Mostra meno"
   },
   "cuisines": {
     "AFRICAN": "Africana",

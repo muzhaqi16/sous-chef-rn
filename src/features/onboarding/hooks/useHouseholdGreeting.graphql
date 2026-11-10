@@ -1,0 +1,13 @@
+# The home the household question greets the user with, and whether they own it.
+query HouseholdGreetingHome($id: ID!) {
+  home(id: $id) {
+    version
+    id
+    name
+    myMembership {
+      version
+      id
+      role
+    }
+  }
+}

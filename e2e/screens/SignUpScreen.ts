@@ -8,28 +8,20 @@ export class SignUpScreen extends BaseScreen {
   private readonly nameInput = authTestIDs.signUpNameInput;
   private readonly emailInput = authTestIDs.signUpEmailInput;
   private readonly passwordInput = authTestIDs.signUpPasswordInput;
-  private readonly confirmPasswordInput =
-    authTestIDs.signUpConfirmPasswordInput;
 
   /** Last field filled here, so it is the one holding the keyboard. */
-  protected override keyboardInput = this.confirmPasswordInput;
+  protected override keyboardInput = this.passwordInput;
 
   /** `AuthFormTemplate`'s title row — above the keyboard on every auth screen. */
   protected override blurTarget = authTestIDs.formTitleRow;
   private readonly submitButton = authTestIDs.signUpSubmitButton;
   private readonly loginLink = authTestIDs.signUpLoginLink;
 
-  async signUpWith(
-    name: string,
-    email: string,
-    password: string,
-    confirmPassword?: string,
-  ) {
+  async signUpWith(name: string, email: string, password: string) {
     await this.waitForScreen();
     await this.enterName(name);
     await this.enterEmail(email);
     await this.enterPassword(password);
-    await this.enterConfirmPassword(confirmPassword ?? password);
     await this.submit();
   }
 
@@ -51,10 +43,6 @@ export class SignUpScreen extends BaseScreen {
 
   async enterPassword(password: string) {
     await this.clearAndType(this.passwordInput, password);
-  }
-
-  async enterConfirmPassword(password: string) {
-    await this.clearAndType(this.confirmPasswordInput, password);
   }
 
   async submit() {
@@ -80,10 +68,6 @@ export class SignUpScreen extends BaseScreen {
 
   async expectPasswordFieldError() {
     await this.expectVisible(kitTestIDs.inputError(this.passwordInput));
-  }
-
-  async expectConfirmPasswordFieldError() {
-    await this.expectVisible(kitTestIDs.inputError(this.confirmPasswordInput));
   }
 
   async expectSubmitVisible() {

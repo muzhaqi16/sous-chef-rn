@@ -1,6 +1,8 @@
 import React from 'react';
 import { Linking, TextInput } from 'react-native';
 import { GraphQLError } from 'graphql';
+import type { ApolloLink } from '@apollo/client';
+import type { DocumentNode } from 'graphql';
 import { act, fireEvent, screen, within } from '@testing-library/react-native';
 import { makeCache } from '#/apollo/cache';
 import { useStore } from '#store';
@@ -17,19 +19,25 @@ import {
   type MockFor,
 } from '#/test-utils/apolloMockProvider';
 import { drainTimers } from '#/test-utils/drainTimers';
+import { operationLog } from '#/test-utils/operationLog';
 import {
   CreateOutcome,
   ErrorCode,
   UsualStoreSource,
 } from '#/graphql/generated/schemaTypes';
 import { SearchStoresDocument } from '#operations/store/store.generated';
+import { isRecord } from '#/utils/isRecord';
 import {
+  readUsualStores,
   writeUsualStores,
   type UsualStoreEntry,
 } from '#features/catalog/cache/usualStores';
 import { CreateStoreDocument } from '#features/catalog/hooks/useCreateStore.generated';
 import { CreateStoreFromPlaceDocument } from '#features/catalog/hooks/useCreateStoreFromPlace.generated';
-import { AddUsualStoreDocument } from '#features/catalog/hooks/useUsualStoreWrites.generated';
+import {
+  AddUsualStoreDocument,
+  RemoveUsualStoreDocument,
+} from '#features/catalog/hooks/useUsualStoreWrites.generated';
 import { StorePlacesDocument } from '#features/catalog/hooks/useStoreSearch.generated';
 import { useStorePickerStore } from '#features/catalog/store/storePickerStore';
 import { catalogTestIDs } from '#features/catalog/testIDs';
@@ -58,6 +66,8 @@ const banksville: NonNullable<UsualStoreEntry['store']> = {
 const renderPicker = (
   mocks: ReturnType<typeof recordMock>['mock'][],
   seed?: (cache: ReturnType<typeof makeCache>) => void,
+  params: { several?: boolean } = {},
+  links: ApolloLink[] = [],
 ) => {
   const cache = makeCache();
   seed?.(cache);
@@ -73,10 +83,13 @@ const renderPicker = (
       chain: banksville.chain,
     },
   ]);
-  return renderWithApollo(<StorePickerScreen route={route} />, {
-    cache,
-    operationMocks: mocks,
-  });
+  renderWithApollo(
+    <StorePickerScreen
+      route={{ ...route, params: { ...route.params, ...params } }}
+    />,
+    { cache, operationMocks: mocks, links },
+  );
+  return cache;
 };
 
 const searching = (stores: object[]) =>
@@ -301,6 +314,334 @@ describe('StorePickerScreen', () => {
     await drainTimers();
     expect(toastService.success).toHaveBeenCalledWith('Added to your stores');
     expect(useAppNavigation().goBack).toHaveBeenCalled();
+    expect(screen.queryByTestId(catalogTestIDs.storePickerDone)).toBeNull();
+  });
+
+  describe('several stores in one visit', () => {
+    const CREDIT = '© OpenStreetMap contributors';
+    const names = new Map([
+      [banksville.id, banksville.name],
+      ['s-sal', 'Save-A-Lot'],
+      ['s-aldi', 'ALDI'],
+      ['s-coop', 'East End Food Co-op'],
+    ]);
+    const heldStore = (id: string) => ({
+      placeId: null,
+      name: names.get(id) ?? id,
+      address: null,
+      credit: null,
+      distanceKm: 1,
+      store: {
+        id,
+        name: names.get(id) ?? id,
+        address: null,
+        storeNumber: null,
+        chain: null,
+      },
+    });
+    const saveALotPlace = {
+      placeId: 'osm:node/7',
+      store: null,
+      name: 'Save-A-Lot',
+      address: 'Stoner Way',
+      distanceKm: 1.8,
+      credit: CREDIT,
+    };
+    // Until a typed name asks again, Save-A-Lot is a place; then its store.
+    const near15221 = () =>
+      recordMock(StorePlacesDocument, {
+        dataFor: (vars): MockDataFor<typeof StorePlacesDocument> => ({
+          storePlaces: inputOf(vars).search
+            ? [heldStore('s-sal')]
+            : [saveALotPlace, heldStore('s-aldi'), heldStore('s-coop')],
+        }),
+      });
+    const madeFromPlace = (options: { held?: boolean } = {}) =>
+      recordMock(CreateStoreFromPlaceDocument, {
+        ...options,
+        data: {
+          createStoreFromPlace: {
+            __typename: 'CreateStorePayload',
+            outcome: CreateOutcome.Created,
+            store: { id: 's-sal', name: 'Save-A-Lot' },
+          },
+        },
+      });
+    const storeIdOf = (vars: Record<string, unknown>) => {
+      const { target } = inputOf(vars);
+      return isRecord(target) ? String(target.storeId) : '';
+    };
+    // The household's list as the API keeps it: each write answers it whole.
+    const householdApi = () => {
+      let held = [banksville.id];
+      const entry = (id: string) => ({
+        id: `home-1:${id}`,
+        store: { id, name: names.get(id) ?? id },
+        chain: null,
+      });
+      return {
+        add: recordMock(AddUsualStoreDocument, {
+          dataFor: (vars): MockDataFor<typeof AddUsualStoreDocument> => {
+            held = [...held, storeIdOf(vars)];
+            return {
+              addUsualStore: {
+                __typename: 'AddUsualStorePayload',
+                usualStores: held.map(entry),
+              },
+            };
+          },
+        }),
+        remove: recordMock(RemoveUsualStoreDocument, {
+          dataFor: (vars): MockDataFor<typeof RemoveUsualStoreDocument> => {
+            held = held.filter(id => id !== storeIdOf(vars));
+            return {
+              removeUsualStore: {
+                __typename: 'RemoveUsualStorePayload',
+                usualStores: held.map(id => ({ id: `home-1:${id}` })),
+              },
+            };
+          },
+        }),
+      };
+    };
+    const usualStoreNames = (cache: ReturnType<typeof makeCache>) =>
+      readUsualStores(cache, 'home-1')?.map(({ store }) => store?.name);
+    const rowOf = (key: string) =>
+      screen.getByTestId(catalogTestIDs.storePickerRow(key));
+    /** A row that offers no tap: held, or its write still settling. */
+    const offersNoTap = (row: ReturnType<typeof rowOf>) =>
+      within(row).queryByRole('button') === null;
+
+    // Each step waits on the operation it started, never on a clock.
+    let log = operationLog();
+    const answered = (document: DocumentNode, nth = 1) =>
+      act(async () => {
+        await log.answered(document, nth);
+      });
+    // A typed term asks after a debounce whose update must render first, and
+    // inside `act` it would wait for `act` to end: the request is awaited out
+    // of it, then its answer in it.
+    const searched = async (document: DocumentNode, nth = 1) => {
+      await log.requested(document, nth);
+      await answered(document, nth);
+    };
+    const renderSeveral = (mocks: ReturnType<typeof recordMock>['mock'][]) =>
+      renderPicker(mocks, undefined, { several: true }, [log.link]);
+    const typeTerm = (text: string) => {
+      fireEvent.changeText(
+        screen.getByPlaceholderText('Search by store name or address'),
+        text,
+      );
+    };
+    const listNear15221 = async () => {
+      typeZip('15221');
+      await answered(StorePlacesDocument);
+      expect(screen.getByText('East End Food Co-op')).toBeTruthy();
+    };
+
+    beforeEach(() => {
+      jest.useRealTimers();
+      log = operationLog();
+    });
+
+    it('adds each store tapped and stays open, until Done goes back', async () => {
+      const api = householdApi();
+      const cache = renderSeveral([
+        near15221().mock,
+        madeFromPlace().mock,
+        api.add.mock,
+      ]);
+      await listNear15221();
+
+      const picks = ['Save-A-Lot', 'ALDI', 'East End Food Co-op'];
+      for (const [index, name] of picks.entries()) {
+        fireEvent.press(screen.getByText(name));
+        await answered(AddUsualStoreDocument, index + 1);
+      }
+
+      expect(within(rowOf('place:osm:node/7')).getByText('Added')).toBeTruthy();
+      expect(within(rowOf('store:s-aldi')).getByText('Added')).toBeTruthy();
+      expect(within(rowOf('store:s-coop')).getByText('Added')).toBeTruthy();
+      expect(useAppNavigation().goBack).not.toHaveBeenCalled();
+      expect(toastService.success).not.toHaveBeenCalled();
+
+      fireEvent.press(screen.getByTestId(catalogTestIDs.storePickerDone));
+
+      expect(useAppNavigation().goBack).toHaveBeenCalledTimes(1);
+      expect(usualStoreNames(cache)).toEqual([
+        banksville.name,
+        'Save-A-Lot',
+        'ALDI',
+        'East End Food Co-op',
+      ]);
+    });
+
+    it('changes nothing when Done is tapped with nothing added', async () => {
+      const api = householdApi();
+      const cache = renderSeveral([near15221().mock, api.add.mock]);
+      await listNear15221();
+
+      fireEvent.press(screen.getByTestId(catalogTestIDs.storePickerDone));
+
+      expect(useAppNavigation().goBack).toHaveBeenCalledTimes(1);
+      expect(api.add.fired).toEqual([]);
+      expect(usualStoreNames(cache)).toEqual([banksville.name]);
+    });
+
+    it('takes back a store added this visit on a second tap', async () => {
+      const api = householdApi();
+      const cache = renderSeveral([
+        near15221().mock,
+        api.add.mock,
+        api.remove.mock,
+      ]);
+      await listNear15221();
+
+      fireEvent.press(screen.getByText('ALDI'));
+      await answered(AddUsualStoreDocument);
+      expect(usualStoreNames(cache)).toContain('ALDI');
+      fireEvent.press(screen.getByText('ALDI'));
+
+      await answered(RemoveUsualStoreDocument);
+      expect(api.remove.fired.map(storeIdOf)).toEqual(['s-aldi']);
+      expect(usualStoreNames(cache)).toEqual([banksville.name]);
+      expect(within(rowOf('store:s-aldi')).queryByText('Added')).toBeNull();
+    });
+
+    it('takes back a place added this visit, from its place row', async () => {
+      const api = householdApi();
+      const cache = renderSeveral([
+        near15221().mock,
+        madeFromPlace().mock,
+        api.add.mock,
+        api.remove.mock,
+      ]);
+      await listNear15221();
+
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+      await answered(AddUsualStoreDocument);
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+
+      await answered(RemoveUsualStoreDocument);
+      expect(api.remove.fired.map(storeIdOf)).toEqual(['s-sal']);
+      expect(usualStoreNames(cache)).toEqual([banksville.name]);
+      expect(within(rowOf('place:osm:node/7')).queryByText('Added')).toBeNull();
+    });
+
+    it('takes back a place added this visit once the list names its store', async () => {
+      const api = householdApi();
+      const cache = renderSeveral([
+        near15221().mock,
+        madeFromPlace().mock,
+        api.add.mock,
+        api.remove.mock,
+      ]);
+      await listNear15221();
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+      await answered(AddUsualStoreDocument);
+
+      typeTerm('save');
+      await searched(StorePlacesDocument, 2);
+      expect(within(rowOf('store:s-sal')).getByText('Added')).toBeTruthy();
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+
+      await answered(RemoveUsualStoreDocument);
+      expect(api.remove.fired.map(storeIdOf)).toEqual(['s-sal']);
+      expect(usualStoreNames(cache)).toEqual([banksville.name]);
+    });
+
+    it('offers no tap on a store the household had before the visit', async () => {
+      renderSeveral([searching([banksville]).mock]);
+
+      typeTerm('giant');
+      await searched(SearchStoresDocument);
+
+      const row = rowOf(`store:${banksville.id}`);
+      expect(within(row).getByText('Added')).toBeTruthy();
+      expect(offersNoTap(row)).toBe(true);
+    });
+
+    it('adds a typed name once, takes it back on a second tap, and reuses it on a third', async () => {
+      const api = householdApi();
+      const create = recordMock(CreateStoreDocument, {
+        dataFor: (vars): MockDataFor<typeof CreateStoreDocument> => {
+          const id = String(inputOf(vars).id);
+          names.set(id, "Pete's Corner Market");
+          return {
+            createStore: {
+              __typename: 'CreateStorePayload',
+              outcome: CreateOutcome.Created,
+              store: { id, name: "Pete's Corner Market" },
+            },
+          };
+        },
+      });
+      renderSeveral([
+        searching([]).mock,
+        create.mock,
+        api.add.mock,
+        api.remove.mock,
+      ]);
+      typeTerm("Pete's Corner Market");
+      await searched(SearchStoresDocument);
+
+      fireEvent.press(
+        screen.getByText("Not listed? Add “Pete's Corner Market”"),
+      );
+      await answered(AddUsualStoreDocument);
+
+      const footer = screen.getByTestId(catalogTestIDs.storePickerUnlisted);
+      expect(within(footer).getByText("Pete's Corner Market")).toBeTruthy();
+      expect(within(footer).getByText('Added')).toBeTruthy();
+      expect(create.fired).toHaveLength(1);
+      expect(api.add.fired).toHaveLength(1);
+
+      fireEvent.press(within(footer).getByText("Pete's Corner Market"));
+
+      await answered(RemoveUsualStoreDocument);
+      expect(api.remove.fired.map(storeIdOf)).toEqual([
+        String(inputOf(create.fired[0] ?? {}).id),
+      ]);
+      expect(
+        screen.getByText("Not listed? Add “Pete's Corner Market”"),
+      ).toBeTruthy();
+
+      // Added again, it is the same store: no second one is made.
+      fireEvent.press(
+        screen.getByText("Not listed? Add “Pete's Corner Market”"),
+      );
+      await answered(AddUsualStoreDocument, 2);
+      expect(create.fired).toHaveLength(1);
+      expect(api.add.fired.map(storeIdOf)).toEqual([
+        String(inputOf(create.fired[0] ?? {}).id),
+        String(inputOf(create.fired[0] ?? {}).id),
+      ]);
+    });
+
+    it('sends nothing for a second tap while a place is becoming a store', async () => {
+      const api = householdApi();
+      const create = madeFromPlace({ held: true });
+      renderSeveral([
+        near15221().mock,
+        create.mock,
+        api.add.mock,
+        api.remove.mock,
+      ]);
+      await listNear15221();
+
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+      await act(async () => {
+        await log.requested(CreateStoreFromPlaceDocument);
+      });
+      expect(offersNoTap(rowOf('place:osm:node/7'))).toBe(true);
+      fireEvent.press(screen.getByText('Save-A-Lot'));
+
+      create.release();
+      await answered(AddUsualStoreDocument);
+      expect(create.fired).toHaveLength(1);
+      expect(api.add.fired.map(storeIdOf)).toEqual(['s-sal']);
+      expect(api.remove.fired).toEqual([]);
+    });
   });
 
   it("marks a store the household has, and doesn't add it twice", async () => {

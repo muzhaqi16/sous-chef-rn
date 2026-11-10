@@ -7,6 +7,7 @@ export type FeatureFlag =
   | 'budgetAndPrices'
   | 'deviceReceiptModel'
   | 'deviceReceiptReading'
+  | 'gettingStarted'
   | 'homeChangeFeed'
   | 'ingredientPaste'
   | 'listChangeFeed'
@@ -33,6 +34,8 @@ const FEATURE_FLAG_DEFAULTS: Record<FeatureFlag, boolean> = {
   // A receipt read on the phone by `@muzhaqi16/receipt-rules` first, kept when it
   // adds up; off, every receipt is read as `receiptParsing` says.
   deviceReceiptReading: true,
+  // Today's Getting started card for a new account; off, Today shows its tiles.
+  gettingStarted: true,
   // A home's members, pending invites and storage locations kept current by the
   // same feed; off, the home's reads and its subscription do it.
   homeChangeFeed: true,

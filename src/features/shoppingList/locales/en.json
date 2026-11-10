@@ -273,9 +273,8 @@
     "quantityRequired": "Enter a quantity greater than zero"
   },
   "addToShoppingListSheet": {
-    "tutorialTapPlus": "Tap + next to an item to add it",
-    "tutorialTapAddManually": "Tap \"Add Manually\" to add an item",
-    "tutorialPullDown": "Pull down to close"
+    "tutorialTapPlus": "Tap + next to an item to add it.",
+    "tutorialTapAddManually": "Tap \"Add Manually\" to add an item."
   },
   "shoppingListSelector": {
     "title": "Select Shopping List",
@@ -330,26 +329,24 @@
   "shoppingListTutorial": {
     "addButton": {
       "title": "Add an item",
-      "subtitle": "Tap + to add items to your shopping list"
+      "subtitle": "Tap + to add items to your shopping list."
     },
     "swipeActions": {
       "title": "Swipe to manage items",
-      "subtitle": "Swipe any item left to edit, or right to delete"
+      "subtitle": "Swipe an item right to edit it, or left to delete it. With a screen reader, both are in the item’s actions."
     },
     "checkbox": {
-      "subtitle": "Tap the checkbox to mark this item as purchased"
-    },
-    "longPress": {
-      "title": "Record the price",
-      "subtitle": "Press and hold an item to enter its actual quantity and price before marking it purchased"
-    },
-    "purchasedTab": {
-      "title": "View purchased items",
-      "subtitle": "Tap to see your purchased items"
+      "subtitle": "Tap the checkbox to mark this item as purchased."
     },
     "moveToPantry": {
       "title": "Move to pantry",
-      "subtitle": "Tap to move this item to your pantry"
+      "subtitle": "Tap to move this item to your pantry."
+    },
+    "receiptOffer": {
+      "subtitle": "Bought these? Scan this trip’s receipt to put them in your pantry."
+    },
+    "storeModeNew": {
+      "subtitle": "New: shop your list aisle by aisle, in the store’s order. Tap to try it."
     }
   },
   "listTemplate": {

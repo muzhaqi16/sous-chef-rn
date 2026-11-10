@@ -3,6 +3,9 @@
 import React from 'react';
 import { render, userEvent, act, within } from '@testing-library/react-native';
 import { RecipeMain } from '../RecipeMain';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
+import { GUIDE_TOURS } from '#domain/guides';
 import { recipesTestIDs } from '#features/recipes/testIDs';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
@@ -135,7 +138,10 @@ jest.mock('#hooks/ui/useTutorialSequence', () => ({
     isActive: false,
   })),
 }));
-jest.mock('#hooks/settings/useFeatureHint', () => ({}));
+let mockTipFacts: string[] = [];
+jest.mock('#hooks/settings/useFeatureHint', () => ({
+  hasTipFact: (fact: string) => mockTipFacts.includes(fact),
+}));
 jest.mock('@gorhom/bottom-sheet', () => ({
   BottomSheetModal: () => null,
   useBottomSheetScrollableCreator: jest.fn(
@@ -277,6 +283,77 @@ describe('RecipeMain', () => {
     mockItemListImpl = (props: ItemListMockProps) =>
       props.ListHeaderComponent ?? null;
     mockScreenWith({});
+  });
+
+  it('Cook from your pantry: started from the card, it leads to the pantry’s recipes and waits for a cook while the own tour waits', () => {
+    mockDeferredScreen.mockImplementation(
+      ({ component: Component }: { component: React.ComponentType }) => (
+        <Component />
+      ),
+    );
+    act(() => tutorialSession.startGuide(GUIDE_TOURS.cook));
+
+    render(<RecipeMain />);
+
+    const calls = jest
+      .mocked(useTutorialSequence)
+      .mock.calls.map(([options]) => options);
+    const guide = calls.filter(o => o.tourId === GUIDE_TOURS.cook).pop();
+    expect(guide?.canStart).toBe(true);
+    expect(guide?.steps.map(step => step.rectKey)).toEqual([
+      'discoveryHeader',
+      'pantryButton',
+      'discoveryHeader',
+    ]);
+    expect([...(guide?.steps ?? [])].pop()?.advanceOn).toEqual({
+      event: 'recipe.cooked',
+    });
+    expect(calls.filter(o => o.tourId === undefined).pop()?.isPaused).toBe(
+      true,
+    );
+    act(() => tutorialSession.endGuide(GUIDE_TOURS.cook));
+  });
+
+  describe('tips in context', () => {
+    const visibleTips = () =>
+      jest
+        .mocked(useTutorialSequence)
+        .mock.calls.map(([options]) => options)
+        .filter(o => o.tourId === undefined)
+        .pop()
+        ?.steps.filter(step => step.when?.() ?? true)
+        .map(step => step.featureId);
+
+    beforeEach(() => {
+      mockTipFacts = [];
+      mockDeferredScreen.mockImplementation(
+        ({ component: Component }: { component: React.ComponentType }) => (
+          <Component />
+        ),
+      );
+    });
+
+    it('Nothing saved yet: no tip about saved recipes, nor any about diet filters', () => {
+      render(<RecipeMain />);
+
+      expect(visibleTips()).not.toContain('recipe_tutorial_saved');
+      expect(visibleTips()).not.toContain('recipe_tutorial_dietary');
+    });
+
+    it('The first saved recipe: the Saved tip may show', () => {
+      mockTipFacts = ['recipeSaved'];
+      render(<RecipeMain />);
+
+      expect(visibleTips()).toContain('recipe_tutorial_saved');
+      expect(visibleTips()).not.toContain('recipe_tutorial_my_recipes');
+    });
+
+    it('My recipes once the first is imported or written', () => {
+      mockTipFacts = ['recipeAdded'];
+      render(<RecipeMain />);
+
+      expect(visibleTips()).toContain('recipe_tutorial_my_recipes');
+    });
   });
 
   it('renders the outer component with fallback', () => {

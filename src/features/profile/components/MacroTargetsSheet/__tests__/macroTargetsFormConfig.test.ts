@@ -55,4 +55,14 @@ describe('the macro-targets schema', () => {
       macroTargetUpdates({ ...blank, calories: '2200', fat: '70' }),
     ).toEqual({ calorieTarget: 2200, fatTarget: 70 });
   });
+
+  // Emptying a stored target removes it: the API reads null as "clear it".
+  it('clears a target emptied from its stored value', () => {
+    expect(
+      macroTargetUpdates(
+        { ...blank, calories: '2200' },
+        { calorieTarget: 2000, proteinTarget: 120 },
+      ),
+    ).toEqual({ calorieTarget: 2200, proteinTarget: null });
+  });
 });

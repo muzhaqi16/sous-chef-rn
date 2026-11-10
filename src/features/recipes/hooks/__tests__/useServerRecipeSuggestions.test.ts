@@ -91,6 +91,7 @@ describe('useServerRecipeSuggestions per home', () => {
       first: 20,
       today: '2026-10-14',
       homeId: 'home-a',
+      excludeDietaryConflicts: true,
     });
   });
 
@@ -190,7 +191,12 @@ describe("yesterday's ranking on a new day", () => {
     const cache = makeCache();
     seedQuery(cache, {
       query: RecipeSuggestionsDocument,
-      variables: { first: 20, today: '2026-10-13', homeId },
+      variables: {
+        first: 20,
+        today: '2026-10-13',
+        homeId,
+        excludeDietaryConflicts: true,
+      },
       data: { recipeSuggestions: { edges: [edge('r-yesterday', 50)] } },
     });
     return cache;
@@ -208,7 +214,9 @@ describe("yesterday's ranking on a new day", () => {
     await drainTimers();
 
     expect(ids(result.current.rows)).toEqual(['recipe-r-today']);
-    expect(suggestions.fired).toEqual([{ first: 20, today: '2026-10-14' }]);
+    expect(suggestions.fired).toEqual([
+      { first: 20, today: '2026-10-14', excludeDietaryConflicts: true },
+    ]);
   });
 
   it('stands when the server cannot answer', async () => {
@@ -264,7 +272,12 @@ describe('useServerRecipeSuggestions', () => {
     await drainTimers();
     expect(result.current.rows).toHaveLength(1);
 
-    expect(suggestions.fired[0]).toEqual({ first: 20, today: '2026-10-14' });
+    // Every surface asks for screening, so members' shared restrictions count.
+    expect(suggestions.fired[0]).toEqual({
+      first: 20,
+      today: '2026-10-14',
+      excludeDietaryConflicts: true,
+    });
   });
 
   it.each([

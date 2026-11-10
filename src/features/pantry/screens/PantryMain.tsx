@@ -10,6 +10,8 @@ import { useAnimatedReaction } from 'react-native-reanimated';
 import { useFocusEffect, useRoute } from '@react-navigation/native';
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
 import { useTabBarAddMenu } from '#hooks/navigation/useTabBarAddMenu';
+import type { TabBarAddAction } from '#/context/TabBarActionsContext';
+import { useCurrentHome } from '#features/pantry/hooks/useCurrentHome';
 import { StyleSheet } from 'react-native-unistyles';
 import { usePantrySelectorConfig } from '#features/pantry/screens/usePantrySelectorConfig';
 import { useScannerSetup } from '#features/barcode/screens/useScannerSetup';
@@ -24,6 +26,12 @@ import {
   useTutorialSequence,
   type TutorialStep,
 } from '#hooks/ui/useTutorialSequence';
+import { useTutorialSession } from '#hooks/ui/tutorialSession';
+import { noteTipFact } from '#hooks/settings/useFeatureHint';
+import { useIsApiUnavailable } from '#hooks/app/useIsApiUnavailable';
+import { GUIDE_TOURS } from '#domain/guides';
+import { useSoonestDatedItem } from '#features/pantry/hooks/useSoonestDatedItem';
+import { useExpiryPushAsk } from '#features/notifications/screens/useExpiryPushAsk';
 import { Telemetry } from '#services/telemetry';
 import { useStore } from '#store';
 import { usePantryScreen } from '#features/pantry/screens/usePantryScreen';
@@ -49,13 +57,18 @@ import { Screen } from '#components/templates/Screen';
 import { TabScreenHeader } from '#components/molecules/TabScreenHeader';
 import { useCurrentPantry } from '#features/pantry/hooks/useCurrentPantry';
 
-function buildPantryTutorialSteps(t: Translate): TutorialStep[] {
+// Switching pantries is taught once there are two to switch between.
+function buildPantryTutorialSteps(
+  t: Translate,
+  pantryCount: number,
+): TutorialStep[] {
   return [
     {
       featureId: 'pantry_tutorial_settings',
       title: t('labels.pantrySettings'),
       subtitle: t('pantryScreen.tutorialPantrySettingsSubtitle'),
       rectKey: 'settingsIcon',
+      when: () => pantryCount > 1,
     },
     {
       featureId: 'pantry_tutorial_add',
@@ -263,6 +276,7 @@ function PantryMainContent({
   } = usePantryModals();
 
   const permissions = usePantryPermissions();
+  const { currentHome } = useCurrentHome();
 
   // Element positions for the tutorial spotlight coach-marks.
   const [settingsIconRect, setSettingsIconRect] = useState<{
@@ -272,23 +286,45 @@ function PantryMainContent({
     height: number;
   } | null>(null);
   const { addButtonRect, isOverlayOpen } = useTabBarState();
+  // "Stock your pantry", started from Today's Getting started card. While it
+  // runs, the screen's own tour waits.
+  const stockGuideStarted = useTutorialSession().startedGuides.has(
+    GUIDE_TOURS.stock,
+  );
+  const offline = useIsApiUnavailable();
+  // The first dated food here, onboarding's staples or a receipt's, brings the
+  // one ask to turn notifications on.
+  const datedItemName = useSoonestDatedItem(screen.pantry?.id, {
+    skip: !isPantryFocused,
+  });
+  useExpiryPushAsk({ datedItemName, isFocused: isPantryFocused });
+  // Dated food is the other half of a new account's activation.
+  useEffect(() => {
+    if (datedItemName) noteTipFact('datedItem');
+  }, [datedItemName]);
 
   const tutorial = useTutorialSequence({
-    steps: buildPantryTutorialSteps(t),
+    steps: buildPantryTutorialSteps(t, screen.pantries.length),
     targetRects: {
       settingsIcon: settingsIconRect,
       addButton: addButtonRect,
     },
     canStart: canStartTutorial,
-    isPaused: !isPantryFocused || isOverlayOpen,
+    isPaused: !isPantryFocused || isOverlayOpen || stockGuideStarted,
   });
 
-  const tutorialTargetActions: Record<number, () => void> = {
-    0: onSettingsPress,
-    1: () => {
-      Telemetry.trackEvent('add_pantry_item_clicked');
-      openAddSheet();
-    },
+  const runTutorialTarget = (featureId: string) => {
+    switch (featureId) {
+      case 'pantry_tutorial_settings':
+        onSettingsPress();
+        break;
+      case 'pantry_tutorial_add':
+        Telemetry.trackEvent('add_pantry_item_clicked');
+        openAddSheet();
+        break;
+      default:
+        break;
+    }
   };
 
   const canAdd =
@@ -297,43 +333,75 @@ function PantryMainContent({
     !screen.noPantries &&
     permissions.canAddItems;
 
-  // Always registered, so the `+` says why it cannot add rather than doing
-  // nothing. Every way to add is one tap from here, as on Recipes.
-  const addRefusal = canAdd ? undefined : t('errors.codes.forbidden');
-  useTabBarAddMenu([
-    {
-      key: 'search',
-      label: t('labels.searchToAdd'),
-      icon: 'search',
-      onPress: () => {
-        Telemetry.trackEvent('add_pantry_item_clicked');
-        openAddSheet();
-      },
-      disabledReason: addRefusal,
-    },
-    {
-      key: 'barcode',
-      label: t('labels.scanBarcode'),
-      icon: 'barcode-outline',
-      onPress: () =>
-        toBarcode({ source: 'pantry', pantryId: screen.pantry?.id }),
-      disabledReason: addRefusal,
-    },
-    {
-      key: 'receipt',
-      label: t('labels.scanReceipt'),
-      icon: 'receipt-outline',
-      onPress: () => toReceiptScan(),
-      disabledReason: addRefusal,
-    },
-    {
-      key: 'manual',
-      label: t('labels.addManually'),
-      icon: 'create-outline',
-      onPress: openAddManually,
-      disabledReason: addRefusal,
-    },
-  ]);
+  // With nowhere to add yet, the `+` takes the step its empty state offers;
+  // one action runs straight from the bar, with no menu.
+  const nextStep: TabBarAddAction | null = screen.noHomes
+    ? {
+        key: 'getStarted',
+        label: t('labels.getStarted'),
+        icon: 'home-outline',
+        onPress: onSelectHome,
+      }
+    : screen.noHomeSelected
+    ? {
+        key: 'chooseHome',
+        label: t('pantryScreen.noHomeSelectedAction'),
+        icon: 'home-outline',
+        onPress: onSelectHome,
+      }
+    : screen.noPantries
+    ? {
+        key: 'createPantry',
+        label: t('pantryScreen.noPantriesAction'),
+        icon: 'basket-outline',
+        onPress: onCreatePantry,
+      }
+    : null;
+  // Otherwise every way to add is one tap from here, as on Recipes, and a
+  // member who may not add is told so, and whom to ask.
+  const addRefusal = permissions.canAddItems
+    ? undefined
+    : currentHome?.name
+    ? t('moveToPantry.cannotAddBody', { home: currentHome.name })
+    : t('errors.codes.forbidden');
+  useTabBarAddMenu(
+    nextStep
+      ? [nextStep]
+      : [
+          {
+            key: 'search',
+            label: t('labels.searchToAdd'),
+            icon: 'search',
+            onPress: () => {
+              Telemetry.trackEvent('add_pantry_item_clicked');
+              openAddSheet();
+            },
+            disabledReason: addRefusal,
+          },
+          {
+            key: 'barcode',
+            label: t('labels.scanBarcode'),
+            icon: 'barcode-outline',
+            onPress: () =>
+              toBarcode({ source: 'pantry', pantryId: screen.pantry?.id }),
+            disabledReason: addRefusal,
+          },
+          {
+            key: 'receipt',
+            label: t('labels.scanReceipt'),
+            icon: 'receipt-outline',
+            onPress: () => toReceiptScan(),
+            disabledReason: addRefusal,
+          },
+          {
+            key: 'manual',
+            label: t('labels.addManually'),
+            icon: 'create-outline',
+            onPress: openAddManually,
+            disabledReason: addRefusal,
+          },
+        ],
+  );
 
   const handleAddItem = canAdd ? openAddSheet : undefined;
 
@@ -342,6 +410,26 @@ function PantryMainContent({
   };
 
   const coachStep = tutorial.currentStep;
+
+  const stockGuide = useTutorialSequence({
+    tourId: GUIDE_TOURS.stock,
+    steps: [
+      {
+        featureId: 'stock_guide_receipt',
+        title: t('labels.scanReceipt'),
+        // Reading a receipt is the server's.
+        subtitle: offline
+          ? t('pantryScreen.stockGuideOffline')
+          : t('pantryScreen.stockGuideSubtitle'),
+        rectKey: 'addButton',
+        when: () => canAdd,
+      },
+    ],
+    targetRects: { addButton: addButtonRect },
+    canStart: stockGuideStarted,
+    isPaused: !isPantryFocused || isOverlayOpen,
+  });
+  const stockStep = stockGuide.currentStep;
 
   return (
     <Screen testID={pantryTestIDs.screen} scroll="list" gutter="none">
@@ -403,18 +491,32 @@ function PantryMainContent({
         onClose={onOverlayClose}
       />
       {/* Tutorial spotlight coach-marks */}
-      {coachStep ? (
+      {stockStep ? (
+        <SpotlightCoachMark
+          targetRect={stockStep.targetRect}
+          title={stockStep.title}
+          subtitle={stockStep.subtitle}
+          onDismiss={stockGuide.skipAll}
+          onClose={stockGuide.pause}
+          onTargetPress={() => {
+            if (!offline) toReceiptScan();
+            stockGuide.advance();
+          }}
+        />
+      ) : coachStep ? (
         <SpotlightCoachMark
           targetRect={coachStep.targetRect}
           title={coachStep.title}
           subtitle={coachStep.subtitle}
           stepIndex={coachStep.stepIndex}
           totalSteps={coachStep.totalSteps}
+          waitsForAction={coachStep.waitsForAction}
+          demo={coachStep.demo}
           onDismiss={tutorial.skipAll}
+          onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}
           onTargetPress={() => {
-            const action = tutorialTargetActions[coachStep.stepIndex];
-            action?.();
+            runTutorialTarget(coachStep.featureId);
             tutorial.advance();
           }}
         />

@@ -207,7 +207,12 @@
     "actionRequiredBody": "This notification requires action: {{action}}",
     "goToNotifications": "Go to Notifications",
     "urgentUnread_one": "{{count}} urgent notification",
-    "urgentUnread_other": "{{count}} urgent notifications"
+    "urgentUnread_other": "{{count}} urgent notifications",
+    "expiryAsk": {
+      "title": "Know before food goes off",
+      "message": "We’ll tell you before food goes off. First up: {{item}}. You can change this in Settings.",
+      "turnOn": "Turn on"
+    }
   },
   "notificationGroups": {
     "urgent": "🚨 Urgent",

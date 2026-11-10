@@ -41,7 +41,7 @@ const safe = async (label: string, fn: () => Promise<void>) => {
 // later runs; the state persists.
 const dismissTutorialIfPresent = async () => {
   try {
-    await element(by.id(kitTestIDs.spotlightSkipButton)).atIndex(0).tap();
+    await element(by.id(kitTestIDs.spotlightNotNowButton)).atIndex(0).tap();
     await settle(600);
   } catch {
     /* no tutorial up */
@@ -122,6 +122,8 @@ describe('UI Tour', () => {
       }
       await settle(800);
       await shoot('06-profile');
+      // Profile is pushed over the tabs, which come back with Back.
+      await element(by.id(kitTestIDs.headerBackButton)).tap();
     });
 
     await safe('Pantry add sheet', async () => {

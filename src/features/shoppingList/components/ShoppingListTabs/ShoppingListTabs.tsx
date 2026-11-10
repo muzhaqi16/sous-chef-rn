@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   useWindowDimensions,
   View,
@@ -31,10 +31,7 @@ import {
   ShoppingListDataProvider,
   type ShoppingListTabData,
 } from './ShoppingListDataContext';
-import {
-  useShoppingListTutorial,
-  ShoppingListTutorialStep,
-} from '#features/shoppingList/context/ShoppingListTutorialContext';
+import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
 import { StyleSheet } from 'react-native-unistyles';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
@@ -156,7 +153,8 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
   const permissions = useShoppingListItemPermissions();
   const tabBarRef = useRef<View>(null);
   const layout = useWindowDimensions();
-  const tutorial = useShoppingListTutorial();
+  const tour = useFirstShopTourContext();
+  const tabForGuide = tour?.tabForGuide ?? null;
 
   const routes: TabRoute[] = [
     { key: 'shopping', title: t('shoppingListScreen.tabShopping') },
@@ -184,38 +182,20 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
     // here or the tab bar keeps following a list the finger has left.
     onMomentumScrollEnd?.();
     setIndex(newIndex);
-    if (newIndex === 1) {
-      tutorial?.notifyPurchasedTabTapped();
-    }
   };
 
-  // Auto-switch to the purchased tab on the move-to-pantry step, via the
-  // adjusting-state-during-render pattern rather than setState-in-effect.
-  const [prevTutorialStep, setPrevTutorialStep] = useState(
-    tutorial?.currentStep,
-  );
-  if (tutorial?.currentStep !== prevTutorialStep) {
-    setPrevTutorialStep(tutorial?.currentStep);
-    if (
-      tutorial?.currentStep ===
-      ShoppingListTutorialStep.SPOTLIGHT_MOVE_TO_PANTRY
-    ) {
-      setIndex(1);
-    }
+  // The guide's next tip may point into the other tab, so the list goes there
+  // as it comes up (adjusting state during render, not an effect).
+  const [lastTabForGuide, setLastTabForGuide] = useState(tabForGuide);
+  if (tabForGuide !== lastTabForGuide) {
+    setLastTabForGuide(tabForGuide);
+    if (tabForGuide) setIndex(ROUTE_KEYS.indexOf(tabForGuide));
   }
-
-  const shouldMeasurePurchasedTab =
-    tutorial?.isActive &&
-    tutorial.currentStep === ShoppingListTutorialStep.SPOTLIGHT_PURCHASED_TAB;
-
-  const handleTabMeasure = (
-    key: ShoppingListTabId,
-    rect: { x: number; y: number; width: number; height: number },
-  ) => {
-    if (key === 'purchased') {
-      tutorial?.registerRect('purchasedTab', rect);
-    }
-  };
+  // The tour measures a row only while its tab shows.
+  const noteTab = tour?.noteTab;
+  useEffect(() => {
+    noteTab?.(shoppingTabActive ? 'shopping' : 'purchased');
+  }, [noteTab, shoppingTabActive]);
 
   const tabActions: ShoppingListTabsActions = {
     onItemPress,
@@ -329,8 +309,6 @@ const ShoppingListTabs: React.FC<ShoppingListTabsProps> = ({
         jumpTo={jumpTo}
         counts={counts}
         actionButtons={actionButtons.length > 0 ? actionButtons : undefined}
-        onTabMeasure={shouldMeasurePurchasedTab ? handleTabMeasure : undefined}
-        measureTabKeys={shouldMeasurePurchasedTab ? ['purchased'] : undefined}
       />
     </View>
   );

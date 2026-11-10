@@ -13,7 +13,11 @@ import { t } from '#/i18n';
 import { TopLevelErrorCode } from '#/graphql/generated/schemaTypes';
 import { storeApi } from '#store';
 import { profileTestIDs } from '#features/profile/testIDs';
-import { SearchAvoidableFoodsDocument } from '#features/profile/ui/useAvoidFoodSearch.generated';
+import {
+  CommonlyAvoidedFoodsDocument,
+  SearchAvoidableFoodsDocument,
+} from '#features/profile/ui/useAvoidFoodSearch.generated';
+import { RestrictionSeverity } from '#/graphql/generated/schemaTypes';
 import { AvoidFoodSheet } from '../AvoidFoodSheet';
 
 jest.mock('#hooks/ui/useStandardBottomSheet', () => ({
@@ -35,6 +39,14 @@ const TURKEY_BACON = { id: 'turkey-bacon', name: 'Turkey Bacon' };
 const searchMock = (foods: Array<{ id: string; name: string }>) =>
   recordMock(SearchAvoidableFoodsDocument, {
     data: { searchItems: { edges: foods.map(node => ({ node })) } },
+  });
+
+const MILK = { id: 'milk', name: 'Milk' };
+const PEANUTS = { id: 'peanuts', name: 'Peanuts' };
+
+const suggestedMock = (foods: Array<{ id: string; name: string }>) =>
+  recordMock(CommonlyAvoidedFoodsDocument, {
+    data: { items: { edges: foods.map(node => ({ node })) } },
   });
 
 const sheet = (visible: boolean) => (
@@ -170,6 +182,97 @@ describe('AvoidFoodSheet search', () => {
     expect(search.fired).toEqual([]);
     expect(row(BACON.id)).toBeNull();
     expect(screen.getByTestId(profileTestIDs.avoidSearchInput)).toBeTruthy();
+  });
+
+  describe('with nothing typed', () => {
+    it('lists the foods people commonly avoid, and a tap picks one', async () => {
+      const onPick = jest.fn(() => Promise.resolve(true));
+      renderWithApollo(
+        <AvoidFoodSheet visible onDismiss={jest.fn()} onPick={onPick} />,
+        { operationMocks: [suggestedMock([MILK, PEANUTS]).mock] },
+      );
+      await drainTimers();
+
+      expect(
+        screen.getByText(t('dietaryProfile.avoidSuggestionsTitle')),
+      ).toBeTruthy();
+      expect(row(MILK.id)).toBeTruthy();
+      expect(row(PEANUTS.id)).toBeTruthy();
+
+      fireEvent.press(screen.getByText('Milk'));
+      await drainTimers();
+
+      expect(onPick).toHaveBeenCalledWith(
+        expect.objectContaining({ id: MILK.id, name: 'Milk' }),
+        RestrictionSeverity.Preference,
+      );
+    });
+
+    it('leaves out a food already avoided', async () => {
+      renderWithApollo(
+        <AvoidFoodSheet
+          visible
+          onDismiss={jest.fn()}
+          avoided={new Set([MILK.id])}
+          onPick={jest.fn()}
+        />,
+        { operationMocks: [suggestedMock([MILK, PEANUTS]).mock] },
+      );
+      await drainTimers();
+
+      expect(row(MILK.id)).toBeNull();
+      expect(row(PEANUTS.id)).toBeTruthy();
+    });
+
+    it('gives way to the results once a search is typed', async () => {
+      renderWithApollo(sheet(true), {
+        operationMocks: [
+          suggestedMock([MILK, PEANUTS]).mock,
+          searchMock([BACON]).mock,
+        ],
+      });
+      await drainTimers();
+      expect(row(MILK.id)).toBeTruthy();
+
+      type('bac');
+      await drainTimers();
+
+      expect(row(MILK.id)).toBeNull();
+      expect(
+        screen.queryByText(t('dietaryProfile.avoidSuggestionsTitle')),
+      ).toBeNull();
+      expect(row(BACON.id)).toBeTruthy();
+    });
+
+    it('shows no title while the list is empty', async () => {
+      renderWithApollo(sheet(true), {
+        operationMocks: [suggestedMock([]).mock],
+      });
+      await drainTimers();
+
+      expect(
+        screen.queryByText(t('dietaryProfile.avoidSuggestionsTitle')),
+      ).toBeNull();
+    });
+
+    it('asks for nothing while the sheet is closed or the device is offline', async () => {
+      const suggested = suggestedMock([MILK]);
+      const { rerender } = renderWithApollo(sheet(false), {
+        operationMocks: [suggested.mock],
+      });
+      await drainTimers();
+      expect(suggested.fired).toEqual([]);
+
+      storeApi.setState({ isOnline: false, apiReachable: null });
+      rerender(sheet(true));
+      await drainTimers();
+
+      expect(suggested.fired).toEqual([]);
+      expect(row(MILK.id)).toBeNull();
+      expect(
+        screen.getByText(t('dietaryProfile.avoidSearchNeedsConnection')),
+      ).toBeTruthy();
+    });
   });
 
   it('says why a search failed', async () => {

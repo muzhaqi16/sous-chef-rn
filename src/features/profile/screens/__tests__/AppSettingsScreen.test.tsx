@@ -8,6 +8,9 @@ import {
 } from '@testing-library/react-native';
 import { AppSettingsScreen } from '../AppSettingsScreen';
 import { useFeatureFlag } from '#hooks/settings/useFeatureFlag';
+import { hasFeatureHintBeenShown } from '#hooks/settings/useFeatureHint';
+import { featureHintKey } from '#store/slices/tutorialSlice';
+import { useStore } from '#store';
 import { profileTestIDs } from '#features/profile/testIDs';
 
 // --- Mocks ---
@@ -51,6 +54,7 @@ jest.mock('#store/useAppStore', () => {
     useAppStore: (selector: (state: MockState) => unknown) =>
       selector(getState()),
     useShowNavigationLabels: () => getState().showNavigationLabels,
+    useUserId: () => 'account-a',
   };
 });
 
@@ -65,10 +69,6 @@ jest.mock('#hooks/settings/useUserPreferences', () => ({
 
 jest.mock('#hooks/settings/useFeatureFlag', () => ({
   useFeatureFlag: jest.fn(() => true),
-}));
-
-jest.mock('#hooks/settings/useFeatureHint', () => ({
-  resetAllFeatureHints: jest.fn(),
 }));
 
 jest.mock('#/styles/commonStyles', () => ({
@@ -374,6 +374,61 @@ describe('AppSettingsScreen', () => {
  * on every visit for as long as the request took, which against a stalled API
  * is the 10s httpLink abort deadline.
  */
+describe('AppSettingsScreen - Replay tips', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    useStore.setState({
+      featureHintsShown: {
+        [featureHintKey('account-a', 'first_shop')]: true,
+        [featureHintKey('account-b', 'first_shop')]: true,
+      },
+      lastUnpromptedTipAt: { 'account-a': 1, 'account-b': 1 },
+    });
+  });
+
+  it('Two accounts on one phone: brings back only this account’s tips', () => {
+    render(<AppSettingsScreen />);
+
+    fireEvent.press(screen.getByTestId(profileTestIDs.settingsReplayTips));
+
+    expect(hasFeatureHintBeenShown('first_shop', 'account-a')).toBe(false);
+    expect(hasFeatureHintBeenShown('first_shop', 'account-b')).toBe(true);
+    expect(useStore.getState().lastUnpromptedTipAt).toEqual({
+      'account-b': 1,
+    });
+  });
+
+  it('turns tips back on for the account when they are off', () => {
+    mockAppSettings.mockReturnValueOnce({
+      settings: {
+        preferredUnitSystem: 'METRIC',
+        showTutorials: false,
+        storeMode: false,
+        budgetAndPrices: null,
+      },
+      loading: false,
+      hasLoadedSettings: true,
+      error: noError(),
+      refetch: jest.fn(),
+      updateAppSetting: mockUpdateAppSetting,
+      resetToDefaults: mockResetToDefaults,
+    });
+    render(<AppSettingsScreen />);
+
+    fireEvent.press(screen.getByTestId(profileTestIDs.settingsReplayTips));
+
+    expect(mockUpdateAppSetting).toHaveBeenCalledWith('showTutorials', true);
+  });
+
+  it('leaves the switch alone when tips are already on', () => {
+    render(<AppSettingsScreen />);
+
+    fireEvent.press(screen.getByTestId(profileTestIDs.settingsReplayTips));
+
+    expect(mockUpdateAppSetting).not.toHaveBeenCalled();
+  });
+});
+
 describe('AppSettingsScreen - loading state', () => {
   beforeEach(() => {
     jest.clearAllMocks();

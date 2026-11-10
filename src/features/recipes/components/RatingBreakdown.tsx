@@ -77,8 +77,8 @@ export const RatingBreakdown: React.FC<RatingBreakdownProps> = ({
                 tone="rating"
                 style={styles.barTrack}
                 accessibilityLabel={t('recipes.ratingBreakdownRow', {
-                  stars: starLevel,
                   count,
+                  stars: t('recipes.ratingStars', { count: starLevel }),
                 })}
               />
               <Text

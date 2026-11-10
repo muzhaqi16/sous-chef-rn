@@ -2,6 +2,10 @@
  * What each profile write changes on the device, as a pending layer. The
  * server's answer writes its own rows; `commit` adds what it cannot state.
  */
+import {
+  entityFields,
+  type EntityFieldsInputs,
+} from '#/apollo/pendingWrites/entityFields';
 import { inputIdOf } from '#/apollo/pendingWrites/inputId';
 import type { LocalWrite } from '#/apollo/pendingWrites/types';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -20,6 +24,7 @@ import {
   showLocalRestriction,
   type LocalRestriction,
 } from '#features/profile/cache/restrictions';
+import { dropScreenedAnswers } from '#features/profile/cache/screenedAnswers';
 
 export type AddRestrictionInputs = { row: LocalRestriction; now: string };
 
@@ -34,6 +39,7 @@ export const addRestriction: LocalWrite<AddRestrictionInputs> = {
       ? inputIdOf({ input: payload.dietaryRestriction })
       : undefined;
     if (id) listRestriction(cache, id);
+    dropScreenedAnswers(cache);
   },
 };
 
@@ -48,6 +54,18 @@ export const removeRestriction: LocalWrite<RemoveRestrictionInputs> = {
   commit(cache, { variables, inputs: { profileId } }) {
     const id = inputIdOf(variables);
     if (id && profileId) dropRestriction(cache, profileId, id);
+    dropScreenedAnswers(cache);
+  },
+};
+
+/** A profile write: one that set the religious diet outdates what was screened. */
+export const dietaryProfileFields: LocalWrite<EntityFieldsInputs> = {
+  ...entityFields,
+  commit(cache, { variables }) {
+    const input: unknown = variables.input;
+    if (isRecord(input) && input.religiousDiet !== undefined) {
+      dropScreenedAnswers(cache);
+    }
   },
 };
 

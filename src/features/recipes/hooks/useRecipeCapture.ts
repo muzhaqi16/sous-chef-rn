@@ -1,3 +1,4 @@
+import { noteTipFact } from '#hooks/settings/useFeatureHint';
 import { useState } from 'react';
 import { useApolloClient, useMutation } from '@apollo/client/react';
 import { useTranslation } from '#/i18n';
@@ -100,8 +101,11 @@ export function useRecipeCapture() {
       fragment: RecipeCaptureReadersFragmentDoc,
       optimistic: true,
     });
+    const accepted = !!appliedPayload(settled.data);
+    // An import taken on adds a recipe of the user's own.
+    if (accepted) noteTipFact('recipeAdded');
     return classifyCaptureCreate({
-      accepted: !!appliedPayload(settled.data),
+      accepted,
       capture,
       refusedField: settled.failure?.field ?? null,
       error: settled.error,

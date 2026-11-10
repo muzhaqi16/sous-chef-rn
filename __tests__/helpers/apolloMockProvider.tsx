@@ -5,7 +5,13 @@ import {
   type RenderHookOptions,
   type RenderOptions,
 } from '@testing-library/react-native';
-import type { ApolloCache, Cache, InMemoryCache } from '@apollo/client';
+import type {
+  ApolloCache,
+  ApolloClient,
+  Cache,
+  InMemoryCache,
+} from '@apollo/client';
+import { useApolloClient } from '@apollo/client/react';
 import { gql, type OperationVariables } from '@apollo/client';
 import { makeCache } from '#/apollo/cache';
 import { pendingWritesOf } from '#/apollo/pendingWrites/pendingWrites';
@@ -741,22 +747,52 @@ export function renderHookWithApollo<TResult, TProps>(
 /**
  * `render` that auto-wraps with the Apollo test provider.
  */
+/** Hands the provider's client out as it renders. */
+function ClientProbe({
+  onClient,
+}: {
+  onClient: (client: ApolloClient) => void;
+}) {
+  onClient(useApolloClient());
+  return null;
+}
+
+/**
+ * `render` wrapped in the Apollo test provider. Its `client` lets a test await
+ * a read in flight: `client.query` joins it.
+ */
 export function renderWithApollo(
   ui: React.ReactElement,
   options: ApolloTestOptions & Omit<RenderOptions, 'wrapper'> = {},
 ) {
   const { mocks, resolvers, operationMocks, links, cache, ...rest } =
     options as ResolvedApolloTestOptions & Omit<RenderOptions, 'wrapper'>;
-  return render(ui, {
-    wrapper: createApolloTestWrapper({
-      mocks,
-      resolvers,
-      operationMocks,
-      links,
-      cache,
-    } as ApolloTestOptions),
+  const Provider = createApolloTestWrapper({
+    mocks,
+    resolvers,
+    operationMocks,
+    links,
+    cache,
+  } as ApolloTestOptions);
+  const probe: { client?: ApolloClient } = {};
+  const capture = (client: ApolloClient) => {
+    probe.client = client;
+  };
+  const rendered = render(ui, {
+    wrapper: ({ children }: { children: ReactNode }) => (
+      // MockedProvider renders one element and nothing else.
+      <Provider>
+        <>
+          <ClientProbe onClient={capture} />
+          {children}
+        </>
+      </Provider>
+    ),
     ...rest,
   });
+  const { client } = probe;
+  if (!client) throw new Error('renderWithApollo: the provider never mounted');
+  return { ...rendered, client };
 }
 
 import type {

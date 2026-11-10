@@ -2,11 +2,10 @@
 
 import { BaseScreen } from './BaseScreen';
 import { onboardingTestIDs } from '../../src/features/onboarding/testIDs';
-import { kitTestIDs } from '../../src/components/testIDs';
 
 /**
- * Setup: selects or creates the home, pantry and list, then replaces itself
- * with the first question. It stops only when invitations are pending.
+ * Pending invitations with no home: create one's own, or none for now. Setup
+ * otherwise runs beside the questions with no screen of its own.
  */
 export class OnboardingSetupScreen extends BaseScreen {
   protected screenID = onboardingTestIDs.setupScreen;
@@ -38,7 +37,7 @@ export class DietaryStepScreen extends BaseScreen {
   }
 }
 
-/** The receipt step: scan a receipt, or pick staples instead. */
+/** The kitchen step: scan a receipt, and pick staples on the same screen. */
 export class ReceiptStepScreen extends BaseScreen {
   protected screenID = onboardingTestIDs.receiptScreen;
 
@@ -50,25 +49,6 @@ export class ReceiptStepScreen extends BaseScreen {
     await this.tapByID(onboardingTestIDs.receiptScan);
   }
 
-  async tapPickStaples() {
-    await this.tapByID(onboardingTestIDs.receiptStaples);
-  }
-}
-
-/** Staples, the receipt step's alternative: foods grouped by where they are kept. */
-export class SelectPantryItemsScreen extends BaseScreen {
-  protected screenID = onboardingTestIDs.selectPantryItemsScreen;
-
-  async tapSkip() {
-    await this.tapByID(onboardingTestIDs.skipButton(this.screenID));
-  }
-
-  async tapBack() {
-    await this.tapByID(kitTestIDs.headerBackButton);
-  }
-
-  // Item selection is AnimatedChip components with no testIDs — a test can
-  // assert the screen is present and skip.
 }
 
 /** The completion screen, the last. */
