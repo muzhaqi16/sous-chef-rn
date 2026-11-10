@@ -329,6 +329,8 @@ export const TodayMain: React.FC = () => {
           subtitle={tutorial.currentStep.subtitle}
           stepIndex={tutorial.currentStep.stepIndex}
           totalSteps={tutorial.currentStep.totalSteps}
+          waitsForAction={tutorial.currentStep.waitsForAction}
+          demo={tutorial.currentStep.demo}
           onDismiss={tutorial.skipAll}
           onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}

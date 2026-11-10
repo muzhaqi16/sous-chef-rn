@@ -487,7 +487,6 @@
     "shareLink": "Share link",
     "shoppingList": "Shopping List",
     "skip": "Skip",
-    "skipAll": "Skip all",
     "sku": "SKU",
     "slowDownAMoment": "Slow down a moment",
     "someone": "Someone",
@@ -736,7 +735,9 @@
   },
   "tutorial": {
     "youGotIt": "You got it!",
-    "skipTutorial": "Skip tutorial"
+    "gotIt": "Got it",
+    "endTour": "End tour",
+    "stepOf": "{{step}} of {{total}}"
   },
   "offline": {
     "title": "Offline",

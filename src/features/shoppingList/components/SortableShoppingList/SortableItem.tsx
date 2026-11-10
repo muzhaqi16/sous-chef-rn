@@ -397,7 +397,12 @@ const SwipeableListItemComponent: React.FC<SwipeableListItemProps> = ({
               tutorialActions?.notifySwipeActionsSeen();
             }
           }}
-          onSwipeableClose={onSwipeableClose}
+          onSwipeableClose={() => {
+            onSwipeableClose?.();
+            // Back in place, its spotlight targets moved without a layout.
+            if (isTutorialCheckboxTarget) measureCheckbox();
+            if (isTutorialItemCardTarget) measureItemCard();
+          }}
           enabled={swipeEnabled}
         >
           <ListItem

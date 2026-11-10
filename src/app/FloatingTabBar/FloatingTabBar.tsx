@@ -72,8 +72,10 @@ export const FloatingTabBar: React.FC<FloatingTabBarProps> = ({
   const { setActiveTab, setAddButtonRect, setAddMenuOpen, scrollTabBarHidden } =
     useTabBarSetters();
 
-  const { ref: addButtonRef, measure: measureAddButton } =
-    useMeasuredRect(setAddButtonRect);
+  const { ref: addButtonRef, measure: measureAddButton } = useMeasuredRect(
+    setAddButtonRect,
+    'round',
+  );
 
   const showNavigationLabels = useShowNavigationLabels();
 

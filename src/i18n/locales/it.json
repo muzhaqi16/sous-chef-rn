@@ -487,7 +487,6 @@
     "shareLink": "Condividi link",
     "shoppingList": "Lista della spesa",
     "skip": "Salta",
-    "skipAll": "Salta tutto",
     "sku": "SKU",
     "slowDownAMoment": "Aspetta un momento",
     "someone": "Qualcuno",
@@ -736,7 +735,9 @@
   },
   "tutorial": {
     "youGotIt": "Perfetto!",
-    "skipTutorial": "Salta il tutorial"
+    "gotIt": "Ho capito",
+    "endTour": "Termina la guida",
+    "stepOf": "{{step}} di {{total}}"
   },
   "offline": {
     "title": "Offline",

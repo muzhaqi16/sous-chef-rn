@@ -487,7 +487,6 @@
     "shareLink": "Ndaj lidhjen",
     "shoppingList": "Lista e blerjeve",
     "skip": "Kapërce",
-    "skipAll": "Kapërce të gjitha",
     "sku": "SKU",
     "slowDownAMoment": "Prit një moment",
     "someone": "Dikush",
@@ -736,7 +735,9 @@
   },
   "tutorial": {
     "youGotIt": "E kuptova!",
-    "skipTutorial": "Kapërce udhëzuesin"
+    "gotIt": "E kuptova",
+    "endTour": "Mbyll udhëzuesin",
+    "stepOf": "{{step}} nga {{total}}"
   },
   "offline": {
     "title": "Offline",

@@ -445,6 +445,8 @@ function PantryMainContent({
           subtitle={coachStep.subtitle}
           stepIndex={coachStep.stepIndex}
           totalSteps={coachStep.totalSteps}
+          waitsForAction={coachStep.waitsForAction}
+          demo={coachStep.demo}
           onDismiss={tutorial.skipAll}
           onClose={tutorial.pause}
           onNext={tutorial.advanceInPlace}

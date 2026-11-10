@@ -5,10 +5,12 @@ import type { TargetRect } from '#components/organisms/SpotlightCoachMark/Spotli
 /**
  * A view's on-screen rect, for a spotlight to point at. Attach `ref` to a view
  * with `collapsable={false}` (Android flattens it away otherwise) and call
- * `measure` from its `onLayout`. Without `onMeasure`, `measure` does nothing.
+ * `measure` from its `onLayout`, and again when it moves without a layout (a
+ * swiped row settling). Without `onMeasure`, `measure` does nothing.
  */
 export function useMeasuredRect(
   onMeasure: ((rect: TargetRect) => void) | undefined,
+  shape?: TargetRect['shape'],
 ) {
   const ref = useRef<View>(null);
 
@@ -19,7 +21,13 @@ export function useMeasuredRect(
       ref.current?.measure((_x, _y, width, height, pageX, pageY) => {
         // A view not laid out yet reports zero; a spotlight on it is invisible.
         if (width > 0 && height > 0) {
-          onMeasure({ x: pageX, y: pageY, width, height });
+          onMeasure({
+            x: pageX,
+            y: pageY,
+            width,
+            height,
+            ...(shape ? { shape } : {}),
+          });
         }
       });
     });

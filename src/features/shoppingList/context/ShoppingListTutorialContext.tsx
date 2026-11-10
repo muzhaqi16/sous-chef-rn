@@ -389,7 +389,9 @@ export function ShoppingListTutorialProvider({
   const inSheet =
     currentStep === ShoppingListTutorialStep.GUIDE_ADD_ITEM ||
     currentStep === ShoppingListTutorialStep.HINT_DISMISS_SHEET;
+  // Switching tips off mid-tour hides it at once.
   const isActive =
+    tutorialsEnabled &&
     hasStarted &&
     !isCompleted &&
     (!isTransitioning || inSheet) &&

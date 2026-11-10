@@ -735,6 +735,7 @@ export const ShoppingListMainContent: React.FC<
             onNext={handleNext}
             onTargetPress={handleTargetPress}
             allowGesturePassthrough={isSwipeStep}
+            demo={isSwipeStep ? 'swipe' : undefined}
           />
         );
       })()}

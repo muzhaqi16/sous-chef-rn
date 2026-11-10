@@ -1,5 +1,9 @@
 import React, { useLayoutEffect, useRef, useState } from 'react';
-import { View, useWindowDimensions } from 'react-native';
+import {
+  View,
+  useWindowDimensions,
+  type LayoutChangeEvent,
+} from 'react-native';
 import {
   useSharedValue,
   useDerivedValue,
@@ -25,18 +29,19 @@ import {
   Skia,
 } from '@shopify/react-native-skia';
 import { scheduleOnRN } from 'react-native-worklets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StyleSheet, useUnistyles } from 'react-native-unistyles';
 
-import { useShowTutorials } from '#store/useAppStore';
 import {
   HOLE_PADDING,
   TOOLTIP_MARGIN,
-  TOOLTIP_WIDTH,
+  TOOLTIP_MAX_WIDTH,
   ARROW_SIZE,
   SWIPE_THRESHOLD,
   HOLE_TIMING_CONFIG,
 } from './spotlightConstants';
 import { SpotlightTooltip } from './SpotlightTooltip';
+import { GestureDemo } from './GestureDemo';
 import { useMotionEnabled } from '#hooks/animations/useMotionEnabled';
 import { motion } from '#/theme/motion';
 import { kitTestIDs } from '#components/testIDs';
@@ -46,15 +51,17 @@ export interface TargetRect {
   y: number;
   width: number;
   height: number;
+  /** A round target gets a round hole. */
+  shape?: 'round';
 }
 
 export interface SpotlightCoachMarkProps {
   targetRect: TargetRect;
   title: string;
   subtitle?: string;
-  /** Ends the whole tutorial: its Skip all, or Done on the last step. */
+  /** "End tour", or Got it on the last step: every step counts as shown. */
   onDismiss: () => void;
-  /** Closes this tip only, for a tap on the dim or Android back; it comes back later. */
+  /** "Not now", a tap on the dim, Android back or escape: this tip only, back later. */
   onClose: () => void;
   /** Called when the user taps the highlighted target area */
   onTargetPress?: () => void;
@@ -65,14 +72,43 @@ export interface SpotlightCoachMarkProps {
   /** When true, renders as an overlay View instead of a Modal so gestures
    *  pass through the hole area to the underlying content (e.g. swipeable items). */
   allowGesturePassthrough?: boolean;
-  /** Called when the user swipes left to advance to the next step */
+  /** Next, and a left swipe on the dim. */
   onNext?: () => void;
+  /** The step continues on the user's action, so it shows no Next. */
+  waitsForAction?: boolean;
+  /** A hand showing the gesture over the target. */
+  demo?: 'swipe' | 'longPress';
 }
 
+/** The hole around a target: padded, and a circle for a round one. */
+const holeAround = (rect: TargetRect, cornerRadius: number) => {
+  if (rect.shape === 'round') {
+    const size = Math.max(rect.width, rect.height) + HOLE_PADDING * 2;
+    return {
+      left: rect.x + rect.width / 2 - size / 2,
+      top: rect.y + rect.height / 2 - size / 2,
+      width: size,
+      height: size,
+      radius: size / 2,
+    };
+  }
+  return {
+    left: rect.x - HOLE_PADDING,
+    top: rect.y - HOLE_PADDING,
+    width: rect.width + HOLE_PADDING * 2,
+    height: rect.height + HOLE_PADDING * 2,
+    radius: cornerRadius,
+  };
+};
+
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), Math.max(min, max));
+
 /**
- * Spotlight overlay that highlights a target element with a dimmed background.
- * Uses four dim strips (top, bottom, left, right) around the hole to create
- * the overlay, so position can be smoothly animated with Reanimated.
+ * Dims the screen around a target and points a tip at it. The card sits beside
+ * the target where it fits inside the safe area, else on the roomier side,
+ * kept on screen. A tap on the dim, Android back and the screen reader's
+ * escape are "Not now"; the hole travels between steps while it stays mounted.
  */
 export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   targetRect,
@@ -85,97 +121,127 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   totalSteps,
   allowGesturePassthrough,
   onNext,
+  waitsForAction,
+  demo,
 }) => {
-  const tutorialsEnabled = useShowTutorials();
   const { theme } = useUnistyles();
-  const { height: screenHeight, width: screenWidth } = useWindowDimensions();
+  const window = useWindowDimensions();
+  const insets = useSafeAreaInsets();
 
   // In passthrough mode the overlay is a View inside the screen container,
-  // not a full-screen Modal. Page coordinates from measure() must be converted
-  // to overlay-local coordinates by subtracting the overlay's own page offset.
+  // not a full-screen Modal: page coordinates from measure() are converted to
+  // the overlay's by its own page frame.
   const overlayRef = useRef<View>(null);
-  const [overlayPageOffset, setOverlayPageOffset] = useState<{
-    x: number;
-    y: number;
-  } | null>(allowGesturePassthrough ? null : { x: 0, y: 0 });
+  const windowFrame = {
+    x: 0,
+    y: 0,
+    width: window.width,
+    height: window.height,
+  };
+  const [overlayFrame, setOverlayFrame] = useState<typeof windowFrame | null>(
+    allowGesturePassthrough ? null : windowFrame,
+  );
 
-  // Reset offset when passthrough mode activates so we re-measure.
-  // Uses "adjusting state during render" pattern (no effect needed).
+  // Re-measure when passthrough mode changes (adjusting state during render).
   const [prevPassthrough, setPrevPassthrough] = useState(
     allowGesturePassthrough,
   );
   if (prevPassthrough !== allowGesturePassthrough) {
     setPrevPassthrough(allowGesturePassthrough);
-    if (allowGesturePassthrough) {
-      setOverlayPageOffset(null);
-    } else {
-      setOverlayPageOffset({ x: 0, y: 0 });
-    }
+    setOverlayFrame(allowGesturePassthrough ? null : windowFrame);
   }
 
   const handleOverlayLayout = () => {
     if (!allowGesturePassthrough) return;
     requestAnimationFrame(() => {
-      overlayRef.current?.measure((_x, _y, _w, _h, pageX, pageY) => {
-        setOverlayPageOffset({ x: pageX, y: pageY });
+      overlayRef.current?.measure((_x, _y, width, height, pageX, pageY) => {
+        setOverlayFrame({ x: pageX, y: pageY, width, height });
       });
     });
   };
 
-  // Adjust target rect: page coords → overlay-local coords
-  const adjustedRect =
-    overlayPageOffset != null
-      ? {
-          x: targetRect.x - overlayPageOffset.x,
-          y: targetRect.y - overlayPageOffset.y,
-          width: targetRect.width,
-          height: targetRect.height,
-        }
-      : targetRect;
+  const frame = allowGesturePassthrough
+    ? overlayFrame ?? windowFrame
+    : windowFrame;
+  const adjustedRect: TargetRect = {
+    ...targetRect,
+    x: targetRect.x - frame.x,
+    y: targetRect.y - frame.y,
+  };
 
-  const borderRadius = theme.radii.md;
+  const hole = holeAround(adjustedRect, theme.radii.md);
+  const holeBottom = hole.top + hole.height;
 
-  const holeTop = adjustedRect.y - HOLE_PADDING;
-  const holeLeft = adjustedRect.x - HOLE_PADDING;
-  const holeWidth = adjustedRect.width + HOLE_PADDING * 2;
-  const holeHeight = adjustedRect.height + HOLE_PADDING * 2;
-  const holeBottom = holeTop + holeHeight;
-
-  const showAbove = adjustedRect.y > screenHeight / 2;
+  // ── Card placement, inside the safe area ──
+  const gutter = theme.layout.pageGutter;
+  const cardWidth = Math.min(frame.width - gutter * 2, TOOLTIP_MAX_WIDTH);
+  const [cardHeight, setCardHeight] = useState<number | null>(null);
+  const handleCardLayout = (event: LayoutChangeEvent) => {
+    const { height } = event.nativeEvent.layout;
+    if (height !== cardHeight) setCardHeight(height);
+  };
+  const minTop = Math.max(0, insets.top - frame.y) + gutter;
+  const maxBottom =
+    Math.min(frame.height, window.height - insets.bottom - frame.y) - gutter;
+  const gap = TOOLTIP_MARGIN + ARROW_SIZE;
+  const height = cardHeight ?? 0;
+  const roomBelow = maxBottom - (holeBottom + gap);
+  const roomAbove = hole.top - gap - minTop;
+  const below =
+    height <= roomBelow || (height > roomAbove && roomBelow >= roomAbove);
+  const preferredTop = below ? holeBottom + gap : hole.top - gap - height;
+  const cardTop = clamp(preferredTop, minTop, maxBottom - height);
+  // A card pushed off its target's side by the safe area points at nothing.
+  const beside = cardTop === preferredTop;
+  const centreX = adjustedRect.x + adjustedRect.width / 2;
+  const cardLeft = clamp(
+    centreX - cardWidth / 2,
+    gutter,
+    frame.width - cardWidth - gutter,
+  );
+  const arrowLeft = clamp(
+    centreX - cardLeft - ARROW_SIZE / 2,
+    theme.spacing.lg,
+    cardWidth - ARROW_SIZE - theme.spacing.lg,
+  );
 
   // ── Shared values ──
   const pulseOpacity = useSharedValue(1);
-  const tooltipTranslateY = useSharedValue(showAbove ? 10 : -10);
+  const tooltipTranslateY = useSharedValue(
+    adjustedRect.y > frame.height / 2 ? 10 : -10,
+  );
   const tooltipOpacity = useSharedValue(0);
   const motionEnabled = useMotionEnabled();
 
   // Animated hole geometry for smooth step transitions
-  const animHoleTop = useSharedValue(holeTop);
-  const animHoleLeft = useSharedValue(holeLeft);
-  const animHoleWidth = useSharedValue(holeWidth);
-  const animHoleHeight = useSharedValue(holeHeight);
+  const animHoleTop = useSharedValue(hole.top);
+  const animHoleLeft = useSharedValue(hole.left);
+  const animHoleWidth = useSharedValue(hole.width);
+  const animHoleHeight = useSharedValue(hole.height);
+  const animHoleRadius = useSharedValue(hole.radius);
 
   // Detect step changes — animate hole + cross-fade tooltip.
   // Uses "adjusting state during render" pattern (no effect needed).
   const [prevStepIndex, setPrevStepIndex] = useState(stepIndex);
-  const [prevAdjustedRect, setPrevAdjustedRect] = useState(adjustedRect);
+  const [prevHole, setPrevHole] = useState(hole);
 
   const stepChanged = prevStepIndex !== stepIndex;
-  const rectChanged =
-    prevAdjustedRect.x !== adjustedRect.x ||
-    prevAdjustedRect.y !== adjustedRect.y ||
-    prevAdjustedRect.width !== adjustedRect.width ||
-    prevAdjustedRect.height !== adjustedRect.height;
+  const holeChanged =
+    prevHole.left !== hole.left ||
+    prevHole.top !== hole.top ||
+    prevHole.width !== hole.width ||
+    prevHole.height !== hole.height ||
+    prevHole.radius !== hole.radius;
 
   if (stepChanged) {
     setPrevStepIndex(stepIndex);
-    setPrevAdjustedRect(adjustedRect);
+    setPrevHole(hole);
 
-    // Animate hole to new position with eased timing
-    animHoleTop.set(withTiming(holeTop, HOLE_TIMING_CONFIG));
-    animHoleLeft.set(withTiming(holeLeft, HOLE_TIMING_CONFIG));
-    animHoleWidth.set(withTiming(holeWidth, HOLE_TIMING_CONFIG));
-    animHoleHeight.set(withTiming(holeHeight, HOLE_TIMING_CONFIG));
+    animHoleTop.set(withTiming(hole.top, HOLE_TIMING_CONFIG));
+    animHoleLeft.set(withTiming(hole.left, HOLE_TIMING_CONFIG));
+    animHoleWidth.set(withTiming(hole.width, HOLE_TIMING_CONFIG));
+    animHoleHeight.set(withTiming(hole.height, HOLE_TIMING_CONFIG));
+    animHoleRadius.set(withTiming(hole.radius, HOLE_TIMING_CONFIG));
 
     // Cross-fade tooltip (fade out → wait for hole to settle → fade in)
     tooltipOpacity.set(
@@ -187,13 +253,14 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
         ),
       ),
     );
-  } else if (rectChanged) {
-    setPrevAdjustedRect(adjustedRect);
-    // Rect changed without step change (layout shift) — snap instantly
-    animHoleTop.set(holeTop);
-    animHoleLeft.set(holeLeft);
-    animHoleWidth.set(holeWidth);
-    animHoleHeight.set(holeHeight);
+  } else if (holeChanged) {
+    setPrevHole(hole);
+    // The target moved without a step change (layout shift): snap.
+    animHoleTop.set(hole.top);
+    animHoleLeft.set(hole.left);
+    animHoleWidth.set(hole.width);
+    animHoleHeight.set(hole.height);
+    animHoleRadius.set(hole.radius);
   }
 
   useLayoutEffect(() => {
@@ -225,13 +292,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
       cancelAnimation(tooltipOpacity);
       cancelAnimation(tooltipTranslateY);
     };
-  }, [
-    pulseOpacity,
-    tooltipTranslateY,
-    tooltipOpacity,
-    showAbove,
-    motionEnabled,
-  ]);
+  }, [pulseOpacity, tooltipTranslateY, tooltipOpacity, motionEnabled]);
 
   // ── Animated styles ──
 
@@ -240,10 +301,9 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
     transform: [{ translateY: tooltipTranslateY.get() }],
   }));
 
-  // Skia clip path for the hole cutout — replaces 4 dim strip views that
-  // animated layout properties (top/left/width/height) with a single Canvas
-  // draw call, eliminating per-frame layout passes.
-  const overlayColor = theme.colors.overlays.heavy;
+  // One Skia canvas draws the dim with its hole and the pulse ring, so the
+  // animated geometry costs no layout pass per frame.
+  const overlayColor = theme.colors.overlays.dark;
   const primaryColor = theme.colors.primary;
 
   const holePath = useDerivedValue(() =>
@@ -256,8 +316,8 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
             animHoleWidth.get(),
             animHoleHeight.get(),
           ),
-          borderRadius,
-          borderRadius,
+          animHoleRadius.get(),
+          animHoleRadius.get(),
         ),
       )
       .detach(),
@@ -277,26 +337,25 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
         scheduleOnRN(handleSwipeAdvance);
       }
     },
-    enabled: !!onNext && !allowGesturePassthrough,
+    enabled: !!onNext && !allowGesturePassthrough && !waitsForAction,
   });
 
-  // Clamp tooltip horizontally within screen
-  const tooltipHalf = TOOLTIP_WIDTH / 2;
-  const tooltipLeft = Math.max(
-    theme.spacing.md,
-    Math.min(
-      adjustedRect.x + adjustedRect.width / 2 - tooltipHalf,
-      screenWidth - TOOLTIP_WIDTH - theme.spacing.md,
-    ),
-  );
-
-  // Arrow horizontal position relative to tooltip, clamped within bounds
-  const arrowLeftRaw =
-    adjustedRect.x + adjustedRect.width / 2 - tooltipLeft - ARROW_SIZE / 2;
-  const arrowLeft = Math.max(
-    theme.spacing.lg,
-    Math.min(arrowLeftRaw, TOOLTIP_WIDTH - ARROW_SIZE - theme.spacing.lg),
-  );
+  // On a gesture step the hole stays open to touch, so the dim is four strips
+  // around it: a tap on any of them is still "Not now".
+  const holeRight = hole.left + hole.width;
+  const dimTaps = allowGesturePassthrough
+    ? [
+        { top: 0, left: 0, right: 0, height: Math.max(0, hole.top) },
+        { top: holeBottom, left: 0, right: 0, bottom: 0 },
+        {
+          top: hole.top,
+          left: 0,
+          width: Math.max(0, hole.left),
+          height: hole.height,
+        },
+        { top: hole.top, left: holeRight, right: 0, height: hole.height },
+      ]
+    : [{ top: 0, left: 0, right: 0, bottom: 0 }];
 
   const overlay = (
     <GestureDetector gesture={swipeGesture}>
@@ -308,28 +367,26 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           allowGesturePassthrough && styles.passthroughContainer,
         ]}
         pointerEvents={allowGesturePassthrough ? 'box-none' : undefined}
+        // On the Modal path only the tip is reachable until it closes.
+        accessibilityViewIsModal={!allowGesturePassthrough}
       >
-        {/* Dismiss overlay — covers entire screen, handles taps outside the hole */}
-        {!allowGesturePassthrough && (
+        {dimTaps.map((area, index) => (
           <Pressable
-            style={styles.dismissArea}
+            key={index}
+            style={[styles.dimTap, area]}
             onPress={onClose}
             accessible={false}
             testID={kitTestIDs.spotlightDim}
           />
-        )}
+        ))}
 
-        {/* Dim overlay with cutout + pulse ring — single Skia Canvas replaces
-           4 Animated.View dim strips and 1 pulse ring that animated layout
-           properties (top/left/width/height). Canvas draws to one surface,
-           avoiding per-view layout passes on every frame. */}
         <Canvas style={styles.fullScreen} pointerEvents="none">
           <Group clip={holePath} invertClip>
             <SkRect
               x={0}
               y={0}
-              width={screenWidth}
-              height={screenHeight}
+              width={frame.width}
+              height={frame.height}
               color={overlayColor}
             />
           </Group>
@@ -338,7 +395,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
             y={animHoleTop}
             width={animHoleWidth}
             height={animHoleHeight}
-            r={borderRadius}
+            r={animHoleRadius}
             style="stroke"
             strokeWidth={2}
             color={primaryColor}
@@ -353,11 +410,11 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
             style={[
               styles.holeTap,
               {
-                top: holeTop,
-                left: holeLeft,
-                width: holeWidth,
-                height: holeHeight,
-                borderRadius,
+                top: hole.top,
+                left: hole.left,
+                width: hole.width,
+                height: hole.height,
+                borderRadius: hole.radius,
               },
             ]}
             onPress={onTargetPress}
@@ -366,37 +423,40 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
           />
         )}
 
-        {/* Tooltip card */}
+        {demo ? (
+          <GestureDemo key={stepIndex} kind={demo} rect={adjustedRect} />
+        ) : null}
+
         <SpotlightTooltip
-          containerStyle={{
-            left: tooltipLeft,
-            width: TOOLTIP_WIDTH,
-            ...(showAbove
-              ? { bottom: screenHeight - holeTop + TOOLTIP_MARGIN + ARROW_SIZE }
-              : { top: holeBottom + TOOLTIP_MARGIN + ARROW_SIZE }),
-          }}
-          arrowStyle={{
-            left: arrowLeft,
-            ...(showAbove
-              ? { bottom: -ARROW_SIZE / 2 }
-              : { top: -ARROW_SIZE / 2 }),
-          }}
+          containerStyle={[
+            { left: cardLeft, top: cardTop, width: cardWidth },
+            cardHeight === null && styles.unmeasured,
+          ]}
+          arrowStyle={
+            beside
+              ? {
+                  left: arrowLeft,
+                  ...(below
+                    ? { top: -ARROW_SIZE / 2 }
+                    : { bottom: -ARROW_SIZE / 2 }),
+                }
+              : null
+          }
           animatedStyle={tooltipAnimatedStyle}
+          onLayout={handleCardLayout}
           title={title}
           subtitle={subtitle}
           stepIndex={stepIndex}
           totalSteps={totalSteps}
+          waitsForAction={waitsForAction}
+          announce={allowGesturePassthrough}
           onDismiss={onDismiss}
+          onClose={onClose}
           onNext={onNext}
         />
       </View>
     </GestureDetector>
   );
-
-  // Defense-in-depth: respect the user's "Show Tutorials" preference. Callers
-  // already gate via useTutorialSequence or their tutorial context, but skipping
-  // here ensures the overlay never renders when tutorials are disabled.
-  if (!tutorialsEnabled) return null;
 
   // Refuse to render with a degenerate target rect. Tutorial state machines
   // can advance to a spotlight step before the target view has committed
@@ -409,7 +469,7 @@ export const SpotlightCoachMark: React.FC<SpotlightCoachMarkProps> = ({
   if (allowGesturePassthrough) {
     // Wait for the overlay to measure its page offset before showing content
     // to avoid a single-frame flash at the wrong position
-    if (overlayPageOffset === null) {
+    if (overlayFrame === null) {
       return (
         <View
           ref={overlayRef}
@@ -450,10 +510,14 @@ const styles = StyleSheet.create(theme => ({
     ...StyleSheet.absoluteFillObject,
     zIndex: theme.zIndex.overlay,
   },
-  dismissArea: {
-    ...StyleSheet.absoluteFillObject,
+  dimTap: {
+    position: 'absolute',
   },
   holeTap: {
     position: 'absolute',
+  },
+  // Placed once its height is known, so it never shows at a guess.
+  unmeasured: {
+    opacity: 0,
   },
 }));
