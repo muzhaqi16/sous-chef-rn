@@ -25,6 +25,24 @@ query RecipeSuggestions(
           name
         }
       }
+      # What is left to buy, pantry basics aside: the lines an almost-ready
+      # recipe's "Add N to list" sends.
+      missingIngredients {
+        id
+        name
+        quantity
+        isOptional
+        unit {
+          id
+          name
+          symbol
+        }
+        item {
+          version
+          id
+          name
+        }
+      }
       # The stacks expiring within three days of `today` that it would use.
       expiringStacks {
         version

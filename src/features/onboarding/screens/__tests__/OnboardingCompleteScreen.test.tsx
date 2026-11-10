@@ -60,11 +60,17 @@ jest.mock('#features/onboarding/hooks/useCompleteOnboarding', () => ({
 
 let mockPayoff: unknown[] = [];
 let mockShowCheckLabel = false;
+let mockPopular = false;
 jest.mock('#features/onboarding/hooks/useRecipePayoff', () => ({
   useRecipePayoff: () => ({
     rows: mockPayoff,
+    popular: mockPopular,
     showCheckLabel: mockShowCheckLabel,
   }),
+}));
+const mockAddMissing = jest.fn().mockResolvedValue(true);
+jest.mock('#features/recipes/hooks/useAddMissingToList', () => ({
+  useAddMissingToList: () => mockAddMissing,
 }));
 
 const mockInviteLink = jest.fn();
@@ -138,6 +144,32 @@ const SHAKSHUKA = {
   },
 };
 
+/** Uses the eggs held, under half of it: three more to buy. */
+const FRITTATA = {
+  source: 'suggestion',
+  edge: {
+    coverage: 30,
+    missingIngredientCount: 3,
+    usedIngredients: [{ id: 'r2-eggs', name: 'eggs', item: null }],
+    missingIngredients: ['spinach', 'feta', 'milk'].map(name => ({
+      id: `r2-${name}`,
+      name,
+      quantity: 1,
+      isOptional: false,
+      unit: null,
+      item: null,
+    })),
+    expiringStacks: [],
+    node: {
+      id: 'r2',
+      name: 'Frittata',
+      imageUrl: null,
+      servings: 2,
+      totalTimeMinutes: 20,
+    },
+  },
+};
+
 const usualStore = (
   id: string,
   name: string,
@@ -197,6 +229,7 @@ beforeEach(() => {
   mockRegion = 'US';
   summaryOf(HOME_READY);
   mockPayoff = [];
+  mockPopular = false;
   mockShowCheckLabel = false;
   mockVerified = true;
   mockPushEnabled = false;
@@ -218,6 +251,63 @@ afterEach(() => {
 });
 
 describe('OnboardingCompleteScreen', () => {
+  describe('the payoff tiers', () => {
+    it('shows an almost-there recipe with what is left to buy, never as ready', () => {
+      mockPayoff = [FRITTATA];
+      renderScreen();
+
+      expect(
+        screen.getByText(
+          new RegExp(
+            t('recipes.usesYourMoreToBuy', { item: 'eggs', count: 3 }),
+          ),
+        ),
+      ).toBeTruthy();
+      expect(
+        screen.queryByText(new RegExp(t('recipes.readyToCook'))),
+      ).toBeNull();
+    });
+
+    it('adds what is missing to the list in one tap', async () => {
+      mockPayoff = [FRITTATA];
+      const user = userEvent.setup();
+      renderScreen();
+
+      await user.press(
+        screen.getByTestId(onboardingTestIDs.payoffAddMissing('r2')),
+      );
+      await act(async () => {
+        await mockAddMissing.mock.results[0]?.value;
+      });
+
+      expect(mockAddMissing).toHaveBeenCalledWith(
+        'r2',
+        expect.arrayContaining([expect.objectContaining({ name: 'spinach' })]),
+      );
+      expect(screen.getByText(t('labels.added'))).toBeTruthy();
+    });
+
+    it('titles popular picks from the answers, with no tier', () => {
+      mockPopular = true;
+      mockPayoff = [
+        {
+          ...FRITTATA,
+          edge: { ...FRITTATA.edge, coverage: 0, usedIngredients: [] },
+        },
+      ];
+      summaryOf({ ...HOME_READY, cooksFor: 4, stapleItems: 3 });
+      renderScreen();
+
+      expect(
+        screen.getByText(t('onBoarding.payoffPopularTitle', { count: 4 })),
+      ).toBeTruthy();
+      expect(screen.queryByText(t('recipes.basedOnPantry'))).toBeNull();
+      expect(
+        screen.queryByTestId(onboardingTestIDs.payoffAddMissing('r2')),
+      ).toBeNull();
+    });
+  });
+
   describe('tapping a payoff recipe', () => {
     beforeEach(() => {
       useStore.setState({ pendingDeepLinkAction: null });

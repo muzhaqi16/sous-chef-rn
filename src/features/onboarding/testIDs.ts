@@ -45,6 +45,7 @@ export const onboardingTestIDs = {
   /** The completion screen's recipes, invite button and store offer. */
   payoff: 'onboarding-payoff',
   payoffRecipe: (id: string) => `onboarding-payoff-recipe-${id}`,
+  payoffAddMissing: (id: string) => `onboarding-payoff-add-missing-${id}`,
   invite: 'onboarding-invite',
   stores: 'onboarding-stores',
   /** A staples group, by the storage state it holds. */

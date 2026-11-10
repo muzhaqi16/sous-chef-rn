@@ -39,6 +39,7 @@ const edge = (id: string, coverage = 50, missing = 5): Edge => ({
   missingIngredientCount: missing,
   usedIngredients:
     coverage > 0 ? [{ id: `${id}-eggs`, name: 'eggs', item: null }] : [],
+  missingIngredients: [],
   expiringStacks: [],
   node: { id },
 });
@@ -53,13 +54,13 @@ const screenedRanking = (edges: Edge[]) =>
 const ids = (rows: { edge: { node: { id: string } } }[]) =>
   rows.map(row => row.edge.node.id);
 
-const renderPayoff = (edges: Edge[], cache = makeCache()) => {
+const renderPayoff = (edges: Edge[], cache = makeCache(), hasStock = true) => {
   const screened = screenedRanking(edges);
   // Every recipe any render showed, so a flash of a cached answer counts too.
   const everShown = new Set<string>();
   const rendered = renderHookWithApollo(
     () => {
-      const payoff = useRecipePayoff();
+      const payoff = useRecipePayoff({ hasStock });
       ids(payoff.rows).forEach(id => everShown.add(id));
       return payoff;
     },
@@ -144,9 +145,9 @@ describe('useRecipePayoff', () => {
     expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']);
   });
 
-  // A weak match: a recipe using under half its ingredients from the pantry is
-  // not one the pantry can make.
-  it('leaves out a recipe the pantry holds under half of', async () => {
+  // A weak match: under half held, it is almost there, after what is ready,
+  // and one that uses nothing held is no pantry match at all.
+  it('shows a weak match as almost there, after the ready ones', async () => {
     const { result } = renderPayoff([
       edge('a', 0),
       edge('b', 49),
@@ -154,14 +155,33 @@ describe('useRecipePayoff', () => {
     ]);
 
     await drainTimers();
-    expect(ids(result.current.rows)).toEqual(['c']);
+    expect(ids(result.current.rows)).toEqual(['c', 'b']);
+    expect(result.current.popular).toBe(false);
   });
 
-  it('counts a recipe two ingredients short as one the pantry can make', async () => {
+  it('counts a recipe two ingredients short as ready', async () => {
     const { result } = renderPayoff([edge('a', 30, 3), edge('b', 30, 2)]);
 
     await drainTimers();
-    expect(ids(result.current.rows)).toEqual(['b']);
+    expect(ids(result.current.rows)).toEqual(['b', 'a']);
+  });
+
+  // Staples no recipe uses: the server's popular picks, with no tier.
+  it('shows popular picks when nothing uses what was stocked', async () => {
+    const { result } = renderPayoff(
+      ['a', 'b', 'c', 'd'].map(id => edge(id, 0)),
+    );
+
+    await drainTimers();
+    expect(result.current.popular).toBe(true);
+    expect(ids(result.current.rows)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('shows none with nothing stocked', async () => {
+    const { result } = renderPayoff([edge('a', 0)], makeCache(), false);
+
+    await drainTimers();
+    expect(result.current.rows).toEqual([]);
   });
 
   it('shows none with no candidate', async () => {

@@ -16,6 +16,7 @@ import {
 } from '#store/useAppStore';
 import { useCompleteOnboarding } from '#features/onboarding/hooks/useCompleteOnboarding';
 import { useRecipePayoff } from '#features/onboarding/hooks/useRecipePayoff';
+import { useAddMissingToList } from '#features/recipes/hooks/useAddMissingToList';
 import { useScreenTransition } from '#hooks/performance/useScreenTransition';
 import { Text } from '#components/atoms/Text';
 import { useNotificationSettings } from '#features/notifications/hooks/useNotificationSettings';
@@ -38,7 +39,10 @@ export const OnboardingCompleteScreen = () => {
   const household = useHouseholdAnswer();
   const { changeAnswer } = useOnboardingNavigation();
   const homeId = useSelectedHomeId();
-  const payoff = useRecipePayoff();
+  const payoff = useRecipePayoff({
+    hasStock: summary.receiptItems + summary.stapleItems > 0,
+  });
+  const addMissingToList = useAddMissingToList();
   const { settings, updateMultipleSettings } = useNotificationSettings();
   const { hasPermission, turnOnPush } = useTurnOnPush(updateMultipleSettings);
 
@@ -140,7 +144,10 @@ export const OnboardingCompleteScreen = () => {
 
         <RecipePayoff
           rows={payoff.rows}
+          popular={payoff.popular}
           showCheckLabel={payoff.showCheckLabel}
+          cooksFor={summary.cooksFor}
+          onAddMissing={addMissingToList}
           onOpen={recipeId => {
             void openRecipe(recipeId);
           }}
