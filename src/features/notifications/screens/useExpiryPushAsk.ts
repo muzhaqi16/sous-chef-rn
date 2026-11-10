@@ -4,6 +4,7 @@ import { alertService } from '#/services/alertService';
 import { storeApi } from '#store';
 import { useAppStore, useUser } from '#store/useAppStore';
 import { useNotificationSettings } from '#features/notifications/hooks/useNotificationSettings';
+import { featureHintsSuppressed } from '#hooks/settings/useFeatureHint';
 import { useTurnOnPush } from './useTurnOnPush';
 
 /**
@@ -33,7 +34,9 @@ export function useExpiryPushAsk({
   // Unknown until both have been read.
   const pushOn = hasPermission === true && settings.pushEnabled;
   const known = hasPreferences && hasPermission !== null;
+  // Detox runs keep the dialog out of the way, as they do tips.
   const shouldAsk =
+    !featureHintsSuppressed() &&
     isFocused &&
     datedItemName !== null &&
     !!user?.onBoarded &&

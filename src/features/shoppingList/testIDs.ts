@@ -15,6 +15,7 @@ export const shoppingListTestIDs = {
   searchInput: 'shopping-list-search-input',
   batchMoveToPantryButton: 'shopping-list-batch-move-pantry',
   moveToPantryPackageSizeUnit: 'move-to-pantry-package-size-unit',
+  moveToPantryConfirm: 'move-to-pantry-confirm',
   clearAllButton: 'shopping-list-clear-all',
   /** List settings: the store the list is shopped at. */
   listSettingsStore: 'list-settings-store',

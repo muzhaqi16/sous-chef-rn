@@ -9,7 +9,11 @@ import type {
   PantrySortDirection,
   PantrySortOption,
 } from '#store/slices/preferenceTypes';
-import { suppressFeatureHintsForE2E } from '#/hooks/settings/useFeatureHint';
+import {
+  replayTipsFor,
+  suppressFeatureHintsForE2E,
+} from '#/hooks/settings/useFeatureHint';
+import { tutorialSession } from '#hooks/ui/tutorialSession';
 import { HapticService } from '#services/haptic/HapticService';
 import { NativePerformanceService } from '#/services/performance/NativePerformanceService';
 import { MemoryMonitor } from '#/services/performance/MemoryMonitor';
@@ -58,12 +62,15 @@ function injectDetoxLaunchArgs(flags: EndToEndFlags): void {
       detoxEnableTelemetry?: string;
       detoxPantrySortOption?: string;
       detoxPantrySortDirection?: string;
+      /** A guide to run, with this account's tips fresh and tips left on. */
+      detoxGuide?: string;
     }>();
     // LogBox overlays the floating tab bar and breaks visibility checks; the
     // feature-hint tutorial dims the screen and swallows taps on a 2s delay.
     if (args.detoxServer) {
       LogBox.ignoreAllLogs();
-      suppressFeatureHintsForE2E();
+      // A run that drives a guide needs its tips; every other run hides them.
+      if (!args.detoxGuide) suppressFeatureHintsForE2E();
     }
     if (args.detoxUserToken && args.detoxRefreshToken && args.detoxUser) {
       const user: unknown =
@@ -82,6 +89,12 @@ function injectDetoxLaunchArgs(flags: EndToEndFlags): void {
           '[Detox] detoxUser launch argument is not a user; not injected',
         );
       }
+    }
+    const guideUser = useStore.getState().user?.id;
+    if (args.detoxServer && args.detoxGuide && guideUser) {
+      replayTipsFor(guideUser);
+      tutorialSession.startGuide(args.detoxGuide);
+      logger.debug('[Detox] Guide started via launchArgs');
     }
     // Seeded rather than driven through the sort modal, which renders under
     // `{!!stats && …}` and so only exists once the stats query resolves.
