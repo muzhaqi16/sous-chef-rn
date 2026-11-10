@@ -344,6 +344,9 @@
     },
     "receiptOffer": {
       "subtitle": "Li hai comprati? Scansiona lo scontrino di questa spesa per metterli in dispensa."
+    },
+    "storeModeNew": {
+      "subtitle": "Novità: fai la spesa corsia per corsia, nell’ordine del negozio. Tocca per provarla."
     }
   },
   "listTemplate": {

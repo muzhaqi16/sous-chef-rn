@@ -344,6 +344,9 @@
     },
     "receiptOffer": {
       "subtitle": "Bought these? Scan this trip’s receipt to put them in your pantry."
+    },
+    "storeModeNew": {
+      "subtitle": "New: shop your list aisle by aisle, in the store’s order. Tap to try it."
     }
   },
   "listTemplate": {

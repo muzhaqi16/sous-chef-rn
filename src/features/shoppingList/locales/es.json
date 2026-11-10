@@ -344,6 +344,9 @@
     },
     "receiptOffer": {
       "subtitle": "¿Ya los compraste? Escanea el ticket de esta compra para pasarlos a tu despensa."
+    },
+    "storeModeNew": {
+      "subtitle": "Novedad: compra tu lista pasillo a pasillo, en el orden de la tienda. Toca para probarlo."
     }
   },
   "listTemplate": {

@@ -344,6 +344,9 @@
     },
     "receiptOffer": {
       "subtitle": "I bleve? Skano faturën e kësaj blerjeje për t’i futur në qilar."
+    },
+    "storeModeNew": {
+      "subtitle": "E re: bëj pazarin rresht pas rreshti, sipas renditjes së dyqanit. Prek për ta provuar."
     }
   },
   "listTemplate": {

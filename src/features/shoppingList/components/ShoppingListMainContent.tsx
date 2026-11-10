@@ -15,7 +15,10 @@ import { AnimatedItemSelector } from '#components/organisms/AnimatedItemSelector
 import { ListTemplate } from '#features/shoppingList/components/ListTemplate';
 import { SearchBar } from '#components/molecules/SearchBar';
 import { ShoppingListTabs } from '#features/shoppingList/components/ShoppingListTabs/ShoppingListTabs';
-import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import {
+  SpotlightCoachMark,
+  type TargetRect,
+} from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
 
 // Hooks & Context
 import { useAppNavigation } from '#hooks/navigation/useAppNavigation';
@@ -36,6 +39,8 @@ import {
 } from '#features/shoppingList/context/ShoppingListModalsContext';
 import { useUser } from '#store/useAppStore';
 import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
+import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
+import { useNewFeatureTour } from '#hooks/ui/useNewFeatureTour';
 import { FIRST_SHOP_STEP } from '#features/shoppingList/context/useFirstShopTour';
 
 // Utils
@@ -54,6 +59,8 @@ import { Screen, type ScreenHeaderConfig } from '#components/templates/Screen';
 import type { BarAction } from '#components/molecules/BarActions';
 import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
+/** When store mode reached production (4.8.1). */
+const STORE_MODE_RELEASED = '2026-10-20T00:00:00Z';
 /**
  * Inner content component that uses modal context.
  * Separated to allow useShoppingListModals() to access the provider.
@@ -127,6 +134,11 @@ export const ShoppingListMainContent: React.FC<
     toListBudget,
   } = useAppNavigation();
   const storeModeEnabled = useStoreModeEnabled();
+  const storeModeTourAllowed = useNewFeatureTour({
+    introducedOn: STORE_MODE_RELEASED,
+    flag: 'storeMode',
+  });
+  const [storeModeRect, setStoreModeRect] = useState<TargetRect | null>(null);
   const budgetAndPricesEnabled = useBudgetAndPricesEnabled();
   const { setScannerProps, scrollTabBarHidden, setAddMenuOpen } =
     useTabBarSetters();
@@ -295,8 +307,26 @@ export const ShoppingListMainContent: React.FC<
           onPress: () => toStoreMode({ listId: currentListId }),
           testID: shoppingListTestIDs.storeModeButton,
           accessibilityLabel: t('shoppingListScreens.storeMode.open'),
+          onMeasure: rect => setStoreModeRect({ ...rect, shape: 'round' }),
         }
       : null;
+  // Store mode reached production in 4.8.1: an account older than that is
+  // shown where it opens, once.
+  const storeModeTour = useTutorialSequence({
+    tourId: 'feature_store_mode',
+    steps: [
+      {
+        featureId: 'feature_store_mode',
+        title: t('settings.storeMode'),
+        subtitle: t('shoppingListTutorial.storeModeNew.subtitle'),
+        rectKey: 'storeMode',
+        when: () => storeModeTourAllowed && storeModeAction !== null,
+      },
+    ],
+    targetRects: { storeMode: storeModeRect },
+    canStart: !!currentListId,
+    isPaused: !isScreenFocused || isOverlayOpen || anySheetVisible,
+  });
   // Opt-in from Settings: the list's money on a screen of its own.
   const budgetAction: BarAction | null =
     budgetAndPricesEnabled && currentListId
@@ -653,6 +683,22 @@ export const ShoppingListMainContent: React.FC<
         }
         const tipStep = swipeTip.currentStep;
         const receiptStep = tour.receiptTip.currentStep;
+        const featureStep = storeModeTour.currentStep;
+        if (!tipStep && !receiptStep && featureStep) {
+          return (
+            <SpotlightCoachMark
+              targetRect={featureStep.targetRect}
+              title={featureStep.title}
+              subtitle={featureStep.subtitle}
+              onDismiss={storeModeTour.skipAll}
+              onClose={storeModeTour.pause}
+              onTargetPress={() => {
+                if (currentListId) toStoreMode({ listId: currentListId });
+                storeModeTour.advance();
+              }}
+            />
+          );
+        }
         if (!tipStep && receiptStep) {
           const { receiptTip } = tour;
           return (
