@@ -273,8 +273,8 @@
     "quantityRequired": "Shkruaj një sasi më të madhe se zero"
   },
   "addToShoppingListSheet": {
-    "tutorialTapPlus": "Trokit + pranë një artikulli për ta shtuar",
-    "tutorialTapAddManually": "Trokit \"Shto manualisht\" për të shtuar një artikull"
+    "tutorialTapPlus": "Trokit + pranë një artikulli për ta shtuar.",
+    "tutorialTapAddManually": "Trokit \"Shto manualisht\" për të shtuar një artikull."
   },
   "shoppingListSelector": {
     "title": "Zgjidh Listën e Blerjeve",
@@ -329,18 +329,18 @@
   "shoppingListTutorial": {
     "addButton": {
       "title": "Shto një artikull",
-      "subtitle": "Trokit + për të shtuar artikuj në listën e blerjeve"
+      "subtitle": "Trokit + për të shtuar artikuj në listën e blerjeve."
     },
     "swipeActions": {
       "title": "Rrëshqit për të menaxhuar artikujt",
       "subtitle": "Rrëshqit djathtas një artikull për ta modifikuar, ose majtas për ta fshirë. Me lexuesin e ekranit, të dyja janë te veprimet e artikullit."
     },
     "checkbox": {
-      "subtitle": "Trokit kutinë për ta shënuar këtë artikull si të blerë"
+      "subtitle": "Trokit kutinë për ta shënuar këtë artikull si të blerë."
     },
     "moveToPantry": {
       "title": "Zhvendos te qilari",
-      "subtitle": "Trokit për ta zhvendosur këtë artikull te qilari yt"
+      "subtitle": "Trokit për ta zhvendosur këtë artikull te qilari yt."
     },
     "receiptOffer": {
       "subtitle": "I bleve? Skano faturën e kësaj blerjeje për t’i futur në qilar."

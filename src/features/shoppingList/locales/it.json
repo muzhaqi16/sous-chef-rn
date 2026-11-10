@@ -273,8 +273,8 @@
     "quantityRequired": "Inserisci una quantità maggiore di zero"
   },
   "addToShoppingListSheet": {
-    "tutorialTapPlus": "Tocca + accanto a un articolo per aggiungerlo",
-    "tutorialTapAddManually": "Tocca \"Aggiungi manualmente\" per aggiungere un articolo"
+    "tutorialTapPlus": "Tocca + accanto a un articolo per aggiungerlo.",
+    "tutorialTapAddManually": "Tocca \"Aggiungi manualmente\" per aggiungere un articolo."
   },
   "shoppingListSelector": {
     "title": "Seleziona Lista della Spesa",
@@ -329,18 +329,18 @@
   "shoppingListTutorial": {
     "addButton": {
       "title": "Aggiungi un articolo",
-      "subtitle": "Tocca + per aggiungere articoli alla lista della spesa"
+      "subtitle": "Tocca + per aggiungere articoli alla lista della spesa."
     },
     "swipeActions": {
       "title": "Scorri per gestire gli articoli",
       "subtitle": "Scorri un articolo a destra per modificarlo, a sinistra per eliminarlo. Con uno screen reader, le trovi tra le azioni dell’articolo."
     },
     "checkbox": {
-      "subtitle": "Tocca la casella per segnare questo articolo come acquistato"
+      "subtitle": "Tocca la casella per segnare questo articolo come acquistato."
     },
     "moveToPantry": {
       "title": "Sposta nella dispensa",
-      "subtitle": "Tocca per spostare questo articolo nella tua dispensa"
+      "subtitle": "Tocca per spostare questo articolo nella tua dispensa."
     },
     "receiptOffer": {
       "subtitle": "Li hai comprati? Scansiona lo scontrino di questa spesa per metterli in dispensa."

@@ -273,8 +273,8 @@
     "quantityRequired": "Introduce una cantidad mayor que cero"
   },
   "addToShoppingListSheet": {
-    "tutorialTapPlus": "Toca + junto a un artículo para añadirlo",
-    "tutorialTapAddManually": "Toca \"Añadir manualmente\" para añadir un artículo"
+    "tutorialTapPlus": "Toca + junto a un artículo para añadirlo.",
+    "tutorialTapAddManually": "Toca \"Añadir manualmente\" para añadir un artículo."
   },
   "shoppingListSelector": {
     "title": "Selecciona Lista de Compras",
@@ -329,18 +329,18 @@
   "shoppingListTutorial": {
     "addButton": {
       "title": "Añade un artículo",
-      "subtitle": "Toca + para añadir artículos a tu lista de compras"
+      "subtitle": "Toca + para añadir artículos a tu lista de compras."
     },
     "swipeActions": {
       "title": "Desliza para gestionar los artículos",
       "subtitle": "Desliza un artículo a la derecha para editarlo o a la izquierda para eliminarlo. Con un lector de pantalla, ambas están en las acciones del artículo."
     },
     "checkbox": {
-      "subtitle": "Toca la casilla para marcar este artículo como comprado"
+      "subtitle": "Toca la casilla para marcar este artículo como comprado."
     },
     "moveToPantry": {
       "title": "Mover a la despensa",
-      "subtitle": "Toca para mover este artículo a tu despensa"
+      "subtitle": "Toca para mover este artículo a tu despensa."
     },
     "receiptOffer": {
       "subtitle": "¿Ya los compraste? Escanea el ticket de esta compra para pasarlos a tu despensa."
