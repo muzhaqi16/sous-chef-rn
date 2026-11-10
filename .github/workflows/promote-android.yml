@@ -1,0 +1,60 @@
+name: Promote Android
+run-name: 'Promote ${{ inputs.version_code }} to production, by @${{ github.actor }}'
+
+# Sends one build from Play's internal track to production at full rollout,
+# with listing.json's release notes, and tags its commit playstore-v<version>.
+# The play-production environment waits for the release owner's approval.
+
+permissions: {}
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: 'Version code on the internal track to promote'
+        required: true
+        type: number
+
+concurrency:
+  group: play-promote
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    name: Promote to production
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: play-production
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      VERSION_CODE: ${{ inputs.version_code }}
+    steps:
+      # Promotion reads the commit the build came from and the store tags, so it
+      # needs the whole history, tags included.
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Writes the release notes from listing.json; it needs no packages.
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: package.json
+
+      - name: Setup fastlane
+        uses: ./.github/actions/setup-fastlane
+        with:
+          workload-identity-provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service-account: ${{ vars.GCP_PLAY_SERVICE_ACCOUNT }}
+
+      - name: Promote to production
+        run: |
+          bundle exec fastlane android promote version_code:"$VERSION_CODE"
+          echo "Production: version code $VERSION_CODE, at full rollout once Google approves it" >> "$GITHUB_STEP_SUMMARY"

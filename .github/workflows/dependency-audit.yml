@@ -75,8 +75,45 @@ jobs:
             console.log("blocking=" + blocking.length);
           ' >> "$GITHUB_OUTPUT"
 
+      # fastlane's gems run in the release jobs that hold Play access, so they
+      # meet the same bar. bundle-audit exits 1 on a finding, as npm audit does;
+      # a missing report means it could not run.
+      - name: Audit fastlane's gems
+        id: gems
+        run: |
+          gem install --user-install --no-document bundler-audit -v 0.9.3
+          set +e
+          "$(ruby -e 'print Gem.user_dir')/bin/bundle-audit" check --update \
+            --gemfile-lock fastlane/Gemfile.lock --format json --output gems.json
+          set -e
+          node -e '
+            const r = require("./gems.json");
+            if (!Array.isArray(r.results)) {
+              console.error("bundle-audit did not run: " + JSON.stringify(r));
+              process.exit(1);
+            }
+            const fs = require("fs");
+            const blocking = r.results.filter(x =>
+              x.type === "unpatched_gem" &&
+              ["high", "critical"].includes(x.advisory && x.advisory.criticality),
+            );
+            const lines = ["", "Weekly `bundle-audit` of `fastlane/Gemfile.lock` at severity **high** or above.", ""];
+            if (blocking.length === 0) {
+              lines.push("No blocking advisories.");
+            } else {
+              lines.push("| Severity | Gem | Version | Advisory | Patched |");
+              lines.push("| --- | --- | --- | --- | --- |");
+              for (const x of blocking) {
+                lines.push("| " + x.advisory.criticality + " | `" + x.gem.name + "` | " + x.gem.version + " | " +
+                  x.advisory.id + " | " + (x.advisory.patched_versions || []).join(", ") + " |");
+              }
+            }
+            fs.appendFileSync("issue-body.md", lines.join("\n") + "\n");
+            console.log("blocking=" + blocking.length);
+          ' >> "$GITHUB_OUTPUT"
+
       - name: Open or update the tracked issue
-        if: steps.audit.outputs.blocking != '0'
+        if: steps.audit.outputs.blocking != '0' || steps.gems.outputs.blocking != '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -98,7 +135,7 @@ jobs:
           if [ -n "$existing" ]; then
             gh issue edit "$existing" --body-file issue-body.md
             gh issue comment "$existing" \
-              --body "Re-checked on $(date -u +%Y-%m-%d): still ${{ steps.audit.outputs.blocking }} blocking advisory(ies)."
+              --body "Re-checked on $(date -u +%Y-%m-%d): still ${{ steps.audit.outputs.blocking }} npm and ${{ steps.gems.outputs.blocking }} gem blocking advisory(ies)."
             echo "Updated issue #$existing"
           else
             gh issue create --title "$ISSUE_TITLE" --body-file issue-body.md \
@@ -107,7 +144,7 @@ jobs:
           fi
 
       - name: Close the tracked issue when the tree is clean
-        if: steps.audit.outputs.blocking == '0'
+        if: steps.audit.outputs.blocking == '0' && steps.gems.outputs.blocking == '0'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -128,5 +165,5 @@ jobs:
         run: |
           echo "## Dependency audit" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
-          echo "Blocking advisories: ${{ steps.audit.outputs.blocking }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "Blocking advisories: ${{ steps.audit.outputs.blocking }} npm, ${{ steps.gems.outputs.blocking }} gem" >> "$GITHUB_STEP_SUMMARY"
           if [ -f issue-body.md ]; then cat issue-body.md >> "$GITHUB_STEP_SUMMARY"; fi

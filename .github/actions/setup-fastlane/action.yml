@@ -1,0 +1,46 @@
+name: 'Setup fastlane with keyless Play access'
+description: |
+  Signs in to Google through Workload Identity Federation, so no Play key is
+  stored anywhere, then installs fastlane from its own frozen Gemfile.
+
+  Caller is responsible for `actions/checkout` (before this, since checkout
+  cleans the workspace the credentials file is written to) and for granting the
+  job `id-token: write`.
+
+inputs:
+  workload-identity-provider:
+    description: 'Full resource name of the GitHub provider in the Workload Identity pool'
+    required: true
+  service-account:
+    description: 'Email of the service account Play Console grants release access'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Point Bundler and fastlane at fastlane/
+      shell: bash
+      run: |
+        {
+          echo "BUNDLE_GEMFILE=$GITHUB_WORKSPACE/fastlane/Gemfile"
+          echo "FASTLANE_OPT_OUT_USAGE=1"
+          echo "FASTLANE_SKIP_UPDATE_CHECK=1"
+          echo "FASTLANE_SKIP_DOCS=1"
+        } >> "$GITHUB_ENV"
+
+    # Writes an external_account credentials file and exports
+    # GOOGLE_APPLICATION_CREDENTIALS, which supply reads as Application Default
+    # Credentials. The provider only answers this repository's main branch.
+    - name: Sign in to Google without a key
+      uses: google-github-actions/auth@v3
+      with:
+        workload_identity_provider: ${{ inputs.workload-identity-provider }}
+        service_account: ${{ inputs.service-account }}
+
+    # The Ruby the lockfile was resolved and tested with. bundler-cache installs
+    # in deployment mode, so a gem the lockfile does not name never installs.
+    - name: Install Ruby and fastlane
+      uses: ruby/setup-ruby@v1
+      with:
+        ruby-version: '4.0'
+        bundler-cache: true

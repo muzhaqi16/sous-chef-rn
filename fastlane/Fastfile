@@ -1,0 +1,149 @@
+require 'open3'
+require 'tmpdir'
+require 'supply'
+require 'supply/options'
+
+default_platform(:android)
+
+# Lane code runs with fastlane/ as its working directory, so every repository
+# path is built from here.
+def repo_path(*parts)
+  File.expand_path(File.join('..', *parts), __dir__)
+end
+
+def required_option(options, key)
+  value = options[key]
+  UI.user_error!("This lane needs #{key}:<value>") if value.nil? || value.to_s.empty?
+  value.to_s
+end
+
+def version_name_in(build_gradle)
+  build_gradle[/^\s*versionName\s+"([^"]+)"/, 1] ||
+    UI.user_error!('android/app/build.gradle declares no versionName')
+end
+
+# What git prints, or nil when the ref does not exist.
+def git_output(*args)
+  out, status = Open3.capture2('git', '-C', repo_path, *args, err: File::NULL)
+  status.success? && !out.strip.empty? ? out.strip : nil
+end
+
+def git!(*args)
+  sh('git', '-C', repo_path, *args)
+end
+
+# Credentials come from Application Default Credentials: in CI, the
+# external_account file google-github-actions/auth writes. No key is stored.
+def play_client
+  Supply.config = FastlaneCore::Configuration.create(
+    Supply::Options.available_options,
+    { package_name: CredentialsManager::AppfileConfig.try_fetch_value(:package_name) }
+  )
+  Supply::Client.make_from_config
+end
+
+platform :android do
+  desc 'Write the version code after the highest one Play has ever accepted to out:<path>'
+  lane :version_code do |options|
+    out = required_option(options, :out)
+    client = play_client
+    client.begin_edit(package_name: Supply.config[:package_name])
+    begin
+      # A discarded draft's bundle is on no track and its code is still used,
+      # so bundles and APKs count as well as every track's releases.
+      used = client.aab_version_codes + client.apks_version_codes +
+             client.tracks.flat_map { |track| Array(track.releases).flat_map { |release| Array(release.version_codes) } }
+    ensure
+      client.abort_current_edit
+    end
+
+    codes = used.map { |code| Integer(code) }
+    UI.user_error!('Play holds no version code for this app') if codes.empty?
+
+    File.write(File.expand_path(out, repo_path), "#{codes.max + 1}\n")
+    UI.success("Next version code: #{codes.max + 1} (highest Play has accepted: #{codes.max})")
+  end
+
+  desc 'Upload a bundle and its R8 mapping to the internal track as a completed release'
+  lane :upload_internal do |options|
+    version_code = required_option(options, :version_code)
+    version_name = version_name_in(File.read(repo_path('android', 'app', 'build.gradle')))
+
+    # Every metadata upload stays off: nothing in the repository becomes
+    # listing text, and internal releases carry no notes.
+    upload_to_play_store(
+      track: 'internal',
+      release_status: 'completed',
+      aab: File.expand_path(required_option(options, :aab), repo_path),
+      mapping: File.expand_path(required_option(options, :mapping), repo_path),
+      version_name: "#{version_name} (#{version_code})",
+      skip_upload_apk: true,
+      skip_upload_metadata: true,
+      skip_upload_changelogs: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+      # On, supply commits without sending for review when the Console holds
+      # changes to send by hand, and reports success. Off, Play's refusal shows.
+      rescue_changes_not_sent_for_review: false
+    )
+  end
+
+  desc 'Promote build version_code:<code> from the internal track to production at full rollout'
+  lane :promote do |options|
+    version_code = required_option(options, :version_code)
+    UI.user_error!("version_code must be a number, not '#{version_code}'") unless version_code.match?(/\A\d+\z/)
+
+    commit = git_output('rev-list', '-n', '1', "refs/tags/play-build/#{version_code}") ||
+             UI.user_error!("There is no play-build/#{version_code} tag, so #{version_code} is no build from main")
+    build_gradle = git_output('show', "#{commit}:android/app/build.gradle") ||
+                   UI.user_error!("Could not read android/app/build.gradle at #{commit}")
+    version_name = version_name_in(build_gradle)
+
+    # The cache purge and the minimum-version gate key on the version name, so
+    # one name ships from one commit.
+    store_tag = "playstore-v#{version_name}"
+    shipped = git_output('rev-list', '-n', '1', "refs/tags/#{store_tag}")
+    if shipped && shipped != commit
+      UI.user_error!("#{version_name} already shipped from #{shipped[0, 9]}, and #{version_code} was built from " \
+                     "#{commit[0, 9]}. Bump versionName, then promote a build of the new version.")
+    end
+
+    notes = Dir.mktmpdir('play-notes')
+    sh('node', repo_path('scripts', 'store-listing', 'play-release-notes.mjs'),
+       '--version', version_name, '--code', version_code, '--out', notes)
+
+    # Tagged before Play is asked: a failure in between leaves the API holding a
+    # commit production does not run, never production running one it does not
+    # hold. A tag this run made goes again if Play refuses.
+    unless shipped
+      git!('tag', store_tag, commit)
+      git!('push', 'origin', "refs/tags/#{store_tag}")
+    end
+
+    begin
+      # supply promotes only the release internal holds now; naming the code
+      # makes a newer build there fail this instead of shipping untested.
+      upload_to_play_store(
+        track: 'internal',
+        track_promote_to: 'production',
+        track_promote_release_status: 'completed',
+        version_code: Integer(version_code),
+        metadata_path: notes,
+        skip_upload_aab: true,
+        skip_upload_apk: true,
+        skip_upload_metadata: true,
+        skip_upload_images: true,
+        skip_upload_screenshots: true,
+        rescue_changes_not_sent_for_review: false
+      )
+    rescue StandardError
+      unless shipped
+        git!('push', '--delete', 'origin', "refs/tags/#{store_tag}")
+        git!('tag', '--delete', store_tag)
+      end
+      raise
+    end
+
+    UI.success("#{version_name} (#{version_code}) sent to production; #{store_tag} names #{commit[0, 9]}")
+  end
+end

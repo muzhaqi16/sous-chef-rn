@@ -11,6 +11,9 @@ env:
 
 on:
   push:
+    # Every merge to main is a Play build for the internal track.
+    branches:
+      - main
     tags:
       - 'dev-v*'
       - 'stg-v*'
@@ -46,6 +49,13 @@ on:
           - github-hosted
           - both
 
+# A Play build from main takes its version code from Play and uploads it, so
+# those runs go one at a time and only the newest waiting one runs next. Every
+# other run is a group of its own.
+concurrency:
+  group: ${{ github.ref == 'refs/heads/main' && (github.event_name == 'push' || (inputs.build_type == 'playstore' && inputs.environment == 'prod')) && 'play-main' || github.run_id }}
+  cancel-in-progress: false
+
 jobs:
   # ─────────────────────────────────────────────────────────────
   # Holds a release to what production serves. dev and stg builds are
@@ -72,14 +82,50 @@ jobs:
         uses: ./.github/actions/release-check
 
   # ─────────────────────────────────────────────────────────────
+  # A Play build from main is numbered one past the highest version code Play
+  # has ever accepted, so it can never collide. Read-only: the edit it opens is
+  # aborted.
+  # ─────────────────────────────────────────────────────────────
+  version-code:
+    name: Version Code from Play
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'push' || (inputs.build_type == 'playstore' && inputs.environment == 'prod'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: play-internal
+    permissions:
+      contents: read
+      id-token: write
+    outputs:
+      code: ${{ steps.code.outputs.code }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup fastlane
+        uses: ./.github/actions/setup-fastlane
+        with:
+          workload-identity-provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service-account: ${{ vars.GCP_PLAY_SERVICE_ACCOUNT }}
+
+      - name: Ask Play for the next version code
+        id: code
+        run: |
+          bundle exec fastlane android version_code out:"$RUNNER_TEMP/version-code"
+          code=$(cat "$RUNNER_TEMP/version-code")
+          [[ "$code" =~ ^[0-9]+$ ]] || { echo "::error::version_code wrote '$code'"; exit 1; }
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Version code: $code" >> "$GITHUB_STEP_SUMMARY"
+
+  # ─────────────────────────────────────────────────────────────
   # Self-hosted runner build (Linux or macOS runner with 'android' label)
   # Toggle: set vars.ANDROID_SELF_HOSTED_ENABLED = 'true' to enable
   # ─────────────────────────────────────────────────────────────
   build-self-hosted:
     name: Build (Self-Hosted)
-    needs: release-check
+    needs: [release-check, version-code]
     if: |
-      !cancelled() && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') && (
+      !cancelled() && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') &&
+      (needs.version-code.result == 'success' || needs.version-code.result == 'skipped') && (
       (github.event_name != 'workflow_dispatch' && vars.ANDROID_SELF_HOSTED_ENABLED == 'true') ||
       (github.event_name == 'workflow_dispatch' && (
         inputs.runner_type == 'self-hosted' ||
@@ -107,13 +153,18 @@ jobs:
         }}
       IS_PLAYSTORE: ${{
         (github.event_name == 'workflow_dispatch' && inputs.build_type == 'playstore') ||
-        startsWith(github.ref_name, 'playstore-v')
+        startsWith(github.ref_name, 'playstore-v') ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
         }}
+      # Set only on a Play build from main; empty, the build keeps the code in
+      # android/app/build.gradle.
+      VERSION_CODE: ${{ needs.version-code.outputs.code }}
 
     steps:
       # The API holds its schema to shipped builds by reading store tags, so a
       # bundle no tag names is held to nothing. A suffixed tag is no store
-      # version, so it is refused too. A branch is tagged below.
+      # version, so it is refused too. A build from main is tagged when it is
+      # promoted to production.
       - name: Refuse a store bundle without a store tag
         if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'tag'
         shell: bash
@@ -135,16 +186,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version-file: package.json
-
-      # A bundle built by hand from a branch tags its own commit, moving the tag
-      # as `npm run tag:playstore` does. The job's token starts no second build.
-      - name: Tag a store bundle built from a branch
-        if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'branch'
-        shell: bash
-        run: |
-          tag="playstore-v$(node -p "require('./package.json').version")"
-          git tag --force "$tag"
-          git push --force origin "refs/tags/$tag"
 
       - name: Detect Android SDK and Java paths
         run: |
@@ -281,7 +322,7 @@ jobs:
         if: env.IS_PLAYSTORE == 'true'
         run: |
           cd android
-          ./gradlew bundleRelease --stacktrace
+          ./gradlew bundleRelease --stacktrace ${VERSION_CODE:+-PversionCode=$VERSION_CODE}
 
       - name: Build APK
         if: env.IS_PLAYSTORE != 'true'
@@ -296,7 +337,8 @@ jobs:
       # uploadCrashlyticsSymbolFileRelease sends the NDK symbols Crashlytics
       # names native frames with, for the Play Store build only. It runs in the
       # build's tree, so the symbols come from the libraries just packaged; a
-      # failed upload warns, never fails the build.
+      # failed upload warns, never fails the build. It takes the build's version
+      # code too, so gradle sees the same configuration and rebuilds nothing.
       - name: Upload native symbols to Crashlytics
         if: env.IS_PLAYSTORE == 'true'
         continue-on-error: true
@@ -306,7 +348,7 @@ jobs:
           cd android
           LOG="$RUNNER_TEMP/crashlytics-upload.log"
           for attempt in 1 2 3; do
-            if ./gradlew uploadCrashlyticsSymbolFileRelease --stacktrace 2>&1 | tee "$LOG"; then
+            if ./gradlew uploadCrashlyticsSymbolFileRelease --stacktrace ${VERSION_CODE:+-PversionCode=$VERSION_CODE} 2>&1 | tee "$LOG"; then
               echo "Native symbols uploaded on attempt ${attempt}"
               exit 0
             fi
@@ -348,6 +390,19 @@ jobs:
           else
             ls -hal ./android/app/build/outputs/apk/release/ || echo "No release APK outputs found"
           fi
+
+      # The upload job runs on a GitHub-hosted runner, so Play access never
+      # reaches this machine; the bundle and its R8 mapping travel to it here.
+      - name: Keep the bundle for the Play upload
+        if: env.VERSION_CODE != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-bundle-self-hosted
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify 16KB page alignment
         if: env.IS_PLAYSTORE != 'true'
@@ -401,17 +456,20 @@ jobs:
             fi
           done
 
-      # Release artifacts publish only from a release tag or a manual dispatch
-      # run whose ref is a protected branch (github.ref_protected). This blocks
-      # a workflow_dispatch from an arbitrary unprotected branch from pushing a
-      # release build to S3, while keeping the tag-push release path intact.
+      # Release artifacts publish only from a release tag, a push to main, or a
+      # manual dispatch run whose ref is a protected branch
+      # (github.ref_protected). This blocks a workflow_dispatch from an
+      # arbitrary unprotected branch from pushing a release build to S3. A Play
+      # build from main is archived under its version code, so builds of one
+      # branch never overwrite each other.
       - name: Upload Play Store AAB to S3
-        if: env.IS_PLAYSTORE == 'true' && (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.ref_protected))
+        if: env.IS_PLAYSTORE == 'true' && (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'push' && github.ref == 'refs/heads/main') || (github.event_name == 'workflow_dispatch' && github.ref_protected))
         run: |
+          DEST="sous-chef-app-prod/android/${{ github.ref_name }}${VERSION_CODE:+/$VERSION_CODE}"
           mcli cp \
             android/app/build/outputs/bundle/release/app-release.aab \
-            "minio/sous-chef-app-prod/android/${{ github.ref_name }}/app-release.aab"
-          echo "Uploaded AAB to sous-chef-app-prod/android/${{ github.ref_name }}/"
+            "minio/$DEST/app-release.aab"
+          echo "Uploaded AAB to $DEST/"
 
       - name: Upload APKs to S3
         if: env.IS_PLAYSTORE != 'true' && (startsWith(github.ref, 'refs/tags/') || (github.event_name == 'workflow_dispatch' && github.ref_protected))
@@ -449,9 +507,10 @@ jobs:
   # ─────────────────────────────────────────────────────────────
   build-github-hosted:
     name: Build (GitHub-Hosted)
-    needs: release-check
+    needs: [release-check, version-code]
     if: |
-      !cancelled() && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') && (
+      !cancelled() && (needs.release-check.result == 'success' || needs.release-check.result == 'skipped') &&
+      (needs.version-code.result == 'success' || needs.version-code.result == 'skipped') && (
       (github.event_name != 'workflow_dispatch' && vars.ANDROID_GITHUB_HOSTED_ENABLED == 'true') ||
       (github.event_name == 'workflow_dispatch' && (
         inputs.runner_type == 'github-hosted' ||
@@ -479,13 +538,18 @@ jobs:
         }}
       IS_PLAYSTORE: ${{
         (github.event_name == 'workflow_dispatch' && inputs.build_type == 'playstore') ||
-        startsWith(github.ref_name, 'playstore-v')
+        startsWith(github.ref_name, 'playstore-v') ||
+        (github.event_name == 'push' && github.ref == 'refs/heads/main')
         }}
+      # Set only on a Play build from main; empty, the build keeps the code in
+      # android/app/build.gradle.
+      VERSION_CODE: ${{ needs.version-code.outputs.code }}
 
     steps:
       # The API holds its schema to shipped builds by reading store tags, so a
       # bundle no tag names is held to nothing. A suffixed tag is no store
-      # version, so it is refused too. A branch is tagged below.
+      # version, so it is refused too. A build from main is tagged when it is
+      # promoted to production.
       - name: Refuse a store bundle without a store tag
         if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'tag'
         shell: bash
@@ -509,16 +573,6 @@ jobs:
         with:
           node-version-file: package.json
           cache: 'npm'
-
-      # A bundle built by hand from a branch tags its own commit, moving the tag
-      # as `npm run tag:playstore` does. The job's token starts no second build.
-      - name: Tag a store bundle built from a branch
-        if: env.IS_PLAYSTORE == 'true' && github.ref_type == 'branch'
-        shell: bash
-        run: |
-          tag="playstore-v$(node -p "require('./package.json').version")"
-          git tag --force "$tag"
-          git push --force origin "refs/tags/$tag"
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -626,7 +680,7 @@ jobs:
         if: env.IS_PLAYSTORE == 'true'
         run: |
           cd android
-          ./gradlew bundleRelease --stacktrace
+          ./gradlew bundleRelease --stacktrace ${VERSION_CODE:+-PversionCode=$VERSION_CODE}
 
       - name: Build APK
         if: env.IS_PLAYSTORE != 'true'
@@ -641,7 +695,8 @@ jobs:
       # uploadCrashlyticsSymbolFileRelease sends the NDK symbols Crashlytics
       # names native frames with, for the Play Store build only. It runs in the
       # build's tree, so the symbols come from the libraries just packaged; a
-      # failed upload warns, never fails the build.
+      # failed upload warns, never fails the build. It takes the build's version
+      # code too, so gradle sees the same configuration and rebuilds nothing.
       - name: Upload native symbols to Crashlytics
         if: env.IS_PLAYSTORE == 'true'
         continue-on-error: true
@@ -651,7 +706,7 @@ jobs:
           cd android
           LOG="$RUNNER_TEMP/crashlytics-upload.log"
           for attempt in 1 2 3; do
-            if ./gradlew uploadCrashlyticsSymbolFileRelease --stacktrace 2>&1 | tee "$LOG"; then
+            if ./gradlew uploadCrashlyticsSymbolFileRelease --stacktrace ${VERSION_CODE:+-PversionCode=$VERSION_CODE} 2>&1 | tee "$LOG"; then
               echo "Native symbols uploaded on attempt ${attempt}"
               exit 0
             fi
@@ -693,6 +748,19 @@ jobs:
           else
             ls -hal ./android/app/build/outputs/apk/release/ || echo "No release APK outputs found"
           fi
+
+      # The upload job runs on a runner of its own, which is where Play access
+      # lives; the bundle and its R8 mapping travel to it here.
+      - name: Keep the bundle for the Play upload
+        if: env.VERSION_CODE != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: play-bundle-github-hosted
+          path: |
+            android/app/build/outputs/bundle/release/app-release.aab
+            android/app/build/outputs/mapping/release/mapping.txt
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Verify 16KB page alignment
         if: env.IS_PLAYSTORE != 'true'
@@ -763,12 +831,80 @@ jobs:
           retention-days: 30
 
   # ─────────────────────────────────────────────────────────────
+  # A Play build from main goes to the internal track, where internal testers
+  # get it as an ordinary update. Production is promote-android.yml's.
+  # ─────────────────────────────────────────────────────────────
+  upload-internal:
+    name: Upload to Play (internal)
+    needs: [version-code, build-self-hosted, build-github-hosted]
+    if: |
+      !cancelled() && needs.version-code.result == 'success' &&
+      (needs.build-self-hosted.result == 'success' || needs.build-github-hosted.result == 'success')
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: play-internal
+    permissions:
+      contents: write
+      id-token: write
+    env:
+      VERSION_CODE: ${{ needs.version-code.outputs.code }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Download the bundle
+        uses: actions/download-artifact@v4
+        with:
+          pattern: play-bundle-*
+          path: ${{ runner.temp }}/play-bundles
+
+      # Both build jobs run only when both runners are switched on; either
+      # bundle passed every check, and the self-hosted one is the usual one.
+      - name: Pick the bundle
+        run: |
+          dir="$RUNNER_TEMP/play-bundles/play-bundle-self-hosted"
+          [ -d "$dir" ] || dir="$RUNNER_TEMP/play-bundles/play-bundle-github-hosted"
+          echo "BUNDLE_DIR=$dir" >> "$GITHUB_ENV"
+
+      - name: Setup fastlane
+        uses: ./.github/actions/setup-fastlane
+        with:
+          workload-identity-provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service-account: ${{ vars.GCP_PLAY_SERVICE_ACCOUNT }}
+
+      - name: Upload to the internal track
+        run: |
+          bundle exec fastlane android upload_internal \
+            version_code:"$VERSION_CODE" \
+            aab:"$BUNDLE_DIR/bundle/release/app-release.aab" \
+            mapping:"$BUNDLE_DIR/mapping/release/mapping.txt"
+          echo "Internal track: version code $VERSION_CODE from ${GITHUB_SHA::9}" >> "$GITHUB_STEP_SUMMARY"
+
+      # Promotion finds the commit a build came from by this tag. No build
+      # trigger matches it and the API reads only store tags, so it starts
+      # nothing. The job's token starts no workflow either.
+      - name: Record the commit this build came from
+        run: |
+          git tag --force "play-build/$VERSION_CODE" "$GITHUB_SHA"
+          git push --force origin "refs/tags/play-build/$VERSION_CODE" || {
+            echo "::error::Play accepted $VERSION_CODE, but play-build/$VERSION_CODE was not pushed, and promotion needs it. Push it by hand: git tag play-build/$VERSION_CODE $GITHUB_SHA && git push origin play-build/$VERSION_CODE"
+            exit 1
+          }
+
+  # ─────────────────────────────────────────────────────────────
   # Build summary
   # ─────────────────────────────────────────────────────────────
   build-summary:
     name: Build Summary
     runs-on: ubuntu-latest
-    needs: [release-check, build-self-hosted, build-github-hosted]
+    needs:
+      [
+        release-check,
+        version-code,
+        build-self-hosted,
+        build-github-hosted,
+        upload-internal,
+      ]
     if: always()
     steps:
       - name: Check results
@@ -777,11 +913,18 @@ jobs:
           echo "| Runner | Result |" >> $GITHUB_STEP_SUMMARY
           echo "|--------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Release Check | ${{ needs.release-check.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Version Code | ${{ needs.version-code.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Self-Hosted | ${{ needs.build-self-hosted.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| GitHub-Hosted | ${{ needs.build-github-hosted.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Play Internal | ${{ needs.upload-internal.result }} |" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.build-self-hosted.result }}" = "failure" ] || \
              [ "${{ needs.build-github-hosted.result }}" = "failure" ]; then
             echo "::error::One or more build jobs failed"
+            exit 1
+          fi
+          if [ "${{ needs.version-code.result }}" = "failure" ] || \
+             [ "${{ needs.upload-internal.result }}" = "failure" ]; then
+            echo "::error::The Play build did not reach the internal track"
             exit 1
           fi

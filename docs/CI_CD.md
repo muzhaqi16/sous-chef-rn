@@ -9,16 +9,17 @@ This document describes the Continuous Integration and Continuous Deployment (CI
 
 ## 📊 Overview
 
-The CI/CD pipeline consists of 6 GitHub Actions workflows that automate testing, building, and deployment:
+The CI/CD pipeline consists of 7 GitHub Actions workflows that automate testing, building, and deployment:
 
-| Workflow            | Trigger                     | Duration   | Purpose                                                 |
-| ------------------- | --------------------------- | ---------- | ------------------------------------------------------- |
-| **PR Checks**       | Every PR                    | ~15-20 min | Fast feedback: lint, typecheck, unit tests, smoke tests |
-| **E2E Smoke Tests** | PR + Push                   | ~10-15 min | Quick E2E verification                                  |
-| **E2E Tests**       | PR + Push to main/dev       | ~60 min    | Full E2E test suite (iOS + Android)                     |
-| **E2E Nightly**     | Daily at 2 AM UTC           | ~90 min    | Comprehensive nightly regression testing                |
-| **Build Android**   | Git tags or manual dispatch | ~30 min    | Build & release Android APK/AAB                         |
-| **Build iOS**       | Git tags (`v*`, `ios-v*`)   | ~30 min    | Build, sign & upload to App Store Connect               |
+| Workflow            | Trigger                                   | Duration   | Purpose                                                   |
+| ------------------- | ----------------------------------------- | ---------- | --------------------------------------------------------- |
+| **PR Checks**       | Every PR                                  | ~15-20 min | Fast feedback: lint, typecheck, unit tests, smoke tests   |
+| **E2E Smoke Tests** | PR + Push                                 | ~10-15 min | Quick E2E verification                                    |
+| **E2E Tests**       | PR + Push to main/dev                     | ~60 min    | Full E2E test suite (iOS + Android)                       |
+| **E2E Nightly**     | Daily at 2 AM UTC                         | ~90 min    | Comprehensive nightly regression testing                  |
+| **Build Android**   | Push to main, git tags or manual dispatch | ~30 min    | Build Android APK/AAB; main goes to Play's internal track |
+| **Promote Android** | Manual dispatch on main                   | ~5 min     | Send one internal build to production (approval needed)   |
+| **Build iOS**       | Git tags (`v*`, `ios-v*`)                 | ~30 min    | Build, sign & upload to App Store Connect                 |
 
 ---
 
@@ -208,6 +209,7 @@ gh workflow run e2e-nightly.yml
 
 **Triggers:**
 
+- Push to `main`: a Play bundle for the internal track (see **Play distribution** below)
 - Push tags: `dev-v*`, `stg-v*`, `prod-v*`, `playstore-v*`
 - Manual workflow dispatch (choose environment + build type)
 
@@ -215,12 +217,13 @@ gh workflow run e2e-nightly.yml
 
 **Environment:** Resolved from tag prefix or manual input
 
-| Tag prefix     | Environment | Build output            |
-| -------------- | ----------- | ----------------------- |
-| `dev-v*`       | dev         | APK                     |
-| `stg-v*`       | stg         | APK (staging variant)   |
-| `prod-v*`      | prod        | APK                     |
-| `playstore-v*` | prod        | AAB (Play Store bundle) |
+| Ref            | Environment | Build output                               |
+| -------------- | ----------- | ------------------------------------------ |
+| `main`         | prod        | AAB, uploaded to Play's internal track     |
+| `dev-v*`       | dev         | APK                                        |
+| `stg-v*`       | stg         | APK (staging variant)                      |
+| `prod-v*`      | prod        | APK                                        |
+| `playstore-v*` | prod        | AAB (Play Store bundle), archived in MinIO |
 
 **Pipeline steps:**
 
@@ -260,7 +263,58 @@ git tag playstore-v1.2.0 && git push origin playstore-v1.2.0
 
 **A release is held to production.** A job before the build, `.github/actions/release-check`, runs on `prod-v*` and `playstore-v*` tags and on a hand-dispatched prod or playstore build, and on every iOS build; `dev-v*` and `stg-v*` skip it and still build. `api-schema-check` reads `/health` ten times, fetches the schema published for each hash, and validates `persisted-query-manifest.json` against each. The job then compiles the app against each, since the check can't see variables. Anything it can't establish fails it, and a failure stops the build. It needs this repo's Actions read access on the `api-schema` package. Up to half the `/health` reads may fail, as a draining replica answers 503. `tsc` narrows a client ahead of production and doesn't close it: it flags an unknown input field only in a fresh object literal.
 
-**Store tags are read by the API.** On every push, the API's CI validates `persisted-query-manifest.json` and checks each variable's input types against `src/graphql/generated/schema.graphql` at every `playstore-vX.Y.Z`, `ios-vX.Y.Z`, `prod-vX.Y.Z` and bare `vX.Y.Z` tag at or above the client floor. So a store tag keeps that exact name, both files stay committed at those paths, and a tag missing either fails the API's CI. Both build workflows refuse anything else: a bundle from a branch is invisible to that check, and a suffixed tag such as `playstore-v1.2.0-rc1` is no store version. `check:manifest`, held by `persistedManifestIsCurrent.test.ts`, keeps the manifest matching the `.graphql` sources.
+**Store tags are read by the API.** On every push, the API's CI validates `persisted-query-manifest.json` and checks each variable's input types against `src/graphql/generated/schema.graphql` at every `playstore-vX.Y.Z`, `ios-vX.Y.Z`, `prod-vX.Y.Z` and bare `vX.Y.Z` tag at or above the client floor. So a store tag keeps that exact name, both files stay committed at those paths, and a tag missing either fails the API's CI. Both build workflows refuse anything else: a bundle from a branch is invisible to that check, and a suffixed tag such as `playstore-v1.2.0-rc1` is no store version. `check:manifest`, held by `persistedManifestIsCurrent.test.ts`, keeps the manifest matching the `.graphql` sources. A build from `main` gets its store tag only when it is promoted to production, so the tag always names the commit production runs.
+
+#### Play distribution
+
+Every merge to `main`, and a dispatch on `main` with `build_type: playstore` and `environment: prod`, ends on Play's internal testing track. Internal testers get it as an ordinary Play update. Runs from `main` go one at a time; of several waiting, only the newest runs.
+
+1. `release-check` holds the build to production, as for any store build.
+2. `version-code` asks Play for one past the highest version code it has ever accepted: every bundle, every APK and every track, including discarded drafts. The build passes it as `-PversionCode`. `versionName` stays in `android/app/build.gradle`, and a version bump no longer touches `versionCode`; a local build keeps the value written there.
+3. The build job builds and checks the bundle as before, archives it in MinIO under `android/main/<code>/`, and hands the bundle and `mapping.txt` to the next job as an artifact. The self-hosted runner never holds Play access.
+4. `upload-internal` uploads them with fastlane (`fastlane/Fastfile`, lane `upload_internal`) and tags the commit `play-build/<code>`, which promotion reads. No trigger matches that tag, and the API ignores it.
+
+The fastlane jobs run on ubuntu-latest through `.github/actions/setup-fastlane`: keyless Google sign-in, then fastlane from `fastlane/Gemfile` (its own lockfile, Ruby 4.0, frozen install). No Play key is stored anywhere: the Workload Identity provider issues a short-lived token only to this repository's `main`, and only to `build-android.yml` and `promote-android.yml`. Run lanes locally with `BUNDLE_GEMFILE=fastlane/Gemfile bundle exec fastlane android <lane>`; Play calls need `gcloud auth application-default login --scopes=openid,email,https://www.googleapis.com/auth/androidpublisher` first.
+
+**One-time setup.** In Google Cloud (any project you own; `<owner>` is this repository's owner):
+
+```bash
+PROJECT=<gcp-project-id>
+PROJECT_NUMBER=$(gcloud projects describe "$PROJECT" --format 'value(projectNumber)')
+REPO_ID=$(gh api repos/<owner>/sous-chef-rn --jq .id)
+
+gcloud services enable androidpublisher.googleapis.com iamcredentials.googleapis.com sts.googleapis.com --project "$PROJECT"
+gcloud iam service-accounts create play-publisher --project "$PROJECT" --display-name "Play publisher (GitHub Actions)"
+gcloud iam workload-identity-pools create github --project "$PROJECT" --location global --display-name "GitHub Actions"
+gcloud iam workload-identity-pools providers create-oidc sous-chef-rn \
+  --project "$PROJECT" --location global --workload-identity-pool github \
+  --issuer-uri https://token.actions.githubusercontent.com \
+  --attribute-mapping 'google.subject=assertion.sub,attribute.repository_id=assertion.repository_id,attribute.ref=assertion.ref,attribute.workflow_ref=assertion.workflow_ref' \
+  --attribute-condition "assertion.repository_id == '$REPO_ID' && assertion.ref == 'refs/heads/main' && (assertion.workflow_ref.startsWith('<owner>/sous-chef-rn/.github/workflows/build-android.yml@') || assertion.workflow_ref.startsWith('<owner>/sous-chef-rn/.github/workflows/promote-android.yml@'))"
+gcloud iam service-accounts add-iam-policy-binding "play-publisher@$PROJECT.iam.gserviceaccount.com" \
+  --project "$PROJECT" --role roles/iam.workloadIdentityUser \
+  --member "principalSet://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/attribute.repository_id/$REPO_ID"
+
+gh variable set GCP_WORKLOAD_IDENTITY_PROVIDER --body "projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/github/providers/sous-chef-rn"
+gh variable set GCP_PLAY_SERVICE_ACCOUNT --body "play-publisher@$PROJECT.iam.gserviceaccount.com"
+```
+
+The condition keys on `repository_id`, which survives a rename, and on `ref` and `workflow_ref`, never on `sub`: a job that names an environment gets a subject of `environment:<name>`.
+
+In Play Console, under Users and permissions, invite `play-publisher@<project>.iam.gserviceaccount.com` with these permissions on Sous Chef only: _Release to production, exclude devices, and use Play App Signing_; _Release apps to testing tracks_; _View app information (read-only)_. Grant no store-listing rights. A new permission can take up to a day to apply, until which Play answers "The caller does not have permission". Keep the internal testers list there; each tester opens its opt-in link once.
+
+In GitHub, create the environments `play-internal` (deployment branch `main`) and `play-production` (deployment branch `main`, the release owner as required reviewer). Until all of this exists, a push to `main` fails at `version-code` and builds nothing.
+
+#### Promoting to production (`promote-android.yml`)
+
+Once a build on the internal track is tested, run **Actions → Promote Android** on `main` with its version code (in the build run's summary and on Play's internal track). The `play-production` environment waits for the release owner's approval, then `fastlane android promote`:
+
+1. Finds the build's commit from `play-build/<code>`. A code with no such tag is no build from `main`.
+2. Reads the version name at that commit. If `playstore-v<name>` already names another commit, it stops: one version name ships from one commit, because the cache purge and the minimum-version gate key on it. Bump `versionName`, and promote a build of the new version.
+3. Writes the release notes from `scripts/store-listing/listing.json` as it is on `main` (`play-release-notes.mjs`), so notes written after the build need no rebuild. `_playReleaseNotesFor` must equal the version name, and every language Play lists needs `play.releaseNotes` of at most 500 characters (`playReleaseNotes.test.ts` holds the limit at merge). Have es, it and sq reviewed as `_review` asks before setting the stamp.
+4. Tags the commit `playstore-v<name>`, then promotes that exact build at full rollout. Managed publishing is off, so it goes live when Google approves it.
+
+If a newer build has replaced it on the internal track, the promotion fails; test that one and promote it instead. If Play refuses the change, for instance because the Console holds changes that must be sent by hand, production is unchanged and the tag this run made is deleted; send those changes in the Console, then promote again.
 
 ---
 

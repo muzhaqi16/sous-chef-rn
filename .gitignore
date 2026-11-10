@@ -59,6 +59,9 @@ yarn-error.log
 **/fastlane/Preview.html
 **/fastlane/screenshots
 **/fastlane/test_output
+**/fastlane/README.md
+# Short-lived Google credentials google-github-actions/auth writes in CI
+gha-creds-*.json
 
 # Bundle artifact
 *.jsbundle
