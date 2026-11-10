@@ -734,7 +734,6 @@
     "a11yHint": "Apre l'editor della quantità"
   },
   "tutorial": {
-    "youGotIt": "Perfetto!",
     "gotIt": "Ho capito",
     "endTour": "Termina la guida",
     "stepOf": "{{step}} di {{total}}"

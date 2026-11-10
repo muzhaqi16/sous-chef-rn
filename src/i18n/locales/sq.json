@@ -734,7 +734,6 @@
     "a11yHint": "Hap redaktuesin e sasisë"
   },
   "tutorial": {
-    "youGotIt": "E kuptova!",
     "gotIt": "E kuptova",
     "endTour": "Mbyll udhëzuesin",
     "stepOf": "{{step}} nga {{total}}"
