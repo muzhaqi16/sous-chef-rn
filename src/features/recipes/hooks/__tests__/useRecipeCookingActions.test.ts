@@ -22,6 +22,7 @@ import type { RootState } from '#store';
 import { useSelectedPantryId } from '#store/useAppStore';
 import { useRecipeCookingActions } from '../useRecipeCookingActions';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
+import { onTutorialEvent, type TutorialEvent } from '#domain/tutorialEvents';
 
 jest.mock('#/domain/reviewPrompt');
 
@@ -312,6 +313,37 @@ describe('useRecipeCookingActions', () => {
     );
     expect(mockToastSuccess).not.toHaveBeenCalled();
     expect(askForReviewAfterSuccess).not.toHaveBeenCalled();
+  });
+
+  // "Cook from your pantry" waits for this, however the cook was made.
+  describe('the event a waiting guide continues on', () => {
+    const listen = () => {
+      const heard: TutorialEvent[] = [];
+      const stop = onTutorialEvent(event => heard.push(event));
+      return { heard, stop };
+    };
+
+    it('is sent for a cook the server took', async () => {
+      const { heard, stop } = listen();
+      const { result } = renderCooking([cookedMock().mock]);
+
+      await cook(result);
+      await drainTimers();
+      stop();
+
+      expect(heard).toEqual(['recipe.cooked']);
+    });
+
+    it('is not sent for a refused cook', async () => {
+      const { heard, stop } = listen();
+      const { result } = renderCooking([refusedCookMock().mock]);
+
+      await cook(result);
+      await drainTimers();
+      stop();
+
+      expect(heard).toEqual([]);
+    });
   });
 
   it('skip review sends a client-minted id and the selected pantry', async () => {

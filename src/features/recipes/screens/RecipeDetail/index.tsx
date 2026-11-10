@@ -541,8 +541,8 @@ const RecipeDetailScreen: React.FC = () => {
                 })}
               </MetaItem>
             )}
-          {/* Cooked count - inline with metadata */}
-          {!!isSaved && (
+          {/* Any recipe can be cooked; only a saved one keeps a count. */}
+          {!!recipeId && (
             <Pressable
               style={({ pressed }) => [
                 styles.metaItem,
@@ -550,6 +550,7 @@ const RecipeDetailScreen: React.FC = () => {
               ]}
               onPress={() => setCookedModalVisible(true)}
               disabled={markingAsCooked}
+              accessibilityRole="button"
             >
               {markingAsCooked ? (
                 <SuccessActivityIndicator size="small" />

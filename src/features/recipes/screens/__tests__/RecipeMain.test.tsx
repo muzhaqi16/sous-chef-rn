@@ -285,7 +285,7 @@ describe('RecipeMain', () => {
     mockScreenWith({});
   });
 
-  it('Cook from your pantry: started from the card, it leads to the pantry’s recipes while the own tour waits', () => {
+  it('Cook from your pantry: started from the card, it leads to the pantry’s recipes and waits for a cook while the own tour waits', () => {
     mockDeferredScreen.mockImplementation(
       ({ component: Component }: { component: React.ComponentType }) => (
         <Component />
@@ -303,7 +303,11 @@ describe('RecipeMain', () => {
     expect(guide?.steps.map(step => step.rectKey)).toEqual([
       'discoveryHeader',
       'pantryButton',
+      'discoveryHeader',
     ]);
+    expect([...(guide?.steps ?? [])].pop()?.advanceOn).toEqual({
+      event: 'recipe.cooked',
+    });
     expect(calls.filter(o => o.tourId === undefined).pop()?.isPaused).toBe(
       true,
     );

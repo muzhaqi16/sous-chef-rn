@@ -5,7 +5,6 @@ import { useTranslation } from '#/i18n';
 import { Pressable } from '#components/atoms/themedComponents';
 import { Icon } from '#components/atoms/Icon';
 import { Text } from '#components/atoms/Text';
-import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 
 interface InlineTourHintProps {
   text: string;
@@ -15,12 +14,13 @@ interface InlineTourHintProps {
   onClose: () => void;
   /** "End tour": every step counts as shown. */
   onEnd: () => void;
+  testID?: string;
 }
 
 /**
- * A guide's step shown inside the sheet it happens in, where a spotlight
- * would stack a second modal on the sheet. It continues on the action, so it
- * has no Next.
+ * A guide's step shown where it happens (in a sheet, or on a screen whose
+ * action is a step away) instead of a spotlight. It continues on the action,
+ * so it has no Next.
  */
 export const InlineTourHint = ({
   text,
@@ -28,6 +28,7 @@ export const InlineTourHint = ({
   totalSteps,
   onClose,
   onEnd,
+  testID,
 }: InlineTourHintProps) => {
   const { t } = useTranslation();
   const progress = t('tutorial.stepOf', {
@@ -35,7 +36,7 @@ export const InlineTourHint = ({
     total: totalSteps,
   });
   return (
-    <View style={styles.container} testID={shoppingListTestIDs.tourSheetHint}>
+    <View style={styles.container} testID={testID}>
       <View
         style={styles.content}
         accessible

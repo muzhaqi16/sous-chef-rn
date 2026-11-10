@@ -12,7 +12,8 @@ import { SuggestionSurface } from '#/graphql/generated/schemaTypes';
 import { useSuggestionDismissal } from '#features/catalog/hooks/useSuggestionDismissal';
 import { useShowShoppingListImages } from '#hooks/settings/useUserPreferences';
 import { useFirstShopTourContext } from '#features/shoppingList/context/FirstShopTourContext';
-import { InlineTourHint } from '#features/shoppingList/components/InlineTourHint';
+import { InlineTourHint } from '#components/molecules/InlineTourHint';
+import { shoppingListTestIDs } from '#features/shoppingList/testIDs';
 import { AddItemSheet } from '#features/catalog/ui/AddItemSheet/AddItemSheet';
 import { useAddItemSheetState } from '#features/catalog/ui/AddItemSheet/useAddItemSheetState';
 import { shoppingListSheetConfig } from '#features/shoppingList/components/AddToShoppingListSheet/shoppingListSheetConfig';
@@ -156,6 +157,7 @@ export const AddToShoppingListSheet: React.FC<AddToShoppingListSheetProps> = ({
         totalSteps={step.totalSteps}
         onClose={guide.pause}
         onEnd={guide.skipAll}
+        testID={shoppingListTestIDs.tourSheetHint}
       />
     ) : undefined;
 

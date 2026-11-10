@@ -145,7 +145,7 @@
     "cookWithPantry": "Cucina con ciò che hai",
     "searchByName": "Per nome",
     "searchByIngredients": "Per ingredienti",
-    "cookWithPantrySubtitle": "Cerca ricette in base agli ingredienti nella dispensa",
+    "cookWithPantrySubtitle": "Cerca ricette in base agli ingredienti nella dispensa.",
     "loadingRecipe": "Caricamento ricetta...",
     "recipeNotFoundDb": "Ricetta non trovata nel database",
     "recipeNotFound": "Ricetta non trovata",
@@ -400,6 +400,7 @@
       "partlyInPantry": "In parte nella tua dispensa"
     },
     "cookGuideSuggestions": "Ricette con quello che hai, prima con ciò che scade prima. Aprine una per cucinarla.",
+    "cookGuideCook": "Aprine una e, quando è pronta, tocca {{action}}.",
     "cookGuideOffline": "Le ricette dalla dispensa richiedono una connessione. Compariranno qui quando sarai di nuovo online."
   },
   "recipeFilters": {

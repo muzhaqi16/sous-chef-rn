@@ -5,7 +5,8 @@
 export type TutorialEvent =
   | 'list.itemAdded'
   | 'list.movedToPantry'
-  | 'list.rowSwiped';
+  | 'list.rowSwiped'
+  | 'recipe.cooked';
 
 type Listener = (event: TutorialEvent) => void;
 

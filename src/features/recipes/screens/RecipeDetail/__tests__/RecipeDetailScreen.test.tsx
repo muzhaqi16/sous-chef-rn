@@ -985,14 +985,15 @@ describe('RecipeDetail', () => {
       expect(tree.getByText('Mark cooked')).toBeTruthy();
     });
 
-    it('shows nothing for a recipe not saved', () => {
+    // Any recipe can be cooked; only a saved one keeps the count.
+    it('offers to mark a recipe not saved as cooked', () => {
       const tree = renderCooked({
         isSaved: false,
         cookedCount: 0,
         lastCookedAt: null,
       });
 
-      expect(tree.queryByText('Mark cooked')).toBeNull();
+      expect(tree.getByRole('button', { name: 'Mark cooked' })).toBeTruthy();
     });
   });
 });

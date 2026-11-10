@@ -26,6 +26,7 @@ import { RecipeSkeleton } from '#features/recipes/components/skeletons/RecipeSke
 import { ItemCardSkeleton } from '#components/molecules/ItemCardSkeleton';
 import { PaginationFooter } from '#components/atoms/PaginationFooter';
 import { SpotlightCoachMark } from '#components/organisms/SpotlightCoachMark/SpotlightCoachMark';
+import { InlineTourHint } from '#components/molecules/InlineTourHint';
 import { useTutorialSequence } from '#hooks/ui/useTutorialSequence';
 import { useTutorialSession } from '#hooks/ui/tutorialSession';
 import { useMeasuredRect } from '#hooks/ui/useMeasuredRect';
@@ -154,12 +155,22 @@ const RecipeMainInner: React.FC = () => {
           : t('recipes.cookGuideSuggestions'),
         rectKey: 'discoveryHeader',
       },
+      // The tab's own pantry tip: seeing either counts for both.
       {
-        featureId: 'cook_guide_ingredients',
+        featureId: 'recipe_tutorial_pantry',
         title: t('recipes.cookWithPantry'),
         subtitle: t('recipes.cookWithPantrySubtitle'),
         rectKey: 'pantryButton',
         when: () => screen.hasPantryItems,
+      },
+      // The guide waits for a cook, made from whichever recipe the user opens.
+      {
+        featureId: 'cook_guide_cook',
+        title: t('recipes.cookGuideCook', { action: t('recipes.markCooked') }),
+        subtitle: '',
+        rectKey: 'discoveryHeader',
+        presentation: 'inline',
+        advanceOn: { event: 'recipe.cooked' },
       },
     ],
     targetRects: {
@@ -377,6 +388,15 @@ const RecipeMainInner: React.FC = () => {
         />
       ) : null}
       {ListHeader}
+      {cookGuide.inlineStep && !screen.showSearchResults ? (
+        <InlineTourHint
+          text={cookGuide.inlineStep.title}
+          stepIndex={cookGuide.inlineStep.stepIndex}
+          totalSteps={cookGuide.inlineStep.totalSteps}
+          onClose={cookGuide.pause}
+          onEnd={cookGuide.skipAll}
+        />
+      ) : null}
     </>
   );
 
@@ -517,7 +537,7 @@ const RecipeMainInner: React.FC = () => {
           onClose={cookGuide.pause}
           onNext={cookGuide.advanceInPlace}
           onTargetPress={() => {
-            if (cookGuide.currentStep?.featureId === 'cook_guide_ingredients') {
+            if (cookGuide.currentStep?.featureId === 'recipe_tutorial_pantry') {
               switchSearchMode('ingredients');
               openIngredientSelector();
             }

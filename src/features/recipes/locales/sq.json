@@ -145,7 +145,7 @@
     "cookWithPantry": "Gatuaj me çfarë ke",
     "searchByName": "Sipas emrit",
     "searchByIngredients": "Sipas përbërësve",
-    "cookWithPantrySubtitle": "Kërko receta sipas përbërësve në qilar",
+    "cookWithPantrySubtitle": "Kërko receta sipas përbërësve në qilar.",
     "loadingRecipe": "Po ngarkohet receta...",
     "recipeNotFoundDb": "Receta nuk u gjet në bazën e të dhënave",
     "recipeNotFound": "Receta nuk u gjet",
@@ -400,6 +400,7 @@
       "partlyInPantry": "Pjesërisht në qilarin tënd"
     },
     "cookGuideSuggestions": "Receta me çka ke, duke nisur me ushqimin që skadon më shpejt. Hap një për ta gatuar.",
+    "cookGuideCook": "Hap një dhe, kur ta kesh gatuar, prek {{action}}.",
     "cookGuideOffline": "Recetat nga qilari kanë nevojë për lidhje. Do të shfaqen këtu sapo të jesh sërish online."
   },
   "recipeFilters": {

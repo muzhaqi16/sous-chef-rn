@@ -9,6 +9,7 @@ import {
 import { toastService } from '#/services/toastService';
 import { executeWithLoadingState } from '#/utils/finallyHelpers';
 import { settleMutation } from '#/apollo/utils/settleMutation';
+import { emitTutorialEvent } from '#domain/tutorialEvents';
 import { askForReviewAfterSuccess } from '#/domain/reviewPrompt';
 import { generateEntityId } from '#/utils/generateEntityId';
 import { appliedPayload } from '#/utils/errors/mutationPayload';
@@ -121,7 +122,10 @@ export function useRecipeCookingActions({
         skippedIngredients.every(item => item.code === ErrorCode.UnitInvalid),
     };
 
-    if (settled.status !== 'failed') askForReviewAfterSuccess();
+    if (settled.status !== 'failed') {
+      emitTutorialEvent('recipe.cooked');
+      askForReviewAfterSuccess();
+    }
     return { failure: settled.failure, skipped };
   };
 
